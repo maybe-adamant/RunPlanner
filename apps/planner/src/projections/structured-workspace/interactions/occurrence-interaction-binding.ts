@@ -1327,9 +1327,7 @@ export function bindOccurrenceLocalInteractions(
                 slot.generation,
                 () => candidates.localVisitGenerations(slot.address, generationValues),
               ),
-              ...(slot.entered
-                ? { disabledReason: 'Uncheck Visited before disabling generation.' }
-                : {}),
+              ...(slot.entered ? { disabledReason: 'Uncheck Visited first.' } : {}),
               contextReached: candidates.contextReached({
                 kind: 'sideRoomGeneration',
                 sideRoom: slot.address,

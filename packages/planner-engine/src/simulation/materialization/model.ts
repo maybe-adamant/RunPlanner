@@ -238,6 +238,8 @@ export interface CanonicalAuthoredRoom {
   /** Normalized catalog whitelist consumed by an Extended Well purchase. */
   readonly stygianWellExtendedDirectPurchaseItemKeys?: readonly string[];
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
+  /** Fields combat rooms only: the room-action domain's cage order state. */
+  readonly fieldsCageOrder?: import('../../authored-project/room-actions/domain').FieldsCageOrderState;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly clockworkReward?: 'goal' | 'nonGoal';

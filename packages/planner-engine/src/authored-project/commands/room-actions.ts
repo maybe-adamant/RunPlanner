@@ -54,14 +54,11 @@ export function applyRoomActionCommand(
   )?.domain;
   const order = occurrence.roomActions.order;
   if (command.kind === 'ReplaceFieldsCageOrder') {
-    if (domain?.lifecycleProfileKey !== 'FieldsCombatRoom') {
+    const cageOrder = domain?.fieldsCageOrder;
+    if (cageOrder === undefined) {
       failCommand(command, 'occurrence does not own Fields cage order');
     }
-    const activePhases = new Set(
-      domain.activeReferences.flatMap((reference) =>
-        reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
-      ),
-    );
+    const activePhases = new Set(cageOrder.activePhaseKeys);
     if (
       activePhases.size === 0 ||
       command.phaseKeys.length !== activePhases.size ||
@@ -70,18 +67,17 @@ export function applyRoomActionCommand(
     ) {
       failCommand(command, 'phaseKeys must contain each active Fields cage exactly once');
     }
+    if (!cageOrder.available) {
+      failCommand(command, 'restore missing cage actions before changing their order');
+    }
+    if (cageOrder.phaseKeys.every((phaseKey, index) => phaseKey === command.phaseKeys[index]))
+      return document;
     const activeCagePositions = (references: readonly RoomActionReference[]) =>
       references.flatMap((reference, index) =>
         reference.kind === 'completeFieldsCage' && activePhases.has(reference.phaseKey)
           ? [{ index, phaseKey: reference.phaseKey }]
           : [],
       );
-    const positions = activeCagePositions(order);
-    if (positions.length !== activePhases.size) {
-      failCommand(command, 'restore missing cage actions before changing their order');
-    }
-    if (positions.every((position, index) => position.phaseKey === command.phaseKeys[index]))
-      return document;
     const nextOrder = [...order];
     // Resolve the prefix with ordinary insertion moves, without publishing or
     // reconciling an intermediate permutation. Other actions retain their sequence.

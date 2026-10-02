@@ -651,7 +651,9 @@ pickup. Neither command may infer entries from room names or rendered rows.
 Echo's history-derived replay may be effective while its structural pickup
 entry is empty or retains a former source. `EditEchoReplay` seeds that exact
 entry and applies its first child edit as one command, so Undo restores the
-previous payload without a separate identity-confirmation edit.
+previous payload without a separate identity-confirmation edit. The command
+trusts the caller's `sourceOffer` seed; evaluation derives the replay identity
+from history, overriding a stale seed with a `traitOfferMissing` finding.
 `PlaceEchoGoldPickup` atomically materializes the source-derived Gold pickup
 with unresolved children and inserts it in `roomActions.order`. Subsequent
 outcome edits use the ordinary acquisition, trait, level, and conversion

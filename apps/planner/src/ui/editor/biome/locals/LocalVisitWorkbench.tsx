@@ -55,6 +55,9 @@ function GenerationControl({
   const waiting = !interaction.contextReached || candidateWaits(next);
   const disabled = interaction.disabledReason !== undefined;
   const target = findingTarget(slot.address, `local-${slot.marker.focusKey}-generation`);
+  const description = [target['aria-description'], interaction.disabledReason]
+    .filter((entry) => entry !== undefined)
+    .join(' ');
   return (
     <div
       aria-disabled={disabled || undefined}
@@ -63,10 +66,11 @@ function GenerationControl({
       inert={target.inert}
       role="group"
     >
-      <label>
+      <label title={interaction.disabledReason}>
         <input
           {...target}
           aria-busy={candidates.pending || undefined}
+          aria-description={description === '' ? undefined : description}
           aria-label={`${slot.label} generation`}
           checked={slot.generation === 'generated'}
           data-candidate-support={candidateSupport(candidate)}
@@ -82,7 +86,7 @@ function GenerationControl({
           onFocus={candidates.activate}
           onPointerDown={candidates.activate}
           ref={controlRef}
-          title={waiting ? candidateWaitingTitle : undefined}
+          title={interaction.disabledReason ?? (waiting ? candidateWaitingTitle : undefined)}
           type="checkbox"
         />
         <span>Generated</span>
