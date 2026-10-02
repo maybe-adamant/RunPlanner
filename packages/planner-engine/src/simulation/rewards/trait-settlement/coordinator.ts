@@ -75,6 +75,7 @@ import {
 import { addRewardFinding } from '../findings';
 import { settleReachedLevelResolution } from '../level-resolution-settlement';
 import { isTraitOfferMutationEvent } from '../../traits/history/fold';
+import type { ReachedLevelResolutionEvaluation, ReachedTraitOfferEvaluation } from '../../traits';
 
 export interface ReachedTraitChildCheckpoint {
   readonly address: SemanticAddress;
@@ -108,7 +109,10 @@ export type TraitOfferScreenCompletion = Extract<
   { readonly kind: 'screenCompleted' }
 >;
 
-type TraitOfferAcquisitionSettlement = ReturnType<typeof applyTraitOfferForAcquisitionInternal> & {
+type TraitOfferAcquisitionSettlement = Omit<
+  TraitOfferSettlementProduct,
+  'findingEmissions' | 'evaluation'
+> & {
   /** The immediately preceding same-occurrence trait mutations. */
   readonly priorTraitMutations?: readonly PriorTraitMutation[];
   /** Complete acquisition-owned finding emissions; callers merge them by region and chronology. */
@@ -163,6 +167,77 @@ function consumeChaosGodScreen(
       });
 }
 
+/** One trait finding write, applied by the caller in emission order through the merging writer. */
+interface TraitFindingEmission {
+  readonly finding: SemanticFinding;
+  readonly region: string;
+  readonly chronology: FindingChronology | undefined;
+  readonly evaluation?: ReachedLevelResolutionEvaluation;
+}
+
+/** One acquisition's settled branch, its ordered finding writes and its exact child contacts. */
+interface TraitOfferSettlementProduct {
+  readonly branch: RewardBranchState;
+  readonly findingEmissions: readonly TraitFindingEmission[];
+  readonly blockedChild?: ReachedTraitChildCheckpoint;
+  readonly candidateContact?: ReachedTraitOfferCandidateContact;
+  /** Present only when a legal upgrade screen settled completely. */
+  readonly completion?: TraitOfferScreenCompletion;
+  /** The evaluation this acquisition appended to the branch's trait trace. */
+  readonly evaluation: ReachedTraitOfferEvaluation | undefined;
+}
+
+function regionEntryEmission(entry: FindingRegionEntry): TraitFindingEmission {
+  return Object.freeze({
+    finding: entry.finding,
+    region: entry.atomicRegion,
+    chronology: entry.chronology,
+  });
+}
+
+/** A merged entry re-emitted once per retained evaluation, or once when it has none. */
+function entryEmissions(entries: readonly FindingRegionEntry[]): readonly TraitFindingEmission[] {
+  return entries.flatMap((entry) =>
+    (entry.levelResolutionEvaluations ?? [undefined]).map((evaluation) =>
+      Object.freeze({
+        finding: entry.finding,
+        region: entry.atomicRegion,
+        chronology: entry.chronology,
+        ...(evaluation === undefined ? {} : { evaluation }),
+      }),
+    ),
+  );
+}
+
+/** The settlement fields a caller publishes, without the emission and trace products. */
+function settlementOf(
+  product: TraitOfferSettlementProduct,
+): Omit<TraitOfferSettlementProduct, 'findingEmissions' | 'evaluation'> {
+  return Object.freeze({
+    branch: product.branch,
+    ...(product.blockedChild === undefined ? {} : { blockedChild: product.blockedChild }),
+    ...(product.candidateContact === undefined
+      ? {}
+      : { candidateContact: product.candidateContact }),
+    ...(product.completion === undefined ? {} : { completion: product.completion }),
+  });
+}
+
+function reduceTraitFindingEmissions(
+  emissions: readonly TraitFindingEmission[],
+): readonly FindingRegionEntry[] {
+  const findings = new Map<string, FindingRegionEntry>();
+  for (const emission of emissions)
+    addRewardFinding(
+      findings,
+      emission.finding,
+      emission.region,
+      emission.chronology,
+      emission.evaluation,
+    );
+  return Object.freeze([...findings.values()]);
+}
+
 function applyTraitOfferForAcquisitionInternal(
   catalog: Catalog,
   reachedBranch: RewardBranchState,
@@ -178,17 +253,19 @@ function applyTraitOfferForAcquisitionInternal(
   role: string,
   lifecyclePoint: string,
   sequence: number,
-  findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
   options: ApplyTraitOfferOptions = {},
   echoLastRunBoon?: EchoLastRunBoonSettlement,
-): {
-  readonly branch: RewardBranchState;
-  readonly blockedChild?: ReachedTraitChildCheckpoint;
-  readonly candidateContact?: ReachedTraitOfferCandidateContact;
-  /** Present only when a legal upgrade screen settled completely. */
-  readonly completion?: TraitOfferScreenCompletion;
-} {
+): TraitOfferSettlementProduct {
+  const findingEmissions: TraitFindingEmission[] = [];
+  const settle = (
+    product: Omit<TraitOfferSettlementProduct, 'findingEmissions' | 'evaluation'>,
+  ): TraitOfferSettlementProduct =>
+    Object.freeze({
+      ...product,
+      findingEmissions: Object.freeze(findingEmissions),
+      evaluation: product.branch.traitEvaluations?.[reachedBranch.traitEvaluations?.length ?? 0],
+    });
   const acquisitionMode = options.mode ?? Object.freeze({ kind: 'ordinary' as const });
   const openedOwner =
     acquisitionMode.kind === 'ordinary' ? traitOwnerAddress(reward.origin) : undefined;
@@ -220,7 +297,7 @@ function applyTraitOfferForAcquisitionInternal(
     isAspectSpellDropDormant(catalog, branch.state.equipment.aspectKey) &&
     role === 'self'
   )
-    return Object.freeze({ branch });
+    return settle({ branch });
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.state.traitHistory;
@@ -237,20 +314,21 @@ function applyTraitOfferForAcquisitionInternal(
       (reward.offer === undefined
         ? undefined
         : traitGiverForAcquisitionRole(catalog, reward.offer, role));
-    if (findings !== undefined && owner !== undefined)
-      addTraitFinding(
-        findings,
-        owner,
-        role,
-        lifecyclePoint,
-        sequence,
-        'traitOfferMissing',
-        undefined,
-        undefined,
-        undefined,
-        findingChronology,
+    if (owner !== undefined)
+      findingEmissions.push(
+        traitFindingEmission(
+          owner,
+          role,
+          lifecyclePoint,
+          sequence,
+          'traitOfferMissing',
+          undefined,
+          undefined,
+          undefined,
+          findingChronology,
+        ),
       );
-    return Object.freeze({
+    return settle({
       branch,
       ...(owner === undefined
         ? {}
@@ -328,19 +406,7 @@ function applyTraitOfferForAcquisitionInternal(
     ...(findingChronology === undefined ? {} : { findingChronology }),
   });
   if (levelResolution !== undefined) {
-    if (findings !== undefined) {
-      for (const entry of levelResolution.findingEntries) {
-        for (const evaluation of entry.levelResolutionEvaluations ?? [undefined]) {
-          addRewardFinding(
-            findings,
-            entry.finding,
-            entry.atomicRegion,
-            entry.chronology,
-            evaluation,
-          );
-        }
-      }
-    }
+    findingEmissions.push(...entryEmissions(levelResolution.findingEntries));
     // Only a Pom screen this settlement reached closes; a skipped effect appends nothing.
     const priorCount = branch.levelResolutionEvaluations?.length ?? 0;
     const evaluations = levelResolution.branch.levelResolutionEvaluations ?? [];
@@ -351,14 +417,14 @@ function applyTraitOfferForAcquisitionInternal(
       evaluated?.effectKind === 'choice'
         ? traitOfferRoomKey(reward.origin)
         : undefined;
-    return Object.freeze({
+    return settle({
       branch: levelResolution.branch,
       ...(completion === undefined
         ? {}
         : { completion: Object.freeze({ kind: 'screenCompleted' as const, room: completion }) }),
     });
   }
-  if (effectiveAuthored === undefined) return Object.freeze({ branch: effectiveBranch });
+  if (effectiveAuthored === undefined) return settle({ branch: effectiveBranch });
   const evaluationContext = withBoonRarityFacts(
     catalog,
     generation,
@@ -465,83 +531,82 @@ function applyTraitOfferForAcquisitionInternal(
               })
             : evaluation,
         ]);
-  if (
-    findings !== undefined &&
-    callingCard !== undefined &&
-    callingCard.invalidActions.length > 0
-  ) {
+  if (callingCard !== undefined && callingCard.invalidActions.length > 0) {
     const owner = traitOwnerAddress(reward.origin);
     if (owner !== undefined) {
       for (const actionIndex of callingCard.invalidActions) {
-        addTraitFinding(
-          findings,
-          owner,
-          role,
-          lifecyclePoint,
-          sequence,
-          'callingCardRarificationUnavailable',
-          undefined,
-          `rarification action ${actionIndex + 1} is unavailable at this offer frontier`,
-          undefined,
-          findingChronology,
-          actionIndex,
-          callingCard.offer.kind === 'traits'
-            ? callingCard.offer.rarificationActions?.[actionIndex]
-            : undefined,
+        findingEmissions.push(
+          traitFindingEmission(
+            owner,
+            role,
+            lifecyclePoint,
+            sequence,
+            'callingCardRarificationUnavailable',
+            undefined,
+            `rarification action ${actionIndex + 1} is unavailable at this offer frontier`,
+            undefined,
+            findingChronology,
+            actionIndex,
+            callingCard.offer.kind === 'traits'
+              ? callingCard.offer.rarificationActions?.[actionIndex]
+              : undefined,
+          ),
         );
       }
     }
   }
   if (
-    findings !== undefined &&
-    ((evaluation.generation?.findings.length ?? 0) > 0 ||
-      evaluation.composition.findings.length > 0 ||
-      evaluation.assessments.some((assessment) => !assessment.legal))
+    (evaluation.generation?.findings.length ?? 0) > 0 ||
+    evaluation.composition.findings.length > 0 ||
+    evaluation.assessments.some((assessment) => !assessment.legal)
   ) {
     const owner = traitOwnerAddress(reward.origin);
     if (owner !== undefined) {
       evaluation.assessments.forEach((assessment) =>
         assessment.findings.forEach((finding) => {
-          addTraitFinding(
-            findings,
+          findingEmissions.push(
+            traitFindingEmission(
+              owner,
+              role,
+              lifecyclePoint,
+              sequence,
+              finding.code,
+              finding.traitKey,
+              finding.detail,
+              finding.requirementTraitKeys,
+              findingChronology,
+            ),
+          );
+        }),
+      );
+      evaluation.generation?.findings.forEach((finding) => {
+        findingEmissions.push(
+          traitFindingEmission(
+            owner,
+            role,
+            lifecyclePoint,
+            sequence,
+            finding.code,
+            undefined,
+            undefined,
+            undefined,
+            findingChronology,
+          ),
+        );
+      });
+      evaluation.composition.findings.forEach((finding) => {
+        findingEmissions.push(
+          traitFindingEmission(
             owner,
             role,
             lifecyclePoint,
             sequence,
             finding.code,
             finding.traitKey,
-            finding.detail,
-            finding.requirementTraitKeys,
+            undefined,
+            undefined,
             findingChronology,
-          );
-        }),
-      );
-      evaluation.generation?.findings.forEach((finding) => {
-        addTraitFinding(
-          findings,
-          owner,
-          role,
-          lifecyclePoint,
-          sequence,
-          finding.code,
-          undefined,
-          undefined,
-          undefined,
-          findingChronology,
-        );
-      });
-      evaluation.composition.findings.forEach((finding) => {
-        addTraitFinding(
-          findings,
-          owner,
-          role,
-          lifecyclePoint,
-          sequence,
-          finding.code,
-          finding.traitKey,
-          undefined,
-          undefined,
-          findingChronology,
+          ),
         );
       });
     }
@@ -580,7 +645,7 @@ function applyTraitOfferForAcquisitionInternal(
       legal && acquisitionMode.kind === 'ordinary'
         ? screenCompletion(catalog, reward.origin, effectiveAuthored.giverKey)
         : undefined;
-    return Object.freeze({
+    return settle({
       branch: consumeChaosGodScreen(
         catalog,
         branchAfterOffer,
@@ -640,9 +705,7 @@ function applyTraitOfferForAcquisitionInternal(
     sequence,
     ...(findingChronology === undefined ? {} : { findingChronology }),
   });
-  if (findings !== undefined)
-    for (const entry of selectedChildren.findings)
-      addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology);
+  findingEmissions.push(...selectedChildren.findings.map(regionEntryEmission));
   const traitHistory = selectedChildren.traitHistory;
   let blockedChildAddress = selectedChildren.blockedChild?.address;
   let blockedChildCandidateContext = selectedChildren.blockedChild?.candidateContext;
@@ -705,9 +768,7 @@ function applyTraitOfferForAcquisitionInternal(
       sequence,
       findingChronology,
     );
-    if (findings !== undefined)
-      for (const entry of stone.findings)
-        addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology);
+    findingEmissions.push(...stone.findings.map(regionEntryEmission));
     blockedChildAddress ??= stone.blockedChild?.address;
     blockedChildCandidateContext ??= stone.blockedChild?.candidateContext;
     if (stone.secondary !== undefined) {
@@ -730,7 +791,6 @@ function applyTraitOfferForAcquisitionInternal(
         'concaveStoneSecondary',
         lifecyclePoint,
         sequence,
-        findings,
         findingChronology,
         Object.freeze({
           mode: Object.freeze({
@@ -743,6 +803,8 @@ function applyTraitOfferForAcquisitionInternal(
           }),
         }),
       );
+      // The residual's findings follow the Stone's in acquisition order.
+      findingEmissions.push(...secondarySettlement.findingEmissions);
       stoneBranch = secondarySettlement.branch;
       blockedChildAddress ??= secondarySettlement.blockedChild?.address;
       // Residual children retain the outer offer's address. Their candidate
@@ -758,7 +820,7 @@ function applyTraitOfferForAcquisitionInternal(
     evaluation.targetedAcquisition.legal
       ? screenCompletion(catalog, reward.origin, effectiveAuthored.giverKey)
       : undefined;
-  return Object.freeze({
+  return settle({
     branch: stoneBranch,
     ...(completion === undefined ? {} : { completion }),
     ...(blockedChildAddress === undefined
@@ -785,25 +847,23 @@ export function applyTraitOfferForAcquisition(
   findingChronology?: FindingChronology,
   options: ApplyTraitOfferOptions = {},
 ): TraitOfferAcquisitionSettlement {
-  const localFindings = new Map<string, FindingRegionEntry>();
-  const complete = (
-    settlement: Omit<TraitOfferAcquisitionSettlement, 'findingEntries'>,
-  ): TraitOfferAcquisitionSettlement => {
-    const findingEntries = Object.freeze([...localFindings.values()]);
-    return Object.freeze({ ...settlement, findingEntries });
-  };
   const traitContext: TraitOfferSourceContext = Object.freeze({ ...(reward.traitContext ?? {}) });
-  const settlement = applyTraitOfferForAcquisitionInternal(
+  const product = applyTraitOfferForAcquisitionInternal(
     catalog,
     branch,
     reward,
     role,
     lifecyclePoint,
     sequence,
-    localFindings,
     findingChronology,
     options,
   );
+  const { evaluation } = product;
+  const settlement = settlementOf(product);
+  const findingEntries = reduceTraitFindingEmissions(product.findingEmissions);
+  const complete = (
+    result: Omit<TraitOfferAcquisitionSettlement, 'findingEntries'>,
+  ): TraitOfferAcquisitionSettlement => Object.freeze({ ...result, findingEntries });
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   // A missing authored screen is an incomplete reached frontier, not a closed
   // choice. Retain both one-use effects so the repaired screen receives them.
@@ -834,7 +894,6 @@ export function applyTraitOfferForAcquisition(
   const consumesYarn =
     temporaryBoonRarityUses(branch.state, traitContext) > 0 &&
     boonRarityFactsForOffer(catalog, branch.state, closedContext) !== undefined;
-  const evaluation = settlement.branch.traitEvaluations?.[branch.traitEvaluations?.length ?? 0];
   // Hymn is spent only by a screen whose options were built while Hymn was held.
   const consumesHymn =
     evaluation !== undefined &&
@@ -879,8 +938,7 @@ function applyEchoLastRunBoonForAcquisition(
   sequence: number,
   findingChronology?: FindingChronology,
 ): TraitOfferAcquisitionSettlement {
-  const findings = new Map<string, FindingRegionEntry>();
-  const settlement = applyTraitOfferForAcquisitionInternal(
+  const product = applyTraitOfferForAcquisitionInternal(
     catalog,
     branch,
     {
@@ -891,11 +949,11 @@ function applyEchoLastRunBoonForAcquisition(
     'echoLastRunSelection',
     lifecyclePoint,
     sequence,
-    findings,
     findingChronology,
     Object.freeze({ mode: Object.freeze({ kind: 'direct' }) }),
     Object.freeze({ address, outcome }),
   );
+  const settlement = settlementOf(product);
   // The nested acquisition is edited atomically through its Echo choice owner;
   // its internal one-row offer is not an independently authored trait screen.
   return Object.freeze({
@@ -906,7 +964,7 @@ function applyEchoLastRunBoonForAcquisition(
           blockedChild: Object.freeze({ ...settlement.blockedChild, address }),
         }),
     findingEntries: Object.freeze(
-      [...findings.values()].map((entry) =>
+      reduceTraitFindingEmissions(product.findingEmissions).map((entry) =>
         Object.freeze({
           ...entry,
           finding: Object.freeze({ ...entry.finding, origin: address }),
@@ -979,13 +1037,11 @@ export function settleEncounterTraitOffer(
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
   unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {
-  const localFindings = new Map<string, FindingRegionEntry>();
+  const findingEmissions: TraitFindingEmission[] = [];
   const complete = (
     settlement: Omit<EncounterTraitOfferSettlement, 'findingEntries'>,
-  ): EncounterTraitOfferSettlement => {
-    const findingEntries = Object.freeze([...localFindings.values()]);
-    return Object.freeze({ ...settlement, findingEntries });
-  };
+  ): EncounterTraitOfferSettlement =>
+    Object.freeze({ ...settlement, findingEntries: reduceTraitFindingEmissions(findingEmissions) });
   const providerKey = offer?.giverKey ?? unresolvedProviderKey;
   if (providerKey === undefined)
     throw new Error('encounter trait offer settlement requires its known provider');
@@ -1008,7 +1064,7 @@ export function settleEncounterTraitOffer(
       sequence,
       findingChronology,
     );
-    mergeTraitSettlementFindings(localFindings, settlement.findingEntries);
+    findingEmissions.push(...entryEmissions(settlement.findingEntries));
     return complete({ ...settlement, screenCompleted: false });
   }
   let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
@@ -1029,7 +1085,7 @@ export function settleEncounterTraitOffer(
         sequence,
         findingChronology,
       );
-      mergeTraitSettlementFindings(localFindings, settlement.findingEntries);
+      findingEmissions.push(...entryEmissions(settlement.findingEntries));
       candidateContact = settlement.candidateContact;
       completion = settlement.completion;
       return settlement.branch;
@@ -1050,8 +1106,7 @@ export function settleEncounterTraitOffer(
     // Record the exact pre-effect frontier before validating Circe's authored
     // child. Circe's ordinary offer findings stay provisional until that child
     // is valid, so the child remains the first blocking repair owner.
-    const provisionalFindings =
-      disposition?.kind === 'circe' ? new Map<string, FindingRegionEntry>() : localFindings;
+    const appliedEmissions: TraitFindingEmission[] = [];
     const appliedSettlement = applyTraitOfferForAcquisition(
       catalog,
       branch,
@@ -1062,7 +1117,11 @@ export function settleEncounterTraitOffer(
       findingChronology,
       directTraitSetBranchHistories === undefined ? {} : { directTraitSetBranchHistories },
     );
-    mergeTraitSettlementFindings(provisionalFindings, appliedSettlement.findingEntries);
+    appliedEmissions.push(...entryEmissions(appliedSettlement.findingEntries));
+    // Circe's offer findings stay provisional until its child is valid, and a
+    // rejected child drops them; every other offer publishes them now.
+    const publishAppliedFindings = () => findingEmissions.push(...appliedEmissions.splice(0));
+    if (disposition?.kind !== 'circe') publishAppliedFindings();
     candidateContact = appliedSettlement.candidateContact;
     completion = appliedSettlement.completion;
     const applied = appliedSettlement.branch;
@@ -1070,22 +1129,22 @@ export function settleEncounterTraitOffer(
     const rejectCirce = (code: TraitFindingCode, detail?: string): RewardBranchState => {
       const address = createCirceResolutionAddress(owner, offer.selectedOptionKey);
       blockedChild = Object.freeze({ address, branch: applied });
-      addTraitChildFinding(
-        localFindings,
-        address,
-        lifecyclePoint,
-        sequence,
-        code,
-        selected?.traitKey,
-        detail,
-        findingChronology,
+      findingEmissions.push(
+        traitChildFindingEmission(
+          address,
+          lifecyclePoint,
+          sequence,
+          code,
+          selected?.traitKey,
+          detail,
+          findingChronology,
+        ),
       );
       return applied;
     };
     if (disposition?.kind === 'circe') {
       if (applied.state.traitHistory === branch.state.traitHistory) {
-        if (provisionalFindings !== localFindings)
-          for (const [key, entry] of provisionalFindings) localFindings.set(key, entry);
+        publishAppliedFindings();
         return applied;
       }
       const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
@@ -1098,8 +1157,7 @@ export function settleEncounterTraitOffer(
       );
       if (rejection !== undefined) return rejectCirce(rejection.code, rejection.detail);
     }
-    if (provisionalFindings !== localFindings)
-      for (const [key, entry] of provisionalFindings) localFindings.set(key, entry);
+    publishAppliedFindings();
     if (
       disposition?.kind === 'echo' &&
       disposition.effect === 'lastRunBoon' &&
@@ -1111,15 +1169,16 @@ export function settleEncounterTraitOffer(
       const child = selected.echoLastRunBoon;
       const reject = (code: TraitFindingCode, detail?: string): RewardBranchState => {
         blockedChild = Object.freeze({ address, branch: applied });
-        addTraitChildFinding(
-          localFindings,
-          address,
-          lifecyclePoint,
-          sequence,
-          code,
-          selected.traitKey,
-          detail,
-          findingChronology,
+        findingEmissions.push(
+          traitChildFindingEmission(
+            address,
+            lifecyclePoint,
+            sequence,
+            code,
+            selected.traitKey,
+            detail,
+            findingChronology,
+          ),
         );
         return applied;
       };
@@ -1154,7 +1213,7 @@ export function settleEncounterTraitOffer(
         sequence,
         findingChronology,
       );
-      mergeTraitSettlementFindings(localFindings, nestedSettlement.findingEntries);
+      findingEmissions.push(...entryEmissions(nestedSettlement.findingEntries));
       const nested = nestedSettlement.branch;
       blockedChild ??= nestedSettlement.blockedChild;
       if (nested.state.traitHistory === applied.state.traitHistory)
@@ -1175,15 +1234,16 @@ export function settleEncounterTraitOffer(
       const reject = (code: TraitFindingCode, detail?: string): RewardBranchState => {
         const address = createEchoPomTargetAddress(owner, offer.selectedOptionKey);
         blockedChild = Object.freeze({ address, branch: applied });
-        addTraitChildFinding(
-          localFindings,
-          address,
-          lifecyclePoint,
-          sequence,
-          code,
-          selected.traitKey,
-          detail,
-          findingChronology,
+        findingEmissions.push(
+          traitChildFindingEmission(
+            address,
+            lifecyclePoint,
+            sequence,
+            code,
+            selected.traitKey,
+            detail,
+            findingChronology,
+          ),
         );
         return applied;
       };
@@ -1235,8 +1295,7 @@ export function settleEncounterTraitOffer(
   });
 }
 
-function addTraitChildFinding(
-  findings: Map<string, FindingRegionEntry>,
+function traitChildFindingEmission(
   origin: SemanticAddress,
   lifecyclePoint: string,
   sequence: number,
@@ -1244,33 +1303,21 @@ function addTraitChildFinding(
   traitKey: string | undefined,
   detail?: string,
   findingChronology?: FindingChronology,
-  atomicRegion?: string,
-): void {
-  const entry = createTraitChildFindingEntry(
-    origin,
-    lifecyclePoint,
-    sequence,
-    code,
-    traitKey,
-    detail,
-    findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
-    atomicRegion,
+): TraitFindingEmission {
+  return regionEntryEmission(
+    createTraitChildFindingEntry(
+      origin,
+      lifecyclePoint,
+      sequence,
+      code,
+      traitKey,
+      detail,
+      findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+    ),
   );
-  addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology);
 }
 
-function mergeTraitSettlementFindings(
-  findings: Map<string, FindingRegionEntry>,
-  entries: readonly FindingRegionEntry[],
-): void {
-  for (const entry of entries) {
-    for (const evaluation of entry.levelResolutionEvaluations ?? [undefined])
-      addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology, evaluation);
-  }
-}
-
-function addTraitFinding(
-  findings: Map<string, FindingRegionEntry>,
+function traitFindingEmission(
   owner: TraitOfferOwnerAddress,
   acquisitionRole: string,
   lifecyclePoint: string,
@@ -1282,7 +1329,7 @@ function addTraitFinding(
   findingChronology?: FindingChronology,
   actionIndex?: number,
   optionKey?: string,
-): void {
+): TraitFindingEmission {
   const origin = createTraitOfferAddress(owner, acquisitionRole);
   const value: SemanticFinding = Object.freeze({
     code,
@@ -1299,10 +1346,9 @@ function addTraitFinding(
       ...(optionKey === undefined ? {} : { optionKey }),
     }),
   });
-  addRewardFinding(
-    findings,
-    value,
-    ownerRegion(origin),
-    findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
-  );
+  return Object.freeze({
+    finding: value,
+    region: ownerRegion(origin),
+    chronology: findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+  });
 }
