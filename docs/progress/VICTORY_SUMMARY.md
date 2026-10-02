@@ -19,11 +19,14 @@ extent logic; any planner-specific lib API.
 
 ## Facts and simplifications
 
-- Source fact: `routeSession.exit` records `route.lastExitedOccurrence`; room
-  disposal on mismatch or fault leaves the cursor at the unexited room, so the
-  last exited occurrence is the last room realized as planned. Recovery
-  admission (`newAt`) starts the cursor at the recovered index, so earlier rooms
-  are never credited.
+- Source fact: RunClear opens inside the final boss room before LeaveRoom
+  (`PresentationBiomeI.lua:151`, `PresentationBiomeQ.lua:42` call
+  `OpenRunClearScreen` after the kill), so on a synchronized session the
+  current occurrence is the last room realized as planned. Otherwise
+  `routeSession.exit` records `route.lastExitedOccurrence`; room disposal on
+  mismatch or fault leaves the cursor at the unexited room, so the last exited
+  occurrence is the fallback. Recovery admission (`newAt`) starts the cursor at
+  the recovered index, so earlier rooms are never credited.
 - Simplification: extent and biome boundaries are not consulted. Hub and
   transparent rooms never advance the cursor and never appear.
 

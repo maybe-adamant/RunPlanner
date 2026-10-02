@@ -25,6 +25,7 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
     local runtime = {
         attach = function(target) lu.assertIs(target, module) end,
         roomGuideInspection = function() end,
+        sessionInspection = function() end,
     }
     local imports = {
         ["mods/host/data.lua"] = { buildStorage = function() return {} end, buildStatus = function() return {} end },
@@ -40,7 +41,11 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
         ["mods/host/status_ui.lua"] = { bind = function() return { drawTab = function() end, drawQuickContent = function() end } end },
         ["mods/room/guide.lua"] = { attach = function(target, inspection)
             lu.assertIs(target, module)
-            lu.assertIsFunction(inspection)
+            lu.assertIs(inspection, runtime.roomGuideInspection)
+        end },
+        ["mods/host/victory_summary.lua"] = { attach = function(target, inspection)
+            lu.assertIs(target, module)
+            lu.assertIs(inspection, runtime.sessionInspection)
         end },
     }
     local environment = setmetatable({

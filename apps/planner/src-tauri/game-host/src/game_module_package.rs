@@ -148,7 +148,7 @@ mod tests {
     fn module_checkout(root: &Path) {
         write(
             &root.join("manifest.template.json"),
-            br#"{"namespace":"adamantRunPlanner","name":"Run_Planner","description":"d","dependencies":["adamant-ModpackLib-4.1.0"],"website_url":"https://example.invalid","FullName":"adamantRunPlanner-Run_Planner"}"#,
+            br#"{"namespace":"adamantRunPlanner","name":"Run_Planner","description":"d","dependencies":["adamant-ModpackLib-4.2.0"],"website_url":"https://example.invalid","FullName":"adamantRunPlanner-Run_Planner"}"#,
         );
         for name in ["icon.png", "LICENSE", "README.md"] {
             write(&root.join(name), name.as_bytes());
@@ -198,7 +198,7 @@ mod tests {
         }
         let package =
             ModulePackage::from_assembly("2.3.4", PackageSource::Checkout, first).unwrap();
-        assert_eq!(package.dependencies, ["adamant-ModpackLib-4.1.0"]);
+        assert_eq!(package.dependencies, ["adamant-ModpackLib-4.2.0"]);
         let compatibility = package
             .files
             .iter()

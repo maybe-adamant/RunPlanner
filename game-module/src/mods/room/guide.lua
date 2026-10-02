@@ -4,58 +4,9 @@ local guide = {}
 
 local MAX_ROWS = 6
 
--- Display-only names matching the catalog; native map IDs are not text keys.
-local roomOccupants = {
-    F_Story01 = "Arachne", G_Story01 = "Narcissus", H_Bridge01 = "Echo", I_Story01 = "Hades",
-    N_Story01 = "Medea", O_Story01 = "Circe", P_Story01 = "Dionysus",
-    F_MiniBoss01 = "Root-Stalker", F_MiniBoss02 = "Shadow-Spiller", F_MiniBoss03 = "Master-Slicer",
-    G_MiniBoss01 = "Deep Serpent", G_MiniBoss02 = "King Vermin", G_MiniBoss03 = "Hellifish",
-    H_MiniBoss01 = "Phantom", H_MiniBoss02 = "Queen Lamia",
-    I_MiniBoss01 = "The Verminancer", I_MiniBoss02 = "Goldwrath",
-    N_MiniBoss01 = "Satyr Champion", N_MiniBoss02 = "Erymanthian Boar",
-    O_MiniBoss01 = "Charybdis", O_MiniBoss02 = "The Yargonaut",
-    P_MiniBoss01 = "Talos", P_MiniBoss02 = "Mega-Dracon",
-    Q_MiniBoss02 = "Brute", Q_MiniBoss03 = "Tail", Q_MiniBoss04 = "Eye", Q_MiniBoss05 = "Stalker",
-}
-
-local function displayName(key, fallback)
-    if type(key) ~= "string" or key == "" then return fallback end
-    local ok, label = pcall(function()
-        return _G.GetDisplayName and _G.GetDisplayName({ Text = key }) or nil
-    end)
-    if ok and type(label) == "string" and label ~= "" and label ~= key then
-        -- Native names may contain resource icons and formatting commands.
-        -- The compact guide deliberately renders plain text only.
-        label = label:gsub("{[!#][^}]*}", ""):gsub("%s+", " "):match("^%s*(.-)%s*$")
-        if label ~= "" then return label end
-    end
-    return fallback
-end
-
-local function roomName(gameName)
-    local localized = displayName(gameName, nil)
-    if localized then return localized end
-    local chaos = tostring(gameName):match("^Chaos_(%d+)$")
-    if chaos then return "Chaos · " .. chaos end
-    local dream = tostring(gameName):match("^Dream_PostBoss(%d+)$")
-    if dream then return "Dream · Postboss " .. dream end
-    local biome, kind, number = tostring(gameName):match("^(%u)_([%a]+)(%d*)$")
-    local biomes = { F = "Erebus", G = "Oceanus", H = "Fields", I = "Tartarus",
-        N = "Ephyra", O = "Thessaly", P = "Olympus", Q = "Summit", B = "Anomaly", C = "Zagreus" }
-    if biomes[biome] and roomOccupants[gameName] then
-        return biomes[biome] .. " · " .. roomOccupants[gameName]
-    end
-    local rooms = { Combat = "Combat", MiniBoss = "Miniboss", Boss = "Boss", Opening = "Opening",
-        Intro = "Intro", PreHub = "Hub entrance", Hub = "Hub", PreBoss = "Preboss",
-        PostBoss = "Postboss", Shop = "Shop", Story = "Story", Reprieve = "Fountain",
-        Devotion = "Trial", Sub = "Side room" }
-    if biomes[biome] and rooms[kind] then
-        local suffix = (kind == "Combat" or kind == "Sub" or kind == "MiniBoss" or kind == "Opening")
-            and number ~= "" and (" " .. number) or ""
-        return biomes[biome] .. " · " .. rooms[kind] .. suffix
-    end
-    return "Current room"
-end
+local names = type(import) == "function" and import("mods/room/names.lua")
+    or require("mods.room.names")
+local roomName, displayName, roomOccupants = names.room, names.display, names.occupants
 
 local function sourceName(source)
     if type(source) ~= "string" then return nil end
@@ -164,9 +115,9 @@ local function instruction(description, occurrence, transaction)
     if kind == "interactEncounter" then
         local resolution = transaction and transaction.resolution
         local giver = resolution and resolution.offer and resolution.offer.giver
-        local names = { "Arachne", "Narcissus", "Echo", "Hades", "Medea", "Circe",
+        local givers = { "Arachne", "Narcissus", "Echo", "Hades", "Medea", "Circe",
             "Dionysus", "Icarus", "Artemis", "Athena", "Nemesis", "Heracles" }
-        for _, name in ipairs(names) do
+        for _, name in ipairs(givers) do
             if giver == name or (resolution and resolution.kind == "nemesisRandomEvent" and name == "Nemesis")
                 or (type(description.encounterKey) == "string"
                     and (description.encounterKey:match("^" .. name)

@@ -951,7 +951,7 @@ pub mod test_support {
 
     pub fn package_from(version: &str, main: &str, source: PackageSource) -> ModulePackage {
         let manifest = format!(
-            r#"{{"namespace":"adamantRunPlanner","name":"Run_Planner","version_number":"{version}","dependencies":["Hell2Modding-Hell2Modding-1.0.78","SGG_Modding-ModUtil-4.0.1","adamant-ModpackLib-4.1.0"],"FullName":"adamantRunPlanner-Run_Planner"}}"#
+            r#"{{"namespace":"adamantRunPlanner","name":"Run_Planner","version_number":"{version}","dependencies":["Hell2Modding-Hell2Modding-1.0.78","SGG_Modding-ModUtil-4.0.1","adamant-ModpackLib-4.2.0"],"FullName":"adamantRunPlanner-Run_Planner"}}"#
         );
         let files = [
             (
@@ -1044,8 +1044,8 @@ mod tests {
         let package = package("1.2.0", "return 1");
         let cases = [
             (None, ModpackLibState::Missing),
-            (Some("4.0.1"), ModpackLibState::Older),
-            (Some("4.1.0"), ModpackLibState::Compatible),
+            (Some("4.1.0"), ModpackLibState::Older),
+            (Some("4.2.0"), ModpackLibState::Compatible),
             (Some("4.7.2"), ModpackLibState::Compatible),
             (Some("5.0.0"), ModpackLibState::IncompatibleMajor),
             (Some("3.9.9"), ModpackLibState::IncompatibleMajor),
@@ -1064,7 +1064,7 @@ mod tests {
             let before = snapshot(&library);
             let inspection = inspect(&target, &package).unwrap();
             assert_eq!(inspection.modpack_lib.state, expected, "{found:?}");
-            assert_eq!(inspection.modpack_lib.required, "4.1.0");
+            assert_eq!(inspection.modpack_lib.required, "4.2.0");
             assert_eq!(inspection.modpack_lib.found.as_deref(), found);
             let blockers = inspection_blockers(&inspection, &package.version);
             assert_eq!(
@@ -1102,7 +1102,7 @@ mod tests {
             names(&inspect(&target, &package).unwrap()),
             ["Hell2Modding-Hell2Modding", "SGG_Modding-ModUtil"]
         );
-        modpack_lib(&temporary.0, "4.1.0");
+        modpack_lib(&temporary.0, "4.2.0");
         assert_eq!(
             names(&inspect(&target, &package).unwrap()),
             [
@@ -1140,7 +1140,7 @@ mod tests {
             if managed {
                 write(
                     &temporary.0.join(MODS_YML_FILE),
-                    "- manifestVersion: 1\n  name: adamantRunPlanner-Run_Planner\n  dependencies:\n    - adamant-ModpackLib-4.1.0\n  enabled: false\n- manifestVersion: 1\n  name: adamantRunPlanner-RunPlanner_Modpack\n  enabled: true\n",
+                    "- manifestVersion: 1\n  name: adamantRunPlanner-Run_Planner\n  dependencies:\n    - adamant-ModpackLib-4.2.0\n  enabled: false\n- manifestVersion: 1\n  name: adamantRunPlanner-RunPlanner_Modpack\n  enabled: true\n",
                 );
                 plugin(&temporary.0, COORDINATOR_DIRECTORY, "{}");
             } else {
@@ -1328,7 +1328,7 @@ mod tests {
         let target = target(&temporary.0, TargetKind::Manual);
         let package = package("1.2.0", "return 1");
         assert_eq!(remove(&target, &package).unwrap(), RemoveOutcome::Absent);
-        modpack_lib(&temporary.0, "4.1.0");
+        modpack_lib(&temporary.0, "4.2.0");
         write(
             &target
                 .rom
