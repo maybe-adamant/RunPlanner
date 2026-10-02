@@ -12,7 +12,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch } from '@planner/state/store';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -71,6 +71,9 @@ export function RouteOverview({
 }) {
   const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
+  const replacementRevision = useAppSelector(
+    (state) => state.editorSession.workspaceReplacementRevision,
+  );
   const configuredBiomeCount = workspaceRoute.biomes.length;
   const configuredBiomeLabels = navigation.biomePanels
     .slice(0, configuredBiomeCount)
@@ -132,6 +135,10 @@ export function RouteOverview({
           workspaceRoute={workspaceRoute}
         />
       )}
+      <RunModifiersEditor
+        key={`${project.projectId}:${replacementRevision}`}
+        workspaceRoute={workspaceRoute}
+      />
     </section>
   );
 }
@@ -455,5 +462,103 @@ function MatureRouteLoadout({
         />
       </div>
     </>
+  );
+}
+
+function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: WorkspaceRoute }) {
+  const dispatch = useAppDispatch();
+  const control = workspaceRoute.runModifiers;
+  const multiplier = control.value.enemyGoldDropChanceMultiplier;
+  const [draft, setDraft] = useState<{
+    readonly source: number;
+    readonly text: string;
+    readonly error?: string;
+  }>();
+  // An authored multiplier replacement (including history restoration) supersedes its draft.
+  if (draft !== undefined && draft.source !== multiplier) setDraft(undefined);
+  const currentDraft = draft?.source === multiplier ? draft : undefined;
+  const prefix = `${workspaceRoute.routeKey}-run-modifiers`;
+  const commit = () => {
+    if (currentDraft === undefined) return;
+    const result = control.goldDraftIntent(currentDraft.text);
+    if (result.kind === 'invalid') {
+      setDraft({ ...currentDraft, error: result.message });
+      return;
+    }
+    setDraft(undefined);
+    dispatch(authoredProjectCommandDispatched(result.intent.command));
+  };
+  return (
+    <section
+      className="route-run-modifiers route-loadout-section"
+      aria-labelledby={`${prefix}-heading`}
+    >
+      <h3 id={`${prefix}-heading`} className="route-loadout-summary">
+        Run modifiers
+      </h3>
+      <div className="route-run-modifier-controls">
+        <label className="route-run-modifier-toggle">
+          <input
+            type="checkbox"
+            checked={control.value.guaranteeEligibleCrits}
+            onChange={(event) =>
+              dispatch(
+                authoredProjectCommandDispatched(control.setCrits(event.target.checked).command),
+              )
+            }
+          />
+          Guarantee eligible crits
+        </label>
+        <label className="route-run-modifier-toggle">
+          <input
+            type="checkbox"
+            checked={control.value.guaranteeEligibleDoubleDamage}
+            onChange={(event) =>
+              dispatch(
+                authoredProjectCommandDispatched(
+                  control.setDoubleDamage(event.target.checked).command,
+                ),
+              )
+            }
+          />
+          Guarantee eligible double damage
+        </label>
+        <div className="field-control route-run-modifier-gold">
+          <label htmlFor={`${prefix}-gold`}>Enemy gold-drop chance</label>
+          <div className="route-run-modifier-multiplier">
+            <input
+              id={`${prefix}-gold`}
+              type="text"
+              inputMode="decimal"
+              value={currentDraft?.text ?? String(multiplier)}
+              aria-invalid={currentDraft?.error === undefined ? undefined : true}
+              aria-describedby={`${prefix}-help${currentDraft?.error === undefined ? '' : ` ${prefix}-error`}`}
+              onChange={(event) => setDraft({ source: multiplier, text: event.target.value })}
+              onBlur={commit}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commit();
+                } else if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setDraft(undefined);
+                }
+              }}
+            />
+            <span aria-hidden="true">×</span>
+          </div>
+          {currentDraft?.error === undefined ? null : (
+            <p id={`${prefix}-error`} role="alert">
+              {currentDraft.error}
+            </p>
+          )}
+        </div>
+      </div>
+      <p id={`${prefix}-help`} className="panel-description">
+        Crits and double damage each require a positive contextual native chance and retain their
+        prerequisites and blockers. Only capped enemy gold-drop chances increase; the native
+        encounter money store still applies.
+      </p>
+    </section>
   );
 }

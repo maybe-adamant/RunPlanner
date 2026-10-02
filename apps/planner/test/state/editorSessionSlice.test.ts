@@ -74,6 +74,7 @@ describe('editor session navigation', () => {
       focusedSemanticOwner: null,
       selectedFinding: null,
       semanticNavigationRevision: 0,
+      workspaceReplacementRevision: 0,
     });
   });
 
@@ -361,6 +362,9 @@ describe('editor session navigation', () => {
       selectedFinding: null,
     });
     expect(replacement.semanticNavigationRevision).toBe(selected.semanticNavigationRevision);
+    expect(replacement.workspaceReplacementRevision).toBe(
+      selected.workspaceReplacementRevision + 1,
+    );
   });
 
   it('rejects session addresses with unknown catalog identities', () => {

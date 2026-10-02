@@ -48,6 +48,7 @@ import { presentWorkspaceBiome } from './presentation/biome-presentation';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
 import { indexFindingsByRepairTarget } from './navigation/finding-highlights';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
+import { bindRunModifiers } from './interactions/run-modifiers';
 import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
   appendUniqueBatchInteractionRequirements,
@@ -658,6 +659,7 @@ export function createStructuredWorkspaceProjection(
         ),
       ]);
       const route = Object.freeze({
+        runModifiers: bindRunModifiers(project.route),
         ...(fixedLoadout ? {} : { startingReward }),
         startingArcana: Object.freeze(
           createArcanaFearState(catalog, project.route.loadout).arcana.active.map(

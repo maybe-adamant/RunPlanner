@@ -542,7 +542,19 @@ export interface WorkspaceRouteRailBiome {
   readonly status: WorkspaceStatus;
 }
 
+export interface WorkspaceRunModifiersControl {
+  readonly value: import('@run-planner/engine/authored-project').RunModifiers;
+  readonly setCrits: (value: boolean) => WorkspaceCommandIntent;
+  readonly setDoubleDamage: (value: boolean) => WorkspaceCommandIntent;
+  readonly goldDraftIntent: (
+    draft: string,
+  ) =>
+    | { readonly kind: 'valid'; readonly intent: WorkspaceCommandIntent }
+    | { readonly kind: 'invalid'; readonly message: string };
+}
+
 export interface WorkspaceRoute {
+  readonly runModifiers: WorkspaceRunModifiersControl;
   /**
    * The route-owned offer; any acquisition payload remains on the first entry Timeline.
    * Absent when the route's save profile starts without a reward.
