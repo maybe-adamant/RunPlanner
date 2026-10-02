@@ -72,6 +72,51 @@ engine facts because candidate history and required-object validation need
 their exact positions, but neither is a separate rendered row. The timeline
 must not imply that an optional cleanup action is required before leaving.
 
+### Biome reward walk
+
+The biome reward chronology applies each history event through one seam table
+(`chronologySeamTable`). A seam reads the fixed walk context and the current
+walk state and returns the next state, a possible Run State capture or
+target-slot history checkpoint, and ordered accumulator emissions. Events with
+no reward seam only advance the branches to their sequence.
+
+| Walk seam                                               | Reward handling                                                                                                                       |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                          |
+| Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts.                                                                     |
+| Room entered                                            | Room entry, Shrine and Well assessments, the room-entry Run State capture; halts when a Shrine delivery needs placement.              |
+| Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                  |
+| Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                 |
+| Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                            |
+| Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                   |
+| Acquisition point reached                               | Acquisition settlement, Purging Pool sale nodes and the Shrine Travel Deal refill state.                                              |
+| Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates. |
+| Room exited                                             | Room exit and its Run State capture.                                                                                                  |
+| Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                      |
+| Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                     |
+| Eris interacted (Room Action)                           | Eris's curse.                                                                                                                         |
+| Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                         |
+| Shrine deliveries scheduled (Room Action)               | Hermes Shrine delivery settlement.                                                                                                    |
+
+Hub departure is a post-step hook on the same table: a Hub exit or a visit's
+return records a departure, and a later fountain use in that interval replaces
+it. After the last event the walk captures the Hub frontier's Run State,
+evaluates every boss-door store, then records the blank exit-decision
+frontier's target history. Boss-door stores are therefore evaluated after the
+history loop, and their findings publish last, although each store belongs to
+its source room's exit boundary.
+
+Trait settlement within these seams settles a level-resolution role from the
+opened branch. A selected offer's settled branch takes reward history from the
+opened branch and keepsakes from the Calling-Card-adjusted branch.
+
+The walk is owned by `simulation/rewards/biome/`: `chronology.ts`
+orchestrates it, `chronology-walk.ts` defines the context and walk state,
+`chronology-seams.ts` holds the seam table, `chronology-accumulator.ts` owns
+the accumulated emissions and their write rules, `chronology-run-state.ts`
+owns Run State capture and target-slot history, and `chronology-publication.ts`
+publishes the finished walk.
+
 ### Biome-specific correspondence
 
 #### Devotion
