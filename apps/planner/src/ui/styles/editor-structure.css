@@ -184,6 +184,8 @@
 .room-card > label,
 .field-control > span,
 .loadout-dialog-launcher > label,
+.route-run-modifier-toggle > span,
+.route-run-modifier-gold > label,
 .contextual-picker > label {
   color: #aaa7af;
   font-size: 0.78rem;

@@ -173,7 +173,7 @@ the engine before dispatch. The gold slider offers 1×–5× in 0.1× steps, wit
 Slider adjustments remain local until pointer release, navigation-key release,
 blur or Enter, producing one history edit per gesture. Existing authored values
 outside the slider range remain intact until edited. Explanatory text appears
-on help-icon hover or focus. Sibling and unrelated
+on each option’s hover, with accessible descriptions on its control. Sibling and unrelated
 edits retain that draft, and committing it uses the current authored siblings.
 An authored multiplier change refreshes it; accepted document replacement clears
 it even when the loaded project has the same persisted ID and multiplier.

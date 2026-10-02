@@ -14,10 +14,9 @@ import {
 } from '@planner-test/fixtures/renderPlanner';
 
 afterEach(cleanup);
-const gold = () =>
-  screen.getByRole('slider', { name: 'Enemy gold-drop chance multiplier' }) as HTMLInputElement;
-const crits = () => screen.getByRole('checkbox', { name: 'Guarantee eligible crits' });
-const doubles = () => screen.getByRole('checkbox', { name: 'Guarantee eligible double damage' });
+const gold = () => screen.getByRole('slider', { name: 'Enemy gold chance' }) as HTMLInputElement;
+const crits = () => screen.getByRole('checkbox', { name: 'Guaranteed crits' });
+const doubles = () => screen.getByRole('checkbox', { name: 'Guaranteed double damage' });
 
 function open(routeKey = 'Underworld') {
   const view = renderPlannerForInteraction({ application: createOpenTestApplication(routeKey) });
@@ -58,16 +57,14 @@ describe('Run modifier authoring', () => {
     expect(view.project().route.loadout.runModifiers).toBeUndefined();
   });
 
-  it('shows help on focus and dismisses it with Escape', () => {
+  it('puts concise hover help on each option without an extra button', () => {
     open();
     expect(screen.getByRole('heading', { name: 'Loadout' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Modifiers' })).toBeTruthy();
-    expect(screen.queryByRole('tooltip')).toBeNull();
-    const help = screen.getByRole('button', { name: 'About run modifiers' });
-    fireEvent.focus(help);
-    expect(screen.getByRole('tooltip').textContent).toContain('room gold limits');
-    fireEvent.keyDown(help, { key: 'Escape' });
-    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'About run modifiers' })).toBeNull();
+    expect(crits().closest('label')?.title).toContain('native chance is positive');
+    expect(doubles().closest('label')?.title).toContain('native chance is positive');
+    expect(gold().getAttribute('aria-description')).toContain('room gold limits');
   });
 
   it('commits a slider gesture once and restores it through history and replacement', () => {
