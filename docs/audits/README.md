@@ -62,6 +62,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 
 ### Loadout and progression
 
+- [Run modifiers](loadout-and-progression/RUN_MODIFIERS_GAME_DATA_AUDIT.md) — Native crit and double-damage rolls, capped hostile-enemy gold drops, and run-lifetime contacts.
 - [Arcana and Fear](loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md) — Arcana board, Fear, and progression declarations.
 - [Cherished Heirloom](loadout-and-progression/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md) — Cherished Heirloom progression and supported keepsake effects.
 - [Echo Gift Gift Gift](loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md) — Echo's Gift Gift Gift keepsake capture and replay facts.
