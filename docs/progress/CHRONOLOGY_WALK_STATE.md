@@ -106,6 +106,10 @@ remediation each. Full gate and performance compare at closure.
 7. `offerPointAcquired` and `producerRoleAdvanced` have identical bodies.
 8. Hoisted `recordAcquisitionRoleFrontiers` uses locals declared later; it
    works only because of call order.
+9. Trait settlement's level-resolution path settles from the opened branch,
+   ignoring a Calling Card spend that every other path keeps (`effectiveBranch`).
+10. A selected offer's settled branch takes reward history from the opened
+    branch but keepsakes from the effective branch.
 
 ## Closure
 
