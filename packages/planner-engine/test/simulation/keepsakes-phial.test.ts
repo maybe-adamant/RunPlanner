@@ -420,6 +420,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
       fountainEvent(),
       fountainRoom('ApolloWeaponBoon'),
       [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'))],
+      undefined,
     );
     const branch = result.branches[0];
     expect(branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
@@ -442,6 +443,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
       fountainEvent(2),
       fountainRoom('BoonDecayBoon'),
       [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), history)],
+      undefined,
     );
     expect(result.branches[0]?.state.traitHistory?.equippedTraits.BoonDecayBoon?.rarity).toBe(
       'Heroic',
@@ -453,12 +455,18 @@ describe('Aromatic Phial fountain lifecycle', () => {
   });
 
   it('consumes with no mutation when the Hephaestus cap empties only the mutation domain', () => {
-    const result = applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
-      fountainBranch(
-        equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
-        cappedHephaestusHistory(),
-      ),
-    ]);
+    const result = applyFountainUsedTransition(
+      catalog,
+      fountainEvent(),
+      undefined,
+      [
+        fountainBranch(
+          equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
+          cappedHephaestusHistory(),
+        ),
+      ],
+      undefined,
+    );
     const branch = result.branches[0];
     expect(branch?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     expect(branch?.state.traitHistory?.equippedTraits.HephaestusWeaponBoon?.rarity).toBe('Common');
@@ -469,9 +477,13 @@ describe('Aromatic Phial fountain lifecycle', () => {
   });
 
   it('leaves an empty consumption guard pending and does not spend a second use after consumption', () => {
-    const empty = applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
-      fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo')),
-    ]);
+    const empty = applyFountainUsedTransition(
+      catalog,
+      fountainEvent(),
+      undefined,
+      [fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo'))],
+      undefined,
+    );
     expect(empty.branches[0]?.state.keepsakes.phial).toEqual({ status: 'pending' });
     expect(empty.findings).toEqual([]);
 
@@ -481,6 +493,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
       fountainEvent(2),
       fountainRoom('ApolloWeaponBoon'),
       [fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'), undefined, consumed)],
+      undefined,
     );
     expect(later.branches[0]?.state.keepsakes.phial).toEqual({ status: 'consumed' });
     expect(later.branches[0]?.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.rarity).toBe(
@@ -508,36 +521,56 @@ describe('Aromatic Phial fountain lifecycle', () => {
       ]?.stale;
     expect(
       stale(
-        applyFountainUsedTransition(catalog, fountainEvent(), fountainRoom('ApolloWeaponBoon'), [
-          withWaiting(fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'))),
-        ]),
+        applyFountainUsedTransition(
+          catalog,
+          fountainEvent(),
+          fountainRoom('ApolloWeaponBoon'),
+          [withWaiting(fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo')))],
+          undefined,
+        ),
       ),
     ).toBe(true);
     expect(
       stale(
-        applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
-          withWaiting(
-            fountainBranch(
-              equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
-              cappedHephaestusHistory(),
+        applyFountainUsedTransition(
+          catalog,
+          fountainEvent(),
+          undefined,
+          [
+            withWaiting(
+              fountainBranch(
+                equippedTrait('HephaestusWeaponBoon', 'Hephaestus', 1),
+                cappedHephaestusHistory(),
+              ),
             ),
-          ),
-        ]),
+          ],
+          undefined,
+        ),
       ),
     ).toBe(true);
     // With no rarifiable trait the Phial never fires.
     expect(
       stale(
-        applyFountainUsedTransition(catalog, fountainEvent(), undefined, [
-          withWaiting(fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo'))),
-        ]),
+        applyFountainUsedTransition(
+          catalog,
+          fountainEvent(),
+          undefined,
+          [withWaiting(fountainBranch(equippedTrait('ElementalDamageFloorBoon', 'Apollo')))],
+          undefined,
+        ),
       ),
     ).toBe(false);
   });
 
   it('blocks later chronology on a missing or unavailable required target', () => {
     const branch = fountainBranch(equippedTrait('ApolloWeaponBoon', 'Apollo'));
-    const missing = applyFountainUsedTransition(catalog, fountainEvent(), undefined, [branch]);
+    const missing = applyFountainUsedTransition(
+      catalog,
+      fountainEvent(),
+      undefined,
+      [branch],
+      undefined,
+    );
     expect(missing.branches).toEqual([]);
     expect(missing.findings[0]?.finding.code).toBe('fountainRarityResultMissing');
 
@@ -546,6 +579,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
       fountainEvent(),
       fountainRoom('ZeusWeaponBoon'),
       [branch],
+      undefined,
     );
     expect(unavailable.branches).toEqual([]);
     expect(unavailable.findings[0]?.finding.code).toBe('fountainRarityResultUnavailable');
