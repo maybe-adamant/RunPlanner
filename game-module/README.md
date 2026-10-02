@@ -103,6 +103,9 @@ The optional **Show room guide** setting is off by default. Enable it in the
 in-game inspector to show read-only, numbered guidance for the current planned
 room; it does not make choices or change steering.
 
+After a victory, the RunClear screen names the last room completed as planned
+beneath the `Modded` label.
+
 The optional **Highlight planned choices** setting is also off by default. It
 marks an available planned exit, Ship wheel offer, or trait-screen row when the
 exact native object is available; it never selects it for you.

@@ -21,6 +21,7 @@ local function initialize()
     local ui = import("mods/host/status_ui.lua").bind(runtime.inboxInspection, runtime.sessionInspection,
         runtime.activeSlot)
     local guide = import("mods/room/guide.lua")
+    local victorySummary = import("mods/host/victory_summary.lua")
     local module = lib.createModule({
         pluginGuid = _PLUGIN.guid,
         modpack = "run-planner",
@@ -35,6 +36,7 @@ local function initialize()
     module.ui.tab(ui.drawTab)
     module.ui.quickContent(ui.drawQuickContent)
     guide.attach(module, runtime.roomGuideInspection)
+    victorySummary.attach(module, runtime.sessionInspection)
     runtime.attach(module)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)
         rom.gui.add_imgui(fallbackUi.renderWindow)

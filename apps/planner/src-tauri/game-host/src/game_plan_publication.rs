@@ -298,7 +298,7 @@ mod tests {
 
     fn ready_target(root: &Path, kind: TargetKind) -> (ResolvedTarget, ModulePackage) {
         let target = target(root, kind);
-        modpack_lib(root, "4.1.0");
+        modpack_lib(root, "4.2.0");
         let package = package("1.2.0", "return 1");
         install(
             &target,
@@ -444,7 +444,7 @@ mod tests {
         let older = publish(&config, &package, 2, r#"{"other":true}"#);
         assert_eq!(older.blockers[0].code, BlockerCode::ModpackLibOlder);
         assert_eq!(older.blockers[0].found.as_deref(), Some("4.0.1"));
-        assert_eq!(older.blockers[0].required.as_deref(), Some("4.1.0"));
+        assert_eq!(older.blockers[0].required.as_deref(), Some("4.2.0"));
         assert_eq!(
             fs::read_to_string(safe_destination(&target, 2).unwrap()).unwrap(),
             encode_slot(&package.build_id, PLAN)
@@ -548,7 +548,7 @@ mod tests {
         let config = temporary.0.join("app-config");
         let root = temporary.0.join("target");
         let target = target(&root, TargetKind::Manual);
-        modpack_lib(&root, "4.1.0");
+        modpack_lib(&root, "4.2.0");
         let bundled = package("1.2.0", "return 1");
         let installed = package_from("1.2.0", "return 0", PackageSource::Checkout);
         install(
