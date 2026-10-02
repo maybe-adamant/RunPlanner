@@ -7,10 +7,14 @@ import {
   createCompleteFGIxionChaosProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
+  createFInvalidLaterConversionProject,
+  createFMidshopUnresolvedBlindBoxBeforePomProject,
+  createGContractAvailabilityProject,
   createGoldenFGHIProject,
   createGoldenFGHProject,
   createUnderworldFPoolCheckpoint,
   createUnderworldFWellCheckpoint,
+  loadUnderworldFMidshopPomFrontierProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOPQShopTraitProject,
@@ -32,9 +36,17 @@ import {
   createMatureCombat01Sequence,
   freshFileRouteFrontierWalk,
   withNewHFieldsRoom,
+  withRetainedFreshFileIntroCustomization,
+  withRetainedFreshFilePostboss,
 } from '@run-planner/test-fixtures/fresh-file';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
+import {
+  createEchoHammerReplayMissingProject,
+  createFPoolSaleClearedProject,
+  freshFileHFieldsIssueSteps,
+} from './corpus-support';
 
 export interface EquivalenceEntry {
   readonly name: string;
@@ -54,6 +66,7 @@ const entry = (
  */
 export function equivalenceCorpus(): readonly EquivalenceEntry[] {
   const frontier = freshFileRouteFrontierWalk();
+  const fieldsIssueSteps = freshFileHFieldsIssueSteps();
   return Object.freeze([
     ...executionFixtures.map((fixture) =>
       entry(`execution/${fixture.name}`, fixture.project, fixture.catalog?.() ?? catalog),
@@ -79,6 +92,26 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
         () => createFConversionFrontierProject(rewardType).project,
       ),
     ),
+    entry(
+      'underworld/createFInvalidLaterConversionProject',
+      () => createFInvalidLaterConversionProject().project,
+    ),
+    entry(
+      'underworld/createFMidshopUnresolvedBlindBoxBeforePomProject',
+      createFMidshopUnresolvedBlindBoxBeforePomProject,
+    ),
+    entry(
+      'underworld/loadUnderworldFMidshopPomFrontierProject',
+      loadUnderworldFMidshopPomFrontierProject,
+    ),
+    ...[true, false].map((entered) =>
+      entry(
+        `underworld/createGContractAvailabilityProject(${entered})`,
+        () => createGContractAvailabilityProject(entered).project,
+      ),
+    ),
+    entry('underworld/echoHammerReplayMissing', createEchoHammerReplayMissingProject),
+    entry('underworld/fPoolSaleCleared', createFPoolSaleClearedProject),
     entry('surface/loadSurfaceNOPQProject', loadSurfaceNOPQProject),
     entry('surface/surfaceAnvilProject', surfaceAnvilProject),
     entry('surface/createSurfaceNOHermesShrineDeliveryCheckpoint', () =>
@@ -109,6 +142,24 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
       entry(`fresh-file/withNewHFieldsRoom(${cageOutcome})`, () =>
         withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', cageOutcome),
       ),
+    ),
+    entry('fresh-file/withRetainedFreshFilePostboss(all)', () =>
+      withRetainedFreshFilePostboss(createFreshFileFProject(), {
+        well: true,
+        poolSaleTraitKey: 'ApolloWeaponBoon',
+        rackKeepsakeKey: catalog.keepsakes.values[0]!.key,
+      }),
+    ),
+    entry('fresh-file/withRetainedFreshFilePostboss(emptyPool)', () =>
+      withRetainedFreshFilePostboss(createFreshFileFProject(), { poolSaleTraitKey: null }),
+    ),
+    entry('fresh-file/withRetainedFreshFileIntroCustomization', () =>
+      withRetainedFreshFileIntroCustomization(
+        authorLegalTraitOffers(createFreshFileFirstSequence()),
+      ),
+    ),
+    ...fieldsIssueSteps.map((document, index) =>
+      entry(`fresh-file/hFieldsIssues/${String(index).padStart(2, '0')}`, () => document),
     ),
     ...frontier.map((document, index) =>
       entry(`fresh-file/frontier/${String(index).padStart(2, '0')}`, () => document),

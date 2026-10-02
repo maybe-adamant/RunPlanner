@@ -15,15 +15,23 @@ import {
   createShopOfferAddress,
   createStartingRewardAddress,
   createTargetAddress,
+  discoverAuthoredTraitCarrierChildren,
   semanticAddressKey,
+  TRAIT_OPTION_KEYS,
   type AcquisitionRoleAddress,
   type AuthoredRewardState,
   type AuthoredTraitOffer,
+  type FigurineArcanaAddress,
+  type FountainRarityOutcomeAddress,
+  type JudgmentArcanaAddress,
+  type KeepsakeEquipResultAddress,
+  type KeepsakeSelectionAddress,
   type NaturalSelectionResultAddress,
   type ProjectDocument,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
   type TraitOfferAddress,
+  type TranscendentEmbryoOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -285,6 +293,19 @@ export function probeCandidates(
     offers.set(semanticAddressKey(selected.address), selected);
     evaluate({ kind: 'traitOffer', trait: selected.address, value: selected.offer });
   }
+  for (const { address: trait, offer: value } of offers.values()) {
+    evaluate({ kind: 'ransomAssessment', trait, value });
+    if (value.kind !== 'traits') continue;
+    for (const optionKey of TRAIT_OPTION_KEYS.slice(0, value.options.length)) {
+      evaluate({ kind: 'traitOfferFocusedOption', trait, value, optionKey });
+      evaluate({ kind: 'traitAcquisitionTargetDomain', trait, value, optionKey });
+      evaluate({ kind: 'circeResolutionDomain', trait, value, optionKey });
+      evaluate({ kind: 'echoPomTargetDomain', trait, value, optionKey });
+      evaluate({ kind: 'echoLastRunBoonDomain', trait, value, optionKey });
+    }
+    for (const child of discoverAuthoredTraitCarrierChildren(catalog, trait, value))
+      evaluate({ kind: 'traitCarrierChildDomain', trait, value, child });
+  }
   for (const acquisition of harvestAddresses<AcquisitionRoleAddress>(
     evaluation,
     new Set(['acquisitionRole']),
@@ -292,7 +313,19 @@ export function probeCandidates(
     evaluate({ kind: 'acquisitionConversion', acquisition });
   const owners = [
     ...evaluation.findings.map((finding) => finding.origin),
-    ...harvestAddresses(evaluation, new Set(['steadyGrowthOutcome', 'naturalSelectionResult'])),
+    ...harvestAddresses(
+      evaluation,
+      new Set([
+        'steadyGrowthOutcome',
+        'naturalSelectionResult',
+        'keepsakeEquipResult',
+        'keepsakeSelection',
+        'fountainRarityOutcome',
+        'transcendentEmbryoOutcome',
+        'judgmentArcana',
+        'figurineArcana',
+      ]),
+    ),
   ];
   for (const owner of owners) {
     switch (owner.kind) {
@@ -319,10 +352,47 @@ export function probeCandidates(
           });
         break;
       }
+      case 'keepsakeEquipResult':
+        evaluate({ kind: 'keepsakeEquipResult', result: owner as KeepsakeEquipResultAddress });
+        break;
+      case 'keepsakeSelection':
+        evaluate({ kind: 'keepsakeSelection', selection: owner as KeepsakeSelectionAddress });
+        break;
+      case 'fountainRarityOutcome':
+        evaluate({
+          kind: 'fountainRarityOutcome',
+          outcome: owner as FountainRarityOutcomeAddress,
+          targetTraitKey: undefined,
+        });
+        break;
+      case 'transcendentEmbryoOutcome':
+        evaluate({
+          kind: 'transcendentEmbryoOutcome',
+          outcome: owner as TranscendentEmbryoOutcomeAddress,
+          value: undefined,
+        });
+        break;
+      case 'judgmentArcana':
+        evaluate({
+          kind: 'judgmentArcana',
+          judgment: owner as JudgmentArcanaAddress,
+          arcanaKeys: [],
+        });
+        break;
+      case 'figurineArcana':
+        evaluate({
+          kind: 'figurineArcana',
+          figurine: owner as FigurineArcanaAddress,
+          arcanaKeys: [],
+        });
+        break;
       default:
-        // The authored sweep above evaluates reward, target and decision owners;
-        // encounter, Hub visit, level-resolution and acquisition-entry findings
-        // have no session query without an authored candidate value.
+        // Remaining gaps. Owners with no session query: encounter and Gorgon
+        // phases, Hub visits, level resolutions, Room Actions, and Purging Pool,
+        // Hermes Shrine and Stygian Well slots. Session queries never issued:
+        // acquisition-entry offers, start room, Hub terminal takeover and All
+        // Together set domains; Hub slots, Hub action order and side rooms are
+        // probed for reachability only.
         break;
     }
   }

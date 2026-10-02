@@ -269,7 +269,8 @@ broad phase-closure verification:
 - `npm run test:equivalence` before and after engine refactors and any
   chronology or settlement change. It compares digests of the
   `simulateProject` product, the encoded execution plan and a candidate-session
-  probe for every fixture builder and checkpoint with the committed
+  probe for the execution fixtures, checkpoints and the listed route builders
+  with the committed
   `packages/planner-engine/test/equivalence/baseline.json`; `EQUIVALENCE_WRITE=1`
   rewrites the baseline, only for an intended product change.
 
