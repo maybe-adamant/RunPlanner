@@ -1081,7 +1081,8 @@ function reachHistorySequence(
   );
 }
 
-function applySeamStep(
+/** Applies one seam step in its fixed order; exported for its ordering witness. */
+export function applySeamStep(
   context: ChronologyWalkContext,
   accumulator: ChronologyAccumulator,
   received: ChronologyWalkState,

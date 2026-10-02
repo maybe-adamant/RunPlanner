@@ -111,6 +111,14 @@ remediation each. Full gate and performance compare at closure.
 10. A selected offer's settled branch takes reward history from the opened
     branch but keepsakes from the effective branch.
 
+## Bounded unknown
+
+No corpus project attaches a Run State snapshot to a trait-child settlement:
+every child-producing step empties the walk, and no outgoing site settlement
+emits a child before its capture. The order is pinned by a unit witness of
+the seam step; whether attachment is reachable at all is a separate follow-up
+before closure.
+
 ## Closure
 
 Promote the seam table to `docs/design/ROOM_LIFECYCLE_MODEL.md` as the
