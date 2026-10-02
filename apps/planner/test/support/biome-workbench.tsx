@@ -16,7 +16,6 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
   WorkspaceRoomTab,
-  WorkspaceSideRoomsTab,
   WorkspaceTakeoverBatchNode,
 } from '@planner/projections/structured-workspace';
 import { createEditorSessionReducer } from '@planner/state/editorSessionSlice';
@@ -279,7 +278,6 @@ export function renderOccurrenceWorkbench(
   application?: PlannerApplication,
   options: {
     readonly findingNavigationRevision?: number;
-    readonly initialSideRoomsTab?: WorkspaceSideRoomsTab;
     readonly initialSideRoomSlotKey?: string;
     readonly initialTab?: WorkspaceRoomTab;
   } = {},
@@ -294,9 +292,6 @@ export function renderOccurrenceWorkbench(
         {...(currentOptions.findingNavigationRevision === undefined
           ? {}
           : { findingNavigationRevision: currentOptions.findingNavigationRevision })}
-        {...(currentOptions.initialSideRoomsTab === undefined
-          ? {}
-          : { initialSideRoomsTab: currentOptions.initialSideRoomsTab })}
         {...(currentOptions.initialSideRoomSlotKey === undefined
           ? {}
           : { initialSideRoomSlotKey: currentOptions.initialSideRoomSlotKey })}

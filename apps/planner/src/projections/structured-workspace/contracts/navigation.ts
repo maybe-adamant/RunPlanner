@@ -18,9 +18,6 @@ export type WorkspaceRoomTab =
   | 'shipCombat2Actions'
   | 'shipInactiveRepair';
 
-/** Transient presentation view for one parent's declared Ephyra side-room group. */
-export type WorkspaceSideRoomsTab = 'doors' | 'visits';
-
 /** Transient destination for one presentation surface of the persistent Hub board. */
 export type WorkspaceHubTab = 'overview' | 'timeline' | 'exit';
 
@@ -65,8 +62,6 @@ export interface WorkspaceInspectorDestination {
   readonly presentationPanel?: 'overview';
   /** Present when this owner belongs to a specific room-workbench tab. */
   readonly roomTab?: WorkspaceRoomTab;
-  /** Present only for a room's Side Rooms tab. */
-  readonly sideRoomsTab?: WorkspaceSideRoomsTab;
   /** Declared parent-local slot selected by a side-room destination. */
   readonly sideRoomSlotKey?: string;
   /** Present when this owner belongs to a specific Hub-workbench tab. */

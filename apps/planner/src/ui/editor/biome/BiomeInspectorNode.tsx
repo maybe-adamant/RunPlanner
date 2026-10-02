@@ -11,7 +11,6 @@ import {
   type WorkspaceNode,
   type WorkspaceOccurrenceStageOutgoing,
   type WorkspaceRoomTab,
-  type WorkspaceSideRoomsTab,
 } from '@planner/projections/structured-workspace';
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
@@ -40,7 +39,6 @@ interface BiomeInspectorNodeProps {
   >;
   readonly hubTab?: WorkspaceHubTab;
   readonly roomTab?: WorkspaceRoomTab;
-  readonly sideRoomsTab?: WorkspaceSideRoomsTab;
   readonly sideRoomSlotKey?: string;
   readonly findingNavigationRevision?: number;
   readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
@@ -152,7 +150,6 @@ function OccurrenceInspector({
   outgoingDecision,
   findingNavigationRevision,
   roomTab,
-  sideRoomsTab,
   sideRoomSlotKey,
 }: Pick<
   BiomeInspectorNodeProps,
@@ -162,7 +159,6 @@ function OccurrenceInspector({
   | 'outgoingDecision'
   | 'findingNavigationRevision'
   | 'roomTab'
-  | 'sideRoomsTab'
   | 'sideRoomSlotKey'
 > & {
   readonly defaultToDoors?: boolean;
@@ -211,7 +207,6 @@ function OccurrenceInspector({
         {...(node.runState === undefined ? {} : { runState: node.runState })}
         {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
         initialTab={roomTab ?? (defaultToDoors ? 'doors' : 'overview')}
-        {...(sideRoomsTab === undefined ? {} : { initialSideRoomsTab: sideRoomsTab })}
         {...(sideRoomSlotKey === undefined ? {} : { initialSideRoomSlotKey: sideRoomSlotKey })}
         doors={
           outgoingDecision === undefined ? (

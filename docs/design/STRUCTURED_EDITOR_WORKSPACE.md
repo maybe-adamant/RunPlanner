@@ -640,8 +640,8 @@ Exact Hub inspector destinations also carry their presentation tab: Hub,
 slot-set, and main incoming-reward-identity owners open Hub Overview; main
 visit and ordering owners open Hub Timeline; entered main-room occurrences and
 their incoming-reward acquisition children open the main occurrence Timeline;
-parent-owned side generation and side reward identity open the parent main
-occurrence Side Rooms Doors view, while side entry order opens Side Rooms Visits;
+parent-owned side generation, side reward identity, and side entry order open
+the parent main occurrence Side Rooms workbench;
 entered side occurrences and their acquisition
 children open the side occurrence Timeline; the uncommitted completed-Hub
 handoff opens Exit; Hub fountain placement opens Hub Timeline; and its Phial
@@ -711,8 +711,8 @@ board remains the sole editable main-reward surface.
 
 Entered side occurrences extend the N rail as nested children of their owning
 main visit. The rail includes only side occurrences in the authored local
-`visitOrder`; generated but unentered side rows stay in the parent Side Rooms
-workbench and do not receive rail entries. Side children retain side-entry order, select the
+`visitOrder`; unentered side rows stay in the parent Side Rooms workbench and
+do not receive rail entries. Side children retain side-entry order, select the
 side occurrence's Timeline, and do not contribute to the six-main-visit count.
 Parent-owned side generation, entry order, and reward-identity markers select
 the parent main visit and its Side Rooms workbench. The rail uses the complete marker

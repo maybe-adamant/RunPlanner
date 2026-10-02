@@ -58,11 +58,13 @@ const pointer = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 300, c
 describe('RoomMapViewport', () => {
   it('collapses map controls without resetting zoom or pan', () => {
     const { scroll, image, capture } = renderMap(1000, 800, 'collapsible-overlay');
+    expect(scroll.hasAttribute('data-pannable')).toBe(false);
     const toggle = screen.getByRole('button', { name: 'Map controls' });
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('button', { name: 'Fit' })).toBeNull();
     fireEvent.click(toggle);
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(scroll.hasAttribute('data-pannable')).toBe(true);
     scroll.scrollLeft = 80;
     scroll.scrollTop = 60;
     fireEvent.click(toggle);

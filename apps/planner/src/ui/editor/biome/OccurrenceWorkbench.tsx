@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-} from 'react';
+import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import {
   workspaceInteractionKey,
   type WorkspaceDoorContract,
@@ -14,7 +8,6 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomTab,
-  type WorkspaceSideRoomsTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -33,7 +26,6 @@ interface OccurrenceWorkbenchProps {
   readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
-  readonly initialSideRoomsTab?: WorkspaceSideRoomsTab;
   readonly initialSideRoomSlotKey?: string;
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
@@ -62,7 +54,6 @@ export function OccurrenceWorkbench({
   findingNavigationRevision,
   interactions,
   localVisit,
-  initialSideRoomsTab,
   initialSideRoomSlotKey,
   room,
   renderRoomActionRowContent,
@@ -74,48 +65,6 @@ export function OccurrenceWorkbench({
   const findingTarget = useFindingTarget();
   const requestedTab = initialTab ?? 'overview';
   const roomIdentity = workspaceInteractionKey(room.address);
-  const [sideRoomsSession, setSideRoomsSession] = useState<{
-    readonly findingNavigationRevision: number | undefined;
-    readonly roomIdentity: string;
-    readonly slotKey: string | undefined;
-    readonly view: WorkspaceSideRoomsTab;
-  }>({
-    findingNavigationRevision: undefined,
-    roomIdentity: '',
-    slotKey: undefined,
-    view: 'doors',
-  });
-  const rememberedSideRooms =
-    sideRoomsSession.roomIdentity === roomIdentity
-      ? sideRoomsSession
-      : {
-          findingNavigationRevision: undefined,
-          roomIdentity,
-          slotKey: initialSideRoomSlotKey,
-          view: initialSideRoomsTab ?? ('doors' as const),
-        };
-  const hasNewSideRoomsFinding =
-    findingNavigationRevision !== undefined &&
-    sideRoomsSession.roomIdentity === roomIdentity &&
-    sideRoomsSession.findingNavigationRevision !== findingNavigationRevision;
-  const activeSideRooms = hasNewSideRoomsFinding
-    ? {
-        findingNavigationRevision,
-        roomIdentity,
-        slotKey: initialSideRoomSlotKey,
-        view: initialSideRoomsTab ?? ('doors' as const),
-      }
-    : rememberedSideRooms;
-  const rememberSideRooms = useCallback(
-    (session: { readonly slotKey: string | undefined; readonly view: WorkspaceSideRoomsTab }) =>
-      setSideRoomsSession({
-        findingNavigationRevision,
-        roomIdentity,
-        slotKey: session.slotKey,
-        view: session.view,
-      }),
-    [findingNavigationRevision, roomIdentity],
-  );
   const [tabState, setTabState] = useState({
     active: requestedTab,
     findingNavigationRevision,
@@ -301,11 +250,11 @@ export function OccurrenceWorkbench({
           <LocalVisitWorkbench
             interactions={interactions}
             localVisit={localVisit}
-            onSessionChange={rememberSideRooms}
             parentGameName={room.gameName}
-            selectedSlotKey={activeSideRooms.slotKey}
+            {...(initialSideRoomSlotKey === undefined
+              ? {}
+              : { selectedSlotKey: initialSideRoomSlotKey })}
             title={room.label}
-            view={activeSideRooms.view}
             {...(findingNavigationRevision === undefined ? {} : { findingNavigationRevision })}
           />
         ) : activeTab === 'layout' && room.workbench.kind === 'fields' ? (

@@ -1276,7 +1276,6 @@ describe('workspace inspector destinations', () => {
     if (sideParentVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
     expect(destination(complete, sideRoom)).toMatchObject({
       roomTab: 'sideRooms',
-      sideRoomsTab: 'doors',
       sideRoomSlotKey: 'sideDoor1',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
@@ -1288,7 +1287,6 @@ describe('workspace inspector destinations', () => {
       ),
     ).toMatchObject({
       roomTab: 'sideRooms',
-      sideRoomsTab: 'visits',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
@@ -1304,7 +1302,6 @@ describe('workspace inspector destinations', () => {
     );
     expect(destination(complete, sideReward)).toMatchObject({
       roomTab: 'sideRooms',
-      sideRoomsTab: 'doors',
       sideRoomSlotKey: 'sideDoor1',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
