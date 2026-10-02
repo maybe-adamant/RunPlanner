@@ -672,14 +672,13 @@ function projectHubNode(
       [...doorsMarkers, slot.localVisit.orderMarker],
       parentWorkbench.key,
     );
-    markerDestinations.setSideRoomsDestination([slot.localVisit.marker], 'doors');
-    markerDestinations.setSideRoomsDestination([slot.localVisit.orderMarker], 'visits');
+    markerDestinations.setRoomTab([...doorsMarkers, slot.localVisit.orderMarker], 'sideRooms');
     for (const local of slot.localVisit.slots) {
       const markers =
         local.generation === 'generated'
           ? [local.marker, ...workspaceHubMainRewardMarkers(local.room)]
           : [local.marker];
-      markerDestinations.setSideRoomsDestination(markers, 'doors', local.key);
+      markerDestinations.setSideRoomDestination(markers, local.key);
     }
   }
   markerDestinations.setHubTab(

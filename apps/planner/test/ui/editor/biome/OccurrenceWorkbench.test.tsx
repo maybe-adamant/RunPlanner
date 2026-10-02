@@ -3,8 +3,10 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
+  createBiomeAddress,
   createEncounterPhaseAddress,
   createFieldsSpatialAddress,
+  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -21,6 +23,7 @@ import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbenc
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import {
   authoredProjectCommandDispatched,
+  authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 
@@ -35,6 +38,7 @@ import {
 import {
   loadSurfaceNProject,
   loadSurfaceNOPQProject,
+  nLocalOccurrenceId,
   nOccurrenceId,
   nOccurrenceIds,
   oOccurrenceIds,
@@ -496,7 +500,7 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('moves N side-room generation and rewards into Side Rooms Doors without authoring from its parent map', async () => {
+  it('edits N side-room generation and visits in one Side Rooms workbench without authoring from its parent map', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -506,10 +510,16 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByRole('tab', { name: 'Side Rooms' })).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: 'Side Room 03 generation' })).toBeNull();
     openRoomTab('Side Rooms');
-    let sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
-    expect(within(sideRooms).getByRole('tab', { name: 'Doors' })).toBeTruthy();
+    const sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
+    expect(within(sideRooms).queryByRole('tab', { name: 'Doors' })).toBeNull();
     const parentMap = screen.getByRole('img', { name: 'Map of Combat 05' });
     expect(parentMap.getAttribute('src')).toBe(roomMapAssetFor('N_Combat05')?.src);
+    expect(within(sideRooms).queryByText('Parent room map')).toBeNull();
+    expect(within(sideRooms).queryByRole('button', { name: 'Fit' })).toBeNull();
+    await view.user.click(within(sideRooms).getByRole('button', { name: 'Map controls' }));
+    expect(within(sideRooms).getByRole('button', { name: 'Fit' })).toBeTruthy();
+    await view.user.click(within(sideRooms).getByRole('button', { name: 'Zoom in' }));
+    expect(within(sideRooms).getByText('125%')).toBeTruthy();
     let generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
     expect((generation as HTMLInputElement).checked).toBe(true);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
@@ -520,22 +530,6 @@ describe('OccurrenceWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
-    const doorsTab = within(sideRooms).getByRole('tab', { name: 'Doors' });
-    const visitsTab = within(sideRooms).getByRole('tab', { name: 'Visits' });
-    fireEvent.keyDown(doorsTab, { key: 'ArrowRight' });
-    expect(visitsTab.getAttribute('aria-selected')).toBe('true');
-    expect(document.activeElement).toBe(visitsTab);
-    openRoomTab('Room Overview');
-    openRoomTab('Side Rooms');
-    sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
-    expect(
-      within(sideRooms).getByRole('tab', { name: 'Visits' }).getAttribute('aria-selected'),
-    ).toBe('true');
-    const sideOrder = (): HTMLSelectElement =>
-      screen.getByRole('combobox', { name: 'Side Room 03 visit order' });
-    expect(sideOrder().disabled).toBe(false);
-
-    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Doors' }));
     generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
 
     await view.user.click(generation);
@@ -551,9 +545,6 @@ describe('OccurrenceWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Visits' }));
-    expect(sideOrder().disabled).toBe(true);
-    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Doors' }));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
@@ -564,9 +555,6 @@ describe('OccurrenceWorkbench', () => {
         true,
       ),
     );
-    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Visits' }));
-    expect(sideOrder().disabled).toBe(false);
-    await view.user.click(within(sideRooms).getByRole('tab', { name: 'Doors' }));
     expect(
       within(
         screen.getByRole('checkbox', { name: 'Side Room 03 generation' }).closest('li')!,
@@ -644,7 +632,210 @@ describe('OccurrenceWorkbench', () => {
     expect(checkbox.getAttribute('data-has-findings')).toBe('true');
   });
 
-  it('keeps manual Side Rooms tab focus and honors later finding focus requests', async () => {
+  it('edits side-room visits through existing checkbox, drag, and arrow proposals', async () => {
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOPQProject(),
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat05')),
+    );
+    openRoomTab('Side Rooms');
+    const visited = () => screen.getByRole('list', { name: 'Visited side rooms' });
+    const labels = () =>
+      [...visited().querySelectorAll('li')].map((row) => row.querySelector('strong')?.textContent);
+    const rowFor = (list: HTMLElement, label: string) => {
+      const row = [...list.querySelectorAll('li')].find((candidate) =>
+        within(candidate).queryByText(label),
+      );
+      if (row === undefined) throw new Error(`${label} row is missing`);
+      return row;
+    };
+    const keyboardMove = async (
+      label: string,
+      direction: 'up' | 'down',
+      expected: readonly string[],
+    ) => {
+      const row = rowFor(visited(), label);
+      const button = within(row).getByRole('button', {
+        name: `Move ${label} ${direction}`,
+      }) as HTMLButtonElement;
+      fireEvent.focus(button);
+      await waitFor(() => expect(button.disabled).toBe(false));
+      const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+      await view.user.click(button);
+      await waitFor(() => expect(labels()).toEqual(expected));
+      expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+        historyBefore + 1,
+      );
+    };
+    const pointer = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
+    const drag = (source: HTMLElement, target: HTMLElement) => {
+      Object.defineProperty(document, 'elementFromPoint', {
+        configurable: true,
+        value: () => target,
+      });
+      const handle = within(source).getByLabelText(
+        `Drag ${source.querySelector('strong')?.textContent}`,
+      );
+      fireEvent.pointerDown(handle, pointer);
+      fireEvent.pointerMove(handle, { ...pointer, clientY: 30 });
+      expect(source.getAttribute('data-dragging')).toBe('true');
+      expect(document.querySelector('.room-action-drag-preview')).not.toBeNull();
+      if (source !== target)
+        expect(
+          target.hasAttribute('data-drop-before') || target.hasAttribute('data-drop-after'),
+        ).toBe(true);
+      fireEvent.pointerUp(handle, { ...pointer, clientY: 30 });
+      expect(document.querySelector('.room-action-drag-preview')).toBeNull();
+    };
+
+    expect(labels()).toEqual(['Side Room 07', 'Side Room 02']);
+    await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 03 visit' }));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 07', 'Side Room 02', 'Side Room 03']));
+    drag(rowFor(visited(), 'Side Room 03'), rowFor(visited(), 'Side Room 07'));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 07', 'Side Room 02']));
+    drag(rowFor(visited(), 'Side Room 02'), rowFor(visited(), 'Side Room 07'));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02', 'Side Room 07']));
+    drag(rowFor(visited(), 'Side Room 03'), rowFor(visited(), 'Side Room 07'));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 02', 'Side Room 07', 'Side Room 03']));
+    const noOpHistory = view.application.store.getState().projectWorkspace.history!.past.length;
+    drag(rowFor(visited(), 'Side Room 03'), rowFor(visited(), 'Side Room 03'));
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      noOpHistory,
+    );
+    drag(rowFor(visited(), 'Side Room 02'), rowFor(visited(), 'Side Room 07'));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 07', 'Side Room 02', 'Side Room 03']));
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      noOpHistory + 1,
+    );
+    await keyboardMove('Side Room 03', 'up', ['Side Room 07', 'Side Room 03', 'Side Room 02']);
+    await keyboardMove('Side Room 03', 'up', ['Side Room 03', 'Side Room 07', 'Side Room 02']);
+    expect(
+      (
+        within(rowFor(visited(), 'Side Room 03')).getByRole('button', {
+          name: 'Move Side Room 03 up',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(
+      (
+        within(rowFor(visited(), 'Side Room 02')).getByRole('button', {
+          name: 'Move Side Room 02 down',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+
+    const preserved = occurrenceById(nOccurrenceId('combat05'))(
+      workspaceBiome(view.application, 'Surface', 'N'),
+    )?.localVisit?.slots.find((slot) => slot.label === 'Side Room 07');
+    if (preserved?.generation !== 'generated') throw new Error('Side Room 07 is not generated');
+    const retainedOccurrenceId = preserved.occurrenceId;
+    const retainedReward = preserved.door.offerRewardSurface.rewards.map(
+      (reward) => reward.summary,
+    );
+    const retainedEncounterCount = preserved.room.encounterPhases.length;
+    const retainedActionCount = preserved.room.roomActions?.rows.length ?? 0;
+
+    const draggedVisit = rowFor(visited(), 'Side Room 07');
+    const draggedHandle = within(draggedVisit).getByLabelText('Drag Side Room 07');
+    fireEvent.pointerDown(draggedHandle, pointer);
+    fireEvent.pointerMove(draggedHandle, { ...pointer, clientY: 30 });
+    await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 07 visit' }));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02']));
+    const historyAfterRemoval =
+      view.application.store.getState().projectWorkspace.history!.past.length;
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => rowFor(visited(), 'Side Room 02'),
+    });
+    fireEvent.pointerUp(visited(), { ...pointer, clientY: 30 });
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyAfterRemoval,
+    );
+    await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 07 visit' }));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02', 'Side Room 07']));
+    const restored = occurrenceById(nOccurrenceId('combat05'))(
+      workspaceBiome(view.application, 'Surface', 'N'),
+    )?.localVisit?.slots.find((slot) => slot.label === 'Side Room 07');
+    if (restored?.generation !== 'generated') throw new Error('Side Room 07 was not restored');
+    expect(restored.occurrenceId).toBe(retainedOccurrenceId);
+    expect(restored.door.offerRewardSurface.rewards.map((reward) => reward.summary)).toEqual(
+      retainedReward,
+    );
+    expect(restored.room.encounterPhases).toHaveLength(retainedEncounterCount);
+    expect(restored.room.roomActions?.rows.length ?? 0).toBe(retainedActionCount);
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02']));
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02', 'Side Room 07']));
+  });
+
+  it('explains a rejected side-room Visit checkbox change from the engine candidate', async () => {
+    const biome = createBiomeAddress('Surface', 'N');
+    let project = loadSurfaceNProject();
+    for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, nLocalOccurrenceId('combat05', slotKey)),
+        value: { rewardType: 'AirBoost' },
+      });
+    }
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat05')),
+    );
+    const localVisit = occurrenceById(nOccurrenceId('combat05'))(
+      workspaceBiome(view.application, 'Surface', 'N'),
+    )?.localVisit;
+    const firstDoor = localVisit?.slots.find((slot) => slot.key === 'sideDoor1');
+    if (firstDoor === undefined) throw new Error('Combat 05 side door 1 is missing');
+
+    openRoomTab('Side Rooms');
+    const remove = screen.getByRole('checkbox', {
+      name: `${firstDoor.label} visit`,
+    }) as HTMLInputElement;
+    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
+    fireEvent.pointerDown(remove);
+    await waitFor(() => expect(remove.disabled).toBe(true));
+    const rejectionId = remove.getAttribute('aria-describedby');
+    if (rejectionId === null) throw new Error('Rejected side-room visit has no explanation');
+    expect(document.getElementById(rejectionId)?.textContent).toContain(
+      'Reward unavailable from pool',
+    );
+    const visited = screen.getByRole('list', { name: 'Visited side rooms' });
+    const rows = [...visited.querySelectorAll('li')];
+    const source = rows.find((row) => within(row).queryByText(firstDoor.label));
+    const target = rows.find((row) => row !== source);
+    if (source === undefined || target === undefined) throw new Error('Rejected move rows missing');
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => target,
+    });
+    const pointer = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
+    const handle = within(source).getByLabelText(`Drag ${firstDoor.label}`);
+    fireEvent.pointerDown(handle, pointer);
+    fireEvent.pointerMove(handle, { ...pointer, clientY: 30 });
+    await waitFor(() =>
+      expect(document.querySelector('.room-action-drag-preview')?.textContent).toContain(
+        'Unavailable:',
+      ),
+    );
+    expect(target.getAttribute('data-drop-before') ?? target.getAttribute('data-drop-after')).toBe(
+      'unavailable',
+    );
+    expect(document.querySelector('.room-action-drag-preview')?.textContent).toContain(
+      'Reward unavailable from pool',
+    );
+    fireEvent.pointerUp(handle, { ...pointer, clientY: 30 });
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyBefore,
+    );
+  });
+
+  it('focuses an exact Side Rooms generation finding without inner-tab session state', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -677,35 +868,25 @@ describe('OccurrenceWorkbench', () => {
 
     view.rerenderOccurrence({
       findingNavigationRevision: 1,
-      initialSideRoomsTab: 'doors',
       initialSideRoomSlotKey: slot.key,
       initialTab: 'sideRooms',
     });
     expect(document.activeElement).toBe(
       screen.getByRole('checkbox', { name: `${slot.label} generation` }),
     );
-    const doors = screen.getByRole('tab', { name: 'Doors' });
-    const visits = screen.getByRole('tab', { name: 'Visits' });
-    fireEvent.keyDown(doors, { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(visits);
-    expect(visits.getAttribute('aria-selected')).toBe('true');
-
-    await view.user.click(doors);
     expect(screen.getByLabelText(`${slot.label}: Not generated`)).toBeTruthy();
 
     view.rerenderOccurrence({
       findingNavigationRevision: 2,
-      initialSideRoomsTab: 'doors',
       initialSideRoomSlotKey: slot.key,
       initialTab: 'sideRooms',
     });
-    expect(screen.getByRole('tab', { name: 'Doors' }).getAttribute('aria-selected')).toBe('true');
     expect(document.activeElement).toBe(
       screen.getByRole('checkbox', { name: `${slot.label} generation` }),
     );
   });
 
-  it('explains the visited-room generation restriction on hover and keyboard focus without changing authored state', async () => {
+  it('keeps visited-room generation disabled until Visited is unchecked without a redundant hover', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -719,24 +900,10 @@ describe('OccurrenceWorkbench', () => {
     expect((checkbox as HTMLInputElement).disabled).toBe(true);
     expect(screen.queryByRole('tooltip')).toBeNull();
     await view.user.hover(control);
-    const hint = screen.getByRole('tooltip');
-    expect(hint.textContent).toBe('Set Visit to “Not visited” before disabling generation.');
-    expect(control.getAttribute('aria-describedby')).toBe(hint.id);
-    await view.user.unhover(control);
     expect(screen.queryByRole('tooltip')).toBeNull();
-    act(() => control.focus());
-    expect(screen.getByRole('tooltip')).toBeTruthy();
-    await view.user.keyboard('{Escape}');
-    expect(screen.queryByRole('tooltip')).toBeNull();
-    await view.user.keyboard(' ');
     await view.user.click(checkbox);
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
-    await view.user.click(screen.getByRole('tab', { name: 'Visits' }));
-    await view.user.selectOptions(
-      screen.getByRole('combobox', { name: 'Side Room 02 visit order' }),
-      'notEntered',
-    );
-    await view.user.click(screen.getByRole('tab', { name: 'Doors' }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 02 visit' }));
     const repairedCheckbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
     const repairedControl = screen.getByRole('group', { name: 'Side Room 02 generation control' });
     expect((repairedCheckbox as HTMLInputElement).disabled).toBe(false);

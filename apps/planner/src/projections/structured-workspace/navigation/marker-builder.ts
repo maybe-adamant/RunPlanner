@@ -10,7 +10,6 @@ import type {
   WorkspaceInspectorDestination,
   WorkspaceMarker,
   WorkspaceRoomTab,
-  WorkspaceSideRoomsTab,
 } from '../contracts/navigation';
 
 /**
@@ -26,11 +25,7 @@ export interface WorkspaceMarkerDestinationEmitter {
   redirectToContext(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
   setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void;
   setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
-  setSideRoomsDestination(
-    markers: Iterable<WorkspaceMarker>,
-    tab: WorkspaceSideRoomsTab,
-    slotKey?: string,
-  ): void;
+  setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void;
 }
 
 export interface WorkspaceBiomeMarkerDestinationBuilder {
@@ -159,21 +154,12 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
         destinations.set(marker.focusKey, Object.freeze({ ...destination, roomTab: tab }));
       }
     },
-    setSideRoomsDestination(
-      markers: Iterable<WorkspaceMarker>,
-      tab: WorkspaceSideRoomsTab,
-      slotKey?: string,
-    ): void {
+    setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void {
       for (const marker of markers) {
         const destination = requireRegistered(marker);
         destinations.set(
           marker.focusKey,
-          Object.freeze({
-            ...destination,
-            roomTab: 'sideRooms',
-            sideRoomsTab: tab,
-            ...(slotKey === undefined ? {} : { sideRoomSlotKey: slotKey }),
-          }),
+          Object.freeze({ ...destination, roomTab: 'sideRooms', sideRoomSlotKey: slotKey }),
         );
       }
     },

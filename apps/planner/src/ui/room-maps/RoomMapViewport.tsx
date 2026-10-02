@@ -79,8 +79,12 @@ export function RoomMapViewport({
     fittedScale === undefined || imageSize === undefined
       ? undefined
       : {
-          height: Math.round(imageSize.height * fittedScale * (zoom / 100)),
-          width: Math.round(imageSize.width * fittedScale * (zoom / 100)),
+          height: (zoom <= 100 ? Math.floor : Math.round)(
+            imageSize.height * fittedScale * (zoom / 100),
+          ),
+          width: (zoom <= 100 ? Math.floor : Math.round)(
+            imageSize.width * fittedScale * (zoom / 100),
+          ),
         };
   const canPan =
     displayedImageSize !== undefined &&
@@ -247,6 +251,7 @@ export function RoomMapViewport({
     <div
       aria-label={`Pan map of ${title}`}
       className="room-map-scroll"
+      data-pannable={canPan || undefined}
       ref={scrollRef}
       role="region"
       tabIndex={0}
