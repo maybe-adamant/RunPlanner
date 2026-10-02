@@ -512,6 +512,13 @@ product, chronological owner, downstream consumers and primary tests.
 - A new snapshot fact must come from existing folded state, not a diagnostic
   reconstruction.
 
+`npm run test:equivalence` is the behaviour-preservation witness for engine
+refactors: it compares digests of the simulation product, the encoded
+execution plan and a candidate-session probe against a committed baseline. No
+corpus project attaches a capture to a child emitted in the same step's
+leading emissions; the Echo encounter child attaches to a later exit-decision
+capture in two entries. Reachability of same-step attachment is a follow-up.
+
 Keep policy matrices at their owners. Retain representative real-plan
 witnesses across acquisition, maturity, upstream change, removal and Undo for
 long-lived effects. Product tests prove handoffs rather than reproduce engine
