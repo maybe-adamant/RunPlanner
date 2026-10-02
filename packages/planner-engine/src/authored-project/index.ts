@@ -65,6 +65,7 @@ export {
 } from './room-actions/lifecycle-structure';
 export {
   assembleRoomActionDomain,
+  type FieldsCageOrderState,
   type RoomActionCheckpointContribution,
   type RoomActionContribution,
   type RoomActionDependency,

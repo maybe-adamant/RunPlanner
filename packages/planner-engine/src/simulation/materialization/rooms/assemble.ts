@@ -399,6 +399,9 @@ export function materializeAuthoredRoom(
       ? {}
       : { structuralEncounterIdentities: Object.freeze(structuralEncounterIdentities) }),
     roomActionRoster,
+    ...(roomActionDomain.fieldsCageOrder === undefined
+      ? {}
+      : { fieldsCageOrder: roomActionDomain.fieldsCageOrder }),
     roomLifecycleTimeline,
   });
 }

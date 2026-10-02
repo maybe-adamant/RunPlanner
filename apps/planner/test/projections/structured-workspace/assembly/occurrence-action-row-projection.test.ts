@@ -15,6 +15,7 @@ import {
   createRewardWheelOfferAddress,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
+  decodeProjectDocument,
   echoLastRewardPickupEntryKey,
   goldenFBiome,
   goldenFStartId,
@@ -999,6 +1000,54 @@ describe('structured workspace actions assembly', () => {
           launcher.owner.checkpoint.kind === 'roomEntered',
       ),
     ).toBe(false);
+  });
+
+  it('reads the Fields cage order and its blocked state from the engine product', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const authored = createGoldenFGHIProject();
+    const missing = decodeProjectDocument(
+      {
+        ...authored,
+        route: {
+          ...authored.route,
+          biomes: authored.route.biomes.map((biome) =>
+            biome.biomeKey !== 'H' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== occurrenceId
+                        ? occurrence
+                        : {
+                            ...occurrence,
+                            roomActions: {
+                              order: occurrence.roomActions.order.filter(
+                                (reference) =>
+                                  reference.kind !== 'completeFieldsCage' ||
+                                  reference.phaseKey !== 'Cage02',
+                              ),
+                            },
+                          },
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+    const roomActions = assemble(missing, 'Underworld', 'H', occurrenceId).assembly.node.room
+      .roomActions;
+    expect(roomActions?.timeline.fieldsCageOrder).toEqual({
+      phaseKeys: ['Cage01'],
+      choices: [
+        { phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
+        { phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+      ],
+      unavailableReason: 'Restore missing cage actions before changing their order.',
+    });
   });
 
   it('projects a Gold duplicate ordered after its Travel refill source', () => {

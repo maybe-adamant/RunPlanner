@@ -22,7 +22,6 @@ import {
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { createPortal } from 'react-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
@@ -539,10 +538,9 @@ describe('OccurrenceRoomActions', () => {
       .closest<HTMLElement>('[data-room-action-key]')
       ?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     if (!handle) throw new Error('Athena drag handle missing');
-    const titled = [...actions.querySelectorAll<HTMLElement>('[title]')].map((element) => ({
-      element,
-      title: element.title,
-    }));
+    const titled = [...actions.querySelectorAll<HTMLElement>('.room-action-row[title]')].map(
+      (element) => ({ element, title: element.title }),
+    );
     expect(titled.length).toBeGreaterThan(0);
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
@@ -557,7 +555,7 @@ describe('OccurrenceRoomActions', () => {
     });
     fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
     expect(screen.getByText(`Unavailable: ${blockedMove!.explanations.join(' ')}`)).toBeTruthy();
-    expect(actions.querySelectorAll('[title]:not([title=""])')).toHaveLength(0);
+    expect(actions.querySelectorAll('.room-action-row[title]')).toHaveLength(0);
     const preview = actions.querySelector('.room-action-drag-preview');
     expect(preview?.querySelector('.room-action-drag-header strong')?.textContent).toBe(
       'Talk to Athena',
@@ -569,38 +567,6 @@ describe('OccurrenceRoomActions', () => {
       screen.getByText(`Action not moved. ${blockedMove!.explanations.join(' ')}`),
     ).toBeTruthy();
     for (const { element, title } of titled) expect(element.title).toBe(title);
-    const childTitles = (removed: boolean, changed: boolean) =>
-      createPortal(
-        <>
-          <span
-            data-testid="removed-drag-title"
-            title={removed ? undefined : 'Old blocked reason'}
-          />
-          <span data-testid="changed-drag-title" title={changed ? 'New reason' : 'Old reason'} />
-        </>,
-        actions,
-      );
-    const childView = render(childTitles(false, false));
-    fireEvent.pointerDown(handle, {
-      button: 0,
-      clientX: 12,
-      clientY: 12,
-      isPrimary: true,
-      pointerId: 93,
-    });
-    fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 93 });
-    expect(actions.querySelectorAll('[title]:not([title=""])')).toHaveLength(0);
-    childView.rerender(childTitles(false, true));
-    await waitFor(() =>
-      expect(screen.getByTestId('changed-drag-title').getAttribute('title')).toBe(''),
-    );
-    childView.rerender(childTitles(true, true));
-    fireEvent.pointerCancel(board, { pointerId: 93 });
-    for (const { element, title } of titled) expect(element.title).toBe(title);
-    expect(screen.getByTestId('removed-drag-title').hasAttribute('title')).toBe(false);
-    expect(screen.getByTestId('changed-drag-title').getAttribute('title')).toBe('New reason');
-    childView.unmount();
-
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
     await view.user.click(
@@ -742,6 +708,7 @@ describe('OccurrenceRoomActions', () => {
     }) as HTMLButtonElement;
     expect(cageOrder.disabled).toBe(true);
     expect(cageOrder.title).toBe('Restore missing cage actions before changing their order.');
+    expect(cageOrder.textContent).toMatch(/^Cage \d \(.+\) \/ Cage \d \(.+\)/);
   });
 
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {

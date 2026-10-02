@@ -451,11 +451,14 @@ infinite; Fangs and Menace remain native. Decline, realization failure and
 diagnostics follow the finite contract.
 
 Encounter selection checks the requested variant through native eligibility before
-forcing it. A false verdict for an enemy introduction identified by native
-`EnemyData.IntroEncounterName` also tries `SetupEncounter`'s replacement gate:
-the introduction is unfinished and its `GameStateRequirements`, if any, pass
-native `IsGameStateEligible`. These replacements need not belong to the room's
-initial selection list. Native check errors still decline ownership.
+forcing it. Enemy introductions are never in a room's `LegalEncounters`, so
+native `IsEncounterEligible` rejects them. For a published introduction the
+executor then applies native's replacement gate exactly as `SetupEncounter`
+does (`RunLogic.lua:1125-1148`): some enemy's `EnemyData.IntroEncounterName`
+names it, it is not completed, and its `GameStateRequirements`, if any, pass
+native `IsGameStateEligible`. The planner proves the trigger enemy admissible
+at that room when authoring; like every other forced identity, the executor
+does not re-prove it. Native check errors still decline ownership.
 Rejection delegates selection to the game with a diagnostic and without
 applying the rejected variant's customization. Existing conformance checks resulting
 state, including NPC traits; this admission adds no mismatch boundary.

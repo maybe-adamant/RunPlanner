@@ -35,10 +35,7 @@ export function FieldsCageOrderControl({
         cancelLabel="Cancel"
         choiceLabel={`Cage ${(phaseKeys?.length ?? 0) + 1} of ${control.choices.length}`}
         closeOnSelect={false}
-        disabled={
-          interaction.fieldsCageOrderIntentFor === undefined ||
-          control.unavailableReason !== undefined
-        }
+        disabled={interaction.fieldsCageOrderIntentFor === undefined}
         {...(control.unavailableReason !== undefined
           ? { disabledTitle: control.unavailableReason }
           : {})}
@@ -61,7 +58,9 @@ export function FieldsCageOrderControl({
         }}
         open={phaseKeys !== undefined}
         placeholder="Choose combat order"
-        triggerLabel={control.phaseKeys.map(labelFor).join(' / ')}
+        {...(control.phaseKeys.length === 0
+          ? {}
+          : { triggerLabel: control.phaseKeys.map(labelFor).join(' / ') })}
       />
     </div>
   );

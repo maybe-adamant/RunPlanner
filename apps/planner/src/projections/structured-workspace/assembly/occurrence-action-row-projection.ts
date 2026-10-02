@@ -311,7 +311,7 @@ function roomActionsForOccurrence(
       else if (movingPrerequisite) explanation = `${label} requires this action first.`;
       else explanation = `${label} requires ${actionLabel(prerequisite)} first.`;
     } else if (blocker.checkpointUnavailable === true) {
-      explanation = `${label} requires unavailable checkpoint ${blocker.dependency.checkpointKey}.`;
+      explanation = `${label} requires a checkpoint this room cannot reach: ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
     } else {
       explanation = `${label} must come ${blocker.dependency.kind === 'afterCheckpoint' ? 'after' : 'before'} ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
     }

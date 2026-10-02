@@ -33,6 +33,7 @@ import {
   createTargetAddress,
   decodeProjectDocument,
   redoProjectHistory,
+  roomActionDomainForOccurrence,
   roomActionKey,
   undoProjectHistory,
   type ProjectDocument,
@@ -268,6 +269,23 @@ describe('room-action commands', () => {
       },
       catalog,
     );
+    const cageOrder = (document: ProjectDocument) =>
+      roomActionDomainForOccurrence(document, catalog, goldenHBiome, fieldsId)?.domain
+        .fieldsCageOrder;
+    expect(cageOrder(initial)).toEqual({
+      activePhaseKeys: ['Cage01', 'Cage02'],
+      phaseKeys: ['Cage02', 'Cage01'],
+      available: true,
+    });
+    expect(cageOrder(missing)).toEqual({
+      activePhaseKeys: ['Cage01', 'Cage02'],
+      phaseKeys: ['Cage01'],
+      available: false,
+    });
+    expect(
+      roomActionDomainForOccurrence(project(), catalog, biome, occurrenceId)?.domain
+        .fieldsCageOrder,
+    ).toBeUndefined();
     expect(() =>
       applyProjectCommand(missing, catalog, {
         kind: 'ReplaceFieldsCageOrder',

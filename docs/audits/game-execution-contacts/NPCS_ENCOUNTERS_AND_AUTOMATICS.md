@@ -154,7 +154,11 @@ tables.
 
 At `ChooseEncounter`, native `IsEncounterEligible` checks the requested declaration
 before forcing it. Rejection leaves selection native and produces a diagnostic;
-the rejected customization scope does not leak into native selection. A returned
+the rejected customization scope does not leak into native selection. The
+exception is an enemy introduction, which is never in `LegalEncounters`: it is
+admitted through `SetupEncounter`'s replacement gate (`RunLogic.lua:1125-1148`),
+which requires an enemy linking to it through `IntroEncounterName`, an
+uncompleted introduction and passing `GameStateRequirements`. A returned
 matching encounter table binds to the corresponding published phase. Selection
 admission and phase binding are separate contacts. Existing conformance detects
 meaningful downstream divergence rather than adding an eligibility mismatch.

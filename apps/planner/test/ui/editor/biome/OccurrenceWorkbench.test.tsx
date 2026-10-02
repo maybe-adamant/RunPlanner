@@ -864,6 +864,7 @@ describe('OccurrenceWorkbench', () => {
       await view.user.click(screen.getByRole('checkbox', { name: `${side.label} generation` }));
     }
     const generation = screen.getByRole('checkbox', { name: `${slot.label} generation` });
+    // Focus styling on a flagged checkbox is CSS-only (finding-overrides.css); jsdom cannot observe it.
     expect(generation.getAttribute('data-has-findings')).toBe('true');
 
     view.rerenderOccurrence({
@@ -886,7 +887,7 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('keeps visited-room generation disabled until Visited is unchecked without a redundant hover', async () => {
+  it('keeps visited-room generation disabled and explained until Visited is unchecked', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -898,6 +899,9 @@ describe('OccurrenceWorkbench', () => {
     const control = screen.getByRole('group', { name: 'Side Room 02 generation control' });
     const before = view.application.store.getState().projectWorkspace.history!.present;
     expect((checkbox as HTMLInputElement).disabled).toBe(true);
+    expect(checkbox.getAttribute('title')).toBe('Uncheck Visited first.');
+    expect(checkbox.getAttribute('aria-description')).toBe('Uncheck Visited first.');
+    expect(checkbox.closest('label')?.getAttribute('title')).toBe('Uncheck Visited first.');
     expect(screen.queryByRole('tooltip')).toBeNull();
     await view.user.hover(control);
     expect(screen.queryByRole('tooltip')).toBeNull();
@@ -907,6 +911,8 @@ describe('OccurrenceWorkbench', () => {
     const repairedCheckbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
     const repairedControl = screen.getByRole('group', { name: 'Side Room 02 generation control' });
     expect((repairedCheckbox as HTMLInputElement).disabled).toBe(false);
+    expect(repairedCheckbox.getAttribute('title')).toBeNull();
+    expect(repairedCheckbox.getAttribute('aria-description')).toBeNull();
     expect(repairedControl.getAttribute('tabindex')).toBeNull();
     expect(repairedControl.getAttribute('aria-describedby')).toBeNull();
     expect(screen.queryByRole('tooltip')).toBeNull();

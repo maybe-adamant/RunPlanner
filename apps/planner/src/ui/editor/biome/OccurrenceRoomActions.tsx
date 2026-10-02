@@ -133,51 +133,6 @@ export function RoomActionsWorkbench({
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
   const dragging = pointerDrag !== undefined;
-  useEffect(() => {
-    if (!dragging) return;
-    const root = board.current?.closest<HTMLElement>('.room-actions-workbench');
-    if (root === null || root === undefined) return;
-    const titles = new Map<HTMLElement, string>();
-    const retainTitleChanges = (records: readonly MutationRecord[]) => {
-      for (const record of records) {
-        if (record.type !== 'attributes' || !(record.target instanceof HTMLElement)) continue;
-        const title = record.target.getAttribute('title');
-        if (title === null) titles.delete(record.target);
-        else titles.set(record.target, title);
-      }
-    };
-    const suppressTitles = () => {
-      for (const element of root.querySelectorAll<HTMLElement>('[title]')) {
-        const title = element.getAttribute('title')!;
-        if (title === '') continue;
-        titles.set(element, title);
-        // Keep an empty attribute so a later React removal remains observable.
-        element.setAttribute('title', '');
-      }
-    };
-    const observation = {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ['title'],
-    };
-    const observer = new MutationObserver((records) => {
-      retainTitleChanges(records);
-      // Our suppression writes must not replace the application-owned title.
-      observer.disconnect();
-      suppressTitles();
-      observer.observe(root, observation);
-    });
-    suppressTitles();
-    observer.observe(root, observation);
-    return () => {
-      retainTitleChanges(observer.takeRecords());
-      observer.disconnect();
-      for (const [element, title] of titles) {
-        if (element.getAttribute('title') === '') element.setAttribute('title', title);
-      }
-    };
-  }, [dragging]);
   const [announcement, setAnnouncement] = useState('');
   const [placementRequest, setPlacementRequest] = useState<{ owner: string; actionKey: string }>();
   const placementTrigger = useRef<HTMLButtonElement | null>(null);
@@ -510,14 +465,17 @@ export function RoomActionsWorkbench({
         <li
           className="hub-open-room-card room-action-row"
           data-action-accent={actionAccent}
+          // A row title would follow the pointer as a native tooltip during a drag.
           title={
-            actionAccent === 'optional'
-              ? 'Optional action'
-              : actionAccent === 'phase'
-                ? 'Required in this timeline section, not necessarily as the next action.'
-                : actionAccent === 'room'
-                  ? 'Required before leaving the room.'
-                  : undefined
+            dragging
+              ? undefined
+              : actionAccent === 'optional'
+                ? 'Optional action'
+                : actionAccent === 'phase'
+                  ? 'Required in this timeline section, not necessarily as the next action.'
+                  : actionAccent === 'room'
+                    ? 'Required before leaving the room.'
+                    : undefined
           }
           data-dragging={pointerDrag?.actionKey === row.key || undefined}
           data-drop-after={

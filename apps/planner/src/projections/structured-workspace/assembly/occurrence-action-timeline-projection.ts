@@ -87,31 +87,32 @@ function projectRoomLifecycleTimeline(
   };
   const room = requireRoom(input.catalog, input.occurrence.gameName);
   const envelope = input.catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey];
-  const cageChoices =
+  const cageOrderState = input.evaluatedRoom?.fieldsCageOrder;
+  const cageLabels =
     roomLocal.kind !== 'fields'
-      ? []
-      : roomLocal.cages.map((cage) => {
-          const phase = envelope?.slots.find(
-            (slot) =>
-              slot.rewardAttachment?.kind === 'localReward' &&
-              slot.rewardAttachment.slotKey === cage.key,
-          );
-          if (phase === undefined) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${cage.key} has no Fields cage encounter slot`,
+      ? new Map<string, string>()
+      : new Map(
+          roomLocal.cages.map((cage) => {
+            const phase = envelope?.slots.find(
+              (slot) =>
+                slot.rewardAttachment?.kind === 'localReward' &&
+                slot.rewardAttachment.slotKey === cage.key,
             );
-          }
-          return Object.freeze({
-            phaseKey: phase.key,
-            label: `${cage.label} (${cage.summary})`,
-          });
-        });
-  const activeCageKeys = new Set(cageChoices.map((choice) => choice.phaseKey));
-  const cageOrder = input.occurrence.roomActions.order.flatMap((reference) =>
-    reference.kind === 'completeFieldsCage' && activeCageKeys.has(reference.phaseKey)
-      ? [reference.phaseKey]
-      : [],
-  );
+            if (phase === undefined) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${cage.key} has no Fields cage encounter slot`,
+              );
+            }
+            return [phase.key, `${cage.label} (${cage.summary})`] as const;
+          }),
+        );
+  const cageChoices = (cageOrderState?.activePhaseKeys ?? []).map((phaseKey) => {
+    const label = cageLabels.get(phaseKey);
+    if (label === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(`${phaseKey} has no Fields cage label`);
+    }
+    return Object.freeze({ phaseKey, label });
+  });
   const cageLabelByBoundaryKey = new Map(
     timeline.entries
       .flatMap((entry) =>
@@ -268,18 +269,15 @@ function projectRoomLifecycleTimeline(
     );
   }
   return Object.freeze({
-    ...(cageChoices.length === 0
+    ...(cageOrderState === undefined || cageChoices.length === 0
       ? {}
       : {
           fieldsCageOrder: Object.freeze({
             choices: Object.freeze(cageChoices),
-            phaseKeys: Object.freeze(cageOrder),
-            ...(rows.some(
-              (row) =>
-                row.reference.kind === 'completeFieldsCage' && !row.stale && row.rank === null,
-            )
-              ? { unavailableReason: 'Restore missing cage actions before changing their order.' }
-              : {}),
+            phaseKeys: cageOrderState.phaseKeys,
+            ...(cageOrderState.available
+              ? {}
+              : { unavailableReason: 'Restore missing cage actions before changing their order.' }),
           }),
         }),
     boundaries: Object.freeze([...timeline.boundaries]),

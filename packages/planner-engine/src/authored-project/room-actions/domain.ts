@@ -90,6 +90,16 @@ export interface RoomActionCheckpointContribution {
 export type RoomActionDomainContribution =
   RoomActionContribution | RoomActionCheckpointContribution;
 
+/** Active Fields cages and whether their authored order is one replaceable permutation. */
+export interface FieldsCageOrderState {
+  /** The exact cage phases a `ReplaceFieldsCageOrder` permutation must contain. */
+  readonly activePhaseKeys: readonly string[];
+  /** Authored order of the active cages present in the room action order. */
+  readonly phaseKeys: readonly string[];
+  /** False when no cage is active or an active cage action is missing from the order. */
+  readonly available: boolean;
+}
+
 export interface RoomActionDomain {
   readonly owner: ReturnType<typeof createOccurrenceAddress>;
   readonly declaration: RoomDeclaration;
@@ -97,6 +107,28 @@ export interface RoomActionDomain {
   readonly lifecycleStructure: RoomLifecycleStructure;
   readonly activeReferences: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionDomainContribution[];
+  /** Present only for a Fields combat room. */
+  readonly fieldsCageOrder?: FieldsCageOrderState;
+}
+
+function fieldsCageOrderState(
+  activeReferences: readonly RoomActionReference[],
+  order: readonly RoomActionReference[],
+): FieldsCageOrderState {
+  const activePhaseKeys = activeReferences.flatMap((reference) =>
+    reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+  );
+  const active = new Set(activePhaseKeys);
+  const phaseKeys = order.flatMap((reference) =>
+    reference.kind === 'completeFieldsCage' && active.has(reference.phaseKey)
+      ? [reference.phaseKey]
+      : [],
+  );
+  return frozen({
+    activePhaseKeys: frozen(activePhaseKeys),
+    phaseKeys: frozen(phaseKeys),
+    available: activePhaseKeys.length > 0 && phaseKeys.length === activePhaseKeys.length,
+  });
 }
 
 function frozen<T>(value: T): T {
@@ -910,5 +942,13 @@ export function assembleRoomActionDomain(options: {
     lifecycleStructure,
     activeReferences,
     contributions,
+    ...(lifecycleProfileKey === 'FieldsCombatRoom'
+      ? {
+          fieldsCageOrder: fieldsCageOrderState(
+            activeReferences,
+            options.occurrence.roomActions.order,
+          ),
+        }
+      : {}),
   });
 }
