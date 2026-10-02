@@ -1,7 +1,6 @@
 import type { Catalog } from '../../../catalog-schema';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
-import type { HermesShrineCandidateContext } from '../../commerce/hermes-shrine';
 import {
   createBiomeAddress,
   createHubDecisionAddress,
@@ -55,12 +54,7 @@ import {
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import { selectedTraitOfferProducts } from './selected-trait-products';
 import { prepareRewardEvaluationInputs } from './prepared-inputs';
-import { addHubBoardRewardLookup } from '../../state/reward-lookups';
 import { reachSimulationHistory } from '../../state/transitions';
-import {
-  normalizeOfferedRewardTypes,
-  publishOfferedRewardTypes,
-} from '../../state/offered-rewards';
 import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
@@ -69,9 +63,7 @@ import {
   createChronologyAccumulator,
   generationFindings,
   lifecycleFindings,
-  mergedFindings,
   settledFindings,
-  siteSettlementEmissions,
   type ChronologyEmission,
 } from './chronology-accumulator';
 import {
@@ -83,17 +75,9 @@ import {
   type ChronologyWalkContext,
   type ChronologyWalkState,
 } from './chronology-seams';
-import {
-  applyTargetGenerationCompletedTransition,
-  type TargetGenerationFrontier,
-} from './generation/target-generation-completed';
-import { applyRoomCreatedTransition } from './generation/room-created';
-import { flushHubBoard } from './generation/hub-board';
-import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
-import type { PendingHubBoardGeneration as GenerationPendingHubBoardGeneration } from './generation/emissions';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
 import {
   publishBiomeRewardEvaluationAssembly,
@@ -107,8 +91,6 @@ import {
   initializeRewardBranches,
   publicRewardBranch,
 } from '../branch-lifecycle';
-import type { OfferProcessingPeer } from '../offer-generation';
-import { resourcePlacementFindingRegions } from '../../resources';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from '../branch-primitives';
 import { rewardFinding } from '../findings';
 import { assessAuthoredBossDoorRewardStore } from './reward-store-support';
@@ -122,13 +104,6 @@ import {
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
-
-/**
- * One persistent Ephyra board-generation region. The region starts from the
- * post-Hub-entry reward branches and contains every open physical door,
- * independently from the later six-room visit chronology.
- */
-type PendingHubBoardGeneration = GenerationPendingHubBoardGeneration;
 
 const rewardFacts = createBiomeRewardFacts;
 
@@ -148,8 +123,7 @@ export function evaluateBiomeRewardChronology(
   const enteredBiomeCount = routePosition.ordinal;
   const fullRunBiomeCount = routePosition.itineraryBiomeKeys.length;
   const prepared = prepareRewardEvaluationInputs(catalog, snapshot, history);
-  const { layout, rooms, views, targets, additionalContinuations, hubTargetByOrigin, lifecycle } =
-    prepared;
+  const { layout, rooms, views, additionalContinuations } = prepared;
   const authoredSeaStarDuplicateSiteKeys = new Set(
     [...rooms.values()].flatMap((room) =>
       room.kind === 'authored'
@@ -171,7 +145,6 @@ export function evaluateBiomeRewardChronology(
         : [],
     ),
   );
-  const batchesByParent = prepared.batchesByParent;
   const accumulator = createChronologyAccumulator(rooms);
 
   // A Hub replaces its source's zero-target terminal envelope. Its source
@@ -212,25 +185,15 @@ export function evaluateBiomeRewardChronology(
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
       ? semanticAddressKey(snapshot.frontier.parent.origin)
       : undefined;
-  const expectedStores = new Map<string, string | undefined>();
-  const targetGenerationByParent = new Map<string, TargetGenerationFrontier>();
-  const hermesShrineAssessments = new Map<
-    string,
-    {
-      readonly origin: import('../../../authored-project/addresses').OccurrenceAddress;
-      readonly assessments: readonly HermesShrineCandidateContext[];
-    }
-  >();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
-  const hubDecisionsBySource = new Map(
+  const hubDecisionOwnerBySource = new Map(
     snapshot.decisions
       .filter(
         (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
           decision.kind === 'hub',
       )
-      .map((decision) => [semanticAddressKey(decision.source.origin), decision]),
+      .map((decision) => [semanticAddressKey(decision.source.origin), decision.origin]),
   );
-  let peers: readonly OfferProcessingPeer[] = Object.freeze([]);
   let walk: ChronologyWalkState = createChronologyWalkState(
     initializeRewardBranches(
       initialBranches,
@@ -255,6 +218,12 @@ export function evaluateBiomeRewardChronology(
     resourcePlacements,
     resourceFindings,
     authoredSeaStarDuplicateSiteKeys,
+    history,
+    prepared,
+    hubTakeoverSources,
+    hubRestoringSources,
+    hubDecisionOwnerBySource,
+    frontierSource,
     accumulated: accumulator,
   });
   const echoReplay = applyEchoKeepsakeReplayTransition(
@@ -275,7 +244,6 @@ export function evaluateBiomeRewardChronology(
     { kind: 'timelineFacts', facts: echoReplay.timelineFacts },
     { kind: 'echoKeepsakeReplayOutcome', outcome: echoReplay.outcome },
   ]);
-  let pendingHubBoard: PendingHubBoardGeneration | undefined;
   // A Hub interval ends at its departure: Hub exit or a visit's return, then any fountain use.
   const recordHubDeparture = (origin: HubRoomAddress, sequence: number, replace: boolean) => {
     const room = rooms.get(semanticAddressKey(origin));
@@ -309,7 +277,7 @@ export function evaluateBiomeRewardChronology(
     }
     const currentShopNames = visibleStoreOptionNames(
       source,
-      hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
+      walk.hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
     );
     // One token represents this exact rewardFacts closure: current/source room,
     // declaration, immutable view, shop names and peer context. Branch-varying
@@ -445,42 +413,6 @@ export function evaluateBiomeRewardChronology(
       : targetSlotHistory(origin, historySequence);
   }
 
-  function flushPendingHubBoard(): void {
-    const flushed = flushHubBoard(catalog, pendingHubBoard);
-    if (flushed === undefined) return;
-    if (
-      layout.progression.kind === 'hub' &&
-      pendingHubBoard !== undefined &&
-      flushed.peers.length === pendingHubBoard.participants.length &&
-      flushed.branches.length > 0
-    ) {
-      const lookupKey = layout.progression.rewardLookup.key;
-      walk = withBranches(
-        walk,
-        Object.freeze(
-          flushed.branches.map((branch) =>
-            Object.freeze({
-              ...branch,
-              state: addHubBoardRewardLookup(
-                branch.state,
-                lookupKey,
-                flushed.peers.map((peer) => peer.offer.rewardType),
-              ),
-            }),
-          ),
-        ),
-      );
-    } else {
-      walk = withBranches(walk, flushed.branches);
-    }
-    peers = flushed.peers;
-    accumulator.mergeEmissions([
-      generationFindings(flushed.findings),
-      { kind: 'producerFrontiers', frontiers: flushed.producerFrontiers },
-    ]);
-    pendingHubBoard = undefined;
-  }
-
   function reachHistorySequence(sequence: number): void {
     const view = history.viewsBySequence[sequence];
     if (view === undefined) {
@@ -500,11 +432,19 @@ export function evaluateBiomeRewardChronology(
   }
 
   function applySeamStep(step: ChronologySeamStep): void {
-    if (step.runStateCheckpoint !== undefined)
+    if (step.leadingEmissions !== undefined) accumulator.mergeEmissions(step.leadingEmissions);
+    const checkpoint = step.runStateCheckpoint;
+    if (checkpoint !== undefined)
       captureRunState(
-        step.runStateCheckpoint.owner,
-        step.runStateCheckpoint.room,
-        step.runStateCheckpoint.view,
+        checkpoint.owner,
+        checkpoint.room,
+        checkpoint.view,
+        checkpoint.branches ?? walk.branches,
+      );
+    const target = step.targetHistoryCheckpoint;
+    if (target !== undefined)
+      accumulator.mergeEmissions(
+        targetSlotHistory(target.origin, target.historySequence, target.branches),
       );
     walk = step.state;
     accumulator.mergeEmissions(step.emissions);
@@ -538,7 +478,7 @@ export function evaluateBiomeRewardChronology(
           Object.freeze({
             hermesShrine:
               room?.kind === 'authored' &&
-              hermesShrineAssessments.has(semanticAddressKey(room.origin)),
+              walk.hermesShrineAssessments.has(semanticAddressKey(room.origin)),
             stygianWell:
               room?.kind === 'authored' &&
               walk.stygianWellAssessments.has(semanticAddressKey(room.origin)),
@@ -553,10 +493,13 @@ export function evaluateBiomeRewardChronology(
           },
         ]);
         if (entered.hermesShrineAssessment !== undefined)
-          hermesShrineAssessments.set(
-            semanticAddressKey(entered.hermesShrineAssessment.origin),
-            entered.hermesShrineAssessment,
-          );
+          walk = Object.freeze({
+            ...walk,
+            hermesShrineAssessments: new Map(walk.hermesShrineAssessments).set(
+              semanticAddressKey(entered.hermesShrineAssessment.origin),
+              entered.hermesShrineAssessment,
+            ),
+          });
         if (entered.stygianWellAssessment !== undefined)
           walk = Object.freeze({
             ...walk,
@@ -641,177 +584,17 @@ export function evaluateBiomeRewardChronology(
         ]);
         break;
       }
-      case 'roomCreated': {
-        accumulator.mergeEmissions([
-          mergedFindings(resourcePlacementFindingRegions(event, resourceFindings)),
-        ]);
-        const transition = applyRoomCreatedTransition({
-          catalog,
-          snapshot,
-          event,
-          rooms,
-          views,
-          targets,
-          hubTargetByOrigin,
-          additionalContinuations,
-          expectedStores,
-          hermesShrineAssessments,
-          batchesByParent,
-          ...('current' in history ? { historyCurrent: history.current } : {}),
-          branches: walk.branches,
-          peers,
-          ...(pendingHubBoard === undefined ? {} : { pendingHubBoard }),
-          lifecycle,
-          enteredBiomeCount,
-          authoredSeaStarDuplicateSiteKeys,
-        });
-        if (transition.keepsakeSelectionCandidate !== undefined)
-          accumulator.mergeEmissions([
-            {
-              kind: 'keepsakeSelectionCandidate',
-              key: transition.keepsakeSelectionCandidate.key,
-              candidate: transition.keepsakeSelectionCandidate.candidate,
-            },
-          ]);
-        if (transition.hubRunStateCheckpoint !== undefined)
-          captureRunState(
-            transition.hubRunStateCheckpoint.owner,
-            transition.hubRunStateCheckpoint.source,
-            transition.hubRunStateCheckpoint.view,
-          );
-        accumulator.mergeEmissions([
-          generationFindings(transition.findings),
-          { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
-        ]);
-        walk = withBranches(walk, transition.branches);
-        peers = transition.peers;
-        pendingHubBoard = transition.pendingHubBoard;
+      case 'roomCreated':
+        applySeamStep(chronologySeamHandlers.roomCreated(walkContext, walk, event));
         break;
-      }
-      case 'targetGenerationCompleted': {
-        if (
-          event.origin.kind === 'hubSlot' &&
-          pendingHubBoard?.participants.length === hubTargetByOrigin.size
-        ) {
-          flushPendingHubBoard();
-        }
-        const targetGeneration =
-          event.origin.kind === 'target'
-            ? targetGenerationByParent.get(semanticAddressKey(event.parentOrigin))
-            : undefined;
-        const transition = applyTargetGenerationCompletedTransition(event, targetGeneration);
-        if (transition.nextTargetHistory !== undefined)
-          accumulator.mergeEmissions(
-            targetSlotHistory(transition.nextTargetHistory, event.sequence),
-          );
-        walk = withBranches(walk, advanceRewardBranches(walk.branches, event.sequence));
-        // The game rebuilds its offered-reward set once, when the whole batch
-        // has rooms and its exits unlock. The completed batch's own generated
-        // offers are that set, so nothing reconstructs the rule here: the last
-        // generated target simply publishes the peers this batch produced.
-        //
-        // Only ordinary exit batches publish. Hub slot and local visit slot
-        // generations, the hub handoff batch and declaration-fixed room links
-        // are deliberately excluded: the hub board has its own run-persistent
-        // lookup with a different lifetime, and a fixed link reaches its target
-        // without an offered door batch. Extra exits (Chaos gate, Zagreus
-        // contract) are created at the parent's entry, so their offers are
-        // already flushed from `peers` by this batch's outgoing checkpoint;
-        // the game does count those doors, which is a recorded fidelity gap
-        // rather than a behavior difference, since no such room offers a type
-        // any inventory entry currently consults.
-        if (
-          event.origin.kind === 'target' &&
-          targetGeneration !== undefined &&
-          transition.nextTargetHistory === undefined &&
-          targetGeneration.exitKeys.at(-1) === event.origin.exitKey
-        ) {
-          // Normalized once for the whole cohort: every branch of one batch
-          // shares the same offered set and therefore the same frozen array.
-          const offeredRewardTypes = normalizeOfferedRewardTypes(
-            peers.map((peer) => peer.offer.rewardType),
-          );
-          walk = withBranches(
-            walk,
-            Object.freeze(
-              walk.branches.map((branch) =>
-                Object.freeze({
-                  ...branch,
-                  state: publishOfferedRewardTypes(branch.state, offeredRewardTypes),
-                }),
-              ),
-            ),
-          );
-        }
+      case 'targetGenerationCompleted':
+        applySeamStep(chronologySeamHandlers.targetGenerationCompleted(walkContext, walk, event));
         break;
-      }
-      case 'outgoingGenerationCheckpoint': {
-        const ownerKey = semanticAddressKey(event.origin);
-        const source = rooms.get(ownerKey);
-        const sourceViews = views.get(ownerKey);
-        const declaration =
-          source === undefined
-            ? undefined
-            : routeRoomDeclaration(catalog.rooms.byKey[source.gameName], source.origin.routeKey);
-        const batch = batchesByParent.get(ownerKey);
-        const hubDecisionOwner = hubDecisionsBySource.get(ownerKey)?.origin;
-        const frontierOwner =
-          frontierSource === ownerKey &&
-          snapshot.kind === 'biomePrefix' &&
-          snapshot.frontier?.kind === 'exitDecision'
-            ? snapshot.frontier.origin
-            : undefined;
-        const transition = applyOutgoingGenerationTransition({
-          catalog,
-          snapshot,
-          event,
-          layout,
-          source,
-          sourceViews,
-          declaration,
-          batch,
-          hubDecisionOwner,
-          frontierOwner,
-          emptyOutgoing: lifecycle.emptyOutgoingOwnerKeys.has(ownerKey),
-          hubTakeover: hubTakeoverSources.has(ownerKey),
-          hubRestoring: hubRestoringSources.has(ownerKey),
-          branches: walk.branches,
-          authoredSeaStarDuplicateSiteKeys,
-        });
-        for (const settlement of transition.siteSettlements)
-          accumulator.mergeEmissions(
-            siteSettlementEmissions(settlement, source?.origin ?? event.origin),
-          );
-        if (transition.runStateCheckpoint !== undefined)
-          captureRunState(
-            transition.runStateCheckpoint.owner,
-            transition.runStateCheckpoint.source,
-            transition.runStateCheckpoint.view,
-            transition.runStateCheckpoint.branches,
-          );
-        if (transition.targetGeneration !== undefined)
-          targetGenerationByParent.set(
-            transition.targetGeneration.parentKey,
-            transition.targetGeneration.frontier,
-          );
-        if (transition.targetHistoryCheckpoint !== undefined)
-          accumulator.mergeEmissions(
-            targetSlotHistory(
-              transition.targetHistoryCheckpoint.origin,
-              transition.targetHistoryCheckpoint.historySequence,
-              transition.targetHistoryCheckpoint.branches,
-            ),
-          );
-        for (const entry of transition.expectedStores)
-          expectedStores.set(entry.targetKey, entry.storeKey);
-        accumulator.mergeEmissions([
-          { kind: 'storeSupport', entries: transition.storeSupportEntries },
-          generationFindings(transition.findings),
-        ]);
-        walk = withBranches(walk, transition.branches);
-        peers = transition.peers;
+      case 'outgoingGenerationCheckpoint':
+        applySeamStep(
+          chronologySeamHandlers.outgoingGenerationCheckpoint(walkContext, walk, event),
+        );
         break;
-      }
       case 'offerPointMaterialized': {
         const roomKey = semanticAddressKey(event.origin);
         const transition = applyOfferPointMaterializedTransition({
@@ -820,7 +603,7 @@ export function evaluateBiomeRewardChronology(
           event,
           rooms,
           views,
-          lifecycle,
+          lifecycle: prepared.lifecycle,
           branches: walk.branches,
           routeLoadout,
           authoredSeaStarDuplicateSiteKeys,
@@ -1042,7 +825,7 @@ export function evaluateBiomeRewardChronology(
     at: (address: SemanticAddress) => traitChildSettlementProducts.get(semanticAddressKey(address)),
   });
   const publishedHermesShrineAssessments = Object.freeze(
-    [...hermesShrineAssessments.values()].map(({ origin, assessments }) => {
+    [...walk.hermesShrineAssessments.values()].map(({ origin, assessments }) => {
       const travelDealRefills = walk.hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
       return Object.freeze({
         origin,
