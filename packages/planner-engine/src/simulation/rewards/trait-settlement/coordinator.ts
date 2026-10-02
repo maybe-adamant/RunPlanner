@@ -1315,16 +1315,16 @@ function rejectEncounterChild(
 function settleCirce(
   selection: AppliedEncounterSelection,
   disposition: Extract<TraitSelectedDisposition, { readonly kind: 'circe' }>,
+  selected: NonNullable<AppliedEncounterSelection['selected']>,
 ): EncounterChildResult {
-  const { catalog, branch, offer, selected, owner, sequence, applied, appliedEmissions } =
-    selection;
+  const { catalog, branch, offer, owner, sequence, applied, appliedEmissions } = selection;
   const accepted = {
     findingEmissions: appliedEmissions,
     blockedChild: selection.appliedBlockedChild,
   };
   if (applied.state.traitHistory === branch.state.traitHistory)
     return { ...accepted, branch: applied };
-  const resolution = selected?.circeResolution;
+  const resolution = selected.circeResolution;
   const acquisitionOrdinal = branch.state.reached.routePosition.ordinal;
   const rejection = assessCirceChild(catalog, branch, disposition, resolution, acquisitionOrdinal);
   if (rejection !== undefined)
@@ -1333,10 +1333,9 @@ function settleCirce(
       createCirceResolutionAddress(owner, offer.selectedOptionKey),
       [],
       rejection.code,
-      selected?.traitKey,
+      selected.traitKey,
       rejection.detail,
     );
-  if (selected === undefined) return { ...accepted, branch: applied };
   return {
     ...accepted,
     branch: settleValidatedCirceChild(
@@ -1523,8 +1522,8 @@ function settleTraitsEncounterOffer(
     applied.state.traitHistory !== undefined &&
     applied.state.traitHistory !== branch.state.traitHistory;
   const child: EncounterChildResult =
-    disposition?.kind === 'circe'
-      ? settleCirce(selection, disposition)
+    disposition?.kind === 'circe' && selected !== undefined
+      ? settleCirce(selection, disposition, selected)
       : disposition?.kind === 'echo' &&
           disposition.effect === 'lastRunBoon' &&
           selected !== undefined &&
@@ -1586,7 +1585,6 @@ export function settleEncounterTraitOffer(
     );
     return Object.freeze({
       ...settlement,
-      findingEntries: reduceTraitFindingEmissions(entryEmissions(settlement.findingEntries)),
       screenCompleted: false,
     });
   }
