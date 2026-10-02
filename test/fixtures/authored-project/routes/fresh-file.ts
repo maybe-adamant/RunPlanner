@@ -36,7 +36,10 @@ import { authorLegalTraitOffers } from '../shared';
  * Authors, in chronological order, each reached generated composition a fresh
  * profile requires (its deterministic initial value) and each missing trait offer.
  */
-export function authorFreshFileFrontier(project: ProjectDocument): ProjectDocument {
+export function authorFreshFileFrontier(
+  project: ProjectDocument,
+  observe?: (authored: ProjectDocument) => void,
+): ProjectDocument {
   let current = project;
   for (let pass = 0; pass < 256; pass += 1) {
     const assembly = simulateProjectAssembly(catalog, current);
@@ -56,6 +59,7 @@ export function authorFreshFileFrontier(project: ProjectDocument): ProjectDocume
         decisionKey: String(required!.evidence.decisionKey),
         value,
       });
+      observe?.(current);
       continue;
     }
     const authored = authorLegalTraitOffers(current);
@@ -65,6 +69,7 @@ export function authorFreshFileFrontier(project: ProjectDocument): ProjectDocume
       return current;
     }
     current = authored;
+    observe?.(current);
   }
   throw new Error('fresh fixture frontier did not settle');
 }
@@ -458,6 +463,19 @@ export function createFreshFileRouteProject(): ProjectDocument {
 let freshFileRoute: ProjectDocument | undefined;
 
 function freshFileRouteProject(): ProjectDocument {
+  return authorFreshFileFrontier(freshFileRouteFrontierStart());
+}
+
+/** The Fresh File route's frontier walk: its start, then each authored step through the route. */
+export function freshFileRouteFrontierWalk(): readonly ProjectDocument[] {
+  const start = freshFileRouteFrontierStart();
+  const documents = [start];
+  authorFreshFileFrontier(start, (authored) => documents.push(authored));
+  return Object.freeze(documents);
+}
+
+/** The made-fresh F→I route before its compositions and trait offers are authored. */
+function freshFileRouteFrontierStart(): ProjectDocument {
   const fresh = JSON.parse(encodeProjectDocument(freshFileFTopology()));
   const mature = JSON.parse(
     encodeProjectDocument(loadUnderworldFGHICheckpoint()).replaceAll('Underworld', 'FreshFile'),
@@ -578,7 +596,7 @@ function freshFileRouteProject(): ProjectDocument {
       phase,
       encounterKey,
     });
-  return authorFreshFileFrontier(project);
+  return project;
 }
 
 const introductionPhase = (
