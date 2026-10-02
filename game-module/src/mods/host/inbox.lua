@@ -76,7 +76,7 @@ function inbox.unwrap(raw, buildId)
     local value, decodeError = json.decode(raw)
     if value == nil then return nil, "malformed-plan", "malformed-json: " .. tostring(decodeError) end
     if json.isObject(value) and value.format == PLAN_FORMAT then
-        return nil, "stale-slot", "plan was sent before slots named a module build; send it again"
+        return nil, "stale-slot", "plan was sent before slots named a module build; send it again or restart the game"
     end
     if not json.isObject(value) or value.format ~= inbox.SLOT_FORMAT then
         return nil, "malformed-plan", "slot must be a run-planner-slot envelope"
@@ -92,7 +92,7 @@ function inbox.unwrap(raw, buildId)
             "the installed module has no build identity; install it from the planner's Game panel"
     end
     if value.buildId ~= buildId then
-        return nil, "stale-slot", "plan was sent for another module build; send it again"
+        return nil, "stale-slot", "plan was sent for another module build; send it again or restart the game"
     end
     return value.plan
 end

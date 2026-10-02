@@ -168,7 +168,7 @@ keepsake or Arcana, starts with empty god-use, god-pickup and resource-gain
 history, and has no run-start reward. The Executor realizes the opening at the
 nested `CreateRoom` contact
 ([integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md)). A
-brand-new profile run on 2026-09-30 (build from `0bc1971a`) bound the opening under
+brand-new profile run on 2026-09-30 (module source as of `0d65c432`) bound the opening under
 `StartNewGame` and completed the published F–I plan with no mismatch.
 
 ### Unreachable content

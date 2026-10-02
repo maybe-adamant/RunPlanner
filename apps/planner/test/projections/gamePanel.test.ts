@@ -541,10 +541,10 @@ describe('Game panel projection', () => {
       },
     });
     const current = { kind: 'publishable', projectId: 'mine', planFingerprint: 'current' } as const;
-    expect(projectGamePlans(status, current, 'clean', catalog, 0)?.rows[1]).toEqual({
+    expect(projectGamePlans(status, current, 'clean', catalog, 0)?.rows[1]).toMatchObject({
       slot: 2,
       state: 'stale',
-      columns: null,
+      columns: { route: 'Underworld', endsAt: 'Erebus', plan: null },
       summary: 'Sent by another build — send again',
       marker: null,
       action: { label: 'Replace', confirm: true },

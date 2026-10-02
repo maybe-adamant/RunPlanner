@@ -617,7 +617,7 @@ function slotColumns(
   catalog: Catalog,
   now: number,
 ): GamePlanSlotRow['columns'] {
-  if (slot.state !== 'present') return null;
+  if (slot.state !== 'present' && slot.state !== 'stale') return null;
   const endKey = slot.biomeKeys.at(-1);
   const weapon =
     slot.weaponKey === null

@@ -31,7 +31,9 @@ This parses every Lua file under `src/` and `tests/` with `luac -p`, then runs
 with LuaUnit and Luacheck installed from LuaRocks.
 
 `manifest.template.json` is the source of the package manifest; the release
-build adds `version_number`.
+build adds `version_number`. Assembly also stamps `buildId`, a hash of the
+`src/` payload, into `execution-compatibility.json`; the checked-in file
+carries no `buildId`.
 
 `README.md` is the player-facing introduction; keep implementation and
 development details here.
