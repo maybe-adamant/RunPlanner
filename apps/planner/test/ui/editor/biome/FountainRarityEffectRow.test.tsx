@@ -107,7 +107,7 @@ describe('FountainRarityEffectRow', () => {
       </Provider>,
     );
     expect(await screen.findByLabelText('Phial Target')).toBeTruthy();
-    expect(screen.getByText('Needs repair')).toBeTruthy();
+    expect(screen.queryByText('Needs repair')).toBeNull();
     await act(async () => {
       screen.getByRole('button', { name: 'Clear Phial target' }).click();
     });

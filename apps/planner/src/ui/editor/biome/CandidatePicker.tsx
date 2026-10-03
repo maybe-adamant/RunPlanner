@@ -50,9 +50,6 @@ export function CandidatePicker<T extends number | string>({
       }}
       onSelect={onReplace}
       placeholder={placeholder}
-      // Support evidence lives in the popover; an unsupported selection is
-      // already announced by its finding.
-      selectedExplanation="never"
       {...(selected === undefined ? {} : { triggerLabel: selected.label })}
     />
   );

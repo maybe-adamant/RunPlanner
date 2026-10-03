@@ -231,11 +231,6 @@ function TargetRow({
           />
         )}
         <AnomalyRoomControl room={door.room} />
-        {node.targetInteraction !== 'readOnly' && target.physicalState === 'unavailable' ? (
-          <p className="fixed-room-state">
-            This saved door is no longer available here. Fix the earlier route first.
-          </p>
-        ) : null}
         <div className="door-reward-slot">
           <DoorRewardEditor
             door={door}

@@ -63,16 +63,12 @@ function derivedRewardSupplementalOffer(
           kind: 'echoDoubleShopInvalid' as const,
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
-          explanation:
-            'This duplicate has no active eligible paid source. Remove its pickup from the Timeline.',
           purchase,
         })
       : Object.freeze({
           kind: 'travelDealInvalid' as const,
           key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
           label: 'Travel Deal refill',
-          explanation:
-            'This selected refill has no active triggering purchase. Clear Purchased here to repair the Shop.',
           purchase,
         });
   }

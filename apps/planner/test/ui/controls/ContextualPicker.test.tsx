@@ -92,6 +92,51 @@ const model: ContextualPickerModel<string> = {
 };
 
 describe('ContextualPicker', () => {
+  it.each(['forced', 'impossible', 'unassessed'] as const)(
+    'keeps a loaded %s selection explanation in the popover without adding page text',
+    async (state) => {
+      const user = userEvent.setup();
+      const explanation = 'This selection depends on an earlier route choice.';
+      const selected = { ...model.selected!, state, explanation };
+      const assessed: ContextualPickerModel<string> = {
+        selected,
+        sections: [
+          {
+            key: 'current',
+            kind: 'category',
+            label: 'Current selection',
+            collapsible: false,
+            items: [selected],
+          },
+        ],
+      };
+      const picker = (currentModel: ContextualPickerModel<string>) => (
+        <ContextualPicker
+          id="stable-picker"
+          label="Room"
+          model={currentModel}
+          onSelect={() => undefined}
+          placeholder="Select a room"
+        />
+      );
+      const view = render(picker(model));
+      const trigger = screen.getByLabelText('Room');
+      const field = trigger.parentElement!;
+      const initialText = field.textContent;
+      await user.click(trigger);
+      view.rerender(picker(assessed));
+      expect(within(screen.getByRole('listbox')).getByText(explanation)).toBeTruthy();
+      expect(field.textContent).toBe(initialText);
+      expect(trigger.getAttribute('aria-description')).toBe(explanation);
+      await user.keyboard('{Escape}');
+      expect(screen.queryByText(explanation)).toBeNull();
+      expect(field.textContent).toBe(initialText);
+      expect(trigger.getAttribute('aria-invalid')).toBe(state === 'impossible' ? 'true' : null);
+      await user.click(trigger);
+      expect(within(screen.getByRole('listbox')).getByText(explanation)).toBeTruthy();
+    },
+  );
+
   it('keeps an associated label from opening an authoring-locked picker', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

@@ -250,21 +250,6 @@ select {
   font-size: 0.75rem;
 }
 
-.contextual-picker-selected-explanation {
-  margin: 0;
-  color: #96939c;
-  font-size: 0.75rem;
-  line-height: 1.35;
-}
-
-.contextual-picker-selected-explanation[data-candidate-state='forced'] {
-  color: #d8ba80;
-}
-
-.contextual-picker-selected-explanation[data-candidate-state='impossible'] {
-  color: #e7a1a1;
-}
-
 .contextual-picker-popover {
   z-index: 50;
   width: max(calc(var(--radix-popover-trigger-width) / var(--app-scale, 1)), 320px);
@@ -612,10 +597,6 @@ select {
   grid-template-columns: minmax(6.5rem, 7.5rem) minmax(0, 1fr);
   align-items: center;
   column-gap: 10px;
-}
-
-.field-control-inline > .contextual-picker-selected-explanation {
-  grid-column: 1 / -1;
 }
 
 .door-fixed-reward > .fixed-room-state,

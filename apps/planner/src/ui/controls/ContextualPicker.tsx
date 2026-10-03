@@ -29,8 +29,6 @@ interface ContextualPickerProps<T> {
   readonly placeholder: string;
   readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
-  /** When to render the selected explanation under the trigger. */
-  readonly selectedExplanation?: 'always' | 'never';
 }
 
 function PickerSection<T>({
@@ -191,7 +189,6 @@ export function ContextualPicker<T>({
   placeholder,
   side = 'bottom',
   triggerLabel,
-  selectedExplanation = 'always',
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -201,9 +198,6 @@ export function ContextualPicker<T>({
   }, []);
   const open = controlledOpen ?? internalOpen;
   const selected = model.selected;
-  const showSelectedExplanation =
-    selected?.explanation !== undefined && selectedExplanation === 'always';
-  const selectedExplanationId = showSelectedExplanation ? `${id}-selected-explanation` : undefined;
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
   const interactionDisabled = disabled || disabledTitle !== undefined || authoringLocked;
@@ -235,7 +229,6 @@ export function ContextualPicker<T>({
         <Popover.Trigger asChild>
           <button
             aria-busy={loading || undefined}
-            aria-describedby={selectedExplanationId}
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-invalid={selected?.state === 'impossible' || undefined}
@@ -245,6 +238,7 @@ export function ContextualPicker<T>({
             disabled={interactionDisabled}
             {...(disabledTitle === undefined ? {} : { title: disabledTitle })}
             {...findingTarget}
+            aria-description={findingTarget?.['aria-description'] ?? selected?.explanation}
             id={id}
             ref={(node) => {
               captureTrigger(node);
@@ -280,15 +274,6 @@ export function ContextualPicker<T>({
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
-      {showSelectedExplanation && (
-        <p
-          className="contextual-picker-selected-explanation"
-          data-candidate-state={selected.state}
-          id={selectedExplanationId}
-        >
-          {selected.explanation}
-        </p>
-      )}
     </div>
   );
 }

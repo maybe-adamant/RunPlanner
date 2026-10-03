@@ -43,7 +43,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly kind: 'travelDealInvalid' | 'echoDoubleShopInvalid';
       readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
       readonly label: string;
-      readonly explanation: string;
       readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
     }
   | {
