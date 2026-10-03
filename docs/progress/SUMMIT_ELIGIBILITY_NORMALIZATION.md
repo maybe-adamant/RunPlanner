@@ -50,8 +50,10 @@ engine candidates; no Q-specific UI policy or hidden repair is permitted.
 Catalog width closure currently depends on Q's last stage. Replace that inference
 with conservative declaration-based source exclusion: only direct source and
 Preboss biomeDepthCache ranges can prove disjointness after shifting the source
-range by its declared advancement. Unknown predicates and fixed starts remain
-admitted. Use this proof only where declared direct progression has no intervening
+range by a proven uniform predecessor commit increment. Outgoing generation
+precedes the current room commit, so its own increment is not that shift. Prove
+uniformity across possible ordinary/start predecessors; unknown or nonuniform
+increments, unknown predicates and fixed starts remain conservatively admitted. Use this proof only where declared direct progression has no intervening
 detour/restore path; otherwise keep the conservative source set. Do not introduce
 another room-group list, Q-name branch, or general symbolic evaluator. Preserve
 `remainingOffers: none` width-one validation and its counted counterpart.
@@ -83,8 +85,9 @@ invalid states, replacement and topology; EDITOR_MODEL.md projection ownership.
 
 Catalog owns the complete depth/group matrix and ordinary force absence. Assert
 retained Preboss force and unchanged N bounded entry. Width mutation tests must
-reject a two-door Q source moved to depth 6 or advanced from depth 5 by 2, and
-retain conservative handling for unproven predicates/paths.
+reject a two-door Q source moved to depth 6, and reject unproven width-one
+closure after a predecessor increment mutation breaks uniformity. Retain
+conservative handling for unproven predicates/paths.
 
 Engine owns exact support through all six established pools, absent ordinary
 force evidence, depth-7 required takeover from an empty envelope, both fixed
