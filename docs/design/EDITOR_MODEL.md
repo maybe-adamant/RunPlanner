@@ -223,6 +223,17 @@ needed. Navigation must work when entering from another biome and when already
 inside the same occurrence on the wrong tab. Redirected focus scrolls/focuses
 that same repair target rather than independently rerouting the finding.
 
+Timeline navigation follows the application-owned presentation that contains
+its control, including nested reward and trait controls. A Ship phase publishes
+its tab together with its rows and lifecycle entries; React consumes that
+selection without rebuilding phase ownership. Rendering selects an ordinary
+room timeline, one explicit Ship phase, or Ship repairs. An omitted phase does
+not mean all phases, and a missing action destination does not imply repairs.
+Inactive wheel choices navigate to Overview to restore their phase; retained
+action rows navigate to their repair controls.
+Stale session tabs may recover to Overview after an edit; newly assembled
+semantic destinations must name an existing presentation target.
+
 The compact repair banner shows a title, its location below, and optional detail
 only when it adds a constraint or repair choice. It sits above the biome title
 in the structure rail, or across the content width on Route and read-only index

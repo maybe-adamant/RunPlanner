@@ -7,6 +7,7 @@ import type {
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomSummary,
+  WorkspaceShipPhasePresentation,
   WorkspaceBossDoorRewardStoreControl,
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
@@ -131,7 +132,6 @@ export function DirectRoomWorkbench({
   interactions,
   room,
   view,
-  shipPhaseKey,
   renderRoomActionRowContent,
   renderRoomActionRowTrailingContent,
   renderLifecycleBoundaryContent,
@@ -140,8 +140,10 @@ export function DirectRoomWorkbench({
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
-  readonly view: 'overview' | 'actions';
-  readonly shipPhaseKey?: string;
+  readonly view:
+    | 'overview'
+    | 'actions'
+    | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation };
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderRoomActionRowTrailingContent?: (
     row: WorkspaceRoomActions['rows'][number],
@@ -183,6 +185,7 @@ export function DirectRoomWorkbench({
       }
       return (
         <RoomActionsWorkbench
+          mode={{ kind: 'roomTimeline' }}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           encounterPhases={workbench.encounterPhases}
           idPrefix={idPrefix}
@@ -224,6 +227,7 @@ export function DirectRoomWorkbench({
       }
       return (
         <RoomActionsWorkbench
+          mode={{ kind: 'roomTimeline' }}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           encounterPhases={workbench.encounterPhases}
           idPrefix={idPrefix}
@@ -257,6 +261,7 @@ export function DirectRoomWorkbench({
       }
       return (
         <RoomActionsWorkbench
+          mode={{ kind: 'roomTimeline' }}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           idPrefix={idPrefix}
           interactions={interactions}
@@ -288,8 +293,10 @@ export function DirectRoomWorkbench({
           </>
         );
       }
+      if (typeof view === 'string') throw new Error('Ship timeline requires an explicit phase');
       return (
         <RoomActionsWorkbench
+          mode={view}
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           encounterPhases={room.encounterPhases}
           idPrefix={idPrefix}
@@ -305,12 +312,6 @@ export function DirectRoomWorkbench({
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
-          ship={{
-            occurrence: room.address,
-            phases: workbench.phases,
-            repairRows: workbench.repairRows,
-            ...(shipPhaseKey === undefined ? {} : { phaseKey: shipPhaseKey }),
-          }}
         />
       );
   }

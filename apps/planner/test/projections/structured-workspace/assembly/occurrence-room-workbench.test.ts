@@ -1,3 +1,6 @@
+import { createEncounterPhaseAddress } from '@run-planner/engine/authored-project';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { surfaceShrineTravelDealProject } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
@@ -10,6 +13,88 @@ import {
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 
 describe('occurrence room workbench', () => {
+  it('keeps required Ship delivery placement and reward focus in its rendered phase', () => {
+    let project = surfaceShrineTravelDealProject();
+    let result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
+    const delivery = result.assembly.node.room.workbench.roomActions?.rows.find(
+      (row) => row.reference.kind === 'interactAcquisitionEntry' && row.label.includes('Delivery'),
+    );
+    if (delivery === undefined) throw new Error('Missing delivery');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: delivery.address,
+    });
+    result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
+    const workbench = result.assembly.node.room.workbench;
+    if (workbench.kind !== 'ship') throw new Error('Missing Ship');
+    const due = workbench.phases
+      .find((phase) => phase.key === 'Combat1')
+      ?.unplacedRows.find((row) => row.key === delivery.key);
+    if (due?.placement === undefined) throw new Error('Missing phase-local delivery placement');
+    expect(workbench.repairRows.map((row) => row.key)).not.toContain(due.key);
+    expect(result.markers.destinations().get(due.marker.focusKey)?.roomTab).toBe(
+      'shipCombat1Actions',
+    );
+    project = applyProjectCommand(project, catalog, due.placement.command);
+    result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
+    const placed = result.assembly.node.room.workbench;
+    if (placed.kind !== 'ship') throw new Error('Missing Ship');
+    const row = placed.phases
+      .find((phase) => phase.key === 'Combat1')
+      ?.actionRows.find((candidate) => candidate.key === due.key);
+    expect(row).toBeDefined();
+    expect(result.markers.destinations().get(row!.marker.focusKey)?.roomTab).toBe(
+      'shipCombat1Actions',
+    );
+  });
+
+  it('routes trait and reward children to the phase that renders their action', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+    const project = authorLegalTraitOffers(
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat1'),
+        encounterKey: 'IcarusCombatO',
+      }),
+    );
+    const result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat01);
+    const workbench = result.assembly.node.room.workbench;
+    if (workbench.kind !== 'ship') throw new Error('Missing Ship');
+    let childCount = 0;
+    for (const phase of workbench.phases) {
+      for (const row of phase.actionRows) {
+        const traits = [
+          ...(row.traitOffer === undefined ? [] : [row.traitOffer]),
+          ...(row.rewardPayload?.control.traitOffers ?? []),
+        ];
+        for (const trait of traits) {
+          for (const marker of [trait.marker, ...trait.children.map((child) => child.marker)]) {
+            childCount++;
+            expect(result.markers.destinations().get(marker.focusKey)?.roomTab).toBe(
+              phase.key === 'Intro' ? 'shipIntroActions' : 'shipCombat1Actions',
+            );
+          }
+        }
+      }
+    }
+    expect(childCount).toBeGreaterThan(0);
+  });
+
+  it('routes an inactive wheel to the Overview that can restore its phase', () => {
+    const result = assemble(loadSurfaceNOPQProject(), 'Surface', 'O', oOccurrenceIds.combat04);
+    const room = result.assembly.node.room;
+    if (room.roomLocal.kind !== 'ship' || room.workbench.kind !== 'ship')
+      throw new Error('Missing Ship');
+    const wheel = room.roomLocal.wheels.find((entry) => !entry.active)!;
+    expect(room.workbench.repairRows).toEqual([]);
+    for (const marker of [wheel.marker, ...wheel.offers.map((offer) => offer.control.marker)]) {
+      expect(result.markers.destinations().get(marker.focusKey)).toMatchObject({
+        roomTab: 'overview',
+        focusAddress: room.address,
+      });
+    }
+  });
+
   it('derives a three-phase Ship presentation without exposing outgoing generation', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {

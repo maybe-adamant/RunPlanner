@@ -1,4 +1,3 @@
-import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import {
   Fragment,
   useEffect,
@@ -102,7 +101,7 @@ export function RoomActionsWorkbench({
   renderRowContent,
   renderRowTrailingContent,
   renderBoundaryContent,
-  ship,
+  mode,
 }: {
   readonly actions?: WorkspaceRoomActions;
   readonly children?: ReactNode;
@@ -119,12 +118,13 @@ export function RoomActionsWorkbench({
   /** Consumer-owned controls placed after the shared ordering controls. */
   readonly renderRowTrailingContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
-  readonly ship?: {
-    readonly occurrence: OccurrenceAddress;
-    readonly phases: readonly WorkspaceShipPhasePresentation[];
-    readonly repairRows: readonly WorkspaceRoomActions['rows'][number][];
-    readonly phaseKey?: string;
-  };
+  readonly mode:
+    | { readonly kind: 'roomTimeline' }
+    | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation }
+    | {
+        readonly kind: 'shipRepairs';
+        readonly rows: readonly WorkspaceRoomActions['rows'][number][];
+      };
 }) {
   const executeIntent = useCommandIntent();
   const findingTarget = useFindingTarget();
@@ -140,7 +140,7 @@ export function RoomActionsWorkbench({
   const placementOwner =
     actions === undefined
       ? ''
-      : `${workspaceInteractionKey(actions.owner)}:${ship?.phaseKey ?? ''}`;
+      : `${workspaceInteractionKey(actions.owner)}:${mode.kind === 'shipPhase' ? mode.phase.key : mode.kind}`;
   const placingRow =
     placementRequest?.owner === placementOwner
       ? actions?.rows.find(
@@ -189,7 +189,7 @@ export function RoomActionsWorkbench({
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [placingRow]);
   const hasOptionalChildren = optionalChildren !== undefined && optionalChildren !== null;
-  if (actions === undefined && ship === undefined) {
+  if (actions === undefined && mode.kind === 'roomTimeline') {
     if (encounterPhases === undefined || idPrefix === undefined) return null;
     return (
       <section aria-label="Room Timeline" className="room-actions-workbench">
@@ -342,11 +342,11 @@ export function RoomActionsWorkbench({
   };
   const renderedInsertions = new Set<string>();
   const visibleTimeline =
-    ship === undefined
+    mode.kind === 'roomTimeline'
       ? (actions?.timeline.entries ?? [])
-      : ship.phases
-          .filter((phase) => ship.phaseKey === undefined || phase.key === ship.phaseKey)
-          .flatMap((phase) => phase.timeline);
+      : mode.kind === 'shipPhase'
+        ? mode.phase.timeline
+        : [];
   // A shared action-order position belongs below its Doors open boundary.
   const doorsOpenInsertion = visibleTimeline.find(
     (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
@@ -635,7 +635,7 @@ export function RoomActionsWorkbench({
         </button>
       </div>
     );
-  if (ship !== undefined) {
+  if (mode.kind !== 'roomTimeline') {
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
         <section
@@ -654,34 +654,17 @@ export function RoomActionsWorkbench({
             }}
             {...pointerHandlers}
           >
-            {ship.phases
-              .filter((phase) => ship.phaseKey === undefined || phase.key === ship.phaseKey)
-              .map((phase) => {
-                const timelineActionRanks = new Set(
-                  phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
-                );
-                const renderPhaseTimelineEntry = (
-                  entry: WorkspaceRoomLifecycleTimelineEntry,
-                ): ReactNode[] => {
-                  if (entry.kind === 'boundary') return [renderBoundary(entry)];
-                  if (entry.kind === 'automaticEffect') {
-                    if (entry.effect === 'steadyGrowth') {
-                      const control = actions?.steadyGrowth?.find(
-                        (candidate) =>
-                          workspaceInteractionKey(candidate.address) ===
-                          workspaceInteractionKey(entry.address),
-                      );
-                      return control === undefined
-                        ? []
-                        : [
-                            <SteadyGrowthEffectRow
-                              control={control}
-                              interactions={interactions}
-                              key={workspaceInteractionKey(control.address)}
-                            />,
-                          ];
-                    }
-                    const control = actions?.transcendentEmbryo?.find(
+            {(mode.kind === 'shipPhase' ? [mode.phase] : []).map((phase) => {
+              const timelineActionRanks = new Set(
+                phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
+              );
+              const renderPhaseTimelineEntry = (
+                entry: WorkspaceRoomLifecycleTimelineEntry,
+              ): ReactNode[] => {
+                if (entry.kind === 'boundary') return [renderBoundary(entry)];
+                if (entry.kind === 'automaticEffect') {
+                  if (entry.effect === 'steadyGrowth') {
+                    const control = actions?.steadyGrowth?.find(
                       (candidate) =>
                         workspaceInteractionKey(candidate.address) ===
                         workspaceInteractionKey(entry.address),
@@ -689,71 +672,96 @@ export function RoomActionsWorkbench({
                     return control === undefined
                       ? []
                       : [
-                          <TranscendentEmbryoEffectRow
+                          <SteadyGrowthEffectRow
                             control={control}
                             interactions={interactions}
                             key={workspaceInteractionKey(control.address)}
                           />,
                         ];
                   }
-                  if (entry.presentation !== 'row') return [];
-                  const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
-                  return row === undefined
+                  const control = actions?.transcendentEmbryo?.find(
+                    (candidate) =>
+                      workspaceInteractionKey(candidate.address) ===
+                      workspaceInteractionKey(entry.address),
+                  );
+                  return control === undefined
                     ? []
                     : [
-                        <Fragment key={entry.actionKey}>
-                          {renderRow(row, phase.checkpoints, entry.supplement)}
-                        </Fragment>,
+                        <TranscendentEmbryoEffectRow
+                          control={control}
+                          interactions={interactions}
+                          key={workspaceInteractionKey(control.address)}
+                        />,
                       ];
-                };
-                const trailingCheckpoints = phase.checkpoints.filter(
-                  (checkpoint) =>
-                    actions?.timeline.suppressedCheckpointKeys.includes(checkpoint.key) !== true &&
-                    checkpoint.afterRank !== 0 &&
-                    !timelineActionRanks.has(checkpoint.afterRank),
-                );
-                return (
-                  <section
-                    aria-label={`${phase.label} ship phase`}
-                    className="ship-phase"
-                    key={phase.key}
-                  >
-                    {phase.actionRows.length === 0 &&
-                    phase.checkpoints.length === 0 &&
-                    phase.timeline.length === 0 ? null : (
-                      <ol aria-label={`${phase.label} timeline`} className="room-action-list">
-                        {checkpointRows(0, phase.checkpoints)}
-                        {phase.timeline.flatMap(renderPhaseTimelineEntry)}
-                        {trailingCheckpoints.map((checkpoint) => (
-                          <li
-                            className="room-action-checkpoint"
-                            key={`checkpoint:${checkpoint.key}`}
-                          >
-                            <span aria-hidden="true" className="hub-roster-rank">
-                              ·
-                            </span>
-                            <strong>{checkpoint.label}</strong>
-                          </li>
-                        ))}
+                }
+                if (entry.presentation !== 'row') return [];
+                const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
+                return row === undefined
+                  ? []
+                  : [
+                      <Fragment key={entry.actionKey}>
+                        {renderRow(row, phase.checkpoints, entry.supplement)}
+                      </Fragment>,
+                    ];
+              };
+              const trailingCheckpoints = phase.checkpoints.filter(
+                (checkpoint) =>
+                  actions?.timeline.suppressedCheckpointKeys.includes(checkpoint.key) !== true &&
+                  checkpoint.afterRank !== 0 &&
+                  !timelineActionRanks.has(checkpoint.afterRank),
+              );
+              return (
+                <section
+                  aria-label={`${phase.label} ship phase`}
+                  className="ship-phase"
+                  key={phase.key}
+                >
+                  {phase.actionRows.length === 0 &&
+                  phase.checkpoints.length === 0 &&
+                  phase.timeline.length === 0 ? null : (
+                    <ol aria-label={`${phase.label} timeline`} className="room-action-list">
+                      {checkpointRows(0, phase.checkpoints)}
+                      {phase.timeline.flatMap(renderPhaseTimelineEntry)}
+                      {trailingCheckpoints.map((checkpoint) => (
+                        <li className="room-action-checkpoint" key={`checkpoint:${checkpoint.key}`}>
+                          <span aria-hidden="true" className="hub-roster-rank">
+                            ·
+                          </span>
+                          <strong>{checkpoint.label}</strong>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {phase.unplacedRows.length === 0 ? null : (
+                    <section aria-label="Required actions" className="room-action-optional-pool">
+                      <div className="local-reward-heading">
+                        <h5>Required actions</h5>
+                      </div>
+                      <ol
+                        aria-label={`${phase.label} required actions`}
+                        className="room-action-list"
+                      >
+                        {phase.unplacedRows.map((row) => renderRow(row, phase.checkpoints))}
                       </ol>
-                    )}
-                    {phase.optionalRows.length === 0 ? null : (
-                      <section aria-label="Optional actions" className="room-action-optional-pool">
-                        <div className="local-reward-heading">
-                          <h5>Optional actions</h5>
-                        </div>
-                        <ol
-                          aria-label={`${phase.label} optional actions`}
-                          className="room-action-list"
-                        >
-                          {phase.optionalRows.map((row) => renderRow(row, phase.checkpoints))}
-                        </ol>
-                      </section>
-                    )}
-                  </section>
-                );
-              })}
-            {ship.phaseKey !== undefined || ship.repairRows.length === 0 ? null : (
+                    </section>
+                  )}
+                  {phase.optionalRows.length === 0 ? null : (
+                    <section aria-label="Optional actions" className="room-action-optional-pool">
+                      <div className="local-reward-heading">
+                        <h5>Optional actions</h5>
+                      </div>
+                      <ol
+                        aria-label={`${phase.label} optional actions`}
+                        className="room-action-list"
+                      >
+                        {phase.optionalRows.map((row) => renderRow(row, phase.checkpoints))}
+                      </ol>
+                    </section>
+                  )}
+                </section>
+              );
+            })}
+            {mode.kind !== 'shipRepairs' || mode.rows.length === 0 ? null : (
               <section aria-label="Ship action repairs" className="ship-action-repairs">
                 <div className="local-reward-heading">
                   <h4>Inactive actions</h4>
@@ -763,7 +771,7 @@ export function RoomActionsWorkbench({
                   restore the phase that owns them.
                 </p>
                 <ol aria-label="Inactive Ship actions" className="room-action-list">
-                  {ship.repairRows.map((row) => renderRow(row, []))}
+                  {mode.rows.map((row) => renderRow(row, []))}
                 </ol>
               </section>
             )}

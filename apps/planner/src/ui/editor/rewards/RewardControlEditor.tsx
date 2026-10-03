@@ -132,6 +132,7 @@ export function RewardControlEditor({
                     id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
                     label={`Pickup outcome${control.realizedAcquisition === undefined ? '' : ` · ${control.realizedAcquisition.label}`}`}
                     ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
+                    layout="inline"
                     placeholder="Choose a pickup outcome"
                     model={declaredChoicesPicker(
                       [

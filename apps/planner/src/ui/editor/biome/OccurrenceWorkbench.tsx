@@ -7,6 +7,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
   type WorkspaceRoomSummary,
+  type WorkspaceShipPhasePresentation,
   type WorkspaceRoomActions,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomTab,
@@ -74,7 +75,7 @@ export function OccurrenceWorkbench({
     roomIdentity,
     requested: requestedTab,
   });
-  const activeTab =
+  const selectedTab =
     tabState.roomIdentity === roomIdentity &&
     tabState.requested === requestedTab &&
     tabState.findingNavigationRevision === findingNavigationRevision
@@ -91,19 +92,14 @@ export function OccurrenceWorkbench({
     ...(localVisit === undefined ? [] : (['sideRooms'] as const)),
     ...(room.workbench.kind === 'fields' ? (['layout'] as const) : []),
     ...(room.workbench.kind === 'ship'
-      ? room.workbench.phases.map((_phase, index) =>
-          index === 0
-            ? ('shipIntroActions' as const)
-            : index === 1
-              ? ('shipCombat1Actions' as const)
-              : ('shipCombat2Actions' as const),
-        )
+      ? room.workbench.phases.map((phase) => phase.tab)
       : ['actions' as const]),
     ...(room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
       ? (['shipInactiveRepair'] as const)
       : []),
     'doors',
   ];
+  const activeTab = tabOrder.includes(selectedTab) ? selectedTab : 'overview';
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, tab: WorkspaceRoomTab) => {
     const currentIndex = tabOrder.indexOf(tab);
     if (currentIndex < 0) return;
@@ -156,9 +152,22 @@ export function OccurrenceWorkbench({
     activeTab === 'shipIntroActions' ||
     activeTab === 'shipCombat1Actions' ||
     activeTab === 'shipCombat2Actions';
+  const shipPhaseView = (): {
+    readonly kind: 'shipPhase';
+    readonly phase: WorkspaceShipPhasePresentation;
+  } => {
+    const phase =
+      room.workbench.kind === 'ship'
+        ? room.workbench.phases.find((candidate) => candidate.tab === activeTab)
+        : undefined;
+    if (phase === undefined) throw new Error(`No Ship phase for timeline tab ${activeTab}`);
+    return { kind: 'shipPhase', phase };
+  };
   const renderDirectRoomWorkbench = (
-    view: 'overview' | 'actions',
-    shipPhaseKey?: string,
+    view:
+      | 'overview'
+      | 'actions'
+      | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation },
   ): ReactNode => (
     <DirectRoomWorkbench
       idPrefix={idPrefix}
@@ -172,7 +181,6 @@ export function OccurrenceWorkbench({
       {...(renderOptionalRoomActionContent === undefined
         ? {}
         : { renderOptionalRoomActionContent })}
-      {...(shipPhaseKey === undefined ? {} : { shipPhaseKey })}
       view={view}
     />
   );
@@ -200,15 +208,9 @@ export function OccurrenceWorkbench({
           {localVisit === undefined ? null : tabButton('sideRooms', 'Side Rooms')}
           {room.workbench.kind === 'fields' ? tabButton('layout', 'Room Layout') : null}
           {room.workbench.kind === 'ship'
-            ? room.workbench.phases.map((phase, index) => {
-                const tab: WorkspaceRoomTab =
-                  index === 0
-                    ? 'shipIntroActions'
-                    : index === 1
-                      ? 'shipCombat1Actions'
-                      : 'shipCombat2Actions';
-                return tabButton(tab, `${phase.label} Timeline`, phase.key);
-              })
+            ? room.workbench.phases.map((phase) =>
+                tabButton(phase.tab, `${phase.label} Timeline`, phase.key),
+              )
             : tabButton('actions', 'Room Timeline')}
           {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
             ? tabButton('shipInactiveRepair', 'Inactive Actions')
@@ -276,21 +278,10 @@ export function OccurrenceWorkbench({
               ? {}
               : { actions: room.workbench.roomActions })}
             interactions={interactions}
-            ship={{
-              occurrence: room.address,
-              phases: [],
-              repairRows: room.workbench.repairRows,
-            }}
+            mode={{ kind: 'shipRepairs', rows: room.workbench.repairRows }}
           />
         ) : room.workbench.kind === 'ship' ? (
-          renderDirectRoomWorkbench(
-            'actions',
-            activeTab === 'shipIntroActions'
-              ? room.workbench.phases[0]?.key
-              : activeTab === 'shipCombat1Actions'
-                ? room.workbench.phases[1]?.key
-                : room.workbench.phases[2]?.key,
-          )
+          renderDirectRoomWorkbench(shipPhaseView())
         ) : (
           renderDirectRoomWorkbench('actions')
         )}

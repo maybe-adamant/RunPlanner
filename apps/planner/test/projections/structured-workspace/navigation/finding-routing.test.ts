@@ -1,3 +1,5 @@
+import { loadSurfaceNOPQProject, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import {
   createAllTogetherSetAddress,
   createBiomeAddress,
@@ -55,6 +57,38 @@ const route = {
 } as unknown as WorkspaceRoute;
 
 describe('fine-grained finding routing', () => {
+  it('rejects a finding routed to a room tab that its Ship does not render', () => {
+    const { workspace } = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
+    const ship = workspace.route.biomes
+      .find((entry) => entry.biomeKey === 'O')
+      ?.nodes.find(
+        (entry) =>
+          entry.kind === 'occurrenceWorkbench' &&
+          entry.room.occurrenceId === oOccurrenceIds.combat04,
+      );
+    if (ship?.kind !== 'occurrenceWorkbench' || ship.room.workbench.kind !== 'ship')
+      throw new Error('Missing Ship');
+    const action = ship.room.workbench.phases[1]!.actionRows[0]!;
+    const target = workspace.focusByOwner.get(action.marker.focusKey)!;
+    expect(() =>
+      assertFineGrainedFindingDestination(action.address, target, workspace.route),
+    ).not.toThrow();
+    for (const roomTab of [
+      'actions',
+      'shipCombat2Actions',
+      'shipInactiveRepair',
+      'layout',
+    ] as const) {
+      expect(() =>
+        assertFineGrainedFindingDestination(
+          action.address,
+          { ...target, roomTab },
+          workspace.route,
+        ),
+      ).toThrow(/unavailable room tab/);
+    }
+  });
+
   it('requires an exact final structural inspector subject, not a default fallback', () => {
     expect(() => assertFineGrainedFindingDestination(owner, destination(), route)).not.toThrow();
 
