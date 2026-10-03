@@ -201,7 +201,7 @@ describe('OccurrenceRoomActions', () => {
     });
     await view.user.click(outcome);
     const timePiece = screen.getByRole('option', {
-      name: 'Time Piece · convert to Gold',
+      name: 'Timepiece',
     });
 
     expect(timePiece.getAttribute('aria-disabled')).not.toBe('true');
@@ -705,7 +705,7 @@ describe('OccurrenceRoomActions', () => {
     const gorgon = edited.room.roomActions?.rows.find(
       (row) => row.reference.kind === 'interactGorgon' && row.reference.phaseKey === 'Cage01',
     );
-    expect(gorgon).toMatchObject({ executable: true, issues: [], stale: false });
+    expect(gorgon).toMatchObject({ executable: true, stale: false });
   });
 
   it('distinguishes a retained blocker from new placement dependencies', () => {
@@ -803,7 +803,7 @@ describe('OccurrenceRoomActions', () => {
     const repairs = within(actions).getByRole('region', { name: 'Timeline repairs' });
     expect(within(timeline).queryByText('Clear Cage03')).toBeNull();
     expect(within(repairs).getByText('Clear Cage03')).toBeTruthy();
-    expect(within(repairs).getByText('This required action has not been placed.')).toBeTruthy();
+    expect(within(repairs).queryByText('This required action has not been placed.')).toBeNull();
     const cageOrder = within(actions).getByRole('button', {
       name: 'Combat Order',
     }) as HTMLButtonElement;
@@ -1104,8 +1104,8 @@ describe('OccurrenceRoomActions', () => {
     const outcomeControl = disposition.closest<HTMLElement>('.pickup-outcome-control');
     if (outcomeControl === null) throw new Error('Pickup outcome control is missing');
     expect(outcomeControl.classList.contains('pickup-outcome-control')).toBe(true);
-    expect(within(outcomeControl).getByText('Pickup outcome')).toBeTruthy();
-    expect(disposition.textContent).toContain('Pick up reward');
+    expect(within(outcomeControl).getByText('Outcome')).toBeTruthy();
+    expect(disposition.textContent).toContain('Pickup');
     expect(
       within(outcomeControl).queryByRole('button', {
         name: 'Edit Pom: No eligible traits',
@@ -1124,7 +1124,7 @@ describe('OccurrenceRoomActions', () => {
     ).toBe(true);
 
     await view.user.click(disposition);
-    await view.user.click(screen.getByRole('option', { name: 'Artificer · replace reward' }));
+    await view.user.click(screen.getByRole('option', { name: 'Artificer' }));
     await waitFor(() => {
       const sourceAction = screen
         .getByText(/^(Collect Nectar|Use Artificer on Nectar)$/)
@@ -1135,7 +1135,7 @@ describe('OccurrenceRoomActions', () => {
           name: 'Edit Pom: No eligible traits',
         }),
       ).toBeNull();
-      expect(within(sourceAction).getByRole('button', { name: 'Artificer item' })).toBeTruthy();
+      expect(within(sourceAction).getByRole('button', { name: 'Item' })).toBeTruthy();
     });
   });
 
@@ -1187,11 +1187,11 @@ describe('OccurrenceRoomActions', () => {
     );
     expect(blocked?.explanations).toEqual(['Use Artificer on Bones first to create this reward.']);
     expect(within(sourceAction).getByRole('button', { name: /^Pickup outcome for / })).toBeTruthy();
-    expect(within(sourceAction).getByRole('button', { name: 'Artificer item' })).toBeTruthy();
+    expect(within(sourceAction).getByRole('button', { name: 'Item' })).toBeTruthy();
     expect(
       within(replacementAction).queryByRole('button', { name: /^Pickup outcome for / }),
     ).toBeNull();
-    expect(within(replacementAction).queryByRole('button', { name: 'Artificer item' })).toBeNull();
+    expect(within(replacementAction).queryByRole('button', { name: 'Item' })).toBeNull();
 
     const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
     const site = artificerAcquisitionSite(occurrence, source);
@@ -1253,11 +1253,11 @@ describe('OccurrenceRoomActions', () => {
 
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(actions).getByText('This required action has not been placed.')).toBeTruthy();
+    expect(within(actions).queryByText('This required action has not been placed.')).toBeNull();
     expect(within(actions).getByRole('region', { name: 'Timeline repairs' })).toBeTruthy();
     expect(actions.querySelector('[data-room-action-drag-handle]')).toBeNull();
     const repairRow = within(actions)
-      .getByText('This required action has not been placed.')
+      .getByRole('button', { name: 'Restore required action' })
       .closest<HTMLElement>('[data-room-action-key]');
     if (repairRow === null) throw new Error('Required repair row is missing');
     expect(within(repairRow).queryByText('Position')).toBeNull();
@@ -1332,7 +1332,7 @@ describe('OccurrenceRoomActions', () => {
     const repairs = await screen.findByRole('region', { name: 'Timeline repairs' });
     const stale = within(repairs).getByText('Clear Combat').closest('li');
     if (stale === null) throw new Error('Stale Standard encounter action is missing');
-    expect(within(stale).getByText('This action no longer belongs to the room.')).toBeTruthy();
+    expect(within(stale).queryByText('This action no longer belongs to the room.')).toBeNull();
     expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(stale);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
 

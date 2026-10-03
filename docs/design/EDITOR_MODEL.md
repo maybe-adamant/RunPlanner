@@ -222,6 +222,9 @@ The destination selects route, biome, rail stop, inspector, tab and dialog as
 needed. Navigation must work when entering from another biome and when already
 inside the same occurrence on the wrong tab. Redirected focus scrolls/focuses
 that same repair target rather than independently rerouting the finding.
+Finding navigation updates the selected tab; clearing or advancing the issue
+removes its selection without restoring an earlier tab or overriding later
+manual navigation. Explicit navigation still selects its requested destination.
 
 Timeline navigation follows the application-owned presentation that contains
 its control, including nested reward and trait controls. A Ship phase publishes
@@ -232,7 +235,9 @@ not mean all phases, and a missing action destination does not imply repairs.
 Inactive wheel choices navigate to Overview to restore their phase; retained
 action rows navigate to their repair controls.
 Stale session tabs may recover to Overview after an edit; newly assembled
-semantic destinations must name an existing presentation target.
+semantic destinations must name an existing presentation target and an explicit
+room tab when hosted by an occurrence. Placement findings target the existing
+Place row; inline Item and Phial findings target their own controls.
 
 The compact repair banner shows a title, its location below, and optional detail
 only when it adds a constraint or repair choice. It sits above the biome title

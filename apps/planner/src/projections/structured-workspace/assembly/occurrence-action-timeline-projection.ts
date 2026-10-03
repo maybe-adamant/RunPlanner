@@ -3,8 +3,9 @@ import {
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
+  roomActionKey,
 } from '@run-planner/engine/authored-project';
-import type { RoomLifecycleTimeline } from '@run-planner/engine/simulation';
+import type { RoomLifecycleTimeline, RoomActionRosterIssue } from '@run-planner/engine/simulation';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
@@ -50,6 +51,7 @@ function lifecycleBoundaryCheckpointKey(boundary: WorkspaceRoomLifecycleBoundary
 function projectRoomLifecycleTimeline(
   input: WorkspaceOccurrenceActionsInput,
   timeline: RoomLifecycleTimeline,
+  rosterIssues: readonly RoomActionRosterIssue[],
   roomLocal: WorkspaceRoomLocal,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   rows: readonly WorkspaceRoomActionRow[],
@@ -258,7 +260,9 @@ function projectRoomLifecycleTimeline(
             ? ('fieldsCageAnchor' as const)
             : entry.action.reference.kind === 'chooseRewardWheel' &&
                 roomLocal.kind === 'ship' &&
-                rows.find((row) => row.key === entry.action.key)?.issues.length === 0 &&
+                !rosterIssues.some(
+                  (issue) => roomActionKey(issue.reference) === entry.action.key,
+                ) &&
                 activeWheelKeys.has(entry.action.reference.wheelKey)
               ? ('rewardWheelAnchor' as const)
               : ('row' as const),

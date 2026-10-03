@@ -450,6 +450,10 @@ const findingCopy = {
     title: 'Place Echo Gold pickup',
     description: 'Place it on the timeline before choosing its outcome.',
   },
+  roomActionOrderUnavailable: {
+    title: 'Action out of order',
+    description: 'Move this action to an allowed timeline position.',
+  },
   roomActionPlacementRequired: {
     title: 'Place required action',
     description: 'This required action has not been placed.',
@@ -570,6 +574,33 @@ export function isChaosGatePositionFinding(finding: SemanticFinding): boolean {
 }
 
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
+  if (finding.code === 'rewardSourceUnavailable') {
+    if (finding.evidence.reason === 'staleHermesShrineDelivery') {
+      return Object.freeze({
+        title: 'Shrine delivery unavailable',
+        description: 'Remove this delivery from the timeline.',
+      });
+    }
+    if (finding.evidence.reason === 'staleClockedTraitPickup') {
+      return Object.freeze({
+        title: 'Pickup unavailable',
+        description: 'Check this pickup’s source and room placement.',
+      });
+    }
+  }
+  if (finding.code === 'roomActionOrderUnavailable') {
+    return Object.freeze({
+      title: 'Action out of order',
+      description:
+        finding.evidence.reason === 'dependency'
+          ? finding.evidence.checkpointUnavailable === true
+            ? 'Restore the room phase this action requires.'
+            : finding.evidence.dependencyKind === 'beforeCheckpoint'
+              ? 'Move this action before its required checkpoint.'
+              : 'Move this action after its prerequisite.'
+          : 'Move this action into its allowed room phase.',
+    });
+  }
   if (isChaosGatePositionFinding(finding)) {
     return Object.freeze({
       title: 'Chaos gate position unavailable',
@@ -616,7 +647,21 @@ export function presentAssessmentIssue(issue: AssessmentIssue): FindingPresentat
   if (reason === undefined) {
     throw new Error(`Assessment issue ${issue.regionKey} has no reason`);
   }
-  return presentFinding(reason);
+  const first = presentFinding(reason);
+  const descriptions = [
+    ...new Set(
+      issue.reasons
+        .map((finding) => {
+          const copy = presentFinding(finding);
+          return copy.description ?? (copy.title === first.title ? undefined : copy.title);
+        })
+        .filter((description): description is string => description !== undefined),
+    ),
+  ];
+  return Object.freeze({
+    title: first.title,
+    ...(descriptions.length === 0 ? {} : { description: descriptions.join(' ') }),
+  });
 }
 
 /**

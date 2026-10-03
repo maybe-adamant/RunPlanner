@@ -32,7 +32,9 @@ export function RoomActionOrderingControls({
   const removalEnabled =
     removable?.structurallyAuthorable === true || row.shopParticipation !== undefined;
   const explanation = removalEnabled
-    ? `Remove ${row.label} from the timeline`
+    ? removable?.kind === 'unplace'
+      ? 'Remove this delivery and its reward details while keeping the source purchase.'
+      : `Remove ${row.label} from the timeline`
     : row.rank === null
       ? 'This action is not currently in the timeline.'
       : row.shopParticipation !== undefined
@@ -61,7 +63,8 @@ export function RoomActionOrderingControls({
         >
           Add…
         </button>
-      ) : (
+      ) : (row.stale || removable?.kind === 'unplace') &&
+        !moves.some((proposal) => proposal.structurallyAuthorable) ? null : (
         <RoomActionPlacementPicker
           label={`Move ${row.label}`}
           trigger="Move…"
@@ -72,17 +75,7 @@ export function RoomActionOrderingControls({
           onApply={onApply}
         />
       )}
-      {removable?.kind === 'unplace' ? (
-        <button
-          className="secondary-action action-compact"
-          disabled={!removalEnabled}
-          onClick={onRemove}
-          title="Remove this placement and its reward details while preserving the source purchase."
-          type="button"
-        >
-          Unplace delivery
-        </button>
-      ) : showRemoval ? (
+      {showRemoval || removable?.kind === 'unplace' ? (
         <TimelineActionDeleteButton
           enabled={removalEnabled}
           explanation={explanation}

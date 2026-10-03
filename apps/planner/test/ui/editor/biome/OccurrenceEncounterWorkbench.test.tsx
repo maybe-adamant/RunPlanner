@@ -1504,7 +1504,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       throw new Error('Ordered Psyche acquisition row is missing');
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     await view.user.click(within(orderedPsycheRow).getByRole('button', { name: /Pickup outcome/ }));
-    await view.user.click(screen.getByRole('option', { name: 'Time Piece · convert to Gold' }));
+    await view.user.click(screen.getByRole('option', { name: 'Timepiece' }));
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
@@ -2111,7 +2111,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.contains(traitLauncher),
     ).toBe(true);
     expect(
-      actionRow.querySelector(':scope > .acquisition-entry-resolution')?.getAttribute('data-empty'),
+      actionRow.querySelector('.acquisition-entry-resolution')?.getAttribute('data-empty'),
     ).toBe('true');
   });
 
@@ -2245,7 +2245,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     const staleNpc = within(repairs).getByText('Resolve Combat2 encounter').closest('li');
     if (staleNpc === null) throw new Error('Dormant Combat2 NPC action is missing');
     expect(screen.getAllByText('Resolve Combat2 encounter')).toHaveLength(1);
-    expect(within(staleNpc).getByText('This action no longer belongs to the room.')).toBeTruthy();
+    expect(within(staleNpc).getByText('stale')).toBeTruthy();
+    expect(staleNpc.querySelector('.room-action-issues')).toBeNull();
     expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(staleNpc);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
 

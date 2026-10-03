@@ -535,6 +535,11 @@ export function RoomActionsWorkbench({
                 row={row}
               />
               {nemesisInteraction === undefined ? renderSupplement(supplement) : null}
+              <RoomActionAcquisitionRow
+                hideOffer={inlineMysteryBoonOffer}
+                interactions={interactions}
+                row={row}
+              />
             </div>
             <div className="room-action-ordering">
               {placement === undefined ? (
@@ -557,32 +562,23 @@ export function RoomActionsWorkbench({
                 />
               ) : (
                 <button
-                  className="secondary-action action-compact"
+                  aria-label={
+                    row.participation === 'required'
+                      ? placement.command.kind === 'PlaceHermesShrineDelivery'
+                        ? 'Place required delivery'
+                        : 'Place required pickup'
+                      : 'Take pickup'
+                  }
+                  className="secondary-action action-compact room-action-placement-toggle"
                   onClick={() => executeIntent(placement)}
                   type="button"
                 >
-                  {row.participation === 'required'
-                    ? placement.command.kind === 'PlaceHermesShrineDelivery'
-                      ? 'Place required delivery'
-                      : 'Place required pickup'
-                    : 'Take pickup'}
+                  {row.participation === 'required' ? 'Place' : 'Take pickup'}
                 </button>
               )}
               {renderRowTrailingContent?.(row)}
             </div>
           </div>
-          {row.issues.length === 0 ? null : (
-            <ul className="room-action-issues">
-              {row.issues.map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
-          )}
-          <RoomActionAcquisitionRow
-            hideOffer={inlineMysteryBoonOffer}
-            interactions={interactions}
-            row={row}
-          />
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
         {row.rank === null ? null : renderInsertion(row.rank, row.key)}
@@ -766,10 +762,6 @@ export function RoomActionsWorkbench({
                 <div className="local-reward-heading">
                   <h4>Inactive actions</h4>
                 </div>
-                <p className="fixed-room-state">
-                  These retained actions no longer belong to an active Ship phase. Remove them or
-                  restore the phase that owns them.
-                </p>
                 <ol aria-label="Inactive Ship actions" className="room-action-list">
                   {mode.rows.map((row) => renderRow(row, []))}
                 </ol>
@@ -869,10 +861,6 @@ export function RoomActionsWorkbench({
           <div className="local-reward-heading">
             <h5>Timeline repairs</h5>
           </div>
-          <p className="fixed-room-state">
-            These retained actions are not part of the active lifecycle order. Restore or remove
-            them explicitly.
-          </p>
           <ol aria-label="Timeline repairs" className="room-action-list">
             {actions.repairRows.map((row) => renderRow(row))}
           </ol>

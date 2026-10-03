@@ -134,6 +134,7 @@ const editorSessionSlice = createSlice({
       state.runStateTarget = null;
     },
     semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
+      state.semanticNavigationRevision += 1;
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       state.traitDialogTarget = null;

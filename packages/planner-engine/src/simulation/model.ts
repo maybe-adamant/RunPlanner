@@ -30,6 +30,7 @@ export type RoomGenerationFindingCode =
   | 'targetRoomUnavailable';
 
 export type EncounterResolutionFindingCode =
+  | 'roomActionOrderUnavailable'
   | 'encounterSlotActivationUnavailable'
   | 'encounterUnavailable'
   | 'encounterCustomizationUnavailable'

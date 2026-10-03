@@ -130,7 +130,7 @@ export function RewardControlEditor({
                 <div className="pickup-outcome-control">
                   <ContextualPicker
                     id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
-                    label={`Pickup outcome${control.realizedAcquisition === undefined ? '' : ` · ${control.realizedAcquisition.label}`}`}
+                    label="Outcome"
                     ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
                     layout="inline"
                     placeholder="Choose a pickup outcome"
@@ -139,12 +139,12 @@ export function RewardControlEditor({
                         {
                           key: 'normal',
                           value: 'normal',
-                          label: `Pick up ${control.realizedAcquisition?.label ?? 'reward'}`,
+                          label: 'Pickup',
                         },
                         {
                           key: 'timePiece',
                           value: 'timePiece',
-                          label: 'Time Piece · convert to Gold',
+                          label: 'Timepiece',
                           disabled:
                             !interaction.timePieceSupported &&
                             conversion.value.kind !== 'timePiece',
@@ -152,7 +152,7 @@ export function RewardControlEditor({
                         {
                           key: 'artificer',
                           value: 'artificer',
-                          label: 'Artificer · replace reward',
+                          label: 'Artificer',
                           disabled:
                             !interaction.artificerSupported &&
                             conversion.value.kind !== 'artificer',

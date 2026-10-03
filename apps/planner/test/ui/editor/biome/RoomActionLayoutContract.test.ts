@@ -27,39 +27,29 @@ function block(styles: string, selector: string): string {
 }
 
 describe('Room action layout', () => {
-  it('moves compound controls using their own row width', () => {
-    expect(block(timelineStyles, '.room-action-row')).toContain(
-      'container: room-action / inline-size;',
-    );
-    expect(block(timelineStyles, '.room-action-lifecycle-boundary')).toContain(
-      'container: room-action / inline-size;',
-    );
-    const compound = timelineStyles.slice(
-      timelineStyles.indexOf('@container room-action (max-width: 50rem)'),
+  it('aligns action columns and switches all rows together at narrow widths', () => {
+    const row = block(timelineStyles, '.room-action-row');
+    expect(row).toContain('display: grid;');
+    expect(row).toContain('grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);');
+    expect(timelineStyles).toContain('@container timeline-list (max-width: 52rem)');
+    expect(block(timelineStyles, '.room-action-row > .room-action-identity')).toContain(
+      'flex-wrap: nowrap;',
     );
     expect(
-      block(compound, '.room-action-row[data-inline-layout] > .room-action-controls'),
-    ).toContain('grid-column: 1 / -1;');
-    const narrow = timelineStyles.slice(
-      timelineStyles.indexOf('@container room-action (max-width: 34rem)'),
-    );
-    expect(block(narrow, '.room-action-row > .room-action-controls')).toContain(
-      'grid-column: 1 / -1;',
-    );
+      block(timelineStyles, '.room-action-inline-editors > .acquisition-entry-resolution'),
+    ).toContain('flex: 0 1 auto;');
   });
 
   it('wraps whole editors while keeping ordering buttons in a nonshrinking group', () => {
     expect(block(timelineStyles, '.room-action-inline-editors')).toContain('flex-wrap: wrap;');
     expect(block(timelineStyles, '.room-action-row > .room-action-controls')).toContain(
-      'flex-wrap: wrap;',
+      'grid-template-columns: minmax(0, 1fr) 8rem;',
     );
     expect(block(timelineStyles, '.room-action-ordering')).toContain('flex: 0 0 auto;');
-    for (const selector of [
-      '.room-action-inline-reward',
-      '.room-action-inline-editors > .trait-offer-launcher',
-    ]) {
-      expect(block(timelineStyles, selector)).toContain('min-width: min(100%, 13rem);');
-    }
+    expect(block(timelineStyles, '.room-action-inline-reward')).toContain('width: max-content;');
+    expect(block(timelineStyles, '.room-action-inline-editors > .trait-offer-launcher')).toContain(
+      'min-width: 0;',
+    );
     expect(block(rewardStyles, '.pickup-outcome-control > .contextual-picker')).toContain(
       'max-width: 100%;',
     );
@@ -75,13 +65,10 @@ describe('Room action layout', () => {
     expect(block(timelineStyles, '.nemesis-response-control')).toContain('display: inline-flex;');
     expect(block(timelineStyles, '.nemesis-response-control')).toContain('white-space: nowrap;');
     expect(block(timelineStyles, '.nemesis-fixed-reward')).toContain('min-height: 36px;');
-    expect(block(timelineStyles, ".room-action-row[data-inline-layout='sentence']")).toContain(
-      'grid-template-columns: minmax(0, 1fr) auto;',
-    );
   });
 
   it('allows scheduled, fountain, and keepsake target groups to reflow', () => {
-    expect(block(timelineStyles, '.room-action-row > .room-action-identity')).toContain(
+    expect(block(timelineStyles, '.room-timeline-effect-row > .room-action-identity')).toContain(
       'flex-wrap: wrap;',
     );
     expect(block(timelineStyles, '.fountain-rarity-inline')).toContain('flex-wrap: wrap;');

@@ -351,22 +351,6 @@ function roomActionsForOccurrence(
     controls.find(
       (control) => semanticAddressKey(control.owner.address) === semanticAddressKey(address),
     );
-  const issuesFor = (actionKey: string): readonly string[] =>
-    Object.freeze(
-      roster.issues.flatMap((issue) => {
-        if (roomActionKey(issue.reference) !== actionKey) return [];
-        switch (issue.kind) {
-          case 'dependency':
-            return [`Dependency: ${issue.detail}`];
-          case 'window':
-            return [`Timing: ${issue.detail}`];
-          case 'stale':
-            return ['This action no longer belongs to the room.'];
-          case 'unrankedRequired':
-            return ['This required action has not been placed.'];
-        }
-      }),
-    );
   const controlForRole = (
     control: WorkspaceRewardControl,
     role: string,
@@ -523,14 +507,6 @@ function roomActionsForOccurrence(
       })();
       return Object.freeze({
         address,
-        issues:
-          row.placementAssessment?.kind === 'invalid'
-            ? Object.freeze([
-                row.placementAssessment.reason === 'sourceInactive'
-                  ? 'This delivery source is absent or inactive; unplace the retained delivery to repair it.'
-                  : 'This pickup does not belong at this contact; remove its retained placement to repair it.',
-              ])
-            : issuesFor(row.key),
         key: row.key,
         label: occurrenceActionLabel(
           input.catalog,
@@ -556,7 +532,7 @@ function roomActionsForOccurrence(
           : {
               artificerOutput: Object.freeze({
                 control: artificerOutput,
-                label: 'Artificer item' as const,
+                label: 'Item' as const,
               }),
             }),
         ...(row.stale ||
@@ -642,7 +618,6 @@ function roomActionsForOccurrence(
       return [
         Object.freeze({
           address: actionAddress,
-          issues: Object.freeze(['This required action has not been placed.']),
           key: roomActionKey(reference),
           label: occurrenceActionLabel(
             input.catalog,
@@ -718,7 +693,6 @@ function roomActionsForOccurrence(
       return [
         Object.freeze({
           address: actionAddress,
-          issues: Object.freeze([]),
           key: roomActionKey(reference),
           label: occurrenceActionLabel(
             input.catalog,
@@ -774,7 +748,6 @@ function roomActionsForOccurrence(
           return [
             Object.freeze({
               address: actionAddress,
-              issues: Object.freeze(required ? ['This required action has not been placed.'] : []),
               key: roomActionKey(reference),
               label: occurrenceActionLabel(
                 input.catalog,
@@ -945,6 +918,7 @@ function roomActionsForOccurrence(
   const projectedTimeline = projectRoomLifecycleTimeline(
     input,
     activeLifecycleTimeline,
+    roster.issues,
     roomLocal,
     encounterPhases,
     allProjectedRows,

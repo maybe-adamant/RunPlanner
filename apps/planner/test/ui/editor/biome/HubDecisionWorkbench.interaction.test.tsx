@@ -8,6 +8,43 @@ import { withRetainedHubBehindMissingLink } from '@planner-test/support/hub-work
 import { renderStaticHubDecisionWorkbench } from '@planner-test/support/biome-workbench';
 
 describe('HubDecisionWorkbench interaction', () => {
+  it('retains finding navigation and later manual navigation when the finding clears', () => {
+    const view = renderStaticHubDecisionWorkbench(
+      loadSurfaceNCompleteHubFrontierProject(),
+      'Surface',
+      'N',
+      { initialTab: 'timeline' },
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 1 });
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    view.rerenderHub({ initialTab: 'overview' });
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 2 });
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    view.rerenderHub({ initialTab: 'timeline' });
+    expect(screen.getByRole('tab', { name: 'Hub Exit' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 3 });
+    view.rerenderHub({ initialTab: 'overview', navigationRevision: 4 });
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    view.rerenderHub({
+      initialTab: 'timeline',
+      findingNavigationRevision: 5,
+      navigationRevision: 5,
+    });
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
   it('locks destructive Hub removal without locking map viewing when the retained Hub is unavailable', () => {
     renderStaticHubDecisionWorkbench(
       withRetainedHubBehindMissingLink(loadSurfaceNCompleteHubFrontierProject()),

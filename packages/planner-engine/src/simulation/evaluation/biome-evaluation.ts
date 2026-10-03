@@ -1,3 +1,4 @@
+import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import { sharedRewardLookups } from '../state/reward-lookups';
@@ -81,19 +82,55 @@ interface BiomeProjectEvaluationAssembly {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
 }
 
-/**
- * A lifecycle block's own reason, addressed at the exact leaf the block names.
- * A room-action block is an unplaced required action; every other block already
- * names the authored owner that has to change.
- */
-function lifecycleBlockFinding(blockedAt: SemanticAddress): SemanticFinding {
-  return Object.freeze({
-    code: 'roomActionPlacementRequired' as const,
-    severity: 'error' as const,
-    phase: 'completeness' as const,
-    origin: blockedAt,
-    evidence: Object.freeze({}),
-  });
+/** Classify only the exact active action that stopped lifecycle execution. */
+function lifecycleBlockFindings(
+  blockedAt: SemanticAddress,
+  snapshot: CanonicalBiome,
+): readonly SemanticFinding[] {
+  for (const room of structurallyActiveEncounterRooms(snapshot)) {
+    const row = room.roomActionRoster.rows.find((candidate) =>
+      blockedAt.kind === 'roomAction'
+        ? room.origin.kind === 'occurrence' &&
+          room.origin.occurrenceId === blockedAt.occurrenceId &&
+          candidate.key === blockedAt.actionKey
+        : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
+    );
+    if (row === undefined || row.stale) continue;
+    const reasons = room.roomActionRoster.issues.flatMap((issue): SemanticFinding[] =>
+      roomActionKey(issue.reference) === row.key &&
+      (issue.kind === 'dependency' || issue.kind === 'window')
+        ? [
+            Object.freeze({
+              code: 'roomActionOrderUnavailable',
+              severity: 'error',
+              phase: 'encounterResolution',
+              origin: blockedAt,
+              evidence: Object.freeze({
+                reason: issue.kind,
+                detail: issue.detail,
+                ...(issue.kind === 'dependency'
+                  ? {
+                      dependencyKind: issue.dependency.kind,
+                      checkpointUnavailable: issue.checkpointUnavailable === true,
+                    }
+                  : {}),
+              }),
+            }),
+          ]
+        : [],
+    );
+    if (reasons.length > 0) return Object.freeze(reasons);
+    break;
+  }
+  return Object.freeze([
+    Object.freeze({
+      code: 'roomActionPlacementRequired',
+      severity: 'error',
+      phase: 'completeness',
+      origin: blockedAt,
+      evidence: Object.freeze({}),
+    }),
+  ]);
 }
 
 /**
@@ -599,7 +636,7 @@ export function evaluateBiomeAssembly(
     // carries the finding rather than the invalidity going unexplained.
     const blockFindings =
       progressive.evaluation.issue === undefined
-        ? Object.freeze([lifecycleBlockFinding(blockedAt)])
+        ? lifecycleBlockFindings(blockedAt, snapshot)
         : Object.freeze([]);
     const findings = Object.freeze([...blockFindings, ...progressive.evaluation.findings]);
     const issue =

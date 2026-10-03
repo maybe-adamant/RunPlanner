@@ -302,7 +302,7 @@ describe('Hermes Shrine workbench', () => {
     expect(ordering?.contains(sourcePicker)).toBe(false);
     expect(
       resolvedDeliveryRow
-        .querySelector(':scope > .acquisition-entry-resolution')
+        .querySelector('.acquisition-entry-resolution')
         ?.getAttribute('data-empty'),
     ).toBe('true');
     await view.user.click(within(resolvedDeliveryRow).getByRole('button', { name: 'Reward' }));
