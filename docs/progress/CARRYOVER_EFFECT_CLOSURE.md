@@ -81,6 +81,11 @@ Engine primary tests establish:
    defaults and Undo restores the old subtree. Removing an ancestor generated
    subtree must not attempt a second removal through an already deleted host.
    Existing manual-gate policy holds.
+7. Vow of Shadow miniboss encounter swaps retain compatible Steady Growth and
+   Transcendent Embryo phase outcomes through the real vow command and edit
+   settlement; assess both swapped encounter declarations and reverse toggling.
+   If contact evidence changes, assert the owning timed-effect policy instead
+   of assuming structural retention guarantees correspondence.
 
 Application witnesses verify new required Gold has no Place step, uses Move,
 legacy omission uses Restore, and optional participation is unchanged. Keep the
