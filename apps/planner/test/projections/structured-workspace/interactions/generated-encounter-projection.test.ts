@@ -40,6 +40,43 @@ const items = (picker: ReturnType<typeof projectGeneratedEncounterHighlightPicke
   picker.sections.flatMap((section) => section.items);
 
 describe('generated enemy presentation', () => {
+  it('automatically completes only valid confirmed waves with no eligible continuation', () => {
+    const assessment = {
+      ...baseAssessment,
+      waves: [
+        {
+          waveIndex: 1,
+          typeCount: { min: 1, max: 2 },
+          additionalTypeCount: { min: 0, max: 1 },
+          seeds: [{ kind: 'highlight', key: 'Guard' }],
+          activeMemberKeys: ['Guard'],
+          exhausted: true,
+          eligibleKeysByPosition: [[]],
+          sampledBudgetKeys: ['Guard'],
+        },
+      ],
+    } as const satisfies GeneratedEncounterAssessment;
+    const project = (value: GeneratedEncounterAssessment, confirmed = 1) =>
+      projectGeneratedEncounterWaveDraft(value, 1, confirmed, [], labels, introductionLabel);
+    expect(project(assessment).completesAutomatically).toBe(true);
+    expect(project(assessment, 0).completesAutomatically).toBe(false);
+    const optional = project({
+      ...assessment,
+      waves: [{ ...assessment.waves[0], exhausted: false, eligibleKeysByPosition: [['Brawler']] }],
+    });
+    expect(optional.completesAutomatically).toBe(false);
+    expect(
+      optional.picker.sections.flatMap((section) => section.items).map((item) => item.value),
+    ).toEqual([{ kind: 'finish' }, { kind: 'enemy', key: 'Brawler' }]);
+    expect(project({ ...assessment, waves: [] }).completesAutomatically).toBe(false);
+    expect(
+      project({
+        ...assessment,
+        issues: [{ reason: 'enemyUnavailable', waveIndex: 1, position: 1, key: 'Guard' }],
+      }).completesAutomatically,
+    ).toBe(false);
+  });
+
   it('shows costs for shared, seeded, and additional enemy choices without changing identity', () => {
     const costedLabels = labels.map((choice, index) => ({
       ...choice,

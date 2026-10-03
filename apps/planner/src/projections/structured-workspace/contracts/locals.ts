@@ -176,6 +176,7 @@ export type WorkspaceGeneratedWaveDraftChoice =
   | { readonly kind: 'enemy'; readonly key: string };
 
 export interface WorkspaceGeneratedWaveDraft {
+  readonly completesAutomatically: boolean;
   readonly picker: ContextualPickerModel<WorkspaceGeneratedWaveDraftChoice>;
   readonly stepLabel: string;
   readonly sampledBudgetKeys: readonly string[];

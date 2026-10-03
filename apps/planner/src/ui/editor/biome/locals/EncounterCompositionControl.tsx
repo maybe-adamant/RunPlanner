@@ -332,10 +332,25 @@ function GeneratedEncounterWaveDraftPicker({
               setDraft(undefined);
               return;
             }
-            if (choice.kind === 'confirmSeed')
-              setDraft({ ...draft, confirmedSeedCount: draft.confirmedSeedCount + 1 });
-            else if (choice.kind === 'enemy')
-              setDraft({ ...draft, typeKeys: Object.freeze([...draft.typeKeys, choice.key]) });
+            const next =
+              choice.kind === 'confirmSeed'
+                ? { ...draft, confirmedSeedCount: draft.confirmedSeedCount + 1 }
+                : { ...draft, typeKeys: Object.freeze([...draft.typeKeys, choice.key]) };
+            const nextProduct = interaction.generatedWaveDraftFor?.(
+              wave.waveIndex,
+              next.confirmedSeedCount,
+              next.typeKeys,
+            );
+            if (nextProduct?.completesAutomatically) {
+              edit((edits) =>
+                edits.replaceWaveEnemies(
+                  wave.waveIndex,
+                  next.typeKeys,
+                  nextProduct.sampledBudgetKeys,
+                ),
+              );
+              setDraft(undefined);
+            } else setDraft(next);
           }}
           open={draft !== undefined}
           placeholder={actionLabel}
