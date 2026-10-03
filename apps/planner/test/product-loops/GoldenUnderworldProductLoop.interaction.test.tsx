@@ -855,7 +855,10 @@ describe('underworld product loop', () => {
     });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
-    expect(within(automaticReturn).getByText('Reward hidden on this door.')).toBeTruthy();
+    const hiddenNote = within(automaticReturn).getByText('Reward hidden on this door.');
+    expect(hiddenNote.classList.contains('door-information-note')).toBe(true);
+    expect(hiddenNote.parentElement?.lastElementChild).toBe(hiddenNote);
+    expect(hiddenNote.parentElement?.querySelector('button')).not.toBeNull();
     const returnReward = createIncomingRewardAddress(goldenGBiome, returned);
     const returnRewardOffer = () => {
       const state = currentProject(application)

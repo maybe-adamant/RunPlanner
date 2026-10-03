@@ -77,51 +77,47 @@ export function TranscendentEmbryoEffectRow({
     >
       <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
         <strong>Transcendent Embryo</strong>
-        {domain?.emptyNoOp === true && outcome === undefined ? (
-          <span>No eligible blessing</span>
-        ) : (
-          <div className="transcendent-embryo-outcome-row">
-            <RandomTraitTargetPicker
-              findingTarget={findingTarget(control.address)}
-              ariaLabel="Transcendent Embryo blessing"
-              id={semanticOwnerControlElementId(control.address)}
-              interaction={{ traitLabel: interaction.blessingLabel }}
-              label="Target"
-              layout="inline"
-              model={domain?.picker ?? { sections: Object.freeze([]) }}
-              onSelect={(blessingKey) =>
-                executeIntent(interaction.intentFor(interaction.outcomeFor(blessingKey)))
+        <div className="transcendent-embryo-outcome-row">
+          <RandomTraitTargetPicker
+            findingTarget={findingTarget(control.address)}
+            ariaLabel="Transcendent Embryo blessing"
+            disabled={domain?.emptyNoOp === true && outcome === undefined}
+            placeholder={domain?.emptyNoOp === true ? 'No eligible blessing' : 'Choose a trait'}
+            id={semanticOwnerControlElementId(control.address)}
+            interaction={{ traitLabel: interaction.blessingLabel }}
+            label="Target"
+            layout="inline"
+            model={domain?.picker ?? { sections: Object.freeze([]) }}
+            onSelect={(blessingKey) =>
+              executeIntent(interaction.intentFor(interaction.outcomeFor(blessingKey)))
+            }
+            onOpenChange={onOpenChange}
+            open={domain?.emptyNoOp === true && outcome === undefined ? false : open}
+            selected={selected === '' ? null : selected}
+          />
+          {domain?.operands === undefined ||
+          domain.rarity === undefined ||
+          outcome === undefined ? null : (
+            <TranscendentEmbryoOutcomeFields
+              onChange={(blessingValues) =>
+                executeIntent(interaction.intentFor(Object.freeze({ ...outcome, blessingValues })))
               }
-              onOpenChange={onOpenChange}
-              open={open}
-              selected={selected === '' ? null : selected}
+              operands={domain.operands}
+              rarity={domain.rarity}
+              values={outcome.blessingValues}
             />
-            {domain?.operands === undefined ||
-            domain.rarity === undefined ||
-            outcome === undefined ? null : (
-              <TranscendentEmbryoOutcomeFields
-                onChange={(blessingValues) =>
-                  executeIntent(
-                    interaction.intentFor(Object.freeze({ ...outcome, blessingValues })),
-                  )
-                }
-                operands={domain.operands}
-                rarity={domain.rarity}
-                values={outcome.blessingValues}
-              />
-            )}
-          </div>
-        )}
-        {domain?.selectedPossible === false && selected !== '' ? (
-          <>
-            <button
-              className="quiet-action"
-              onClick={() => executeIntent(interaction.intentFor(null))}
-              type="button"
-            >
-              Clear recorded blessing
-            </button>
-          </>
+          )}
+        </div>
+        {selected !== '' ? (
+          <button
+            className="quiet-action effect-repair-action"
+            disabled={domain?.selectedPossible !== false}
+            data-inactive={domain?.selectedPossible !== false || undefined}
+            onClick={() => executeIntent(interaction.intentFor(null))}
+            type="button"
+          >
+            Clear recorded blessing
+          </button>
         ) : null}
       </div>
     </li>

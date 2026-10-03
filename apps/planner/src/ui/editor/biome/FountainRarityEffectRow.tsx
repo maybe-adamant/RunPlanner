@@ -75,16 +75,16 @@ export function FountainRarityEffectRow({
         open={open}
         selected={selected === '' ? null : selected}
       />
-      {domain?.selectedPossible === false && selected !== '' ? (
-        <>
-          <button
-            className="quiet-action"
-            onClick={() => executeIntent(interaction.intentFor(null))}
-            type="button"
-          >
-            Clear Phial target
-          </button>
-        </>
+      {selected !== '' ? (
+        <button
+          className="quiet-action effect-repair-action"
+          disabled={domain?.selectedPossible !== false}
+          data-inactive={domain?.selectedPossible !== false || undefined}
+          onClick={() => executeIntent(interaction.intentFor(null))}
+          type="button"
+        >
+          Clear Phial target
+        </button>
       ) : null}
     </div>
   );

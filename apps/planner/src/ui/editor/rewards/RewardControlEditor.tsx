@@ -95,9 +95,13 @@ export function RewardControlEditor({
       {!showAcquisitionChildren ? null : (
         <div className="trait-offer-launchers">
           {control.realizedAcquisition === undefined ? null : (
-            <p className="reward-acquisition-outcome" role="status">
-              Vow of Forfeit: {control.realizedAcquisition.label}
-            </p>
+            <div
+              className="field-control field-control-inline reward-acquisition-outcome"
+              role="status"
+            >
+              <span>Outcome</span>
+              <span title="Vow of Forfeit">{control.realizedAcquisition.label} · Forfeit</span>
+            </div>
           )}
           {showTraitOffers
             ? (control.traitOffers ?? []).map((trait) => (

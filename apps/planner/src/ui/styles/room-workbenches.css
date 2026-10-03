@@ -1448,9 +1448,11 @@
 }
 
 .room-action-placement-notice {
-  position: sticky;
-  bottom: 8px;
-  z-index: 2;
+  position: fixed;
+  bottom: 16px;
+  right: 24px;
+  max-width: calc(100% - 48px);
+  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2350,4 +2352,12 @@
 
 .room-action-ordering > .room-action-delete:last-child {
   margin-inline-start: auto;
+}
+
+.effect-repair-action[data-inactive] {
+  visibility: hidden;
+}
+
+.shop-family-item-status {
+  min-height: 36px;
 }

@@ -41,9 +41,18 @@ describe('Reward row layout', () => {
     expect(cssBlock(structure, '.door-fixed-reward')).toContain('min-height: 36px;');
   });
 
+  it('keeps placement feedback out of flow and pool results separate from editable columns', () => {
+    expect(cssBlock(workbenches, '.room-action-placement-notice')).toContain('position: fixed;');
+    expect(cssBlock(structure, '.batch-pool-information')).toContain('min-height: 2.5rem;');
+    expect(cssBlock(workbenches, '.effect-repair-action[data-inactive]')).toContain(
+      'visibility: hidden;',
+    );
+  });
+
   it('centers acquisition feedback with its sibling timeline controls without a top margin', () => {
     expect(cssBlock(feedback, '.trait-offer-launchers')).toContain('align-items: center;');
     expect(cssBlock(feedback, '.reward-acquisition-outcome')).toContain('margin: 0;');
-    expect(cssBlock(feedback, '.reward-acquisition-outcome')).toContain('padding: 0.3rem 0.6rem;');
+    expect(cssBlock(feedback, '.reward-acquisition-outcome')).not.toContain('padding:');
+    expect(cssBlock(feedback, '.reward-acquisition-outcome')).not.toContain('border:');
   });
 });

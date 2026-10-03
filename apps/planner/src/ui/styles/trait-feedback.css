@@ -54,13 +54,9 @@
 
 .reward-acquisition-outcome {
   margin: 0;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid rgb(226 185 113 / 35%);
-  border-radius: 0.4rem;
-  color: #dfc89e;
-  background: rgb(226 185 113 / 8%);
+  min-width: 0;
+  max-width: 100%;
   font-size: 0.8rem;
-  font-weight: 650;
   line-height: 1.3;
 }
 

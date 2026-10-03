@@ -838,7 +838,15 @@ announcements, and keyboard navigation. The contextual picker uses Radix
 Popover plus `cmdk`, styled through the existing hand-written CSS. Candidate
 explanations stay inside the popover; loading or changing a selection never adds
 explanatory text below its trigger. The trigger retains its accessible description
-and invalid-state indication without adding layout space. No
+and invalid-state indication without adding layout space. Automatic-effect
+rows keep the target control mounted when assessment resolves to a no-op; selected
+targets keep a local repair-action slot so later assessment does not move their
+controls. Placement and rejected-drag feedback float outside document flow.
+Shop supplemental states use the same item and participation columns. Door pool
+results occupy a separate information area below the editable pool control;
+Fields, inherited-pool, and hidden-reward explanations share the door-information
+note presentation beneath their owning controls. Batch-wide rules stay with the
+batch, while reward visibility stays with the individual door. No
 removal-confirmation dialog dependency is required for in-project editing.
 Confirmation is reserved for operations that are both externally consequential
 and not recoverable through project history. Tailwind adoption and literal
