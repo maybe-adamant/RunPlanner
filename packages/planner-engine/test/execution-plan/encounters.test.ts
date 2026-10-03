@@ -9,6 +9,7 @@ import {
   createOccurrenceAddress,
   createExitDecisionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  semanticAddressKey,
 } from '../../src/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
@@ -20,6 +21,9 @@ import {
   decodeExecutionPlan,
 } from '../../src/execution-plan';
 import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
+import { assembleExecutionOverview } from '../../src/execution-plan/assembly/overview';
+import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
+import type { CompleteValidBiomeProjectEvaluation } from '../../src/simulation/evaluation/evaluation-products';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
@@ -62,6 +66,48 @@ describe('resolved execution encounters', () => {
       'Intro',
       'Combat',
     ]);
+  });
+
+  it('rejects an entered room whose recorded phases are not a prefix', () => {
+    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
+    const assembly = simulateProjectAssembly(catalog, loadSurfaceNOPQProject());
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate): candidate is CompleteValidBiomeProjectEvaluation =>
+        candidate.biomeKey === 'P' &&
+        candidate.authoring === 'complete' &&
+        candidate.validity === 'valid',
+    );
+    if (biome === undefined) throw new Error('fixture lacks a complete valid P biome');
+    const room = orderedExecutionRooms([biome]).find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+    if (room === undefined) throw new Error('fixture lacks P_Combat02');
+    const withoutPhase = (slotKey: string): CompleteValidBiomeProjectEvaluation => ({
+      ...biome,
+      history: {
+        ...biome.history,
+        events: biome.history.events.filter(
+          (event) =>
+            !(
+              event.kind === 'encounterRecorded' &&
+              event.phaseKey === slotKey &&
+              semanticAddressKey(event.origin) === semanticAddressKey(room.origin)
+            ),
+        ),
+      },
+    });
+    expect(
+      assembleExecutionOverview(
+        catalog,
+        room,
+        withoutPhase('Combat'),
+        undefined,
+        [],
+      ).encounterPhases.map((phase) => phase.slotKey),
+    ).toEqual(['Intro']);
+    expect(() =>
+      assembleExecutionOverview(catalog, room, withoutPhase('Intro'), undefined, []),
+    ).toThrow('P_Combat02 lacks recorded encounter Intro');
   });
 
   it.each([

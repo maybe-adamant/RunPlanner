@@ -113,6 +113,11 @@ export function TranscendentEmbryoEffectRow({
             className="quiet-action effect-repair-action"
             disabled={domain?.selectedPossible !== false}
             data-inactive={domain?.selectedPossible !== false || undefined}
+            title={
+              domain?.selectedPossible === false
+                ? undefined
+                : 'Nothing to clear; the recorded choice is still possible.'
+            }
             onClick={() => executeIntent(interaction.intentFor(null))}
             type="button"
           >
