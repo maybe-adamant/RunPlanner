@@ -1,3 +1,4 @@
+import type { TimedEffectContact } from './timed-effects/contacts';
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ShipCombatState } from '../../authored-project/model';
 import type { SemanticFinding } from '../model';
@@ -40,11 +41,13 @@ export interface ShipLifecycleCandidateCapability {
  * for the addressed occurrence capability that its family owns.
  */
 export interface RoomLifecycleCandidateArtifacts {
+  readonly timedEffects: readonly TimedEffectContact[];
   readonly shipAt: (owner: OccurrenceAddress) => ShipLifecycleCandidateCapability | undefined;
 }
 
 export function createRoomLifecycleCandidateArtifacts(
   shipsByOwner: ReadonlyMap<string, ShipLifecycleCandidateContext>,
+  timedEffects: readonly TimedEffectContact[] = Object.freeze([]),
 ): RoomLifecycleCandidateArtifacts {
   const ships = new Map<string, ShipLifecycleCandidateCapability>();
   for (const [key, context] of shipsByOwner) {
@@ -59,6 +62,7 @@ export function createRoomLifecycleCandidateArtifacts(
     );
   }
   return Object.freeze({
+    timedEffects,
     shipAt: (owner: OccurrenceAddress) => ships.get(semanticAddressKey(owner)),
   });
 }

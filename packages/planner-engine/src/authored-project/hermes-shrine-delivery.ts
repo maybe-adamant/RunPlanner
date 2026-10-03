@@ -323,10 +323,11 @@ export function retainedHermesShrineDeliveryReward(
 export function removeHermesShrineDeliveryFromOtherHosts(
   document: ProjectDocument,
   entryKey: string,
-  host: OccurrenceAddress,
+  host?: OccurrenceAddress,
 ): ProjectDocument {
   return mapOccurrences(document, (routeKey, biomeKey, occurrence) => {
-    if (occurrenceMatchesAddress(routeKey, biomeKey, occurrence, host)) return occurrence;
+    if (host !== undefined && occurrenceMatchesAddress(routeKey, biomeKey, occurrence, host))
+      return occurrence;
     const site = occurrence.acquisitionSites?.[HERMES_SHRINE_DELIVERY_SITE_KEY];
     const hasEntry = site?.pickupEntries?.[entryKey] !== undefined;
     const actionKey = roomActionKey({
@@ -356,4 +357,12 @@ export function removeHermesShrineDeliveryFromOtherHosts(
           }),
     });
   });
+}
+
+/** Edit settlement has proven that this exact obligation changed contact. */
+export function discardDisplacedHermesShrineDelivery(
+  document: ProjectDocument,
+  entryKey: string,
+): ProjectDocument {
+  return removeHermesShrineDeliveryFromOtherHosts(document, entryKey);
 }

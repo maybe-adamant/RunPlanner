@@ -50,6 +50,14 @@ export function applyProjectHistoryCommand(
   return history([...current.past, current.present], next, []);
 }
 
+/** Publish one engine-settled semantic edit as one exact snapshot. */
+export function publishProjectHistoryEdit(
+  current: ProjectHistory,
+  next: ProjectDocument,
+): ProjectHistory {
+  return next === current.present ? current : history([...current.past, current.present], next, []);
+}
+
 /** Apply one semantic transaction made of engine commands as one undo step. */
 export function applyProjectHistoryCommands(
   current: ProjectHistory,

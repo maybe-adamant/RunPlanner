@@ -1042,6 +1042,19 @@ activation result, or contextual trait assessment. Contextual impossibility is
 derived validation truth, so an authored value remains persisted until an
 explicit semantic command changes or removes it.
 
+Room replacement retains structurally representable Hermes and clocked-pickup
+payloads and automatic Steady Growth/Embryo phase choices. This is provisional
+retention, not a timing equivalence claim. Exact edit settlement compares the
+effect-owned source, cycle, progress and lifecycle contact across reached cohorts;
+unknown or mixed current evidence cannot justify erasure. Once current evidence
+agrees, inherited choices without established prior correspondence reset, including
+suffix choices revealed by a later blocker repair. This conservative fallback can
+lose choices even when clocks did not change; Undo restores them. The exact outcome
+or pickup child authored by the current command is protected. Retained unranked
+Hermes payload follows the same rule; placing an action does not author its nested
+choices. Vanished structural phases
+are removed under the existing codec and remain recoverable through Undo.
+
 Before decoding a successful proposed document, the command boundary compares
 the structurally active Room Action domains before and after the edit and
 closes only the newly required delta. This pure authored-domain step does not
@@ -1061,8 +1074,9 @@ command-local order.
 `UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
 and its host-local payload, including nested reward choices, while preserving
 the source purchase and sibling deliveries. It validates structural ownership,
-not simulated validity, and can deliberately leave a live required obligation
-unplaced. Due-contact validation continues to require that delivery before
+not simulated validity. The structural command can represent an unplaced
+obligation; application edit settlement refuses to publish removal of a reached
+valid required delivery. Proven invalid placements retain this explicit repair. Due-contact validation continues to require that delivery before
 publication. Same-room rushed deliveries retain purchase-owned repair and their
 required action; ordinary required actions remain protected from removal.
 Source reactivation uses the existing exact placement support rather than
@@ -1159,8 +1173,8 @@ every schema-89 route is a mature save whose selections stay as written.
 ## Undo and Redo
 
 `ProjectHistory` holds frozen `past`, `present`, and `future` document
-snapshots. One effective semantic command creates one history step and clears
-redo. A no-op command retains history identity. Undo and redo restore exact
+snapshots. One effective semantic edit, including engine-owned timed-effect settlement,
+creates one history step and clears redo. A no-op command retains history identity. Undo and redo restore exact
 prior snapshots. Derived simulation and transient UI state remain outside this
 history.
 

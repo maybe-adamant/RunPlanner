@@ -547,6 +547,12 @@ describe('Supply Chain lifecycle', () => {
     );
     expect(deferred.derivedAcquisitionEntryFrontiers).toEqual([]);
     expect(
+      deferred.timedEffects.find((contact) => contact.effect === 'clockedPickup'),
+    ).toMatchObject({
+      deferred: true,
+      cohorts: [[expect.objectContaining({ progress: 6, interval: 7 })]],
+    });
+    expect(
       deferred.branches[0]?.state.traitHistory?.equippedTraits.SupplyDropBoon
         ?.pickupProducerProgress,
     ).toBe(6);
@@ -619,6 +625,12 @@ describe('Supply Chain lifecycle', () => {
       } as unknown as CanonicalAuthoredRoom,
       afterBoss,
     );
+    expect(
+      released.timedEffects.find((contact) => contact.effect === 'clockedPickup'),
+    ).toMatchObject({
+      deferred: false,
+      cohorts: [[expect.objectContaining({ progress: 6, interval: 7 })]],
+    });
     expect(released.derivedAcquisitionEntryFrontiers).toEqual([
       expect.objectContaining({
         kind: 'clockedTraitPickup',

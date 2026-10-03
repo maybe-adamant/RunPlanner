@@ -333,6 +333,7 @@ export {
 export {
   applyProjectHistoryCommand,
   applyProjectHistoryCommands,
+  publishProjectHistoryEdit,
   canRedoProjectHistory,
   canUndoProjectHistory,
   createProjectHistory,

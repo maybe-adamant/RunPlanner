@@ -770,6 +770,14 @@ one fixed automatic timeline effect inside End Encounter, after any required
 pre-effect phase actions. It is not a movable
 Room Action, and it does not introduce a second lifecycle clock or scheduler.
 
+The effect advancement seams also return compact correspondence evidence for
+edit settlement: source acquisition, cycle, progress and applicable deferral,
+with every input cohort represented. These facts travel through the complete
+chronology product into exact lifecycle artifacts and obey the same blocking
+coverage. They observe the existing clocks; they do not advance another clock
+or turn matching phase names into timing equivalence. A missing later contact is
+unknown unless reached room exit proves that contact absent.
+
 One encounter-end checkpoint settles every fixed automatic outcome before it
 publishes any pickup created by a matured clock. Steady Growth precedes
 Transcendent Embryo in that fixed order. Supply Chain and Hermes Shrine clocks

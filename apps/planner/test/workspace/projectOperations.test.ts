@@ -1072,19 +1072,20 @@ describe('project profile operations', () => {
         candidate.origin.site.owner.kind === 'occurrence' &&
         candidate.origin.site.owner.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f',
     );
-    if (deliveryFinding?.origin.kind !== 'acquisitionEntry') {
-      throw new Error('loaded profile lost its due Shrine delivery placement');
-    }
-    const deliveryEntry = deliveryFinding.origin;
-    expect(() =>
-      application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'PlaceHermesShrineDelivery',
-          entry: deliveryEntry,
-          encounterPhaseKey: 'Combat',
-        }),
+    expect(deliveryFinding).toBeUndefined();
+    const host = application.store
+      .getState()
+      .projectWorkspace.history!.present.route.biomes.flatMap(
+        (biome) => biome.topology?.occurrences ?? [],
+      )
+      .find((occurrence) => occurrence.occurrenceId === 'c34604d0-c4e3-4c26-8539-54a82158716f');
+    expect(
+      host?.roomActions.order.some(
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' &&
+          reference.siteKey === 'hermesShrineDelivery',
       ),
-    ).not.toThrow();
+    ).toBe(true);
   });
 
   it('reconciles a pre-fix Ixion purchase into its forced gate while loading', async () => {

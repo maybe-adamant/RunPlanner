@@ -1,3 +1,4 @@
+import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
 import { biomeStartRoomGameNames, resolveBiomeStart } from '../route-profile';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type {
@@ -116,6 +117,21 @@ function reconcileReplacementAcquisitionSites(
   const sites: Record<string, AuthoredAcquisitionSiteState> = {
     ...(replacement.acquisitionSites ?? {}),
   };
+  // Timing is assessed by edit settlement; retain representable payload here.
+  for (const [siteKey, site] of Object.entries(previous.acquisitionSites ?? {})) {
+    const entries = Object.fromEntries(
+      Object.entries(site.pickupEntries ?? {}).filter(
+        ([key]) =>
+          siteKey === 'hermesShrineDelivery' ||
+          parseClockedTraitGeneratedPickupEntryKey(key) !== undefined,
+      ),
+    );
+    if (Object.keys(entries).length > 0)
+      sites[siteKey] = Object.freeze({
+        ...(sites[siteKey] ?? {}),
+        pickupEntries: Object.freeze({ ...(sites[siteKey]?.pickupEntries ?? {}), ...entries }),
+      });
+  }
   for (const source of authoredAcquisitionSources(biome, replacement, routeStartIncoming)) {
     const sourceOwner = source.acquisition.owner;
     const role = source.acquisition.acquisitionRole;

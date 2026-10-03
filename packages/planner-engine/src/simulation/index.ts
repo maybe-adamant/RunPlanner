@@ -541,3 +541,5 @@ export {
   type TraitOfferOptionLevelResolutionInput,
 } from './traits/offer-levels';
 export type { AssessmentIssue } from './assessment-issue';
+
+export { settleProjectEdit } from './edit-settlement';
