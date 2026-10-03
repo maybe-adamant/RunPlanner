@@ -92,7 +92,7 @@ export function ShopWorkbench({
             offer.kind === 'travelDealPlaceholder' ? (
               <div className="shop-family-offer-row" key={offer.key}>
                 <div className="shop-family-item-control">
-                  <div className="field-control field-control-inline shop-family-item-status">
+                  <div className="field-control field-control-inline shop-family-item-status control-placeholder">
                     <span>Travel Deal Item</span>
                     <span className="fixed-room-state">{offer.explanation}</span>
                   </div>
@@ -113,7 +113,7 @@ export function ShopWorkbench({
             ) : offer.kind === 'travelDealInvalid' ? (
               <div className="shop-family-offer-row shop-family-offer-invalid" key={offer.key}>
                 <div className="shop-family-item-control">
-                  <div className="field-control field-control-inline shop-family-item-status">
+                  <div className="field-control field-control-inline shop-family-item-status control-placeholder">
                     <span>Travel Deal Item</span>
                     <span className="fixed-room-state">Unavailable</span>
                   </div>

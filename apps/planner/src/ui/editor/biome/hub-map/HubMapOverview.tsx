@@ -162,7 +162,10 @@ function HubMapMarker({
               </button>
             </header>
             {slot.door === undefined ? (
-              <p className="fixed-room-state">Reward details are not available yet.</p>
+              <div className="field-control field-control-inline control-placeholder">
+                <span>Reward</span>
+                <span className="fixed-room-state">Reward details are not available yet.</span>
+              </div>
             ) : (
               <DoorRewardEditor
                 door={slot.door}

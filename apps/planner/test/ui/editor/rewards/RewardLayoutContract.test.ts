@@ -38,7 +38,10 @@ describe('Reward row layout', () => {
   it('gives all door and intro reward states the same gap from their room control', () => {
     const spacing = cssBlock(structure, '.door-reward-slot,\n.start-room-entry-reward');
     expect(spacing).toContain('margin-top: 12px;');
-    expect(cssBlock(structure, '.door-fixed-reward')).toContain('min-height: 36px;');
+    const placeholder = cssBlock(structure, '.control-placeholder > .fixed-room-state');
+    expect(placeholder).toContain('min-height: 36px;');
+    expect(placeholder).toContain('margin: 0;');
+    expect(workbenches).not.toContain('.ephyra-side-unavailable');
   });
 
   it('keeps placement feedback out of flow and pool results separate from editable columns', () => {

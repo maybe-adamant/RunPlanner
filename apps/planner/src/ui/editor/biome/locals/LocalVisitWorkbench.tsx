@@ -593,7 +593,10 @@ export function LocalVisitWorkbench({
                   <VisitControl interactions={interactions} localVisit={localVisit} slot={slot} />
                 </div>
                 {slot.generation !== 'generated' ? (
-                  <p className="ephyra-side-unavailable">No reward until this door is generated.</p>
+                  <div className="field-control field-control-inline control-placeholder">
+                    <span>Reward</span>
+                    <span className="fixed-room-state">Generate this door to set its reward.</span>
+                  </div>
                 ) : (
                   <DoorRewardEditor
                     door={slot.door}

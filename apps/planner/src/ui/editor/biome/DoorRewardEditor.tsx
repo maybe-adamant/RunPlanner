@@ -52,26 +52,17 @@ export function RewardSurfaceEditor({
   if (editableRewards.length === 0) {
     return (
       <div aria-label={ariaLabel} className="door-reward-list">
-        {visibility === 'hidden' ? (
-          <p
-            className="door-information-note"
-            aria-live="polite"
-            id={`${idPrefix}-status`}
-            tabIndex={-1}
-          >
-            Reward hidden on this door.
-          </p>
-        ) : (
-          <div
-            aria-live="polite"
-            className="field-control field-control-inline door-fixed-reward"
-            id={`${idPrefix}-status`}
-            tabIndex={-1}
-          >
-            <span>Reward</span>
-            <span className="fixed-room-state">No reward</span>
-          </div>
-        )}
+        <div
+          aria-live="polite"
+          className="field-control field-control-inline door-fixed-reward control-placeholder"
+          id={`${idPrefix}-status`}
+          tabIndex={-1}
+        >
+          <span>Reward</span>
+          <span className="fixed-room-state">
+            {visibility === 'hidden' ? 'Hidden on this door' : 'No reward'}
+          </span>
+        </div>
       </div>
     );
   }

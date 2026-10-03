@@ -30,10 +30,11 @@ it('keeps a hidden reward distinct from no reward and preserves its focus destin
   const view = render(surface('visible'));
   expect(screen.getByText('No reward')).toBeTruthy();
   view.rerender(surface('hidden'));
-  const note = screen.getByText('Reward hidden on this door.');
-  expect(note.classList.contains('door-information-note')).toBe(true);
+  const hidden = screen.getByText('Hidden on this door');
+  const row = hidden.closest('.control-placeholder');
+  expect(row).not.toBeNull();
   expect(screen.queryByText('No reward')).toBeNull();
   act(() => application.store.dispatch(semanticOwnerFocused(owner)));
-  expect(document.activeElement).toBe(note);
+  expect(document.activeElement).toBe(row);
   application.dispose();
 });

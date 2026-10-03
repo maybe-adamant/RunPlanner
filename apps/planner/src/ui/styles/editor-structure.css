@@ -648,6 +648,17 @@ select {
   gap: 8px;
 }
 
+/* A message standing in for a control keeps the control's label column and value frame. */
+.control-placeholder > .fixed-room-state {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  margin: 0;
+  padding: 6px 9px;
+  border: 1px dashed #353640;
+  border-radius: 8px;
+}
+
 .counted-reward-editor,
 .shop-editor,
 .fixed-room-state {
@@ -803,10 +814,6 @@ select {
 .door-reward-list {
   display: grid;
   gap: 8px;
-}
-
-.door-fixed-reward {
-  min-height: 36px;
 }
 
 .additional-exit-room-state {

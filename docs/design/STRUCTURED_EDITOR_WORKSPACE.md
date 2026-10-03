@@ -846,7 +846,12 @@ Shop supplemental states use the same item and participation columns. Door pool
 results occupy a separate information area below the editable pool control;
 Fields, inherited-pool, and hidden-reward explanations share the door-information
 note presentation beneath their owning controls. Batch-wide rules stay with the
-batch, while reward visibility stays with the individual door. No
+batch, while reward visibility stays with the individual door. A message that
+stands in for a control (an ungenerated side-room reward, a door awaiting its
+room, an unavailable Travel Deal item, a hidden or absent door reward) keeps the
+control's label column and value frame through `control-placeholder`, so the
+state change never moves neighbouring controls; section-wide empty states keep
+their paragraph form. No
 removal-confirmation dialog dependency is required for in-project editing.
 Confirmation is reserved for operations that are both externally consequential
 and not recoverable through project history. Tailwind adoption and literal
