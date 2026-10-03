@@ -216,8 +216,7 @@ function requireLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLa
     layout !== undefined &&
     (layout.progression.kind === 'hub' ||
       layout.progression.rewardStorePolicy.kind === 'authoredBaseStore' ||
-      (layout.progression.progressionPolicy.kind === 'staged' &&
-        layout.progression.batchPolicy.kind === 'standard' &&
+      (layout.progression.batchPolicy.kind === 'standard' &&
         layout.progression.rewardStorePolicy.kind === 'none') ||
       (layout.progression.batchPolicy.kind === 'clockwork' &&
         layout.progression.rewardStorePolicy.kind === 'none') ||

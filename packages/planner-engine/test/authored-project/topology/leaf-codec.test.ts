@@ -253,7 +253,7 @@ describe('topology leaf codecs', () => {
     ['derived and selected multi-door takeover batches', selectedFTakeoverProject],
     ['Fields batch state at its ordinary bounds', completeHProject],
     ['source-offer-point Ship batches at their ordinary bounds', completeOProject],
-    ['staged no-store batches at their ordinary bounds', completeQProject],
+    ['Summit no-store batches at their takeover frontier', completeQProject],
     [
       'normal PreHub, source-bearing Hub, and completed-Hub handoff decisions',
       createCompleteNProject,

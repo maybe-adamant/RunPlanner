@@ -1090,12 +1090,14 @@ export interface StagedCandidatePoolDescriptor {
   readonly roomGameNames: readonly string[];
 }
 
-export type GeneratedProgressionPolicy =
-  | { readonly kind: 'eligibilityDriven' }
-  | {
-      readonly kind: 'staged';
-      readonly stages: readonly StagedCandidatePoolDescriptor[];
-    };
+export interface GeneratedProgressionPolicy {
+  readonly kind: 'eligibilityDriven';
+}
+
+export interface HubEntryProgressionPolicy {
+  readonly kind: 'staged';
+  readonly stages: readonly StagedCandidatePoolDescriptor[];
+}
 
 export type NormalDoorBatchPolicy =
   | {
@@ -1153,7 +1155,7 @@ export interface OceanusAnomalyReplacementDescriptor {
 export interface HubEntryNormalDecisionDescriptor extends NormalDecisionProgressionCommon {
   /** Stable physical identity for the bounded normal exit from the Opening. */
   readonly exitKey: string;
-  readonly progressionPolicy: Extract<GeneratedProgressionPolicy, { readonly kind: 'staged' }>;
+  readonly progressionPolicy: HubEntryProgressionPolicy;
   readonly bounds: {
     readonly maxBatches: number;
     readonly maxTargets: number;

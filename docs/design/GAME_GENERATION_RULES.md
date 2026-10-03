@@ -99,10 +99,9 @@ narrower replacement remains representable, while a corrupt key such as
 
 Generated progression has no catalog-owned batch or target maximum. Candidate
 declarations, entered history, and force pressure decide when it continues or
-closes. Q additionally constrains ordinary candidates through its ordered stage
-pools; exhausting that sequence provides no seventh ordinary domain, but does
-not become a second Preboss authority. N's one-step Hub entry remains the only
-structurally bounded normal progression.
+closes. Q's ordinary declarations use exact depth eligibility through depth 6;
+at depth 7 only its required Preboss takeover is supported. N's one-step Hub
+entry remains the only structurally bounded normal progression.
 
 An empty occurrence-sourced batch is an uncommitted decision envelope, not an
 ordinary progression unit. At that frontier the same generation authority can

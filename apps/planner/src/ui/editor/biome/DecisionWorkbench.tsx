@@ -620,7 +620,7 @@ function BatchSettings({
   );
 }
 
-/** Renders an ordinary, staged, mixed, or atomic takeover decision from its projection. */
+/** Renders an ordinary, bounded Hub-entry, mixed, or atomic takeover decision from its projection. */
 export function BatchWorkbench({
   interactions,
   label,

@@ -376,17 +376,15 @@ force depths, linked rooms, concrete exit widths, rewards, and final
 
 ### Planner product
 
-The planner's six stage pools constrain authoring and produce exact legal Room
-Occurrences. Stage identity, candidate exhaustion, final Preboss pressure, and
-the absence of a fourth-position Postboss have already been resolved before
-publication.
+The planner evaluates exact ordinary room depth eligibility and produces legal
+Room Occurrences. Candidate support, final Preboss pressure, and the absence
+of a fourth-position Postboss have already been resolved before publication.
 
 ### Execution disposition
 
 Q has **no new navigation mechanism**. The executor receives exact room names,
 rewards, door widths, and the fixed Boss link through the F/G baseline. It must
-not publish or advance a Q stage cursor and must not repeat the stage candidate
-evaluator.
+not introduce a Q progression cursor or repeat room eligibility evaluation.
 
 World Shop realization and any room-local delivery or timeline behavior belong
 to their existing feature and timeline adapters. They are not Q navigation

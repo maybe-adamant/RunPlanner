@@ -97,8 +97,8 @@ describe('topology relational closure codec', () => {
     ).toBe(false);
   });
 
-  it('derives staged selection from the selected spine rather than decision storage order', () => {
-    let document = project('codec-staged-q', 'Surface', 4);
+  it('retains wrong-depth Summit targets independently of decision storage order', () => {
+    let document = project('codec-retained-q', 'Surface', 4);
     document = createBatchTargets(document, {
       biome: qBiome,
       sourceOccurrenceId: 'Q:start',
@@ -118,10 +118,11 @@ describe('topology relational closure codec', () => {
     );
     if (firstFork === undefined) throw new Error('missing first-fork occurrence');
     firstFork.gameName = 'Q_Combat02';
-    expectDocumentError(reordered.document, {
-      path: reordered.path,
-      detail: 'Q_Combat02 is not available in staged pool firstFork',
-    });
+    expect(
+      decodeProjectDocument(reordered.document, catalog).route.biomes[3]?.topology?.occurrences,
+    ).toContainEqual(
+      expect.objectContaining({ occurrenceId: 'q-first-fork', gameName: 'Q_Combat02' }),
+    );
   });
 
   it('uses selected topology ownership to require active Shop entry state', () => {

@@ -450,8 +450,8 @@ Completion likewise resolves the exact allowed Preboss/Boss/Postboss chain; a
 cross-family completion map does not authorize unrelated foreign rooms.
 
 Generated batches retain their layout's progression, reward-store, and
-batch-state contracts. Q's candidate pools are checked on the selected spine,
-not decision-array position. H's Fields result remains batch-owned. O can
+batch-state contracts. Q's exact room depths are evaluated eligibility, so
+wrong-depth ordinary choices remain representable. H's Fields result remains batch-owned. O can
 derive a reward store from the active Ship wheel. I remains a normal Clockwork
 batch: `I_PreBoss02` may coexist with normal peers but its one-creation-per-
 source policy is declaration-owned.
@@ -717,7 +717,7 @@ never rendered ordinals.
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
 declaration-compatible leaves. It never moves state to another occurrence or
 guesses a reward. It resets incompatible state to complete defaults and cannot
-bypass a staged candidate pool, fixed start/Hub identity, or atomic takeover
+bypass a bounded Hub-entry candidate pool, fixed start/Hub identity, or atomic takeover
 rule.
 
 Route detours use narrower commands than general room replacement. An Anomaly

@@ -35,21 +35,55 @@ function knownTakeoverSourceWidths(
     return [1];
   }
   if (layout.progression.kind !== 'generated') return undefined;
-  const policy = layout.progression.progressionPolicy;
-  if (policy.kind !== 'staged') {
-    return rooms.values
-      .filter(
-        (room) =>
-          room.roomSetKey === preboss.roomSetKey &&
-          room.mode.kind === 'authored' &&
-          room.kind !== 'Preboss' &&
-          room.exits.length > 0,
+  const sources = rooms.values.filter(
+    (room) =>
+      room.roomSetKey === preboss.roomSetKey &&
+      room.mode.kind === 'authored' &&
+      room.kind !== 'Preboss' &&
+      room.kind !== 'Boss' &&
+      room.kind !== 'PostBoss' &&
+      room.exits.length > 0,
+  );
+  const predecessorCommitDelta = sources[0]?.counters.biomeDepthCache;
+  // A target is generated before its predecessor commits. Its own outgoing
+  // generation sees that predecessor's increment, not its own later commit.
+  // Prove a uniform increment over the full source set before excluding any
+  // source by depth. Detours and specialized lifecycles remain conservative.
+  const directProgression =
+    layout.chaos === undefined &&
+    layout.progression.anomalyReplacement === undefined &&
+    predecessorCommitDelta !== undefined &&
+    sources.every(
+      (room) =>
+        room.counters.biomeDepthCache === predecessorCommitDelta &&
+        room.lifecycleProfileKey === undefined &&
+        room.additionalExits.length === 0 &&
+        room.exits.every((exit) => exit.behavior.kind === 'playerSelected'),
+    );
+  return sources
+    .filter((source) => {
+      const sourceRequirement = source.eligibility;
+      const targetRequirement = preboss.eligibility;
+      if (
+        !directProgression ||
+        source.kind === 'Intro' ||
+        source.kind === 'Opening' ||
+        sourceRequirement?.kind !== 'counterRange' ||
+        sourceRequirement.axis !== 'biomeDepthCache' ||
+        sourceRequirement.range.min === undefined ||
+        sourceRequirement.range.max === undefined ||
+        targetRequirement?.kind !== 'counterRange' ||
+        targetRequirement.axis !== 'biomeDepthCache'
       )
-      .map((room) => room.exits.length);
-  }
-  const finalStage = policy.stages.at(-1);
-  if (finalStage === undefined) return undefined;
-  return finalStage.roomGameNames.map((gameName) => rooms.byKey[gameName]?.exits.length ?? 0);
+        return true;
+      const minimum = sourceRequirement.range.min + predecessorCommitDelta;
+      const maximum = sourceRequirement.range.max + predecessorCommitDelta;
+      return !(
+        (targetRequirement.range.min !== undefined && maximum < targetRequirement.range.min) ||
+        (targetRequirement.range.max !== undefined && minimum > targetRequirement.range.max)
+      );
+    })
+    .map((source) => source.exits.length);
 }
 
 function validatePrebossBatchPolicies(

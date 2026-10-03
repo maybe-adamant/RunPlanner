@@ -128,9 +128,7 @@ export function selectRoomsForTargetCategory(
   target: TargetAddress,
   category: RoomSelectorCategory,
 ): readonly RoomDeclaration[] {
-  // A staged declaration's semantic ordinal belongs to the engine's selected
-  // spine, not to the persisted decision-array position.  The picker presents
-  // the declaration-owned category domain and lets the candidate session own
-  // stage, eligibility, cap, and physical-exit validation.
+  // The picker presents the declaration-owned category domain. The candidate
+  // session owns eligibility, caps, physical exits and bounded Hub-entry rules.
   return selectRoomsForCategory(catalog, target.routeKey, target.biomeKey, category);
 }

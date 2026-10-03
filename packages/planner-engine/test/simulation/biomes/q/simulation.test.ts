@@ -5,6 +5,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createTargetAddress,
+  decodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -25,7 +26,7 @@ function completeQ(project = loadSurfaceNOPQProject()) {
 }
 
 describe('Q simulation', () => {
-  it('replays the scripted Summit stages and width-one takeover through the common evaluator', () => {
+  it('replays the depth-constrained Summit rooms and width-one takeover through the common evaluator', () => {
     const { evaluation, route, biome: q } = completeQ();
     if (q.validity !== 'valid') throw new Error('Q fixture must be valid');
 
@@ -81,6 +82,14 @@ describe('Q simulation', () => {
       ['Q_MiniBoss03', 'Q_MiniBoss04'],
       ['Q_MiniBoss03', 'Q_MiniBoss04'],
     ]);
+    for (const batch of q.roomGeneration.ordinary.ordinaryBatches) {
+      for (const target of batch.targets) {
+        expect(target.pressure.optionalForcedRoomGameNames).toEqual([]);
+        expect(target.pressure.requiredForcedRoomGameNames).toEqual([]);
+        expect(target.pressure.eligibleRoomGameNames).not.toContain('Q_Boss01');
+        expect(target.pressure.eligibleRoomGameNames).not.toContain('Q_Boss02');
+      }
+    }
     const tail = batches[5]?.targets[0]?.room;
     const eye = batches[5]?.targets[1]?.room;
     expect(tail?.encounterPhases[0]?.authoredChoiceKey).toBe('BossTyphonTail01');
@@ -112,7 +121,7 @@ describe('Q simulation', () => {
     });
   });
 
-  it('keeps the staged terminal takeover assessable from its empty envelope', () => {
+  it('keeps the depth-seven terminal takeover assessable from its empty envelope', () => {
     const decision = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
@@ -131,6 +140,54 @@ describe('Q simulation', () => {
     ).toMatchObject({
       kind: 'takeoverPrebossBatch',
       result: { support: 'required', selectedPossible: true, requiredExitKeys: ['exit1'] },
+    });
+  });
+
+  it('preserves a wrong-depth replacement and its suffix with exact repair candidates', () => {
+    const original = loadSurfaceNOPQProject();
+    const project = applyProjectCommand(original, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(qBiome, qOccurrenceIds.foyer),
+      gameName: 'Q_Combat01',
+    });
+    expect(decodeProjectDocument(project, catalog)).toEqual(project);
+    const before = original.route.biomes.find((biome) => biome.biomeKey === 'Q')!.topology!;
+    const after = project.route.biomes.find((biome) => biome.biomeKey === 'Q')!.topology!;
+    expect(after.decisions).toEqual(before.decisions);
+    expect(after.occurrences.map((room) => room.occurrenceId)).toEqual(
+      before.occurrences.map((room) => room.occurrenceId),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    const target = createTargetAddress(
+      qBiome,
+      { kind: 'occurrence', occurrenceId: qOccurrenceIds.intro },
+      'exit1',
+    );
+    expect(simulateProject(catalog, project).findings).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: target,
+      }),
+    );
+    const candidates = createPreparedProjectCandidateSession(catalog, assembly);
+    expect(
+      candidates.evaluate({ kind: 'roomTarget', target, gameName: 'Q_Combat01' }),
+    ).toMatchObject({
+      kind: 'roomTarget',
+      result: {
+        pressure: {
+          selectedPossible: false,
+          selectedExclusions: expect.arrayContaining([
+            expect.objectContaining({ kind: 'eligibilityRequirement' }),
+          ]),
+        },
+      },
+    });
+    expect(
+      candidates.evaluate({ kind: 'roomTarget', target, gameName: 'Q_Combat11' }),
+    ).toMatchObject({
+      kind: 'roomTarget',
+      result: { pressure: { selectedPossible: true, requiredForcedRoomGameNames: [] } },
     });
   });
 

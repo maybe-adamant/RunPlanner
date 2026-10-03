@@ -595,8 +595,8 @@ export function selectedExitContinuation(
 }
 
 /**
- * Decision-array order is serialization detail. Generated staged progression
- * instead advances through the selected ordinary-batch spine from the start.
+ * Decision-array order is serialization detail. Ordinary-batch ordinals
+ * follow the selected spine from the start, including bounded Hub entry.
  */
 export function selectedOrdinaryBatchIndex(
   topology: SelectedSpineTopology,
@@ -634,9 +634,8 @@ export function selectedOrdinaryBatchIndex(
 
 /**
  * The bounded Hub entry owns its terminal ordinary ordinal directly.
- * Generated layouts have no structural terminal ordinal: staged pools may
- * constrain ordinary candidates, while evaluated room eligibility and force
- * decide when generated progression closes.
+ * Generated layouts have no structural terminal ordinal: evaluated room
+ * eligibility and force decide when generated progression closes.
  */
 export function ordinaryProgressionBatchLimit(layout: BiomeLayout): number | undefined {
   const progression = normalDecisionProgressionForLayout(layout);

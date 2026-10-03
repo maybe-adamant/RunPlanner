@@ -613,9 +613,9 @@ room-local, or finding products.
 - I's Preboss remains a generated ordinary peer after Goal completion; it has
   no over-bound terminal envelope and closes the biome only when picked.
 - O and Q reach a width-one takeover when their Preboss declarations become
-  eligible and required at depth 7. Q's exhausted stage sequence contributes no
-  seventh ordinary candidates; O's ordinary candidates are excluded by the
-  required Preboss pressure.
+  eligible and required at depth 7. Q's exact ordinary room eligibility admits
+  no room at that depth; O's ordinary candidates are excluded by the required
+  Preboss pressure. Both use the common candidate and repair surface.
 
 The shared rail and inspector share a direct room-choice surface, not a
 universal ownership model or a separate Preboss action.
