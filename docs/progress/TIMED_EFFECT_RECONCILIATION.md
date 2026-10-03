@@ -1,6 +1,9 @@
 # Timed-effect reconciliation
 
-Status: locked execution contract; implementation has not started.
+Status: locked execution contract; Gate 1 implementation under review.
+Cross-edit fallback amendment: independent review reproduced an inherited Steady
+Growth target executing at a different cycle after an earlier missing target was
+repaired. The rules below close that case without persisted provenance.
 Base: `3db3418f` (implementation baseline `8c9d12d8`; the later commit only
 added the now-retired positioned-placement plan).
 
@@ -65,8 +68,12 @@ choice reset are chosen planner authoring policies.
    structurally representable leaves: vanished owners/phases may require narrow
    removal to satisfy the existing codec, recoverable through Undo. Earlier incompleteness must
    not cause speculative relocation or deletion. Later edits resume settlement
-   when exact evidence becomes available. Never simulate past unresolved choices
-   using invented outcomes.
+   when exact evidence becomes available. Newly reached inherited choices with
+   agreeing current evidence but no established prior correspondence use the reset
+   fallback; absence of old evidence must not authorize reuse. This can reset
+   inherited choices after an ordinary blocker repair even when clocks did not
+   change. Protect the exact choice explicitly authored by the current command.
+   Never simulate past unresolved choices using invented outcomes.
 5. Reconcile downstream affected contacts, not just the replaced room. Match a
    recurring drop to the corresponding source/maturity; do not reuse choices from
    a different cycle merely because the trait matches.
@@ -88,12 +95,17 @@ threshold/checkpoint, including equip/reset boundaries. Compare effect-owned
 clock advancement and ordered active lifecycle contacts; never equate unrelated
 cycles by global history sequence or a shared phase label.
 
-Equivalent evidence must agree across reached cohorts. Mixed or missing evidence
-is unknown, not a license to copy, erase or pick the first branch. Structural
-correspondence may preserve representable data until exact assessment is reached;
-it must not claim contextual validity. Restrict resets to effects displaced by
-this edit's topology/timing change, not arbitrary invalid target/boon authorship.
-Existing invalid choices remain repairable under ordinary validation.
+Equivalent evidence must agree across reached cohorts. Mixed or missing CURRENT
+evidence remains unknown and does not authorize destructive reconciliation.
+Structural correspondence may preserve representable data until exact assessment
+is reached; it must not claim contextual validity. Once current evidence agrees,
+unchanged inherited choices without established old correspondence reset under
+the conservative fallback. This includes a later edit revealing a previously
+unassessed suffix; it requires no hidden cross-edit cache or persisted provenance.
+Protect the current command's exact authored outcome or pickup child, and do not
+reset ordinary context-invalid choices at contacts with established equivalence.
+Apply the same rule to retained unranked Hermes payload: absence of an old action
+is not evidence that its nested choices belong to the newly reached contact.
 
 ## Ownership and construction
 
@@ -145,7 +157,7 @@ stale placements before allowing them to block discovery of the next valid conta
 but do not bypass unrelated reward/target blockers. Preserve safe choices and
 prevent duplicate deliveries. Support subsequent edits revealing more contacts.
 
-Acceptance: multiple deliveries; earlier clock shift; source removal/reactivation;
+Acceptance: multiple deliveries; earlier clock shift; source removal/reactivation; two-edit changed-cycle reuse;
 rushed same-room and final-preboss cases; unresolved predecessor; partial/mixed
 branch evidence; no-op/idempotence; one Undo/Redo; no mutation during projection
 or simulation. Include existing/imported missing placements in the explicit repair
