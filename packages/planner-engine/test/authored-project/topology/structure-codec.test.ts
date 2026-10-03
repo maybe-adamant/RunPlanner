@@ -336,7 +336,7 @@ describe('topology structural codec', () => {
     },
   );
 
-  it('rejects a seventh Q ordinary target through its exhausted staged pool', () => {
+  it('leaves terminal Q ordinary target eligibility to reached generation', () => {
     const document = terminalEnvelope(
       loadSurfaceNOPQProject(),
       qBiome,
@@ -352,6 +352,6 @@ describe('topology structural codec', () => {
     );
     expect(
       ordinaryTargetAuthoringEligibility(catalog, layout, plan.topology, target, 'Q_Combat10'),
-    ).toMatchObject({ kind: 'unavailable', reason: 'stage', stageKey: '?' });
+    ).toMatchObject({ kind: 'authorable', room: { gameName: 'Q_Combat10' } });
   });
 });

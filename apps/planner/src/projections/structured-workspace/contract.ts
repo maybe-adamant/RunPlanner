@@ -464,7 +464,7 @@ export type WorkspaceRoomPickerControl =
        * The engine-owned static `CreateTarget` domain for this exact target.
        * It remains independent of evaluated candidate reachability, so an
        * incomplete retained prefix can be editable without allowing a room
-       * beyond a terminal or staged progression bound.
+       * beyond a terminal or bounded Hub-entry progression.
        */
       readonly ordinaryTargetGameNames: readonly string[];
       /** The declaration-owned terminal Hub candidate, when this is the bounded N frontier. */

@@ -57,7 +57,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2, max: 6 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -82,7 +82,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2, max: 6 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -110,9 +110,8 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 2, max: 2 },
     },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 2, deadline: 2 },
   },
   {
     gameName: 'Q_Combat04',
@@ -136,7 +135,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2, max: 6 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -164,9 +163,8 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 2, max: 2 },
     },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 2, deadline: 2 },
   },
   {
     gameName: 'Q_Combat06',
@@ -190,7 +188,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 4 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -215,7 +213,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -240,7 +238,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2, max: 6 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -265,7 +263,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 4 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -343,9 +341,8 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 5, max: 5 },
     },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 5, deadline: 5 },
   },
   {
     gameName: 'Q_Combat13',
@@ -372,9 +369,8 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 5, max: 5 },
     },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 5, deadline: 5 },
   },
   {
     gameName: 'Q_Combat14',
@@ -401,9 +397,8 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 5, max: 5 },
     },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 5, deadline: 5 },
   },
   {
     gameName: 'Q_Combat15',
@@ -430,9 +425,8 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 2, max: 2 },
     },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 2, deadline: 2 },
   },
   {
     gameName: 'Q_Combat16',
@@ -456,7 +450,7 @@ export const qRooms = [
     eligibility: {
       kind: 'counterRange',
       axis: 'biomeDepthCache',
-      range: { min: 2 },
+      range: { min: 4, max: 4 },
     },
   },
   {
@@ -485,7 +479,11 @@ export const qRooms = [
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 3, deadline: 3 },
+    eligibility: {
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 3, max: 3 },
+    },
   },
   {
     gameName: 'Q_MiniBoss05',
@@ -513,7 +511,11 @@ export const qRooms = [
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 3, deadline: 3 },
+    eligibility: {
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 3, max: 3 },
+    },
   },
   {
     gameName: 'Q_MiniBoss03',
@@ -541,7 +543,11 @@ export const qRooms = [
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 6, deadline: 6 },
+    eligibility: {
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 6, max: 6 },
+    },
   },
   {
     gameName: 'Q_MiniBoss04',
@@ -569,7 +575,11 @@ export const qRooms = [
     ],
     counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
-    force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 6, deadline: 6 },
+    eligibility: {
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 6, max: 6 },
+    },
   },
   {
     gameName: 'Q_PreBoss01',

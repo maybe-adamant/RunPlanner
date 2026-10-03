@@ -749,7 +749,7 @@ special topology and interaction owners:
 - N Hub doors, rewards, side-room presence, and side-room rewards;
 - O ShipCombat phase count, wheel cohorts, wheel rewards, and selected pickups;
 - P's native ordered PreCombat/Combat envelope and Heracles suffix termination;
-- Q's ordinary stage-resolved rooms, World Shop, fixed Boss link, and terminal
+- Q's ordinary depth-eligible rooms, World Shop, fixed Boss link, and terminal
   topology;
 - three authored distinct Chaos curse options, the selected curse/blessing
   pair, acquisition, and the selected Chaos map's declaration-sized visible

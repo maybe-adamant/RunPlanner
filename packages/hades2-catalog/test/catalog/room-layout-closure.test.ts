@@ -86,6 +86,90 @@ describe('room-layout compiler closure', () => {
     ).toThrow(CatalogContractError);
   });
 
+  it.each([
+    'eligibleWideSource',
+    'nonuniformPredecessor',
+    'unknownPredicate',
+    'missingUpperBound',
+  ] as const)('retains conservative takeover width for %s', (mutation) => {
+    const fixture = input();
+    expect(() =>
+      createCatalog({
+        ...fixture,
+        rooms: fixture.rooms.map((room) => {
+          if (mutation === 'nonuniformPredecessor' && room.gameName === 'Q_Combat01') {
+            return { ...room, counters: { ...room.counters, biomeDepthCache: 2 } };
+          }
+          if (room.gameName !== 'Q_Combat12') return room;
+          if (mutation === 'eligibleWideSource')
+            return {
+              ...room,
+              eligibility: {
+                kind: 'counterRange',
+                axis: 'biomeDepthCache',
+                range: { min: 6, max: 6 },
+              },
+            };
+          if (mutation === 'missingUpperBound')
+            return {
+              ...room,
+              eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 5 } },
+            };
+          if (mutation === 'unknownPredicate')
+            return {
+              ...room,
+              eligibility: { kind: 'all', requirements: [room.eligibility!] },
+            };
+          return room;
+        }),
+      }),
+    ).toThrow(/none is only valid when every supported normal-door source is width one/);
+  });
+
+  it('does not infer direct takeover widths for a layout admitting a detour', () => {
+    const catalog = createCatalog(declarations);
+    const layouts = createCollection(
+      catalog.biomeLayouts.values.map((layout) =>
+        layout.biomeKey === 'Q'
+          ? { ...layout, chaos: catalog.biomeLayouts.byKey.P!.chaos! }
+          : layout,
+      ),
+      'biomeLayouts',
+      (layout) => layout.biomeKey,
+      'biomeKey',
+    );
+    expect(() =>
+      validateRoomLayoutClosure(
+        catalog.rooms,
+        layouts,
+        catalog.exitCompatibilityPolicies,
+        catalog.routes,
+        catalog.rewards.shops,
+      ),
+    ).toThrow(/none is only valid when every supported normal-door source is width one/);
+  });
+
+  it('retains uncertain specialized lifecycle sources in the takeover width domain', () => {
+    const catalog = createCatalog(declarations);
+    const rooms = createCollection(
+      catalog.rooms.values.map((room) =>
+        room.gameName === 'Q_Combat12' ? { ...room, lifecycleProfileKey: 'StoryPickupRoom' } : room,
+      ),
+      'rooms',
+      (room) => room.gameName,
+      'gameName',
+    );
+    expect(() =>
+      validateRoomLayoutClosure(
+        rooms,
+        catalog.biomeLayouts,
+        catalog.exitCompatibilityPolicies,
+        catalog.routes,
+        catalog.rewards.shops,
+      ),
+    ).toThrow(/none is only valid when every supported normal-door source is width one/);
+  });
+
   it('closes derived-room ownership and Hub reward lookups', () => {
     const catalog = createCatalog(declarations);
     expect(catalog.rooms.byKey.N_Hub?.mode).toEqual({ kind: 'derived', classification: 'hub' });

@@ -20,7 +20,6 @@ import {
 } from '../common';
 import { normalizeAuthoredFields } from '../descriptors';
 import { fail } from '../errors';
-import { requireLayoutRoom } from './start-completion';
 
 export function normalizeRewardStorePolicy(
   rawPolicy: RewardStorePolicy,
@@ -116,58 +115,11 @@ function normalizeRewardStoreOverrides(
 
 function normalizeProgressionPolicy(
   rawPolicy: GeneratedProgressionPolicy,
-  biomeKey: string,
-  rooms: CatalogCollection<RoomDeclaration>,
   path: string,
 ): GeneratedProgressionPolicy {
   const receivedKind: unknown = (rawPolicy as { readonly kind?: unknown }).kind;
   if (rawPolicy.kind === 'eligibilityDriven') {
     return Object.freeze({ kind: 'eligibilityDriven' });
-  }
-  if (rawPolicy.kind === 'staged') {
-    const stageKeys = freezeUniqueStrings(
-      rawPolicy.stages.map((stage) => stage.key),
-      `${path}.stages.keys`,
-    );
-    if (stageKeys.length === 0) {
-      fail(`${path}.stages`, 'must not be empty');
-    }
-    return Object.freeze({
-      kind: 'staged',
-      stages: Object.freeze(
-        rawPolicy.stages.map((stage, stageIndex) => {
-          const stagePath = `${path}.stages[${stageIndex}]`;
-          const roomGameNames = freezeUniqueStrings(
-            stage.roomGameNames,
-            `${stagePath}.roomGameNames`,
-          );
-          if (roomGameNames.length === 0) {
-            fail(`${stagePath}.roomGameNames`, 'must not be empty');
-          }
-          roomGameNames.forEach((gameName, roomIndex) => {
-            const room = requireLayoutRoom(
-              gameName,
-              biomeKey,
-              rooms,
-              `${stagePath}.roomGameNames[${roomIndex}]`,
-            );
-            if (
-              room.mode.kind !== 'authored' ||
-              room.kind === 'Intro' ||
-              room.kind === 'Opening' ||
-              room.kind === 'PreHub' ||
-              room.kind === 'Preboss'
-            ) {
-              fail(
-                `${stagePath}.roomGameNames[${roomIndex}]`,
-                `${gameName} must be an authored normal-door room`,
-              );
-            }
-          });
-          return Object.freeze({ key: stageKeys[stageIndex] as string, roomGameNames });
-        }),
-      ),
-    });
   }
   fail(`${path}.kind`, `unknown progression policy ${String(receivedKind)}`);
 }
@@ -322,8 +274,6 @@ export function normalizeGeneratedProgression(
 ): GeneratedProgressionDescriptor {
   const progressionPolicy = normalizeProgressionPolicy(
     raw.progressionPolicy,
-    biomeKey,
-    rooms,
     `${path}.progressionPolicy`,
   );
   if ('bounds' in raw && raw.bounds !== undefined) {

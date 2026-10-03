@@ -86,7 +86,12 @@ const biomeContracts = [
     biomeKey: 'Q',
     routeKey: 'Surface',
     start: { kind: 'fixedAuthored', roomGameName: 'Q_Intro' },
-    progression: { kind: 'generated', policy: 'staged', batch: 'standard', bounds: null },
+    progression: {
+      kind: 'generated',
+      policy: 'eligibilityDriven',
+      batch: 'standard',
+      bounds: null,
+    },
     completion: ['Q_Boss01'],
   },
 ] as const;
@@ -232,4 +237,52 @@ describe('biome layout declarations', () => {
       );
     },
   );
+});
+
+describe('Summit exact ordinary depth eligibility', () => {
+  it.each([
+    [1, ['Q_Combat10', 'Q_Combat11']],
+    [2, ['Q_Combat03', 'Q_Combat05', 'Q_Combat15']],
+    [3, ['Q_MiniBoss02', 'Q_MiniBoss05']],
+    [
+      4,
+      [
+        'Q_Combat01',
+        'Q_Combat02',
+        'Q_Combat04',
+        'Q_Combat06',
+        'Q_Combat07',
+        'Q_Combat08',
+        'Q_Combat09',
+        'Q_Combat16',
+      ],
+    ],
+    [5, ['Q_Combat12', 'Q_Combat13', 'Q_Combat14']],
+    [6, ['Q_MiniBoss03', 'Q_MiniBoss04']],
+  ] as const)('owns depth %i without ordinary force', (depth, names) => {
+    for (const name of names) {
+      expect(catalog.rooms.byKey[name]?.eligibility).toEqual({
+        kind: 'counterRange',
+        axis: 'biomeDepthCache',
+        range: { min: depth, max: depth },
+      });
+      expect(catalog.rooms.byKey[name]?.force).toBeUndefined();
+    }
+  });
+
+  it('retains the forced depth-seven Preboss and bounded Hub entry', () => {
+    expect(catalog.rooms.byKey.Q_PreBoss01).toMatchObject({
+      eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 7 } },
+      force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 7, deadline: 7 },
+    });
+    expect(catalog.biomeLayouts.byKey.N?.progression).toMatchObject({
+      kind: 'hub',
+      entry: {
+        progressionPolicy: {
+          kind: 'staged',
+          stages: [{ key: 'entry', roomGameNames: ['N_PreHub01'] }],
+        },
+      },
+    });
+  });
 });

@@ -18,7 +18,6 @@ import {
   createRouteAddress,
   createRoomActionAddress,
   createTargetAddress,
-  ProjectCommandContractError,
   roomActionKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -510,7 +509,7 @@ describe('authored-project room replacement commands', () => {
     );
   });
 
-  it('keeps staged replacements inside the selected batch pool', () => {
+  it('retains structurally compatible Summit replacements outside their current depth', () => {
     let project = surfaceProject(4);
     const introDecision = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
@@ -541,13 +540,14 @@ describe('authored-project room replacement commands', () => {
       gameName: 'Q_Combat03',
     });
 
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceOccurrenceRoom',
-        occurrence: createOccurrenceAddress(qBiome, createOccurrenceId('q-first-fork')),
-        gameName: 'Q_Combat02',
-      }),
-    ).toThrow(ProjectCommandContractError);
+    const wrongDepth = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(qBiome, createOccurrenceId('q-first-fork')),
+      gameName: 'Q_Combat02',
+    });
+    expect(wrongDepth.route.biomes[3]?.topology?.occurrences).toContainEqual(
+      expect.objectContaining({ occurrenceId: 'q-first-fork', gameName: 'Q_Combat02' }),
+    );
     const replaced = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(qBiome, createOccurrenceId('q-first-fork')),

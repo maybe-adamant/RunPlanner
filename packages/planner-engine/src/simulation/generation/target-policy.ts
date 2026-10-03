@@ -631,6 +631,8 @@ function normalCandidatePool(
       (room) =>
         room.roomSetKey === layout.biomeKey &&
         room.mode.kind === 'authored' &&
+        room.kind !== 'Boss' &&
+        room.kind !== 'PostBoss' &&
         room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors' &&
         (room.kind !== 'Preboss' ||
           room.gameName === route.completion.prebossRoomGameNameByBiomeKey[layout.biomeKey]) &&

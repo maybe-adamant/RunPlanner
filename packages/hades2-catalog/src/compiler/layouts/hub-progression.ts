@@ -2,7 +2,7 @@ import type {
   CatalogCollection,
   CompletedHubExitDescriptor,
   ExitTypeDeclaration,
-  GeneratedProgressionPolicy,
+  HubEntryProgressionPolicy,
   HubDecisionDescriptor,
   HubEntryNormalDecisionDescriptor,
   HubTerminalTakeoverDescriptor,
@@ -56,11 +56,11 @@ function normalizeCompletedHubExit(
 }
 
 function normalizeHubEntryProgressionPolicy(
-  rawPolicy: GeneratedProgressionPolicy,
+  rawPolicy: HubEntryProgressionPolicy,
   biomeKey: string,
   rooms: CatalogCollection<RoomDeclaration>,
   path: string,
-): Extract<GeneratedProgressionPolicy, { readonly kind: 'staged' }> {
+): HubEntryProgressionPolicy {
   if (rawPolicy.kind !== 'staged') {
     fail(`${path}.kind`, 'must be staged');
   }

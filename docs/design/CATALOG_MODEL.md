@@ -103,7 +103,7 @@ A layout declares:
 - biome-entry counter baselines and completion transition effects;
 - an authored-choice or fixed-authored start;
 - generated or persistent-Hub progression;
-- eligibility-driven or staged target support;
+- eligibility-driven generated target support and staged bounded Hub entry;
 - standard, Fields or Clockwork batch policy and its required fields;
 - authored-base-store, source-offer-point or no-store reward policy;
 - fixed Boss and route-position Postboss resolution;

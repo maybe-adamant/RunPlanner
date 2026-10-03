@@ -456,18 +456,42 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(1);
   });
 
-  it('does not publish ordinary room candidates beyond Q’s terminal decision envelope', () => {
+  it('repairs a retained wrong-depth Summit room through the common target picker', () => {
+    const occurrence = createOccurrenceAddress(qBiome, qOccurrenceIds.foyer);
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence,
+      gameName: 'Q_Combat01',
+    });
+    const target = createTargetAddress(
+      qBiome,
+      { kind: 'occurrence', occurrenceId: qOccurrenceIds.intro },
+      'exit1',
+    );
+    const interaction = bind(project, 'Surface', 'Q').interactions.rooms.get(
+      semanticAddressKey(target),
+    );
+    if (interaction?.kind !== 'targetRoom') throw new Error('missing Summit repair interaction');
+    const items = interaction.load().sections.flatMap((section) => section.items);
+    expect(items.find((item) => item.value.gameName === 'Q_Combat01')).toMatchObject({
+      state: 'impossible',
+    });
+    expect(items.find((item) => item.value.gameName === 'Q_Combat11')).toMatchObject({
+      state: 'possible',
+      disabled: false,
+    });
+    expect(interaction.intentFor('Q_Combat11')).toEqual({
+      command: { kind: 'ReplaceOccurrenceRoom', occurrence, gameName: 'Q_Combat11' },
+      focus: { owner: target, timing: 'after' },
+    });
+  });
+
+  it('uses reached eligibility for ordinary rooms at Q’s required takeover frontier', () => {
     const owner = createExitDecisionAddress(qBiome, {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
     });
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      decision: createExitDecisionAddress(oBiome, {
-        kind: 'occurrence',
-        occurrenceId: oOccurrenceIds.combat02,
-      }),
-      kind: 'RemoveExitDecision',
-    });
+    let project = loadSurfaceNOPQProject();
     project = applyProjectCommand(project, catalog, {
       decision: owner,
       kind: 'RemoveExitDecision',
@@ -483,10 +507,20 @@ describe('structured workspace interaction binding', () => {
       throw new Error('Q terminal Door 1 decision-entry interaction is missing');
     }
     const items = interaction.load().sections.flatMap((section) => section.items);
-    expect(items.map((item) => item.value.gameName)).toEqual(['Q_PreBoss01']);
-    expect(() => interaction.intentFor('Q_Combat01')).toThrow(
-      /outside the decision-entry room domain/,
-    );
+    expect(items.find((item) => item.value.gameName === 'Q_PreBoss01')).toMatchObject({
+      state: 'forced',
+      disabled: false,
+    });
+    expect(items.find((item) => item.value.gameName === 'Q_Combat01')).toMatchObject({
+      state: 'impossible',
+      disabled: true,
+    });
+    expect(
+      items.some(
+        (item) => item.value.gameName === 'Q_Boss01' || item.value.gameName === 'Q_Boss02',
+      ),
+    ).toBe(false);
+    expect(() => interaction.intentFor('Q_Combat01')).toThrow(/not currently authorable/);
     expect(allocations).toBe(0);
   });
 

@@ -53,6 +53,17 @@ describe('biome layout declaration normalization', () => {
     expect(() => createCatalog(bounded)).toThrow(CatalogContractError);
   });
 
+  it('rejects staged policies on generated layouts', () => {
+    const fixture = input();
+    const q = fixture.biomeLayouts.find((layout) => layout.biomeKey === 'Q');
+    if (q === undefined || q.progression.kind !== 'generated') throw new Error('missing Q layout');
+    (q.progression as unknown as { progressionPolicy: unknown }).progressionPolicy = {
+      kind: 'staged',
+      stages: [{ key: 'foyer', roomGameNames: ['Q_Combat10'] }],
+    };
+    expect(() => createCatalog(fixture)).toThrow(/unknown progression policy staged/);
+  });
+
   it('rejects Hub entry, terminal, and fixed-start declarations outside the local contract', () => {
     const widened = input();
     const n = widened.biomeLayouts.find((layout) => layout.biomeKey === 'N');
