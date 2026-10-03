@@ -16,7 +16,10 @@ Source facts distinguish Gold's first accepted paid non-SpellDrop purchase from
 clock maturity. Duplicate materialization precedes the source acquisition's
 children. Boss normal/Rivals declarations retain the fixed boss outcome contact.
 Echo replay results are biome-owned; Ixion generated topology is purchase-owned.
-These established policies remain intact.
+These established policies remain intact. The authored-subtree regression exposed
+a stale removal traversal: removing an earlier generated subtree can also remove
+a later gate host. Reconciliation must resolve removal hosts against the current
+topology and skip those already removed, without changing FIFO or retention policy.
 
 ## Ownership and locked decisions
 
@@ -75,7 +78,9 @@ Engine primary tests establish:
 5. Echo same-kind capture removal/reinstatement retains the biome-owned result
    and reassesses it against current replay.
 6. Authored Ixion child survives unchanged origin/host; reassignment regenerates
-   defaults and Undo restores the old subtree. Existing manual-gate policy holds.
+   defaults and Undo restores the old subtree. Removing an ancestor generated
+   subtree must not attempt a second removal through an already deleted host.
+   Existing manual-gate policy holds.
 
 Application witnesses verify new required Gold has no Place step, uses Move,
 legacy omission uses Restore, and optional participation is unchanged. Keep the
