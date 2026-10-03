@@ -422,6 +422,25 @@ Three responsibilities stay separate:
 3. the application maps it to one repair destination shared by navigation and
    inline feedback.
 
+Generated pickup placement assessment is separate from required participation
+and reward completeness. Hermes deliveries and clocked trait pickups publish
+exact source, entry and reached-contact evidence as valid, invalid or unassessed.
+Universal rejection across reached branches proves invalidity; mixed or empty
+cohorts do not. Missing candidate capability is not evidence of a stale source.
+A valid placement with missing or mismatched reward details retains its reward
+repair instead of becoming an obsolete placement.
+
+Lifecycle assessment travels explicitly through chronology publication and
+first-blocking retention, independently of reward candidates. The blocking
+placement keeps its repair even when it has no candidates; later lifecycle
+claims remain withheld. Authored source absence or inactivity is independent
+structural proof and remains available for retained hosts beyond coverage,
+without synthesizing entered rooms, timelines or history. Existing authoring
+readiness still governs invocation. Application projections bind the supported
+unplacement or optional-removal intent to the same semantic repair owner used
+by finding navigation; local generated required pickups retain source-owned
+repair rather than acquiring arbitrary relocation.
+
 An N side-room acquisition is not located by its parent rail position.
 A Supply Chain Pom's target belongs to its generated level-resolution owner,
 not the original trait's offer. Extending an address family therefore requires

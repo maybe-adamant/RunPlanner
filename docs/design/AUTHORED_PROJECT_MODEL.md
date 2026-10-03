@@ -1054,9 +1054,19 @@ pre-existing omissions nor removes rows made dormant by the command.
 The single dispatcher in `authored-project/commands/dispatch.ts` closes a
 successful proposal before decoding it. Source action closure precedes generated
 pickup reconciliation; newly active generated actions are then scheduled.
-Resource topology cleanup, missing Shrine-delivery retraction, inactive clocked
-pickup retraction and Chaos topology reconciliation remain in that explicit
+Resource topology cleanup, missing or newly inactive Shrine-source retraction,
+inactive clocked pickup retraction and Chaos topology reconciliation remain in that explicit
 command-local order.
+
+`UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
+and its host-local payload, including nested reward choices, while preserving
+the source purchase and sibling deliveries. It validates structural ownership,
+not simulated validity, and can deliberately leave a live required obligation
+unplaced. Due-contact validation continues to require that delivery before
+publication. Same-room rushed deliveries retain purchase-owned repair and their
+required action; ordinary required actions remain protected from removal.
+Source reactivation uses the existing exact placement support rather than
+guessing a replacement host.
 
 Retained clocked-pickup payload alone does not create an optional action. The
 simulator's reached due-entry capability exposes unplaced drops; ordered stale

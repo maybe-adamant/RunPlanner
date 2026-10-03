@@ -2,6 +2,7 @@ import { generatedPickupPlacementRepairLabel } from './assembly/occurrence-actio
 import { assessRoomActionPlacements } from '@run-planner/engine/simulation';
 import {
   structurallyInvalidGeneratedPickupPlacements,
+  roomActionKey,
   createBiomeAddress,
   resolveRoutePosition,
   type ResolvedRoutePosition,
@@ -872,6 +873,7 @@ function createWorkspaceBiomeSource(
                   ?.topology?.occurrences.find((room) => room.occurrenceId === source.occurrenceId);
           return Object.freeze({
             ...repair,
+            proposalKey: `structuralUnplace:${roomActionKey(repair.reference)}`,
             label: generatedPickupPlacementRepairLabel(
               catalog,
               repair.reference,

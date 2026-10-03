@@ -316,4 +316,4 @@ export interface WorkspaceRoomActionInteraction {
 
 export type WorkspaceGeneratedPickupPlacementRepair = ReturnType<
   typeof import('@run-planner/engine/authored-project').structurallyInvalidGeneratedPickupPlacements
->[number] & { readonly label: string };
+>[number] & { readonly label: string; readonly proposalKey: string };

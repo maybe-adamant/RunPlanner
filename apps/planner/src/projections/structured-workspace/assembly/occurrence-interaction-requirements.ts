@@ -151,10 +151,10 @@ export function occurrenceInteractionRequirements(
         kind: 'roomActions' as const,
         owner: room.address,
         proposals: Object.freeze(
-          room.placementRepairs.map(({ reference }, index) =>
+          room.placementRepairs.map(({ reference, proposalKey }) =>
             Object.freeze({
               kind: 'unplace' as const,
-              key: `structuralUnplace:${index}`,
+              key: proposalKey,
               label: 'Unplace delivery',
               reference,
               structurallyAuthorable: true,

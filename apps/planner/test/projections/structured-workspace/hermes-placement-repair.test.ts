@@ -9,7 +9,6 @@ import {
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
   createBiomeAddress,
-  hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   parseClockedTraitGeneratedPickupEntryKey,
   applyProjectHistoryCommand,
@@ -22,6 +21,7 @@ import {
   oBiome,
   oOccurrenceIds,
   createStaleSurfaceHermesDeliveryPlacement,
+  createTwoStaleSurfaceHermesDeliveryPlacements,
 } from '@run-planner/test-fixtures/surface';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 
@@ -105,7 +105,7 @@ it('publishes independent structural repair behind an earlier blocker without an
   expect(
     projected.workspace.interactions.roomActions
       .get(semanticAddressKey(host))
-      ?.intentFor('structuralUnplace:0').command.kind,
+      ?.intentFor(node.room.placementRepairs![0]!.proposalKey).command.kind,
   ).toBe('UnplaceGeneratedDelivery');
 });
 
@@ -269,76 +269,12 @@ it('binds a reached obsolete clocked placement to ordinary removal while preserv
 });
 
 it('distinguishes two uncovered retained deliveries and binds the selected repair exactly', () => {
-  const { project, host, source, entryKey } = createStaleSurfaceHermesDeliveryPlacement();
-  const originalHost = project.route.biomes
-    .find((biome) => biome.biomeKey === host.biomeKey)!
-    .topology!.occurrences.find((room) => room.occurrenceId === host.occurrenceId)!;
-  let second = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceHermesShrineOffer',
-    occurrence: source,
-    slotKey: 'secondLeft',
-    value: { rewardType: 'MaxHealthDrop' },
-  });
-  second = applyProjectCommand(second, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:secondLeft',
-    purchase: { delay: 2, rushed: false },
-  });
-  const secondEntryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
-  second = applyProjectCommand(second, catalog, {
-    kind: 'PlaceHermesShrineDelivery',
-    entry: createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
-      secondEntryKey,
-    ),
-    encounterPhaseKey: 'Encounter',
-  });
-  // Retain both production-built placements to represent a loaded snapshot.
-  const loaded = {
-    ...second,
-    route: {
-      ...second.route,
-      biomes: second.route.biomes.map((biome) =>
-        biome.biomeKey !== host.biomeKey || biome.topology === null
-          ? biome
-          : {
-              ...biome,
-              topology: {
-                ...biome.topology,
-                occurrences: biome.topology.occurrences.map((room) =>
-                  room.occurrenceId !== host.occurrenceId
-                    ? room
-                    : {
-                        ...room,
-                        roomActions: {
-                          order: [
-                            ...originalHost.roomActions.order,
-                            ...room.roomActions.order.filter(
-                              (reference) =>
-                                !originalHost.roomActions.order.some(
-                                  (original) =>
-                                    roomActionKey(original) === roomActionKey(reference),
-                                ),
-                            ),
-                          ],
-                        },
-                        acquisitionSites: {
-                          ...room.acquisitionSites,
-                          hermesShrineDelivery: {
-                            pickupEntries: {
-                              ...originalHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries,
-                              ...room.acquisitionSites?.hermesShrineDelivery?.pickupEntries,
-                            },
-                          },
-                        },
-                      },
-                ),
-              },
-            },
-      ),
-    },
-  };
+  const {
+    project: loaded,
+    host,
+    entryKey,
+    secondEntryKey,
+  } = createTwoStaleSurfaceHermesDeliveryPlacements();
   const blocked = applyProjectCommand(loaded, catalog, {
     kind: 'ReplaceStartingReward',
     reward: createStartingRewardAddress('Surface'),
@@ -362,7 +298,7 @@ it('distinguishes two uncovered retained deliveries and binds the selected repai
   const repaired = applyProjectCommand(
     blocked,
     catalog,
-    interaction.intentFor(`structuralUnplace:${selectedIndex}`).command,
+    interaction.intentFor(node.room.placementRepairs![selectedIndex]!.proposalKey).command,
   );
   const retained = repaired.route.biomes
     .find((biome) => biome.biomeKey === host.biomeKey)!
