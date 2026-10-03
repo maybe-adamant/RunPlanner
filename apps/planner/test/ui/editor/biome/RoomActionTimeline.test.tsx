@@ -27,6 +27,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import {
+  authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
@@ -47,6 +48,7 @@ import {
 import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import {
   loadSurfaceNOPQProject,
+  surfaceShrineTravelDealProject,
   nBiome,
   nOccurrenceIds,
   oBiome,
@@ -77,6 +79,105 @@ afterEach(() => {
   vi.restoreAllMocks();
   delete (document as unknown as { elementFromPoint?: Document['elementFromPoint'] })
     .elementFromPoint;
+});
+
+describe('Ship timeline tab recovery', () => {
+  it('places a phase-local required delivery without entering inactive repairs', async () => {
+    const view = renderOccurrenceWorkbench(
+      surfaceShrineTravelDealProject(),
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat04),
+      undefined,
+      { initialTab: 'shipCombat1Actions' },
+    );
+    const biome = workspaceProjection(view.application).route.biomes.find(
+      (entry) => entry.biomeKey === 'O',
+    )!;
+    const node = occurrenceById(oOccurrenceIds.combat04)(biome)!;
+    const delivery = node.room.roomActions!.rows.find(
+      (row) => row.reference.kind === 'interactAcquisitionEntry' && row.label.includes('Delivery'),
+    )!;
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'UnplaceGeneratedDelivery',
+          action: delivery.address,
+        }),
+      ),
+    );
+    const required = screen.getByRole('region', { name: 'Required actions' });
+    await view.user.click(
+      within(required).getByRole('button', { name: 'Place required delivery' }),
+    );
+    expect(screen.queryByRole('region', { name: 'Required actions' })).toBeNull();
+    expect(
+      screen.getByRole('tab', { name: 'Combat 1 Timeline' }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(screen.queryByRole('region', { name: 'Intro ship phase' })).toBeNull();
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(screen.getByRole('region', { name: 'Required actions' })).not.toBeNull();
+    expect(
+      screen.getByRole('tab', { name: 'Combat 1 Timeline' }).getAttribute('aria-selected'),
+    ).toBe('true');
+  });
+
+  it('recovers a removed phase tab and restores only that phase on Undo', async () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat04),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Combat 2 Timeline' }));
+    expect(screen.getByRole('region', { name: 'Combat 2 ship phase' })).not.toBeNull();
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceShipEncounterCount',
+          occurrence,
+          encounterCount: 2,
+        }),
+      ),
+    );
+    expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.queryByRole('region', { name: 'Combat 2 ship phase' })).toBeNull();
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(
+      screen.getByRole('tab', { name: 'Combat 2 Timeline' }).getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(screen.getByRole('region', { name: 'Combat 2 ship phase' })).not.toBeNull();
+    expect(screen.queryByRole('region', { name: 'Intro ship phase' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Combat 1 ship phase' })).toBeNull();
+  });
+
+  it.each(['actions', 'shipCombat2Actions', 'shipInactiveRepair'] as const)(
+    'recovers unavailable %s without showing a combined timeline',
+    async (initialTab) => {
+      const { user } = renderOccurrenceWorkbench(
+        loadSurfaceNOPQProject(),
+        'Surface',
+        'O',
+        occurrenceById(oOccurrenceIds.combat04),
+        undefined,
+        { initialTab },
+      );
+      expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+        'true',
+      );
+      await user.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+      expect(screen.getByRole('region', { name: 'Combat 1 ship phase' })).not.toBeNull();
+      expect(screen.queryByRole('region', { name: 'Intro ship phase' })).toBeNull();
+    },
+  );
 });
 
 describe('OccurrenceRoomActions', () => {

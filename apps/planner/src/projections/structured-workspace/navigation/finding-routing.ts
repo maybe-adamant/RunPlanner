@@ -92,6 +92,24 @@ export function assertFineGrainedFindingDestination(
         : route.biomes
             .find((biome) => biome.biomeKey === destination.biomeKey)
             ?.nodes.find((node) => node.key === destination.nodeKey);
+  if (exactNode?.kind === 'occurrenceWorkbench' && destination?.roomTab !== undefined) {
+    const workbench = exactNode.room.workbench;
+    const tab = destination.roomTab;
+    const valid =
+      tab === 'overview' ||
+      tab === 'doors' ||
+      tab === 'sideRooms' ||
+      (tab === 'layout' && workbench.kind === 'fields') ||
+      (tab === 'actions' && workbench.kind !== 'ship') ||
+      (workbench.kind === 'ship' &&
+        (workbench.phases.some((phase) => phase.tab === tab) ||
+          (tab === 'shipInactiveRepair' && workbench.repairRows.length > 0)));
+    if (!valid) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} finding targets unavailable room tab ${tab}`,
+      );
+    }
+  }
   const exactFrontier =
     destination?.routeKey === undefined ||
     destination.biomeKey === undefined ||

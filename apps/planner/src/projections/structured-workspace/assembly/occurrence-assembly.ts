@@ -797,13 +797,14 @@ export function assembleWorkspaceOccurrence(
         roomLocal.kind === 'ship' ? roomTabForPhase(roomLocal, effect.phaseKey) : 'actions',
       );
     }
-    const shipRepairKeys = new Set(roomActions.repairRows.map((row) => row.key));
-    const timelineActionPhaseKeys = new Map(
-      roomActions.timeline.entries.flatMap((entry) =>
-        entry.kind === 'action' && entry.phaseKey !== undefined
-          ? [[entry.actionKey, entry.phaseKey] as const]
-          : [],
-      ),
+    const shipActionTabs = new Map(
+      workbench.kind === 'ship'
+        ? workbench.phases.flatMap((phase) =>
+            [...phase.actionRows, ...phase.optionalRows, ...phase.unplacedRows].map(
+              (row) => [row.key, phase.tab] as const,
+            ),
+          )
+        : [],
     );
     const artificerOfferTargets = new Set(
       roomActions.rows.flatMap((row) =>
@@ -811,14 +812,8 @@ export function assembleWorkspaceOccurrence(
       ),
     );
     for (const row of roomActions.rows) {
-      if (row.stygianWellTwist !== undefined) {
-        input.markerDestinations.redirectToContext(
-          row.stygianWellTwist.marker,
-          row.marker,
-          node.key,
-        );
-      }
       const acquisitionMarkers = Object.freeze([
+        ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
         ...(row.placementAssessment?.kind === 'invalid' &&
         row.reference.kind === 'interactAcquisitionEntry'
           ? [
@@ -856,26 +851,19 @@ export function assembleWorkspaceOccurrence(
       for (const marker of acquisitionMarkers) {
         input.markerDestinations.redirectToContext(marker, row.marker, node.key);
       }
-      const wheelKey =
-        row.window.kind === 'shipPostCombat' || row.window.kind === 'shipPreCombat'
-          ? row.window.wheelKey
-          : undefined;
       const tab =
-        roomLocal.kind === 'ship' && shipRepairKeys.has(row.key)
-          ? 'shipInactiveRepair'
-          : row.reference.kind === 'interactEncounter' || row.reference.kind === 'interactGorgon'
-            ? roomTabForPhase(roomLocal, row.reference.phaseKey)
-            : roomLocal.kind === 'ship' && timelineActionPhaseKeys.has(row.key)
-              ? roomTabForPhase(roomLocal, timelineActionPhaseKeys.get(row.key)!)
-              : wheelKey !== undefined
-                ? roomTabForPhase(
-                    roomLocal,
-                    roomLocal.kind === 'ship'
-                      ? (roomLocal.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.key ??
-                          '')
-                      : '',
-                  )
-                : 'actions';
+        roomLocal.kind === 'ship'
+          ? (shipActionTabs.get(row.key) ??
+            (workbench.kind === 'ship' &&
+            workbench.repairRows.some((repair) => repair.key === row.key)
+              ? 'shipInactiveRepair'
+              : undefined))
+          : 'actions';
+      if (tab === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Ship action ${row.key} has no rendered timeline destination`,
+        );
+      }
       input.markerDestinations.setRoomTab(
         [
           row.marker,
@@ -897,13 +885,17 @@ export function assembleWorkspaceOccurrence(
           `Ship wheel ${wheel.key} has no preceding workbench phase`,
         );
       }
-      const tab: WorkspaceRoomTab = !wheel.active
-        ? 'shipInactiveRepair'
-        : roomTabForPhase(roomLocal, workbenchPhase!.key);
-      input.markerDestinations.setRoomTab(
-        [wheel.marker, ...wheel.offers.flatMap((offer) => [offer.control.marker])],
-        tab,
-      );
+      const wheelMarkers = [wheel.marker, ...wheel.offers.map((offer) => offer.control.marker)];
+      if (!wheel.active) {
+        // The phase-count control restores an inactive wheel; no wheel editor exists in repairs.
+        for (const marker of wheelMarkers) {
+          input.markerDestinations.redirectToContext(marker, roomSummary.marker, node.key);
+        }
+        input.markerDestinations.setRoomTab(wheelMarkers, 'overview');
+        continue;
+      }
+      const tab: WorkspaceRoomTab = workbenchPhase!.tab;
+      input.markerDestinations.setRoomTab(wheelMarkers, tab);
       const choice = roomActions?.rows.find(
         (row) => row.reference.kind === 'chooseRewardWheel' && row.reference.wheelKey === wheel.key,
       );

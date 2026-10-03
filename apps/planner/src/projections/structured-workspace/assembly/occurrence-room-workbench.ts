@@ -1,3 +1,4 @@
+import { roomTabForPhase } from './occurrence-action-run-state';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceRoomWorkbenchPresentation,
@@ -77,6 +78,26 @@ function shipWorkbenchPresentation(
   };
   const actionByKey = new Map(roomActions?.rows.map((row) => [row.key, row]) ?? []);
   const phaseRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
+  const phaseUnplacedRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
+  const repairRows: WorkspaceRoomActionRow[] = [];
+  const phaseIndexForWindow = (window: WorkspaceRoomActionRow['window']): number => {
+    switch (window.kind) {
+      case 'encounterEnd':
+        return roomLocal.phases.findIndex((phase) => phase.key === window.phaseKey);
+      case 'shipPostCombat':
+      case 'shipPreCombat': {
+        const index = roomLocal.phases.findIndex(
+          (phase) => phase.rewardWheelKey === window.wheelKey,
+        );
+        return index < 0 ? -1 : window.kind === 'shipPreCombat' ? Math.max(0, index - 1) : index;
+      }
+      case 'standard':
+        return window.phase === 'beforeCombat' ? 0 : roomLocal.phases.length - 1;
+      case 'fields':
+      case 'postOutgoing':
+        return roomLocal.phases.length - 1;
+    }
+  };
   const phaseOptionalRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const phaseBoundaryEntries = roomLocal.phases.map(
     () => [] as Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>[],
@@ -121,19 +142,7 @@ function shipWorkbenchPresentation(
       phaseCheckpointEntries[phaseIndex]!.push(checkpoint);
     }
     for (const row of roomActions.optionalRows) {
-      const phaseIndex = (() => {
-        const window = row.window;
-        if (window.kind === 'shipPostCombat') {
-          return roomLocal.phases.findIndex((phase) => phase.rewardWheelKey === window.wheelKey);
-        }
-        if (window.kind === 'shipPreCombat') {
-          const targetIndex = roomLocal.phases.findIndex(
-            (phase) => phase.rewardWheelKey === window.wheelKey,
-          );
-          return Math.max(0, targetIndex - 1);
-        }
-        return roomLocal.phases.length - 1;
-      })();
+      const phaseIndex = phaseIndexForWindow(row.window);
       if (phaseIndex < 0) {
         throw new StructuredWorkspaceProjectionContractError(
           `Ship optional action ${row.key} has no declaration-owned phase`,
@@ -142,11 +151,21 @@ function shipWorkbenchPresentation(
       phaseOptionalRows[phaseIndex]!.push(row);
     }
   }
+  for (const row of roomActions?.repairRows ?? []) {
+    const phaseIndex = phaseIndexForWindow(row.window);
+    if (!row.stale && row.rank === null && phaseIndex >= 0) {
+      phaseUnplacedRows[phaseIndex]!.push(row);
+    } else {
+      repairRows.push(row);
+    }
+  }
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
     const wheel = wheelForNextPhase(index);
     return Object.freeze({
+      tab: roomTabForPhase(roomLocal, phase.key),
       actionRows: Object.freeze(phaseRows[index]!),
+      unplacedRows: Object.freeze(phaseUnplacedRows[index]!),
       checkpoints: Object.freeze(phaseCheckpointEntries[index]!),
       ...(encounter === undefined ? {} : { encounter }),
       key: phase.key,
@@ -161,7 +180,7 @@ function shipWorkbenchPresentation(
     features,
     kind: 'ship' as const,
     phases: Object.freeze(phases),
-    repairRows: Object.freeze(roomActions?.repairRows ?? []),
+    repairRows: Object.freeze(repairRows),
     ...(roomActions === undefined ? {} : { roomActions }),
   });
 }

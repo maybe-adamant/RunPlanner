@@ -1,4 +1,8 @@
 import {
+  StructuredWorkspaceProjectionContractError,
+  type WorkspaceShipPhasePresentation,
+} from '../contract';
+import {
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   type RoomRunStateCheckpointAddress,
@@ -13,6 +17,11 @@ import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
+export function roomTabForPhase(
+  roomLocal: Extract<WorkspaceRoomLocal, { readonly kind: 'ship' }>,
+  phaseKey: string,
+): WorkspaceShipPhasePresentation['tab'];
+export function roomTabForPhase(roomLocal: WorkspaceRoomLocal, phaseKey: string): WorkspaceRoomTab;
 export function roomTabForPhase(roomLocal: WorkspaceRoomLocal, phaseKey: string): WorkspaceRoomTab {
   if (roomLocal.kind !== 'ship') return 'actions';
   switch (roomLocal.phases.findIndex((phase) => phase.key === phaseKey)) {
@@ -23,7 +32,9 @@ export function roomTabForPhase(roomLocal: WorkspaceRoomLocal, phaseKey: string)
     case 2:
       return 'shipCombat2Actions';
     default:
-      return 'actions';
+      throw new StructuredWorkspaceProjectionContractError(
+        `Ship timeline references unknown phase ${phaseKey}`,
+      );
   }
 }
 

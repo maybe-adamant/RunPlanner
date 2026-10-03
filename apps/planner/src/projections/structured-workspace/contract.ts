@@ -488,6 +488,12 @@ export interface WorkspaceShipStructurePhase {
 }
 
 export interface WorkspaceShipPhasePresentation {
+  readonly tab: Extract<
+    WorkspaceRoomTab,
+    'shipIntroActions' | 'shipCombat1Actions' | 'shipCombat2Actions'
+  >;
+  /** Active required actions owned by this phase but not yet inserted. */
+  readonly unplacedRows: readonly WorkspaceRoomActionRow[];
   readonly actionRows: readonly WorkspaceRoomActionRow[];
   readonly checkpoints: WorkspaceRoomActions['checkpoints'];
   readonly encounter?: WorkspaceEncounterPhase;
