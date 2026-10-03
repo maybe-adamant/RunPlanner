@@ -445,13 +445,36 @@ export function assessRoomActionPlacements(
   route: import('../../authored-project/model').AuthoredRoutePlan,
   owner: OccurrenceAddress,
   roster: RoomActionRoster,
+  reachedPlacements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[] = [],
 ): RoomActionRoster {
   const rows = roster.rows.map((row) => {
-    const placementAssessment = assessGeneratedPickupPlacement(route, owner, row.reference);
+    const structural = assessGeneratedPickupPlacement(route, owner, row.reference);
+    const reference = row.reference;
+    const reached =
+      reference.kind !== 'interactAcquisitionEntry'
+        ? undefined
+        : reachedPlacements.find(
+            (placement) =>
+              placement.address.site.owner.kind === 'occurrence' &&
+              placement.address.site.owner.occurrenceId === owner.occurrenceId &&
+              placement.address.site.biomeKey === owner.biomeKey &&
+              placement.address.entryKey === reference.entryKey &&
+              placement.address.site.pointKey === reference.siteKey,
+          )?.assessment;
+    const placementAssessment =
+      structural?.kind === 'invalid' ? structural : (reached ?? structural);
     return placementAssessment === undefined ? row : frozen({ ...row, placementAssessment });
   });
   const invalidKeys = new Set(
-    rows.filter((row) => row.placementAssessment?.kind === 'invalid').map((row) => row.key),
+    rows
+      .filter(
+        (row) =>
+          row.placementAssessment?.kind === 'invalid' &&
+          (row.placementAssessment.source.kind === 'clockedTraitPickup' ||
+            row.placementAssessment.source.occurrenceId !== owner.occurrenceId ||
+            row.placementAssessment.source.biomeKey !== owner.biomeKey),
+      )
+      .map((row) => row.key),
   );
   return frozen({
     ...roster,
@@ -462,7 +485,11 @@ export function assessRoomActionPlacements(
         .filter((row) => invalidKeys.has(row.key) && row.rank !== null)
         .map((row): RoomActionProposal =>
           frozen({
-            kind: 'unplace',
+            kind:
+              row.reference.kind === 'interactAcquisitionEntry' &&
+              row.reference.siteKey === 'hermesShrineDelivery'
+                ? 'unplace'
+                : 'remove',
             reference: row.reference,
             fromIndex: row.rank! - 1,
             order: frozen(

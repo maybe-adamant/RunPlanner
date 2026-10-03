@@ -1,3 +1,7 @@
+import {
+  assessReachedHermesDeliveryPlacement,
+  assessReachedClockedPickupPlacement,
+} from '../../acquisition/generated-pickup-placement';
 import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
@@ -42,7 +46,11 @@ import {
   settlePickupAcquisitionSite,
   withRoomStoredSourceProducts,
 } from '../../acquisition/site-settlement';
-import type { AcquisitionRoleFrontier } from '../../acquisition/contracts';
+import type {
+  DerivedAcquisitionEntryFrontier,
+  GeneratedPickupPlacement,
+  AcquisitionRoleFrontier,
+} from '../../acquisition/contracts';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
@@ -63,6 +71,7 @@ export interface HermesShrineRefillState {
 }
 
 export interface AcquisitionPointReachedTransition {
+  readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
@@ -90,10 +99,12 @@ export interface AcquisitionPointReachedInputs {
   readonly purgingPoolAssessment:
     { readonly assessments: readonly PurgingPoolAssessment[] } | undefined;
   readonly hermesShrineRefillState: HermesShrineRefillState | undefined;
+  readonly derivedAcquisitionEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
   readonly derivedAcquisitionEntryCapability?: import('../../acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
 
 function transitionResult(input: {
+  readonly generatedPickupPlacements?: readonly GeneratedPickupPlacement[];
   readonly branches: readonly RewardBranchState[];
   readonly findings: ReadonlyMap<string, FindingRegionEntry>;
   readonly producerFrontiers?: readonly RewardProducerFrontier[] | undefined;
@@ -104,6 +115,7 @@ function transitionResult(input: {
   readonly timelineFacts?: PlannerTimelineFacts;
 }): AcquisitionPointReachedTransition {
   return Object.freeze({
+    generatedPickupPlacements: Object.freeze(input.generatedPickupPlacements ?? []),
     branches: Object.freeze(input.branches),
     findings: Object.freeze([...input.findings.values()]),
     producerFrontiers: Object.freeze(input.producerFrontiers ?? []),
@@ -124,6 +136,9 @@ export function applyAcquisitionPointReachedTransition(
     throw new BiomeRewardSimulationContractError('Shrine acquisitions have no authored room');
   }
   const findings = new Map<string, FindingRegionEntry>();
+  const generatedPickupPlacements: GeneratedPickupPlacement[] = [];
+  const publish = (input: Parameters<typeof transitionResult>[0]) =>
+    transitionResult({ ...input, generatedPickupPlacements });
   // These are lower-level settlement inputs. The transition boundary itself
   // exposes only frozen arrays, so chronology cannot share a mutable collector.
   const authoredSeaStarDuplicateSiteKeys = new Set(inputs.authoredSeaStarDuplicateSiteKeys);
@@ -166,7 +181,7 @@ export function applyAcquisitionPointReachedTransition(
         ];
       }),
     );
-    return transitionResult({
+    return publish({
       branches: inputs.sourceBranches.map((branch) =>
         spawnDueHermesDeliveries(
           catalog,
@@ -316,9 +331,9 @@ export function applyAcquisitionPointReachedTransition(
         ownerRegion(room.origin),
         chronology,
       );
-      return transitionResult({ branches: inputs.sourceBranches, findings });
+      return publish({ branches: inputs.sourceBranches, findings });
     }
-    return transitionResult({
+    return publish({
       branches: inputs.sourceBranches.map((branch) => {
         const before = branch.state.traitHistory;
         const traitHistory = foldTraitHistoryEvents(catalog, [
@@ -393,7 +408,7 @@ export function applyAcquisitionPointReachedTransition(
       chronology,
     );
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
-    return transitionResult({
+    return publish({
       branches: settled.branches,
       findings,
       roleFrontiers: settled.roleFrontiers,
@@ -403,12 +418,33 @@ export function applyAcquisitionPointReachedTransition(
 
   if (event.siteKey !== undefined && event.entryKey !== undefined) {
     const site = room.acquisitionSites[event.siteKey];
+    const retainedReference = room.roomActionRoster.rows.find(
+      (row) =>
+        row.rank !== null &&
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.siteKey === event.siteKey &&
+        row.reference.entryKey === event.entryKey,
+    )?.reference;
+    const pickupReference =
+      retainedReference?.kind === 'interactAcquisitionEntry' ? retainedReference : undefined;
     const clockedTraitPickup = parseClockedTraitGeneratedPickupEntryKey(event.entryKey);
     if (site !== undefined && clockedTraitPickup !== undefined) {
+      const placement =
+        pickupReference === undefined
+          ? undefined
+          : assessReachedClockedPickupPlacement(
+              room.origin,
+              pickupReference,
+              inputs.sourceBranches,
+              inputs.derivedAcquisitionEntryFrontiers ?? [],
+              event.sequence,
+            );
+      if (placement !== undefined) generatedPickupPlacements.push(placement);
       const capability = inputs.derivedAcquisitionEntryCapability;
       const retained = site.entries[event.entryKey];
       const entry = createAcquisitionEntryAddress(site.address, event.entryKey);
       if (
+        placement?.assessment.kind !== 'valid' ||
         capability?.kind !== 'clockedTraitPickup' ||
         capability.producerLifecycleKey === undefined ||
         capability.fixedReward === undefined ||
@@ -418,11 +454,13 @@ export function applyAcquisitionPointReachedTransition(
       ) {
         addFinding('rewardSourceUnavailable', entry, {
           reason:
-            capability?.kind !== 'clockedTraitPickup'
+            placement?.assessment.kind === 'invalid'
               ? 'staleClockedTraitPickup'
-              : 'retainedSourceMismatch',
+              : placement?.assessment.kind === 'unassessed'
+                ? 'clockedPickupContextDisagreement'
+                : 'retainedSourceMismatch',
         });
-        return transitionResult({ branches: inputs.sourceBranches, findings });
+        return publish({ branches: inputs.sourceBranches, findings });
       }
       const acquisitionView =
         roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
@@ -450,7 +488,7 @@ export function applyAcquisitionPointReachedTransition(
         presentsMaterializedScreen: true,
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
-      return transitionResult({
+      return publish({
         branches: settled.branches,
         findings,
         roleFrontiers: settled.roleFrontiers,
@@ -462,6 +500,16 @@ export function applyAcquisitionPointReachedTransition(
         ? parseHermesShrineDeliveryEntryKey(event.entryKey)
         : undefined;
     if (site !== undefined && shrineDelivery !== undefined) {
+      const placement =
+        pickupReference === undefined
+          ? undefined
+          : assessReachedHermesDeliveryPlacement(
+              room.origin,
+              pickupReference,
+              inputs.sourceBranches,
+              event.sequence,
+            );
+      if (placement !== undefined) generatedPickupPlacements.push(placement);
       const sourceOrigin = {
         kind: 'occurrence' as const,
         routeKey: shrineDelivery.routeKey,
@@ -474,13 +522,15 @@ export function applyAcquisitionPointReachedTransition(
       );
       const firstDue = due[0];
       const agreedDue =
+        placement?.assessment.kind === 'valid' &&
         firstDue !== undefined &&
         due.length === inputs.sourceBranches.length &&
         due.every(
           (delivery) =>
             delivery !== undefined &&
             delivery.dueAt !== undefined &&
-            semanticAddressKey(delivery.dueAt) === semanticAddressKey(room.origin),
+            semanticAddressKey(delivery.dueAt) === semanticAddressKey(room.origin) &&
+            delivery.rewardType === firstDue.rewardType,
         )
           ? firstDue
           : undefined;
@@ -492,9 +542,14 @@ export function applyAcquisitionPointReachedTransition(
         (retained !== null && retained.offer.rewardType !== agreedDue.rewardType)
       ) {
         addFinding('rewardSourceUnavailable', entry, {
-          reason: agreedDue === undefined ? 'staleHermesShrineDelivery' : 'retainedSourceMismatch',
+          reason:
+            placement?.assessment.kind === 'invalid'
+              ? 'staleHermesShrineDelivery'
+              : placement?.assessment.kind === 'unassessed'
+                ? 'hermesDeliveryContextDisagreement'
+                : 'retainedSourceMismatch',
         });
-        return transitionResult({ branches: inputs.sourceBranches, findings });
+        return publish({ branches: inputs.sourceBranches, findings });
       }
       const prior = inputs.hermesShrineRefillState;
       let refillState = prior;
@@ -637,7 +692,7 @@ export function applyAcquisitionPointReachedTransition(
           event.sequence,
         );
       });
-      return transitionResult({
+      return publish({
         branches,
         findings,
         producerFrontiers: Object.freeze([
@@ -718,7 +773,7 @@ export function applyAcquisitionPointReachedTransition(
         authoredSeaStarDuplicateSiteKeys,
       });
       mergeRewardFindingEmissions(findings, settled.findingEmissions);
-      return transitionResult({
+      return publish({
         branches: settled.branches,
         findings,
         roleFrontiers: settled.roleFrontiers,
@@ -769,7 +824,7 @@ export function applyAcquisitionPointReachedTransition(
       ? {}
       : { derivedAcquisitionEntryCapability: inputs.derivedAcquisitionEntryCapability }),
   });
-  return transitionResult({
+  return publish({
     branches: authoredSiteSettlement.branches,
     findings,
     authoredSiteSettlement,

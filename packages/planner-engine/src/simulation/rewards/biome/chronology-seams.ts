@@ -156,6 +156,7 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
     }),
     emissions: [
       { kind: 'timelineFacts', facts: transition.timelineFacts },
+      { kind: 'generatedPickupPlacements', placements: transition.generatedPickupPlacements },
       {
         kind: 'derivedAcquisitionEntryFrontiers',
         frontiers: transition.derivedAcquisitionEntryFrontiers,
@@ -244,6 +245,7 @@ function acquisitionEmissions(
 ): readonly ChronologyEmission[] {
   return [
     settledFindings(transition.findings),
+    { kind: 'generatedPickupPlacements', placements: transition.generatedPickupPlacements },
     { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
     { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
     { kind: 'timelineFacts', facts: transition.timelineFacts },
@@ -330,14 +332,16 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     event.siteKey === undefined || room === undefined
       ? undefined
       : room.acquisitionSites[event.siteKey]?.address;
+  const derivedFrontiers =
+    derivedSite === undefined || event.entryKey === undefined
+      ? Object.freeze([])
+      : context.accumulated.derivedAcquisitionEntryFrontiers(
+          semanticAddressKey(createAcquisitionEntryAddress(derivedSite, event.entryKey)),
+        );
   const derivedCapability =
     derivedSite === undefined || event.entryKey === undefined
       ? undefined
-      : attestDerivedAcquisitionEntryCandidateCapability(
-          context.accumulated.derivedAcquisitionEntryFrontiers(
-            semanticAddressKey(createAcquisitionEntryAddress(derivedSite, event.entryKey)),
-          ),
-        );
+      : attestDerivedAcquisitionEntryCandidateCapability(derivedFrontiers);
   const transition = applyAcquisitionPointReachedTransition({
     catalog: context.catalog,
     snapshot: context.snapshot,
@@ -349,6 +353,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     purgingPoolAssessment: state.purgingPoolAssessments.get(shrineKey),
     hermesShrineRefillState: refillState,
+    derivedAcquisitionEntryFrontiers: derivedFrontiers,
     ...(derivedCapability === undefined
       ? {}
       : { derivedAcquisitionEntryCapability: derivedCapability }),
@@ -825,6 +830,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   return {
     leadingEmissions: [
       lifecycleFindings(entered.findings),
+      { kind: 'generatedPickupPlacements', placements: entered.generatedPickupPlacements },
       {
         kind: 'derivedAcquisitionEntryFrontiers',
         frontiers: entered.derivedAcquisitionEntryFrontiers,

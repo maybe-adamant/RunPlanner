@@ -115,6 +115,9 @@ export function publishChronology(
     }),
   );
   const simulation: BiomeRewardSimulation = Object.freeze({
+    ...(accumulation.generatedPickupPlacements.length === 0
+      ? {}
+      : { generatedPickupPlacements: accumulation.generatedPickupPlacements }),
     biomeKey: snapshot.biomeKey,
     validity: immutableFindings.length === 0 && walk.branches.length > 0 ? 'valid' : 'invalid',
     ...(accumulation.echoKeepsakeReplayOutcome === undefined

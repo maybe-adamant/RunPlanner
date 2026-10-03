@@ -36,6 +36,7 @@ import { traitOfferContextIdentity } from '../../traits';
 import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
 import type {
   AcquisitionRoleFrontier,
+  GeneratedPickupPlacement,
   DerivedAcquisitionEntryFrontier,
 } from '../acquisition/contracts';
 import type { RewardBranchState } from '../branch-primitives';
@@ -77,6 +78,10 @@ export interface AddedChronologyFinding {
  * entry's level-resolution evaluations through `add`.
  */
 export type ChronologyEmission =
+  | {
+      readonly kind: 'generatedPickupPlacements';
+      readonly placements: readonly GeneratedPickupPlacement[];
+    }
   | {
       readonly kind: 'findings';
       readonly rule: 'add';
@@ -209,6 +214,7 @@ export interface TraitChildSettlementAccumulation {
 
 /** The biome accumulators, complete once the walk and finalization have merged everything. */
 export interface ChronologyAccumulation {
+  readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly producerFrontiers: ReadonlyMap<string, RewardProducerFrontier>;
   readonly reachedTraitOfferCandidateContexts: ReadonlyMap<
@@ -350,6 +356,7 @@ export function createChronologyAccumulator(
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
   const derivedAcquisitionEntryContexts = new Map<
     string,
     readonly DerivedAcquisitionEntryFrontier[]
@@ -672,6 +679,12 @@ export function createChronologyAccumulator(
 
   function mergeEmission(emission: ChronologyEmission): void {
     switch (emission.kind) {
+      case 'generatedPickupPlacements':
+        for (const placement of emission.placements) {
+          const key = semanticAddressKey(placement.address);
+          if (!generatedPickupPlacements.has(key)) generatedPickupPlacements.set(key, placement);
+        }
+        break;
       case 'findings':
         mergeFindings(emission);
         return;
@@ -809,6 +822,7 @@ export function createChronologyAccumulator(
       finished = true;
       return Object.freeze({
         findingRegions: Object.freeze([...findings.values()]),
+        generatedPickupPlacements: Object.freeze([...generatedPickupPlacements.values()]),
         producerFrontiers,
         reachedTraitOfferCandidateContexts,
         acquisitionConversionContexts,

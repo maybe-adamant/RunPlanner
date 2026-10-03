@@ -42,7 +42,10 @@ import {
   type AuthoredTranscendentEmbryoOutcome,
 } from '../../../../authored-project/traits/state';
 import { clockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/acquisition/pickup-producers';
-import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
+import type {
+  GeneratedPickupPlacement,
+  DerivedAcquisitionEntryFrontier,
+} from '../../acquisition/contracts';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
 import { rewardFinding } from '../../findings';
@@ -56,6 +59,7 @@ import {
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 
 export interface EncounterEndEffectsTransition {
+  readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
   readonly branches: readonly RewardBranchState[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   /** A due Shrine delivery has no exact ranked/retained host action yet. */
@@ -472,6 +476,7 @@ export function applyEncounterEndEffectsTransition(
     next = pickupAdvance.branches;
   }
   const deliveryPlacementFindings: LifecycleFinding[] = [];
+  const generatedPickupPlacements: GeneratedPickupPlacement[] = [];
   const recordedPhase =
     next[0] === undefined
       ? undefined
@@ -501,7 +506,13 @@ export function applyEncounterEndEffectsTransition(
               Object.freeze({
                 ...delivery,
                 remainingUses: Math.max(0, remainingUses),
-                ...(remainingUses <= 0 ? { dueAt: deliveryHost, dueSequence: event.sequence } : {}),
+                ...(remainingUses <= 0
+                  ? {
+                      dueAt: deliveryHost,
+                      dueSequence: event.sequence,
+                      dueEncounterPhaseKey: event.phaseKey,
+                    }
+                  : {}),
               }),
             ] as const;
           }),
@@ -586,6 +597,7 @@ export function applyEncounterEndEffectsTransition(
               ),
               kind: 'clockedTraitPickup',
               branchCohortSize: finalBranches.length,
+              historySequence: event.sequence,
               rewardTypes: Object.freeze([pickup.rewardType]),
               fixedReward,
               producerLifecycleKey: maturity.producerLifecycleKey,
@@ -613,6 +625,7 @@ export function applyEncounterEndEffectsTransition(
       event.phaseKey,
     );
     deliveryPlacementFindings.push(...due.findings);
+    generatedPickupPlacements.push(...due.generatedPickupPlacements);
     derivedAcquisitionEntryFrontiers.push(...due.frontiers);
   }
   const timelineNodes: PlannerTimelineNode[] = [
@@ -680,6 +693,7 @@ export function applyEncounterEndEffectsTransition(
   }
   return Object.freeze({
     branches: advanceRewardBranches(finalBranches, event.sequence),
+    generatedPickupPlacements: Object.freeze(generatedPickupPlacements),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
     hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
     steadyGrowthThresholds: steadyAdvance?.thresholds ?? Object.freeze([]),

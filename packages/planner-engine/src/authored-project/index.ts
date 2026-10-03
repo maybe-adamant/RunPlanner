@@ -423,3 +423,5 @@ export {
 export { chaosGateSpawnPointIndices } from './chaos-gate-position';
 
 export { NATIVE_RUN_MODIFIERS, routeRunModifiers, decodeRunModifiers } from './run-modifiers';
+
+export { structurallyInvalidGeneratedPickupPlacements } from './generated-pickup-placement';

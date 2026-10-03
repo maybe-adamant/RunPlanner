@@ -6,14 +6,21 @@ import {
   parseHermesShrineDeliveryEntryKey,
 } from './hermes-shrine-delivery';
 
+export type GeneratedPickupSource =
+  | OccurrenceAddress
+  | {
+      readonly kind: 'clockedTraitPickup';
+      readonly acquisitionIdentity: string;
+    };
+
 /** Placement truth is separate from required participation and reward completeness. */
 export type GeneratedPickupPlacementAssessment =
-  | { readonly kind: 'valid'; readonly source: OccurrenceAddress }
-  | { readonly kind: 'unassessed'; readonly source: OccurrenceAddress }
+  | { readonly kind: 'valid'; readonly source: GeneratedPickupSource }
+  | { readonly kind: 'unassessed'; readonly source: GeneratedPickupSource }
   | {
       readonly kind: 'invalid';
-      readonly source: OccurrenceAddress;
-      readonly reason: 'sourceInactive';
+      readonly source: GeneratedPickupSource;
+      readonly reason: 'sourceInactive' | 'dueContactMismatch';
     };
 
 /** Structural proof requires no reached lifecycle context; live timing remains unassessed. */
@@ -42,4 +49,21 @@ export function assessGeneratedPickupPlacement(
   return hermesShrineDeliverySourceIsStructurallyActive(route, parsed)
     ? Object.freeze({ kind: 'unassessed', source })
     : Object.freeze({ kind: 'invalid', source, reason: 'sourceInactive' });
+}
+
+/** Retained placements with independent structural proof, without lifecycle products. */
+export function structurallyInvalidGeneratedPickupPlacements(
+  route: AuthoredRoutePlan,
+  host: OccurrenceAddress,
+  order: readonly RoomActionReference[],
+): readonly {
+  readonly reference: RoomActionReference;
+  readonly assessment: Extract<GeneratedPickupPlacementAssessment, { readonly kind: 'invalid' }>;
+}[] {
+  return Object.freeze(
+    order.flatMap((reference) => {
+      const assessment = assessGeneratedPickupPlacement(route, host, reference);
+      return assessment?.kind === 'invalid' ? [Object.freeze({ reference, assessment })] : [];
+    }),
+  );
 }

@@ -1,5 +1,7 @@
+import { generatedPickupPlacementRepairLabel } from './assembly/occurrence-action-label';
 import { assessRoomActionPlacements } from '@run-planner/engine/simulation';
 import {
+  structurallyInvalidGeneratedPickupPlacements,
   createBiomeAddress,
   resolveRoutePosition,
   type ResolvedRoutePosition,
@@ -82,6 +84,10 @@ export interface WorkspaceEvaluatedBatchOverlay {
 }
 
 export interface WorkspaceBiomeSource {
+  readonly structuralPlacementRepairs: (
+    owner: OccurrenceAddress,
+    order: readonly import('@run-planner/engine/authored-project').RoomActionReference[],
+  ) => readonly import('./contracts/timeline').WorkspaceGeneratedPickupPlacementRepair[];
   readonly roomActionPlacementRoster: (
     owner: OccurrenceAddress,
     roster: import('@run-planner/engine/simulation').RoomActionRoster,
@@ -851,10 +857,53 @@ function createWorkspaceBiomeSource(
       overlay.additional.get(semanticAddressKey(owner)) ?? Object.freeze([]),
     evaluatedBatch: (owner: ExitDecisionAddress) => overlay.batches.get(semanticAddressKey(owner)),
     evaluatedHub: (owner: HubDecisionAddress) => overlay.hubs.get(semanticAddressKey(owner)),
+    structuralPlacementRepairs: (
+      owner: OccurrenceAddress,
+      order: readonly import('@run-planner/engine/authored-project').RoomActionReference[],
+    ) => {
+      const repairs = structurallyInvalidGeneratedPickupPlacements(project.route, owner, order).map(
+        (repair) => {
+          const source = repair.assessment.source;
+          const sourceRoom =
+            source.kind !== 'occurrence'
+              ? undefined
+              : project.route.biomes
+                  .find((biome) => biome.biomeKey === source.biomeKey)
+                  ?.topology?.occurrences.find((room) => room.occurrenceId === source.occurrenceId);
+          return Object.freeze({
+            ...repair,
+            label: generatedPickupPlacementRepairLabel(
+              catalog,
+              repair.reference,
+              sourceRoom,
+              occurrencesById.get(owner.occurrenceId),
+            ),
+          });
+        },
+      );
+      return Object.freeze(
+        repairs.map((repair) =>
+          repairs.filter((candidate) => candidate.label === repair.label).length === 1
+            ? repair
+            : Object.freeze({
+                ...repair,
+                label: `${repair.label} · ${repair.assessment.source.kind === 'occurrence' ? repair.assessment.source.occurrenceId : repair.assessment.source.acquisitionIdentity}`,
+              }),
+        ),
+      );
+    },
     roomActionPlacementRoster: (
       owner: OccurrenceAddress,
       roster: import('@run-planner/engine/simulation').RoomActionRoster,
-    ) => assessRoomActionPlacements(project.route, owner, roster),
+    ) =>
+      assessRoomActionPlacements(
+        project.route,
+        owner,
+        roster,
+        evaluation !== undefined && 'rewards' in evaluation
+          ? (evaluation.rewards.generatedPickupPlacements ?? [])
+          : [],
+      ),
     exitDecision: (source: ExitDecisionSourceAddress) =>
       exitDecisionsByOwner.get(semanticAddressKey(createExitDecisionAddress(biome, source))),
     exitDecisions,
