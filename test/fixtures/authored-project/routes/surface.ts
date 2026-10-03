@@ -18,6 +18,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
+  roomActionKey,
   hermesShrineDeliveryEntryKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -677,4 +678,84 @@ export function createStaleSurfaceHermesDeliveryPlacement() {
     catalog,
   );
   return { project: loaded, source, host, entryKey };
+}
+
+export function createTwoStaleSurfaceHermesDeliveryPlacements() {
+  const { project, host, source, entryKey } = createStaleSurfaceHermesDeliveryPlacement();
+  const originalHost = project.route.biomes
+    .find((biome) => biome.biomeKey === host.biomeKey)!
+    .topology!.occurrences.find((room) => room.occurrenceId === host.occurrenceId)!;
+  let second = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: source,
+    slotKey: 'secondLeft',
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+  second = applyProjectCommand(second, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:secondLeft',
+    purchase: { delay: 2, rushed: false },
+  });
+  const secondEntryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+  second = applyProjectCommand(second, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry: createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      secondEntryKey,
+    ),
+    encounterPhaseKey: 'Encounter',
+  });
+  // Retain both production-built placements to represent a loaded snapshot.
+  const loaded = {
+    ...second,
+    route: {
+      ...second.route,
+      biomes: second.route.biomes.map((biome) =>
+        biome.biomeKey !== host.biomeKey || biome.topology === null
+          ? biome
+          : {
+              ...biome,
+              topology: {
+                ...biome.topology,
+                occurrences: biome.topology.occurrences.map((room) =>
+                  room.occurrenceId !== host.occurrenceId
+                    ? room
+                    : {
+                        ...room,
+                        roomActions: {
+                          order: [
+                            ...originalHost.roomActions.order,
+                            ...room.roomActions.order.filter(
+                              (reference) =>
+                                !originalHost.roomActions.order.some(
+                                  (original) =>
+                                    roomActionKey(original) === roomActionKey(reference),
+                                ),
+                            ),
+                          ],
+                        },
+                        acquisitionSites: {
+                          ...room.acquisitionSites,
+                          hermesShrineDelivery: {
+                            pickupEntries: {
+                              ...originalHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries,
+                              ...room.acquisitionSites?.hermesShrineDelivery?.pickupEntries,
+                            },
+                          },
+                        },
+                      },
+                ),
+              },
+            },
+      ),
+    },
+  };
+  return {
+    project: decodeProjectDocument(JSON.parse(encodeProjectDocument(loaded)) as unknown, catalog),
+    host,
+    source,
+    entryKey,
+    secondEntryKey,
+  };
 }

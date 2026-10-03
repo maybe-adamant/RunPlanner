@@ -300,16 +300,17 @@ export function OccurrenceWorkbench({
               This delivery source is absent or inactive; unplace the retained delivery to repair
               it.
             </p>
-            {room.placementRepairs.map((repair, index) => (
+            {room.placementRepairs.map((repair) => (
               <button
-                key={index}
+                key={repair.proposalKey}
+                className="secondary-action action-compact"
                 type="button"
                 onClick={() =>
                   executeIntent(
                     requireWorkspaceInteraction(
                       interactions.roomActions,
                       workspaceInteractionKey(room.address),
-                    ).intentFor(`structuralUnplace:${index}`),
+                    ).intentFor(repair.proposalKey),
                   )
                 }
               >
