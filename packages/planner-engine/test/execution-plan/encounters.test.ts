@@ -24,11 +24,46 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
   pBiome,
+  pOccurrenceId,
   reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 describe('resolved execution encounters', () => {
+  it('publishes only the recorded P encounter prefix when Heracles ends the sequence', () => {
+    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
+    const intro = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Intro',
+    );
+    const ordinary = loadSurfaceNOPQProject();
+    const heracles = applyProjectCommand(ordinary, catalog, {
+      kind: 'SelectEncounter',
+      phase: intro,
+      encounterKey: 'HeraclesCombatP',
+    });
+    const assembly = simulateProjectAssembly(catalog, heracles);
+    expect(assembly.evaluation.route.summary.eligibleForExecutionPlan).toBe(true);
+    expect(assembly.evaluation.route.findings).toEqual([]);
+    const room = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly, catalog }),
+    }).occurrences.find((occurrence) => occurrence.id === occurrenceId);
+    expect(room?.overview.encounterPhases).toEqual([
+      { slotKey: 'Intro', encounterKey: 'HeraclesCombatP', kind: 'combat' },
+    ]);
+    const ordinaryRoom = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, ordinary),
+        catalog,
+      }),
+    }).occurrences.find((occurrence) => occurrence.id === occurrenceId);
+    expect(ordinaryRoom?.overview.encounterPhases.map((phase) => phase.slotKey)).toEqual([
+      'Intro',
+      'Combat',
+    ]);
+  });
+
   it.each([
     ['F_MiniBoss01', 'MiniBossTreant'],
     ['F_MiniBoss02', 'MiniBossFogEmitter'],
