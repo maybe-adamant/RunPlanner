@@ -153,6 +153,22 @@ export function retainBlockedRegionProducts(
     blockedAt.kind === 'keepsakeEquipResult' ? blockedAt : undefined;
   const blockedAcquisitionAt = acquisitionRoleAncestor(blockedAt);
   const blockedDerivedAcquisitionAt = derivedAcquisitionEntryAncestor(blockedAt);
+  const retainedPlacementKeys = new Set(
+    (retainedRewards.generatedPickupPlacements ?? []).map((placement) =>
+      semanticAddressKey(placement.address),
+    ),
+  );
+  const blockingPlacements = (selectedRewards.generatedPickupPlacements ?? []).filter(
+    (placement) =>
+      blockedDerivedAcquisitionAt !== undefined &&
+      semanticAddressKey(placement.address) === semanticAddressKey(blockedDerivedAcquisitionAt) &&
+      !retainedPlacementKeys.has(semanticAddressKey(placement.address)),
+  );
+  const generatedPickupPlacements = Object.freeze([
+    ...(retainedRewards.generatedPickupPlacements ?? []),
+    ...blockingPlacements,
+  ]);
+
   const occurrenceOwner = ancestors.occurrenceOwner;
   const belongsToBlockedOccurrence = (owner: SemanticAddress): boolean =>
     occurrenceOwner !== undefined &&
@@ -741,6 +757,7 @@ export function retainBlockedRegionProducts(
   );
   return Object.freeze({
     rewards:
+      blockingPlacements.length === 0 &&
       selectedTraitOffers.length === retainedRewards.selectedTraitOffers.length &&
       selectedLevelResolutions.length === retainedRewards.selectedLevelResolutions.length &&
       steadyGrowthOutcomes.length === retainedRewards.steadyGrowthOutcomes.length &&
@@ -751,6 +768,7 @@ export function retainBlockedRegionProducts(
         ? retainedRewards
         : Object.freeze({
             ...retainedRewards,
+            ...(generatedPickupPlacements.length === 0 ? {} : { generatedPickupPlacements }),
             ...(settledCurrentSiteBranches === undefined
               ? blockedChildSettlement === undefined
                 ? {}

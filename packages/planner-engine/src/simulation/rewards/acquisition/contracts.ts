@@ -63,6 +63,13 @@ export interface ProducerRoleSettlementProduct {
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
 }
 
+/** Exact assessed authored placement, independent of reward and candidate completeness. */
+export interface GeneratedPickupPlacement {
+  readonly address: AcquisitionEntryAddress;
+  readonly assessment: import('../../../authored-project/generated-pickup-placement').GeneratedPickupPlacementAssessment;
+  readonly contact: { readonly owner: SemanticAddress; readonly sequence: number };
+}
+
 export interface DerivedAcquisitionEntryFrontier {
   readonly address: AcquisitionEntryAddress;
   /** Dynamic inventory and its later acquisition have different candidate owners. */
@@ -77,6 +84,8 @@ export interface DerivedAcquisitionEntryFrontier {
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
   readonly branchCohortSize: number;
+  /** Exact maturity contact; clocked placement evidence never combines temporal cohorts. */
+  readonly historySequence?: number;
   readonly sourceOfferKey?: string;
   readonly slotIndex?: number;
   /** Exact declaration families with at least one supported resolved offer on this branch. */

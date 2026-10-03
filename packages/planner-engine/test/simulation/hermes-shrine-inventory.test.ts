@@ -27,6 +27,7 @@ import {
   resolveRoutePosition,
 } from '@run-planner/engine/authored-project';
 import {
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   assembleRoomActionRoster,
   hermesShrineCandidateForProjectEvaluationAssembly,
@@ -1794,4 +1795,73 @@ describe('Hermes Shrine entry inventory requirements', () => {
       'hermesShrineInventoryRequirement',
     );
   });
+});
+
+it('retains reached placement rejection at the first due phase stop', () => {
+  const original = loadSurfaceNOHermesShrineDeliveryCheckpoint();
+  const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+  const occurrence = original.route.biomes
+    .find((biome) => biome.biomeKey === 'O')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId);
+  const reference = occurrence?.roomActions.order.find(
+    (reference) =>
+      reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'hermesShrineDelivery',
+  );
+  if (reference?.kind !== 'interactAcquisitionEntry') throw new Error('fixture delivery missing');
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(host, reference.siteKey),
+    reference.entryKey,
+  );
+  const project = applyProjectCommand(original, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry,
+    encounterPhaseKey: 'obsoletePhase',
+  });
+  const assembly = simulateProjectAssembly(catalog, project);
+  const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
+  if (evaluation === undefined || !('rewards' in evaluation))
+    throw new Error('delivery evaluation missing');
+  expect(evaluation.findings.map((finding) => finding.code)).toContain(
+    'hermesShrineDeliveryPlacementRequired',
+  );
+  expect(evaluation.rewards.generatedPickupPlacements).toContainEqual(
+    expect.objectContaining({
+      address: entry,
+      assessment: expect.objectContaining({ kind: 'invalid', reason: 'dueContactMismatch' }),
+    }),
+  );
+});
+
+it('publishes active-source wrong-host rejection without a derived candidate capability', () => {
+  const original = loadSurfaceNOHermesShrineDeliveryCheckpoint();
+  const dueHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+  const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+  const occurrence = original.route.biomes
+    .find((biome) => biome.biomeKey === 'O')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === dueHost.occurrenceId);
+  const reference = occurrence?.roomActions.order.find(
+    (reference) =>
+      reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'hermesShrineDelivery',
+  );
+  if (reference?.kind !== 'interactAcquisitionEntry') throw new Error('fixture delivery missing');
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(host, reference.siteKey),
+    reference.entryKey,
+  );
+  const project = applyProjectCommand(original, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry,
+    encounterPhaseKey: 'Encounter',
+  });
+  const assembly = simulateProjectAssembly(catalog, project);
+  const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
+  if (evaluation === undefined || !('rewards' in evaluation))
+    throw new Error('delivery evaluation missing');
+  expect(evaluation.rewards.generatedPickupPlacements).toContainEqual(
+    expect.objectContaining({
+      address: entry,
+      assessment: expect.objectContaining({ kind: 'invalid', reason: 'dueContactMismatch' }),
+    }),
+  );
+  expect(derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, entry.site)).toEqual([]);
 });

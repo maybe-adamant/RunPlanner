@@ -1,5 +1,7 @@
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import {
+  requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceDoorContract,
   type WorkspaceInteractionCatalog,
@@ -63,6 +65,7 @@ export function OccurrenceWorkbench({
   runState,
 }: OccurrenceWorkbenchProps) {
   const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
   const requestedTab = initialTab ?? 'overview';
   const roomIdentity = workspaceInteractionKey(room.address);
   const [tabState, setTabState] = useState({
@@ -291,6 +294,30 @@ export function OccurrenceWorkbench({
         ) : (
           renderDirectRoomWorkbench('actions')
         )}
+        {showTimelineLegend && room.placementRepairs !== undefined ? (
+          <section aria-label="Placement repairs">
+            <p>
+              This delivery source is absent or inactive; unplace the retained delivery to repair
+              it.
+            </p>
+            {room.placementRepairs.map((repair, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() =>
+                  executeIntent(
+                    requireWorkspaceInteraction(
+                      interactions.roomActions,
+                      workspaceInteractionKey(room.address),
+                    ).intentFor(`structuralUnplace:${index}`),
+                  )
+                }
+              >
+                Unplace delivery · {repair.label}
+              </button>
+            ))}
+          </section>
+        ) : null}
       </section>
     </article>
   );

@@ -42,6 +42,7 @@ import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 import { clearOfferedRewardTypes } from '../../../state/offered-rewards';
 
 export interface RoomEnteredTransition {
+  readonly generatedPickupPlacements: readonly import('../../acquisition/contracts').GeneratedPickupPlacement[];
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly LifecycleFinding[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
@@ -442,6 +443,7 @@ export function applyRoomEnteredTransition(
   return Object.freeze({
     branches: next,
     findings: Object.freeze(findings),
+    generatedPickupPlacements: dueDeliveries?.generatedPickupPlacements ?? Object.freeze([]),
     derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
     hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,
     ...(hermesShrineAssessment === undefined ? {} : { hermesShrineAssessment }),

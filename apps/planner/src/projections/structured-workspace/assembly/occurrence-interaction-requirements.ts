@@ -145,6 +145,26 @@ export function occurrenceInteractionRequirements(
       );
     }
   }
+  if (room.placementRepairs !== undefined) {
+    requirements.push(
+      Object.freeze({
+        kind: 'roomActions' as const,
+        owner: room.address,
+        proposals: Object.freeze(
+          room.placementRepairs.map(({ reference }, index) =>
+            Object.freeze({
+              kind: 'unplace' as const,
+              key: `structuralUnplace:${index}`,
+              label: 'Unplace delivery',
+              reference,
+              structurallyAuthorable: true,
+              explanations: Object.freeze([]),
+            }),
+          ),
+        ),
+      }),
+    );
+  }
   if (room.roomActions !== undefined) {
     requirements.push(
       Object.freeze({

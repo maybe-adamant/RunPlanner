@@ -182,6 +182,7 @@ export function assemble(
     routeKey,
   });
   const assembly = assembleWorkspaceOccurrence({
+    structuralPlacementRepairs: source.structuralPlacementRepairs,
     roomActionPlacementRoster: source.roomActionPlacementRoster,
     configuredRivalsRank: source.configuredRivalsRank,
     routePosition: source.routePosition,

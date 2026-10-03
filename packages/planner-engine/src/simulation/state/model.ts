@@ -67,6 +67,7 @@ export interface PendingHermesShrineDelivery {
   readonly rushed?: boolean;
   readonly dueAt?: import('../../authored-project/addresses').OccurrenceAddress;
   readonly dueSequence?: number;
+  readonly dueEncounterPhaseKey?: string;
 }
 
 /** The state substates native trait-offer generation reads when a loot's options are built. */

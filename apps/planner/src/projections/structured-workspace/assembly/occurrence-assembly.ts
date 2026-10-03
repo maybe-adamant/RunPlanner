@@ -193,6 +193,10 @@ function offerRewardRewards(
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
+  readonly structuralPlacementRepairs: (
+    owner: OccurrenceAddress,
+    order: readonly import('@run-planner/engine/authored-project').RoomActionReference[],
+  ) => readonly import('../contracts/timeline').WorkspaceGeneratedPickupPlacementRepair[];
   readonly roomActionPlacementRoster: (
     owner: OccurrenceAddress,
     roster: import('@run-planner/engine/simulation').RoomActionRoster,
@@ -378,6 +382,13 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
   });
   const { roomActions, runStateByTab, runStateLaunchers } = actionAssembly;
+  const placementRepairs =
+    roomActions === undefined
+      ? input.structuralPlacementRepairs(
+          createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+          input.occurrence.roomActions.order,
+        )
+      : undefined;
   const judgment = (() => {
     if (room.kind !== 'Boss' || !input.facts.detailsActive) return undefined;
     const bossDefeated = input.evaluatedRoom?.roomLifecycleTimeline.boundaries.find(
@@ -569,6 +580,9 @@ export function assembleWorkspaceOccurrence(
     marker: input.markerDestinations.marker(address),
     occurrenceId: occurrence.occurrenceId,
     ...(roomActions === undefined ? {} : { roomActions }),
+    ...(placementRepairs === undefined || placementRepairs.length === 0
+      ? {}
+      : { placementRepairs }),
     ...(occurrence.state.kind !== 'anomaly'
       ? {}
       : (() => {

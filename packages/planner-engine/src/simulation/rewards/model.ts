@@ -210,6 +210,7 @@ export interface HubDepartureRunState {
 }
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
+  readonly generatedPickupPlacements?: readonly import('./acquisition/contracts').GeneratedPickupPlacement[];
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
   readonly timelineFacts: PlannerTimelineFacts;
   /** Exact one-shot Gift Gift Gift volatile result reached at this biome start. */

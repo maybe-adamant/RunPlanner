@@ -277,3 +277,30 @@ export function occurrenceActionLabel(
       return 'Talk to Eris';
   }
 }
+
+/** Concise identity for a retained delivery outside evaluated lifecycle coverage. */
+export function generatedPickupPlacementRepairLabel(
+  catalog: Catalog,
+  reference: import('@run-planner/engine/authored-project').RoomActionReference,
+  source: import('@run-planner/engine/authored-project').RoomOccurrence | undefined,
+  host: import('@run-planner/engine/authored-project').RoomOccurrence | undefined,
+): string {
+  if (reference.kind !== 'interactAcquisitionEntry') return 'Delivery';
+  const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+  const generation = parsed?.generationKey;
+  const slot =
+    generation === 'travelDealRefill'
+      ? 'Travel Deal'
+      : generation === 'initial:first'
+        ? 'Slot 1'
+        : generation === 'initial:secondLeft'
+          ? 'Slot 2'
+          : 'Slot 3';
+  const offer =
+    host?.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey]?.offer;
+  const roomLabel =
+    source === undefined
+      ? 'Hermes Shrine'
+      : (catalog.rooms.byKey[source.gameName]?.label ?? source.gameName);
+  return `${roomLabel} · ${slot}${offer === undefined ? '' : ` · ${timelineRewardLabel(catalog, offer)}`}`;
+}

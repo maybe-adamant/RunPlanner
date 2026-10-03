@@ -313,3 +313,7 @@ export interface WorkspaceRoomActionInteraction {
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
 }
+
+export type WorkspaceGeneratedPickupPlacementRepair = ReturnType<
+  typeof import('@run-planner/engine/authored-project').structurallyInvalidGeneratedPickupPlacements
+>[number] & { readonly label: string };

@@ -526,7 +526,9 @@ function roomActionsForOccurrence(
         issues:
           row.placementAssessment?.kind === 'invalid'
             ? Object.freeze([
-                'This delivery source is absent or inactive; unplace the retained delivery to repair it.',
+                row.placementAssessment.reason === 'sourceInactive'
+                  ? 'This delivery source is absent or inactive; unplace the retained delivery to repair it.'
+                  : 'This pickup does not belong at this contact; remove its retained placement to repair it.',
               ])
             : issuesFor(row.key),
         key: row.key,
