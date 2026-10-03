@@ -24,7 +24,9 @@ export function RoomActionOrderingControls({
   readonly onBeginAdd: (button: HTMLButtonElement) => void;
   readonly showRemoval?: boolean;
 }) {
-  const removable = proposals.find((proposal) => proposal.kind === 'remove');
+  const removable = proposals.find(
+    (proposal) => proposal.kind === 'remove' || proposal.kind === 'unplace',
+  );
   const moves = proposals.filter((proposal) => proposal.kind === 'move');
   const insertions = proposals.filter((proposal) => proposal.kind === 'insert');
   const removalEnabled =
@@ -70,7 +72,17 @@ export function RoomActionOrderingControls({
           onApply={onApply}
         />
       )}
-      {showRemoval ? (
+      {removable?.kind === 'unplace' ? (
+        <button
+          className="secondary-action action-compact"
+          disabled={!removalEnabled}
+          onClick={onRemove}
+          title="Remove this placement and its reward details while preserving the source purchase."
+          type="button"
+        >
+          Unplace delivery
+        </button>
+      ) : showRemoval ? (
         <TimelineActionDeleteButton
           enabled={removalEnabled}
           explanation={explanation}

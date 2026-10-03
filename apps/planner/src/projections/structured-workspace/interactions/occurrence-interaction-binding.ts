@@ -928,6 +928,11 @@ export function bindOccurrenceLocalInteractions(
                 requirement.owner.occurrenceId,
                 roomActionKey(proposal.reference),
               );
+              if (proposal.kind === 'unplace') {
+                return Object.freeze({
+                  command: Object.freeze({ kind: 'UnplaceGeneratedDelivery' as const, action }),
+                });
+              }
               if (proposal.kind === 'remove') {
                 return Object.freeze({
                   command: Object.freeze({ kind: 'RemoveRoomAction' as const, action }),

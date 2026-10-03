@@ -2,12 +2,15 @@ import type { OccurrenceAddress } from './addresses';
 import type { Catalog } from '../catalog-schema';
 import { locallyValidRewardOffers } from '../reward-kernel';
 import type {
+  AuthoredRoutePlan,
   AuthoredRewardState,
+  BiomeTopology,
   HermesShrineGenerationKey,
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
 } from './model';
+import { structurallyActiveOccurrenceIds } from './topology/query';
 import { roomActionKey } from './room-actions/key';
 import { createUnresolvedAcquisitionRewardState } from './traits/state';
 
@@ -90,6 +93,50 @@ export function parseHermesShrineDeliveryEntryKey(key: string):
   } catch {
     return undefined;
   }
+}
+
+interface HermesShrineDeliverySource {
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly sourceOccurrenceId: OccurrenceId;
+  readonly generationKey: HermesShrineGenerationKey;
+}
+
+/** Lazily computed structural activity per biome; `null` marks an absent topology. */
+function structurallyActiveIdsByBiome(route: AuthoredRoutePlan) {
+  const cache = new Map<string, ReadonlySet<OccurrenceId> | null>();
+  return (biomeKey: string): ReadonlySet<OccurrenceId> | null => {
+    const cached = cache.get(biomeKey);
+    if (cached !== undefined) return cached;
+    const topology: BiomeTopology | null =
+      route.biomes.find((biome) => biome.biomeKey === biomeKey)?.topology ?? null;
+    const active = topology === null ? null : structurallyActiveOccurrenceIds(topology);
+    cache.set(biomeKey, active);
+    return active;
+  };
+}
+
+export function hermesShrineDeliverySourceIsStructurallyActive(
+  route: AuthoredRoutePlan,
+  source: HermesShrineDeliverySource,
+): boolean {
+  if (source.routeKey !== route.routeKey) return false;
+  const occurrence = route.biomes
+    .find((biome) => biome.biomeKey === source.biomeKey)
+    ?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === source.sourceOccurrenceId,
+    );
+  if (occurrence?.hermesShrine === undefined) return false;
+  const purchase =
+    source.generationKey === 'travelDealRefill'
+      ? occurrence.hermesShrine.travelDealRefill?.purchase
+      : occurrence.hermesShrine.purchaseBySlot?.[
+          source.generationKey.slice('initial:'.length) as import('./model').HermesShrineSlotKey
+        ];
+  if (purchase === undefined) return false;
+  return (
+    structurallyActiveIdsByBiome(route)(source.biomeKey)?.has(source.sourceOccurrenceId) ?? false
+  );
 }
 
 function mapOccurrences(
@@ -204,25 +251,35 @@ export function unplaceHermesShrineDeliveriesFromSource(
 }
 
 /**
- * Reconciles active delivery actions after any semantic command removes a
- * Shrine-bearing occurrence or its Shrine feature. Retained delivery payload
- * remains dormant for repair; only actions whose exact source disappeared are
- * retracted.
+ * Reconciles active delivery actions after a semantic command removes a
+ * Shrine-bearing occurrence or its Shrine feature, or stops the source from
+ * being entered in the authored topology. Retained delivery payload remains
+ * dormant for repair.
  */
 export function retractMissingHermesShrineDeliveryActions(
   previous: ProjectDocument,
   document: ProjectDocument,
 ): ProjectDocument {
   let reconciled = document;
+  const previousActiveIds = structurallyActiveIdsByBiome(previous.route);
+  const currentActiveIds = structurallyActiveIdsByBiome(document.route);
   for (const previousBiome of previous.route.biomes) {
+    const currentBiome = document.route.biomes.find(
+      (biome) => biome.biomeKey === previousBiome.biomeKey,
+    );
+    if (currentBiome === previousBiome) continue;
     for (const previousOccurrence of previousBiome.topology?.occurrences ?? []) {
       if (previousOccurrence.hermesShrine === undefined) continue;
-      const currentOccurrence = reconciled.route.biomes
-        .find((biome) => biome.biomeKey === previousBiome.biomeKey)
-        ?.topology?.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === previousOccurrence.occurrenceId,
-        );
-      if (currentOccurrence?.hermesShrine !== undefined) continue;
+      const currentOccurrence = currentBiome?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === previousOccurrence.occurrenceId,
+      );
+      if (currentOccurrence?.hermesShrine !== undefined) {
+        const wasActive =
+          previousActiveIds(previousBiome.biomeKey)?.has(previousOccurrence.occurrenceId) ?? false;
+        const isActive =
+          currentActiveIds(previousBiome.biomeKey)?.has(previousOccurrence.occurrenceId) ?? false;
+        if (!wasActive || isActive) continue;
+      }
       reconciled = unplaceHermesShrineDeliveriesFromSource(reconciled, {
         kind: 'occurrence',
         routeKey: previous.route.routeKey,

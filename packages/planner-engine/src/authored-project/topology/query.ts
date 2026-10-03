@@ -819,3 +819,69 @@ export function completedHubHandoffForSource(
     ? undefined
     : Object.freeze({ kind: 'completedHubHandoff' as const, room });
 }
+
+/** Structurally entered occurrence identities, independent of evaluation reach. */
+export function structurallyActiveOccurrenceIds(
+  topology: BiomeTopology,
+): ReadonlySet<OccurrenceId> {
+  const active = new Set<OccurrenceId>([topology.startOccurrenceId]);
+  const activeHubDecisions = new Set<string>();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const decision of topology.decisions) {
+      if (decision.kind === 'localVisit') {
+        if (!active.has(decision.sourceOccurrenceId)) continue;
+        for (const occurrenceId of decision.visitOrder) {
+          const target = Object.values(decision.targetsBySlot).find(
+            (candidate) => candidate.occurrenceId === occurrenceId,
+          );
+          if (target?.generation !== 'generated' || active.has(occurrenceId)) continue;
+          active.add(occurrenceId);
+          changed = true;
+        }
+        continue;
+      }
+      if (decision.kind === 'hub') {
+        if (!active.has(decision.source.occurrenceId)) continue;
+        if (!activeHubDecisions.has(decision.hubKey)) {
+          activeHubDecisions.add(decision.hubKey);
+          changed = true;
+        }
+        const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
+        for (const slotKey of hubVisitSlotKeys(decision)) {
+          const target = bySlot.get(slotKey);
+          if (target === undefined || active.has(target.occurrenceId)) continue;
+          active.add(target.occurrenceId);
+          changed = true;
+        }
+        continue;
+      }
+      const sourceActive =
+        decision.source.kind === 'occurrence'
+          ? active.has(decision.source.occurrenceId)
+          : activeHubDecisions.has(decision.source.decisionKey);
+      if (!sourceActive) continue;
+      const continuation = selectedExitContinuation(
+        decision,
+        additionalExitsForDecision(topology, decision),
+      );
+      const occurrenceId =
+        continuation?.kind === 'normal'
+          ? continuation.target.occurrenceId
+          : continuation?.kind === 'additional'
+            ? continuation.exit.occurrenceId
+            : undefined;
+      if (occurrenceId !== undefined && !active.has(occurrenceId)) {
+        active.add(occurrenceId);
+        changed = true;
+      }
+    }
+    for (const link of topology.fixedRoomLinks) {
+      if (!active.has(link.sourceOccurrenceId) || active.has(link.targetOccurrenceId)) continue;
+      active.add(link.targetOccurrenceId);
+      changed = true;
+    }
+  }
+  return active;
+}

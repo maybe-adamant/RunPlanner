@@ -4,6 +4,9 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createLocalVisitOrderAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
@@ -608,3 +611,70 @@ export function surfaceSeleneHexPathProject(): ProjectDocument {
 
 export { authorLegalTraitOffers };
 export type { ResolvedRewardOffer };
+
+/** Portable loaded-save fixture retaining a delivery from an unvisited N side room. */
+export function createStaleSurfaceHermesDeliveryPlacement() {
+  const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
+  const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+  const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+  let project = loadSurfaceNOProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePresence',
+    occurrence: source,
+    present: true,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: source,
+    slotKey: 'first',
+    value: { rewardType: 'HealBigDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:first',
+    purchase: { delay: 2, rushed: false },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry: createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      entryKey,
+    ),
+    encounterPhaseKey: 'Encounter',
+  });
+  const placedHost = project.route.biomes
+    .find((plan) => plan.biomeKey === host.biomeKey)
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId);
+  if (placedHost === undefined) throw new Error('delivery fixture host missing');
+  const withdrawn = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalVisitOrder',
+    order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat11'), 'sideRooms'),
+    occurrenceIds: [],
+  });
+  const loaded = decodeProjectDocument(
+    JSON.parse(
+      encodeProjectDocument({
+        ...withdrawn,
+        route: {
+          ...withdrawn.route,
+          biomes: withdrawn.route.biomes.map((plan) =>
+            plan.biomeKey !== host.biomeKey || plan.topology === null
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    occurrences: plan.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId === host.occurrenceId ? placedHost : occurrence,
+                    ),
+                  },
+                },
+          ),
+        },
+      }),
+    ) as unknown,
+    catalog,
+  );
+  return { project: loaded, source, host, entryKey };
+}

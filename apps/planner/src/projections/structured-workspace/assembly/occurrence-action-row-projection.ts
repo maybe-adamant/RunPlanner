@@ -36,6 +36,10 @@ import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
 export interface WorkspaceOccurrenceActionsInput {
+  readonly roomActionPlacementRoster: (
+    owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
+    roster: import('@run-planner/engine/simulation').RoomActionRoster,
+  ) => import('@run-planner/engine/simulation').RoomActionRoster;
   readonly biome: import('@run-planner/engine/authored-project').BiomeAddress;
   readonly catalog: Catalog;
   readonly encounterPhaseStatus: (
@@ -114,7 +118,14 @@ function roomActionsForOccurrence(
   encounterPhases: readonly WorkspaceEncounterPhase[],
   controls: readonly WorkspaceRewardControl[],
 ): WorkspaceRoomActions | undefined {
-  const roster = input.evaluatedRoom?.roomActionRoster;
+  const evaluatedRoster = input.evaluatedRoom?.roomActionRoster;
+  const roster =
+    evaluatedRoster === undefined
+      ? undefined
+      : input.roomActionPlacementRoster(
+          createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+          evaluatedRoster,
+        );
   const lifecycleTimeline = input.evaluatedRoom?.roomLifecycleTimeline;
   if (
     roster === undefined ||
@@ -325,9 +336,11 @@ function roomActionsForOccurrence(
         kind: proposal.kind,
         key,
         label:
-          proposal.kind === 'remove'
-            ? 'Remove from timeline'
-            : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
+          proposal.kind === 'unplace'
+            ? 'Unplace delivery'
+            : proposal.kind === 'remove'
+              ? 'Remove from timeline'
+              : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
         reference: proposal.reference,
         structurallyAuthorable: proposal.structurallyAuthorable,
         explanations: explanationFor(proposal),
@@ -510,7 +523,12 @@ function roomActionsForOccurrence(
       })();
       return Object.freeze({
         address,
-        issues: issuesFor(row.key),
+        issues:
+          row.placementAssessment?.kind === 'invalid'
+            ? Object.freeze([
+                'This delivery source is absent or inactive; unplace the retained delivery to repair it.',
+              ])
+            : issuesFor(row.key),
         key: row.key,
         label: occurrenceActionLabel(
           input.catalog,
@@ -539,7 +557,9 @@ function roomActionsForOccurrence(
                 label: 'Artificer item' as const,
               }),
             }),
-        ...(row.stale || resolvedRewardControl === undefined
+        ...(row.stale ||
+        row.placementAssessment?.kind === 'invalid' ||
+        resolvedRewardControl === undefined
           ? {}
           : {
               rewardPayload: Object.freeze({
@@ -559,6 +579,9 @@ function roomActionsForOccurrence(
                       resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
             }),
+        ...(row.placementAssessment === undefined
+          ? {}
+          : { placementAssessment: row.placementAssessment }),
         stale: row.stale,
         ...(row.reference.kind !== 'interactShopOffer'
           ? {}

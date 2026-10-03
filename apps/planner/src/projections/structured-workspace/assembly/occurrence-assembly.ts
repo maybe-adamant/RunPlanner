@@ -13,6 +13,8 @@ import {
   createRoomFeatureAddress,
   createBiomeAddress,
   createOccurrenceAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createKeepsakeEquipResultAddress,
   semanticAddressKey,
   roomActionKey,
@@ -191,6 +193,10 @@ function offerRewardRewards(
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
+  readonly roomActionPlacementRoster: (
+    owner: OccurrenceAddress,
+    roster: import('@run-planner/engine/simulation').RoomActionRoster,
+  ) => import('@run-planner/engine/simulation').RoomActionRoster;
   readonly configuredRivalsRank: number;
   readonly routePosition: ResolvedRoutePosition;
   /** Closed declaration-owned map domain for an Anomaly replacement in this biome. */
@@ -343,6 +349,7 @@ export function assembleWorkspaceOccurrence(
   const { encounterPhases, roomLocal, rewardControls: allRewardControls } = rewardLocal;
   const offerRewardRewardsForRoom = offerRewardRewards(input, room, roomLocal, allRewardControls);
   const actionAssembly = assembleOccurrenceActions({
+    roomActionPlacementRoster: input.roomActionPlacementRoster,
     biome: input.biome,
     catalog: input.catalog,
     encounterPhaseStatus: input.encounterPhaseStatus,
@@ -798,6 +805,20 @@ export function assembleWorkspaceOccurrence(
         );
       }
       const acquisitionMarkers = Object.freeze([
+        ...(row.placementAssessment?.kind === 'invalid' &&
+        row.reference.kind === 'interactAcquisitionEntry'
+          ? [
+              input.markerDestinations.marker(
+                createAcquisitionEntryAddress(
+                  createAcquisitionSiteAddress(
+                    createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+                    row.reference.siteKey,
+                  ),
+                  row.reference.entryKey,
+                ),
+              ),
+            ]
+          : []),
         ...(roomLocal.kind === 'shop'
           ? roomLocal.supplementalOffers.flatMap((offer) =>
               offer.kind === 'echoDoubleShopInvalid' &&

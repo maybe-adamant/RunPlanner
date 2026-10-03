@@ -215,6 +215,7 @@ export {
   type RoomLifecycleProducerInput,
 } from './lifecycle';
 export {
+  assessRoomActionPlacements,
   assembleRoomActionRoster,
   scopeRoomActionRoster,
   type RoomActionCheckpoint,

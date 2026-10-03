@@ -589,6 +589,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,
+      roomActionPlacementRoster: source.roomActionPlacementRoster,
       encounterPhaseStatus: source.encounterPhaseStatus,
       preparedEncounterDefinitionKeysBySlot: source.preparedEncounterDefinitionKeys(
         request.occurrence.occurrenceId,

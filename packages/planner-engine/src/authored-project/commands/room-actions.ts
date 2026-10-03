@@ -9,6 +9,10 @@ import {
 import { createBiomeAddress } from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
+import {
+  HERMES_SHRINE_DELIVERY_SITE_KEY,
+  parseHermesShrineDeliveryEntryKey,
+} from '../hermes-shrine-delivery';
 import { authoredShopOffer, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
@@ -181,6 +185,22 @@ export function applyRoomActionCommand(
       nextOrder.splice(command.index, 0, command.reference);
       break;
     }
+    case 'UnplaceGeneratedDelivery': {
+      if (existingIndex < 0) failCommand(command, 'delivery is not ordered');
+      const reference = order[existingIndex];
+      if (
+        reference?.kind !== 'interactAcquisitionEntry' ||
+        reference.siteKey !== HERMES_SHRINE_DELIVERY_SITE_KEY
+      )
+        failCommand(command, 'action is not a relocatable generated delivery');
+      const source = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+      if (source === undefined || source.routeKey !== document.route.routeKey)
+        failCommand(command, 'delivery does not name an exact route source');
+      if (source.biomeKey === command.action.biomeKey && source.sourceOccurrenceId === occurrenceId)
+        failCommand(command, 'same-room Shrine delivery uses purchase repair');
+      nextOrder = order.filter((_, index) => index !== existingIndex);
+      break;
+    }
     case 'RemoveRoomAction':
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
       if (order[existingIndex]?.kind === 'interactShopOffer') {
@@ -216,7 +236,10 @@ export function applyRoomActionCommand(
     ...occurrence,
     roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
   };
-  const removed = command.kind === 'RemoveRoomAction' ? order[existingIndex] : undefined;
+  const removed =
+    command.kind === 'RemoveRoomAction' || command.kind === 'UnplaceGeneratedDelivery'
+      ? order[existingIndex]
+      : undefined;
   const inserted = command.kind === 'InsertRoomAction' ? command.reference : undefined;
   const travelParticipation =
     removed?.kind === 'interactAcquisitionEntry' &&
@@ -239,15 +262,19 @@ export function applyRoomActionCommand(
   }
   if (
     removed?.kind === 'interactAcquisitionEntry' &&
-    removed.siteKey === 'roomExit' &&
-    parseClockedTraitGeneratedPickupEntryKey(removed.entryKey) !== undefined
+    (command.kind === 'UnplaceGeneratedDelivery' ||
+      (removed.siteKey === 'roomExit' &&
+        parseClockedTraitGeneratedPickupEntryKey(removed.entryKey) !== undefined))
   ) {
     const acquisitionSites = { ...occurrence.acquisitionSites };
-    const site = acquisitionSites.roomExit;
+    const site = acquisitionSites[removed.siteKey];
     const pickupEntries = { ...site?.pickupEntries };
     delete pickupEntries[removed.entryKey];
-    if (Object.keys(pickupEntries).length === 0) delete acquisitionSites.roomExit;
-    else acquisitionSites.roomExit = Object.freeze({ pickupEntries: Object.freeze(pickupEntries) });
+    if (Object.keys(pickupEntries).length === 0) delete acquisitionSites[removed.siteKey];
+    else
+      acquisitionSites[removed.siteKey] = Object.freeze({
+        pickupEntries: Object.freeze(pickupEntries),
+      });
     if (Object.keys(acquisitionSites).length === 0) delete nextOccurrence.acquisitionSites;
     else nextOccurrence.acquisitionSites = Object.freeze(acquisitionSites);
   }

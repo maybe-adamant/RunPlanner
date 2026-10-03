@@ -52,12 +52,13 @@ export interface RoomActionRow {
   readonly window: RoomActionWindow;
   readonly dependencies: readonly RoomActionDependency[];
   readonly rank: number | null;
+  readonly placementAssessment?: import('../../authored-project/generated-pickup-placement').GeneratedPickupPlacementAssessment;
   readonly stale: boolean;
   readonly executable: boolean;
 }
 
 export interface RoomActionProposal {
-  readonly kind: 'insert' | 'move' | 'remove';
+  readonly kind: 'insert' | 'move' | 'remove' | 'unplace';
   readonly reference: RoomActionReference;
   readonly fromIndex?: number;
   readonly toIndex?: number;

@@ -67,6 +67,7 @@ function hubKit(source: WorkspaceBiomeSource) {
       throw new Error(input.occurrence.occurrenceId + ' occurrence facts are missing');
     }
     return assembleWorkspaceOccurrence({
+      roomActionPlacementRoster: source.roomActionPlacementRoster,
       configuredRivalsRank: source.configuredRivalsRank,
       routePosition: source.routePosition,
       biome: source.biome,

@@ -149,6 +149,7 @@ function commandContractAddress(
     case 'ReplaceHermesShrineTravelDealRefill':
       return command.occurrence;
     case 'InsertRoomAction':
+    case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
       return command.action;

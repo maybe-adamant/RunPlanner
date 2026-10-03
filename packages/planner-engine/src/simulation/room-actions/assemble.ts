@@ -1,3 +1,4 @@
+import { assessGeneratedPickupPlacement } from '../../authored-project/generated-pickup-placement';
 import {
   createBiomeAddress,
   createRoomActionAddress,
@@ -436,5 +437,43 @@ export function scopeRoomActionRoster(
       ),
       lifecycleStructure,
     ),
+  });
+}
+
+/** Authoring repair assessment does not change the evaluated roster's execution facts. */
+export function assessRoomActionPlacements(
+  route: import('../../authored-project/model').AuthoredRoutePlan,
+  owner: OccurrenceAddress,
+  roster: RoomActionRoster,
+): RoomActionRoster {
+  const rows = roster.rows.map((row) => {
+    const placementAssessment = assessGeneratedPickupPlacement(route, owner, row.reference);
+    return placementAssessment === undefined ? row : frozen({ ...row, placementAssessment });
+  });
+  const invalidKeys = new Set(
+    rows.filter((row) => row.placementAssessment?.kind === 'invalid').map((row) => row.key),
+  );
+  return frozen({
+    ...roster,
+    rows: frozen(rows),
+    proposals: frozen([
+      ...roster.proposals.filter((proposal) => !invalidKeys.has(roomActionKey(proposal.reference))),
+      ...rows
+        .filter((row) => invalidKeys.has(row.key) && row.rank !== null)
+        .map((row): RoomActionProposal =>
+          frozen({
+            kind: 'unplace',
+            reference: row.reference,
+            fromIndex: row.rank! - 1,
+            order: frozen(
+              roster.rows
+                .filter((candidate) => candidate.rank !== null && candidate.key !== row.key)
+                .map((candidate) => candidate.reference),
+            ),
+            structurallyAuthorable: true,
+            blockers: frozen([]),
+          }),
+        ),
+    ]),
   });
 }

@@ -1,3 +1,4 @@
+import { assessRoomActionPlacements } from '@run-planner/engine/simulation';
 import {
   createBiomeAddress,
   resolveRoutePosition,
@@ -81,6 +82,10 @@ export interface WorkspaceEvaluatedBatchOverlay {
 }
 
 export interface WorkspaceBiomeSource {
+  readonly roomActionPlacementRoster: (
+    owner: OccurrenceAddress,
+    roster: import('@run-planner/engine/simulation').RoomActionRoster,
+  ) => import('@run-planner/engine/simulation').RoomActionRoster;
   readonly configuredRivalsRank: number;
   readonly routePosition: ResolvedRoutePosition;
   /** The route-owned start offer composed with this entry's occurrence-owned acquisition payload. */
@@ -846,6 +851,10 @@ function createWorkspaceBiomeSource(
       overlay.additional.get(semanticAddressKey(owner)) ?? Object.freeze([]),
     evaluatedBatch: (owner: ExitDecisionAddress) => overlay.batches.get(semanticAddressKey(owner)),
     evaluatedHub: (owner: HubDecisionAddress) => overlay.hubs.get(semanticAddressKey(owner)),
+    roomActionPlacementRoster: (
+      owner: OccurrenceAddress,
+      roster: import('@run-planner/engine/simulation').RoomActionRoster,
+    ) => assessRoomActionPlacements(project.route, owner, roster),
     exitDecision: (source: ExitDecisionSourceAddress) =>
       exitDecisionsByOwner.get(semanticAddressKey(createExitDecisionAddress(biome, source))),
     exitDecisions,
