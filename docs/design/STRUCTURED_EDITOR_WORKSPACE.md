@@ -289,8 +289,11 @@ through the exact engine capability; Reset removes that value. Customized contro
 have no inner native defaults. Wave tabs contain staged whole-wave pickers and
 budget tables showing allocations, derived counts and final cost. Variable budget
 sliders map through the engine; fixed budgets remain labels. Intermediate picker
-choices and input drafts are local; Finish Wave publishes one replacement and one
-Undo entry, while Cancel is inert. Finish depends on composition validity, not
+choices and input drafts are local. Finish Wave allows an early stop while more
+enemies are eligible; a selection that completes a valid wave with no eligible
+continuation commits immediately and closes the picker. Both publish one replacement
+and one Undo entry, while Cancel is inert. Opening or reassessing a draft never
+commits it. Completion depends on composition validity, not
 unrelated retained Menace count findings.
 
 Fangs uses adjacent Target and Perks controls: target edits persist immediately,

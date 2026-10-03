@@ -287,7 +287,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(within(dialog).getByRole('button', { name: 'Wave 2 enemies' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
     await view.user.click(await screen.findByRole('option', { name: 'Wastrel (18)' }));
-    await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
+    expect(screen.queryByRole('option', { name: 'Finish Wave' })).toBeNull();
     await waitFor(() =>
       expect(
         view.application.store

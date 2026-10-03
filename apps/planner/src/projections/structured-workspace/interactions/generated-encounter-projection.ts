@@ -409,6 +409,7 @@ export function projectGeneratedEncounterWaveDraft(
     return Object.freeze({
       picker: Object.freeze({ sections: Object.freeze([]) }),
       stepLabel: 'Wave is not active',
+      completesAutomatically: false,
       sampledBudgetKeys: Object.freeze([]),
     });
   }
@@ -515,6 +516,7 @@ export function projectGeneratedEncounterWaveDraft(
     picker: Object.freeze({ sections: Object.freeze(sections) }),
     stepLabel,
     sampledBudgetKeys: wave.sampledBudgetKeys,
+    completesAutomatically: canFinish && !hasFurtherCandidates,
   });
 }
 

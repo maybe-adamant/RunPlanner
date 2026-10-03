@@ -105,9 +105,6 @@ function customizeTrigger(project: ProjectDocument, owner = phase): HTMLButtonEl
 async function initialize(view: Awaited<ReturnType<typeof open>>) {
   await view.user.click(within(view.dialog).getByRole('button', { name: 'Edit' }));
 }
-async function finishWave(view: Awaited<ReturnType<typeof open>>) {
-  await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
-}
 async function selectBudgetWave(view: Awaited<ReturnType<typeof open>>, index: number) {
   await view.user.click(
     within(view.dialog).getByRole('tab', { name: new RegExp(`^Wave ${index}(,|$)`) }),
@@ -260,7 +257,7 @@ describe('generated encounter customization workflows', () => {
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 1 enemies' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
     await view.user.click(await screen.findByRole('option', { name: 'Wastrel (18)' }));
-    await finishWave(view);
+    await view.user.click(await screen.findByRole('option', { name: 'Finish Wave' }));
     expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 14 } } }] });
     expect(view.dialog.textContent).toContain('Converted Whisper requests exceed');
     fireEvent.change(
@@ -480,15 +477,37 @@ describe('generated encounter customization workflows', () => {
     fireEvent.pointerUp(slider, { pointerId: 1 });
     await waitFor(() => expect(current(view, owner)).toMatchObject({ baseRoll: 414 }));
   });
-  it('commits a finished wave draft with its carried allocations', async () => {
+  it('commits a seed-only wave only after its final confirmation', async () => {
+    const view = await open(customize(createCompleteFGProject(), phase, composed));
+    const before = view.application.store.getState().projectWorkspace.history!;
+    await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 1 enemies' }));
+    expect(view.application.store.getState().projectWorkspace.history).toBe(before);
+    await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
+    expect(screen.queryByRole('option', { name: 'Finish Wave' })).toBeNull();
+    expect(current(view)).toMatchObject({
+      waves: expect.arrayContaining([expect.objectContaining({ waveIndex: 1, typeKeys: [] })]),
+    });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(
+      before.present,
+    );
+  });
+
+  it('automatically commits an exhausted wave with its allocations and one Undo step', async () => {
     const view = await open(customize(createCompleteFGProject(), phase, composed));
     await selectBudgetWave(view, 3);
+    const before = view.application.store.getState().projectWorkspace.history!;
     await view.user.click(within(view.dialog).getByRole('button', { name: 'Wave 3 enemies' }));
     await view.user.click(await screen.findByRole('option', { name: 'Whisper (5)' }));
     await view.user.click(await screen.findByRole('option', { name: 'Spindle (7)' }));
+    expect(view.application.store.getState().projectWorkspace.history).toBe(before);
     await view.user.click(await screen.findByRole('option', { name: 'Casket (12)' }));
-    await finishWave(view);
+    expect(screen.queryByRole('option', { name: 'Finish Wave' })).toBeNull();
     expect(current(view)).toMatchObject({ waves: [{ allocations: { Guard: 2, Radiator: 3 } }] });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.application.store.getState().projectWorkspace.history!.present).toBe(
+      before.present,
+    );
   });
   it('formats fractional budgets and keeps wave tabs out of authored history', async () => {
     const value = {
