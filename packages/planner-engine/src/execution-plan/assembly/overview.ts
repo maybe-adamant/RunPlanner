@@ -938,6 +938,22 @@ export function assembleExecutionOverview(
   const structuralIdentities = new Map(
     (room.structuralEncounterIdentities ?? []).map((phase) => [phase.slotKey, phase]),
   );
+  if (room.entered) {
+    // An earlier phase may end the sequence, so unrecorded phases form a suffix after a recorded one.
+    const lastRecorded = room.encounterPhases.reduce(
+      (last, phase, index) => (recordedPhases.has(phase.slotKey) ? index : last),
+      -1,
+    );
+    const gap = room.encounterPhases.find(
+      (phase, index) =>
+        (index < lastRecorded || lastRecorded < 0) && !recordedPhases.has(phase.slotKey),
+    );
+    if (gap !== undefined)
+      throw new CompilerError(
+        'executionCoverageMissing',
+        `${room.gameName} lacks recorded encounter ${gap.slotKey}`,
+      );
+  }
   return Object.freeze({
     ...(incomingReward === undefined ? {} : { incomingReward }),
     ...(room.effectNeutralRequiredReward ? { effectNeutralRequiredReward: true as const } : {}),
@@ -945,7 +961,6 @@ export function assembleExecutionOverview(
       ? {}
       : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
     encounterPhases: Object.freeze(
-      // Entered rooms publish the phases the simulator recorded; an earlier phase can end the sequence.
       room.encounterPhases
         .filter(
           (phase) =>

@@ -97,7 +97,10 @@ export function ShopWorkbench({
                     <span className="fixed-room-state">{offer.explanation}</span>
                   </div>
                 </div>
-                <label className="shop-family-participation">
+                <label
+                  className="shop-family-participation"
+                  title="No Travel Deal is offered here yet."
+                >
                   <input
                     aria-label="Purchased Travel Deal"
                     type="checkbox"
