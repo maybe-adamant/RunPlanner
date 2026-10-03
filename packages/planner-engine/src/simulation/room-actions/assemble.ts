@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createRoomActionAddress,
   type OccurrenceAddress,
+  type AcquisitionEntryAddress,
 } from '../../authored-project/addresses';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import type { RoomActionReference } from '../../authored-project/model';
@@ -446,7 +447,24 @@ export function assessRoomActionPlacements(
   owner: OccurrenceAddress,
   roster: RoomActionRoster,
   reachedPlacements: readonly import('../rewards/acquisition/contracts').GeneratedPickupPlacement[] = [],
+  acquisitionEntries: readonly {
+    readonly address: AcquisitionEntryAddress;
+    readonly kind: import('../rewards/acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability['kind'];
+    readonly participation?: 'required' | 'optional';
+    readonly retainedSourceMismatch?: boolean;
+  }[] = [],
 ): RoomActionRoster {
+  const requiredGold = acquisitionEntries.some(
+    (entry) =>
+      entry.address.site.owner.kind === 'occurrence' &&
+      entry.address.site.owner.occurrenceId === owner.occurrenceId &&
+      entry.address.site.biomeKey === owner.biomeKey &&
+      entry.address.site.pointKey === 'roomExit' &&
+      entry.address.entryKey === 'echoDoubleShopReward' &&
+      entry.kind === 'echoDoubleShopReward' &&
+      entry.participation === 'required' &&
+      entry.retainedSourceMismatch !== true,
+  );
   const rows = roster.rows.map((row) => {
     const structural = assessGeneratedPickupPlacement(route, owner, row.reference);
     const reference = row.reference;
@@ -480,7 +498,17 @@ export function assessRoomActionPlacements(
     ...roster,
     rows: frozen(rows),
     proposals: frozen([
-      ...roster.proposals.filter((proposal) => !invalidKeys.has(roomActionKey(proposal.reference))),
+      ...roster.proposals.filter(
+        (proposal) =>
+          !invalidKeys.has(roomActionKey(proposal.reference)) &&
+          !(
+            requiredGold &&
+            proposal.kind === 'remove' &&
+            proposal.reference.kind === 'interactAcquisitionEntry' &&
+            proposal.reference.siteKey === 'roomExit' &&
+            proposal.reference.entryKey === 'echoDoubleShopReward'
+          ),
+      ),
       ...rows
         .filter((row) => invalidKeys.has(row.key) && row.rank !== null)
         .map((row): RoomActionProposal =>

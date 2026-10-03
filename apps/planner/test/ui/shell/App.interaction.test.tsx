@@ -64,7 +64,7 @@ import {
   createGoldenEchoGiftHammerPendingProject,
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
-import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
+import { createEchoGoldHPrebossProject } from '@run-planner/test-fixtures/underworld';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
   reachedTraitOffers,

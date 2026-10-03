@@ -9,6 +9,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
+  createIncomingRewardAddress,
+  createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   undoProjectHistory,
@@ -186,6 +188,82 @@ describe('Chaos physical position authoring', () => {
         }),
       )?.spawnPointIndex,
     ).toBeUndefined();
+  });
+
+  it('preserves an authored Ixion child for the same origin and regenerates defaults on FIFO reassignment', () => {
+    let project = loadUnderworldIxionChaosCheckpoint();
+    const host = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'G'),
+      createOccurrenceId('golden-g-intro'),
+    );
+    const well = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: well,
+      slotKey: 'secondRight',
+      itemKey: 'TemporaryForcedSecretDoorTrait',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondRight',
+      purchased: true,
+    });
+    const childId = gate(project, host.occurrenceId)!.occurrenceId;
+    const childAt = (value: typeof project) =>
+      value.route.biomes
+        .find((biome) => biome.biomeKey === 'G')!
+        .topology!.occurrences.find((room) => room.occurrenceId === childId);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(createBiomeAddress('Underworld', 'G'), childId),
+        'self',
+      ),
+      value: {
+        kind: 'chaos',
+        giverKey: 'Chaos',
+        curseOptions: [
+          { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        ],
+        selectedOptionKey: 'option1',
+        selectedCurseValues: {},
+        blessingKey: 'ChaosWeaponBlessing',
+        rarity: 'Common',
+        blessingValues: { damageBonus: 0.2 },
+      },
+    });
+    const authoredChild = childAt(project)!;
+    const retained = applyProjectCommand(project, catalog, {
+      kind: 'SetChaosSpawnPoint',
+      additional: createAdditionalExitAddress(
+        createBiomeAddress('Underworld', 'G'),
+        host.occurrenceId,
+        'chaos',
+      ),
+      spawnPointIndex: 1,
+    });
+    expect(childAt(retained)).toEqual(authoredChild);
+    const history = applyProjectHistoryCommand(createProjectHistory(retained), catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: false,
+    });
+    expect(gate(history.present, host.occurrenceId)?.origin?.generationKey).toBe(
+      'initial:secondRight',
+    );
+    expect(gate(history.present, host.occurrenceId)?.spawnPointIndex).toBeUndefined();
+    const regenerated = childAt(history.present);
+    expect(regenerated).toBeDefined();
+    expect(regenerated?.state).not.toEqual(authoredChild.state);
+    expect(undoProjectHistory(history).present).toBe(retained);
+    expect(childAt(undoProjectHistory(history).present)).toEqual(authoredChild);
   });
 
   it('preserves a surviving Ixion gate choice and restores it on purchase-removal Undo', () => {

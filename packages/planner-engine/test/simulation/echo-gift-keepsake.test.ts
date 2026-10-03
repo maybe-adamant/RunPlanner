@@ -783,7 +783,7 @@ describe('Echo Gift Gift Gift', () => {
     });
   });
 
-  it('carries a captured Experimental Hammer from H into the exact I biome-start child', () => {
+  it('retains and reassesses the biome-owned Hammer result when the same Echo capture is removed and reinstated', () => {
     const forcedTargetId = createOccurrenceId('golden-h-combat05');
     const echo = createTraitOfferAddress(
       createEncounterPhaseAddress(
@@ -950,6 +950,53 @@ describe('Echo Gift Gift Gift', () => {
       i.rewards.branches[0]?.state.traitHistory?.equippedTraits[selectedTraitKey],
     ).toMatchObject({
       hammerRank: 'RankI',
+    });
+    const replayResult = project.route.biomes.find(
+      (biome) => biome.biomeKey === 'I',
+    )!.echoKeepsakeReplayResults;
+    const giftOffer = {
+      kind: 'traits' as const,
+      giverKey: 'Echo',
+      options: [
+        { traitKey: giftTraitKey },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'DiminishingHealthAndManaBoon' },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: [],
+    };
+    const removed = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echo,
+      value: { ...giftOffer, selectedOptionKey: 'option2' },
+    });
+    expect(
+      removed.route.biomes.find((biome) => biome.biomeKey === 'I')!.echoKeepsakeReplayResults,
+    ).toEqual(replayResult);
+    const withoutGift = evaluatedProject(removed).route.biomes.find(
+      (biome) => biome.biomeKey === 'I',
+    );
+    expect(
+      withoutGift && 'rewards' in withoutGift
+        ? withoutGift.rewards.volatileEchoKeepsakeReplay
+        : undefined,
+    ).toBeUndefined();
+    const reinstated = applyProjectCommand(removed, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echo,
+      value: giftOffer,
+    });
+    expect(
+      reinstated.route.biomes.find((biome) => biome.biomeKey === 'I')!.echoKeepsakeReplayResults,
+    ).toEqual(replayResult);
+    const replayed = evaluatedProject(reinstated).route.biomes.find(
+      (biome) => biome.biomeKey === 'I',
+    );
+    expect(
+      replayed && 'rewards' in replayed ? replayed.rewards.volatileEchoKeepsakeReplay : undefined,
+    ).toMatchObject({
+      capturedKeepsakeKey: 'TempHammerKeepsake',
+      result: { kind: 'experimentalHammer', value: selected.value },
     });
   });
 });

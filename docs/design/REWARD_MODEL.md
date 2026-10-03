@@ -1085,8 +1085,13 @@ the exact Echo acquisition and materializes the singleton free duplicate
 before that paid entry's acquisition roles run.
 Materialization does not acquire the duplicate. A native loot duplicate
 (Boon, Hermes, Hammer, or full Pom) requires pickup; a consumable duplicate,
-including an unopened Mystery Boon, may remain unpicked. Both require explicit
-Timeline placement before authoring their acquisition children. Pre-kernel
+including an unopened Mystery Boon, may remain unpicked. Edit settlement inserts
+required Timeline membership when exact prior evidence establishes that the
+obligation was inactive or optional, even before the paid source's child is
+resolved. An existing required omission or unknown prior contact remains missing
+and offers explicit Restore. Optional consumables use Take pickup. Loading and
+simulation do not change membership; a changed trigger retains authored pickup
+position and children for finding-backed repair. Pre-kernel
 rejection leaves Gold armed; invalid nested detail
 after an accepted paid source does not roll consumption back.
 

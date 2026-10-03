@@ -4,6 +4,7 @@ import {
   structurallyInvalidGeneratedPickupPlacements,
   roomActionKey,
   createBiomeAddress,
+  createAcquisitionSiteAddress,
   resolveRoutePosition,
   type ResolvedRoutePosition,
   createEncounterPhaseAddress,
@@ -905,6 +906,7 @@ function createWorkspaceBiomeSource(
         evaluation !== undefined && 'rewards' in evaluation
           ? (evaluation.rewards.generatedPickupPlacements ?? [])
           : [],
+        derivedAcquisitionEntries(createAcquisitionSiteAddress(owner, 'roomExit')),
       ),
     exitDecision: (source: ExitDecisionSourceAddress) =>
       exitDecisionsByOwner.get(semanticAddressKey(createExitDecisionAddress(biome, source))),

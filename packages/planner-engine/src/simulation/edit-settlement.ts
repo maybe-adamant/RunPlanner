@@ -103,7 +103,45 @@ export function settleProjectEdit(options: {
       throw new Error('Edit evaluation does not match its authored snapshot');
     return result;
   };
-  candidateArtifactsForProjectEvaluationAssembly(before);
+  const beforeArtifacts = candidateArtifactsForProjectEvaluationAssembly(before);
+  const beforeExitedOwners = new Set(
+    before.evaluation.route.biomes.flatMap((biome) =>
+      'history' in biome
+        ? biome.history.events.flatMap((event) =>
+            event.kind === 'roomExited' ? [semanticAddressKey(event.origin)] : [],
+          )
+        : [],
+    ),
+  );
+  if (command.kind === 'RemoveRoomAction') {
+    const owner = createOccurrenceAddress(
+      createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+      command.action.occurrenceId,
+    );
+    const reference = occurrenceAt(before.project, owner)?.roomActions.order.find(
+      (reference) => roomActionKey(reference) === command.action.actionKey,
+    );
+    if (
+      reference?.kind === 'interactAcquisitionEntry' &&
+      reference.siteKey === 'roomExit' &&
+      reference.entryKey === 'echoDoubleShopReward'
+    ) {
+      const capability = beforeArtifacts
+        .biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
+        ?.derivedAcquisitionEntries.at(
+          createAcquisitionEntryAddress(
+            createAcquisitionSiteAddress(owner, reference.siteKey),
+            reference.entryKey,
+          ),
+        );
+      if (
+        capability?.kind === 'echoDoubleShopReward' &&
+        capability.participation === 'required' &&
+        capability.retainedSourceMismatch !== true
+      )
+        return before;
+    }
+  }
   const beforePlacements = new Map(
     placements(before).map((placement) => [semanticAddressKey(placement.address), placement]),
   );
@@ -311,6 +349,49 @@ export function settleProjectEdit(options: {
       }
     }
     const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
+    const newlyRequiredGold = occurrences(project).flatMap(({ owner, occurrence }) => {
+      const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+      const site = createAcquisitionSiteAddress(owner, 'roomExit');
+      return (artifacts.biomeAt(biome)?.derivedAcquisitionEntries.entriesAt(site) ?? []).flatMap(
+        ({ address, capability }) => {
+          if (
+            capability.kind !== 'echoDoubleShopReward' ||
+            capability.participation !== 'required' ||
+            capability.sourceOfferKey === undefined ||
+            occurrence.roomActions.order.some(
+              (reference) =>
+                reference.kind === 'interactAcquisitionEntry' &&
+                reference.siteKey === site.pointKey &&
+                reference.entryKey === address.entryKey,
+            )
+          )
+            return [];
+          const prior = beforeArtifacts.biomeAt(biome)?.derivedAcquisitionEntries.at(address);
+          const previouslyNonrequired =
+            prior?.kind === 'echoDoubleShopPlaceholder' ||
+            (prior?.kind === 'echoDoubleShopReward' && prior.participation === 'optional') ||
+            (prior === undefined &&
+              occurrenceAt(before.project, owner)?.state.kind === 'shop' &&
+              beforeExitedOwners.has(semanticAddressKey(owner)));
+          return previouslyNonrequired
+            ? [{ address, sourceOfferKey: capability.sourceOfferKey }]
+            : [];
+        },
+      );
+    });
+    if (newlyRequiredGold.length > 0) {
+      for (const { address, sourceOfferKey } of newlyRequiredGold) {
+        consume(`gold:${semanticAddressKey(address)}`);
+        project = applyProjectCommand(project, catalog, {
+          kind: 'PlaceEchoGoldPickup',
+          site: address.site,
+          entryKey: 'echoDoubleShopReward',
+          sourceOfferKey,
+        });
+      }
+      assembly = evaluate(project);
+      continue;
+    }
     const due = occurrences(project).flatMap(({ owner, occurrence }) => {
       const site = createAcquisitionSiteAddress(owner, 'hermesShrineDelivery');
       return (

@@ -1,3 +1,4 @@
+import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 import { supportedTraitOffer } from '@run-planner/test-fixtures/shared';
 import { agreedTimedEffectContact } from '../../../src/simulation/rewards/timed-effects/contacts';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
@@ -11,8 +12,10 @@ import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtu
 import {
   applyProjectCommand,
   createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createLevelResolutionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createKeepsakeEquipResultAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   hermesShrineDeliveryEntryKey,
@@ -43,6 +46,88 @@ function occurrence(project: ProjectDocument, id: string) {
 }
 
 describe('timed-effect edit settlement', () => {
+  it('retains an active downstream Embryo outcome through Shadow activation and removal', () => {
+    const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const value = { blessingKey: 'ChaosElementalBlessing', blessingValues: {} } as const;
+    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+      value,
+    });
+    const f = createBiomeAddress('Underworld', 'F');
+    const owner = createOccurrenceAddress(f, createOccurrenceId('golden-f-b7-e1'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(owner, 'Encounter'),
+      value,
+    });
+    const before = evaluate(project);
+    expect(before.evaluation.route.biomes[0]?.validity).toBe('valid');
+    const contacts =
+      candidateArtifactsForProjectEvaluationAssembly(before).biomeAt(f)?.roomLifecycles
+        .timedEffects;
+    expect(contacts?.some((contact) => contact.owner.occurrenceId === owner.occurrenceId)).toBe(
+      true,
+    );
+    for (const rank of [1, 0]) {
+      const settled = settle(project, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        vowKey: 'MinibossCountShrineUpgrade',
+        rank,
+      });
+      expect(settled.evaluation.route.biomes[0]?.validity).toBe('valid');
+      expect(
+        candidateArtifactsForProjectEvaluationAssembly(settled).biomeAt(f)?.roomLifecycles
+          .timedEffects,
+      ).toEqual(contacts);
+      expect(
+        occurrence(settled.project, owner.occurrenceId).encounters.transcendentEmbryoBlessingByPhase
+          ?.Encounter,
+      ).toEqual(value);
+      project = settled.project;
+    }
+  });
+  it('retains both minibosses’ dormant automatic choices through Shadow activation and removal', () => {
+    let project = loadUnderworldFGProject();
+    const f = createBiomeAddress('Underworld', 'F');
+    const rooms = project.route.biomes[0]!.topology!.occurrences.filter(
+      (room) => room.gameName === 'F_MiniBoss01' || room.gameName === 'F_MiniBoss02',
+    );
+    expect(rooms).toHaveLength(2);
+    for (const room of rooms) {
+      const owner = createOccurrenceAddress(f, room.occurrenceId);
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceSteadyGrowthTarget',
+        outcome: createSteadyGrowthOutcomeAddress(owner, 'Encounter'),
+        targetTraitKey: 'ApolloWeaponBoon',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTranscendentEmbryoTransformation',
+        outcome: createTranscendentEmbryoOutcomeAddress(owner, 'Encounter'),
+        value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+      });
+    }
+    const original = project;
+    for (const rank of [1, 0]) {
+      project = settle(project, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        vowKey: 'MinibossCountShrineUpgrade',
+        rank,
+      }).project;
+      for (const room of rooms) {
+        expect(occurrence(project, room.occurrenceId).encounters).toEqual(
+          occurrence(original, room.occurrenceId).encounters,
+        );
+      }
+    }
+  });
   it.each([
     ['surface-p-1-1-p_combat03', 'P_Combat05'],
     ['surface-p-3-1-p_combat04', 'P_Combat05'],

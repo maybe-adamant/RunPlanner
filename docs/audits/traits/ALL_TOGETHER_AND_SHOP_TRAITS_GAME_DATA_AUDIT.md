@@ -344,9 +344,10 @@ identical.
 ### Well boundary
 
 The same `FirstPurchaseDiscount` value also affects Wells of Charon. Their
-purchase handler owns a separate first-purchase replacement path. Wells remain
-outside the current supported planner product, so the World Shop facts above do
-not silently activate Well inventory or Well purchases.
+purchase handler owns a separate first-purchase replacement path. The planner
+models Well inventory, direct purchases, Travel refill and nested Fateful Twist
+through their own ordered Well boundary; World Shop rules do not substitute for
+those source-specific contracts.
 
 ## Infernal Contract and Travel Deal interaction
 
@@ -447,7 +448,6 @@ Two refill timing contacts remain bounded:
   spawn; the planner builds the refill when the rushed initial delivery is
   picked up.
 
-Future Well scope or a change to exact Surface Shop delivery timing must
-separately settle any newly relevant inventory counts, expedited-delivery
-choices, and room-local chronology. Those questions do not alter the current
-World-Shop model or the supported Shrine delivery boundary.
+Changes to exact Surface Shop delivery timing must separately settle newly
+relevant expedited-delivery choices and room-local chronology. These remaining
+source questions do not invalidate the implemented Well purchase boundary.

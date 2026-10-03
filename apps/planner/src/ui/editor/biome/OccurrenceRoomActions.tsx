@@ -566,7 +566,7 @@ export function RoomActionsWorkbench({
                     row.participation === 'required'
                       ? placement.command.kind === 'PlaceHermesShrineDelivery'
                         ? 'Restore delivery'
-                        : 'Place required pickup'
+                        : 'Restore pickup'
                       : 'Take pickup'
                   }
                   className="secondary-action action-compact room-action-placement-toggle"
@@ -576,7 +576,7 @@ export function RoomActionsWorkbench({
                   {placement.command.kind === 'PlaceHermesShrineDelivery'
                     ? 'Restore delivery'
                     : row.participation === 'required'
-                      ? 'Place'
+                      ? 'Restore pickup'
                       : 'Take pickup'}
                 </button>
               )}
