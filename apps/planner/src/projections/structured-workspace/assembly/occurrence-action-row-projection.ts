@@ -597,7 +597,8 @@ function roomActionsForOccurrence(
             row.reference.kind === 'interactAcquisitionEntry' &&
             row.reference.siteKey === 'hermesShrineDelivery' &&
             row.reference.entryKey === capability.address.entryKey &&
-            row.reference.encounterPhaseKey === capability.encounterPhaseKey,
+            (row.reference.encounterPhaseKey === capability.encounterPhaseKey ||
+              row.placementAssessment?.kind === 'invalid'),
         )
       )
         return [];

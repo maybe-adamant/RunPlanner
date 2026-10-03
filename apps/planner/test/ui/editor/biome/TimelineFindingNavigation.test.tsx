@@ -114,7 +114,7 @@ it.each([
     const repair = screen.getByRole('button', {
       name:
         kind === 'delivery' || kind === 'ship'
-          ? 'Place required delivery'
+          ? 'Restore delivery'
           : kind === 'artificer'
             ? 'Item'
             : 'Phial Target',
@@ -130,7 +130,7 @@ it.each([
     expect(target?.contains(repair)).toBe(true);
     if (kind === 'delivery' || kind === 'ship') {
       await view.user.click(repair);
-      expect(screen.queryByRole('button', { name: 'Place required delivery' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull();
       expect(
         screen
           .getByRole('tab', {

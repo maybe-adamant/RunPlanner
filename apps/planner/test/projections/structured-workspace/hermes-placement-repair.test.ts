@@ -1,5 +1,6 @@
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -14,6 +15,7 @@ import {
   applyProjectHistoryCommand,
   createProjectHistory,
   roomActionKey,
+  createRoomActionAddress,
   semanticAddressKey,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
@@ -21,6 +23,7 @@ import {
   oBiome,
   oOccurrenceIds,
   createStaleSurfaceHermesDeliveryPlacement,
+  createSurfaceNOHermesShrineDeliveryCheckpoint,
   createTwoStaleSurfaceHermesDeliveryPlacements,
 } from '@run-planner/test-fixtures/surface';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
@@ -305,4 +308,86 @@ it('distinguishes two uncovered retained deliveries and binds the selected repai
   expect(
     retained.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[secondEntryKey],
   ).toBeUndefined();
+});
+
+it('keeps one stale-phase repair row and restores its due phase atomically', () => {
+  let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+  const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:secondLeft',
+    purchase: { delay: 4, rushed: false },
+  });
+  const due = projectStructuredWorkspaceFixture(project)
+    .workspace.route.biomes.flatMap((biome) => biome.nodes)
+    .find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.roomActions?.rows.some(
+          (row) => row.placement?.command.kind === 'PlaceHermesShrineDelivery',
+        ),
+    );
+  if (due?.kind !== 'occurrenceWorkbench') throw new Error('Due host missing');
+  const host = due.room.address;
+  const restore = due.room.roomActions?.rows.find(
+    (row) => row.placement?.command.kind === 'PlaceHermesShrineDelivery',
+  )?.placement;
+  if (restore?.command.kind !== 'PlaceHermesShrineDelivery')
+    throw new Error('Due delivery missing');
+  const command = restore.command;
+  project = applyProjectCommand(project, catalog, {
+    ...command,
+    encounterPhaseKey: command.encounterPhaseKey === 'Combat1' ? 'Intro' : 'Combat1',
+  });
+  const projected = projectStructuredWorkspaceFixture(project);
+  const node = projected.workspace.route.biomes
+    .flatMap((biome) => biome.nodes)
+    .find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === host.occurrenceId,
+    );
+  if (node?.kind !== 'occurrenceWorkbench') throw new Error('Repair host missing');
+  const rows = node.room.roomActions!.rows.filter(
+    (row) =>
+      row.reference.kind === 'interactAcquisitionEntry' &&
+      row.reference.entryKey === command.entry.entryKey,
+  );
+  expect(rows).toHaveLength(1);
+  const row = rows[0]!;
+  expect(row.placementAssessment).toMatchObject({ kind: 'invalid', reason: 'dueContactMismatch' });
+  expect(row.placement).toBeUndefined();
+  const finding = projected.evaluation.findings.find(
+    (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(command.entry),
+  );
+  expect(finding).toBeDefined();
+  expect(projected.workspace.focusByOwner.get(semanticAddressKey(finding!.origin))?.focusKey).toBe(
+    row.marker.focusKey,
+  );
+  const evaluate = (value: typeof project) => simulateProjectAssembly(catalog, value);
+  const settled = settleProjectEdit({
+    catalog,
+    before: evaluate(project),
+    evaluate,
+    command: {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(oBiome, host.occurrenceId, row.key),
+    },
+  });
+  const restored = projectStructuredWorkspaceFixture(settled.project)
+    .workspace.route.biomes.flatMap((biome) => biome.nodes)
+    .find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === host.occurrenceId,
+    );
+  if (restored?.kind !== 'occurrenceWorkbench') throw new Error('Restored host missing');
+  const restoredRows = restored.room.roomActions!.rows.filter(
+    (row) =>
+      row.reference.kind === 'interactAcquisitionEntry' &&
+      row.reference.entryKey === command.entry.entryKey,
+  );
+  expect(restoredRows).toHaveLength(1);
+  expect(restoredRows[0]!.rank).not.toBeNull();
+  expect(restoredRows[0]!.placement).toBeUndefined();
+  expect(restoredRows[0]!.reference).toMatchObject({
+    encounterPhaseKey: command.encounterPhaseKey,
+  });
 });
