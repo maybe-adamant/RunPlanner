@@ -275,7 +275,7 @@ describe('OccurrenceRoomActions', () => {
       ...workspace.interactions,
       steadyGrowth: new Map([[semanticAddressKey(outcome), interaction]]),
     } as unknown as WorkspaceInteractionCatalog;
-    render(
+    const view = render(
       <Provider store={application.store}>
         <SteadyGrowthEffectRow control={control} interactions={interactions} />
       </Provider>,
@@ -283,6 +283,31 @@ describe('OccurrenceRoomActions', () => {
     const picker = await screen.findByLabelText('Steady Growth target');
     await waitFor(() => expect(picker.getAttribute('aria-expanded')).toBe('true'));
     expect(picker.id).toBe(semanticOwnerControlElementId(outcome));
+    const emptyInteraction = {
+      ...interaction,
+      forTarget: () => ({
+        load: () => ({
+          emptyNoOp: true,
+          selectedPossible: true,
+          picker: { sections: [] },
+        }),
+      }),
+    };
+    view.rerender(
+      <Provider store={application.store}>
+        <SteadyGrowthEffectRow
+          control={control}
+          interactions={{
+            ...interactions,
+            steadyGrowth: new Map([[semanticAddressKey(outcome), emptyInteraction]]),
+          }}
+        />
+      </Provider>,
+    );
+    await waitFor(() => expect(picker).toHaveProperty('disabled', true));
+    expect(screen.getByLabelText('Steady Growth target')).toBe(picker);
+    expect(picker.textContent).toContain('No eligible trait');
+    expect(picker.getAttribute('aria-expanded')).toBe('false');
     application.dispose();
   });
 

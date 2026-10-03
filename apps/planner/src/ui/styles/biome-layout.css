@@ -596,22 +596,6 @@
   margin-top: 0;
 }
 
-.takeover-action {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 10px;
-  border: 1px solid rgb(193 169 123 / 35%);
-  border-radius: 8px;
-  color: #cfc2a1;
-  background: rgb(193 169 123 / 7%);
-  font-size: 0.82rem;
-}
-
-.takeover-action h4 {
-  margin: 0;
-}
-
 .topology-removal-action {
   margin: 12px 14px 14px;
 }

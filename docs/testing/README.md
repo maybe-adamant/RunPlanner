@@ -9,6 +9,7 @@ commits, not these checklists.
 - [Encounters and room features](ENCOUNTER_LIVE_ACCEPTANCE.md)
 - [Trait offer generation](TRAIT_OFFER_LIVE_ACCEPTANCE.md)
 - [Victory summary](VICTORY_SUMMARY_LIVE_ACCEPTANCE.md)
+- [Editor layout](EDITOR_LAYOUT_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete

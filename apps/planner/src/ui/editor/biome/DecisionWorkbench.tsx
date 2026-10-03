@@ -449,14 +449,10 @@ function TakeoverRepairAction({
   const executeIntent = useCommandIntent();
   return (
     <section
-      className="takeover-action"
+      className="workbench-action-row"
       data-action={interaction.action}
       data-presentation={interaction.presentation}
     >
-      <div className="owner-markers">
-        <h4>Fix Preboss doors</h4>
-      </div>
-      <p className="fixed-room-state">Fix {interaction.label} to restore the missing doors.</p>
       <button
         {...findingTarget(interaction.owner)}
         className="secondary-action"
@@ -517,7 +513,7 @@ function InheritedRewardStoreRow({
     <div className="inherited-reward-store" role="status">
       <span>Reward pool from ship</span>
       <strong>{inherited.label}</strong>
-      <p>{inherited.explanation}</p>
+      <p className="door-information-note">{inherited.explanation}</p>
       <button
         className="semantic-focus-link"
         data-workspace-node={inherited.wheel.focusKey}
@@ -565,16 +561,22 @@ function BatchSettings({
             placeholder="Select pool"
           />
         )}
-        {node.inheritedRewardStore === undefined ? null : (
-          <InheritedRewardStoreRow inherited={node.inheritedRewardStore} nodeKey={node.key} />
-        )}
-        {node.effectiveRewardStore === undefined ? null : (
-          <div className="effective-reward-store" role="status">
-            <span>Effective reward pool</span>
-            <strong>{node.effectiveRewardStore.label}</strong>
-          </div>
-        )}
       </div>
+      {store === undefined &&
+      node.inheritedRewardStore === undefined &&
+      node.effectiveRewardStore === undefined ? null : (
+        <div className="batch-pool-information">
+          {node.inheritedRewardStore === undefined ? null : (
+            <InheritedRewardStoreRow inherited={node.inheritedRewardStore} nodeKey={node.key} />
+          )}
+          {node.effectiveRewardStore === undefined ? null : (
+            <div className="effective-reward-store" role="status">
+              <span>Effective reward pool</span>
+              <strong>{node.effectiveRewardStore.label}</strong>
+            </div>
+          )}
+        </div>
+      )}
       {fields === undefined && node.fields === undefined ? null : (
         <div className="fields-batch-editor">
           {fields === undefined ? null : (
@@ -602,7 +604,7 @@ function BatchSettings({
                   </dd>
                 </div>
               </dl>
-              <p className="fields-batch-note">
+              <p className="door-information-note">
                 {node.fields.cageTargetCount === 0
                   ? 'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.'
                   : 'Cage rewards appear bottom to top on the door'}
@@ -679,15 +681,11 @@ export function BatchWorkbench({
         {node.targets.map((target) => (
           <TargetRow interactions={interactions} key={target.exitKey} node={node} target={target} />
         ))}
-        {node.kind === 'takeoverBatch' ? (
-          node.missingTargets.length === 0 ? null : (
-            <p className="fixed-room-state">Fix Preboss doors to restore the missing doors.</p>
-          )
-        ) : (
-          node.missingTargets.map((target) => (
-            <MissingTargetRow interactions={interactions} key={target.exitKey} target={target} />
-          ))
-        )}
+        {node.kind === 'takeoverBatch'
+          ? null
+          : node.missingTargets.map((target) => (
+              <MissingTargetRow interactions={interactions} key={target.exitKey} target={target} />
+            ))}
         {node.zagreusContract === undefined ? null : (
           <ZagreusContractExit
             control={node.zagreusContract}

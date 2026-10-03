@@ -63,33 +63,31 @@ export function SteadyGrowthEffectRow({
     >
       <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
         <strong>Steady Growth</strong>
-        {domain?.emptyNoOp === true && control.targetTraitKey === undefined ? (
-          <span>No eligible trait</span>
-        ) : (
-          <RandomTraitTargetPicker
-            findingTarget={findingTarget(control.address)}
-            ariaLabel="Steady Growth target"
-            id={semanticOwnerControlElementId(control.address)}
-            interaction={interaction}
-            label="Target"
-            layout="inline"
-            model={domain?.picker ?? { sections: Object.freeze([]) }}
-            onSelect={(target) => executeIntent(interaction.intentFor(target))}
-            onOpenChange={onOpenChange}
-            open={open}
-            selected={selected === '' ? null : selected}
-          />
-        )}
-        {domain?.selectedPossible === false && selected !== '' ? (
-          <>
-            <button
-              className="quiet-action"
-              onClick={() => executeIntent(interaction.intentFor(null))}
-              type="button"
-            >
-              Clear recorded target
-            </button>
-          </>
+        <RandomTraitTargetPicker
+          findingTarget={findingTarget(control.address)}
+          ariaLabel="Steady Growth target"
+          disabled={domain?.emptyNoOp === true && selected === ''}
+          placeholder={domain?.emptyNoOp === true ? 'No eligible trait' : 'Choose a trait'}
+          id={semanticOwnerControlElementId(control.address)}
+          interaction={interaction}
+          label="Target"
+          layout="inline"
+          model={domain?.picker ?? { sections: Object.freeze([]) }}
+          onSelect={(target) => executeIntent(interaction.intentFor(target))}
+          onOpenChange={onOpenChange}
+          open={domain?.emptyNoOp === true && selected === '' ? false : open}
+          selected={selected === '' ? null : selected}
+        />
+        {selected !== '' ? (
+          <button
+            className="quiet-action effect-repair-action"
+            disabled={domain?.selectedPossible !== false}
+            data-inactive={domain?.selectedPossible !== false || undefined}
+            onClick={() => executeIntent(interaction.intentFor(null))}
+            type="button"
+          >
+            Clear recorded target
+          </button>
         ) : null}
       </div>
     </li>

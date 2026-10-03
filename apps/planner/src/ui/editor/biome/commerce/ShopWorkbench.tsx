@@ -90,14 +90,30 @@ export function ShopWorkbench({
           )
           .map((offer) =>
             offer.kind === 'travelDealPlaceholder' ? (
-              <div className="shop-family-offer-placeholder" key={offer.key}>
-                <strong>Travel Deal</strong>
-                <span>{offer.explanation}</span>
+              <div className="shop-family-offer-row" key={offer.key}>
+                <div className="shop-family-item-control">
+                  <div className="field-control field-control-inline shop-family-item-status">
+                    <span>Travel Deal Item</span>
+                    <span className="fixed-room-state">{offer.explanation}</span>
+                  </div>
+                </div>
+                <label className="shop-family-participation">
+                  <input
+                    aria-label="Purchased Travel Deal"
+                    type="checkbox"
+                    checked={false}
+                    disabled
+                  />
+                  Purchased
+                </label>
               </div>
             ) : offer.kind === 'travelDealInvalid' ? (
               <div className="shop-family-offer-row shop-family-offer-invalid" key={offer.key}>
-                <div>
-                  <strong>Travel Deal</strong>
+                <div className="shop-family-item-control">
+                  <div className="field-control field-control-inline shop-family-item-status">
+                    <span>Travel Deal Item</span>
+                    <span className="fixed-room-state">Unavailable</span>
+                  </div>
                 </div>
                 <label className="shop-family-participation">
                   <input

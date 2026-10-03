@@ -127,6 +127,8 @@ function candidatePicker(
 /** Shared single-target presentation leaf for random Pom-like effects. */
 export function RandomTraitTargetPicker({
   findingTarget,
+  disabled = false,
+  placeholder = 'Choose a trait',
   ariaLabel,
   id,
   interaction,
@@ -139,6 +141,8 @@ export function RandomTraitTargetPicker({
   selected,
 }: {
   readonly ariaLabel: string;
+  readonly disabled?: boolean;
+  readonly placeholder?: string;
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
   readonly interaction: { readonly traitLabel: (traitKey: string) => string };
@@ -161,7 +165,8 @@ export function RandomTraitTargetPicker({
       onSelect={onSelect}
       {...(onOpenChange === undefined ? {} : { onOpenChange })}
       {...(open === undefined ? {} : { open })}
-      placeholder="Choose a trait"
+      disabled={disabled}
+      placeholder={placeholder}
       {...(selected === null ? {} : { triggerLabel: interaction.traitLabel(selected) })}
     />
   );

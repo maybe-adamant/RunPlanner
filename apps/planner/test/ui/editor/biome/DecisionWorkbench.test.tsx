@@ -1314,7 +1314,9 @@ describe('DecisionWorkbench', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText('Cage rewards appear bottom to top on the door')).toBeNull();
-    expect(document.querySelectorAll('.fields-batch-note')).toHaveLength(1);
+    expect(document.querySelectorAll('.fields-batch-editor > .door-information-note')).toHaveLength(
+      1,
+    );
   });
 
   it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {
@@ -1885,7 +1887,7 @@ describe('DecisionWorkbench', () => {
       'G',
       subjectForOwner(retainedOwner),
     );
-    expect(screen.getByText('Fix Preboss doors to restore the missing doors.')).toBeTruthy();
+    expect(screen.queryByText('Fix Preboss doors to restore the missing doors.')).toBeNull();
     await expanded.user.click(screen.getByRole('button', { name: 'Fix Preboss doors' }));
     expect(
       workspaceBiome(expanded.application, 'Underworld', 'G').nodes.find(

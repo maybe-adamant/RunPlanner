@@ -719,12 +719,6 @@ select {
   font-weight: 600;
 }
 
-.inherited-reward-store > p {
-  margin: 4px 0 2px;
-  color: #aaa5af;
-  font-size: 0.78rem;
-}
-
 .decision-heading h3,
 .frontier-actions h3 {
   margin: 0;
@@ -901,23 +895,6 @@ select {
   width: 100%;
 }
 
-.shop-family-offer-placeholder {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr);
-  gap: 14px;
-  padding: 7px 0;
-  color: #aaa7af;
-  font-size: 0.82rem;
-}
-
-.shop-family-offer-invalid > div {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr);
-  gap: 14px;
-  color: #aaa7af;
-  font-size: 0.82rem;
-}
-
 .acquisition-entry-resolution {
   margin-top: 8px;
   padding-top: 8px;
@@ -973,7 +950,7 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.fields-batch-note {
+.door-information-note {
   grid-column: 1 / -1;
   margin: 0;
   color: #e2b971;
@@ -1024,4 +1001,22 @@ select {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
+}
+
+.batch-pool-information {
+  min-height: 2.5rem;
+  margin: 6px 14px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.batch-pool-information > .effective-reward-store {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.batch-pool-information > .effective-reward-store > strong {
+  margin: 0;
 }

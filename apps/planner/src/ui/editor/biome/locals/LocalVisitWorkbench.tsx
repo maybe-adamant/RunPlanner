@@ -515,7 +515,18 @@ function VisitOrder({
             )}
           </div>
         )}
-        {dragFeedback === undefined ? null : <p role="status">{dragFeedback}</p>}
+        {dragFeedback === undefined ? null : (
+          <div className="room-action-placement-notice" role="status">
+            <span>{dragFeedback}</span>
+            <button
+              className="quiet-action action-compact"
+              type="button"
+              onClick={() => setDragFeedback(undefined)}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
