@@ -238,6 +238,7 @@ function applyUnchecked(
         command,
       );
     case 'InsertRoomAction':
+    case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
     case 'ReplaceFieldsCageOrder':

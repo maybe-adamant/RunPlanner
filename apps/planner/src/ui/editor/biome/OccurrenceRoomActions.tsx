@@ -446,7 +446,9 @@ export function RoomActionsWorkbench({
           : 'optional'
         : row.requiredScope;
     const removeRow = (): void => {
-      const removable = proposals.find((proposal) => proposal.kind === 'remove');
+      const removable = proposals.find(
+        (proposal) => proposal.kind === 'remove' || proposal.kind === 'unplace',
+      );
       if (removable?.structurallyAuthorable === true) {
         apply(removable.key);
         return;

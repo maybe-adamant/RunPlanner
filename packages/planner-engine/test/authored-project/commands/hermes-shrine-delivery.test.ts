@@ -3,20 +3,35 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createTraitOfferAddress,
+  applyProjectHistoryCommand,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createProjectHistory,
+  createRoomActionAddress,
   decodeProjectDocument,
   defaultHermesShrineDeliveryReward,
   encodeProjectDocument,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
+  roomActionDomainForOccurrence,
+  roomActionKey,
+  undoProjectHistory,
+  type ProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
   createSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOProject,
   loadSurfaceNOPQProject,
+  nBiome as surfaceNBiome,
+  nLocalOccurrenceId as surfaceNLocalOccurrenceId,
+  nOccurrenceId as surfaceNOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -24,6 +39,8 @@ import {
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { createEnteredNLocalProject, nLocalOccurrenceId } from '../support/complete-n-project';
+import { assessGeneratedPickupPlacement } from '../../../src/authored-project/generated-pickup-placement';
+import { assessRoomActionPlacements } from '../../../src/simulation';
 import { initializeTestRewardBranches } from '../../support/arcana-fear';
 import { withTestEncounterRecord } from '../../support/simulation-state';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
@@ -619,5 +636,685 @@ describe('Hermes Shrine delivery placement', () => {
         encounterPhaseKey: 'LaterEncounter',
       },
     ]);
+  });
+});
+
+type RosterRoom = {
+  readonly occurrenceId: string;
+  readonly roomActionRoster: import('../../../src/simulation').RoomActionRoster;
+};
+
+/** Test-only observation: locate one materialized room by occurrence id anywhere in the evaluation. */
+function materializedRoom(project: ProjectDocument, occurrenceId: string): RosterRoom {
+  const visited = new Set<object>();
+  const search = (value: unknown): RosterRoom | undefined => {
+    if (typeof value !== 'object' || value === null || visited.has(value)) return undefined;
+    visited.add(value);
+    if (
+      'roomActionRoster' in value &&
+      'occurrenceId' in value &&
+      (value as RosterRoom).occurrenceId === occurrenceId
+    )
+      return value as RosterRoom;
+    for (const child of Object.values(value)) {
+      const found = search(child);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  const found = search(simulateProjectAssembly(catalog, project).evaluation.route);
+  if (found === undefined) throw new Error(`${occurrenceId} was not materialized`);
+  return found;
+}
+
+function occurrenceOf(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
+  const occurrence = project.route.biomes
+    .find((candidate) => candidate.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+  if (occurrence === undefined) throw new Error(`${occurrenceId} is missing`);
+  return occurrence;
+}
+
+function orderedDeliveryKeys(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
+  return occurrenceOf(project, biomeKey, occurrenceId).roomActions.order.flatMap((reference) =>
+    reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'hermesShrineDelivery'
+      ? [reference.entryKey]
+      : [],
+  );
+}
+
+function staleDeliveryFindings(project: ProjectDocument) {
+  return simulateProjectAssembly(catalog, project).evaluation.findings.filter(
+    (finding) =>
+      finding.code === 'rewardSourceUnavailable' &&
+      (finding.evidence as { reason?: string } | undefined)?.reason === 'staleHermesShrineDelivery',
+  );
+}
+
+function deliveryAction(entryKey: string, encounterPhaseKey = 'Encounter'): RoomActionReference {
+  return {
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey,
+    encounterPhaseKey,
+  };
+}
+
+/** Entered N side-room Shrine with two delayed purchases placed in a later main room. */
+function projectWithTwoSideRoomDeliveries() {
+  const biome = createBiomeAddress('Surface', 'N');
+  const parentId = createOccurrenceId('round-trip-n-combat02');
+  const sourceId = nLocalOccurrenceId('combat02', 'sideDoor1');
+  const hostId = createOccurrenceId('round-trip-n-combat04');
+  const base = createEnteredNLocalProject();
+  const plan = base.route.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const sourceOccurrence = plan?.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === sourceId,
+  );
+  if (plan?.topology == null || sourceOccurrence === undefined)
+    throw new Error('failed to create side-room Shrine fixture');
+  const withShrine = Object.freeze({
+    ...sourceOccurrence,
+    hermesShrine: Object.freeze({
+      offerBySlot: Object.freeze({
+        first: Object.freeze({ rewardType: 'HealBigDrop' }),
+        secondLeft: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+        secondRight: Object.freeze({ rewardType: 'MaxManaDrop' }),
+      }),
+      purchaseBySlot: Object.freeze({
+        first: Object.freeze({ delay: 2, rushed: false }),
+        secondLeft: Object.freeze({ delay: 2, rushed: false }),
+      }),
+    }),
+  });
+  let project: ProjectDocument = Object.freeze({
+    ...base,
+    route: Object.freeze({
+      ...base.route,
+      biomes: base.route.biomes.map((candidate) =>
+        candidate.biomeKey !== 'N'
+          ? candidate
+          : Object.freeze({
+              ...candidate,
+              topology: Object.freeze({
+                ...plan.topology!,
+                occurrences: Object.freeze(
+                  plan.topology!.occurrences.map((occurrence) =>
+                    occurrence.occurrenceId === sourceId ? withShrine : occurrence,
+                  ),
+                ),
+              }),
+            }),
+      ),
+    }),
+  });
+  const source = createOccurrenceAddress(biome, sourceId);
+  const host = createOccurrenceAddress(biome, hostId);
+  const entryKeys = (['initial:first', 'initial:secondLeft'] as const).map((generationKey) =>
+    hermesShrineDeliveryEntryKey(source, generationKey),
+  );
+  for (const entryKey of entryKeys) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+        entryKey,
+      ),
+      encounterPhaseKey: 'Encounter',
+    });
+  }
+  return Object.freeze({
+    project,
+    biome,
+    source,
+    host,
+    entryKeys,
+    visitOrder: createLocalVisitOrderAddress(biome, parentId, 'sideRooms'),
+    visitSlot: createLocalVisitSlotAddress(biome, parentId, 'sideRooms', 'sideDoor1'),
+  });
+}
+
+/** Directly stored topology edit standing in for a saved project whose source no longer participates. */
+function withSideRoomWithdrawn(
+  project: ProjectDocument,
+  sourceId: string,
+  generation: 'generated' | 'notGenerated',
+): ProjectDocument {
+  const edited = Object.freeze({
+    ...project,
+    route: Object.freeze({
+      ...project.route,
+      biomes: project.route.biomes.map((plan) =>
+        plan.biomeKey !== 'N' || plan.topology === null
+          ? plan
+          : Object.freeze({
+              ...plan,
+              topology: Object.freeze({
+                ...plan.topology,
+                decisions: Object.freeze(
+                  plan.topology.decisions.map((decision) =>
+                    decision.kind !== 'localVisit' ||
+                    !decision.visitOrder.includes(sourceId as never)
+                      ? decision
+                      : Object.freeze({
+                          ...decision,
+                          visitOrder: Object.freeze(
+                            decision.visitOrder.filter((candidate) => candidate !== sourceId),
+                          ),
+                          targetsBySlot: Object.freeze(
+                            Object.fromEntries(
+                              Object.entries(decision.targetsBySlot).map(([slotKey, target]) => [
+                                slotKey,
+                                target.occurrenceId === sourceId
+                                  ? Object.freeze({ ...target, generation })
+                                  : target,
+                              ]),
+                            ),
+                          ),
+                        }),
+                  ),
+                ),
+              }),
+            }),
+      ),
+    }),
+  });
+  return decodeProjectDocument(JSON.parse(encodeProjectDocument(edited)) as unknown, catalog);
+}
+
+describe('Hermes Shrine delivery source participation', () => {
+  it('retracts both deliveries when their side-room source leaves the visit order and keeps the purchases', () => {
+    const { project, biome, source, host, entryKeys, visitOrder, visitSlot } =
+      projectWithTwoSideRoomDeliveries();
+    expect(orderedDeliveryKeys(project, biome.biomeKey, host.occurrenceId)).toEqual(entryKeys);
+    expect(
+      assessGeneratedPickupPlacement(project.route, host, deliveryAction(entryKeys[0]!))?.kind,
+    ).toBe('unassessed');
+
+    const withdrawn = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: visitOrder,
+      occurrenceIds: [],
+    });
+    expect(orderedDeliveryKeys(withdrawn, biome.biomeKey, host.occurrenceId)).toEqual([]);
+    expect(
+      occurrenceOf(withdrawn, biome.biomeKey, source.occurrenceId).hermesShrine?.purchaseBySlot,
+    ).toEqual({ first: { delay: 2, rushed: false }, secondLeft: { delay: 2, rushed: false } });
+    for (const entryKey of entryKeys) {
+      expect(
+        occurrenceOf(withdrawn, biome.biomeKey, host.occurrenceId).acquisitionSites
+          ?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+      ).toBeDefined();
+    }
+    expect(() => simulateProjectAssembly(catalog, withdrawn)).not.toThrow();
+
+    const notGenerated = applyProjectCommand(withdrawn, catalog, {
+      kind: 'SetLocalVisitGeneration',
+      slot: visitSlot,
+      generation: 'notGenerated',
+    });
+    expect(orderedDeliveryKeys(notGenerated, biome.biomeKey, host.occurrenceId)).toEqual([]);
+
+    let restored = applyProjectCommand(notGenerated, catalog, {
+      kind: 'SetLocalVisitGeneration',
+      slot: visitSlot,
+      generation: 'generated',
+    });
+    restored = applyProjectCommand(restored, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: visitOrder,
+      occurrenceIds: [source.occurrenceId],
+    });
+    // Retained payload is not a structural reference, so the delta reconciliation
+    // places nothing; the simulator's exact due capability re-places the purchase.
+    expect(orderedDeliveryKeys(restored, biome.biomeKey, host.occurrenceId)).toEqual([]);
+    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+      simulateProjectAssembly(catalog, restored),
+      source,
+      'initial:first',
+    );
+    expect(placement).toMatchObject({ kind: 'PlaceHermesShrineDelivery' });
+    const replaced = applyProjectCommand(restored, catalog, placement!);
+    expect(
+      replaced.route.biomes.flatMap((plan) =>
+        (plan.topology?.occurrences ?? []).flatMap((occurrence) =>
+          orderedDeliveryKeys(replaced, plan.biomeKey, occurrence.occurrenceId),
+        ),
+      ),
+    ).toContain(entryKeys[0]);
+  });
+
+  it.each([
+    ['removed from the visit order', 'generated'],
+    ['not generated', 'notGenerated'],
+  ] as const)(
+    'treats a loaded source that is %s as invalid placement with a bounded unplace repair',
+    (_label, generation) => {
+      const { project, biome, source, host, entryKeys } = projectWithTwoSideRoomDeliveries();
+      const loaded = withSideRoomWithdrawn(project, source.occurrenceId, generation);
+      expect(orderedDeliveryKeys(loaded, biome.biomeKey, host.occurrenceId)).toEqual(entryKeys);
+      expect(
+        assessGeneratedPickupPlacement(loaded.route, host, deliveryAction(entryKeys[0]!))?.kind,
+      ).toBe('invalid');
+
+      const domain = roomActionDomainForOccurrence(
+        loaded,
+        catalog,
+        biome,
+        host.occurrenceId,
+      )?.domain;
+      const contributionKeys = domain?.contributions.flatMap((entry) =>
+        entry.kind === 'action' ? [roomActionKey(entry.reference)] : [],
+      );
+      for (const entryKey of entryKeys) {
+        expect(contributionKeys).toContain(roomActionKey(deliveryAction(entryKey)));
+        expect(() =>
+          applyProjectCommand(loaded, catalog, {
+            kind: 'RemoveRoomAction',
+            action: createRoomActionAddress(
+              biome,
+              host.occurrenceId,
+              roomActionKey(deliveryAction(entryKey)),
+            ),
+          }),
+        ).toThrow('active required room action cannot be removed');
+      }
+
+      const materialized = materializedRoom(loaded, host.occurrenceId);
+      const room = {
+        ...materialized,
+        roomActionRoster: assessRoomActionPlacements(
+          loaded.route,
+          host,
+          materialized.roomActionRoster,
+        ),
+      };
+      for (const entryKey of entryKeys) {
+        const key = roomActionKey(deliveryAction(entryKey));
+        expect(room.roomActionRoster.rows.find((row) => row.key === key)).toMatchObject({
+          placementAssessment: { kind: 'invalid' },
+        });
+        expect(room.roomActionRoster.proposals).toContainEqual(
+          expect.objectContaining({ kind: 'unplace', reference: deliveryAction(entryKey) }),
+        );
+      }
+
+      let history = createProjectHistory(loaded);
+      for (const entryKey of entryKeys) {
+        history = applyProjectHistoryCommand(history, catalog, {
+          kind: 'UnplaceGeneratedDelivery',
+          action: createRoomActionAddress(
+            biome,
+            host.occurrenceId,
+            roomActionKey(deliveryAction(entryKey)),
+          ),
+        });
+      }
+      const removed = history.present;
+      expect(orderedDeliveryKeys(removed, biome.biomeKey, host.occurrenceId)).toEqual([]);
+      for (const entryKey of entryKeys) {
+        expect(
+          occurrenceOf(removed, biome.biomeKey, host.occurrenceId).acquisitionSites
+            ?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+        ).toBeUndefined();
+      }
+      expect(staleDeliveryFindings(removed)).toEqual([]);
+
+      history = undoProjectHistory(undoProjectHistory(history));
+      expect(history.present).toBe(loaded);
+      expect(orderedDeliveryKeys(history.present, biome.biomeKey, host.occurrenceId)).toEqual(
+        entryKeys,
+      );
+    },
+  );
+
+  it('keeps an entered source required with its reward editor context and refuses removal', () => {
+    const { project, biome, host, entryKeys } = projectWithTwoSideRoomDeliveries();
+    const domain = roomActionDomainForOccurrence(
+      project,
+      catalog,
+      biome,
+      host.occurrenceId,
+    )?.domain;
+    for (const entryKey of entryKeys) {
+      const key = roomActionKey(deliveryAction(entryKey));
+      expect(
+        domain?.contributions.find(
+          (entry) => entry.kind === 'action' && roomActionKey(entry.reference) === key,
+        ),
+      ).toMatchObject({
+        participation: 'required',
+        owner: { kind: 'acquisitionEntry', entryKey },
+      });
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'RemoveRoomAction',
+          action: createRoomActionAddress(biome, host.occurrenceId, key),
+        }),
+      ).toThrow('active required room action cannot be removed');
+    }
+    const room = materializedRoom(project, host.occurrenceId);
+    for (const entryKey of entryKeys) {
+      expect(
+        room.roomActionRoster.rows.find(
+          (row) => row.key === roomActionKey(deliveryAction(entryKey)),
+        ),
+      ).toMatchObject({ stale: false });
+    }
+  });
+
+  it('retracts a cross-biome delivery when its N side-room source leaves the visit order', () => {
+    const parentId = surfaceNOccurrenceId('combat11');
+    const source = createOccurrenceAddress(
+      surfaceNBiome,
+      surfaceNLocalOccurrenceId('combat11', 'sideDoor1'),
+    );
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+    let project = loadSurfaceNOProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:first',
+      purchase: { delay: 8, rushed: false },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+        entryKey,
+      ),
+      encounterPhaseKey: 'Encounter',
+    });
+    expect(orderedDeliveryKeys(project, oBiome.biomeKey, host.occurrenceId)).toEqual([entryKey]);
+    expect(
+      roomActionDomainForOccurrence(project, catalog, oBiome, host.occurrenceId)?.domain
+        .activeReferences,
+    ).toContainEqual(deliveryAction(entryKey));
+
+    const withdrawn = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(surfaceNBiome, parentId, 'sideRooms'),
+      occurrenceIds: [],
+    });
+    expect(orderedDeliveryKeys(withdrawn, oBiome.biomeKey, host.occurrenceId)).toEqual([]);
+    expect(
+      occurrenceOf(withdrawn, oBiome.biomeKey, host.occurrenceId).acquisitionSites
+        ?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+    ).toBeDefined();
+
+    // The same stored state loaded without the command delta is stale and removable.
+    const loaded = decodeProjectDocument(
+      JSON.parse(
+        encodeProjectDocument({
+          ...withdrawn,
+          route: {
+            ...withdrawn.route,
+            biomes: withdrawn.route.biomes.map((plan) =>
+              plan.biomeKey !== oBiome.biomeKey || plan.topology === null
+                ? plan
+                : {
+                    ...plan,
+                    topology: {
+                      ...plan.topology,
+                      occurrences: plan.topology.occurrences.map((occurrence) =>
+                        occurrence.occurrenceId !== host.occurrenceId
+                          ? occurrence
+                          : {
+                              ...occurrence,
+                              roomActions: {
+                                order: [...occurrence.roomActions.order, deliveryAction(entryKey)],
+                              },
+                            },
+                      ),
+                    },
+                  },
+            ),
+          },
+        }),
+      ) as unknown,
+      catalog,
+    );
+    expect(orderedDeliveryKeys(loaded, oBiome.biomeKey, host.occurrenceId)).toEqual([entryKey]);
+    expect(
+      roomActionDomainForOccurrence(loaded, catalog, oBiome, host.occurrenceId)?.domain
+        .activeReferences,
+    ).toContainEqual(deliveryAction(entryKey));
+    const removed = applyProjectCommand(loaded, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(
+        oBiome,
+        host.occurrenceId,
+        roomActionKey(deliveryAction(entryKey)),
+      ),
+    });
+    expect(orderedDeliveryKeys(removed, oBiome.biomeKey, host.occurrenceId)).toEqual([]);
+  });
+
+  it('leaves same-room rushed deliveries and ordinary required actions under the existing guard', () => {
+    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const rushedKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+    const rushed = occurrenceOf(
+      project,
+      oBiome.biomeKey,
+      source.occurrenceId,
+    ).roomActions.order.find(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' && reference.entryKey === rushedKey,
+    );
+    expect(rushed).toBeDefined();
+
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(oBiome, source.occurrenceId, roomActionKey(rushed!)),
+      }),
+    ).toThrow('active required room action cannot be removed');
+  });
+});
+
+describe('explicit generated delivery unplacement', () => {
+  it('unplaces a live required delivery while preserving its due obligation and source purchase', () => {
+    const project = createSurfaceNOHermesShrineDeliveryCheckpoint();
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const reference = deliveryAction(entryKey);
+    const removed = applyProjectCommand(project, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(reference)),
+    });
+    expect(occurrenceOf(removed, oBiome.biomeKey, source.occurrenceId).hermesShrine).toEqual(
+      occurrenceOf(project, oBiome.biomeKey, source.occurrenceId).hermesShrine,
+    );
+    expect(
+      occurrenceOf(removed, oBiome.biomeKey, host.occurrenceId).acquisitionSites
+        ?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+    ).toBeUndefined();
+    const assembly = simulateProjectAssembly(catalog, removed);
+    expect(assembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired' }),
+    );
+    expect(() => assembleExecutionProduct({ assembly, catalog })).toThrow();
+    const roundtrip = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(removed)) as unknown,
+      catalog,
+    );
+    const edited = applyProjectCommand(roundtrip, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'secondRight',
+      value: { rewardType: 'ArmorBoost' },
+    });
+    expect(orderedDeliveryKeys(edited, oBiome.biomeKey, host.occurrenceId)).not.toContain(entryKey);
+  });
+
+  it('removes only the selected payload and trait children and restores the whole edit with Undo', () => {
+    const { project: initial, biome, source, host, entryKeys } = projectWithTwoSideRoomDeliveries();
+    const entryKey = entryKeys[1]!;
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      entryKey,
+    );
+    let project = applyProjectCommand(initial, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'ShopHermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry,
+      encounterPhaseKey: 'Encounter',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType: 'ShopHermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(entry, 'hermes'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+          { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    expect(
+      occurrenceOf(project, biome.biomeKey, host.occurrenceId).acquisitionSites
+        ?.hermesShrineDelivery?.pickupEntries?.[entryKey]?.traitOffersByAcquisitionRole?.hermes,
+    ).toBeDefined();
+    const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(
+        biome,
+        host.occurrenceId,
+        roomActionKey(deliveryAction(entryKey)),
+      ),
+    });
+    const after = occurrenceOf(history.present, biome.biomeKey, host.occurrenceId);
+    expect(after.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]).toBeUndefined();
+    expect(after.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKeys[0]!]).toEqual(
+      occurrenceOf(project, biome.biomeKey, host.occurrenceId).acquisitionSites
+        ?.hermesShrineDelivery?.pickupEntries?.[entryKeys[0]!],
+    );
+    expect(undoProjectHistory(history).present).toBe(project);
+    const reloaded = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(history.present)) as unknown,
+      catalog,
+    );
+    const edited = applyProjectCommand(reloaded, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'secondRight',
+      value: { rewardType: 'ArmorBoost' },
+    });
+    expect(orderedDeliveryKeys(edited, biome.biomeKey, host.occurrenceId)).not.toContain(entryKey);
+  });
+
+  it('repairs an exact retained placement whose source occurrence was deleted', () => {
+    const { project: original, biome, host, entryKeys } = projectWithTwoSideRoomDeliveries();
+    const oldKey = entryKeys[0]!;
+    const missingSource = createOccurrenceAddress(
+      biome,
+      createOccurrenceId('deleted-shrine-source'),
+    );
+    const entryKey = hermesShrineDeliveryEntryKey(missingSource, 'initial:first');
+    const loaded = decodeProjectDocument(
+      {
+        ...original,
+        route: {
+          ...original.route,
+          biomes: original.route.biomes.map((plan) =>
+            plan.biomeKey !== biome.biomeKey || plan.topology === null
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    occurrences: plan.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== host.occurrenceId
+                        ? occurrence
+                        : {
+                            ...occurrence,
+                            acquisitionSites: {
+                              ...occurrence.acquisitionSites,
+                              hermesShrineDelivery: {
+                                pickupEntries: Object.fromEntries(
+                                  Object.entries(
+                                    occurrence.acquisitionSites!.hermesShrineDelivery!
+                                      .pickupEntries!,
+                                  ).map(([key, reward]) => [
+                                    key === oldKey ? entryKey : key,
+                                    reward,
+                                  ]),
+                                ),
+                              },
+                            },
+                            roomActions: {
+                              order: occurrence.roomActions.order.map((reference) =>
+                                reference.kind === 'interactAcquisitionEntry' &&
+                                reference.entryKey === oldKey
+                                  ? { ...reference, entryKey }
+                                  : reference,
+                              ),
+                            },
+                          },
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+    expect(
+      assessGeneratedPickupPlacement(loaded.route, host, deliveryAction(entryKey)),
+    ).toMatchObject({ kind: 'invalid', source: missingSource });
+    const removed = applyProjectCommand(loaded, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(
+        biome,
+        host.occurrenceId,
+        roomActionKey(deliveryAction(entryKey)),
+      ),
+    });
+    expect(orderedDeliveryKeys(removed, biome.biomeKey, host.occurrenceId)).toEqual([entryKeys[1]]);
+    expect(
+      occurrenceOf(removed, biome.biomeKey, host.occurrenceId).acquisitionSites
+        ?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+    ).toBeUndefined();
+  });
+
+  it('rejects local rushed unplacement and protects its required pickup', () => {
+    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+    const action = createRoomActionAddress(
+      oBiome,
+      source.occurrenceId,
+      roomActionKey(deliveryAction(entryKey)),
+    );
+    expect(() =>
+      applyProjectCommand(project, catalog, { kind: 'UnplaceGeneratedDelivery', action }),
+    ).toThrow('same-room Shrine delivery');
   });
 });

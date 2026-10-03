@@ -1,4 +1,8 @@
-export { assembleRoomActionRoster, scopeRoomActionRoster } from './assemble';
+export {
+  assessRoomActionPlacements,
+  assembleRoomActionRoster,
+  scopeRoomActionRoster,
+} from './assemble';
 export {
   appendSteadyGrowthTimelineEffects,
   appendTranscendentEmbryoTimelineEffects,

@@ -166,8 +166,10 @@ the optional Hermes-context plumbing and circular dependency superseded by the
 chosen product; do not simply layer another repair path on top.
 
 Primary tests: authored command/history and room-action authoring suites.
-Representative application witness: supplied-save-shaped stale delivery → finding
-navigation → usable unplacement → Undo. Use a minimal portable production-built
+Representative application witness: supplied-save-shaped stale delivery at a reached
+host → finding navigation → usable unplacement → Undo. Structural assessment of
+a retained host beyond evaluated coverage is completed in Gate B with its
+coverage integration; Gate A must not fabricate an evaluated room to expose it. Use a minimal portable production-built
 fixture, not a dependency on the owner's Downloads directory.
 
 ### B — Reached placement evidence and coverage
@@ -175,7 +177,9 @@ fixture, not a dependency on the owner's Downloads directory.
 Intended commit: `fix(engine): retain generated pickup placement repair evidence`.
 Extend the complete settlement product and consume it in roster/authoring
 assembly and application repair. Cover active sources with obsolete contacts,
-clocked pickups, payload-invalid live placements and unassessed contexts. Preserve
+clocked pickups, payload-invalid live placements and unassessed contexts. Expose
+independent structural assessment for retained hosts without an evaluated roster,
+respecting readiness and without synthesizing reached chronology. Preserve
 branch evidence, first-blocking ownership and existing exact placement queries.
 Remove superseded finding-to-editor fallbacks that route a proven-invalid
 placement into a reward picker. No new scheduler or contextual command validation.

@@ -48,7 +48,7 @@ export interface WorkspaceFigurineArcanaInteraction {
 }
 
 export interface WorkspaceRoomActionProposal {
-  readonly kind: 'insert' | 'move' | 'remove';
+  readonly kind: 'insert' | 'move' | 'remove' | 'unplace';
   readonly key: string;
   readonly label: string;
   readonly reference: RoomActionReference;
@@ -95,6 +95,7 @@ export interface WorkspaceRoomActionRow {
     readonly inlineTraitOffers: readonly WorkspaceTraitOfferControl[];
     readonly showOffer: boolean;
   };
+  readonly placementAssessment?: import('@run-planner/engine/simulation').RoomActionRow['placementAssessment'];
   readonly stale: boolean;
   /** Specialized removal authority for a retained stale base Shop purchase. */
   readonly shopParticipation?: {
@@ -299,12 +300,13 @@ export interface WorkspaceRoomActionInteraction {
   readonly fieldsCageOrderIntentFor?: (
     phaseKeys: readonly string[],
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFieldsCageOrder' }>>;
-  readonly intentFor: (
-    proposalKey: string,
-  ) => WorkspaceCommandIntent<
+  readonly intentFor: (proposalKey: string) => WorkspaceCommandIntent<
     Extract<
       ProjectCommand,
-      { readonly kind: 'InsertRoomAction' | 'RemoveRoomAction' | 'MoveRoomAction' }
+      {
+        readonly kind:
+          'InsertRoomAction' | 'RemoveRoomAction' | 'MoveRoomAction' | 'UnplaceGeneratedDelivery';
+      }
     >
   >;
   readonly key: string;
