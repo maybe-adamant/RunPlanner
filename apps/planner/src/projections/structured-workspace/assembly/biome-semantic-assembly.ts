@@ -444,6 +444,7 @@ function attachHubRoomPresentation(
       hubTimeline: host.hubTimeline ?? hub.fountain.marker,
     });
     markerDestinations.redirect([hub.fountain.outcomeMarker], host.key);
+    markerDestinations.setRoomTab([hub.fountain.outcomeMarker], 'overview');
   }
 }
 
@@ -962,8 +963,10 @@ export function assembleWorkspaceBiomeSemantics(
           marker: markerDestinations.marker(echoKeepsakeReplayAddress),
         })
       : undefined;
-  if (echoKeepsakeReplay !== undefined && entry !== undefined)
+  if (echoKeepsakeReplay !== undefined && entry !== undefined) {
     markerDestinations.redirect([echoKeepsakeReplay.marker], entry.key);
+    markerDestinations.setRoomTab([echoKeepsakeReplay.marker], 'overview');
+  }
   appendUniqueTopologyRemovalInteractionRequirements(
     topologyRemovalInteractionRequirements,
     topologyInteractions.topologyRemovalInteractionRequirements,

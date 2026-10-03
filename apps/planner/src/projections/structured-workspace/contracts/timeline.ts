@@ -60,8 +60,6 @@ export interface WorkspaceRoomActionProposal {
 
 export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
-  /** Engine-owned dependency/window evidence adapted into concise row copy. */
-  readonly issues: readonly string[];
   readonly key: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -85,7 +83,7 @@ export interface WorkspaceRoomActionRow {
   /** Artificer output identity authored at this source transformation checkpoint. */
   readonly artificerOutput?: {
     readonly control: WorkspaceRewardControl;
-    readonly label: 'Artificer item';
+    readonly label: 'Item';
   };
   /** Exact action-owned reward payload, never rediscovered from a rendered key. */
   readonly rewardPayload?: {

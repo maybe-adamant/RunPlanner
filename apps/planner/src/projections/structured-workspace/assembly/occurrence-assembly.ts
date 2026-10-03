@@ -710,6 +710,7 @@ export function assembleWorkspaceOccurrence(
   });
   input.markerDestinations.setRoomTab(
     [
+      roomSummary.marker,
       ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
       ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
       ...workspaceRoomFeatureMarkers(features),
@@ -723,6 +724,17 @@ export function assembleWorkspaceOccurrence(
   // The boss-door pool sits beside its door, so its findings route to Doors.
   if (bossDoorRewardStore?.kind === 'editor') {
     input.markerDestinations.setRoomTab([bossDoorRewardStore.marker], 'doors');
+  }
+  if (roomLocal.kind === 'shop') {
+    input.markerDestinations.setRoomTab(
+      [
+        ...roomLocal.offers.map((offer) => offer.rewardControl.marker),
+        ...roomLocal.supplementalOffers.flatMap((offer) =>
+          offer.kind === 'travelDealRefill' ? [offer.rewardControl.marker] : [],
+        ),
+      ],
+      'overview',
+    );
   }
   if (roomLocal.kind === 'fields') {
     input.markerDestinations.setRoomTab(
@@ -813,6 +825,9 @@ export function assembleWorkspaceOccurrence(
     );
     for (const row of roomActions.rows) {
       const acquisitionMarkers = Object.freeze([
+        ...(row.placement !== undefined && 'entry' in row.placement.command
+          ? [input.markerDestinations.marker(row.placement.command.entry)]
+          : []),
         ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
         ...(row.placementAssessment?.kind === 'invalid' &&
         row.reference.kind === 'interactAcquisitionEntry'
@@ -867,6 +882,8 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.setRoomTab(
         [
           row.marker,
+          ...(row.fountainRarity === undefined ? [] : [row.fountainRarity.marker]),
+          ...(row.artificerOutput === undefined ? [] : [row.artificerOutput.control.marker]),
           ...(row.rewardPayload?.showOffer === true ? [row.rewardPayload.control.marker] : []),
           ...acquisitionMarkers,
         ],

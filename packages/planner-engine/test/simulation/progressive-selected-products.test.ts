@@ -162,7 +162,7 @@ describe('progressive selected and blocked products', () => {
     );
     // The invariant `evaluateRouteAssembly` enforces: an invalid route always
     // selects an issue, and that issue names the same repair leaf.
-    expect(evaluation.route.issue).toMatchObject({ owner: address });
+    expect(evaluation.route.issue).toMatchObject({ owner: address, kind: 'incomplete' });
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'roomActionPlacementRequired', origin: address }),
     );

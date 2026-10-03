@@ -237,6 +237,7 @@ export function renderStaticHubDecisionWorkbench(
   routeKey = 'Surface',
   biomeKey = 'N',
   options: {
+    readonly navigationRevision?: number;
     readonly findingNavigationRevision?: number;
     readonly initialTab?: WorkspaceHubTab;
   } = {},
@@ -252,6 +253,9 @@ export function renderStaticHubDecisionWorkbench(
         findings={workspace.findingsByRepairTarget}
       >
         <HubDecisionWorkbench
+          {...(next.navigationRevision === undefined
+            ? {}
+            : { navigationRevision: next.navigationRevision })}
           {...(next.findingNavigationRevision === undefined
             ? {}
             : { findingNavigationRevision: next.findingNavigationRevision })}

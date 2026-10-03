@@ -80,7 +80,7 @@ const issue: AssessmentIssue = {
   kind: 'incomplete',
   owner: trait,
   regionKey: 'stable-trait-region',
-  reasons: [firstReason, secondReason],
+  reasons: [firstReason, secondReason, secondReason],
 };
 const destination: WorkspaceInspectorDestination = {
   biomeKey: 'F',
@@ -154,8 +154,9 @@ it('shows one grouped issue and selects its Timeline launcher without opening it
 
   const repair = screen.getByRole('button', { name: /choose a trait offer/i });
   expect(screen.getAllByRole('button')).toHaveLength(1);
-  expect(repair.textContent).not.toContain('cannot be generated');
-  expect(repair.querySelector('.finding-description')).toBeNull();
+  expect(repair.querySelector('.finding-description')?.textContent).toBe(
+    'Trait choices cannot appear together',
+  );
 
   fireEvent.click(repair);
 

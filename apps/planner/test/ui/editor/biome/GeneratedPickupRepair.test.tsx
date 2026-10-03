@@ -28,7 +28,7 @@ function occurrence(project: ProjectDocument, occurrenceId: string) {
     .find((room) => room.occurrenceId === occurrenceId)!;
 }
 
-it('runs rendered Unplace delivery as one exact authored edit and restores it through Undo', async () => {
+it('runs delivery deletion as one exact authored edit and restores it through Undo', async () => {
   const { project, host, source, entryKey } = createStaleSurfaceHermesDeliveryPlacement();
   const view = renderOccurrenceWorkbench(
     project,
@@ -40,16 +40,21 @@ it('runs rendered Unplace delivery as one exact authored edit and restores it th
   );
   const projected = workspaceProjection(view.application);
   expect(projected.authoringReadiness(host)).toBe('editable');
-  const button = screen.getByRole('button', { name: 'Unplace delivery' });
+  const button = screen.getByRole('button', { name: /Remove .*Delivery.* from timeline/i });
   expect(button.closest('[inert]')).toBeNull();
-  expect(button.classList.contains('secondary-action')).toBe(true);
+  expect(within(button.closest('li')!).queryByRole('button', { name: /^Move / })).toBeNull();
+  expect(button.classList.contains('danger-action')).toBe(true);
+  expect(
+    screen.queryByText('This delivery is no longer available. Remove it from the timeline.'),
+  ).toBeNull();
+  expect(document.querySelector('.room-action-issues')).toBeNull();
   const prior = view.application.store.getState().projectWorkspace;
   if (prior.kind !== 'openProject') throw new Error('project missing');
   const sourcePurchase = occurrence(prior.history.present, source.occurrenceId).hermesShrine
     ?.purchaseBySlot;
   await view.user.click(button);
   await waitFor(() =>
-    expect(screen.queryByRole('button', { name: 'Unplace delivery' })).toBeNull(),
+    expect(screen.queryByRole('button', { name: /Remove .*Delivery.* from timeline/i })).toBeNull(),
   );
   const repaired = view.application.store.getState().projectWorkspace;
   if (repaired.kind !== 'openProject') throw new Error('project missing');
@@ -62,7 +67,7 @@ it('runs rendered Unplace delivery as one exact authored edit and restores it th
     occurrence(repaired.history.present, source.occurrenceId).hermesShrine?.purchaseBySlot,
   ).toEqual(sourcePurchase);
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-  await screen.findByRole('button', { name: 'Unplace delivery' });
+  await screen.findByRole('button', { name: /Remove .*Delivery.* from timeline/i });
   const restored = view.application.store.getState().projectWorkspace;
   if (restored.kind !== 'openProject') throw new Error('project missing');
   expect(restored.history.present).toBe(prior.history.present);
@@ -89,9 +94,9 @@ it('renders two named structural repair targets under the actual earlier-blocker
     'button',
   );
   expect(repairs).toHaveLength(2);
-  expect(new Set(repairs.map((button) => button.textContent)).size).toBe(2);
+  expect(new Set(repairs.map((button) => button.getAttribute('aria-label'))).size).toBe(2);
   for (const button of repairs) {
-    expect(button.classList.contains('secondary-action')).toBe(true);
+    expect(button.classList.contains('danger-action')).toBe(true);
     expect(button.closest('[inert]')?.getAttribute('data-semantic-owner')).toBe(
       semanticAddressKey(host),
     );

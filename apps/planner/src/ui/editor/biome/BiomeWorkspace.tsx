@@ -525,6 +525,7 @@ export function BiomeWorkspace({
           ) : null
         ) : (
           <BiomeInspectorNode
+            navigationRevision={semanticNavigationRevision}
             frontier={biome.frontier}
             interactions={interactions}
             label={inspectorTitle}

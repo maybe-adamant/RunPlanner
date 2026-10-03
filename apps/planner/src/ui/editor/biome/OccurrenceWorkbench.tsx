@@ -1,3 +1,4 @@
+import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import {
@@ -34,6 +35,7 @@ interface OccurrenceWorkbenchProps {
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
   /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
+  readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly doors?: ReactNode;
   /** Exact room-owned additions to ordinary lifecycle rows. */
@@ -55,6 +57,7 @@ export function OccurrenceWorkbench({
   incomingDoor,
   initialTab,
   findingNavigationRevision,
+  navigationRevision,
   interactions,
   localVisit,
   initialSideRoomSlotKey,
@@ -72,17 +75,38 @@ export function OccurrenceWorkbench({
   const [tabState, setTabState] = useState({
     active: requestedTab,
     findingNavigationRevision,
+    navigationRevision,
     roomIdentity,
     requested: requestedTab,
   });
-  const selectedTab =
-    tabState.roomIdentity === roomIdentity &&
-    tabState.requested === requestedTab &&
-    tabState.findingNavigationRevision === findingNavigationRevision
-      ? tabState.active
-      : requestedTab;
+  const findingCleared =
+    tabState.findingNavigationRevision !== undefined &&
+    findingNavigationRevision === undefined &&
+    tabState.navigationRevision === navigationRevision;
+  if (
+    tabState.roomIdentity !== roomIdentity ||
+    tabState.navigationRevision !== navigationRevision ||
+    tabState.requested !== requestedTab ||
+    tabState.findingNavigationRevision !== findingNavigationRevision
+  ) {
+    setTabState({
+      active:
+        tabState.roomIdentity === roomIdentity && findingCleared ? tabState.active : requestedTab,
+      findingNavigationRevision,
+      navigationRevision,
+      roomIdentity,
+      requested: requestedTab,
+    });
+  }
+  const selectedTab = tabState.active;
   const setActiveTab = (tab: WorkspaceRoomTab): void =>
-    setTabState({ active: tab, findingNavigationRevision, roomIdentity, requested: requestedTab });
+    setTabState({
+      active: tab,
+      navigationRevision,
+      findingNavigationRevision,
+      roomIdentity,
+      requested: requestedTab,
+    });
   const idPrefix = `occurrence-${room.occurrenceId}`;
   const tabId = (tab: WorkspaceRoomTab): string => `${idPrefix}-tab-${tab}`;
   const panelId = `${idPrefix}-panel`;
@@ -287,26 +311,23 @@ export function OccurrenceWorkbench({
         )}
         {showTimelineLegend && room.placementRepairs !== undefined ? (
           <section aria-label="Placement repairs">
-            <p>
-              This delivery source is absent or inactive; unplace the retained delivery to repair
-              it.
-            </p>
             {room.placementRepairs.map((repair) => (
-              <button
-                key={repair.proposalKey}
-                className="secondary-action action-compact"
-                type="button"
-                onClick={() =>
-                  executeIntent(
-                    requireWorkspaceInteraction(
-                      interactions.roomActions,
-                      workspaceInteractionKey(room.address),
-                    ).intentFor(repair.proposalKey),
-                  )
-                }
-              >
-                Unplace delivery · {repair.label}
-              </button>
+              <div className="room-placement-repair" key={repair.proposalKey}>
+                <span>{repair.label}</span>
+                <TimelineActionDeleteButton
+                  enabled
+                  explanation="Remove this delivery and its reward details while keeping the source purchase."
+                  label={repair.label}
+                  onRemove={() =>
+                    executeIntent(
+                      requireWorkspaceInteraction(
+                        interactions.roomActions,
+                        workspaceInteractionKey(room.address),
+                      ).intentFor(repair.proposalKey),
+                    )
+                  }
+                />
+              </div>
             ))}
           </section>
         ) : null}

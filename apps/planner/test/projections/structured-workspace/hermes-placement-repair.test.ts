@@ -109,7 +109,7 @@ it('publishes independent structural repair behind an earlier blocker without an
   ).toBe('UnplaceGeneratedDelivery');
 });
 
-it('binds reached active-source obsolete placement to unplace with reason-specific copy', () => {
+it('binds reached active-source obsolete placement to unplace without duplicate row guidance', () => {
   let project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
   const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
   const dueHost = project.route.biomes
@@ -139,9 +139,7 @@ it('binds reached active-source obsolete placement to unplace with reason-specif
     (row) => roomActionKey(row.reference) === roomActionKey(reference),
   );
   expect(row?.placementAssessment).toMatchObject({ kind: 'invalid', reason: 'dueContactMismatch' });
-  expect(row?.issues).toEqual([
-    'This pickup does not belong at this contact; remove its retained placement to repair it.',
-  ]);
+  expect(row).not.toHaveProperty('issues');
   expect(row?.rewardPayload).toBeUndefined();
   const interaction = projected.workspace.interactions.roomActions.get(semanticAddressKey(host));
   const proposal = interaction?.proposals.find((proposal) => proposal.kind === 'unplace');

@@ -37,6 +37,7 @@ import {
   presentBiomeFeedbackContext,
   presentBiomeStatus,
   presentFinding,
+  presentAssessmentIssue,
   presentProjectStatus,
   presentRouteStatus,
   projectFeedbackHierarchy,
@@ -378,5 +379,57 @@ describe('evaluation presentation', () => {
       'Ephyra',
     );
     expect(findingDestinationLabel(catalog, createHubRoomAddress(nBiome, 'hub'))).toBe('Ephyra');
+  });
+});
+
+describe('timeline finding guidance', () => {
+  const origin = createProjectAddress();
+  const finding = (reason: string, dependencyKind?: string): SemanticFinding => ({
+    code: 'roomActionOrderUnavailable',
+    severity: 'error',
+    phase: 'encounterResolution',
+    origin,
+    evidence: { reason, ...(dependencyKind === undefined ? {} : { dependencyKind }) },
+  });
+
+  it('groups distinct order reasons without duplicate guidance or internal keys', () => {
+    const dependency = finding('dependency', 'afterCheckpoint');
+    const issue = {
+      owner: origin,
+      regionKey: 'test',
+      kind: 'invalid',
+      reasons: [dependency, dependency, finding('window')],
+    } as const satisfies AssessmentIssue;
+    expect(presentAssessmentIssue(issue)).toEqual({
+      title: 'Action out of order',
+      description:
+        'Move this action after its prerequisite. Move this action into its allowed room phase.',
+    });
+    expect(presentFinding(finding('dependency', 'beforeCheckpoint')).description).toBe(
+      'Move this action before its required checkpoint.',
+    );
+  });
+
+  it.each([
+    [
+      'staleHermesShrineDelivery',
+      'Shrine delivery unavailable',
+      'Remove this delivery from the timeline.',
+    ],
+    [
+      'staleClockedTraitPickup',
+      'Pickup unavailable',
+      'Check this pickup’s source and room placement.',
+    ],
+  ])('explains %s from its source evidence', (reason, title, description) => {
+    expect(
+      presentFinding({
+        code: 'rewardSourceUnavailable',
+        severity: 'error',
+        phase: 'rewardGeneration',
+        origin,
+        evidence: { reason },
+      }),
+    ).toEqual({ title, description });
   });
 });

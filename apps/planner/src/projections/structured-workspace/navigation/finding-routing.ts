@@ -92,7 +92,12 @@ export function assertFineGrainedFindingDestination(
         : route.biomes
             .find((biome) => biome.biomeKey === destination.biomeKey)
             ?.nodes.find((node) => node.key === destination.nodeKey);
-  if (exactNode?.kind === 'occurrenceWorkbench' && destination?.roomTab !== undefined) {
+  if (exactNode?.kind === 'occurrenceWorkbench') {
+    if (destination.roomTab === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} finding has no explicit room tab`,
+      );
+    }
     const workbench = exactNode.room.workbench;
     const tab = destination.roomTab;
     const valid =

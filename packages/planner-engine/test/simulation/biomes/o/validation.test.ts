@@ -340,6 +340,30 @@ describe('selected O validation', () => {
         detail: 'afterCheckpoint nextPhaseUsable:wheel1',
       }),
     );
+    const invalid = simulateProject(catalog, invalidOrder);
+    const owner = createRoomActionAddress(
+      oBiome,
+      oOccurrenceIds.combat07,
+      roomActionKey(wheel2Choice),
+    );
+    expect(invalid.route.issue).toMatchObject({ owner, kind: 'invalid' });
+    expect(invalid.route.issue?.reasons).toEqual(
+      invalidRoom.roomActionRoster.issues.flatMap((issue) =>
+        roomActionKey(issue.reference) === roomActionKey(wheel2Choice) &&
+        (issue.kind === 'dependency' || issue.kind === 'window')
+          ? [
+              expect.objectContaining({
+                code: 'roomActionOrderUnavailable',
+                origin: owner,
+                evidence: expect.objectContaining({ reason: issue.kind, detail: issue.detail }),
+              }),
+            ]
+          : [],
+      ),
+    );
+    expect(invalid.findings.some((finding) => finding.code === 'roomActionPlacementRequired')).toBe(
+      false,
+    );
   });
 
   it('keeps dormant Wheel 2 out of a two-phase chronology and resolves outgoing from Wheel 1', () => {
@@ -428,6 +452,14 @@ describe('selected O validation', () => {
       (row) => row.reference.kind === 'interactEncounter' && row.reference.phaseKey === 'Combat2',
     );
     expect(dormantContact).toMatchObject({ stale: true });
+    const dormantEvaluation = simulateProject(catalog, withTwo);
+    expect(
+      dormantEvaluation.findings.some(
+        (finding) =>
+          finding.code === 'roomActionOrderUnavailable' ||
+          finding.code === 'roomActionPlacementRequired',
+      ),
+    ).toBe(false);
     expect(
       dormantRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
     ).not.toContain('combat:Combat2');

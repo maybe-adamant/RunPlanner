@@ -413,7 +413,9 @@ Aggregated diagnostic ranges are not authorization to merge semantic states.
 
 Findings carry stable semantic origin, code, severity and typed evidence.
 Instance identity belongs in the address, not the code. Messages and display
-labels are application products.
+labels are application products. An actual lifecycle action block retains each
+matching dependency or window violation as invalid ordering; a missing required
+action remains incomplete. Dormant stale roster rows do not create findings.
 
 Three responsibilities stay separate:
 

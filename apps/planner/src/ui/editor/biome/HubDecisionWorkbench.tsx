@@ -34,6 +34,7 @@ interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly initialTab?: WorkspaceHubTab;
   /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
+  readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
@@ -58,6 +59,7 @@ export function HubDecisionWorkbench({
   frontier,
   initialTab,
   findingNavigationRevision,
+  navigationRevision,
   interactions,
   node,
 }: HubDecisionWorkbenchProps) {
@@ -115,6 +117,7 @@ export function HubDecisionWorkbench({
   const [tabState, setTabState] = useState({
     active: requestedTab,
     findingNavigationRevision,
+    navigationRevision,
     hubIdentity,
     requested: requestedTab,
   });
@@ -158,18 +161,38 @@ export function HubDecisionWorkbench({
     pendingOverviewFocus.current = false;
     overviewNavigation.current?.focus({ preventScroll: true });
   }, [overviewView]);
-  const activeTab =
-    tabState.hubIdentity === hubIdentity &&
-    tabState.requested === requestedTab &&
-    tabState.findingNavigationRevision === findingNavigationRevision
-      ? tabState.active
-      : requestedTab;
+  const findingCleared =
+    tabState.findingNavigationRevision !== undefined &&
+    findingNavigationRevision === undefined &&
+    tabState.navigationRevision === navigationRevision;
+  if (
+    tabState.hubIdentity !== hubIdentity ||
+    tabState.navigationRevision !== navigationRevision ||
+    tabState.requested !== requestedTab ||
+    tabState.findingNavigationRevision !== findingNavigationRevision
+  ) {
+    setTabState({
+      active:
+        tabState.hubIdentity === hubIdentity && findingCleared ? tabState.active : requestedTab,
+      findingNavigationRevision,
+      navigationRevision,
+      hubIdentity,
+      requested: requestedTab,
+    });
+  }
+  const activeTab = tabState.active;
   const nextVisitTarget =
     activeTab !== 'timeline' || nextVisit === undefined
       ? undefined
       : findingTarget(nextVisit.marker.address, undefined, node.owner);
   const setActiveTab = (tab: WorkspaceHubTab): void =>
-    setTabState({ active: tab, findingNavigationRevision, hubIdentity, requested: requestedTab });
+    setTabState({
+      active: tab,
+      navigationRevision,
+      findingNavigationRevision,
+      hubIdentity,
+      requested: requestedTab,
+    });
   const pendingMembershipFocus = useRef<PendingHubMembershipFocus | undefined>(undefined);
   // Overview keeps every fixed slot in one stable declaration-ordered grid.
   // After a keyboard membership edit remounts that card, restore focus to the
