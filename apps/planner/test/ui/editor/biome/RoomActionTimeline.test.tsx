@@ -366,6 +366,7 @@ describe('OccurrenceRoomActions', () => {
       'automatic',
     );
     expect(screen.queryByText('No eligible trait')).toBeNull();
+    expect(screen.queryByText('Needs repair')).toBeNull();
     await screen.findByRole('button', { name: 'Clear recorded target' }).then((button) =>
       act(() => {
         button.click();

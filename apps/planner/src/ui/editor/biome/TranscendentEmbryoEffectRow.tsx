@@ -114,7 +114,6 @@ export function TranscendentEmbryoEffectRow({
         )}
         {domain?.selectedPossible === false && selected !== '' ? (
           <>
-            <span className="finding-badge">Needs repair</span>
             <button
               className="quiet-action"
               onClick={() => executeIntent(interaction.intentFor(null))}

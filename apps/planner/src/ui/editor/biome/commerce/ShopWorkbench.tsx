@@ -98,7 +98,6 @@ export function ShopWorkbench({
               <div className="shop-family-offer-row shop-family-offer-invalid" key={offer.key}>
                 <div>
                   <strong>Travel Deal</strong>
-                  <span>{offer.explanation}</span>
                 </div>
                 <label className="shop-family-participation">
                   <input

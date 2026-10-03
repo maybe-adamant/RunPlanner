@@ -175,7 +175,7 @@ describe('reward editor projections', () => {
     expect(within(listbox).queryByText('Ashes')).toBeNull();
   });
 
-  it('renders the typed explanation for a selected-invalid reward', async () => {
+  it('keeps the selected-invalid reward explanation inside the picker', async () => {
     const maxHealth = { rewardType: 'MaxHealthDrop' } as const;
     let project = createGoldenFGHIProject();
     project = applyProjectCommand(project, catalog, {
@@ -197,9 +197,11 @@ describe('reward editor projections', () => {
 
     await user.click(screen.getByLabelText('Reward'));
 
-    expect(
-      await screen.findAllByText('This reward conflicts with the offer on Door 1.'),
-    ).toHaveLength(2);
+    const explanation = 'This reward conflicts with the offer on Door 1.';
+    expect(await within(screen.getByRole('listbox')).findByText(explanation)).toBeTruthy();
+    expect(screen.getAllByText(explanation)).toHaveLength(1);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByText(explanation)).toBeNull();
   });
 
   it('keeps a pending interaction open and exposes an explicit cancel action', async () => {

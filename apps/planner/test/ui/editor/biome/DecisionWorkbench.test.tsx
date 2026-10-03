@@ -1921,6 +1921,11 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(ordinaryOwner),
     );
     expect(document.querySelector('[data-command="ReconcileBatchExitCapacity"]')).not.toBeNull();
+    expect(
+      screen.queryByText(
+        'This saved door is no longer available here. Fix the earlier route first.',
+      ),
+    ).toBeNull();
     const repair = screen.getByRole('button', { name: 'Remove unavailable doors' });
     expect(repair.classList.contains('danger-action')).toBe(true);
     await ordinary.user.click(repair);

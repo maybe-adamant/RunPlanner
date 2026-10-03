@@ -1,3 +1,4 @@
+import { presentFinding } from '@planner/projections/evaluationProjection';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -773,6 +774,10 @@ describe('workspace inspector destinations', () => {
       throw new Error(
         `stale Travel Deal finding is missing: ${JSON.stringify(assembled.evaluation.findings)}`,
       );
+    expect(presentFinding(finding)).toEqual({
+      title: 'Travel Deal refill unavailable',
+      description: 'Check the triggering purchase and refill item, or remove this refill purchase.',
+    });
     const workspace = structuredWorkspace.project(assembled);
     const target = destination(workspace, finding.origin);
     const shop = biome(workspace, 'G').nodes.find(

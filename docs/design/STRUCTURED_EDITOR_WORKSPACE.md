@@ -835,7 +835,10 @@ remains visible as incomplete with its authored visits retained.
 
 Use accessible primitives for popovers, radio groups, disclosures, status
 announcements, and keyboard navigation. The contextual picker uses Radix
-Popover plus `cmdk`, styled through the existing hand-written CSS. No
+Popover plus `cmdk`, styled through the existing hand-written CSS. Candidate
+explanations stay inside the popover; loading or changing a selection never adds
+explanatory text below its trigger. The trigger retains its accessible description
+and invalid-state indication without adding layout space. No
 removal-confirmation dialog dependency is required for in-project editing.
 Confirmation is reserved for operations that are both externally consequential
 and not recoverable through project history. Tailwind adoption and literal

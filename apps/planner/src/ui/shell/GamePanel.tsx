@@ -285,7 +285,6 @@ function LocationSection({
           onSelect={onSelectProfile}
           open={pickerOpen}
           placeholder="Choose a profile…"
-          selectedExplanation="never"
         />
       )}
     </section>

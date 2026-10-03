@@ -86,6 +86,39 @@ function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFi
 }
 
 describe('evaluation presentation', () => {
+  it('explains unavailable physical doors without changing other room findings', () => {
+    expect(
+      presentFinding({
+        ...finding('targetRoomUnavailable'),
+        evidence: { exclusionReasons: ['physicalExitUnavailable'] },
+      }),
+    ).toEqual({
+      title: 'Saved door unavailable',
+      description: 'Restore the source room’s doors or use Remove unavailable doors.',
+    });
+    expect(
+      presentFinding({
+        ...finding('targetRoomUnavailable'),
+        evidence: { exclusionReasons: ['eligibilityRequirement'] },
+      }),
+    ).toEqual({ title: 'Room unavailable' });
+  });
+
+  it('gives Travel Deal repair guidance without assuming its triggering purchase is absent', () => {
+    expect(
+      presentFinding({
+        ...finding('shopPurchaseUnavailable'),
+        evidence: { kind: 'travelDealRefillUnavailable' },
+      }),
+    ).toEqual({
+      title: 'Travel Deal refill unavailable',
+      description: 'Check the triggering purchase and refill item, or remove this refill purchase.',
+    });
+    expect(presentFinding(finding('shopPurchaseUnavailable'))).toEqual({
+      title: 'Purchase order unavailable',
+    });
+  });
+
   it('distinguishes Chaos position repair from other unavailable-room findings', () => {
     const gate = createAdditionalExitAddress(biome, createOccurrenceId('source'), 'chaos');
     const position: SemanticFinding = {

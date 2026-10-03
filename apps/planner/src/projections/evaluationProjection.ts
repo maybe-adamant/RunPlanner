@@ -574,6 +574,25 @@ export function isChaosGatePositionFinding(finding: SemanticFinding): boolean {
 }
 
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
+  if (
+    finding.code === 'targetRoomUnavailable' &&
+    Array.isArray(finding.evidence.exclusionReasons) &&
+    finding.evidence.exclusionReasons.includes('physicalExitUnavailable')
+  ) {
+    return Object.freeze({
+      title: 'Saved door unavailable',
+      description: 'Restore the source room’s doors or use Remove unavailable doors.',
+    });
+  }
+  if (
+    finding.code === 'shopPurchaseUnavailable' &&
+    finding.evidence.kind === 'travelDealRefillUnavailable'
+  ) {
+    return Object.freeze({
+      title: 'Travel Deal refill unavailable',
+      description: 'Check the triggering purchase and refill item, or remove this refill purchase.',
+    });
+  }
   if (finding.code === 'rewardSourceUnavailable') {
     if (finding.evidence.reason === 'staleHermesShrineDelivery') {
       return Object.freeze({
