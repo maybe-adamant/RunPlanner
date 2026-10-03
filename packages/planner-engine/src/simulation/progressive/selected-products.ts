@@ -501,7 +501,7 @@ export function retainBlockedRegionProducts(
   // needs repair. Missing child authorship does not undo inventory generation.
   const rewardOwner = ancestors.rewardOwner;
   const blockedShopSite =
-    rewardOwner?.kind === 'shopOffer' && rewardOwner.offerKey === 'travelDealRefill'
+    rewardOwner?.kind === 'shopOffer'
       ? createAcquisitionSiteAddress(
           createOccurrenceAddress(
             createBiomeAddress(rewardOwner.routeKey, rewardOwner.biomeKey),
@@ -509,32 +509,38 @@ export function retainBlockedRegionProducts(
           ),
           'roomExit',
         )
-      : blockedDerivedAcquisitionAt?.entryKey === 'travelDealRefill' &&
-          blockedDerivedAcquisitionAt.site.pointKey === 'roomExit'
-        ? blockedDerivedAcquisitionAt.site
+      : rewardOwner?.kind === 'acquisitionEntry' && rewardOwner.site.pointKey === 'roomExit'
+        ? rewardOwner.site
         : undefined;
-  const blockedShopEntry =
+  const blockedShopEntries =
     blockedShopSite === undefined
-      ? undefined
-      : [selectedArtifacts, blockedArtifacts]
+      ? []
+      : [blockedArtifacts, selectedArtifacts]
           .flatMap((artifacts) => artifacts.derivedAcquisitionEntries.entriesAt(blockedShopSite))
-          .find((entry) => entry.capability.kind === 'travelDealRefill');
+          .filter(
+            (entry) =>
+              entry.capability.kind === 'travelDealRefill' ||
+              entry.capability.kind === 'echoDoubleShopReward',
+          );
+  const reachedShopEntries = new Map(
+    blockedShopEntries.map((entry) => [semanticAddressKey(entry.address), entry]),
+  );
   const derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts =
-    blockedShopSite === undefined || blockedShopEntry === undefined
+    blockedShopSite === undefined || reachedShopEntries.size === 0
       ? retainedDerivedEntries
       : Object.freeze({
-          at: retainedDerivedEntries.at,
+          at: (address: AcquisitionEntryAddress) =>
+            reachedShopEntries.get(semanticAddressKey(address))?.capability ??
+            retainedDerivedEntries.at(address),
           entriesAt: (site: import('../../authored-project/addresses').AcquisitionSiteAddress) => {
             const entries = retainedDerivedEntries.entriesAt(site);
             return semanticAddressKey(site) !== semanticAddressKey(blockedShopSite)
               ? entries
               : Object.freeze([
                   ...entries.filter(
-                    (entry) =>
-                      entry.capability.kind !== 'travelDealRefill' &&
-                      entry.capability.kind !== 'travelDealPlaceholder',
+                    (entry) => !reachedShopEntries.has(semanticAddressKey(entry.address)),
                   ),
-                  blockedShopEntry,
+                  ...reachedShopEntries.values(),
                 ]);
           },
         });

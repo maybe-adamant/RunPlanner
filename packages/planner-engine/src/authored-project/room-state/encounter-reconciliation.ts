@@ -148,7 +148,34 @@ export function reconcileRoomEncounterState(
     if (Object.keys(retained).length > 0)
       customizationByPhase[binding.slotKey] = Object.freeze(retained);
   }
+  const compatibleBoss =
+    previousRoom.mode.kind === 'authored' &&
+    previousRoom.mode.templateKey === 'Boss' &&
+    replacementRoom.mode.kind === 'authored' &&
+    replacementRoom.mode.templateKey === 'Boss';
   return Object.freeze({
+    ...(compatibleBoss && previous.judgmentArcanaKeysByPhase !== undefined
+      ? {
+          judgmentArcanaKeysByPhase: Object.freeze(
+            Object.fromEntries(
+              Object.entries(previous.judgmentArcanaKeysByPhase).filter(([phase]) =>
+                replacementBindings.has(phase),
+              ),
+            ),
+          ),
+        }
+      : {}),
+    ...(compatibleBoss && previous.figurineArcanaKeysByPhase !== undefined
+      ? {
+          figurineArcanaKeysByPhase: Object.freeze(
+            Object.fromEntries(
+              Object.entries(previous.figurineArcanaKeysByPhase).filter(([phase]) =>
+                replacementBindings.has(phase),
+              ),
+            ),
+          ),
+        }
+      : {}),
     ...(previous.steadyGrowthTargetByPhase === undefined
       ? {}
       : {

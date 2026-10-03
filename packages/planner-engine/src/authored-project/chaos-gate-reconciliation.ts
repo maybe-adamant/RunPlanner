@@ -351,7 +351,12 @@ export function reconcileChaosTopology(
     const routeKey = route.routeKey;
     for (let biomeIndex = 0; biomeIndex < route.biomes.length; biomeIndex += 1) {
       const plan = next.route.biomes[biomeIndex]!;
-      for (const source of plan.topology?.occurrences ?? []) {
+      for (const previousSource of plan.topology?.occurrences ?? []) {
+        // Removing an earlier generated detour can also remove this host.
+        const source = next.route.biomes[biomeIndex]?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === previousSource.occurrenceId,
+        );
+        if (source === undefined) continue;
         const generated = source.additionalExits.find(
           (exit) => exit.kind === 'chaos' && exit.origin?.kind === 'ixionGenerated',
         );

@@ -16,7 +16,7 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
+import { createEchoGoldHPrebossProject } from '@run-planner/test-fixtures/underworld';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -25,6 +25,7 @@ import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-wo
 import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
+  authoredProjectRedoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 
 afterEach(cleanup);
@@ -75,7 +76,27 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   ).toBe(false);
 });
 
-it('requires placement of a duplicated Boon and exposes its fresh trait editor on the Timeline', async () => {
+it('adds required Gold with the purchase and restores both through one Undo and Redo', async () => {
+  const project = createEchoGoldHPrebossProject();
+  const view = renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(shopId));
+  openRoomTab('Room Overview');
+  await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
+  const history = view.application.store.getState().projectWorkspace.history!;
+  expect(history.past).toHaveLength(1);
+  openRoomTab('Room Timeline');
+  expect(goldRow().queryByRole('button', { name: 'Restore pickup' })).toBeNull();
+  expect(
+    (goldRow().getByRole('button', { name: /Remove .* from timeline/ }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  expect(goldRow().getByRole('button', { name: /Move .*Gold Gold Gold/ })).toBeTruthy();
+  act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+  expect(view.application.store.getState().projectWorkspace.history!.present).toBe(project);
+  act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+  expect(view.application.store.getState().projectWorkspace.history!.present).toBe(history.present);
+});
+
+it('restores an imported missing duplicated Boon and exposes its fresh trait editor on the Timeline', async () => {
   const project = authorLegalTraitOffers(
     applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
       kind: 'ReplaceShopPurchaseParticipation',
@@ -101,7 +122,7 @@ it('requires placement of a duplicated Boon and exposes its fresh trait editor o
   expect(screen.queryByText(/^Gold Gold Gold duplicate of/)).toBeNull();
   openRoomTab('Room Timeline');
   expect(goldRow().queryByRole('button', { name: 'Reward' })).toBeNull();
-  await view.user.click(goldRow().getByRole('button', { name: 'Place required pickup' }));
+  await view.user.click(goldRow().getByRole('button', { name: 'Restore pickup' }));
   expect(findings().some((finding) => finding.code === 'echoGoldPickupPlacementRequired')).toBe(
     false,
   );

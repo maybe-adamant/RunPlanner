@@ -75,7 +75,8 @@ and violated internal contacts throw contract errors rather than masquerading
 as user findings.
 
 `settleProjectEdit` composes a structural command with exact timed-effect
-reconciliation before application history publication. It consumes the before
+reconciliation and derived required-action activation before application history
+publication. It consumes the before
 assembly and returns the final project and its exact assembly. Required Hermes
 obligations are inserted at reached due contacts; optional clocked pickups are
 never accepted automatically. Proven displaced payload and automatic outcomes

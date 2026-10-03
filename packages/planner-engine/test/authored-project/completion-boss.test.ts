@@ -16,6 +16,9 @@ import {
   createProjectDocument,
   createTargetAddress,
   createProjectHistory,
+  createFigurineArcanaAddress,
+  createJudgmentArcanaAddress,
+  createRouteStartKeepsakeSelectionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   resolveCompletionBoss,
@@ -36,6 +39,64 @@ import {
 } from '@run-planner/engine/simulation';
 
 describe('completion Boss variants', () => {
+  it('retains boss-owned Arcana outcomes through Rivals reconstruction and Undo', () => {
+    const owner = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('golden-f-preboss-shop:boss'),
+    );
+    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'BossMetaUpgradeKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigurineArcana',
+      figurine: createFigurineArcanaAddress(owner, 'Encounter'),
+      arcanaKeys: ['ChanneledCast', 'HealthRegen'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceJudgmentArcana',
+      judgment: createJudgmentArcanaAddress(owner, 'Encounter'),
+      arcanaKeys: ['CardDraw'],
+    });
+    const bossAt = (value: typeof project) =>
+      value.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === owner.occurrenceId,
+      )!;
+    const before = bossAt(project).encounters;
+    for (const rank of [1, 0]) {
+      const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+        kind: 'ReplaceFearVowRank',
+        route: { kind: 'route', routeKey: 'Underworld' },
+        vowKey: 'BossDifficultyShrineUpgrade',
+        rank,
+      });
+      expect(bossAt(history.present).encounters.figurineArcanaKeysByPhase).toEqual(
+        before.figurineArcanaKeysByPhase,
+      );
+      expect(bossAt(history.present).encounters.judgmentArcanaKeysByPhase).toEqual(
+        before.judgmentArcanaKeysByPhase,
+      );
+      const evaluated = simulateProject(catalog, history.present);
+      expect(evaluated.findings.some((finding) => finding.code.startsWith('figurineOutcome'))).toBe(
+        false,
+      );
+      const f = evaluated.route.biomes[0]!;
+      expect(
+        'rewards' in f &&
+          f.rewards.branches.some((branch) =>
+            branch.state.arcanaFear.events.some(
+              (event) =>
+                event.kind === 'temporaryArcanaActivated' && event.owner.kind === 'figurineArcana',
+            ),
+          ),
+      ).toBe(true);
+      expect(undoProjectHistory(history).present).toBe(project);
+      expect(redoProjectHistory(undoProjectHistory(history)).present).toBe(history.present);
+      project = history.present;
+    }
+  });
+
   it('does not materialize a host-family Postboss when route context resolves a Dream identity', () => {
     const ordinary = loadUnderworldFGProject();
     const plan = ordinary.route.biomes.find((biome) => biome.biomeKey === 'F')!;

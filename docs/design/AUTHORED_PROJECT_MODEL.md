@@ -669,10 +669,14 @@ entry and applies its first child edit as one command, so Undo restores the
 previous payload without a separate identity-confirmation edit. The command
 trusts the caller's `sourceOffer` seed; evaluation derives the replay identity
 from history, overriding a stale seed with a `traitOfferMissing` finding.
-`PlaceEchoGoldPickup` atomically materializes the source-derived Gold pickup
-with unresolved children and inserts it in `roomActions.order`. Subsequent
-outcome edits use the ordinary acquisition, trait, level, and conversion
-commands; removal retains its payload for later placement. Travel uses
+Required Gold Gold Gold pickups join `roomActions.order` in the edit that newly
+activates them, after exact agreeing materialization evidence. Prior optional or
+inactive evidence establishes that delta; an unassessed prior Shop does not.
+Existing missing required pickups remain explicitly restorable, and loading stays
+read-only. `PlaceEchoGoldPickup` materializes unresolved children for that repair
+and for optional collection. Retained payload remains available for exact source
+mismatch repair; a changed trigger does not reset it. Subsequent outcome edits use
+the ordinary acquisition, trait, level, and conversion commands. Travel uses
 ordinary Shop inventory commands, not this derived-pickup family.
 
 The engine classifies every structurally active Room Action as required or

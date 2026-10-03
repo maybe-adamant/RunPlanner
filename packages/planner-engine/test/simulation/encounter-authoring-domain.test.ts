@@ -4,6 +4,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -43,59 +44,77 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { loadUnderworldGeneratedCompositionCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 describe('encounter choice identity context', () => {
-  it('prepares Erebus fixed identities from effective Shadow after prior Black Night suppression', () => {
-    const project = createGoldenFGHIProject();
-    const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes[0];
-    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
-      throw new Error('F fixture invalid');
-    const loadout = {
-      ...createDefaultRouteLoadout(catalog),
-      fearRanks: { ...createDefaultRouteLoadout(catalog).fearRanks, MinibossCountShrineUpgrade: 1 },
-    };
-    const active = createArcanaFearState(catalog, loadout);
-    const suppressed = suppressFearVows(catalog, active, ['MinibossCountShrineUpgrade'], {
-      owner: createBiomeAddress('Underworld', 'F'),
-      sequence: 1,
-    });
-    if (!suppressed.legal) throw new Error('Shadow suppression is unavailable');
-    expect(suppressed.state.fear.configuredRanks.MinibossCountShrineUpgrade).toBe(1);
-    expect(() =>
-      attestEffectiveShadowRank(loadout, [
-        { state: { arcanaFear: active } },
-        { state: { arcanaFear: suppressed.state } },
-      ]),
-    ).toThrow(/divergent/);
-    expect(() => attestEffectiveShadowRank(loadout, [])).toThrow(/empty/);
-    for (const [gameName, encounterKey] of [['F_MiniBoss01', 'MiniBossTreant']]) {
-      const room = biome.snapshot.decisions
-        .flatMap((decision) =>
-          decision.kind === 'batch' ? decision.targets.map((target) => target.room) : [],
-        )
-        .find((value) => value.gameName === gameName);
-      const preparation = biome.history.rooms.find(
-        (value) =>
-          value.origin.kind === 'occurrence' && value.origin.occurrenceId === room?.occurrenceId,
-      )?.preparation;
-      if (room === undefined || preparation === undefined)
-        throw new Error('Missing miniboss preparation');
-      for (const state of [active, suppressed.state]) {
-        const rank = attestEffectiveShadowRank(loadout, [
-          { state: { arcanaFear: state } },
-          { state: { arcanaFear: state } },
-        ]);
-        const prepared = prepareRoomEncounterPhases(
-          catalog,
-          room,
-          ordinaryPositionFor(catalog, room.origin),
-          preparation,
-          { effectiveShadowRank: rank },
-        );
-        expect(prepared.validPrefix[0]?.encounterKey).toBe(
-          rank > 0 ? `${encounterKey}_Shrine` : encounterKey,
-        );
+  it.each([
+    ['F_MiniBoss01', 'MiniBossTreant', 'exit1'],
+    ['F_MiniBoss02', 'MiniBossFogEmitter', 'exit2'],
+  ])(
+    'prepares %s from effective Shadow after prior Black Night suppression',
+    (gameName, encounterKey, exitKey) => {
+      const project = authorLegalTraitOffers(
+        applyProjectCommand(createGoldenFGHIProject(), catalog, {
+          kind: 'SetExitSelection',
+          selection: createExitSelectionAddress(createBiomeAddress('Underworld', 'F'), {
+            kind: 'occurrence',
+            occurrenceId: goldenFOccurrenceId(5, 1),
+          }),
+          value: { kind: 'normal', exitKey },
+        }),
+      );
+      const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes[0];
+      if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+        throw new Error('F fixture invalid');
+      const loadout = {
+        ...createDefaultRouteLoadout(catalog),
+        fearRanks: {
+          ...createDefaultRouteLoadout(catalog).fearRanks,
+          MinibossCountShrineUpgrade: 1,
+        },
+      };
+      const active = createArcanaFearState(catalog, loadout);
+      const suppressed = suppressFearVows(catalog, active, ['MinibossCountShrineUpgrade'], {
+        owner: createBiomeAddress('Underworld', 'F'),
+        sequence: 1,
+      });
+      if (!suppressed.legal) throw new Error('Shadow suppression is unavailable');
+      expect(suppressed.state.fear.configuredRanks.MinibossCountShrineUpgrade).toBe(1);
+      expect(() =>
+        attestEffectiveShadowRank(loadout, [
+          { state: { arcanaFear: active } },
+          { state: { arcanaFear: suppressed.state } },
+        ]),
+      ).toThrow(/divergent/);
+      expect(() => attestEffectiveShadowRank(loadout, [])).toThrow(/empty/);
+      {
+        const room = biome.snapshot.decisions
+          .flatMap((decision) =>
+            decision.kind === 'batch' ? decision.targets.map((target) => target.room) : [],
+          )
+          .find((value) => value.gameName === gameName);
+        const preparation = biome.history.rooms.find(
+          (value) =>
+            value.origin.kind === 'occurrence' && value.origin.occurrenceId === room?.occurrenceId,
+        )?.preparation;
+        if (room === undefined || preparation === undefined)
+          throw new Error('Missing miniboss preparation');
+        for (const state of [active, suppressed.state]) {
+          const rank = attestEffectiveShadowRank(loadout, [
+            { state: { arcanaFear: state } },
+            { state: { arcanaFear: state } },
+          ]);
+          const prepared = prepareRoomEncounterPhases(
+            catalog,
+            room,
+            ordinaryPositionFor(catalog, room.origin),
+            preparation,
+            { effectiveShadowRank: rank },
+          );
+          expect(prepared.validPrefix[0]?.encounterKey).toBe(
+            rank > 0 ? `${encounterKey}_Shrine` : encounterKey,
+          );
+        }
       }
-    }
-  });
+    },
+  );
   it('distinguishes known reward, explicit no reward, and unavailable authorship', () => {
     const fCombat = catalog.encounterSets.byKey.FEncountersDefault!.authoringProfiles.find(
       (profile) => profile.key === 'GeneratedF',

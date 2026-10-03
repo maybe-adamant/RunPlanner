@@ -447,8 +447,8 @@ const findingCopy = {
     description: 'Restore this missing delivery on its timeline before choosing its outcome.',
   },
   echoGoldPickupPlacementRequired: {
-    title: 'Place Echo Gold pickup',
-    description: 'Place it on the timeline before choosing its outcome.',
+    title: 'Restore Echo Gold pickup',
+    description: 'Restore this missing pickup on its timeline before choosing its outcome.',
   },
   roomActionOrderUnavailable: {
     title: 'Action out of order',

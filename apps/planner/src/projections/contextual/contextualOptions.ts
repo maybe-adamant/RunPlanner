@@ -292,7 +292,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'echoGoldPickupPlacementRequired':
       return {
         kind: 'acquisition',
-        message: 'Place this required Gold Gold Gold pickup on the Timeline.',
+        message: 'Restore this missing Gold Gold Gold pickup on the Timeline.',
       };
     case 'roomActionOrderUnavailable':
       return { kind: 'generic', message: 'Move this action to an allowed timeline position.' };
