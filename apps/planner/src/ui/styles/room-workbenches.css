@@ -2268,14 +2268,6 @@
   opacity: 0.6;
 }
 
-.ephyra-side-unavailable {
-  display: flex;
-  align-items: center;
-  color: #88858e;
-  font-size: 0.8rem;
-  margin: 0;
-}
-
 .ephyra-side-map-reference > .room-map-viewport > .room-map-canvas {
   aspect-ratio: 16 / 9;
 }

@@ -118,7 +118,7 @@ export function BossDoorRewardPoolRow({
       {store.kind === 'editor' ? (
         <BossDoorRewardStoreEditor idPrefix={idPrefix} interactions={interactions} store={store} />
       ) : (
-        <div className="field-control field-control-inline door-fixed-reward">
+        <div className="field-control field-control-inline door-fixed-reward control-placeholder">
           <span>Reward Pool</span>
           <span className="fixed-room-state">{store.summary}</span>
         </div>

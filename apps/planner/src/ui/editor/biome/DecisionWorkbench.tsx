@@ -311,7 +311,7 @@ function MissingTargetRow({
         ) : target.authoring.kind === 'awaitingPriorExit' ? (
           <div
             aria-live="polite"
-            className="field-control field-control-inline pending-room-status"
+            className="field-control field-control-inline pending-room-status control-placeholder"
           >
             <span>Room</span>
             <span className="fixed-room-state">Select the earlier door's room first</span>
@@ -320,7 +320,7 @@ function MissingTargetRow({
         {canAuthorRoom ? (
           <div
             aria-live="polite"
-            className="field-control field-control-inline pending-reward-status door-reward-slot"
+            className="field-control field-control-inline pending-reward-status door-reward-slot control-placeholder"
           >
             <span>Reward</span>
             <span className="fixed-room-state">Choose room to show reward</span>
