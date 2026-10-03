@@ -223,7 +223,10 @@ export function publishChronology(
   return publishBiomeRewardEvaluationAssembly({
     simulation,
     producerArtifacts: createRewardProducerCandidateArtifacts(accumulation.producerFrontiers),
-    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(walk.shipLifecycleContexts),
+    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(
+      walk.shipLifecycleContexts,
+      accumulation.timedEffects,
+    ),
     traitOfferArtifacts: createTraitOfferCandidateArtifacts(catalog, traitCandidateContexts),
     levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
       catalog,

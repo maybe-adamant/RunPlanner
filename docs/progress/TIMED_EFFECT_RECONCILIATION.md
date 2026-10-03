@@ -1,6 +1,10 @@
 # Timed-effect reconciliation
 
-Status: locked execution contract; Gate 1 implementation under review.
+Status: Gate 1 implemented and reviewed; Gate 2 ready.
+Verification: 21 settlement tests and the focused application/lifecycle witnesses
+pass; independent review's two-edit finding has a regression and remediation.
+Baseline and initial post-change equivalence: 149/149; initial performance
+comparison: all eight metrics passed. Final repository closure remains pending.
 Cross-edit fallback amendment: independent review reproduced an inherited Steady
 Growth target executing at a different cycle after an earlier missing target was
 repaired. The rules below close that case without persisted provenance.

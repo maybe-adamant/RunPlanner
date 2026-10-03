@@ -1,8 +1,6 @@
 import { createAction, type Reducer } from '@reduxjs/toolkit';
 import {
-  applyProjectHistoryCommand,
-  applyProjectHistoryCommands,
-  applyProjectCommand,
+  publishProjectHistoryEdit,
   createProjectHistory,
   reidentifyProjectHistory,
   projectCommandAuthoringAddresses,
@@ -16,8 +14,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
   authoringReadinessAt,
-  attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
-  hermesShrineDeliveryPlacementForPurchaseReschedule,
+  settleProjectEdit,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -106,37 +103,15 @@ export function createProjectWorkspaceReducer(
       ) {
         return state;
       }
-      const history = (() => {
-        if (action.payload.kind === 'PlaceClockedTraitPickup') {
-          if (
-            !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
-              state.assembly,
-              action.payload,
-            )
-          )
-            return state.history;
-          return applyProjectHistoryCommand(state.history, catalog, action.payload);
-        }
-        if (action.payload.kind !== 'SetHermesShrinePurchase') {
-          return applyProjectHistoryCommand(state.history, catalog, action.payload);
-        }
-        const proposed = applyProjectCommand(state.history.present, catalog, action.payload);
-        if (proposed === state.history.present) return state.history;
-        const proposedAssembly = assembleProjectEvaluation(proposed);
-        const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
-          proposedAssembly,
-          action.payload.occurrence,
-          action.payload.generationKey,
-        );
-        return applyProjectHistoryCommands(
-          state.history,
-          catalog,
-          placement === undefined ? [action.payload] : [action.payload, placement],
-        );
-      })();
-      return history === state.history
-        ? state
-        : publishWorkspace(history, assembleProjectEvaluation);
+      const assembly = settleProjectEdit({
+        catalog,
+        before: state.assembly,
+        command: action.payload,
+        evaluate: assembleProjectEvaluation,
+      });
+      if (assembly.project === state.history.present) return state;
+      const history = publishProjectHistoryEdit(state.history, assembly.project);
+      return publishPreparedWorkspace(history, { project: assembly.project, assembly });
     }
     if (authoredProjectUndoRequested.match(action)) {
       if (state.kind === 'noProject') return state;

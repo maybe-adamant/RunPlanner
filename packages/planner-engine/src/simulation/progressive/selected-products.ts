@@ -629,17 +629,22 @@ export function retainBlockedRegionProducts(
         : undefined;
     },
   });
-  const roomLifecycles =
-    shipCapability === undefined
-      ? retainedArtifacts.roomLifecycles
-      : Object.freeze({
-          shipAt: (owner: OccurrenceAddress) =>
-            occurrenceOwner !== undefined &&
-            semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner) &&
-            shipCapability !== undefined
-              ? shipCapability
-              : retainedArtifacts.roomLifecycles.shipAt(owner),
-        });
+  const roomLifecycles = Object.freeze({
+    timedEffects: Object.freeze(
+      selectedArtifacts.roomLifecycles.timedEffects.filter(
+        (contact) =>
+          block.historySequence !== undefined &&
+          (contact.sequence < block.historySequence ||
+            (contact.sequence === block.historySequence && block.historyBoundary !== 'before')),
+      ),
+    ),
+    shipAt: (owner: OccurrenceAddress) =>
+      occurrenceOwner !== undefined &&
+      semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner) &&
+      shipCapability !== undefined
+        ? shipCapability
+        : retainedArtifacts.roomLifecycles.shipAt(owner),
+  });
   // An earlier phase of the blocked room keeps its full-evaluation support.
   const earlierBlockedRoomPhase = (
     address: import('../../authored-project/addresses').EncounterPhaseAddress,

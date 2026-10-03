@@ -155,6 +155,7 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
       halted: transition.hermesShrineDeliveryPlacementRequired,
     }),
     emissions: [
+      { kind: 'timedEffectContacts', contacts: transition.timedEffects },
       { kind: 'timelineFacts', facts: transition.timelineFacts },
       { kind: 'generatedPickupPlacements', placements: transition.generatedPickupPlacements },
       {

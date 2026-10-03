@@ -1,3 +1,4 @@
+import { timedEffectContact, type TimedEffectContact } from '../../timed-effects/contacts';
 import {
   applyTraitOfferTransition,
   invalidatedTraitOffers,
@@ -59,6 +60,7 @@ import {
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 
 export interface EncounterEndEffectsTransition {
+  readonly timedEffects: readonly TimedEffectContact[];
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
   readonly branches: readonly RewardBranchState[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
@@ -460,6 +462,22 @@ export function applyEncounterEndEffectsTransition(
     ),
   );
   const pickupOwner = event.origin.kind === 'occurrence' ? event.origin : undefined;
+  const timedEffects: TimedEffectContact[] = [];
+  if (pickupOwner !== undefined)
+    timedEffects.push(
+      timedEffectContact(
+        catalog,
+        'clockedPickup',
+        pickupOwner,
+        event.phaseKey,
+        event.sequence,
+        next,
+        declaration?.skipRoomsPerUpgrade !== true,
+        declaration?.skipTimedDropResources === true ||
+          (event.origin.routeKey === 'Dream' &&
+            declaration?.skipTimedDropResourcesInDream === true),
+      ),
+    );
   const pickupAdvance =
     pickupOwner === undefined || declaration?.skipRoomsPerUpgrade === true
       ? undefined
@@ -540,6 +558,18 @@ export function applyEncounterEndEffectsTransition(
     room?.kind === 'authored'
       ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
       : undefined;
+  if (steadyOwner !== undefined)
+    timedEffects.push(
+      timedEffectContact(
+        catalog,
+        'steadyGrowth',
+        steadyOwner,
+        event.phaseKey,
+        event.sequence,
+        next,
+        declaration?.skipRoomsPerUpgrade !== true,
+      ),
+    );
   const steadyAdvance =
     steadyOwner === undefined || declaration?.skipRoomsPerUpgrade === true
       ? undefined
@@ -555,6 +585,18 @@ export function applyEncounterEndEffectsTransition(
     room?.kind === 'authored'
       ? room.encounters.transcendentEmbryoBlessingByPhase?.[event.phaseKey]
       : undefined;
+  if (steadyOwner !== undefined)
+    timedEffects.push(
+      timedEffectContact(
+        catalog,
+        'transcendentEmbryo',
+        steadyOwner,
+        event.phaseKey,
+        event.sequence,
+        steadyAdvance?.branches ?? next,
+        steadyAdvance !== undefined,
+      ),
+    );
   const embryoAdvance =
     steadyAdvance === undefined
       ? undefined
@@ -692,6 +734,7 @@ export function applyEncounterEndEffectsTransition(
     );
   }
   return Object.freeze({
+    timedEffects: Object.freeze(timedEffects),
     branches: advanceRewardBranches(finalBranches, event.sequence),
     generatedPickupPlacements: Object.freeze(generatedPickupPlacements),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
