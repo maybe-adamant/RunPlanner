@@ -945,21 +945,16 @@ export function assembleExecutionOverview(
       ? {}
       : { unmodeledEncounterKeys: room.unmodeledEncounterKeys }),
     encounterPhases: Object.freeze(
+      // Entered rooms publish the phases the simulator recorded; an earlier phase can end the sequence.
       room.encounterPhases
         .filter(
           (phase) =>
-            room.entered ||
             recordedPhases.has(phase.slotKey) ||
-            structuralIdentities.has(phase.slotKey),
+            (!room.entered && structuralIdentities.has(phase.slotKey)),
         )
         .map((phase) =>
           (() => {
             const recorded = recordedPhases.get(phase.slotKey);
-            if (room.entered && recorded === undefined)
-              throw new CompilerError(
-                'executionCoverageMissing',
-                `${room.gameName} lacks recorded encounter ${phase.slotKey}`,
-              );
             const phaseAddress = createEncounterPhaseAddress(
               biomeAddress,
               { kind: 'occurrence', occurrenceId: room.occurrenceId },
