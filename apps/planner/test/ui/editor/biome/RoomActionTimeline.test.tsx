@@ -82,35 +82,33 @@ afterEach(() => {
 });
 
 describe('Ship timeline tab recovery', () => {
-  it('places a phase-local required delivery without entering inactive repairs', async () => {
+  it('restores an imported phase-local required delivery without entering inactive repairs', async () => {
+    const complete = surfaceShrineTravelDealProject();
+    const host = complete.route.biomes
+      .find((biome) => biome.biomeKey === 'O')!
+      .topology!.occurrences.find((room) => room.occurrenceId === oOccurrenceIds.combat04)!;
+    const delivery = host.roomActions.order.find(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey === 'hermesShrineDelivery',
+    )!;
+    const project = applyProjectCommand(complete, catalog, {
+      kind: 'UnplaceGeneratedDelivery',
+      action: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(delivery)),
+    });
     const view = renderOccurrenceWorkbench(
-      surfaceShrineTravelDealProject(),
+      project,
       'Surface',
       'O',
       occurrenceById(oOccurrenceIds.combat04),
       undefined,
       { initialTab: 'shipCombat1Actions' },
     );
-    const biome = workspaceProjection(view.application).route.biomes.find(
-      (entry) => entry.biomeKey === 'O',
-    )!;
-    const node = occurrenceById(oOccurrenceIds.combat04)(biome)!;
-    const delivery = node.room.roomActions!.rows.find(
-      (row) => row.reference.kind === 'interactAcquisitionEntry' && row.label.includes('Delivery'),
-    )!;
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'UnplaceGeneratedDelivery',
-          action: delivery.address,
-        }),
-      ),
-    );
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(0);
     const required = screen.getByRole('region', { name: 'Required actions' });
-    await view.user.click(
-      within(required).getByRole('button', { name: 'Place required delivery' }),
-    );
+    await view.user.click(within(required).getByRole('button', { name: 'Restore delivery' }));
     expect(screen.queryByRole('region', { name: 'Required actions' })).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(1);
     expect(
       screen.getByRole('tab', { name: 'Combat 1 Timeline' }).getAttribute('aria-selected'),
     ).toBe('true');

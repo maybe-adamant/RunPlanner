@@ -565,7 +565,7 @@ export function RoomActionsWorkbench({
                   aria-label={
                     row.participation === 'required'
                       ? placement.command.kind === 'PlaceHermesShrineDelivery'
-                        ? 'Place required delivery'
+                        ? 'Restore delivery'
                         : 'Place required pickup'
                       : 'Take pickup'
                   }
@@ -573,7 +573,11 @@ export function RoomActionsWorkbench({
                   onClick={() => executeIntent(placement)}
                   type="button"
                 >
-                  {row.participation === 'required' ? 'Place' : 'Take pickup'}
+                  {placement.command.kind === 'PlaceHermesShrineDelivery'
+                    ? 'Restore delivery'
+                    : row.participation === 'required'
+                      ? 'Place'
+                      : 'Take pickup'}
                 </button>
               )}
               {renderRowTrailingContent?.(row)}

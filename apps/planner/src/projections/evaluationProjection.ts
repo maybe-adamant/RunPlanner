@@ -443,8 +443,8 @@ const findingCopy = {
     title: 'Shrine offer unavailable',
   },
   hermesShrineDeliveryPlacementRequired: {
-    title: 'Place Shrine delivery',
-    description: 'Place it in its delivery room before choosing its outcome.',
+    title: 'Restore delivery',
+    description: 'Restore this missing delivery on its timeline before choosing its outcome.',
   },
   echoGoldPickupPlacementRequired: {
     title: 'Place Echo Gold pickup',

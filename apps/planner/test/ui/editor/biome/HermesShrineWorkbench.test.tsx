@@ -365,9 +365,7 @@ describe('Hermes Shrine workbench', () => {
     const delivery = screen.getByText('Collect Mystery Boon · Delivery').closest('li');
     if (delivery === null) throw new Error('unplaced Mystery delivery row is missing');
     expect(within(delivery).queryByRole('button', { name: 'Reward' })).toBeNull();
-    await view.user.click(
-      within(delivery).getByRole('button', { name: 'Place required delivery' }),
-    );
+    await view.user.click(within(delivery).getByRole('button', { name: 'Restore delivery' }));
     const placedDelivery = await screen.findByText('Collect Mystery Boon · Delivery');
     const placedDeliveryRow = placedDelivery.closest('li');
     if (placedDeliveryRow === null) throw new Error('placed Mystery delivery row is missing');
@@ -431,7 +429,7 @@ describe('Hermes Shrine workbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'Q', occurrence(host.occurrenceId));
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await view.user.click(screen.getByRole('button', { name: 'Place required delivery' }));
+    await view.user.click(screen.getByRole('button', { name: 'Restore delivery' }));
     const placed = view.application.store.getState().projectWorkspace.history!.present;
     act(() =>
       view.application.store.dispatch(
@@ -627,12 +625,10 @@ describe('Hermes Shrine workbench', () => {
     const deliveryRow = screen.getByText('Collect Big Heal · Delivery').closest('li');
     if (deliveryRow === null) throw new Error('delayed delivery row is missing');
     expect(within(deliveryRow).queryByRole('button', { name: 'Remove action' })).toBeNull();
-    await view.user.click(
-      within(deliveryRow).getByRole('button', { name: 'Place required delivery' }),
-    );
+    await view.user.click(within(deliveryRow).getByRole('button', { name: 'Restore delivery' }));
 
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Place required delivery' })).toBeNull(),
+      expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull(),
     );
     const host = application.store
       .getState()
@@ -671,7 +667,7 @@ describe('Hermes Shrine workbench', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     const delivery = screen.getByText('Collect Max Health · Delivery').closest('li');
     if (delivery === null) throw new Error('N side-room delivery row is missing');
-    expect(within(delivery).getByRole('button', { name: 'Place required delivery' })).toBeTruthy();
+    expect(within(delivery).getByRole('button', { name: 'Restore delivery' })).toBeTruthy();
     expect(
       application.store
         .getState()
@@ -695,9 +691,7 @@ describe('Hermes Shrine workbench', () => {
       nodeKey: sourceNode.key,
       inspectorSubject: { kind: 'node', nodeKey: sourceNode.key },
     });
-    await view.user.click(
-      within(delivery).getByRole('button', { name: 'Place required delivery' }),
-    );
+    await view.user.click(within(delivery).getByRole('button', { name: 'Restore delivery' }));
     await waitFor(() =>
       expect(
         application.store

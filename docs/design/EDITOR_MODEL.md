@@ -142,7 +142,11 @@ visible Door 1 control is target-addressed. Binding preserves that distinction;
 React does not create a decision and then issue a second edit.
 
 Room replacement dispatches one command against the stable occurrence.
-The engine decides compatible retention, defaults and structural cleanup.
+The engine decides compatible retention, defaults, structural cleanup and
+timed-effect reconciliation before publishing one Undo step. Required Hermes
+deliveries appear automatically at established contacts and expose Move and
+reward controls. Imported missing deliveries retain an explicit Restore delivery
+repair; opening a project does not insert them.
 React renders the returned state without follow-up resets. Changing a selected
 continuation likewise invokes engine-owned reanchoring, not descendant walking
 in the application.
@@ -237,7 +241,7 @@ action rows navigate to their repair controls.
 Stale session tabs may recover to Overview after an edit; newly assembled
 semantic destinations must name an existing presentation target and an explicit
 room tab when hosted by an occurrence. Placement findings target the existing
-Place row; inline Item and Phial findings target their own controls.
+placement repair row (Restore delivery for Hermes); inline Item and Phial findings target their own controls.
 
 The compact repair banner shows a title, its location below, and optional detail
 only when it adds a constraint or repair choice. It sits above the biome title

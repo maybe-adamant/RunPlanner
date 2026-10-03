@@ -160,7 +160,7 @@ export function agreedTimedEffectContact(
           (source) =>
             acquisitionIdentity === undefined || source.acquisitionIdentity === acquisitionIdentity,
         )
-        .map(({ acquisitionIdentity: _identity, ...source }) => source)
+        .map(({ source, cycle, progress, interval }) => ({ source, cycle, progress, interval }))
         .sort((a, b) => (a.source < b.source ? -1 : a.source > b.source ? 1 : 0)),
     ),
   );
