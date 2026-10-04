@@ -6,10 +6,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 import { useEffect, useRef } from 'react';
 
-import {
-  presentBiomeFeedbackContext,
-  type RouteFeedbackPresentation,
-} from '@planner/projections/evaluationProjection';
+import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { projectRouteNpcIndex } from '@planner/projections/routeNpcIndex';
 import {
@@ -81,10 +78,6 @@ export function RouteWorkspace({
       `${workspaceRoute.routeKey} feedback omitted configured biome ${displayedBiomeKey}`,
     );
   }
-  const contextMessage =
-    activeBiomeFeedback === undefined
-      ? undefined
-      : presentBiomeFeedbackContext(catalog, activeBiomeFeedback);
   const npcIndex = projectRouteNpcIndex(catalog, routeEvaluation, workspace.focusByOwner);
   const traitRows = projectRouteTraitOffers(
     catalog,
@@ -167,6 +160,7 @@ export function RouteWorkspace({
       issue={routeEvaluation.issue}
       focusByOwner={workspace.focusByOwner}
       route={workspaceRoute}
+      blockedView={activeBiomeFeedback}
     />
   );
 
@@ -336,14 +330,6 @@ export function RouteWorkspace({
       <div className="editor-panel" aria-live="polite">
         {contentLayout === 'biome' ? null : repairBanner}
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
-          {contextMessage === undefined ? null : (
-            <p
-              className="feedback-context-banner"
-              data-feedback-context={activeBiomeFeedback?.context}
-            >
-              {contextMessage}
-            </p>
-          )}
           {displayedPanel.kind === 'overview' ? (
             <RouteOverview
               catalog={catalog}

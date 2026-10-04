@@ -415,7 +415,9 @@
 }
 
 .project-findings {
+  display: grid;
   flex: 0 0 auto;
+  gap: 6px;
 }
 
 .assessment-issue-summary {
@@ -451,6 +453,21 @@
   box-shadow:
     0 0 0 1px rgb(218 115 115 / 8%),
     0 12px 28px rgb(0 0 0 / 24%);
+}
+
+.assessment-issue-button[data-feedback-context] {
+  border-color: rgb(132 130 143 / 35%);
+  background: rgb(100 98 112 / 8%);
+  box-shadow: none;
+}
+
+.assessment-issue-button[data-feedback-context='unassessed'] {
+  border-color: rgb(226 185 113 / 30%);
+  background: rgb(226 185 113 / 6%);
+}
+
+.assessment-issue-button:disabled {
+  cursor: default;
 }
 
 .assessment-issue-button:hover,

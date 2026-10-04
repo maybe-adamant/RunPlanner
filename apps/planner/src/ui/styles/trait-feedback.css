@@ -541,20 +541,3 @@
   height: 19px;
   font-size: 0.68rem;
 }
-
-.feedback-context-banner {
-  padding: 9px 11px;
-  border: 1px solid rgb(132 130 143 / 35%);
-  border-radius: 8px;
-  margin: 0 0 14px;
-  color: #aaa7b3;
-  background: rgb(100 98 112 / 8%);
-  font-size: 0.8rem;
-  line-height: 1.4;
-}
-
-.feedback-context-banner[data-feedback-context='unassessed'] {
-  border-color: rgb(226 185 113 / 30%);
-  color: #d3bd94;
-  background: rgb(226 185 113 / 6%);
-}
