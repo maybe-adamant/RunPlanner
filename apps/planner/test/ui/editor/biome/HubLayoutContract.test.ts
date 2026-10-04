@@ -6,16 +6,20 @@ const styles = readFileSync(
   fileURLToPath(new URL('../../../../src/ui/styles/room-workbenches.css', import.meta.url)),
   'utf8',
 );
+const editorStyles = readFileSync(
+  fileURLToPath(new URL('../../../../src/ui/styles/editor-structure.css', import.meta.url)),
+  'utf8',
+);
 
-function firstCssBlock(selector: string): string {
-  const selectorStart = styles.indexOf(selector);
+function firstCssBlock(selector: string, source = styles): string {
+  const selectorStart = source.indexOf(selector);
   if (selectorStart === -1) throw new Error(`CSS selector ${selector} is missing.`);
-  const blockStart = styles.indexOf('{', selectorStart);
-  const blockEnd = styles.indexOf('}', blockStart);
+  const blockStart = source.indexOf('{', selectorStart);
+  const blockEnd = source.indexOf('}', blockStart);
   if (blockStart === -1 || blockEnd === -1) {
     throw new Error(`CSS block ${selector} is incomplete.`);
   }
-  return styles.slice(blockStart + 1, blockEnd);
+  return source.slice(blockStart + 1, blockEnd);
 }
 
 describe('Hub layout contract', () => {
@@ -28,7 +32,9 @@ describe('Hub layout contract', () => {
     const rewardSlot = firstCssBlock('.hub-overview-reward-slot');
     expect(rewardSlot).toContain('grid-template-rows: minmax(36px, auto);');
     expect(rewardSlot).toContain('align-items: center;');
-    expect(firstCssBlock('.hub-main-reward > .fixed-room-state')).toContain('margin: 0;');
+    const placeholder = firstCssBlock('.control-placeholder > .fixed-room-state', editorStyles);
+    expect(placeholder).toContain('min-height: 36px;');
+    expect(placeholder).toContain('margin: 0;');
   });
 
   it('keeps the Overview board at four, two, and one columns as its container narrows', () => {

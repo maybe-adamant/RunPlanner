@@ -293,7 +293,10 @@ export function ClosedHubRoomOption({
         />
       </div>
       <div className="hub-main-reward hub-overview-reward-slot">
-        <p className="fixed-room-state">Open this room to edit its reward.</p>
+        <div className="field-control field-control-inline control-placeholder">
+          <span>Reward</span>
+          <span className="fixed-room-state">Open this room to edit its reward.</span>
+        </div>
       </div>
     </article>
   );

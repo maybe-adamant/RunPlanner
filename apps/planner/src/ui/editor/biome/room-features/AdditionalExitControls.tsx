@@ -141,6 +141,7 @@ export function ChaosSpawnWorkbench({
           className="chaos-position-control"
           role="radiogroup"
           tabIndex={-1}
+          {...(position.invalid ? { title: `Position ${position.value} unavailable` } : {})}
         >
           <span>Position</span>
           {[null, ...position.choices].map((value) => (
@@ -161,7 +162,6 @@ export function ChaosSpawnWorkbench({
               {value ?? 'Any'}
             </label>
           ))}
-          {position.invalid ? <span>Position {position.value} unavailable</span> : null}
         </div>
       )}
     </div>

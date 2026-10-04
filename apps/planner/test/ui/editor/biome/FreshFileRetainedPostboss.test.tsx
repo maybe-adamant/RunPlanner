@@ -49,8 +49,10 @@ describe('Fresh File retained Postboss controls', () => {
       ),
     );
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline).getByText(/no Keepsake Rack on this route/)).toBeTruthy();
-    expect(within(timeline).queryByRole('button', { name: 'Choose Keepsake' })).toBeNull();
+    expect(within(timeline).queryByText(/no Keepsake Rack on this route/)).toBeNull();
+    const keepsakePicker = within(timeline).getByRole('button', { name: 'Choose Keepsake' });
+    expect(keepsakePicker).toHaveProperty('disabled', true);
+    expect(keepsakePicker.getAttribute('title')).toBe('No Keepsake Rack on this route.');
     fireEvent.click(
       within(timeline).getByRole('button', {
         name: 'Remove Change Keepsake from timeline',

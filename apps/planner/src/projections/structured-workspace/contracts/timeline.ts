@@ -253,6 +253,8 @@ export interface WorkspaceFountainRarityControl {
   readonly address: FountainRarityOutcomeAddress;
   readonly marker: WorkspaceMarker;
   readonly targetTraitKey?: string;
+  /** Set while the engine has not established a required Phial target; the picker waits. */
+  readonly pending?: true;
 }
 
 export interface WorkspaceFountainRarityDomain {

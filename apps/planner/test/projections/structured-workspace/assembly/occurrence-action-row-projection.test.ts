@@ -5,6 +5,7 @@ import {
   catalog,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createCompleteFGProject,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
   createGoldenFGHIProject,
@@ -33,6 +34,7 @@ import {
 import {
   clockedTraitGeneratedPickupEntryKey,
   createAcquisitionRoleAddress,
+  createFountainRarityOutcomeAddress,
   createNemesisRandomEventAddress,
   createRoomActionAddress,
   createShopOfferAddress,
@@ -469,6 +471,23 @@ describe('structured workspace actions assembly', () => {
 
     expect(label).toBe('Collect Pom Slice · Supply Chain');
     expect(label).not.toContain('clockedTraitGenerated:');
+  });
+
+  it('publishes a pending Phial control on a fountain use that lacks a rarity assessment', () => {
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const { assembly } = assemble(createCompleteFGProject(), 'Underworld', 'F', postbossId);
+    const fountain = assembly.node.room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'useFountain',
+    );
+    if (fountain === undefined) throw new Error('expected the Postboss fountain action');
+    const outcome = createFountainRarityOutcomeAddress(
+      createRoomActionAddress(goldenFBiome, postbossId, roomActionKey({ kind: 'useFountain' })),
+    );
+    expect(fountain.fountainRarity).toEqual({
+      address: outcome,
+      marker: expect.objectContaining({ address: outcome }),
+      pending: true,
+    });
   });
 
   it('shows the simulation-neutral Boss pickup as a required end-encounter action', () => {

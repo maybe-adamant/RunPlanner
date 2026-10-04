@@ -397,7 +397,11 @@ describe('OccurrenceRoomFeatures', () => {
     );
     const family = screen.getByRole('button', { name: 'Encounter' });
     await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
+    const hint = screen.getByText('Choose a Nemesis event.');
+    expect(hint.closest('.control-placeholder')).toBeTruthy();
+    expect(hint.closest('.nemesis-interaction-controls')).toBeTruthy();
     await chooseNemesisEvent(view.user, 'Free item');
+    expect(screen.queryByText('Choose a Nemesis event.')).toBeNull();
     const freeAction = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
       (row) =>
         row.dataset.roomActionKey ===
@@ -411,6 +415,7 @@ describe('OccurrenceRoomFeatures', () => {
     const trait = await screen.findByRole('button', { name: 'Boon offered' });
     expect(within(freeAction).getByText('Nemesis offers to take')).toBeTruthy();
     const fixedReward = within(freeAction).getByText('to give Triple Gold');
+    expect(fixedReward.closest('.control-placeholder')).toBeTruthy();
     expect(
       within(freeAction)
         .getByRole('checkbox', { name: 'Accept' })

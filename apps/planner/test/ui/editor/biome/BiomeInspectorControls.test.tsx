@@ -346,7 +346,7 @@ describe('Biome inspector controls', () => {
     expect(
       new Set(resourceActions.map((action) => action.closest('.room-feature-presence-row'))).size,
     ).toBe(resourceActions.length);
-    expect(within(resources).queryByText('Repair required')).toBeNull();
+    expect(within(resources).queryByText(/Repair required/)).toBeNull();
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     const removeMining = within(resources).getByRole('checkbox', {

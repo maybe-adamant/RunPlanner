@@ -93,13 +93,19 @@ function roomStatus(target: WorkspacePhysicalTarget): string {
   return 'Offered room';
 }
 
-function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIntent }) {
+function ExactRepairAction({
+  intent,
+}: {
+  readonly intent: WorkspaceBatchRepairIntent | undefined;
+}) {
   const executeIntent = useCommandIntent();
   return (
     <button
       className="danger-action"
-      data-command={intent.command.kind}
-      onClick={() => executeIntent(intent)}
+      {...(intent === undefined ? {} : { 'data-command': intent.command.kind })}
+      disabled={intent === undefined}
+      onClick={() => intent === undefined || executeIntent(intent)}
+      {...(intent === undefined ? { title: 'No unavailable doors to remove.' } : {})}
       type="button"
     >
       Remove unavailable doors
@@ -114,21 +120,31 @@ function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIn
 export function TopologyRemovalAction({
   accessibleLabel,
   compact = false,
+  disabledTitle,
   interaction,
   label,
 }: {
   readonly accessibleLabel?: string;
   readonly compact?: boolean;
-  readonly interaction: WorkspaceTopologyRemovalInteraction;
+  /** Hover text for the mounted slot while no removal applies. */
+  readonly disabledTitle?: string;
+  readonly interaction: WorkspaceTopologyRemovalInteraction | undefined;
   readonly label: string;
 }) {
   const executeIntent = useCommandIntent();
   return (
-    <div className="topology-removal-action" data-command={interaction.intent.command.kind}>
+    <div
+      className="topology-removal-action"
+      {...(interaction === undefined ? {} : { 'data-command': interaction.intent.command.kind })}
+    >
       <button
         aria-label={accessibleLabel}
         className={`danger-action${compact ? ' action-compact' : ''}`}
-        onClick={() => executeIntent(interaction.intent)}
+        disabled={interaction === undefined}
+        onClick={() => interaction === undefined || executeIntent(interaction.intent)}
+        {...(interaction === undefined && disabledTitle !== undefined
+          ? { title: disabledTitle }
+          : {})}
         type="button"
       >
         {label}
@@ -442,8 +458,10 @@ function CompletedHubHandoffAction({
 
 function TakeoverRepairAction({
   interaction,
+  repairNeeded,
 }: {
   readonly interaction: WorkspaceTakeoverRepairInteraction;
+  readonly repairNeeded: boolean;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -454,9 +472,11 @@ function TakeoverRepairAction({
       data-presentation={interaction.presentation}
     >
       <button
-        {...findingTarget(interaction.owner)}
+        {...(repairNeeded ? findingTarget(interaction.owner) : {})}
         className="secondary-action"
+        disabled={!repairNeeded}
         onClick={() => executeIntent(interaction.intent())}
+        {...(repairNeeded ? {} : { title: 'No missing or unavailable Preboss doors to fix.' })}
         type="button"
       >
         Fix Preboss doors
@@ -467,14 +487,16 @@ function TakeoverRepairAction({
 
 function TakeoverAction({
   interaction,
+  repairNeeded,
 }: {
   readonly interaction: WorkspaceTakeoverBatchInteraction;
+  readonly repairNeeded: boolean;
 }) {
   switch (interaction.presentation) {
     case 'completedHubHandoff':
       return <CompletedHubHandoffAction interaction={interaction} />;
     case 'repair':
-      return <TakeoverRepairAction interaction={interaction} />;
+      return <TakeoverRepairAction interaction={interaction} repairNeeded={repairNeeded} />;
   }
 }
 
@@ -490,6 +512,7 @@ function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
           dispatch(semanticOwnerFocused(continuation.marker.address));
         }
       }}
+      {...(continuation === undefined ? { title: 'Select a door to continue.' } : {})}
       type="button"
     >
       Open next room
@@ -628,16 +651,14 @@ export function BatchWorkbench({
   readonly node: BatchNode;
 }) {
   const findingTarget = useFindingTarget();
-  const projectedTakeover =
+  const takeover =
     node.kind === 'takeoverBatch'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
       : undefined;
-  const takeover =
-    projectedTakeover?.presentation === 'repair' &&
-    node.targets.every((target) => target.physicalState !== 'unavailable') &&
-    node.missingTargets.length === 0
-      ? undefined
-      : projectedTakeover;
+  const takeoverRepairNeeded =
+    takeover?.presentation === 'repair' &&
+    (node.targets.some((target) => target.physicalState === 'unavailable') ||
+      node.missingTargets.length > 0);
   const removal =
     node.persistence === 'authored'
       ? requireWorkspaceInteraction(
@@ -658,7 +679,7 @@ export function BatchWorkbench({
       className="decision-card biome-batch-workbench"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
-      {...(takeover?.presentation === 'repair' ? {} : findingTarget(node.owner))}
+      {...(takeoverRepairNeeded ? {} : findingTarget(node.owner))}
       tabIndex={-1}
     >
       <header className="decision-heading">
@@ -701,15 +722,17 @@ export function BatchWorkbench({
           />
         )}
       </div>
-      {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
+      {takeover === undefined ? null : (
+        <TakeoverAction interaction={takeover} repairNeeded={takeoverRepairNeeded} />
+      )}
       <div className="workbench-action-row">
-        {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
-        {node.selectedContinuation === undefined ? null : (
-          <SelectedContinuationAction node={node} />
-        )}
-        {removal === undefined ? null : (
-          <TopologyRemovalAction interaction={removal} label="Remove these doors" />
-        )}
+        <ExactRepairAction intent={node.repairIntent} />
+        <SelectedContinuationAction node={node} />
+        <TopologyRemovalAction
+          disabledTitle="Nothing authored to remove yet."
+          interaction={removal}
+          label="Remove these doors"
+        />
       </div>
     </section>
   );

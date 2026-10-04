@@ -267,7 +267,7 @@ export interface WorkspaceHubFountain {
   readonly actionPosition?: number;
   /** The complete appended order, offered only while the fountain is unused. */
   readonly appendActions?: readonly HubAction[];
-  /** The Phial outcome owner; its target control is present only while one is required. */
+  /** The Phial outcome owner; its target control is present whenever the fountain is used. */
   readonly outcomeMarker: WorkspaceMarker;
   readonly rarity?: WorkspaceFountainRarityControl;
   readonly controlsHost?: {

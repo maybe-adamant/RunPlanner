@@ -13,6 +13,10 @@ const rewardStyles = readFileSync(
   new URL('../../../../src/ui/styles/trait-feedback.css', import.meta.url),
   'utf8',
 );
+const editorStyles = readFileSync(
+  new URL('../../../../src/ui/styles/editor-structure.css', import.meta.url),
+  'utf8',
+);
 
 function block(styles: string, selector: string): string {
   const blocks: string[] = [];
@@ -64,7 +68,10 @@ describe('Room action layout', () => {
     expect(field).toContain('grid-template-columns: minmax(0, 1fr);');
     expect(block(timelineStyles, '.nemesis-response-control')).toContain('display: inline-flex;');
     expect(block(timelineStyles, '.nemesis-response-control')).toContain('white-space: nowrap;');
-    expect(block(timelineStyles, '.nemesis-fixed-reward')).toContain('min-height: 36px;');
+    expect(block(editorStyles, '.control-placeholder > .fixed-room-state')).toContain(
+      'min-height: 36px;',
+    );
+    expect(timelineStyles).toMatch(/\.nemesis-fixed-reward,\n\s+select\n\s+\):not/);
   });
 
   it('allows scheduled, fountain, and keepsake target groups to reflow', () => {

@@ -42,7 +42,9 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
   expect(projected.authoringReadiness(host)).toBe('editable');
   const button = screen.getByRole('button', { name: /Remove .*Delivery.* from timeline/i });
   expect(button.closest('[inert]')).toBeNull();
-  expect(within(button.closest('li')!).queryByRole('button', { name: /^Move / })).toBeNull();
+  const moveSlot = within(button.closest('li')!).getByRole('button', { name: /^Move / });
+  expect(moveSlot).toHaveProperty('disabled', true);
+  expect(moveSlot.getAttribute('title')).toBe('No other position is available.');
   expect(button.classList.contains('danger-action')).toBe(true);
   expect(
     screen.queryByText('This delivery is no longer available. Remove it from the timeline.'),

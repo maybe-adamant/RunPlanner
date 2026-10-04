@@ -35,7 +35,11 @@ describe('HubRoomCards', () => {
     const slotOrderBefore = overviewSlotOrder();
     expect(closedCard.querySelector('[data-assessment]')).toBeNull();
     expect(closedCard.querySelector('.room-kind')).toBeNull();
-    expect(within(closedCard).getByText('Open this room to edit its reward.')).toBeTruthy();
+    const closedRewardShell = within(closedCard)
+      .getByText('Open this room to edit its reward.')
+      .closest('.control-placeholder');
+    expect(closedRewardShell?.classList.contains('field-control-inline')).toBe(true);
+    expect(within(closedRewardShell as HTMLElement).getByText('Reward')).toBeTruthy();
     const historyBeforeMap =
       view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(

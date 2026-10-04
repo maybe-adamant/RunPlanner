@@ -12,11 +12,14 @@ export function RoomActionPlacementPicker({
   label,
   trigger,
   choices,
+  disabledTitle,
   onApply,
 }: {
   readonly label: string;
   readonly trigger: string;
   readonly choices: readonly RoomActionPlacementChoice[];
+  /** Hover text while no destination is proposed. */
+  readonly disabledTitle?: string;
   readonly onApply: (key: string) => void;
 }) {
   const id = useId();
@@ -28,6 +31,7 @@ export function RoomActionPlacementPicker({
         ariaLabel={label}
         placeholder={trigger}
         disabled={choices.length === 0}
+        {...(choices.length === 0 && disabledTitle !== undefined ? { disabledTitle } : {})}
         model={{
           sections: [true, false].flatMap((available) => {
             const matches = choices.filter((choice) => choice.structurallyAuthorable === available);
