@@ -3,6 +3,9 @@ import {
   createAdditionalExitAddress,
   createBiomeFieldAddress,
   createBiomeAddress,
+  createCirceResolutionAddress,
+  createEchoPomTargetAddress,
+  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -10,17 +13,20 @@ import {
   createKeepsakeEquipResultAddress,
   createLocalVisitSlotAddress,
   createLocalVisitOrderAddress,
+  createLevelResolutionAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import {
   type FindingCode,
+  type FindingEvidenceValue,
   type AssessmentIssue,
   type ProjectBiomeEvaluation,
   type ProjectEvaluation,
@@ -34,7 +40,7 @@ import {
   findingDestinationLabel,
   indexFindingsByOwner,
   isChaosGatePositionFinding,
-  presentBiomeFeedbackContext,
+  presentBlockedView,
   presentBiomeStatus,
   presentFinding,
   presentAssessmentIssue,
@@ -335,10 +341,16 @@ describe('evaluation presentation', () => {
     if (fFeedback === undefined || gFeedback === undefined) {
       throw new Error('feedback hierarchy omitted a configured biome');
     }
-    expect(presentBiomeFeedbackContext(catalog, fFeedback)).toBe('Erebus is not evaluated yet.');
-    expect(presentBiomeFeedbackContext(catalog, gFeedback)).toBe(
-      'Finish and fix Erebus before Oceanus can be evaluated.',
-    );
+    expect(presentBlockedView(catalog, fFeedback, 'Erebus')).toEqual({
+      title: 'Erebus is not evaluated yet',
+    });
+    expect(presentBlockedView(catalog, gFeedback, 'Erebus · Opening')).toEqual({
+      title: 'Oceanus is blocked at Erebus · Opening',
+      description: 'Finish and fix Erebus before Oceanus can be evaluated.',
+    });
+    expect(
+      presentBlockedView(catalog, { ...gFeedback, context: 'complete' }, 'Erebus'),
+    ).toBeUndefined();
   });
 
   it('explains a blocked biome without exposing evaluated-prefix internals', () => {
@@ -349,9 +361,10 @@ describe('evaluation presentation', () => {
       status: { label: 'Blocked', tone: 'blocked' },
     } as const satisfies BiomeFeedbackPresentation;
 
-    expect(presentBiomeFeedbackContext(catalog, feedback)).toBe(
-      'Finish the earlier biomes before this biome can be evaluated.',
-    );
+    expect(presentBlockedView(catalog, feedback, undefined)).toEqual({
+      title: 'Erebus is blocked',
+      description: 'Finish the earlier biomes before this biome can be evaluated.',
+    });
   });
 
   it('uses declaration labels and player-facing finding destinations', () => {
@@ -464,5 +477,85 @@ describe('timeline finding guidance', () => {
         evidence: { reason },
       }),
     ).toEqual({ title, description });
+  });
+});
+
+describe('outer finding collapse', () => {
+  const phase = createEncounterPhaseAddress(
+    biome,
+    { kind: 'occurrence', occurrenceId: createOccurrenceId('collapse-room') },
+    'Encounter',
+  );
+  const offer = createTraitOfferAddress(phase, 'selection');
+  const traitFinding = (
+    code: FindingCode,
+    origin: SemanticAddress,
+    evidence: Readonly<Record<string, FindingEvidenceValue>> = {},
+  ): SemanticFinding => ({ code, severity: 'error', phase: 'rewardGeneration', origin, evidence });
+  const issueOf = (owner: SemanticAddress, reasons: readonly SemanticFinding[]) =>
+    ({ kind: 'invalid', owner, regionKey: 'collapse', reasons }) as const satisfies AssessmentIssue;
+
+  it('folds trait option and outcome owners into one trait offer entry with their count', () => {
+    const entry = presentAssessmentIssue(
+      issueOf(offer, [
+        traitFinding('alreadyEquipped', offer, { traitKey: 'ZeusWeaponBoon' }),
+        traitFinding('rarityRollUnavailable', offer, { optionKey: 'option2' }),
+        traitFinding('echoPomTargetMissing', createEchoPomTargetAddress(offer, 'option1')),
+        traitFinding('circeResolutionMissing', createCirceResolutionAddress(offer, 'option2')),
+      ]),
+    );
+    expect(entry).toEqual({
+      title: 'Trait offer needs attention',
+      description: '4 issues to repair in its editor.',
+      dialog: { kind: 'traitOffer', owner: offer },
+      innerFindingCount: 4,
+    });
+  });
+
+  it('keeps a missing or ungenerable offer as the launcher’s own finding', () => {
+    const entry = presentAssessmentIssue(
+      issueOf(offer, [
+        traitFinding('traitOfferMissing', offer),
+        traitFinding('traitOfferGenerationUnavailable', offer),
+      ]),
+    );
+    expect(entry).toEqual({
+      title: 'Choose a trait offer',
+      description: 'Trait choices cannot appear together',
+    });
+    expect(entry.dialog).toBeUndefined();
+  });
+
+  it('folds customization decisions under their encounter phase but not the selector', () => {
+    expect(
+      presentAssessmentIssue(
+        issueOf(phase, [
+          traitFinding('encounterCustomizationUnavailable', phase, {
+            decisionKey: 'generatedComposition',
+          }),
+          traitFinding('encounterIntroductionRequired', phase, { decisionKey: 'infiniteRoster' }),
+        ]),
+      ),
+    ).toEqual({
+      title: 'Encounter customization needs attention',
+      description: '2 issues to repair in its editor.',
+      dialog: { kind: 'encounterCustomization', owner: phase },
+      innerFindingCount: 2,
+    });
+    expect(
+      presentAssessmentIssue(issueOf(phase, [traitFinding('encounterUnavailable', phase)])),
+    ).toEqual({ title: 'Encounter unavailable' });
+  });
+
+  it('folds Pom targets under their level resolution', () => {
+    const resolution = createLevelResolutionAddress(phase, 'selection');
+    expect(
+      presentAssessmentIssue(issueOf(resolution, [traitFinding('missingPomTarget', resolution)])),
+    ).toEqual({
+      title: 'Pom resolution needs attention',
+      description: '1 issue to repair in its editor.',
+      dialog: { kind: 'levelResolution', owner: resolution },
+      innerFindingCount: 1,
+    });
   });
 });

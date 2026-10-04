@@ -2,6 +2,7 @@
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEchoPomTargetAddress,
   createEncounterPhaseAddress,
   createOccurrenceId,
   createTraitOfferAddress,
@@ -9,7 +10,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { AssessmentIssue, SemanticFinding } from '@run-planner/engine/simulation';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { expect, it } from 'vitest';
 
@@ -166,6 +167,105 @@ it('shows one grouped issue and selects its Timeline launcher without opening it
   });
   expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(trait);
   expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+  expect(application.store.getState().editorSession.levelResolutionDialogTarget ?? null).toBeNull();
+});
+
+it('collapses inner trait reasons into one attention entry that selects the launcher', () => {
+  const application = createOpenTestApplication();
+  const inner: SemanticFinding = {
+    ...firstReason,
+    code: 'echoPomTargetMissing',
+    origin: createEchoPomTargetAddress(trait, 'option1'),
+  };
+  const optionLevel: SemanticFinding = {
+    ...firstReason,
+    code: 'alreadyEquipped',
+    evidence: { traitKey: 'ZeusWeaponBoon' },
+  };
+  const { container } = render(
+    <Provider store={application.store}>
+      <ProjectFindings
+        catalog={catalog}
+        focusByOwner={new Map([[semanticAddressKey(trait), destination]])}
+        issue={{ ...issue, reasons: [inner, optionLevel] }}
+      />
+    </Provider>,
+  );
+
+  const panel = within(container);
+  const repair = panel.getByRole('button', { name: /trait offer needs attention/i });
+  expect(panel.getAllByRole('button')).toHaveLength(1);
+  expect(panel.queryByText('Choose Echo Pom target')).toBeNull();
+  expect(repair.querySelector('.finding-description')?.textContent).toBe(
+    '2 issues to repair in its editor.',
+  );
+
+  fireEvent.click(repair);
+
+  expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+    key: issue.regionKey,
+    origin: trait,
+  });
+  expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(trait);
+  expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+});
+
+it('leads a blocked view with its entry and navigates it to the blocking owner', () => {
+  const application = createOpenTestApplication();
+  const { container } = render(
+    <Provider store={application.store}>
+      <ProjectFindings
+        blockedView={{
+          biomeKey: 'G',
+          blockedByBiomeKey: 'F',
+          context: 'blocked',
+          findingCount: 0,
+          status: { label: 'Blocked', tone: 'blocked' },
+        }}
+        catalog={catalog}
+        focusByOwner={new Map([[semanticAddressKey(trait), destination]])}
+        issue={issue}
+      />
+    </Provider>,
+  );
+
+  const buttons = within(container).getAllByRole('button');
+  expect(buttons).toHaveLength(2);
+  expect(buttons[0]?.textContent).toContain('Oceanus is blocked at Erebus');
+  expect(buttons[0]?.textContent).toContain(
+    'Finish and fix Erebus before Oceanus can be evaluated.',
+  );
+  expect(container.querySelector('.feedback-context-banner')).toBeNull();
+
+  fireEvent.click(buttons[0]!);
+
+  expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+    key: issue.regionKey,
+    origin: trait,
+  });
+  expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+});
+
+it('shows an unevaluated view entry without a repair when the engine selected none', () => {
+  const application = createOpenTestApplication();
+  const { container } = render(
+    <Provider store={application.store}>
+      <ProjectFindings
+        blockedView={{
+          biomeKey: 'F',
+          context: 'unassessed',
+          findingCount: 0,
+          status: { label: 'Incomplete', tone: 'incomplete' },
+        }}
+        catalog={catalog}
+        focusByOwner={new Map()}
+        issue={undefined}
+      />
+    </Provider>,
+  );
+
+  const entry = within(container).getByRole('button', { name: 'Erebus is not evaluated yet' });
+  expect(entry.hasAttribute('disabled')).toBe(true);
 });
 
 it('keeps details that explain how to repair the issue', () => {

@@ -542,8 +542,15 @@ describe('planner history interaction', () => {
     expect(repair().parentElement).toBe(
       screen.getByRole('region', { name: 'Oceanus route structure' }),
     );
-    expect(repair().textContent).toBe(copy);
-    await user.click(within(repair()).getByRole('button'));
+    // A blocked view leads its panel with the blocked entry; the repair entry follows unchanged.
+    const entries = within(repair()).getAllByRole('button');
+    expect(entries).toHaveLength(2);
+    expect(entries[0]!.textContent).toContain('Oceanus is blocked at Erebus');
+    expect(repair().textContent).toContain(copy!.replace('Next repair', ''));
+    expect(screen.queryByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBe(
+      within(entries[0]!).getByText('Finish and fix Erebus before Oceanus can be evaluated.'),
+    );
+    await user.click(entries[1]!);
     expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
       key: issue.regionKey,
       origin: issue.owner,

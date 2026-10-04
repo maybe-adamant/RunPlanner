@@ -17,6 +17,20 @@ export interface FindingPresentation {
   readonly description?: string;
 }
 
+export type FindingDialogKind = 'traitOffer' | 'encounterCustomization' | 'levelResolution';
+
+/** The dialog whose feedback region explains an inner finding. */
+export interface FindingDialogOwner {
+  readonly kind: FindingDialogKind;
+  readonly owner: SemanticAddress;
+}
+
+/** One findings-panel entry; a dialog owner's inner reasons fold into it. */
+export interface RepairEntryPresentation extends FindingPresentation {
+  readonly dialog?: FindingDialogOwner;
+  readonly innerFindingCount?: number;
+}
+
 /** Candidate-only trait findings reuse the engine's semantic finding codes. */
 export type TraitCandidateFindingCode = FindingCode | 'duplicateOfferedTrait';
 
@@ -660,11 +674,71 @@ export function formatFindingExplanation(copy: FindingPresentation): string {
   return copy.description === undefined ? copy.title : `${copy.title}: ${copy.description}`;
 }
 
+const dialogKindCopy = {
+  traitOffer: 'Trait offer',
+  encounterCustomization: 'Encounter customization',
+  levelResolution: 'Pom resolution',
+} as const satisfies Readonly<Record<FindingDialogKind, string>>;
+
+const encounterCustomizationCodes: ReadonlySet<FindingCode> = new Set<FindingCode>([
+  'encounterCustomizationUnavailable',
+  'encounterCustomizationRequired',
+  'encounterIntroductionRequired',
+]);
+
+/**
+ * Inner findings are repaired inside a dialog: trait option and outcome owners
+ * and option-level offer reasons under their trait offer, customization
+ * decisions under their encounter phase, and Pom targets under their level
+ * resolution. Findings that describe the launcher's own value stay outer.
+ */
+export function findingDialogOwner(finding: SemanticFinding): FindingDialogOwner | undefined {
+  let origin: SemanticAddress = finding.origin;
+  if (origin.kind === 'levelResolution') return { kind: 'levelResolution', owner: origin };
+  if (origin.kind === 'encounterPhase') {
+    return encounterCustomizationCodes.has(finding.code)
+      ? { kind: 'encounterCustomization', owner: origin }
+      : undefined;
+  }
+  let nested = false;
+  while (
+    origin.kind === 'traitAcquisitionTarget' ||
+    origin.kind === 'circeResolution' ||
+    origin.kind === 'echoPomTarget' ||
+    origin.kind === 'naturalSelectionResult' ||
+    origin.kind === 'echoLastRunBoon' ||
+    origin.kind === 'echoLastReward' ||
+    origin.kind === 'allTogetherSet'
+  ) {
+    origin = origin.trait;
+    nested = true;
+  }
+  if (origin.kind !== 'traitOffer') return undefined;
+  return nested || 'traitKey' in finding.evidence || 'optionKey' in finding.evidence
+    ? { kind: 'traitOffer', owner: origin }
+    : undefined;
+}
+
 /** The engine selects the repair region; presentation only adapts its explanation. */
-export function presentAssessmentIssue(issue: AssessmentIssue): FindingPresentation {
+export function presentAssessmentIssue(issue: AssessmentIssue): RepairEntryPresentation {
   const reason = issue.reasons[0];
   if (reason === undefined) {
     throw new Error(`Assessment issue ${issue.regionKey} has no reason`);
+  }
+  const inner = issue.reasons
+    .map(findingDialogOwner)
+    .filter((dialog): dialog is FindingDialogOwner => dialog !== undefined);
+  const dialog = inner[0];
+  if (dialog !== undefined) {
+    const count = inner.filter(
+      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(dialog.owner),
+    ).length;
+    return Object.freeze({
+      title: `${dialogKindCopy[dialog.kind]} needs attention`,
+      description: `${count} ${count === 1 ? 'issue' : 'issues'} to repair in its editor.`,
+      dialog,
+      innerFindingCount: count,
+    });
   }
   const first = presentFinding(reason);
   const descriptions = [
@@ -796,16 +870,21 @@ export function projectFeedbackHierarchy(
   return projected;
 }
 
-export function presentBiomeFeedbackContext(
+/**
+ * The findings-panel entry for a biome whose view is blocked or not yet
+ * evaluated; `blockedAt` names the blocking owner's destination.
+ */
+export function presentBlockedView(
   catalog: Catalog,
   feedback: BiomeFeedbackPresentation,
-): string | undefined {
+  blockedAt: string | undefined,
+): FindingPresentation | undefined {
   const biome = catalog.biomes.byKey[feedback.biomeKey];
   if (biome === undefined) {
     throw new Error(`Feedback references unknown biome ${feedback.biomeKey}`);
   }
   if (feedback.context === 'unassessed') {
-    return `${biome.label} is not evaluated yet.`;
+    return Object.freeze({ title: `${biome.label} is not evaluated yet` });
   }
   if (feedback.context !== 'blocked') {
     return undefined;
@@ -817,9 +896,16 @@ export function presentBiomeFeedbackContext(
   if (feedback.blockedByBiomeKey !== undefined && blocker === undefined) {
     throw new Error(`Feedback references unknown blocking biome ${feedback.blockedByBiomeKey}`);
   }
-  return blocker === undefined
-    ? 'Finish the earlier biomes before this biome can be evaluated.'
-    : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated.`;
+  return Object.freeze({
+    title:
+      blockedAt === undefined
+        ? `${biome.label} is blocked`
+        : `${biome.label} is blocked at ${blockedAt}`,
+    description:
+      blocker === undefined
+        ? 'Finish the earlier biomes before this biome can be evaluated.'
+        : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated.`,
+  });
 }
 
 /** The navigation intent for the route's next repair, shared by every entry point to it. */

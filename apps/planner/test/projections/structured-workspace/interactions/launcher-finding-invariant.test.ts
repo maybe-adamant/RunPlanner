@@ -46,6 +46,7 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
+import { presentAssessmentIssue } from '@planner/projections/evaluationProjection';
 
 const services = createStructuredWorkspaceTestServices();
 
@@ -71,6 +72,7 @@ const checked = {
   localVisit: 0,
   hubSlot: 0,
   fieldsSpatial: 0,
+  collapsed: 0,
 };
 const compositionFindingCodes = new Set([
   'encounterCustomizationUnavailable',
@@ -148,7 +150,41 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
   }
   for (const finding of owners)
     disabled.push(...blockedNativeSettings(interactions, finding.origin));
+  disabled.push(...disabledCollapsedLauncher(interactions, assembly));
   return disabled;
+}
+
+/** The outer entry folds inner reasons onto its dialog launcher, which must stay enabled. */
+function disabledCollapsedLauncher(
+  interactions: ReturnType<typeof services.structuredWorkspace.project>['interactions'],
+  assembly: ProjectEvaluationAssembly,
+): readonly string[] {
+  const issue = assembly.evaluation.issue;
+  if (issue === undefined) return [];
+  const entry = presentAssessmentIssue(issue);
+  if (entry.dialog === undefined) return [];
+  expect(semanticAddressKey(entry.dialog.owner)).toBe(semanticAddressKey(issue.owner));
+  const key = semanticAddressKey(entry.dialog.owner);
+  const reached = (() => {
+    switch (entry.dialog.kind) {
+      case 'traitOffer':
+        return interactions.traitOffers.get(key)?.contextReached;
+      case 'levelResolution':
+        return interactions.levelResolutions.get(key)?.contextReached;
+      case 'encounterCustomization': {
+        const interaction = interactions.encounterCustomizations.get(key);
+        if (interaction === undefined) return undefined;
+        return (
+          interaction.infiniteRosterDraftFor !== undefined ||
+          interaction.generatedComposition?.editable !== true ||
+          interaction.generatedAssessment !== undefined
+        );
+      }
+    }
+  })();
+  if (reached === undefined) return [];
+  checked.collapsed += 1;
+  return reached ? [] : [`collapsed ${entry.title} ${key}`];
 }
 
 /** Hub visits and the fountain use are repaired through their Hub's action order. */
@@ -265,6 +301,7 @@ describe('a finding never disables the launcher that repairs it', () => {
       expect(check(project)).toEqual([]);
     expect(checked.trait).toBeGreaterThan(0);
     expect(checked.encounter).toBeGreaterThan(0);
+    expect(checked.collapsed).toBeGreaterThan(0);
   });
 
   it('holds on the golden Underworld and Surface routes with representative repairs', () => {
@@ -367,6 +404,7 @@ describe('a finding never disables the launcher that repairs it', () => {
     });
     for (const project of [pom, roster, nemesis]) expect(check(project)).toEqual([]);
     expect(checked.pom).toBeGreaterThan(0);
+    expect(checked.collapsed).toBeGreaterThan(0);
     expect(checked.roster).toBeGreaterThan(0);
     expect(checked.nemesis).toBeGreaterThan(0);
   });
