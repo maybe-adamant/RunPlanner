@@ -1262,13 +1262,13 @@ describe('DecisionWorkbench', () => {
       decisionContainingOccurrence(goldenFOccurrenceId(2, 1)),
     );
 
-    const badge = screen.getByTitle('Vow of Forfeit');
-    expect(badge.textContent).toBe('Forfeit → Red Onion');
-    expect(badge.classList.contains('neutral-status')).toBe(true);
-    const rewards = badge.closest<HTMLElement>('[aria-label$=" door rewards"]');
+    const trigger = screen.getByTitle('Vow of Forfeit');
+    expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
+    const rewards = trigger.closest<HTMLElement>('[aria-label$=" door rewards"]');
     if (rewards === null) throw new Error('Forfeited door reward surface is missing');
-    expect(within(rewards).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    expect(within(rewards).getByRole('button', { name: 'Reward' }).textContent).toContain('Zeus');
+    expect(within(rewards).getByRole('button', { name: 'Reward' })).toBe(trigger);
+    expect(trigger.textContent).toMatch(/Zeus.*\(Red Onion\)/);
+    expect(screen.queryByText(/^Forfeit →/)).toBeNull();
     expect(screen.getAllByTitle('Vow of Forfeit')).toHaveLength(1);
   });
 
@@ -1289,9 +1289,10 @@ describe('DecisionWorkbench', () => {
 
     const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
     const offers = within(combat09).getByLabelText('Combat 09 door rewards');
-    const badge = within(offers).getByTitle('Vow of Forfeit');
-    expect(badge.textContent).toBe('Forfeit → Red Onion');
-    expect(within(offers).getByRole('button', { name: 'Cage 1' }).textContent).toContain('Hermes');
+    const trigger = within(offers).getByTitle('Vow of Forfeit');
+    expect(within(offers).getByRole('button', { name: 'Cage 1' })).toBe(trigger);
+    expect(trigger.textContent).toMatch(/Hermes.*\(Red Onion\)/);
+    expect(within(offers).queryByText(/^Forfeit →/)).toBeNull();
     expect(within(offers).getAllByTitle('Vow of Forfeit')).toHaveLength(1);
   });
 
