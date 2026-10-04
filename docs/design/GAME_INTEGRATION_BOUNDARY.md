@@ -374,7 +374,7 @@ Temporary scopes are coroutine-local, nesting-safe, and restored on return or
 error. Missing required native functions and escaping host errors fault execution;
 recognized unsupported contacts pass through with bounded diagnostics. Modifier
 diagnostics may continue after prefix completion without enabling other adapters.
-There are no crit-count, double-damage-count, or gold-total conformance obligations.
+There are no gold-total conformance obligations.
 
 ### Content fingerprint
 

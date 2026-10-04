@@ -20,6 +20,8 @@ export interface NumberRunModifierDeclaration extends RunModifierDeclarationShap
   readonly min: number;
   readonly max: number;
   readonly step: number;
+  /** Suffix shown after an authored value, such as `×` for a multiplier. */
+  readonly unit: string;
 }
 
 export type RunModifierDeclaration = BooleanRunModifierDeclaration | NumberRunModifierDeclaration;
@@ -40,6 +42,7 @@ export const RUN_MODIFIER_DECLARATIONS = declareRunModifiers([
     min: 1,
     max: 5,
     step: 0.1,
+    unit: '×',
     label: 'Enemy gold chance',
     description: 'Multiplies eligible gold-drop chances up to 100%; room gold limits still apply.',
     stage: 'released',

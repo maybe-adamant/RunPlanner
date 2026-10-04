@@ -41,6 +41,8 @@ export interface CreateApplicationOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly autosaveScheduler?: AutosaveScheduler;
   readonly buildIdentity?: BuildIdentity;
+  /** Authors `internal` run modifiers; defaults to the Vite development build flag. */
+  readonly devBuild?: boolean;
   readonly profileFile?: ProfileFileAdapter;
   readonly profileFileRestore?: ProfileFileRestoreResult;
   readonly gameModuleHost?: GameModuleHost;
@@ -93,6 +95,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       traitDomain,
     },
     options.allocateOccurrenceId ?? allocateOccurrenceId,
+    { devBuild: options.devBuild ?? import.meta.env.DEV },
   );
   const prepareProjectWorkspace = (project: ProjectDocument): PreparedProjectWorkspace => {
     assertPublicProjectAdmission(catalog, project);

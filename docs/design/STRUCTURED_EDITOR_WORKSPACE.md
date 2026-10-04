@@ -156,6 +156,11 @@ Steady Growth progress and its rarity-dependent interval are joined from the
 same equipped-trait snapshot; the workspace does not count lifecycle events or
 predict a future automatic target.
 
+The Loadout modifiers section renders from the engine's run modifier
+declarations: a toggle or slider by declared kind, with the label, description
+and numeric domain taken from the declaration; `internal` declarations appear
+only when the application composition marks a development build.
+
 Run State remains available through the covered lifecycle checkpoint that
 precedes or contains the first blocking value and unavailable afterward. The
 workspace consumes that engine-published coverage directly; it does not apply

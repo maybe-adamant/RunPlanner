@@ -542,13 +542,24 @@ export interface WorkspaceRouteRailBiome {
   readonly status: WorkspaceStatus;
 }
 
+export type WorkspaceRunModifierDraftResult =
+  | { readonly kind: 'valid'; readonly intent: WorkspaceCommandIntent }
+  | { readonly kind: 'invalid'; readonly message: string };
+
 export interface WorkspaceRunModifiersControl {
   readonly value: import('@run-planner/engine/authored-project').RunModifiers;
-  readonly goldDraftIntent: (
+  /** Declarations authored in this build, in declaration order. */
+  readonly declarations: readonly import('@run-planner/engine/authored-project').RunModifierDeclaration[];
+  /** Complete replacement for a boolean modifier. */
+  readonly setValue: (
+    declaration: import('@run-planner/engine/authored-project').BooleanRunModifierDeclaration,
+    value: boolean,
+  ) => WorkspaceCommandIntent;
+  /** Complete replacement for a number modifier once its draft text is within the declared domain. */
+  readonly draftIntent: (
+    declaration: import('@run-planner/engine/authored-project').NumberRunModifierDeclaration,
     draft: string,
-  ) =>
-    | { readonly kind: 'valid'; readonly intent: WorkspaceCommandIntent }
-    | { readonly kind: 'invalid'; readonly message: string };
+  ) => WorkspaceRunModifierDraftResult;
 }
 
 export interface WorkspaceRoute {

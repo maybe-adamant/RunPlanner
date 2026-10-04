@@ -210,8 +210,9 @@ automatic-activation rules, Vow maxima, and Fear increments. The authored model
 owns only the player's starting selections; derived automatic cards and the
 configured Fear total are not persisted independently.
 
-Loadout optionally owns a `runModifiers` record whose keys, kinds, defaults
-and numeric domains come from the run-modifier declaration table. The persisted
+Loadout optionally owns a `runModifiers` record whose keys, kinds, defaults,
+numeric domains and display `unit` come from the run-modifier declaration
+table. The persisted
 record carries only values that differ from their declared default; absence
 means every modifier is native. The one released modifier is
 `enemyGoldDropChanceMultiplier`, a finite number from 1 to 5 with fractions

@@ -6,6 +6,8 @@ import {
   createKeepsakeEquipResultAddress,
   deriveRouteLoadout,
   routeInitialProfile,
+  type BooleanRunModifierDeclaration,
+  type NumberRunModifierDeclaration,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -466,28 +468,8 @@ function MatureRouteLoadout({
 }
 
 function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: WorkspaceRoute }) {
-  const dispatch = useAppDispatch();
   const control = workspaceRoute.runModifiers;
-  const multiplier = control.value.enemyGoldDropChanceMultiplier;
-  const [draft, setDraft] = useState<{
-    readonly source: number;
-    readonly text: string;
-    readonly error?: string;
-  }>();
-  // An authored multiplier replacement (including history restoration) supersedes its draft.
-  if (draft !== undefined && draft.source !== multiplier) setDraft(undefined);
-  const currentDraft = draft?.source === multiplier ? draft : undefined;
   const prefix = `${workspaceRoute.routeKey}-run-modifiers`;
-  const commit = () => {
-    if (currentDraft === undefined) return;
-    const result = control.goldDraftIntent(currentDraft.text);
-    if (result.kind === 'invalid') {
-      setDraft({ ...currentDraft, error: result.message });
-      return;
-    }
-    setDraft(undefined);
-    dispatch(authoredProjectCommandDispatched(result.intent.command));
-  };
   return (
     <section
       className="route-run-modifiers route-loadout-section"
@@ -499,61 +481,138 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
         </h2>
       </header>
       <div className="route-run-modifier-controls">
-        <div
-          className="route-run-modifier-gold"
-          title="Multiplies eligible gold-drop chances up to 100%; room gold limits still apply."
-        >
-          <label htmlFor={`${prefix}-gold`}>Enemy gold chance</label>
-          <div className="route-run-modifier-multiplier">
-            <input
-              id={`${prefix}-gold`}
-              aria-description="Multiplies eligible gold-drop chances up to 100%; room gold limits still apply."
-              type="range"
-              min={1}
-              max={5}
-              step={0.1}
-              value={currentDraft?.text ?? String(multiplier)}
-              aria-valuetext={`${currentDraft?.text ?? multiplier}×${multiplier === 1 && currentDraft === undefined ? ' (Vanilla)' : ''}`}
-              onChange={(event) => setDraft({ source: multiplier, text: event.target.value })}
-              onPointerUp={commit}
-              onKeyUp={(event) => {
-                if (
-                  [
-                    'ArrowLeft',
-                    'ArrowRight',
-                    'ArrowUp',
-                    'ArrowDown',
-                    'Home',
-                    'End',
-                    'PageUp',
-                    'PageDown',
-                  ].includes(event.key)
-                )
-                  commit();
-              }}
-              onBlur={commit}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  commit();
-                } else if (event.key === 'Escape') {
-                  event.preventDefault();
-                  setDraft(undefined);
-                }
-              }}
+        {control.declarations.map((declaration) =>
+          declaration.kind === 'boolean' ? (
+            <BooleanRunModifierToggle
+              key={declaration.key}
+              control={control}
+              declaration={declaration}
             />
-            <output htmlFor={`${prefix}-gold`}>
-              {currentDraft?.text ?? multiplier}×
-              {Number(currentDraft?.text ?? multiplier) === 1 ? ' (Vanilla)' : ''}
-            </output>
-          </div>
-          {currentDraft?.error === undefined ? null : (
-            <p id={`${prefix}-error`} role="alert">
-              {currentDraft.error}
-            </p>
-          )}
-        </div>
+          ) : (
+            <NumberRunModifierSlider
+              key={declaration.key}
+              control={control}
+              declaration={declaration}
+              id={`${prefix}-${declaration.key}`}
+            />
+          ),
+        )}
       </div>
     </section>
+  );
+}
+
+function BooleanRunModifierToggle({
+  control,
+  declaration,
+}: {
+  readonly control: WorkspaceRoute['runModifiers'];
+  readonly declaration: BooleanRunModifierDeclaration;
+}) {
+  const dispatch = useAppDispatch();
+  const values: Readonly<Record<string, boolean | number>> = control.value;
+  return (
+    <label className="route-run-modifier-toggle" title={declaration.description}>
+      <span>{declaration.label}</span>
+      <input
+        type="checkbox"
+        aria-description={declaration.description}
+        checked={values[declaration.key] === true}
+        onChange={(event) =>
+          dispatch(
+            authoredProjectCommandDispatched(
+              control.setValue(declaration, event.target.checked).command,
+            ),
+          )
+        }
+      />
+    </label>
+  );
+}
+
+const SLIDER_COMMIT_KEYS = [
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  'ArrowDown',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+];
+
+function NumberRunModifierSlider({
+  control,
+  declaration,
+  id,
+}: {
+  readonly control: WorkspaceRoute['runModifiers'];
+  readonly declaration: NumberRunModifierDeclaration;
+  readonly id: string;
+}) {
+  const dispatch = useAppDispatch();
+  const values: Readonly<Record<string, boolean | number>> = control.value;
+  const authored = Number(values[declaration.key]);
+  const [draft, setDraft] = useState<{
+    readonly source: number;
+    readonly text: string;
+    readonly error?: string;
+  }>();
+  // An authored replacement (including history restoration) supersedes its draft.
+  if (draft !== undefined && draft.source !== authored) setDraft(undefined);
+  const currentDraft = draft?.source === authored ? draft : undefined;
+  const shown = currentDraft?.text ?? String(authored);
+  const vanilla = Number(shown) === declaration.default ? ' (Vanilla)' : '';
+  const commit = () => {
+    if (currentDraft === undefined) return;
+    const result = control.draftIntent(declaration, currentDraft.text);
+    if (result.kind === 'invalid') {
+      setDraft({ ...currentDraft, error: result.message });
+      return;
+    }
+    setDraft(undefined);
+    dispatch(authoredProjectCommandDispatched(result.intent.command));
+  };
+  return (
+    <div className="route-run-modifier-number" title={declaration.description}>
+      <label htmlFor={id}>{declaration.label}</label>
+      <div className="route-run-modifier-multiplier">
+        <input
+          id={id}
+          aria-description={declaration.description}
+          type="range"
+          min={declaration.min}
+          max={declaration.max}
+          step={declaration.step}
+          value={shown}
+          aria-valuetext={`${shown}${declaration.unit}${vanilla}`}
+          onChange={(event) => setDraft({ source: authored, text: event.target.value })}
+          onPointerUp={commit}
+          onKeyUp={(event) => {
+            if (SLIDER_COMMIT_KEYS.includes(event.key)) commit();
+          }}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commit();
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              setDraft(undefined);
+            }
+          }}
+        />
+        <output htmlFor={id}>
+          {shown}
+          {declaration.unit}
+          {vanilla}
+        </output>
+      </div>
+      {currentDraft?.error === undefined ? null : (
+        <p id={`${id}-error`} role="alert">
+          {currentDraft.error}
+        </p>
+      )}
+    </div>
   );
 }
