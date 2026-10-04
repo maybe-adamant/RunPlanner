@@ -456,6 +456,7 @@ export function EncounterCompositionControl({
   const [helpOpen, setHelpOpen] = useState(false);
   const value = decision?.value === undefined ? undefined : authored(decision);
   const assessment = value === undefined ? undefined : interaction?.generatedAssessment;
+  const warnings = assessment?.composition === 'active' ? assessment.warnings : [];
   // A retained removal-only value on a non-editable composition authors nothing.
   const authorable = value !== undefined && composition.editable;
   // Authored rows have content only in an active assessed composition.
@@ -973,13 +974,6 @@ export function EncounterCompositionControl({
       </div>
       {rows.length === 0 ? null : (
         <div className="encounter-generated-waves">
-          {assessment?.composition === 'active'
-            ? assessment.warnings.map((warning) => (
-                <p className="encounter-composition-warning" key={warning}>
-                  {warning}
-                </p>
-              ))
-            : null}
           <div className="encounter-budget-tabs-header">
             <nav className="run-state-tabs" aria-label="Wave budgets" role="tablist">
               {rows.map((wave, index) => (
@@ -1052,11 +1046,18 @@ export function EncounterCompositionControl({
           </p>
         </section>
       ))}
-      {requiredFindings.length > 0 ||
+      {assessment?.composition === 'active' ||
+      requiredFindings.length > 0 ||
       initializationFailure ||
       (assessment && assessment.issues.length > 0) ? (
         <section className="encounter-composition-findings" aria-label="Customization findings">
           <h4>Findings</h4>
+          {!initializationFailure &&
+          requiredFindings.length === 0 &&
+          (assessment?.issues.length ?? 0) === 0 &&
+          warnings.length === 0 ? (
+            <p className="trait-offer-feedback-empty">No current findings.</p>
+          ) : null}
           {initializationFailure ? (
             <p className="encounter-customization-repair">
               No supported composition is available here.
@@ -1081,6 +1082,11 @@ export function EncounterCompositionControl({
                     }[issue.field]
                 : `Wave ${issue.waveIndex}`}
               : {issue.message}
+            </p>
+          ))}
+          {warnings.map((warning) => (
+            <p className="encounter-composition-warning" key={warning}>
+              {warning}
             </p>
           ))}
         </section>

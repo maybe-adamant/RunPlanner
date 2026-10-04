@@ -427,7 +427,12 @@ describe('Pom resolution editor', () => {
         }),
     });
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
-    expect(screen.getByText('No eligible traits; no level is gained.')).not.toBeNull();
+    // The message occupies the picker's control slot rather than collapsing the dialog body.
+    const placeholder = screen
+      .getByText('No eligible traits; no level is gained.')
+      .closest('.control-placeholder');
+    expect(placeholder?.classList.contains('field-control-inline')).toBe(true);
+    expect(placeholder?.textContent).toContain('Recorded target');
     expect(screen.queryByRole('button', { name: 'Recorded random Pom target' })).toBeNull();
     expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
       false,
@@ -455,7 +460,13 @@ describe('Pom resolution editor', () => {
         }),
     });
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
-    await user.click(screen.getByRole('button', { name: 'Clear recorded target' }));
+    const placeholder = screen
+      .getByText(/No eligible traits; clear the recorded target\./)
+      .closest('.control-placeholder');
+    expect(placeholder).not.toBeNull();
+    const clear = screen.getByRole('button', { name: 'Clear recorded target' });
+    expect(placeholder?.contains(clear)).toBe(true);
+    await user.click(clear);
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     expect(onCommit).toHaveBeenCalledWith({ kind: 'random', targetTraitKey: null });
   });

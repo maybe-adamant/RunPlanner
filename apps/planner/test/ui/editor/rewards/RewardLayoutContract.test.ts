@@ -9,6 +9,10 @@ const workbenches = readFileSync(
   new URL('../../../../src/ui/styles/room-workbenches.css', import.meta.url),
   'utf8',
 );
+const traitFeedback = readFileSync(
+  new URL('../../../../src/ui/styles/trait-feedback.css', import.meta.url),
+  'utf8',
+);
 
 function cssBlock(styles: string, selector: string): string {
   const declaration = `${selector} {`;
@@ -37,7 +41,13 @@ describe('Reward row layout', () => {
     const placeholder = cssBlock(structure, '.control-placeholder > .fixed-room-state');
     expect(placeholder).toContain('min-height: 36px;');
     expect(placeholder).toContain('margin: 0;');
+    expect(placeholder).toContain('gap: 8px;');
     expect(workbenches).not.toContain('.ephyra-side-unavailable');
+  });
+
+  it('holds the Circe and Echo choice region height while choices load', () => {
+    expect(cssBlock(traitFeedback, '.trait-choice-region')).toMatch(/min-height: \d+(\.\d+)?rem;/);
+    expect(cssBlock(traitFeedback, '.trait-offer-feedback')).toContain('min-height: 5rem;');
   });
 
   it('keeps placement feedback out of flow and pool results separate from editable columns', () => {

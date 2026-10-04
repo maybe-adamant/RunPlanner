@@ -424,24 +424,28 @@ export function PomResolutionEditor({
           })}
         </div>
       ) : emptyNoOp ? (
-        <p className="trait-offer-feedback-empty">No eligible traits; no level is gained.</p>
+        <div className="field-control field-control-inline control-placeholder">
+          <span>Recorded target</span>
+          <span className="fixed-room-state">No eligible traits; no level is gained.</span>
+        </div>
       ) : interaction.value.kind === 'random' &&
         activeGroup?.surface.emptyTargetAllowed === true &&
         activeGroup.surface.eligibleTargetTraitKeys.length === 0 ? (
-        <div className="trait-offer-feedback">
-          <p className="trait-offer-feedback-empty">
+        <div className="field-control field-control-inline control-placeholder">
+          <span>Recorded target</span>
+          <span className="fixed-room-state">
             No eligible traits; clear the recorded target.
-          </p>
-          <button
-            className="quiet-action"
-            onClick={() => {
-              setRandomTarget(null);
-              evaluateDraft(Object.freeze({ kind: 'random', targetTraitKey: null }));
-            }}
-            type="button"
-          >
-            Clear recorded target
-          </button>
+            <button
+              className="quiet-action action-compact"
+              onClick={() => {
+                setRandomTarget(null);
+                evaluateDraft(Object.freeze({ kind: 'random', targetTraitKey: null }));
+              }}
+              type="button"
+            >
+              Clear recorded target
+            </button>
+          </span>
         </div>
       ) : (
         <RandomTraitTargetPicker

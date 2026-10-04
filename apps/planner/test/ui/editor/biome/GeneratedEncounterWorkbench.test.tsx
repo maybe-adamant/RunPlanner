@@ -266,9 +266,10 @@ describe('generated encounter customization workflows', () => {
     );
     fireEvent.blur(within(view.dialog).getByRole('textbox', { name: 'Wave 1 Whisper converted' }));
     expect(current(view)).toMatchObject({ menace: [{ conversions: { Guard: { count: 1 } } }] });
-    expect(
-      within(view.dialog).queryByRole('region', { name: 'Customization findings' }),
-    ).toBeNull();
+    // The findings region stays mounted while the composition is active.
+    const cleared = within(view.dialog).getByRole('region', { name: 'Customization findings' });
+    expect(cleared.textContent).toContain('No current findings.');
+    expect(cleared.textContent).not.toContain('Converted Whisper requests exceed');
   });
 
   it('uses the contextual Menace replacement picker with full friendly Tartarus pool', async () => {
@@ -934,11 +935,16 @@ describe('generated encounter customization workflows', () => {
       }),
       owner,
     );
-    expect(
-      within(view.dialog).getByText(
-        'Sorrow-Spiller can appear only once per run. An earlier uncustomized encounter may already include it.',
-      ),
-    ).toBeTruthy();
+    const warning = within(view.dialog).getByText(
+      'Sorrow-Spiller can appear only once per run. An earlier uncustomized encounter may already include it.',
+    );
+    const findings = within(view.dialog).getByRole('region', { name: 'Customization findings' });
+    expect(findings.contains(warning)).toBe(true);
+    expect(findings.textContent).not.toContain('No current findings.');
+    // Warnings follow the wave controls instead of mounting above the wave tabs.
+    const tabs = within(view.dialog).getByRole('tablist', { name: 'Wave budgets' });
+    expect(tabs.compareDocumentPosition(findings) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(tabs.contains(warning)).toBe(false);
   });
   it('initializes reward-owned Devotion at its exact phase', async () => {
     const owner = createEncounterPhaseAddress(

@@ -58,9 +58,8 @@ export function ChaosTraitOfferEditor({
   readonly onUpdate: (value: AuthoredChaosTraitOffer) => void;
 }) {
   const domain = interaction.domainFor(value);
-  if (domain === undefined) {
-    return <p role="status">Chaos outcome is unavailable at the current route frontier.</p>;
-  }
+  // The dialog closes when its offer context is lost, so a reached Chaos offer always has a domain.
+  if (domain === undefined) throw new Error('Chaos offer editor rendered without a reached domain');
   const updateCurse = (index: number, curseKey: string): void => {
     const options = [...value.curseOptions] as AuthoredChaosTraitOffer['curseOptions'][number][];
     const current = options[index]!;

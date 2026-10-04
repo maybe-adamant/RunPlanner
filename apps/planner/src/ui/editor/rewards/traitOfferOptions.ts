@@ -3,7 +3,23 @@ import {
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
 } from '@run-planner/engine/authored-project';
-import type { WorkspaceTraitOptionDomainInteraction } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceCirceResolutionDomain,
+  WorkspaceTraitOptionDomainInteraction,
+} from '@planner/projections/structured-workspace';
+
+/** Why this Circe outcome cannot be chosen here; shown in the dialog's feedback region. */
+export function circeUnavailableMessage(
+  domain: WorkspaceCirceResolutionDomain | undefined,
+): string | undefined {
+  return domain === undefined
+    ? undefined
+    : !domain.outerAvailable
+      ? 'This Circe trait has no available outcome here.'
+      : !domain.branchAgreement
+        ? 'No outcome is supported across every route branch.'
+        : undefined;
+}
 
 export function replaceTraitOfferOption(
   value: AuthoredTraitOfferTraits,
