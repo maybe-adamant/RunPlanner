@@ -158,11 +158,24 @@ export function retainBlockedRegionProducts(
       semanticAddressKey(placement.address),
     ),
   );
+  // The clamped prefix stops before the blocked room, so a placement assessed
+  // at an earlier contact of that room is proven only by the selected attempt.
+  const blockedDerivedAcquisitionKey =
+    blockedDerivedAcquisitionAt === undefined
+      ? undefined
+      : semanticAddressKey(blockedDerivedAcquisitionAt);
   const blockingPlacements = (selectedRewards.generatedPickupPlacements ?? []).filter(
-    (placement) =>
-      blockedDerivedAcquisitionAt !== undefined &&
-      semanticAddressKey(placement.address) === semanticAddressKey(blockedDerivedAcquisitionAt) &&
-      !retainedPlacementKeys.has(semanticAddressKey(placement.address)),
+    (placement) => {
+      const key = semanticAddressKey(placement.address);
+      return (
+        !retainedPlacementKeys.has(key) &&
+        (key === blockedDerivedAcquisitionKey ||
+          phaseTakesEffectBeforeBlock(
+            { kind: 'history', sequence: placement.contact.sequence, boundary: 'at' },
+            block,
+          ))
+      );
+    },
   );
   const generatedPickupPlacements = Object.freeze([
     ...(retainedRewards.generatedPickupPlacements ?? []),

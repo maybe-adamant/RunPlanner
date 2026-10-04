@@ -81,8 +81,10 @@ assembly and returns the final project and its exact assembly. Required Hermes
 obligations are inserted at reached due contacts; optional clocked pickups are
 never accepted automatically. Proven displaced payload and automatic outcomes
 are reset, while unassessed representable authorship remains retained. When a later
-edit reaches inherited choices, agreeing current evidence without established prior
-correspondence also resets them; the exact choice authored by that edit is protected. Each
+edit reaches inherited timed-effect choices, agreeing current evidence without
+established prior correspondence also resets them; the exact choice authored by that
+edit is protected. A delivery already ranked at its exact due host and phase with an
+unchanged obligation has that correspondence and is retained when first reached. Each
 repair consumes an explicit obligation or displaced owner; repeated repairs are
 contract errors rather than an unbounded replay policy. Loading and projection
 remain read-only, and Undo/Redo restore the settled snapshots.
