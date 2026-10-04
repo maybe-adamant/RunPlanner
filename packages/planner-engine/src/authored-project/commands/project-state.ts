@@ -3,7 +3,12 @@ import { routeInitialProfile } from '../route-profile';
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
-import { decodeRunModifiers, isNativeRunModifiers, routeRunModifiers } from '../run-modifiers';
+import {
+  RUN_MODIFIER_DECLARATIONS,
+  decodeRunModifiers,
+  encodeRunModifiers,
+  routeRunModifiers,
+} from '../run-modifiers';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
 import { resolveCompletionBoss } from '../completion-boss';
 import { createDefaultStartTopology } from '../topology/construction';
@@ -332,19 +337,17 @@ export function applyProjectStateCommand(
       const value = decodeRunModifiers(command.value, 'runModifiers');
       const route = document.route;
       const previous = routeRunModifiers(route.loadout);
-      const native = isNativeRunModifiers(value);
-      if (
-        previous.guaranteeEligibleCrits === value.guaranteeEligibleCrits &&
-        previous.guaranteeEligibleDoubleDamage === value.guaranteeEligibleDoubleDamage &&
-        previous.enemyGoldDropChanceMultiplier === value.enemyGoldDropChanceMultiplier &&
-        (!native || route.loadout.runModifiers === undefined)
-      )
+      if (RUN_MODIFIER_DECLARATIONS.every(({ key }) => previous[key] === value[key]))
         return document;
+      const encoded = encodeRunModifiers(value);
       const loadout = { ...route.loadout };
       delete loadout.runModifiers;
       return {
         ...document,
-        route: { ...route, loadout: { ...loadout, ...(native ? {} : { runModifiers: value }) } },
+        route: {
+          ...route,
+          loadout: { ...loadout, ...(encoded === undefined ? {} : { runModifiers: encoded }) },
+        },
       };
     }
     case 'ReplaceManualArcanaSelection': {

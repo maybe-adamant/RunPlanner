@@ -1,6 +1,6 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation/evaluation-products';
 import type { Catalog } from '../catalog-schema';
-import type { RunModifiers } from '../authored-project/model';
+import type { RunModifiers } from '../authored-project/run-modifiers';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
 import type { TraitElement, TraitRarity } from '../catalog-schema';
 import type {

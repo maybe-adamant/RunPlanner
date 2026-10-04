@@ -77,18 +77,17 @@ local function startingKeepsake(value)
     return record
 end
 
+-- Only the modifiers this module implements are read; other wire keys are inert
+-- here and remain part of the fingerprinted contents.
 local function runModifiers(value)
     local label = "execution plan.runModifiers"
-    local record, errorMessage = p.exact(value, {
-        "guaranteeEligibleCrits", "guaranteeEligibleDoubleDamage", "enemyGoldDropChanceMultiplier",
-    }, {}, label)
+    local record, errorMessage = p.obj(value, label)
     if not record then return nil, errorMessage end
-    if not p.bool(record.guaranteeEligibleCrits, label .. ".guaranteeEligibleCrits")
-        or not p.bool(record.guaranteeEligibleDoubleDamage, label .. ".guaranteeEligibleDoubleDamage")
-        or not p.num(record.enemyGoldDropChanceMultiplier, label .. ".enemyGoldDropChanceMultiplier", 1) then
+    local multiplier = record.enemyGoldDropChanceMultiplier
+    if multiplier ~= nil and not p.num(multiplier, label .. ".enemyGoldDropChanceMultiplier", 1) then
         return p.fail(label .. " contains invalid values")
     end
-    return record
+    return { enemyGoldDropChanceMultiplier = multiplier == nil and 1 or multiplier }
 end
 
 local function fingerprintBody(plan, decodedOccurrences)
@@ -183,8 +182,10 @@ function protocol.decode(value)
         or (plan.routeKey == "Surface" and not surface) then
         return p.fail("execution plan.routeKey disagrees with extent")
     end
+    local modifiers
     if plan.runModifiers ~= nil then
-        local _, modifiersError = runModifiers(plan.runModifiers)
+        local modifiersError
+        modifiers, modifiersError = runModifiers(plan.runModifiers)
         if modifiersError then return nil, modifiersError end
     end
     local _, loadoutError = loadout.decode(plan.startingLoadout)
@@ -222,6 +223,7 @@ function protocol.decode(value)
         return p.fail("execution plan fingerprint does not match contents")
     end
     attachDerived(decoded, derived)
+    plan.runModifiers = modifiers
     plan.resources = resourcePolicy
     plan.occurrences = decoded
     plan.occurrencesById = idsOrError

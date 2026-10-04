@@ -113,11 +113,7 @@ export function runModifiersProject(): ProjectDocument {
   return applyProjectCommand(fOnlyProject(), catalog, {
     kind: 'ReplaceRunModifiers',
     route: createRouteAddress('Underworld'),
-    value: {
-      guaranteeEligibleCrits: true,
-      guaranteeEligibleDoubleDamage: true,
-      enemyGoldDropChanceMultiplier: 2.5,
-    },
+    value: { enemyGoldDropChanceMultiplier: 2.5 },
   });
 }
 

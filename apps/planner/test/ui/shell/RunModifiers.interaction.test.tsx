@@ -29,35 +29,10 @@ describe('Run modifier authoring', () => {
     fireEvent.change(gold(), { target: { value: '1.2' } });
     expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(1);
     fireEvent.keyDown(gold(), { key: 'Enter' });
-    expect(view.modifiers()).toEqual({
-      guaranteeEligibleCrits: false,
-      guaranteeEligibleDoubleDamage: false,
-      enemyGoldDropChanceMultiplier: 1.2,
-    });
+    expect(view.modifiers()).toEqual({ enemyGoldDropChanceMultiplier: 1.2 });
     fireEvent.change(gold(), { target: { value: '1' } });
     fireEvent.blur(gold());
     expect(view.project().route.loadout.runModifiers).toBeUndefined();
-  });
-
-  it('keeps the guarantee toggles out of the editor while their authored values persist', () => {
-    const view = open();
-    expect(screen.queryByRole('checkbox', { name: 'Guaranteed crits' })).toBeNull();
-    expect(screen.queryByRole('checkbox', { name: 'Guaranteed double damage' })).toBeNull();
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceRunModifiers',
-          route: createRouteAddress('Underworld'),
-          value: { ...view.modifiers(), guaranteeEligibleCrits: true },
-        }),
-      ),
-    );
-    fireEvent.change(gold(), { target: { value: '1.5' } });
-    fireEvent.blur(gold());
-    expect(view.modifiers()).toMatchObject({
-      guaranteeEligibleCrits: true,
-      enemyGoldDropChanceMultiplier: 1.5,
-    });
   });
 
   it('puts concise hover help on each option without an extra button', () => {
@@ -91,7 +66,7 @@ describe('Run modifier authoring', () => {
     expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(2.5);
   });
 
-  it('preserves an existing multiplier above the slider range until edited', () => {
+  it('clamps a stored multiplier above the slider range to 5', () => {
     const view = open();
     act(() =>
       view.application.store.dispatch(
@@ -102,9 +77,9 @@ describe('Run modifier authoring', () => {
         }),
       ),
     );
-    expect(screen.getByText('8×')).toBeTruthy();
+    expect(screen.getByText('5×')).toBeTruthy();
     fireEvent.blur(gold());
-    expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(8);
+    expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(5);
   });
 
   it('allows modifiers on Fresh File while preserving fixed native equipment', () => {
@@ -116,11 +91,7 @@ describe('Run modifier authoring', () => {
     expect(screen.queryByLabelText('Starting reward')).toBeNull();
     fireEvent.change(gold(), { target: { value: '1.5' } });
     fireEvent.blur(gold());
-    expect(view.modifiers()).toEqual({
-      guaranteeEligibleCrits: false,
-      guaranteeEligibleDoubleDamage: false,
-      enemyGoldDropChanceMultiplier: 1.5,
-    });
+    expect(view.modifiers()).toEqual({ enemyGoldDropChanceMultiplier: 1.5 });
     expect(view.project().route.loadout).toMatchObject({
       weaponKey: null,
       aspectKey: null,

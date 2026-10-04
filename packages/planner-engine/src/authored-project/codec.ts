@@ -1,7 +1,7 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
-import { decodeRunModifiers } from './run-modifiers';
+import { decodeRunModifiers, encodeRunModifiers } from './run-modifiers';
 import { normalizeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
@@ -336,6 +336,11 @@ function decodeRoutePlan(
     ) as import('./model').ResourcePlacements,
   );
 
+  const runModifiers =
+    'runModifiers' in loadout
+      ? encodeRunModifiers(decodeRunModifiers(loadout.runModifiers, `${path}.loadout.runModifiers`))
+      : undefined;
+
   return Object.freeze({
     routeKey,
     itineraryBiomeKeys: Object.freeze(itineraryBiomeKeys),
@@ -347,9 +352,7 @@ function decodeRoutePlan(
       manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
       fearRanks: Object.freeze(fearRanks),
       startingKeepsakeKey,
-      ...('runModifiers' in loadout
-        ? { runModifiers: decodeRunModifiers(loadout.runModifiers, `${path}.loadout.runModifiers`) }
-        : {}),
+      ...(runModifiers === undefined ? {} : { runModifiers }),
       ...(loadout.keepsakeEquipResults === undefined
         ? {}
         : {

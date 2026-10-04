@@ -544,8 +544,6 @@ export interface WorkspaceRouteRailBiome {
 
 export interface WorkspaceRunModifiersControl {
   readonly value: import('@run-planner/engine/authored-project').RunModifiers;
-  readonly setCrits: (value: boolean) => WorkspaceCommandIntent;
-  readonly setDoubleDamage: (value: boolean) => WorkspaceCommandIntent;
   readonly goldDraftIntent: (
     draft: string,
   ) =>

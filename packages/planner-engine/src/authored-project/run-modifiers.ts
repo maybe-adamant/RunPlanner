@@ -1,51 +1,119 @@
-import type { RouteLoadout, RunModifiers } from './model';
-import { expectRecord, expectExactKeys, expectBoolean, failProjectDocument } from './validation';
+import type { RouteLoadout } from './model';
+import { expectRecord } from './validation';
 
-export const NATIVE_RUN_MODIFIERS: RunModifiers = Object.freeze({
-  guaranteeEligibleCrits: false,
-  guaranteeEligibleDoubleDamage: false,
-  enemyGoldDropChanceMultiplier: 1,
-});
+interface RunModifierDeclarationShape {
+  readonly key: string;
+  readonly label: string;
+  readonly description: string;
+  /** `internal` modifiers are authored only in a development build. */
+  readonly stage: 'released' | 'internal';
+}
 
-/** Read native defaults without inserting persisted fields. */
+export interface BooleanRunModifierDeclaration extends RunModifierDeclarationShape {
+  readonly kind: 'boolean';
+  readonly default: boolean;
+}
+
+export interface NumberRunModifierDeclaration extends RunModifierDeclarationShape {
+  readonly kind: 'number';
+  readonly default: number;
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+}
+
+export type RunModifierDeclaration = BooleanRunModifierDeclaration | NumberRunModifierDeclaration;
+
+function declareRunModifiers<const T extends readonly RunModifierDeclaration[]>(
+  declarations: T,
+): Readonly<T> {
+  for (const declaration of declarations) Object.freeze(declaration);
+  return Object.freeze(declarations);
+}
+
+/** Authoring shape and stage only; the exporting engine and the module hook own behaviour. */
+export const RUN_MODIFIER_DECLARATIONS = declareRunModifiers([
+  {
+    key: 'enemyGoldDropChanceMultiplier',
+    kind: 'number',
+    default: 1,
+    min: 1,
+    max: 5,
+    step: 0.1,
+    label: 'Enemy gold chance',
+    description: 'Multiplies eligible gold-drop chances up to 100%; room gold limits still apply.',
+    stage: 'released',
+  },
+]);
+
+type DeclaredRunModifier = (typeof RUN_MODIFIER_DECLARATIONS)[number];
+export type RunModifierKey = DeclaredRunModifier['key'];
+
+/** The complete authored settings, every declared modifier present. */
+export type RunModifiers = {
+  readonly [D in DeclaredRunModifier as D['key']]: D['kind'] extends 'boolean' ? boolean : number;
+};
+
+/** Persisted settings: only values that differ from their declared default. */
+export type RunModifiersRecord = Readonly<Partial<RunModifiers>>;
+
+export const NATIVE_RUN_MODIFIERS: RunModifiers = Object.freeze(
+  Object.fromEntries(
+    RUN_MODIFIER_DECLARATIONS.map((declaration) => [declaration.key, declaration.default]),
+  ) as RunModifiers,
+);
+
+export function runModifierDeclaration(key: RunModifierKey): RunModifierDeclaration {
+  const declaration = RUN_MODIFIER_DECLARATIONS.find((candidate) => candidate.key === key);
+  if (declaration === undefined) throw new Error(`undeclared run modifier ${key}`);
+  return declaration;
+}
+
+export function isRunModifierValue(declaration: RunModifierDeclaration, value: unknown): boolean {
+  if (declaration.kind === 'boolean') return typeof value === 'boolean';
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value >= declaration.min &&
+    value <= declaration.max
+  );
+}
+
+/** Read the complete settings without inserting persisted fields. */
 export function routeRunModifiers(loadout: Pick<RouteLoadout, 'runModifiers'>): RunModifiers {
-  return loadout.runModifiers ?? NATIVE_RUN_MODIFIERS;
+  return loadout.runModifiers === undefined
+    ? NATIVE_RUN_MODIFIERS
+    : Object.freeze({ ...NATIVE_RUN_MODIFIERS, ...loadout.runModifiers });
 }
 
 export function isNativeRunModifiers(value: RunModifiers): boolean {
-  return (
-    !value.guaranteeEligibleCrits &&
-    !value.guaranteeEligibleDoubleDamage &&
-    value.enemyGoldDropChanceMultiplier === 1
+  return RUN_MODIFIER_DECLARATIONS.every(
+    (declaration) => value[declaration.key] === declaration.default,
   );
 }
 
-/** The authored settings' complete structural domain, also consumed by export. */
+/** A finite number outside the declared domain clamps to its nearest bound. */
+function healRunModifierValue(declaration: RunModifierDeclaration, raw: unknown): boolean | number {
+  if (declaration.kind === 'boolean') return typeof raw === 'boolean' ? raw : declaration.default;
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return declaration.default;
+  return Math.min(declaration.max, Math.max(declaration.min, raw));
+}
+
+/** Unknown keys are dropped; a malformed known value heals toward its declaration. */
 export function decodeRunModifiers(value: unknown, path: string): RunModifiers {
   const record = expectRecord(value, path);
-  expectExactKeys(
-    record,
-    ['guaranteeEligibleCrits', 'guaranteeEligibleDoubleDamage', 'enemyGoldDropChanceMultiplier'],
-    path,
-  );
-  const guaranteeEligibleCrits = expectBoolean(
-    record.guaranteeEligibleCrits,
-    `${path}.guaranteeEligibleCrits`,
-  );
-  const guaranteeEligibleDoubleDamage = expectBoolean(
-    record.guaranteeEligibleDoubleDamage,
-    `${path}.guaranteeEligibleDoubleDamage`,
-  );
-  const multiplier = record.enemyGoldDropChanceMultiplier;
-  if (typeof multiplier !== 'number' || !Number.isFinite(multiplier) || multiplier < 1) {
-    failProjectDocument(
-      `${path}.enemyGoldDropChanceMultiplier`,
-      'must be a finite number at least 1',
-    );
-  }
-  return Object.freeze({
-    guaranteeEligibleCrits,
-    guaranteeEligibleDoubleDamage,
-    enemyGoldDropChanceMultiplier: multiplier,
-  });
+  const decoded: Record<string, boolean | number> = {};
+  for (const declaration of RUN_MODIFIER_DECLARATIONS)
+    decoded[declaration.key] = healRunModifierValue(declaration, record[declaration.key]);
+  return Object.freeze(decoded) as RunModifiers;
+}
+
+/** Non-default values only; undefined when every value is native. */
+export function encodeRunModifiers(value: RunModifiers): RunModifiersRecord | undefined {
+  const entries = RUN_MODIFIER_DECLARATIONS.filter(
+    (declaration) => value[declaration.key] !== declaration.default,
+  ).map((declaration) => [declaration.key, value[declaration.key]]);
+  return entries.length === 0
+    ? undefined
+    : (Object.freeze(Object.fromEntries(entries)) as RunModifiersRecord);
 }

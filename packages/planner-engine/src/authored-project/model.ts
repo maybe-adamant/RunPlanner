@@ -6,6 +6,7 @@ import type {
   AuthoredTranscendentEmbryoOutcome,
   AuthoredTraitOffer,
 } from './traits/state';
+import type { RunModifiersRecord } from './run-modifiers';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 90 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
@@ -59,16 +60,10 @@ export interface RouteWeaponAspectLoadout {
   readonly aspectKey: string | null;
 }
 
-/** Optional run-wide execution settings; absence preserves native behavior. */
-export interface RunModifiers {
-  readonly guaranteeEligibleCrits: boolean;
-  readonly guaranteeEligibleDoubleDamage: boolean;
-  readonly enemyGoldDropChanceMultiplier: number;
-}
-
 /** Complete persisted route configuration. */
 export interface RouteLoadout extends RouteWeaponAspectLoadout {
-  readonly runModifiers?: RunModifiers;
+  /** Non-default run-wide execution settings; absence preserves native behavior. */
+  readonly runModifiers?: RunModifiersRecord;
   /** Route-owned offer selected before an entry room exists. */
   readonly startingReward: ResolvedRewardOffer | null;
   readonly manualArcanaKeys: readonly string[];

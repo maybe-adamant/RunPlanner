@@ -48,11 +48,7 @@
       }
     }
   },
-  "runModifiers": {
-    "guaranteeEligibleCrits": true,
-    "guaranteeEligibleDoubleDamage": true,
-    "enemyGoldDropChanceMultiplier": 2.5
-  },
+  "runModifiers": { "enemyGoldDropChanceMultiplier": 2.5 },
   "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake" },
   "extent": { "kind": "configuredPrefix", "biomeKeys": ["F"], "terminalBiomeKey": "F" },
   "selectedOccurrenceIds": [
@@ -2333,5 +2329,5 @@
       }
     }
   ],
-  "planFingerprint": "7e725471"
+  "planFingerprint": "a6544415"
 }
