@@ -15,3 +15,10 @@ wide (1920 px) window. Confirm or waive each item; retire confirmed items.
       without shifting it and dismisses cleanly.
 - [ ] Compare a Travel Deal placeholder, an invalid Travel Deal, and a purchased
       one in the Shop workbench. Item and participation columns align.
+- [ ] With Vow of Forfeit active, open a door, a Fields cage door, a Ship wheel
+      offer and the route starting reward whose Boon realizes as a Red Onion.
+      The picker trigger reads the offer followed by `(Red Onion)` with "Vow of
+      Forfeit" on hover; nothing renders beside the control; the timeline row
+      reads "Collect Red Onion" with no provenance. The cage and wheel cases
+      show the onion as soon as the room is entered or the wheel is picked,
+      before any later cage or combat settles.
