@@ -1,18 +1,91 @@
 import type {
   WorkspaceInteractionCatalog,
+  WorkspaceRewardControl,
   WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
 } from '@planner/projections/structured-workspace';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
 import { AnvilResultLauncher } from '../rewards/AnvilResultEditor';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
-/** Trait and level controls attached to one projected room-action row. */
+/** Pickup outcome and Sea Star controls for one acquisition role of a timeline row. */
+function PickupOutcomeControls({
+  conversion,
+  idPrefix,
+  interactions,
+}: {
+  readonly conversion: NonNullable<WorkspaceRewardControl['conversions']>[number];
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.acquisitionConversions,
+    workspaceInteractionKey(conversion.address),
+  );
+  if (!interaction.visible) return null;
+  return (
+    <div className="reward-acquisition-conversion">
+      <div className="pickup-outcome-control">
+        <ContextualPicker
+          id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
+          label="Outcome"
+          ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
+          layout="inline"
+          placeholder="Choose a pickup outcome"
+          model={declaredChoicesPicker(
+            [
+              { key: 'normal', value: 'normal', label: 'Pickup' },
+              {
+                key: 'timePiece',
+                value: 'timePiece',
+                label: 'Timepiece',
+                disabled: !interaction.timePieceSupported && conversion.value.kind !== 'timePiece',
+              },
+              {
+                key: 'artificer',
+                value: 'artificer',
+                label: 'Artificer',
+                disabled: !interaction.artificerSupported && conversion.value.kind !== 'artificer',
+              },
+            ],
+            conversion.value.kind,
+          )}
+          onSelect={(kind) => {
+            if (kind === 'normal' || kind === 'timePiece') {
+              executeIntent(interaction.intentFor(Object.freeze({ kind })));
+              return;
+            }
+            if (kind === 'artificer')
+              executeIntent(interaction.intentFor(Object.freeze({ kind: 'artificer' })));
+          }}
+        />
+      </div>
+      {!interaction.seaStarSupported && !interaction.seaStarProcced ? null : (
+        <label className="pickup-outcome-control">
+          <input
+            aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
+            checked={interaction.seaStarProcced}
+            disabled={!interaction.seaStarSupported && !interaction.seaStarProcced}
+            onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}
+            type="checkbox"
+          />
+          <span>Sea Star procced</span>
+        </label>
+      )}
+    </div>
+  );
+}
+
+/** Pickup outcome first, then what follows from it: trait, Pom, Anvil, Artificer output, Fountain. */
 export function RoomActionInlineEditors({
   inlineRewardOffer = false,
   row,
@@ -26,8 +99,10 @@ export function RoomActionInlineEditors({
     ...(row.traitOffer === undefined ? [] : [row.traitOffer]),
     ...(row.rewardPayload?.inlineTraitOffers ?? []),
   ];
-  const levels = row.rewardPayload?.inlineLevelResolutions ?? [];
-  const anvilInteractions = (row.rewardPayload?.control.conversions ?? []).flatMap((control) => {
+  const payload = row.rewardPayload;
+  const levels = payload?.inlineLevelResolutions ?? [];
+  const conversions = payload?.control.conversions ?? [];
+  const anvilInteractions = conversions.flatMap((control) => {
     const interaction = requireWorkspaceInteraction(
       interactions.acquisitionConversions,
       workspaceInteractionKey(control.address),
@@ -43,15 +118,22 @@ export function RoomActionInlineEditors({
             idPrefix={`room-action-inline-${row.rewardPayload.control.marker.focusKey}`}
             interactions={interactions}
             offerSummaryMode="source"
-            showAcquisitionChildren={false}
-            showLevelResolutions={false}
-            showTraitOffers={false}
             {...(row.rewardPayload.control.offerEditStartStep === undefined
               ? {}
               : { offerStartStep: row.rewardPayload.control.offerEditStartStep })}
           />
         </div>
       )}
+      {payload === undefined
+        ? null
+        : conversions.map((conversion) => (
+            <PickupOutcomeControls
+              conversion={conversion}
+              idPrefix={`room-action-${payload.control.marker.focusKey}`}
+              interactions={interactions}
+              key={workspaceInteractionKey(conversion.address)}
+            />
+          ))}
       {traitControls.map((control) => (
         <TraitOfferLauncher
           control={control}
@@ -69,6 +151,19 @@ export function RoomActionInlineEditors({
       {anvilInteractions.map((interaction) => (
         <AnvilResultLauncher interaction={interaction} key="anvil-of-fates" />
       ))}
+      {row.artificerOutput === undefined ? null : (
+        <div className="room-action-artificer-output">
+          <RewardControlEditor
+            control={row.artificerOutput.control}
+            idPrefix={`room-action-artificer-${row.artificerOutput.control.marker.focusKey}`}
+            interactions={interactions}
+            label={row.artificerOutput.label}
+            {...(row.artificerOutput.control.offerEditStartStep === undefined
+              ? {}
+              : { offerStartStep: row.artificerOutput.control.offerEditStartStep })}
+          />
+        </div>
+      )}
       {row.fountainRarity === undefined ? null : (
         <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
       )}

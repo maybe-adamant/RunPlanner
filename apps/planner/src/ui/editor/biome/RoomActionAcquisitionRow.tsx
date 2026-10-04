@@ -1,13 +1,11 @@
-import {
-  requireWorkspaceInteraction,
-  workspaceInteractionKey,
-  type WorkspaceInteractionCatalog,
-  type WorkspaceRoomActionRow,
+import type {
+  WorkspaceInteractionCatalog,
+  WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
-/** Acquisition, conversion, and Artificer-output presentation for one action. */
+/** Reward authoring on one action's pickup line: the offer picker when the row exposes it. */
 export function RoomActionAcquisitionRow({
   hideOffer = false,
   row,
@@ -21,54 +19,25 @@ export function RoomActionAcquisitionRow({
   const payload = row.rewardPayload;
   if (payload === undefined) return null;
   const showOffer = payload.showOffer && !hideOffer;
-  const visible =
-    showOffer ||
-    payload.control.realizedAcquisition !== undefined ||
-    (payload.control.conversions ?? []).some(
-      (conversion) =>
-        requireWorkspaceInteraction(
-          interactions.acquisitionConversions,
-          workspaceInteractionKey(conversion.address),
-        ).visible,
-    ) ||
-    row.artificerOutput !== undefined;
   return (
     <div
       className="acquisition-entry-resolution"
-      data-empty={!visible || undefined}
+      data-empty={!showOffer || undefined}
       {...(payload.control.owner.kind === 'acquisitionEntry' &&
       payload.control.offerEditVisibility === 'hidden'
         ? findingTarget(payload.control.owner.address)
         : {})}
       tabIndex={-1}
     >
-      <div className="room-action-outcome-controls">
-        <RewardControlEditor
-          control={payload.control}
-          idPrefix={`room-action-${payload.control.marker.focusKey}`}
-          interactions={interactions}
-          showAcquisitionChildren
-          showLevelResolutions={false}
-          showOffer={showOffer}
-          showTraitOffers={false}
-          {...(payload.control.offerEditStartStep === undefined
-            ? {}
-            : { offerStartStep: payload.control.offerEditStartStep })}
-        />
-        {row.artificerOutput === undefined ? null : (
-          <div className="room-action-artificer-output">
-            <RewardControlEditor
-              control={row.artificerOutput.control}
-              idPrefix={`room-action-artificer-${row.artificerOutput.control.marker.focusKey}`}
-              interactions={interactions}
-              label={row.artificerOutput.label}
-              {...(row.artificerOutput.control.offerEditStartStep === undefined
-                ? {}
-                : { offerStartStep: row.artificerOutput.control.offerEditStartStep })}
-            />
-          </div>
-        )}
-      </div>
+      <RewardControlEditor
+        control={payload.control}
+        idPrefix={`room-action-${payload.control.marker.focusKey}`}
+        interactions={interactions}
+        showOffer={showOffer}
+        {...(payload.control.offerEditStartStep === undefined
+          ? {}
+          : { offerStartStep: payload.control.offerEditStartStep })}
+      />
     </div>
   );
 }

@@ -1820,8 +1820,6 @@
   border: 0;
 }
 
-.room-action-row .room-action-outcome-controls,
-.room-action-row .room-action-artificer-output,
 .room-action-row .pickup-outcome-control {
   gap: 4px 6px;
 }
@@ -1836,9 +1834,12 @@
 }
 
 .room-action-row .room-action-artificer-output {
-  margin-left: 0;
-  justify-content: flex-start;
-  text-align: left;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
 }
 
 .room-action-row .room-action-artificer-output .field-control-inline {

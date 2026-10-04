@@ -60,7 +60,6 @@ export function ShopWorkbench({
                 idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
                 interactions={interactions}
                 label={`${offer.label} Item`}
-                showAcquisitionChildren={false}
               />
             </div>
             <label className="shop-family-participation">
@@ -136,7 +135,6 @@ export function ShopWorkbench({
                     idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
                     interactions={interactions}
                     label="Travel Deal Item"
-                    showAcquisitionChildren={false}
                   />
                 </div>
                 <label className="shop-family-participation">

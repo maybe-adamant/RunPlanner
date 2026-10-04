@@ -6,13 +6,9 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
-import { TraitOfferLauncher } from './TraitOfferEditor';
-import { PomResolutionLauncher } from './PomResolutionEditor';
 import { ShopOfferEditor } from './ShopOfferEditor';
 import type { RewardPickerStep } from '@planner/projections/rewards/rewardPicker';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -21,9 +17,6 @@ export function RewardControlEditor({
   interactions,
   label = 'Reward',
   showOffer = true,
-  showAcquisitionChildren = false,
-  showLevelResolutions = true,
-  showTraitOffers = true,
   offerStartStep,
   offerSummaryMode = 'offer',
 }: {
@@ -32,12 +25,6 @@ export function RewardControlEditor({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label?: string;
   readonly showOffer?: boolean;
-  /** Trait, level, and conversion controls belong to the owning Room Timeline row. */
-  readonly showAcquisitionChildren?: boolean;
-  /** A Room Timeline row can promote Pom/level controls into its compact action heading. */
-  readonly showLevelResolutions?: boolean;
-  /** A Room Timeline row can promote trait launchers into its compact action heading. */
-  readonly showTraitOffers?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
   readonly offerStartStep?: RewardPickerStep;
   /** A compact fixed-type picker can omit the already-visible reward type. */
@@ -55,9 +42,10 @@ export function RewardControlEditor({
     if (interaction === undefined) throw new Error('Shop offers require an exact option edit');
     executeIntent(interaction.intentFor(value));
   };
+  if (!showOffer) return null;
   return (
     <>
-      {!showOffer ? null : control.shopOption !== undefined ? (
+      {control.shopOption !== undefined ? (
         <ShopOfferEditor control={control} interactions={interactions} label={label} />
       ) : control.kind === 'countedReward' ? (
         <CountedRewardEditor
@@ -92,106 +80,11 @@ export function RewardControlEditor({
           summaryMode={offerSummaryMode}
         />
       )}
-      {!showAcquisitionChildren ? null : (
-        <div className="trait-offer-launchers">
-          {control.realizedAcquisition === undefined ? null : (
-            <div
-              className="field-control field-control-inline reward-acquisition-outcome"
-              role="status"
-            >
-              <span>Outcome</span>
-              <span title="Vow of Forfeit">{control.realizedAcquisition.label} · Forfeit</span>
-            </div>
-          )}
-          {showTraitOffers
-            ? (control.traitOffers ?? []).map((trait) => (
-                <TraitOfferLauncher
-                  control={trait}
-                  interactions={interactions}
-                  key={workspaceInteractionKey(trait.address)}
-                />
-              ))
-            : null}
-          {showLevelResolutions
-            ? (control.levelResolutions ?? []).map((resolution) => (
-                <PomResolutionLauncher
-                  control={resolution}
-                  interactions={interactions}
-                  key={workspaceInteractionKey(resolution.address)}
-                />
-              ))
-            : null}
-          {(control.conversions ?? []).map((conversion) => {
-            const interaction = requireWorkspaceInteraction(
-              interactions.acquisitionConversions,
-              workspaceInteractionKey(conversion.address),
-            );
-            return !interaction.visible ? null : (
-              <div
-                className="reward-acquisition-conversion"
-                key={workspaceInteractionKey(conversion.address)}
-              >
-                <div className="pickup-outcome-control">
-                  <ContextualPicker
-                    id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
-                    label="Outcome"
-                    ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
-                    layout="inline"
-                    placeholder="Choose a pickup outcome"
-                    model={declaredChoicesPicker(
-                      [
-                        {
-                          key: 'normal',
-                          value: 'normal',
-                          label: 'Pickup',
-                        },
-                        {
-                          key: 'timePiece',
-                          value: 'timePiece',
-                          label: 'Timepiece',
-                          disabled:
-                            !interaction.timePieceSupported &&
-                            conversion.value.kind !== 'timePiece',
-                        },
-                        {
-                          key: 'artificer',
-                          value: 'artificer',
-                          label: 'Artificer',
-                          disabled:
-                            !interaction.artificerSupported &&
-                            conversion.value.kind !== 'artificer',
-                        },
-                      ],
-                      conversion.value.kind,
-                    )}
-                    onSelect={(kind) => {
-                      if (kind === 'normal' || kind === 'timePiece') {
-                        executeIntent(interaction.intentFor(Object.freeze({ kind })));
-                        return;
-                      }
-                      if (kind === 'artificer')
-                        executeIntent(interaction.intentFor(Object.freeze({ kind: 'artificer' })));
-                    }}
-                  />
-                </div>
-                {!interaction.seaStarSupported && !interaction.seaStarProcced ? null : (
-                  <label className="pickup-outcome-control">
-                    <input
-                      aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
-                      checked={interaction.seaStarProcced}
-                      disabled={!interaction.seaStarSupported && !interaction.seaStarProcced}
-                      onChange={(event) =>
-                        executeIntent(interaction.seaStarIntentFor(event.target.checked))
-                      }
-                      type="checkbox"
-                    />
-                    <span>Sea Star procced</span>
-                  </label>
-                )}
-              </div>
-            );
-          })}
-        </div>
+      {control.realizedAcquisition === undefined ? null : (
+        // Vow of Forfeit provenance belongs to the reward, not to the action that collects it.
+        <span className="neutral-status" title="Vow of Forfeit">
+          {`Forfeit → ${control.realizedAcquisition.label}`}
+        </span>
       )}
     </>
   );

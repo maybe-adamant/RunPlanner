@@ -2017,6 +2017,36 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
   });
 
+  it('marks a forfeited Ship wheel pick on its wheel offer and collects the onion on its row', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Surface' },
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = authorLegalTraitOffers(project);
+    renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
+
+    openRoomTab('Intro Timeline');
+    const ship = screen.getByLabelText('Ship combat structure');
+    const badge = within(ship).getByTitle('Vow of Forfeit');
+    expect(badge.textContent).toBe('Forfeit → Red Onion');
+    expect(badge.classList.contains('neutral-status')).toBe(true);
+    expect(within(ship).getAllByTitle('Vow of Forfeit')).toHaveLength(1);
+
+    openRoomTab('Combat 1 Timeline');
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(actions).queryByTitle('Vow of Forfeit')).toBeNull();
+    expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
+    expect(actions.textContent).toContain('Red Onion');
+    expect(actions.textContent).not.toContain('Forfeit');
+  });
+
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {

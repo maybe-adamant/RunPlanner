@@ -90,7 +90,6 @@ export function RewardSurfaceEditor({
               idPrefix={`${idPrefix}-${reward.key}`}
               interactions={interactions}
               label={showRewardLabels ? reward.label : 'Reward'}
-              showAcquisitionChildren={false}
             />
           )}
         </section>

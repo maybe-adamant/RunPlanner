@@ -4,6 +4,8 @@ import type {
   WorkspaceTraitOfferControl,
 } from './contracts/traits';
 import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
@@ -579,8 +581,25 @@ export function createStructuredWorkspaceProjection(
       if (runStartBinding.kind !== 'countedChoice') {
         throw new Error('Run-start reward must use a counted choice binding.');
       }
+      // The route start reward is collected as the first room's incoming reward, so its
+      // realized acquisition (Vow of Forfeit) is already projected on that room's control.
+      const startBiome = authoredRoute.biomes[0];
+      const startRoomReward =
+        startBiome?.topology == null
+          ? undefined
+          : rewardControls.get(
+              semanticAddressKey(
+                createIncomingRewardAddress(
+                  createBiomeAddress(routeSource.routeKey, startBiome.biomeKey),
+                  startBiome.topology.startOccurrenceId,
+                ),
+              ),
+            );
       const startingReward = Object.freeze<WorkspaceRewardControl>({
         kind: 'explicitReward' as const,
+        ...(startRoomReward?.realizedAcquisition === undefined
+          ? {}
+          : { realizedAcquisition: startRoomReward.realizedAcquisition }),
         marker: Object.freeze({
           address: routeStartingReward,
           assessment: routeMarker.assessment,

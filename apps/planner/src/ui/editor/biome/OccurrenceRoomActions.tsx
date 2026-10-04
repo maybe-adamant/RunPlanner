@@ -529,17 +529,17 @@ export function RoomActionsWorkbench({
           <div className="hub-rank-actions room-action-controls">
             <div className="room-action-inline-editors">
               {renderRowContent?.(row)}
+              <RoomActionAcquisitionRow
+                hideOffer={inlineMysteryBoonOffer}
+                interactions={interactions}
+                row={row}
+              />
               <RoomActionInlineEditors
                 inlineRewardOffer={inlineMysteryBoonOffer}
                 interactions={interactions}
                 row={row}
               />
               {nemesisInteraction === undefined ? renderSupplement(supplement) : null}
-              <RoomActionAcquisitionRow
-                hideOffer={inlineMysteryBoonOffer}
-                interactions={interactions}
-                row={row}
-              />
             </div>
             <div className="room-action-ordering">
               {placement === undefined ? (
