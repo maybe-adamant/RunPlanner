@@ -37,6 +37,7 @@ import { traitOfferContextIdentity } from '../../traits';
 import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
 import type {
   AcquisitionRoleFrontier,
+  FixedAcquisitionRealization,
   GeneratedPickupPlacement,
   DerivedAcquisitionEntryFrontier,
 } from '../acquisition/contracts';
@@ -96,6 +97,10 @@ export type ChronologyEmission =
   | {
       readonly kind: 'acquisitionRoleFrontiers';
       readonly frontiers: readonly AcquisitionRoleFrontier[] | undefined;
+    }
+  | {
+      readonly kind: 'fixedAcquisitionRealizations';
+      readonly realizations: readonly FixedAcquisitionRealization[];
     }
   | {
       readonly kind: 'traitOfferCandidateContacts';
@@ -228,6 +233,7 @@ export interface ChronologyAccumulation {
     readonly TraitOfferCandidateContext[]
   >;
   readonly acquisitionConversionContexts: ReadonlyMap<string, readonly AcquisitionRoleFrontier[]>;
+  readonly fixedAcquisitionRealizations: ReadonlyMap<string, FixedAcquisitionRealization>;
   readonly derivedAcquisitionEntryContexts: ReadonlyMap<
     string,
     readonly DerivedAcquisitionEntryFrontier[]
@@ -362,6 +368,7 @@ export function createChronologyAccumulator(
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
+  const fixedAcquisitionRealizations = new Map<string, FixedAcquisitionRealization>();
   const timedEffects: TimedEffectContact[] = [];
   const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
   const derivedAcquisitionEntryContexts = new Map<
@@ -701,6 +708,13 @@ export function createChronologyAccumulator(
       case 'acquisitionRoleFrontiers':
         recordAcquisitionRoleFrontiers(emission.frontiers);
         return;
+      case 'fixedAcquisitionRealizations':
+        for (const realization of emission.realizations) {
+          const key = semanticAddressKey(realization.address);
+          if (!fixedAcquisitionRealizations.has(key))
+            fixedAcquisitionRealizations.set(key, realization);
+        }
+        return;
       case 'traitOfferCandidateContacts':
         recordTraitOfferCandidateContacts(emission.contacts);
         return;
@@ -837,6 +851,7 @@ export function createChronologyAccumulator(
         producerFrontiers,
         reachedTraitOfferCandidateContexts,
         acquisitionConversionContexts,
+        fixedAcquisitionRealizations,
         derivedAcquisitionEntryContexts,
         timelineFacts:
           timelineFactNodes.size === 0 && timelineFactDependencies.size === 0

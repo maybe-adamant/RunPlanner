@@ -1371,7 +1371,9 @@ replacement and the canonical concrete acquisition settles the Onion. This
 also covers a picked Thessaly Ship-wheel reward, a Fields cage reward, and an
 Artificer-generated RoomReward Boon/Hermes replacement; it does not inspect the
 resolved giver. Fields fixes this outcome on selected room entry in active
-cage-list order, independently of later cage activation and pickup order.
+cage-list order, independently of later cage activation and pickup order; the
+entry-fixed realization is published for the cage's acquisition roles from
+that entry and retained when a later contact in the same room blocks.
 Unentered offered rooms do not consume the use. Pickup settles the fixed
 replacement without spending Forfeit again. Other required rewards, including
 miniboss and selected Ship-wheel rewards, retain acquisition-time settlement

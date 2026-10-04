@@ -37,7 +37,8 @@ export function evaluateAcquisitionConversionCandidate(
   query: AcquisitionConversionCandidateQuery,
 ): CandidateContextUnavailable | EvaluatedAcquisitionConversionCandidate {
   const capability = artifacts?.at(query.acquisition);
-  if (capability === undefined)
+  // A role realized only by an entry-fixed Forfeit has no reached pickup to convert.
+  if (capability === undefined || capability.timePieceAssessments.length === 0)
     return unavailableForBiome(
       evaluation,
       query.acquisition.routeKey,

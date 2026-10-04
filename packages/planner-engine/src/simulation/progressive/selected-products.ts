@@ -33,7 +33,10 @@ import {
   type FountainRarityCandidateArtifacts,
   type TranscendentEmbryoCandidateArtifacts,
 } from '../keepsakes/candidate-artifacts';
-import { type DerivedAcquisitionEntryCandidateArtifacts } from '../rewards/acquisition/artifacts';
+import {
+  type AcquisitionConversionCandidateArtifacts,
+  type DerivedAcquisitionEntryCandidateArtifacts,
+} from '../rewards/acquisition/artifacts';
 import type { SteadyGrowthCandidateArtifacts } from '../candidates/steady-growth';
 import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer/capability';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
@@ -454,28 +457,38 @@ export function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.acquisitionConversions.atReplacement(blockedDerivedAcquisitionAt) ??
         blockedArtifacts.acquisitionConversions.atReplacement(blockedDerivedAcquisitionAt));
-  const acquisitionConversions =
-    (blockedAcquisitionAt === undefined || blockedAcquisitionCapability === undefined) &&
-    blockedReplacementCapability === undefined
-      ? retainedArtifacts.acquisitionConversions
-      : Object.freeze({
-          at: (address: AcquisitionRoleAddress) =>
-            blockedAcquisitionAt !== undefined &&
-            blockedAcquisitionCapability !== undefined &&
-            semanticAddressKey(address) === semanticAddressKey(blockedAcquisitionAt)
-              ? blockedAcquisitionCapability
-              : blockedReplacementCapability !== undefined &&
-                  semanticAddressKey(address) ===
-                    semanticAddressKey(blockedReplacementCapability.address)
-                ? blockedReplacementCapability.capability
-                : retainedArtifacts.acquisitionConversions.at(address),
-          atReplacement: (address: AcquisitionEntryAddress) =>
-            blockedDerivedAcquisitionAt !== undefined &&
-            blockedReplacementCapability !== undefined &&
-            semanticAddressKey(address) === semanticAddressKey(blockedDerivedAcquisitionAt)
-              ? blockedReplacementCapability
-              : retainedArtifacts.acquisitionConversions.atReplacement(address),
-        });
+  // A role reached at an earlier contact of the blocked room, including a
+  // Forfeit fixed at its entry, is proven only by the selected attempt.
+  const acquisitionRoleBeforeBlock = (address: AcquisitionRoleAddress): boolean =>
+    phaseTakesEffectBeforeBlock(
+      selectedArtifacts.acquisitionConversions.positionAt(address),
+      block,
+    );
+  const acquisitionConversions: AcquisitionConversionCandidateArtifacts = Object.freeze({
+    at: (address: AcquisitionRoleAddress) =>
+      blockedAcquisitionAt !== undefined &&
+      blockedAcquisitionCapability !== undefined &&
+      semanticAddressKey(address) === semanticAddressKey(blockedAcquisitionAt)
+        ? blockedAcquisitionCapability
+        : blockedReplacementCapability !== undefined &&
+            semanticAddressKey(address) === semanticAddressKey(blockedReplacementCapability.address)
+          ? blockedReplacementCapability.capability
+          : (retainedArtifacts.acquisitionConversions.at(address) ??
+            (acquisitionRoleBeforeBlock(address)
+              ? selectedArtifacts.acquisitionConversions.at(address)
+              : undefined)),
+    atReplacement: (address: AcquisitionEntryAddress) =>
+      blockedDerivedAcquisitionAt !== undefined &&
+      blockedReplacementCapability !== undefined &&
+      semanticAddressKey(address) === semanticAddressKey(blockedDerivedAcquisitionAt)
+        ? blockedReplacementCapability
+        : retainedArtifacts.acquisitionConversions.atReplacement(address),
+    positionAt: (address: AcquisitionRoleAddress) =>
+      retainedArtifacts.acquisitionConversions.positionAt(address) ??
+      (acquisitionRoleBeforeBlock(address)
+        ? selectedArtifacts.acquisitionConversions.positionAt(address)
+        : undefined),
+  });
   const blockedDerivedAcquisitionCapability =
     blockedDerivedAcquisitionAt === undefined
       ? undefined

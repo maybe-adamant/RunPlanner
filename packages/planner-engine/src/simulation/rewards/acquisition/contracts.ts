@@ -111,6 +111,16 @@ export interface DerivedAcquisitionEntryFrontier {
   ) => import('../producer-frontiers').RewardProducerCandidateResult;
 }
 
+/**
+ * A role's realized acquisition fixed by a `rewardForfeited` event before its
+ * pickup contact, such as a Fields cage forfeited on room entry.
+ */
+export interface FixedAcquisitionRealization {
+  readonly address: import('../../../authored-project/addresses').AcquisitionRoleAddress;
+  readonly realizedAcquisition: ConcreteAcquisitionEvent;
+  readonly historySequence: number;
+}
+
 export interface AcquisitionRoleFrontier {
   readonly address: import('../../../authored-project/addresses').AcquisitionRoleAddress;
   /** Exact active Room Action that reached this role, when it is consequential. */
