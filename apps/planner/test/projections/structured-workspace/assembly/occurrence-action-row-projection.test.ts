@@ -486,7 +486,7 @@ describe('structured workspace actions assembly', () => {
     expect(fountain.fountainRarity).toEqual({
       address: outcome,
       marker: expect.objectContaining({ address: outcome }),
-      pending: true,
+      pending: 'unreached',
     });
   });
 

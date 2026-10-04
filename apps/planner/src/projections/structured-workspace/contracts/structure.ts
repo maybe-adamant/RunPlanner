@@ -583,8 +583,6 @@ export interface WorkspaceRoute {
       readonly locationLabel: string;
       readonly occurrenceId: OccurrenceId;
     };
-    readonly reasons: readonly string[];
-    readonly valid: boolean;
   }[];
   readonly routeKey: string;
   readonly status: WorkspaceStatus;

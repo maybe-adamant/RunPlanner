@@ -74,12 +74,6 @@ const checked = {
   fieldsSpatial: 0,
   collapsed: 0,
 };
-const compositionFindingCodes = new Set([
-  'encounterCustomizationUnavailable',
-  'encounterCustomizationRequired',
-  'encounterIntroductionRequired',
-]);
-
 /** The trait offer whose dialog repairs a finding at this owner, if any. */
 function repairingTraitOffer(owner: SemanticAddress): SemanticAddress | undefined {
   if (owner.kind === 'traitOffer') return owner;
@@ -108,18 +102,14 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
       if (interaction !== undefined && !interaction.contextReached)
         disabled.push(`trait ${finding.code} ${semanticAddressKey(owner)}`);
     }
-    // The encounter selector, an inline picker, repairs the phase's other findings.
-    if (owner.kind === 'encounterPhase' && compositionFindingCodes.has(finding.code)) {
+    // A customization decision names itself in evidence; the encounter selector,
+    // an inline picker, repairs the phase's other findings.
+    if (owner.kind === 'encounterPhase' && 'decisionKey' in finding.evidence) {
       const interaction = interactions.encounterCustomizations.get(semanticAddressKey(owner));
       if (interaction !== undefined) checked.encounter += 1;
       const roster = finding.evidence.decisionKey === 'infiniteRoster';
       if (roster && interaction !== undefined) checked.roster += 1;
-      if (
-        roster
-          ? interaction !== undefined && interaction.infiniteRosterDraftFor === undefined
-          : interaction?.generatedComposition?.editable === true &&
-            interaction.generatedAssessment === undefined
-      )
+      if (interaction !== undefined && !customizationReached(interaction, roster))
         disabled.push(`encounter ${finding.code} ${semanticAddressKey(owner)}`);
     }
     if (owner.kind === 'levelResolution') {
@@ -154,9 +144,27 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
   return disabled;
 }
 
+type WorkspaceInteractions = ReturnType<
+  typeof services.structuredWorkspace.project
+>['interactions'];
+type EncounterCustomizationInteraction = NonNullable<
+  ReturnType<WorkspaceInteractions['encounterCustomizations']['get']>
+>;
+
+/** The customization decision a finding names can be opened for repair. */
+function customizationReached(
+  interaction: EncounterCustomizationInteraction,
+  roster: boolean,
+): boolean {
+  return roster
+    ? interaction.infiniteRosterDraftFor !== undefined
+    : interaction.generatedComposition?.editable !== true ||
+        interaction.generatedAssessment !== undefined;
+}
+
 /** The outer entry folds inner reasons onto its dialog launcher, which must stay enabled. */
 function disabledCollapsedLauncher(
-  interactions: ReturnType<typeof services.structuredWorkspace.project>['interactions'],
+  interactions: WorkspaceInteractions,
   assembly: ProjectEvaluationAssembly,
 ): readonly string[] {
   const issue = assembly.evaluation.issue;
@@ -174,11 +182,11 @@ function disabledCollapsedLauncher(
       case 'encounterCustomization': {
         const interaction = interactions.encounterCustomizations.get(key);
         if (interaction === undefined) return undefined;
-        return (
-          interaction.infiniteRosterDraftFor !== undefined ||
-          interaction.generatedComposition?.editable !== true ||
-          interaction.generatedAssessment !== undefined
-        );
+        return issue.reasons
+          .filter((reason) => 'decisionKey' in reason.evidence)
+          .every((reason) =>
+            customizationReached(interaction, reason.evidence.decisionKey === 'infiniteRoster'),
+          );
       }
     }
   })();
@@ -201,7 +209,7 @@ function hubOrderKey(owner: SemanticAddress): string | undefined {
 
 /** Native settings owned by this finding owner whose engine context is unreached. */
 function blockedNativeSettings(
-  interactions: ReturnType<typeof services.structuredWorkspace.project>['interactions'],
+  interactions: WorkspaceInteractions,
   owner: SemanticAddress,
 ): readonly string[] {
   const key = semanticAddressKey(owner);

@@ -84,16 +84,17 @@ export function projectFountainRarityControl(
   markerDestinations: WorkspaceMarkerDestinationEmitter,
 ): WorkspaceFountainRarityControl {
   const evaluated = assess?.(outcome, targetTraitKey);
-  const targetRequired =
-    evaluated?.kind === 'fountainRarityOutcome' &&
-    evaluated.result.status === 'pending' &&
-    evaluated.result.targetRequired &&
-    evaluated.result.mutationTargetKeys.length > 0;
+  const pending =
+    evaluated?.kind !== 'fountainRarityOutcome' || evaluated.result.status !== 'pending'
+      ? 'unreached'
+      : !evaluated.result.targetRequired || evaluated.result.mutationTargetKeys.length === 0
+        ? 'noTargetRequired'
+        : undefined;
   return Object.freeze<WorkspaceFountainRarityControl>({
     address: outcome,
     marker: markerDestinations.marker(outcome),
     ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
-    ...(targetRequired ? {} : { pending: true }),
+    ...(pending === undefined ? {} : { pending }),
   });
 }
 

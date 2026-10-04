@@ -614,6 +614,11 @@ describe('Biome inspector controls', () => {
     const judgmentPopup = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
     // The board renders inside the fixed-height choice region the loader also fills.
     expect(judgmentPopup.querySelector('.trait-choice-region .arcana-board')).toBeTruthy();
+    const arcanaFeedback = within(judgmentPopup).getByRole('status', { name: 'Arcana feedback' });
+    expect(arcanaFeedback.textContent).toContain('No current findings.');
+    expect(judgmentPopup.querySelector('.arcana-fear-dialog-content')?.lastElementChild).toBe(
+      arcanaFeedback,
+    );
     for (let index = 0; index < 5; index += 1) {
       const next = within(judgmentPopup)
         .getAllByRole<HTMLButtonElement>('button', { pressed: false })

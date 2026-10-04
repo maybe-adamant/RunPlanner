@@ -37,6 +37,10 @@ describe('Anvil result editor', () => {
     const user = userEvent.setup();
     render(<AnvilResultEditor interaction={interaction} onCommit={onCommit} />);
 
+    const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
+    expect(feedback.textContent).toContain('No current findings.');
+    expect(feedback.parentElement?.lastElementChild).toBe(feedback);
+
     expect(
       (screen.getByRole('button', { name: 'Added Hammer 1' }) as HTMLButtonElement).disabled,
     ).toBe(true);

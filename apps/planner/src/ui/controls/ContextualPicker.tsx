@@ -31,6 +31,8 @@ interface ContextualPickerProps<T> {
   readonly triggerLabel?: string;
   /** Hover explanation for the current value of an enabled trigger. */
   readonly triggerTitle?: string;
+  /** Marks a retained value the current context cannot produce. */
+  readonly invalid?: boolean;
 }
 
 function PickerSection<T>({
@@ -192,6 +194,7 @@ export function ContextualPicker<T>({
   side = 'bottom',
   triggerLabel,
   triggerTitle,
+  invalid = false,
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -234,7 +237,7 @@ export function ContextualPicker<T>({
             aria-busy={loading || undefined}
             aria-expanded={open}
             aria-haspopup="listbox"
-            aria-invalid={selected?.state === 'impossible' || undefined}
+            aria-invalid={invalid || selected?.state === 'impossible' || undefined}
             {...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel })}
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}

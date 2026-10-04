@@ -503,6 +503,13 @@ function TakeoverAction({
 function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
   const dispatch = useAppDispatch();
   const continuation = node.selectedContinuation;
+  const doorSelected =
+    node.targets.some((target) => target.selected) ||
+    node.zagreusContract?.selected === true ||
+    node.chaos?.selected === true;
+  const disabledTitle = doorSelected
+    ? 'Fill the remaining doors to continue.'
+    : 'Select a door to continue.';
   return (
     <button
       className="primary-action"
@@ -512,7 +519,7 @@ function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
           dispatch(semanticOwnerFocused(continuation.marker.address));
         }
       }}
-      {...(continuation === undefined ? { title: 'Select a door to continue.' } : {})}
+      {...(continuation === undefined ? { title: disabledTitle } : {})}
       type="button"
     >
       Open next room

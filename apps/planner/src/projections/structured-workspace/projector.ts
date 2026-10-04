@@ -710,7 +710,6 @@ export function createStructuredWorkspaceProjection(
         resources: Object.freeze(
           (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
             const placement = routeSource.resourceAuthoring.placements[family];
-            const assessment = routeSource.resourceAuthoring.assessmentByFamily[family];
             const presentedPlacement =
               placement === null
                 ? undefined
@@ -735,8 +734,6 @@ export function createStructuredWorkspaceProjection(
             return Object.freeze({
               family,
               ...(presentedPlacement === undefined ? {} : { placement: presentedPlacement }),
-              reasons: assessment?.reasons ?? Object.freeze([]),
-              valid: assessment?.legal ?? placement === null,
             });
           }),
         ),

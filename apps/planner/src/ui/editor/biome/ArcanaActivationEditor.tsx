@@ -6,6 +6,7 @@ import type {
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { TraitOfferFeedbackRegion } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 
@@ -72,6 +73,7 @@ export function ArcanaActivationEditor({
           </div>
         )}
       </div>
+      <TraitOfferFeedbackRegion label="Arcana feedback" entries={[]} />
     </ArcanaFearDialog>
   );
 }

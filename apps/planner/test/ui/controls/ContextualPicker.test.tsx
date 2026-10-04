@@ -137,6 +137,25 @@ describe('ContextualPicker', () => {
     },
   );
 
+  it('marks a retained unavailable value invalid with its hover title and nothing else', () => {
+    render(
+      <ContextualPicker
+        id="invalid-picker"
+        invalid
+        label="Room"
+        model={model}
+        onSelect={() => undefined}
+        placeholder="Select a room"
+        triggerTitle="Retained choice is unavailable here."
+      />,
+    );
+    const trigger = screen.getByLabelText('Room');
+    expect(trigger.getAttribute('aria-invalid')).toBe('true');
+    expect(trigger.getAttribute('title')).toBe('Retained choice is unavailable here.');
+    expect(trigger).toHaveProperty('disabled', false);
+    expect(trigger.parentElement!.textContent).toBe(`Room${model.selected!.label}▾`);
+  });
+
   it('keeps an associated label from opening an authoring-locked picker', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

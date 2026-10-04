@@ -5,6 +5,7 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { TraitOfferFeedbackRegion } from './TraitOfferForm';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 type AnvilDraft = {
@@ -255,6 +256,7 @@ export function AnvilResultEditor({
       >
         Save Anvil result
       </button>
+      <TraitOfferFeedbackRegion label="Anvil feedback" entries={[]} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   RUN_MODIFIER_DECLARATIONS,
@@ -13,6 +14,8 @@ import {
   authoredProjectUndoRequested,
   authoredProjectRedoRequested,
 } from '@planner/state/projectWorkspaceSlice';
+import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
+import { NumberRunModifierSlider } from '@planner/ui/shell/RouteOverview';
 import {
   createOpenTestApplication,
   renderPlannerForInteraction,
@@ -78,6 +81,38 @@ describe('Run modifier authoring', () => {
     fireEvent.change(gold(), { target: { value: '2.5' } });
     fireEvent.keyUp(gold(), { key: 'ArrowLeft' });
     expect(view.modifiers().enemyGoldDropChanceMultiplier).toBe(2.5);
+  });
+
+  // jsdom sanitizes a range value into its declared domain, so the projection's
+  // invalid draft result is driven through a stubbed control.
+  it('shows a rejected draft on hover and the accessible description without page text', () => {
+    const application = createOpenTestApplication();
+    const declaration = runModifierDeclaration('enemyGoldDropChanceMultiplier');
+    if (declaration.kind !== 'number') throw new Error('expected a number declaration');
+    const control: WorkspaceRoute['runModifiers'] = {
+      value: { enemyGoldDropChanceMultiplier: 1 },
+      declarations: [declaration],
+      setValue: () => {
+        throw new Error('not a boolean modifier');
+      },
+      draftIntent: () => ({ kind: 'invalid', message: 'Enter a value from 1 to 5.' }),
+    };
+    render(
+      <Provider store={application.store}>
+        <NumberRunModifierSlider control={control} declaration={declaration} id="gold-stub" />
+      </Provider>,
+    );
+    fireEvent.change(gold(), { target: { value: '2' } });
+    fireEvent.blur(gold());
+    expect(gold().getAttribute('aria-invalid')).toBe('true');
+    expect(gold().getAttribute('aria-description')).toBe('Enter a value from 1 to 5.');
+    expect(gold().closest('.route-run-modifier-number')?.getAttribute('title')).toBe(
+      'Enter a value from 1 to 5.',
+    );
+    // The rejection adds no page text: only the label and the output remain.
+    expect(document.body.textContent).toBe('Enemy gold chance2×');
+    expect(screen.queryByRole('alert')).toBeNull();
+    application.dispose();
   });
 
   it('clamps a stored multiplier above the slider range to 5', () => {

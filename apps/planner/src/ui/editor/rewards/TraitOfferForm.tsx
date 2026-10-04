@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 /** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
 export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
 
+/** One feedback row: the reporter's key and its current message. */
+export type FeedbackEntry = readonly [key: string, message: string];
+
 // eslint-disable-next-line react-refresh/only-export-components -- The hooks and region form one feedback boundary.
 export const ignoreOutcomeFeedback: OutcomeFeedbackReporter = () => undefined;
 
@@ -21,7 +24,7 @@ export function useReportedFeedback(
 
 /** Collects keyed sub-editor messages for the dialog's feedback region. */
 // eslint-disable-next-line react-refresh/only-export-components -- The hooks and region form one feedback boundary.
-export function useOutcomeFeedback(): readonly [readonly string[], OutcomeFeedbackReporter] {
+export function useOutcomeFeedback(): readonly [readonly FeedbackEntry[], OutcomeFeedbackReporter] {
   const [feedback, setFeedback] = useState<ReadonlyMap<string, string>>(() => new Map());
   const report = useCallback<OutcomeFeedbackReporter>((key, message) => {
     setFeedback((current) => {
@@ -32,28 +35,28 @@ export function useOutcomeFeedback(): readonly [readonly string[], OutcomeFeedba
       return next;
     });
   }, []);
-  return [[...feedback.values()], report];
+  return [[...feedback], report];
 }
 
 /** The always-mounted feedback region at the bottom of a trait-form dialog body. */
 export function TraitOfferFeedbackRegion({
   children,
   label,
-  messages,
+  entries,
 }: {
   readonly children?: ReactNode;
   readonly label: string;
-  readonly messages: readonly string[];
+  readonly entries: readonly FeedbackEntry[];
 }) {
   return (
     <section aria-label={label} className="trait-offer-feedback" role="status">
       <h3>{label}</h3>
-      {children === undefined && messages.length === 0 ? (
+      {children === undefined && entries.length === 0 ? (
         <p className="trait-offer-feedback-empty">No current findings.</p>
       ) : null}
       {children}
-      {messages.map((message) => (
-        <p className="feedback-text" key={message}>
+      {entries.map(([key, message]) => (
+        <p className="feedback-text" key={key}>
           {message}
         </p>
       ))}

@@ -541,7 +541,7 @@ const SLIDER_COMMIT_KEYS = [
   'PageDown',
 ];
 
-function NumberRunModifierSlider({
+export function NumberRunModifierSlider({
   control,
   declaration,
   id,

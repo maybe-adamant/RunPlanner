@@ -680,43 +680,42 @@ const dialogKindCopy = {
   levelResolution: 'Pom resolution',
 } as const satisfies Readonly<Record<FindingDialogKind, string>>;
 
-const encounterCustomizationCodes: ReadonlySet<FindingCode> = new Set<FindingCode>([
-  'encounterCustomizationUnavailable',
-  'encounterCustomizationRequired',
-  'encounterIntroductionRequired',
-]);
+function dialogKindOf(owner: SemanticAddress): FindingDialogKind | undefined {
+  switch (owner.kind) {
+    case 'traitOffer':
+      return 'traitOffer';
+    case 'encounterPhase':
+      return 'encounterCustomization';
+    case 'levelResolution':
+      return 'levelResolution';
+    default:
+      return undefined;
+  }
+}
 
 /**
- * Inner findings are repaired inside a dialog: trait option and outcome owners
- * and option-level offer reasons under their trait offer, customization
- * decisions under their encounter phase, and Pom targets under their level
- * resolution. Findings that describe the launcher's own value stay outer.
+ * An issue at a dialog launcher folds its inner reasons into one outer entry.
+ * A reason is inner when its origin lies beneath the issue owner, or when a
+ * same-origin reason carries dialog-level evidence by the engine's convention:
+ * `traitKey`/`optionKey` name one offer option, `decisionKey` names one
+ * encounter customization decision, and any level-resolution reason is a Pom
+ * target. Reasons describing the launcher's own value stay outer.
  */
-export function findingDialogOwner(finding: SemanticFinding): FindingDialogOwner | undefined {
-  let origin: SemanticAddress = finding.origin;
-  if (origin.kind === 'levelResolution') return { kind: 'levelResolution', owner: origin };
-  if (origin.kind === 'encounterPhase') {
-    return encounterCustomizationCodes.has(finding.code)
-      ? { kind: 'encounterCustomization', owner: origin }
-      : undefined;
-  }
-  let nested = false;
-  while (
-    origin.kind === 'traitAcquisitionTarget' ||
-    origin.kind === 'circeResolution' ||
-    origin.kind === 'echoPomTarget' ||
-    origin.kind === 'naturalSelectionResult' ||
-    origin.kind === 'echoLastRunBoon' ||
-    origin.kind === 'echoLastReward' ||
-    origin.kind === 'allTogetherSet'
-  ) {
-    origin = origin.trait;
-    nested = true;
-  }
-  if (origin.kind !== 'traitOffer') return undefined;
-  return nested || 'traitKey' in finding.evidence || 'optionKey' in finding.evidence
-    ? { kind: 'traitOffer', owner: origin }
-    : undefined;
+export function findingDialogOwner(
+  issue: Pick<AssessmentIssue, 'owner'>,
+  reason: SemanticFinding,
+): FindingDialogOwner | undefined {
+  const owner = issue.owner;
+  const kind = dialogKindOf(owner);
+  if (kind === undefined) return undefined;
+  if (semanticAddressKey(reason.origin) !== semanticAddressKey(owner)) return { kind, owner };
+  const inner =
+    kind === 'traitOffer'
+      ? 'traitKey' in reason.evidence || 'optionKey' in reason.evidence
+      : kind === 'encounterCustomization'
+        ? 'decisionKey' in reason.evidence
+        : true;
+  return inner ? { kind, owner } : undefined;
 }
 
 /** The engine selects the repair region; presentation only adapts its explanation. */
@@ -726,13 +725,11 @@ export function presentAssessmentIssue(issue: AssessmentIssue): RepairEntryPrese
     throw new Error(`Assessment issue ${issue.regionKey} has no reason`);
   }
   const inner = issue.reasons
-    .map(findingDialogOwner)
+    .map((candidate) => findingDialogOwner(issue, candidate))
     .filter((dialog): dialog is FindingDialogOwner => dialog !== undefined);
   const dialog = inner[0];
   if (dialog !== undefined) {
-    const count = inner.filter(
-      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(dialog.owner),
-    ).length;
+    const count = inner.length;
     return Object.freeze({
       title: `${dialogKindCopy[dialog.kind]} needs attention`,
       description: `${count} ${count === 1 ? 'issue' : 'issues'} to repair in its editor.`,
