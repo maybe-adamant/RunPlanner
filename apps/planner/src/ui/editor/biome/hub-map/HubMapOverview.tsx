@@ -186,7 +186,14 @@ function HubMapMarker({
                 Close room
               </button>
             ) : (
-              <p className="fixed-room-state">This room cannot be closed now.</p>
+              <button
+                className="danger-action action-compact"
+                disabled
+                title="This room cannot be closed now."
+                type="button"
+              >
+                Close room
+              </button>
             )}
           </Popover.Content>
         </Popover.Portal>
