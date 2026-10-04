@@ -30,15 +30,18 @@ const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze(
 });
 
 function PostbossKeepsakeControl({
+  disabledTitle,
   hideLabel = false,
   interaction,
 }: {
+  readonly disabledTitle?: string;
   readonly hideLabel?: boolean;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
 }) {
   return (
     <div className="room-keepsake-control" data-label-hidden={hideLabel || undefined}>
       <KeepsakeSelectionPicker
+        {...(disabledTitle === undefined ? {} : { disabledTitle })}
         id={`postboss-keepsake-${interaction.key}`}
         interaction={interaction}
         label="Choose Keepsake"
@@ -64,17 +67,15 @@ function KeepsakeRackTimelineContent({
           workspaceInteractionKey(selection.equipResult.address),
         );
   if (interaction === undefined) return null;
-  if (interaction.unavailableReason !== undefined)
-    return (
-      <div className="room-keepsake-action">
-        <span className="room-keepsake-unavailable">
-          {interaction.selectedLabel} — no Keepsake Rack on this route
-        </span>
-      </div>
-    );
   return (
     <div className="room-keepsake-action">
-      <PostbossKeepsakeControl hideLabel interaction={interaction} />
+      <PostbossKeepsakeControl
+        {...(interaction.unavailableReason === undefined
+          ? {}
+          : { disabledTitle: 'No Keepsake Rack on this route.' })}
+        hideLabel
+        interaction={interaction}
+      />
       {equipResult === undefined ? null : (
         <KeepsakeEquipResultPicker
           id={`${equipResult.owner.resultKind}-${equipResult.key}`}

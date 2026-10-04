@@ -1257,7 +1257,10 @@ describe('BiomeWorkspace', () => {
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
     expect(within(inspector).getByRole('heading', { name: 'Configure door offer' })).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
-    expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
+    expect(within(inspector).getByRole('button', { name: 'Remove these doors' })).toHaveProperty(
+      'disabled',
+      true,
+    );
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
 
     const pool = within(inspector).getByRole('button', { name: 'Reward Pool' });
@@ -1290,7 +1293,10 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
-    expect(screen.getByRole('button', { name: 'Remove these doors' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Remove these doors' })).toHaveProperty(
+      'disabled',
+      false,
+    );
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
@@ -1302,7 +1308,10 @@ describe('BiomeWorkspace', () => {
     const restoredInspector = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(restoredInspector).getByRole('tab', { name: 'Room Doors' }));
     expect(screen.getByRole('heading', { name: 'Configure door offer' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove these doors' })).toHaveProperty(
+      'disabled',
+      true,
+    );
   });
 
   it('renders topology-owned and fixed outgoing states on their exact N occurrences', async () => {

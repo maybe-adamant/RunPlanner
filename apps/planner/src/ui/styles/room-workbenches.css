@@ -1021,18 +1021,6 @@
   max-width: 100%;
 }
 
-.nemesis-fixed-reward {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-}
-
-.nemesis-interaction-hint {
-  margin: 0;
-  color: #aaa7af;
-  font-size: 0.88rem;
-}
-
 .nemesis-response-control {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1976,12 +1964,6 @@
   padding: 12px 4px 4px;
   border-radius: 8px;
   background: rgb(174 152 202 / 10%);
-}
-
-.hub-main-reward > .fixed-room-state {
-  margin: 0;
-  padding-top: 0;
-  border-top: 0;
 }
 
 .hub-main-reward .contextual-picker {

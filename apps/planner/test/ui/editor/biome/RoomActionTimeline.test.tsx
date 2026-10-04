@@ -198,6 +198,9 @@ describe('OccurrenceRoomActions', () => {
     const outcome = within(actions).getByRole('button', {
       name: /^Pickup outcome for /,
     });
+    const seaStar = within(actions).getByRole('checkbox', { name: /^Sea Star procced for / });
+    expect(seaStar).toHaveProperty('disabled', true);
+    expect(seaStar.closest('label')?.getAttribute('title')).toBe('Sea Star does not apply here.');
     await view.user.click(outcome);
     const timePiece = screen.getByRole('option', {
       name: 'Timepiece',

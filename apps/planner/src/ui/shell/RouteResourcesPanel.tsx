@@ -40,9 +40,6 @@ export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute 
                   {placement === undefined
                     ? 'No selected success'
                     : `${placement.biomeKey} · ${placement.locationLabel}`}
-                  {placement !== undefined && !resource.valid
-                    ? ` · Repair required: ${resource.reasons.join(', ')}`
-                    : ''}
                 </span>
               </div>
               {placement === undefined ? null : (

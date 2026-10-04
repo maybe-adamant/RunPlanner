@@ -128,6 +128,7 @@ function candidatePicker(
 export function RandomTraitTargetPicker({
   findingTarget,
   disabled = false,
+  disabledTitle,
   placeholder = 'Choose a trait',
   ariaLabel,
   id,
@@ -142,6 +143,7 @@ export function RandomTraitTargetPicker({
 }: {
   readonly ariaLabel: string;
   readonly disabled?: boolean;
+  readonly disabledTitle?: string;
   readonly placeholder?: string;
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
@@ -166,6 +168,7 @@ export function RandomTraitTargetPicker({
       {...(onOpenChange === undefined ? {} : { onOpenChange })}
       {...(open === undefined ? {} : { open })}
       disabled={disabled}
+      {...(disabledTitle === undefined ? {} : { disabledTitle })}
       placeholder={placeholder}
       {...(selected === null ? {} : { triggerLabel: interaction.traitLabel(selected) })}
     />

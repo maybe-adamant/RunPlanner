@@ -32,6 +32,7 @@ function PickupOutcomeControls({
     workspaceInteractionKey(conversion.address),
   );
   if (!interaction.visible) return null;
+  const seaStarApplies = interaction.seaStarSupported || interaction.seaStarProcced;
   return (
     <div className="reward-acquisition-conversion">
       <div className="pickup-outcome-control">
@@ -69,18 +70,19 @@ function PickupOutcomeControls({
           }}
         />
       </div>
-      {!interaction.seaStarSupported && !interaction.seaStarProcced ? null : (
-        <label className="pickup-outcome-control">
-          <input
-            aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
-            checked={interaction.seaStarProcced}
-            disabled={!interaction.seaStarSupported && !interaction.seaStarProcced}
-            onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}
-            type="checkbox"
-          />
-          <span>Sea Star procced</span>
-        </label>
-      )}
+      <label
+        className="pickup-outcome-control"
+        {...(seaStarApplies ? {} : { title: 'Sea Star does not apply here.' })}
+      >
+        <input
+          aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
+          checked={interaction.seaStarProcced}
+          disabled={!seaStarApplies}
+          onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}
+          type="checkbox"
+        />
+        <span>Sea Star procced</span>
+      </label>
     </div>
   );
 }

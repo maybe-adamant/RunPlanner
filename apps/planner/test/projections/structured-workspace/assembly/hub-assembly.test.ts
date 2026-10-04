@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
+  createFountainRarityOutcomeAddress,
   createHubDecisionAddress,
   createHubFountainAddress,
   createIncomingRewardAddress,
@@ -126,6 +127,7 @@ describe('structured workspace Hub assembly', () => {
     });
     expect(unused.fountain).not.toHaveProperty('actionPosition');
     expect(unused.fountain).not.toHaveProperty('controlsHost');
+    expect(unused.fountain).not.toHaveProperty('rarity');
     expect(unused.visits.map((visit) => visit.actionPosition)).toEqual([
       1,
       2,
@@ -141,6 +143,14 @@ describe('structured workspace Hub assembly', () => {
       controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[0]!) },
     });
     expect(between.fountain).not.toHaveProperty('appendActions');
+    // Without a rarity assessment the Phial control is still published, waiting.
+    expect(between.fountain.rarity).toEqual({
+      address: createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub')),
+      marker: expect.objectContaining({
+        address: createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub')),
+      }),
+      pending: true,
+    });
     expect(between.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([1, 3]);
 
     const first = withActions(0);

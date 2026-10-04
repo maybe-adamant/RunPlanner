@@ -76,26 +76,24 @@ export interface WorkspaceOccurrenceActionsInput {
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
 }
 
-/** The Phial target control for one fountain use, present only while a target is required. */
+/** The Phial target control for one fountain use; pending until the engine requires a target. */
 export function projectFountainRarityControl(
   outcome: FountainRarityOutcomeAddress,
   targetTraitKey: string | undefined,
-  assess: NonNullable<WorkspaceOccurrenceActionsInput['fountainRarityAssessment']>,
+  assess: WorkspaceOccurrenceActionsInput['fountainRarityAssessment'],
   markerDestinations: WorkspaceMarkerDestinationEmitter,
-): WorkspaceFountainRarityControl | undefined {
-  const evaluated = assess(outcome, targetTraitKey);
-  if (evaluated.kind !== 'fountainRarityOutcome') return undefined;
-  if (
-    evaluated.result.status !== 'pending' ||
-    evaluated.result.targetRequired !== true ||
-    evaluated.result.mutationTargetKeys.length === 0
-  ) {
-    return undefined;
-  }
+): WorkspaceFountainRarityControl {
+  const evaluated = assess?.(outcome, targetTraitKey);
+  const targetRequired =
+    evaluated?.kind === 'fountainRarityOutcome' &&
+    evaluated.result.status === 'pending' &&
+    evaluated.result.targetRequired &&
+    evaluated.result.mutationTargetKeys.length > 0;
   return Object.freeze<WorkspaceFountainRarityControl>({
     address: outcome,
     marker: markerDestinations.marker(outcome),
     ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+    ...(targetRequired ? {} : { pending: true }),
   });
 }
 
@@ -417,7 +415,7 @@ function roomActionsForOccurrence(
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY);
       const fountainRarity =
-        row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined
+        row.reference.kind !== 'useFountain'
           ? undefined
           : projectFountainRarityControl(
               createFountainRarityOutcomeAddress(address),

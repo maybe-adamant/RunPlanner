@@ -6,7 +6,7 @@ import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { roomActionDestinationLabel } from './room-action-placement';
 
-/** Timeline-only ordering and removal controls for one already-projected action. */
+/** Timeline-only ordering and removal slots for one already-projected action; a slot without a proposal stays mounted and disabled. */
 export function RoomActionOrderingControls({
   row,
   rows,
@@ -42,13 +42,15 @@ export function RoomActionOrderingControls({
         : row.participation === 'required'
           ? 'Required actions cannot be removed.'
           : 'This action cannot be removed from its current state.';
+  const restoreDisabled = insertions.length !== 1 || insertions[0]?.structurallyAuthorable !== true;
   return (
     <>
       {row.rank === null && row.participation === 'required' ? (
         <button
           className="secondary-action action-compact"
-          disabled={insertions.length !== 1 || insertions[0]?.structurallyAuthorable !== true}
+          disabled={restoreDisabled}
           onClick={() => insertions[0] === undefined || onApply(insertions[0].key)}
+          {...(restoreDisabled ? { title: 'No position to restore this action.' } : {})}
           type="button"
         >
           Restore required action
@@ -59,12 +61,12 @@ export function RoomActionOrderingControls({
           className="secondary-action action-compact"
           disabled={insertions.length === 0}
           onClick={(event) => onBeginAdd(event.currentTarget)}
+          {...(insertions.length === 0 ? { title: 'No position to add this action.' } : {})}
           type="button"
         >
           Add…
         </button>
-      ) : (row.stale || removable?.kind === 'unplace') &&
-        !moves.some((proposal) => proposal.structurallyAuthorable) ? null : (
+      ) : (
         <RoomActionPlacementPicker
           label={`Move ${row.label}`}
           trigger="Move…"
@@ -72,6 +74,7 @@ export function RoomActionOrderingControls({
             ...proposal,
             label: roomActionDestinationLabel(rows, proposal.toIndex ?? 0, row),
           }))}
+          disabledTitle="No other position is available."
           onApply={onApply}
         />
       )}

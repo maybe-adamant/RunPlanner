@@ -115,6 +115,50 @@ describe('FountainRarityEffectRow', () => {
     application.dispose();
   });
 
+  it('keeps a pending Phial target mounted and disabled until the engine requires one', async () => {
+    const application = createApplication();
+    const action = createRoomActionAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+      roomActionKey({ kind: 'useFountain' }),
+    );
+    const outcome = createFountainRarityOutcomeAddress(action);
+    const interaction: WorkspaceFountainRarityInteraction = {
+      key: semanticAddressKey(outcome),
+      owner: outcome,
+      intentFor: (targetTraitKey) => ({
+        command: { kind: 'ReplaceFountainRarityTarget', outcome, targetTraitKey },
+      }),
+      forTarget: () => ({ load: () => undefined }),
+      traitLabel: (traitKey) => traitKey,
+    };
+    const interactions = {
+      fountainRarity: new Map([[semanticAddressKey(outcome), interaction]]),
+    } as unknown as WorkspaceInteractionCatalog;
+    render(
+      <Provider store={application.store}>
+        <FountainRarityEffectRow
+          control={{
+            address: outcome,
+            marker: {
+              address: outcome,
+              assessment: 'unassessed',
+              findingCount: 0,
+              focusKey: 'test-phial-pending',
+            },
+            pending: true,
+          }}
+          interactions={interactions}
+        />
+      </Provider>,
+    );
+    const picker = await screen.findByLabelText('Phial Target');
+    expect(picker).toHaveProperty('disabled', true);
+    expect(picker.getAttribute('title')).toBe('Waits on an earlier choice');
+    expect(screen.queryByRole('button', { name: 'Clear Phial target' })).toBeNull();
+    application.dispose();
+  });
+
   it('authors an eligible target through the nested fountain interaction', async () => {
     const user = userEvent.setup();
     const application = createApplication();

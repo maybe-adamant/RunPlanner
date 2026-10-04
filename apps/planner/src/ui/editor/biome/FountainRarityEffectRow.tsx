@@ -8,6 +8,7 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
+import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -56,6 +57,7 @@ export function FountainRarityEffectRow({
   return (
     <div
       className="fountain-rarity-inline"
+      data-pending={control.pending || undefined}
       data-fountain-rarity={
         control.address.action.kind === 'roomAction'
           ? control.address.action.actionKey
@@ -65,6 +67,7 @@ export function FountainRarityEffectRow({
       <RandomTraitTargetPicker
         findingTarget={findingTarget(control.address)}
         ariaLabel="Phial Target"
+        {...(control.pending === true ? { disabledTitle: candidateWaitingTitle } : {})}
         id={semanticOwnerControlElementId(control.address)}
         interaction={interaction}
         label="Phial Target"

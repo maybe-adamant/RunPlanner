@@ -569,7 +569,7 @@ function projectHubNode(
     );
   }
   const rarity =
-    fountainPrecedingVisits === undefined || input.fountainRarityAssessment === undefined
+    fountainPrecedingVisits === undefined
       ? undefined
       : projectFountainRarityControl(
           fountainOutcome,

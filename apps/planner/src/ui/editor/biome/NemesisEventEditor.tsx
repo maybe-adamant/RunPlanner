@@ -46,7 +46,14 @@ export function NemesisInteractionEditor({
   const executeIntent = useCommandIntent();
   const candidates = useWorkspaceInteraction(interaction);
   const value = interaction.value;
-  if (value === null) return <p className="nemesis-interaction-hint">Choose a Nemesis event.</p>;
+  if (value === null)
+    return (
+      <div className="nemesis-interaction-controls">
+        <div className="field-control field-control-inline control-placeholder">
+          <span className="fixed-room-state">Choose a Nemesis event.</span>
+        </div>
+      </div>
+    );
   const commit = (next: AuthoredNemesisRandomEventOutcome, reward = interaction.reward): void =>
     executeIntent(interaction.detailIntentFor({ ...next, reward }));
   const fixedResultLabel = interaction.fixedResultLabel;
@@ -107,10 +114,12 @@ export function NemesisInteractionEditor({
             : { triggerLabel: interaction.selectedRewardLabel })}
         />
       ) : (
-        <span className="nemesis-fixed-reward">
-          {value.kind === 'traitTrade' ? 'to give ' : ''}
-          {fixedResultLabel}
-        </span>
+        <div className="field-control field-control-inline control-placeholder">
+          <span className="fixed-room-state nemesis-fixed-reward">
+            {value.kind === 'traitTrade' ? 'to give ' : ''}
+            {fixedResultLabel}
+          </span>
+        </div>
       )}
       {value.kind === 'goldTrade' || value.kind === 'damageTrade' || value.kind === 'traitTrade' ? (
         <label className="field-control nemesis-response-control">

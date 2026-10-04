@@ -479,7 +479,8 @@ describe('DecisionWorkbench', () => {
       screen.getByRole('radiogroup', { name: 'Position' }).getAttribute('aria-description'),
     ).toContain('Chaos gate position unavailable');
     const position = screen.getByRole('radiogroup', { name: 'Position' });
-    expect(within(position).getByText('Position 4 unavailable')).toBeTruthy();
+    expect(within(position).queryByText('Position 4 unavailable')).toBeNull();
+    expect(position.getAttribute('title')).toBe('Position 4 unavailable');
     expect(within(position).queryByRole('radio', { name: '4' })).toBeNull();
     expect(position.getAttribute('aria-invalid')).toBe('true');
     await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
@@ -705,7 +706,9 @@ describe('DecisionWorkbench', () => {
     if (openingId === undefined) throw new Error('N Opening was not authored');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
+    const uncommittedRemoval = screen.getByRole('button', { name: 'Remove these doors' });
+    expect(uncommittedRemoval).toHaveProperty('disabled', true);
+    expect(uncommittedRemoval.getAttribute('title')).toBe('Nothing authored to remove yet.');
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
@@ -823,7 +826,7 @@ describe('DecisionWorkbench', () => {
     );
     expect(await screen.findByRole('article', { name: 'Combat 03 room offer' })).toBeTruthy();
     expect(screen.getByRole('article', { name: 'Door 2 unspecified room offer' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Open next room' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty('disabled', true);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(await screen.findByRole('article', { name: 'Combat 01 room offer' })).toBeTruthy();
   });
@@ -874,8 +877,10 @@ describe('DecisionWorkbench', () => {
     );
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
     expect(within(authoredOffer).queryByRole('button', { name: /^Open .+ room$/ })).toBeNull();
-    // The sibling door is still missing, so no continuation is advertised yet.
-    expect(screen.queryByRole('button', { name: 'Open next room' })).toBeNull();
+    // The sibling door is still missing, so the continuation slot stays disabled.
+    const waitingContinuation = screen.getByRole('button', { name: 'Open next room' });
+    expect(waitingContinuation).toHaveProperty('disabled', true);
+    expect(waitingContinuation.getAttribute('title')).toBe('Select a door to continue.');
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>

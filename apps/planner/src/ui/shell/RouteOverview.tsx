@@ -573,13 +573,15 @@ function NumberRunModifierSlider({
     setDraft(undefined);
     dispatch(authoredProjectCommandDispatched(result.intent.command));
   };
+  const error = currentDraft?.error;
   return (
-    <div className="route-run-modifier-number" title={declaration.description}>
+    <div className="route-run-modifier-number" title={error ?? declaration.description}>
       <label htmlFor={id}>{declaration.label}</label>
       <div className="route-run-modifier-multiplier">
         <input
           id={id}
-          aria-description={declaration.description}
+          aria-description={error ?? declaration.description}
+          aria-invalid={error === undefined ? undefined : true}
           type="range"
           min={declaration.min}
           max={declaration.max}
@@ -608,11 +610,6 @@ function NumberRunModifierSlider({
           {vanilla}
         </output>
       </div>
-      {currentDraft?.error === undefined ? null : (
-        <p id={`${id}-error`} role="alert">
-          {currentDraft.error}
-        </p>
-      )}
     </div>
   );
 }
