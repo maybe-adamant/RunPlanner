@@ -950,6 +950,10 @@ const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = 
     emissions: [
       generationFindings(transition.findings),
       { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
+      {
+        kind: 'fixedAcquisitionRealizations',
+        realizations: transition.fixedAcquisitionRealizations,
+      },
     ],
   };
 };

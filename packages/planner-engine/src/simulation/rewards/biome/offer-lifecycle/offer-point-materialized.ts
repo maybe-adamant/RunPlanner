@@ -11,6 +11,7 @@ import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
+import type { FixedAcquisitionRealization } from '../../acquisition/contracts';
 import { materializeFieldsOptionalOfferPoint } from './fields-optional-materialization';
 import { applyRewardWheelOfferPointMaterialization } from './reward-wheel-offer-point-materialized';
 import { applyShopOfferPointMaterialization } from './shop-offer-point-materialized';
@@ -32,6 +33,7 @@ export interface OfferPointMaterializedTransition {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
+  readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly shipLifecycleCandidate?: ShipLifecycleCandidateContext;
 }
 
@@ -54,27 +56,33 @@ export function applyOfferPointMaterializedTransition(
     throw new BiomeRewardSimulationContractError('shop offer point has no authored room');
 
   if (inputs.event.offerPoint === 'shopInventory')
-    return applyShopOfferPointMaterialization({
-      catalog: inputs.catalog,
-      snapshot: inputs.snapshot,
-      event: inputs.event,
-      room,
-      declaration,
-      roomView,
-      branches: inputs.branches,
+    return Object.freeze({
+      ...applyShopOfferPointMaterialization({
+        catalog: inputs.catalog,
+        snapshot: inputs.snapshot,
+        event: inputs.event,
+        room,
+        declaration,
+        roomView,
+        branches: inputs.branches,
+      }),
+      fixedAcquisitionRealizations: Object.freeze([]),
     });
 
   if (inputs.event.offerPoint === 'fieldsOptionalRewards')
-    return materializeFieldsOptionalOfferPoint({
-      catalog: inputs.catalog,
-      snapshot: inputs.snapshot,
-      event: inputs.event,
-      room,
-      declaration,
-      roomView,
-      branches: inputs.branches,
-      lifecycle: inputs.lifecycle,
-      authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
+    return Object.freeze({
+      ...materializeFieldsOptionalOfferPoint({
+        catalog: inputs.catalog,
+        snapshot: inputs.snapshot,
+        event: inputs.event,
+        room,
+        declaration,
+        roomView,
+        branches: inputs.branches,
+        lifecycle: inputs.lifecycle,
+        authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
+      }),
+      fixedAcquisitionRealizations: Object.freeze([]),
     });
 
   const wheel = applyRewardWheelOfferPointMaterialization({
@@ -92,6 +100,7 @@ export function applyOfferPointMaterializedTransition(
     branches: wheel.branches,
     findings: wheel.findings,
     producerFrontiers: wheel.producerFrontiers,
+    fixedAcquisitionRealizations: wheel.fixedAcquisitionRealizations,
     ...(inputs.shipLifecycleCandidateAlreadyPublished || wheel.shipLifecycleCandidate === undefined
       ? {}
       : { shipLifecycleCandidate: wheel.shipLifecycleCandidate }),

@@ -3,14 +3,12 @@ import { routeRoomShop } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
-  createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBiomeAddress,
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   type OccurrenceAddress,
 } from '../../../../authored-project/addresses';
-import { resolveAcquisitionRole } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingChronology } from '../../../finding-regions';
@@ -36,6 +34,7 @@ import {
   reachedOfferForOrigin,
 } from '../../offer-generation';
 import { consumeRoomRewardForfeit } from '../../../arcana-fear';
+import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
@@ -147,25 +146,16 @@ export function applyRoomEnteredTransition(
         replacementByBranch.some((candidate) => candidate !== replacement)
       )
         continue;
-      const bindings =
-        catalog.rewards.producerLifecycles.byKey[localReward.producerLifecycleKey]?.rewardTypes
-          .byKey[localReward.offer.rewardType]?.acquisitionLifecycle ?? [];
-      for (const binding of bindings)
-        fixedAcquisitionRealizations.push(
-          Object.freeze({
-            address: createAcquisitionRoleAddress(localReward.origin, binding.role),
-            realizedAcquisition: Object.freeze({
-              ...resolveAcquisitionRole(
-                catalog.rewards,
-                localReward.offer,
-                binding.role,
-                binding.lifecyclePoint,
-              ),
-              acquisition: Object.freeze({ kind: 'consumable' as const, gameName: replacement }),
-            }),
-            historySequence: event.sequence,
-          }),
-        );
+      fixedAcquisitionRealizations.push(
+        ...forfeitFixedAcquisitionRealizations(
+          catalog,
+          localReward.origin,
+          localReward.producerLifecycleKey,
+          localReward.offer,
+          replacement,
+          event.sequence,
+        ),
+      );
     }
   }
   if (room !== undefined) {

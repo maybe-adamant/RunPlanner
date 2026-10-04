@@ -457,13 +457,20 @@ export function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.acquisitionConversions.atReplacement(blockedDerivedAcquisitionAt) ??
         blockedArtifacts.acquisitionConversions.atReplacement(blockedDerivedAcquisitionAt));
-  // A role reached at an earlier contact of the blocked room, including a
-  // Forfeit fixed at its entry, is proven only by the selected attempt.
+  // A role reached at an earlier contact of the blocked room is proven only by
+  // the selected attempt. A Forfeit fixed before the block, at room entry or a
+  // Ship wheel pick, stays known when its pickup lies beyond the block.
   const acquisitionRoleBeforeBlock = (address: AcquisitionRoleAddress): boolean =>
     phaseTakesEffectBeforeBlock(
       selectedArtifacts.acquisitionConversions.positionAt(address),
       block,
     );
+  const fixedBeforeBlock = (address: AcquisitionRoleAddress) => {
+    const fixed = selectedArtifacts.acquisitionConversions.fixedAt(address);
+    return fixed !== undefined && phaseTakesEffectBeforeBlock(fixed.position, block)
+      ? fixed
+      : undefined;
+  };
   const acquisitionConversions: AcquisitionConversionCandidateArtifacts = Object.freeze({
     at: (address: AcquisitionRoleAddress) =>
       blockedAcquisitionAt !== undefined &&
@@ -476,7 +483,7 @@ export function retainBlockedRegionProducts(
           : (retainedArtifacts.acquisitionConversions.at(address) ??
             (acquisitionRoleBeforeBlock(address)
               ? selectedArtifacts.acquisitionConversions.at(address)
-              : undefined)),
+              : fixedBeforeBlock(address)?.capability)),
     atReplacement: (address: AcquisitionEntryAddress) =>
       blockedDerivedAcquisitionAt !== undefined &&
       blockedReplacementCapability !== undefined &&
@@ -487,7 +494,9 @@ export function retainBlockedRegionProducts(
       retainedArtifacts.acquisitionConversions.positionAt(address) ??
       (acquisitionRoleBeforeBlock(address)
         ? selectedArtifacts.acquisitionConversions.positionAt(address)
-        : undefined),
+        : fixedBeforeBlock(address)?.position),
+    fixedAt: (address: AcquisitionRoleAddress) =>
+      retainedArtifacts.acquisitionConversions.fixedAt(address) ?? fixedBeforeBlock(address),
   });
   const blockedDerivedAcquisitionCapability =
     blockedDerivedAcquisitionAt === undefined

@@ -1373,13 +1373,21 @@ Artificer-generated RoomReward Boon/Hermes replacement; it does not inspect the
 resolved giver. Fields fixes this outcome on selected room entry in active
 cage-list order, independently of later cage activation and pickup order; the
 entry-fixed realization is published for the cage's acquisition roles from
-that entry and retained when a later contact in the same room blocks.
-Unentered offered rooms do not consume the use. Pickup settles the fixed
-replacement without spending Forfeit again. Other required rewards, including
-miniboss and selected Ship-wheel rewards, retain acquisition-time settlement
-where it yields the same modeled outcome. Native spawn timing alone does not
-require a separate simulation phase; earlier consumption is needed when
-coexisting rewards make pickup order observably different. Shops, Devotion, and other
+that entry. Between choosing a Ship wheel offer and collecting its reward after
+that wheel's combat, no other Forfeit-eligible RoomReward spawn can occur in the
+room: Artificer outputs cannot intercede there, and NPC interactions never touch
+the RoomReward spawn path. A picked `Boon` or `HermesUpgrade` wheel offer whose
+biome use is unconsumed on every branch at the pick therefore has its Red Onion
+realization published from the pick, while consumption and the `rewardForfeited`
+event stay at pickup settlement, so event order is unchanged. Entry- and
+pick-fixed realizations are retained when a later contact in the same room
+blocks, including a block that withholds the room's lifecycle. Unentered
+offered rooms do not consume the use. Pickup settles the fixed replacement
+without spending Forfeit again. Other required rewards, such as miniboss
+rewards, retain acquisition-time settlement where it yields the same modeled
+outcome. Native spawn timing alone does not require a separate simulation
+phase; earlier consumption is needed when coexisting rewards make pickup order
+observably different. Shops, Devotion, and other
 acquisitions outside the qualifying native RoomReward spawn path do not
 trigger or consume Forfeit. The Red Onion keeps its normal
 pickup, Time Piece, and Sea Star contacts, but cannot start a trait offer,

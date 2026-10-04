@@ -14,6 +14,9 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import { processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
+import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
+import type { FixedAcquisitionRealization } from '../../acquisition/contracts';
+import { consumeRoomRewardForfeit } from '../../../arcana-fear';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import { historyFindingChronology } from '../finding-chronology';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
@@ -44,7 +47,49 @@ export interface RewardWheelOfferPointMaterialization {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
   readonly producerFrontiers: readonly RewardProducerFrontier[];
+  /** Roles of the picked offer realized by a Forfeit fixed at this pick. */
+  readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly shipLifecycleCandidate?: ShipLifecycleCandidateContext;
+}
+
+/**
+ * Between a Ship wheel pick and its post-combat pickup no other Forfeit-eligible
+ * RoomReward spawns in the room, so a picked Boon/Hermes offer's Forfeit outcome
+ * is known at the pick. Consumption and the `rewardForfeited` event still
+ * belong to pickup settlement.
+ */
+function pickedWheelForfeitRealizations(
+  catalog: Catalog,
+  wheel: CanonicalRewardWheel,
+  branches: readonly RewardBranchState[],
+  historySequence: number,
+): readonly FixedAcquisitionRealization[] {
+  const picked = wheel.offers.find((offer) => offer.picked);
+  const rewardType = picked?.offer.rewardType;
+  if (
+    picked === undefined ||
+    (rewardType !== 'Boon' && rewardType !== 'HermesUpgrade') ||
+    branches.length === 0
+  )
+    return Object.freeze([]);
+  const replacements = branches.map((branch) => {
+    const forfeit = consumeRoomRewardForfeit(catalog, branch.state.arcanaFear, rewardType, {
+      owner: picked.origin,
+      sequence: historySequence,
+    });
+    return forfeit.consumed ? forfeit.replacementRewardType : undefined;
+  });
+  const replacement = replacements[0];
+  if (replacement === undefined || replacements.some((candidate) => candidate !== replacement))
+    return Object.freeze([]);
+  return forfeitFixedAcquisitionRealizations(
+    catalog,
+    picked.origin,
+    wheel.producerLifecycleKey,
+    picked.offer,
+    replacement,
+    historySequence,
+  );
 }
 
 /** Evaluates one reached non-Shop, non-Fields reward-wheel materialization. */
@@ -327,6 +372,12 @@ export function applyRewardWheelOfferPointMaterialization(
     branches: nextBranches,
     findings: Object.freeze([...findings.values()]),
     producerFrontiers: Object.freeze([producerFrontier]),
+    fixedAcquisitionRealizations: pickedWheelForfeitRealizations(
+      catalog,
+      wheel,
+      nextBranches,
+      event.sequence,
+    ),
     ...(shipLifecycleCandidate === undefined ? {} : { shipLifecycleCandidate }),
   });
 }
