@@ -8,6 +8,7 @@ import type { AuthoredRewardState } from '../../../authored-project/model';
 import type { Catalog } from '../../../catalog-schema';
 import type { ConcreteAcquisitionEvent } from '../../../reward-kernel';
 import type { FindingEvidence } from '../../model';
+import type { HistoryFindingChronology } from '../../finding-regions';
 import type { RewardBranchState } from '../branch-primitives';
 import {
   assessArtificerConversion,
@@ -15,7 +16,7 @@ import {
   assessTimePieceConversion,
 } from './conversions';
 import type { AcquisitionSource } from './source';
-import type { DerivedAcquisitionEntryFrontier } from './contracts';
+import type { DerivedAcquisitionEntryFrontier, FixedAcquisitionRealization } from './contracts';
 import { createAnvilCandidateCapability, type AnvilCandidateCapability } from '../anvil-settlement';
 
 export interface DerivedAcquisitionEntryCandidateCapability {
@@ -144,6 +145,8 @@ export interface AcquisitionConversionCandidateArtifacts {
         readonly capability: AcquisitionConversionCandidateCapability;
       }
     | undefined;
+  /** History position of the contact that produced this role's capability. */
+  readonly positionAt: (address: AcquisitionRoleAddress) => HistoryFindingChronology | undefined;
 }
 export function createAcquisitionConversionCandidateArtifacts(
   catalog: Catalog,
@@ -155,6 +158,7 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly realizedAcquisitionByBranch?: readonly (ConcreteAcquisitionEvent | undefined)[];
       readonly source: AcquisitionSource;
       readonly lifecyclePoint: import('../../../reward-kernel').ProducerLifecyclePointKey;
+      readonly historySequence: number;
       readonly blocksArtificerConversion?: true;
       readonly artificerReplacementAddress: import('../../../authored-project/addresses').AcquisitionEntryAddress;
       readonly artificerReplacementCandidate?: {
@@ -163,11 +167,26 @@ export function createAcquisitionConversionCandidateArtifacts(
       readonly artificerReplacementOptions?: readonly import('../../../authored-project/model').AuthoredRewardState[];
     }[]
   >,
+  fixedRealizations: ReadonlyMap<string, FixedAcquisitionRealization> = new Map(),
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
+  const privateFixedRealizations = new Map(fixedRealizations);
   const at = (address: AcquisitionRoleAddress) => {
-    const entries = privateContexts.get(semanticAddressKey(address));
-    if (entries === undefined) return undefined;
+    const key = semanticAddressKey(address);
+    const entries = privateContexts.get(key);
+    if (entries === undefined) {
+      // A forfeit fixed before the pickup contact realizes the role without any
+      // settlement-time conversion assessment.
+      const fixed = privateFixedRealizations.get(key);
+      return fixed === undefined
+        ? undefined
+        : Object.freeze({
+            timePieceAssessments: Object.freeze([]),
+            artificerAssessments: Object.freeze([]),
+            seaStarAssessments: Object.freeze([]),
+            realizedAcquisition: fixed.realizedAcquisition,
+          });
+    }
     const anvil = createAnvilCandidateCapability(catalog, entries);
     return Object.freeze({
       timePieceAssessments: Object.freeze(
@@ -273,8 +292,21 @@ export function createAcquisitionConversionCandidateArtifacts(
       }
       return undefined;
     },
+    positionAt: (address: AcquisitionRoleAddress) => {
+      const key = semanticAddressKey(address);
+      const sequence =
+        privateContexts.get(key)?.[0]?.historySequence ??
+        privateFixedRealizations.get(key)?.historySequence;
+      return sequence === undefined
+        ? undefined
+        : Object.freeze({ kind: 'history' as const, sequence, boundary: 'at' as const });
+    },
   });
 }
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
-  return Object.freeze({ at: () => undefined, atReplacement: () => undefined });
+  return Object.freeze({
+    at: () => undefined,
+    atReplacement: () => undefined,
+    positionAt: () => undefined,
+  });
 }

@@ -3,12 +3,14 @@ import { routeRoomShop } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
+  createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBiomeAddress,
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   type OccurrenceAddress,
 } from '../../../../authored-project/addresses';
+import { resolveAcquisitionRole } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingChronology } from '../../../finding-regions';
@@ -37,7 +39,10 @@ import { consumeRoomRewardForfeit } from '../../../arcana-fear';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
-import type { DerivedAcquisitionEntryFrontier } from '../../acquisition/contracts';
+import type {
+  DerivedAcquisitionEntryFrontier,
+  FixedAcquisitionRealization,
+} from '../../acquisition/contracts';
 import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 import { clearOfferedRewardTypes } from '../../../state/offered-rewards';
 
@@ -45,6 +50,8 @@ export interface RoomEnteredTransition {
   readonly generatedPickupPlacements: readonly import('../../acquisition/contracts').GeneratedPickupPlacement[];
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly LifecycleFinding[];
+  /** Roles realized by a Forfeit fixed at this entry, ahead of their pickup contact. */
+  readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
   readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly hermesShrineAssessment?: {
@@ -88,8 +95,10 @@ export function applyRoomEnteredTransition(
   // Shrine inventory consults the completed hub board through each branch's own
   // reached snapshot; the entering cohort must still agree on that board.
   attestSharedRewardLookups(branches.map((candidate) => candidate.state));
+  const fixedAcquisitionRealizations: FixedAcquisitionRealization[] = [];
   if (room?.lifecycleProfileKey === 'FieldsCombatRoom') {
     for (const localReward of room.localRewards ?? []) {
+      const replacementByBranch: ('RoomRewardConsolationPrize' | undefined)[] = [];
       next = Object.freeze(
         next.map((branch) => {
           const offer = reachedOfferForOrigin(branch, localReward.origin);
@@ -104,6 +113,7 @@ export function applyRoomEnteredTransition(
                   owner: localReward.origin,
                   sequence: event.sequence,
                 });
+          replacementByBranch.push(forfeit.consumed ? forfeit.replacementRewardType : undefined);
           const materialized = forfeit.consumed
             ? appendRewardEvent(
                 Object.freeze({
@@ -129,6 +139,33 @@ export function applyRoomEnteredTransition(
               );
         }),
       );
+      // A forfeit fixed on every entering branch realizes the cage's roles
+      // before their pickup contact is reached.
+      const replacement = replacementByBranch[0];
+      if (
+        replacement === undefined ||
+        replacementByBranch.some((candidate) => candidate !== replacement)
+      )
+        continue;
+      const bindings =
+        catalog.rewards.producerLifecycles.byKey[localReward.producerLifecycleKey]?.rewardTypes
+          .byKey[localReward.offer.rewardType]?.acquisitionLifecycle ?? [];
+      for (const binding of bindings)
+        fixedAcquisitionRealizations.push(
+          Object.freeze({
+            address: createAcquisitionRoleAddress(localReward.origin, binding.role),
+            realizedAcquisition: Object.freeze({
+              ...resolveAcquisitionRole(
+                catalog.rewards,
+                localReward.offer,
+                binding.role,
+                binding.lifecyclePoint,
+              ),
+              acquisition: Object.freeze({ kind: 'consumable' as const, gameName: replacement }),
+            }),
+            historySequence: event.sequence,
+          }),
+        );
     }
   }
   if (room !== undefined) {
@@ -443,6 +480,7 @@ export function applyRoomEnteredTransition(
   return Object.freeze({
     branches: next,
     findings: Object.freeze(findings),
+    fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
     generatedPickupPlacements: dueDeliveries?.generatedPickupPlacements ?? Object.freeze([]),
     derivedAcquisitionEntryFrontiers: dueDeliveries?.frontiers ?? Object.freeze([]),
     hermesShrineDeliveryPlacementRequired: dueDeliveries?.placementRequired ?? false,

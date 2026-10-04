@@ -836,6 +836,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
         kind: 'derivedAcquisitionEntryFrontiers',
         frontiers: entered.derivedAcquisitionEntryFrontiers,
       },
+      { kind: 'fixedAcquisitionRealizations', realizations: entered.fixedAcquisitionRealizations },
     ],
     state: Object.freeze({
       ...state,

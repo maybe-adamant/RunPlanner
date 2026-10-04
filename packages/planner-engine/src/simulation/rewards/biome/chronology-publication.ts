@@ -247,6 +247,7 @@ export function publishChronology(
     acquisitionConversionArtifacts: createAcquisitionConversionCandidateArtifacts(
       catalog,
       accumulation.acquisitionConversionContexts,
+      accumulation.fixedAcquisitionRealizations,
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(
       accumulation.derivedAcquisitionEntryContexts,

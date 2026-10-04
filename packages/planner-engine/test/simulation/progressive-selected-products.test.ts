@@ -4,17 +4,21 @@ import { ordinaryRoutePosition } from '../support/route-position';
 import * as fixture from './support/progressive-biome-fixtures';
 import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
+  createAcquisitionRoleAddress,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createLocalRewardAddress,
   createRoomActionAddress,
+  createRouteAddress,
   createTraitAcquisitionTargetAddress,
   decodeProjectDocument,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
 import { authoringReadinessAt } from '@run-planner/engine/simulation';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
 import { phaseTakesEffectBeforeBlock } from '../../src/simulation/progressive/selected-products';
 
 const {
@@ -1219,6 +1223,54 @@ describe('progressive selected and blocked products', () => {
         requiredCheckpoint: 'afterTargetGeneration',
         coverage: { kind: 'none', reason: 'notEvaluated' },
       },
+    });
+  });
+
+  it('retains an acquisition role settled earlier in the blocked room', () => {
+    const fieldsOccurrenceId = createOccurrenceId('golden-h-combat09');
+    const cage1 = createLocalRewardAddress(goldenHBiome, fieldsOccurrenceId, 'cages', 'cage1');
+    const cage2 = createLocalRewardAddress(goldenHBiome, fieldsOccurrenceId, 'cages', 'cage2');
+    let project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = authorLegalTraitOffers(project);
+    // Cage2 becomes the first qualifying cage and is picked first; cage1's
+    // Hammer resets to an unauthored offer, so the later cage1 pickup blocks.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: cage2,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: cage1,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const fields = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+    expect(fields?.findings.map((finding) => finding.code)).toEqual(['traitOfferMissing']);
+    expect(fields?.findings[0]?.origin).toMatchObject({ kind: 'traitOffer', owner: cage1 });
+    const branch =
+      fields !== undefined && 'rewards' in fields ? fields.rewards.branches[0] : undefined;
+    const cage2Pickup = branch?.events.find(
+      (event) =>
+        event.kind === 'concreteAcquisition' &&
+        semanticAddressKey(event.origin) === semanticAddressKey(cage2),
+    );
+    expect(cage2Pickup).toMatchObject({
+      acquisition: { acquisition: { gameName: 'RoomRewardConsolationPrize' } },
+    });
+
+    // The settlement-backed capability from the earlier pickup survives the clamp.
+    const capability = candidateArtifactsForProjectEvaluationAssembly(assembly)
+      .biomeAt(goldenHBiome)
+      ?.acquisitionConversions.at(createAcquisitionRoleAddress(cage2, 'source'));
+    expect(capability?.timePieceAssessments).toHaveLength(1);
+    expect(capability?.realizedAcquisition).toMatchObject({
+      acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
     });
   });
 });

@@ -28,7 +28,11 @@ import {
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
-import { simulateProject } from '../../src/simulation';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
+  simulateProject,
+} from '../../src/simulation';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { evaluateProgressiveBiomeAssembly } from '../../src/simulation/progressive/biome';
@@ -264,6 +268,48 @@ describe('Vow of Forfeit Red Onion substitution', () => {
           event.acquisition.acquisition.gameName !== 'RoomRewardConsolationPrize',
       ),
     ).toBe(true);
+  });
+
+  it('publishes the entry-fixed Fields cage realization while a sibling cage blocks', () => {
+    let project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = authorLegalTraitOffers(project);
+    // A new cage2 Boon resets its trait offer, so evaluation blocks at cage2's
+    // pickup, which precedes cage1's pickup in this room.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: fieldsCage2,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const fields = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+    expect(fields?.findings.map((finding) => finding.code)).toEqual(['traitOfferMissing']);
+    expect(fields?.findings[0]?.origin).toMatchObject({ kind: 'traitOffer', owner: fieldsCage2 });
+
+    const cage1Role = createAcquisitionRoleAddress(fieldsCage1, 'self');
+    expect(acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, cage1Role)).toEqual(
+      {
+        timePieceAssessments: [],
+        artificerAssessments: [],
+        seaStarAssessments: [],
+        realizedAcquisition: {
+          role: 'self',
+          lifecyclePoint: 'roomRewardPickup',
+          acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
+        },
+      },
+    );
+    // The unreached pickup has no conversion context to answer.
+    expect(
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+        kind: 'acquisitionConversion',
+        acquisition: cage1Role,
+      }),
+    ).toMatchObject({ kind: 'unavailable' });
   });
 
   it('keeps entry-fixed Forfeit owners distinct during branch equivalence', () => {
