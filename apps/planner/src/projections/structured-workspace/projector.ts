@@ -180,11 +180,18 @@ function routeStatus(route: { readonly status: ProjectEvaluation['status'] }): W
   return route.status;
 }
 
+export interface StructuredWorkspaceProjectionOptions {
+  /** A development build also authors `internal` run modifiers. */
+  readonly devBuild?: boolean;
+}
+
 export function createStructuredWorkspaceProjection(
   catalog: Catalog,
   services: StructuredWorkspaceContextualServices,
   allocateOccurrenceId: OccurrenceIdFactory,
+  options: StructuredWorkspaceProjectionOptions = {},
 ): StructuredWorkspaceProjectionService {
+  const devBuild = options.devBuild ?? false;
   const cache = new WeakMap<ProjectEvaluationAssembly, StructuredWorkspaceProjection>();
   return Object.freeze({
     project(assembly: ProjectEvaluationAssembly): StructuredWorkspaceProjection {
@@ -678,7 +685,7 @@ export function createStructuredWorkspaceProjection(
         ),
       ]);
       const route = Object.freeze({
-        runModifiers: bindRunModifiers(project.route),
+        runModifiers: bindRunModifiers(project.route, devBuild),
         ...(fixedLoadout ? {} : { startingReward }),
         startingArcana: Object.freeze(
           createArcanaFearState(catalog, project.route.loadout).arcana.active.map(

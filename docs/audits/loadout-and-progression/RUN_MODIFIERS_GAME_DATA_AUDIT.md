@@ -32,12 +32,13 @@ can apply together. Pure damage, invulnerability, `IgnoreAllModifiers`, and
 `IgnoreFutureModifiers` retain their native branches. Other crit rolls exist
 outside `Damage`, including the `FirstHitHealTrait` hit-effect contact.
 
-Planner disposition: the two independent options affect only their exact
-outgoing-player `Damage` rolls with positive final chances. Incoming and
-self-damage remain native. Each original RNG call keeps its arguments and
-consumption before an eligible result is changed to success. Native calculation,
-blockers, flags and damage application remain intact. An option supplies no
-new crit or double-damage source and does not steer the other roll.
+Planner disposition: retired. The guaranteed-crit and guaranteed-double-damage
+modifiers were never released; their declarations, executor wraps and authored
+keys are removed, and a save carrying them decodes to the gold-only shape. The
+source facts above remain the evidence for any future damage-roll modifier,
+which would have to keep each original RNG call's arguments and consumption,
+leave native blockers and flags intact, and affect only exact outgoing-player
+`Damage` rolls with positive final chances.
 
 ## Capped hostile-enemy gold
 
@@ -63,7 +64,8 @@ The loop checks the remaining store before each parcel and deducts the full
 rounded amount afterward: the last parcel can overshoot the remaining store.
 It also decrements its local parcel budget by the paid amount, not by one.
 
-Planner disposition: at the exact three-argument death contact for a hostile
+Planner disposition: the enemy gold-drop chance multiplier is the only released
+run modifier. At the exact three-argument death contact for a hostile
 victim, a positive chance is scaled to `min(1, chance * multiplier)` only when
 an encounter store exists and the data does not ignore it. A call-local copy
 changes only `Chance`. The game owns all other checks, parcel amounts and store

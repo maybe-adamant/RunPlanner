@@ -1081,7 +1081,7 @@
 }
 
 .route-run-modifier-toggle,
-.route-run-modifier-gold {
+.route-run-modifier-number {
   display: grid;
   grid-template-columns: 10rem minmax(0, 1fr);
   align-items: center;
@@ -1116,7 +1116,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.route-run-modifier-gold [role='alert'] {
+.route-run-modifier-number [role='alert'] {
   grid-column: 1 / -1;
   margin: 0;
   color: #e7a1a1;
@@ -1124,7 +1124,7 @@
 
 @container app-viewport (max-width: 700px) {
   .route-run-modifier-toggle,
-  .route-run-modifier-gold {
+  .route-run-modifier-number {
     grid-template-columns: minmax(6.5rem, 7.5rem) minmax(0, 1fr);
   }
 }

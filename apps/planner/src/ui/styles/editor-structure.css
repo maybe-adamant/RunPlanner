@@ -186,7 +186,7 @@
 .loadout-dialog-launcher > label,
 .route-fixed-loadout-facts dt,
 .route-run-modifier-toggle > span,
-.route-run-modifier-gold > label,
+.route-run-modifier-number > label,
 .contextual-picker > label {
   color: #aaa7af;
   font-size: 0.78rem;

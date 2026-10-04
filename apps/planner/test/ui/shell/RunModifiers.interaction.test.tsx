@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createRouteAddress, routeRunModifiers } from '@run-planner/engine/authored-project';
+import {
+  RUN_MODIFIER_DECLARATIONS,
+  createRouteAddress,
+  routeRunModifiers,
+  runModifierDeclaration,
+} from '@run-planner/engine/authored-project';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -35,12 +40,21 @@ describe('Run modifier authoring', () => {
     expect(view.project().route.loadout.runModifiers).toBeUndefined();
   });
 
-  it('puts concise hover help on each option without an extra button', () => {
+  it('renders each released declaration by kind with its own label and hover help', () => {
     open();
     expect(screen.getByRole('heading', { name: 'Loadout' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Modifiers' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'About run modifiers' })).toBeNull();
-    expect(gold().getAttribute('aria-description')).toContain('room gold limits');
+    const released = RUN_MODIFIER_DECLARATIONS.filter((d) => d.stage === 'released');
+    expect(screen.getAllByRole('slider')).toHaveLength(
+      released.filter((d) => d.kind === 'number').length,
+    );
+    const declaration = runModifierDeclaration('enemyGoldDropChanceMultiplier');
+    expect(gold().getAttribute('aria-description')).toBe(declaration.description);
+    expect(gold().closest('.route-run-modifier-number')?.getAttribute('title')).toBe(
+      declaration.description,
+    );
+    expect(screen.getByText('1× (Vanilla)')).toBeTruthy();
   });
 
   it('commits a slider gesture once and restores it through history and replacement', () => {

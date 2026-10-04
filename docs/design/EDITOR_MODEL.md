@@ -170,14 +170,15 @@ domain. Picker activation invokes a prepared, address-bound capability.
 Application projections translate its evidence into grouped/searchable options;
 React neither constructs engine queries nor recomputes legality.
 
-Loadout exposes independent eligible-crit and eligible-double-damage checkboxes
-and an enemy gold-drop chance multiplier, including in Fresh File. Application
-binding reads engine-owned defaults and validates a complete replacement through
-the engine before dispatch. The gold slider offers 1×–5× in 0.1× steps, with 1× labeled Vanilla.
+Loadout renders the released run-modifier declarations, a toggle or slider by
+declared kind, including in Fresh File. Application binding reads engine-owned
+defaults and validates a complete replacement through the engine before
+dispatch. The gold slider offers 1×–5× in 0.1× steps, with 1× labeled Vanilla.
 Slider adjustments remain local until pointer release, navigation-key release,
-blur or Enter, producing one history edit per gesture. Existing authored values
-outside the slider range remain intact until edited. Explanatory text appears
-on each option’s hover, with accessible descriptions on its control. Sibling and unrelated
+blur or Enter, producing one history edit per gesture. Stored values outside
+the declared domain clamp to the nearest bound on decode. Explanatory text
+appears on each option’s hover, with accessible descriptions on its control.
+Sibling and unrelated
 edits retain that draft, and committing it uses the current authored siblings.
 An authored multiplier change refreshes it; accepted document replacement clears
 it even when the loaded project has the same persisted ID and multiplier.
