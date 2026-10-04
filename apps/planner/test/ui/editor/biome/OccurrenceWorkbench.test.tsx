@@ -801,11 +801,9 @@ describe('OccurrenceWorkbench', () => {
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     fireEvent.pointerDown(remove);
     await waitFor(() => expect(remove.disabled).toBe(true));
-    const rejectionId = remove.getAttribute('aria-describedby');
-    if (rejectionId === null) throw new Error('Rejected side-room visit has no explanation');
-    expect(document.getElementById(rejectionId)?.textContent).toContain(
-      'Reward unavailable from pool',
-    );
+    expect(remove.getAttribute('aria-description')).toContain('Reward unavailable from pool');
+    expect(remove.title).toContain('Reward unavailable from pool');
+    expect(screen.queryByText(/Reward unavailable from pool/)).toBeNull();
     const visited = screen.getByRole('list', { name: 'Visited side rooms' });
     const rows = [...visited.querySelectorAll('li')];
     const source = rows.find((row) => within(row).queryByText(firstDoor.label));

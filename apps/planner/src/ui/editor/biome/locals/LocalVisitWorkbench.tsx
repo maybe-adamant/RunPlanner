@@ -150,14 +150,13 @@ function VisitControl({
   const { index, option } = orderOption(slot, optionKey);
   const candidate = candidates.result?.[index];
   const state = orderActionState(interaction, candidate);
-  const rejectionId = `${slot.key}-visit-rejection`;
   const unavailable = slot.generation !== 'generated';
   return (
     <div className="ephyra-side-visit-control">
       <label>
         <input
           aria-busy={candidates.pending || undefined}
-          aria-describedby={state.rejection === undefined ? undefined : rejectionId}
+          aria-description={state.rejection}
           aria-label={`${slot.label} visit`}
           checked={slot.entered}
           data-candidate-support={candidateSupport(candidate)}
@@ -179,11 +178,6 @@ function VisitControl({
         />
         <span>Visited</span>
       </label>
-      {state.rejection === undefined ? null : (
-        <span className="ephyra-side-order-rejection" id={rejectionId}>
-          {state.rejection}
-        </span>
-      )}
     </div>
   );
 }
