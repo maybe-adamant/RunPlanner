@@ -22,6 +22,11 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { CompoundOutcomeEditor } from './CompoundOutcomeEditor';
+import {
+  ignoreOutcomeFeedback,
+  useReportedFeedback,
+  type OutcomeFeedbackReporter,
+} from './TraitOfferForm';
 import { naturalSelectionOptionWithTargets, replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyPicker: ContextualPickerModel<string> = Object.freeze({ sections: Object.freeze([]) });
@@ -304,6 +309,7 @@ export function NaturalSelectionOutcomeEditor({
   findingTarget,
   initial,
   loadableFor,
+  onFeedback = ignoreOutcomeFeedback,
   onSelect,
   slotCount,
   traitLabel,
@@ -315,6 +321,7 @@ export function NaturalSelectionOutcomeEditor({
     targets: readonly string[],
     retainedTarget?: string,
   ) => { readonly load: () => WorkspaceNaturalSelectionDomain | undefined };
+  readonly onFeedback?: OutcomeFeedbackReporter;
   readonly onSelect: (targets: readonly string[]) => void;
   readonly slotCount: number;
   readonly traitLabel: (traitKey: string) => string;
@@ -379,42 +386,44 @@ export function NaturalSelectionOutcomeEditor({
     const count = draft.filter((candidate) => candidate === traitKey).length;
     return count > 1 ? [`${traitLabel(traitKey)} ×${count}`] : [];
   });
+  useReportedFeedback(
+    onFeedback,
+    `naturalSelectionRepeats:${controlId}`,
+    repeated.length === 0 ? undefined : `Repeated targets: ${repeated.join(', ')}`,
+  );
   return (
-    <>
-      {repeated.length === 0 ? null : (
-        <p className="trait-selected-outcome-detail">Repeated targets: {repeated.join(', ')}</p>
-      )}
-      <CompoundOutcomeEditor
-        {...(findingTarget === undefined ? {} : { findingTarget })}
-        activeIndex={activeIndex}
-        complete={complete}
-        legend="Natural Selection targets"
-        onBegin={begin}
-        rows={rows}
-        startLabel="Choose all targets"
-      >
-        {domain === undefined ? (
-          <p className="feedback-text">
+    <CompoundOutcomeEditor
+      {...(findingTarget === undefined ? {} : { findingTarget })}
+      activeIndex={activeIndex}
+      complete={complete}
+      legend="Natural Selection targets"
+      onBegin={begin}
+      rows={rows}
+      startLabel="Choose all targets"
+    >
+      {domain === undefined ? (
+        <div className="control-placeholder">
+          <p className="fixed-room-state">
             {loaded.pending ? 'Evaluating targets…' : 'Targets unavailable.'}
           </p>
-        ) : (
-          <ContextualPicker
-            cancelLabel="Cancel"
-            choiceLabel={`Target ${Math.min((activeIndex ?? 0) + 1, slotCount)} of ${slotCount}`}
-            closeOnSelect={false}
-            id={`${controlId}-picker`}
-            label="Trait"
-            model={domain.picker}
-            onOpenChange={(open) => {
-              if (!open) cancel();
-            }}
-            onSelect={choose}
-            open={true}
-            placeholder="Choose an eligible core trait"
-          />
-        )}
-      </CompoundOutcomeEditor>
-    </>
+        </div>
+      ) : (
+        <ContextualPicker
+          cancelLabel="Cancel"
+          choiceLabel={`Target ${Math.min((activeIndex ?? 0) + 1, slotCount)} of ${slotCount}`}
+          closeOnSelect={false}
+          id={`${controlId}-picker`}
+          label="Trait"
+          model={domain.picker}
+          onOpenChange={(open) => {
+            if (!open) cancel();
+          }}
+          onSelect={choose}
+          open={true}
+          placeholder="Choose an eligible core trait"
+        />
+      )}
+    </CompoundOutcomeEditor>
   );
 }
 
@@ -423,16 +432,25 @@ export function TraitOfferSelectedSpecialOutcomes({
   offer,
   carrierChildren,
   feedback,
+  onFeedback = ignoreOutcomeFeedback,
   onUpdate,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly offer: AuthoredTraitOfferTraits;
   readonly carrierChildren: readonly WorkspaceTraitCarrierChildInteraction[];
   readonly feedback: readonly import('@planner/projections/structured-workspace').WorkspaceTraitOfferFeedback[];
+  readonly onFeedback?: OutcomeFeedbackReporter;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const findingTarget = useFindingTarget();
   const ransomAssessment = feedback.find((entry) => entry.kind === 'ransom')?.assessment;
+  useReportedFeedback(
+    onFeedback,
+    'ransom',
+    ransomAssessment !== undefined && !ransomAssessment.branchAgreement
+      ? 'Ransom result differs across current route branches.'
+      : undefined,
+  );
   const allTogetherGroups = useMemo(() => {
     const allTogetherSets = carrierChildren.filter(
       (
@@ -535,6 +553,7 @@ export function TraitOfferSelectedSpecialOutcomes({
           initial={binding.initial}
           key={binding.key}
           loadableFor={binding.loadableFor}
+          onFeedback={onFeedback}
           onSelect={(targets) =>
             onUpdate(
               binding.naturalSelection.update(
@@ -551,7 +570,9 @@ export function TraitOfferSelectedSpecialOutcomes({
         <fieldset className="trait-selected-outcome-detail" aria-label="Ransom preview">
           <legend>Ransom preview</legend>
           {!ransomAssessment.branchAgreement ? (
-            <p className="feedback-text">Ransom result differs across current route branches.</p>
+            <p>
+              <span aria-label="Not applicable">—</span>
+            </p>
           ) : (
             <>
               <p>

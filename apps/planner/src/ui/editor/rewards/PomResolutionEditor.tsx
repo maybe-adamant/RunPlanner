@@ -377,22 +377,28 @@ export function PomResolutionEditor({
   };
   return (
     <div className="trait-offer-editor pom-resolution-editor">
-      {groups.length <= 1 ? null : (
-        <ContextualPicker
-          label="Route state"
-          placeholder="Choose a route state"
-          model={declaredChoicesPicker(
-            groups.map((group, index) => ({
-              key: group.key,
-              value: group.key,
-              label: `Route state ${index + 1}${group.branchIndices.length > 1 ? ` (${group.branchIndices.length} branches)` : ''}`,
-            })),
-            activeGroup?.key ?? '',
-          )}
-          id={`${domKey}-pom-branch`}
-          onSelect={selectGroup}
-        />
-      )}
+      <ContextualPicker
+        label="Route state"
+        placeholder={groups.length === 0 ? 'Evaluating route state…' : 'Choose a route state'}
+        {...(groups.length <= 1
+          ? {
+              disabledTitle:
+                groups.length === 0
+                  ? 'Evaluating route state…'
+                  : 'One route state applies to this Pom.',
+            }
+          : {})}
+        model={declaredChoicesPicker(
+          groups.map((group, index) => ({
+            key: group.key,
+            value: group.key,
+            label: `Route state ${index + 1}${group.branchIndices.length > 1 ? ` (${group.branchIndices.length} branches)` : ''}`,
+          })),
+          activeGroup?.key ?? '',
+        )}
+        id={`${domKey}-pom-branch`}
+        onSelect={selectGroup}
+      />
       {interaction.value.kind === 'choice' ? (
         <div className="trait-offer-options">
           {rows.map((index) => {

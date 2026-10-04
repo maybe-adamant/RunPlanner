@@ -439,26 +439,30 @@ function ReadOnlyWavePanel({
 export function EncounterCompositionControl({
   composition,
   decision,
+  hasRequiredFindings = false,
   idKey,
   interaction,
-  requiredFindings = [],
+  onInitializationFailure,
 }: {
-  readonly requiredFindings?: readonly string[];
   readonly composition: WorkspaceEncounterComposition;
   readonly decision?: Decision;
+  readonly hasRequiredFindings?: boolean;
   readonly idKey: string;
   readonly interaction?: WorkspaceEncounterCustomizationInteraction;
+  /** Reports whether the last Edit attempt found no supported composition. */
+  readonly onInitializationFailure?: (failed: boolean) => void;
 }) {
   const execute = useCommandIntent();
   const edit = useGeneratedEdit(interaction);
   const [selectedWave, setSelectedWave] = useState<number>();
-  const [initializationFailure, setInitializationFailure] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const value = decision?.value === undefined ? undefined : authored(decision);
   const assessment = value === undefined ? undefined : interaction?.generatedAssessment;
-  const warnings = assessment?.composition === 'active' ? assessment.warnings : [];
   // A retained removal-only value on a non-editable composition authors nothing.
   const authorable = value !== undefined && composition.editable;
+  const waveCountUnavailable =
+    value?.waveCount !== undefined &&
+    (value.waveCount < composition.waveCount.min || value.waveCount > composition.waveCount.max);
   // Authored rows have content only in an active assessed composition.
   const rows = composition.waves.filter(
     (wave) => wave.source !== 'authored' || assessment?.composition === 'active',
@@ -793,15 +797,12 @@ export function EncounterCompositionControl({
           decision === undefined || interaction === undefined ? null : (
             <button
               className="secondary-action action-compact encounter-composition-edit"
-              data-has-findings={requiredFindings.length > 0}
+              data-has-findings={hasRequiredFindings}
               disabled={interaction.initializeGenerated === undefined}
               onClick={() => {
                 const initial = interaction.initializeGenerated?.();
-                if (initial === undefined) {
-                  setInitializationFailure(true);
-                  return;
-                }
-                setInitializationFailure(false);
+                onInitializationFailure?.(initial === undefined);
+                if (initial === undefined) return;
                 execute(interaction.intentFor(decision.key, initial));
               }}
               type="button"
@@ -927,7 +928,17 @@ export function EncounterCompositionControl({
           data-has-issues={assessment?.issues.some((issue) => issue.field === 'waveCount')}
         >
           <span>Waves</span>
-          <div className="encounter-wave-count" role="radiogroup" aria-label="Waves">
+          <div
+            aria-invalid={waveCountUnavailable || undefined}
+            className="encounter-wave-count"
+            role="radiogroup"
+            aria-label="Waves"
+            title={
+              waveCountUnavailable
+                ? `Retained wave count ${value?.waveCount} is unavailable here.`
+                : undefined
+            }
+          >
             {Array.from(
               { length: composition.waveCount.max - composition.waveCount.min + 1 },
               (_, index) => composition.waveCount.min + index,
@@ -943,13 +954,6 @@ export function EncounterCompositionControl({
                 {count}
               </label>
             ))}
-            {value?.waveCount !== undefined &&
-            (value.waveCount < composition.waveCount.min ||
-              value.waveCount > composition.waveCount.max) ? (
-              <span className="encounter-customization-repair">
-                {value.waveCount} (unavailable)
-              </span>
-            ) : null}
           </div>
         </div>
         {composition.sharedEnemy ? (
@@ -1046,51 +1050,59 @@ export function EncounterCompositionControl({
           </p>
         </section>
       ))}
-      {assessment?.composition === 'active' ||
-      requiredFindings.length > 0 ||
-      initializationFailure ||
-      (assessment && assessment.issues.length > 0) ? (
-        <section className="encounter-composition-findings" aria-label="Customization findings">
-          <h4>Findings</h4>
-          {!initializationFailure &&
-          requiredFindings.length === 0 &&
-          (assessment?.issues.length ?? 0) === 0 &&
-          warnings.length === 0 ? (
-            <p className="trait-offer-feedback-empty">No current findings.</p>
-          ) : null}
-          {initializationFailure ? (
-            <p className="encounter-customization-repair">
-              No supported composition is available here.
-            </p>
-          ) : null}
-          {requiredFindings.map((message) => (
-            <p className="encounter-customization-repair" key={message}>
-              {message}
-            </p>
-          ))}
-          {assessment?.issues.map((issue, index) => (
-            <p className="encounter-customization-repair" key={index}>
-              {issue.waveIndex === undefined
-                ? issue.field === undefined
-                  ? 'Composition'
-                  : {
-                      baseRoll: 'Budget',
-                      waveCount: 'Waves',
-                      highlight: 'Shared Enemy',
-                      fangs: 'Fangs',
-                      enemies: 'Enemies',
-                    }[issue.field]
-                : `Wave ${issue.waveIndex}`}
-              : {issue.message}
-            </p>
-          ))}
-          {warnings.map((warning) => (
-            <p className="encounter-composition-warning" key={warning}>
-              {warning}
-            </p>
-          ))}
-        </section>
+    </section>
+  );
+}
+
+/** Issue messages of an assessed composition, each named by its field or wave. */
+// eslint-disable-next-line react-refresh/only-export-components -- Formats the control's own assessment for the dialog region.
+export function compositionIssueMessages(
+  assessment: WorkspaceEncounterCustomizationInteraction['generatedAssessment'] | undefined,
+): readonly string[] {
+  return (
+    assessment?.issues.map(
+      (issue) =>
+        `${
+          issue.waveIndex === undefined
+            ? issue.field === undefined
+              ? 'Composition'
+              : {
+                  baseRoll: 'Budget',
+                  waveCount: 'Waves',
+                  highlight: 'Shared Enemy',
+                  fangs: 'Fangs',
+                  enemies: 'Enemies',
+                }[issue.field]
+            : `Wave ${issue.waveIndex}`
+        }: ${issue.message}`,
+    ) ?? []
+  );
+}
+
+/** The dialog's one feedback region: always mounted, with an empty state. */
+export function CustomizationFindings({
+  messages,
+  warnings = [],
+}: {
+  readonly messages: readonly string[];
+  readonly warnings?: readonly string[];
+}) {
+  return (
+    <section className="encounter-composition-findings" aria-label="Customization findings">
+      <h4>Findings</h4>
+      {messages.length === 0 && warnings.length === 0 ? (
+        <p className="trait-offer-feedback-empty">No current findings.</p>
       ) : null}
+      {messages.map((message, index) => (
+        <p className="encounter-customization-repair" key={index}>
+          {message}
+        </p>
+      ))}
+      {warnings.map((warning) => (
+        <p className="encounter-composition-warning" key={warning}>
+          {warning}
+        </p>
+      ))}
     </section>
   );
 }

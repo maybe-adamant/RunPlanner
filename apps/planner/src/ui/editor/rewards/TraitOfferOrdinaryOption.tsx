@@ -26,6 +26,7 @@ export function TraitOfferOrdinaryOption({
   effectiveRarity,
   effectiveLevel,
   persephoneLevelRolls,
+  showEffectiveValues = false,
   spellOffer = false,
   rarifySupported,
   value,
@@ -39,6 +40,7 @@ export function TraitOfferOrdinaryOption({
   readonly effectiveRarity?: TraitRarity;
   readonly effectiveLevel?: number;
   readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
+  readonly showEffectiveValues?: boolean;
   readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
   readonly value: AuthoredTraitOfferTraits;
@@ -150,6 +152,7 @@ export function TraitOfferOrdinaryOption({
         if (open) controller.activate(loadable);
       }}
       persephoneAriaLabel={`${optionKey} Persephone roll`}
+      showEffectiveValues={showEffectiveValues}
       showPersephoneBonus={interaction.showPersephoneBonus}
       {...(option.persephoneLevelBonus === undefined
         ? {}

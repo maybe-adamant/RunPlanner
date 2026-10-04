@@ -90,6 +90,9 @@ export function CocoonRewardPointControl({
           layout="inline"
           id={id}
           placeholder="Any"
+          {...(!decision.valueSupported && decision.value !== undefined
+            ? { triggerTitle: 'Retained position is unavailable here.' }
+            : {})}
           model={declaredChoicesPicker(
             [
               { key: 'any', value: null, label: 'Any' },
@@ -113,9 +116,6 @@ export function CocoonRewardPointControl({
           )}
           onSelect={select}
         />
-        {!decision.valueSupported && decision.value !== undefined ? (
-          <span className="encounter-customization-repair">Needs repair</span>
-        ) : null}
       </div>
       <RoomMapViewport
         key={decision.selection.gameName}

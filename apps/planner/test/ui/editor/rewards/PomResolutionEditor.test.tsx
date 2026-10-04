@@ -327,6 +327,10 @@ describe('Pom resolution editor', () => {
     expect(screen.getByRole('button', { name: 'Pom target 2' }).textContent).toContain(
       'Choose a trait',
     );
+    const routeState = screen.getByRole('button', { name: 'Route state' });
+    expect(routeState).toHaveProperty('disabled', true);
+    expect(routeState.getAttribute('title')).toBe('One route state applies to this Pom.');
+    expect(routeState.textContent).toContain('Route state 1');
   });
 
   it('switches correlated route-state surfaces without unioning their target domains', async () => {

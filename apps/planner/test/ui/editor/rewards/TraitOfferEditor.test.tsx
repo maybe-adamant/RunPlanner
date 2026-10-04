@@ -326,6 +326,10 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
     const targetName = 'Boon Boon Boon selected trait target';
     expect(screen.getByRole('button', { name: targetName })).toBeTruthy();
+    const nestedFeedback = within(
+      screen.getByRole('region', { name: 'Boon Boon Boon choice' }),
+    ).getByRole('status', { name: 'Choice feedback' });
+    expect(nestedFeedback.textContent).toContain('No current findings.');
     await user.click(screen.getByRole('button', { name: 'Add option' }));
     await user.click(screen.getByRole('button', { name: 'Add option' }));
     await user.click(screen.getAllByRole('radio')[2]!);
@@ -923,7 +927,11 @@ describe('trait offer editor entry and dialog', () => {
     expect(godSent?.textContent).not.toContain(' + ');
     expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
     expect(screen.queryByText(/^Rarity:/)).toBeNull();
-    expect(screen.queryByRole('status', { name: 'Offer feedback' })).toBeNull();
+    // Spell offers keep the one fixed feedback region and mounted effective-value lists.
+    expect(screen.getByRole('status', { name: 'Offer feedback' }).textContent).toContain(
+      'No current findings.',
+    );
+    expect(document.querySelectorAll('[aria-label="Effective trait values"]')).toHaveLength(3);
     expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start over' })).toBeNull();
@@ -1421,6 +1429,80 @@ describe('trait offer editor entry and dialog', () => {
       interaction.owner,
     );
     expect(restored.offer).not.toMatchObject({ rejectedOptionKey: 'option2' });
+    application.dispose();
+  });
+
+  it('keeps an unrequired Rejected row mounted and disabled with its reason on hover', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits' && candidate.value.options.length === 3,
+    );
+    if (base === undefined || base.value?.kind !== 'traits')
+      throw new Error('three-row trait interaction is missing');
+    const { rejectedOptionKey: _rejectedOptionKey, ...withoutRejected } = base.value;
+    void _rejectedOptionKey;
+    const value = Object.freeze({
+      ...withoutRejected,
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: Object.freeze([]),
+    });
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      rejectedBlockDomain: () =>
+        Object.freeze({
+          required: false,
+          canClear: true,
+          needsRepair: false,
+          optionKeys: Object.freeze(['option2', 'option3'] as const),
+        }),
+      load: (draft: AuthoredTraitOffer = value) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                callingCard: Object.freeze([]),
+                chaosOfferRules: Object.freeze([
+                  Object.freeze({
+                    rejectedBlockRequired: false,
+                    rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
+                    rejectedBlockNeedsRepair: false,
+                  }),
+                ]),
+                effectiveLevels: Object.freeze([]),
+                findings: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+    });
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={interactions} target={interaction.owner} />
+      </Provider>,
+    );
+
+    const group = await screen.findByRole('group', { name: 'Rejected blocked row' });
+    expect(group.getAttribute('title')).toBe('Rejected does not block a row in this offer.');
+    expect(screen.getByRole('radio', { name: 'No blocked row' })).toHaveProperty('checked', true);
+    for (const radio of within(group).getAllByRole('radio'))
+      expect(radio).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+      'disabled',
+      false,
+    );
     application.dispose();
   });
 

@@ -58,14 +58,17 @@ export function CocoonCountControl({
     );
   };
   const shown = draft ?? position;
+  const unavailable = count !== undefined && !decision.valueSupported;
   const shownText = shown === 0 ? 'Default' : String(minimum + shown - 1);
   return (
     <div className="encounter-customization-row">
       <label htmlFor={id}>{decision.label}</label>
       <div className="encounter-cocoon-count">
         <input
+          aria-invalid={unavailable || undefined}
           aria-valuetext={shownText}
           id={id}
+          title={unavailable ? `Retained count ${count} is unavailable here.` : undefined}
           max={maximum - minimum + 1}
           min={0}
           onBlur={commit}
@@ -103,9 +106,6 @@ export function CocoonCountControl({
           Reset
         </button>
       </div>
-      {!decision.valueSupported && count !== undefined ? (
-        <span className="encounter-customization-repair">Needs repair</span>
-      ) : null}
     </div>
   );
 }

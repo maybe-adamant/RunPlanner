@@ -3,7 +3,7 @@ import {
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import {
@@ -14,11 +14,13 @@ import { type WorkspaceTraitOfferInteraction } from '@planner/projections/struct
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
+import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
 import {
-  TraitOfferSelectedOutcome,
-  type OutcomeFeedbackReporter,
-} from './TraitOfferSelectedOutcome';
-import { TraitOfferForm, TraitOfferShapeActions } from './TraitOfferForm';
+  TraitOfferFeedbackRegion,
+  TraitOfferForm,
+  TraitOfferShapeActions,
+  useOutcomeFeedback,
+} from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
@@ -61,19 +63,7 @@ export function TraitOfferEditorShell({
     [draft, interaction, value],
   );
   // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
-  const [outcomeFeedback, setOutcomeFeedback] = useState<ReadonlyMap<string, string>>(
-    () => new Map(),
-  );
-  const reportOutcomeFeedback = useCallback<OutcomeFeedbackReporter>((key, message) => {
-    setOutcomeFeedback((current) => {
-      if (current.get(key) === message) return current;
-      const next = new Map(current);
-      if (message === undefined) next.delete(key);
-      else next.set(key, message);
-      return next;
-    });
-  }, []);
-  const outcomeMessages = [...outcomeFeedback.values()];
+  const [outcomeMessages, reportOutcomeFeedback] = useOutcomeFeedback();
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
@@ -121,6 +111,9 @@ export function TraitOfferEditorShell({
     value.kind === 'traits' && rejectedRules !== undefined
       ? interaction.rejectedBlockDomain?.(rejectedRules)
       : undefined;
+  // The row stays mounted whenever its domain exists; evaluation alone enables it.
+  const rejectedBlockInactive =
+    rejectedBlock !== undefined && !rejectedBlock.required && !rejectedBlock.needsRepair;
   const recoveryDraft =
     support !== 'impossible'
       ? undefined
@@ -170,41 +163,37 @@ export function TraitOfferEditorShell({
       />
     );
   }
-  // Spell offers have no offer-level feedback unless a sub-editor reports some.
-  const hideFeedback = spellOffer && outcomeMessages.length === 0;
-  const feedbackSection = hideFeedback ? undefined : (
-    <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
-      <h3>Offer feedback</h3>
-      {!hasOptionFeedback && offerMessage === undefined && outcomeMessages.length === 0 ? (
-        <p className="trait-offer-feedback-empty">No current findings.</p>
-      ) : null}
-      {feedback.options.map((option, index) =>
-        option.reasons.length === 0 && option.replacement === undefined ? null : (
-          <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
-            <strong>Option {index + 1}</strong>
-            {option.reasons.length === 0 ? null : (
-              <ul className="trait-option-feedback" aria-label={`${OPTION_KEYS[index]} feedback`}>
-                {option.reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-            )}
-            {option.replacement === undefined ? null : (
-              <p className="trait-option-replacement">
-                Replaces {option.replacement.replacedTraitLabel} · {option.replacement.oldRarity} to{' '}
-                {option.replacement.requiredRarity}
-              </p>
-            )}
-          </div>
-        ),
-      )}
-      {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
-      {outcomeMessages.map((message) => (
-        <p className="feedback-text" key={message}>
-          {message}
-        </p>
-      ))}
-    </section>
+  const feedbackSection = (
+    <TraitOfferFeedbackRegion
+      label="Offer feedback"
+      messages={offerMessage === undefined ? outcomeMessages : [offerMessage, ...outcomeMessages]}
+    >
+      {!hasOptionFeedback
+        ? undefined
+        : feedback.options.map((option, index) =>
+            option.reasons.length === 0 && option.replacement === undefined ? null : (
+              <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
+                <strong>Option {index + 1}</strong>
+                {option.reasons.length === 0 ? null : (
+                  <ul
+                    className="trait-option-feedback"
+                    aria-label={`${OPTION_KEYS[index]} feedback`}
+                  >
+                    {option.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                )}
+                {option.replacement === undefined ? null : (
+                  <p className="trait-option-replacement">
+                    Replaces {option.replacement.replacedTraitLabel} ·{' '}
+                    {option.replacement.oldRarity} to {option.replacement.requiredRarity}
+                  </p>
+                )}
+              </div>
+            ),
+          )}
+    </TraitOfferFeedbackRegion>
   );
   const recoveryAction =
     recoveryDraft === undefined ? undefined : (
@@ -233,14 +222,22 @@ export function TraitOfferEditorShell({
         }
         options={
           <>
-            {rejectedBlock === undefined ||
-            (!rejectedBlock.required && !rejectedBlock.needsRepair) ? null : (
-              <fieldset aria-label="Rejected blocked row" className="trait-offer-rejected-block">
+            {rejectedBlock === undefined ? null : (
+              <fieldset
+                aria-label="Rejected blocked row"
+                className="trait-offer-rejected-block"
+                title={
+                  rejectedBlockInactive
+                    ? 'Rejected does not block a row in this offer.'
+                    : 'Rejected blocks one offered row.'
+                }
+              >
                 <legend>Rejected blocked row</legend>
                 {rejectedBlock.canClear ? (
                   <label>
                     <input
                       checked={value.rejectedOptionKey === undefined}
+                      disabled={rejectedBlockInactive}
                       name={`${interaction.key}-rejected-block`}
                       onChange={() => {
                         const { rejectedOptionKey: _rejectedOptionKey, ...withoutBlock } = value;
@@ -256,6 +253,7 @@ export function TraitOfferEditorShell({
                   <label key={optionKey}>
                     <input
                       checked={value.rejectedOptionKey === optionKey}
+                      disabled={rejectedBlockInactive}
                       name={`${interaction.key}-rejected-block`}
                       onChange={() =>
                         updateValue(Object.freeze({ ...value, rejectedOptionKey: optionKey }))
@@ -291,6 +289,7 @@ export function TraitOfferEditorShell({
                       ? {}
                       : { persephoneLevelRolls: rowPersephoneLevelRolls })}
                     rarifySupported={rarifySupported(optionKey)}
+                    showEffectiveValues
                     spellOffer={spellOffer}
                     value={value}
                   />

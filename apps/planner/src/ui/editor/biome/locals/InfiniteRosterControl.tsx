@@ -39,7 +39,7 @@ export function InfiniteRosterControl({
     typeKeys !== undefined &&
     (!decision.valueSupported || interaction.infiniteRosterSupported === false);
   return (
-    <div className="encounter-customization-row">
+    <div className="encounter-customization-row" data-invalid={needsRepair || undefined}>
       <span>{decision.label}</span>
       <ContextualPicker<WorkspaceInfiniteRosterDraftChoice>
         ariaLabel={decision.label}
@@ -64,6 +64,7 @@ export function InfiniteRosterControl({
         open={draft !== undefined}
         placeholder="Default"
         triggerLabel={typeKeys === undefined ? 'Default' : typeKeys.map(labelFor).join(' · ')}
+        {...(needsRepair ? { triggerTitle: 'Retained roster is unavailable here.' } : {})}
       />
       <button
         className="quiet-action"
@@ -73,7 +74,6 @@ export function InfiniteRosterControl({
       >
         Reset
       </button>
-      {needsRepair ? <span className="encounter-customization-repair">Needs repair</span> : null}
     </div>
   );
 }
