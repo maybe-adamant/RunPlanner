@@ -25,27 +25,16 @@ import {
   TraitOfferSelectedSpecialOutcomes,
 } from './TraitOfferSelectedSpecialOutcomes';
 import { HexTreeEditor } from './HexTreeEditor';
+import {
+  ignoreOutcomeFeedback,
+  useReportedFeedback,
+  type OutcomeFeedbackReporter,
+} from './TraitOfferForm';
 import { circeUnavailableMessage } from './traitOfferOptions';
 
 const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
-
-/** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
-export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
-
-const ignoreOutcomeFeedback: OutcomeFeedbackReporter = () => undefined;
-
-function useReportedFeedback(
-  onFeedback: OutcomeFeedbackReporter,
-  key: string,
-  message: string | undefined,
-): void {
-  useEffect(() => {
-    onFeedback(key, message);
-    return () => onFeedback(key, undefined);
-  }, [key, message, onFeedback]);
-}
 
 function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
   return model.sections
@@ -480,6 +469,7 @@ export function TraitOfferSelectedOutcome({
         feedback={feedback}
         interaction={interaction}
         offer={value}
+        onFeedback={onFeedback}
         onUpdate={onUpdate}
       />
       {concaveStoneChild === undefined || concaveStoneDomain.result === undefined ? null : (
@@ -509,6 +499,7 @@ export function TraitOfferSelectedOutcome({
                 feedback={[]}
                 interaction={interaction}
                 offer={value}
+                onFeedback={onFeedback}
                 onUpdate={onUpdate}
               />
             </div>

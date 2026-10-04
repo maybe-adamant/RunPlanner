@@ -18,7 +18,12 @@ import { useAppSelector } from '@planner/state/store';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
-import { TraitOfferForm, TraitOfferShapeActions } from './TraitOfferForm';
+import {
+  TraitOfferFeedbackRegion,
+  TraitOfferForm,
+  TraitOfferShapeActions,
+  useOutcomeFeedback,
+} from './TraitOfferForm';
 import { TraitOfferOption } from './TraitOfferOption';
 import { TraitAcquisitionTargetOutcome } from './TraitOfferSelectedOutcome';
 import {
@@ -150,6 +155,8 @@ function EchoLastRunBoonChoiceEditor({
     setRows(draft.rows);
     setSelectedIndex(draft.selectedIndex);
   };
+  // The nested form is the visible dialog body, so it owns its own fixed feedback region.
+  const [outcomeMessages, reportOutcomeFeedback] = useOutcomeFeedback();
   const selectedPayload = (
     <>
       {selectedComplete === undefined ||
@@ -191,16 +198,18 @@ function EchoLastRunBoonChoiceEditor({
           slotCount={carrier.slotCount}
           traitLabel={carrier.traitLabel}
           loadableFor={naturalLoadableFor}
+          onFeedback={reportOutcomeFeedback}
           onSelect={(targets) => updateRow(selectedIndex, withNaturalTargets(selectedRow, targets))}
         />
       ) : null}
-      {selectedKind === undefined || carrier !== undefined ? null : (
-        <p className="feedback-text">
-          Complete the other Echo rows before editing this outcome. Existing targets are retained.
-        </p>
-      )}
     </>
   );
+  const carrierMessage =
+    selectedKind === undefined || carrier !== undefined
+      ? undefined
+      : 'Complete the other Echo rows before editing this outcome. Existing targets are retained.';
+  const feedbackMessages =
+    carrierMessage === undefined ? outcomeMessages : [carrierMessage, ...outcomeMessages];
 
   return (
     <section
@@ -276,6 +285,7 @@ function EchoLastRunBoonChoiceEditor({
               {...(row.rarity === undefined ? {} : { rarityValue: row.rarity })}
               {...(effectiveRarity === undefined ? {} : { effectiveRarity })}
               {...(effectiveLevel === undefined ? {} : { effectiveLevel })}
+              showEffectiveValues
               selected={selectedIndex === index}
               selectedDisabled={false}
               selectedName={`${controlId}-selected`}
@@ -285,6 +295,7 @@ function EchoLastRunBoonChoiceEditor({
           );
         })}
         selectedOutcome={selectedPayload}
+        feedback={<TraitOfferFeedbackRegion label="Choice feedback" messages={feedbackMessages} />}
         shapeActions={
           <TraitOfferShapeActions
             {...(nextDraft === undefined ? {} : { onAdd: () => applySize(nextDraft) })}

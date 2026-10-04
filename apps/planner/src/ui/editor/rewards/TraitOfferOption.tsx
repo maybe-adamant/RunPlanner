@@ -38,6 +38,7 @@ export function TraitOfferOption<TraitValue>({
   selectedDisabled,
   selectedLabel,
   selectedName,
+  showEffectiveValues = false,
   showPersephoneBonus = false,
   spellSlot,
   traitAriaLabel,
@@ -70,6 +71,8 @@ export function TraitOfferOption<TraitValue>({
   readonly selectedDisabled: boolean;
   readonly selectedLabel: string;
   readonly selectedName: string;
+  /** Mounts the effective-value list with placeholders before evaluation supplies values. */
+  readonly showEffectiveValues?: boolean;
   readonly showPersephoneBonus?: boolean;
   readonly spellSlot?: { readonly bonus: number; readonly moonglow: string };
   readonly traitAriaLabel: string;
@@ -157,7 +160,9 @@ export function TraitOfferOption<TraitValue>({
           Rarify
         </button>
       )}
-      {effectiveRarity === undefined && effectiveLevel === undefined ? null : (
+      {!showEffectiveValues &&
+      effectiveRarity === undefined &&
+      effectiveLevel === undefined ? null : (
         <dl aria-label="Effective trait values" className="trait-option-effective-summary">
           <dt>Effective rarity</dt>
           <dd>

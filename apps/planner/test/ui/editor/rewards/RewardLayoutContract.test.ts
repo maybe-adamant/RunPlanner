@@ -48,6 +48,7 @@ describe('Reward row layout', () => {
   it('holds the Circe and Echo choice region height while choices load', () => {
     expect(cssBlock(traitFeedback, '.trait-choice-region')).toMatch(/min-height: \d+(\.\d+)?rem;/);
     expect(cssBlock(traitFeedback, '.trait-offer-feedback')).toContain('min-height: 5rem;');
+    expect(cssBlock(workbenches, '.encounter-composition-findings')).toContain('min-height: 5rem;');
   });
 
   it('keeps placement feedback out of flow and pool results separate from editable columns', () => {

@@ -721,7 +721,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+    expect(within(dialog).queryByText('Needs repair')).toBeNull();
+    const findingsRegion = within(dialog).getByRole('region', { name: 'Customization findings' });
+    expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
+    // The one feedback region closes the dialog body, after every decision row.
+    expect(dialog.querySelector('.encounter-customization-fields')?.lastElementChild).toBe(
+      findingsRegion,
+    );
     expect(
       view.application.store
         .getState()
@@ -774,11 +780,19 @@ describe('OccurrenceEncounterWorkbench', () => {
     const selector = within(dialog).getByRole('button', { name: 'Reward position' });
     expect(finding.origin).toEqual(phase);
     expect(selector.textContent).toContain('1 (unavailable)');
+    expect(selector.getAttribute('aria-invalid')).toBe('true');
+    expect(selector.getAttribute('title')).toBe('Retained position is unavailable here.');
     await view.user.click(selector);
     expect(
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
-    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+    expect(within(dialog).queryByText('Needs repair')).toBeNull();
+    const findingsRegion = within(dialog).getByRole('region', { name: 'Customization findings' });
+    expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
+    // The one feedback region closes the dialog body, after every decision row.
+    expect(dialog.querySelector('.encounter-customization-fields')?.lastElementChild).toBe(
+      findingsRegion,
+    );
     const point = () =>
       view.application.store
         .getState()
@@ -796,7 +810,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() =>
       expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) }),
     );
-    expect(within(dialog).queryByText('Needs repair')).toBeNull();
+    expect(
+      within(dialog).getByRole('region', { name: 'Customization findings' }).textContent,
+    ).not.toContain('Retained choice is unavailable here.');
+    expect(selector.getAttribute('title')).toBeNull();
     await view.user.click(selector);
     expect(screen.queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
     await view.user.keyboard('{Escape}');
@@ -849,11 +866,26 @@ describe('OccurrenceEncounterWorkbench', () => {
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
     expect((slider as HTMLInputElement).value).toBe('7');
     expect(within(dialog).getByText('20 (unavailable)')).toBeTruthy();
-    expect(within(dialog).getByText('Needs repair')).toBeTruthy();
+    expect(slider.getAttribute('aria-invalid')).toBe('true');
+    expect(slider.getAttribute('title')).toBe('Retained count 20 is unavailable here.');
+    expect(within(dialog).queryByText('Needs repair')).toBeNull();
+    const findingsRegion = within(dialog).getByRole('region', { name: 'Customization findings' });
+    expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
+    // The one feedback region closes the dialog body, after every decision row.
+    expect(dialog.querySelector('.encounter-customization-fields')?.lastElementChild).toBe(
+      findingsRegion,
+    );
 
     fireEvent.keyDown(slider, { key: 'End' });
     fireEvent.keyUp(slider, { key: 'End' });
     await waitFor(() => expect(cocoonCount()).toEqual({ kind: 'cocoonCount', count: 14 }));
+    // The findings region stays mounted after the repair clears its entry.
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole('region', { name: 'Customization findings' }).textContent,
+      ).not.toContain('Retained choice is unavailable here.'),
+    );
+    expect(slider.getAttribute('aria-invalid')).toBeNull();
   });
 
   it('routes a reached retained Scylla finding to the manual popup trigger', async () => {

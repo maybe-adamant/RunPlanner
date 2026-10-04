@@ -42,34 +42,36 @@ export function ArcanaActivationEditor({
       <p className="route-loadout-summary">
         Choose {requiredCount} inactive Arcana cards in order.
       </p>
-      {domain === undefined ? (
-        <p>Loading Arcana…</p>
-      ) : (
-        <div className="room-judgment-options arcana-board">
-          {control.choices.map((choice) => {
-            const selected = draft.includes(choice.value);
-            return (
-              <ArcanaCard
-                key={choice.value}
-                cardKey={choice.value}
-                label={choice.label}
-                rarity={domain.activeArcana.find((card) => card.key === choice.value)?.rarity}
-                resultRarity={domain.rarity}
-                aria-pressed={selected}
-                disabled={!selected && !domain.inactiveArcanaKeys.includes(choice.value)}
-                selectionOrder={selected ? draft.indexOf(choice.value) + 1 : undefined}
-                onClick={() =>
-                  setDraft(
-                    selected
-                      ? draft.filter((key) => key !== choice.value)
-                      : [...draft, choice.value],
-                  )
-                }
-              />
-            );
-          })}
-        </div>
-      )}
+      <div className="trait-choice-region">
+        {domain === undefined ? (
+          <p>Loading Arcana…</p>
+        ) : (
+          <div className="room-judgment-options arcana-board">
+            {control.choices.map((choice) => {
+              const selected = draft.includes(choice.value);
+              return (
+                <ArcanaCard
+                  key={choice.value}
+                  cardKey={choice.value}
+                  label={choice.label}
+                  rarity={domain.activeArcana.find((card) => card.key === choice.value)?.rarity}
+                  resultRarity={domain.rarity}
+                  aria-pressed={selected}
+                  disabled={!selected && !domain.inactiveArcanaKeys.includes(choice.value)}
+                  selectionOrder={selected ? draft.indexOf(choice.value) + 1 : undefined}
+                  onClick={() =>
+                    setDraft(
+                      selected
+                        ? draft.filter((key) => key !== choice.value)
+                        : [...draft, choice.value],
+                    )
+                  }
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
     </ArcanaFearDialog>
   );
 }

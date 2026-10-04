@@ -14,7 +14,11 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
-import { EncounterCompositionControl } from './EncounterCompositionControl';
+import {
+  compositionIssueMessages,
+  CustomizationFindings,
+  EncounterCompositionControl,
+} from './EncounterCompositionControl';
 import { CocoonCountControl } from './CocoonCountControl';
 import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
@@ -45,6 +49,7 @@ function EncounterCustomizationControl({
 }) {
   const executeIntent = useCommandIntent();
   const [manualOpen, setManualOpen] = useState(false);
+  const [initializationFailure, setInitializationFailure] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const interactionKey = workspaceInteractionKey(phase.address);
   const interaction =
@@ -103,6 +108,26 @@ function EncounterCustomizationControl({
   const retainedLabel = (decision: NonNullable<typeof phase.customization>[number], key: string) =>
     decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
     'Unavailable choice';
+  const unavailableTitle = 'Retained choice is unavailable here.';
+  // Retained decision values the current context cannot produce; the composition's own
+  // issues are listed by its control, so it is named only when no composition exists.
+  const assessment =
+    generatedDecision?.value === undefined ? undefined : interaction?.generatedAssessment;
+  const findingMessages = [
+    ...(initializationFailure ? ['No supported composition is available here.'] : []),
+    ...required,
+    ...(phase.customization ?? []).flatMap((decision) =>
+      decision.value !== undefined &&
+      (!decision.valueSupported ||
+        (decision.selection.kind === 'infiniteRoster' &&
+          interaction?.infiniteRosterSupported === false)) &&
+      (composition === undefined || !isGeneratedEncounterDecision(decision))
+        ? [`${decision.label}: ${unavailableTitle} Choose another value or reset it.`]
+        : [],
+    ),
+    ...compositionIssueMessages(assessment),
+  ];
+  const warnings = assessment?.composition === 'active' ? assessment.warnings : [];
   return (
     <>
       <button
@@ -162,12 +187,12 @@ function EncounterCustomizationControl({
                         Reset
                       </button>
                     </div>
-                    <p className="encounter-customization-repair">Needs repair</p>
                   </section>
                 )
               ) : (
                 <EncounterCompositionControl
-                  requiredFindings={required}
+                  hasRequiredFindings={required.length > 0}
+                  onInitializationFailure={setInitializationFailure}
                   composition={composition}
                   {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
                   idKey={interactionKey}
@@ -217,6 +242,9 @@ function EncounterCustomizationControl({
                         layout="inline"
                         ariaLabel={decision.label}
                         placeholder="Default"
+                        {...(!decision.valueSupported && value !== undefined
+                          ? { triggerTitle: unavailableTitle }
+                          : {})}
                         model={declaredChoicesPicker(
                           [
                             { key: 'default', value: '', label: 'Default' },
@@ -249,9 +277,6 @@ function EncounterCustomizationControl({
                           )
                         }
                       />
-                      {!decision.valueSupported && value !== undefined ? (
-                        <span className="encounter-customization-repair">Needs repair</span>
-                      ) : null}
                     </div>
                   );
                 }
@@ -291,7 +316,9 @@ function EncounterCustomizationControl({
                         ariaLabel={`${decision.label} use ${index + 1}`}
                         {...(index > 0 && selected[0] === undefined
                           ? { disabledTitle: 'Choose the first summon first' }
-                          : {})}
+                          : !decision.valueSupported && selected[index] !== undefined
+                            ? { triggerTitle: unavailableTitle }
+                            : {})}
                         placeholder="Default"
                         model={declaredChoicesPicker(
                           [
@@ -330,12 +357,10 @@ function EncounterCustomizationControl({
                         onSelect={(choiceKey) => replace(index, choiceKey)}
                       />
                     ))}
-                    {!decision.valueSupported && value !== undefined ? (
-                      <p className="encounter-customization-repair">Needs repair</p>
-                    ) : null}
                   </section>
                 );
               })}
+              <CustomizationFindings messages={findingMessages} warnings={warnings} />
             </div>
           </div>
         </dialog>

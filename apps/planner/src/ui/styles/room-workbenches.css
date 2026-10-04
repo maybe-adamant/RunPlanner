@@ -750,6 +750,7 @@
 .encounter-composition-findings {
   display: grid;
   gap: 8px;
+  min-height: 5rem;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;

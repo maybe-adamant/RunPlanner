@@ -1,4 +1,65 @@
-import type { ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+
+/** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
+export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
+
+// eslint-disable-next-line react-refresh/only-export-components -- The hooks and region form one feedback boundary.
+export const ignoreOutcomeFeedback: OutcomeFeedbackReporter = () => undefined;
+
+/** Reports one keyed message while it is defined and clears it on change or unmount. */
+// eslint-disable-next-line react-refresh/only-export-components -- The hooks and region form one feedback boundary.
+export function useReportedFeedback(
+  onFeedback: OutcomeFeedbackReporter,
+  key: string,
+  message: string | undefined,
+): void {
+  useEffect(() => {
+    onFeedback(key, message);
+    return () => onFeedback(key, undefined);
+  }, [key, message, onFeedback]);
+}
+
+/** Collects keyed sub-editor messages for the dialog's feedback region. */
+// eslint-disable-next-line react-refresh/only-export-components -- The hooks and region form one feedback boundary.
+export function useOutcomeFeedback(): readonly [readonly string[], OutcomeFeedbackReporter] {
+  const [feedback, setFeedback] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const report = useCallback<OutcomeFeedbackReporter>((key, message) => {
+    setFeedback((current) => {
+      if (current.get(key) === message) return current;
+      const next = new Map(current);
+      if (message === undefined) next.delete(key);
+      else next.set(key, message);
+      return next;
+    });
+  }, []);
+  return [[...feedback.values()], report];
+}
+
+/** The always-mounted feedback region at the bottom of a trait-form dialog body. */
+export function TraitOfferFeedbackRegion({
+  children,
+  label,
+  messages,
+}: {
+  readonly children?: ReactNode;
+  readonly label: string;
+  readonly messages: readonly string[];
+}) {
+  return (
+    <section aria-label={label} className="trait-offer-feedback" role="status">
+      <h3>{label}</h3>
+      {children === undefined && messages.length === 0 ? (
+        <p className="trait-offer-feedback-empty">No current findings.</p>
+      ) : null}
+      {children}
+      {messages.map((message) => (
+        <p className="feedback-text" key={message}>
+          {message}
+        </p>
+      ))}
+    </section>
+  );
+}
 
 export function TraitOfferShapeActions({
   onAdd,

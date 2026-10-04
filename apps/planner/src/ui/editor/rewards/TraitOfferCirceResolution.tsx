@@ -59,14 +59,16 @@ export function TraitOfferCirceResolution({
     : (domain?.arcanaCards.map((card) => ({ value: card.key, label: card.label })) ?? []);
   return (
     <>
-      <fieldset className="trait-circe-resolution" hidden={domain === undefined}>
+      <fieldset className="trait-circe-resolution">
         <legend>
           {fear
             ? 'Vows to suppress'
             : domain?.effect === 'activateArcana'
               ? 'Red Citrine Arcana'
               : 'Lapis Arcana'}{' '}
-          ({domain?.requiredCount})
+          (
+          {domain === undefined ? <span aria-label="Not applicable">—</span> : domain.requiredCount}
+          )
         </legend>
         <button
           {...findingTarget}
@@ -76,6 +78,8 @@ export function TraitOfferCirceResolution({
           aria-label={title}
           aria-invalid={picker?.selected?.disabled || undefined}
           aria-haspopup="dialog"
+          disabled={domain === undefined}
+          title={domain === undefined ? 'Evaluating this Circe outcome…' : undefined}
           onClick={() => setDraft({ title, kind: fear ? 'fear' : 'arcana', keys: currentKeys })}
         >
           {currentKeys.length === 0 ? title : currentKeys.map(labelFor).join(' · ')}

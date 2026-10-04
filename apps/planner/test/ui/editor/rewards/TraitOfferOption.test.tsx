@@ -23,6 +23,22 @@ const baseProps = {
   traitPicker: { sections: [] },
 };
 
+describe('effective value list', () => {
+  it('mounts placeholders before evaluation supplies effective values', () => {
+    render(<TraitOfferOption {...baseProps} showEffectiveValues />);
+    const summary = screen.getByLabelText('Effective trait values');
+    expect(Array.from(summary.querySelectorAll('dd')).map((cell) => cell.textContent)).toEqual([
+      '—',
+      '—',
+    ]);
+  });
+
+  it('stays unmounted when no effective values are supplied or expected', () => {
+    render(<TraitOfferOption {...baseProps} />);
+    expect(screen.queryByLabelText('Effective trait values')).toBeNull();
+  });
+});
+
 describe('trait rarity presentation', () => {
   it.each([
     'ElementalUnifiedBoon',

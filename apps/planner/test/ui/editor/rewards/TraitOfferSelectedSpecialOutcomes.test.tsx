@@ -33,6 +33,7 @@ import type { WorkspaceInteractionCatalog } from '@planner/projections/structure
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
 import { TraitOfferSelectedOutcome } from '@planner/ui/editor/rewards/TraitOfferSelectedOutcome';
+import { NaturalSelectionOutcomeEditor } from '@planner/ui/editor/rewards/TraitOfferSelectedSpecialOutcomes';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
   createGoldenFGHIProject,
@@ -41,6 +42,46 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
+
+describe('Natural Selection editor feedback', () => {
+  it('reports repeated targets through the feedback reporter instead of inline text', () => {
+    const onFeedback = vi.fn();
+    render(
+      <NaturalSelectionOutcomeEditor
+        controlId="natural"
+        initial={['A', 'A', 'B']}
+        loadableFor={() => ({ load: () => ({ complete: true, picker: { sections: [] } }) })}
+        onFeedback={onFeedback}
+        onSelect={() => undefined}
+        slotCount={3}
+        traitLabel={(key) => key}
+      />,
+    );
+    expect(onFeedback).toHaveBeenCalledWith(
+      expect.stringContaining('naturalSelectionRepeats'),
+      'Repeated targets: A ×2',
+    );
+    expect(screen.queryByText(/Repeated targets/)).toBeNull();
+  });
+
+  it('holds the target control frame while its domain is unavailable', async () => {
+    const user = userEvent.setup();
+    render(
+      <NaturalSelectionOutcomeEditor
+        controlId="natural"
+        initial={[]}
+        loadableFor={() => ({ load: () => undefined })}
+        onSelect={() => undefined}
+        slotCount={2}
+        traitLabel={(key) => key}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
+    const placeholder = screen.getByText('Targets unavailable.');
+    expect(placeholder.classList.contains('fixed-room-state')).toBe(true);
+    expect(placeholder.parentElement?.classList.contains('control-placeholder')).toBe(true);
+  });
+});
 
 describe('selected outcomes', () => {
   it('stages two Latest Model targets and can replace a completed selection', async () => {
@@ -994,9 +1035,12 @@ describe('selected outcomes', () => {
         />
       </Provider>,
     );
-    expect(screen.getByRole('group', { name: 'Ransom preview' }).textContent).toContain(
-      'Ransom result differs across current route branches.',
-    );
+    // Branch disagreement is dialog feedback; the preview keeps its static shape.
+    const message = screen.getByText('Ransom result differs across current route branches.');
+    expect(screen.getByRole('status', { name: 'Offer feedback' }).contains(message)).toBe(true);
+    const preview = screen.getByRole('group', { name: 'Ransom preview' });
+    expect(preview.contains(message)).toBe(false);
+    expect(within(preview).getByLabelText('Not applicable').textContent).toBe('—');
     expect(screen.queryByText(/Removes .* opposing traits/)).toBeNull();
     application.dispose();
   });
@@ -1385,6 +1429,7 @@ describe('selected outcomes', () => {
       // Unavailability is dialog feedback, not text inside the Circe control group.
       const feedback = screen.getByRole('status', { name: 'Offer feedback' });
       const circeGroup = screen.getByRole('button', { name: controlLabel }).closest('fieldset');
+      expect(circeGroup?.hidden).toBe(false);
       if (!outerAvailable) {
         const message = screen.getByText('This Circe trait has no available outcome here.');
         expect(feedback.contains(message)).toBe(true);
