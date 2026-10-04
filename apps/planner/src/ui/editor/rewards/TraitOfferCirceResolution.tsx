@@ -8,6 +8,7 @@ import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { circeUnavailableMessage } from './traitOfferOptions';
 
 export function TraitOfferCirceResolution({
   controlId,
@@ -44,15 +45,7 @@ export function TraitOfferCirceResolution({
   const labelFor = (key: string) =>
     picker?.sections.flatMap((section) => section.items).find((item) => item.value === key)
       ?.label ?? key;
-  const unavailableMessage =
-    domain === undefined
-      ? undefined
-      : !domain.outerAvailable
-        ? 'This Circe trait has no available outcome here.'
-        : !domain.branchAgreement
-          ? 'No outcome is supported across every route branch.'
-          : undefined;
-  const disabled = domain === undefined || unavailableMessage !== undefined;
+  const disabled = domain === undefined || circeUnavailableMessage(domain) !== undefined;
   const complete = draft?.keys.length === domain?.requiredCount;
   const candidates =
     domain === undefined || draft === null
@@ -75,9 +68,6 @@ export function TraitOfferCirceResolution({
               : 'Lapis Arcana'}{' '}
           ({domain?.requiredCount})
         </legend>
-        {unavailableMessage === undefined ? null : (
-          <p className="feedback-text">{unavailableMessage}</p>
-        )}
         <button
           {...findingTarget}
           id={controlId}
@@ -107,59 +97,64 @@ export function TraitOfferCirceResolution({
             );
           }}
         >
-          {domain === undefined ? (
-            <p>Loading choices…</p>
-          ) : (
-            <>
-              <p className="route-loadout-summary">
-                Choose {domain.requiredCount} {fear ? 'Vows to suppress' : 'Arcana cards in order'}.{' '}
-                {draft.keys.length} selected.
-              </p>
-              <div
-                role="group"
-                aria-label={`${draft.title} cards`}
-                className={fear ? 'fear-rank-list' : 'arcana-board'}
-              >
-                {choices.map((choice) => {
-                  const selected = draft.keys.includes(choice.value);
-                  const candidate = candidates.find((item) => item.value === choice.value);
-                  const props = {
-                    'aria-pressed': selected,
-                    disabled:
-                      disabled ||
-                      (!selected && (complete || candidate === undefined || candidate.disabled)),
-                    title: candidate?.explanation,
-                    onClick: () =>
-                      setDraft({
-                        ...draft,
-                        keys: selected
-                          ? draft.keys.filter((key) => key !== choice.value)
-                          : [...draft.keys, choice.value],
-                      }),
-                  };
-                  return fear ? (
-                    <FearCard
-                      key={choice.value}
-                      {...props}
-                      vowKey={choice.value}
-                      label={choice.label}
-                      aria-label={choice.label}
-                    />
-                  ) : (
-                    <ArcanaCard
-                      key={choice.value}
-                      {...props}
-                      cardKey={choice.value}
-                      label={choice.label}
-                      rarity={domain.arcanaCards.find((card) => card.key === choice.value)?.rarity}
-                      resultRarity={domain.resultRarity}
-                      selectionOrder={selected ? draft.keys.indexOf(choice.value) + 1 : undefined}
-                    />
-                  );
-                })}
-              </div>
-            </>
-          )}
+          <div className="trait-choice-region">
+            {domain === undefined ? (
+              <p>Loading choices…</p>
+            ) : (
+              <>
+                <p className="route-loadout-summary">
+                  Choose {domain.requiredCount}{' '}
+                  {fear ? 'Vows to suppress' : 'Arcana cards in order'}. {draft.keys.length}{' '}
+                  selected.
+                </p>
+                <div
+                  role="group"
+                  aria-label={`${draft.title} cards`}
+                  className={fear ? 'fear-rank-list' : 'arcana-board'}
+                >
+                  {choices.map((choice) => {
+                    const selected = draft.keys.includes(choice.value);
+                    const candidate = candidates.find((item) => item.value === choice.value);
+                    const props = {
+                      'aria-pressed': selected,
+                      disabled:
+                        disabled ||
+                        (!selected && (complete || candidate === undefined || candidate.disabled)),
+                      title: candidate?.explanation,
+                      onClick: () =>
+                        setDraft({
+                          ...draft,
+                          keys: selected
+                            ? draft.keys.filter((key) => key !== choice.value)
+                            : [...draft.keys, choice.value],
+                        }),
+                    };
+                    return fear ? (
+                      <FearCard
+                        key={choice.value}
+                        {...props}
+                        vowKey={choice.value}
+                        label={choice.label}
+                        aria-label={choice.label}
+                      />
+                    ) : (
+                      <ArcanaCard
+                        key={choice.value}
+                        {...props}
+                        cardKey={choice.value}
+                        label={choice.label}
+                        rarity={
+                          domain.arcanaCards.find((card) => card.key === choice.value)?.rarity
+                        }
+                        resultRarity={domain.resultRarity}
+                        selectionOrder={selected ? draft.keys.indexOf(choice.value) + 1 : undefined}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </ArcanaFearDialog>
       )}
     </>

@@ -11,7 +11,10 @@ import {
 import {
   applyProjectCommand,
   createAllTogetherSetAddress,
+  createIncomingRewardAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   createCirceResolutionAddress,
   createNaturalSelectionResultAddress,
@@ -31,7 +34,11 @@ import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/T
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
 import { TraitOfferSelectedOutcome } from '@planner/ui/editor/rewards/TraitOfferSelectedOutcome';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
 
@@ -1375,13 +1382,184 @@ describe('selected outcomes', () => {
         expect(screen.queryByRole('dialog', { name: 'Red Citrine Arcana' })).toBeNull();
         expect(screen.queryByText(retainedText)).toBeNull();
       }
+      // Unavailability is dialog feedback, not text inside the Circe control group.
+      const feedback = screen.getByRole('status', { name: 'Offer feedback' });
+      const circeGroup = screen.getByRole('button', { name: controlLabel }).closest('fieldset');
       if (!outerAvailable) {
-        expect(screen.getByText('This Circe trait has no available outcome here.')).toBeTruthy();
+        const message = screen.getByText('This Circe trait has no available outcome here.');
+        expect(feedback.contains(message)).toBe(true);
+        expect(circeGroup?.contains(message)).toBe(false);
       }
       if (!branchAgreement) {
-        expect(screen.getByText('No outcome is supported across every route branch.')).toBeTruthy();
+        const message = screen.getByText('No outcome is supported across every route branch.');
+        expect(feedback.contains(message)).toBe(true);
+        expect(circeGroup?.contains(message)).toBe(false);
       }
       application.dispose();
     },
   );
+
+  it('reports Latest Model branch disagreement in the offer feedback region, not above its picker', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    )!;
+    const value: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Icarus',
+      selectedOptionKey: 'option1',
+      options: [
+        { traitKey: 'UpgradeHammerBoon' },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ],
+    };
+    const child = base
+      .optionDomain(value, 'option1')
+      .children.find((entry) => entry.child.kind === 'latestModelTargets');
+    if (child?.child.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
+    const domain = { requiredCount: 2, branchAgreement: false, picker: pickerModel([]) };
+    const interaction = {
+      ...base,
+      value,
+      load: () =>
+        Object.freeze([
+          Object.freeze({
+            value,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: (
+        offer: AuthoredTraitOfferTraits,
+        key: Parameters<typeof base.optionDomain>[1],
+      ) => ({
+        ...base.optionDomain(offer, key),
+        children: [{ ...child, forOffer: () => ({ load: () => domain }) }],
+      }),
+    } as typeof base;
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={
+            Object.freeze({
+              ...workspace.interactions,
+              traitOffers: new Map([[base.key, interaction]]),
+            }) as unknown as WorkspaceInteractionCatalog
+          }
+          onCommit={() => undefined}
+        />
+      </Provider>,
+    );
+    const picker = await screen.findByLabelText('Latest Model target');
+    expect((picker as HTMLButtonElement).disabled).toBe(true);
+    const message = screen.getByText('No target count is supported across every route branch.');
+    const feedback = screen.getByRole('status', { name: 'Offer feedback' });
+    expect(feedback.contains(message)).toBe(true);
+    expect(feedback.textContent).not.toContain('No current findings.');
+    expect(screen.getByRole('region', { name: 'Selected trait outcome' }).contains(message)).toBe(
+      false,
+    );
+    application.dispose();
+  });
+
+  it('reports an unassessable retained Stone outcome in the offer feedback region and keeps its clear action', async () => {
+    const application = createApplication();
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1));
+    const address = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'UnpickedBoonKeepsake',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: address,
+      value: {
+        kind: 'traits',
+        giverKey: 'Hera',
+        selectedOptionKey: 'option1',
+        options: [
+          { traitKey: 'HeraSpecialBoon', rarity: 'Common' },
+          { traitKey: 'BoonDecayBoon', rarity: 'Common' },
+          { traitKey: 'HeraCastBoon', rarity: 'Common' },
+        ],
+        concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = workspace.interactions.traitOffers.get(semanticAddressKey(address))!;
+    // The retained Stone result has no assessable domain in this route context.
+    const interaction = {
+      ...base,
+      optionDomain: (
+        offer: AuthoredTraitOfferTraits,
+        key: Parameters<typeof base.optionDomain>[1],
+      ) => {
+        const domain = base.optionDomain(offer, key);
+        return {
+          ...domain,
+          children: domain.children.map((entry) =>
+            entry.child.kind === 'concaveStone'
+              ? { ...entry, forOffer: () => ({ load: () => undefined }) }
+              : entry,
+          ),
+        };
+      },
+    } as typeof base;
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={
+            Object.freeze({
+              ...workspace.interactions,
+              traitOffers: new Map([[base.key, interaction]]),
+            }) as unknown as WorkspaceInteractionCatalog
+          }
+          onCommit={() => undefined}
+        />
+      </Provider>,
+    );
+    const stone = await screen.findByRole('group', { name: 'Concave Stone outcome' });
+    const message = await screen.findByText(
+      'This retained Stone outcome cannot be assessed in the current route context.',
+    );
+    expect(screen.getByRole('status', { name: 'Offer feedback' }).contains(message)).toBe(true);
+    expect(stone.contains(message)).toBe(false);
+    const clear = within(stone).getByRole('button', {
+      name: 'Clear retained Concave Stone result',
+    });
+    await user.click(clear);
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          'This retained Stone outcome cannot be assessed in the current route context.',
+        ),
+      ).toBeNull(),
+    );
+    expect(screen.getByRole('status', { name: 'Offer feedback' }).textContent).toContain(
+      'No current findings.',
+    );
+    application.dispose();
+  });
 });

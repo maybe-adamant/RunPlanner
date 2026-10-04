@@ -344,6 +344,11 @@
   min-width: 0;
 }
 
+/* Loading and loaded choices share one region height so the dialog resizes once. */
+.trait-choice-region {
+  min-height: 18rem;
+}
+
 .echo-last-run-choice-header {
   align-items: flex-start;
 }

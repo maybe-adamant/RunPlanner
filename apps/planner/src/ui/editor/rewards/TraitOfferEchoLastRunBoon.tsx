@@ -206,7 +206,7 @@ function EchoLastRunBoonChoiceEditor({
     <section
       {...findingTarget}
       tabIndex={-1}
-      className="echo-last-run-choice"
+      className="echo-last-run-choice trait-choice-region"
       aria-label="Boon Boon Boon choice"
     >
       <header className="echo-last-run-choice-header">
@@ -359,7 +359,7 @@ export function LoadedEchoLastRunBoonChoice({
   }, [child, focusedSemanticOwner, loaded.result]);
   if (child === undefined || option === undefined) {
     return (
-      <section className="echo-last-run-choice" role="status">
+      <section className="echo-last-run-choice trait-choice-region" role="status">
         <p>Boon Boon Boon is not active for the selected Echo trait.</p>
         <button className="quiet-action" onClick={onBack} type="button">
           Back to Echo offer
@@ -369,7 +369,7 @@ export function LoadedEchoLastRunBoonChoice({
   }
   if (loaded.result === undefined) {
     return (
-      <section className="echo-last-run-choice" role="status">
+      <section className="echo-last-run-choice trait-choice-region" role="status">
         <p>{loaded.pending ? 'Evaluating previous-run outcomes…' : 'No outcomes are available.'}</p>
         <button className="quiet-action" onClick={onBack} type="button">
           Back to Echo offer

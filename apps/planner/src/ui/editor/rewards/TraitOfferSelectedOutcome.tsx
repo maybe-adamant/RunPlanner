@@ -25,10 +25,27 @@ import {
   TraitOfferSelectedSpecialOutcomes,
 } from './TraitOfferSelectedSpecialOutcomes';
 import { HexTreeEditor } from './HexTreeEditor';
+import { circeUnavailableMessage } from './traitOfferOptions';
 
 const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
+
+/** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
+export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
+
+const ignoreOutcomeFeedback: OutcomeFeedbackReporter = () => undefined;
+
+function useReportedFeedback(
+  onFeedback: OutcomeFeedbackReporter,
+  key: string,
+  message: string | undefined,
+): void {
+  useEffect(() => {
+    onFeedback(key, message);
+    return () => onFeedback(key, undefined);
+  }, [key, message, onFeedback]);
+}
 
 function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
   return model.sections
@@ -110,6 +127,7 @@ function LatestModelTargetsOutcome({
   child,
   findingTarget,
   interaction,
+  onFeedback,
   onUpdate,
   value,
 }: {
@@ -119,6 +137,7 @@ function LatestModelTargetsOutcome({
   >;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly findingTarget: FindingTargetProps;
+  readonly onFeedback: OutcomeFeedbackReporter;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
   readonly value: AuthoredTraitOfferTraits;
 }) {
@@ -133,6 +152,13 @@ function LatestModelTargetsOutcome({
   useEffect(() => {
     controller.activate(loadable);
   }, [controller, loadable]);
+  useReportedFeedback(
+    onFeedback,
+    'latestModelTargets',
+    domain.result !== undefined && !domain.result.branchAgreement
+      ? 'No target count is supported across every route branch.'
+      : undefined,
+  );
   if (domain.result === undefined) return null;
   const requiredCount = domain.result.requiredCount;
   const picker = {
@@ -144,9 +170,6 @@ function LatestModelTargetsOutcome({
   };
   return (
     <>
-      {!domain.result.branchAgreement ? (
-        <p className="feedback-text">No target count is supported across every route branch.</p>
-      ) : null}
       <ContextualPicker
         findingTarget={findingTarget}
         ariaLabel="Latest Model target"
@@ -181,11 +204,13 @@ function LatestModelTargetsOutcome({
 export function TraitOfferSelectedOutcome({
   interaction,
   value,
+  onFeedback = ignoreOutcomeFeedback,
   onOpenEchoLastRunBoon,
   onUpdate,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
+  readonly onFeedback?: OutcomeFeedbackReporter;
   readonly onOpenEchoLastRunBoon: () => void;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
@@ -304,6 +329,22 @@ export function TraitOfferSelectedOutcome({
     loadable,
   ]);
 
+  const retainedStoneUnassessed =
+    concaveStoneChild !== undefined &&
+    concaveStoneDomain.result === undefined &&
+    concaveStoneChild.child.value !== undefined;
+  useReportedFeedback(
+    onFeedback,
+    'circeResolution',
+    circeChild === undefined ? undefined : circeUnavailableMessage(circeDomain.result),
+  );
+  useReportedFeedback(
+    onFeedback,
+    'concaveStone',
+    retainedStoneUnassessed
+      ? 'This retained Stone outcome cannot be assessed in the current route context.'
+      : undefined,
+  );
   const selectedTraitLabel = interaction.traitLabel(option.traitKey);
   const isHexOutcome = hexTreeChild !== undefined;
   const feedback = interaction.feedbackFor(value);
@@ -350,6 +391,7 @@ export function TraitOfferSelectedOutcome({
           child={latestModelChild}
           findingTarget={findingTarget(latestModelChild.child.address)}
           interaction={interaction}
+          onFeedback={onFeedback}
           onUpdate={onUpdate}
           value={value}
         />
@@ -473,12 +515,9 @@ export function TraitOfferSelectedOutcome({
           )}
         </ConcaveStoneOutcomeEditor>
       )}
-      {concaveStoneChild === undefined ||
-      concaveStoneDomain.result !== undefined ||
-      concaveStoneChild.child.value === undefined ? null : (
+      {!retainedStoneUnassessed ? null : (
         <fieldset className="trait-selected-outcome-detail" aria-label="Concave Stone outcome">
           <legend>Concave Stone</legend>
-          <p>This retained Stone outcome cannot be assessed in the current route context.</p>
           <button
             className="quiet-action action-compact"
             onClick={() => {

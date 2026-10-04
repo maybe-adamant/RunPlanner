@@ -3,7 +3,7 @@ import {
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import {
@@ -14,7 +14,10 @@ import { type WorkspaceTraitOfferInteraction } from '@planner/projections/struct
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
-import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
+import {
+  TraitOfferSelectedOutcome,
+  type OutcomeFeedbackReporter,
+} from './TraitOfferSelectedOutcome';
 import { TraitOfferForm, TraitOfferShapeActions } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
@@ -57,6 +60,20 @@ export function TraitOfferEditorShell({
       draft.interaction === interaction ? draft.loadable : traitOfferLoadable(interaction, value),
     [draft, interaction, value],
   );
+  // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
+  const [outcomeFeedback, setOutcomeFeedback] = useState<ReadonlyMap<string, string>>(
+    () => new Map(),
+  );
+  const reportOutcomeFeedback = useCallback<OutcomeFeedbackReporter>((key, message) => {
+    setOutcomeFeedback((current) => {
+      if (current.get(key) === message) return current;
+      const next = new Map(current);
+      if (message === undefined) next.delete(key);
+      else next.set(key, message);
+      return next;
+    });
+  }, []);
+  const outcomeMessages = [...outcomeFeedback.values()];
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
@@ -153,10 +170,12 @@ export function TraitOfferEditorShell({
       />
     );
   }
-  const feedbackSection = spellOffer ? undefined : (
+  // Spell offers have no offer-level feedback unless a sub-editor reports some.
+  const hideFeedback = spellOffer && outcomeMessages.length === 0;
+  const feedbackSection = hideFeedback ? undefined : (
     <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
       <h3>Offer feedback</h3>
-      {!hasOptionFeedback && offerMessage === undefined ? (
+      {!hasOptionFeedback && offerMessage === undefined && outcomeMessages.length === 0 ? (
         <p className="trait-offer-feedback-empty">No current findings.</p>
       ) : null}
       {feedback.options.map((option, index) =>
@@ -180,6 +199,11 @@ export function TraitOfferEditorShell({
         ),
       )}
       {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
+      {outcomeMessages.map((message) => (
+        <p className="feedback-text" key={message}>
+          {message}
+        </p>
+      ))}
     </section>
   );
   const recoveryAction =
@@ -278,6 +302,7 @@ export function TraitOfferEditorShell({
         selectedOutcome={
           <TraitOfferSelectedOutcome
             interaction={interaction}
+            onFeedback={reportOutcomeFeedback}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
             onUpdate={updateValue}
             value={value}

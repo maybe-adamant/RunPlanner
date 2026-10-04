@@ -851,7 +851,12 @@ stands in for a control (an ungenerated side-room reward, a door awaiting its
 room, an unavailable Travel Deal item, a hidden or absent door reward) keeps the
 control's label column and value frame through `control-placeholder`, so the
 state change never moves neighbouring controls; section-wide empty states keep
-their paragraph form. In the Room Timeline action column the pickup-outcome
+their paragraph form. Inside a dialog or popover, draft feedback (branch
+disagreement, an unassessable retained outcome, once-per-run enemy warnings)
+lives in the dialog's one fixed feedback region and never between controls; a
+message standing in for a dialog control uses the same `control-placeholder`
+shell, and a loading choice region holds its loaded height so the dialog
+resizes once. In the Room Timeline action column the pickup-outcome
 control precedes everything that outcome enables: trait, Pom, Anvil, Artificer
 output, and Fountain controls. Reward provenance such as a Vow of Forfeit
 realization is a `neutral-status` badge on the reward's own control beside its

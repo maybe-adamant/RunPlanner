@@ -652,6 +652,7 @@ select {
 .control-placeholder > .fixed-room-state {
   display: flex;
   align-items: center;
+  gap: 8px;
   min-height: 36px;
   margin: 0;
   padding: 6px 9px;
