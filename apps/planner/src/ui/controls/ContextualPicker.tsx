@@ -29,6 +29,8 @@ interface ContextualPickerProps<T> {
   readonly placeholder: string;
   readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
+  /** Hover explanation for the current value of an enabled trigger. */
+  readonly triggerTitle?: string;
 }
 
 function PickerSection<T>({
@@ -189,6 +191,7 @@ export function ContextualPicker<T>({
   placeholder,
   side = 'bottom',
   triggerLabel,
+  triggerTitle,
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -236,7 +239,11 @@ export function ContextualPicker<T>({
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}
             disabled={interactionDisabled}
-            {...(disabledTitle === undefined ? {} : { title: disabledTitle })}
+            {...(disabledTitle !== undefined
+              ? { title: disabledTitle }
+              : triggerTitle === undefined
+                ? {}
+                : { title: triggerTitle })}
             {...findingTarget}
             aria-description={findingTarget?.['aria-description'] ?? selected?.explanation}
             id={id}

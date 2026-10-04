@@ -858,11 +858,12 @@ message standing in for a dialog control uses the same `control-placeholder`
 shell, and a loading choice region holds its loaded height so the dialog
 resizes once. In the Room Timeline action column the pickup-outcome
 control precedes everything that outcome enables: trait, Pom, Anvil, Artificer
-output, and Fountain controls. Reward provenance such as a Vow of Forfeit
-realization is a `neutral-status` badge on the reward's own control beside its
-offer picker, never on the timeline row, whose label names the realized pickup.
-No
-removal-confirmation dialog dependency is required for in-project editing.
+output, and Fountain controls. A reward control names its Vow of Forfeit
+realization inside its own picker trigger text, `(Red Onion)` after the
+authored offer, with the vow named on hover; no element renders beside the
+control, and the timeline row carries no provenance because its label already
+names the realized pickup. No removal-confirmation dialog dependency is
+required for in-project editing.
 Confirmation is reserved for operations that are both externally consequential
 and not recoverable through project history. Tailwind adoption and literal
 shadcn component copying are out of scope.

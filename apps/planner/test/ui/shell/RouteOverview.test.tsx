@@ -137,8 +137,12 @@ describe('RouteOverview', () => {
     application.store.dispatch(newProjectCreated(project));
     const markup = routeOverviewMarkup(application);
     expect(markup).toContain('>Starting reward</label>');
-    expect(markup).toContain('title="Vow of Forfeit"');
-    expect(markup).toContain('Forfeit → Red Onion');
+    expect(markup).toMatch(
+      /<button[^>]*class="contextual-picker-trigger"[^>]*title="Vow of Forfeit"/,
+    );
+    expect(markup).toMatch(/Apollo[^<]*\(Red Onion\)<\/span>/);
+    expect(markup).not.toContain('Forfeit →');
+    expect(markup.match(/title="Vow of Forfeit"/g)).toHaveLength(1);
   });
 
   it('owns only the independent starting reward in Route Loadout', () => {

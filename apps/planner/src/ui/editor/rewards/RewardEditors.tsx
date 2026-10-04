@@ -25,6 +25,8 @@ interface RewardValueEditorProps {
   readonly offer: ResolvedRewardOffer | null;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
+  /** Vow of Forfeit realization named after the authored offer in the trigger text. */
+  readonly realizedLabel?: string;
   /** A fixed-type inline editor may present only its selected Boon source. */
   readonly summaryMode?: 'offer' | 'source';
   readonly unresolvedSeed?: ResolvedRewardOffer;
@@ -55,6 +57,7 @@ export function RewardValueEditor({
   offer,
   onReplace,
   initialStep = 'type',
+  realizedLabel,
   summaryMode = 'offer',
   unresolvedSeed,
 }: RewardValueEditorProps) {
@@ -140,6 +143,7 @@ export function RewardValueEditor({
       : activeOffer === undefined
         ? 'Choose reward'
         : resolver.summary(activeOffer);
+  const triggerLabel = realizedLabel === undefined ? summary : `${summary} (${realizedLabel})`;
 
   return (
     <div className="reward-value-editor">
@@ -163,7 +167,8 @@ export function RewardValueEditor({
         onSelect={select}
         open={active !== undefined}
         placeholder={summary}
-        triggerLabel={summary}
+        triggerLabel={triggerLabel}
+        {...(realizedLabel === undefined ? {} : { triggerTitle: 'Vow of Forfeit' })}
       />
     </div>
   );
@@ -177,6 +182,7 @@ export function CountedRewardEditor({
   label,
   onReplace,
   initialStep,
+  realizedLabel,
   summaryMode,
   unresolvedSeed,
 }: CountedRewardEditorProps) {
@@ -189,6 +195,7 @@ export function CountedRewardEditor({
       offer={offer}
       onReplace={onReplace}
       {...(initialStep === undefined ? {} : { initialStep })}
+      {...(realizedLabel === undefined ? {} : { realizedLabel })}
       {...(summaryMode === undefined ? {} : { summaryMode })}
       {...(unresolvedSeed === undefined ? {} : { unresolvedSeed })}
     />

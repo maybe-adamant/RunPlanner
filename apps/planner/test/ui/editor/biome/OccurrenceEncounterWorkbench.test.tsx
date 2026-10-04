@@ -2034,9 +2034,10 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Timeline');
     const ship = screen.getByLabelText('Ship combat structure');
-    const badge = within(ship).getByTitle('Vow of Forfeit');
-    expect(badge.textContent).toBe('Forfeit → Red Onion');
-    expect(badge.classList.contains('neutral-status')).toBe(true);
+    const trigger = within(ship).getByTitle('Vow of Forfeit');
+    expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
+    expect(trigger.textContent).toMatch(/Apollo.*\(Red Onion\)/);
+    expect(within(ship).queryByText(/^Forfeit →/)).toBeNull();
     expect(within(ship).getAllByTitle('Vow of Forfeit')).toHaveLength(1);
 
     openRoomTab('Combat 1 Timeline');
@@ -2044,6 +2045,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(actions).queryByTitle('Vow of Forfeit')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     expect(actions.textContent).toContain('Red Onion');
+    expect(actions.textContent).not.toContain('(Red Onion)');
     expect(actions.textContent).not.toContain('Forfeit');
   });
 

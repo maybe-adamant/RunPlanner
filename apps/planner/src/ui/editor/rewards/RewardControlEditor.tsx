@@ -43,6 +43,10 @@ export function RewardControlEditor({
     executeIntent(interaction.intentFor(value));
   };
   if (!showOffer) return null;
+  const realized =
+    control.realizedAcquisition === undefined
+      ? {}
+      : { realizedLabel: control.realizedAcquisition.label };
   return (
     <>
       {control.shopOption !== undefined ? (
@@ -55,6 +59,7 @@ export function RewardControlEditor({
           label={label}
           offer={control.offer}
           onReplace={onReplace}
+          {...realized}
           {...(control.authoringSeed === undefined
             ? {}
             : { unresolvedSeed: control.authoringSeed })}
@@ -71,6 +76,7 @@ export function RewardControlEditor({
           label={label}
           offer={control.offer}
           onReplace={onReplace}
+          {...realized}
           {...(control.authoringSeed === undefined
             ? {}
             : { unresolvedSeed: control.authoringSeed })}
@@ -79,12 +85,6 @@ export function RewardControlEditor({
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
           summaryMode={offerSummaryMode}
         />
-      )}
-      {control.realizedAcquisition === undefined ? null : (
-        // Vow of Forfeit provenance belongs to the reward, not to the action that collects it.
-        <span className="neutral-status" title="Vow of Forfeit">
-          {`Forfeit → ${control.realizedAcquisition.label}`}
-        </span>
       )}
     </>
   );

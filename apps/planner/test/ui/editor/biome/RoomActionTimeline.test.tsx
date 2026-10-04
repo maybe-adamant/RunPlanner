@@ -1198,7 +1198,7 @@ describe('OccurrenceRoomActions', () => {
       .getByText('Collect Red Onion')
       .closest<HTMLElement>('[data-room-action-key]');
     if (row === null) throw new Error('Forfeited pickup row is missing');
-    expect(row.textContent).not.toMatch(/Forfeit|Zeus|boon/);
+    expect(row.textContent).not.toMatch(/Forfeit|Zeus|boon|\(Red Onion\)/);
     const outcome = within(row).getByRole('button', { name: /^Pickup outcome for / });
     expect(outcome.textContent).toContain('Pickup');
     expect(
