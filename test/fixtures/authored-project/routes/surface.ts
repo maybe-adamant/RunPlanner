@@ -24,7 +24,12 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { authorLegalTraitOffers, hubVisitActions, replaceTestShopOfferActions } from '../shared';
+import {
+  authorLegalTraitOffers,
+  hubVisitActions,
+  replaceTestShopOfferActions,
+  supportedTraitOffer,
+} from '../shared';
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
@@ -202,6 +207,68 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
     ),
     encounterPhaseKey: 'Encounter',
   });
+}
+
+/**
+ * N/O route with two authored Mystery deliveries due in O Combat01: the N
+ * Postboss Shrine's at Intro and the O Combat07 Shrine's at Combat1. Later O
+ * reward authorship is not revalidated against the added boons.
+ */
+export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
+  readonly project: ProjectDocument;
+  readonly introEntry: ReturnType<typeof createAcquisitionEntryAddress>;
+  readonly combatEntry: ReturnType<typeof createAcquisitionEntryAddress>;
+} {
+  const introSource = createOccurrenceAddress(
+    nBiome,
+    createOccurrenceId('surface-n-preboss:postboss'),
+  );
+  const combatSource = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+  const site = createAcquisitionSiteAddress(
+    createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
+    'hermesShrineDelivery',
+  );
+  const introEntry = createAcquisitionEntryAddress(
+    site,
+    hermesShrineDeliveryEntryKey(introSource, 'initial:secondLeft'),
+  );
+  const combatEntry = createAcquisitionEntryAddress(
+    site,
+    hermesShrineDeliveryEntryKey(combatSource, 'initial:secondLeft'),
+  );
+  let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+  for (const [occurrence, delay, entry, encounterPhaseKey, source] of [
+    [introSource, 5, introEntry, 'Intro', 'ApolloUpgrade'],
+    [combatSource, 2, combatEntry, 'Combat1', 'HeraUpgrade'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay, rushed: false },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry,
+      encounterPhaseKey,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source } },
+    });
+    const trait = createTraitOfferAddress(entry, 'hiddenSource');
+    const value = supportedTraitOffer(project, trait, source.replace('Upgrade', ''));
+    if (value === undefined) throw new Error(`${source} has no supported Mystery offer`);
+    project = applyProjectCommand(project, catalog, { kind: 'ReplaceTraitOffer', trait, value });
+  }
+  return Object.freeze({ project, introEntry, combatEntry });
 }
 
 /**

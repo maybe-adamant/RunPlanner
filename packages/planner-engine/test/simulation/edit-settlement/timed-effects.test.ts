@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   loadSurfaceNOPQProject,
   createSurfaceNOHermesShrineDeliveryCheckpoint,
+  createSurfaceOSameRoomHermesDeliveriesCheckpoint,
 } from '@run-planner/test-fixtures/surface';
 import { catalog } from '@run-planner/hades2-catalog';
 import { loadSurfaceScheduledLifecycleCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -26,6 +27,7 @@ import {
   createTraitOfferAddress,
   createRoomActionAddress,
   roomActionKey,
+  semanticAddressKey,
   publishProjectHistoryEdit,
   createProjectHistory,
   undoProjectHistory,
@@ -540,6 +542,59 @@ describe('timed-effect edit settlement', () => {
       expect(undoProjectHistory(history).present).toBe(project);
     },
   );
+  it('retains a same-room sibling delivery already placed at its due contact', () => {
+    const {
+      project: complete,
+      introEntry,
+      combatEntry,
+    } = createSurfaceOSameRoomHermesDeliveriesCheckpoint();
+    const introTrait = createTraitOfferAddress(introEntry, 'hiddenSource');
+    const missingOffers = (assembly: ReturnType<typeof evaluate>) =>
+      assembly.evaluation.findings
+        .filter((finding) => finding.code === 'traitOfferMissing')
+        .map((finding) => semanticAddressKey(finding.origin));
+    expect(missingOffers(evaluate(complete))).toEqual([]);
+    const nestedOffer = (project: ProjectDocument, entry: typeof introEntry) =>
+      occurrence(project, 'surface-o-combat01').acquisitionSites?.hermesShrineDelivery
+        ?.pickupEntries?.[entry.entryKey]?.traitOffersByAcquisitionRole.hiddenSource;
+    const combatValue = nestedOffer(complete, combatEntry);
+    const introValue = nestedOffer(complete, introEntry);
+    if (combatValue == null || introValue == null) throw new Error('fixture offers missing');
+    // Re-sourcing the Intro Mystery clears its nested offer; Combat1 stays authored but unreached.
+    let project = complete;
+    for (const source of ['AphroditeUpgrade', 'ApolloUpgrade'] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionEntryOffer',
+        entry: introEntry,
+        value: { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source } },
+      });
+    expect(nestedOffer(project, introEntry)).toBeNull();
+    const before = evaluate(project);
+    expect(missingOffers(before)).toEqual([semanticAddressKey(introTrait)]);
+    const settled = settleProjectEdit({
+      catalog,
+      before,
+      command: { kind: 'ReplaceTraitOffer', trait: introTrait, value: introValue },
+      evaluate,
+    });
+    expect(nestedOffer(settled.project, introEntry)).toEqual(introValue);
+    expect(nestedOffer(settled.project, combatEntry)).toEqual(combatValue);
+    expect(missingOffers(settled)).toEqual([]);
+    expect(
+      settleProjectEdit({
+        catalog,
+        before: settled,
+        command: {
+          kind: 'ReplaceTraitOffer',
+          trait: createTraitOfferAddress(combatEntry, 'hiddenSource'),
+          value: combatValue,
+        },
+        evaluate,
+      }),
+    ).toBe(settled);
+    const history = publishProjectHistoryEdit(createProjectHistory(project), settled.project);
+    expect(undoProjectHistory(history).present).toBe(project);
+  });
   it('treats mixed and missing reached cohorts as unknown correspondence', () => {
     const assembly = evaluate(loadSurfaceScheduledLifecycleCheckpoint());
     const contact = candidateArtifactsForProjectEvaluationAssembly(assembly)

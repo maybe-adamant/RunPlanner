@@ -413,34 +413,40 @@ export function settleProjectEdit(options: {
         );
         const oldProof =
           beforePlacements.get(semanticAddressKey(address))?.assessment.kind === 'valid';
+        const prior = occurrences(before.project).flatMap(({ occurrence, owner }) =>
+          occurrence.roomActions.order.flatMap((reference) =>
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'hermesShrineDelivery' &&
+            reference.entryKey === address.entryKey
+              ? [{ owner, reference }]
+              : [],
+          ),
+        );
+        const incompatible =
+          purchasedObligation(before.project, address.entryKey) !==
+            purchasedObligation(project, address.entryKey) ||
+          prior.some(
+            ({ owner, reference }) =>
+              semanticAddressKey(owner) !== semanticAddressKey(address.site.owner) ||
+              reference.encounterPhaseKey !== capability.encounterPhaseKey,
+          );
+        // A delivery already ranked at this exact due contact with an unchanged
+        // obligation corresponds to it; reaching it later proves nothing new.
+        const corresponds = prior.length > 0 && !incompatible;
         const resetInherited =
           inherited &&
           !oldProof &&
+          !corresponds &&
           !authoredEntries.has(semanticAddressKey(address)) &&
           !repaired.has(`delivery:${semanticAddressKey(address)}`);
-        return ranked && !resetInherited ? [] : [{ address, capability, resetInherited }];
+        return ranked && !resetInherited
+          ? []
+          : [{ address, capability, incompatible, resetInherited }];
       });
     });
     if (due.length === 0) return assembly;
-    for (const { address, capability, resetInherited } of due) {
+    for (const { address, capability, incompatible, resetInherited } of due) {
       consume(`delivery:${semanticAddressKey(address)}`);
-      const prior = occurrences(before.project).flatMap(({ occurrence, owner }) =>
-        occurrence.roomActions.order.flatMap((reference) =>
-          reference.kind === 'interactAcquisitionEntry' &&
-          reference.siteKey === 'hermesShrineDelivery' &&
-          reference.entryKey === address.entryKey
-            ? [{ owner, reference }]
-            : [],
-        ),
-      );
-      const incompatible =
-        purchasedObligation(before.project, address.entryKey) !==
-          purchasedObligation(project, address.entryKey) ||
-        prior.some(
-          ({ owner, reference }) =>
-            semanticAddressKey(owner) !== semanticAddressKey(address.site.owner) ||
-            reference.encounterPhaseKey !== capability.encounterPhaseKey,
-        );
       if (incompatible || resetInherited)
         project = discardDisplacedHermesShrineDelivery(project, address.entryKey);
       project = applyProjectCommand(project, catalog, {

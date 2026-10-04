@@ -37,6 +37,7 @@ import {
 import type { RewardHistoryState, RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
+  createSurfaceOSameRoomHermesDeliveriesCheckpoint,
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
   loadSurfaceNOPQProject,
@@ -1829,6 +1830,39 @@ it('retains reached placement rejection at the first due phase stop', () => {
       address: entry,
       assessment: expect.objectContaining({ kind: 'invalid', reason: 'dueContactMismatch' }),
     }),
+  );
+});
+
+it('keeps an earlier proven same-room placement when a later sibling blocks', () => {
+  const {
+    project: complete,
+    introEntry,
+    combatEntry,
+  } = createSurfaceOSameRoomHermesDeliveriesCheckpoint();
+  const project = applyProjectCommand(complete, catalog, {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry: combatEntry,
+    value: {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+    },
+  });
+  const assembly = simulateProjectAssembly(catalog, project);
+  const evaluation = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
+  if (evaluation === undefined || !('rewards' in evaluation))
+    throw new Error('delivery evaluation missing');
+  expect(evaluation.findings.map((finding) => finding.code)).toEqual(['traitOfferMissing']);
+  expect(evaluation.rewards.generatedPickupPlacements).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        address: introEntry,
+        assessment: { kind: 'valid', source: expect.anything() },
+      }),
+      expect.objectContaining({
+        address: combatEntry,
+        assessment: { kind: 'valid', source: expect.anything() },
+      }),
+    ]),
   );
 });
 
