@@ -1,11 +1,3 @@
-.trait-offer-launchers {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.45rem;
-}
-
 .pickup-outcome-control {
   display: inline-flex;
   min-width: 0;
@@ -23,41 +15,6 @@
 .pickup-outcome-control > .contextual-picker {
   min-width: min(100%, 13rem);
   max-width: 100%;
-}
-
-.room-action-outcome-controls,
-.room-action-artificer-output {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.room-action-artificer-output {
-  justify-content: flex-end;
-  margin-left: auto;
-  text-align: right;
-}
-
-.room-action-outcome-controls > .trait-offer-launchers {
-  min-width: 0;
-  max-width: 100%;
-  margin-top: 0;
-}
-
-.room-action-artificer-output > .reward-value-editor,
-.room-action-artificer-output > .counted-reward-editor {
-  min-width: min(100%, 18rem);
-  flex: 0 1 18rem;
-}
-
-.reward-acquisition-outcome {
-  margin: 0;
-  min-width: 0;
-  max-width: 100%;
-  font-size: 0.8rem;
-  line-height: 1.3;
 }
 
 .trait-offer-dialog-backdrop {

@@ -14,6 +14,7 @@ import {
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createStartingRewardAddress,
   createSteadyGrowthOutcomeAddress,
   decodeProjectDocument,
   semanticAddressKey,
@@ -1114,7 +1115,7 @@ describe('OccurrenceRoomActions', () => {
     ).not.toBeNull();
   });
 
-  it('keeps Nectar trait editing on its pickup line and hides it after Artificer conversion', async () => {
+  it('orders the pickup outcome before the editing it enables on one pickup line', async () => {
     const view = renderOccurrenceWorkbench(
       createFConversionFrontierProject('GiftDrop').project,
       'Underworld',
@@ -1127,25 +1128,21 @@ describe('OccurrenceRoomActions', () => {
     });
     const outcomeControl = disposition.closest<HTMLElement>('.pickup-outcome-control');
     if (outcomeControl === null) throw new Error('Pickup outcome control is missing');
-    expect(outcomeControl.classList.contains('pickup-outcome-control')).toBe(true);
     expect(within(outcomeControl).getByText('Outcome')).toBeTruthy();
     expect(disposition.textContent).toContain('Pickup');
-    expect(
-      within(outcomeControl).queryByRole('button', {
-        name: 'Edit Pom: No eligible traits',
-      }),
-    ).toBeNull();
     const pomLauncher = screen.getByRole('button', {
       name: /Edit Pom: No eligible traits/,
     });
     expect(pomLauncher.getAttribute('data-trait-status')).toBe('valid');
     const pickupRow = pomLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (pickupRow === null) throw new Error('Nectar pickup row is missing');
-    expect(
-      pickupRow
-        .querySelector(':scope > .room-action-controls > .room-action-inline-editors')
-        ?.contains(pomLauncher),
-    ).toBe(true);
+    const column = pickupRow.querySelector<HTMLElement>(
+      ':scope > .room-action-controls > .room-action-inline-editors',
+    );
+    if (column === null) throw new Error('Nectar inline editor column is missing');
+    expect(column.contains(disposition)).toBe(true);
+    expect(column.contains(pomLauncher)).toBe(true);
+    expectBefore(disposition, pomLauncher);
 
     await view.user.click(disposition);
     await view.user.click(screen.getByRole('option', { name: 'Artificer' }));
@@ -1159,8 +1156,58 @@ describe('OccurrenceRoomActions', () => {
           name: 'Edit Pom: No eligible traits',
         }),
       ).toBeNull();
-      expect(within(sourceAction).getByRole('button', { name: 'Item' })).toBeTruthy();
+      const outcome = within(sourceAction).getByRole('button', { name: /^Pickup outcome for / });
+      const output = within(sourceAction).getByRole('button', { name: 'Item' });
+      const sourceColumn = sourceAction.querySelector<HTMLElement>(
+        ':scope > .room-action-controls > .room-action-inline-editors',
+      );
+      expect(sourceColumn?.contains(outcome)).toBe(true);
+      expect(sourceColumn?.contains(output)).toBe(true);
+      expectBefore(outcome, output);
     });
+  });
+
+  it('shows a forfeited incoming reward as its realized pickup without forfeit text on the row', () => {
+    // A Timepiece-capable loadout keeps the pickup outcome editable on the realized Red Onion.
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = authorLegalTraitOffers(project);
+    renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(goldenFOccurrenceId(2, 1)),
+    );
+    openRoomTab('Room Timeline');
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const row = within(actions)
+      .getByText('Collect Red Onion')
+      .closest<HTMLElement>('[data-room-action-key]');
+    if (row === null) throw new Error('Forfeited pickup row is missing');
+    expect(row.textContent).not.toMatch(/Forfeit|Zeus|boon/);
+    const outcome = within(row).getByRole('button', { name: /^Pickup outcome for / });
+    expect(outcome.textContent).toContain('Pickup');
+    expect(
+      row
+        .querySelector(':scope > .room-action-controls > .room-action-inline-editors')
+        ?.contains(outcome),
+    ).toBe(true);
+    expect(within(row).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
+    expect(within(actions).queryByTitle('Vow of Forfeit')).toBeNull();
   });
 
   it('authors an Artificer replacement through its exact Room Action acquisition site', () => {

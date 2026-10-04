@@ -105,10 +105,13 @@ export function occurrenceActionLabel(
     control = rewardControl,
     fallbackSummary?: string,
   ): string => {
+    // A forfeited reward is collected as its realized consolation, not as the authored offer.
     const summary =
       !includeOfferSummary || control?.offer === null || control?.offer === undefined
         ? fallbackSummary
-        : timelineRewardLabel(catalog, control.offer, control);
+        : control.realizedAcquisition === undefined
+          ? timelineRewardLabel(catalog, control.offer, control)
+          : timelineRewardName(catalog, control.realizedAcquisition.rewardType);
     const conversion = control?.conversions?.find((entry) => entry.value.kind !== 'normal');
     const action =
       conversion?.value.kind === 'artificer'

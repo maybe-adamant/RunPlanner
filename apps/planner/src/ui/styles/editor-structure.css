@@ -918,10 +918,6 @@ select {
   border: 0;
 }
 
-.trait-offer-launchers:empty {
-  display: none;
-}
-
 .fields-batch-editor {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

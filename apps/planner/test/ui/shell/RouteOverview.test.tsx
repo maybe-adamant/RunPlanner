@@ -1,9 +1,17 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Provider } from 'react-redux';
-import { createProjectDocument, createRouteAddress } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createProjectDocument,
+  createRouteAddress,
+  createStartingRewardAddress,
+} from '@run-planner/engine/authored-project';
+import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { projectFeedbackHierarchy } from '@planner/projections/evaluationProjection';
 import { projectRouteNavigation } from '@planner/projections/editorNavigation';
 import {
@@ -110,6 +118,27 @@ describe('RouteOverview', () => {
       }),
     );
     expect(routeOverviewMarkup(application)).not.toContain('Hex talent layout');
+  });
+
+  it('marks a Vow of Forfeit realization on the starting reward control', () => {
+    const application = createApplication();
+    let project = applyProjectCommand(createCompleteFGProject(), application.catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = authorLegalTraitOffers(project);
+    application.store.dispatch(newProjectCreated(project));
+    const markup = routeOverviewMarkup(application);
+    expect(markup).toContain('>Starting reward</label>');
+    expect(markup).toContain('title="Vow of Forfeit"');
+    expect(markup).toContain('Forfeit → Red Onion');
   });
 
   it('owns only the independent starting reward in Route Loadout', () => {

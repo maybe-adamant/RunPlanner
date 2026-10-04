@@ -851,7 +851,12 @@ stands in for a control (an ungenerated side-room reward, a door awaiting its
 room, an unavailable Travel Deal item, a hidden or absent door reward) keeps the
 control's label column and value frame through `control-placeholder`, so the
 state change never moves neighbouring controls; section-wide empty states keep
-their paragraph form. No
+their paragraph form. In the Room Timeline action column the pickup-outcome
+control precedes everything that outcome enables: trait, Pom, Anvil, Artificer
+output, and Fountain controls. Reward provenance such as a Vow of Forfeit
+realization is a `neutral-status` badge on the reward's own control beside its
+offer picker, never on the timeline row, whose label names the realized pickup.
+No
 removal-confirmation dialog dependency is required for in-project editing.
 Confirmation is reserved for operations that are both externally consequential
 and not recoverable through project history. Tailwind adoption and literal

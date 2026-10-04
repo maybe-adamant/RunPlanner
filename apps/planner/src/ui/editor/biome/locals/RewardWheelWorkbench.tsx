@@ -178,7 +178,6 @@ export function RewardWheelWorkbench({
                     control={offer.control}
                     idPrefix={`${idPrefix}-${offer.key}`}
                     interactions={interactions}
-                    showAcquisitionChildren={false}
                   />
                 </div>
               </section>

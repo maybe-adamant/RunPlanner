@@ -5,10 +5,6 @@ const structure = readFileSync(
   new URL('../../../../src/ui/styles/editor-structure.css', import.meta.url),
   'utf8',
 );
-const feedback = readFileSync(
-  new URL('../../../../src/ui/styles/trait-feedback.css', import.meta.url),
-  'utf8',
-);
 const workbenches = readFileSync(
   new URL('../../../../src/ui/styles/room-workbenches.css', import.meta.url),
   'utf8',
@@ -50,12 +46,5 @@ describe('Reward row layout', () => {
     expect(cssBlock(workbenches, '.effect-repair-action[data-inactive]')).toContain(
       'visibility: hidden;',
     );
-  });
-
-  it('centers acquisition feedback with its sibling timeline controls without a top margin', () => {
-    expect(cssBlock(feedback, '.trait-offer-launchers')).toContain('align-items: center;');
-    expect(cssBlock(feedback, '.reward-acquisition-outcome')).toContain('margin: 0;');
-    expect(cssBlock(feedback, '.reward-acquisition-outcome')).not.toContain('padding:');
-    expect(cssBlock(feedback, '.reward-acquisition-outcome')).not.toContain('border:');
   });
 });

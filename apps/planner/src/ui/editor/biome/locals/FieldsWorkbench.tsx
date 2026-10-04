@@ -72,7 +72,6 @@ export function FieldsWorkbench({
                 idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
                 interactions={interactions}
                 label={reward.label}
-                showAcquisitionChildren={false}
               />
             </div>
           ))}

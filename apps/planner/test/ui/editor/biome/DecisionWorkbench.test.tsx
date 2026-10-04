@@ -58,6 +58,7 @@ import {
   goldenGStartId,
   goldenGOccurrenceId,
   goldenHBiome,
+  loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOProject,
@@ -74,6 +75,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { decisionContainingOccurrence } from '@planner-test/support/occurrence-workbench';
 import {
   renderBiomeClearAction,
   renderDecisionWorkbench,
@@ -1238,6 +1240,59 @@ describe('DecisionWorkbench', () => {
     expect(selector.closest('.batch-controls')).toBeNull();
     expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
     expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
+  });
+
+  it('marks a Vow of Forfeit realization on the forfeited door reward control', () => {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = authorLegalTraitOffers(project);
+    renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'F',
+      decisionContainingOccurrence(goldenFOccurrenceId(2, 1)),
+    );
+
+    const badge = screen.getByTitle('Vow of Forfeit');
+    expect(badge.textContent).toBe('Forfeit → Red Onion');
+    expect(badge.classList.contains('neutral-status')).toBe(true);
+    const rewards = badge.closest<HTMLElement>('[aria-label$=" door rewards"]');
+    if (rewards === null) throw new Error('Forfeited door reward surface is missing');
+    expect(within(rewards).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(within(rewards).getByRole('button', { name: 'Reward' }).textContent).toContain('Zeus');
+    expect(screen.getAllByTitle('Vow of Forfeit')).toHaveLength(1);
+  });
+
+  it('marks the entry-fixed Vow of Forfeit on the forfeited Fields cage reward', () => {
+    let project = applyProjectCommand(loadNemesisFieldsCheckpoint(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = authorLegalTraitOffers(project);
+    renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'H',
+      decisionContainingOccurrence(createOccurrenceId('golden-h-combat09')),
+    );
+
+    const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
+    const offers = within(combat09).getByLabelText('Combat 09 door rewards');
+    const badge = within(offers).getByTitle('Vow of Forfeit');
+    expect(badge.textContent).toBe('Forfeit → Red Onion');
+    expect(within(offers).getByRole('button', { name: 'Cage 1' }).textContent).toContain('Hermes');
+    expect(within(offers).getAllByTitle('Vow of Forfeit')).toHaveLength(1);
   });
 
   it('authors prepared Fields cage identities on their exact outgoing door cards', () => {
