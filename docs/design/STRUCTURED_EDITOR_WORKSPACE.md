@@ -836,42 +836,68 @@ open-set minimum includes both the detached slot subtree and the Hub-owned
 completed-handoff subtree in that one engine-owned impact. The resulting board
 remains visible as incomplete with its authored visits retained.
 
+## Feedback Layers
+
+Every editing surface uses the same two feedback layers, so text never moves a
+control while the user edits.
+
+The outer layer is the findings panel and the timeline badges. The engine's one
+assessment issue folds its inner reasons into one finding per dialog owner
+(trait offer, encounter customization, Pom resolution), worded as attention plus
+a count; a reason is inner when its origin lies beneath the owner or when a
+same-origin reason carries dialog-level evidence (`traitKey`/`optionKey`,
+`decisionKey`). The entry navigates to the launcher that opens the editor and
+never opens the dialog itself. A biome whose view is blocked or unassessed has
+its explanation as the muted blocked-view entry of the same panel, not as a
+banner in the workbench. Status badges may change their text width inside a pill.
+
+The inner layer is one always-mounted feedback region at the bottom of every
+visible dialog body (trait offer and its nested Echo choice, Pom, Circe, Chaos,
+Anvil, encounter composition and customization, Arcana activation). The region
+keeps a minimum height and an empty state; draft feedback (branch disagreement,
+an unassessable retained outcome, once-per-run enemy warnings, a carrier not yet
+complete) is reported there by reporter key and never between controls.
+Controls inside carry only an invalid marker and a hover title; entries navigate
+to the control they correct. A loading choice region holds its loaded height so
+the dialog resizes once.
+
+Row stability: a control whose declaration exists stays mounted and is only
+enabled by evaluation; a pending control states on hover whether it waits on an
+earlier choice or has nothing to target. A message that stands in for a control
+(an ungenerated side-room reward, a door awaiting its room, an unavailable
+Travel Deal item, a hidden or absent door reward, a dialog control without a
+value) keeps the control's label column and value frame through
+`control-placeholder`; section-wide empty states keep their paragraph form.
+Action rows render fixed slots, disabled with a hover title when no proposal
+applies, and the Door Exit continuation names on hover whether a door is still
+unselected or the batch is unfinished. Rows or sections created by an authored
+decision are expected changes. In the Room Timeline action column the
+pickup-outcome control precedes everything that outcome enables: trait, Pom,
+Anvil, Artificer output, and Fountain controls. A reward control names its Vow
+of Forfeit realization inside its own picker trigger text, `(Red Onion)` after
+the authored offer, with the vow named on hover; no element renders beside the
+control, and the timeline row carries no provenance because its label already
+names the realized pickup.
+
+Information notes explain a rule or a result beneath their owning control:
+door pool results occupy a separate area below the editable pool control, and
+Fields, inherited-pool, and hidden-reward explanations share the
+`door-information-note` presentation. Candidate explanations stay inside the
+picker popover; the trigger retains its accessible description and invalid
+state without adding layout space. Placement and rejected-drag feedback float
+outside document flow.
+
 ## Component Foundation
 
 Use accessible primitives for popovers, radio groups, disclosures, status
 announcements, and keyboard navigation. The contextual picker uses Radix
-Popover plus `cmdk`, styled through the existing hand-written CSS. Candidate
-explanations stay inside the popover; loading or changing a selection never adds
-explanatory text below its trigger. The trigger retains its accessible description
-and invalid-state indication without adding layout space. Automatic-effect
-rows keep the target control mounted when assessment resolves to a no-op; selected
-targets keep a local repair-action slot so later assessment does not move their
-controls. Placement and rejected-drag feedback float outside document flow.
-Shop supplemental states use the same item and participation columns. Door pool
-results occupy a separate information area below the editable pool control;
-Fields, inherited-pool, and hidden-reward explanations share the door-information
-note presentation beneath their owning controls. Batch-wide rules stay with the
-batch, while reward visibility stays with the individual door. A message that
-stands in for a control (an ungenerated side-room reward, a door awaiting its
-room, an unavailable Travel Deal item, a hidden or absent door reward) keeps the
-control's label column and value frame through `control-placeholder`, so the
-state change never moves neighbouring controls; section-wide empty states keep
-their paragraph form. Inside a dialog or popover, draft feedback (branch
-disagreement, an unassessable retained outcome, once-per-run enemy warnings)
-lives in the dialog's one fixed feedback region and never between controls; a
-message standing in for a dialog control uses the same `control-placeholder`
-shell, and a loading choice region holds its loaded height so the dialog
-resizes once. In the Room Timeline action column the pickup-outcome
-control precedes everything that outcome enables: trait, Pom, Anvil, Artificer
-output, and Fountain controls. A reward control names its Vow of Forfeit
-realization inside its own picker trigger text, `(Red Onion)` after the
-authored offer, with the vow named on hover; no element renders beside the
-control, and the timeline row carries no provenance because its label already
-names the realized pickup. No removal-confirmation dialog dependency is
-required for in-project editing.
-Confirmation is reserved for operations that are both externally consequential
-and not recoverable through project history. Tailwind adoption and literal
-shadcn component copying are out of scope.
+Popover plus `cmdk`, styled through the existing hand-written CSS. Shop
+supplemental states use the same item and participation columns. Batch-wide
+rules stay with the batch, while reward visibility stays with the individual
+door. No removal-confirmation dialog dependency is required for in-project
+editing. Confirmation is reserved for operations that are both externally
+consequential and not recoverable through project history. Tailwind adoption
+and literal shadcn component copying are out of scope.
 
 Dependency choice remains subordinate to the ownership contract. A component
 library must not hide semantic commands, make caller-owned option models mutable,
