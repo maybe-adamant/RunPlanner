@@ -147,6 +147,13 @@ export interface AcquisitionConversionCandidateArtifacts {
     | undefined;
   /** History position of the contact that produced this role's capability. */
   readonly positionAt: (address: AcquisitionRoleAddress) => HistoryFindingChronology | undefined;
+  /** A Forfeit realization fixed ahead of this role's pickup contact, with its position. */
+  readonly fixedAt: (address: AcquisitionRoleAddress) =>
+    | {
+        readonly capability: AcquisitionConversionCandidateCapability;
+        readonly position: HistoryFindingChronology;
+      }
+    | undefined;
 }
 export function createAcquisitionConversionCandidateArtifacts(
   catalog: Catalog,
@@ -171,21 +178,23 @@ export function createAcquisitionConversionCandidateArtifacts(
 ): AcquisitionConversionCandidateArtifacts {
   const privateContexts = new Map(contexts);
   const privateFixedRealizations = new Map(fixedRealizations);
+  // A forfeit fixed before the pickup contact realizes the role without any
+  // settlement-time conversion assessment.
+  const fixedCapability = (
+    fixed: FixedAcquisitionRealization,
+  ): AcquisitionConversionCandidateCapability =>
+    Object.freeze({
+      timePieceAssessments: Object.freeze([]),
+      artificerAssessments: Object.freeze([]),
+      seaStarAssessments: Object.freeze([]),
+      realizedAcquisition: fixed.realizedAcquisition,
+    });
   const at = (address: AcquisitionRoleAddress) => {
     const key = semanticAddressKey(address);
     const entries = privateContexts.get(key);
     if (entries === undefined) {
-      // A forfeit fixed before the pickup contact realizes the role without any
-      // settlement-time conversion assessment.
       const fixed = privateFixedRealizations.get(key);
-      return fixed === undefined
-        ? undefined
-        : Object.freeze({
-            timePieceAssessments: Object.freeze([]),
-            artificerAssessments: Object.freeze([]),
-            seaStarAssessments: Object.freeze([]),
-            realizedAcquisition: fixed.realizedAcquisition,
-          });
+      return fixed === undefined ? undefined : fixedCapability(fixed);
     }
     const anvil = createAnvilCandidateCapability(catalog, entries);
     return Object.freeze({
@@ -301,6 +310,19 @@ export function createAcquisitionConversionCandidateArtifacts(
         ? undefined
         : Object.freeze({ kind: 'history' as const, sequence, boundary: 'at' as const });
     },
+    fixedAt: (address: AcquisitionRoleAddress) => {
+      const fixed = privateFixedRealizations.get(semanticAddressKey(address));
+      return fixed === undefined
+        ? undefined
+        : Object.freeze({
+            capability: fixedCapability(fixed),
+            position: Object.freeze({
+              kind: 'history' as const,
+              sequence: fixed.historySequence,
+              boundary: 'at' as const,
+            }),
+          });
+    },
   });
 }
 export function createEmptyAcquisitionConversionCandidateArtifacts(): AcquisitionConversionCandidateArtifacts {
@@ -308,5 +330,6 @@ export function createEmptyAcquisitionConversionCandidateArtifacts(): Acquisitio
     at: () => undefined,
     atReplacement: () => undefined,
     positionAt: () => undefined,
+    fixedAt: () => undefined,
   });
 }

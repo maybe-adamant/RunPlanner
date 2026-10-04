@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -390,6 +391,130 @@ describe('Vow of Forfeit Red Onion substitution', () => {
         (offer) => semanticAddressKey(offer.address.owner) === semanticAddressKey(owner),
       ),
     ).toBe(false);
+  });
+
+  describe('picked Ship-wheel realization fixed at the pick', () => {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const offer1 = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer1',
+    );
+    const offer2 = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer2',
+    );
+    const combat1 = createEncounterPhaseAddress(
+      oBiome,
+      createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
+      'Combat1',
+    );
+    const boon = {
+      rewardType: 'Boon' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    };
+    const withForfeit = () =>
+      applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'ReplaceFearVowRank',
+        route: createRouteAddress('Surface'),
+        vowKey: 'BoonSkipShrineUpgrade',
+        rank: 1,
+      });
+    // An unsupported Gorgon condition blocks at the wheel's combat start, which
+    // sits between the pick and the wheel reward pickup.
+    const blockedAtCombat = (project: ReturnType<typeof withForfeit>) => {
+      const assembly = simulateProjectAssembly(
+        catalog,
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceGorgonDeathDefianceCondition',
+          phase: combat1,
+          value: true,
+        }),
+      );
+      expect(assembly.evaluation.issue).toMatchObject({
+        kind: 'invalid',
+        owner: combat1,
+        reasons: [expect.objectContaining({ code: 'gorgonConditionUnavailable' })],
+      });
+      return assembly;
+    };
+    const forfeitEvents = (assembly: ReturnType<typeof simulateProjectAssembly>) => {
+      const o = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'O');
+      if (o === undefined || !('rewards' in o)) throw new Error('expected O reward evaluation');
+      return o.rewards.branches[0]!.events.filter(
+        (event) =>
+          event.kind === 'rewardForfeited' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(offer1),
+      );
+    };
+
+    it('publishes the picked Boon realization before its combat and settles the same outcome after it', () => {
+      const project = authorLegalTraitOffers(
+        applyProjectCommand(withForfeit(), catalog, {
+          kind: 'ReplaceRewardWheelOffer',
+          offer: offer1,
+          value: boon,
+        }),
+      );
+      const role = createAcquisitionRoleAddress(offer1, 'source');
+
+      const blocked = blockedAtCombat(project);
+      const fixed = acquisitionConversionCandidateForProjectEvaluationAssembly(blocked, role);
+      expect(fixed).toEqual({
+        timePieceAssessments: [],
+        artificerAssessments: [],
+        seaStarAssessments: [],
+        realizedAcquisition: {
+          role: 'source',
+          lifecyclePoint: 'roomRewardPickup',
+          acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
+        },
+      });
+      // Consumption still belongs to the unreached pickup settlement.
+      expect(forfeitEvents(blocked)).toEqual([]);
+      expect(
+        createPreparedProjectCandidateSession(catalog, blocked).evaluate({
+          kind: 'acquisitionConversion',
+          acquisition: role,
+        }),
+      ).toMatchObject({ kind: 'unavailable' });
+
+      const settled = simulateProjectAssembly(catalog, project);
+      expect(settled.evaluation.issue).toBeUndefined();
+      const capability = acquisitionConversionCandidateForProjectEvaluationAssembly(settled, role);
+      expect(capability?.timePieceAssessments).toHaveLength(1);
+      expect(capability?.realizedAcquisition).toEqual(fixed?.realizedAcquisition);
+      expect(forfeitEvents(settled)).toHaveLength(1);
+    });
+
+    it('publishes nothing for an unpicked qualifying offer or a non-qualifying pick', () => {
+      let project = applyProjectCommand(withForfeit(), catalog, {
+        kind: 'ReplaceRewardWheelOfferCount',
+        wheel,
+        offerCount: 2,
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceRewardWheelOffer',
+        offer: offer2,
+        value: boon,
+      });
+      const blocked = blockedAtCombat(project);
+      expect(
+        acquisitionConversionCandidateForProjectEvaluationAssembly(
+          blocked,
+          createAcquisitionRoleAddress(offer2, 'source'),
+        ),
+      ).toBeUndefined();
+      expect(
+        acquisitionConversionCandidateForProjectEvaluationAssembly(
+          blocked,
+          createAcquisitionRoleAddress(offer1, 'self'),
+        ),
+      ).toBeUndefined();
+    });
   });
 
   it('does not forfeit a qualifying unpicked Ship-wheel preview', () => {

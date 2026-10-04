@@ -5,6 +5,7 @@ import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
+  type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
 import { artificerReplacementEntryKey } from '../../../authored-project/acquisition/artificer';
 import {
@@ -59,6 +60,7 @@ import {
 import type {
   AcquisitionRoleFrontier,
   AcquisitionRoleResolution,
+  FixedAcquisitionRealization,
   ProducerRoleSettlementProduct,
   RewardFactsFactory,
 } from './contracts';
@@ -81,6 +83,37 @@ import {
 } from '../../../authored-project/acquisition/sea-star';
 
 /** A Sea Star duplicate loot is created after its source screen closes. */
+/**
+ * Realizations of an offer's acquisition roles once a Forfeit replacement is
+ * known ahead of the pickup contact, such as a Fields cage at room entry or a
+ * picked Ship wheel offer at its pick.
+ */
+export function forfeitFixedAcquisitionRealizations(
+  catalog: Catalog,
+  origin: TraitOfferOwnerAddress,
+  producerLifecycleKey: string,
+  offer: ResolvedRewardOffer,
+  replacement: 'RoomRewardConsolationPrize',
+  historySequence: number,
+): readonly FixedAcquisitionRealization[] {
+  const bindings =
+    catalog.rewards.producerLifecycles.byKey[producerLifecycleKey]?.rewardTypes.byKey[
+      offer.rewardType
+    ]?.acquisitionLifecycle ?? [];
+  return Object.freeze(
+    bindings.map((binding) =>
+      Object.freeze({
+        address: createAcquisitionRoleAddress(origin, binding.role),
+        realizedAcquisition: Object.freeze({
+          ...resolveAcquisitionRole(catalog.rewards, offer, binding.role, binding.lifecyclePoint),
+          acquisition: Object.freeze({ kind: 'consumable' as const, gameName: replacement }),
+        }),
+        historySequence,
+      }),
+    ),
+  );
+}
+
 function spawnSeaStarDuplicate(
   catalog: Catalog,
   branch: RewardBranchState,
