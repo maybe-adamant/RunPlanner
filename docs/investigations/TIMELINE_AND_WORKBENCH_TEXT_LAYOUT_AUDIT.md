@@ -53,22 +53,17 @@ by a finding should instead be consolidated into that finding.
 
 ## Remaining audit surface
 
-The following areas were identified as separate follow-up inventory rather than
-part of the delivered slices:
+Two items remain; everything else listed by the original inventory has been
+reviewed against the criteria below and either retained or delivered.
 
-- “Stale” versus “Required” badges: stale state may overlap a finding, while a
-  required obligation can be meaningful independently.
-- Nemesis fallback text such as “Choose an event”; its reachability and layout
-  impact were not established.
-- Side-room “No reward until generated” state, which currently changes the
-  displayed control area.
-- Dialogs and popovers, which need a separate review because draft feedback can
-  differ from project-level findings. This includes encounter customization,
-  Trait/Pom drafts, Echo/Circe/Chaos loading and results, and Hub map popovers.
-- Any remaining timeline, overview, or exit text not covered by the focused
-  slices above.
+- Timeline ordering column: Add, Move, delete and Restore controls mount per
+  proposal, so the trailing column's contents change as evaluation moves.
+  Decide after a visual pass whether to render every slot and disable.
+- Hub fountain Phial row: the control exists only once the engine's fountain
+  rarity assessment is present, so it mounts on evaluation. A stable slot needs
+  a projected pending control from the projection lane.
 
-These are not accepted defects by themselves. Review each against the same
-criteria: whether it duplicates a finding, whether it communicates a necessary
-rule/result/state, whether it stays in a stable location during edits, and
-whether navigation points to the control that owns the repair.
+Review each against the same criteria: whether it duplicates a finding, whether
+it communicates a necessary rule, result or state, whether it stays in a stable
+location during edits, and whether navigation points to the control that owns
+the repair.
