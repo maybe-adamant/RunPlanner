@@ -22,3 +22,20 @@ wide (1920 px) window. Confirm or waive each item; retire confirmed items.
       reads "Collect Red Onion" with no provenance. The cage and wheel cases
       show the onion as soon as the room is entered or the wheel is picked,
       before any later cage or combat settles.
+- [ ] Open a trait offer whose Ransom branches disagree, an encounter
+      customization with a retained unavailable value, a Pom with one route
+      state, an Anvil result and a Judgment or Figurine Arcana editor. Each
+      dialog body ends in one feedback region of fixed minimum height that
+      reads "No current findings." when empty; messages appear only there,
+      the offending control shows only its red invalid border and hover
+      title, and the controls above never move.
+- [ ] Change evaluation around a Room Timeline (reorder an action, clear and
+      restore a pickup) and around a Door Exit (select and deselect a door).
+      The ordering column and the Door Exit action row keep their slots;
+      disabled slots explain themselves on hover and nothing shifts.
+- [ ] Hover a disabled Phial Target on a fountain use before its context is
+      reached ("Waits on an earlier choice") and on an evaluated use with no
+      targetable boon ("No Phial-eligible boon to target here.").
+- [ ] Select a biome whose view is blocked by an earlier biome, then one that is
+      unassessed. The explanation is the muted first entry of the findings
+      panel, keeps its tone on hover, and no banner appears in the workbench.

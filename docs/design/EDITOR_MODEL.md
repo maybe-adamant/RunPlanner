@@ -263,10 +263,12 @@ projection failure, not grounds for silently falling back to the Timeline tab.
 
 For example, a missing optional reward choice belongs to its Overview control;
 the later pickup action does not inherit the border merely because simulation
-encountered the missing value there. A nested trait issue selects its Timeline
-launcher without hiding the occurrence or opening the dialog automatically.
-The dialog remains an explicit editing action. Advancing to the next issue
-does not steal focus, navigate, change authorship or create an Undo entry.
+encountered the missing value there. Findings repaired inside a dialog fold
+into one outer finding per dialog owner; that outer finding navigates to the
+launcher without hiding the occurrence or opening the dialog, and the dialog's
+own feedback entries navigate to the control they correct once it is open.
+Opening the dialog remains an explicit editing action. Advancing to the next
+issue does not steal focus, navigate, change authorship or create an Undo entry.
 
 After authored publication, reconcile stale session selections against exact
 live owners. Clear a vanished finding selection independently from vanished
