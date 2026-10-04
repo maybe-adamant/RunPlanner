@@ -11,6 +11,7 @@ import { useFindingExplanations, useFindingTarget } from '@planner/ui/feedback/u
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import type { FeedbackEntry } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { NemesisEventSelector } from '../NemesisEventEditor';
@@ -113,19 +114,28 @@ function EncounterCustomizationControl({
   // issues are listed by its control, so it is named only when no composition exists.
   const assessment =
     generatedDecision?.value === undefined ? undefined : interaction?.generatedAssessment;
-  const findingMessages = [
-    ...(initializationFailure ? ['No supported composition is available here.'] : []),
-    ...required,
+  const findingEntries: readonly FeedbackEntry[] = [
+    ...(initializationFailure
+      ? [['initialization', 'No supported composition is available here.'] as const]
+      : []),
+    ...required.map((message, index) => [`required-${index}`, message] as const),
     ...(phase.customization ?? []).flatMap((decision) =>
       decision.value !== undefined &&
       (!decision.valueSupported ||
         (decision.selection.kind === 'infiniteRoster' &&
           interaction?.infiniteRosterSupported === false)) &&
       (composition === undefined || !isGeneratedEncounterDecision(decision))
-        ? [`${decision.label}: ${unavailableTitle} Choose another value or reset it.`]
+        ? [
+            [
+              decision.key,
+              `${decision.label}: ${unavailableTitle} Choose another value or reset it.`,
+            ] as const,
+          ]
         : [],
     ),
-    ...compositionIssueMessages(assessment),
+    ...compositionIssueMessages(assessment).map(
+      (message, index) => [`composition-${index}`, message] as const,
+    ),
   ];
   const warnings = assessment?.composition === 'active' ? assessment.warnings : [];
   return (
@@ -243,7 +253,7 @@ function EncounterCustomizationControl({
                         ariaLabel={decision.label}
                         placeholder="Default"
                         {...(!decision.valueSupported && value !== undefined
-                          ? { triggerTitle: unavailableTitle }
+                          ? { invalid: true, triggerTitle: unavailableTitle }
                           : {})}
                         model={declaredChoicesPicker(
                           [
@@ -317,7 +327,7 @@ function EncounterCustomizationControl({
                         {...(index > 0 && selected[0] === undefined
                           ? { disabledTitle: 'Choose the first summon first' }
                           : !decision.valueSupported && selected[index] !== undefined
-                            ? { triggerTitle: unavailableTitle }
+                            ? { invalid: true, triggerTitle: unavailableTitle }
                             : {})}
                         placeholder="Default"
                         model={declaredChoicesPicker(
@@ -360,7 +370,7 @@ function EncounterCustomizationControl({
                   </section>
                 );
               })}
-              <CustomizationFindings messages={findingMessages} warnings={warnings} />
+              <CustomizationFindings entries={findingEntries} warnings={warnings} />
             </div>
           </div>
         </dialog>

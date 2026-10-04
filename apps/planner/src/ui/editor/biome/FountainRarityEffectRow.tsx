@@ -15,6 +15,11 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 
+const pendingPhialTitles = {
+  unreached: candidateWaitingTitle,
+  noTargetRequired: 'No Phial-eligible boon to target here.',
+} as const satisfies Record<NonNullable<WorkspaceFountainRarityControl['pending']>, string>;
+
 /** Inline editor for the exact target nested under one fountain action row. */
 export function FountainRarityEffectRow({
   control,
@@ -57,7 +62,7 @@ export function FountainRarityEffectRow({
   return (
     <div
       className="fountain-rarity-inline"
-      data-pending={control.pending || undefined}
+      data-pending={control.pending}
       data-fountain-rarity={
         control.address.action.kind === 'roomAction'
           ? control.address.action.actionKey
@@ -67,7 +72,9 @@ export function FountainRarityEffectRow({
       <RandomTraitTargetPicker
         findingTarget={findingTarget(control.address)}
         ariaLabel="Phial Target"
-        {...(control.pending === true ? { disabledTitle: candidateWaitingTitle } : {})}
+        {...(control.pending === undefined
+          ? {}
+          : { disabledTitle: pendingPhialTitles[control.pending] })}
         id={semanticOwnerControlElementId(control.address)}
         interaction={interaction}
         label="Phial Target"

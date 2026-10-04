@@ -10,6 +10,7 @@ import type {
   WorkspaceGeneratedFangsDraftChoice,
 } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type { FeedbackEntry } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { NavigationStatusMarker } from '@planner/ui/feedback/EvaluationFeedback';
@@ -1081,20 +1082,20 @@ export function compositionIssueMessages(
 
 /** The dialog's one feedback region: always mounted, with an empty state. */
 export function CustomizationFindings({
-  messages,
+  entries,
   warnings = [],
 }: {
-  readonly messages: readonly string[];
+  readonly entries: readonly FeedbackEntry[];
   readonly warnings?: readonly string[];
 }) {
   return (
     <section className="encounter-composition-findings" aria-label="Customization findings">
       <h4>Findings</h4>
-      {messages.length === 0 && warnings.length === 0 ? (
+      {entries.length === 0 && warnings.length === 0 ? (
         <p className="trait-offer-feedback-empty">No current findings.</p>
       ) : null}
-      {messages.map((message, index) => (
-        <p className="encounter-customization-repair" key={index}>
+      {entries.map(([key, message]) => (
+        <p className="encounter-customization-repair" key={key}>
           {message}
         </p>
       ))}

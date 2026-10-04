@@ -880,7 +880,7 @@ describe('DecisionWorkbench', () => {
     // The sibling door is still missing, so the continuation slot stays disabled.
     const waitingContinuation = screen.getByRole('button', { name: 'Open next room' });
     expect(waitingContinuation).toHaveProperty('disabled', true);
-    expect(waitingContinuation.getAttribute('title')).toBe('Select a door to continue.');
+    expect(waitingContinuation.getAttribute('title')).toBe('Fill the remaining doors to continue.');
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>

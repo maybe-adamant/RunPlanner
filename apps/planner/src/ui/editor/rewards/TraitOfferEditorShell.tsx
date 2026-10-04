@@ -63,7 +63,7 @@ export function TraitOfferEditorShell({
     [draft, interaction, value],
   );
   // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
-  const [outcomeMessages, reportOutcomeFeedback] = useOutcomeFeedback();
+  const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
@@ -166,7 +166,9 @@ export function TraitOfferEditorShell({
   const feedbackSection = (
     <TraitOfferFeedbackRegion
       label="Offer feedback"
-      messages={offerMessage === undefined ? outcomeMessages : [offerMessage, ...outcomeMessages]}
+      entries={
+        offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries]
+      }
     >
       {!hasOptionFeedback
         ? undefined

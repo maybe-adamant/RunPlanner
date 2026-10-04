@@ -980,15 +980,6 @@
   font-size: 0.88rem;
 }
 
-.encounter-budget-control > .encounter-customization-repair {
-  grid-column: 1 / -1;
-}
-
-.encounter-customization-row > .encounter-customization-repair {
-  grid-column: 2;
-  color: var(--danger);
-}
-
 .nemesis-interaction-controls {
   display: flex;
   flex: 1 1 0;

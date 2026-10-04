@@ -23,6 +23,7 @@ import {
   TraitOfferForm,
   TraitOfferShapeActions,
   useOutcomeFeedback,
+  type FeedbackEntry,
 } from './TraitOfferForm';
 import { TraitOfferOption } from './TraitOfferOption';
 import { TraitAcquisitionTargetOutcome } from './TraitOfferSelectedOutcome';
@@ -156,7 +157,7 @@ function EchoLastRunBoonChoiceEditor({
     setSelectedIndex(draft.selectedIndex);
   };
   // The nested form is the visible dialog body, so it owns its own fixed feedback region.
-  const [outcomeMessages, reportOutcomeFeedback] = useOutcomeFeedback();
+  const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
   const selectedPayload = (
     <>
       {selectedComplete === undefined ||
@@ -208,8 +209,10 @@ function EchoLastRunBoonChoiceEditor({
     selectedKind === undefined || carrier !== undefined
       ? undefined
       : 'Complete the other Echo rows before editing this outcome. Existing targets are retained.';
-  const feedbackMessages =
-    carrierMessage === undefined ? outcomeMessages : [carrierMessage, ...outcomeMessages];
+  const feedbackEntries: readonly FeedbackEntry[] =
+    carrierMessage === undefined
+      ? outcomeEntries
+      : [['carrier', carrierMessage], ...outcomeEntries];
 
   return (
     <section
@@ -295,7 +298,7 @@ function EchoLastRunBoonChoiceEditor({
           );
         })}
         selectedOutcome={selectedPayload}
-        feedback={<TraitOfferFeedbackRegion label="Choice feedback" messages={feedbackMessages} />}
+        feedback={<TraitOfferFeedbackRegion label="Choice feedback" entries={feedbackEntries} />}
         shapeActions={
           <TraitOfferShapeActions
             {...(nextDraft === undefined ? {} : { onAdd: () => applySize(nextDraft) })}

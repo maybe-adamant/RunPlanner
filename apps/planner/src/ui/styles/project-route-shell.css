@@ -476,6 +476,16 @@
   background: linear-gradient(135deg, rgb(132 61 66 / 34%), transparent 58%), rgb(49 27 31 / 58%);
 }
 
+.assessment-issue-button[data-feedback-context]:hover {
+  border-color: rgb(132 130 143 / 50%);
+  background: rgb(100 98 112 / 12%);
+}
+
+.assessment-issue-button[data-feedback-context='unassessed']:hover {
+  border-color: rgb(226 185 113 / 45%);
+  background: rgb(226 185 113 / 10%);
+}
+
 .finding-title {
   color: #f0e9df;
   font-size: 0.86rem;
@@ -1131,12 +1141,6 @@
   white-space: nowrap;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
-}
-
-.route-run-modifier-number [role='alert'] {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: #e7a1a1;
 }
 
 @container app-viewport (max-width: 700px) {

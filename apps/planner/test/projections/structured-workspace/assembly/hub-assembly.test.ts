@@ -149,7 +149,7 @@ describe('structured workspace Hub assembly', () => {
       marker: expect.objectContaining({
         address: createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub')),
       }),
-      pending: true,
+      pending: 'unreached',
     });
     expect(between.visits.slice(0, 2).map((visit) => visit.actionPosition)).toEqual([1, 3]);
 

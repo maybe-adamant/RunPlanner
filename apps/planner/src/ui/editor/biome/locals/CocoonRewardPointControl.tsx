@@ -91,7 +91,7 @@ export function CocoonRewardPointControl({
           id={id}
           placeholder="Any"
           {...(!decision.valueSupported && decision.value !== undefined
-            ? { triggerTitle: 'Retained position is unavailable here.' }
+            ? { invalid: true, triggerTitle: 'Retained position is unavailable here.' }
             : {})}
           model={declaredChoicesPicker(
             [
