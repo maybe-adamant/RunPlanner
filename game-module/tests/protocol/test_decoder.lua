@@ -255,37 +255,22 @@ function TestProtocol.testRunModifiersProducerFixtureAndFingerprint()
     local value = decode("run-modifiers")
     local plan, errorMessage = protocol.decode(value)
     lu.assertNil(errorMessage)
-    lu.assertEquals(plan.runModifiers, {
-        guaranteeEligibleCrits = true,
-        guaranteeEligibleDoubleDamage = true,
-        enemyGoldDropChanceMultiplier = 2.5,
-    })
+    lu.assertEquals(plan.runModifiers, { enemyGoldDropChanceMultiplier = 2.5 })
     lu.assertNil(plan.startingLoadout.runModifiers)
     local native = decode("f-opening")
     lu.assertNotNil(protocol.decode(native))
     lu.assertNil(native.runModifiers)
-    for _, mutate in ipairs({
-        function(row) row.guaranteeEligibleCrits = false end,
-        function(row) row.guaranteeEligibleDoubleDamage = false end,
-        function(row) row.enemyGoldDropChanceMultiplier = 2.75 end,
-    }) do
-        value = decode("run-modifiers")
-        mutate(value.runModifiers)
-        local rejected, reason = protocol.decode(value)
-        lu.assertNil(rejected)
-        lu.assertStrContains(reason, "fingerprint")
-    end
+    value = decode("run-modifiers")
+    value.runModifiers.enemyGoldDropChanceMultiplier = 2.75
+    local rejected, reason = protocol.decode(value)
+    lu.assertNil(rejected)
+    lu.assertStrContains(reason, "fingerprint")
 end
 
-function TestProtocol.testRunModifiersStrictCompleteWireDomain()
+function TestProtocol.testRunModifiersValidateKnownKeysStrictly()
     for _, mutate in ipairs({
-        function(row) row.guaranteeEligibleCrits = nil end,
-        function(row) row.guaranteeEligibleDoubleDamage = nil end,
-        function(row) row.enemyGoldDropChanceMultiplier = nil end,
-        function(row) row.extra = true end,
-        function(row) row.guaranteeEligibleCrits = 1 end,
-        function(row) row.guaranteeEligibleDoubleDamage = "false" end,
         function(row) row.enemyGoldDropChanceMultiplier = "2" end,
+        function(row) row.enemyGoldDropChanceMultiplier = true end,
         function(row) row.enemyGoldDropChanceMultiplier = 0.99 end,
         function(row) row.enemyGoldDropChanceMultiplier = 0 / 0 end,
         function(row) row.enemyGoldDropChanceMultiplier = math.huge end,
@@ -472,8 +457,9 @@ end
 local function refreshFingerprint(plan)
     plan.planFingerprint = protocol.fingerprint({
         format = plan.format, catalogVersion = plan.catalogVersion, projectId = plan.projectId,
-        routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, startingKeepsake = plan.startingKeepsake,
-        extent = plan.extent, selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
+        routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, runModifiers = plan.runModifiers,
+        startingKeepsake = plan.startingKeepsake, extent = plan.extent,
+        selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
         olympusAetos = plan.olympusAetos,
         occurrences = plan.occurrences,
     })
@@ -593,6 +579,24 @@ local function minimalPlan(transactions)
     })
     refreshFingerprint(plan)
     return plan
+end
+
+function TestProtocol.testRunModifiersIgnoreUnknownKeysAndDefaultAbsentKnownKeys()
+    local plan = minimalPlan({})
+    plan.runModifiers = tagged({ enemyGoldDropChanceMultiplier = 2.5, guaranteeEligibleCrits = true,
+        experimentalModifier = { nested = "value" } }, "runModifiers", false)
+    local _, staleReason = protocol.decode(plan)
+    lu.assertStrContains(staleReason, "fingerprint")
+    refreshFingerprint(plan)
+    local decoded, errorMessage = protocol.decode(plan)
+    lu.assertNil(errorMessage)
+    lu.assertEquals(decoded.runModifiers, { enemyGoldDropChanceMultiplier = 2.5 })
+    local absent = minimalPlan({})
+    absent.runModifiers = tagged({ guaranteeEligibleDoubleDamage = false }, "runModifiers", false)
+    refreshFingerprint(absent)
+    decoded, errorMessage = protocol.decode(absent)
+    lu.assertNil(errorMessage)
+    lu.assertEquals(decoded.runModifiers, { enemyGoldDropChanceMultiplier = 1 })
 end
 
 function TestProtocol.testFreshFileOmitsAbsentLoadoutKeys()

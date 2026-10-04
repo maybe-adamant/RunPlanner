@@ -362,7 +362,6 @@ export {
   type ResourcePlacement,
   type ResourcePlacements,
   type RouteLoadout,
-  type RunModifiers,
   type AuthoredKeepsakeEquipResults,
   type AuthoredFountainRarityResult,
   type AuthoredExperimentalHammerEquipResult,
@@ -423,6 +422,21 @@ export {
 } from './loadout';
 export { chaosGateSpawnPointIndices } from './chaos-gate-position';
 
-export { NATIVE_RUN_MODIFIERS, routeRunModifiers, decodeRunModifiers } from './run-modifiers';
+export {
+  RUN_MODIFIER_DECLARATIONS,
+  NATIVE_RUN_MODIFIERS,
+  runModifierDeclaration,
+  isRunModifierValue,
+  isNativeRunModifiers,
+  routeRunModifiers,
+  decodeRunModifiers,
+  encodeRunModifiers,
+  type RunModifierDeclaration,
+  type BooleanRunModifierDeclaration,
+  type NumberRunModifierDeclaration,
+  type RunModifierKey,
+  type RunModifiers,
+  type RunModifiersRecord,
+} from './run-modifiers';
 
 export { structurallyInvalidGeneratedPickupPlacements } from './generated-pickup-placement';

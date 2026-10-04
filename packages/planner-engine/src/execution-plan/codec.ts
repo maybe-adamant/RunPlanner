@@ -1,5 +1,8 @@
-import { decodeRunModifiers } from '../authored-project/run-modifiers';
-import { ProjectDocumentContractError } from '../authored-project/validation';
+import {
+  RUN_MODIFIER_DECLARATIONS,
+  isRunModifierValue,
+  type RunModifiers,
+} from '../authored-project/run-modifiers';
 import {
   EXECUTION_CATALOG_VERSION,
   EXECUTION_PLAN_FORMAT,
@@ -61,6 +64,26 @@ function displayNameValue(value: unknown): string {
   return value;
 }
 
+/** The complete declared record; the module ignores keys it does not implement. */
+function runModifiersRecord(value: unknown): RunModifiers {
+  const label = 'execution plan.runModifiers';
+  const record = object(value, label);
+  exact(
+    record,
+    RUN_MODIFIER_DECLARATIONS.map((declaration) => declaration.key),
+    [],
+    label,
+  );
+  const decoded: Record<string, boolean | number> = {};
+  for (const declaration of RUN_MODIFIER_DECLARATIONS) {
+    const raw = record[declaration.key];
+    if (!isRunModifierValue(declaration, raw))
+      fail(`${label}.${declaration.key} is outside its declared domain`);
+    decoded[declaration.key] = raw as boolean | number;
+  }
+  return Object.freeze(decoded) as RunModifiers;
+}
+
 export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const record = expandDiagnosticFrames(value);
   exact(
@@ -118,15 +141,8 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     fail('execution plan.routeKey disagrees with extent');
   if (extent.terminalBiomeKey !== biomeKeys[biomeKeys.length - 1])
     fail('execution plan.extent.terminalBiomeKey disagrees with biomeKeys');
-  let runModifiers: ExecutionPlan['runModifiers'];
-  if ('runModifiers' in record) {
-    try {
-      runModifiers = decodeRunModifiers(record.runModifiers, 'execution plan.runModifiers');
-    } catch (error) {
-      if (error instanceof ProjectDocumentContractError) fail(error.message);
-      throw error;
-    }
-  }
+  const runModifiers =
+    'runModifiers' in record ? runModifiersRecord(record.runModifiers) : undefined;
   const decodedStartingLoadout = startingLoadout(record.startingLoadout);
   const starting = object(record.startingKeepsake, 'execution plan.startingKeepsake');
   exact(starting, [], ['keepsakeKey', 'equipResults'], 'execution plan.startingKeepsake');

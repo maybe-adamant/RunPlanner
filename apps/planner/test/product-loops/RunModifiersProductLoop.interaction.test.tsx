@@ -29,11 +29,7 @@ it('restores authored modifiers through history, saved reload and published exec
   expect(gold().value).toBe('1');
   act(() => application.store.dispatch(authoredProjectRedoRequested()));
   expect(gold().value).toBe('1.7');
-  const expected = {
-    guaranteeEligibleCrits: false,
-    guaranteeEligibleDoubleDamage: false,
-    enemyGoldDropChanceMultiplier: 1.7,
-  };
+  const expected = { enemyGoldDropChanceMultiplier: 1.7 };
   await act(async () => {
     expect((await application.projectOperations.saveProfile()).status).toBe('success');
   });

@@ -6,8 +6,12 @@ import {
   createProjectDocument,
   createRouteAddress,
   decodeProjectDocument,
+  decodeRunModifiers,
   encodeProjectDocument,
+  encodeRunModifiers,
+  isNativeRunModifiers,
   NATIVE_RUN_MODIFIERS,
+  RUN_MODIFIER_DECLARATIONS,
   routeRunModifiers,
   projectCommandAddress,
   ProjectCommandContractError,
@@ -16,11 +20,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 const route = createRouteAddress('Underworld');
-const settings: RunModifiers = {
-  guaranteeEligibleCrits: true,
-  guaranteeEligibleDoubleDamage: false,
-  enemyGoldDropChanceMultiplier: 1.25,
-};
+const settings: RunModifiers = { enemyGoldDropChanceMultiplier: 1.25 };
 const project = () =>
   createProjectDocument(catalog, {
     projectId: 'modifiers',
@@ -29,21 +29,87 @@ const project = () =>
   });
 const replace = (value: RunModifiers, document = project()) =>
   applyProjectCommand(document, catalog, { kind: 'ReplaceRunModifiers', route, value });
+const withLoadoutModifiers = (value: unknown, document = project()) => ({
+  ...document,
+  route: { ...document.route, loadout: { ...document.route.loadout, runModifiers: value } },
+});
 
-const malformed: readonly unknown[] = [
-  null,
-  [],
-  {},
-  { ...settings, unknown: true },
-  { guaranteeEligibleCrits: true, enemyGoldDropChanceMultiplier: 2 },
-  { guaranteeEligibleCrits: true, guaranteeEligibleDoubleDamage: true },
-  { ...settings, guaranteeEligibleCrits: 1 },
-  { ...settings, guaranteeEligibleDoubleDamage: 'false' },
-  ...[NaN, Infinity, -Infinity, 0.99, '2', null].map((enemyGoldDropChanceMultiplier) => ({
-    ...settings,
-    enemyGoldDropChanceMultiplier,
-  })),
+const malformedValues: readonly unknown[] = [NaN, Infinity, -Infinity, '2', null, true];
+const clampedValues: readonly (readonly [number, number])[] = [
+  [0.5, 1],
+  [0.99, 1],
+  [5.01, 5],
+  [8, 5],
 ];
+
+describe('run modifier declarations', () => {
+  it('declare unique keys with valid numeric domains that contain their defaults', () => {
+    const keys = RUN_MODIFIER_DECLARATIONS.map((declaration) => declaration.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const declaration of RUN_MODIFIER_DECLARATIONS) {
+      expect(['released', 'internal']).toContain(declaration.stage);
+      expect(declaration.label).not.toBe('');
+      if (declaration.kind === 'number') {
+        expect(declaration.min).toBeLessThan(declaration.max);
+        expect(declaration.step).toBeGreaterThan(0);
+        expect(declaration.default).toBeGreaterThanOrEqual(declaration.min);
+        expect(declaration.default).toBeLessThanOrEqual(declaration.max);
+      } else {
+        expect(typeof declaration.default).toBe('boolean');
+      }
+    }
+    expect(Object.isFrozen(RUN_MODIFIER_DECLARATIONS)).toBe(true);
+    expect(NATIVE_RUN_MODIFIERS).toEqual({ enemyGoldDropChanceMultiplier: 1 });
+    expect(isNativeRunModifiers(NATIVE_RUN_MODIFIERS)).toBe(true);
+    expect(isNativeRunModifiers(settings)).toBe(false);
+  });
+
+  it('drops unknown keys, heals malformed known values, and omits all-default encodings', () => {
+    expect(decodeRunModifiers({ ...settings, unknown: true }, 'runModifiers')).toEqual(settings);
+    expect(decodeRunModifiers({}, 'runModifiers')).toEqual(NATIVE_RUN_MODIFIERS);
+    for (const enemyGoldDropChanceMultiplier of malformedValues)
+      expect(decodeRunModifiers({ enemyGoldDropChanceMultiplier }, 'runModifiers')).toEqual(
+        NATIVE_RUN_MODIFIERS,
+      );
+    for (const [stored, clamped] of clampedValues)
+      expect(decodeRunModifiers({ enemyGoldDropChanceMultiplier: stored }, 'runModifiers')).toEqual(
+        { enemyGoldDropChanceMultiplier: clamped },
+      );
+    expect(encodeRunModifiers(NATIVE_RUN_MODIFIERS)).toBeUndefined();
+    expect(encodeRunModifiers(settings)).toEqual(settings);
+    for (const value of [null, [], 'modifiers', 2])
+      expect(() => decodeRunModifiers(value, 'runModifiers')).toThrow(ProjectDocumentContractError);
+  });
+
+  it('decodes a document carrying the retired guarantee keys to the gold-only shape', () => {
+    const decoded = decodeProjectDocument(
+      withLoadoutModifiers({
+        guaranteeEligibleCrits: true,
+        guaranteeEligibleDoubleDamage: true,
+        enemyGoldDropChanceMultiplier: 2.5,
+      }),
+      catalog,
+    );
+    expect(decoded.route.loadout.runModifiers).toEqual({ enemyGoldDropChanceMultiplier: 2.5 });
+    expect(encodeProjectDocument(decoded)).not.toContain('guaranteeEligible');
+    const native = decodeProjectDocument(
+      withLoadoutModifiers({ guaranteeEligibleCrits: true, enemyGoldDropChanceMultiplier: 'x' }),
+      catalog,
+    );
+    expect(native.route.loadout).not.toHaveProperty('runModifiers');
+    expect(routeRunModifiers(native.route.loadout)).toBe(NATIVE_RUN_MODIFIERS);
+    for (const [stored, clamped] of [
+      [8, 5],
+      [0.5, 1],
+    ]) {
+      const saved = decodeProjectDocument(
+        withLoadoutModifiers({ enemyGoldDropChanceMultiplier: stored }),
+        catalog,
+      );
+      expect(routeRunModifiers(saved.route.loadout).enemyGoldDropChanceMultiplier).toBe(clamped);
+    }
+  });
+});
 
 describe('authored run modifiers', () => {
   it('leaves old schema-90 bytes unchanged and reads native defaults', () => {
@@ -82,34 +148,37 @@ describe('authored run modifiers', () => {
     expect(authoringReadinessAt(assembly, projectCommandAddress(command))).toBe('editable');
   });
 
-  it('preserves explicit native presence during decode and removes it on reset', () => {
-    const original = project();
-    const decoded = decodeProjectDocument(
-      {
-        ...original,
-        route: {
-          ...original.route,
-          loadout: { ...original.route.loadout, runModifiers: NATIVE_RUN_MODIFIERS },
-        },
-      },
-      catalog,
-    );
-    expect(decoded.route.loadout.runModifiers).toEqual(NATIVE_RUN_MODIFIERS);
-    expect(replace(NATIVE_RUN_MODIFIERS, decoded).route.loadout).not.toHaveProperty('runModifiers');
+  it('normalizes an explicit all-default record away during decode', () => {
+    const decoded = decodeProjectDocument(withLoadoutModifiers(NATIVE_RUN_MODIFIERS), catalog);
+    expect(decoded.route.loadout).not.toHaveProperty('runModifiers');
+    expect(replace(NATIVE_RUN_MODIFIERS, decoded)).toBe(decoded);
   });
 
-  it.each(malformed)('rejects malformed complete settings at their owner: %j', (value) => {
-    const original = project();
-    expect(() => replace(value as RunModifiers, original)).toThrow(ProjectCommandContractError);
-    expect(() =>
-      decodeProjectDocument(
-        {
-          ...original,
-          route: { ...original.route, loadout: { ...original.route.loadout, runModifiers: value } },
-        },
-        catalog,
-      ),
-    ).toThrow(ProjectDocumentContractError);
+  it.each(malformedValues)(
+    'normalizes a malformed command value instead of rejecting: %j',
+    (value) => {
+      const changed = replace({ ...settings }, project());
+      const normalized = replace({ enemyGoldDropChanceMultiplier: value } as RunModifiers, changed);
+      expect(normalized.route.loadout).not.toHaveProperty('runModifiers');
+      expect(routeRunModifiers(normalized.route.loadout)).toEqual(NATIVE_RUN_MODIFIERS);
+      const unknown = replace({ ...settings, unknown: true } as RunModifiers, project());
+      expect(unknown.route.loadout.runModifiers).toEqual(settings);
+      for (const [stored, clamped] of clampedValues)
+        expect(
+          routeRunModifiers(
+            replace({ enemyGoldDropChanceMultiplier: stored }, project()).route.loadout,
+          ).enemyGoldDropChanceMultiplier,
+        ).toBe(clamped);
+    },
+  );
+
+  it.each([null, [], 'modifiers'])('rejects a non-record value at its owner: %j', (value) => {
+    expect(() => replace(value as unknown as RunModifiers, project())).toThrow(
+      ProjectCommandContractError,
+    );
+    expect(() => decodeProjectDocument(withLoadoutModifiers(value), catalog)).toThrow(
+      ProjectDocumentContractError,
+    );
   });
 
   it('rejects the wrong route and permits Fresh File modifiers while retaining equipment guards', () => {

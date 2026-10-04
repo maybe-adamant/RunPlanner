@@ -877,15 +877,16 @@ end
 function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndPlanAfterPrefix()
     local runtimeSession = require('mods.runtime.session')
     local modifierHooks = require('mods.run_modifiers.hooks')
-    local admitted = { Hero = { ObjectId = 1 } }
+    local admitted = { Hero = { ObjectId = 1 }, CurrentRoom = { Encounter = { MoneyDropStore = 2 } } }
+    local victim = { ObjectId = 2, DamageType = 'Enemy', AddToEnemyTeam = true, MoneyDropOnDeath = { Chance = 0.2 } }
     local state = runtimeSession.create()
     local plan = { kind = 'ready', occurrences = {}, selectedOccurrenceIds = {}, occurrencesById = {},
-        runModifiers = { guaranteeEligibleCrits = true, guaranteeEligibleDoubleDamage = false, enemyGoldDropChanceMultiplier = 1 } }
+        runModifiers = { enemyGoldDropChanceMultiplier = 4 } }
     local preview = plan
     local module, _, callbacks = capture()
     local restore = nativeGame.install({ CurrentRun = admitted, CurrentHubRoom = false, SessionMapState = {},
-        Damage = function() end, CalculateCritChance = function() end, CalculateDoubleDamageChance = function() end,
-        GetTotalHeroTraitValue = function() end, RandomChance = function() end, rom = { path = {}, log = { info = function() end } } })
+        ActiveEnemies = { [2] = victim }, Kill = function() end, CheckMoneyDrop = function() end,
+        rom = { path = {}, log = { info = function() end } } })
     local priorImport = _G.import
     _G.import = function(path)
         if path == 'mods/runtime/session.lua' then
@@ -914,23 +915,19 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
     local bound = assert(loadfile('src/mods/runtime/composition.lua'))().bind('/tmp/run-planner-modifiers-test')
     bound.attach(module)
     lu.assertIs(state.admittedNativeRun, admitted)
-    preview = { runModifiers = { guaranteeEligibleCrits = false } }
+    preview = { runModifiers = { enemyGoldDropChanceMultiplier = 1 } }
     lu.assertIs(bound.sessionInspection().plan, plan)
     state.state, state.reason = 'inactive', 'configured-prefix-complete'
-    local victim, args = {}, { AttackerTable = admitted.Hero }
-    local result = callbacks.Damage(nil, {}, function()
-        callbacks.CalculateCritChance(nil, {}, function() return 0.2 end, admitted.Hero, victim, nil, args)
-        callbacks.CalculateDoubleDamageChance(nil, {}, function() return 0.2 end, admitted.Hero, victim, nil, args)
-        callbacks.GetTotalHeroTraitValue(nil, {}, function() return 1 end, 'LuckMultiplier', { IsMultiplier = true })
-        callbacks.GetTotalHeroTraitValue(nil, {}, function() return 0 end, 'OutgoingUnmodifiedCritBonus')
-        local crit = callbacks.RandomChance(nil, {}, function() return false end, 0.2)
-        local double = callbacks.RandomChance(nil, {}, function() return false end, 0.2)
-        return { crit, double }
-    end, victim, args)
-    lu.assertEquals(result, { true, false })
+    local args = { AttackerTable = admitted.Hero }
+    local function drop()
+        return callbacks.Kill(nil, {}, function(v)
+            return callbacks.CheckMoneyDrop(nil, {}, function(_, data) return data end, v, v.MoneyDropOnDeath, admitted.Hero)
+        end, victim, args)
+    end
+    lu.assertEquals(drop().Chance, 0.8)
     runtimeSession.beginNewRun(state)
     lu.assertNil(state.admittedNativeRun)
-    lu.assertEquals(callbacks.Damage(nil, {}, function() return 'native-new-run' end, victim, args), 'native-new-run')
+    lu.assertIs(drop(), victim.MoneyDropOnDeath)
     _G.import = priorImport
     restore()
 end

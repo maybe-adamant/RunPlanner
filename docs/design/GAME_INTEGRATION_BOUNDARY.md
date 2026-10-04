@@ -346,11 +346,14 @@ transaction or mismatch obligation.
 ### Run modifiers
 
 The optional top-level `runModifiers` execution product carries the complete
-normal-crit guarantee, double-damage guarantee, and enemy gold-drop chance
-multiplier authored in Loadout. It is separate from `startingLoadout` and native
+declared run-modifier record authored in Loadout; today that is the enemy
+gold-drop chance multiplier. It is separate from `startingLoadout` and native
 equipment conformance. Native settings are omitted by the producer, preserving
-default document fingerprints. Both decoders validate present groups strictly;
-fingerprint verification uses their actual presence without inserting defaults.
+default document fingerprints. The planner decoder validates a present record
+against the declaration table; the module reads only the modifiers it
+implements, validates those values, and ignores unknown keys, which remain part
+of the fingerprinted contents. Fingerprint verification uses the record's
+actual presence without inserting defaults.
 
 The module binds settings to the admitted plan and native `CurrentRun` identity.
 They become active only after starting-loadout verification or supported
@@ -360,13 +363,10 @@ ordinary room steering remains passive. Rejection, mismatch, executor fault,
 death, Crossroads presence, and a different native run prevent their application.
 Activation and temporary scopes are process-local, never native-save-backed.
 
-Normal crit and double damage independently guarantee only their positive final
-outgoing-player damage rolls, invoking the original RNG once with unchanged
-arguments before overriding the result. Native prerequisites, blockers, and
-damage application remain authoritative. Enemy gold changes only the positive
-chance input for capped hostile-enemy death drops; native amounts, `BlockMoney`,
-and encounter-store accounting remain authoritative. Reaction, breakable and
-uncapped drops are outside this setting. Gold-urn generation is unchanged.
+Enemy gold changes only the positive chance input for capped hostile-enemy
+death drops; native amounts, `BlockMoney`, and encounter-store accounting remain
+authoritative. Reaction, breakable and uncapped drops are outside this setting.
+Gold-urn generation is unchanged.
 The [run-modifier source audit](../audits/loadout-and-progression/RUN_MODIFIERS_GAME_DATA_AUDIT.md)
 owns exact native contacts and exclusions.
 
