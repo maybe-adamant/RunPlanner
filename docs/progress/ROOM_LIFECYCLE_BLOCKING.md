@@ -111,7 +111,8 @@ composition at room preparation.
   the per-encounter events: Fig Leaf (including the P pre-combat cascade, which
   suppresses execution but never changes the recorded identity), Gorgon, Aetos,
   NPC trait offers, the Nemesis random-event response and encounter-end
-  checkpoints.
+  checkpoints. The Nemesis event family is part of the identity (picked at
+  entry); its re-check at the interaction repairs on the Overview picker.
 - Fig Leaf and Aetos findings get their own addresses, as Gorgon has, so they
   never share the encounter phase's Overview address.
 - When a room stops at its Overview, encounter candidate support stays
