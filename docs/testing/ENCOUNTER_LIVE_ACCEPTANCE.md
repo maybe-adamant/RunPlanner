@@ -67,3 +67,15 @@ retire this file when none remain.
       the later planned NPC encounter remains eligible.
 - [ ] Shopping outside the protection window, for the other NPC, and while
       execution is unbound or desynchronized remains native.
+
+## Shop purchases
+
+- [ ] Shrine of Hermes with Travel Deal held on entry: plan two rushed
+      purchases with slot 3 bought first and slot 1 second, and buy the Travel
+      Deal refill. Buy in that order in game. Slot 3's vacated position refills
+      with the planned item, slot 1 does not refill, and the refill purchase
+      executes without a conformance mismatch.
+- [ ] World Shop and Stygian Well with Travel Deal held on entry: buy the
+      refill authored on the Travel Deal line under the first purchase row. The
+      refill appears in the first purchase's slot with the planned item and
+      executes as before, without a conformance mismatch.

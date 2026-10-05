@@ -339,9 +339,10 @@ bypass because visible names can affect host-room outgoing exclusions before
 purchase. Inventory owns only each visible reward type. Hidden payload and
 pickup-owned detail—including Mystery Boon's eventual God and trait offer—are
 authored only on the concrete rushed or delayed delivery pickup. Purchase state
-is sparse per stable generation; delay, rush, pending delivery, delivery host,
-and Spell reservation are derived products. Purchase itself
-is not a room action. A rushed purchase ranks one optional source-room pickup;
+is sparse per stable generation and holds its delay; each purchase is also one
+timeline purchase action that owns its rush and order, from which the Travel
+Deal source follows. Pending delivery, delivery host, and Spell reservation are
+derived products. A rushed purchase ranks one optional source-room pickup;
 a delayed purchase is scheduled at source cleanup, counts qualifying later
 encounter-end effects, and materializes at its reached host. Side-room Shrines
 use the same source rule but do not consume a newly scheduled or older pending

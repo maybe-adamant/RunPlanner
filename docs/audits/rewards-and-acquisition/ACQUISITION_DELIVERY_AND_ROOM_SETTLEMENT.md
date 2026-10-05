@@ -295,8 +295,14 @@ the first speed-up purchase with `FirstPurchaseDiscount` (Travel Deal) while
 which spawns the rushed item. A later speed-up or delayed purchase refills
 nothing, and leaving the rushed item uncollected does not undo the refill. The
 planner realizes the refill when the room's Shrine purchases are scheduled,
-after outgoing generation; because purchase order is not authored, the first
-rushed purchase is taken in slot order.
+after outgoing generation, from the first rushed initial purchase in the
+authored timeline order.
+
+The game permits a rush after later purchases, such as buy 3, buy 1, rush 3.
+The planner authors rush on each Shrine purchase action and orders those
+actions, expressing that sequence as buy 3 rushed, then buy 1. Only the order
+of speed-ups decides `FirstSpeedUpPurchase`, so ordered rushed purchases reach
+every equivalent outcome.
 
 Rarity is owned by the
 [Boon rarity ledger audit](../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#delayed-hermes-delivery-in-a-miniboss-room):

@@ -1047,8 +1047,13 @@ Purging Pool sales and Well purchases use feature-local checkboxes to opt into
 their host occurrence's one ranked action order. An unchecked sale or purchase
 remains on its owning feature and is not duplicated in the generic Optional
 actions pool; once checked, it is an ordinary ranked timeline participant. A
-Shrine purchase remains feature-local: its concrete required delivery is the
-only Shrine action in the timeline. A Pool and Well may use their feature-local **Interact**
+purchased Shrine generation, including a purchased Travel Deal refill, likewise
+gains one required `purchaseHermesShrineOffer` row in the room's post-outgoing
+purchase window (an Ephyra side room, having no outgoing generation, opens
+with it). The row authors that purchase's rush and its order among the Shrine's
+purchases; the walk still schedules every Shrine purchase together at the
+Shrine checkpoint. Shop, Shrine and Well purchase rows have no generic insert or
+remove proposal; their feature commands own membership. A Pool and Well may use their feature-local **Interact**
 boundary: until then their live random inventory remains dormant and no action
 is active. World Shop and Shrine inventories are always fully authored; neither
 receives that convenience because their visible identities affect outgoing
@@ -1082,10 +1087,14 @@ Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A rushed Shrine purchase, including a Travel Deal replacement,
 ranks one optional same-room pickup at the post-outgoing action rank; the author
 may remove it, and an item left behind vanishes at room exit. The Travel Deal
-refill is caused by the first rushed purchase itself when the Shrine screen
-closes, so it is realized when the purchases are scheduled and does not depend
-on collecting the rushed item. Purchase order is not authored; the planner
-treats rushed purchases in slot order. A delayed
+refill is caused by the first rushed initial purchase in timeline order when
+the Shrine screen closes, so it is realized when the purchases are scheduled
+and does not depend on collecting the rushed item. A rushed pickup follows its
+purchase row, and the refill's purchase row follows the triggering purchase
+row; both dependencies constrain authoring only and are not published.
+Shrine purchase rows never reach the execution room guide or timeline
+transactions: each purchase's delay and rush publish through the room Overview
+inventory. A delayed
 purchase is scheduled at source cleanup without consuming a delay use and
 derives a later required pickup at the reached encounter-end host. At the
 Preboss of the fourth entered biome, entry expires every still-pending delivery
