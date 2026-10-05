@@ -22,6 +22,7 @@ export interface DerivedHermesShrineDelivery {
   readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
   readonly rewardType: string;
   /** Rush resolves at the source action; ordinary countdowns resolve later. */
+  // `finalPrebossCompletion` names the fourth-biome flush; renaming it is a product change.
   readonly deliveryKind: 'rush' | 'countdown' | 'finalPrebossCompletion' | 'pending';
   readonly hostOrigin?: import('../../authored-project/addresses').OccurrenceAddress;
   readonly hostSequence?: number;

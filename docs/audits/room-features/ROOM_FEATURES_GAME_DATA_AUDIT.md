@@ -311,7 +311,7 @@ otherwise nonqualifying encounters do not. Expiration spawns a required
 pickup, which is mandatory when delivered. A rushed purchase removes pending
 state and spawns the exact item as ordinary, abandonable loot when the Shrine
 screen closes.
-Multiple purchases remain independent. Forced final-Preboss completion
+Multiple purchases remain independent. The forced fourth-biome Preboss flush
 delivers all pending Shrine items when `EnteredBiomes == 4`: Dream non-Q
 Preboss rooms use `ShopRoomEvents` with `AutocompleteSurfaceShopDelivery`
 (`EncounterSets.lua:415–430`). Q uses `SpawnHermesInPerson` on either route

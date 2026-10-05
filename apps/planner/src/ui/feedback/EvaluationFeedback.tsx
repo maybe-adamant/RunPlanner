@@ -121,11 +121,32 @@ export function ProjectFindings({
       <h2 className="visually-hidden" id="project-findings-title">
         Next repair
       </h2>
-      {faultLabel === undefined ? null : (
-        <p className="assessment-issue-summary settlement-fault" role="status">
-          <span className="finding-title">Settlement could not finish repairing {faultLabel}</span>
-          <span className="finding-description">Edit the delivery directly.</span>
-        </p>
+      {settlementFault === undefined || faultLabel === undefined ? null : (
+        <button
+          className="assessment-issue-button"
+          data-feedback-context="settlementFault"
+          onClick={() =>
+            dispatch(
+              findingSelected({
+                focusAddress:
+                  focusByOwner.get(semanticAddressKey(settlementFault.owner))?.focusAddress ??
+                  settlementFault.owner,
+                key: settlementFault.key,
+                origin: settlementFault.owner,
+                traitDialogTarget: null,
+                levelResolutionDialogTarget: null,
+              }),
+            )
+          }
+          type="button"
+        >
+          <span className="assessment-issue-summary">
+            <span className="finding-title">
+              Settlement could not finish repairing {faultLabel}
+            </span>
+          </span>
+          <span className="finding-description">Edit it directly.</span>
+        </button>
       )}
       {blocked === undefined ? null : (
         <button

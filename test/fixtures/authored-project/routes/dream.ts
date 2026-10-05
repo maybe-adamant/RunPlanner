@@ -1,6 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createOccurrenceAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
@@ -508,4 +511,77 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
     project = settled;
   }
   throw new Error('Dream fixture trait/Pom settlement did not converge');
+}
+
+export const dreamSingleQOccurrenceIds = Object.freeze({
+  shrineSource: createOccurrenceId('dream-q-ordinary'),
+  preboss: createOccurrenceId('dream-q-preboss'),
+  boss: createOccurrenceId('dream-q-preboss:boss'),
+});
+
+/**
+ * A complete one-biome Dream itinerary (`['Q']`): the mixed prefix's Q plan
+ * with its Postboss removed, since a last biome has none. Its Preboss is the
+ * first entered biome's, so no delivery flush happens there.
+ */
+export function dreamSingleQProject(): ProjectDocument {
+  const mixed = dreamMixedPrefixProject();
+  const plan = mixed.route.biomes.find((candidate) => candidate.biomeKey === 'Q');
+  if (plan?.topology === null || plan === undefined) throw new Error('Dream Q plan is missing');
+  const topology = plan.topology;
+  const isPostboss = (occurrenceId: string) => occurrenceId.endsWith(':postboss');
+  return decodeProjectDocument(
+    JSON.parse(
+      encodeProjectDocument({
+        ...mixed,
+        projectId: 'dream-single-q',
+        route: {
+          ...mixed.route,
+          itineraryBiomeKeys: ['Q'],
+          biomes: [
+            {
+              ...plan,
+              topology: {
+                ...topology,
+                occurrences: topology.occurrences.filter(
+                  (occurrence) => !isPostboss(occurrence.occurrenceId),
+                ),
+                fixedRoomLinks: topology.fixedRoomLinks.filter(
+                  (link) => !isPostboss(link.targetOccurrenceId),
+                ),
+              },
+            },
+          ],
+        },
+      }),
+    ),
+    catalog,
+  );
+}
+
+/** The single-Q itinerary with a Q Combat01 Shrine purchase whose delay outlasts the route. */
+export function dreamSingleQShrineDeliveryProject(): ProjectDocument {
+  const source = createOccurrenceAddress(qBiome, dreamSingleQOccurrenceIds.shrineSource);
+  let project = applyProjectCommand(dreamSingleQProject(), catalog, {
+    kind: 'SetHermesShrinePresence',
+    occurrence: source,
+    present: true,
+  });
+  for (const [slotKey, rewardType] of [
+    ['first', 'HealBigDrop'],
+    ['secondLeft', 'MaxHealthDrop'],
+    ['secondRight', 'MaxManaDrop'],
+  ] as const)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey,
+      value: { rewardType },
+    });
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:first',
+    purchase: { delay: 8, rushed: false },
+  });
 }

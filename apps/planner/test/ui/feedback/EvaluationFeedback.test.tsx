@@ -287,22 +287,27 @@ it('keeps details that explain how to repair the issue', () => {
   );
 });
 
-it('names the owner of an unfinished automatic repair beside the next repair', () => {
+it('names the owner of an unfinished automatic repair and navigates to it', () => {
   const application = createOpenTestApplication();
   const owner = createOccurrenceAddress(biome, createOccurrenceId('settlement-fault-owner'));
-  const { container } = render(
+  const fault = { key: `delivery:${semanticAddressKey(owner)}`, owner };
+  render(
     <Provider store={application.store}>
       <ProjectFindings
         catalog={catalog}
         focusByOwner={new Map()}
         issue={undefined}
-        settlementFault={{ key: `delivery:${semanticAddressKey(owner)}`, owner }}
+        settlementFault={fault}
       />
     </Provider>,
   );
 
-  expect(screen.getByRole('status').textContent).toBe(
-    'Settlement could not finish repairing ErebusEdit the delivery directly.',
-  );
-  expect(container.querySelectorAll('button')).toHaveLength(0);
+  const entry = screen.getByRole('button', { name: /Settlement could not finish repairing/ });
+  expect(entry.textContent).toBe('Settlement could not finish repairing ErebusEdit it directly.');
+  fireEvent.click(entry);
+  expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
+    key: fault.key,
+    origin: owner,
+  });
+  expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
 });

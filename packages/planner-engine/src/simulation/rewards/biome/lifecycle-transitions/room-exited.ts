@@ -5,12 +5,11 @@ import type { Catalog } from '../../../../catalog-schema';
 import type { ResourcePlacements } from '../../../../authored-project/model';
 import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
-  createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
+  createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
-import { hermesShrineDeliveryEntryKey } from '../../../../authored-project/hermes-shrine-delivery';
+import type { PendingHermesShrineDelivery } from '../../../state/model';
 import { findingRegion, ownerRegion } from '../../../finding-regions';
 import { rewardFinding } from '../../findings';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
@@ -51,32 +50,32 @@ export function applyRoomExitedTransition(
   let next = branches;
   const findingRegions = [...resourcePlacementFindingRegions(event, resourceFindings)];
   // No Boss room hosts a delivery flush, so a delivery still counting down
-  // when the route's last Boss is left can never arrive.
+  // when the route's last Boss is left can never arrive. The purchase owns
+  // the repair; the Boss exit owns the chronology.
   if (
     room !== undefined &&
     room.origin.kind === 'occurrence' &&
     routePosition.isLast &&
     catalog.rooms.byKey[room.gameName]?.kind === 'Boss'
   ) {
-    const site = createAcquisitionSiteAddress(room.origin, 'hermesShrineDelivery');
-    const unreachable = new Map<string, string>();
+    const unreachable = new Map<string, PendingHermesShrineDelivery>();
     for (const branch of branches)
       for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries))
-        if (delivery.dueAt === undefined)
-          unreachable.set(
-            hermesShrineDeliveryEntryKey(delivery.sourceOrigin, delivery.generationKey),
-            delivery.sourceKey,
-          );
-    for (const [entryKey, sourceKey] of unreachable) {
-      const address = createAcquisitionEntryAddress(site, entryKey);
+        if (delivery.dueAt === undefined) unreachable.set(delivery.sourceKey, delivery);
+    for (const delivery of unreachable.values()) {
+      const purchase = createRoomFeatureAddress(delivery.sourceOrigin, {
+        kind: 'hermesShrineOffer',
+        generationKey: delivery.generationKey,
+      });
       findingRegions.push(
         findingRegion(
-          rewardFinding('rewardSourceUnavailable', address, {
+          rewardFinding('rewardSourceUnavailable', purchase, {
             reason: 'routeEndsBeforeDelivery',
-            sourceKey,
+            sourceKey: delivery.sourceKey,
+            hostOccurrenceId: room.origin.occurrenceId,
           }),
-          ownerRegion(address),
-          { kind: 'history', sequence: event.sequence, boundary: 'at' },
+          ownerRegion(purchase),
+          { kind: 'history', sequence: event.sequence, boundary: 'at', room: room.origin },
         ),
       );
     }
@@ -134,8 +133,9 @@ export function applyRoomExitedTransition(
         }),
       );
   }
-  // Loot left unopened, resources left uncollected and rushed Shrine items
-  // left on the floor disappear with the room.
+  // Loot left unopened, resources left uncollected and a rushed Shrine item
+  // left on the floor disappear with the room; a countdown delivery due here
+  // is required and never reaches this exit unacquired.
   const exitedRoom = traitOfferRoomKey(event.origin);
   if (exitedRoom !== undefined)
     next = Object.freeze(
@@ -146,7 +146,9 @@ export function applyRoomExitedTransition(
         );
         const abandoned = Object.entries(state.pendingHermesShrineDeliveries).filter(
           ([, delivery]) =>
-            delivery.dueAt !== undefined && semanticAddressKey(delivery.dueAt) === exitedRoom,
+            delivery.rushed === true &&
+            delivery.dueAt !== undefined &&
+            semanticAddressKey(delivery.dueAt) === exitedRoom,
         );
         if (abandoned.length > 0) {
           const remaining = { ...state.pendingHermesShrineDeliveries };
