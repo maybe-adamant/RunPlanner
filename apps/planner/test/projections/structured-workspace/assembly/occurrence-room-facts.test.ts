@@ -247,10 +247,7 @@ describe('occurrence room facts', () => {
       assemble(project, 'Underworld', 'F', shopId, undefined, entries).assembly.node.room.roomLocal;
     expect(
       projectWith(() => [{ address: travelAddress, kind: 'travelDealPlaceholder' }]),
-    ).toMatchObject({
-      kind: 'shop',
-      supplementalOffers: [{ kind: 'travelDealPlaceholder' }],
-    });
+    ).toMatchObject({ kind: 'shop', supplementalOffers: [] });
     expect(
       projectWith(() => [
         {

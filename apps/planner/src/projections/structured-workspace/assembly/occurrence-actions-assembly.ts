@@ -17,6 +17,7 @@ export function assembleOccurrenceActions(input: WorkspaceOccurrenceActionAssemb
     input.roomLocal,
     input.encounterPhases,
     input.controls,
+    input.features,
   );
   return Object.freeze({
     roomActions,

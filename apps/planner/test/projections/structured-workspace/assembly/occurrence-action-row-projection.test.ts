@@ -1,4 +1,11 @@
-import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  purchaseTestHermesShrineOffer,
+  testHermesShrinePurchaseAction,
+} from '@run-planner/test-fixtures/shared';
+import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import { loadSurfaceNOProject as loadSurfaceNO, nBiome } from '@run-planner/test-fixtures/surface';
+import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
@@ -36,11 +43,15 @@ import {
   clockedTraitGeneratedPickupEntryKey,
   createAcquisitionRoleAddress,
   createFountainRarityOutcomeAddress,
+  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  createRoomFeatureAddress,
+  type RoomActionReference,
+  type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import {
   goldenFOccurrenceId,
@@ -1284,5 +1295,290 @@ describe('structured workspace actions assembly', () => {
       reference: travelReference,
       toIndex: 1,
     });
+  });
+});
+
+describe('shop-like purchase rows', () => {
+  const shrineId = createOccurrenceId('surface-n-preboss:postboss');
+  const shrineOwner = createOccurrenceAddress(nBiome, shrineId);
+
+  function travelDealShrine(rushed: boolean): ProjectDocument {
+    let project = applyProjectCommand(loadSurfaceNO(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat05')),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+    });
+    const hermes = createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat09'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: hermes,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(hermes, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'RestockBoon', rarity: 'Epic' },
+          { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: shrineOwner,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    for (const generationKey of ['initial:first', 'initial:secondLeft'] as const)
+      project = purchaseTestHermesShrineOffer(project, catalog, shrineOwner, generationKey, {
+        delay: 2,
+        rushed,
+      });
+    // Timeline order, not slot order, decides which rushed purchase triggers the refill.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: testHermesShrinePurchaseAction(shrineOwner, 'initial:secondLeft'),
+      toIndex: 1,
+    });
+    return authorLegalTraitOffers({
+      ...project,
+      route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
+    });
+  }
+
+  /** Purchase rows in timeline order from the composed workspace. */
+  function purchaseRows(
+    project: ProjectDocument,
+    occurrenceId: string,
+    kind: 'purchaseHermesShrineOffer' | 'purchaseStygianWellOffer',
+  ) {
+    const node = projectStructuredWorkspaceFixture(project)
+      .workspace.route.biomes.flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${occurrenceId} is missing`);
+    return (node.room.roomActions?.rows ?? [])
+      .filter((row) => row.reference.kind === kind)
+      .sort((left, right) => (left.rank ?? Infinity) - (right.rank ?? Infinity));
+  }
+  const shrineRows = (project: ProjectDocument) =>
+    purchaseRows(project, shrineId, 'purchaseHermesShrineOffer');
+
+  it('carries Shrine rush and the refill line on the first rushed purchase in timeline order', () => {
+    const rows = shrineRows(travelDealShrine(true));
+    expect(
+      rows.map((row) => [
+        row.reference.kind === 'purchaseHermesShrineOffer' && row.reference.generationKey,
+        row.hermesShrinePurchase?.rushed,
+        row.travelDealLine?.kind,
+      ]),
+    ).toEqual([
+      ['initial:secondLeft', true, 'hermesShrine'],
+      ['initial:first', true, undefined],
+    ]);
+    expect(rows[0]?.travelDealLine).toMatchObject({
+      refill: { rewardType: 'ArmorBoost', sourceGenerationKey: 'initial:secondLeft' },
+    });
+  });
+
+  it('omits the Shrine refill line without a rushed purchase and removes a stranded refill', () => {
+    let project = travelDealShrine(false);
+    expect(shrineRows(project).some((row) => row.travelDealLine !== undefined)).toBe(false);
+    project = purchaseTestHermesShrineOffer(project, catalog, shrineOwner, 'travelDealRefill', {
+      delay: 3,
+      rushed: false,
+    });
+    const refill = shrineRows(project).find(
+      (row) =>
+        row.reference.kind === 'purchaseHermesShrineOffer' &&
+        row.reference.generationKey === 'travelDealRefill',
+    );
+    expect(refill).toMatchObject({
+      hermesShrinePurchase: { rushed: false },
+      refillPurchaseRemoval: {
+        command: {
+          kind: 'SetHermesShrinePurchase',
+          occurrence: shrineOwner,
+          generationKey: 'travelDealRefill',
+          purchase: null,
+        },
+      },
+    });
+    expect(refill?.travelDealLine).toBeUndefined();
+  });
+
+  it('hosts the Well refill on its first purchase and removes a refill without one', () => {
+    const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const wellOwner = createOccurrenceAddress(goldenFBiome, wellId);
+    const wellRows = (project: ProjectDocument) =>
+      purchaseRows(project, wellId, 'purchaseStygianWellOffer');
+    const checkpoint = authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint());
+    const hosted = wellRows(checkpoint).filter((row) => row.travelDealLine !== undefined);
+    expect(hosted).toHaveLength(1);
+    const source = hosted[0]!.reference;
+    expect(hosted[0]!.travelDealLine).toMatchObject({
+      kind: 'stygianWell',
+      refill: {
+        sourceGenerationKey: source.kind === 'purchaseStygianWellOffer' && source.generationKey,
+      },
+    });
+    expect(
+      wellRows(checkpoint).find((row) => row.refillPurchaseRemoval !== undefined),
+    ).toBeUndefined();
+
+    let stranded = checkpoint;
+    for (const generationKey of [
+      'initial:healing',
+      'initial:secondLeft',
+      'initial:secondRight',
+    ] as const)
+      stranded = applyProjectCommand(stranded, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: wellOwner,
+        generationKey,
+        purchased: false,
+      });
+    const rows = wellRows(stranded);
+    expect(rows.map((row) => row.travelDealLine)).toEqual([undefined]);
+    expect(rows[0]).toMatchObject({
+      reference: { generationKey: 'travelDealRefill' },
+      refillPurchaseRemoval: {
+        command: {
+          kind: 'SetStygianWellPurchase',
+          occurrence: wellOwner,
+          generationKey: 'travelDealRefill',
+          purchased: false,
+        },
+      },
+    });
+  });
+
+  /** A hosted refill finding opens the line's own control on the room's timeline. */
+  function expectLineDestination(
+    project: ProjectDocument,
+    occurrenceId: string,
+    refill: SemanticAddress,
+  ) {
+    const { evaluation, workspace } = projectStructuredWorkspaceFixture(project);
+    expect(evaluation.findings).toContainEqual(expect.objectContaining({ origin: refill }));
+    const node = workspace.route.biomes
+      .flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+      );
+    expect(workspace.focusByOwner.get(semanticAddressKey(refill))).toMatchObject({
+      focusAddress: refill,
+      nodeKey: node?.key,
+      roomTab: 'actions',
+    });
+  }
+
+  it('routes a hosted Shrine refill finding to its Travel Deal line', () => {
+    const project = applyProjectCommand(travelDealShrine(true), catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: shrineOwner,
+      // A visible initial identity is never a refill candidate.
+      value: { rewardType: 'HealBigDrop' },
+    });
+    expectLineDestination(
+      project,
+      shrineId,
+      createRoomFeatureAddress(shrineOwner, {
+        kind: 'hermesShrineOffer',
+        generationKey: 'travelDealRefill',
+      }),
+    );
+  });
+
+  it('routes a hosted Well refill finding to its Travel Deal line', () => {
+    const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
+    const wellOwner = createOccurrenceAddress(goldenFBiome, wellId);
+    const project = applyProjectCommand(
+      authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
+      catalog,
+      { kind: 'ReplaceStygianWellTravelDealRefill', occurrence: wellOwner, itemKey: null },
+    );
+    expectLineDestination(
+      project,
+      wellId,
+      createRoomFeatureAddress(wellOwner, {
+        kind: 'stygianWellOffer',
+        generationKey: 'travelDealRefill',
+      }),
+    );
+  });
+
+  it('hosts the World Shop refill on its source purchase and removes it without one', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopId),
+      'roomExit',
+    );
+    const travel = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+    };
+    const withOrder = (order: readonly RoomActionReference[]): ProjectDocument => {
+      const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+      return {
+        ...base,
+        route: {
+          ...base.route,
+          biomes: base.route.biomes.map((biome): typeof biome =>
+            biome.biomeKey !== 'F' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((candidate) =>
+                      candidate.occurrenceId === shopId
+                        ? { ...candidate, roomActions: { order } }
+                        : candidate,
+                    ),
+                  },
+                },
+          ),
+        },
+      };
+    };
+    const rows = assemble(
+      withOrder([{ kind: 'interactShopOffer', offerKey: 'MajorNonBoon' }]),
+      'Underworld',
+      'F',
+      shopId,
+      undefined,
+      (candidate) =>
+        semanticAddressKey(candidate) !== semanticAddressKey(site)
+          ? []
+          : [
+              {
+                address: createAcquisitionEntryAddress(site, TRAVEL_DEAL_REFILL_ENTRY_KEY),
+                kind: 'travelDealRefill' as const,
+                sourceOfferKey: 'MajorNonBoon',
+                slotIndex: 1,
+                rewardTypes: ['RandomLoot'],
+              },
+            ],
+    ).assembly.node.room.roomActions?.rows;
+    expect(
+      rows?.find((row) => row.reference.kind === 'interactShopOffer')?.travelDealLine,
+    ).toMatchObject({ kind: 'worldShop', offer: { sourceOfferKey: 'MajorNonBoon' } });
+
+    const stranded = assemble(withOrder([travel]), 'Underworld', 'F', shopId).assembly.node.room
+      .roomActions?.rows;
+    const refill = stranded?.find((row) => row.key === roomActionKey(travel));
+    expect(refill?.refillPurchaseRemoval).toEqual({
+      command: { kind: 'RemoveRoomAction', action: refill?.address },
+    });
+    expect(stranded?.some((row) => row.travelDealLine !== undefined)).toBe(false);
   });
 });

@@ -33,6 +33,7 @@ import { RoomActionInlineEditors } from './RoomActionInlineEditors';
 import { RoomActionOrderingControls } from './RoomActionOrderingControls';
 import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor } from './NemesisEventEditor';
+import { HermesShrineRushControl, TravelDealLine } from './commerce/PurchaseRowControls';
 interface PendingRoomActionPointerDrag {
   readonly actionKey: string;
   readonly handle: HTMLElement;
@@ -449,6 +450,10 @@ export function RoomActionsWorkbench({
       const removable = proposals.find(
         (proposal) => proposal.kind === 'remove' || proposal.kind === 'unplace',
       );
+      if (row.refillPurchaseRemoval !== undefined) {
+        executeIntent(row.refillPurchaseRemoval);
+        return;
+      }
       if (removable?.structurallyAuthorable === true) {
         apply(removable.key);
         return;
@@ -528,6 +533,13 @@ export function RoomActionsWorkbench({
           </div>
           <div className="hub-rank-actions room-action-controls">
             <div className="room-action-inline-editors">
+              {row.hermesShrinePurchase === undefined ? null : (
+                <HermesShrineRushControl
+                  interactions={interactions}
+                  label={row.label}
+                  purchase={row.hermesShrinePurchase}
+                />
+              )}
               {renderRowContent?.(row)}
               <RoomActionAcquisitionRow
                 hideOffer={inlineMysteryBoonOffer}
@@ -557,7 +569,9 @@ export function RoomActionsWorkbench({
                   showRemoval={
                     row.reference.kind !== 'interactKeepsakeRack' &&
                     row.reference.kind !== 'interactEris' &&
-                    (!row.participationOwnedByOverview || row.stale)
+                    (!row.participationOwnedByOverview ||
+                      row.stale ||
+                      row.refillPurchaseRemoval !== undefined)
                   }
                 />
               ) : (
@@ -583,6 +597,14 @@ export function RoomActionsWorkbench({
               {renderRowTrailingContent?.(row)}
             </div>
           </div>
+          {row.travelDealLine === undefined ? null : (
+            <TravelDealLine
+              interactions={interactions}
+              line={row.travelDealLine}
+              onApply={apply}
+              proposals={actions.proposals}
+            />
+          )}
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
         {row.rank === null ? null : renderInsertion(row.rank, row.key)}

@@ -3,7 +3,6 @@ import {
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
-  hermesShrinePurchaseAction,
   routeRoomShop,
   semanticAddressKey,
   type BiomeAddress,
@@ -187,10 +186,6 @@ function roomFeatures(
   const shrineAssessment = input.hermesShrineAssessment?.(poolOwner);
   const wellAssessment = input.stygianWellAssessment?.(poolOwner);
   const shrine = input.occurrence.hermesShrine;
-  const shrinePurchaseRushed = (
-    generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
-  ): boolean =>
-    hermesShrinePurchaseAction(input.occurrence.roomActions.order, generationKey)?.rushed === true;
   const well = input.occurrence.stygianWell;
   const pool = input.occurrence.purgingPool;
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
@@ -262,7 +257,7 @@ function roomFeatures(
                 (wellAssessment !== undefined ||
                   (well.travelDealRefillKey === undefined &&
                     well.twistResultKeyBySlot?.travelDealRefill == null)))
-                ? []
+                ? undefined
                 : (() => {
                     const generationKey = 'travelDealRefill' as const;
                     const selected = well.travelDealRefillKey ?? null;
@@ -271,24 +266,25 @@ function roomFeatures(
                         ? declaredWellAllItemKeys
                         : (wellAssessment.travelDealRefill?.candidateItemKeys ?? Object.freeze([]));
                     const address = featureAddress({ kind: 'stygianWellOffer', generationKey });
-                    return [
-                      Object.freeze({
-                        address,
-                        marker: input.markerDestinations.marker(address),
-                        key: 'travelDealRefill' as const,
-                        generationKey,
-                        label: 'Travel Deal',
-                        itemKey: selected,
-                        ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
-                        candidateItemKeys: candidates,
-                        candidateItems: Object.freeze(
-                          candidates.map((key) => Object.freeze({ key, label: itemLabel(key) })),
-                        ),
-                        offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                        purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                        purchased: purchased.has(generationKey),
-                      }),
-                    ];
+                    const sourceGenerationKey =
+                      wellAssessment?.travelDealRefill?.sourceGenerationKey;
+                    return Object.freeze({
+                      address,
+                      marker: input.markerDestinations.marker(address),
+                      key: 'travelDealRefill' as const,
+                      generationKey,
+                      label: 'Travel Deal',
+                      itemKey: selected,
+                      ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
+                      candidateItemKeys: candidates,
+                      candidateItems: Object.freeze(
+                        candidates.map((key) => Object.freeze({ key, label: itemLabel(key) })),
+                      ),
+                      offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                      purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                      purchased: purchased.has(generationKey),
+                      ...(sourceGenerationKey === undefined ? {} : { sourceGenerationKey }),
+                    });
                   })();
             const presenceAddress = featureAddress({ kind: 'stygianWellPresence' });
             const inventoryAddress = featureAddress({ kind: 'stygianWellInventory' });
@@ -316,7 +312,8 @@ function roomFeatures(
                 ? {}
                 : { interactionKey: `stygianWellInteract:${semanticAddressKey(poolOwner)}` }),
               interacted: well?.interacted === true,
-              slots: Object.freeze([...initialSlots, ...refill]),
+              slots: Object.freeze(initialSlots),
+              ...(refill === undefined ? {} : { travelDealRefill: refill }),
             });
           })(),
         ]),
@@ -400,7 +397,6 @@ function roomFeatures(
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
                         purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
                         purchase: shrine?.purchaseBySlot?.[slotKey] ?? null,
-                        rushed: shrinePurchaseRushed(generationKey),
                       });
                     }),
               ),
@@ -450,7 +446,12 @@ function roomFeatures(
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
                         purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
                         purchase: shrine.travelDealRefill?.purchase ?? null,
-                        rushed: shrinePurchaseRushed('travelDealRefill'),
+                        ...(shrineAssessment?.travelDealRefill === undefined
+                          ? {}
+                          : {
+                              sourceGenerationKey:
+                                shrineAssessment.travelDealRefill.sourceGenerationKey,
+                            }),
                       });
                     })(),
                   }),

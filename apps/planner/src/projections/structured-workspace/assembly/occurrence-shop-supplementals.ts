@@ -74,6 +74,7 @@ function derivedRewardSupplementalOffer(
   }
   if (capability === undefined) return undefined;
   if (capability.kind === placeholderKind) {
+    // Travel Deal is authored under its triggering purchase, so it has no placeholder.
     return gold
       ? Object.freeze({
           kind: 'echoDoubleShopPlaceholder' as const,
@@ -81,12 +82,7 @@ function derivedRewardSupplementalOffer(
           label: 'Gold Gold Gold duplicate',
           explanation: 'Settle the first paid non-Spell Shop purchase before editing Echo Gold.',
         })
-      : Object.freeze({
-          kind: 'travelDealPlaceholder' as const,
-          key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
-          label: 'Travel Deal refill',
-          explanation: 'Settle the first paid Shop purchase before editing Travel Deal.',
-        });
+      : undefined;
   }
   if (capability.kind !== activeKind || capability.sourceOfferKey === undefined) {
     return undefined;

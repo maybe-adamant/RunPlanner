@@ -79,6 +79,7 @@ export function workspaceRoomFeatureMarkers(
             feature.presenceMarker,
             ...(feature.inventoryMarker === undefined ? [] : [feature.inventoryMarker]),
             ...feature.slots.map((slot) => slot.marker),
+            ...(feature.travelDealRefill === undefined ? [] : [feature.travelDealRefill.marker]),
           ];
         case 'purgingPool':
           return [feature.inventoryMarker, ...feature.slots.map((slot) => slot.marker)];

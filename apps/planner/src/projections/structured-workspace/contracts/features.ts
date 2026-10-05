@@ -98,9 +98,8 @@ export type WorkspaceRoomFeature =
         readonly purchaseInteractionKey: string;
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
-        /** Rush of the generation's purchase action. */
-        readonly rushed: boolean;
       }[];
+      /** Refill inventory, authored on the timeline under the purchase that triggers it. */
       readonly travelDealRefill?: {
         readonly address: RoomFeatureAddress;
         readonly marker: WorkspaceMarker;
@@ -115,8 +114,8 @@ export type WorkspaceRoomFeature =
         readonly purchaseInteractionKey: string;
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
-        /** Rush of the generation's purchase action. */
-        readonly rushed: boolean;
+        /** The rushed purchase that triggers the refill; absent while Travel Deal does not apply. */
+        readonly sourceGenerationKey?: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
       };
     }
   | {
@@ -130,22 +129,36 @@ export type WorkspaceRoomFeature =
       readonly presenceInteractionKey?: string;
       readonly interactionKey?: string;
       readonly interacted: boolean;
-      readonly slots: readonly {
-        readonly key:
-          import('@run-planner/engine/authored-project').StygianWellSlotKey | 'travelDealRefill';
-        readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-        readonly address: RoomFeatureAddress;
-        readonly marker: WorkspaceMarker;
-        readonly label: string;
-        readonly itemKey: string | null;
-        readonly itemLabel?: string;
-        readonly candidateItemKeys: readonly string[];
-        readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
-        readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
-        readonly purchased: boolean;
-      }[];
+      readonly slots: readonly WorkspaceStygianWellSlot[];
+      /** Refill inventory, authored on the timeline under the purchase that triggers it. */
+      readonly travelDealRefill?: Omit<WorkspaceStygianWellSlot, 'key'> & {
+        readonly key: 'travelDealRefill';
+        /** The first purchase that triggers the refill; absent while Travel Deal does not apply. */
+        readonly sourceGenerationKey?: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+      };
     };
+
+export interface WorkspaceStygianWellSlot {
+  readonly key: import('@run-planner/engine/authored-project').StygianWellSlotKey;
+  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+  readonly address: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  readonly label: string;
+  readonly itemKey: string | null;
+  readonly itemLabel?: string;
+  readonly candidateItemKeys: readonly string[];
+  readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
+  readonly offerInteractionKey: string;
+  readonly purchaseInteractionKey: string;
+  readonly purchased: boolean;
+}
+
+export type WorkspaceHermesShrineTravelDealRefill = NonNullable<
+  Extract<WorkspaceRoomFeature, { readonly kind: 'hermesShrine' }>['travelDealRefill']
+>;
+export type WorkspaceStygianWellTravelDealRefill = NonNullable<
+  Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }>['travelDealRefill']
+>;
 
 export interface WorkspaceZagreusContractControl {
   readonly door: WorkspaceDoorContract;

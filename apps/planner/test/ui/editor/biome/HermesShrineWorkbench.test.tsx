@@ -157,22 +157,21 @@ describe('Hermes Shrine workbench', () => {
     const inactiveDelay = screen.getByRole('combobox', {
       name: 'Hermes Shrine Offer 1 delivery delay',
     });
-    const inactiveRush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' });
+    // The overview holds inventory only; rush lives on the timeline purchase row.
+    expect(screen.queryByRole('checkbox', { name: /^Rush/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
     expect(inactiveDelay).toHaveProperty('disabled', true);
     expect(inactiveDelay).toHaveProperty('value', '');
     expect(within(inactiveDelay).getByRole('option', { name: 'Random' })).toHaveProperty(
       'selected',
       true,
     );
-    expect(inactiveRush).toHaveProperty('disabled', true);
-    expect(inactiveRush).toHaveProperty('checked', false);
 
     const purchased = screen.getByRole('checkbox', { name: 'Purchased Hermes Shrine Offer 1' });
     await view.user.click(purchased);
     const offerRow = purchased.closest<HTMLElement>('.hermes-shrine-slot');
     if (offerRow === null) throw new Error('Hermes Shrine Offer 1 row is missing');
     expect(inactiveDelay).toHaveProperty('disabled', false);
-    expect(inactiveRush).toHaveProperty('disabled', false);
     expect(
       (
         within(offerRow).getByRole('combobox', {
@@ -189,11 +188,17 @@ describe('Hermes Shrine workbench', () => {
       'selected',
       true,
     );
-    expect(inactiveRush).toHaveProperty('disabled', true);
     await view.user.click(purchased);
     expect(inactiveDelay).toHaveProperty('value', '2');
+    fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    const purchaseRow = screen.getByText('Buy Big Heal · Slot 1').closest('li');
+    if (purchaseRow === null) throw new Error('Shrine purchase row is missing');
+    // Purchased owns membership in the overview; the row offers no removal.
+    expect(
+      within(purchaseRow).queryByRole('button', { name: /^Remove .* from timeline$/ }),
+    ).toBeNull();
     await view.user.click(
-      within(offerRow).getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' }),
+      within(purchaseRow).getByRole('checkbox', { name: 'Rush Buy Big Heal · Slot 1' }),
     );
 
     const room = occurrence(oOccurrenceIds.combat07)(
@@ -268,8 +273,8 @@ describe('Hermes Shrine workbench', () => {
     await view.user.click(
       screen.getByRole('checkbox', { name: 'Purchased Hermes Shrine Offer 3' }),
     );
-    await view.user.click(screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 3' }));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Rush Buy Mystery Boon · Slot 3' }));
     const entryKey = hermesShrineDeliveryEntryKey(owner, 'initial:secondRight');
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
@@ -766,7 +771,7 @@ describe('Hermes Shrine workbench', () => {
     expect((presence as HTMLInputElement).disabled).toBe(true);
   });
 
-  it('rushes a Travel Deal refill through the shared Shrine purchase controls', async () => {
+  it('keeps a refill purchased without Travel Deal rushable and removable on its own row', async () => {
     const owner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     let project = completeOrdinaryShrine();
     project = applyProjectCommand(project, catalog, {
@@ -784,35 +789,36 @@ describe('Hermes Shrine workbench', () => {
       'O',
       occurrence(oOccurrenceIds.combat07),
     );
-    openOverview();
-
-    const delay = screen.getByRole('combobox', {
-      name: 'Hermes Shrine Travel Deal delivery delay',
-    });
-    expect((delay as HTMLSelectElement).disabled).toBe(false);
-    expect((delay as HTMLSelectElement).value).toBe('4');
-    const rush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' });
-    expect((rush as HTMLInputElement).checked).toBe(false);
-    expect(within(delay).getAllByRole('option')).toHaveLength(7);
-    await view.user.click(rush);
-    expect(
-      (screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' }) as HTMLInputElement)
-        .checked,
-    ).toBe(true);
-    expect(
+    const shrine = () =>
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')!
-        .topology!.occurrences.find((room) => room.occurrenceId === oOccurrenceIds.combat07)!
-        .roomActions.order,
-    ).toContainEqual({
+        .topology!.occurrences.find((room) => room.occurrenceId === oOccurrenceIds.combat07)!;
+    openOverview();
+    expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    const refillRow = () => screen.getByText(/· Travel Deal Offer$/).closest('li')!;
+    const rush = within(refillRow()).getByRole('checkbox', { name: /^Rush / });
+    expect((rush as HTMLInputElement).checked).toBe(false);
+    await view.user.click(rush);
+    expect(shrine().roomActions.order).toContainEqual({
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'travelDealRefill',
       rushed: true,
     });
+
+    const remove = within(refillRow()).getByRole('button', { name: /^Remove .* from timeline$/ });
+    expect(remove).toHaveProperty('disabled', false);
+    await view.user.click(remove);
+    expect(shrine().hermesShrine?.travelDealRefill).toEqual({
+      offer: { rewardType: 'ArmorBoost' },
+    });
+    expect(screen.queryByText(/· Travel Deal Offer$/)).toBeNull();
   });
 
-  it('hides the retained Travel Deal refill when Rush is cleared and restores it when rushed again', async () => {
+  it('authors the refill on the first rushed purchase row only while Travel Deal applies', async () => {
     const postbossId = createOccurrenceId('surface-n-preboss:postboss');
     const owner = createOccurrenceAddress(nBiome, postbossId);
     let project = loadSurfaceNOProject();
@@ -855,20 +861,44 @@ describe('Hermes Shrine workbench', () => {
       route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'N', occurrence(postbossId));
-    openOverview();
-    expect(screen.getByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeTruthy();
-    const rush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' });
-    await view.user.click(rush);
-    expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
-    expect(
+    const shrine = () =>
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
           (room) => room.occurrenceId === postbossId,
-        )?.hermesShrine?.travelDealRefill?.offer,
-    ).toEqual({ rewardType: 'ArmorBoost' });
+        )!;
+    openOverview();
+    expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    const sourceRow = () => screen.getByText(/· Slot 1$/).closest('li')!;
+    const line = within(sourceRow()).getByRole('group', { name: 'Travel Deal' });
+    expect(
+      within(line).getByRole('button', { name: 'Hermes Shrine Travel Deal Item' }),
+    ).toBeTruthy();
+    expect(
+      within(line).getByRole('combobox', { name: 'Hermes Shrine Travel Deal delivery delay' }),
+    ).toHaveProperty('disabled', true);
+
+    await view.user.click(
+      within(line).getByRole('checkbox', { name: 'Purchased Hermes Shrine Travel Deal' }),
+    );
+    expect(shrine().hermesShrine?.travelDealRefill?.purchase).toEqual({ delay: 2 });
+    const refillRow = screen.getByText(/· Travel Deal Offer$/).closest('li')!;
+    expect(within(refillRow).getByRole('checkbox', { name: /^Rush / })).toHaveProperty(
+      'checked',
+      false,
+    );
+    await view.user.click(
+      within(sourceRow()).getByRole('checkbox', { name: 'Purchased Hermes Shrine Travel Deal' }),
+    );
+    expect(shrine().hermesShrine?.travelDealRefill?.purchase).toBeUndefined();
+
+    const rush = within(sourceRow()).getByRole('checkbox', { name: /^Rush / });
     await view.user.click(rush);
-    expect(screen.getByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual({ rewardType: 'ArmorBoost' });
+    await view.user.click(within(sourceRow()).getByRole('checkbox', { name: /^Rush / }));
+    expect(within(sourceRow()).getByRole('group', { name: 'Travel Deal' })).toBeTruthy();
   });
 
   it('indexes only present Shrines and navigates to their owning room', async () => {

@@ -204,7 +204,10 @@ export function occurrenceInteractionRequirements(
             ? {}
             : { interactionKey: feature.interactionKey }),
           slots: Object.freeze(
-            feature.slots.map((slot) =>
+            [
+              ...feature.slots,
+              ...(feature.travelDealRefill === undefined ? [] : [feature.travelDealRefill]),
+            ].map((slot) =>
               Object.freeze({
                 generationKey: slot.generationKey,
                 slotKey: slot.key,
@@ -256,7 +259,6 @@ export function occurrenceInteractionRequirements(
                 candidateRewardTypes: slot.candidateRewardTypes,
                 candidateRewards: slot.candidateRewards,
                 purchase: slot.purchase,
-                rushed: slot.rushed,
                 offerInteractionKey: slot.offerInteractionKey,
                 purchaseInteractionKey: slot.purchaseInteractionKey,
               }),
@@ -273,7 +275,6 @@ export function occurrenceInteractionRequirements(
                     candidateRewardTypes: feature.travelDealRefill.candidateRewardTypes,
                     candidateRewards: feature.travelDealRefill.candidateRewards,
                     purchase: feature.travelDealRefill.purchase,
-                    rushed: feature.travelDealRefill.rushed,
                     offerInteractionKey: feature.travelDealRefill.offerInteractionKey,
                     purchaseInteractionKey: feature.travelDealRefill.purchaseInteractionKey,
                   }),
