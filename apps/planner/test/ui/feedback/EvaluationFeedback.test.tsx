@@ -4,6 +4,7 @@ import {
   createBiomeAddress,
   createEchoPomTargetAddress,
   createEncounterPhaseAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -284,4 +285,24 @@ it('keeps details that explain how to repair the issue', () => {
   expect(repair.querySelector('.finding-description')?.textContent).toBe(
     'Use the next rarity above the equipped boon.',
   );
+});
+
+it('names the owner of an unfinished automatic repair beside the next repair', () => {
+  const application = createOpenTestApplication();
+  const owner = createOccurrenceAddress(biome, createOccurrenceId('settlement-fault-owner'));
+  const { container } = render(
+    <Provider store={application.store}>
+      <ProjectFindings
+        catalog={catalog}
+        focusByOwner={new Map()}
+        issue={undefined}
+        settlementFault={{ key: `delivery:${semanticAddressKey(owner)}`, owner }}
+      />
+    </Provider>,
+  );
+
+  expect(screen.getByRole('status').textContent).toBe(
+    'Settlement could not finish repairing ErebusEdit the delivery directly.',
+  );
+  expect(container.querySelectorAll('button')).toHaveLength(0);
 });

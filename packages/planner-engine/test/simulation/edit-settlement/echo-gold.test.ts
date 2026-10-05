@@ -30,7 +30,7 @@ const offer = createShopOfferAddress(goldenHBiome, owner.occurrenceId, 'Boon');
 const purchase = { kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true } as const;
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
-  settleProjectEdit({ catalog, before: evaluate(project), command, evaluate });
+  settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly;
 const shop = (project: ProjectDocument) =>
   project.route.biomes
     .find((biome) => biome.biomeKey === 'H')!
@@ -59,7 +59,9 @@ describe('required Echo Gold activation', () => {
       settled.evaluation.findings.some((finding) => finding.code === 'traitOfferMissing'),
     ).toBe(true);
     const before = evaluate(settled.project);
-    expect(settleProjectEdit({ catalog, before, evaluate, command: purchase })).toBe(before);
+    expect(settleProjectEdit({ catalog, before, evaluate, command: purchase }).assembly).toBe(
+      before,
+    );
   });
   it('keeps an existing imported required omission through a source edit and allows Restore', () => {
     const imported = applyProjectCommand(project, catalog, purchase);
@@ -202,7 +204,7 @@ describe('required Echo Gold activation', () => {
             roomActionKey(reference),
           ),
         },
-      }),
+      }).assembly,
     ).toBe(settled);
   });
 });

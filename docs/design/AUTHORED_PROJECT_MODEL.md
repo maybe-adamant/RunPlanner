@@ -1090,8 +1090,10 @@ the source purchase and sibling deliveries. It validates structural ownership,
 not simulated validity. The structural command can represent an unplaced
 obligation; application edit settlement refuses to publish removal of a reached
 valid required delivery. Proven invalid placements retain this explicit repair. Due-contact validation continues to require that delivery before
-publication. Same-room rushed deliveries retain purchase-owned repair and their
-required action; ordinary required actions remain protected from removal.
+publication. Same-room rushed deliveries are optional actions ranked by the
+purchase command and removed through `RemoveRoomAction`, never unplaced; a
+rushed purchase may stand without its action. Ordinary required actions remain
+protected from removal.
 Source reactivation uses the existing exact placement support rather than
 guessing a replacement host.
 

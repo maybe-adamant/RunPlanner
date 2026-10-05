@@ -35,7 +35,7 @@ import {
 } from '../acquisition/pickup-producers';
 import { ERIS_GIFT_SITE_KEY } from '../acquisition/eris-gift';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
-import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
@@ -264,8 +264,7 @@ function assertHermesShrineDeliveryActionClosure(
       .map(([slotKey]) => `initial:${slotKey}` as import('../model').HermesShrineGenerationKey),
   );
   const actionCounts = new Map<import('../model').HermesShrineGenerationKey, number>();
-  const finalPrebossHost =
-    catalog.rooms.byKey[source.gameName]?.kind === 'Preboss' && routePosition.isLast;
+  const finalPrebossHost = isDeliveryFlushHost(catalog.rooms.byKey[source.gameName], routePosition);
   for (const reference of roomActions.order) {
     if (
       reference.kind !== 'interactAcquisitionEntry' ||
@@ -298,11 +297,10 @@ function assertHermesShrineDeliveryActionClosure(
     )
       actionCounts.set(parsed.generationKey, (actionCounts.get(parsed.generationKey) ?? 0) + 1);
   }
-  if (rushed.size !== actionCounts.size || [...rushed].some((key) => actionCounts.get(key) !== 1))
-    failProjectDocument(
-      path,
-      'rushed Shrine purchases must have exactly one matching delivery action',
-    );
+  // A rushed item is optional loot: its purchase may have no ranked pickup,
+  // but a same-room pickup always belongs to one rushed purchase.
+  if ([...actionCounts].some(([key, count]) => !rushed.has(key) || count !== 1))
+    failProjectDocument(path, 'same-room Shrine delivery actions require their rushed purchase');
 }
 
 function sameStructuredValue(left: unknown, right: unknown): boolean {

@@ -1,6 +1,6 @@
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { type AssessmentIssue } from '@run-planner/engine/simulation';
+import { type AssessmentIssue, type SettlementFault } from '@run-planner/engine/simulation';
 
 import {
   type BiomeFeedbackPresentation,
@@ -67,6 +67,7 @@ export function ProjectFindings({
   focusByOwner,
   route,
   blockedView,
+  settlementFault,
 }: {
   readonly catalog: Catalog;
   readonly issue: AssessmentIssue | undefined;
@@ -74,6 +75,8 @@ export function ProjectFindings({
   readonly route?: WorkspaceRoute;
   /** Feedback of the displayed biome; a blocked or unevaluated view leads the panel. */
   readonly blockedView?: BiomeFeedbackPresentation | undefined;
+  /** The last edit's unfinished automatic repair, published beside the assembly. */
+  readonly settlementFault?: SettlementFault | undefined;
 }) {
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
@@ -94,8 +97,17 @@ export function ProjectFindings({
     blockedView === undefined
       ? undefined
       : presentBlockedView(catalog, blockedView, destinationLabel);
+  const faultLabel =
+    settlementFault === undefined
+      ? undefined
+      : findingDestinationLabel(
+          catalog,
+          settlementFault.owner,
+          focusByOwner.get(semanticAddressKey(settlementFault.owner)),
+          route,
+        );
 
-  if (issue === undefined && blocked === undefined) return null;
+  if (issue === undefined && blocked === undefined && faultLabel === undefined) return null;
 
   // Both entries navigate to the blocking owner's launcher; neither opens a dialog.
   const navigate =
@@ -109,6 +121,12 @@ export function ProjectFindings({
       <h2 className="visually-hidden" id="project-findings-title">
         Next repair
       </h2>
+      {faultLabel === undefined ? null : (
+        <p className="assessment-issue-summary settlement-fault" role="status">
+          <span className="finding-title">Settlement could not finish repairing {faultLabel}</span>
+          <span className="finding-description">Edit the delivery directly.</span>
+        </p>
+      )}
       {blocked === undefined ? null : (
         <button
           className="assessment-issue-button"

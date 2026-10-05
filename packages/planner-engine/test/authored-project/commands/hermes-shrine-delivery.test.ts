@@ -19,6 +19,7 @@ import {
   encodeProjectDocument,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
+  publishProjectHistoryEdit,
   roomActionDomainForOccurrence,
   roomActionKey,
   undoProjectHistory,
@@ -47,6 +48,7 @@ import type { CanonicalAuthoredRoom } from '../../../src/simulation/materializat
 import { applyEncounterEndEffectsTransition } from '../../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import {
   hermesShrineDeliveryPlacementForPurchaseReschedule,
+  settleProjectEdit,
   simulateProjectAssembly,
 } from '../../../src/simulation';
 import {
@@ -1102,8 +1104,9 @@ describe('Hermes Shrine delivery source participation', () => {
     expect(orderedDeliveryKeys(removed, oBiome.biomeKey, host.occurrenceId)).toEqual([]);
   });
 
-  it('leaves same-room rushed deliveries and ordinary required actions under the existing guard', () => {
-    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+  it('ranks a rushed delivery as optional loot that can be left behind', () => {
+    const project = createSurfaceNOHermesShrineDeliveryCheckpoint();
+    expect(simulateProjectAssembly(catalog, project).evaluation.status).toBe('valid');
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const rushedKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
     const rushed = occurrenceOf(
@@ -1115,13 +1118,42 @@ describe('Hermes Shrine delivery source participation', () => {
         reference.kind === 'interactAcquisitionEntry' && reference.entryKey === rushedKey,
     );
     expect(rushed).toBeDefined();
+    const contribution = (document: ProjectDocument) =>
+      roomActionDomainForOccurrence(
+        document,
+        catalog,
+        oBiome,
+        source.occurrenceId,
+      )?.domain.contributions.find(
+        (entry) =>
+          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(rushed!),
+      );
+    expect(contribution(project)).toMatchObject({ participation: 'optional' });
 
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'RemoveRoomAction',
-        action: createRoomActionAddress(oBiome, source.occurrenceId, roomActionKey(rushed!)),
-      }),
-    ).toThrow('active required room action cannot be removed');
+    const removed = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(oBiome, source.occurrenceId, roomActionKey(rushed!)),
+    });
+    const host = occurrenceOf(removed, oBiome.biomeKey, source.occurrenceId);
+    expect(
+      host.roomActions.order.some(
+        (reference) => roomActionKey(reference) === roomActionKey(rushed!),
+      ),
+    ).toBe(false);
+    expect(host.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2, rushed: true });
+    expect(host.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[rushedKey]).toMatchObject({
+      offer: { rewardType: 'HealBigDrop' },
+    });
+    expect(contribution(removed)).toMatchObject({ participation: 'optional' });
+    const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(removed)), catalog);
+    const evaluation = simulateProjectAssembly(catalog, roundTrip).evaluation;
+    expect(evaluation.status).toBe('valid');
+    const o = evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
+    if (o?.authoring !== 'complete' || !('rewards' in o)) throw new Error('O rewards missing');
+    // The abandoned item vanishes with its room instead of lingering as pending.
+    expect(o.rewards.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
+      rushedKey,
+    );
   });
 });
 
@@ -1316,5 +1348,129 @@ describe('explicit generated delivery unplacement', () => {
     expect(() =>
       applyProjectCommand(project, catalog, { kind: 'UnplaceGeneratedDelivery', action }),
     ).toThrow('same-room Shrine delivery');
+  });
+});
+
+describe('flush-host admission after source retraction', () => {
+  const source = createOccurrenceAddress(qBiome, qOccurrenceIds.ordinary);
+  const host = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
+  const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+  const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
+  const settle = (project: ProjectDocument, command: Parameters<typeof applyProjectCommand>[2]) =>
+    settleProjectEdit({ catalog, before: evaluate(project), command, evaluate });
+  const hostOf = (project: ProjectDocument) =>
+    project.route.biomes
+      .find((biome) => biome.biomeKey === qBiome.biomeKey)!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId)!;
+  const orderedKeys = (project: ProjectDocument) =>
+    hostOf(project).roomActions.order.flatMap((reference) =>
+      reference.kind === 'interactAcquisitionEntry' && reference.entryKey === entryKey
+        ? [reference]
+        : [],
+    );
+  const requiredContribution = (project: ProjectDocument) =>
+    roomActionDomainForOccurrence(
+      project,
+      catalog,
+      qBiome,
+      host.occurrenceId,
+    )?.domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.reference.kind === 'interactAcquisitionEntry' &&
+        entry.reference.entryKey === entryKey,
+    );
+
+  /** A Q Combat01 Shrine whose delayed delivery is still pending at the Q Preboss flush. */
+  function placedAtFlushHost() {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey,
+        value: { rewardType },
+      });
+    const settled = settle(project, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:first',
+      purchase: { delay: 8, rushed: false },
+    });
+    expect(settled.fault).toBeUndefined();
+    expect(settled.assembly.evaluation.status).toBe('valid');
+    expect(orderedKeys(settled.assembly.project)).toEqual([
+      { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey },
+    ]);
+    expect(requiredContribution(settled.assembly.project)).toMatchObject({
+      participation: 'required',
+    });
+    return settled.assembly.project;
+  }
+
+  function expectDormant(project: ProjectDocument) {
+    expect(orderedKeys(project)).toEqual([]);
+    expect(
+      hostOf(project).acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+    ).toMatchObject({ offer: { rewardType: 'HealBigDrop' } });
+    expect(requiredContribution(project)).toBeUndefined();
+    const evaluation = evaluate(project).evaluation;
+    expect(
+      evaluation.findings
+        .map((finding) => finding.code)
+        .filter((code) =>
+          ['roomActionPlacementRequired', 'hermesShrineDeliveryPlacementRequired'].includes(code),
+        ),
+    ).toEqual([]);
+    return evaluation;
+  }
+
+  it('leaves retained payload dormant when the purchase is cleared and restores it on repurchase', () => {
+    const placed = placedAtFlushHost();
+    const cleared = settle(placed, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:first',
+      purchase: null,
+    });
+    expect(cleared.fault).toBeUndefined();
+    expect(expectDormant(cleared.assembly.project).status).toBe('valid');
+    const history = publishProjectHistoryEdit(
+      createProjectHistory(placed),
+      cleared.assembly.project,
+    );
+    expect(undoProjectHistory(history).present).toBe(placed);
+
+    const repurchased = settle(cleared.assembly.project, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:first',
+      purchase: { delay: 8, rushed: false },
+    });
+    expect(repurchased.fault).toBeUndefined();
+    expect(repurchased.assembly.evaluation.status).toBe('valid');
+    expect(orderedKeys(repurchased.assembly.project)).toHaveLength(1);
+    expect(requiredContribution(repurchased.assembly.project)).toMatchObject({
+      participation: 'required',
+    });
+  });
+
+  it('leaves retained payload dormant when the Shrine is removed', () => {
+    const placed = placedAtFlushHost();
+    const removed = settle(placed, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: false,
+    });
+    expect(removed.fault).toBeUndefined();
+    expect(expectDormant(removed.assembly.project).status).toBe('valid');
   });
 });

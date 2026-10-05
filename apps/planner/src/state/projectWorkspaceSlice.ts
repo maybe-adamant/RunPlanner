@@ -16,6 +16,7 @@ import {
   authoringReadinessAt,
   settleProjectEdit,
   type ProjectEvaluationAssembly,
+  type SettlementFault,
 } from '@run-planner/engine/simulation';
 
 import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
@@ -26,12 +27,15 @@ export interface OpenProjectWorkspaceState {
   readonly kind: 'openProject';
   readonly assembly: ProjectEvaluationAssembly;
   readonly history: ProjectHistory;
+  /** The repair the last edit's settlement could not finish; cleared by the next publication. */
+  readonly settlementFault?: SettlementFault;
 }
 export interface NoProjectWorkspaceState {
   readonly kind: 'noProject';
   /** Absent at runtime; these optional members make the union ergonomic for callers after narrowing. */
   readonly assembly?: never;
   readonly history?: never;
+  readonly settlementFault?: never;
 }
 export type ProjectWorkspaceState = OpenProjectWorkspaceState | NoProjectWorkspaceState;
 
@@ -71,6 +75,7 @@ function publishWorkspace(
 function publishPreparedWorkspace(
   history: ProjectHistory,
   prepared: PreparedProjectWorkspace,
+  settlementFault?: SettlementFault,
 ): ProjectWorkspaceState {
   assertProjectEvaluationAssembly(prepared.assembly);
   if (prepared.project !== history.present || prepared.assembly.project !== history.present) {
@@ -80,6 +85,7 @@ function publishPreparedWorkspace(
     kind: 'openProject' as const,
     assembly: prepared.assembly,
     history,
+    ...(settlementFault === undefined ? {} : { settlementFault }),
   });
 }
 
@@ -103,7 +109,7 @@ export function createProjectWorkspaceReducer(
       ) {
         return state;
       }
-      const assembly = settleProjectEdit({
+      const { assembly, fault } = settleProjectEdit({
         catalog,
         before: state.assembly,
         command: action.payload,
@@ -111,7 +117,7 @@ export function createProjectWorkspaceReducer(
       });
       if (assembly.project === state.history.present) return state;
       const history = publishProjectHistoryEdit(state.history, assembly.project);
-      return publishPreparedWorkspace(history, { project: assembly.project, assembly });
+      return publishPreparedWorkspace(history, { project: assembly.project, assembly }, fault);
     }
     if (authoredProjectUndoRequested.match(action)) {
       if (state.kind === 'noProject') return state;

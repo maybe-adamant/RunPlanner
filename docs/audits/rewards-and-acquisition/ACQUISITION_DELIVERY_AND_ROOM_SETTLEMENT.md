@@ -274,14 +274,39 @@ encounter depth.” A planner declaration must say which resolved encounter
 completions advance pending-delivery uses; it must not infer the answer from
 `countsEncounterDepth`, room depth, or one generic room-completed event.
 
-The player may instead purchase rush delivery. The pending state is removed
-and `CloseSurfaceShopScreen` spawns the item in the current room. A delivered
-item cannot be abandoned: whether it arrives through rush, countdown expiry,
-or forced completion, its concrete acquisition is mandatory. The physical
-spawn and pickup remain distinct game events, but the planner needs no
-picked-up/not-picked-up authoring fact for a delivery. Some encounter sets also
-invoke `CompleteSurfaceShopItems`, which expires every pending Shop delivery
-immediately and spawns the corresponding items.
+The player may instead purchase rush delivery. `CloseSurfaceShopScreen`
+(`SurfaceShopLogic.lua:528-540`) removes the pending trait with
+`SkipExpire = true`, spawns the item through `SpawnStoreItemInWorld`
+(`StoreLogic.lua:619`, which never writes `RoomRequiredObjects`) and sets only
+`BlockBoughtTextLines`. Only the countdown expiry path
+(`TraitLogic.lua:1337-1348`) marks the spawned item required and sets
+`IgnorePurchase` and `IgnoreRoomRarityBonus = true`. The planner follows that
+split: a countdown or flush delivery is a required pickup at its due host,
+while a rushed item is optional loot ranked once at purchase that the author may
+remove and that vanishes with its room when left behind. The physical spawn and
+pickup remain distinct game events, but the planner needs no
+picked-up/not-picked-up authoring fact beyond the optional row.
+
+Rarity is a bounded discrepancy owned by the
+[Boon rarity ledger audit](../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#delayed-hermes-delivery-in-a-miniboss-room):
+both paths build their first offer before `IgnoreRoomRarityBonus` can apply,
+so a rushed item and a countdown delivery alike read the host room's rarity
+override on first build, and only a countdown rebuild ignores it. The planner
+applies no room rarity override to delivered boons on either path.
+
+Two native flush paths share one gate. `CompleteSurfaceShopItems`
+(`EncounterSets.lua:414-430`, the `ShopRoomEvents` set) requires
+`CurrentRun.IsDreamRun`, the room flag `AutocompleteSurfaceShopDelivery`—set on
+the F through P `*_PreBoss01` rooms but not on `Q_PreBoss01`—and
+`CurrentRun.EnteredBiomes == 4`. `Q_PreBoss01` instead carries the
+`HermesSpawnTrigger` distance trigger (`RoomDataQ.lua:1275-1300`), which calls
+`SpawnHermesInPerson` (`EventPresentation.lua:3509-3566`) when
+`EnteredBiomes == 4`; it removes every `OnExpire.SpawnShopItem` trait, spawning
+each item as a required object (`TraitLogic.lua:1337-1348`). The Q trigger
+fires at the shop, but the shop stands between the entry and the only Boss
+exit, so the planner's room-entry flush is equivalent. Both paths therefore
+flush at the Preboss of the fourth entered biome, never at an earlier or later
+Preboss; a shorter itinerary keeps counting down into its Boss encounter.
 
 An authored Shrine offer has purchase participation and a delivery disposition:
 `Rush now` or an initial delay from `2` through `8`. The engine derives the
@@ -677,7 +702,7 @@ The planner represents the supported equivalent of `StorePendingDeliveryItem`
 as source-owned Shrine inventory identity and purchase timing plus a derived
 lifecycle delivery product. Purchase is feature-local rather than an ordered
 room action. The reward type and encounter-use delay remain attached to the
-scheduled delivery until countdown, rush, or final-Preboss completion
+scheduled delivery until countdown, rush, or the fourth-biome Preboss flush
 materializes the required pickup. An unplaced due delivery is a required
 host-owned chronology footprint and blocks later progression until its atomic
 materialization. Hidden payload and pickup-owned detail are authored on that

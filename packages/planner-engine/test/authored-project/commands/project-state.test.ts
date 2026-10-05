@@ -263,9 +263,8 @@ describe('authored-project project-state commands', () => {
       mutate(detailWithoutAction, occurrenceId, (occurrence) => {
         (occurrence.roomActions as { order: unknown[] }).order = [];
       });
-      expect(() => decodeProjectDocument(detailWithoutAction, catalog), name).toThrow(
-        'rushed Shrine purchases must have exactly one matching delivery action',
-      );
+      // A rushed item left on the floor is representable: the purchase stands alone.
+      expect(() => decodeProjectDocument(detailWithoutAction, catalog), name).not.toThrow();
 
       const actionWithoutDetail = JSON.parse(encodeProjectDocument(project)) as Record<
         string,
@@ -275,7 +274,7 @@ describe('authored-project project-state commands', () => {
         delete (occurrence.hermesShrine as Record<string, unknown>).purchaseBySlot;
       });
       expect(() => decodeProjectDocument(actionWithoutDetail, catalog), name).toThrow(
-        'rushed Shrine purchases must have exactly one matching delivery action',
+        'same-room Shrine delivery actions require their rushed purchase',
       );
     }
     for (const [name, project, occurrenceId] of [
