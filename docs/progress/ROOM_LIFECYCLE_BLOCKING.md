@@ -1,6 +1,6 @@
 # Room lifecycle blocking
 
-Status: locked 2026-10-05; amended 2026-10-05 (doors open in the Timeline). Base: `b69eea52`. No schema change.
+Status: locked 2026-10-05; amended 2026-10-05 (doors open in the Timeline; encounters in the Overview). Base: `b69eea52`. No schema change.
 
 ## Objective
 
@@ -86,6 +86,37 @@ Any Overview product that reads Timeline-produced state is a modelling error.
   settle later to the Timeline.
 - An architecture or engine test enforces that Overview assessments read only
   entry state.
+- A failed Overview publishes the same entry Run State as a successful one,
+  minus the failed product: entry effects (Preboss delivery flush, forced-Chaos
+  spark, Fields forfeits) apply through one shared function.
+
+### Encounters in the Overview
+
+Native facts: every phase's encounter identity and generated composition are
+fixed at the door transition (`RoomLogic.lua:4376-4389`, `:4421-4450`;
+`RunLogic.lua:1099-1118`) from predecessor state plus earlier phases'
+records; this holds for single-encounter rooms, Ship phases (including
+whether the optional Combat2 plays), P's two phases, Fields Passive and cages,
+NPC encounters (Icarus, Athena, Heracles, Artemis, Arachne) and introductions.
+Ship wheels choose rewards only. Boss customization choices are rolled in the
+fight but read no Timeline state. The engine already resolves identity and
+composition at room preparation.
+
+- Encounter identity and customization are Overview products for every phase.
+  Their findings, missing or invalid, block at the Overview and repair there.
+- Composition assessment reads entry state; Ship phases stop reading the
+  phase-start Run State for vow ranks.
+- The Timeline keeps a read-only projection of each phase (start and end), the
+  order it controls (Fields cage order, Ship phase barriers and wheel picks) and
+  the per-encounter events: Fig Leaf (including the P pre-combat cascade, which
+  suppresses execution but never changes the recorded identity), Gorgon, Aetos,
+  NPC trait offers, the Nemesis random-event response and encounter-end
+  checkpoints.
+- Fig Leaf and Aetos findings get their own addresses, as Gorgon has, so they
+  never share the encounter phase's Overview address.
+- When a room stops at its Overview, encounter candidate support stays
+  published for every phase.
+- Out of scope: challenge switches.
 
 ## Correction 3: a Timeline block
 
@@ -130,13 +161,17 @@ chronology inference. Catalog, schema and game module: untouched.
 2. `fix(engine): settle the room Overview on entry` — correction 2; Shop
    inventory blocks at the room's Overview with `roomEntered` kept; Overview
    read-only invariant.
-3. `feat(engine): publish a room Timeline up to its blocking product` —
+3. `feat(planner): author encounters in the room Overview` — encounter
+   identity and customization move to the Overview (engine finding location,
+   repair owner, Fig Leaf and Aetos addresses, entry-state composition reads;
+   application anchors and read-only Timeline phases).
+4. `feat(engine): publish a room Timeline up to its blocking product` —
    correction 3 for ordinary rooms: positions, region row set, position cut,
    deletion of the superseded allowlist paths; application adapts read-only
    rows.
-4. `feat(engine): …` — correction 3 for fixed rooms, the opening room and Hub
+5. `feat(engine): …` — correction 3 for fixed rooms, the opening room and Hub
    visit lifecycles, deleting their clamp branches.
-5. Closure: SIMULATION_AND_VALIDATION (completeness table, readiness),
+6. Closure: SIMULATION_AND_VALIDATION (completeness table, readiness),
    ROOM_LIFECYCLE_MODEL (stages), EDITOR_MODEL, STRUCTURED_EDITOR_WORKSPACE;
    delete this plan; full gate.
 
