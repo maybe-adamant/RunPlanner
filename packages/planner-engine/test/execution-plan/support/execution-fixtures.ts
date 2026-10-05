@@ -15,6 +15,8 @@ import {
 import {
   createCompleteFGAnomalyProject,
   createCompleteFGProject,
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIDuplicateAnvilResult,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadUnderworldArachneCocoonsCheckpoint,
@@ -39,6 +41,7 @@ import {
   surfaceGeneratedPreCombatProject,
   surfaceShrineDeliveriesProject,
   surfaceShrineRushedUnrankedProject,
+  surfaceTravelDealRefillAnvilProject,
   typhonCustomizationProject,
 } from '@run-planner/test-fixtures/surface';
 
@@ -70,11 +73,13 @@ import surfaceQShopCorrelationFixture from '../fixtures/surface-q-shop-correlati
 import surfaceScheduledLifecycleFixture from '../fixtures/surface-scheduled-lifecycle.execution.json';
 import surfaceShrineDeliveriesFixture from '../fixtures/surface-shrine-deliveries.execution.json';
 import surfaceShrineRushedUnrankedFixture from '../fixtures/surface-shrine-rushed-unranked.execution.json';
+import surfaceTravelDealRefillAnvilFixture from '../fixtures/surface-travel-deal-refill-anvil.execution.json';
 import underworldArachneCocoonsFixture from '../fixtures/underworld-arachne-cocoons.execution.json';
 import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
 import underworldFGHIEmptyShopGroupFixture from '../fixtures/underworld-fghi-empty-shop-group.execution.json';
 import underworldGeneratedCompositionFixture from '../fixtures/underworld-generated-composition.execution.json';
+import underworldEchoGoldAnvilDuplicateFixture from '../fixtures/underworld-echo-gold-anvil-duplicate.execution.json';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
@@ -121,6 +126,10 @@ export function runModifiersProject(): ProjectDocument {
     route: createRouteAddress('Underworld'),
     value: { enemyGoldDropChanceMultiplier: 2.5 },
   });
+}
+
+function echoGoldAnvilDuplicateProject(): ProjectDocument {
+  return createEchoGoldIAnvilDuplicateProject(echoGoldIDuplicateAnvilResult);
 }
 
 export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
@@ -218,6 +227,16 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'dream-shrine-pending',
     project: dreamSingleQShrineDeliveryProject,
     wire: dreamShrinePendingFixture,
+  },
+  {
+    name: 'underworld-echo-gold-anvil-duplicate',
+    project: echoGoldAnvilDuplicateProject,
+    wire: underworldEchoGoldAnvilDuplicateFixture,
+  },
+  {
+    name: 'surface-travel-deal-refill-anvil',
+    project: surfaceTravelDealRefillAnvilProject,
+    wire: surfaceTravelDealRefillAnvilFixture,
   },
 ]);
 

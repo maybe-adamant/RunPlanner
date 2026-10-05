@@ -79,3 +79,12 @@ retire this file when none remain.
       refill authored on the Travel Deal line under the first purchase row. The
       refill appears in the first purchase's slot with the planned item and
       executes as before, without a conformance mismatch.
+- [ ] World Shop with Gold Gold Gold held on entry: plan an Anvil of Fates as
+      the first purchase and author a different Anvil result on its Gold Gold
+      Gold copy. Buy the Anvil, then pick up the spawned copy. Each Anvil
+      removes and adds exactly its planned traits, in that order, without a
+      conformance mismatch.
+- [ ] World Shop with Travel Deal held on entry: author an Anvil of Fates as
+      the Travel Deal refill with a planned result. Buy the first item, then
+      the refill Anvil. The Anvil removes and adds exactly its planned traits
+      without a conformance mismatch.
