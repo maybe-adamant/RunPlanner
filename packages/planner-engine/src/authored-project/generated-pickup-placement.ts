@@ -1,8 +1,10 @@
-import { createBiomeAddress, createOccurrenceAddress, type OccurrenceAddress } from './addresses';
+import type { OccurrenceAddress } from './addresses';
 import type { AuthoredRoutePlan, RoomActionReference } from './model';
 import {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
+  hermesShrineDeliverySourceAddress,
   hermesShrineDeliverySourceIsStructurallyActive,
+  isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
 } from './hermes-shrine-delivery';
 
@@ -36,16 +38,8 @@ export function assessGeneratedPickupPlacement(
     return undefined;
   const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
   if (parsed === undefined) return undefined;
-  const source = createOccurrenceAddress(
-    createBiomeAddress(parsed.routeKey, parsed.biomeKey),
-    parsed.sourceOccurrenceId,
-  );
-  if (
-    source.routeKey === host.routeKey &&
-    source.biomeKey === host.biomeKey &&
-    source.occurrenceId === host.occurrenceId
-  )
-    return undefined;
+  const source = hermesShrineDeliverySourceAddress(parsed);
+  if (isSameRoomDelivery(source, host)) return undefined;
   return hermesShrineDeliverySourceIsStructurallyActive(route, parsed)
     ? Object.freeze({ kind: 'unassessed', source })
     : Object.freeze({ kind: 'invalid', source, reason: 'sourceInactive' });

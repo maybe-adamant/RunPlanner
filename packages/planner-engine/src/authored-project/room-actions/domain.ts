@@ -26,7 +26,13 @@ import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
 } from '../acquisition/artificer';
-import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import {
+  hermesShrineDeliverySourceAddress,
+  isDeliveryFlushHost,
+  isSameRoomDelivery,
+  parseHermesShrineDeliveryEntryKey,
+  purchaseFor,
+} from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -224,6 +230,7 @@ function travelDealSourceAction(
   ) {
     return occurrence.roomActions.order.find((candidate) => candidate.kind === 'interactShopOffer');
   }
+  const here = createOccurrenceAddress(biome, occurrence.occurrenceId);
   if (
     reference.kind === 'interactAcquisitionEntry' &&
     reference.siteKey === 'hermesShrineDelivery' &&
@@ -231,10 +238,8 @@ function travelDealSourceAction(
       const delivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
       return (
         delivery?.generationKey === 'travelDealRefill' &&
-        delivery.routeKey === biome.routeKey &&
-        delivery.biomeKey === biome.biomeKey &&
-        delivery.sourceOccurrenceId === occurrence.occurrenceId &&
-        occurrence.hermesShrine?.travelDealRefill?.purchase?.rushed === true
+        isSameRoomDelivery(hermesShrineDeliverySourceAddress(delivery), here) &&
+        purchaseFor(occurrence.hermesShrine, 'travelDealRefill')?.rushed === true
       );
     })()
   ) {
@@ -245,18 +250,12 @@ function travelDealSourceAction(
       )
         return false;
       const delivery = parseHermesShrineDeliveryEntryKey(candidate.entryKey);
-      if (
-        delivery === undefined ||
-        !delivery.generationKey.startsWith('initial:') ||
-        delivery.routeKey !== biome.routeKey ||
-        delivery.biomeKey !== biome.biomeKey ||
-        delivery.sourceOccurrenceId !== occurrence.occurrenceId
-      )
-        return false;
-      const slotKey = delivery.generationKey.slice(
-        'initial:'.length,
-      ) as import('../model').HermesShrineSlotKey;
-      return occurrence.hermesShrine?.purchaseBySlot?.[slotKey]?.rushed === true;
+      return (
+        delivery !== undefined &&
+        delivery.generationKey !== 'travelDealRefill' &&
+        isSameRoomDelivery(hermesShrineDeliverySourceAddress(delivery), here) &&
+        purchaseFor(occurrence.hermesShrine, delivery.generationKey)?.rushed === true
+      );
     });
   }
   return undefined;

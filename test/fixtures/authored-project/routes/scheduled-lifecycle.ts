@@ -24,6 +24,7 @@ import {
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
+  hermesShrineDeliveryEntryKey,
   type AcquisitionEntryAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -31,7 +32,6 @@ import {
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
-  hermesShrineDeliveryPlacementForPurchaseReschedule,
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -104,12 +104,26 @@ function placeDelayedShrineDeliveries(project: ProjectDocument): ProjectDocument
   let next = project;
   for (const source of [nPostboss, oPostboss]) {
     const assembly = simulateProjectAssembly(catalog, next);
-    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
-      assembly,
-      source,
-      'initial:secondLeft',
-    );
-    if (placement === undefined)
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const contact = next.route.biomes
+      .flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+          derivedAcquisitionEntriesForProjectEvaluationAssembly(
+            assembly,
+            createAcquisitionSiteAddress(
+              createOccurrenceAddress(
+                { kind: 'biome', routeKey: next.route.routeKey, biomeKey: biome.biomeKey },
+                occurrence.occurrenceId,
+              ),
+              'hermesShrineDelivery',
+            ),
+          ),
+        ),
+      )
+      .find(
+        (entry) => entry.kind === 'hermesShrineDelivery' && entry.address.entryKey === entryKey,
+      );
+    if (contact === undefined)
       throw new Error(
         `scheduled lifecycle fixture lacks ${source.biomeKey} Shrine delivery: ${JSON.stringify(
           assembly.evaluation.findings.map((finding) => ({
@@ -119,7 +133,13 @@ function placeDelayedShrineDeliveries(project: ProjectDocument): ProjectDocument
           })),
         )}`,
       );
-    next = applyProjectCommand(next, catalog, placement);
+    next = applyProjectCommand(next, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: contact.address,
+      ...(contact.encounterPhaseKey === undefined
+        ? {}
+        : { encounterPhaseKey: contact.encounterPhaseKey }),
+    });
     next = settleReachedAutomaticOutcomes(next);
   }
   return next;

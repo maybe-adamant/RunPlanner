@@ -24,8 +24,12 @@ import {
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import {
   defaultHermesShrineDeliveryReward,
+  hermesShrineDeliverySourceAddress,
   isDeliveryFlushHost,
+  isSameRoomDelivery,
+  offerFor,
   parseHermesShrineDeliveryEntryKey,
+  purchaseFor,
   removeHermesShrineDeliveryFromOtherHosts,
   retainedHermesShrineDeliveryReward,
 } from '../../hermes-shrine-delivery';
@@ -225,22 +229,8 @@ export function applyAcquisitionSiteCommand(
       );
     if (source?.hermesShrine === undefined)
       failCommand(command, 'does not name a Shrine source occurrence');
-    const sourceOffer =
-      parsed.generationKey === 'travelDealRefill'
-        ? source.hermesShrine.travelDealRefill?.offer
-        : source.hermesShrine.offerBySlot[
-            parsed.generationKey.slice(
-              'initial:'.length,
-            ) as import('../../model').HermesShrineSlotKey
-          ];
-    const purchase =
-      parsed.generationKey === 'travelDealRefill'
-        ? source.hermesShrine.travelDealRefill?.purchase
-        : source.hermesShrine.purchaseBySlot?.[
-            parsed.generationKey.slice(
-              'initial:'.length,
-            ) as import('../../model').HermesShrineSlotKey
-          ];
+    const sourceOffer = offerFor(source.hermesShrine, parsed.generationKey);
+    const purchase = purchaseFor(source.hermesShrine, parsed.generationKey);
     if (sourceOffer === undefined || sourceOffer === null || purchase === undefined)
       failCommand(command, 'does not name a purchased Shrine delivery');
     const finalPrebossHost = isDeliveryFlushHost(
@@ -249,11 +239,7 @@ export function applyAcquisitionSiteCommand(
     );
     if (command.encounterPhaseKey !== undefined && command.encounterPhaseKey.trim().length === 0)
       failCommand(command, 'has an empty due encounter phase');
-    const sourceIsHost =
-      parsed.routeKey === site.owner.routeKey &&
-      parsed.biomeKey === site.owner.biomeKey &&
-      parsed.sourceOccurrenceId === site.owner.occurrenceId;
-    if (sourceIsHost)
+    if (isSameRoomDelivery(hermesShrineDeliverySourceAddress(parsed), site.owner))
       failCommand(command, 'same-room Shrine deliveries use the post-outgoing window');
     if (command.encounterPhaseKey === undefined && !finalPrebossHost)
       failCommand(command, 'has no due encounter phase');

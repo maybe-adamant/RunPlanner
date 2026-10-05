@@ -1,6 +1,6 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
-import type { HermesShrineState } from '../../authored-project/model';
+import { hermesShrineInitialSlotKey, type HermesShrineState } from '../../authored-project/model';
 import type { HermesDeliveryObligation } from '../../authored-project/hermes-shrine-delivery';
 import {
   evaluateRequirement,
@@ -111,10 +111,8 @@ export function assessHermesShrineTravelDealRefill(
   sourceGenerationKey: import('../../authored-project/model').HermesShrineGenerationKey,
   requirements: readonly RequirementEvaluationContext[],
 ): HermesShrineTravelDealRefillAssessment | undefined {
-  const slotKey = sourceGenerationKey.startsWith('initial:')
-    ? (sourceGenerationKey.slice('initial:'.length) as HermesShrineSlotKey)
-    : undefined;
-  if (slotKey === undefined || !SLOT_KEYS.includes(slotKey)) return undefined;
+  const slotKey = hermesShrineInitialSlotKey(sourceGenerationKey);
+  if (slotKey === undefined) return undefined;
   const profile = catalog.rewards.shops.byKey.SurfaceShop;
   const group = profile?.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? ''];
   if (group === undefined) return undefined;

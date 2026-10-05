@@ -7,9 +7,15 @@ import {
   encounterEnvelopeSlots,
   directEncounterDefinitionKeyForSlot,
 } from '../room-state/encounter-envelope';
-import { semanticAddressKey } from '../addresses';
+import { createOccurrenceAddress, semanticAddressKey } from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
-import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import {
+  hermesShrineDeliverySourceAddress,
+  isDeliveryFlushHost,
+  isSameRoomDelivery,
+  parseHermesShrineDeliveryEntryKey,
+  purchaseFor,
+} from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   echoLastRewardPickupEntryKeys,
@@ -318,10 +324,10 @@ export function activeRoomActionReferences(
       )
         continue;
       if (shrineDelivery !== undefined) {
-        const sourceIsCurrent =
-          shrineDelivery.routeKey === biome.routeKey &&
-          shrineDelivery.biomeKey === biome.biomeKey &&
-          shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId;
+        const sourceIsCurrent = isSameRoomDelivery(
+          hermesShrineDeliverySourceAddress(shrineDelivery),
+          createOccurrenceAddress(biome, occurrence.occurrenceId),
+        );
         const flushHost = isDeliveryFlushHost(room, routePosition);
         // A retained cross-occurrence entry is not a timeline action until
         // settlement ranks it at its reached delivery contact; dormant payload
@@ -335,14 +341,7 @@ export function activeRoomActionReferences(
         )
           continue;
         if (sourceIsCurrent) {
-          const purchase =
-            shrineDelivery.generationKey === 'travelDealRefill'
-              ? occurrence.hermesShrine?.travelDealRefill?.purchase
-              : occurrence.hermesShrine?.purchaseBySlot?.[
-                  shrineDelivery.generationKey.slice(
-                    'initial:'.length,
-                  ) as import('../model').HermesShrineSlotKey
-                ];
+          const purchase = purchaseFor(occurrence.hermesShrine, shrineDelivery.generationKey);
           if (purchase?.rushed !== true) continue;
           if (
             shrineDelivery.generationKey === 'travelDealRefill' &&

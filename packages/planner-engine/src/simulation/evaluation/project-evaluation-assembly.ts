@@ -8,11 +8,9 @@ import {
   type KeepsakeEquipResultAddress,
   type LevelResolutionAddress,
   type NemesisRandomEventAddress,
-  type OccurrenceAddress,
   type TraitOfferAddress,
   type ShopOfferAddress,
 } from '../../authored-project/addresses';
-import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { CountedRewardBinding, ShopSlotAssessment } from '../../reward-kernel';
 import type { ProjectDocument } from '../../authored-project/model';
@@ -408,49 +406,6 @@ export function attestClockedTraitPickupPlacementForProjectEvaluationAssembly(
 ): boolean {
   const attested = clockedTraitPickupPlacementForProjectEvaluationAssembly(assembly, command.entry);
   return attested !== undefined && JSON.stringify(attested) === JSON.stringify(command);
-}
-
-/**
- * Resolve the exact simulator-owned host activated by one proposed delayed
- * Shrine purchase edit. The application may then commit the source edit and
- * placement commands as one history transaction without deriving chronology.
- */
-export function hermesShrineDeliveryPlacementForPurchaseReschedule(
-  assembly: ProjectEvaluationAssembly,
-  source: OccurrenceAddress,
-  generationKey: import('../../authored-project/model').HermesShrineGenerationKey,
-): Extract<ProjectCommand, { readonly kind: 'PlaceHermesShrineDelivery' }> | undefined {
-  requireExactProjectEvaluationAssembly(assembly);
-  const entryKey = hermesShrineDeliveryEntryKey(source, generationKey);
-  const matches = assembly.evaluation.route.biomes
-    .flatMap((biome) => ('rewards' in biome ? biome.rewards.findings : []))
-    .filter(
-      (finding) =>
-        finding.code === 'hermesShrineDeliveryPlacementRequired' &&
-        finding.origin.kind === 'acquisitionEntry' &&
-        finding.origin.entryKey === entryKey,
-    );
-  if (matches.length > 1) {
-    throw new ProjectSimulationContractError(
-      `Shrine delivery ${entryKey} has multiple simulator-owned placement hosts`,
-    );
-  }
-  const finding = matches[0];
-  if (finding?.origin.kind !== 'acquisitionEntry') return undefined;
-  const encounterPhaseKey = finding.evidence.encounterPhaseKey;
-  if (
-    encounterPhaseKey !== undefined &&
-    (typeof encounterPhaseKey !== 'string' || encounterPhaseKey.length === 0)
-  ) {
-    throw new ProjectSimulationContractError(
-      `Shrine delivery ${entryKey} placement has an invalid encounter phase`,
-    );
-  }
-  return Object.freeze({
-    kind: 'PlaceHermesShrineDelivery',
-    entry: finding.origin,
-    ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
-  });
 }
 
 /**

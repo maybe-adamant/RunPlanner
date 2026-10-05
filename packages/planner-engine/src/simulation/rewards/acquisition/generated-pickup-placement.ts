@@ -1,13 +1,15 @@
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
-  createBiomeAddress,
-  createOccurrenceAddress,
   semanticAddressKey,
   type OccurrenceAddress,
 } from '../../../authored-project/addresses';
 import type { RoomActionReference } from '../../../authored-project/model';
-import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
+import {
+  dueContactMatches,
+  hermesShrineDeliverySourceAddress,
+  parseHermesShrineDeliveryEntryKey,
+} from '../../../authored-project/hermes-shrine-delivery';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../authored-project/acquisition/pickup-producers';
 import type {
   GeneratedPickupPlacementAssessment,
@@ -51,20 +53,16 @@ export function assessReachedHermesDeliveryPlacement(
   branches: readonly RewardBranchState[],
   sequence: number,
 ): GeneratedPickupPlacement {
-  const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey)!;
-  const source = createOccurrenceAddress(
-    createBiomeAddress(parsed.routeKey, parsed.biomeKey),
-    parsed.sourceOccurrenceId,
+  const source = hermesShrineDeliverySourceAddress(
+    parseHermesShrineDeliveryEntryKey(reference.entryKey)!,
   );
   return placement(
     owner,
     reference,
     source,
     branches.map((branch) => {
-      const due = branch.state.pendingHermesShrineDeliveries[reference.entryKey];
-      return due?.due !== undefined &&
-        semanticAddressKey(due.due.host) === semanticAddressKey(owner) &&
-        due.due.encounterPhaseKey === reference.encounterPhaseKey
+      const delivery = branch.state.pendingHermesShrineDeliveries[reference.entryKey];
+      return delivery !== undefined && dueContactMatches(delivery, owner, reference)
         ? 'valid'
         : 'invalid';
     }),

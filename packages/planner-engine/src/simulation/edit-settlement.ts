@@ -20,7 +20,10 @@ import { roomActionKey } from '../authored-project/room-actions/state';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../authored-project/acquisition/pickup-producers';
 import {
   discardDisplacedHermesShrineDelivery,
+  hermesShrineDeliverySourceAddress,
+  offerFor,
   parseHermesShrineDeliveryEntryKey,
+  purchaseFor,
 } from '../authored-project/hermes-shrine-delivery';
 import {
   agreedTimedEffectContact,
@@ -67,22 +70,26 @@ function placements(assembly: ProjectEvaluationAssembly) {
     'rewards' in biome ? (biome.rewards.generatedPickupPlacements ?? []) : [],
   );
 }
-function purchasedObligation(project: ProjectDocument, entryKey: string): string | undefined {
+/** The authored facts behind one delivery obligation: the sold offer and its purchase terms. */
+function purchasedObligation(project: ProjectDocument, entryKey: string) {
   const source = parseHermesShrineDeliveryEntryKey(entryKey);
   if (source === undefined) return undefined;
-  const shrine = project.route.biomes
-    .find((biome) => biome.biomeKey === source.biomeKey)
-    ?.topology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === source.sourceOccurrenceId,
-    )?.hermesShrine;
-  const generation = source.generationKey;
-  const slot = generation.slice(
-    'initial:'.length,
-  ) as import('../authored-project/model').HermesShrineSlotKey;
-  return JSON.stringify(
-    generation === 'travelDealRefill'
-      ? shrine?.travelDealRefill
-      : [shrine?.offerBySlot[slot], shrine?.purchaseBySlot?.[slot]],
+  const shrine = occurrenceAt(project, hermesShrineDeliverySourceAddress(source))?.hermesShrine;
+  const purchase = purchaseFor(shrine, source.generationKey);
+  return Object.freeze({
+    rewardType: offerFor(shrine, source.generationKey)?.rewardType,
+    delay: purchase?.delay,
+    rushed: purchase?.rushed,
+  });
+}
+function sameObligation(
+  before: ReturnType<typeof purchasedObligation>,
+  after: ReturnType<typeof purchasedObligation>,
+): boolean {
+  return (
+    before?.rewardType === after?.rewardType &&
+    before?.delay === after?.delay &&
+    before?.rushed === after?.rushed
   );
 }
 
@@ -452,8 +459,10 @@ export function settleProjectEdit(options: {
           ),
         );
         const incompatible =
-          purchasedObligation(before.project, address.entryKey) !==
-            purchasedObligation(project, address.entryKey) ||
+          !sameObligation(
+            purchasedObligation(before.project, address.entryKey),
+            purchasedObligation(project, address.entryKey),
+          ) ||
           prior.some(
             ({ owner, reference }) =>
               semanticAddressKey(owner) !== semanticAddressKey(address.site.owner) ||

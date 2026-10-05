@@ -6,11 +6,13 @@ import {
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,
 } from '../room-actions/defaults';
-import { createBiomeAddress } from '../addresses';
+import { createBiomeAddress, createOccurrenceAddress } from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
 import {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
+  hermesShrineDeliverySourceAddress,
+  isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
 import { authoredShopOffer, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
@@ -196,7 +198,15 @@ export function applyRoomActionCommand(
       const source = parseHermesShrineDeliveryEntryKey(reference.entryKey);
       if (source === undefined || source.routeKey !== document.route.routeKey)
         failCommand(command, 'delivery does not name an exact route source');
-      if (source.biomeKey === command.action.biomeKey && source.sourceOccurrenceId === occurrenceId)
+      if (
+        isSameRoomDelivery(
+          hermesShrineDeliverySourceAddress(source),
+          createOccurrenceAddress(
+            createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+            occurrenceId,
+          ),
+        )
+      )
         failCommand(command, 'same-room Shrine delivery uses purchase repair');
       nextOrder = order.filter((_, index) => index !== existingIndex);
       break;

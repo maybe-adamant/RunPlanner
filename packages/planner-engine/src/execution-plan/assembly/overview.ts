@@ -4,7 +4,10 @@ import {
   createTravelDealRefillRealizationAddress,
   semanticAddressKey,
 } from '../../authored-project/addresses';
-import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
+import {
+  hermesShrineDeliveryEntryKey,
+  purchaseFor,
+} from '../../authored-project/hermes-shrine-delivery';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
@@ -557,23 +560,19 @@ function executionHermesShrine(
           'executionCoverageMissing',
           `${room.gameName} lacks Shrine offer ${slotKey}`,
         );
-      const purchase = shrine.purchaseBySlot?.[slotKey];
+      const generationKey = `initial:${slotKey}` as Exclude<
+        HermesShrineGenerationKey,
+        'travelDealRefill'
+      >;
+      const purchase = purchaseFor(shrine, generationKey);
       return Object.freeze({
-        generationKey: `initial:${slotKey}` as Exclude<
-          HermesShrineGenerationKey,
-          'travelDealRefill'
-        >,
+        generationKey,
         optionKey: optionKeys[index]!,
         rewardType: offer.rewardType,
         slotIndex,
         ...(purchase === undefined
           ? {}
-          : {
-              deliverySourceKey: hermesShrineDeliveryEntryKey(
-                room.origin,
-                `initial:${slotKey}` as Exclude<HermesShrineGenerationKey, 'travelDealRefill'>,
-              ),
-            }),
+          : { deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey) }),
         ...(purchase === undefined
           ? {}
           : { purchase: Object.freeze({ roomDelay: purchase.delay, rushed: purchase.rushed }) }),
