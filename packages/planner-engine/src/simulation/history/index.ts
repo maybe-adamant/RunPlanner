@@ -41,6 +41,7 @@ export type {
   BiomeHistoryPrefix,
   OfferPointView,
   ProgressiveRoomHistoryViews,
+  RoomOverviewHistoryViews,
   RequiredObjectHistoryEntry,
   RoomAppearanceHistoryEntry,
   RoomCreatedHistoryEvent,

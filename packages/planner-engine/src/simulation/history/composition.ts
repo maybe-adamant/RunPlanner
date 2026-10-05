@@ -4,6 +4,7 @@ import { createBiomeAddress, type BiomeAddress } from '../../authored-project/ad
 import {
   executeEncounterRecordPrefix,
   executeRoomLifecycle,
+  roomOverviewOperationCount,
   type RoomLifecycleEvent,
 } from '../lifecycle';
 import {
@@ -162,6 +163,8 @@ export interface RoomLifecycleCompositionOptions {
    * exiting the room, which still depends on the unresolved door selection.
    */
   readonly continueThroughPostOutgoingActions?: boolean;
+  /** Enter the room and settle its Overview, then stop before its Timeline. */
+  readonly stopAfterOverview?: boolean;
 }
 
 interface BiomeHistoryEnvelopeOptions<
@@ -376,9 +379,18 @@ export function appendRoomLifecycle(
     createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
   );
   options.prepare?.(fragment.events);
+  const overviewEnd = options.stopAfterOverview
+    ? (() => {
+        const profile = catalog.roomLifecycleProfiles.byKey[room.lifecycleProfileKey];
+        if (profile === undefined)
+          fail(`${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`);
+        return roomOverviewOperationCount(profile);
+      })()
+    : undefined;
   let projectedOutgoing = false;
   let reachedOutgoing = false;
   for (const sourceEvent of fragment.events) {
+    if (overviewEnd !== undefined && sourceEvent.operationIndex >= overviewEnd) return;
     const event =
       sourceEvent.kind === 'encounterStarted'
         ? (() => {

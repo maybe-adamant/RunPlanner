@@ -109,6 +109,9 @@ export interface ChronologyWalkState {
   readonly expectedStores: ReadonlyMap<string, string | undefined>;
   readonly hermesShrineAssessments: ReadonlyMap<string, HermesShrineRoomAssessment>;
   readonly shipLifecycleContexts: ReadonlyMap<string, ShipLifecycleCandidateContext>;
+  /** The prepared cohort entering the current room's Overview. */
+  readonly overviewCohort:
+    { readonly roomKey: string; readonly branches: readonly RewardBranchState[] } | undefined;
 }
 
 export function createChronologyWalkState(
@@ -130,6 +133,7 @@ export function createChronologyWalkState(
     expectedStores: new Map(),
     hermesShrineAssessments: new Map(),
     shipLifecycleContexts: new Map(),
+    overviewCohort: undefined,
   });
 }
 

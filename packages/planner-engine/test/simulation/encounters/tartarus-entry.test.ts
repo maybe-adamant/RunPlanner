@@ -62,16 +62,17 @@ describe('Tartarus reached first-combat identity', () => {
       });
       expect(generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)).toBeDefined();
       const biome = assembly.evaluation.route.biomes.find((value) => value.biomeKey === 'I');
-      expect(
-        biome &&
-          'history' in biome &&
-          biome.history.events.some(
-            (event) =>
-              event.kind === 'encounterRecorded' &&
-              event.origin.kind === 'occurrence' &&
-              event.origin.occurrenceId === occurrence.occurrenceId,
-          ),
-      ).toBe(false);
+      const roomEvents =
+        biome !== undefined && 'history' in biome
+          ? biome.history.events.filter(
+              (event) =>
+                event.origin.kind === 'occurrence' &&
+                event.origin.occurrenceId === occurrence.occurrenceId,
+            )
+          : [];
+      // The composition is an Overview product: the room is entered, its Timeline never starts.
+      expect(roomEvents.some((event) => event.kind === 'roomEntered')).toBe(true);
+      expect(roomEvents.some((event) => event.kind === 'encounterStarted')).toBe(false);
     },
   );
   it.each([

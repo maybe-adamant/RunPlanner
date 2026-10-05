@@ -80,9 +80,10 @@ describe('Fresh File generated-composition issue chronology', () => {
         supported,
       ).labels,
     ).toEqual([
-      'composition:Passive Passive',
-      'optionalReward Passive',
-      'spatial Passive',
+      // An Overview stop enters the room: every phase's support reads its preparation.
+      'composition:Passive Passive+Cage01+Cage02+Cage03',
+      'optionalReward Passive+Cage01+Cage02+Cage03',
+      'spatial Passive+Cage01+Cage02+Cage03',
       'composition:Cage01 Passive+Cage01',
       'composition:Cage02 Passive+Cage01+Cage02',
       'trait:cage2 Passive+Cage01+Cage02',

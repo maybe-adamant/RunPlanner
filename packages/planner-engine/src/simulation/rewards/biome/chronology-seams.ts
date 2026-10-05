@@ -837,7 +837,14 @@ const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, eve
     state.branches,
   );
   return {
-    state: withBranches(state, transition.branches),
+    state: Object.freeze({
+      ...state,
+      branches: transition.branches,
+      overviewCohort: Object.freeze({
+        roomKey: semanticAddressKey(event.origin),
+        branches: transition.branches,
+      }),
+    }),
     emissions: [lifecycleFindings(transition.findings)],
   };
 };

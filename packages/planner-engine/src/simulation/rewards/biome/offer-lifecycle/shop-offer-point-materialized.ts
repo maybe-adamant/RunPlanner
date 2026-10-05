@@ -10,7 +10,7 @@ import {
   type AuthoredShopOffer,
   type ShopOptionSelection,
 } from '../../../../reward-kernel';
-import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
+import type { HistoryEvent, RoomOverviewHistoryViews } from '../../../history';
 import type {
   CanonicalAuthoredRoom,
   CanonicalResolvedIncomingReward,
@@ -34,7 +34,7 @@ export interface ShopOfferPointMaterializationInputs {
   readonly event: Extract<HistoryEvent, { readonly kind: 'offerPointMaterialized' }>;
   readonly room: CanonicalAuthoredRoom;
   readonly declaration: RoomDeclaration;
-  readonly roomView: ProgressiveRoomHistoryViews;
+  readonly roomView: RoomOverviewHistoryViews;
   readonly branches: readonly RewardBranchState[];
 }
 

@@ -10,3 +10,4 @@ export {
   type RoomLifecycleExecutionInput,
   type RoomLifecycleProducerInput,
 } from './model';
+export { roomOverviewOperationCount } from './overview';

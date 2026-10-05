@@ -3,6 +3,7 @@ import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import {
   createBiomeAddress,
+  createRoomRunStateCheckpointAddress,
   createTargetAddress,
   semanticAddressKey,
 } from '../../../authored-project/addresses';
@@ -24,8 +25,11 @@ import {
   type ChronologyEmission,
 } from './chronology-accumulator';
 import { publishChronology } from './chronology-publication';
+import type { HistoryEvent } from '../../history';
 import { walkHistoryEvent } from './chronology-seams';
 import { captureRunState, targetSlotHistory } from './chronology-run-state';
+import { applyRoomEntryEffects } from './lifecycle-transitions/room-entered';
+import { rewardFindingChronologyForRoom } from './finding-chronology';
 import {
   createChronologyWalkState,
   withBranches,
@@ -216,6 +220,53 @@ function blankFrontierTargetHistory(
 }
 
 /**
+ * An entered room whose Overview product no branch supports stops the walk
+ * with an empty cohort; its entry Run State is the prepared cohort with the
+ * room's entry effects, without the unsettled product.
+ */
+function captureFailedOverviewEntry(
+  context: ChronologyWalkContext,
+  accumulator: ChronologyAccumulator,
+  walk: ChronologyWalkState,
+): void {
+  const cohort = walk.overviewCohort;
+  if (walk.branches.length > 0 || cohort === undefined || cohort.branches.length === 0) return;
+  const room = context.rooms.get(cohort.roomKey);
+  const entry = context.views.get(cohort.roomKey)?.entry;
+  const entered = context.history.events.find(
+    (event): event is Extract<HistoryEvent, { readonly kind: 'roomEntered' }> =>
+      event.kind === 'roomEntered' && semanticAddressKey(event.origin) === cohort.roomKey,
+  );
+  if (
+    room?.kind !== 'authored' ||
+    room.lifecycleProfileKey === 'ShipCombatRoom' ||
+    entry === undefined ||
+    entered === undefined
+  )
+    return;
+  const effects = applyRoomEntryEffects(
+    context.catalog,
+    entered,
+    room,
+    context.chaosGateSourceOccurrenceIds,
+    context.ixionGeneratedChaosSourceOccurrenceIds,
+    cohort.branches,
+    rewardFindingChronologyForRoom(
+      context.snapshot,
+      room.origin,
+      entered.sequence,
+      'localRoomLifecycle',
+    ),
+    context.routePosition,
+  );
+  captureRunState(context, withBranches(walk, effects.branches), accumulator, {
+    owner: createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
+    room,
+    view: entry,
+  });
+}
+
+/**
  * After the last event: the Hub frontier's Run State, every boss-door store,
  * then the blank exit-decision frontier's target history.
  */
@@ -226,6 +277,7 @@ function finalizeWalk(
 ): void {
   const { snapshot, rooms, history, views } = context;
   const { layout } = context.prepared;
+  captureFailedOverviewEntry(context, accumulator, walk);
   if (
     snapshot.kind === 'biomePrefix' &&
     snapshot.frontier?.kind === 'exitDecision' &&

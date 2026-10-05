@@ -288,6 +288,12 @@ export interface ProgressiveRoomHistoryViews {
   readonly exit?: HistoryStateView;
 }
 
+/** The views a room's Overview may read: its preparation and entry, never its Timeline. */
+export type RoomOverviewHistoryViews = Pick<
+  ProgressiveRoomHistoryViews,
+  'origin' | 'preparation' | 'entry'
+>;
+
 export interface RoomHistoryViews extends ProgressiveRoomHistoryViews {
   readonly postCommit: HistoryStateView;
   readonly exit: HistoryStateView;

@@ -531,3 +531,11 @@ export function selectedBatchContinuation(
     ? Object.freeze({ kind: 'additional', continuation: additional[0]! })
     : Object.freeze({ kind: 'normal', target });
 }
+
+/** The room a batch's one selected continuation enters. */
+export function selectedBatchContinuationRoom(batch: CanonicalBatch): CanonicalAuthoredRoom {
+  const selected = selectedBatchContinuation(batch);
+  if (selected === undefined)
+    fail(`${batch.origin.source.kind} batch has no selected continuation`);
+  return selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
+}

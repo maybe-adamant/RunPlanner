@@ -4,6 +4,9 @@ import {
   semanticAddressKey,
   type TargetAddress,
 } from '../../authored-project/addresses';
+import type { Catalog } from '../../catalog-schema';
+import { roomOverviewOperationCount } from '../lifecycle';
+import { selectedBatchContinuationRoom } from '../materialization';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalDecision,
@@ -14,7 +17,7 @@ import type {
   MaterializedHubVisitFrontier,
 } from '../materialization';
 import { ownerRegion } from '../finding-regions';
-import type { EncounterHistoryBlock } from '../history';
+import type { EncounterHistoryBlock, HistoryEvent } from '../history';
 import {
   encounterBlockFinding,
   locateFinding,
@@ -67,6 +70,39 @@ function sourceExitedBeforeBlock(
     (event) => event.kind === 'roomExited' && semanticAddressKey(event.origin) === sourceKey,
   );
   return exited !== undefined && located.historySequence > exited.sequence;
+}
+
+/** The selected attempt's history, with the catalog that reads its lifecycle profiles. */
+export interface SelectedChronology {
+  readonly catalog: Catalog;
+  readonly history: ProgressiveBiomeSelectedProducts['history'];
+}
+
+/**
+ * A block before the selected continuation's first Timeline event belongs to
+ * that room's Overview: the room is entered and its Overview is the repair region.
+ */
+function selectedOverviewBlock(
+  selected: SelectedChronology | undefined,
+  located: LocatedFinding,
+  decision: Extract<CanonicalDecision, { readonly kind: 'batch' }>,
+): boolean {
+  if (selected === undefined || located.historySequence === undefined) return false;
+  const { catalog, history } = selected;
+  if (!sourceExitedBeforeBlock(history, located, decision)) return false;
+  const room = selectedBatchContinuationRoom(decision);
+  const profile = catalog.roomLifecycleProfiles.byKey[room.lifecycleProfileKey];
+  if (profile === undefined)
+    throw new Error(`${room.gameName} has unknown lifecycle profile ${room.lifecycleProfileKey}`);
+  const roomKey = semanticAddressKey(room.origin);
+  const roomEvents = history.events.filter(
+    (event): event is Extract<HistoryEvent, { readonly operationIndex: number }> =>
+      'operationIndex' in event && semanticAddressKey(event.origin) === roomKey,
+  );
+  if (!roomEvents.some((event) => event.kind === 'roomEntered')) return false;
+  const overviewEnd = roomOverviewOperationCount(profile);
+  const timelineStart = roomEvents.find((event) => event.operationIndex >= overviewEnd);
+  return timelineStart === undefined || located.historySequence < timelineStart.sequence;
 }
 
 export function hubVisitFrontier(
@@ -134,6 +170,7 @@ export function exitFrontier(
   targets: readonly CanonicalTarget[] = [],
   additional: readonly CanonicalAdditionalContinuation[] = decision.additional,
   sourceExited = false,
+  selectedOverview = false,
 ): MaterializedExitDecisionFrontier {
   const partialBatch =
     targets.length > 0
@@ -149,14 +186,18 @@ export function exitFrontier(
     selectedExitKey: decision.selectedExitKey,
     selectedOrigin: decision.selectedOrigin,
     ...(sourceExited && partialBatch !== undefined ? { sourceExited: true as const } : {}),
+    ...(sourceExited && selectedOverview && partialBatch !== undefined
+      ? { selectedOverview: true as const }
+      : {}),
   });
 }
 
 export function clampPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
-  history?: ProgressiveBiomeSelectedProducts['history'],
+  selected?: SelectedChronology,
 ): MaterializedBiomePrefix {
+  const history = selected?.history;
   // Automatic Boss Arcana findings occur only after the terminal Boss
   // encounter. The authored prefix is already the exact pre-completion state;
   // trimming its Preboss decision would falsely erase that state rather than
@@ -306,6 +347,7 @@ export function clampPrefix(
       retainedTargets,
       retainedAdditional,
       sourceExitedBeforeBlock(history, located, decision),
+      selectedOverviewBlock(selected, located, decision),
     ),
   });
 }
@@ -321,8 +363,9 @@ export function clampPrefix(
 export function retainedInteractionPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
-  history: ProgressiveBiomeSelectedProducts['history'],
+  selected: SelectedChronology,
 ): MaterializedBiomePrefix {
+  const { history } = selected;
   if (located.fixedRoomIndex !== undefined) {
     return Object.freeze({
       ...prefix,
@@ -331,15 +374,15 @@ export function retainedInteractionPrefix(
       ),
     });
   }
-  if (located.targetIndex === undefined) return clampPrefix(prefix, located, history);
+  if (located.targetIndex === undefined) return clampPrefix(prefix, located, selected);
   const decision = located.frontierBatch
     ? prefix.frontier?.kind === 'exitDecision'
       ? prefix.frontier.partialBatch
       : undefined
     : prefix.decisions[located.decisionIndex];
   if (decision === undefined || decision.kind !== 'batch')
-    return clampPrefix(prefix, located, history);
-  if (decision.parent.origin.kind === 'hubRoom') return clampPrefix(prefix, located, history);
+    return clampPrefix(prefix, located, selected);
+  if (decision.parent.origin.kind === 'hubRoom') return clampPrefix(prefix, located, selected);
   // A batch's physical targets share one reward-store envelope.  Interaction
   // replay therefore has to retain the complete authored target set even when
   // the first blocked owner belongs to an earlier peer.  The execution prefix
@@ -365,6 +408,7 @@ export function retainedInteractionPrefix(
       targets,
       additional,
       sourceExitedBeforeBlock(history, located, decision),
+      selectedOverviewBlock(selected, located, decision),
     ),
   });
 }
@@ -379,6 +423,7 @@ export function encounterBlockProductPrefix(
       `encounter block ${semanticAddressKey(block.blockedAt)} has no structural owner`,
     );
   }
+  // History composition stopped at this room's preparation, before its entry.
   const clamped = clampPrefix(prefix, located);
   const decision =
     located.frontierBatch && prefix.frontier?.kind === 'exitDecision'

@@ -9,7 +9,11 @@ import {
   createRoomRunStateCheckpointAddress,
   type OccurrenceAddress,
 } from '../../../../authored-project/addresses';
-import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
+import type {
+  HistoryEvent,
+  ProgressiveRoomHistoryViews,
+  RoomOverviewHistoryViews,
+} from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion, type FindingChronology } from '../../../finding-regions';
 
@@ -69,21 +73,27 @@ export interface RoomEnteredTransition {
   };
 }
 
-export function applyRoomEnteredTransition(
+export interface RoomEntryEffects {
+  readonly branches: readonly RewardBranchState[];
+  readonly findings: readonly LifecycleFinding[];
+  readonly fixedAcquisitionRealizations: readonly FixedAcquisitionRealization[];
+  readonly flushHost: boolean;
+}
+
+/**
+ * The entry effects on the reached branches that no Overview product decides:
+ * map reset, Fields forfeits, a forced Chaos spark and the delivery flush.
+ */
+export function applyRoomEntryEffects(
   catalog: Catalog,
   event: Extract<HistoryEvent, { readonly kind: 'roomEntered' }>,
   room: CanonicalAuthoredRoom | undefined,
-  roomView: ProgressiveRoomHistoryViews | undefined,
   chaosGateSourceOccurrenceIds: ReadonlySet<string>,
   ixionGeneratedChaosSourceOccurrenceIds: ReadonlySet<string>,
   branches: readonly RewardBranchState[],
   findingChronology: FindingChronology,
   routePosition: ResolvedRoutePosition,
-  alreadyAssessed: {
-    readonly hermesShrine: boolean;
-    readonly stygianWell: boolean;
-  },
-): RoomEnteredTransition {
+): RoomEntryEffects {
   // Entering a room initializes its map: the transition that offered the way
   // here stops being a fact before this room can generate anything of its own.
   let next: readonly RewardBranchState[] = Object.freeze(
@@ -259,6 +269,43 @@ export function applyRoomEnteredTransition(
       next.map((branch) => spawnDueHermesDeliveries(catalog, room, branch, event.sequence)),
     );
   }
+  return Object.freeze({
+    branches: next,
+    findings: Object.freeze(findings),
+    fixedAcquisitionRealizations: Object.freeze(fixedAcquisitionRealizations),
+    flushHost,
+  });
+}
+
+export function applyRoomEnteredTransition(
+  catalog: Catalog,
+  event: Extract<HistoryEvent, { readonly kind: 'roomEntered' }>,
+  room: CanonicalAuthoredRoom | undefined,
+  roomView: RoomOverviewHistoryViews | undefined,
+  chaosGateSourceOccurrenceIds: ReadonlySet<string>,
+  ixionGeneratedChaosSourceOccurrenceIds: ReadonlySet<string>,
+  branches: readonly RewardBranchState[],
+  findingChronology: FindingChronology,
+  routePosition: ResolvedRoutePosition,
+  alreadyAssessed: {
+    readonly hermesShrine: boolean;
+    readonly stygianWell: boolean;
+  },
+): RoomEnteredTransition {
+  const effects = applyRoomEntryEffects(
+    catalog,
+    event,
+    room,
+    chaosGateSourceOccurrenceIds,
+    ixionGeneratedChaosSourceOccurrenceIds,
+    branches,
+    findingChronology,
+    routePosition,
+  );
+  const next = effects.branches;
+  const findings: LifecycleFinding[] = [...effects.findings];
+  const fixedAcquisitionRealizations = effects.fixedAcquisitionRealizations;
+  const flushHost = effects.flushHost;
   const dueDeliveries =
     flushHost && room?.origin.kind === 'occurrence'
       ? dueHermesShrineDeliveryFrontier(catalog, room, room.origin, next, event.sequence, undefined)
