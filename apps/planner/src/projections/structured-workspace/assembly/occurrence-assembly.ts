@@ -864,8 +864,12 @@ export function assembleWorkspaceOccurrence(
           : []),
         ...(roomLocal.kind === 'shop'
           ? roomLocal.supplementalOffers.flatMap((offer) =>
-              offer.kind === 'echoDoubleShopInvalid' &&
-              roomActionKey(offer.purchase.reference) === row.key
+              (offer.kind === 'echoDoubleShopInvalid' ||
+                offer.kind === 'travelDealRefill' ||
+                offer.kind === 'travelDealInvalid') &&
+              roomActionKey(offer.purchase.reference) === row.key &&
+              // An acquisition-resolved refill shows its own entry control on the row.
+              row.rewardPayload?.control.marker.focusKey !== offer.purchase.marker.focusKey
                 ? [offer.purchase.marker]
                 : [],
             )
