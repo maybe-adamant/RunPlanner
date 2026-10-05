@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import type { CandidateProjectionSession } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import {
+  surfaceTravelDealRefillAnvilProject,
+  surfaceTravelDealRefillAnvilResult,
+} from '@run-planner/test-fixtures/surface';
 
 const {
   bind,
@@ -33,37 +38,62 @@ const {
 } = support;
 
 describe('acquisition-conversion-interactions', () => {
-  it('projects the purchased Anvil result from its existing acquisition frontier', () => {
-    const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
-    const acquisition = createAcquisitionRoleAddress(offer, 'self');
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceShopOffer',
-      offer,
-      value: { rewardType: 'ChaosWeaponUpgrade' },
-    });
-    project = replaceTestShopOfferActions(
-      project,
-      catalog,
-      createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
-      ['PremiumProgress'],
-    );
-
-    const interaction = bind(project, 'Surface', 'Q').interactions.acquisitionConversions.get(
-      semanticAddressKey(acquisition),
-    );
-    expect(interaction?.anvil).toMatchObject({ value: null });
-    expect(interaction?.anvil?.removableTraitKeys.length).toBeGreaterThan(0);
-    const removed = interaction?.anvil?.removableTraitKeys[0];
-    if (removed === undefined) throw new Error('Anvil removal domain is empty');
-    expect(interaction?.anvil?.addedTraitKeysFor(removed, []).length).toBeGreaterThan(1);
-    expect(
-      interaction?.anvil?.intentFor({
-        kind: 'anvilOfFates',
-        removedTraitKey: removed,
-        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
-      }),
-    ).toMatchObject({ command: { kind: 'ReplaceAnvilResult', acquisition } });
-  });
+  it.each([
+    [
+      'World Shop slot',
+      'PremiumProgress',
+      () => {
+        const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
+        const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+          kind: 'ReplaceShopOffer',
+          offer,
+          value: { rewardType: 'ChaosWeaponUpgrade' },
+        });
+        return replaceTestShopOfferActions(
+          project,
+          catalog,
+          createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
+          ['PremiumProgress'],
+        );
+      },
+      null,
+    ],
+    [
+      'Travel Deal refill',
+      'travelDealRefill',
+      surfaceTravelDealRefillAnvilProject,
+      surfaceTravelDealRefillAnvilResult,
+    ],
+  ] as const)(
+    'binds the %s Anvil result at its reward role frontier',
+    (_label, offerKey, project, value) => {
+      const acquisition = createAcquisitionRoleAddress(
+        createShopOfferAddress(qBiome, qOccurrenceIds.preboss, offerKey),
+        'self',
+      );
+      const { interactions } = projectStructuredWorkspaceFixture(project()).workspace;
+      const anvil = interactions.acquisitionConversions.get(semanticAddressKey(acquisition))?.anvil;
+      expect(anvil).toMatchObject({ contextReached: true, value });
+      const removed = anvil?.removableTraitKeys[0];
+      if (removed === undefined) throw new Error('Anvil removal domain is empty');
+      expect(anvil?.addedTraitKeysFor(removed, []).length).toBeGreaterThan(1);
+      expect(
+        anvil?.intentFor({
+          kind: 'anvilOfFates',
+          removedTraitKey: removed,
+          addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+        }),
+      ).toMatchObject({ command: { kind: 'ReplaceAnvilResult', acquisition } });
+      const plainSlot = createAcquisitionRoleAddress(
+        createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'Survival'),
+        'self',
+      );
+      expect(interactions.acquisitionConversions.get(semanticAddressKey(plainSlot))).toBeDefined();
+      expect(
+        interactions.acquisitionConversions.get(semanticAddressKey(plainSlot))?.anvil,
+      ).toBeUndefined();
+    },
+  );
 
   it('retains an invalid paid-Shop Time Piece conversion as an engine-backed repair control', () => {
     const shopOffer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon');

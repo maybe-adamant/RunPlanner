@@ -924,5 +924,21 @@ describe('Gold Gold Gold Shop pickups', () => {
         evidence: expect.objectContaining({ pickupEffect: 'anvilOfFates' }),
       }),
     );
+
+    const converted = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAcquisitionDisposition',
+        acquisition: duplicate,
+        value: { kind: 'timePiece' },
+      }),
+    );
+    // A converted pickup is never collected, so it offers no Anvil result.
+    expect(
+      acquisitionConversionCandidateForProjectEvaluationAssembly(converted, duplicate)?.anvil,
+    ).toBeUndefined();
+    expect(converted.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'timePieceConversionUnavailable', origin: duplicate }),
+    );
   });
 });

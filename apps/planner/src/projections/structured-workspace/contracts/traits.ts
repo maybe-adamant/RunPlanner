@@ -44,8 +44,10 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly artificerSupported: boolean;
   readonly seaStarSupported: boolean;
   readonly seaStarProcced: boolean;
-  /** Exact acquisition-owned Anvil editor, present only on the purchased Anvil role. */
+  /** Exact reward-owned Anvil editor, present whenever the role carries an Anvil result. */
   readonly anvil?: {
+    /** Whether the engine reached this role's Anvil frontier; only then can its editor open. */
+    readonly contextReached: boolean;
     readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
     readonly removableTraitKeys: readonly string[];
     readonly addedTraitKeysFor: (
@@ -102,6 +104,10 @@ export interface WorkspaceAcquisitionConversionControl {
   readonly marker: WorkspaceMarker;
   readonly rewardOwner: SemanticAddress;
   readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
+  /** The reward's Anvil result, present exactly when this role carries the Anvil pickup effect. */
+  readonly anvilResult?: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
+  /** Whether the engine applies that Anvil result at this reached role (a normal pickup). */
+  readonly anvilApplies?: boolean;
 }
 
 export type WorkspaceTraitCarrierChildControl = AuthoredTraitCarrierChild & {

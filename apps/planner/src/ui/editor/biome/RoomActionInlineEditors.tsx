@@ -109,7 +109,9 @@ export function RoomActionInlineEditors({
       interactions.acquisitionConversions,
       workspaceInteractionKey(control.address),
     );
-    return interaction.anvil === undefined ? [] : [interaction.anvil];
+    return interaction.anvil === undefined
+      ? []
+      : [{ anvil: interaction.anvil, owner: interaction.owner }];
   });
   return (
     <>
@@ -150,8 +152,12 @@ export function RoomActionInlineEditors({
           key={workspaceInteractionKey(control.address)}
         />
       ))}
-      {anvilInteractions.map((interaction) => (
-        <AnvilResultLauncher interaction={interaction} key="anvil-of-fates" />
+      {anvilInteractions.map(({ anvil, owner }) => (
+        <AnvilResultLauncher
+          interaction={anvil}
+          key={workspaceInteractionKey(owner)}
+          owner={owner}
+        />
       ))}
       {row.artificerOutput === undefined ? null : (
         <div className="room-action-artificer-output">

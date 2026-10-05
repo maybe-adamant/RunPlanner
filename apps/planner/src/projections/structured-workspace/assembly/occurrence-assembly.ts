@@ -882,8 +882,16 @@ export function assembleWorkspaceOccurrence(
           ? []
           : rewardChildMarkers(row.artificerOutput.control)),
       ]);
+      // An applicable Anvil result is repaired at its own launcher inside the row.
+      const anvilFocusKeys = new Set(
+        (row.rewardPayload?.control.conversions ?? []).flatMap((conversion) =>
+          conversion.anvilApplies === true ? [conversion.marker.focusKey] : [],
+        ),
+      );
       for (const marker of acquisitionMarkers) {
-        input.markerDestinations.redirectToContext(marker, row.marker, node.key);
+        if (anvilFocusKeys.has(marker.focusKey))
+          input.markerDestinations.redirect([marker], node.key);
+        else input.markerDestinations.redirectToContext(marker, row.marker, node.key);
       }
       const tab =
         roomLocal.kind === 'ship'
