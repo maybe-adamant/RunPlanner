@@ -1289,6 +1289,38 @@ describe('room-action commands', () => {
     ).not.toThrow();
   });
 
+  it('rejects generic membership edits for Well purchases while retaining move', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const project = createUnderworldFWellCheckpoint(false);
+    const reference = project.route.biomes
+      .find((candidate) => candidate.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === well.occurrenceId)
+      ?.roomActions.order.find((candidate) => candidate.kind === 'purchaseStygianWellOffer');
+    if (reference === undefined) throw new Error('missing Well purchase');
+    const action = createRoomActionAddress(
+      goldenFBiome,
+      well.occurrenceId,
+      roomActionKey(reference),
+    );
+    expect(() =>
+      applyProjectCommand(project, catalog, { kind: 'RemoveRoomAction', action }),
+    ).toThrow('SetStygianWellPurchase');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action,
+        reference,
+        index: 0,
+      }),
+    ).toThrow('SetStygianWellPurchase');
+    expect(() =>
+      applyProjectCommand(project, catalog, { kind: 'MoveRoomAction', action, toIndex: 0 }),
+    ).not.toThrow();
+  });
+
   it('places a Stygian Well Travel refill after the first initial purchase in either selection order', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
