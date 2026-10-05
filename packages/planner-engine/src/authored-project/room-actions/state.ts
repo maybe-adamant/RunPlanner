@@ -10,7 +10,9 @@ import {
 import { createOccurrenceAddress, semanticAddressKey } from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
+  firstRushedInitialPurchase,
   hermesShrineDeliverySourceAddress,
+  hermesShrinePurchaseAction,
   isDeliveryFlushHost,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
@@ -213,6 +215,21 @@ export function activeRoomActionReferences(
         Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' }),
       );
   }
+  if (occurrence.hermesShrine !== undefined) {
+    // Each purchased generation has one purchase action; a new one starts unrushed.
+    for (const generationKey of [
+      'initial:first',
+      'initial:secondLeft',
+      'initial:secondRight',
+      'travelDealRefill',
+    ] as const) {
+      if (purchaseFor(occurrence.hermesShrine, generationKey) === undefined) continue;
+      references.push(
+        hermesShrinePurchaseAction(occurrence.roomActions.order, generationKey) ??
+          Object.freeze({ kind: 'purchaseHermesShrineOffer', generationKey, rushed: false }),
+      );
+    }
+  }
   for (const phase of envelopeSlots) {
     if (activeEncounterSlots !== undefined && !activeEncounterSlots.has(phase.key)) continue;
     const key = directEncounterDefinitionKeyForSlot(
@@ -341,13 +358,12 @@ export function activeRoomActionReferences(
         )
           continue;
         if (sourceIsCurrent) {
-          const purchase = purchaseFor(occurrence.hermesShrine, shrineDelivery.generationKey);
-          if (purchase?.rushed !== true) continue;
+          const order = occurrence.roomActions.order;
+          if (hermesShrinePurchaseAction(order, shrineDelivery.generationKey)?.rushed !== true)
+            continue;
           if (
             shrineDelivery.generationKey === 'travelDealRefill' &&
-            !Object.values(occurrence.hermesShrine?.purchaseBySlot ?? {}).some(
-              (initialPurchase) => initialPurchase.rushed,
-            )
+            firstRushedInitialPurchase(order) === undefined
           )
             continue;
         }

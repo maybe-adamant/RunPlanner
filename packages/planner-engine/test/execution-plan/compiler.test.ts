@@ -99,6 +99,7 @@ import { migrateProjectDocument as migrateProject86To87 } from '../../../../sche
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
 import { migrateProjectDocument as migrateProject89To90 } from '../../../../schema/migrate-project-89-to-90.js';
+import { migrateProjectDocument as migrateProject90To91 } from '../../../../schema/migrate-project-90-to-91.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -2165,6 +2166,25 @@ describe('execution-plan compiler and codec', () => {
     for (const biome of legacy.route.biomes) {
       for (const occurrence of biome.topology?.occurrences ?? []) {
         delete occurrence.startingRewardAcquisition;
+        // Schema 90 stored each Shrine purchase's rush on its purchase detail.
+        const shrine = (occurrence as { hermesShrine?: Record<string, Record<string, object>> })
+          .hermesShrine;
+        for (const action of occurrence.roomActions.order) {
+          if (action.kind !== 'purchaseHermesShrineOffer') continue;
+          const { generationKey, rushed } = action as unknown as {
+            generationKey: string;
+            rushed: boolean;
+          };
+          const purchases =
+            generationKey === 'travelDealRefill'
+              ? shrine!.travelDealRefill!
+              : shrine!.purchaseBySlot!;
+          const key = generationKey === 'travelDealRefill' ? 'purchase' : generationKey.slice(8);
+          purchases[key] = { ...purchases[key], rushed };
+        }
+        occurrence.roomActions.order = occurrence.roomActions.order.filter(
+          (action) => action.kind !== 'purchaseHermesShrineOffer',
+        );
       }
       const decisions = (biome.topology as { decisions?: Record<string, unknown>[] } | null)
         ?.decisions;
@@ -2220,9 +2240,11 @@ describe('execution-plan compiler and codec', () => {
     );
     const loaded = parseProjectDocument(
       JSON.stringify(
-        migrateProject89To90(
-          migrateProject88To89(
-            migrateProject87To88(migrateProject86To87(migrateProject85To86(migrated))),
+        migrateProject90To91(
+          migrateProject89To90(
+            migrateProject88To89(
+              migrateProject87To88(migrateProject86To87(migrateProject85To86(migrated))),
+            ),
           ),
         ),
       ),

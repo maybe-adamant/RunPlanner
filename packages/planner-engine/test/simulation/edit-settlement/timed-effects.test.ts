@@ -1,5 +1,8 @@
 import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
-import { supportedTraitOffer } from '@run-planner/test-fixtures/shared';
+import {
+  purchaseTestHermesShrineOffer,
+  supportedTraitOffer,
+} from '@run-planner/test-fixtures/shared';
 import { agreedTimedEffectContact } from '../../../src/simulation/rewards/timed-effects/contacts';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 import { describe, expect, it } from 'vitest';
@@ -422,17 +425,15 @@ describe('timed-effect edit settlement', () => {
     let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
     const o = createBiomeAddress('Surface', 'O');
     const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:first',
-      purchase: { delay: 3, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:first', {
+      delay: 3,
+      rushed: false,
     });
     const settled = settle(project, {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondRight',
-      purchase: { delay: 3, rushed: false },
+      purchase: { delay: 3 },
     });
     const deliveries = occurrence(settled.project, 'surface-o-devotion').roomActions.order.filter(
       (reference) =>
@@ -517,7 +518,7 @@ describe('timed-effect edit settlement', () => {
               kind: 'SetHermesShrinePurchase',
               occurrence: source,
               generationKey: 'initial:secondLeft',
-              purchase: { delay: 4, rushed: false },
+              purchase: { delay: 4 },
             }
           : { kind: 'PlaceHermesShrineDelivery', entry, encounterPhaseKey: 'Encounter' },
       );
@@ -630,7 +631,7 @@ describe('timed-effect edit settlement', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondRight',
-      purchase: { delay: 8, rushed: false },
+      purchase: { delay: 8 },
     });
     const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
     expect(occurrence(settled.project, 'surface-q-preboss').roomActions.order).toContainEqual({
@@ -676,7 +677,7 @@ describe('timed-effect edit settlement', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondLeft',
-      purchase: { delay: 3, rushed: false },
+      purchase: { delay: 3 },
     }).project;
     expect(orders(restored)).toHaveLength(1);
   });

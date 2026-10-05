@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 90,
+  "schemaVersion": 91,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -275,6 +275,11 @@
               "roomActions": {
                 "order": [
                   {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "initial:secondLeft",
+                    "rushed": false
+                  },
+                  {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
                     "acquisitionRole": "self"
@@ -295,8 +300,7 @@
                 },
                 "purchaseBySlot": {
                   "secondLeft": {
-                    "delay": 2,
-                    "rushed": false
+                    "delay": 2
                   }
                 }
               },

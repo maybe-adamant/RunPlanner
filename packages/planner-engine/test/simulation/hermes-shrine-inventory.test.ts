@@ -47,6 +47,7 @@ import {
   oBiome,
   oOccurrenceIds,
   pBiome,
+  surfaceShrineTravelDealProject,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
@@ -55,7 +56,12 @@ import {
   dreamSingleQProject,
   dreamSingleQShrineDeliveryProject,
 } from '@run-planner/test-fixtures/dream';
-import { authorLegalTraitOffers, supportedTraitOffer } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  purchaseTestHermesShrineOffer,
+  supportedTraitOffer,
+  testHermesShrinePurchaseAction,
+} from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   assessHermesShrineInventory,
@@ -1006,11 +1012,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
       slotKey: 'secondLeft',
       value: { rewardType: 'MaxHealthDrop' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:secondLeft', {
+      delay: 2,
+      rushed: true,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHermesShrineTravelDealRefill',
@@ -1141,17 +1145,13 @@ describe('Hermes Shrine Travel Deal generation', () => {
       occurrence: host,
       value: { rewardType: 'ArmorBoost' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
+      delay: 2,
+      rushed: true,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'travelDealRefill',
-      purchase: { delay: 3, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'travelDealRefill', {
+      delay: 3,
+      rushed: true,
     });
     const refillEntry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
@@ -1227,11 +1227,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
       generationKey: 'travelDealRefill',
       purchase: null,
     });
-    const unrushedSource = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: false },
+    const unrushedSource = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
+      delay: 2,
+      rushed: false,
     });
     for (const [cleanup, cleaned] of [
       ['unpurchase', unpurchasedRefill],
@@ -1262,11 +1260,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
       });
     }
 
-    const secondRush = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: true },
+    const secondRush = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:secondLeft', {
+      delay: 2,
+      rushed: true,
     });
     // The first rush has already established the fourth generation above.
     // Clear its optional later purchase so this assertion isolates the second
@@ -1380,12 +1376,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       ['initial:first', { delay: 2, rushed: true }],
       ['travelDealRefill', { delay: 3, rushed: true }],
     ] as const)
-      project = applyProjectCommand(project, catalog, {
-        kind: 'SetHermesShrinePurchase',
-        occurrence: host,
-        generationKey,
-        purchase,
-      });
+      project = purchaseTestHermesShrineOffer(project, catalog, host, generationKey, purchase);
     const refillKey = hermesShrineDeliveryEntryKey(host, 'travelDealRefill');
     const removePickup = (
       document: typeof project,
@@ -1471,11 +1462,9 @@ describe('Hermes Shrine Travel Deal generation', () => {
     expect(left.sources).toEqual(['initial:first']);
 
     // A second rushed purchase is not the first speed-up and creates no other refill.
-    const secondRush = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: true },
+    const secondRush = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:secondLeft', {
+      delay: 2,
+      rushed: true,
     });
     for (const document of [secondRush, removePickup(secondRush, 'initial:first')]) {
       const both = evaluate(document);
@@ -1485,15 +1474,152 @@ describe('Hermes Shrine Travel Deal generation', () => {
 
     // A delayed first purchase is no speed-up and refills nothing.
     const delayed = evaluate(
-      applyProjectCommand(project, catalog, {
-        kind: 'SetHermesShrinePurchase',
-        occurrence: host,
-        generationKey: 'initial:first',
-        purchase: { delay: 2, rushed: false },
+      purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
+        delay: 2,
+        rushed: false,
       }),
     );
     expect(delayed.refillAcquired).toBe(false);
     expect(delayed.sources).toEqual([undefined]);
+  });
+
+  describe('in timeline order', () => {
+    const shrine = createOccurrenceAddress(
+      nBiome,
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const refillPurchase = createRoomActionAddress(
+      nBiome,
+      shrine.occurrenceId,
+      roomActionKey({
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: 'travelDealRefill',
+        rushed: false,
+      }),
+    );
+    const evaluate = (project: ReturnType<typeof surfaceShrineTravelDealProject>) => {
+      const evaluation = simulateProject(catalog, project);
+      const n = evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
+      if (n === undefined || !('rewards' in n)) throw new Error('N rewards are missing');
+      return {
+        findings: evaluation.findings,
+        sources: n.rewards.hermesShrineAssessments
+          .find((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(shrine))
+          ?.assessments.map((assessment) => assessment.travelDealRefill?.sourceGenerationKey),
+      };
+    };
+    const withSecondRush = () =>
+      purchaseTestHermesShrineOffer(
+        surfaceShrineTravelDealProject(),
+        catalog,
+        shrine,
+        'initial:secondLeft',
+        { delay: 3, rushed: true },
+      );
+
+    it('refills the slot of the first rushed purchase action, not the first slot', () => {
+      const project = withSecondRush();
+      expect(evaluate(project).sources).toEqual(['initial:first']);
+
+      const moved = applyProjectCommand(project, catalog, {
+        kind: 'MoveRoomAction',
+        action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
+        toIndex: 1,
+      });
+      // The stored first-group refill is kept and reported against the new
+      // source slot's group, which blocks the room's assessment.
+      const reordered = evaluate(moved);
+      expect(
+        moved.route.biomes[0]!.topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === shrine.occurrenceId,
+        )?.hermesShrine?.travelDealRefill?.offer,
+      ).toEqual({ rewardType: 'ArmorBoost' });
+      expect(reordered.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'hermesShrineTravelDealRefillUnavailable',
+          evidence: { generationKey: 'initial:secondLeft', rewardType: 'ArmorBoost' },
+        }),
+      );
+    });
+
+    it('reports a refill purchase with no rushed purchase to create it', () => {
+      const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+        kind: 'SetHermesShrinePurchaseRush',
+        action: testHermesShrinePurchaseAction(shrine, 'initial:first'),
+        rushed: false,
+      });
+      expect(evaluate(project).findings).toContainEqual(
+        expect.objectContaining({
+          code: 'hermesShrineTravelDealRefillUnavailable',
+          origin: refillPurchase,
+          evidence: { generationKey: 'travelDealRefill', reason: 'noRushedPurchase' },
+        }),
+      );
+    });
+
+    it('reports a refill purchase whose Travel Deal is lost upstream and clears it on removal', () => {
+      const travelDealSource = createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+        'self',
+      );
+      const project = applyProjectCommand(
+        applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+          kind: 'SetHermesShrinePurchaseRush',
+          action: refillPurchase,
+          rushed: true,
+        }),
+        catalog,
+        {
+          kind: 'ReplaceTraitOffer',
+          trait: travelDealSource,
+          value: {
+            kind: 'traits',
+            giverKey: 'Hermes',
+            options: [
+              { traitKey: 'RestockBoon', rarity: 'Epic' },
+              { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+              { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+            ],
+            selectedOptionKey: 'option2',
+          },
+        },
+      );
+      const lost = evaluate(project);
+      expect(lost.findings).toContainEqual(
+        expect.objectContaining({
+          code: 'hermesShrineTravelDealRefillUnavailable',
+          origin: refillPurchase,
+          evidence: { generationKey: 'travelDealRefill', reason: 'travelDealInactive' },
+        }),
+      );
+      // The refill purchase is the first stop; its pickup is never reached.
+      expect(lost.findings).toHaveLength(1);
+      const refillPickup = hermesShrineDeliveryEntryKey(shrine, 'travelDealRefill');
+
+      const removed = applyProjectCommand(project, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: shrine,
+        generationKey: 'travelDealRefill',
+        purchase: null,
+      });
+      const room = removed.route.biomes[0]!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === shrine.occurrenceId,
+      );
+      expect(room?.hermesShrine?.travelDealRefill).toEqual({ offer: { rewardType: 'ArmorBoost' } });
+      expect(room?.roomActions.order).not.toContainEqual(
+        expect.objectContaining({ generationKey: 'travelDealRefill' }),
+      );
+      expect(room?.roomActions.order).not.toContainEqual(
+        expect.objectContaining({ entryKey: refillPickup }),
+      );
+      expect(
+        evaluate(removed).findings.filter(
+          (finding) =>
+            semanticAddressKey(finding.origin) === semanticAddressKey(refillPurchase) ||
+            ('entryKey' in finding.origin && finding.origin.entryKey === refillPickup),
+        ),
+      ).toEqual([]);
+    });
   });
 });
 
@@ -1531,11 +1657,9 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
     );
     expect(outgoingEligibility(unpurchased.runState, 'SpellDrop')).toBe('eligible');
 
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 8, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+      delay: 8,
+      rushed: false,
     });
     const purchased = evaluateShrineOutgoingPrefix(project, 'SpellDrop', oOccurrenceIds.combat01);
     const sourceKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
@@ -1565,11 +1689,9 @@ describe('Hermes Shrine pickup settlement', () => {
       pBiome,
       createOccurrenceId('surface-p-preboss-shop:postboss'),
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:first',
-      purchase: { delay: 8, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:first', {
+      delay: 8,
+      rushed: false,
     });
     const evaluation = observeDeliveryStop(
       project,
@@ -1678,11 +1800,9 @@ describe('Hermes Shrine pickup settlement', () => {
         value: { rewardType },
       });
     }
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
+      delay: 2,
+      rushed: true,
     });
     const evaluation = simulateProject(catalog, project);
     const p = evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
@@ -1710,11 +1830,9 @@ describe('Hermes Shrine pickup settlement', () => {
       slotKey: 'secondRight',
       value: { rewardType: 'BlindBoxLoot' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:secondRight',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:secondRight', {
+      delay: 2,
+      rushed: true,
     });
 
     const assembly = simulateProjectAssembly(catalog, project);
@@ -1754,11 +1872,9 @@ describe('Hermes Shrine pickup settlement', () => {
         value: { rewardType },
       });
     }
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
+      delay: 2,
+      rushed: true,
     });
     const site = createAcquisitionSiteAddress(host, 'hermesShrineDelivery');
     const entry = createAcquisitionEntryAddress(
@@ -1798,11 +1914,9 @@ describe('Hermes Shrine pickup settlement', () => {
     // the virtual same-room rush source merely because both use the closed
     // Shrine delivery site key.
     const delayedHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
-    let delayed = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: false },
+    let delayed = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
+      delay: 2,
+      rushed: false,
     });
     const delayedEntry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(delayedHost, 'hermesShrineDelivery'),
@@ -1873,11 +1987,9 @@ describe('Hermes Shrine pickup settlement', () => {
       slotKey: 'secondLeft',
       value: { rewardType },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+      delay,
+      rushed: false,
     });
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(
@@ -1967,11 +2079,9 @@ describe('Hermes Shrine pickup settlement', () => {
         value: { rewardType },
       });
     }
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: host,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:secondLeft', {
+      delay: 2,
+      rushed: true,
     });
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),

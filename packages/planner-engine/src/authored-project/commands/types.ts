@@ -472,6 +472,12 @@ export type HermesShrineCommand =
       readonly purchase: import('../model').HermesShrinePurchase | null;
     }
   | {
+      /** Rushing delivers the item in the Shrine room and offers its optional pickup. */
+      readonly kind: 'SetHermesShrinePurchaseRush';
+      readonly action: RoomActionSemanticAddress;
+      readonly rushed: boolean;
+    }
+  | {
       readonly kind: 'ReplaceHermesShrineTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
       readonly value: import('../model').HermesShrineInventoryOffer;

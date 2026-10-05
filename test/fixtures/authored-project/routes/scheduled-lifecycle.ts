@@ -10,7 +10,11 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
-import { authorLegalTraitOffers, hubVisitActions } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  hubVisitActions,
+  purchaseTestHermesShrineOffer,
+} from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createAcquisitionSiteAddress,
@@ -374,17 +378,13 @@ function buildSurfaceScheduledLifecycleProject(clearLocalVisits = false): Projec
   project = authorLegalTraitOffers(project);
 
   for (const source of [nPostboss, oPostboss]) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:first', {
+      delay: 2,
+      rushed: true,
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+      delay: 2,
+      rushed: false,
     });
   }
 

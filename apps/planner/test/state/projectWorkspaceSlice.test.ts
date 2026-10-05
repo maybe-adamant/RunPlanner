@@ -416,7 +416,7 @@ describe('project workspace application state', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: source,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 2, rushed: false },
+        purchase: { delay: 2 },
       }),
     );
     const delayTwo = presentProject(store.getState());
@@ -433,7 +433,7 @@ describe('project workspace application state', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: source,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 3, rushed: false },
+        purchase: { delay: 3 },
       }),
     );
     const delayThree = presentProject(store.getState());
@@ -464,7 +464,7 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectUndoRequested());
     expect(presentProject(store)).toBe(delayTwo);
-    for (const purchase of [null, { delay: 2, rushed: false }] as const) {
+    for (const purchase of [null, { delay: 2 }] as const) {
       const before = store.getState().projectWorkspace.history!.past.length;
       store.dispatch(
         authoredProjectCommandDispatched({

@@ -191,6 +191,29 @@ export function occurrenceActionLabel(
     }
     case 'purchaseStygianWellOffer':
       return `Buy ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
+    case 'purchaseHermesShrineOffer': {
+      const slot =
+        reference.generationKey === 'travelDealRefill'
+          ? 'Travel Deal Offer'
+          : reference.generationKey === 'initial:first'
+            ? 'Slot 1'
+            : reference.generationKey === 'initial:secondLeft'
+              ? 'Slot 2'
+              : 'Slot 3';
+      const offer =
+        reference.generationKey === 'travelDealRefill'
+          ? occurrence.hermesShrine?.travelDealRefill?.offer
+          : occurrence.hermesShrine?.offerBySlot[
+              reference.generationKey.slice(
+                'initial:'.length,
+              ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey
+            ];
+      return `Buy ${
+        offer === null || offer === undefined
+          ? slot
+          : `${timelineRewardName(catalog, offer.rewardType)} · ${slot}`
+      }`;
+    }
     case 'sellPurgingPoolTrait': {
       const traitKey = purgingPoolTraitKeyBySlot?.[reference.slotKey];
       return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;

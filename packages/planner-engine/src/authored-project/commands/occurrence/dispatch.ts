@@ -16,10 +16,18 @@ import { updateOccurrence } from './mutation';
 import { hermesShrineInitialSlotKey } from '../../model';
 import {
   defaultHermesShrineDeliveryReward,
+  firstRushedInitialPurchase,
   hermesShrineDeliveryEntryKey,
+  hermesShrinePurchaseAction,
+  offerFor,
+  purchaseFor,
   unplaceHermesShrineDelivery,
 } from '../../hermes-shrine-delivery';
-import { createBiomeAddress } from '../../addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  type OccurrenceAddress,
+} from '../../addresses';
 import { roomActionKey } from '../../room-actions/key';
 import {
   roomActionDomainForOccurrence,
@@ -28,7 +36,7 @@ import {
 
 function withRushedHermesDelivery(
   occurrence: import('../../model').RoomOccurrence,
-  origin: import('../../addresses').OccurrenceAddress,
+  origin: OccurrenceAddress,
   catalog: Catalog,
   generationKey: import('../../model').HermesShrineGenerationKey,
   rewardType: string,
@@ -53,6 +61,54 @@ function withRushedHermesDelivery(
       }),
     }),
   });
+}
+
+/**
+ * Keeps the refill purchase, and its rushed pickup, after the purchase that now
+ * triggers Travel Deal when an edit changes the first rushed initial purchase.
+ */
+function followRefillTrigger(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  source: OccurrenceAddress,
+): ProjectDocument {
+  const biome = createBiomeAddress(source.routeKey, source.biomeKey);
+  const host = roomActionDomainForOccurrence(document, catalog, biome, source.occurrenceId);
+  if (host === undefined) return document;
+  const order = host.occurrence.roomActions.order;
+  const trigger = firstRushedInitialPurchase(order);
+  const refillKey = roomActionKey({
+    kind: 'purchaseHermesShrineOffer',
+    generationKey: 'travelDealRefill',
+    rushed: false,
+  });
+  const pickupKey = roomActionKey({
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey: hermesShrineDeliveryEntryKey(source, 'travelDealRefill'),
+  });
+  const refillIndex = order.findIndex((reference) => roomActionKey(reference) === refillKey);
+  if (trigger === undefined || refillIndex < 0 || refillIndex > order.indexOf(trigger))
+    return document;
+  const moved = new Set(
+    order.map(roomActionKey).filter((key) => key === refillKey || key === pickupKey),
+  );
+  const scheduled = scheduleRequiredRoomActions({
+    catalog,
+    domain: host.domain,
+    order: order.filter((reference) => !moved.has(roomActionKey(reference))),
+    requiredKeys: moved,
+    participation: 'any',
+  });
+  return updateOccurrence(
+    document,
+    { ...located, plan: document.route.biomes[located.biomeIndex]! },
+    Object.freeze({
+      ...host.occurrence,
+      roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
+    }),
+  );
 }
 
 export function applyOccurrenceCommand(
@@ -81,6 +137,14 @@ export function applyOccurrenceCommand(
           located,
           Object.freeze({
             ...withoutShrine,
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze(
+                occurrence.roomActions.order.filter(
+                  (reference) => reference.kind !== 'purchaseHermesShrineOffer',
+                ),
+              ),
+            }),
           }),
         );
       }
@@ -127,7 +191,8 @@ export function applyOccurrenceCommand(
       return updateOccurrence(
         document,
         located,
-        shrine.purchaseBySlot?.[command.slotKey]?.rushed === true
+        hermesShrinePurchaseAction(occurrence.roomActions.order, `initial:${command.slotKey}`)
+          ?.rushed === true
           ? withRushedHermesDelivery(
               nextOccurrence,
               command.occurrence,
@@ -148,12 +213,11 @@ export function applyOccurrenceCommand(
         (slotKey === undefined || !['first', 'secondLeft', 'secondRight'].includes(slotKey))
       )
         failCommand(command, `unknown Hermes Shrine generation ${String(command.generationKey)}`);
-      const selectedOffer =
-        command.generationKey === 'travelDealRefill'
-          ? occurrence.hermesShrine.travelDealRefill?.offer
-          : occurrence.hermesShrine.offerBySlot[slotKey!];
+      const selectedOffer = offerFor(occurrence.hermesShrine, command.generationKey);
       if (selectedOffer === undefined || selectedOffer === null)
         failCommand(command, 'Shrine offer is unresolved');
+      if (command.purchase !== null && Object.keys(command.purchase).some((key) => key !== 'delay'))
+        failCommand(command, 'Shrine purchase carries only its delay; rush is on its action');
       if (
         command.purchase !== null &&
         command.purchase.delay !== 2 &&
@@ -165,136 +229,202 @@ export function applyOccurrenceCommand(
         command.purchase.delay !== 8
       )
         failCommand(command, 'Shrine purchase delay must be from 2 through 8');
-      if (command.purchase !== null && typeof command.purchase.rushed !== 'boolean')
-        failCommand(command, 'Shrine purchase rushed must be boolean');
-      const existing = occurrence.hermesShrine.purchaseBySlot ?? {};
-      const next = { ...existing } as Record<string, unknown>;
+      const existing = purchaseFor(occurrence.hermesShrine, command.generationKey);
+      const purchase =
+        command.purchase === null ? undefined : Object.freeze({ delay: command.purchase.delay });
+      const nextPurchases = { ...occurrence.hermesShrine.purchaseBySlot };
       if (slotKey !== undefined) {
-        if (command.purchase === null) delete next[slotKey];
-        else next[slotKey] = Object.freeze({ ...command.purchase });
+        if (purchase === undefined) delete nextPurchases[slotKey];
+        else nextPurchases[slotKey] = purchase;
       }
+      const shrineWithoutPurchases = { ...occurrence.hermesShrine };
+      delete shrineWithoutPurchases.purchaseBySlot;
+      const refillWithoutPurchase = {
+        ...(occurrence.hermesShrine.travelDealRefill ?? { offer: null }),
+      };
+      delete refillWithoutPurchase.purchase;
+      const hermesShrine: import('../../model').HermesShrineState = Object.freeze({
+        ...shrineWithoutPurchases,
+        ...(Object.keys(nextPurchases).length === 0
+          ? {}
+          : { purchaseBySlot: Object.freeze(nextPurchases) }),
+        ...(command.generationKey !== 'travelDealRefill'
+          ? {}
+          : {
+              travelDealRefill: Object.freeze({
+                ...refillWithoutPurchase,
+                ...(purchase === undefined ? {} : { purchase }),
+              }),
+            }),
+      });
+      const order = occurrence.roomActions.order;
+      const nextOrder =
+        purchase === undefined
+          ? order.filter(
+              (reference) =>
+                !(
+                  reference.kind === 'purchaseHermesShrineOffer' &&
+                  reference.generationKey === command.generationKey
+                ),
+            )
+          : order;
       const deliveryEntryKey = hermesShrineDeliveryEntryKey(
         command.occurrence,
         command.generationKey,
       );
-      const roomActions = Object.freeze({
-        ...occurrence.roomActions,
-        // A rush is represented by its concrete delivery action.  Switching
-        // back to delayed or clearing the purchase removes only that active
-        // reference; the authored delivery payload remains for repair.
-        order: Object.freeze(
-          command.purchase?.rushed === true
-            ? occurrence.roomActions.order
-            : occurrence.roomActions.order.filter(
-                (reference) =>
-                  !(
-                    reference.kind === 'interactAcquisitionEntry' &&
-                    reference.siteKey === 'hermesShrineDelivery' &&
-                    reference.entryKey === deliveryEntryKey
-                  ),
-              ),
-        ),
-      });
-      const shrineWithoutPurchase = { ...occurrence.hermesShrine };
-      delete shrineWithoutPurchase.purchaseBySlot;
-      const nextOccurrence = Object.freeze({
-        ...occurrence,
-        roomActions,
-        hermesShrine: Object.freeze({
-          ...shrineWithoutPurchase,
-          ...(Object.keys(next).length === 0
-            ? {}
-            : {
-                purchaseBySlot: Object.freeze(
-                  next,
-                ) as import('../../model').HermesShrineState['purchaseBySlot'],
-              }),
-          ...(command.generationKey !== 'travelDealRefill'
-            ? {}
-            : {
-                travelDealRefill: Object.freeze({
-                  ...(() => {
-                    const withoutPurchase = {
-                      ...(occurrence.hermesShrine.travelDealRefill ?? { offer: null }),
-                    };
-                    delete withoutPurchase.purchase;
-                    return withoutPurchase;
-                  })(),
-                  ...(command.purchase === null
-                    ? {}
-                    : { purchase: Object.freeze(command.purchase) }),
-                }),
-              }),
-        }) as import('../../model').HermesShrineState,
-      });
-      const updated = updateOccurrence(
+      let updated = updateOccurrence(
         document,
         located,
-        command.purchase?.rushed === true
-          ? withRushedHermesDelivery(
-              nextOccurrence,
-              command.occurrence,
-              catalog,
-              command.generationKey,
-              selectedOffer.rewardType,
+        Object.freeze({
+          ...occurrence,
+          hermesShrine,
+          roomActions: Object.freeze({
+            ...occurrence.roomActions,
+            order: Object.freeze(nextOrder),
+          }),
+        }),
+      );
+      if (purchase === undefined) {
+        // Clearing retracts the purchase's pickup and every placed delivery;
+        // authored delivery payload remains for repair.
+        updated = unplaceHermesShrineDelivery(updated, deliveryEntryKey);
+        return command.generationKey !== 'travelDealRefill' &&
+          firstRushedInitialPurchase(nextOrder) === undefined
+          ? unplaceHermesShrineDelivery(
+              updated,
+              hermesShrineDeliveryEntryKey(command.occurrence, 'travelDealRefill'),
             )
-          : nextOccurrence,
-      );
-      const unplacedDelivery = unplaceHermesShrineDelivery(
+          : followRefillTrigger(updated, catalog, located, command.occurrence);
+      }
+      if (existing !== undefined) {
+        // Delay is the rushed item's price; it only retimes a delayed delivery.
+        return hermesShrinePurchaseAction(order, command.generationKey)?.rushed === true
+          ? updated
+          : unplaceHermesShrineDelivery(updated, deliveryEntryKey);
+      }
+      // A new purchase starts unrushed at its canonical timeline position.
+      const host = roomActionDomainForOccurrence(
         updated,
-        deliveryEntryKey,
-        command.purchase?.rushed === true ? command.occurrence : undefined,
+        catalog,
+        createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+        command.occurrence.occurrenceId,
       );
-      // A rushed item is optional loot; rank it once at its canonical post-outgoing
-      // position so the author starts from the pickup and may remove it.
-      if (command.purchase?.rushed === true) {
-        const biome = createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey);
-        const host = roomActionDomainForOccurrence(
-          unplacedDelivery,
-          catalog,
-          biome,
-          command.occurrence.occurrenceId,
-        );
-        if (host === undefined)
-          failCommand(command, 'rushed Shrine host has no room-action domain');
-        const order = scheduleRequiredRoomActions({
-          catalog,
-          domain: host.domain,
-          order: host.occurrence.roomActions.order,
-          requiredKeys: new Set([
-            roomActionKey({
-              kind: 'interactAcquisitionEntry',
-              siteKey: 'hermesShrineDelivery',
-              entryKey: deliveryEntryKey,
-            }),
-          ]),
-          participation: 'any',
-        });
-        return order === host.occurrence.roomActions.order
-          ? unplacedDelivery
+      if (host === undefined) failCommand(command, 'Shrine host has no room-action domain');
+      const purchaseKey = roomActionKey({
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: command.generationKey,
+        rushed: false,
+      });
+      const scheduled = scheduleRequiredRoomActions({
+        catalog,
+        domain: host.domain,
+        order: host.occurrence.roomActions.order,
+        requiredKeys: new Set([purchaseKey]),
+      });
+      if (!scheduled.some((reference) => roomActionKey(reference) === purchaseKey))
+        failCommand(command, 'Shrine purchase has no active room action');
+      return unplaceHermesShrineDelivery(
+        updateOccurrence(
+          updated,
+          { ...located, plan: updated.route.biomes[located.biomeIndex]! },
+          Object.freeze({
+            ...host.occurrence,
+            roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
+          }),
+        ),
+        deliveryEntryKey,
+      );
+    }
+    case 'SetHermesShrinePurchaseRush': {
+      const occurrence = requireOccurrence(located.plan, command.action.occurrenceId, command);
+      if (typeof command.rushed !== 'boolean')
+        failCommand(command, 'Shrine purchase rushed must be boolean');
+      const order = occurrence.roomActions.order;
+      const index = order.findIndex(
+        (reference) => roomActionKey(reference) === command.action.actionKey,
+      );
+      const action = order[index];
+      if (action?.kind !== 'purchaseHermesShrineOffer')
+        failCommand(command, 'action is not a Shrine purchase');
+      if (action.rushed === command.rushed) return document;
+      const offer = offerFor(occurrence.hermesShrine, action.generationKey);
+      if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
+      const source = createOccurrenceAddress(
+        createBiomeAddress(command.action.routeKey, command.action.biomeKey),
+        occurrence.occurrenceId,
+      );
+      const nextOrder = Object.freeze(
+        order.map((reference, position) =>
+          position === index ? Object.freeze({ ...action, rushed: command.rushed }) : reference,
+        ),
+      );
+      const withOrder = Object.freeze({
+        ...occurrence,
+        roomActions: Object.freeze({ ...occurrence.roomActions, order: nextOrder }),
+      });
+      const deliveryEntryKey = hermesShrineDeliveryEntryKey(source, action.generationKey);
+      const updated = unplaceHermesShrineDelivery(
+        updateOccurrence(
+          document,
+          located,
+          command.rushed
+            ? withRushedHermesDelivery(
+                withOrder,
+                source,
+                catalog,
+                action.generationKey,
+                offer.rewardType,
+              )
+            : withOrder,
+        ),
+        deliveryEntryKey,
+        command.rushed ? source : undefined,
+      );
+      if (!command.rushed)
+        return action.generationKey !== 'travelDealRefill' &&
+          firstRushedInitialPurchase(nextOrder) === undefined
+          ? unplaceHermesShrineDelivery(
+              updated,
+              hermesShrineDeliveryEntryKey(source, 'travelDealRefill'),
+            )
+          : followRefillTrigger(updated, catalog, located, source);
+      // A rushed item is optional loot; rank it once at its canonical position
+      // so the author starts from the pickup and may remove it.
+      const host = roomActionDomainForOccurrence(
+        updated,
+        catalog,
+        createBiomeAddress(source.routeKey, source.biomeKey),
+        source.occurrenceId,
+      );
+      if (host === undefined) failCommand(command, 'rushed Shrine host has no room-action domain');
+      const scheduled = scheduleRequiredRoomActions({
+        catalog,
+        domain: host.domain,
+        order: host.occurrence.roomActions.order,
+        requiredKeys: new Set([
+          roomActionKey({
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: deliveryEntryKey,
+          }),
+        ]),
+        participation: 'any',
+      });
+      return followRefillTrigger(
+        scheduled === host.occurrence.roomActions.order
+          ? updated
           : updateOccurrence(
-              unplacedDelivery,
-              { ...located, plan: unplacedDelivery.route.biomes[located.biomeIndex]! },
+              updated,
+              { ...located, plan: updated.route.biomes[located.biomeIndex]! },
               Object.freeze({
                 ...host.occurrence,
-                roomActions: Object.freeze({ ...host.occurrence.roomActions, order }),
+                roomActions: Object.freeze({ ...host.occurrence.roomActions, order: scheduled }),
               }),
-            );
-      }
-      // A refill can only be triggered by this Shrine's first rushed initial
-      // delivery. Retain its authored detail when that source is un-rushed,
-      // but retract the now-dormant active refill action.
-      if (
-        slotKey !== undefined &&
-        !Object.values(nextOccurrence.hermesShrine.purchaseBySlot ?? {}).some(
-          (purchase) => purchase.rushed,
-        )
-      )
-        return unplaceHermesShrineDelivery(
-          unplacedDelivery,
-          hermesShrineDeliveryEntryKey(command.occurrence, 'travelDealRefill'),
-        );
-      return unplacedDelivery;
+            ),
+        catalog,
+        located,
+        source,
+      );
     }
     case 'ReplaceHermesShrineTravelDealRefill': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);

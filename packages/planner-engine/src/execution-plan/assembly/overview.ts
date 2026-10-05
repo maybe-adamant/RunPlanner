@@ -6,6 +6,7 @@ import {
 } from '../../authored-project/addresses';
 import {
   hermesShrineDeliveryEntryKey,
+  hermesShrinePurchaseAction,
   purchaseFor,
 } from '../../authored-project/hermes-shrine-delivery';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
@@ -497,12 +498,29 @@ export function hermesShrineTravelDealRefill(
               deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, 'travelDealRefill'),
               purchase: Object.freeze({
                 roomDelay: travelDeal.purchase.delay,
-                rushed: travelDeal.purchase.rushed,
+                rushed: shrinePurchaseRushed(room, 'travelDealRefill'),
               }),
             }),
       }),
     }),
   });
+}
+
+/** Rush is authored on the generation's timeline purchase action. */
+function shrinePurchaseRushed(
+  room: CanonicalAuthoredRoom,
+  generationKey: HermesShrineGenerationKey,
+): boolean {
+  const action = hermesShrinePurchaseAction(
+    room.roomActionRoster.rows.map((row) => row.reference),
+    generationKey,
+  );
+  if (action === undefined)
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} lacks Shrine purchase action ${generationKey}`,
+    );
+  return action.rushed;
 }
 
 function executionHermesShrine(
@@ -559,7 +577,12 @@ function executionHermesShrine(
           : { deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey) }),
         ...(purchase === undefined
           ? {}
-          : { purchase: Object.freeze({ roomDelay: purchase.delay, rushed: purchase.rushed }) }),
+          : {
+              purchase: Object.freeze({
+                roomDelay: purchase.delay,
+                rushed: shrinePurchaseRushed(room, generationKey),
+              }),
+            }),
       });
     }),
   );

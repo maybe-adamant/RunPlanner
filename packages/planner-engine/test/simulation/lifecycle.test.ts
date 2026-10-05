@@ -123,6 +123,14 @@ function eventKinds(executionInput: RoomLifecycleExecutionInput) {
   return executeRoomLifecycle(catalog, executionInput).events.map((event) => event.kind);
 }
 
+function firstShrinePurchase(rushed: boolean): RoomActionReference {
+  return Object.freeze({
+    kind: 'purchaseHermesShrineOffer',
+    generationKey: 'initial:first',
+    rushed,
+  });
+}
+
 function actionRoster(
   actionOrigin: typeof origin,
   order: readonly RoomActionReference[],
@@ -253,9 +261,21 @@ describe('single-room lifecycle execution', () => {
         encounterPhases: phases('SingleEncounter', ['GeneratedN']),
         hermesShrine: {
           offerBySlot: { first: { rewardType: 'Boon' }, secondLeft: null, secondRight: null },
-          purchaseBySlot: { first: { delay: 2, rushed: false } },
+          purchaseBySlot: { first: { delay: 2 } },
         },
-        roomActionRoster: actionRoster(sideOrigin, [], [], 'EphyraSideRoom'),
+        roomActionRoster: actionRoster(
+          sideOrigin,
+          [firstShrinePurchase(false)],
+          [
+            {
+              reference: firstShrinePurchase(false),
+              participation: 'required',
+              window: { kind: 'postOutgoing' },
+              dependencies: [],
+            },
+          ],
+          'EphyraSideRoom',
+        ),
       }),
     );
     const scheduled = fragment.events.findIndex(
@@ -297,12 +317,18 @@ describe('single-room lifecycle execution', () => {
         encounterPhases: phases('SingleEncounter', ['GeneratedN']),
         hermesShrine: {
           offerBySlot: { first: { rewardType: 'Boon' }, secondLeft: null, secondRight: null },
-          purchaseBySlot: { first: { delay: 2, rushed: true } },
+          purchaseBySlot: { first: { delay: 2 } },
         },
         roomActionRoster: actionRoster(
           sideOrigin,
-          [delivery],
+          [firstShrinePurchase(true), delivery],
           [
+            {
+              reference: firstShrinePurchase(true),
+              participation: 'required',
+              window: { kind: 'postOutgoing' },
+              dependencies: [],
+            },
             {
               reference: delivery,
               participation: 'required',

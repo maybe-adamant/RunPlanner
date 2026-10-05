@@ -1,3 +1,4 @@
+import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
@@ -313,11 +314,9 @@ it('distinguishes two uncovered retained deliveries and binds the selected repai
 it('keeps one stale-phase repair row and restores its due phase atomically', () => {
   let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
   const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:secondLeft',
-    purchase: { delay: 4, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+    delay: 4,
+    rushed: false,
   });
   const due = projectStructuredWorkspaceFixture(project)
     .workspace.route.biomes.flatMap((biome) => biome.nodes)

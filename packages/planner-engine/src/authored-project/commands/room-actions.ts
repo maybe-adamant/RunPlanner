@@ -156,6 +156,9 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'interactShopOffer') {
         failCommand(command, 'base Shop purchases use ReplaceShopPurchaseParticipation');
       }
+      if (command.reference.kind === 'purchaseHermesShrineOffer') {
+        failCommand(command, 'Shrine purchases use SetHermesShrinePurchase');
+      }
       const key = roomActionKey(command.reference);
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');
@@ -215,6 +218,9 @@ export function applyRoomActionCommand(
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
       if (order[existingIndex]?.kind === 'interactShopOffer') {
         failCommand(command, 'base Shop purchases use ReplaceShopPurchaseParticipation');
+      }
+      if (order[existingIndex]?.kind === 'purchaseHermesShrineOffer') {
+        failCommand(command, 'Shrine purchases use SetHermesShrinePurchase');
       }
       if (
         occurrenceIsActive &&

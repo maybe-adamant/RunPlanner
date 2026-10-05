@@ -23,7 +23,11 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { loadSurfaceNCheckpoint } from '../checkpoints/surface';
-import { authorLegalTraitOffers, authorLegalPomResolutions } from '../shared';
+import {
+  authorLegalTraitOffers,
+  authorLegalPomResolutions,
+  purchaseTestHermesShrineOffer,
+} from '../shared';
 import { hubVisitActions } from '../hub-actions';
 
 const qBiome = createBiomeAddress('Dream', 'Q');
@@ -578,10 +582,8 @@ export function dreamSingleQShrineDeliveryProject(): ProjectDocument {
       slotKey,
       value: { rewardType },
     });
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:first',
-    purchase: { delay: 8, rushed: false },
+  return purchaseTestHermesShrineOffer(project, catalog, source, 'initial:first', {
+    delay: 8,
+    rushed: false,
   });
 }

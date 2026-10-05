@@ -34,6 +34,7 @@ import {
   hubVisitActions,
   replaceTestShopOfferActions,
   supportedTraitOffer,
+  purchaseTestHermesShrineOffer,
 } from '../shared';
 import {
   loadSurfaceNCheckpoint,
@@ -190,17 +191,13 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(options?: {
       value: { rewardType },
     });
   }
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: shrine,
-    generationKey: 'initial:first',
-    purchase: { delay: 2, rushed: true },
+  project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:first', {
+    delay: 2,
+    rushed: true,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: shrine,
-    generationKey: 'initial:secondLeft',
-    purchase: { delay: 3, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:secondLeft', {
+    delay: 3,
+    rushed: false,
   });
   const deliveryHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
   if (options?.placeDelayedDelivery === false) return project;
@@ -252,11 +249,9 @@ export function createSurfaceOSameRoomHermesDeliveriesCheckpoint(): {
       slotKey: 'secondLeft',
       value: { rewardType: 'BlindBoxLoot' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, occurrence, 'initial:secondLeft', {
+      delay,
+      rushed: false,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
@@ -313,17 +308,13 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
     occurrence: shrine,
     value: { rewardType: 'ArmorBoost' },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: shrine,
-    generationKey: 'initial:first',
-    purchase: { delay: 2, rushed: true },
+  project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:first', {
+    delay: 2,
+    rushed: true,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: shrine,
-    generationKey: 'travelDealRefill',
-    purchase: { delay: 2, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'travelDealRefill', {
+    delay: 2,
+    rushed: false,
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {
@@ -435,11 +426,9 @@ export function surfaceShrineDeliveriesProject(): ProjectDocument {
     [nSideRoom, 'initial:secondRight', 8, false],
     [oShrine, 'initial:first', 2, true],
   ] as const) {
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence,
-      generationKey,
-      purchase: { delay, rushed },
+    project = purchaseTestHermesShrineOffer(project, catalog, occurrence, generationKey, {
+      delay,
+      rushed,
     });
   }
   project = applyProjectCommand(project, catalog, {
@@ -447,17 +436,13 @@ export function surfaceShrineDeliveriesProject(): ProjectDocument {
     occurrence: oShrine,
     value: { rewardType: 'ArmorBoost' },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: oShrine,
-    generationKey: 'travelDealRefill',
-    purchase: { delay: 2, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, oShrine, 'travelDealRefill', {
+    delay: 2,
+    rushed: false,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: pPostboss,
-    generationKey: 'initial:secondRight',
-    purchase: { delay: 8, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, pPostboss, 'initial:secondRight', {
+    delay: 8,
+    rushed: false,
   });
   return placeDueHermesShrineDeliveries(project);
 }
@@ -509,11 +494,9 @@ export function createSurfaceNShrineSideRoomDeliveryCheckpoint(): ProjectDocumen
       value: { rewardType },
     });
   }
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:secondLeft',
-    purchase: { delay: 2, rushed: false },
+  return purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+    delay: 2,
+    rushed: false,
   });
 }
 
@@ -537,11 +520,9 @@ export function createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(): ProjectD
     slotKey: 'secondRight',
     value: { rewardType: 'BlindBoxLoot' },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:secondRight',
-    purchase: { delay: 3, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondRight', {
+    delay: 3,
+    rushed: false,
   });
   const boss = createOccurrenceAddress(
     nBiome,
@@ -846,11 +827,9 @@ export function createStaleSurfaceHermesDeliveryPlacement() {
     slotKey: 'first',
     value: { rewardType: 'HealBigDrop' },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:first',
-    purchase: { delay: 2, rushed: false },
+  project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:first', {
+    delay: 2,
+    rushed: false,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'PlaceHermesShrineDelivery',
@@ -907,11 +886,9 @@ export function createTwoStaleSurfaceHermesDeliveryPlacements() {
     slotKey: 'secondLeft',
     value: { rewardType: 'MaxHealthDrop' },
   });
-  second = applyProjectCommand(second, catalog, {
-    kind: 'SetHermesShrinePurchase',
-    occurrence: source,
-    generationKey: 'initial:secondLeft',
-    purchase: { delay: 2, rushed: false },
+  second = purchaseTestHermesShrineOffer(second, catalog, source, 'initial:secondLeft', {
+    delay: 2,
+    rushed: false,
   });
   const secondEntryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
   second = applyProjectCommand(second, catalog, {

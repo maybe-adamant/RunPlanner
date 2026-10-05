@@ -290,6 +290,7 @@ function applyUnchecked(
     case 'SetHermesShrinePresence':
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrinePurchase':
+    case 'SetHermesShrinePurchaseRush':
     case 'ReplaceHermesShrineTravelDealRefill':
       return applyOccurrenceCommand(
         document,

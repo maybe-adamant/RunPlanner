@@ -1,5 +1,17 @@
 # Project schema boundary
 
+Schema 91 authors each Hermes Shrine purchase as a `purchaseHermesShrineOffer`
+room action that owns its rush; `purchaseBySlot` and the Travel Deal refill
+purchase keep only their delay.
+
+```bash
+npm run schema:migrate-90-to-91 -- path/to/schema-90-project.runplanner.json
+```
+
+The migration adds one action per purchased generation in slot order, then the
+refill, before the Shrine room's own pickups, so the first rushed purchase is
+unchanged.
+
 Schema 90 admits the Fresh File route, whose loadout stores `null` weapon,
 aspect and starting keepsake selections. Every schema-89 document is a mature
 save with its selections already written.
@@ -172,8 +184,9 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The application migrates schema 86, 87, 88 and 89 documents to
-schema 90 when it opens them; older documents need the offline tools above.
+is never mutated. The application migrates schema 86, 87, 88, 89 and 90
+documents to schema 91 when it opens them; older documents need the offline
+tools above.
 
 Migrate a schema-74 document with:
 

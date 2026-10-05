@@ -7,6 +7,7 @@ import {
   parseProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
@@ -20,6 +21,7 @@ import {
   applyProjectDocumentTransitions,
   loadProjectDocument,
 } from '@planner/persistence/projectDocumentLoader';
+import schema90ShrinePurchases from './fixtures/shrine-purchases.schema-90.runplanner.json';
 
 const project = createProjectDocument(catalog, {
   configuredBiomeCount: 1,
@@ -28,7 +30,7 @@ const project = createProjectDocument(catalog, {
 });
 
 describe('project document loader', () => {
-  it('loads a current schema-90 document through the strict parser without migration provenance', () => {
+  it('loads a current schema-91 document through the strict parser without migration provenance', () => {
     const json = encodeProjectDocument(project);
 
     expect(loadProjectDocument(json, catalog)).toEqual({
@@ -51,11 +53,11 @@ describe('project document loader', () => {
         delete decision.actions;
       }
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 90 }), catalog),
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 91 }), catalog),
     ).toThrow(/visitOrder/);
 
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
-    expect(loaded.migrationProvenance).toHaveLength(3);
+    expect(loaded.migrationProvenance).toHaveLength(4);
     expect(loaded.project).toEqual(
       applyProjectCommand(current, catalog, {
         kind: 'ReplaceHubActionOrder',
@@ -65,7 +67,7 @@ describe('project document loader', () => {
     );
   });
 
-  it('chains a schema-87 document without a Hub through 88 and 89 to 90 by version only', () => {
+  it('chains a schema-87 document without a Hub through 88, 89 and 90 to 91 by version only', () => {
     const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
     legacy.schemaVersion = 87;
 
@@ -89,6 +91,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 90,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 90,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 91,
+        },
       ],
       project,
     });
@@ -100,7 +108,7 @@ describe('project document loader', () => {
     legacy.projectId = 'run-plan';
     const first = loadProjectDocument(JSON.stringify(legacy), catalog);
     const second = loadProjectDocument(JSON.stringify(legacy), catalog).project;
-    expect(first.migrationProvenance.map((step) => step.sourceSchemaVersion)).toEqual([88, 89]);
+    expect(first.migrationProvenance.map((step) => step.sourceSchemaVersion)).toEqual([88, 89, 90]);
     expect(first.project.projectId).toMatch(/^run-plan-[0-9a-f-]{36}$/);
     expect(second.projectId).not.toBe(first.project.projectId);
     expect({ ...first.project, projectId: project.projectId }).toEqual(project);
@@ -122,7 +130,7 @@ describe('project document loader', () => {
     ['Underworld', () => createGoldenFGHIProject()],
     ['Surface', () => loadSurfaceNProject()],
   ])(
-    'migrates a mature schema-89 %s document to schema 90 without reinterpreting it',
+    'migrates a mature schema-89 %s document to schema 91 without reinterpreting it',
     (_route, current) => {
       const expected = current();
       const legacy = { ...JSON.parse(encodeProjectDocument(expected)), schemaVersion: 89 };
@@ -134,10 +142,16 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 90,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 90,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 91,
+        },
       ]);
       expect(loaded.project).toEqual(expected);
       expect(encodeProjectDocument(loaded.project)).toBe(
-        JSON.stringify({ ...legacy, schemaVersion: 90 }, null, 2) + '\n',
+        JSON.stringify({ ...legacy, schemaVersion: 91 }, null, 2) + '\n',
       );
     },
   );
@@ -197,7 +211,7 @@ describe('project document loader', () => {
       },
     };
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 90 }), catalog),
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 91 }), catalog),
     ).toThrow(/weights/);
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
 
@@ -227,6 +241,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 90,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 90,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 91,
+        },
       ],
       project: expected,
     });
@@ -241,8 +261,8 @@ describe('project document loader', () => {
     ],
     [
       'future schema',
-      JSON.stringify({ ...project, schemaVersion: 91 }),
-      /newer than supported schema 90/,
+      JSON.stringify({ ...project, schemaVersion: 92 }),
+      /newer than supported schema 91/,
     ],
     [
       'mismatched current catalog',
@@ -259,7 +279,7 @@ describe('project document loader', () => {
       catalogVersion: 'catalog-85-normalized',
       schemaVersion: 85,
     } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 90 } as const;
+    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 91 } as const;
     const oldDocument = { ...project, ...oldIdentity };
 
     const migrated = applyProjectDocumentTransitions({
@@ -298,7 +318,7 @@ describe('project document loader', () => {
         sourceCatalogVersion: 'catalog-85-normalized',
         sourceSchemaVersion: 85,
         targetCatalogVersion: catalog.version,
-        targetSchemaVersion: 90,
+        targetSchemaVersion: 91,
       },
     ]);
     expect(parseProjectDocument(JSON.stringify(migrated.document), catalog)).toEqual(project);
@@ -306,7 +326,7 @@ describe('project document loader', () => {
 
   it('rejects a transition that does not reach its declared target identity', () => {
     const oldIdentity = { catalogVersion: 'catalog-85', schemaVersion: 85 } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 90 } as const;
+    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 91 } as const;
 
     expect(() =>
       applyProjectDocumentTransitions({
@@ -325,5 +345,70 @@ describe('project document loader', () => {
         ],
       }),
     ).toThrow(/did not produce its declared target identity/);
+  });
+
+  it('migrates schema-90 Shrine rush onto purchase actions and evaluates identically', () => {
+    const shrine = 'surface-n-preboss:postboss';
+    const source = {
+      kind: 'occurrence',
+      routeKey: 'Surface',
+      biomeKey: 'N',
+      occurrenceId: shrine,
+    } as const;
+    const entryKey = (generationKey: string) =>
+      `hermesShrineDelivery:${encodeURIComponent(
+        JSON.stringify(['Surface', 'N', shrine, generationKey]),
+      )}`;
+    const loaded = loadProjectDocument(JSON.stringify(schema90ShrinePurchases), catalog);
+    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([91]);
+    const occurrence = loaded.project.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shrine);
+    expect(occurrence?.hermesShrine?.purchaseBySlot).toEqual({
+      first: { delay: 2 },
+      secondRight: { delay: 5 },
+    });
+    expect(occurrence?.hermesShrine?.travelDealRefill?.purchase).toEqual({ delay: 2 });
+    expect(occurrence?.roomActions.order).toEqual([
+      { kind: 'useFountain' },
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight', rushed: true },
+      { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill', rushed: false },
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: entryKey('initial:first'),
+      },
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: entryKey('initial:secondRight'),
+      },
+    ]);
+
+    // Recorded from the schema-90 engine evaluating the unmigrated fixture.
+    const evaluation = simulateProject(catalog, loaded.project);
+    expect(evaluation.status).toBe('valid');
+    expect(evaluation.findings).toEqual([]);
+    const [n, o] = evaluation.route.biomes.map((biome) =>
+      'rewards' in biome ? biome.rewards : undefined,
+    );
+    expect(n?.hermesShrineDeliveries).toEqual([
+      {
+        entryKey: entryKey('travelDealRefill'),
+        source,
+        generationKey: 'travelDealRefill',
+        rewardType: 'ArmorBoost',
+        rushed: false,
+        remainingUses: 2,
+        deliveryKind: 'pending',
+      },
+    ]);
+    expect(o?.hermesShrineDeliveries).toEqual([]);
+    expect(
+      n?.hermesShrineAssessments
+        .find((entry) => entry.origin.occurrenceId === shrine)
+        ?.assessments.map((assessment) => assessment.travelDealRefill?.sourceGenerationKey),
+    ).toEqual(['initial:first']);
   });
 });

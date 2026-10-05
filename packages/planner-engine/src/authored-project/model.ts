@@ -8,7 +8,7 @@ import type {
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 90 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 91 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -129,9 +129,9 @@ export function hermesShrineInitialSlotKey(
     : undefined;
 }
 
+/** Purchased terms; rush and purchase order belong to the generation's purchase action. */
 export interface HermesShrinePurchase {
   readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
-  readonly rushed: boolean;
 }
 
 /** Visible Shrine inventory identity. Concrete payload and pickup detail belong to delivery. */
@@ -210,6 +210,11 @@ export type RoomActionReference =
   | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
   | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
   | { readonly kind: 'purchaseStygianWellOffer'; readonly generationKey: StygianWellGenerationKey }
+  | {
+      readonly kind: 'purchaseHermesShrineOffer';
+      readonly generationKey: HermesShrineGenerationKey;
+      readonly rushed: boolean;
+    }
   | { readonly kind: 'sellPurgingPoolTrait'; readonly slotKey: 'left' | 'middle' | 'right' }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }

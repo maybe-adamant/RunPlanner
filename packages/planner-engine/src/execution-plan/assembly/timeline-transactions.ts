@@ -622,6 +622,8 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind === 'collectRequiredReward' ||
       timeline.action.reference.kind === 'sellPurgingPoolTrait' ||
       timeline.action.reference.kind === 'interactEris' ||
+      // Shrine purchases, rush included, publish through the room Overview.
+      timeline.action.reference.kind === 'purchaseHermesShrineOffer' ||
       // Fields cage completion is represented by the ordered encounter phases;
       // native ChooseEncounter is the only steering contact.  The room action
       // itself has no separate executable callback or transaction.

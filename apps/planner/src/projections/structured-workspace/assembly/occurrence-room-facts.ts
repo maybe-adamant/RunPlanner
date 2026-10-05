@@ -304,20 +304,9 @@ export function assembleOccurrenceRewardLocal(
   const rushedShrineRewardControls = Object.freeze(
     input.occurrence.hermesShrine === undefined
       ? []
-      : [
-          ...Object.entries(input.occurrence.hermesShrine.purchaseBySlot ?? []).map(
-            ([slotKey, purchase]) => [`initial:${slotKey}`, purchase] as const,
-          ),
-          ...(input.occurrence.hermesShrine.travelDealRefill?.purchase === undefined
-            ? []
-            : [
-                [
-                  'travelDealRefill' as const,
-                  input.occurrence.hermesShrine.travelDealRefill.purchase,
-                ] as const,
-              ]),
-        ].flatMap(([generationKey, purchase]) => {
-          if (purchase?.rushed !== true) return [];
+      : input.occurrence.roomActions.order.flatMap((reference) => {
+          if (reference.kind !== 'purchaseHermesShrineOffer' || !reference.rushed) return [];
+          const generationKey = reference.generationKey;
           const inventoryOffer =
             generationKey === 'travelDealRefill'
               ? input.occurrence.hermesShrine?.travelDealRefill?.offer
@@ -329,10 +318,7 @@ export function assembleOccurrenceRewardLocal(
           if (inventoryOffer === null || inventoryOffer === undefined) return [];
           const entry = createAcquisitionEntryAddress(
             createAcquisitionSiteAddress(address, 'hermesShrineDelivery'),
-            hermesShrineDeliveryEntryKey(
-              address,
-              generationKey as import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
-            ),
+            hermesShrineDeliveryEntryKey(address, generationKey),
           );
           const reward =
             input.occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[

@@ -18,6 +18,7 @@ import {
   authorLegalTraitOffers,
   replaceTestShopOfferActions,
   hubVisitActions,
+  purchaseTestHermesShrineOffer,
 } from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFGHICheckpoint,
@@ -1680,12 +1681,13 @@ describe('engine-owned F/G execution semantic product', () => {
       purchase: null,
     });
     for (const purchase of [{ delay: 2, rushed: false }, null] as const) {
-      const changed = applyProjectCommand(withoutRefillPurchase, catalog, {
-        kind: 'SetHermesShrinePurchase',
-        occurrence: shrineAddress,
-        generationKey: 'initial:first',
+      const changed = purchaseTestHermesShrineOffer(
+        withoutRefillPurchase,
+        catalog,
+        shrineAddress,
+        'initial:first',
         purchase,
-      });
+      );
       expect(
         changed.route.biomes[0]!.topology!.occurrences.find(
           (candidate) => candidate.occurrenceId === shrineAddress.occurrenceId,

@@ -37,6 +37,7 @@ const executionDispositions = {
     interactWheelReward: 'covered',
     interactShopOffer: 'covered',
     purchaseStygianWellOffer: 'covered',
+    purchaseHermesShrineOffer: 'covered',
     sellPurgingPoolTrait: 'intentionally-omitted',
     interactEncounter: 'covered',
     interactGorgon: 'covered',

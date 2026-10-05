@@ -126,6 +126,12 @@ export interface WorkspaceHermesShrinePurchaseInteraction {
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchase' }>
   >;
+  readonly rushed: boolean;
+  readonly rushIntentFor: (
+    rushed: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchaseRush' }>
+  >;
 }
 
 export interface WorkspaceHermesShrineOfferInteraction {

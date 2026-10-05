@@ -22,6 +22,7 @@ import {
 } from '../../../../authored-project/acquisition/artificer';
 import {
   dueContactMatches,
+  firstRushedInitialPurchase,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
@@ -37,7 +38,6 @@ import {
 } from '../../../commerce/purging-pool';
 import {
   assessHermesShrineTravelDealRefill,
-  firstRushedInitialGeneration,
   type HermesShrineTravelDealRefillAssessment,
 } from '../../../commerce/hermes-shrine';
 import { foldTraitHistoryEvents } from '../../../traits';
@@ -206,9 +206,20 @@ export function applyAcquisitionPointReachedTransition(
         pendingDelivery(delivery.generationKey, delivery.rewardType, delivery),
       ),
     );
-    // Travel Deal refills the slot of the first rushed purchase when that
-    // purchase closes the Shrine screen, whether or not the item is collected.
-    const sourceGenerationKey = firstRushedInitialGeneration(event.deliveries);
+    // Travel Deal refills the slot of the first rushed purchase in timeline
+    // order when that purchase closes the Shrine screen, whether or not the
+    // item is collected.
+    const purchaseRows = room.roomActionRoster.rows
+      .filter((row) => row.rank !== null && row.reference.kind === 'purchaseHermesShrineOffer')
+      .sort((left, right) => left.rank! - right.rank!);
+    const sourceGenerationKey = firstRushedInitialPurchase(
+      purchaseRows.map((row) => row.reference),
+    )?.generationKey;
+    const refillRow = purchaseRows.find(
+      (row) =>
+        row.reference.kind === 'purchaseHermesShrineOffer' &&
+        row.reference.generationKey === 'travelDealRefill',
+    );
     const shrine = room.hermesShrine;
     const refillAssessments =
       sourceGenerationKey === undefined ||
@@ -253,16 +264,23 @@ export function applyAcquisitionPointReachedTransition(
         });
     }
     const refillPurchase = shrine?.travelDealRefill?.purchase;
+    // Without a rushed purchase holding Travel Deal the purchased refill never exists.
+    if (refillPurchase !== undefined && refillAssessments === undefined && refillRow !== undefined)
+      addFinding('hermesShrineTravelDealRefillUnavailable', refillRow.owner, {
+        generationKey: 'travelDealRefill',
+        reason: sourceGenerationKey === undefined ? 'noRushedPurchase' : 'travelDealInactive',
+      });
     if (
       refillSupported &&
       refillPurchase !== undefined &&
+      refillRow?.reference.kind === 'purchaseHermesShrineOffer' &&
       refillOffer !== undefined &&
       refillOffer !== null
     ) {
       const [refillKey, refillDelivery] = pendingDelivery(
         'travelDealRefill',
         refillOffer.rewardType,
-        refillPurchase,
+        { delay: refillPurchase.delay, rushed: refillRow.reference.rushed },
       );
       scheduled[refillKey] = refillDelivery;
     }

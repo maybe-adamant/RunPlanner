@@ -237,7 +237,7 @@ describe('authored-project checkpoint integrity', () => {
       (occurrence) => occurrence.occurrenceId === sourceId,
     );
     const host = n?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === hostId);
-    expect(source?.hermesShrine?.purchaseBySlot?.secondLeft).toEqual({ delay: 2, rushed: false });
+    expect(source?.hermesShrine?.purchaseBySlot?.secondLeft).toEqual({ delay: 2 });
     expect(source?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
     );
