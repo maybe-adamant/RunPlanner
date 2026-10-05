@@ -9,6 +9,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
@@ -54,7 +55,7 @@ import {
   dreamSingleQProject,
   dreamSingleQShrineDeliveryProject,
 } from '@run-planner/test-fixtures/dream';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, supportedTraitOffer } from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   assessHermesShrineInventory,
@@ -1679,6 +1680,177 @@ describe('Hermes Shrine pickup settlement', () => {
         (occurrence) => occurrence.occurrenceId === delayedHost.occurrenceId,
       )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[delayedEntry.entryKey];
     expect(retained?.dispositionByAcquisitionRole.self).toEqual({ kind: 'timePiece' });
+  });
+
+  /** The published rarity table of one delivery's trait child, per reached branch. */
+  function deliveredBoonRarityValues(
+    project: ReturnType<typeof loadSurfaceNOPQProject>,
+    trait: ReturnType<typeof createTraitOfferAddress>,
+    giverKey: string,
+  ) {
+    const value = supportedTraitOffer(project, trait, giverKey);
+    if (value === undefined) throw new Error(`${giverKey} delivery has no supported offer`);
+    const authored = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value,
+    });
+    const assembly = simulateProjectAssembly(catalog, authored);
+    const biome = assembly.evaluation.route.biomes.find(
+      (candidate) => candidate.biomeKey === trait.biomeKey,
+    );
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error(
+        `delivery host biome is not valid: ${biome?.findings.map((finding) => finding.code).join(',')}`,
+      );
+    const evaluation = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+      kind: 'traitOffer',
+      trait,
+      value,
+    });
+    if (evaluation.kind !== 'traitOffer') throw new Error('delivery child candidate unavailable');
+    return evaluation.result.branches.map((branch) => branch.offerGenerationState?.rarity);
+  }
+
+  /** O Postboss Shrine countdown purchase placed at the P host it falls due in. */
+  function countdownDeliveryIntoP(
+    delay: 5 | 6,
+    hostOccurrenceId: string,
+    encounterPhaseKey: string,
+  ) {
+    const rewardType = 'ShopHermesUpgrade';
+    const source = createOccurrenceAddress(
+      oBiome,
+      createOccurrenceId('surface-o-preboss:postboss'),
+    );
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'secondLeft',
+      value: { rewardType },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay, rushed: false },
+    });
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(pBiome, createOccurrenceId(hostOccurrenceId)),
+        'hermesShrineDelivery',
+      ),
+      hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry,
+      encounterPhaseKey,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType },
+    });
+    return Object.freeze({ project, entry });
+  }
+
+  it('builds a countdown delivery with the miniboss host rarity override', () => {
+    const override = catalog.rooms.byKey.P_MiniBoss01?.boonRarityOverride;
+    if (override === undefined) throw new Error('missing P Miniboss rarity override');
+    const { project, entry } = countdownDeliveryIntoP(6, 'surface-p-5-1-p_miniboss01', 'Encounter');
+    expect(
+      deliveredBoonRarityValues(project, createTraitOfferAddress(entry, 'hermes'), 'Hermes'),
+    ).toEqual([
+      {
+        kind: 'orderedChecks',
+        values: { ...catalog.boonRarityBases.hermes, ...override },
+        rollOrder: catalog.boonRarityRollOrder,
+      },
+    ]);
+  });
+
+  it('keeps the provider base for a countdown delivery into a room without an override', () => {
+    expect(catalog.rooms.byKey.P_Combat07?.boonRarityOverride).toBeUndefined();
+    const { project, entry } = countdownDeliveryIntoP(5, 'surface-p-4-1-p_combat07', 'Combat');
+    expect(
+      deliveredBoonRarityValues(project, createTraitOfferAddress(entry, 'hermes'), 'Hermes'),
+    ).toEqual([
+      {
+        kind: 'orderedChecks',
+        values: catalog.boonRarityBases.hermes,
+        rollOrder: catalog.boonRarityRollOrder,
+      },
+    ]);
+  });
+
+  it('builds a rushed same-room delivery with the miniboss host rarity override', () => {
+    const override = catalog.rooms.byKey.O_MiniBoss02?.boonRarityOverride;
+    if (override === undefined) throw new Error('missing O Miniboss rarity override');
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: host,
+      gameName: 'O_MiniBoss02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(oBiome, {
+        kind: 'occurrence',
+        occurrenceId: oOccurrenceIds.combat01,
+      }),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.combat01),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'BlindBoxLoot'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 2, rushed: true },
+    });
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
+    expect(
+      deliveredBoonRarityValues(project, createTraitOfferAddress(entry, 'hiddenSource'), 'Apollo'),
+    ).toEqual([
+      {
+        kind: 'orderedChecks',
+        values: { ...catalog.boonRarityBases.olympian, ...override },
+        rollOrder: catalog.boonRarityRollOrder,
+      },
+    ]);
   });
 });
 

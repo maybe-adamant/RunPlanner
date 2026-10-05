@@ -287,12 +287,13 @@ remove and that vanishes with its room when left behind. The physical spawn and
 pickup remain distinct game events, but the planner needs no
 picked-up/not-picked-up authoring fact beyond the optional row.
 
-Rarity is a bounded discrepancy owned by the
+Rarity is owned by the
 [Boon rarity ledger audit](../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#delayed-hermes-delivery-in-a-miniboss-room):
 both paths build their first offer before `IgnoreRoomRarityBonus` can apply,
 so a rushed item and a countdown delivery alike read the host room's rarity
 override on first build, and only a countdown rebuild ignores it. The planner
-applies no room rarity override to delivered boons on either path.
+attaches the host room's override to the delivered boon on both paths and
+models no rebuild.
 
 Two native flush paths share one gate. `CompleteSurfaceShopItems`
 (`EncounterSets.lua:414-430`, the `ShopRoomEvents` set) requires

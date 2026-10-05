@@ -215,6 +215,16 @@ export function applyAcquisitionPointReachedTransition(
       view,
       hubBoardLookups: 'consulted',
     });
+  // A Shrine delivery builds its loot inside the host room, so it reads that
+  // room's rarity override like any other loot created there.
+  const deliveryTraitContext =
+    declaration.boonRarityOverride === undefined
+      ? {}
+      : {
+          traitContext: Object.freeze({
+            boonRarityRoomOverride: declaration.boonRarityOverride,
+          }),
+        };
   const hermesDeliveryProducerFrontier = (input: {
     readonly address: import('../../../../authored-project/addresses').AcquisitionEntryAddress;
     readonly rewardType: string;
@@ -255,6 +265,7 @@ export function applyAcquisitionPointReachedTransition(
             presentsMaterializedScreen: false,
             requiredEntryKeys: new Set([input.address.entryKey]),
             producerLifecycleKey: 'HermesShrineDelivery',
+            ...deliveryTraitContext,
             historySequence: event.sequence,
             atomicRegion: input.atomicRegion,
             facts: (state) => factsAt(input.acquisitionView, state),
@@ -636,6 +647,7 @@ export function applyAcquisitionPointReachedTransition(
         ...(deliveryActionOwner === undefined ? {} : { timelineOwner: deliveryActionOwner }),
         requiredEntryKeys: new Set([event.entryKey]),
         producerLifecycleKey: 'HermesShrineDelivery',
+        ...deliveryTraitContext,
         historySequence: event.sequence,
         facts: (state) => factsAt(acquisitionView, state),
         findingChronology: chronology,
