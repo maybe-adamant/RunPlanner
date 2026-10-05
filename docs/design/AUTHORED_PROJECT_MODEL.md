@@ -605,8 +605,15 @@ settlement boundary.
 A declaration-owned Pool of Purging persists its fixed slots only after the
 player authors interaction; disabling interaction removes sale actions while
 retaining dormant slot detail. A present Shrine of Hermes persists its visible
-initial inventory and sparse purchase timing, while its rushed or delayed
-delivery owns concrete acquisition payload. A Stygian Well uses its
+initial inventory and sparse purchase terms: `HermesShrinePurchase` is
+`{ delay }`, and a generation is purchased when `purchaseBySlot` (or, for the
+refill, `travelDealRefill.purchase`) holds it. Each purchased generation has
+exactly one `{ kind: 'purchaseHermesShrineOffer', generationKey, rushed }`
+reference in `roomActions.order`, which owns its rush and its position among the
+Shrine's purchases; the codec rejects a missing, duplicate or unpurchased
+purchase action, and a same-room Shrine pickup without a rushed purchase
+action. Its rushed or delayed delivery owns concrete acquisition payload. A
+Stygian Well uses its
 `interacted` flag as the boundary between native-random inventory and three
 authored initial generations. Travel Deal refill state is occurrence-local to
 its Shop, Shrine, or Well carrier. Pending deliveries, temporary effects,
@@ -666,7 +673,15 @@ is a no-op on an empty slot. The Travel refill is not a declared slot.
 `interactShopOffer` reference. Generic Room Action insertion/removal rejects
 that reference family so Overview's Purchased marker is the sole membership
 interaction; ranked purchases remain movable with the ordinary Room Action
-commands. Removing participation remains accepted for a retained stale
+commands. Shrine and Well purchase references are rejected the same way.
+`SetHermesShrinePurchase` sets one generation's delay or clears its purchase: a
+new purchase inserts its unrushed purchase action at its canonical position,
+and clearing removes that action, its pickup and placed deliveries while
+retaining delivery payload. `SetHermesShrinePurchaseRush` changes rush on one
+exact purchase action, ranking or retracting its optional same-room pickup.
+When either command changes the first rushed initial purchase, the refill's
+purchase action and pickup are rescheduled after the new trigger; when no
+rushed initial purchase remains, the refill's pickup is retracted. Removing participation remains accepted for a retained stale
 purchase after its Shop owner disappears, allowing exact repair without
 deleting unrelated actions. `MoveRoomAction` changes one ranked action's
 position within the complete chronology;
@@ -1091,8 +1106,8 @@ not simulated validity. The structural command can represent an unplaced
 obligation; application edit settlement refuses to publish removal of a reached
 valid required delivery. Proven invalid placements retain this explicit repair. Due-contact validation continues to require that delivery before
 publication. Same-room rushed deliveries are optional actions ranked by the
-purchase command and removed through `RemoveRoomAction`, never unplaced; a
-rushed purchase may stand without its action. Ordinary required actions remain
+rush command and removed through `RemoveRoomAction`, never unplaced; a
+rushed purchase may stand without its pickup. Ordinary required actions remain
 protected from removal.
 Source reactivation uses the existing exact placement support rather than
 guessing a replacement host.
@@ -1184,6 +1199,10 @@ schema 88's shared default `'run-plan'` with a unique identity, and there is no
 runtime rule for it. Schema 90 admits the Fresh File route's null equipment
 and keepsake selections; the 89 → 90 migration changes only the version, since
 every schema-89 route is a mature save whose selections stay as written.
+Schema 91 moves Shrine rush from the purchase terms onto the purchase action;
+the 90 → 91 migration inserts one action per purchased generation in slot
+order (`first`, `secondLeft`, `secondRight`, then the refill) carrying the old
+rush, before the Shrine room's own pickups, so the refill source is unchanged.
 
 ## Undo and Redo
 

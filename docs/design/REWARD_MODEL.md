@@ -848,8 +848,11 @@ structural commands and decoding use only the host profile's option domain.
 A Shrine of Hermes refill is caused by the first rushed (speed-up) initial
 purchase when it closes the Shrine screen, not by collecting the rushed item:
 it is realized with the purchase's scheduling, and removing the optional rushed
-pickup leaves the refill and its own delivery intact. Purchase order is not
-authored, so the first rushed purchase is taken in slot order.
+pickup leaves the refill and its own delivery intact. The source is the first
+rushed initial `purchaseHermesShrineOffer` in timeline order, and the refill
+replaces that purchase's slot. Reordering or re-rushing purchases can change the
+source; a retained refill item outside the new source's group is kept and
+reported `hermesShrineTravelDealRefillUnavailable` at the refill offer.
 Gold Gold Gold is a free pickup under the `roomExit` acquisition site, derived from the first accepted
 paid non-`SpellDrop` purchase while its one-use Echo trait is equipped.
 
@@ -860,6 +863,10 @@ dormant. Its saved choice neither creates a finding nor publishes a refill
 transaction, and the editor hides the inactive row once assessed. Restoring a
 qualifying trigger reuses that choice. A retained refill purchase still needs
 its repair control; hiding dormant detail must not hide an authored interaction.
+A purchased Shrine refill with no rushed initial purchase, or whose source does
+not hold Travel Deal on every branch, keeps its item and reports
+`hermesShrineTravelDealRefillUnavailable` at its purchase row with reason
+`noRushedPurchase` or `travelDealInactive`.
 The same capability boundary governs Contract pedestals: retaining an unpicked
 reward after losing Infernal Contract does not publish a pedestal. A selected
 stale pickup remains a validation finding and a repairable authored action.
@@ -913,8 +920,8 @@ the one authored order, evaluates that source against history from earlier
 authored actions, and never retries another permutation. It retains ordinary
 reward-source possibility branches within that fixed order.
 
-Payload and order are deliberately separate. Travel uses the ordinary Shop
-inventory editor and keeps its `interactAcquisitionEntry(roomExit, travelDealRefill)`
+Payload and order are deliberately separate. Travel uses the ordinary reward
+editor and keeps its `interactAcquisitionEntry(roomExit, travelDealRefill)`
 participant. Non-Mystery children remain on the inventory slot. Mystery's sparse
 acquisition child exists only while purchased and resolves against the later
 pre-acquisition context, not the refill-generation context. Removing its purchase
@@ -926,10 +933,11 @@ The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives
 per-row membership and one ranked Room Timeline surface from the
 occurrence-owned list. That surface remains on the producing occurrence; an
-outgoing decision never adopts the source room's chronology. For Shop entries,
-Overview inventory owns reward identity and its Purchased marker, while the
-participating action row owns chronology and acquisition-time resolution
-children. Generated pickup entries whose payload is owned by the action row
+outgoing decision never adopts the source room's chronology. For fixed Shop, Shrine and
+Well slots, Overview inventory owns reward identity and its Purchased marker,
+while the participating action row owns chronology, Shrine rush and
+acquisition-time resolution children. Travel Deal refill inventory is edited on
+the Room Timeline under the purchase row that triggers it. Generated pickup entries whose payload is owned by the action row
 retain the full reward editor there.
 
 ## Offer and Acquisition

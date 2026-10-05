@@ -13,8 +13,9 @@ wide (1920 px) window. Confirm or waive each item; retire confirmed items.
       and wrap without moving the controls above them.
 - [ ] Drag a side room to a rejected position. The notice floats over the list
       without shifting it and dismisses cleanly.
-- [ ] Compare a Travel Deal placeholder, an invalid Travel Deal, and a purchased
-      one in the Shop workbench. Item and participation columns align.
+- [ ] Compare World Shop, Well and Shrine Travel Deal lines under their
+      triggering purchase rows, unpurchased and purchased. Item and Purchased
+      columns align with the row above.
 - [ ] With Vow of Forfeit active, open a door, a Fields cage door, a Ship wheel
       offer and the route starting reward whose Boon realizes as a Red Onion.
       The picker trigger reads the offer followed by `(Red Onion)` with "Vow of

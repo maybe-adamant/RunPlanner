@@ -26,8 +26,9 @@ at the moment of the rush?
   Deal means Travel Deal does not work there.
 - Planner Shrine gate today: Travel Deal held on every branch at Shrine
   scheduling, after the room's other actions
-  (`encounter-acquisition/acquisition-point-reached.ts`, refill block). That
-  accepts a trait gained in the room before scheduling.
+  (`encounter-acquisition/acquisition-point-reached.ts`, `refillAssessments`).
+  That accepts a trait gained in the room before scheduling. The refill source
+  is already the first rushed initial purchase in timeline order.
 
 The two readings differ only when Travel Deal comes from a non-purchase source
 in the same Shrine room before the rush.
@@ -50,9 +51,9 @@ Control: hold Travel Deal on entry and rush; the slot refills.
 ## Disposition by outcome
 
 - **Refill in step 3 (and in the variant's second rush):** the gate is "held at
-  the rush". The planner checks the trait at the rushed purchase's timeline
-  position, which requires the authored purchase order of the proposed Shrine
-  purchase actions.
+  the rush". The planner checks the trait at the triggering rushed purchase
+  action's timeline position; the authored purchase order this needs already
+  exists on the `purchaseHermesShrineOffer` actions.
 - **No refill:** the gate is "held on entry". Align the Shrine with the World
   Shop's entry check; the current scheduling-time check over-permits and is
   corrected.

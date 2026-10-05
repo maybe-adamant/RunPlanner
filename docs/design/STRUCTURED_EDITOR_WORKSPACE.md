@@ -327,24 +327,35 @@ or child ownership moves to a composite editor.
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
 render Room Overview, Room Timeline, and Room Doors. Overview contains read-only
-incoming context and meaningful room-local setup: Fields identities, Shop
-inventory and Purchased markers, and Room features. Ephyra parents with declared
+incoming context and meaningful room-local setup: Fields identities, World
+Shop inventory and Purchased markers, and Room features, whose Shrine and Well
+inventories likewise hold only their fixed slots (a Shrine slot shows Item,
+Delay and Purchased). Shrine rush and every Travel Deal refill are authored on
+the Room Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench.
 Room Timeline consumes the engine lifecycle timeline plus the one
 occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
 product. A
 section is omitted when its projected product is empty.
 
-Timeline action headings use **Purchase** for paid World Shop/Well items and
-their refills, **Interact** for other actions (including Contract items and
+Timeline action headings use **Buy** for paid World Shop, Shrine and Well
+items and their refills, **Collect** for pickups (including Contract items and
 Echo-generated pickups), and **Sell** for Pool sales. Omit generic `with` and
 `pickup` wording; retain distinguishing cage, phase, source-role, and boosted
-identities. Purchases use `Purchase Slot N Offer · Item` or
-`Purchase Travel Deal Offer · Item`, with N matching inventory display order;
-Contract items use `Interact Contract Item · Item`. Timeline Pom names are
+identities. Purchases use `Buy Item · Slot N` or `Buy Item · Travel Deal Offer`,
+with N matching inventory display order; Contract items use
+`Collect Item · Contract Item`. Timeline Pom names are
 **Pom**, **Double Pom**, **Triple Pom**, and
 **Pom Slice**, without changing catalog names. Headings, drag previews, and
 action controls share the projected label; outcome details remain separate.
+
+A Shrine purchase row carries its Rush checkbox. The purchase row that triggers
+Travel Deal renders the refill's inventory controls as its second line: for a
+Shrine, the engine's refill source (the first rushed initial purchase) while
+Travel Deal applies; for a Well, its first purchase; for a World Shop, the
+purchase the refill entry names as its source. The line has no placeholder. A
+purchased refill that no line hosts keeps its own purchase row with a bound
+removal, and refill findings route to the line's control or to that row.
 
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
@@ -355,8 +366,9 @@ rank, while optional membership and stale removal remain on their established
 paths.
 
 Manual tab selection is transient and defaults to Overview for a newly focused
-occurrence. Exact semantic focus overrides it: setup and purchase markers open
-Overview, active encounter/action owners open the matching Room Timeline tab,
+occurrence. Exact semantic focus overrides it: setup and fixed-slot purchase
+markers open Overview, Travel Deal refill markers and active encounter/action
+owners open the matching Room Timeline tab,
 inactive Ship actions open repair, and outgoing owners open Room Doors. The
 application publishes that closed destination; React does not parse addresses
 or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,
@@ -864,9 +876,8 @@ the dialog resizes once.
 Row stability: a control whose declaration exists stays mounted and is only
 enabled by evaluation; a pending control states on hover whether it waits on an
 earlier choice or has nothing to target. A message that stands in for a control
-(an ungenerated side-room reward, a door awaiting its room, an unavailable
-Travel Deal item, a hidden or absent door reward, a dialog control without a
-value) keeps the control's label column and value frame through
+(an ungenerated side-room reward, a door awaiting its room, a hidden or
+absent door reward, a dialog control without a value) keeps the control's label column and value frame through
 `control-placeholder`; section-wide empty states keep their paragraph form.
 Action rows render fixed slots, disabled with a hover title when no proposal
 applies, and the Door Exit continuation names on hover whether a door is still
