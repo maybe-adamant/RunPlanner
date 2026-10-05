@@ -763,6 +763,74 @@ export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
   return authorLegalTraitOffers(project);
 }
 
+export const surfaceTravelDealRefillAnvilResult = Object.freeze({
+  kind: 'anvilOfFates' as const,
+  removedTraitKey: 'StaffDoubleAttackTrait',
+  addedTraitKeys: Object.freeze(['StaffLongAttackTrait', 'StaffJumpSpecialTrait'] as const),
+});
+
+/**
+ * Complete N/O/P/Q route whose N Combat09 Travel Deal reaches the Q Preboss
+ * Shop; the purchased Health refill is replaced by an authored Anvil.
+ */
+export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
+  const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+  const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
+  const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: travelDealSource,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(travelDealSource, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Epic' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress'),
+    value: { rewardType: 'MaxHealthDropBig' },
+  });
+  project = replaceTestShopOfferActions(project, catalog, shop, ['PremiumProgress']);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: refill,
+    value: { rewardType: 'ChaosWeaponUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnvilResult',
+    acquisition: createAcquisitionRoleAddress(refill, 'self'),
+    value: surfaceTravelDealRefillAnvilResult,
+  });
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit' as const,
+    entryKey: 'travelDealRefill',
+  };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(qBiome, qOccurrenceIds.preboss, roomActionKey(reference)),
+    reference,
+    index: 1,
+  });
+  return authorLegalTraitOffers(project);
+}
+
 /** A reached outdoor P combat with an Icarus-compatible incoming reward. */
 export function reachedPOutdoorIcarusFixture() {
   const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
