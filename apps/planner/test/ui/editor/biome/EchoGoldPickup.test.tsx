@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -16,7 +17,13 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
-import { createEchoGoldHPrebossProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createEchoGoldHPrebossProject,
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIDuplicateAnvilResult,
+  echoGoldIPrebossShopId,
+  goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -27,6 +34,8 @@ import {
   authoredProjectUndoRequested,
   authoredProjectRedoRequested,
 } from '@planner/state/projectWorkspaceSlice';
+import { findingSelected } from '@planner/state/editorSessionSlice';
+import { nextRepairSelection } from '@planner/projections/evaluationProjection';
 
 afterEach(cleanup);
 
@@ -295,4 +304,63 @@ it('repairs a retained consumable when its Gold source changes to a Mystery Boon
       semanticAddressKey(createTraitOfferAddress(gold, 'hiddenSource')),
     ),
   ).toBe(true);
+});
+
+it('authors the Anvil result of a Gold duplicate at its timeline row and lands its finding there', async () => {
+  const duplicateAnvil = createAcquisitionRoleAddress(
+    createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId),
+        'roomExit',
+      ),
+      'echoDoubleShopReward',
+    ),
+    'self',
+  );
+  const view = renderOccurrenceWorkbench(
+    createEchoGoldIAnvilDuplicateProject(),
+    'Underworld',
+    'I',
+    occurrenceById(echoGoldIPrebossShopId),
+  );
+  openRoomTab('Room Timeline');
+  const launcher = goldRow().getByRole('button', { name: 'Edit Anvil: Choose result' });
+  expect(launcher.getAttribute('data-has-findings')).toBe('true');
+  expect((launcher as HTMLButtonElement).disabled).toBe(false);
+
+  const assembly = view.application.store.getState().projectWorkspace.assembly!;
+  const issue = assembly.evaluation.issue;
+  if (issue === undefined) throw new Error('missing duplicate Anvil result has no issue');
+  expect(issue.owner).toEqual(duplicateAnvil);
+  act(() =>
+    view.application.store.dispatch(
+      findingSelected(
+        nextRepairSelection(issue, workspaceProjection(view.application).focusByOwner),
+      ),
+    ),
+  );
+  expect(document.activeElement).toBe(launcher);
+
+  await view.user.click(launcher);
+  const label = (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey;
+  const choose = async (picker: string, traitKey: string) => {
+    await view.user.click(screen.getByRole('button', { name: picker }));
+    await view.user.click(screen.getByRole('option', { name: label(traitKey) }));
+  };
+  await choose('Removed Hammer', echoGoldIDuplicateAnvilResult.removedTraitKey);
+  await choose('Added Hammer 1', echoGoldIDuplicateAnvilResult.addedTraitKeys[0]);
+  await choose('Added Hammer 2', echoGoldIDuplicateAnvilResult.addedTraitKeys[1]);
+  await view.user.click(screen.getByRole('button', { name: 'Save Anvil result' }));
+  expect(
+    workspaceProjection(view.application).interactions.acquisitionConversions.get(
+      semanticAddressKey(duplicateAnvil),
+    )?.anvil?.value,
+  ).toEqual(echoGoldIDuplicateAnvilResult);
+  expect(
+    view.application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.some((finding) =>
+        semanticAddressKey(finding.origin).includes('echoDoubleShopReward'),
+      ),
+  ).toBe(false);
 });

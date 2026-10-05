@@ -335,12 +335,19 @@ function conversionControls(
           `${semanticAddressKey(owner.address)} lacks acquisition disposition for ${role.key}`,
         );
       }
+      const anvilResult = reward.anvilResultsByAcquisitionRole?.[role.key];
       return Object.freeze({
         acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role.key),
         address,
         marker: input.markerDestinations.marker(address),
         rewardOwner: owner.address,
         value,
+        ...(anvilResult === undefined
+          ? {}
+          : {
+              anvilResult,
+              anvilApplies: input.acquisitionConversionCandidate?.(address)?.anvil !== undefined,
+            }),
       });
     }),
   );

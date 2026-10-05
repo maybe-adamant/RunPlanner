@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import type { AuthoredAnvilResult } from '../../authored-project/model';
+import type { AuthoredAnvilResult, AuthoredRewardState } from '../../authored-project/model';
 import type { ResolvedTraitOfferSource } from '../traits/offer-domain';
 import type { SimulationState } from '../state/model';
 import { replaceSimulationTraitHistory } from '../state/transitions';
@@ -30,6 +30,7 @@ interface AnvilAcquisitionFrontier {
   readonly source: {
     readonly offer: ResolvedRewardOffer;
     readonly traitContext?: ResolvedTraitOfferSource | undefined;
+    readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
   };
 }
 
@@ -211,9 +212,14 @@ export function createAnvilCandidateCapability(
   const frontiers = entries
     .filter((entry) => {
       const pickupEffect = pickupEffectForOffer(catalog.rewards, entry.source.offer);
+      // A converted pickup is never collected, so its Anvil result does not apply.
+      const disposition =
+        entry.source.dispositionByAcquisitionRole?.[entry.address.acquisitionRole]?.kind ??
+        'normal';
       return (
         pickupEffect?.role === entry.address.acquisitionRole &&
-        pickupEffect.effect.kind === 'anvilOfFates'
+        pickupEffect.effect.kind === 'anvilOfFates' &&
+        disposition === 'normal'
       );
     })
     .flatMap((entry) =>

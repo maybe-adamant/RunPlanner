@@ -1,10 +1,15 @@
-import type { AuthoredAnvilResult } from '@run-planner/engine/authored-project';
+import type {
+  AcquisitionRoleAddress,
+  AuthoredAnvilResult,
+} from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferFeedbackRegion } from './TraitOfferForm';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
@@ -261,7 +266,14 @@ export function AnvilResultEditor({
   );
 }
 
-export function AnvilResultLauncher({ interaction }: { readonly interaction: AnvilInteraction }) {
+export function AnvilResultLauncher({
+  interaction,
+  owner,
+}: {
+  readonly interaction: AnvilInteraction;
+  readonly owner: AcquisitionRoleAddress;
+}) {
+  const findingTarget = useFindingTarget();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const label =
@@ -275,8 +287,11 @@ export function AnvilResultLauncher({ interaction }: { readonly interaction: Anv
   return (
     <>
       <button
+        {...findingTarget(owner)}
         className="trait-offer-launcher quiet-action action-compact"
+        disabled={!interaction.contextReached || undefined}
         onClick={() => setOpen(true)}
+        title={interaction.contextReached ? undefined : candidateWaitingTitle}
         type="button"
       >
         {label}

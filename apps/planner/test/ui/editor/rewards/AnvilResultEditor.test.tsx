@@ -16,6 +16,7 @@ describe('Anvil result editor', () => {
   it('authors one removal followed by two distinct additions in three contextual pickers', async () => {
     const onCommit = vi.fn();
     const interaction: AnvilInteraction = {
+      contextReached: true,
       value: null,
       removableTraitKeys: ['OldHammer'],
       addedTraitKeysFor: (removed, prior) =>

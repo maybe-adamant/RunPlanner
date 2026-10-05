@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createExitSelectionAddress,
@@ -33,10 +36,14 @@ import {
   anomalyRosterPhase,
   createCompleteFGAnomalyProject,
   createCompleteFGProject,
+  createEchoGoldIAnvilDuplicateProject,
   createGoldenFGHIProject,
+  echoGoldIDuplicateAnvilResult,
+  echoGoldIPrebossShopId,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
+  goldenIBiome,
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -65,6 +72,7 @@ const checked = {
   trait: 0,
   encounter: 0,
   pom: 0,
+  anvil: 0,
   nemesis: 0,
   roster: 0,
   wheel: 0,
@@ -117,6 +125,12 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
       if (interaction !== undefined) checked.pom += 1;
       if (interaction !== undefined && !interaction.contextReached)
         disabled.push(`pom ${finding.code} ${semanticAddressKey(owner)}`);
+    }
+    if (owner.kind === 'acquisitionRole' && 'pickupEffect' in finding.evidence) {
+      const anvil = interactions.acquisitionConversions.get(semanticAddressKey(owner))?.anvil;
+      if (anvil !== undefined) checked.anvil += 1;
+      if (anvil !== undefined && !anvil.contextReached)
+        disabled.push(`anvil ${finding.code} ${semanticAddressKey(owner)}`);
     }
     // A Nemesis event's details are repaired at its encounter's interaction row.
     const nemesisEvent =
@@ -415,6 +429,36 @@ describe('a finding never disables the launcher that repairs it', () => {
     expect(checked.collapsed).toBeGreaterThan(0);
     expect(checked.roster).toBeGreaterThan(0);
     expect(checked.nemesis).toBeGreaterThan(0);
+  });
+
+  it('holds for a missing or illegal Gold duplicate Anvil result', () => {
+    const illegal = createEchoGoldIAnvilDuplicateProject({
+      ...echoGoldIDuplicateAnvilResult,
+      // The first Anvil already removed this Hammer.
+      removedTraitKey: 'StaffDoubleAttackTrait',
+    });
+    expect(check(illegal)).toEqual([]);
+    expect(checked.anvil).toBeGreaterThan(0);
+    checked.anvil = 0;
+    expect(check(createEchoGoldIAnvilDuplicateProject())).toEqual([]);
+    expect(checked.anvil).toBeGreaterThan(0);
+    // A Time Piece conversion is repaired at the pickup outcome, not the Anvil launcher.
+    const duplicate = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId),
+          'roomExit',
+        ),
+        'echoDoubleShopReward',
+      ),
+      'self',
+    );
+    const timePiece = applyProjectCommand(createEchoGoldIAnvilDuplicateProject(), catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: duplicate,
+      value: { kind: 'timePiece' },
+    });
+    expect(check(timePiece)).toEqual([]);
   });
 
   it('holds for wheel, ship-phase, side-room, Hub-slot and Fields-spatial owners', () => {

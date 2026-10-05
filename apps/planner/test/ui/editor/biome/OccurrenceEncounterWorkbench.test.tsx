@@ -67,6 +67,7 @@ import {
   pOccurrenceId,
   pOccurrenceIds,
   qOccurrenceIds,
+  surfaceTravelDealRefillAnvilProject,
 } from '@run-planner/test-fixtures/surface';
 import {
   renderOccurrenceWorkbench,
@@ -2797,6 +2798,24 @@ describe('OccurrenceEncounterWorkbench', () => {
     renderOccurrenceWorkbench(saved, 'Underworld', 'F', occurrenceById(shopId));
     openRoomTab('Room Timeline');
     expect(within(purchase()).getByRole('button', { name: /Trait/ })).toBeTruthy();
+  });
+
+  it('authors a Travel Deal refill Anvil at its own purchase row, not on the Travel Deal line', () => {
+    renderOccurrenceWorkbench(
+      surfaceTravelDealRefillAnvilProject(),
+      'Surface',
+      'Q',
+      occurrenceById(qOccurrenceIds.preboss),
+    );
+    openRoomTab('Room Timeline');
+    const line = screen.getByRole('group', { name: 'Travel Deal' });
+    expect(within(line).queryByRole('button', { name: /^Edit Anvil/ })).toBeNull();
+    const refill = screen.getByText('Buy Anvil of Fates · Travel Deal Offer').closest('li');
+    if (refill === null) throw new Error('Travel Deal refill purchase row is missing');
+    expect(within(refill).getByRole('button', { name: /^Edit Anvil: / })).toHaveProperty(
+      'disabled',
+      false,
+    );
   });
 
   it('removes the Shop Death Defiance repair control while retaining purchase authoring', async () => {

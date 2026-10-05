@@ -1,7 +1,6 @@
 import {
   seaStarDuplicateSiteKey,
   SEA_STAR_DUPLICATE_ENTRY_KEY,
-  authoredShopOffer,
   type AcquisitionDisposition,
 } from '@run-planner/engine/authored-project';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
@@ -48,20 +47,17 @@ export function bindAcquisitionConversionInteractions(input: {
             )?.biomes
               .find((biome) => biome.biomeKey === conversion.address.biomeKey)
               ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
-      const anvilCapability = input.candidates.anvilResult(conversion.address);
-      const shopOffer =
-        owner.kind === 'shopOffer' && occurrence?.state.kind === 'shop'
-          ? authoredShopOffer(occurrence, owner.offerKey)
-          : undefined;
-      const anvilResult =
-        shopOffer?.reward?.anvilResultsByAcquisitionRole?.[conversion.address.acquisitionRole];
+      const anvilResult = conversion.anvilResult;
+      const anvilCapability =
+        anvilResult === undefined ? undefined : input.candidates.anvilResult(conversion.address);
       const anvil =
-        owner.kind !== 'shopOffer' || anvilCapability === undefined || anvilResult === undefined
+        anvilResult === undefined
           ? undefined
           : Object.freeze({
+              contextReached: anvilCapability !== undefined,
               value: anvilResult,
-              removableTraitKeys: anvilCapability.removableTraitKeys,
-              addedTraitKeysFor: anvilCapability.addedTraitKeysFor,
+              removableTraitKeys: anvilCapability?.removableTraitKeys ?? Object.freeze([]),
+              addedTraitKeysFor: anvilCapability?.addedTraitKeysFor ?? (() => Object.freeze([])),
               traitLabel: (traitKey: string) =>
                 input.catalog.traits.byKey[traitKey]?.label ?? traitKey,
               intentFor: (
