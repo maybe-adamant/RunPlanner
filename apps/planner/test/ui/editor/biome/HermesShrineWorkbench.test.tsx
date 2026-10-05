@@ -423,7 +423,7 @@ describe('Hermes Shrine workbench', () => {
     expect(() => workspaceProjection(view.application)).not.toThrow();
   });
 
-  it('repairs a forced final-Preboss Mystery delivery through its own timeline controls', async () => {
+  it('repairs a Mystery delivery flushed at the fourth-biome Preboss through its own timeline controls', async () => {
     const source = createOccurrenceAddress(
       pBiome,
       createOccurrenceId(`${pOccurrenceIds.prebossShop}:postboss`),
@@ -462,7 +462,7 @@ describe('Hermes Shrine workbench', () => {
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const delivery = screen.getByText('Collect Mystery Boon · Delivery').closest('li');
-    if (delivery === null) throw new Error('final Preboss Mystery delivery row is missing');
+    if (delivery === null) throw new Error('flushed Mystery delivery row is missing');
     await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
     expect(within(delivery).getByRole('button', { name: /Trait/ })).toHaveProperty(
@@ -478,7 +478,7 @@ describe('Hermes Shrine workbench', () => {
     );
     const draft = traitEditor?.traitOfferStartingOutcome?.();
     if (traitEditor === undefined || draft === undefined)
-      throw new Error('final Preboss Mystery delivery trait editor is missing');
+      throw new Error('flushed Mystery delivery trait editor is missing');
     act(() =>
       view.application.store.dispatch(
         authoredProjectCommandDispatched(traitEditor.intentFor(draft).command),

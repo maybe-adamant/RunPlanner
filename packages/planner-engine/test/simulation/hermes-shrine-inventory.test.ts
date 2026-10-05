@@ -18,9 +18,8 @@ import {
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
+  createRoomFeatureAddress,
   createTraitOfferAddress,
-  decodeProjectDocument,
-  encodeProjectDocument,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   roomActionKey,
@@ -51,7 +50,11 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNOHermesShrineDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
-import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
+import {
+  dreamSingleQOccurrenceIds,
+  dreamSingleQProject,
+  dreamSingleQShrineDeliveryProject,
+} from '@run-planner/test-fixtures/dream';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
@@ -756,86 +759,48 @@ describe('Hermes Shrine delayed deliveries', () => {
   );
 
   it('reports a delivery still pending when a short itinerary leaves its last Boss', () => {
-    const mixed = dreamMixedPrefixProject();
-    const qPlan = mixed.route.biomes.find((plan) => plan.biomeKey === 'Q');
-    if (qPlan?.topology === null || qPlan === undefined) throw new Error('Dream Q plan missing');
-    const topology = qPlan.topology;
-    const isPostboss = (occurrenceId: string) => occurrenceId.endsWith(':postboss');
-    const single = decodeProjectDocument(
-      JSON.parse(
-        encodeProjectDocument({
-          ...mixed,
-          route: {
-            ...mixed.route,
-            itineraryBiomeKeys: ['Q'],
-            biomes: [
-              {
-                ...qPlan,
-                topology: {
-                  ...topology,
-                  occurrences: topology.occurrences.filter(
-                    (occurrence) => !isPostboss(occurrence.occurrenceId),
-                  ),
-                  fixedRoomLinks: topology.fixedRoomLinks.filter(
-                    (link) => !isPostboss(link.targetOccurrenceId),
-                  ),
-                },
-              },
-            ],
-          },
-        }),
-      ),
-      catalog,
-    );
-    expect(simulateProjectAssembly(catalog, single).evaluation.status).toBe('valid');
+    expect(simulateProjectAssembly(catalog, dreamSingleQProject()).evaluation.status).toBe('valid');
     const q = createBiomeAddress('Dream', 'Q');
-    const source = createOccurrenceAddress(q, createOccurrenceId('dream-q-ordinary'));
-    let project = applyProjectCommand(single, catalog, {
-      kind: 'SetHermesShrinePresence',
-      occurrence: source,
-      present: true,
-    });
-    for (const [slotKey, rewardType] of [
-      ['first', 'HealBigDrop'],
-      ['secondLeft', 'MaxHealthDrop'],
-      ['secondRight', 'MaxManaDrop'],
-    ] as const)
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceHermesShrineOffer',
-        occurrence: source,
-        slotKey,
-        value: { rewardType },
-      });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:first',
-      purchase: { delay: 8, rushed: false },
-    });
-    const assembly = simulateProjectAssembly(catalog, project);
+    const source = createOccurrenceAddress(q, dreamSingleQOccurrenceIds.shrineSource);
+    const assembly = simulateProjectAssembly(catalog, dreamSingleQShrineDeliveryProject());
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
-    const bossEntry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(q, createOccurrenceId('dream-q-preboss:boss')),
-        'hermesShrineDelivery',
-      ),
-      entryKey,
-    );
+    const purchase = createRoomFeatureAddress(source, {
+      kind: 'hermesShrineOffer',
+      generationKey: 'initial:first',
+    });
     expect(assembly.evaluation.status).toBe('invalid');
     expect(assembly.evaluation.issue).toMatchObject({
       kind: 'invalid',
-      owner: bossEntry,
+      owner: purchase,
       reasons: [
         expect.objectContaining({
           code: 'rewardSourceUnavailable',
-          origin: bossEntry,
-          evidence: { reason: 'routeEndsBeforeDelivery', sourceKey: entryKey },
+          origin: purchase,
+          evidence: {
+            reason: 'routeEndsBeforeDelivery',
+            sourceKey: entryKey,
+            hostOccurrenceId: dreamSingleQOccurrenceIds.boss,
+          },
         }),
       ],
     });
     const biome = assembly.evaluation.route.biomes[0];
-    if (biome?.authoring !== 'complete' || !('rewards' in biome))
-      throw new Error('Dream Q did not publish rewards');
+    if (
+      biome?.authoring !== 'complete' ||
+      !('rewards' in biome) ||
+      biome.validity !== 'invalid' ||
+      !('assessmentPrefix' in biome)
+    )
+      throw new Error('Dream Q did not publish an invalid assessed biome');
+    // The finding sits at the Boss exit, so the Boss is the withheld fixed room
+    // and every authored room before it stays assessed.
+    expect(biome.materializedPrefix.fixedRoomLinks?.map((link) => link.target.gameName)).toEqual([
+      'Q_Boss01',
+    ]);
+    expect(biome.assessmentPrefix?.fixedRoomLinks).toEqual([]);
+    expect(biome.assessmentPrefix?.decisions.length).toBe(
+      biome.materializedPrefix.decisions.length,
+    );
     // The first-biome Preboss does not flush: the delivery is still counting down.
     expect(biome.rewards.hermesShrineDeliveries).toEqual([
       expect.objectContaining({ sourceKey: entryKey, deliveryKind: 'pending' }),

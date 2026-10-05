@@ -1089,7 +1089,7 @@ into a required phase-less post-outgoing pickup; it does not decrement the
 ordinary encounter clock or acquire a reward. A shorter itinerary never flushes:
 its pending delivery keeps counting down into the Boss encounter, and one still
 pending when the route's last Boss is left reports `rewardSourceUnavailable`
-(`routeEndsBeforeDelivery`) at that Boss's delivery entry. A Hub side-room source is ordinary for
+(`routeEndsBeforeDelivery`) at the source Shrine purchase, located at that Boss's exit. A Hub side-room source is ordinary for
 scheduling, but cannot advance an older pending delivery; later qualifying main
 Hub visits can advance or host it. Fixed Boss occurrences are ordinary later
 delivery hosts. No feature owns a private purchase order or a completion-only

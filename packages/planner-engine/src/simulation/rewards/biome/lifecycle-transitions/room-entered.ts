@@ -221,9 +221,9 @@ export function applyRoomEnteredTransition(
       );
   }
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
-  const isFinalPreboss =
+  const flushHost =
     room?.origin.kind === 'occurrence' && isDeliveryFlushHost(declaration, routePosition);
-  if (isFinalPreboss) {
+  if (flushHost) {
     next = Object.freeze(
       next.map((branch) =>
         Object.freeze({
@@ -257,7 +257,7 @@ export function applyRoomEnteredTransition(
     );
   }
   const dueDeliveries =
-    isFinalPreboss && room?.origin.kind === 'occurrence'
+    flushHost && room?.origin.kind === 'occurrence'
       ? dueHermesShrineDeliveryFrontier(catalog, room, room.origin, next, event.sequence, undefined)
       : undefined;
   if (dueDeliveries !== undefined) findings.push(...dueDeliveries.findings);

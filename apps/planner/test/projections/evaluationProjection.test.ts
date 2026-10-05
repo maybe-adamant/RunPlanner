@@ -110,6 +110,18 @@ describe('evaluation presentation', () => {
     ).toEqual({ title: 'Room unavailable' });
   });
 
+  it('explains a delivery the route ends before at its Shrine purchase', () => {
+    expect(
+      presentFinding({
+        ...finding('rewardSourceUnavailable'),
+        evidence: { reason: 'routeEndsBeforeDelivery', sourceKey: 'hermesShrineDelivery:x' },
+      }),
+    ).toEqual({
+      title: 'Shrine delivery cannot arrive',
+      description: 'The route ends before this delivery is due. Rush or shorten the purchase.',
+    });
+  });
+
   it('gives Travel Deal repair guidance without assuming its triggering purchase is absent', () => {
     expect(
       presentFinding({

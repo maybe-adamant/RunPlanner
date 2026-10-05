@@ -782,15 +782,7 @@ function locateStructuralOwner(
 }
 
 /** Shared finding/edit locator over materialization's existing timeline and Hub phases. */
-export function locateOwner(
-  prefix: CanonicalBiome | MaterializedBiomePrefix,
-  address: SemanticAddress,
-  chronology?: FindingRegionEntry['chronology'],
-): OwnerLocation | undefined {
-  const structural = locateStructuralOwner(prefix, address, chronology);
-  if (structural === undefined) return undefined;
-  const occurrence = occurrenceOwnerAddress(address);
-  if (occurrence === undefined) return structural;
+function prefixRooms(prefix: CanonicalBiome | MaterializedBiomePrefix): CanonicalAuthoredRoom[] {
   const rooms: CanonicalAuthoredRoom[] = [];
   if (prefix.entryRoom !== undefined) rooms.push(prefix.entryRoom);
   for (const { decision } of prefixDecisionEntries(prefix)) {
@@ -813,6 +805,26 @@ export function locateOwner(
   if (prefix.kind === 'biomePrefix' && hasHubVisitDetails(prefix.frontier))
     rooms.push(prefix.frontier.target.room, ...prefix.frontier.localSlots);
   rooms.push(...(prefix.fixedRoomLinks ?? []).map((link) => link.target));
+  return rooms;
+}
+
+export function locateOwner(
+  prefix: CanonicalBiome | MaterializedBiomePrefix,
+  address: SemanticAddress,
+  chronology?: FindingRegionEntry['chronology'],
+): OwnerLocation | undefined {
+  // A finding raised by one room's event about an owner elsewhere (a Shrine
+  // purchase whose delivery the route's last Boss leaves pending) sits at that
+  // room's contact; the owner stays the repair destination.
+  if (chronology?.kind === 'history' && chronology.room !== undefined) {
+    const { room, ...history } = chronology;
+    return locateOwner(prefix, room, history);
+  }
+  const structural = locateStructuralOwner(prefix, address, chronology);
+  if (structural === undefined) return undefined;
+  const occurrence = occurrenceOwnerAddress(address);
+  if (occurrence === undefined) return structural;
+  const rooms = prefixRooms(prefix);
   const room = rooms.find((room) => room.occurrenceId === occurrence.occurrenceId);
   if (room === undefined) return structural;
   const root = ownerOrigin(address);

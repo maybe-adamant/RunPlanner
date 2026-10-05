@@ -609,7 +609,7 @@ describe('timed-effect edit settlement', () => {
     expect(agreedTimedEffectContact({ ...contact, cohorts: [] })).toBeUndefined();
     expect(agreedTimedEffectContact(undefined)).toBeUndefined();
   });
-  it('places a delayed final-Preboss delivery at its phase-less contact', () => {
+  it('places a delayed delivery flushed at the fourth-biome Preboss at its phase-less contact', () => {
     let project = loadSurfaceNOPQProject();
     const source = createOccurrenceAddress(
       p,

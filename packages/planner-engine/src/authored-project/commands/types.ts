@@ -514,7 +514,7 @@ export type AcquisitionSiteCommand =
       /** Atomically materializes and ranks one due Shrine delivery entry. */
       readonly kind: 'PlaceHermesShrineDelivery';
       readonly entry: AcquisitionEntryAddress;
-      /** Exact encounter end that made this delivery due; final Preboss entry is phase-less. */
+      /** Exact encounter end that made this delivery due; the fourth-biome Preboss flush is phase-less. */
       readonly encounterPhaseKey?: string;
     }
   | {
