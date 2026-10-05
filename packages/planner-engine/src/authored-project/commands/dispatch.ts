@@ -12,6 +12,7 @@ import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand } from './acquisition/acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition/acquisition-conversion';
+import { applyAnvilResultCommand } from './acquisition/anvil-result';
 import { applySeaStarResultCommand } from './acquisition/sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
 import { applyFigurineArcanaCommand } from './figurine-arcana';
@@ -276,7 +277,6 @@ function applyUnchecked(
     case 'ReplaceShopOffer':
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
-    case 'ReplaceAnvilResult':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
@@ -328,6 +328,13 @@ function applyUnchecked(
       );
     case 'ReplaceAcquisitionDisposition':
       return applyAcquisitionDispositionCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceAnvilResult':
+      return applyAnvilResultCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

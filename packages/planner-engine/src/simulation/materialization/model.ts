@@ -84,7 +84,8 @@ export interface CanonicalShopOffer {
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
-  readonly anvilResult?: import('../../authored-project/model').AuthoredAnvilResult | null;
+  readonly anvilResultsByAcquisitionRole?:
+    import('../../authored-project/model').AnvilResultsByAcquisitionRole | undefined;
   readonly traitContext?: TraitOfferSourceContext;
 }
 

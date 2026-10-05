@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
+import { pickupEffectForOffer } from '../../reward-kernel/history';
 
 /**
  * Every authored reward owns an explicit disposition for every declared
@@ -32,4 +33,16 @@ export function rewardSourceResolvesAtAcquisition(
     catalog.rewards.rewardTypes.byKey[offer.rewardType]?.sourceResolution?.kind ===
     'acquisitionRole'
   );
+}
+
+/** The unauthored Anvil result at the role whose concrete acquisition declares it, if any. */
+export function createUnresolvedAnvilResults(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): import('../model').AnvilResultsByAcquisitionRole | undefined {
+  if (rewardSourceResolvesAtAcquisition(catalog, offer)) return undefined;
+  const pickupEffect = pickupEffectForOffer(catalog.rewards, offer);
+  return pickupEffect?.effect.kind === 'anvilOfFates'
+    ? Object.freeze({ [pickupEffect.role]: null })
+    : undefined;
 }

@@ -33,6 +33,7 @@ import {
   createTargetAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
+  type AuthoredAnvilResult,
   type BiomeAddress,
   type OccurrenceId,
   type ProjectDocument,
@@ -1390,8 +1391,20 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
 
 export const echoGoldIPrebossShopId = createOccurrenceId('golden-i-preboss');
 
-/** Gold held into the I Preboss Shop, whose first purchase is a resolved Anvil and is duplicated. */
-export function createEchoGoldIAnvilDuplicateProject(): ProjectDocument {
+/** A legal second Anvil after the I Preboss Shop's first Anvil. */
+export const echoGoldIDuplicateAnvilResult = Object.freeze({
+  kind: 'anvilOfFates' as const,
+  removedTraitKey: 'StaffDashAttackTrait',
+  addedTraitKeys: Object.freeze(['StaffJumpSpecialTrait', 'StaffExAoETrait'] as const),
+});
+
+/**
+ * Gold held into the I Preboss Shop, whose first purchase is a resolved Anvil
+ * and is duplicated; the duplicate's own result is authored only when given.
+ */
+export function createEchoGoldIAnvilDuplicateProject(
+  duplicateResult?: AuthoredAnvilResult,
+): ProjectDocument {
   const shop = createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId);
   const anvil = createShopOfferAddress(goldenIBiome, echoGoldIPrebossShopId, 'PremiumProgress');
   let project = applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
@@ -1401,7 +1414,7 @@ export function createEchoGoldIAnvilDuplicateProject(): ProjectDocument {
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceAnvilResult',
-    offer: anvil,
+    acquisition: createAcquisitionRoleAddress(anvil, 'self'),
     value: {
       kind: 'anvilOfFates',
       removedTraitKey: 'StaffDoubleAttackTrait',
@@ -1409,10 +1422,21 @@ export function createEchoGoldIAnvilDuplicateProject(): ProjectDocument {
     },
   });
   project = replaceTestShopOfferActions(project, catalog, shop, ['PremiumProgress']);
-  return applyProjectCommand(project, catalog, {
+  const site = createAcquisitionSiteAddress(shop, 'roomExit');
+  project = applyProjectCommand(project, catalog, {
     kind: 'PlaceEchoGoldPickup',
-    site: createAcquisitionSiteAddress(shop, 'roomExit'),
+    site,
     entryKey: 'echoDoubleShopReward',
     sourceOfferKey: 'PremiumProgress',
   });
+  return duplicateResult === undefined
+    ? project
+    : applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAnvilResult',
+        acquisition: createAcquisitionRoleAddress(
+          createAcquisitionEntryAddress(site, 'echoDoubleShopReward'),
+          'self',
+        ),
+        value: duplicateResult,
+      });
 }

@@ -30,7 +30,8 @@ export interface AcquisitionSource {
   readonly roomRewardForfeitEligible?: true;
   readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
   readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
-  readonly anvilResult?: import('../../../authored-project/model').AuthoredAnvilResult | null;
+  readonly anvilResultsByAcquisitionRole?:
+    import('../../../authored-project/model').AnvilResultsByAcquisitionRole | undefined;
   readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
   /** Exact source-produced payload stored at the occurrence acquisition site. */
   readonly artificerReplacementByAcquisitionRole?: Readonly<

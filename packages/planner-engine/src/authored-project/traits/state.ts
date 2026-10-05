@@ -1,7 +1,10 @@
 import type { Catalog, TraitRarity, TraitProviderKind } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SelectedPickupProducer } from '../acquisition/pickup-producers';
-import { createNormalDispositionByAcquisitionRole } from '../acquisition/reward-state';
+import {
+  createNormalDispositionByAcquisitionRole,
+  createUnresolvedAnvilResults,
+} from '../acquisition/reward-state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
 
@@ -652,10 +655,12 @@ function createUnresolvedAcquisitionRewardStateForEffect(
   routeKey: string,
 ): import('../model').AuthoredRewardState {
   const levels = createUnresolvedLevelResolutions(catalog, offer, levelEffectSource, routeKey);
+  const anvilResults = createUnresolvedAnvilResults(catalog, offer);
   return Object.freeze({
     offer,
     dispositionByAcquisitionRole: createNormalDispositionByAcquisitionRole(catalog, offer),
     traitOffersByAcquisitionRole: createUnresolvedTraitOffers(catalog, offer),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
+    ...(anvilResults === undefined ? {} : { anvilResultsByAcquisitionRole: anvilResults }),
   });
 }

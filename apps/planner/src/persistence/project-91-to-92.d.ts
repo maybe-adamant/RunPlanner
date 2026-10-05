@@ -1,0 +1,4 @@
+export const SOURCE_SCHEMA_VERSION: 91;
+export const OUTPUT_SCHEMA_VERSION: 92;
+export const CATALOG_VERSION: string;
+export function migrateProjectDocument(value: unknown): unknown;

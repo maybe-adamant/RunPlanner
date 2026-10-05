@@ -674,9 +674,9 @@ function materializeShopEntry(
           traitOffersByAcquisitionRole: travelState.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole: travelState.reward.levelResolutionsByAcquisitionRole,
           dispositionByAcquisitionRole: travelState.reward.dispositionByAcquisitionRole,
-          ...(travelState.anvilResult === undefined
+          ...(travelState.reward.anvilResultsByAcquisitionRole === undefined
             ? {}
-            : { anvilResult: travelState.anvilResult }),
+            : { anvilResultsByAcquisitionRole: travelState.reward.anvilResultsByAcquisitionRole }),
           traitContext: traitContextForOffer(context, travelState.reward.offer),
         });
   const materializedContract =
@@ -696,6 +696,11 @@ function materializeShopEntry(
           offer: contractState.reward.offer,
           traitOffersByAcquisitionRole: contractState.reward.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole: contractState.reward.levelResolutionsByAcquisitionRole,
+          ...(contractState.reward.anvilResultsByAcquisitionRole === undefined
+            ? {}
+            : {
+                anvilResultsByAcquisitionRole: contractState.reward.anvilResultsByAcquisitionRole,
+              }),
           dispositionByAcquisitionRole: contractState.reward.dispositionByAcquisitionRole,
           traitContext: traitContextForOffer(context, contractState.reward.offer),
         });
@@ -729,9 +734,11 @@ function materializeShopEntry(
                   authored.reward.levelResolutionsByAcquisitionRole,
                 dispositionByAcquisitionRole: authored.reward.dispositionByAcquisitionRole,
                 traitContext: traitContextForOffer(context, authored.reward.offer),
-                ...(authored.anvilResult === undefined
+                ...(authored.reward.anvilResultsByAcquisitionRole === undefined
                   ? {}
-                  : { anvilResult: authored.anvilResult }),
+                  : {
+                      anvilResultsByAcquisitionRole: authored.reward.anvilResultsByAcquisitionRole,
+                    }),
               }),
             ];
       }),

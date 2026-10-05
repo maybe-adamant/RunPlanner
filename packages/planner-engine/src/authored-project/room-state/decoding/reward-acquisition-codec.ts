@@ -5,7 +5,12 @@ import type {
   RewardPayload,
   RewardTypeDeclaration,
 } from '../../../reward-kernel/model';
-import type { AuthoredRewardState } from '../../model';
+import type {
+  AnvilResultsByAcquisitionRole,
+  AuthoredAnvilResult,
+  AuthoredRewardState,
+} from '../../model';
+import { createUnresolvedAnvilResults } from '../../acquisition/reward-state';
 import {
   expectArray,
   expectExactKeys,
@@ -696,6 +701,7 @@ export function decodeRewardState(
         'offer',
         'traitOffersByAcquisitionRole',
         'levelResolutionsByAcquisitionRole',
+        'anvilResultsByAcquisitionRole',
         'dispositionByAcquisitionRole',
       ].includes(key)
     )
@@ -724,6 +730,12 @@ export function decodeRewardState(
           routeKey,
           `${path}.levelResolutionsByAcquisitionRole`,
         );
+  const anvilResults = decodeAnvilResults(
+    raw.anvilResultsByAcquisitionRole,
+    catalog,
+    offer,
+    `${path}.anvilResultsByAcquisitionRole`,
+  );
   if (raw.dispositionByAcquisitionRole === undefined)
     failProjectDocument(`${path}.dispositionByAcquisitionRole`, 'is required');
   const dispositionByAcquisitionRole = decodeAcquisitionDispositions(
@@ -742,7 +754,56 @@ export function decodeRewardState(
       `${path}.traitOffersByAcquisitionRole`,
     ),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
+    ...(anvilResults === undefined ? {} : { anvilResultsByAcquisitionRole: anvilResults }),
     dispositionByAcquisitionRole,
+  });
+}
+
+/** Present exactly for the role whose concrete acquisition declares the Anvil pickup effect. */
+function decodeAnvilResults(
+  value: unknown,
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  path: string,
+): AnvilResultsByAcquisitionRole | undefined {
+  const expected = createUnresolvedAnvilResults(catalog, offer);
+  if (expected === undefined) {
+    if (value !== undefined)
+      failProjectDocument(path, 'Anvil results are not supported for this reward');
+    return undefined;
+  }
+  if (value === undefined) failProjectDocument(path, 'is required for this Anvil reward');
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, Object.keys(expected), path);
+  return Object.freeze(
+    Object.fromEntries(
+      Object.keys(expected).map((role) => [role, decodeAnvilResult(raw[role], `${path}.${role}`)]),
+    ),
+  );
+}
+
+/** Strict Anvil of Fates result shape, shared by the codec and its command. */
+export function decodeAnvilResult(value: unknown, path: string): AuthoredAnvilResult | null {
+  if (value === null) return null;
+  const entry = expectRecord(value, path);
+  expectExactKeys(entry, ['kind', 'removedTraitKey', 'addedTraitKeys'], path);
+  if (expectString(entry.kind, `${path}.kind`) !== 'anvilOfFates')
+    failProjectDocument(`${path}.kind`, 'expected anvilOfFates');
+  const removedTraitKey =
+    entry.removedTraitKey === null
+      ? null
+      : expectString(entry.removedTraitKey, `${path}.removedTraitKey`);
+  const addedTraitKeys = expectArray(entry.addedTraitKeys, `${path}.addedTraitKeys`).map(
+    (candidate, index) => expectString(candidate, `${path}.addedTraitKeys[${index}]`),
+  );
+  if (addedTraitKeys.length !== 2)
+    failProjectDocument(`${path}.addedTraitKeys`, 'must contain exactly two traits');
+  if (addedTraitKeys[0] === addedTraitKeys[1])
+    failProjectDocument(`${path}.addedTraitKeys`, 'must contain distinct traits');
+  return Object.freeze({
+    kind: 'anvilOfFates',
+    removedTraitKey,
+    addedTraitKeys: Object.freeze(addedTraitKeys) as readonly [string, string],
   });
 }
 

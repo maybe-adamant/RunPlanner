@@ -62,7 +62,7 @@ describe('acquisition-conversion-interactions', () => {
         removedTraitKey: removed,
         addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
       }),
-    ).toMatchObject({ command: { kind: 'ReplaceAnvilResult', offer } });
+    ).toMatchObject({ command: { kind: 'ReplaceAnvilResult', acquisition } });
   });
 
   it('retains an invalid paid-Shop Time Piece conversion as an engine-backed repair control', () => {

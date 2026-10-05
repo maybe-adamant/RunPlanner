@@ -10,8 +10,11 @@ import {
   selectedPickupProducerForEntry,
 } from '../../acquisition/pickup-producers';
 import {
+  authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,
   authoredShopOffer,
+  replaceAuthoredAcquisitionEntry,
+  replaceAuthoredAcquisitionEntryAtSite,
   replaceAuthoredShopOffer,
   shopSlotProfile,
 } from '../../shop';
@@ -20,12 +23,17 @@ import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery'
 import { requireShipCombatWheels } from '../../room-state/declaration';
 import { incomingLevelEffectSource } from '../../room-state/level-effects';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
-import { routeStartIncomingReward } from '../../room-state/starting-reward';
+import {
+  isRouteStartIncomingReward,
+  routeStartIncomingReward,
+  startingRewardAcquisitionFrom,
+} from '../../room-state/starting-reward';
 import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-effects';
-import { failCommand } from '../contract';
-import type { TraitOfferCommand, LevelResolutionCommand } from '../types';
+import { failCommand, type LocatedBiome } from '../contract';
+import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
+import type { AnvilResultCommand, TraitOfferCommand, LevelResolutionCommand } from '../types';
 
-type RewardCommand = TraitOfferCommand | LevelResolutionCommand;
+type RewardCommand = TraitOfferCommand | LevelResolutionCommand | AnvilResultCommand;
 
 export interface LocatedReward {
   readonly reward: AuthoredRewardState;
@@ -435,4 +443,57 @@ export function updateRewardState(
       return failCommand(command, 'encounter trait offers are updated by the encounter owner path');
   }
   return failCommand(command, `unsupported reward owner ${owner.kind}`);
+}
+
+/** Writes one role-owning reward back to its exact persisted owner. */
+export function replaceOwnedReward(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: import('../../model').BiomeTopology,
+  occurrence: RoomOccurrence,
+  owner: TraitOfferOwnerAddress,
+  command: RewardCommand,
+  nextReward: AuthoredRewardState,
+): ProjectDocument {
+  if (owner.kind === 'acquisitionEntry') {
+    const exactSite = owner.site.pointKey !== 'roomExit';
+    const pickup = exactSite
+      ? authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey)
+      : authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
+    if (pickup === undefined || pickup === null)
+      failCommand(command, `missing pickup entry ${owner.entryKey}`);
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        exactSite
+          ? replaceAuthoredAcquisitionEntryAtSite(
+              occurrence,
+              owner.site,
+              owner.entryKey,
+              nextReward,
+            )
+          : replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, nextReward),
+      ),
+    );
+  }
+  const nextOccurrence = isRouteStartIncomingReward(document, located.routePosition, occurrence)
+    ? Object.freeze({
+        ...occurrence,
+        startingRewardAcquisition: startingRewardAcquisitionFrom(nextReward),
+      })
+    : Object.freeze({
+        ...occurrence,
+        state: updateRewardState(
+          catalog,
+          occurrence,
+          occurrence.state,
+          owner,
+          command,
+          () => nextReward,
+        ),
+      });
+  return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
 }

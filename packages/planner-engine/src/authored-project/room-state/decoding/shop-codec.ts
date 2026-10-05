@@ -1,27 +1,14 @@
 import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
 import type { ShopRewardBinding } from '../../../reward-kernel/bindings';
 import type { ShopProfileDeclaration } from '../../../reward-kernel/model';
-import { pickupEffectForOffer, type ResolvedRewardOffer } from '../../../reward-kernel';
-import type {
-  AuthoredAnvilResult,
-  AuthoredRewardState,
-  ShopOfferState,
-  ShopState,
-} from '../../model';
-import {
-  expectArray,
-  expectExactKeys,
-  expectRecord,
-  expectString,
-  failProjectDocument,
-} from '../../validation';
+import type { AuthoredRewardState, ShopOfferState, ShopState } from '../../model';
+import { expectExactKeys, expectRecord, expectString, failProjectDocument } from '../../validation';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   shopSlotProfile,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../shop';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
-import { rewardSourceResolvesAtAcquisition } from '../../acquisition/reward-state';
 
 function decodeShopInventoryReward(
   value: unknown,
@@ -66,44 +53,6 @@ function decodeShopInventoryReward(
   });
 }
 
-function decodeAnvilResult(
-  value: unknown,
-  catalog: Catalog,
-  offer: ResolvedRewardOffer,
-  path: string,
-): AuthoredAnvilResult | null | undefined {
-  const expected = rewardSourceResolvesAtAcquisition(catalog, offer)
-    ? undefined
-    : pickupEffectForOffer(catalog.rewards, offer);
-  if (expected === undefined) {
-    if (value !== undefined)
-      failProjectDocument(path, 'pickup effect results are not supported for this reward');
-    return undefined;
-  }
-  if (value === undefined) failProjectDocument(path, 'is required for this reward pickup effect');
-  if (value === null) return null;
-  const entry = expectRecord(value, path);
-  expectExactKeys(entry, ['kind', 'removedTraitKey', 'addedTraitKeys'], path);
-  if (expectString(entry.kind, `${path}.kind`) !== expected.effect.kind)
-    failProjectDocument(`${path}.kind`, `expected ${expected.effect.kind}`);
-  const removedTraitKey =
-    entry.removedTraitKey === null
-      ? null
-      : expectString(entry.removedTraitKey, `${path}.removedTraitKey`);
-  const addedTraitKeys = expectArray(entry.addedTraitKeys, `${path}.addedTraitKeys`).map(
-    (candidate, index) => expectString(candidate, `${path}.addedTraitKeys[${index}]`),
-  );
-  if (addedTraitKeys.length !== 2)
-    failProjectDocument(`${path}.addedTraitKeys`, 'must contain exactly two traits');
-  if (addedTraitKeys[0] === addedTraitKeys[1])
-    failProjectDocument(`${path}.addedTraitKeys`, 'must contain distinct traits');
-  return Object.freeze({
-    kind: 'anvilOfFates',
-    removedTraitKey,
-    addedTraitKeys: Object.freeze(addedTraitKeys) as readonly [string, string],
-  });
-}
-
 export function decodeShopState(
   value: unknown,
   catalog: Catalog,
@@ -145,7 +94,7 @@ function decodeShopOffer(
   path: string,
 ): ShopOfferState {
   const rawOffer = expectRecord(value, path);
-  expectExactKeys(rawOffer, ['optionKey', 'reward', 'anvilResult'], path);
+  expectExactKeys(rawOffer, ['optionKey', 'reward'], path);
   const optionKey =
     rawOffer.optionKey === null ? null : expectString(rawOffer.optionKey, `${path}.optionKey`);
   const reward = decodeShopInventoryReward(
@@ -157,8 +106,6 @@ function decodeShopOffer(
   );
   if (reward === null) {
     if (optionKey !== null) failProjectDocument(`${path}.optionKey`, 'requires a selected reward');
-    if (rawOffer.anvilResult !== undefined)
-      failProjectDocument(`${path}.anvilResult`, 'requires a selected Anvil reward');
     return Object.freeze({ optionKey: null, reward: null });
   }
   const option =
@@ -175,17 +122,7 @@ function decodeShopOffer(
       `${path}.reward.offer.rewardType`,
       `${reward.offer.rewardType} is not available from ${profile.key}`,
     );
-  const anvilResult = decodeAnvilResult(
-    rawOffer.anvilResult,
-    catalog,
-    reward.offer,
-    `${path}.anvilResult`,
-  );
-  return Object.freeze({
-    optionKey,
-    reward,
-    ...(anvilResult === undefined ? {} : { anvilResult }),
-  });
+  return Object.freeze({ optionKey, reward });
 }
 
 function decodeShopOffers(

@@ -3,19 +3,8 @@ import type { ProjectDocument, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits/state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { locateReward, updateRewardState } from './acquisition/reward-source';
-import {
-  isRouteStartIncomingReward,
-  startingRewardAcquisitionFrom,
-} from '../room-state/starting-reward';
+import { locateReward, replaceOwnedReward } from './acquisition/reward-source';
 import type { LevelResolutionCommand } from './types';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
-import {
-  authoredAcquisitionEntry,
-  authoredAcquisitionEntryAtSite,
-  replaceAuthoredAcquisitionEntry,
-  replaceAuthoredAcquisitionEntryAtSite,
-} from '../shop';
 
 function updateLevelResolutionReward(
   reward: AuthoredRewardState,
@@ -114,54 +103,18 @@ export function applyLevelResolutionCommand(
       command.levelResolution.acquisitionRole
     ];
   if (JSON.stringify(existing) === JSON.stringify(value)) return document;
-  if (owner.kind === 'acquisitionEntry') {
-    const exactSite = owner.site.pointKey !== 'roomExit';
-    const pickup = exactSite
-      ? authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey)
-      : authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
-    if (pickup === undefined || pickup === null)
-      failCommand(command, `missing pickup entry ${owner.entryKey}`);
-    const nextPickup = updateLevelResolutionReward(
-      pickup,
+  return replaceOwnedReward(
+    document,
+    catalog,
+    located,
+    topology,
+    occurrence,
+    owner,
+    command,
+    updateLevelResolutionReward(
+      locatedReward.reward,
       command.levelResolution.acquisitionRole,
       value,
-    );
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        exactSite
-          ? replaceAuthoredAcquisitionEntryAtSite(
-              occurrence,
-              owner.site,
-              owner.entryKey,
-              nextPickup,
-            )
-          : replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, nextPickup),
-      ),
-    );
-  }
-  const nextReward = updateLevelResolutionReward(
-    locatedReward.reward,
-    command.levelResolution.acquisitionRole,
-    value,
+    ),
   );
-  const nextOccurrence = isRouteStartIncomingReward(document, located.routePosition, occurrence)
-    ? Object.freeze({
-        ...occurrence,
-        startingRewardAcquisition: startingRewardAcquisitionFrom(nextReward),
-      })
-    : Object.freeze({
-        ...occurrence,
-        state: updateRewardState(
-          catalog,
-          occurrence,
-          occurrence.state,
-          owner,
-          command,
-          () => nextReward,
-        ),
-      });
-  return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
 }

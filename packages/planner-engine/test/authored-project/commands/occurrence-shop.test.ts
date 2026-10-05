@@ -14,6 +14,7 @@ import {
   createRoomActionAddress,
   roomActionKey,
   createLevelResolutionAddress,
+  createAcquisitionRoleAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
@@ -25,6 +26,12 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIDuplicateAnvilResult,
+  echoGoldIPrebossShopId,
+  goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
 
 describe('authored-project Shop occurrence commands', () => {
   it('persists exact ordinary and Boosted Boon identities with the same reward shape', () => {
@@ -76,7 +83,7 @@ describe('authored-project Shop occurrence commands', () => {
     ).toThrow('StackUpgradeBig does not produce RandomLoot');
   });
 
-  it('stores the Anvil result only on its World Shop offer and clears it with the offer', () => {
+  it('stores the Anvil result on its reward role and drops it with the reward', () => {
     const offer = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress');
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShopOffer',
@@ -85,7 +92,7 @@ describe('authored-project Shop occurrence commands', () => {
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAnvilResult',
-      offer,
+      acquisition: createAcquisitionRoleAddress(offer, 'self'),
       value: {
         kind: 'anvilOfFates',
         removedTraitKey: 'StaffDoubleAttackTrait',
@@ -107,8 +114,63 @@ describe('authored-project Shop occurrence commands', () => {
         (occurrence) => occurrence.occurrenceId === qOccurrenceIds.preboss,
       )?.state;
     expect(
-      state?.kind === 'shop' ? state.shop?.offers.PremiumProgress?.anvilResult : undefined,
+      state?.kind === 'shop'
+        ? state.shop?.offers.PremiumProgress?.reward?.anvilResultsByAcquisitionRole
+        : null,
     ).toBe(undefined);
+  });
+
+  it('stores the Gold duplicate Anvil result on its own entry role', () => {
+    const project = createEchoGoldIAnvilDuplicateProject();
+    const shop = createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId);
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(shop, 'roomExit'),
+      'echoDoubleShopReward',
+    );
+    const authored = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: createAcquisitionRoleAddress(entry, 'self'),
+      value: echoGoldIDuplicateAnvilResult,
+    });
+    const occurrence = (document: typeof project) =>
+      document.route.biomes
+        .find((biome) => biome.biomeKey === 'I')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === echoGoldIPrebossShopId,
+        );
+    expect(
+      occurrence(authored)?.acquisitionSites?.roomExit?.pickupEntries?.echoDoubleShopReward
+        ?.anvilResultsByAcquisitionRole,
+    ).toEqual({ self: echoGoldIDuplicateAnvilResult });
+    const paidAnvil = (document: typeof project) => {
+      const state = occurrence(document)?.state;
+      return state?.kind === 'shop' ? state.shop?.offers.PremiumProgress : undefined;
+    };
+    expect(paidAnvil(authored)).toBeDefined();
+    expect(paidAnvil(authored)).toEqual(paidAnvil(project));
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(authored)), catalog)).toEqual(
+      authored,
+    );
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAnvilResult',
+        acquisition: createAcquisitionRoleAddress(
+          createShopOfferAddress(goldenIBiome, echoGoldIPrebossShopId, 'Survival'),
+          'self',
+        ),
+        value: null,
+      }),
+    ).toThrow('no declared Anvil of Fates pickup effect');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceAnvilResult',
+        acquisition: createAcquisitionRoleAddress(entry, 'self'),
+        value: {
+          ...echoGoldIDuplicateAnvilResult,
+          addedTraitKeys: ['StaffExAoETrait', 'StaffExAoETrait'],
+        },
+      }),
+    ).toThrow('must contain distinct traits');
   });
 
   it('rejects a level-resolution child on Shop GiftDrop', () => {

@@ -8,7 +8,6 @@ import type { ShopOccurrenceCommand } from '../types';
 import { createUnresolvedAcquisitionRewardState } from '../../traits/state';
 import { rewardSourceResolvesAtAcquisition } from '../../acquisition/reward-state';
 import { reconcileAcquisitionResolvedRewardEntry } from '../../acquisition/acquisition-entry';
-import { pickupEffectForOffer } from '../../../reward-kernel/history';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -65,25 +64,6 @@ export function applyShopOccurrenceCommand(
       null,
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(current, nextOccurrence));
-  }
-  if (command.kind === 'ReplaceAnvilResult') {
-    const reward = offer.reward;
-    if (reward === null) failCommand(command, 'acquisition effect result requires a reward');
-    if (pickupEffectForOffer(catalog.rewards, reward.offer)?.effect.kind !== 'anvilOfFates')
-      failCommand(command, 'reward has no declared Anvil of Fates pickup effect');
-    if (JSON.stringify(offer.anvilResult) === JSON.stringify(command.value)) return document;
-    const replacement = Object.freeze({
-      ...offer,
-      anvilResult: command.value,
-    });
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        current,
-        replaceAuthoredShopOffer(occurrence, command.offer.offerKey, replacement),
-      ),
-    );
   }
   const profile = shopSlotProfile(
     catalog,
@@ -152,14 +132,7 @@ export function applyShopOccurrenceCommand(
               },
               located.routePosition.routeKey,
             );
-        const pickupEffect = resolvesAtAcquisition
-          ? undefined
-          : pickupEffectForOffer(catalog.rewards, selectedOffer);
-        return Object.freeze({
-          optionKey: selectedOptionKey,
-          reward,
-          ...(pickupEffect?.effect.kind === 'anvilOfFates' ? { anvilResult: null } : {}),
-        });
+        return Object.freeze({ optionKey: selectedOptionKey, reward });
       })();
   const purchaseSelected = occurrence.roomActions.order.some((reference) =>
     command.offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY

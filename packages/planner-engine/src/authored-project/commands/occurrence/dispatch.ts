@@ -835,7 +835,6 @@ export function applyOccurrenceCommand(
     case 'ReplaceShopOffer':
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
-    case 'ReplaceAnvilResult':
       return applyShopOccurrenceCommand(document, catalog, located, command);
     case 'SelectEncounter':
     case 'ResetEncounter':

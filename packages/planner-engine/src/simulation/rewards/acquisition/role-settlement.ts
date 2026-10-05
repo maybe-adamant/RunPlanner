@@ -442,7 +442,7 @@ export function applyProducerRoleHistory(
     const concreteDeclaration =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName];
     const pickupEffect = concreteDeclaration?.pickupEffect;
-    const authoredAnvilResult = incoming.anvilResult;
+    const authoredAnvilResult = incoming.anvilResultsByAcquisitionRole?.[resolution.role];
     if (pickupEffect !== undefined && disposition.kind === 'normal') {
       if (authoredAnvilResult === undefined || authoredAnvilResult === null) {
         addRewardFinding(
