@@ -36,10 +36,16 @@ function pickerItemLabel(catalog: Catalog, optionLabel: string, selection: ShopO
   return source.label;
 }
 
-/** A current item that is no longer possible can be cleared from its own section. */
+/** An invalid current item can be cleared only when no item can replace it. */
 function withClearForInvalidSelection(
   model: ContextualPickerModel<ShopOptionSelection>,
 ): ContextualPickerModel<ShopOptionSelection | null> {
+  const replaceable = model.sections.some(
+    (section) =>
+      section.kind !== 'selectedInvalid' &&
+      section.items.some((item) => item.state === 'possible' || item.state === 'forced'),
+  );
+  if (replaceable) return model;
   return Object.freeze({
     ...model,
     sections: Object.freeze(
