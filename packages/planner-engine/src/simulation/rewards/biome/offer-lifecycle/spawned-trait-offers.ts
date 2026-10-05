@@ -211,10 +211,10 @@ export function spawnDueHermesDeliveries(
   if (room === undefined) return branch;
   const host = semanticAddressKey(room.origin);
   const entryKeys = Object.values(branch.state.pendingHermesShrineDeliveries).flatMap((delivery) =>
-    delivery.dueAt !== undefined &&
-    semanticAddressKey(delivery.dueAt) === host &&
-    delivery.dueSequence === sequence
-      ? [hermesShrineDeliveryEntryKey(delivery.sourceOrigin, delivery.generationKey)]
+    delivery.due !== undefined &&
+    semanticAddressKey(delivery.due.host) === host &&
+    delivery.due.historySequence === sequence
+      ? [hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey)]
       : [],
   );
   return entryKeys.length === 0

@@ -813,10 +813,11 @@ describe('Supply Chain lifecycle', () => {
         rewardHistory: attachTraitHistory(bridalSettlement.branch.state.rewardHistory, progressed),
         pendingHermesShrineDeliveries: Object.freeze({
           delivery: Object.freeze({
-            sourceKey: 'delivery',
-            sourceOrigin: occurrence,
+            entryKey: 'delivery',
+            source: occurrence,
             generationKey: 'initial:first' as const,
             rewardType: 'Boon',
+            rushed: false,
             remainingUses: 1,
           }),
         }),
@@ -882,10 +883,11 @@ describe('Supply Chain lifecycle', () => {
         ...base.state,
         pendingHermesShrineDeliveries: Object.freeze({
           delivery: Object.freeze({
-            sourceKey: 'delivery',
-            sourceOrigin: occurrence,
+            entryKey: 'delivery',
+            source: occurrence,
             generationKey: 'initial:first' as const,
             rewardType: 'Boon',
+            rushed: false,
             remainingUses: 1,
           }),
         }),
@@ -920,8 +922,12 @@ describe('Supply Chain lifecycle', () => {
     ]);
     expect(advanced.branches[0]?.state.pendingHermesShrineDeliveries.delivery).toMatchObject({
       remainingUses: 0,
-      dueAt: occurrence,
-      dueSequence: 1,
+      due: {
+        host: occurrence,
+        encounterPhaseKey: 'Encounter',
+        cause: 'countdown',
+        historySequence: 1,
+      },
     });
     expect(advanced.derivedAcquisitionEntryFrontiers).toEqual([
       expect.objectContaining({ kind: 'hermesShrineDelivery' }),

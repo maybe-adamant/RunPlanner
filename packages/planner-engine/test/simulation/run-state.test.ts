@@ -239,10 +239,11 @@ describe('decision run-state snapshots', () => {
     );
     const base = initializeTestRewardBranches()[0]!;
     const delivery = Object.freeze({
-      sourceKey: 'delivery-source',
-      sourceOrigin: occurrence,
+      entryKey: 'delivery-source',
+      source: occurrence,
       generationKey: 'initial:first' as const,
       rewardType: 'Boon',
+      rushed: false,
       remainingUses: 3,
     });
     const beforeBranch = Object.freeze({
@@ -500,10 +501,11 @@ describe('decision run-state snapshots', () => {
                 pendingHermesShrineDeliveries: pending
                   ? {
                       spell: {
-                        sourceKey: 'spell',
-                        sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+                        entryKey: 'spell',
+                        source: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
                         generationKey: 'initial:secondLeft' as const,
                         rewardType: 'SpellDrop',
+                        rushed: false,
                         remainingUses: 8,
                       },
                     }

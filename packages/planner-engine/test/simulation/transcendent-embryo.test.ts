@@ -313,10 +313,11 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         keepsakes: keepsakes,
         pendingHermesShrineDeliveries: Object.freeze({
           delivery: Object.freeze({
-            sourceKey: 'delivery',
-            sourceOrigin: encounterOwner,
+            entryKey: 'delivery',
+            source: encounterOwner,
             generationKey: 'initial:first' as const,
             rewardType: 'Boon',
+            rushed: false,
             remainingUses: 1,
           }),
         }),

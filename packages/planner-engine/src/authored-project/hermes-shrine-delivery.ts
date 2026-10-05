@@ -1,14 +1,17 @@
 import type { OccurrenceAddress } from './addresses';
 import type { Catalog, RoomDeclaration } from '../catalog-schema';
 import { locallyValidRewardOffers } from '../reward-kernel';
-import type {
-  AuthoredRoutePlan,
-  AuthoredRewardState,
-  BiomeTopology,
-  HermesShrineGenerationKey,
-  OccurrenceId,
-  ProjectDocument,
-  RoomOccurrence,
+import {
+  hermesShrineInitialSlotKey,
+  type AuthoredRoutePlan,
+  type AuthoredRewardState,
+  type BiomeTopology,
+  type HermesShrineGenerationKey,
+  type HermesShrinePurchase,
+  type HermesShrineState,
+  type OccurrenceId,
+  type ProjectDocument,
+  type RoomOccurrence,
 } from './model';
 import { structurallyActiveOccurrenceIds } from './topology/query';
 import { roomActionKey } from './room-actions/key';
@@ -22,6 +25,60 @@ const GENERATION_KEYS = [
 ] as const satisfies readonly HermesShrineGenerationKey[];
 
 export const HERMES_SHRINE_DELIVERY_SITE_KEY = 'hermesShrineDelivery' as const;
+
+/** Where and how one Shrine of Hermes purchase arrives; `due` is absent while it counts down. */
+export interface HermesDeliveryObligation {
+  readonly entryKey: string;
+  /** The Shrine room that sold the item. */
+  readonly source: OccurrenceAddress;
+  readonly generationKey: HermesShrineGenerationKey;
+  readonly rewardType: string;
+  readonly rushed: boolean;
+  readonly due?: HermesDeliveryDueContact;
+}
+
+export interface HermesDeliveryDueContact {
+  readonly host: OccurrenceAddress;
+  /** Absent for a rush at the Shrine and for the fourth-biome Preboss flush. */
+  readonly encounterPhaseKey?: string;
+  readonly cause: 'rush' | 'countdown' | 'flush';
+  readonly historySequence: number;
+}
+
+/** A rushed item is delivered in the Shrine room itself. */
+export function isSameRoomDelivery(source: OccurrenceAddress, host: OccurrenceAddress): boolean {
+  return (
+    source.routeKey === host.routeKey &&
+    source.biomeKey === host.biomeKey &&
+    source.occurrenceId === host.occurrenceId
+  );
+}
+
+/** The authored purchase behind one Shrine generation, initial slot or Travel Deal refill. */
+export function purchaseFor(
+  shrine: HermesShrineState | undefined,
+  generationKey: HermesShrineGenerationKey,
+): HermesShrinePurchase | undefined {
+  if (shrine === undefined) return undefined;
+  if (generationKey === 'travelDealRefill') return shrine.travelDealRefill?.purchase;
+  const slotKey = hermesShrineInitialSlotKey(generationKey);
+  return slotKey === undefined ? undefined : shrine.purchaseBySlot?.[slotKey];
+}
+
+/**
+ * Whether the obligation is due at `host`. Without `contact` any phase matches;
+ * with it the due phase must equal `contact.encounterPhaseKey`, where an absent
+ * key means a phase-less rush or flush contact.
+ */
+export function dueContactMatches(
+  obligation: HermesDeliveryObligation,
+  host: OccurrenceAddress,
+  contact?: { readonly encounterPhaseKey?: string | undefined },
+): boolean {
+  const due = obligation.due;
+  if (due === undefined || !isSameRoomDelivery(due.host, host)) return false;
+  return contact === undefined || due.encounterPhaseKey === contact.encounterPhaseKey;
+}
 
 /**
  * Native flushes every pending Shrine delivery at the Preboss of the fourth
@@ -138,14 +195,7 @@ export function hermesShrineDeliverySourceIsStructurallyActive(
     ?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === source.sourceOccurrenceId,
     );
-  if (occurrence?.hermesShrine === undefined) return false;
-  const purchase =
-    source.generationKey === 'travelDealRefill'
-      ? occurrence.hermesShrine.travelDealRefill?.purchase
-      : occurrence.hermesShrine.purchaseBySlot?.[
-          source.generationKey.slice('initial:'.length) as import('./model').HermesShrineSlotKey
-        ];
-  if (purchase === undefined) return false;
+  if (purchaseFor(occurrence?.hermesShrine, source.generationKey) === undefined) return false;
   return (
     structurallyActiveIdsByBiome(route)(source.biomeKey)?.has(source.sourceOccurrenceId) ?? false
   );

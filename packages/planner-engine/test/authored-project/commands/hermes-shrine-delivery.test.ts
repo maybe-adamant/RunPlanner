@@ -374,13 +374,13 @@ describe('Hermes Shrine delivery placement', () => {
         ...branch.state,
         pendingHermesShrineDeliveries: Object.freeze({
           [entryKey]: Object.freeze({
-            sourceKey: entryKey,
-            sourceOrigin: source,
+            entryKey,
+            source,
             generationKey: 'initial:first' as const,
             rewardType: 'HealBigDrop',
+            rushed: false,
             remainingUses: 0,
-            dueAt: host,
-            dueSequence: 1,
+            due: Object.freeze({ host, cause: 'countdown' as const, historySequence: 1 }),
           }),
         }),
       }),
@@ -443,10 +443,11 @@ describe('Hermes Shrine delivery placement', () => {
         ...branch.state,
         pendingHermesShrineDeliveries: Object.freeze({
           [entryKey]: Object.freeze({
-            sourceKey: entryKey,
-            sourceOrigin: source,
+            entryKey,
+            source,
             generationKey: 'initial:first' as const,
             rewardType: 'HealBigDrop',
+            rushed: false,
             remainingUses: 2,
           }),
         }),
@@ -491,7 +492,7 @@ describe('Hermes Shrine delivery placement', () => {
       ],
     );
     expect(sideRoom.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
-      sourceOrigin: source,
+      source,
       remainingUses: 2,
     });
     expect(sideRoom.derivedAcquisitionEntryFrontiers).toEqual([]);
@@ -512,7 +513,7 @@ describe('Hermes Shrine delivery placement', () => {
     expect(
       firstMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
     ).toMatchObject({
-      sourceOrigin: source,
+      source,
       remainingUses: 1,
     });
 
@@ -525,9 +526,9 @@ describe('Hermes Shrine delivery placement', () => {
     expect(
       dueMainEncounter.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
     ).toMatchObject({
-      sourceOrigin: source,
+      source,
       remainingUses: 0,
-      dueAt: host,
+      due: { host, encounterPhaseKey: 'Encounter', cause: 'countdown' },
     });
     expect(parseHermesShrineDeliveryEntryKey(entryKey)?.sourceOccurrenceId).toBe(
       source.occurrenceId,
@@ -557,13 +558,13 @@ describe('Hermes Shrine delivery placement', () => {
         ...branch.state,
         pendingHermesShrineDeliveries: Object.freeze({
           [entryKey]: Object.freeze({
-            sourceKey: entryKey,
-            sourceOrigin: source,
+            entryKey,
+            source,
             generationKey: 'initial:first' as const,
             rewardType: 'HealBigDrop',
+            rushed: false,
             remainingUses: 0,
-            dueAt: host,
-            dueSequence: 1,
+            due: Object.freeze({ host, cause: 'countdown' as const, historySequence: 1 }),
           }),
         }),
       }),
@@ -1151,7 +1152,7 @@ describe('Hermes Shrine delivery source participation', () => {
     const o = evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
     if (o?.authoring !== 'complete' || !('rewards' in o)) throw new Error('O rewards missing');
     // The abandoned item vanishes with its room instead of lingering as pending.
-    expect(o.rewards.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
+    expect(o.rewards.hermesShrineDeliveries.map((delivery) => delivery.entryKey)).not.toContain(
       rushedKey,
     );
   });

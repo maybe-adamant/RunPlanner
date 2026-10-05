@@ -27,7 +27,7 @@ const reference = {
 };
 const seed = initializeTestRewardBranches()[0]!;
 function delivery(
-  dueAt = host,
+  dueHost = host,
   dueEncounterPhaseKey: string | null = 'combat1',
 ): RewardBranchState {
   return {
@@ -36,13 +36,18 @@ function delivery(
       ...seed.state,
       pendingHermesShrineDeliveries: {
         [reference.entryKey]: {
-          sourceKey: reference.entryKey,
-          sourceOrigin: source,
+          entryKey: reference.entryKey,
+          source,
           generationKey: 'initial:first',
           rewardType: 'HealBigDrop',
+          rushed: false,
           remainingUses: 0,
-          dueAt,
-          ...(dueEncounterPhaseKey === null ? {} : { dueEncounterPhaseKey }),
+          due: {
+            host: dueHost,
+            cause: 'countdown',
+            historySequence: 9,
+            ...(dueEncounterPhaseKey === null ? {} : { encounterPhaseKey: dueEncounterPhaseKey }),
+          },
         },
       },
     },

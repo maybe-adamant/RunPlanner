@@ -143,18 +143,11 @@ export function publishChronology(
           .map(
             (delivery) =>
               [
-                delivery.sourceKey,
+                delivery.entryKey,
                 Object.freeze({
-                  sourceKey: delivery.sourceKey,
-                  sourceOrigin: delivery.sourceOrigin,
-                  rewardType: delivery.rewardType,
+                  ...delivery,
                   deliveryKind:
-                    delivery.dueAt === undefined ? ('pending' as const) : ('countdown' as const),
-                  ...(delivery.dueAt === undefined ? {} : { hostOrigin: delivery.dueAt }),
-                  ...(delivery.dueSequence === undefined
-                    ? {}
-                    : { hostSequence: delivery.dueSequence }),
-                  remainingUses: delivery.remainingUses,
+                    delivery.due === undefined ? ('pending' as const) : ('countdown' as const),
                 }),
               ] as const,
           ),

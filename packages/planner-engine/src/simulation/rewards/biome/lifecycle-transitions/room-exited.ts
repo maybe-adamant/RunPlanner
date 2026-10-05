@@ -108,9 +108,9 @@ export function applyRoomExitedTransition(
         );
         const abandoned = Object.entries(state.pendingHermesShrineDeliveries).filter(
           ([, delivery]) =>
-            delivery.rushed === true &&
-            delivery.dueAt !== undefined &&
-            semanticAddressKey(delivery.dueAt) === exitedRoom,
+            delivery.rushed &&
+            delivery.due !== undefined &&
+            semanticAddressKey(delivery.due.host) === exitedRoom,
         );
         if (abandoned.length > 0) {
           const remaining = { ...state.pendingHermesShrineDeliveries };

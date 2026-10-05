@@ -1,5 +1,9 @@
 import type { Catalog } from '../../catalog-schema';
 import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
+import type {
+  HermesDeliveryDueContact,
+  HermesDeliveryObligation,
+} from '../../authored-project/hermes-shrine-delivery';
 import type { EquippedTrait } from '../../authored-project/traits/state';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type {
@@ -58,16 +62,11 @@ export interface PendingShopState {
   readonly infernalContractOffer?: CanonicalShopOffer;
 }
 
-export interface PendingHermesShrineDelivery {
-  readonly sourceKey: string;
-  readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
-  readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
-  readonly rewardType: string;
+export type { HermesDeliveryObligation, HermesDeliveryDueContact };
+
+/** A branch's open Shrine order: the obligation plus the encounter uses left before it falls due. */
+export interface PendingHermesShrineDelivery extends HermesDeliveryObligation {
   readonly remainingUses: number;
-  readonly rushed?: boolean;
-  readonly dueAt?: import('../../authored-project/addresses').OccurrenceAddress;
-  readonly dueSequence?: number;
-  readonly dueEncounterPhaseKey?: string;
 }
 
 /** The state substates native trait-offer generation reads when a loot's options are built. */
