@@ -187,6 +187,11 @@ not restricted to the miniboss room reward. A later offer reroll preserves the
 already assembled rarity table while explicitly ignoring a second room-bonus
 application, so it does not erase or double the initial benefit.
 
+The rush path (`SurfaceShopLogic.lua:528-540`) never sets
+`IgnoreRoomRarityBonus`, so a rushed item reads the room override on every
+build. The planner currently applies no room rarity override to delivered boons
+on either path; that omission is the bounded planner discrepancy for this fact.
+
 This result follows from the exact construction order and is important for the
 planner: the rarity context belongs to the room in which the delayed reward is
 materialized, not the earlier Shrine purchase room.

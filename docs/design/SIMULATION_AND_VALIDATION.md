@@ -85,8 +85,10 @@ edit reaches inherited timed-effect choices, agreeing current evidence without
 established prior correspondence also resets them; the exact choice authored by that
 edit is protected. A delivery already ranked at its exact due host and phase with an
 unchanged obligation has that correspondence and is retained when first reached. Each
-repair consumes an explicit obligation or displaced owner; repeated repairs are
-contract errors rather than an unbounded replay policy. Loading and projection
+repair consumes an explicit obligation or displaced owner. A repeated repair is
+not replayed: settlement stops and returns the last evaluated assembly with a
+settlement fault naming the owner, which the application publishes beside the
+assembly rather than treating as an error. Loading and projection
 remain read-only, and Undo/Redo restore the settled snapshots.
 
 Evaluation rebuilds synchronously for a new authored snapshot. Application

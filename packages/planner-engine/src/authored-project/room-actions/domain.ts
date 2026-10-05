@@ -26,7 +26,7 @@ import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
 } from '../acquisition/artificer';
-import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -533,21 +533,25 @@ function baseContribution(
         routePosition.ordinal,
         routeStartIncoming,
       );
+      const sameRoomShrineDelivery =
+        hermesDelivery !== undefined &&
+        hermesDelivery.routeKey === biome.routeKey &&
+        hermesDelivery.biomeKey === biome.biomeKey &&
+        hermesDelivery.sourceOccurrenceId === occurrence.occurrenceId;
+      // A countdown delivery spawns as a required object; a rushed item is
+      // ordinary loot the player may leave behind.
       const required =
-        hermesDelivery !== undefined ||
+        (hermesDelivery !== undefined && !sameRoomShrineDelivery) ||
         (producer?.pickups.some((pickup) => pickup.key === reference.entryKey && pickup.required) ??
           false);
       const site = acquisitionSiteFromStorageKey(
         createOccurrenceAddress(biome, occurrence.occurrenceId),
         reference.siteKey,
       );
-      const sameRoomShrineDelivery =
-        hermesDelivery !== undefined &&
-        hermesDelivery.routeKey === biome.routeKey &&
-        hermesDelivery.biomeKey === biome.biomeKey &&
-        hermesDelivery.sourceOccurrenceId === occurrence.occurrenceId;
-      const finalPrebossHost =
-        catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss' && routePosition.isLast;
+      const finalPrebossHost = isDeliveryFlushHost(
+        catalog.rooms.byKey[occurrence.gameName],
+        routePosition,
+      );
       return contribution(
         biome,
         occurrence,

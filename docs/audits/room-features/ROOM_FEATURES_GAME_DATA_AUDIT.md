@@ -309,14 +309,16 @@ encounter-use countdown, purchase depth, and expiration action. Qualifying
 encounter completions decrement it; noncombat, skipped, ignored-use, and
 otherwise nonqualifying encounters do not. Expiration spawns a required
 pickup, which is mandatory when delivered. A rushed purchase removes pending
-state and spawns the exact required pickup when the Shrine screen closes.
+state and spawns the exact item as ordinary, abandonable loot when the Shrine
+screen closes.
 Multiple purchases remain independent. Forced final-Preboss completion
 delivers all pending Shrine items when `EnteredBiomes == 4`: Dream non-Q
 Preboss rooms use `ShopRoomEvents` with `AutocompleteSurfaceShopDelivery`
 (`EncounterSets.lua:415–430`). Q uses `SpawnHermesInPerson` on either route
-(`RoomDataQ.lua:1275–1300`, `EventPresentation.lua:3526–3563`). A non-final Q
-does not flush early. The planner uses resolved itinerary terminality, not
-the room's biome name, for the shared required delivery-pickup product.
+(`RoomDataQ.lua:1275–1300`, `EventPresentation.lua:3526–3563`). A Q entered
+earlier does not flush. The planner uses the resolved itinerary ordinal, not
+the room's biome name or terminality, for the shared required delivery-pickup
+product.
 
 Travel Deal applies its first-purchase treatment. Only the first rushed
 purchase refills its vacated slot with a fresh SurfaceShop option, excluding
@@ -339,12 +341,12 @@ pickup-owned detail—including Mystery Boon's eventual God and trait offer—ar
 authored only on the concrete rushed or delayed delivery pickup. Purchase state
 is sparse per stable generation; delay, rush, pending delivery, delivery host,
 and Spell reservation are derived products. Purchase itself
-is not a room action. A rushed purchase creates one required source-room pickup;
+is not a room action. A rushed purchase ranks one optional source-room pickup;
 a delayed purchase is scheduled at source cleanup, counts qualifying later
 encounter-end effects, and materializes at its reached host. Side-room Shrines
 use the same source rule but do not consume a newly scheduled or older pending
-use. Final Preboss entry flushes pending deliveries into required post-outgoing
-pickups. Numeric prices and economy remain sim-neutral.
+use. Entering the fourth entered biome's Preboss flushes pending deliveries into
+required post-outgoing pickups. Numeric prices and economy remain sim-neutral.
 
 ## Stygian Wells
 

@@ -19,6 +19,12 @@ import {
   hermesShrineDeliveryEntryKey,
   unplaceHermesShrineDelivery,
 } from '../../hermes-shrine-delivery';
+import { createBiomeAddress } from '../../addresses';
+import { roomActionKey } from '../../room-actions/key';
+import {
+  roomActionDomainForOccurrence,
+  scheduleRequiredRoomActions,
+} from '../../room-actions/defaults';
 
 function withRushedHermesDelivery(
   occurrence: import('../../model').RoomOccurrence,
@@ -239,12 +245,47 @@ export function applyOccurrenceCommand(
         deliveryEntryKey,
         command.purchase?.rushed === true ? command.occurrence : undefined,
       );
+      // A rushed item is optional loot; rank it once at its canonical post-outgoing
+      // position so the author starts from the pickup and may remove it.
+      if (command.purchase?.rushed === true) {
+        const biome = createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey);
+        const host = roomActionDomainForOccurrence(
+          unplacedDelivery,
+          catalog,
+          biome,
+          command.occurrence.occurrenceId,
+        );
+        if (host === undefined)
+          failCommand(command, 'rushed Shrine host has no room-action domain');
+        const order = scheduleRequiredRoomActions({
+          catalog,
+          domain: host.domain,
+          order: host.occurrence.roomActions.order,
+          requiredKeys: new Set([
+            roomActionKey({
+              kind: 'interactAcquisitionEntry',
+              siteKey: 'hermesShrineDelivery',
+              entryKey: deliveryEntryKey,
+            }),
+          ]),
+          participation: 'any',
+        });
+        return order === host.occurrence.roomActions.order
+          ? unplacedDelivery
+          : updateOccurrence(
+              unplacedDelivery,
+              { ...located, plan: unplacedDelivery.route.biomes[located.biomeIndex]! },
+              Object.freeze({
+                ...host.occurrence,
+                roomActions: Object.freeze({ ...host.occurrence.roomActions, order }),
+              }),
+            );
+      }
       // A refill can only be triggered by this Shrine's first rushed initial
       // delivery. Retain its authored detail when that source is un-rushed,
       // but retract the now-dormant active refill action.
       if (
         slotKey !== undefined &&
-        command.purchase?.rushed !== true &&
         !Object.values(nextOccurrence.hermesShrine.purchaseBySlot ?? {}).some(
           (purchase) => purchase.rushed,
         )

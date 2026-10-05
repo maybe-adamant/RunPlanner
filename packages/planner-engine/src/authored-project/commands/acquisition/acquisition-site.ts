@@ -24,6 +24,7 @@ import {
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import {
   defaultHermesShrineDeliveryReward,
+  isDeliveryFlushHost,
   parseHermesShrineDeliveryEntryKey,
   removeHermesShrineDeliveryFromOtherHosts,
   retainedHermesShrineDeliveryReward,
@@ -242,10 +243,10 @@ export function applyAcquisitionSiteCommand(
           ];
     if (sourceOffer === undefined || sourceOffer === null || purchase === undefined)
       failCommand(command, 'does not name a purchased Shrine delivery');
-    const hostDeclaration = catalog.rooms.byKey[host.gameName];
-    const finalPrebossHost =
-      hostDeclaration?.kind === 'Preboss' &&
-      resolveRoutePosition(catalog, document.route, site.biomeKey).isLast;
+    const finalPrebossHost = isDeliveryFlushHost(
+      catalog.rooms.byKey[host.gameName],
+      resolveRoutePosition(catalog, document.route, site.biomeKey),
+    );
     if (command.encounterPhaseKey !== undefined && command.encounterPhaseKey.trim().length === 0)
       failCommand(command, 'has an empty due encounter phase');
     const sourceIsHost =

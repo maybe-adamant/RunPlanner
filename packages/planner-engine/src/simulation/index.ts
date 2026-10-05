@@ -542,4 +542,8 @@ export {
 } from './traits/offer-levels';
 export type { AssessmentIssue } from './assessment-issue';
 
-export { settleProjectEdit } from './edit-settlement';
+export {
+  settleProjectEdit,
+  type ProjectEditSettlement,
+  type SettlementFault,
+} from './edit-settlement';

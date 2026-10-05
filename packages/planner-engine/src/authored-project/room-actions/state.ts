@@ -9,7 +9,7 @@ import {
 } from '../room-state/encounter-envelope';
 import { semanticAddressKey } from '../addresses';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
-import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   echoLastRewardPickupEntryKeys,
@@ -322,11 +322,17 @@ export function activeRoomActionReferences(
           shrineDelivery.routeKey === biome.routeKey &&
           shrineDelivery.biomeKey === biome.biomeKey &&
           shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId;
-        const finalPrebossHost = room.kind === 'Preboss' && routePosition.isLast;
+        const flushHost = isDeliveryFlushHost(room, routePosition);
         // A retained cross-occurrence entry is not a timeline action until
-        // its exact delivery contact is reached. Final-Preboss entry is the
-        // sole phase-less cross-occurrence contact and uses post-outgoing.
-        if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
+        // settlement ranks it at its reached delivery contact; dormant payload
+        // alone never re-admits a retracted delivery. The fourth-biome Preboss
+        // flush is the sole phase-less cross-occurrence contact and uses
+        // post-outgoing.
+        if (
+          !sourceIsCurrent &&
+          (existingReference === undefined ||
+            (reference.encounterPhaseKey === undefined && !flushHost))
+        )
           continue;
         if (sourceIsCurrent) {
           const purchase =

@@ -21,10 +21,12 @@ import {
   createShopOfferAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
+  semanticAddressKey,
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import * as simulation from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -866,5 +868,33 @@ describe('project workspace application state', () => {
       assembleProjectEvaluation.mock.results[1]?.value.evaluation,
     );
     expect(assembleProjectEvaluation).toHaveBeenCalledTimes(2);
+  });
+
+  it('publishes the settled assembly and records an unfinished automatic repair', () => {
+    const { store } = createStore();
+    const command = {
+      kind: 'ConfigureRoutePrefix',
+      route: createRouteAddress('Underworld'),
+      configuredBiomeCount: 1,
+    } as const satisfies ProjectCommand;
+    const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const fault = { key: `delivery:${semanticAddressKey(owner)}`, owner };
+    const settle = vi.spyOn(simulation, 'settleProjectEdit').mockImplementationOnce((options) => ({
+      assembly: options.evaluate(applyProjectCommand(options.before.project, catalog, command)),
+      fault,
+    }));
+    try {
+      store.dispatch(authoredProjectCommandDispatched(command));
+    } finally {
+      settle.mockRestore();
+    }
+    const workspace = store.getState().projectWorkspace;
+    expect(workspace.settlementFault).toEqual(fault);
+    expect(workspace.assembly?.project).toBe(presentProject(store));
+    expect(presentProject(store).route.biomes).toHaveLength(1);
+    expect(projectHistory(store).past).toHaveLength(1);
+
+    store.dispatch(authoredProjectUndoRequested());
+    expect(store.getState().projectWorkspace.settlementFault).toBeUndefined();
   });
 });

@@ -40,7 +40,7 @@ import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/
 const p = createBiomeAddress('Surface', 'P');
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
-  settleProjectEdit({ catalog, before: evaluate(project), command, evaluate });
+  settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly;
 function occurrence(project: ProjectDocument, id: string) {
   return project.route.biomes
     .flatMap((biome) => biome.topology?.occurrences ?? [])
@@ -239,7 +239,7 @@ describe('timed-effect edit settlement', () => {
       },
       evaluate,
     });
-    expect(settled).toBe(before);
+    expect(settled.assembly).toBe(before);
   });
   it('keeps Supply Chain optional when removing an accepted maturity', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
@@ -576,7 +576,7 @@ describe('timed-effect edit settlement', () => {
       before,
       command: { kind: 'ReplaceTraitOffer', trait: introTrait, value: introValue },
       evaluate,
-    });
+    }).assembly;
     expect(nestedOffer(settled.project, introEntry)).toEqual(introValue);
     expect(nestedOffer(settled.project, combatEntry)).toEqual(combatValue);
     expect(missingOffers(settled)).toEqual([]);
@@ -590,7 +590,7 @@ describe('timed-effect edit settlement', () => {
           value: combatValue,
         },
         evaluate,
-      }),
+      }).assembly,
     ).toBe(settled);
     const history = publishProjectHistoryEdit(createProjectHistory(project), settled.project);
     expect(undoProjectHistory(history).present).toBe(project);
@@ -695,12 +695,14 @@ describe('timed-effect edit settlement', () => {
       entry: missing.origin,
       ...(typeof phase === 'string' ? { encounterPhaseKey: phase } : {}),
     };
-    const settled = settleProjectEdit({ catalog, before, command, evaluate });
+    const settled = settleProjectEdit({ catalog, before, command, evaluate }).assembly;
     expect(
       settled.evaluation.findings.some(
         (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
       ),
     ).toBe(false);
-    expect(settleProjectEdit({ catalog, before: settled, command, evaluate })).toBe(settled);
+    expect(settleProjectEdit({ catalog, before: settled, command, evaluate }).assembly).toBe(
+      settled,
+    );
   });
 });

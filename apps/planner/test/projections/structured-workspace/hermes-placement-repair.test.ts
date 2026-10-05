@@ -372,7 +372,7 @@ it('keeps one stale-phase repair row and restores its due phase atomically', () 
       kind: 'UnplaceGeneratedDelivery',
       action: createRoomActionAddress(oBiome, host.occurrenceId, row.key),
     },
-  });
+  }).assembly;
   const restored = projectStructuredWorkspaceFixture(settled.project)
     .workspace.route.biomes.flatMap((biome) => biome.nodes)
     .find(

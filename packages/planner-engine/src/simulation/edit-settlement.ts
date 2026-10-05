@@ -9,6 +9,7 @@ import {
   createTranscendentEmbryoOutcomeAddress,
   semanticAddressKey,
   type OccurrenceAddress,
+  type SemanticAddress,
 } from '../authored-project/addresses';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
 import { projectCommandAuthoringAddresses } from '../authored-project/commands/contract';
@@ -85,16 +86,29 @@ function purchasedObligation(project: ProjectDocument, entryKey: string): string
   );
 }
 
+/** A repair the settlement refused to repeat; its owner stays repairable by hand. */
+export interface SettlementFault {
+  readonly key: string;
+  readonly owner: SemanticAddress;
+}
+
+export interface ProjectEditSettlement {
+  readonly assembly: ProjectEvaluationAssembly;
+  readonly fault?: SettlementFault;
+}
+
 /**
  * Settle one semantic edit above structural commands and exact evaluation.
- * Preparation and Undo/Redo never call this operation.
+ * Preparation and Undo/Redo never call this operation. The result is total:
+ * a repeated repair stops settlement and is reported as a fault beside the
+ * last evaluated assembly.
  */
 export function settleProjectEdit(options: {
   readonly catalog: Catalog;
   readonly before: ProjectEvaluationAssembly;
   readonly command: ProjectCommand;
   readonly evaluate: (project: ProjectDocument) => ProjectEvaluationAssembly;
-}): ProjectEvaluationAssembly {
+}): ProjectEditSettlement {
   const { catalog, before, command } = options;
   const evaluate = (project: ProjectDocument): ProjectEvaluationAssembly => {
     const result = options.evaluate(project);
@@ -139,7 +153,7 @@ export function settleProjectEdit(options: {
         capability.participation === 'required' &&
         capability.retainedSourceMismatch !== true
       )
-        return before;
+        return Object.freeze({ assembly: before });
     }
   }
   const beforePlacements = new Map(
@@ -159,14 +173,14 @@ export function settleProjectEdit(options: {
         reference.entryKey,
       );
       if (beforePlacements.get(semanticAddressKey(address))?.assessment.kind === 'valid')
-        return before;
+        return Object.freeze({ assembly: before });
     }
   }
   if (
     command.kind === 'PlaceClockedTraitPickup' &&
     !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(before, command)
   )
-    return before;
+    return Object.freeze({ assembly: before });
   const authoredAddresses = projectCommandAuthoringAddresses(command, before.project);
   const authoredEntries = new Set(
     command.kind === 'PlaceHermesShrineDelivery' || command.kind === 'PlaceClockedTraitPickup'
@@ -178,18 +192,24 @@ export function settleProjectEdit(options: {
   );
   const authoredOutcomes = new Set(authoredAddresses.map(semanticAddressKey));
   let project = applyProjectCommand(before.project, catalog, command);
-  if (project === before.project) return before;
+  if (project === before.project) return Object.freeze({ assembly: before });
   let assembly = evaluate(project);
   const beforeContacts = new Map(contacts(before).map((contact) => [contactKey(contact), contact]));
   // Each repair consumes one exact displaced owner or required obligation. A
-  // repeated repair means an inconsistent contact, not permission to replay forever.
+  // repeated repair means an inconsistent contact, not permission to replay
+  // forever: settlement stops with the last evaluated assembly and the fault.
   const repaired = new Set<string>();
-  const consume = (key: string) => {
-    if (repaired.has(key)) throw new Error(`Timed-effect settlement repeated ${key}`);
+  const consume = (key: string, owner: SemanticAddress): SettlementFault | undefined => {
+    if (repaired.has(key)) return Object.freeze({ key, owner });
     repaired.add(key);
+    return undefined;
   };
   for (;;) {
-    const repairs: { readonly key: string; readonly command: ProjectCommand }[] = [];
+    const repairs: {
+      readonly key: string;
+      readonly owner: SemanticAddress;
+      readonly command: ProjectCommand;
+    }[] = [];
     const currentContacts = contacts(assembly);
     const keys = new Set(currentContacts.map(contactKey));
     const exitedOwners = new Set(
@@ -237,6 +257,7 @@ export function settleProjectEdit(options: {
         )
           repairs.push({
             key: contactKey(contact),
+            owner: contact.owner,
             command: {
               kind: 'ReplaceSteadyGrowthTarget',
               outcome: createSteadyGrowthOutcomeAddress(contact.owner, contact.phaseKey),
@@ -260,6 +281,7 @@ export function settleProjectEdit(options: {
         )
           repairs.push({
             key: contactKey(contact),
+            owner: contact.owner,
             command: {
               kind: 'ReplaceTranscendentEmbryoTransformation',
               outcome: createTranscendentEmbryoOutcomeAddress(contact.owner, contact.phaseKey),
@@ -297,6 +319,7 @@ export function settleProjectEdit(options: {
           if (newSource === undefined || oldSource === newSource) continue;
           repairs.push({
             key: `${contactKey(contact)}:${reference.entryKey}`,
+            owner: contact.owner,
             command: {
               kind: 'RemoveRoomAction',
               action: createRoomActionAddress(
@@ -311,7 +334,8 @@ export function settleProjectEdit(options: {
     }
     if (repairs.length > 0) {
       for (const repair of repairs) {
-        consume(repair.key);
+        const fault = consume(repair.key, repair.owner);
+        if (fault !== undefined) return Object.freeze({ assembly, fault });
         project = applyProjectCommand(project, catalog, repair.command);
       }
       assembly = evaluate(project);
@@ -332,7 +356,11 @@ export function settleProjectEdit(options: {
           reference.entryKey === displaced.address.entryKey,
       );
       if (reference !== undefined) {
-        consume(`displaced:${semanticAddressKey(displaced.address)}`);
+        const fault = consume(
+          `displaced:${semanticAddressKey(displaced.address)}`,
+          displaced.address,
+        );
+        if (fault !== undefined) return Object.freeze({ assembly, fault });
         project = applyProjectCommand(project, catalog, {
           kind:
             displaced.address.site.pointKey === 'hermesShrineDelivery'
@@ -381,7 +409,8 @@ export function settleProjectEdit(options: {
     });
     if (newlyRequiredGold.length > 0) {
       for (const { address, sourceOfferKey } of newlyRequiredGold) {
-        consume(`gold:${semanticAddressKey(address)}`);
+        const fault = consume(`gold:${semanticAddressKey(address)}`, address);
+        if (fault !== undefined) return Object.freeze({ assembly, fault });
         project = applyProjectCommand(project, catalog, {
           kind: 'PlaceEchoGoldPickup',
           site: address.site,
@@ -444,9 +473,10 @@ export function settleProjectEdit(options: {
           : [{ address, capability, incompatible, resetInherited }];
       });
     });
-    if (due.length === 0) return assembly;
+    if (due.length === 0) return Object.freeze({ assembly });
     for (const { address, capability, incompatible, resetInherited } of due) {
-      consume(`delivery:${semanticAddressKey(address)}`);
+      const fault = consume(`delivery:${semanticAddressKey(address)}`, address);
+      if (fault !== undefined) return Object.freeze({ assembly, fault });
       if (incompatible || resetInherited)
         project = discardDisplacedHermesShrineDelivery(project, address.entryKey);
       project = applyProjectCommand(project, catalog, {

@@ -207,6 +207,28 @@ describe('Hermes Shrine workbench', () => {
     );
     expect(deliveryRow?.label).toBe('Collect Big Heal · Delivery');
     expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
+    // A rushed item is optional loot: ranked by default, removable, and re-addable.
+    expect(deliveryRow).toMatchObject({ participation: 'optional' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+    const timelineRow = screen.getByText('Collect Big Heal · Delivery').closest('li');
+    if (timelineRow === null) throw new Error('rushed delivery timeline row is missing');
+    expect(within(timelineRow).queryByText('required')).toBeNull();
+    const remove = within(timelineRow).getByRole('button', {
+      name: 'Remove Collect Big Heal · Delivery from timeline',
+    });
+    expect(remove).toHaveProperty('disabled', false);
+    await view.user.click(remove);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add Collect Big Heal · Delivery' })).toBeTruthy(),
+    );
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+        )?.hermesShrine?.purchaseBySlot?.first,
+    ).toEqual({ delay: 2, rushed: true });
   });
 
   it('authors Mystery Boon identity in inventory and its god only at rushed acquisition', async () => {

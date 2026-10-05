@@ -1,5 +1,5 @@
 import type { OccurrenceAddress } from './addresses';
-import type { Catalog } from '../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../catalog-schema';
 import { locallyValidRewardOffers } from '../reward-kernel';
 import type {
   AuthoredRoutePlan,
@@ -22,6 +22,18 @@ const GENERATION_KEYS = [
 ] as const satisfies readonly HermesShrineGenerationKey[];
 
 export const HERMES_SHRINE_DELIVERY_SITE_KEY = 'hermesShrineDelivery' as const;
+
+/**
+ * Native flushes every pending Shrine delivery at the Preboss of the fourth
+ * entered biome (`EnteredBiomes == 4`), whether through the Preboss room
+ * event or Q's in-person Hermes trigger. A shorter itinerary never flushes.
+ */
+export function isDeliveryFlushHost(
+  declaration: Pick<RoomDeclaration, 'kind'> | undefined,
+  routePosition: { readonly ordinal: number },
+): boolean {
+  return declaration?.kind === 'Preboss' && routePosition.ordinal === 4;
+}
 
 /**
  * Materializes only payload-free Shrine identities. Payload-bearing identities

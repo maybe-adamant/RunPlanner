@@ -333,10 +333,11 @@ delivery:
   vacated Surface Shop slot from the same surface profile, with current names
   excluded before fallback.
 
-Preboss `AutocompleteSurfaceShopDelivery` can deliver pending purchases. Schema
-58 models this source behavior through Shrine-owned delayed delivery and the
-shared final-Preboss completion rule; it does not collapse that delivery into a
-World Shop acquisition. The planner still collapses Gold costs and discounts.
+Preboss `AutocompleteSurfaceShopDelivery` can deliver pending purchases at the
+fourth entered biome. Schema 58 models this source behavior through
+Shrine-owned delayed delivery and the shared fourth-biome Preboss flush; it does
+not collapse that delivery into a World Shop acquisition, and a shorter
+itinerary carries the obligation into the Boss encounter. The planner still collapses Gold costs and discounts.
 Travel Deal remains one refill after its first modeled qualifying purchase, a
 timing simplification rather than a claim that the source paths are literally
 identical.
@@ -418,8 +419,8 @@ the existing acquisition entry rather than during inventory generation.
 The first accepted purchase identifies the Travel/Gold source slot, but it is
 not a complete payload context. Generated reward legality belongs to the exact
 history prefix at that source action. The current delivery-aware presentation
-accounts for earlier same-room acquisitions—including Q's forced final-Preboss
-Hermes delivery—rather than deriving candidates from Shop-entry history or a
+accounts for earlier same-room acquisitions—including Q's forced fourth-biome
+Preboss Hermes delivery—rather than deriving candidates from Shop-entry history or a
 source selector. Shrine delivery is supported through its distinct source and
 host ownership; this World-Shop audit does not broaden that feature's scope.
 

@@ -38,6 +38,7 @@ import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-sett
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
+import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
 import type {
   DerivedAcquisitionEntryFrontier,
   FixedAcquisitionRealization,
@@ -221,7 +222,7 @@ export function applyRoomEnteredTransition(
   }
   const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
   const isFinalPreboss =
-    room?.origin.kind === 'occurrence' && declaration?.kind === 'Preboss' && routePosition.isLast;
+    room?.origin.kind === 'occurrence' && isDeliveryFlushHost(declaration, routePosition);
   if (isFinalPreboss) {
     next = Object.freeze(
       next.map((branch) =>

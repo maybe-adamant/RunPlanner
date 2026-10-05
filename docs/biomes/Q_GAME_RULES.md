@@ -122,8 +122,10 @@ combat-wave details, and NPC event or interaction variants remain deliberately
 outside the product until they have explicit catalog and authored-state
 ownership.
 
-The source-backed final-Preboss forced Hermes deliveries are required pickups
-sharing the occurrence's one action chronology with World Shop purchases. A
+The source-backed Hermes deliveries forced at the Preboss of the fourth entered
+biome are required pickups sharing the occurrence's one action chronology with
+World Shop purchases; a Q Preboss reached earlier in a shorter Dream itinerary
+does not flush, and the obligation carries into the Boss encounter. A
 delivery before a purchase may change the exact Travel Deal or Gold Gold Gold
 payload frontier—for example by locking a fourth god into the pool—while a
 delivery after that purchase cannot alter an already-generated payload.

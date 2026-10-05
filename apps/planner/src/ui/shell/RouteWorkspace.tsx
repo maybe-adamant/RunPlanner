@@ -59,6 +59,7 @@ export function RouteWorkspace({
   const dispatch = useAppDispatch();
   const pendingNpcPhaseFocus = useRef<EncounterPhaseAddress | null>(null);
   const activePanel = useAppSelector((state) => state.editorSession.activePanel);
+  const settlementFault = useAppSelector((state) => state.projectWorkspace.settlementFault);
   const activeBiomeProjection =
     activePanel.kind !== 'biome'
       ? undefined
@@ -161,6 +162,7 @@ export function RouteWorkspace({
       focusByOwner={workspace.focusByOwner}
       route={workspaceRoute}
       blockedView={activeBiomeFeedback}
+      settlementFault={settlementFault}
     />
   );
 

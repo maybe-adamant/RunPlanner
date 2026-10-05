@@ -125,6 +125,7 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
     context.views.get(semanticAddressKey(event.origin)),
     context.resourcePlacements,
     state.branches,
+    context.routePosition,
     context.resourceFindings,
   );
   return {

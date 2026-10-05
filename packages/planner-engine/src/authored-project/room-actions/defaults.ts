@@ -118,6 +118,8 @@ export function scheduleRequiredRoomActions(options: {
   readonly domain: RoomActionDomain;
   readonly order: readonly RoomActionReference[];
   readonly requiredKeys: ReadonlySet<string>;
+  /** `any` also ranks named optional actions, such as a rushed Shrine pickup. */
+  readonly participation?: 'required' | 'any';
 }): readonly RoomActionReference[] {
   const authoredKeys = new Set(options.order.map(roomActionKey));
   const activeActions = options.domain.contributions.filter(
@@ -129,7 +131,7 @@ export function scheduleRequiredRoomActions(options: {
   );
   const cohort = activeActions.filter(
     (action) =>
-      action.participation === 'required' &&
+      (action.participation === 'required' || options.participation === 'any') &&
       options.requiredKeys.has(roomActionKey(action.reference)) &&
       !authoredKeys.has(roomActionKey(action.reference)),
   );
