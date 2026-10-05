@@ -7,7 +7,10 @@ import {
 } from '../../../../authored-project/addresses';
 import type { Catalog } from '../../../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import { hermesShrineDeliveryEntryKey } from '../../../../authored-project/hermes-shrine-delivery';
+import {
+  dueContactMatches,
+  hermesShrineDeliveryEntryKey,
+} from '../../../../authored-project/hermes-shrine-delivery';
 import {
   applyTraitOfferContextTransition,
   spawnPendingTraitOffers,
@@ -209,11 +212,8 @@ export function spawnDueHermesDeliveries(
   sequence: number,
 ): RewardBranchState {
   if (room === undefined) return branch;
-  const host = semanticAddressKey(room.origin);
   const entryKeys = Object.values(branch.state.pendingHermesShrineDeliveries).flatMap((delivery) =>
-    delivery.due !== undefined &&
-    semanticAddressKey(delivery.due.host) === host &&
-    delivery.due.historySequence === sequence
+    dueContactMatches(delivery, room.origin) && delivery.due?.historySequence === sequence
       ? [hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey)]
       : [],
   );

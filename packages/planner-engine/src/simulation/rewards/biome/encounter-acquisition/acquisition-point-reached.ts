@@ -21,6 +21,7 @@ import {
   parseArtificerReplacementEntryKey,
 } from '../../../../authored-project/acquisition/artificer';
 import {
+  dueContactMatches,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
@@ -539,6 +540,8 @@ export function applyAcquisitionPointReachedTransition(
         (branch) => branch.state.pendingHermesShrineDeliveries[sourceKey],
       );
       const firstDue = due[0];
+      // Branch agreement checks the host only; the placement assessment above already
+      // proved the exact phase for every branch.
       const agreedDue =
         placement?.assessment.kind === 'valid' &&
         firstDue !== undefined &&
@@ -546,8 +549,7 @@ export function applyAcquisitionPointReachedTransition(
         due.every(
           (delivery) =>
             delivery !== undefined &&
-            delivery.due !== undefined &&
-            semanticAddressKey(delivery.due.host) === semanticAddressKey(room.origin) &&
+            dueContactMatches(delivery, room.origin) &&
             delivery.rewardType === firstDue.rewardType,
         )
           ? firstDue

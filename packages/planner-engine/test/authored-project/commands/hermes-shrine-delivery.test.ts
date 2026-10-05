@@ -23,6 +23,9 @@ import {
   roomActionDomainForOccurrence,
   roomActionKey,
   undoProjectHistory,
+  type AcquisitionEntryAddress,
+  type HermesShrineGenerationKey,
+  type OccurrenceAddress,
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
@@ -47,7 +50,7 @@ import { withTestEncounterRecord } from '../../support/simulation-state';
 import type { CanonicalAuthoredRoom } from '../../../src/simulation/materialization';
 import { applyEncounterEndEffectsTransition } from '../../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import {
-  hermesShrineDeliveryPlacementForPurchaseReschedule,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '../../../src/simulation';
@@ -120,6 +123,48 @@ function projectWithUnrankedDeliveryHost() {
   });
 }
 
+/** The placement command at the due contact the simulator published for one purchase. */
+function duePlacement(
+  assembly: ReturnType<typeof simulateProjectAssembly>,
+  source: OccurrenceAddress,
+  generationKey: HermesShrineGenerationKey,
+):
+  | {
+      readonly kind: 'PlaceHermesShrineDelivery';
+      readonly entry: AcquisitionEntryAddress;
+      readonly encounterPhaseKey?: string;
+    }
+  | undefined {
+  const entryKey = hermesShrineDeliveryEntryKey(source, generationKey);
+  const route = assembly.project.route;
+  const contacts = route.biomes.flatMap((biome) =>
+    (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+      derivedAcquisitionEntriesForProjectEvaluationAssembly(
+        assembly,
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(
+            createBiomeAddress(route.routeKey, biome.biomeKey),
+            occurrence.occurrenceId,
+          ),
+          'hermesShrineDelivery',
+        ),
+      ).filter(
+        (entry) => entry.kind === 'hermesShrineDelivery' && entry.address.entryKey === entryKey,
+      ),
+    ),
+  );
+  if (contacts.length > 1) throw new Error(`${entryKey} is due at several hosts`);
+  const contact = contacts[0];
+  if (contact === undefined) return undefined;
+  return Object.freeze({
+    kind: 'PlaceHermesShrineDelivery' as const,
+    entry: contact.address,
+    ...(contact.encounterPhaseKey === undefined
+      ? {}
+      : { encounterPhaseKey: contact.encounterPhaseKey }),
+  });
+}
+
 describe('Hermes Shrine delivery placement', () => {
   it('counts ship intros toward a delivery that matures at the boss and publishes its pickup', () => {
     let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
@@ -130,7 +175,7 @@ describe('Hermes Shrine delivery placement', () => {
       generationKey: 'initial:secondLeft',
       purchase: { delay: 6, rushed: false },
     });
-    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+    const placement = duePlacement(
       simulateProjectAssembly(catalog, project),
       source,
       'initial:secondLeft',
@@ -181,11 +226,7 @@ describe('Hermes Shrine delivery placement', () => {
       purchase: { delay: 8, rushed: false },
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
-      assembly,
-      source,
-      'initial:secondRight',
-    );
+    const placement = duePlacement(assembly, source, 'initial:secondRight');
     expect(placement).toEqual({
       kind: 'PlaceHermesShrineDelivery',
       entry: createAcquisitionEntryAddress(
@@ -216,11 +257,14 @@ describe('Hermes Shrine delivery placement', () => {
       ...placement,
       encounterPhaseKey: 'Encounter',
     });
-    const repair = hermesShrineDeliveryPlacementForPurchaseReschedule(
-      simulateProjectAssembly(catalog, wrongPhase),
-      source,
-      'initial:secondRight',
+    const wrongPhaseAssembly = simulateProjectAssembly(catalog, wrongPhase);
+    expect(wrongPhaseAssembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'hermesShrineDeliveryPlacementRequired',
+        origin: placement.entry,
+      }),
     );
+    const repair = duePlacement(wrongPhaseAssembly, source, 'initial:secondRight');
     expect(repair).toEqual(placement);
     const repaired = applyProjectCommand(wrongPhase, catalog, repair!);
     const roundTrip = decodeProjectDocument(JSON.parse(encodeProjectDocument(repaired)), catalog);
@@ -272,7 +316,7 @@ describe('Hermes Shrine delivery placement', () => {
     const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
     const delayedEntryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
-    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+    const placement = duePlacement(
       simulateProjectAssembly(catalog, project),
       source,
       'initial:secondLeft',
@@ -312,7 +356,7 @@ describe('Hermes Shrine delivery placement', () => {
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
-    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+    const placement = duePlacement(
       simulateProjectAssembly(catalog, project),
       source,
       'initial:secondLeft',
@@ -871,7 +915,7 @@ describe('Hermes Shrine delivery source participation', () => {
     // Retained payload is not a structural reference, so the delta reconciliation
     // places nothing; the simulator's exact due capability re-places the purchase.
     expect(orderedDeliveryKeys(restored, biome.biomeKey, host.occurrenceId)).toEqual([]);
-    const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+    const placement = duePlacement(
       simulateProjectAssembly(catalog, restored),
       source,
       'initial:first',

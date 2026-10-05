@@ -3,11 +3,11 @@ import type { Catalog } from '../../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
-  semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
 import {
   defaultHermesShrineDeliveryReward,
+  dueContactMatches,
   hermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
@@ -41,11 +41,8 @@ export function dueHermesShrineDeliveryFrontier(
   const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
   for (const branch of branches) {
     for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
-      if (
-        delivery.due === undefined ||
-        semanticAddressKey(delivery.due.host) !== semanticAddressKey(deliveryHost)
-      )
-        continue;
+      // The frontier covers every phase of the host; the exact phase is checked per retained action.
+      if (!dueContactMatches(delivery, deliveryHost)) continue;
       const entryKey = hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey);
       const retained =
         room?.kind === 'authored'

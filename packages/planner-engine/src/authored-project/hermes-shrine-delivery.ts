@@ -1,4 +1,4 @@
-import type { OccurrenceAddress } from './addresses';
+import { createBiomeAddress, createOccurrenceAddress, type OccurrenceAddress } from './addresses';
 import type { Catalog, RoomDeclaration } from '../catalog-schema';
 import { locallyValidRewardOffers } from '../reward-kernel';
 import {
@@ -7,6 +7,7 @@ import {
   type AuthoredRewardState,
   type BiomeTopology,
   type HermesShrineGenerationKey,
+  type HermesShrineInventoryOffer,
   type HermesShrinePurchase,
   type HermesShrineState,
   type OccurrenceId,
@@ -63,6 +64,17 @@ export function purchaseFor(
   if (generationKey === 'travelDealRefill') return shrine.travelDealRefill?.purchase;
   const slotKey = hermesShrineInitialSlotKey(generationKey);
   return slotKey === undefined ? undefined : shrine.purchaseBySlot?.[slotKey];
+}
+
+/** The visible inventory offer behind one Shrine generation; `null` is an empty slot. */
+export function offerFor(
+  shrine: HermesShrineState | undefined,
+  generationKey: HermesShrineGenerationKey,
+): HermesShrineInventoryOffer | null | undefined {
+  if (shrine === undefined) return undefined;
+  if (generationKey === 'travelDealRefill') return shrine.travelDealRefill?.offer;
+  const slotKey = hermesShrineInitialSlotKey(generationKey);
+  return slotKey === undefined ? undefined : shrine.offerBySlot[slotKey];
 }
 
 /**
@@ -169,6 +181,16 @@ interface HermesShrineDeliverySource {
   readonly biomeKey: string;
   readonly sourceOccurrenceId: OccurrenceId;
   readonly generationKey: HermesShrineGenerationKey;
+}
+
+/** The Shrine room named by a parsed delivery entry key. */
+export function hermesShrineDeliverySourceAddress(
+  source: Omit<HermesShrineDeliverySource, 'generationKey'>,
+): OccurrenceAddress {
+  return createOccurrenceAddress(
+    createBiomeAddress(source.routeKey, source.biomeKey),
+    source.sourceOccurrenceId,
+  );
 }
 
 /** Lazily computed structural activity per biome; `null` marks an absent topology. */

@@ -425,7 +425,6 @@ export {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
-  hermesShrineDeliveryPlacementForPurchaseReschedule,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
