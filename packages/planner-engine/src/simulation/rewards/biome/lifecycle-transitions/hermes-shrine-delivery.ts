@@ -42,11 +42,11 @@ export function dueHermesShrineDeliveryFrontier(
   for (const branch of branches) {
     for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries)) {
       if (
-        delivery.dueAt === undefined ||
-        semanticAddressKey(delivery.dueAt) !== semanticAddressKey(deliveryHost)
+        delivery.due === undefined ||
+        semanticAddressKey(delivery.due.host) !== semanticAddressKey(deliveryHost)
       )
         continue;
-      const entryKey = hermesShrineDeliveryEntryKey(delivery.sourceOrigin, delivery.generationKey);
+      const entryKey = hermesShrineDeliveryEntryKey(delivery.source, delivery.generationKey);
       const retained =
         room?.kind === 'authored'
           ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
@@ -85,7 +85,7 @@ export function dueHermesShrineDeliveryFrontier(
               'hermesShrineDeliveryPlacementRequired',
               createAcquisitionEntryAddress(site, entryKey),
               {
-                sourceKey: delivery.sourceKey,
+                sourceKey: delivery.entryKey,
                 ...(encounterPhaseKey === undefined ? {} : { encounterPhaseKey }),
               },
             ),

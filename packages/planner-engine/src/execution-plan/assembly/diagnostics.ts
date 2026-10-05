@@ -160,19 +160,21 @@ function assembleRunStateDiagnostic(
       ),
       hermesShrineDeliveries: Object.freeze(
         Object.values(snapshot.pendingHermesShrineDeliveries)
-          .sort((left, right) => left.sourceKey.localeCompare(right.sourceKey))
+          .sort((left, right) => left.entryKey.localeCompare(right.entryKey))
           .map((delivery) =>
             Object.freeze({
-              sourceKey: delivery.sourceKey,
-              sourceOccurrenceId: delivery.sourceOrigin.occurrenceId,
+              sourceKey: delivery.entryKey,
+              sourceOccurrenceId: delivery.source.occurrenceId,
               generationKey: delivery.generationKey,
               rewardType: delivery.rewardType,
               remainingUses: delivery.remainingUses,
-              rushed: delivery.rushed === true,
-              ...(delivery.dueAt === undefined
+              rushed: delivery.rushed,
+              ...(delivery.due === undefined
                 ? {}
-                : { dueOccurrenceId: delivery.dueAt.occurrenceId }),
-              ...(delivery.dueSequence === undefined ? {} : { dueSequence: delivery.dueSequence }),
+                : {
+                    dueOccurrenceId: delivery.due.host.occurrenceId,
+                    dueSequence: delivery.due.historySequence,
+                  }),
             }),
           ),
       ),

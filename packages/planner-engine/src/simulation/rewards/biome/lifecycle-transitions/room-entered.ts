@@ -235,12 +235,15 @@ export function applyRoomEnteredTransition(
                 Object.entries(branch.state.pendingHermesShrineDeliveries).map(
                   ([key, delivery]) => [
                     key,
-                    delivery.dueAt === undefined
+                    delivery.due === undefined
                       ? Object.freeze({
                           ...delivery,
                           remainingUses: 0,
-                          dueAt: room.origin,
-                          dueSequence: event.sequence,
+                          due: Object.freeze({
+                            host: room.origin,
+                            cause: 'flush' as const,
+                            historySequence: event.sequence,
+                          }),
                         })
                       : delivery,
                   ],

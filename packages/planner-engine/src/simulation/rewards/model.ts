@@ -251,7 +251,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
     readonly assessments: readonly import('../commerce/stygian-well').StygianWellCandidateContext[];
   }[];
-  /** Derived source-to-host delivery state; no pending object is persisted. */
+  /** Open Shrine delivery obligations at the biome's end; no pending object is persisted. */
   readonly hermesShrineDeliveries: readonly import('../commerce/hermes-shrine').DerivedHermesShrineDelivery[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];

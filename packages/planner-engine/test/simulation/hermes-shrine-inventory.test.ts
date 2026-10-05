@@ -695,10 +695,11 @@ describe('Hermes Shrine delayed deliveries', () => {
             ...branch.state,
             pendingHermesShrineDeliveries: Object.freeze({
               [entryKey]: Object.freeze({
-                sourceKey: entryKey,
-                sourceOrigin: source,
+                entryKey,
+                source,
                 generationKey: 'initial:first' as const,
                 rewardType: 'HealBigDrop',
+                rushed: false,
                 remainingUses: 8,
               }),
             }),
@@ -739,7 +740,7 @@ describe('Hermes Shrine delayed deliveries', () => {
         );
         expect(
           transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey],
-        ).not.toHaveProperty('dueAt');
+        ).not.toHaveProperty('due');
         return;
       }
       expect(transition.hermesShrineDeliveryPlacementRequired).toBe(true);
@@ -752,8 +753,7 @@ describe('Hermes Shrine delayed deliveries', () => {
       });
       expect(transition.branches[0]?.state.pendingHermesShrineDeliveries[entryKey]).toMatchObject({
         remainingUses: 0,
-        dueAt: room.origin,
-        dueSequence: entryEvent.sequence,
+        due: { host: room.origin, cause: 'flush', historySequence: entryEvent.sequence },
       });
     },
   );
@@ -772,7 +772,7 @@ describe('Hermes Shrine delayed deliveries', () => {
       throw new Error('Dream Q did not publish rewards');
     // The first-biome Preboss does not flush: the delivery is still counting down.
     expect(biome.rewards.hermesShrineDeliveries).toEqual([
-      expect.objectContaining({ sourceKey: entryKey, deliveryKind: 'pending' }),
+      expect.objectContaining({ entryKey, deliveryKind: 'pending' }),
     ]);
     expect(biome.rewards.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineDeliveryPlacementRequired',
@@ -784,8 +784,8 @@ describe('Hermes Shrine delayed deliveries', () => {
     expect(biome.rewards.branches.length).toBeGreaterThan(0);
     for (const branch of biome.rewards.branches) {
       const pending = branch.state.pendingHermesShrineDeliveries[entryKey];
-      expect(pending).toMatchObject({ sourceKey: entryKey });
-      expect(pending).not.toHaveProperty('dueAt');
+      expect(pending).toMatchObject({ entryKey });
+      expect(pending).not.toHaveProperty('due');
     }
   });
 
@@ -1215,7 +1215,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
         ),
       ),
     ).toBe(true);
-    expect(result.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
+    expect(result.hermesShrineDeliveries.map((delivery) => delivery.entryKey)).not.toContain(
       hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
     );
     expect(refillEntry.entryKey).toBe(hermesShrineDeliveryEntryKey(host, 'travelDealRefill'));
@@ -1345,10 +1345,10 @@ describe('Hermes Shrine Travel Deal generation', () => {
         .map((row) => row.window),
     ).toEqual([{ kind: 'postOutgoing' }, { kind: 'postOutgoing' }]);
     expect(
-      bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.sourceKey),
+      bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.entryKey),
     ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:first'));
     expect(
-      bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.sourceKey),
+      bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.entryKey),
     ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'));
   });
 });
@@ -1547,7 +1547,7 @@ describe('Hermes Shrine pickup settlement', () => {
         `fixture lost valid tail P biome: ${p?.findings.map((finding) => finding.code).join(',')}`,
       );
     }
-    expect(p.rewards.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
+    expect(p.rewards.hermesShrineDeliveries.map((delivery) => delivery.entryKey)).not.toContain(
       hermesShrineDeliveryEntryKey(host, 'initial:first'),
     );
   });

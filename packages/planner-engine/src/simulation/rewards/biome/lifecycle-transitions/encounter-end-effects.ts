@@ -517,7 +517,7 @@ export function applyEncounterEndEffectsTransition(
         const pending = branch.state.pendingHermesShrineDeliveries;
         const deliveries = Object.fromEntries(
           Object.entries(pending).map(([key, delivery]) => {
-            if (delivery.dueAt !== undefined) return [key, delivery] as const;
+            if (delivery.due !== undefined) return [key, delivery] as const;
             const remainingUses = delivery.remainingUses - 1;
             return [
               key,
@@ -526,9 +526,12 @@ export function applyEncounterEndEffectsTransition(
                 remainingUses: Math.max(0, remainingUses),
                 ...(remainingUses <= 0
                   ? {
-                      dueAt: deliveryHost,
-                      dueSequence: event.sequence,
-                      dueEncounterPhaseKey: event.phaseKey,
+                      due: Object.freeze({
+                        host: deliveryHost,
+                        encounterPhaseKey: event.phaseKey,
+                        cause: 'countdown' as const,
+                        historySequence: event.sequence,
+                      }),
                     }
                   : {}),
               }),

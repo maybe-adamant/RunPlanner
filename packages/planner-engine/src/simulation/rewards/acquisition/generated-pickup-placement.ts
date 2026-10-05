@@ -62,9 +62,9 @@ export function assessReachedHermesDeliveryPlacement(
     source,
     branches.map((branch) => {
       const due = branch.state.pendingHermesShrineDeliveries[reference.entryKey];
-      return due?.dueAt !== undefined &&
-        semanticAddressKey(due.dueAt) === semanticAddressKey(owner) &&
-        due.dueEncounterPhaseKey === reference.encounterPhaseKey
+      return due?.due !== undefined &&
+        semanticAddressKey(due.due.host) === semanticAddressKey(owner) &&
+        due.due.encounterPhaseKey === reference.encounterPhaseKey
         ? 'valid'
         : 'invalid';
     }),

@@ -1,8 +1,13 @@
 # Hermes delivery obligation
 
 Status: locked 2026-10-04. Base: `e225f3e1`. Behaviour-preserving engine
-refactor guarded by `npm run test:equivalence` before and after every gate; the
-baseline must not change.
+refactor guarded by `npm run test:equivalence` before and after every gate.
+Acceptance: plan and candidate digests never change. The simulation digest may
+change only where the equivalence lane canonicalizes the branch state's
+pending-delivery entries, because the product replaces that state shape; such a
+change is accepted only with a field-by-field mapping proving every corpus
+snapshot is byte-identical to the baseline after mapping the new shape back to
+the old fields. Any other simulation difference stops the gate.
 
 ## Objective
 

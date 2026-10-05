@@ -165,17 +165,24 @@ export function applyAcquisitionPointReachedTransition(
   if (event.kind === 'hermesShrineDeliveriesScheduled') {
     const scheduled = Object.fromEntries(
       event.deliveries.map((delivery) => {
-        const sourceKey = hermesShrineDeliveryEntryKey(room.origin, delivery.generationKey);
+        const entryKey = hermesShrineDeliveryEntryKey(room.origin, delivery.generationKey);
         return [
-          sourceKey,
+          entryKey,
           Object.freeze({
-            sourceKey,
-            sourceOrigin: room.origin,
+            entryKey,
+            source: room.origin,
             generationKey: delivery.generationKey,
             rewardType: delivery.rewardType,
+            rushed: delivery.rushed,
             remainingUses: delivery.delay,
             ...(delivery.rushed
-              ? { dueAt: room.origin, dueSequence: event.sequence, rushed: true }
+              ? {
+                  due: Object.freeze({
+                    host: room.origin,
+                    cause: 'rush' as const,
+                    historySequence: event.sequence,
+                  }),
+                }
               : {}),
           }),
         ];
@@ -539,8 +546,8 @@ export function applyAcquisitionPointReachedTransition(
         due.every(
           (delivery) =>
             delivery !== undefined &&
-            delivery.dueAt !== undefined &&
-            semanticAddressKey(delivery.dueAt) === semanticAddressKey(room.origin) &&
+            delivery.due !== undefined &&
+            semanticAddressKey(delivery.due.host) === semanticAddressKey(room.origin) &&
             delivery.rewardType === firstDue.rewardType,
         )
           ? firstDue
@@ -565,7 +572,7 @@ export function applyAcquisitionPointReachedTransition(
       const prior = inputs.hermesShrineRefillState;
       let refillState = prior;
       if (
-        agreedDue.rushed === true &&
+        agreedDue.rushed &&
         shrineDelivery.generationKey.startsWith('initial:') &&
         prior?.firstRushedInitialGeneration !== true
       ) {
@@ -671,7 +678,7 @@ export function applyAcquisitionPointReachedTransition(
         const nextPending = { ...remaining };
         if (
           settledThisEntry &&
-          agreedDue.rushed === true &&
+          agreedDue.rushed &&
           shrineDelivery.generationKey.startsWith('initial:') &&
           refillState?.refillSupported === true
         ) {
@@ -680,13 +687,20 @@ export function applyAcquisitionPointReachedTransition(
           if (refillPurchase !== undefined && refillOffer !== undefined && refillOffer !== null) {
             const refillKey = hermesShrineDeliveryEntryKey(sourceOrigin, 'travelDealRefill');
             nextPending[refillKey] = Object.freeze({
-              sourceKey: refillKey,
-              sourceOrigin,
+              entryKey: refillKey,
+              source: sourceOrigin,
               generationKey: 'travelDealRefill',
               rewardType: refillOffer.rewardType,
+              rushed: refillPurchase.rushed,
               remainingUses: refillPurchase.delay,
               ...(refillPurchase.rushed
-                ? { dueAt: room.origin, dueSequence: event.sequence, rushed: true }
+                ? {
+                    due: Object.freeze({
+                      host: room.origin,
+                      cause: 'rush' as const,
+                      historySequence: event.sequence,
+                    }),
+                  }
                 : {}),
             });
           }

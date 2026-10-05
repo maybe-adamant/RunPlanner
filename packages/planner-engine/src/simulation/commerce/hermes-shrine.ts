@@ -1,6 +1,7 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
 import type { HermesShrineState } from '../../authored-project/model';
+import type { HermesDeliveryObligation } from '../../authored-project/hermes-shrine-delivery';
 import {
   evaluateRequirement,
   type RequirementEvaluationContext,
@@ -17,17 +18,10 @@ const SLOT_KEYS = [
   'secondRight',
 ] as const satisfies readonly HermesShrineSlotKey[];
 
-export interface DerivedHermesShrineDelivery {
-  readonly sourceKey: string;
-  readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
-  readonly rewardType: string;
-  /** Rush resolves at the source action; ordinary countdowns resolve later. */
-  // `finalPrebossCompletion` names the fourth-biome flush; renaming it is a product change.
-  readonly deliveryKind: 'rush' | 'countdown' | 'finalPrebossCompletion' | 'pending';
-  readonly hostOrigin?: import('../../authored-project/addresses').OccurrenceAddress;
-  readonly hostSequence?: number;
-  /** Exact encounter phase whose end effects matured this delayed item. */
-  readonly encounterPhaseKey?: string;
+/** A Shrine order still open at the biome's end, with its uses left before it falls due. */
+export interface DerivedHermesShrineDelivery extends HermesDeliveryObligation {
+  /** `countdown` once `due` names the host; `pending` while the clock still runs. */
+  readonly deliveryKind: 'countdown' | 'pending';
   readonly remainingUses: number;
 }
 
