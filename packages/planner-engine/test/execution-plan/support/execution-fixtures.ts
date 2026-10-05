@@ -26,6 +26,7 @@ import {
   loadUnderworldIxionChaosCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
+import { dreamSingleQShrineDeliveryProject } from '@run-planner/test-fixtures/dream';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNPhialIntermediateFountainCheckpoint,
@@ -36,6 +37,8 @@ import {
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
   surfaceGeneratedPreCombatProject,
+  surfaceShrineDeliveriesProject,
+  surfaceShrineRushedUnrankedProject,
   typhonCustomizationProject,
 } from '@run-planner/test-fixtures/surface';
 
@@ -48,6 +51,7 @@ import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group-fixture';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
+import dreamShrinePendingFixture from '../fixtures/dream-shrine-pending.execution.json';
 import fOpeningFixture from '../fixtures/f-opening.execution.json';
 import runModifiersFixture from '../fixtures/run-modifiers.execution.json';
 import fgFixture from '../fixtures/fg.execution.json';
@@ -64,6 +68,8 @@ import surfaceNOPFixture from '../fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from '../fixtures/surface-nopq.execution.json';
 import surfaceQShopCorrelationFixture from '../fixtures/surface-q-shop-correlation.execution.json';
 import surfaceScheduledLifecycleFixture from '../fixtures/surface-scheduled-lifecycle.execution.json';
+import surfaceShrineDeliveriesFixture from '../fixtures/surface-shrine-deliveries.execution.json';
+import surfaceShrineRushedUnrankedFixture from '../fixtures/surface-shrine-rushed-unranked.execution.json';
 import underworldArachneCocoonsFixture from '../fixtures/underworld-arachne-cocoons.execution.json';
 import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
@@ -197,6 +203,21 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'surface-n-phial-intermediate-fountain',
     project: loadSurfaceNPhialIntermediateFountainCheckpoint,
     wire: surfaceNPhialIntermediateFountainFixture,
+  },
+  {
+    name: 'surface-shrine-deliveries',
+    project: surfaceShrineDeliveriesProject,
+    wire: surfaceShrineDeliveriesFixture,
+  },
+  {
+    name: 'surface-shrine-rushed-unranked',
+    project: surfaceShrineRushedUnrankedProject,
+    wire: surfaceShrineRushedUnrankedFixture,
+  },
+  {
+    name: 'dream-shrine-pending',
+    project: dreamSingleQShrineDeliveryProject,
+    wire: dreamShrinePendingFixture,
   },
 ]);
 

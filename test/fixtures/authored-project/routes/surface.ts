@@ -15,6 +15,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
+  createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -24,6 +25,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
   hubVisitActions,
@@ -333,6 +338,147 @@ export function surfaceShrineTravelDealProject(): ProjectDocument {
       encounterPhaseKey: 'Combat1',
     }),
   );
+}
+
+/** The Shrine sources of the complete-route delivery fixture. */
+export const surfaceShrineDeliverySources = Object.freeze({
+  nSideRoom: createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1')),
+  oShrine: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+  pPostboss: createOccurrenceAddress(pBiome, createOccurrenceId('surface-p-preboss-shop:postboss')),
+});
+
+function authorOrdinaryShrine(
+  project: ProjectDocument,
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+): ProjectDocument {
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePresence',
+    occurrence,
+    present: true,
+  });
+  for (const [slotKey, rewardType] of [
+    ['first', 'HealBigDrop'],
+    ['secondLeft', 'MaxHealthDrop'],
+    ['secondRight', 'MaxManaDrop'],
+  ] as const) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey,
+      value: { rewardType },
+    });
+  }
+  return next;
+}
+
+/** Places each due delivery at the host and phase the engine derives, in route order. */
+function placeDueHermesShrineDeliveries(project: ProjectDocument): ProjectDocument {
+  let next = project;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const assembly = simulateProjectAssembly(catalog, next);
+    const required = assembly.evaluation.findings.find(
+      (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
+    );
+    if (required === undefined) return next;
+    const origin = required.origin;
+    if (origin.kind !== 'acquisitionEntry')
+      throw new Error('Shrine delivery placement finding has no entry origin');
+    const contact = derivedAcquisitionEntriesForProjectEvaluationAssembly(
+      assembly,
+      origin.site,
+    ).find(
+      (entry) =>
+        entry.kind === 'hermesShrineDelivery' && entry.address.entryKey === origin.entryKey,
+    );
+    if (contact === undefined || contact.kind !== 'hermesShrineDelivery')
+      throw new Error(`Shrine delivery ${origin.entryKey} has no derived due contact`);
+    next = applyProjectCommand(next, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry: contact.address,
+      ...(contact.encounterPhaseKey === undefined
+        ? {}
+        : { encounterPhaseKey: contact.encounterPhaseKey }),
+    });
+  }
+  throw new Error('Shrine delivery placement exceeded its bound');
+}
+
+/**
+ * Complete N/O/P/Q route with every Shrine delivery contact: cross-biome
+ * countdowns, a rushed ranked pickup, its Travel Deal refill, two deliveries
+ * into one O host, and a P Postboss purchase flushed at Q Preboss.
+ */
+export function surfaceShrineDeliveriesProject(): ProjectDocument {
+  const { nSideRoom, oShrine, pPostboss } = surfaceShrineDeliverySources;
+  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+      'self',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Epic' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = authorLegalTraitOffers(project);
+  project = authorOrdinaryShrine(project, nSideRoom);
+  project = authorOrdinaryShrine(project, oShrine);
+  for (const [occurrence, generationKey, delay, rushed] of [
+    [nSideRoom, 'initial:secondLeft', 5, false],
+    [nSideRoom, 'initial:secondRight', 8, false],
+    [oShrine, 'initial:first', 2, true],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey,
+      purchase: { delay, rushed },
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineTravelDealRefill',
+    occurrence: oShrine,
+    value: { rewardType: 'ArmorBoost' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: oShrine,
+    generationKey: 'travelDealRefill',
+    purchase: { delay: 2, rushed: false },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: pPostboss,
+    generationKey: 'initial:secondRight',
+    purchase: { delay: 8, rushed: false },
+  });
+  return placeDueHermesShrineDeliveries(project);
+}
+
+/** The N/O Shrine delivery route with its rushed O pickup left unranked. */
+export function surfaceShrineRushedUnrankedProject(): ProjectDocument {
+  const project = createSurfaceNOHermesShrineDeliveryCheckpoint();
+  const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+  const rushedKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+  const rushed = project.route.biomes
+    .find((biome) => biome.biomeKey === oBiome.biomeKey)
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === source.occurrenceId)
+    ?.roomActions.order.find(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' && reference.entryKey === rushedKey,
+    );
+  if (rushed === undefined) throw new Error('rushed O Shrine pickup is not ranked');
+  return applyProjectCommand(project, catalog, {
+    kind: 'RemoveRoomAction',
+    action: createRoomActionAddress(oBiome, source.occurrenceId, roomActionKey(rushed)),
+  });
 }
 
 /**
