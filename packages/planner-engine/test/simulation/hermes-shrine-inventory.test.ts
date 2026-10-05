@@ -1351,6 +1351,150 @@ describe('Hermes Shrine Travel Deal generation', () => {
       bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.entryKey),
     ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'));
   });
+
+  it('realizes the refill at the first rushed purchase whether or not its item is collected', () => {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: host,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    for (const [generationKey, purchase] of [
+      ['initial:first', { delay: 2, rushed: true }],
+      ['travelDealRefill', { delay: 3, rushed: true }],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: host,
+        generationKey,
+        purchase,
+      });
+    const refillKey = hermesShrineDeliveryEntryKey(host, 'travelDealRefill');
+    const removePickup = (
+      document: typeof project,
+      generationKey: 'initial:first' | 'initial:secondLeft',
+    ) => {
+      const reference = {
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'hermesShrineDelivery',
+        entryKey: hermesShrineDeliveryEntryKey(host, generationKey),
+      };
+      return applyProjectCommand(document, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(oBiome, host.occurrenceId, roomActionKey(reference)),
+      });
+    };
+    const evaluate = (document: typeof project) => {
+      const route = document.route;
+      const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+      if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
+      const snapshot = materializeBiomePrefix(
+        catalog,
+        oBiome,
+        ordinaryPositionFor(catalog, oBiome),
+        plan,
+        route.loadout,
+      );
+      const history =
+        snapshot == null
+          ? undefined
+          : composeBiomeHistoryPrefix(catalog, snapshot, ordinaryPositionFor(catalog, snapshot));
+      if (snapshot == null || snapshot.entryRoom === undefined || history == null)
+        throw new Error('fixture lost O history');
+      const completeSnapshot = snapshot as typeof snapshot & {
+        readonly entryRoom: NonNullable<typeof snapshot.entryRoom>;
+      };
+      const result = evaluateBiomeRewards(
+        catalog,
+        completeSnapshot,
+        history,
+        ordinaryPositionFor(catalog, completeSnapshot),
+        route.loadout,
+        branchesWithTravelDeal(),
+      );
+      const refillAcquired = result.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            event.settlement.entry.kind === 'acquisitionEntry' &&
+            event.settlement.entry.entryKey === refillKey,
+        ),
+      );
+      const sources = result.hermesShrineAssessments
+        .find((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(host))
+        ?.assessments.map((assessment) => assessment.travelDealRefill?.sourceGenerationKey);
+      return {
+        // The N/O base route carries unrelated incomplete owners; only Shrine codes matter here.
+        codes: result.findings
+          .map((finding) => finding.code)
+          .filter(
+            (code) =>
+              code === 'rewardSourceUnavailable' ||
+              code === 'hermesShrineTravelDealRefillMissing' ||
+              code === 'hermesShrineTravelDealRefillUnavailable',
+          ),
+        reasons: result.findings.flatMap((finding) =>
+          'reason' in finding.evidence ? [finding.evidence.reason] : [],
+        ),
+        refillAcquired,
+        sources,
+      };
+    };
+
+    const kept = evaluate(project);
+    expect(kept.codes).toEqual([]);
+    expect(kept.refillAcquired).toBe(true);
+    expect(kept.sources).toEqual(['initial:first']);
+
+    const left = evaluate(removePickup(project, 'initial:first'));
+    expect(left.codes).toEqual([]);
+    expect(left.reasons).not.toContain('staleHermesShrineDelivery');
+    expect(left.refillAcquired).toBe(true);
+    expect(left.sources).toEqual(['initial:first']);
+
+    // A second rushed purchase is not the first speed-up and creates no other refill.
+    const secondRush = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 2, rushed: true },
+    });
+    for (const document of [secondRush, removePickup(secondRush, 'initial:first')]) {
+      const both = evaluate(document);
+      expect(both.codes).toEqual([]);
+      expect(both.sources).toEqual(['initial:first']);
+    }
+
+    // A delayed first purchase is no speed-up and refills nothing.
+    const delayed = evaluate(
+      applyProjectCommand(project, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: host,
+        generationKey: 'initial:first',
+        purchase: { delay: 2, rushed: false },
+      }),
+    );
+    expect(delayed.refillAcquired).toBe(false);
+    expect(delayed.sources).toEqual([undefined]);
+  });
 });
 
 describe('Hermes Shrine Spell reservation lifecycle input', () => {

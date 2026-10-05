@@ -992,7 +992,8 @@ export function executionTimelineTransactions(
       kind: 'travelDealRefill',
       owner: shrineRefill.owner,
       refill: shrineRefill.refill,
-      window: windowFor(shrineRefill.sourceOwner),
+      // The rushed purchase closes the Shrine screen after outgoing generation.
+      window: Object.freeze({ kind: 'postOutgoing' as const }),
     });
   }
   for (const outcome of biome.rewards.bossArcanaOutcomes) {

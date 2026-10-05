@@ -438,7 +438,9 @@ No game-rule probe is required for All Together's pair selection, the contract
 pedestal pool, or the normal physical World Shop refill; all are explicit in
 source.
 
-Two refill timing contacts remain bounded:
+One refill timing contact remains bounded. The Shrine refill is settled at the
+rushed purchase; its source is recorded in the
+[delivery audit](../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md#a-shrine-of-hermes-purchase-schedules-delivery).
 
 - **Consumable-triggered restock.** `RestockWorldItem` waits only for a named
   screen (`StoreLogic.lua:404,411–432`); a consumable passes its
@@ -446,11 +448,7 @@ Two refill timing contacts remain bounded:
   restock may spawn before or after the consumable's own effects
   (`InteractLogic.lua:1098–1116`). The planner builds the refill's loot after
   the triggering purchase settles.
-- **Hermes Shrine refill contact.** The native shrine path for a
-  first-purchase refill (`SurfaceShopLogic.lua:355–400`) was not traced to a
-  spawn; the planner builds the refill when the rushed initial delivery is
-  picked up.
 
 Changes to exact Surface Shop delivery timing must separately settle newly
 relevant expedited-delivery choices and room-local chronology. These remaining
-source questions do not invalidate the implemented Well purchase boundary.
+source question does not invalidate the implemented Well purchase boundary.

@@ -105,6 +105,22 @@ export interface HermesShrineTravelDealRefillAssessment {
   readonly candidateOptionKeysByRewardType: Readonly<Record<string, string>>;
 }
 
+/**
+ * The Shrine purchase whose speed-up is the room's first (`FirstSpeedUpPurchase`).
+ * Purchase order is not authored, so rushed purchases are taken in slot order;
+ * collecting or leaving the rushed item never changes the refilled slot.
+ */
+export function firstRushedInitialGeneration(
+  deliveries: readonly {
+    readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
+    readonly rushed: boolean;
+  }[],
+): import('../../authored-project/model').HermesShrineGenerationKey | undefined {
+  return SLOT_KEYS.map((slotKey) => `initial:${slotKey}` as const).find((generationKey) =>
+    deliveries.some((delivery) => delivery.rushed && delivery.generationKey === generationKey),
+  );
+}
+
 export function assessHermesShrineTravelDealRefill(
   catalog: Catalog,
   shrine: HermesShrineState,

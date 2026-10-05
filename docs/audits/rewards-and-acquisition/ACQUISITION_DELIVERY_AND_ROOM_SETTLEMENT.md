@@ -287,6 +287,17 @@ remove and that vanishes with its room when left behind. The physical spawn and
 pickup remain distinct game events, but the planner needs no
 picked-up/not-picked-up authoring fact beyond the optional row.
 
+Travel Deal's Shrine refill belongs to the purchase, not the pickup. In the
+speed-up branch of `HandleSurfaceShopAction` (`SurfaceShopLogic.lua:449-474`),
+the first speed-up purchase with `FirstPurchaseDiscount` (Travel Deal) while
+`CurrentRoom.FirstSpeedUpPurchase` is unset regenerates that button's
+`StoreOptions` slot and sets the flag, then calls `CloseSurfaceShopScreen`,
+which spawns the rushed item. A later speed-up or delayed purchase refills
+nothing, and leaving the rushed item uncollected does not undo the refill. The
+planner realizes the refill when the room's Shrine purchases are scheduled,
+after outgoing generation; because purchase order is not authored, the first
+rushed purchase is taken in slot order.
+
 Rarity is owned by the
 [Boon rarity ledger audit](../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md#delayed-hermes-delivery-in-a-miniboss-room):
 both paths build their first offer before `IgnoreRoomRarityBonus` can apply,

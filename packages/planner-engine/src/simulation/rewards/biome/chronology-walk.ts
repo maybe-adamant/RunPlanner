@@ -82,16 +82,11 @@ export interface ChronologyWalkState {
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
-  /** Shrine-keyed Travel Deal refill frontier carried between its deliveries. */
+  /** Shrine-keyed Travel Deal refill domain, captured at the first rushed purchase. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<
     string,
     readonly HermesShrineTravelDealRefillAssessment[]
   >;
-  readonly hermesShrineTravelDealRefillValid: ReadonlyMap<string, boolean>;
-  // The handler's FirstSpeedUpPurchase guard belongs to the Shrine room, not
-  // to a branch.  We still require Travel Deal to agree across every branch
-  // at that first action prefix before publishing a refill generation.
-  readonly firstRushedInitialGenerationByShrine: ReadonlySet<string>;
   /** Gorgon phases keyed `occurrence::phase`, shared by encounter start and settlement. */
   readonly eligibleGorgonPhases: ReadonlySet<string>;
   readonly blockedGorgonPhases: ReadonlySet<string>;
@@ -126,8 +121,6 @@ export function createChronologyWalkState(
     wellRefillRealizations: new Map(),
     purgingPoolAssessments: new Map(),
     hermesShrineTravelDealRefills: new Map(),
-    hermesShrineTravelDealRefillValid: new Map(),
-    firstRushedInitialGenerationByShrine: new Set<string>(),
     eligibleGorgonPhases: new Set<string>(),
     blockedGorgonPhases: new Set<string>(),
     gorgonEvaluationBlocked: false,
