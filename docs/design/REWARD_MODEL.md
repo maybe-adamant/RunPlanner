@@ -1444,7 +1444,9 @@ Artemis/Athena are not rarityless Icarus or Hammer choices.
 `pendingSpellDrop` is a derived reservation from a non-rushed purchased Shrine
 offer. It blocks later Spell Drop generation until concrete acquisition makes
 it redundant; it is not inferred from the equipped Spell slot. Inventory,
-delivery and required pickup use the ordinary acquisition authorities.
+delivery and required pickup use the ordinary acquisition authorities. A
+delivered boon is built in its host room and takes that room's declared boon
+rarity override, whether it fell due there or was rushed.
 
 The editor renders these products and dispatches semantic commands. It does
 not recompute rarity arithmetic, reward legality or acquired effects.

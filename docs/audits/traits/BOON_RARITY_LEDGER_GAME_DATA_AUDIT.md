@@ -189,8 +189,10 @@ application, so it does not erase or double the initial benefit.
 
 The rush path (`SurfaceShopLogic.lua:528-540`) never sets
 `IgnoreRoomRarityBonus`, so a rushed item reads the room override on every
-build. The planner currently applies no room rarity override to delivered boons
-on either path; that omission is the bounded planner discrepancy for this fact.
+build. Planner disposition: a delivery's acquisition source carries the host
+room's declared `boonRarityOverride` on both paths, so its first build reads
+the host room values over the provider base. The planner builds each delivery
+once and models no `IgnoreRoomRarityBonus` rebuild.
 
 This result follows from the exact construction order and is important for the
 planner: the rarity context belongs to the room in which the delayed reward is
