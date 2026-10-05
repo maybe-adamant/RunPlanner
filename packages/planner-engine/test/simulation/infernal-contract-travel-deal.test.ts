@@ -1,6 +1,8 @@
 import { ordinaryPositionFor } from '../support/route-position';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createShopOfferAddress,
   createOccurrenceId,
@@ -39,6 +41,13 @@ import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simul
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { installHexTree } from '../../src/simulation/hex-progress';
 import { matureGodHistoryRecords } from '../support/god-history';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  qBiome,
+  qOccurrenceIds,
+  surfaceTravelDealRefillAnvilProject,
+  surfaceTravelDealRefillAnvilResult,
+} from '@run-planner/test-fixtures/surface';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' } as const;
@@ -1242,6 +1251,24 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect([...result.findings.values()].map((entry) => entry.finding.code)).toContain(
       'rewardAcquisitionUnavailable',
     );
+    expect(
+      [...result.findings.values()].map((entry) => entry.finding.evidence?.['kind']),
+    ).not.toContain('jointPurchaseOrder');
+  });
+
+  it('explains a failing Travel Deal refill at its own entry, not at the Shop site', () => {
+    const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+    // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
+    const project = applyProjectCommand(surfaceTravelDealRefillAnvilProject(), catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: createAcquisitionRoleAddress(refill, 'self'),
+      value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
+    });
+    const findings = simulateProjectAssembly(catalog, project).evaluation.findings;
+    expect(findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardAcquisitionUnavailable' }),
+    );
+    expect(findings.map((finding) => finding.origin.kind)).not.toContain('acquisitionSite');
   });
 
   it('applies raw-option exclusion identities and unrestricted fallback without conflation', () => {
