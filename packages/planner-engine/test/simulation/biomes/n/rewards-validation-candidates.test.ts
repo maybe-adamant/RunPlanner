@@ -7,6 +7,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createFigLeafPhaseAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
@@ -1128,7 +1129,12 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'sideRoomEntryOrder',
       result: {
         selectedPossible: false,
-        findings: [expect.objectContaining({ code: 'figLeafSkipUnavailable', origin: phase })],
+        findings: [
+          expect.objectContaining({
+            code: 'figLeafSkipUnavailable',
+            origin: createFigLeafPhaseAddress(phase),
+          }),
+        ],
       },
     });
     expect(
@@ -1142,7 +1148,10 @@ describe('N Hub rewards, validation, and candidates', () => {
       result: {
         selectedPossible: true,
         findings: expect.arrayContaining([
-          expect.objectContaining({ code: 'figLeafSkipUnavailable', origin: phase }),
+          expect.objectContaining({
+            code: 'figLeafSkipUnavailable',
+            origin: createFigLeafPhaseAddress(phase),
+          }),
         ]),
       },
     });

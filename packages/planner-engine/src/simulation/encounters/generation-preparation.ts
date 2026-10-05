@@ -70,12 +70,9 @@ export function prepareGeneratedEncounter(
   origin: EncounterPhaseAddress,
   preparation: HistoryStateView,
   rewardGeneration: HistoryStateView | undefined,
-  hordesRankAt?: (
-    selection: GeneratedEncounterSelection,
-    origin: EncounterPhaseAddress,
-  ) => number | undefined,
-  fangsRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
-  menaceRankAt?: (origin: EncounterPhaseAddress) => number | undefined,
+  hordesRankAt?: (selection: GeneratedEncounterSelection) => number | undefined,
+  fangsRankAt?: () => number | undefined,
+  menaceRankAt?: () => number | undefined,
   admissionAt?: (
     selection: GeneratedEncounterSelection,
     before: HistoryStateView,
@@ -97,17 +94,17 @@ export function prepareGeneratedEncounter(
       throw new Error(`${phase.encounterKey} lost its reward-generation checkpoint`);
     return { phase };
   }
-  const exactHordesRank = hordesRankAt?.(policy, origin);
+  const exactHordesRank = hordesRankAt?.(policy);
   // Candidate publication may stop at an incomplete reward frontier. Keep the
   // existing structural phase, but do not publish a generated candidate from
   // a fabricated Hordes value.
   if (hordesRankAt !== undefined && exactHordesRank === undefined) return { phase };
   const hordesRank = exactHordesRank ?? 0;
-  const exactFangsRank = fangsRankAt?.(origin);
+  const exactFangsRank = fangsRankAt?.();
   // A reached snapshot without Fangs is rank zero; a missing snapshot is not
   // an authorization to invent the post-reward selection context.
   if (fangsRankAt !== undefined && exactFangsRank === undefined) return { phase };
-  const exactMenaceRank = menaceRankAt?.(origin);
+  const exactMenaceRank = menaceRankAt?.();
   if (menaceRankAt !== undefined && exactMenaceRank === undefined) return { phase };
   const context = Object.freeze({
     ...generationAdmissionContext(before, admissionAt?.(policy, before) ?? {}),

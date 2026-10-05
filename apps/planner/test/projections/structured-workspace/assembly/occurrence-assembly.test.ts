@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createEncounterPhaseAddress,
   createFieldsSpatialAddress,
   createOccurrenceAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -21,6 +22,7 @@ import {
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { oBiome } from '@run-planner/test-fixtures/surface';
 
 describe('structured workspace composer assembly', () => {
   it.each([
@@ -133,6 +135,29 @@ describe('structured workspace composer assembly', () => {
     };
     expect(passiveTab(loadNemesisFieldsCheckpoint())).toBe('overview');
     expect(passiveTab(createGoldenFGHIProject())).toBe('overview');
+  });
+
+  it('routes every Ship phase identity to Overview and its Fig Leaf to its phase Timeline', () => {
+    const occurrenceId = createOccurrenceId('surface-o-combat04');
+    let project = loadSurfaceNOPQProject();
+    for (const phaseKey of ['Intro', 'Combat1'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFigLeafSkip',
+        phase: createEncounterPhaseAddress(oBiome, { kind: 'occurrence', occurrenceId }, phaseKey),
+        value: true,
+      });
+    const result = assemble(project, 'Surface', 'O', occurrenceId);
+    const tab = (focusKey: string) => result.markers.destinations().get(focusKey)?.roomTab;
+    const phases = result.assembly.node.room.encounterPhases;
+    expect(phases.map((phase) => phase.address.phaseKey)).toEqual(['Intro', 'Combat1']);
+    for (const [index, phase] of phases.entries()) {
+      expect(phase.timelineAnchor).toBe('encounterStart');
+      expect(tab(phase.marker.focusKey)).toBe('overview');
+      expect(phase.figLeaf).toBeDefined();
+      expect(tab(phase.figLeaf!.marker.focusKey)).toBe(
+        index === 0 ? 'shipIntroActions' : 'shipCombat1Actions',
+      );
+    }
   });
 
   it('publishes an active Nemesis placement on Layout and hides it when dormant', () => {

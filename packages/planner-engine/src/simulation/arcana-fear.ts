@@ -37,6 +37,24 @@ export function attestEffectiveHordesRank(
     throw new Error('Hordes preparation frontier is divergent');
   return ranks[0]!;
 }
+/** The effective Hordes, Fangs and Menace ranks a room's encounter compositions read. */
+export interface EncounterEntryVowRanks {
+  readonly hordes: number;
+  readonly fangs: number;
+  readonly menace: number;
+}
+
+/** Room entry fixes every phase's composition: one agreed Hordes rank, Fangs and Menace as captured. */
+export function attestEncounterEntryVowRanks(
+  states: readonly { readonly arcanaFear: ArcanaFearState }[],
+): EncounterEntryVowRanks {
+  const ranks = states[0]?.arcanaFear.fear.effectiveRanks;
+  return Object.freeze({
+    hordes: attestEffectiveHordesRank(states),
+    fangs: ranks?.EnemyEliteShrineUpgrade ?? 0,
+    menace: ranks?.NextBiomeEnemyShrineUpgrade ?? 0,
+  });
+}
 export interface ActiveArcanaState {
   readonly key: string;
   readonly origin: ArcanaActivationOrigin;

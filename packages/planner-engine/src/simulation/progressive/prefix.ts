@@ -16,11 +16,8 @@ import type {
   MaterializedExitDecisionFrontier,
   MaterializedHubVisitFrontier,
 } from '../materialization';
-import { ownerRegion } from '../finding-regions';
-import type { EncounterHistoryBlock, HistoryEvent } from '../history';
+import type { HistoryEvent } from '../history';
 import {
-  encounterBlockFinding,
-  locateFinding,
   type HubVisitFindingLocation,
   type LocatedFinding,
   type ProgressiveBiomeSelectedProducts,
@@ -411,43 +408,4 @@ export function retainedInteractionPrefix(
       selectedOverviewBlock(selected, located, decision),
     ),
   });
-}
-
-export function encounterBlockProductPrefix(
-  prefix: MaterializedBiomePrefix,
-  block: EncounterHistoryBlock,
-): MaterializedBiomePrefix {
-  const located = locateFinding(prefix, encounterBlockFinding(block), ownerRegion(block.blockedAt));
-  if (located === undefined) {
-    throw new Error(
-      `encounter block ${semanticAddressKey(block.blockedAt)} has no structural owner`,
-    );
-  }
-  // History composition stopped at this room's preparation, before its entry.
-  const clamped = clampPrefix(prefix, located);
-  const decision =
-    located.frontierBatch && prefix.frontier?.kind === 'exitDecision'
-      ? prefix.frontier.partialBatch
-      : prefix.decisions[located.decisionIndex];
-  if (decision?.kind !== 'batch') return clamped;
-  const created = new Set(
-    block.afterValidRecordPrefix.ledgers.roomCreations.map((event) =>
-      semanticAddressKey(event.origin),
-    ),
-  );
-  const targets = decision.targets.filter((target) =>
-    created.has(semanticAddressKey(target.room.origin)),
-  );
-  const additional = decision.additional.filter((entry) =>
-    created.has(semanticAddressKey(entry.room.origin)),
-  );
-  // The blocked room is prepared only after its source room has exited.
-  const blockedRoom = semanticAddressKey(block.room.origin);
-  const sourceExited =
-    decision.parent.origin.kind === 'occurrence' &&
-    [...targets.map((target) => target.room), ...additional.map((entry) => entry.room)].some(
-      (room) => semanticAddressKey(room.origin) === blockedRoom,
-    );
-  const frontier = exitFrontier(decision, targets, additional, sourceExited);
-  return Object.freeze({ ...clamped, frontier });
 }

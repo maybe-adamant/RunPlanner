@@ -8,6 +8,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createFigLeafPhaseAddress,
   createNemesisRandomEventAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -702,7 +703,7 @@ describe('workspace inspector destinations', () => {
     expect(destination(familyWorkspace, missingFamily.origin)).toMatchObject({
       focusAddress: phase,
       inspectorSubject: { kind: 'node', nodeKey: workbench.key },
-      roomTab: 'actions',
+      roomTab: 'overview',
     });
 
     document = applyProjectCommand(document, catalog, {
@@ -723,6 +724,59 @@ describe('workspace inspector destinations', () => {
     expect(destination(detailWorkspace, missingDetail.origin)).toMatchObject({
       focusAddress: action,
       inspectorSubject: { kind: 'node', nodeKey: workbench.key },
+      roomTab: 'actions',
+    });
+  });
+
+  it('routes encounter identity findings to Overview and phase-start events to Timeline', () => {
+    const occurrenceId = createOccurrenceId('golden-f-b5-e1');
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const routed = (document: ProjectDocument, code: string) => {
+      const finding = assembly(document).evaluation.findings.find(
+        (candidate) => candidate.code === code,
+      );
+      if (finding === undefined) throw new Error(`missing ${code}`);
+      const workspace = project(document);
+      return {
+        finding,
+        destination: destination(workspace, finding.origin),
+        nodeKey: occurrenceWorkbenchFor(biome(workspace, 'F'), occurrenceId).key,
+      };
+    };
+    const composition = routed(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceEncounterCustomization',
+        phase,
+        decisionKey: 'generatedComposition',
+        value: {
+          kind: 'generated',
+          waveCount: 1,
+          waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Guard_Elite'] }],
+        },
+      }),
+      'encounterCustomizationUnavailable',
+    );
+    expect(composition.destination).toMatchObject({
+      focusAddress: phase,
+      inspectorSubject: { kind: 'node', nodeKey: composition.nodeKey },
+      roomTab: 'overview',
+    });
+    const figLeaf = routed(
+      applyProjectCommand(createCompleteFGProject(), catalog, {
+        kind: 'ReplaceFigLeafSkip',
+        phase,
+        value: true,
+      }),
+      'figLeafSkipUnavailable',
+    );
+    expect(figLeaf.finding.origin).toEqual(createFigLeafPhaseAddress(phase));
+    expect(figLeaf.destination).toMatchObject({
+      focusAddress: createFigLeafPhaseAddress(phase),
+      inspectorSubject: { kind: 'node', nodeKey: figLeaf.nodeKey },
       roomTab: 'actions',
     });
   });

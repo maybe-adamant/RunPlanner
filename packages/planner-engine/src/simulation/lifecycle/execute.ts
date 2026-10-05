@@ -1047,39 +1047,3 @@ export function executeRoomLifecycle(
     ...(state.blockedAt === undefined ? {} : { blockedAt: state.blockedAt }),
   });
 }
-
-/**
- * Emits only the exact preparation-and-record prefix for a room whose later
- * active phase is invalid. The caller deliberately does not enter the room,
- * start a phase, acquire a reward, advance counters, or commit/exit it.
- */
-export function executeEncounterRecordPrefix(
-  catalog: Catalog,
-  input: RoomLifecycleExecutionInput,
-): RoomHistoryFragment {
-  const context = resolveExecutionContext(catalog, input);
-  const operationIndex = context.profile.operations.findIndex(
-    (operation) => operation.kind === 'prepareRoom',
-  );
-  const operation = context.profile.operations[operationIndex];
-  if (
-    operationIndex < 0 ||
-    operation?.kind !== 'prepareRoom' ||
-    !operation.effects.includes('recordEncounter')
-  ) {
-    throw new LifecycleExecutionContractError(
-      `${context.profile.key} has no encounter-record preparation operation`,
-    );
-  }
-  const state = applyEffects(
-    operation,
-    { ...context, operationIndex },
-    Object.freeze({ events: Object.freeze([]) }),
-  );
-  return Object.freeze({
-    origin: input.origin,
-    lifecycleProfileKey: context.profile.key,
-    encounterEnvelopeKey: context.input.encounterEnvelopeKey,
-    events: state.events,
-  });
-}

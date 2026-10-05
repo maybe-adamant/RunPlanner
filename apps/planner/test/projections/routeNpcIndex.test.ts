@@ -195,7 +195,7 @@ describe('route NPC index projection', () => {
     }
   });
 
-  it('omits a retained invalid NPC selection while retaining the prior resolved record', () => {
+  it('lists a retained invalid NPC selection recorded at its room Overview after the prior record', () => {
     let project = createCompleteFGProject();
     project = selectEncounter(project, gArtemisPhase, 'ArtemisCombatG');
     project = selectEncounter(project, fArtemisPhase, 'ArtemisCombatF');
@@ -206,8 +206,12 @@ describe('route NPC index projection', () => {
       expect(index.groups).toHaveLength(1);
       expect(index.groups[0]?.entries.map((entry) => entry.encounterKey)).toEqual([
         'ArtemisCombatF',
+        'ArtemisCombatG',
       ]);
-      expect(index.groups[0]?.entries[0]?.phase).toEqual(fArtemisPhase);
+      expect(index.groups[0]?.entries.map((entry) => entry.phase)).toEqual([
+        fArtemisPhase,
+        gArtemisPhase,
+      ]);
     } finally {
       fixture.application.dispose();
     }

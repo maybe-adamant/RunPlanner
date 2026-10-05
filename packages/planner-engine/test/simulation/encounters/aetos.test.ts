@@ -14,6 +14,7 @@ import {
   createTargetAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createAetosPhaseAddress,
   createEncounterPhaseAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -146,7 +147,7 @@ describe('Aetos appearance', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).toContainEqual(
       expect.objectContaining({
         code: 'aetosAppearanceUnavailable',
-        origin: first,
+        origin: createAetosPhaseAddress(first),
         evidence: expect.objectContaining({ reason: 'skipped' }),
       }),
     );
@@ -275,14 +276,17 @@ describe('Aetos appearance', () => {
     expect(invalid.evaluation.findings).toContainEqual(
       expect.objectContaining({
         code: 'aetosAppearanceUnavailable',
-        origin: first,
+        origin: createAetosPhaseAddress(first),
         evidence: expect.objectContaining({ reason: 'wave' }),
       }),
     );
     expect(encounterPhaseSequenceStatusForProjectEvaluationAssembly(invalid, first)).toMatchObject({
       aetos: { selectedWave: 3, waves: [2] },
     });
-    expect(invalid.evaluation.issue).toMatchObject({ kind: 'invalid', owner: first });
+    expect(invalid.evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createAetosPhaseAddress(first),
+    });
     const invalidP = invalid.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P')!;
     if (!('history' in invalidP)) throw new Error('missing retained history');
     expect(
@@ -315,14 +319,17 @@ describe('Aetos appearance', () => {
     expect(duplicate.evaluation.findings).toContainEqual(
       expect.objectContaining({
         code: 'aetosAppearanceUnavailable',
-        origin: later,
+        origin: createAetosPhaseAddress(later),
         evidence: expect.objectContaining({ reason: 'alreadyPlaced' }),
       }),
     );
     expect(
       encounterPhaseSequenceStatusForProjectEvaluationAssembly(duplicate, later),
     ).toMatchObject({ aetos: { selectedWave: 2, waves: [] } });
-    expect(duplicate.evaluation.issue).toMatchObject({ kind: 'invalid', owner: later });
+    expect(duplicate.evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createAetosPhaseAddress(later),
+    });
     const duplicateP = duplicate.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P')!;
     if (!('history' in duplicateP)) throw new Error('missing retained history');
     expect(
@@ -336,7 +343,10 @@ describe('Aetos appearance', () => {
       value: 3,
     });
     const earlierBlock = simulateProjectAssembly(catalog, project);
-    expect(earlierBlock.evaluation.issue).toMatchObject({ kind: 'invalid', owner: first });
+    expect(earlierBlock.evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createAetosPhaseAddress(first),
+    });
     expect(
       encounterPhaseSequenceStatusForProjectEvaluationAssembly(earlierBlock, later),
     ).toBeUndefined();

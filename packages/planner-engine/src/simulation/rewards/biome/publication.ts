@@ -1,3 +1,4 @@
+import type { EncounterEntryVowRanks } from '../../arcana-fear';
 import type { SemanticAddress } from '../../../authored-project/addresses';
 import { type AcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
 import { type DerivedAcquisitionEntryCandidateArtifacts } from '../acquisition/artifacts';
@@ -52,6 +53,8 @@ export interface BiomeRewardEvaluationAssembly {
   readonly fountainRarityArtifacts: FountainRarityCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
+  /** Each entered room's vow ranks, read by its encounter compositions. */
+  readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;
 }
 
 /** Freezes the complete product accumulated by the chronological evaluator. */

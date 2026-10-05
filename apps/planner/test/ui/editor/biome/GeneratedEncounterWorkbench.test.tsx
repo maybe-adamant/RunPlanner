@@ -81,7 +81,7 @@ async function open(project: ProjectDocument, owner = phase) {
     owner.biomeKey,
     occurrenceById(owner.owner.occurrenceId),
   );
-  openRoomTab('Room Timeline');
+  openRoomTab('Room Overview');
   const trigger = screen
     .getAllByRole('button', { name: 'Customize encounter' })
     .find((button) => button.dataset.semanticOwner === semanticAddressKey(owner))!;
@@ -95,7 +95,7 @@ function customizeTrigger(project: ProjectDocument, owner = phase): HTMLButtonEl
     owner.biomeKey,
     occurrenceById(owner.owner.occurrenceId),
   );
-  openRoomTab('Room Timeline');
+  openRoomTab('Room Overview');
   return screen
     .getAllByRole('button', { name: 'Customize encounter' })
     .find(
@@ -552,7 +552,7 @@ describe('generated encounter customization workflows', () => {
       'F',
       occurrenceById(phase.owner.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const trigger = screen.getByRole('button', { name: 'Customize encounter' });
     act(() =>
       view.application.store.dispatch(
@@ -605,7 +605,7 @@ describe('generated encounter customization workflows', () => {
       occurrenceById(newHFieldsRoomId),
     );
     openRoomTab('Room Timeline');
-    expect(screen.queryByLabelText('Passive encounter phase')).toBeNull();
+    expect(screen.queryByLabelText('Passive encounter events')).toBeNull();
     openRoomTab('Room Overview');
     const finding = simulateProject(catalog, project).findings.find(
       (entry) => entry.code === 'encounterCustomizationRequired',
@@ -618,8 +618,9 @@ describe('generated encounter customization workflows', () => {
     );
     const encounters = screen.getByRole('region', { name: 'Encounter structure' });
     expect(within(encounters).getByRole('heading', { name: 'Encounters' })).toBeTruthy();
-    expect(within(encounters).getByText('Passive Encounter')).toBeTruthy();
-    const trigger = within(encounters).getByRole('button', {
+    const passive = within(encounters).getByRole('region', { name: 'Passive encounter phase' });
+    expect(within(passive).getByText('Passive encounter')).toBeTruthy();
+    const trigger = within(passive).getByRole('button', {
       name: 'Customize encounter',
     });
     await waitFor(() => expect(document.activeElement).toBe(trigger));
@@ -629,7 +630,7 @@ describe('generated encounter customization workflows', () => {
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
     expect(current(view, owner)).toBeDefined();
   });
-  it('keeps an earlier authored phase editable while a later phase in its room is the issue', async () => {
+  it('keeps every phase of its room editable while a later phase composition is the issue', async () => {
     const room = (phaseKey: string) =>
       createEncounterPhaseAddress(
         createBiomeAddress('FreshFile', 'H'),
@@ -654,9 +655,9 @@ describe('generated encounter customization workflows', () => {
         .disabled,
     ).toBe(false);
     cleanup();
+    // The composition stops the room at its Overview, where every phase was prepared.
     const later = customizeTrigger(project, room('Cage03'));
-    expect(later.disabled).toBe(true);
-    expect(later.title).toBe('Waits on an earlier choice');
+    expect(later.disabled).toBe(false);
   });
   it('lists a context-less phase selector as declared encounters without availability claims', async () => {
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
@@ -674,7 +675,7 @@ describe('generated encounter customization workflows', () => {
       phase.biomeKey,
       occurrenceById(phase.owner.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Encounter' }));
     const listbox = await screen.findByRole('listbox');
     expect(listbox.textContent).toContain('Declared encounters · evaluated after earlier choices');
@@ -832,7 +833,7 @@ describe('generated encounter customization workflows', () => {
       owner.biomeKey,
       occurrenceById(owner.owner.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     expect(screen.queryByRole('button', { name: 'Customize encounter' })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Inspect encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Intro combat (FIntroFight)' });

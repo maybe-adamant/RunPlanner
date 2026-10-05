@@ -13,7 +13,10 @@ import type {
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
 import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
-import { EncounterPhaseControl } from './locals/EncounterPhaseControl';
+import {
+  EncounterPhaseControl,
+  EncounterPhaseTimelineControl,
+} from './locals/EncounterPhaseControl';
 import { FieldsWorkbench } from './locals/FieldsWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
@@ -153,8 +156,20 @@ export function DirectRoomWorkbench({
 }) {
   const workbench = room.workbench;
   const renderEncounterPhase = (phase: WorkspaceEncounterPhase): ReactNode => (
-    <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={phase} />
+    <EncounterPhaseTimelineControl interactions={interactions} phase={phase} />
   );
+  // Every phase's identity and customization are fixed on entry: the room Overview.
+  const renderOverviewEncounterPhases = (): ReactNode =>
+    room.encounterPhases.length === 0
+      ? undefined
+      : room.encounterPhases.map((phase) => (
+          <EncounterPhaseControl
+            idPrefix={idPrefix}
+            key={phase.address.phaseKey}
+            interactions={interactions}
+            phase={phase}
+          />
+        ));
   const renderRewardWheel = (
     wheel: Parameters<typeof RewardWheelWorkbench>[0]['wheel'],
   ): ReactNode => (
@@ -179,7 +194,7 @@ export function DirectRoomWorkbench({
         return (
           <>
             {renderFeatures()}
-            {renderEncounterStructure()}
+            {renderEncounterStructure(renderOverviewEncounterPhases())}
           </>
         );
       }
@@ -208,18 +223,7 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return (
           <>
-            {renderEncounterStructure(
-              workbench.encounterPhases
-                .filter((phase) => phase.editorAnchor === 'overview')
-                .map((phase) => (
-                  <EncounterPhaseControl
-                    idPrefix={idPrefix}
-                    key={phase.address.phaseKey}
-                    interactions={interactions}
-                    phase={phase}
-                  />
-                )),
-            )}
+            {renderEncounterStructure(renderOverviewEncounterPhases())}
             {renderFeatures()}
             <FieldsWorkbench interactions={interactions} room={workbench.fields} />
           </>
@@ -251,7 +255,7 @@ export function DirectRoomWorkbench({
           <>
             <ShopWorkbench interactions={interactions} room={workbench.shop} />
             {renderFeatures()}
-            {renderEncounterStructure()}
+            {renderEncounterStructure(renderOverviewEncounterPhases())}
           </>
         );
       }
@@ -280,11 +284,14 @@ export function DirectRoomWorkbench({
           <>
             {renderFeatures()}
             {renderEncounterStructure(
-              <ShipCombatPhaseCountWorkbench
-                occurrence={room.address}
-                interactions={interactions}
-                nested
-              />,
+              <>
+                <ShipCombatPhaseCountWorkbench
+                  occurrence={room.address}
+                  interactions={interactions}
+                  nested
+                />
+                {renderOverviewEncounterPhases()}
+              </>,
             )}
           </>
         );

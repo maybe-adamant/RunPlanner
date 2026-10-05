@@ -7,6 +7,7 @@ import { consumeFigLeafUse } from '../../src/simulation/keepsakes/encounter-effe
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createFigLeafPhaseAddress,
   createPostbossKeepsakeSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -99,12 +100,16 @@ describe('Fig Leaf state contract', () => {
           event.origin.occurrenceId === createOccurrenceId('golden-f-b3-e1'),
       );
     expect(laterEvents).toHaveLength(0);
-    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: laterPhase });
+    expect(evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createFigLeafPhaseAddress(laterPhase),
+    });
     expect(
       biome.findings.some(
         (finding) =>
           finding.code === 'figLeafSkipUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(laterPhase),
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createFigLeafPhaseAddress(laterPhase)),
       ),
     ).toBe(true);
   });
@@ -209,7 +214,10 @@ describe('Fig Leaf state contract', () => {
     const combat1Events = events.filter((event) => event.phaseKey === 'Combat1');
     expect(introEvents).toHaveLength(0);
     expect(combat1Events).toHaveLength(0);
-    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: combat1 });
+    expect(evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createFigLeafPhaseAddress(combat1),
+    });
     const repaired = simulateProject(
       catalog,
       applyProjectCommand(project, catalog, {
@@ -239,7 +247,8 @@ describe('Fig Leaf state contract', () => {
       o.findings.some(
         (finding) =>
           finding.code === 'figLeafSkipUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(combat1),
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createFigLeafPhaseAddress(combat1)),
       ),
     ).toBe(true);
   });
@@ -266,12 +275,16 @@ describe('Fig Leaf state contract', () => {
           event.origin.occurrenceId === createOccurrenceId('surface-n-opening'),
       );
     expect(openingEvents).toHaveLength(0);
-    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: phase });
+    expect(evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createFigLeafPhaseAddress(phase),
+    });
     expect(
       n.findings.some(
         (finding) =>
           finding.code === 'figLeafSkipUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(phase),
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createFigLeafPhaseAddress(phase)),
       ),
     ).toBe(true);
   });
@@ -309,7 +322,8 @@ describe('Fig Leaf state contract', () => {
       q.findings.some(
         (finding) =>
           finding.code === 'figLeafSkipUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(phase),
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createFigLeafPhaseAddress(phase)),
       ),
     ).toBe(false);
   });
@@ -337,12 +351,16 @@ describe('Fig Leaf state contract', () => {
           event.origin.occurrenceId === createOccurrenceId('golden-f-b2-e1'),
       );
     expect(events).toHaveLength(0);
-    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: phase });
+    expect(evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createFigLeafPhaseAddress(phase),
+    });
     expect(
       f.findings.some(
         (finding) =>
           finding.code === 'figLeafSkipUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(phase),
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createFigLeafPhaseAddress(phase)),
       ),
     ).toBe(true);
     expect(f.rewards.branches[0]?.state.keepsakes.figLeaf).toBeUndefined();
@@ -389,12 +407,16 @@ describe('Fig Leaf state contract', () => {
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === qOccurrenceIds.foyer,
       );
     expect(qEvents).toHaveLength(0);
-    expect(evaluation.issue).toMatchObject({ kind: 'invalid', owner: selections[3] });
+    expect(evaluation.issue).toMatchObject({
+      kind: 'invalid',
+      owner: createFigLeafPhaseAddress(selections[3]!),
+    });
     expect(
       q.findings.some(
         (finding) =>
           finding.code === 'figLeafSkipUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(selections[3]!),
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createFigLeafPhaseAddress(selections[3]!)),
       ),
     ).toBe(true);
     if (!('rewards' in q)) throw new Error('Q rewards missing');
@@ -576,7 +598,9 @@ describe('Fig Leaf state contract', () => {
     const n = evaluation.route.biomes.find((biome) => biome.biomeKey === 'N');
     const blocked = n?.findings.find((finding) => finding.code === 'figLeafSkipUnavailable');
     expect(blocked).toBeDefined();
-    expect(blocked && semanticAddressKey(blocked.origin)).toBe(semanticAddressKey(phase));
+    expect(blocked && semanticAddressKey(blocked.origin)).toBe(
+      semanticAddressKey(createFigLeafPhaseAddress(phase)),
+    );
     expect(blocked?.evidence.reason).toBe('envelopeBlocker');
     const localRoom = authored.route.biomes
       .find((biome) => biome.biomeKey === 'N')

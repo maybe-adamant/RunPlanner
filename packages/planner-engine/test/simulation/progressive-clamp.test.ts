@@ -4,12 +4,18 @@ import {
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   type OccurrenceId,
   type ProjectDocument,
   type RoomRunStateCheckpointAddress,
 } from '@run-planner/engine/authored-project';
 import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
+import {
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
+  generatedEncounterSupportForProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
 import {
   loadSurfaceNOProject,
   qBiome,
@@ -466,5 +472,90 @@ describe('room Overview block for a Shrine inventory', () => {
     ).toBe(true);
     expect(roomEvents(o, hostId).some((event) => event.kind === 'roomEntered')).toBe(true);
     expect(roomEvents(o, hostId).some((event) => event.kind === 'encounterStarted')).toBe(false);
+  });
+});
+
+describe('encounters in the room Overview', () => {
+  const combat07 = oOccurrenceIds.combat07;
+  const shipPhase = (phaseKey: string) =>
+    createEncounterPhaseAddress(oBiome, { kind: 'occurrence', occurrenceId: combat07 }, phaseKey);
+
+  it('blocks a later Ship phase composition at the Overview with every phase editable', () => {
+    let project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, combat07),
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: shipPhase('Combat2'),
+      decisionKey: 'generatedComposition',
+      value: {
+        kind: 'generated',
+        baseRoll: 9999,
+        waveCount: 1,
+        waves: [
+          { waveIndex: 1, typeKeys: ['SentryBot', 'Dragon'], allocations: { SentryBot: 206 } },
+        ],
+      },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const o = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'O');
+    if (o === undefined || !('history' in o)) throw new Error('O lost its evaluation');
+
+    expect(o.issue).toMatchObject({
+      kind: 'invalid',
+      owner: shipPhase('Combat2'),
+      reasons: [expect.objectContaining({ code: 'encounterCustomizationUnavailable' })],
+    });
+    const events = o.history.events.filter(
+      (event) => event.origin.kind === 'occurrence' && event.origin.occurrenceId === combat07,
+    );
+    // Entered with every phase recorded; the Intro never starts.
+    expect(events.filter((event) => event.kind === 'encounterRecorded')).toHaveLength(3);
+    expect(events.some((event) => event.kind === 'roomEntered')).toBe(true);
+    expect(events.some((event) => event.kind === 'encounterStarted')).toBe(false);
+    expect(exited(biomeEvaluation(project, 'O'), oOccurrenceIds.combat04)).toBe(true);
+    for (const phaseKey of ['Intro', 'Combat1', 'Combat2']) {
+      expect(
+        encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, shipPhase(phaseKey)),
+      ).toBeDefined();
+      expect(
+        generatedEncounterSupportForProjectEvaluationAssembly(assembly, shipPhase(phaseKey)),
+      ).toBeDefined();
+    }
+  });
+
+  it('assesses a first-phase Fig Leaf skip against the room entry state', () => {
+    const occurrenceId = createOccurrenceId('surface-p-1-1-p_combat03');
+    const intro = createEncounterPhaseAddress(
+      pBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Intro',
+    );
+    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const p = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
+    if (p === undefined || !('rewards' in p)) throw new Error('P lost its evaluation');
+    const entry = p.rewards.runStateSnapshots.find(
+      (snapshot) =>
+        semanticAddressKey(snapshot.owner) ===
+        semanticAddressKey(
+          createRoomRunStateCheckpointAddress(createOccurrenceAddress(pBiome, occurrenceId), {
+            kind: 'roomEntered',
+          }),
+        ),
+    );
+    expect(encounterPhaseFigLeafSupportForProjectEvaluationAssembly(assembly, intro)).toMatchObject(
+      {
+        supported: true,
+        remainingUses: entry?.keepsakes.figLeaf?.remainingUses,
+        activatedThisBiome: entry?.keepsakes.figLeaf?.activatedThisBiome,
+      },
+    );
   });
 });

@@ -195,7 +195,7 @@ export function RoomActionsWorkbench({
     return (
       <section aria-label="Room Timeline" className="room-actions-workbench">
         {encounterPhases
-          .filter((phase) => phase.editorAnchor !== 'overview')
+          .filter((phase) => phase.timelineAnchor !== undefined)
           .map((phase) => (
             <Fragment key={workspaceInteractionKey(phase.address)}>
               {renderEncounterPhase?.(phase)}

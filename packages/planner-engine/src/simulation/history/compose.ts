@@ -28,7 +28,6 @@ import {
   composeBiomeHistoryPrefixWithEncounterValidation as composeValidatedPrefixHistoryEnvelope,
   type HistorySegmentWriter,
   type EncounterValidatedBiomeHistory,
-  type EncounterValidatedPrefixHistory,
   type FigLeafLifecycleState,
 } from './composition';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
@@ -708,7 +707,7 @@ function composeBiomeHistoryPrefixResult(
   pendingSpellDrop = false,
   allSpellInvested = false,
   effectiveShadowRank = 0,
-): EncounterValidatedPrefixHistory | null {
+): BiomeHistoryPrefix | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
   const options = {
@@ -852,7 +851,7 @@ function composeBiomeHistoryPrefixResult(
   };
   return validateEncounterResolution
     ? composeValidatedPrefixHistoryEnvelope(options)
-    : Object.freeze({ kind: 'complete' as const, history: composePrefixHistoryEnvelope(options) });
+    : composePrefixHistoryEnvelope(options);
 }
 
 export function composeBiomeHistoryPrefix(
@@ -861,12 +860,7 @@ export function composeBiomeHistoryPrefix(
   routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
 ): BiomeHistoryPrefix | null {
-  const result = composeBiomeHistoryPrefixResult(catalog, snapshot, routePosition, seed);
-  if (result === null) return null;
-  if (result.kind !== 'complete') {
-    throw new Error('ordinary prefix composition unexpectedly encountered encounter validation');
-  }
-  return result.history;
+  return composeBiomeHistoryPrefixResult(catalog, snapshot, routePosition, seed);
 }
 
 export function composeBiomeHistoryPrefixWithEncounterValidation(
@@ -878,7 +872,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   pendingSpellDrop = false,
   allSpellInvested = false,
   effectiveShadowRank = 0,
-): EncounterValidatedPrefixHistory | null {
+): BiomeHistoryPrefix | null {
   return composeBiomeHistoryPrefixResult(
     catalog,
     snapshot,

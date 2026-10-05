@@ -35,7 +35,7 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { executionFixturePath } from '../execution-plan/support/execution-fixtures';
 
 describe('Fresh File generated-composition issue chronology', () => {
-  it('asks for each cage composition where that cage starts, after room entry features', () => {
+  it('asks for every cage composition in the room Overview, before its features and Timeline', () => {
     expect(
       authorFreshFileRoomIssues(
         withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
@@ -43,20 +43,19 @@ describe('Fresh File generated-composition issue chronology', () => {
         newHFieldsRoomId,
       ).labels,
     ).toEqual([
-      // Fields Passive has no lifecycle start; it stays at room preparation.
+      // Every phase's composition is fixed when the room is prepared.
       'composition:Passive',
-      'optionalReward',
-      'spatial',
       'composition:Cage01',
       'composition:Cage02',
-      'trait:cage2',
       'composition:Cage03',
-      'trait:cage3',
+      'optionalReward',
+      'spatial',
+      'trait:cage2',
       'continuation',
     ]);
   });
 
-  it('keeps an earlier phase support in its room while a later input is the issue', () => {
+  it('keeps every phase support in its room while an Overview or Timeline input is the issue', () => {
     const phases = ['Passive', 'Cage01', 'Cage02', 'Cage03'];
     const supported = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
       phases
@@ -72,6 +71,7 @@ describe('Fresh File generated-composition issue chronology', () => {
             ) !== undefined,
         )
         .join('+');
+    const all = 'Passive+Cage01+Cage02+Cage03';
     expect(
       authorFreshFileRoomIssues(
         withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
@@ -79,18 +79,18 @@ describe('Fresh File generated-composition issue chronology', () => {
         newHFieldsRoomId,
         supported,
       ).labels,
-    ).toEqual([
-      // An Overview stop enters the room: every phase's support reads its preparation.
-      'composition:Passive Passive+Cage01+Cage02+Cage03',
-      'optionalReward Passive+Cage01+Cage02+Cage03',
-      'spatial Passive+Cage01+Cage02+Cage03',
-      'composition:Cage01 Passive+Cage01',
-      'composition:Cage02 Passive+Cage01+Cage02',
-      'trait:cage2 Passive+Cage01+Cage02',
-      'composition:Cage03 Passive+Cage01+Cage02+Cage03',
-      'trait:cage3 Passive+Cage01+Cage02+Cage03',
-      'continuation Passive+Cage01+Cage02+Cage03',
-    ]);
+    ).toEqual(
+      [
+        'composition:Passive',
+        'composition:Cage01',
+        'composition:Cage02',
+        'composition:Cage03',
+        'optionalReward',
+        'spatial',
+        'trait:cage2',
+        'continuation',
+      ].map((label) => `${label} ${all}`),
+    );
   });
 
   it('keeps the mature twin on the same entry, placement and offer order', () => {

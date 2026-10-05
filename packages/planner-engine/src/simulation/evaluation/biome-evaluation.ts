@@ -42,8 +42,8 @@ import {
   type MaterializedBiomePrefix,
 } from '../materialization';
 import { evaluateEncounterCandidatesInternal } from '../encounters/candidates';
+import type { EncounterEntryVowRanks } from '../arcana-fear';
 import { structurallyActiveEncounterRooms } from '../encounters/structural';
-import type { EncounterCandidateBoundary } from '../encounters/candidates';
 import type { FindingRegionEntry } from '../finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
@@ -260,8 +260,8 @@ function generation(
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   traitOffers: TraitOfferCandidateArtifacts,
   levelResolutions: LevelResolutionCandidateArtifacts,
+  encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
-  encounterBoundary?: EncounterCandidateBoundary,
   carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
 ): BiomeGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -288,14 +288,13 @@ function generation(
     structurallyActiveEncounterRooms(snapshot),
     encounterPreparationViews(history),
     routePosition,
-    encounterBoundary,
     rewards.figLeafPhaseCandidates,
     gorgonStatus,
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
     history.events,
     history.rooms,
-    rewards.runStateSnapshots,
+    encounterEntryVowRanks,
     rewards.targetHistory,
   );
   const encounterArtifacts = encounters.artifacts;
@@ -613,9 +612,7 @@ export function evaluateBiomeAssembly(
         `${plan.biomeKey} lifecycle block has no materialized progressive prefix`,
       );
     }
-    const blockedAt =
-      progressive.evaluation.blockedAt ??
-      (composed.kind === 'blocked' ? composed.block.blockedAt : composed.blockedAt);
+    const blockedAt = progressive.evaluation.blockedAt ?? composed.blockedAt;
     if (blockedAt === undefined) {
       throw new ProjectSimulationContractError(
         `${plan.biomeKey} lifecycle block has no semantic repair owner`,
@@ -701,8 +698,8 @@ export function evaluateBiomeAssembly(
     rewards.lifecycleArtifacts,
     rewards.traitOfferArtifacts,
     rewards.levelResolutionArtifacts,
+    rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
-    undefined,
     context.seed === undefined
       ? undefined
       : sharedRewardLookups(context.seed.rewardBranches.map((branch) => branch.state)),

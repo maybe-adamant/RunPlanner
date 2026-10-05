@@ -643,11 +643,10 @@ exclusions and known prior explicit selections; native rosters do not become
 invented blacklist facts. Assessment returns typed repair evidence and a complete
 resolved composition: budgets, ordered source entries, generated/effective request
 counts and applicable Fangs/Menace outcomes. Initialization and preview consume
-the same exact capability. A missing required composition is located for repair
-at its phase's start boundary, falling back to preparation for a phase with no
-start event such as Fields Passive, while its assessment context remains
-preparation. Combat and native spawn pacing are not simulated. It introduces
-no additional lifecycle operation, reward obligation or conformance checkpoint.
+the same exact capability. Every phase's identity and composition, missing or
+invalid, is located for repair at its room's preparation, the room Overview.
+Combat and native spawn pacing are not simulated. It introduces no additional
+lifecycle operation, reward obligation or conformance checkpoint.
 
 A declaration may fix leading waves. They count toward the wave total and its
 native budget shares (a two-wave profile generates only its 50% suffix), take no
@@ -730,11 +729,11 @@ These are checkpointed projections of one
 canonical event fold, not a profile baseline, provisional counter slate, or
 NPC-specific ledger.
 
-An active retained selection that fails its requirements is not replaced.
-Preparation keeps its exact phase address available for correction, emits no
-substitute definition, and stops canonical execution before that phase's
-start, counter, reward, completion, or room commit. Later structurally active
-slots remain authorable from the valid record prefix. A valid
+An active retained selection that fails its requirements, or a slot whose
+activation fails, is not replaced. Every active phase's authored identity is
+recorded and the room is entered; the phase's finding blocks at the room's
+Overview, before any phase start, counter, reward, completion or room commit.
+Later structurally active slots remain authorable from the valid record prefix. A valid
 definition-owned `terminateSuffix` effect may end the remaining active
 sequence; an invalid selection never performs that trim. Dormant slots retain
 their authored choice but emit no lifecycle product.

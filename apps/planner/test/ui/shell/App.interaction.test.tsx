@@ -1314,8 +1314,13 @@ describe('planner history interaction', () => {
     const encounter = screen.getByRole('button', { name: 'Encounter' });
     expect(encounter.textContent).toContain('Artemis combat');
     await waitFor(() => expect(document.activeElement).toBe(encounter));
+    // The encounter identity is authored in Overview; its NPC offer acts in the Timeline.
+    expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
 
     const traitAddress = createTraitOfferAddress(phase, 'selection');
+    fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const roomActions = screen.getByRole('region', { name: 'Room Timeline' });
     const traitLauncher = within(roomActions).getByRole('button', { name: /Edit Trait/ });
     expect(traitLauncher.getAttribute('data-trait-status')).toBe('valid');

@@ -2,6 +2,7 @@ import type { BoonRarityOverride, Catalog, TraitRarity } from '../../../../catal
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createGorgonPhaseAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
@@ -139,6 +140,7 @@ export function applyGorgonStartedTransition(inputs: {
     effect?.kind === 'gorgonAmulet' &&
     event.encounterKey === effect.naturalEncounterKey;
   const selected = room.encounters.gorgonResultByPhase?.[event.phaseKey]?.athenaTriggerConditionMet;
+  const gorgonOrigin = createGorgonPhaseAddress(origin);
   const findings: readonly LifecycleFinding[] =
     // Native Athena expires the pending keepsake through its own encounter path.
     selected === true && !supported && !naturalAthena && !inputs.evaluationBlocked
@@ -148,10 +150,10 @@ export function applyGorgonStartedTransition(inputs: {
               code: 'gorgonConditionUnavailable' as const,
               severity: 'error' as const,
               phase: 'encounterResolution' as const,
-              origin,
+              origin: gorgonOrigin,
               evidence: Object.freeze({}),
             }),
-            region: ownerRegion(origin),
+            region: ownerRegion(gorgonOrigin),
             chronology: Object.freeze({
               kind: 'history' as const,
               sequence: event.sequence,

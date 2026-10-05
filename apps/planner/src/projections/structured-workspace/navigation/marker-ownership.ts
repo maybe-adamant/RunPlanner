@@ -115,6 +115,9 @@ export function workspaceOccurrenceOwnedMarkers(
               feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
             ),
           ]),
+      ...(phase.figLeaf === undefined ? [] : [phase.figLeaf.marker]),
+      ...(phase.aetos === undefined ? [] : [phase.aetos.marker]),
+      ...(phase.gorgonCondition === undefined ? [] : [phase.gorgonCondition.marker]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
     ...room.rewardControls.flatMap((control) => [

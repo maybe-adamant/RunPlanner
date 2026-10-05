@@ -187,8 +187,8 @@ describe('OccurrenceRoomFeatures', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
-    expect(screen.getByRole('button', { name: 'Encounter' })).toBeTruthy();
+    // The Nemesis family is part of the phase identity, authored in Overview.
+    openRoomTab('Room Overview');
     const family = screen.getByRole('button', { name: 'Encounter' });
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const eventOwner = createNemesisRandomEventAddress(phase);
@@ -212,6 +212,7 @@ describe('OccurrenceRoomFeatures', () => {
       historyBefore,
     );
     await chooseNemesisEvent(view.user, 'Gold trade');
+    openRoomTab('Room Timeline');
     const authoredEvent = () =>
       view.application.store
         .getState()
@@ -248,7 +249,6 @@ describe('OccurrenceRoomFeatures', () => {
     if (actionRow === undefined) throw new Error('Nemesis interaction row is missing');
     expect(within(actionRow).getByText('Nemesis offers to take Gold to give')).toBeTruthy();
     await waitFor(() => expect(actionRow.dataset.selectedFinding).toBe('true'));
-    expect(family.dataset.selectedFinding).toBe('false');
     await view.user.click(within(actionRow).getByRole('button', { name: 'Reward' }));
     await view.user.click(await screen.findByRole('option', { name: 'Max Health' }));
     await waitFor(() =>
@@ -317,7 +317,7 @@ describe('OccurrenceRoomFeatures', () => {
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
         ?.encounters.encounterKeyByPhase.Encounter;
 
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const history = () => view.application.store.getState().projectWorkspace.history!;
     const before = history().present;
     const pastCount = history().past.length;
@@ -378,7 +378,7 @@ describe('OccurrenceRoomFeatures', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const eventOwner = createNemesisRandomEventAddress(phase);
     const finding = simulateProject(catalog, project).findings.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(eventOwner),
@@ -397,21 +397,33 @@ describe('OccurrenceRoomFeatures', () => {
     );
     const family = screen.getByRole('button', { name: 'Encounter' });
     await waitFor(() => expect(family.contains(document.activeElement)).toBe(true));
+    openRoomTab('Room Timeline');
     const hint = screen.getByText('Choose a Nemesis event.');
     expect(hint.closest('.control-placeholder')).toBeTruthy();
     expect(hint.closest('.nemesis-interaction-controls')).toBeTruthy();
+    openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Free item');
+    openRoomTab('Room Timeline');
     expect(screen.queryByText('Choose a Nemesis event.')).toBeNull();
-    const freeAction = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
+    let freeAction = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
       (row) =>
         row.dataset.roomActionKey ===
         roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
     );
     if (freeAction === undefined) throw new Error('Free-item interaction action is missing');
+    const nemesisAction = () =>
+      [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
+        (row) =>
+          row.dataset.roomActionKey ===
+          roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+      )!;
     expect(within(freeAction).getByText('Interact with Nemesis to get')).toBeTruthy();
     expect(within(freeAction).getByRole('button', { name: 'Reward' })).toBeTruthy();
     expect(within(freeAction).queryByRole('checkbox')).toBeNull();
+    openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Boon trade');
+    openRoomTab('Room Timeline');
+    freeAction = nemesisAction();
     const trait = await screen.findByRole('button', { name: 'Boon offered' });
     expect(within(freeAction).getByText('Nemesis offers to take')).toBeTruthy();
     const fixedReward = within(freeAction).getByText('to give Triple Gold');
@@ -445,7 +457,10 @@ describe('OccurrenceRoomFeatures', () => {
           ?.encounters.nemesisRandomEventByPhase?.Encounter?.kind,
       ).toBe('traitTrade'),
     );
+    openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage trade');
+    openRoomTab('Room Timeline');
+    freeAction = nemesisAction();
     expect(within(freeAction).getByText('Nemesis offers to hit you to give')).toBeTruthy();
     expect(
       within(freeAction)
@@ -478,8 +493,9 @@ describe('OccurrenceRoomFeatures', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await chooseNemesisEvent(view.user, 'Damage contest');
+    openRoomTab('Room Timeline');
     const phrase = screen.getByText('at Nemesis’s damage challenge →');
     const sentence = phrase.parentElement!;
     const result = within(sentence).getByRole('combobox', { name: 'Contest result' });

@@ -225,11 +225,13 @@ boundary, while an unpicked generated host retains its structural repair.
 Invalid Fig Leaf choices remain repairable but cannot publish a normally
 executed encounter as assessed continuation.
 
-The blocking owner retains its repair capability when reached. Each encounter
-phase of the blocked room that takes effect strictly before the stop, at its
-declared start or at room entry when its lifecycle declares none, also retains
-its generation, roster and candidate support, since that context reads nothing
-later; its status, Fig Leaf and Gorgon products are not retained. Later
+The blocking owner retains its repair capability when reached. Every encounter
+phase of the blocked room whose room was prepared at or before the stop also
+retains its identity, generation and roster support, since that context reads
+only the room's preparation and entry state; its status, Fig Leaf and Gorgon
+products are not retained, except that a phase blocked by its own Fig Leaf,
+Aetos or Gorgon finding keeps its status without execution and its Fig Leaf
+support. Later
 history effects, findings and capabilities do not become true merely because
 their authored controls still exist. The candidate session answers whether an
 exact context exists for a native setting's owner (Ship phase count, reward
@@ -477,10 +479,12 @@ generic purchase failure.
 Encounter preparation owns two Fresh File findings on the exact phase:
 `encounterCustomizationRequired` for a reached generated composition that is
 not authored, and `encounterIntroductionRequired` for a retained enemy whose
-introduction is unfinished. Both are errors that withhold execution. The
-introduction stops assessment at room preparation; a missing composition stops
-it at its phase's start, or at preparation for a phase without one; the
+introduction is unfinished. Both are errors that withhold execution. Like every
+encounter identity and composition finding, they stop assessment at the room's
+preparation, its Overview; the
 [introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions) owns the rules.
+Fig Leaf, Aetos and Gorgon findings have their own phase-child owners and stop
+assessment where the phase starts.
 
 Participation and position are also different: toggling a participant changes
 membership without replaying chronological candidate legality. Move controls

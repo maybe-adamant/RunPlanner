@@ -183,7 +183,8 @@ Fields-private acquisition fold.
 
 The editor preserves four distinct occurrence views. Room Doors authors the
 outgoing decision and projects the selected target's active cage reward group.
-Room Overview authors optional reward identities/count and Nemesis activation.
+Room Overview authors every phase's encounter and composition, optional reward
+identities/count and Nemesis activation.
 Room Layout is the sole editor for player entry and physical cage, optional,
 and Nemesis assignments; reward and event identities shown there are read-only
 context. Room Timeline retains the single mixed action chronology and brackets

@@ -518,6 +518,9 @@ export function assembleWorkspaceOccurrence(
       phase.marker,
       ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
       ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+      ...(phase.figLeaf === undefined ? [] : [phase.figLeaf.marker]),
+      ...(phase.aetos === undefined ? [] : [phase.aetos.marker]),
+      ...(phase.gorgonCondition === undefined ? [] : [phase.gorgonCondition.marker]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
     ...workspaceLocalDetailMarkers(roomLocal),
@@ -774,17 +777,24 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
     }
     const phaseTab = roomTabForPhase(roomLocal, phase.address.phaseKey);
-    // Passive combat is configured in Overview; Nemesis selection retains its checkbox there.
+    // Identity and customization are fixed on entry: every phase is authored in Overview.
     input.markerDestinations.setRoomTab(
-      [phase.marker],
-      phase.editorAnchor === 'overview' ||
-        (phase.nemesisFeature !== undefined && phase.customization === undefined)
-        ? 'overview'
-        : phaseTab,
+      [
+        phase.marker,
+        ...(phase.customizable && phase.nemesisEvent !== undefined
+          ? [phase.nemesisEvent.marker]
+          : []),
+      ],
+      'overview',
     );
     input.markerDestinations.setRoomTab(
       [
-        ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
+        ...(phase.nemesisEvent === undefined || phase.customizable
+          ? []
+          : [phase.nemesisEvent.marker]),
+        ...(phase.figLeaf === undefined ? [] : [phase.figLeaf.marker]),
+        ...(phase.aetos === undefined ? [] : [phase.aetos.marker]),
+        ...(phase.gorgonCondition === undefined ? [] : [phase.gorgonCondition.marker]),
         ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
         ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
       ],

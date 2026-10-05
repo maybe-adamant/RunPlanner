@@ -653,8 +653,9 @@ describe('selected O validation', () => {
     const recorded = blockedPhaseEvents.filter((event) => event.kind === 'encounterRecorded');
     expect(creation).toBeDefined();
     expect(preparation).toBeDefined();
-    expect(recorded.map((event) => event.phaseKey)).toEqual(['Intro', 'Combat1']);
-    expect(blockedPhaseEvents.some((event) => event.kind === 'roomEntered')).toBe(false);
+    // The authored Combat2 is recorded and the room entered; its Overview is the block.
+    expect(recorded.map((event) => event.phaseKey)).toEqual(['Intro', 'Combat1', 'Combat2']);
+    expect(blockedPhaseEvents.some((event) => event.kind === 'roomEntered')).toBe(true);
     expect(blockedPhaseEvents.some((event) => event.kind === 'encounterStarted')).toBe(false);
     const blockedFinding = o.findings.find(
       (finding) =>
@@ -672,13 +673,14 @@ describe('selected O validation', () => {
       throw new Error('blocked Ship phase lost its numeric preparation evidence');
     }
     expect(recorded[0]?.sequence).toBe(preparation.sequence + 1);
-    expect(beforeSequence).toBe(recorded.at(-1)?.sequence);
+    expect(beforeSequence).toBe(recorded[1]?.sequence);
     expect(blockedFinding).toMatchObject({ evidence: { slotKey: 'Combat2' } });
     expect(candidate).toMatchObject({
       kind: 'shipEncounterCount',
       result: {
         supportEncounterCounts: [2],
         selectedPossible: false,
+        // The entered room's lifecycle also asks for the activated wheel's reward.
         findings: [
           expect.objectContaining({
             code: 'encounterSlotActivationUnavailable',
@@ -688,6 +690,7 @@ describe('selected O validation', () => {
               'Combat2',
             ),
           }),
+          expect.objectContaining({ code: 'rewardMissing' }),
         ],
       },
     });

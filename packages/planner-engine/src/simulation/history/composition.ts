@@ -2,16 +2,11 @@ import type { ResolvedRoutePosition } from '../../authored-project/route-context
 import type { BiomeTransitionCounterReset, Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../../authored-project/addresses';
 import {
-  executeEncounterRecordPrefix,
   executeRoomLifecycle,
   roomOverviewOperationCount,
   type RoomLifecycleEvent,
 } from '../lifecycle';
-import {
-  prepareRoomEncounterPhases,
-  type EncounterAuthoringRoom,
-  type PreparedEncounterPhases,
-} from '../encounters/preparation';
+import { prepareRoomEncounterPhases, type EncounterAuthoringRoom } from '../encounters/preparation';
 import {
   encounterResolutionContext,
   resolveMaterializedEncounterPhase,
@@ -87,57 +82,13 @@ export interface HistorySegmentWriter {
   ): readonly ResolvedEncounterPhase[];
 }
 
-export interface EncounterHistoryBlock {
-  readonly room: EncounterAuthoringRoom;
-  readonly before: HistoryStateView;
-  readonly afterValidRecordPrefix: HistoryStateView;
-  readonly preparation: PreparedEncounterPhases;
-  readonly blockedAt: NonNullable<PreparedEncounterPhases['blockedAt']>;
-}
-
-export type EncounterValidatedPrefixHistory =
-  | { readonly kind: 'complete'; readonly history: BiomeHistoryPrefix }
-  | {
-      readonly kind: 'blocked';
-      readonly history: BiomeHistoryPrefix;
-      readonly block: EncounterHistoryBlock;
-    };
-
 export type EncounterValidatedBiomeHistory =
   | { readonly kind: 'complete'; readonly history: CanonicalBiomeHistory }
   | {
       readonly kind: 'rewardBlocked';
       readonly history: BiomeHistoryPrefix;
       readonly blockedAt: import('../../authored-project/addresses').SemanticAddress;
-    }
-  | {
-      readonly kind: 'blocked';
-      readonly history: BiomeHistoryPrefix;
-      readonly block: EncounterHistoryBlock;
     };
-
-/**
- * A room with an invalid active encounter cannot enter its lifecycle. Valid
- * preceding phase records are already canonical events; the caller folds that
- * partial stream and retains this exact phase owner as its evaluation block.
- */
-export class EncounterLifecycleBlocked extends Error {
-  constructor(
-    readonly room: EncounterAuthoringRoom,
-    readonly before: HistoryStateView,
-    readonly preparation: PreparedEncounterPhases,
-  ) {
-    if (preparation.valid || preparation.blockedAt === undefined) {
-      throw new Error('encounter lifecycle block requires an invalid preparation result');
-    }
-    super(`encounter lifecycle blocked at ${preparation.blockedAt.phaseKey}`);
-    this.name = 'EncounterLifecycleBlocked';
-  }
-
-  get blockedAt() {
-    return this.preparation.blockedAt!;
-  }
-}
 
 /** Stops history composition before an entered lifecycle whose producer has
  * not been authored. Reward evaluation owns the unresolved frontier and its
@@ -341,7 +292,7 @@ export function appendRoomLifecycle(
     room.kind === 'authored' && room.entry,
   ).declaration;
   const encounterPhases =
-    encounterPreparation?.validPrefix ??
+    encounterPreparation?.recordedPhases ??
     (() => {
       const routeKey = writer.routePosition.routeKey;
       const context =
@@ -362,18 +313,6 @@ export function appendRoomLifecycle(
       });
     })();
   const effectiveEncounterPhases = writer.resolveFigLeafEncounterPhases(room, encounterPhases);
-  if (encounterPreparation !== undefined && !encounterPreparation.valid) {
-    const prefix = executeEncounterRecordPrefix(
-      catalog,
-      createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
-    );
-    for (const event of prefix.events) appendLifecycleEvent(writer, event, fail);
-    throw new EncounterLifecycleBlocked(
-      authoringRoom!,
-      beforeEncounterPreparation!,
-      encounterPreparation,
-    );
-  }
   const fragment = executeRoomLifecycle(
     catalog,
     createRoomLifecycleInput(room, effectiveEncounterPhases, declaration),
@@ -487,7 +426,7 @@ function composeBiomeHistoryPrefixResult({
   allSpellInvested = false,
   effectiveShadowRank = 0,
   compose,
-}: BiomeHistoryPrefixOptions): EncounterValidatedPrefixHistory {
+}: BiomeHistoryPrefixOptions): BiomeHistoryPrefix {
   const builder: EventBuilder = {
     events: [],
     sequenceBase: seed?.sequence ?? 0,
@@ -515,30 +454,9 @@ function composeBiomeHistoryPrefixResult({
   try {
     compose(segmentWriter(builder));
   } catch (error) {
-    if (error instanceof RewardAuthorshipBlocked) {
-      return Object.freeze({
-        kind: 'complete',
-        history: foldBiomeHistoryPrefixEvents(builder.events, seed),
-      });
-    }
-    if (!(error instanceof EncounterLifecycleBlocked)) throw error;
-    const history = foldBiomeHistoryPrefixEvents(builder.events, seed);
-    return Object.freeze({
-      kind: 'blocked',
-      history,
-      block: Object.freeze({
-        room: error.room,
-        before: error.before,
-        afterValidRecordPrefix: history.current,
-        preparation: error.preparation,
-        blockedAt: error.blockedAt,
-      }),
-    });
+    if (!(error instanceof RewardAuthorshipBlocked)) throw error;
   }
-  return Object.freeze({
-    kind: 'complete',
-    history: foldBiomeHistoryPrefixEvents(builder.events, seed),
-  });
+  return foldBiomeHistoryPrefixEvents(builder.events, seed);
 }
 
 export function composeBiomeHistoryPrefix({
@@ -549,7 +467,7 @@ export function composeBiomeHistoryPrefix({
   seed,
   compose,
 }: Omit<BiomeHistoryPrefixOptions, 'validateEncounterResolution'>): BiomeHistoryPrefix {
-  const result = composeBiomeHistoryPrefixResult({
+  return composeBiomeHistoryPrefixResult({
     routeKey,
     routePosition,
     biomeKey,
@@ -558,15 +476,11 @@ export function composeBiomeHistoryPrefix({
     validateEncounterResolution: false,
     compose,
   });
-  if (result.kind !== 'complete') {
-    throw new Error('ordinary prefix composition unexpectedly encountered encounter validation');
-  }
-  return result.history;
 }
 
 export function composeBiomeHistoryPrefixWithEncounterValidation(
   options: Omit<BiomeHistoryPrefixOptions, 'validateEncounterResolution'>,
-): EncounterValidatedPrefixHistory {
+): BiomeHistoryPrefix {
   return composeBiomeHistoryPrefixResult({
     ...options,
     validateEncounterResolution: true,
@@ -688,19 +602,7 @@ function composeBiomeHistoryEnvelopeResult<
         blockedAt: error.blockedAt,
       });
     }
-    if (!(error instanceof EncounterLifecycleBlocked)) throw error;
-    const history = foldBiomeHistoryPrefixEvents(builder.events, seed);
-    return Object.freeze({
-      kind: 'blocked',
-      history,
-      block: Object.freeze({
-        room: error.room,
-        before: error.before,
-        afterValidRecordPrefix: history.current,
-        preparation: error.preparation,
-        blockedAt: error.blockedAt,
-      }),
-    });
+    throw error;
   }
   return Object.freeze({ kind: 'complete', history: foldHistoryEvents(builder.events, seed) });
 }

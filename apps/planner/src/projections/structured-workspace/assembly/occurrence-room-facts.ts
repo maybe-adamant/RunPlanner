@@ -32,6 +32,7 @@ import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
 import { assembleShopSupplementalOffers } from './occurrence-shop-supplementals';
 import {
   requireEncounterEnvelope,
+  shipPhaseLabels,
   requireProjectedRewardControl,
   activeEncounterPhasesForOwner,
   controlsForOccurrence,
@@ -585,19 +586,14 @@ function roomLocalForOccurrence(
     case 'shipCombat': {
       const state = occurrence.state;
       const envelope = requireEncounterEnvelope(input.catalog, room);
-      let combatOrdinal = 0;
+      const labels = shipPhaseLabels(envelope);
       const structuralPhases: readonly WorkspaceShipStructurePhase[] = envelope.slots.map(
         (slot) => {
           const rewardAttachment = slot.rewardAttachment;
-          if (rewardAttachment?.kind !== 'rewardWheel') {
-            return Object.freeze({ key: slot.key, label: slot.key });
-          }
-          combatOrdinal += 1;
-          return Object.freeze({
-            key: slot.key,
-            label: `Combat ${combatOrdinal}`,
-            rewardWheelKey: rewardAttachment.key,
-          });
+          const label = labels.get(slot.key) ?? slot.key;
+          return rewardAttachment?.kind !== 'rewardWheel'
+            ? Object.freeze({ key: slot.key, label })
+            : Object.freeze({ key: slot.key, label, rewardWheelKey: rewardAttachment.key });
         },
       );
       const wheels = envelope.slots.flatMap((slot, phaseIndex) => {

@@ -8,6 +8,7 @@ import {
   type SemanticAddress,
 } from '../../../authored-project/addresses';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
+import { attestEncounterEntryVowRanks } from '../../arcana-fear';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { resourcePlacementFindingRegions } from '../../resources';
@@ -805,6 +806,13 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
       ...state,
       branches: entered.branches,
       halted: entered.hermesShrineDeliveryPlacementRequired,
+      encounterEntryVowRanks:
+        room === undefined || entered.branches.length === 0
+          ? state.encounterEntryVowRanks
+          : new Map(state.encounterEntryVowRanks).set(
+              semanticAddressKey(event.origin),
+              attestEncounterEntryVowRanks(entered.branches.map((branch) => branch.state)),
+            ),
       hermesShrineAssessments:
         shrine === undefined
           ? state.hermesShrineAssessments
