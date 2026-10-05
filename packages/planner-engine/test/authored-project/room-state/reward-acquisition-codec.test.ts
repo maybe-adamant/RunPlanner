@@ -373,6 +373,52 @@ describe('reward acquisition decoder', () => {
     );
   });
 
+  it('requires the Anvil result exactly at the role that declares it, for any reward owner', () => {
+    const source = { kind: 'producerLifecycle', key: 'RoomReward' } as const;
+    const decode = (value: unknown) =>
+      decodeRewardState(value, catalog, '$.reward', source, 'Underworld');
+    const anvil = (extra: Record<string, unknown>) => ({
+      offer: { rewardType: 'ChaosWeaponUpgrade' },
+      traitOffersByAcquisitionRole: {},
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      ...extra,
+    });
+    const result = {
+      kind: 'anvilOfFates',
+      removedTraitKey: null,
+      addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+    };
+    expect(() => decode(anvil({}))).toThrow(
+      'anvilResultsByAcquisitionRole: is required for this Anvil reward',
+    );
+    expect(decode(anvil({ anvilResultsByAcquisitionRole: { self: null } }))).toMatchObject({
+      anvilResultsByAcquisitionRole: { self: null },
+    });
+    expect(decode(anvil({ anvilResultsByAcquisitionRole: { self: result } }))).toMatchObject({
+      anvilResultsByAcquisitionRole: { self: result },
+    });
+    expect(() => decode(anvil({ anvilResultsByAcquisitionRole: { other: null } }))).toThrow(
+      'anvilResultsByAcquisitionRole',
+    );
+    expect(() =>
+      decode(
+        anvil({
+          anvilResultsByAcquisitionRole: {
+            self: { ...result, addedTraitKeys: ['StaffLongAttackTrait', 'StaffLongAttackTrait'] },
+          },
+        }),
+      ),
+    ).toThrow('must contain distinct traits');
+    expect(() =>
+      decode({
+        offer: { rewardType: 'MaxHealthDrop' },
+        traitOffersByAcquisitionRole: {},
+        dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+        anvilResultsByAcquisitionRole: { self: null },
+      }),
+    ).toThrow('Anvil results are not supported for this reward');
+  });
+
   it('requires the exact closed Pom role map and rejects it on non-Pom rewards', () => {
     const declaration = room('F_Combat04');
     const raw = mutable(

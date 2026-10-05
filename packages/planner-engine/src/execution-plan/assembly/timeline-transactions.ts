@@ -11,6 +11,9 @@ import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes
 import { optionIndex } from '../../authored-project/traits/state';
 import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import { nemesisGeneratedPickupSiteKey } from '../../authored-project/acquisition/pickup-producers';
+import { acquisitionSiteStorageKey } from '../../authored-project/acquisition/artificer';
+import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
+import type { AnvilResultsByAcquisitionRole } from '../../authored-project/model';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type { RewardEvent } from '../../simulation/rewards/model';
@@ -36,6 +39,32 @@ import type {
 } from '../model';
 
 /** Build typed execution transactions directly from lifecycle actions and outcomes. */
+/** The Anvil results of the reward behind one acquisition source, wherever the room stores it. */
+function sourceAnvilResults(
+  room: CanonicalAuthoredRoom,
+  source: TraitOfferOwnerAddress,
+): AnvilResultsByAcquisitionRole | undefined {
+  const shop = room.entryState;
+  const shopOffer = (offerKey: string) =>
+    offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+      ? (shop?.travelDealRefill ?? undefined)
+      : (shop?.offers.find((candidate) => candidate.offerKey === offerKey) ??
+        (shop?.infernalContractOffer?.offerKey === offerKey
+          ? shop.infernalContractOffer
+          : undefined));
+  switch (source.kind) {
+    case 'shopOffer':
+      return shopOffer(source.offerKey)?.anvilResultsByAcquisitionRole;
+    case 'acquisitionEntry':
+      return (
+        room.acquisitionSites[acquisitionSiteStorageKey(source.site)]?.entries[source.entryKey] ??
+        (source.site.pointKey === 'roomExit' ? shopOffer(source.entryKey) : undefined)
+      )?.anvilResultsByAcquisitionRole;
+    default:
+      return undefined;
+  }
+}
+
 export function executionTimelineTransactions(
   room: CanonicalAuthoredRoom,
   biome: CompleteValidBiomeProjectEvaluation,
@@ -894,36 +923,22 @@ export function executionTimelineTransactions(
       parseHermesShrineDeliveryEntryKey(source.entryKey) !== undefined
         ? source.entryKey
         : undefined;
-    if (shopOffer !== undefined) {
-      if (shopOffer.offer.rewardType === 'ChaosWeaponUpgrade' && shopOffer.anvilResult == null)
+    // A reward carrying an Anvil publishes its authored result as the use's transformation.
+    const anvilResults = sourceAnvilResults(room, source);
+    const anvilRole = anvilResults === undefined ? undefined : Object.keys(anvilResults)[0];
+    if (anvilRole !== undefined) {
+      const anvilResult = anvilResults![anvilRole];
+      if (anvilResult === undefined || anvilResult === null)
         throw new CompilerError(
           'executionCoverageMissing',
-          `${room.gameName} lacks the authored Anvil result for ${shopOffer.offerKey}`,
+          `${room.gameName} lacks the authored Anvil result for ${semanticAddressKey(source)}`,
         );
-      if (shopOffer.offer.rewardType !== 'ChaosWeaponUpgrade' && shopOffer.anvilResult != null)
-        throw new CompilerError(
-          'executionCoverageMissing',
-          `${room.gameName} has an Anvil result on non-Anvil offer ${shopOffer.offerKey}`,
-        );
-      if (shopOffer.offer.rewardType === 'ChaosWeaponUpgrade') {
-        add({
-          kind: 'transformation',
-          owner: acquisitionOwner,
-          transformation: Object.freeze({ ...shopOffer.anvilResult! }),
-          window: windowFor(acquisitionOwner),
-        });
-      } else {
-        add({
-          kind: 'acquisition',
-          owner: acquisitionOwner,
-          sourceOwner: semanticAddressKey(source),
-          reward,
-          producerLifecycleKey: acquisitionSource.producerLifecycleKey,
-          roles,
-          ...(hermesShrineSourceKey === undefined ? {} : { hermesShrineSourceKey }),
-          window: windowFor(acquisitionOwner),
-        });
-      }
+      add({
+        kind: 'transformation',
+        owner: acquisitionOwner,
+        transformation: Object.freeze({ ...anvilResult }),
+        window: windowFor(acquisitionOwner),
+      });
     } else {
       add({
         kind: 'acquisition',

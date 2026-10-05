@@ -17,6 +17,7 @@ import {
   createRouteAddress,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createAcquisitionRoleAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   roomActionKey,
@@ -131,7 +132,7 @@ export function surfaceAnvilProject(): ProjectDocument {
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceAnvilResult',
-    offer: anvilOffer,
+    acquisition: createAcquisitionRoleAddress(anvilOffer, 'self'),
     value: {
       kind: 'anvilOfFates',
       removedTraitKey: 'StaffDoubleAttackTrait',

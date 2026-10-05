@@ -53,13 +53,13 @@ export function bindAcquisitionConversionInteractions(input: {
         owner.kind === 'shopOffer' && occurrence?.state.kind === 'shop'
           ? authoredShopOffer(occurrence, owner.offerKey)
           : undefined;
+      const anvilResult =
+        shopOffer?.reward?.anvilResultsByAcquisitionRole?.[conversion.address.acquisitionRole];
       const anvil =
-        owner.kind !== 'shopOffer' ||
-        anvilCapability === undefined ||
-        shopOffer?.anvilResult === undefined
+        owner.kind !== 'shopOffer' || anvilCapability === undefined || anvilResult === undefined
           ? undefined
           : Object.freeze({
-              value: shopOffer.anvilResult,
+              value: anvilResult,
               removableTraitKeys: anvilCapability.removableTraitKeys,
               addedTraitKeysFor: anvilCapability.addedTraitKeysFor,
               traitLabel: (traitKey: string) =>
@@ -70,7 +70,7 @@ export function bindAcquisitionConversionInteractions(input: {
                 Object.freeze({
                   command: Object.freeze({
                     kind: 'ReplaceAnvilResult' as const,
-                    offer: owner,
+                    acquisition: conversion.address,
                     value,
                   }),
                   focus: Object.freeze({ owner: conversion.address, timing: 'after' as const }),

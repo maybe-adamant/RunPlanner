@@ -1,5 +1,16 @@
 # Project schema boundary
 
+Schema 92 stores an Anvil of Fates result on the reward that carries the Anvil,
+in `anvilResultsByAcquisitionRole`, instead of on the World Shop slot.
+
+```bash
+npm run schema:migrate-91-to-92 -- path/to/schema-91-project.runplanner.json
+```
+
+The migration moves each Shop slot's `anvilResult` onto its reward's `self`
+role and gives every other reward carrying an Anvil, such as a Gold Gold Gold
+duplicate, an unauthored `null` result.
+
 Schema 91 authors each Hermes Shrine purchase as a `purchaseHermesShrineOffer`
 room action that owns its rush; `purchaseBySlot` and the Travel Deal refill
 purchase keep only their delay.

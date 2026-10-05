@@ -36,8 +36,14 @@ import {
   echoGoldShop,
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
-import { createAcquisitionRoleAddress } from '@run-planner/engine/authored-project';
-import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  applyProjectCommand,
+  createAcquisitionRoleAddress,
+} from '@run-planner/engine/authored-project';
+import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import {
   createEchoGoldIAnvilDuplicateProject,
   echoGoldIPrebossShopId,
@@ -865,6 +871,57 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(findings).not.toContainEqual(
       expect.objectContaining({
         evidence: expect.objectContaining({ kind: 'jointPurchaseOrder' }),
+      }),
+    );
+  });
+
+  it('settles the Gold duplicate of an Anvil with its own result after the first Anvil', () => {
+    const project = createEchoGoldIAnvilDuplicateProject();
+    const duplicate = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId),
+          'roomExit',
+        ),
+        ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+      ),
+      'self',
+    );
+    const anvil = acquisitionConversionCandidateForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      duplicate,
+    )?.anvil;
+    // The first Anvil already replaced Double Attack with its two additions.
+    expect(anvil?.removableTraitKeys).not.toContain('StaffDoubleAttackTrait');
+    expect(anvil?.removableTraitKeys).toEqual(
+      expect.arrayContaining(['StaffDashAttackTrait', 'StaffTripleShotTrait']),
+    );
+    const removedTraitKey = 'StaffDashAttackTrait';
+    const [first] = anvil!.addedTraitKeysFor(removedTraitKey, []);
+    const [second] = anvil!.addedTraitKeysFor(removedTraitKey, [first!]);
+    const authored = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: duplicate,
+      value: { kind: 'anvilOfFates', removedTraitKey, addedTraitKeys: [first!, second!] },
+    });
+    const valid = simulateProjectAssembly(catalog, authored).evaluation;
+    expect(valid.findings).toEqual([]);
+    expect(valid.status).toBe('valid');
+
+    const stale = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: duplicate,
+      value: {
+        kind: 'anvilOfFates',
+        removedTraitKey: 'StaffDoubleAttackTrait',
+        addedTraitKeys: [first!, second!],
+      },
+    });
+    expect(simulateProjectAssembly(catalog, stale).evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardAcquisitionUnavailable',
+        origin: duplicate,
+        evidence: expect.objectContaining({ pickupEffect: 'anvilOfFates' }),
       }),
     );
   });

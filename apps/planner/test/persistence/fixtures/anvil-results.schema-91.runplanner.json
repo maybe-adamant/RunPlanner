@@ -1,15 +1,10 @@
 {
-  "schemaVersion": 92,
+  "schemaVersion": 91,
   "projectId": "golden-fg",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
     "routeKey": "Underworld",
-    "itineraryBiomeKeys": [
-      "F",
-      "G",
-      "H",
-      "I"
-    ],
+    "itineraryBiomeKeys": ["F", "G", "H", "I"],
     "resourcePlacements": {
       "Pickaxe": null,
       "Exorcism": null,
@@ -46,7 +41,7 @@
         "LimitGraspShrineUpgrade": 0,
         "EnemyEliteShrineUpgrade": 0
       },
-      "startingKeepsakeKey": "ManaOverTimeRefundKeepsake"
+      "startingKeepsakeKey": "GoldifyKeepsake"
     },
     "biomes": [
       {
@@ -351,10 +346,7 @@
                   "levelResolutionsByAcquisitionRole": {
                     "self": {
                       "kind": "choice",
-                      "offeredTraitKeys": [
-                        "ApolloWeaponBoon",
-                        "ZeusSpecialBoon"
-                      ],
+                      "offeredTraitKeys": ["ApolloWeaponBoon", "ZeusSpecialBoon"],
                       "selectedTraitKey": "ApolloWeaponBoon"
                     }
                   },
@@ -449,7 +441,7 @@
               },
               "encounters": {
                 "encounterKeyByPhase": {
-                  "Encounter": "NemesisRandomEvent"
+                  "Encounter": "GeneratedF"
                 },
                 "figLeafSkipByPhase": {
                   "Encounter": false
@@ -458,44 +450,16 @@
                   "Encounter": {
                     "athenaTriggerConditionMet": false
                   }
-                },
-                "nemesisRandomEventByPhase": {
-                  "Encounter": {
-                    "kind": "traitTrade",
-                    "traitKey": "ApolloWeaponBoon",
-                    "response": "accept"
-                  }
                 }
               },
               "roomActions": {
                 "order": [
                   {
-                    "kind": "interactEncounter",
-                    "phaseKey": "Encounter"
-                  },
-                  {
-                    "kind": "interactAcquisitionEntry",
-                    "siteKey": "nemesisGenerated:Encounter",
-                    "entryKey": "result"
+                    "kind": "interactIncomingReward",
+                    "producerPoint": "roomRewardPickup",
+                    "acquisitionRole": "self"
                   }
                 ]
-              },
-              "acquisitionSites": {
-                "nemesisGenerated:Encounter": {
-                  "pickupEntries": {
-                    "result": {
-                      "offer": {
-                        "rewardType": "RoomMoneyTripleDrop"
-                      },
-                      "traitOffersByAcquisitionRole": {},
-                      "dispositionByAcquisitionRole": {
-                        "self": {
-                          "kind": "normal"
-                        }
-                      }
-                    }
-                  }
-                }
               },
               "additionalExits": []
             },
@@ -941,13 +905,8 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "LeapLaunchAoETalent",
-                          "LeapAoETalent"
-                        ],
-                        "epicTalentKeys": [
-                          "LeapShieldTalent"
-                        ]
+                        "rareTalentKeys": ["LeapLaunchAoETalent", "LeapAoETalent"],
+                        "epicTalentKeys": ["LeapShieldTalent"]
                       }
                     }
                   },
@@ -2966,13 +2925,8 @@
                         "rarificationActions": [],
                         "hexTree": {
                           "layoutKey": "Lung",
-                          "rareTalentKeys": [
-                            "LaserAoETalent",
-                            "LaserStartAoETalent"
-                          ],
-                          "epicTalentKeys": [
-                            "LaserTripleTalent"
-                          ]
+                          "rareTalentKeys": ["LaserAoETalent", "LaserStartAoETalent"],
+                          "epicTalentKeys": ["LaserTripleTalent"]
                         }
                       }
                     },
@@ -3156,7 +3110,23 @@
                 "gorgonResultByPhase": {},
                 "traitOffersByPhase": {
                   "Encounter": {
-                    "Story_Echo_01": null
+                    "Story_Echo_01": {
+                      "kind": "traits",
+                      "giverKey": "Echo",
+                      "options": [
+                        {
+                          "traitKey": "EchoDoubleShop"
+                        },
+                        {
+                          "traitKey": "DiminishingDodgeBoon"
+                        },
+                        {
+                          "traitKey": "DiminishingHealthAndManaBoon"
+                        }
+                      ],
+                      "selectedOptionKey": "option1",
+                      "rarificationActions": []
+                    }
                   }
                 }
               },
@@ -3165,6 +3135,11 @@
                   {
                     "kind": "interactEncounter",
                     "phaseKey": "Encounter"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "roomExit",
+                    "entryKey": "echoLastReward:Encounter:Story_Echo_01:option1"
                   }
                 ]
               },
@@ -3172,193 +3147,59 @@
             },
             {
               "occurrenceId": "golden-h-combat05",
-              "gameName": "H_Combat05",
+              "gameName": "H_MiniBoss02",
               "state": {
-                "kind": "fieldsCombat",
-                "cages": {
-                  "cage1": {
-                    "offer": {
-                      "rewardType": "RoomMoneyDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
+                "kind": "counted",
+                "reward": {
+                  "offer": {
+                    "rewardType": "Boon",
+                    "payload": {
+                      "kind": "BoonSource",
+                      "source": "ApolloUpgrade"
                     }
                   },
-                  "cage2": {
-                    "offer": {
-                      "rewardType": "Boon",
-                      "payload": {
-                        "kind": "BoonSource",
-                        "source": "ApolloUpgrade"
-                      }
-                    },
-                    "traitOffersByAcquisitionRole": {
-                      "source": {
-                        "kind": "traits",
-                        "giverKey": "Apollo",
-                        "options": [
-                          {
-                            "traitKey": "ApolloWeaponBoon",
-                            "rarity": "Epic"
-                          },
-                          {
-                            "traitKey": "ApolloSprintBoon",
-                            "rarity": "Common"
-                          },
-                          {
-                            "traitKey": "ApolloRetaliateBoon",
-                            "rarity": "Common"
-                          }
-                        ],
-                        "selectedOptionKey": "option3",
-                        "rarificationActions": []
-                      }
-                    },
-                    "dispositionByAcquisitionRole": {
-                      "source": {
-                        "kind": "normal"
-                      }
+                  "traitOffersByAcquisitionRole": {
+                    "source": {
+                      "kind": "traits",
+                      "giverKey": "Apollo",
+                      "options": [
+                        {
+                          "traitKey": "ApolloWeaponBoon",
+                          "rarity": "Epic"
+                        },
+                        {
+                          "traitKey": "ApolloSprintBoon",
+                          "rarity": "Common"
+                        },
+                        {
+                          "traitKey": "ApolloRetaliateBoon",
+                          "rarity": "Common"
+                        }
+                      ],
+                      "selectedOptionKey": "option1",
+                      "rarificationActions": []
                     }
                   },
-                  "cage3": {
-                    "offer": {
-                      "rewardType": "Boon",
-                      "payload": {
-                        "kind": "BoonSource",
-                        "source": "HestiaUpgrade"
-                      }
-                    },
-                    "traitOffersByAcquisitionRole": {
-                      "source": {
-                        "kind": "traits",
-                        "giverKey": "Hestia",
-                        "options": [
-                          {
-                            "traitKey": "HestiaCastBoon",
-                            "rarity": "Rare"
-                          },
-                          {
-                            "traitKey": "HestiaSprintBoon",
-                            "rarity": "Common"
-                          },
-                          {
-                            "traitKey": "OmegaZeroBurnBoon",
-                            "rarity": "Common"
-                          }
-                        ],
-                        "selectedOptionKey": "option1",
-                        "rarificationActions": []
-                      }
-                    },
-                    "dispositionByAcquisitionRole": {
-                      "source": {
-                        "kind": "normal"
-                      }
+                  "dispositionByAcquisitionRole": {
+                    "source": {
+                      "kind": "normal"
                     }
                   }
-                },
-                "optionalRewardCount": 2,
-                "optionalRewards": {
-                  "optional1": {
-                    "offer": {
-                      "rewardType": "RoomMoneyTinyDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  },
-                  "optional2": {
-                    "offer": {
-                      "rewardType": "RoomMoneyTinyDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  },
-                  "optional3": null,
-                  "optional4": null
-                },
-                "spatial": {
-                  "entryStartPointId": 755863,
-                  "cagePointIdBySlot": {
-                    "cage1": 573087,
-                    "cage2": 621494,
-                    "cage3": 621539
-                  },
-                  "optionalPointIdBySlot": {
-                    "optional1": 572849,
-                    "optional2": 621492,
-                    "optional3": 622138,
-                    "optional4": 622142
-                  },
-                  "nemesisPointId": null
                 }
               },
               "encounters": {
-                "encounterKeyByPhase": {
-                  "Passive": "GeneratedH_Passive",
-                  "Cage01": "GeneratedH",
-                  "Cage02": "GeneratedH",
-                  "Cage03": "GeneratedH"
-                },
+                "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {
-                  "Passive": false,
-                  "Cage01": false,
-                  "Cage02": false,
-                  "Cage03": false
+                  "Encounter": false
                 },
-                "gorgonResultByPhase": {
-                  "Passive": {
-                    "athenaTriggerConditionMet": false
-                  },
-                  "Cage01": {
-                    "athenaTriggerConditionMet": false
-                  },
-                  "Cage02": {
-                    "athenaTriggerConditionMet": false
-                  },
-                  "Cage03": {
-                    "athenaTriggerConditionMet": false
-                  }
-                }
+                "gorgonResultByPhase": {}
               },
               "roomActions": {
                 "order": [
                   {
-                    "kind": "completeFieldsCage",
-                    "phaseKey": "Cage03"
-                  },
-                  {
-                    "kind": "interactLocalReward",
-                    "groupKey": "cages",
-                    "slotKey": "cage3"
-                  },
-                  {
-                    "kind": "completeFieldsCage",
-                    "phaseKey": "Cage02"
-                  },
-                  {
-                    "kind": "interactLocalReward",
-                    "groupKey": "cages",
-                    "slotKey": "cage2"
-                  },
-                  {
-                    "kind": "completeFieldsCage",
-                    "phaseKey": "Cage01"
-                  },
-                  {
-                    "kind": "interactLocalReward",
-                    "groupKey": "cages",
-                    "slotKey": "cage1"
+                    "kind": "interactIncomingReward",
+                    "producerPoint": "roomRewardPickup",
+                    "acquisitionRole": "source"
                   }
                 ]
               },
@@ -3761,14 +3602,14 @@
               },
               "selection": {
                 "kind": "normal",
-                "exitKey": "exit1"
+                "exitKey": "exit2"
               }
             },
             {
               "kind": "exit",
               "source": {
                 "kind": "occurrence",
-                "occurrenceId": "golden-h-miniboss01"
+                "occurrenceId": "golden-h-bridge01"
               },
               "normal": {
                 "kind": "batch",
@@ -4118,10 +3959,10 @@
                       }
                     },
                     "PremiumProgress": {
-                      "optionKey": "MaxHealthDropBig",
+                      "optionKey": "ChaosWeaponUpgrade",
                       "reward": {
                         "offer": {
-                          "rewardType": "MaxHealthDropBig"
+                          "rewardType": "ChaosWeaponUpgrade"
                         },
                         "traitOffersByAcquisitionRole": {},
                         "dispositionByAcquisitionRole": {
@@ -4129,6 +3970,11 @@
                             "kind": "normal"
                           }
                         }
+                      },
+                      "anvilResult": {
+                        "kind": "anvilOfFates",
+                        "removedTraitKey": "StaffDoubleAttackTrait",
+                        "addedTraitKeys": ["StaffDashAttackTrait", "StaffTripleShotTrait"]
                       }
                     },
                     "MetaProgress": {
@@ -4160,11 +4006,33 @@
                 "gorgonResultByPhase": {}
               },
               "roomActions": {
-                "order": []
+                "order": [
+                  {
+                    "kind": "interactShopOffer",
+                    "offerKey": "PremiumProgress"
+                  },
+                  {
+                    "kind": "interactAcquisitionEntry",
+                    "siteKey": "roomExit",
+                    "entryKey": "echoDoubleShopReward"
+                  }
+                ]
               },
               "acquisitionSites": {
                 "roomExit": {
-                  "pickupEntries": {}
+                  "pickupEntries": {
+                    "echoDoubleShopReward": {
+                      "offer": {
+                        "rewardType": "ChaosWeaponUpgrade"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    }
+                  }
                 }
               },
               "additionalExits": []

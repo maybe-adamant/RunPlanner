@@ -427,11 +427,6 @@ export type ShopOccurrenceCommand =
       readonly kind: 'ReplaceShopOfferOption';
       readonly offer: ShopOfferAddress;
       readonly value: ShopOptionSelection;
-    }
-  | {
-      readonly kind: 'ReplaceAnvilResult';
-      readonly offer: ShopOfferAddress;
-      readonly value: import('../model').AuthoredAnvilResult | null;
     };
 export type PurgingPoolCommand =
   | {
@@ -643,6 +638,13 @@ export type SeaStarResultCommand = {
   readonly procced: boolean;
 };
 
+/** The exact Anvil of Fates result at the acquisition role that declares that pickup effect. */
+export type AnvilResultCommand = {
+  readonly kind: 'ReplaceAnvilResult';
+  readonly acquisition: AcquisitionRoleAddress;
+  readonly value: import('../model').AuthoredAnvilResult | null;
+};
+
 /** One first Echo outcome edit, atomically replacing a missing or stale replay payload. */
 export type EditEchoReplayCommand = {
   readonly kind: 'EditEchoReplay';
@@ -692,6 +694,7 @@ export type ProjectCommand =
   | LevelResolutionCommand
   | AcquisitionDispositionCommand
   | SeaStarResultCommand
+  | AnvilResultCommand
   | EditEchoReplayCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<

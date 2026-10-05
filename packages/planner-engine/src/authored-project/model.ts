@@ -8,7 +8,7 @@ import type {
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 91 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 92 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -27,8 +27,6 @@ export interface ShopOfferState {
   /** Exact declaration-owned Shop item; null retains an ambiguous migrated selection for repair. */
   readonly optionKey: string | null;
   readonly reward: AuthoredRewardState | null;
-  /** Exact result of a purchased Anvil of Fates. */
-  readonly anvilResult?: AuthoredAnvilResult | null;
 }
 
 export type AuthoredAnvilResult = {
@@ -39,6 +37,8 @@ export type AuthoredAnvilResult = {
 
 export type TraitOffersByAcquisitionRole = Readonly<Record<string, AuthoredTraitOffer | null>>;
 export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, AuthoredLevelResolution>>;
+/** Exact Anvil of Fates result for each role whose concrete acquisition declares that pickup effect. */
+export type AnvilResultsByAcquisitionRole = Readonly<Record<string, AuthoredAnvilResult | null>>;
 
 export type AcquisitionDisposition =
   { readonly kind: 'normal' } | { readonly kind: 'timePiece' } | { readonly kind: 'artificer' };
@@ -47,6 +47,7 @@ export interface AuthoredRewardState {
   readonly offer: ResolvedRewardOffer;
   readonly traitOffersByAcquisitionRole: TraitOffersByAcquisitionRole;
   readonly levelResolutionsByAcquisitionRole?: LevelResolutionsByAcquisitionRole | undefined;
+  readonly anvilResultsByAcquisitionRole?: AnvilResultsByAcquisitionRole | undefined;
   /** Exact player disposition for every declared concrete acquisition role. */
   readonly dispositionByAcquisitionRole: Readonly<Record<string, AcquisitionDisposition>>;
 }

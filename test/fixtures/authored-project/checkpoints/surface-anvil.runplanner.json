@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 91,
+  "schemaVersion": 92,
   "projectId": "surface-4",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -3922,19 +3922,21 @@
                           "rewardType": "ChaosWeaponUpgrade"
                         },
                         "traitOffersByAcquisitionRole": {},
+                        "anvilResultsByAcquisitionRole": {
+                          "self": {
+                            "kind": "anvilOfFates",
+                            "removedTraitKey": "StaffDoubleAttackTrait",
+                            "addedTraitKeys": [
+                              "StaffLongAttackTrait",
+                              "StaffJumpSpecialTrait"
+                            ]
+                          }
+                        },
                         "dispositionByAcquisitionRole": {
                           "self": {
                             "kind": "normal"
                           }
                         }
-                      },
-                      "anvilResult": {
-                        "kind": "anvilOfFates",
-                        "removedTraitKey": "StaffDoubleAttackTrait",
-                        "addedTraitKeys": [
-                          "StaffLongAttackTrait",
-                          "StaffJumpSpecialTrait"
-                        ]
                       }
                     },
                     "MetaProgress": {

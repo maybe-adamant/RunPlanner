@@ -237,7 +237,9 @@ export function settleShopAcquisitionSite(
         ...(offer.levelResolutionsByAcquisitionRole === undefined
           ? {}
           : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
-        ...(offer.anvilResult === undefined ? {} : { anvilResult: offer.anvilResult }),
+        ...(offer.anvilResultsByAcquisitionRole === undefined
+          ? {}
+          : { anvilResultsByAcquisitionRole: offer.anvilResultsByAcquisitionRole }),
         ...(offer.dispositionByAcquisitionRole === undefined
           ? {}
           : { dispositionByAcquisitionRole: offer.dispositionByAcquisitionRole }),
@@ -571,6 +573,9 @@ export function settleShopAcquisitionSite(
                 ...(child.levelResolutionsByAcquisitionRole === undefined
                   ? {}
                   : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
+                ...(child.anvilResultsByAcquisitionRole === undefined
+                  ? {}
+                  : { anvilResultsByAcquisitionRole: child.anvilResultsByAcquisitionRole }),
                 dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
                 ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
                 ...(duplicateActionOwner === undefined

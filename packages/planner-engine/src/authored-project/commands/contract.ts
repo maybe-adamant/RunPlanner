@@ -169,7 +169,6 @@ function commandContractAddress(
     case 'ReplaceShopOffer':
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
-    case 'ReplaceAnvilResult':
       return command.offer;
     case 'PlaceEchoGoldPickup':
       return command.site;
@@ -200,6 +199,7 @@ function commandContractAddress(
       return command.levelResolution;
     case 'ReplaceAcquisitionDisposition':
     case 'ReplaceSeaStarResult':
+    case 'ReplaceAnvilResult':
       return command.acquisition;
   }
 }

@@ -1,15 +1,19 @@
 import { expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   applyProjectHistoryCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
+  createAcquisitionRoleAddress,
+  createRoomActionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
+  roomActionKey,
   semanticAddressKey,
   undoProjectHistory,
 } from '../../../src/authored-project';
@@ -23,7 +27,24 @@ import {
   loadSurfaceAnvilCheckpoint,
   loadSurfaceShrineTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { goldenFBiome, goldenGBiome } from '@run-planner/test-fixtures/underworld';
+import {
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIDuplicateAnvilResult,
+  echoGoldIPrebossShopId,
+  goldenFBiome,
+  goldenGBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  qBiome,
+  qOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
+import {
+  authorLegalTraitOffers,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import { compileEligibleProject, reloadProject } from '../support/authored-checkpoints';
 
 it('exports the settled Ixion Chaos acquisition and reloads its edited selection', () => {
@@ -123,7 +144,7 @@ it('exports the purchased Anvil result and retains its reset through reload and 
   ).toBe(transformation?.owner);
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
     kind: 'ReplaceAnvilResult',
-    offer,
+    acquisition: createAcquisitionRoleAddress(offer, 'self'),
     value: null,
   });
   const reloaded = reloadProject(edited.present);
@@ -139,6 +160,93 @@ it('exports the purchased Anvil result and retains its reset through reload and 
     }),
   );
   expect(undoProjectHistory(edited).present).toBe(saved);
+});
+
+it('exports the Gold duplicate of an Anvil as its own transformation after the first', () => {
+  const shop = compileEligibleProject(
+    createEchoGoldIAnvilDuplicateProject(echoGoldIDuplicateAnvilResult),
+  ).occurrences.find((room) => room.id === echoGoldIPrebossShopId);
+  const transformations = shop?.timeline.transactions.filter(
+    (transaction) => transaction.kind === 'transformation',
+  );
+  expect(transformations).toMatchObject([
+    { transformation: { kind: 'anvilOfFates', removedTraitKey: 'StaffDoubleAttackTrait' } },
+    { transformation: { ...echoGoldIDuplicateAnvilResult } },
+  ]);
+  expect(transformations?.[1]?.owner).toContain('echoDoubleShopReward');
+});
+
+it('exports a Travel Deal refill Anvil as its own transformation', () => {
+  const travelDealSource = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+  const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
+  const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+  const result = {
+    kind: 'anvilOfFates',
+    removedTraitKey: 'StaffDoubleAttackTrait',
+    addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+  } as const;
+  // Hermes moves from Combat05 to Combat09, whose Travel Deal reaches the Q Shop.
+  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat05')),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: travelDealSource,
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(travelDealSource, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: [
+        { traitKey: 'RestockBoon', rarity: 'Epic' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'PremiumProgress'),
+    value: { rewardType: 'MaxHealthDropBig' },
+  });
+  project = replaceTestShopOfferActions(project, catalog, shop, ['PremiumProgress']);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: refill,
+    value: { rewardType: 'ChaosWeaponUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnvilResult',
+    acquisition: createAcquisitionRoleAddress(refill, 'self'),
+    value: result,
+  });
+  const reference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit' as const,
+    entryKey: 'travelDealRefill',
+  };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(qBiome, qOccurrenceIds.preboss, roomActionKey(reference)),
+    reference,
+    index: 1,
+  });
+  project = authorLegalTraitOffers(project);
+  const transactions = compileEligibleProject(project).occurrences.find(
+    (room) => room.id === qOccurrenceIds.preboss,
+  )?.timeline.transactions;
+  const transformation = transactions?.find((transaction) => transaction.kind === 'transformation');
+  expect(transformation).toMatchObject({ transformation: result });
+  expect(transformation?.owner).toContain('travelDealRefill');
+  expect(transactions).not.toContainEqual(
+    expect.objectContaining({ kind: 'acquisition', owner: transformation?.owner }),
+  );
 });
 
 it('exports the acquired World Shop Travel Deal replacement and retains its edited result', () => {

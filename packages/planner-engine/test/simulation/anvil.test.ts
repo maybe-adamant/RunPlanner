@@ -140,13 +140,15 @@ describe('Anvil of Fates acquisition settlement', () => {
         presentsMaterializedScreen: true,
         traitContext: {},
         dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
-        anvilResult: Object.freeze({
-          kind: 'anvilOfFates' as const,
-          removedTraitKey: 'StaffDoubleAttackTrait',
-          addedTraitKeys: Object.freeze([
-            'StaffLongAttackTrait',
-            'StaffJumpSpecialTrait',
-          ]) as readonly [string, string],
+        anvilResultsByAcquisitionRole: Object.freeze({
+          self: Object.freeze({
+            kind: 'anvilOfFates' as const,
+            removedTraitKey: 'StaffDoubleAttackTrait',
+            addedTraitKeys: Object.freeze([
+              'StaffLongAttackTrait',
+              'StaffJumpSpecialTrait',
+            ]) as readonly [string, string],
+          }),
         }),
       }),
       Object.freeze({ ...role, historySequence: 2 }),
@@ -188,7 +190,7 @@ describe('Anvil of Fates acquisition settlement', () => {
         presentsMaterializedScreen: true,
         traitContext: {},
         dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
-        anvilResult: null,
+        anvilResultsByAcquisitionRole: Object.freeze({ self: null }),
       }),
       Object.freeze({ ...role, historySequence: 2 }),
       (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
