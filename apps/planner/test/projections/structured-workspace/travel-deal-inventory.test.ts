@@ -192,3 +192,43 @@ it('replaces the Travel Deal placeholder with editable inventory before outgoing
   ]);
   expect(cleared.workspace.interactions.shopOffers.has(semanticAddressKey(inventory))).toBe(false);
 });
+
+it('repairs an invalid Travel Deal refill from its valid items without a clear choice', async () => {
+  const shopId = goldenGOccurrenceId(5, 1);
+  const room = createOccurrenceAddress(goldenGBiome, shopId);
+  const inventory = createShopOfferAddress(goldenGBiome, shopId, 'travelDealRefill');
+  let project = applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+    kind: 'RemoveExitDecision',
+    decision: createExitDecisionAddress(goldenGBiome, { kind: 'occurrence', occurrenceId: shopId }),
+  });
+  project = replaceTestShopOfferActions(project, catalog, room, []);
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopPurchaseParticipation',
+    offer: createShopOfferAddress(goldenGBiome, shopId, 'Boon'),
+    purchased: true,
+  });
+  project = authorLegalTraitOffers(project);
+  // The refill restocks the first purchase's Boon group, so a non-Boon item is invalid.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceShopOfferOption',
+    offer: inventory,
+    value: {
+      optionKey: 'MetaCardPointsCommonDrop',
+      offer: { rewardType: 'MetaCardPointsCommonDrop' },
+    },
+  });
+  const { workspace } = projectStructuredWorkspaceFixture(project);
+  const interaction = workspace.interactions.shopOffers.get(semanticAddressKey(inventory));
+  if (interaction === undefined) throw new Error('Travel Deal refill has no item picker');
+  const picker = await interaction.load();
+  expect(picker.sections.some((section) => section.kind === 'selectedInvalid')).toBe(true);
+  expect(
+    picker.sections.some((section) =>
+      section.items.some((item) => item.state === 'possible' && item.value !== null),
+    ),
+  ).toBe(true);
+  expect(
+    picker.sections.flatMap((section) => section.items).some((item) => item.value === null),
+  ).toBe(false);
+});
