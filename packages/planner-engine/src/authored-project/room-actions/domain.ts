@@ -26,13 +26,7 @@ import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
 } from '../acquisition/artificer';
-import {
-  hermesShrineDeliverySourceAddress,
-  isDeliveryFlushHost,
-  isSameRoomDelivery,
-  parseHermesShrineDeliveryEntryKey,
-  purchaseFor,
-} from '../hermes-shrine-delivery';
+import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -209,7 +203,6 @@ function phaseRewardAttachment(
 }
 
 function travelDealSourceAction(
-  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): RoomActionReference | undefined {
@@ -230,43 +223,14 @@ function travelDealSourceAction(
   ) {
     return occurrence.roomActions.order.find((candidate) => candidate.kind === 'interactShopOffer');
   }
-  const here = createOccurrenceAddress(biome, occurrence.occurrenceId);
-  if (
-    reference.kind === 'interactAcquisitionEntry' &&
-    reference.siteKey === 'hermesShrineDelivery' &&
-    (() => {
-      const delivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
-      return (
-        delivery?.generationKey === 'travelDealRefill' &&
-        isSameRoomDelivery(hermesShrineDeliverySourceAddress(delivery), here) &&
-        purchaseFor(occurrence.hermesShrine, 'travelDealRefill')?.rushed === true
-      );
-    })()
-  ) {
-    return occurrence.roomActions.order.find((candidate) => {
-      if (
-        candidate.kind !== 'interactAcquisitionEntry' ||
-        candidate.siteKey !== 'hermesShrineDelivery'
-      )
-        return false;
-      const delivery = parseHermesShrineDeliveryEntryKey(candidate.entryKey);
-      return (
-        delivery !== undefined &&
-        delivery.generationKey !== 'travelDealRefill' &&
-        isSameRoomDelivery(hermesShrineDeliverySourceAddress(delivery), here) &&
-        purchaseFor(occurrence.hermesShrine, delivery.generationKey)?.rushed === true
-      );
-    });
-  }
   return undefined;
 }
 
 function travelDealDependencies(
-  biome: BiomeAddress,
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
 ): readonly RoomActionDependency[] {
-  const source = travelDealSourceAction(biome, occurrence, reference);
+  const source = travelDealSourceAction(occurrence, reference);
   return source === undefined
     ? []
     : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
@@ -315,7 +279,7 @@ function baseContribution(
         reference,
         'optional',
         frozen({ kind: 'postOutgoing' }),
-        travelDealDependencies(biome, occurrence, reference),
+        travelDealDependencies(occurrence, reference),
       );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
@@ -571,7 +535,7 @@ function baseContribution(
               ? frozen({ kind: 'postOutgoing' })
               : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
-          ...travelDealDependencies(biome, occurrence, reference),
+          ...travelDealDependencies(occurrence, reference),
           ...(producer === undefined
             ? []
             : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),

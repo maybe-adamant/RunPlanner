@@ -462,10 +462,13 @@ export function surfaceShrineDeliveriesProject(): ProjectDocument {
   return placeDueHermesShrineDeliveries(project);
 }
 
-/** The N/O Shrine delivery route with its rushed O pickup left unranked. */
+/**
+ * The complete delivery route with its rushed O pickup left unranked; the
+ * rushed purchase still realizes its Travel Deal refill.
+ */
 export function surfaceShrineRushedUnrankedProject(): ProjectDocument {
-  const project = createSurfaceNOHermesShrineDeliveryCheckpoint();
-  const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+  const project = surfaceShrineDeliveriesProject();
+  const source = surfaceShrineDeliverySources.oShrine;
   const rushedKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
   const rushed = project.route.biomes
     .find((biome) => biome.biomeKey === oBiome.biomeKey)

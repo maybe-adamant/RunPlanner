@@ -7,7 +7,6 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
-import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
@@ -41,10 +40,7 @@ import {
   type ChronologyWalkState,
   type SeamEvent,
 } from './chronology-walk';
-import {
-  applyAcquisitionPointReachedTransition,
-  type HermesShrineRefillState,
-} from './encounter-acquisition/acquisition-point-reached';
+import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
 import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
@@ -278,10 +274,21 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
     sourceBranches: state.branches,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     purgingPoolAssessment: undefined,
-    hermesShrineRefillState: undefined,
   });
+  const refills = transition.travelDealRefillAssessments;
   return {
-    state: withBranches(state, transition.branches),
+    state:
+      refills === undefined
+        ? withBranches(state, transition.branches)
+        : Object.freeze({
+            ...state,
+            branches: transition.branches,
+            hermesShrineTravelDealRefills: withKeyed(
+              state.hermesShrineTravelDealRefills,
+              semanticAddressKey(event.origin),
+              refills,
+            ),
+          }),
     emissions: acquisitionEmissions(transition, room),
   };
 };
@@ -308,27 +315,6 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
         facts: { nodes: [{ owner: poolRow.owner, included: true }] },
       });
   }
-  const deliverySource =
-    event.siteKey === 'hermesShrineDelivery' && event.entryKey !== undefined
-      ? parseHermesShrineDeliveryEntryKey(event.entryKey)
-      : undefined;
-  const shrineKey =
-    deliverySource === undefined
-      ? semanticAddressKey(event.origin)
-      : semanticAddressKey({
-          kind: 'occurrence' as const,
-          routeKey: deliverySource.routeKey,
-          biomeKey: deliverySource.biomeKey,
-          occurrenceId: deliverySource.sourceOccurrenceId,
-        });
-  const refillState: HermesShrineRefillState | undefined =
-    deliverySource === undefined
-      ? undefined
-      : Object.freeze({
-          firstRushedInitialGeneration: state.firstRushedInitialGenerationByShrine.has(shrineKey),
-          refillAssessments: state.hermesShrineTravelDealRefills.get(shrineKey),
-          refillSupported: state.hermesShrineTravelDealRefillValid.get(shrineKey),
-        });
   const derivedSite =
     event.siteKey === undefined || room === undefined
       ? undefined
@@ -352,8 +338,7 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     roomView: context.views.get(semanticAddressKey(event.origin)),
     sourceBranches: state.branches,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
-    purgingPoolAssessment: state.purgingPoolAssessments.get(shrineKey),
-    hermesShrineRefillState: refillState,
+    purgingPoolAssessment: state.purgingPoolAssessments.get(semanticAddressKey(event.origin)),
     derivedAcquisitionEntryFrontiers: derivedFrontiers,
     ...(derivedCapability === undefined
       ? {}
@@ -362,30 +347,8 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
   emissions.push(...acquisitionEmissions(transition, room));
   if (transition.authoredSiteSettlement !== undefined && room !== undefined)
     emissions.push(...siteSettlementEmissions(transition.authoredSiteSettlement, room.origin));
-  const next = transition.hermesShrineRefillState;
   return {
-    state:
-      next === undefined
-        ? withBranches(state, transition.branches)
-        : Object.freeze({
-            ...state,
-            branches: transition.branches,
-            firstRushedInitialGenerationByShrine: withMember(
-              state.firstRushedInitialGenerationByShrine,
-              shrineKey,
-              next.firstRushedInitialGeneration,
-            ),
-            hermesShrineTravelDealRefills: withKeyed(
-              state.hermesShrineTravelDealRefills,
-              shrineKey,
-              next.refillAssessments,
-            ),
-            hermesShrineTravelDealRefillValid: withKeyed(
-              state.hermesShrineTravelDealRefillValid,
-              shrineKey,
-              next.refillSupported,
-            ),
-          }),
+    state: withBranches(state, transition.branches),
     emissions,
   };
 };

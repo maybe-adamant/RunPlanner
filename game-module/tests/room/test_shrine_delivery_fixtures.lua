@@ -124,7 +124,7 @@ function TestShrineDeliveryFixtures.testFourthBiomeFlushBindsAtPrebossEntryAndNo
     lu.assertNil(session.firstMismatch)
 end
 
-function TestShrineDeliveryFixtures.testRushedRankedPickupIsCollectedInThePurchaseRoomAfterItsRefill()
+function TestShrineDeliveryFixtures.testRushedRankedPickupIsCollectedInThePurchaseRoomWithItsRefill()
     local plan = loadPlan("surface-shrine-deliveries")
     local id = "surface-o-combat07"
     local sourceKey = sourceKeyOf(plan, id, "initial:first")
@@ -134,7 +134,7 @@ function TestShrineDeliveryFixtures.testRushedRankedPickupIsCollectedInThePurcha
     lu.assertTrue(room.openWindow(session, "roomEntered"))
     completeWheel(session)
     lu.assertTrue(room.openWindow(session, "postOutgoing"))
-    -- The published order realizes the Travel Deal refill before the rushed item is taken.
+    -- The refill belongs to the rushed purchase; taking the rushed item is independent of it.
     local refill = assert(room.resolve(session, bindings.resolve, { kind = "travelDealRefill", carrier = "hermesShrine" }))
     lu.assertTrue(room.complete(session, refill))
     collectDelivery(session, sourceKey, { Name = "HealBigDrop", __runPlannerShrine = true,
@@ -161,9 +161,18 @@ function TestShrineDeliveryFixtures.testRushedUnrankedPickupCanBeLeftBehindWitho
     local handle, errorValue = room.resolve(session, bindings.resolve, deliveryContact(sourceKey))
     lu.assertNil(handle)
     lu.assertNil(errorValue)
+    -- The rushed purchase still realizes its Travel Deal refill without the pickup.
+    local refill = assert(room.resolve(session, bindings.resolve, { kind = "travelDealRefill", carrier = "hermesShrine" }))
+    local replacement = assert(room.peek(session, refill)).transaction.refill.replacement
+    lu.assertEquals(replacement.optionKey, "ArmorBoost")
+    lu.assertTrue(room.complete(session, refill))
     lu.assertTrue(room.close(session, function() return true end))
     lu.assertNil(session.firstMismatch)
     lu.assertNil(session.firstFault)
+
+    local host = newSession(plan, "surface-o-combat01")
+    local delivery = assert(room.resolve(host, bindings.resolve, deliveryContact(replacement.deliverySourceKey)))
+    lu.assertEquals(assert(room.peek(host, delivery)).transaction.reward.rewardType, "ArmorBoost")
 end
 
 function TestShrineDeliveryFixtures.testTravelDealRefillDecodesOnTheShrineCarrierAndBindsItsLaterDelivery()

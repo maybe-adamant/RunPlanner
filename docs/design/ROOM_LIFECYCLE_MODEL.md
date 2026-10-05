@@ -89,14 +89,14 @@ no reward seam only advance the branches to their sequence.
 | Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                 |
 | Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                            |
 | Offer point materialized, acquired; role advanced       | Offer materialization and reached-offer settlement.                                                                                   |
-| Acquisition point reached                               | Acquisition settlement, Purging Pool sale nodes and the Shrine Travel Deal refill state.                                              |
+| Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                   |
 | Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates. |
 | Room exited                                             | Room exit and its Run State capture.                                                                                                  |
 | Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                      |
 | Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                     |
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                         |
 | Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                         |
-| Shrine deliveries scheduled (Room Action)               | Hermes Shrine delivery settlement.                                                                                                    |
+| Shrine deliveries scheduled (Room Action)               | Hermes Shrine delivery scheduling and the Travel Deal refill realization.                                                             |
 
 Hub departure is a post-step hook on the same table: a Hub exit or a visit's
 return records a departure, and a later fountain use in that interval replaces
@@ -1081,7 +1081,11 @@ the candidate set.
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A rushed Shrine purchase, including a Travel Deal replacement,
 ranks one optional same-room pickup at the post-outgoing action rank; the author
-may remove it, and an item left behind vanishes at room exit. A delayed
+may remove it, and an item left behind vanishes at room exit. The Travel Deal
+refill is caused by the first rushed purchase itself when the Shrine screen
+closes, so it is realized when the purchases are scheduled and does not depend
+on collecting the rushed item. Purchase order is not authored; the planner
+treats rushed purchases in slot order. A delayed
 purchase is scheduled at source cleanup without consuming a delay use and
 derives a later required pickup at the reached encounter-end host. At the
 Preboss of the fourth entered biome, entry expires every still-pending delivery

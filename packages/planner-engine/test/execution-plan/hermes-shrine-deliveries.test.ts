@@ -159,7 +159,7 @@ describe('surface-shrine-deliveries execution fixture', () => {
     );
   });
 
-  it('publishes the Travel Deal refill on the Shrine carrier before its rushed pickup', () => {
+  it('publishes the Travel Deal refill on the Shrine carrier independently of its rushed pickup', () => {
     const shrine = plan.occurrences.find((occurrence) => occurrence.id === oShrine.occurrenceId);
     const refill = shrine?.timeline.transactions.find(
       (transaction) => transaction.kind === 'travelDealRefill',
@@ -186,10 +186,14 @@ describe('surface-shrine-deliveries execution fixture', () => {
       (transaction) =>
         transaction.kind === 'acquisition' && transaction.hermesShrineSourceKey === rushedKey,
     );
-    expect(shrine?.timeline.dependencies).toContainEqual({
-      owner: pickup?.owner,
-      afterOwner: refill?.owner,
-    });
+    expect(pickup).toBeDefined();
+    // The rushed purchase realizes the refill; collecting its item is unordered.
+    expect(
+      shrine?.timeline.dependencies.filter(
+        (dependency) =>
+          dependency.owner === refill?.owner || dependency.afterOwner === refill?.owner,
+      ),
+    ).toEqual([]);
     expect(shrine?.timeline.obligations).toContainEqual({
       owner: refill?.owner,
       checkpoint: 'roomExit',
@@ -210,39 +214,60 @@ describe('surface-shrine-deliveries execution fixture', () => {
 });
 
 describe('surface-shrine-rushed-unranked execution fixture', () => {
-  const source = createOccurrenceAddress(
-    createBiomeAddress('Surface', 'O'),
-    oOccurrenceIds.combat07,
-  );
-  const rushedKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+  const { nSideRoom, oShrine, pPostboss } = surfaceShrineDeliverySources;
+  const rushedKey = hermesShrineDeliveryEntryKey(oShrine, 'initial:first');
+  const refillKey = hermesShrineDeliveryEntryKey(oShrine, 'travelDealRefill');
   const plan = compile(surfaceShrineRushedUnrankedProject());
 
-  it('publishes the rushed purchase without any pickup row', () => {
-    expect(shrineOffers(plan, source.occurrenceId)[0]).toEqual(
+  it('publishes the rushed purchase without its pickup and still realizes its refill', () => {
+    expect(shrineOffers(plan, oShrine.occurrenceId)[0]).toEqual(
       expect.objectContaining({
         generationKey: 'initial:first',
         deliverySourceKey: rushedKey,
         purchase: { roomDelay: 2, rushed: true },
       }),
     );
-    expect(deliveryRows(plan)).toEqual([
+    expect(deliveryRows(plan).map(({ host, sourceKey }) => ({ host, sourceKey }))).toEqual([
       {
-        host: oOccurrenceIds.devotion,
-        sourceKey: hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
-        rewardType: 'MaxHealthDrop',
-        window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+        host: oOccurrenceIds.combat04,
+        sourceKey: hermesShrineDeliveryEntryKey(nSideRoom, 'initial:secondLeft'),
+      },
+      {
+        host: oOccurrenceIds.combat01,
+        sourceKey: hermesShrineDeliveryEntryKey(nSideRoom, 'initial:secondRight'),
+      },
+      { host: oOccurrenceIds.combat01, sourceKey: refillKey },
+      {
+        host: qOccurrenceIds.preboss,
+        sourceKey: hermesShrineDeliveryEntryKey(pPostboss, 'initial:secondRight'),
       },
     ]);
-    // The abandoned item is due in its own room and vanishes with it instead of lingering.
-    expect(pendingDeliveriesAtExit(plan, source.occurrenceId)).toEqual([
-      { sourceKey: rushedKey, remainingUses: 2, dueOccurrenceId: source.occurrenceId },
+    const shrine = plan.occurrences.find((occurrence) => occurrence.id === oShrine.occurrenceId);
+    const refill = shrine?.timeline.transactions.find(
+      (transaction) => transaction.kind === 'travelDealRefill',
+    );
+    expect(refill).toEqual(
       expect.objectContaining({
-        sourceKey: hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
+        window: { kind: 'postOutgoing' },
+        refill: expect.objectContaining({
+          carrier: 'hermesShrine',
+          source: { generationKey: 'initial:first', slotIndex: 1 },
+        }),
       }),
-    ]);
+    );
+    expect(shrine?.timeline.obligations).toContainEqual({
+      owner: refill?.owner,
+      checkpoint: 'roomExit',
+    });
+    // The abandoned item is due in its own room and vanishes with it instead of lingering.
+    expect(pendingDeliveriesAtExit(plan, oShrine.occurrenceId)).toContainEqual({
+      sourceKey: rushedKey,
+      remainingUses: 2,
+      dueOccurrenceId: oShrine.occurrenceId,
+    });
     expect(
-      pendingDeliveriesAtExit(plan, oOccurrenceIds.combat01).map((row) => row.sourceKey),
-    ).toEqual([hermesShrineDeliveryEntryKey(source, 'initial:secondLeft')]);
+      pendingDeliveriesAtExit(plan, oOccurrenceIds.combat04).map((row) => row.sourceKey),
+    ).not.toContain(rushedKey);
   });
 });
 

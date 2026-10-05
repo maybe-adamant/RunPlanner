@@ -845,6 +845,11 @@ profile's slot counts. It is a paid replacement derived after the first accepted
 paid acquisition when Travel Deal was already equipped. Its exact option is
 validated against the captured source group and post-trigger generation context;
 structural commands and decoding use only the host profile's option domain.
+A Shrine of Hermes refill is caused by the first rushed (speed-up) initial
+purchase when it closes the Shrine screen, not by collecting the rushed item:
+it is realized with the purchase's scheduling, and removing the optional rushed
+pickup leaves the refill and its own delivery intact. Purchase order is not
+authored, so the first rushed purchase is taken in slot order.
 Gold Gold Gold is a free pickup under the `roomExit` acquisition site, derived from the first accepted
 paid non-`SpellDrop` purchase while its one-use Echo trait is equipped.
 

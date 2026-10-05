@@ -432,7 +432,6 @@ export function hermesShrineTravelDealRefill(
 ):
   | {
       readonly owner: string;
-      readonly sourceOwner: string;
       readonly refill: Extract<ExecutionTravelDealRefill, { readonly carrier: 'hermesShrine' }>;
     }
   | undefined {
@@ -477,20 +476,6 @@ export function hermesShrineTravelDealRefill(
       'initial:secondRight': 3,
     } as const
   )[sourceGenerationKey];
-  const sourceEntryKey = hermesShrineDeliveryEntryKey(room.origin, sourceGenerationKey);
-  const sourceAction = room.roomActionRoster.rows.find(
-    (candidate) =>
-      !candidate.stale &&
-      candidate.rank !== null &&
-      candidate.reference.kind === 'interactAcquisitionEntry' &&
-      candidate.reference.siteKey === 'hermesShrineDelivery' &&
-      candidate.reference.entryKey === sourceEntryKey,
-  );
-  if (sourceAction === undefined)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} lacks Shrine Travel Deal source action`,
-    );
   return Object.freeze({
     owner: semanticAddressKey(
       createTravelDealRefillRealizationAddress(
@@ -498,7 +483,6 @@ export function hermesShrineTravelDealRefill(
         room.occurrenceId,
       ),
     ),
-    sourceOwner: semanticAddressKey(sourceAction.owner),
     refill: Object.freeze({
       carrier: 'hermesShrine' as const,
       source: Object.freeze({ generationKey: sourceGenerationKey, slotIndex }),
