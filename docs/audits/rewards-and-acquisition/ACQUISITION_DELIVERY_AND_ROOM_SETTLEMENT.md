@@ -813,7 +813,10 @@ one generic trait-outcome mechanism:
 - Gold Gold Gold equips `EchoDoubleShop`, whose one remaining use is itself the
   pending state. During later World Shop settlement, the first eligible
   purchased entry consumes that equipped trait and creates a separate free
-  world object. `SpellDrop` is skipped without consuming the use. Creating the
+  world object: `DuplicateWorldShopItem` spawns the same item as a pickup
+  (`StoreLogic.lua:361-372`). `SpellDrop` is skipped without consuming the use.
+  A duplicated `ChaosWeaponUpgrade` is therefore a second Anvil of Fates use
+  with its own removed and added Hammers. Creating the
   object does not interact with it: the player may make other Shop purchases or
   pickups before taking the duplicate. A recreated loot source owns the offer
   generated when `CreateLoot` materializes it; a recreated consumable owns its
@@ -834,7 +837,9 @@ its acquisition roles, so later purchases and shops no longer observe the
 effect. The materialized duplicate owns its exact child state independently of
 participation and joins the existing site order only when picked up. A rejected
 purchase leaves Gold armed, while invalid nested source detail after accepted
-removal does not undo consumption or materialization.
+removal does not undo consumption or materialization. The planner authors a
+duplicated Anvil's result on the duplicate's own reward and publishes it as a
+separate Anvil transformation at that pickup.
 
 Infernal Contract and Travel Deal use the same delivered settlement seam
 without sharing Gold's timing policy. Contract contributes a fixed free pickup
