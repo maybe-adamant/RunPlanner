@@ -294,7 +294,10 @@ export function settleShopAcquisitionSite(
     traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
     for (const settledEntry of settled.entries)
       recordRoles(offer.offerKey, settledEntry.acquisitionRoles);
-    if (settled.branches.length !== 1) return false;
+    if (settled.branches.length !== 1) {
+      if (settled.findingEmissions.length > 0) entryPurchaseFailureRecorded = true;
+      return false;
+    }
     execution.candidate = settled.branches[0]!;
     return true;
   };
