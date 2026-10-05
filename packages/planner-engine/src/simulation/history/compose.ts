@@ -822,8 +822,11 @@ function composeBiomeHistoryPrefixResult(
               }
               appendGeneratedTargets(outgoingWriter, current.origin, frontier.targets);
             },
-            stopAfterOutgoing: true,
-            ...postOutgoingAcquisitionOption(catalog, current),
+            // A block inside the selected target follows the source room's
+            // commit and exit; only the target's own lifecycle is withheld.
+            ...(frontier.sourceExited === true
+              ? {}
+              : { stopAfterOutgoing: true, ...postOutgoingAcquisitionOption(catalog, current) }),
           });
         }
       } else if (snapshot.frontier?.kind === 'hubBoard') {

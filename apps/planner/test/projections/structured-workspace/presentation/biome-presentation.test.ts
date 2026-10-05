@@ -5,6 +5,7 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
+  createEncounterPhaseAddress,
   createHubDecisionAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -34,6 +35,8 @@ import {
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
+  pBiome,
+  surfaceEncounterShowcaseProject,
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
 import { workspaceDecisionOwnedMarkers } from '@planner/projections/structured-workspace/navigation/marker-ownership';
@@ -155,6 +158,35 @@ describe('structured workspace biome presentation', () => {
           node.room.runStateByTab.doors.owner.checkpoint.kind === 'beforeRoomExit',
       ),
     ).toBe(true);
+  });
+
+  it('keeps the source room before-exit Run State when its next room blocks', () => {
+    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        pBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-4-1-p_combat07') },
+        'Intro',
+      ),
+      decisionKey: 'generatedComposition',
+      value: {
+        kind: 'generated',
+        baseRoll: 9999,
+        waveCount: 1,
+        waves: [
+          { waveIndex: 1, typeKeys: ['SentryBot', 'Dragon'], allocations: { SentryBot: 206 } },
+        ],
+      },
+    });
+    const source = present(project, 'Surface', 'P').presentation.biome.nodes.find(
+      (node): node is WorkspaceOccurrenceWorkbenchNode =>
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === createOccurrenceId('surface-p-3-1-p_combat04'),
+    );
+    expect(source?.room.runStateByTab.doors).toMatchObject({
+      availability: 'available',
+      owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'beforeRoomExit' } },
+    });
   });
 
   it('keeps Run State on N outer decisions and binds the completed-Hub handoff to visible Preboss', () => {

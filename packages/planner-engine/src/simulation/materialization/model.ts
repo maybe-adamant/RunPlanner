@@ -531,6 +531,8 @@ export interface MaterializedExitDecisionFrontier {
   readonly batchState?: CanonicalBatchState;
   readonly selectedExitKey: string | null;
   readonly selectedOrigin: ExitSelectionAddress;
+  /** The source room has exited after its complete batch; only the target is withheld. */
+  readonly sourceExited?: true;
   /**
    * The current bounded Hub data has two exact empty envelopes whose source
    * room still completes its lifecycle despite the absent ordinary target:

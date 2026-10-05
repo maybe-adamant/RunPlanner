@@ -140,7 +140,6 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       const capability = forcedChaosOccurrenceKeys.has(semanticAddressKey(source.origin))
         ? Object.freeze({ placementEligible: true, failedConditions: Object.freeze([]) })
         : assessChaosPlacement(
-            catalog,
             layout,
             source,
             sourceDeclaration,
@@ -156,7 +155,6 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     }
     if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'zagreusContract')) {
       const capability = assessZagreusContractPlacement(
-        catalog,
         source,
         sourceDeclaration,
         parentHistory,
