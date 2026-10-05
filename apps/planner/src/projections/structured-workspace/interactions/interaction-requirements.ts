@@ -172,7 +172,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
         }[];
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
-        readonly rushed: boolean;
         readonly offerInteractionKey: string;
         readonly purchaseInteractionKey: string;
       }[];

@@ -22,6 +22,11 @@ import type { WorkspaceRewardControl } from './rewards';
 import type { WorkspaceEncounterPhase, WorkspaceRewardWheelDescriptor } from './locals';
 import type { NemesisRandomEventAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceCommandIntent, WorkspaceInteractionChoice } from '../contract';
+import type { WorkspaceShopSupplementalDescriptor } from './commerce';
+import type {
+  WorkspaceHermesShrineTravelDealRefill,
+  WorkspaceStygianWellTravelDealRefill,
+} from './features';
 
 /** Atomic exact-set authoring at one reached Boss-defeated occurrence seam. */
 export interface WorkspaceJudgmentArcanaInteraction {
@@ -67,7 +72,7 @@ export interface WorkspaceRoomActionRow {
   readonly reference: RoomActionReference;
   readonly participation: 'required' | 'optional';
   readonly requiredScope?: import('@run-planner/engine/simulation').RoomActionRow['requiredScope'];
-  /** Participation is authored by a room Overview control; Timeline owns ordering only. */
+  /** Participation is authored by an inventory control (Overview or a Travel Deal line). */
   readonly participationOwnedByOverview: boolean;
   /** Engine-published exact materialization command for one derived acquisition entry. */
   readonly placement?: WorkspaceCommandIntent<
@@ -118,8 +123,35 @@ export interface WorkspaceRoomActionRow {
     readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
     readonly interactionKey: string;
   };
+  /** Rush authored on this Shrine purchase action. */
+  readonly hermesShrinePurchase?: {
+    readonly purchaseInteractionKey: string;
+    readonly rushed: boolean;
+  };
+  /** Refill authoring under the purchase that triggers Travel Deal. */
+  readonly travelDealLine?: WorkspaceTravelDealLine;
+  /** Removes a purchased refill that no Travel Deal line currently hosts. */
+  readonly refillPurchaseRemoval?: WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      {
+        readonly kind: 'SetHermesShrinePurchase' | 'SetStygianWellPurchase' | 'RemoveRoomAction';
+      }
+    >
+  >;
   readonly executable: boolean;
 }
+
+export type WorkspaceTravelDealLine =
+  | {
+      readonly kind: 'worldShop';
+      readonly offer: Extract<
+        WorkspaceShopSupplementalDescriptor,
+        { readonly kind: 'travelDealRefill' }
+      >;
+    }
+  | { readonly kind: 'hermesShrine'; readonly refill: WorkspaceHermesShrineTravelDealRefill }
+  | { readonly kind: 'stygianWell'; readonly refill: WorkspaceStygianWellTravelDealRefill };
 
 export interface WorkspaceRoomActions {
   readonly timeline: WorkspaceRoomLifecycleTimeline;

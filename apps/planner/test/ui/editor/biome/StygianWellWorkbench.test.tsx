@@ -6,9 +6,10 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomFeatureAddress,
+  semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -70,6 +71,10 @@ function openOverview(): void {
   fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
 }
 
+function openTimeline(): void {
+  fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+}
+
 describe('Stygian Well workbench', () => {
   it('authors ordinary presence separately from interaction', async () => {
     const project = loadUnderworldFGProject();
@@ -108,7 +113,7 @@ describe('Stygian Well workbench', () => {
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });
 
-  it('keeps an inactive purchased refill repairable and hides it after clearing Purchased', async () => {
+  it('removes a refill purchased without Travel Deal from its own timeline row', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
     let project = applyProjectCommand(authoredWell(), catalog, {
       kind: 'ReplaceStygianWellTravelDealRefill',
@@ -124,21 +129,32 @@ describe('Stygian Well workbench', () => {
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
     openOverview();
-    const picker = screen.getByRole('button', { name: 'Stygian Well Travel Deal Item' });
-    await view.user.click(picker);
-    const choice = await screen.findByRole('option', { name: /Splintered Shield/ });
-    expect(picker.getAttribute('data-candidate-state')).toBe('impossible');
-    expect(screen.getByText('Current selection')).toBeTruthy();
-    expect(choice.getAttribute('data-candidate-state')).toBe('impossible');
-    expect(choice.getAttribute('aria-disabled')).toBe('true');
-    await view.user.keyboard('{Escape}');
-    await view.user.click(
-      screen.getByRole('checkbox', { name: 'Purchased Stygian Well Travel Deal' }),
-    );
     expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
+    // The refill's finding lands on its purchase row while no line hosts the refill.
+    const refillOffer = createRoomFeatureAddress(owner, {
+      kind: 'stygianWellOffer',
+      generationKey: 'travelDealRefill',
+    });
+    expect(
+      workspaceProjection(view.application).focusByOwner.get(semanticAddressKey(refillOffer)),
+    ).toMatchObject({ roomTab: 'actions', focusAddress: { kind: 'roomAction' } });
+
+    openTimeline();
+    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    const refillRow = screen.getByText(/· Travel Deal Offer$/).closest('li')!;
+    const remove = within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ });
+    expect(remove).toHaveProperty('disabled', false);
+    await view.user.click(remove);
+    const well = view.application.store
+      .getState()
+      .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === postbossId,
+      )?.stygianWell;
+    expect(well?.purchasedGenerationKeys ?? []).not.toContain('travelDealRefill');
+    expect(well?.travelDealRefillKey).toBe('ArmorBoostStore');
   });
 
-  it('hides a dormant refill when the last initial purchase is cleared and restores it on purchase', async () => {
+  it('authors the refill under the first purchase row and hides it when that purchase is cleared', async () => {
     const owner = createOccurrenceAddress(goldenFBiome, postbossId);
     let project = loadUnderworldFStygianWellCheckpoint();
     for (const generationKey of ['initial:secondRight', 'travelDealRefill'] as const) {
@@ -156,12 +172,22 @@ describe('Stygian Well workbench', () => {
       occurrence,
     );
     openOverview();
-    const refillLabel = screen.getByRole('button', {
+    expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
+    openTimeline();
+    const line = screen.getByRole('group', { name: 'Travel Deal' });
+    expect(line.closest('li')?.textContent).toContain('Slot 2');
+    const refillLabel = within(line).getByRole('button', {
       name: 'Stygian Well Travel Deal Item',
     }).textContent;
+    expect(
+      within(line).getByRole('checkbox', { name: 'Purchased Stygian Well Travel Deal' }),
+    ).toHaveProperty('checked', false);
+
+    openOverview();
     const purchase = screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' });
     await view.user.click(purchase);
-    expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
+    openTimeline();
+    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
     expect(
       view.application.store
         .getState()
@@ -169,10 +195,14 @@ describe('Stygian Well workbench', () => {
           (room) => room.occurrenceId === postbossId,
         )?.stygianWell?.travelDealRefillKey,
     ).toBe('ExtendedShopTrait');
-    await view.user.click(purchase);
-    expect(screen.getByRole('button', { name: 'Stygian Well Travel Deal Item' }).textContent).toBe(
-      refillLabel,
-    );
+    openOverview();
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' }));
+    openTimeline();
+    expect(
+      within(screen.getByRole('group', { name: 'Travel Deal' })).getByRole('button', {
+        name: 'Stygian Well Travel Deal Item',
+      }).textContent,
+    ).toBe(refillLabel);
   });
 
   it.each([

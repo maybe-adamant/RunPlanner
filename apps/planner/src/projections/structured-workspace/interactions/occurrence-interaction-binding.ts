@@ -1172,7 +1172,6 @@ export function bindOccurrenceLocalInteractions(
                     purchase,
                   }),
                 }),
-              rushed: slot.rushed,
               rushIntentFor: (rushed: boolean) =>
                 Object.freeze({
                   command: Object.freeze({

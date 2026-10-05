@@ -1685,6 +1685,18 @@
   grid-column: 1 / -1;
 }
 
+/* The Travel Deal refill is a second line spanning its triggering purchase row. */
+.room-action-row > .room-action-travel-deal {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding: 3px 0 0 28px;
+  border-top: 1px dashed rgb(174 152 202 / 24%);
+}
+
+.room-action-travel-deal > .shop-family-offer-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 @container timeline-list (max-width: 52rem) {
   .room-action-row,
   .room-action-row[data-inline-layout='sentence'] {

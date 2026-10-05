@@ -18,6 +18,8 @@ const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
+type StygianWellFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }>;
+
 type InventoryFeature = Extract<
   WorkspaceRoomFeature,
   { readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' }
@@ -253,28 +255,6 @@ export function RoomInventoryPanel({
                 />
               );
             })}
-            {feature.travelDealRefill === undefined
-              ? null
-              : (() => {
-                  const refill = feature.travelDealRefill;
-                  return (
-                    <HermesShrineSlotEditor
-                      label="Travel Deal"
-                      marker={refill.marker}
-                      {...(refill.rewardLabel === undefined
-                        ? {}
-                        : { rewardLabel: refill.rewardLabel })}
-                      offer={requireWorkspaceInteraction(
-                        interactions.hermesShrineOffers,
-                        refill.offerInteractionKey,
-                      )}
-                      purchase={requireWorkspaceInteraction(
-                        interactions.hermesShrinePurchases,
-                        refill.purchaseInteractionKey,
-                      )}
-                    />
-                  );
-                })()}
           </fieldset>
         );
       })();
@@ -315,15 +295,13 @@ function PurgingPoolTraitPicker({
   );
 }
 
-function StygianWellSlotEditor({
+/** One Well inventory slot: item and purchase. */
+export function StygianWellSlotEditor({
   slot,
   interactions,
 }: {
-  readonly slot: Extract<
-    import('@planner/projections/structured-workspace').WorkspaceRoomFeature,
-    { readonly kind: 'stygianWell' }
-  >['slots'][number];
-  readonly interactions: import('@planner/projections/structured-workspace').WorkspaceInteractionCatalog;
+  readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
+  readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -358,6 +336,7 @@ function StygianWellSlotEditor({
           aria-label={`Purchased Stygian Well ${slot.label}`}
           checked={slot.purchased}
           disabled={slot.itemKey === null}
+          {...(slot.itemKey === null ? { title: 'Choose the item first.' } : {})}
           onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
           type="checkbox"
         />
@@ -367,7 +346,8 @@ function StygianWellSlotEditor({
   );
 }
 
-function HermesShrineSlotEditor({
+/** One Shrine inventory slot: item, delivery delay and purchase. */
+export function HermesShrineSlotEditor({
   label,
   marker,
   rewardLabel,
@@ -401,24 +381,13 @@ function HermesShrineSlotEditor({
         placeholder="Unresolved"
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
-      <label className="shop-family-participation">
-        <input
-          aria-label={`Purchased Hermes Shrine ${label}`}
-          checked={current !== null}
-          disabled={offer.rewardType === null}
-          onChange={(event) =>
-            executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
-          }
-          type="checkbox"
-        />
-        Purchased
-      </label>
       <div className="hermes-shrine-purchase-details">
         <label className="hermes-shrine-delay-control">
           Delay
           <select
             aria-label={`Hermes Shrine ${label} delivery delay`}
             disabled={current === null}
+            {...(current === null ? { title: 'Purchase the item first.' } : {})}
             onChange={(event) => {
               if (current === null) return;
               executeIntent(
@@ -442,20 +411,20 @@ function HermesShrineSlotEditor({
             ))}
           </select>
         </label>
-        <label className="shop-family-participation">
-          <input
-            aria-label={`Rush Hermes Shrine ${label}`}
-            checked={purchase.rushed}
-            disabled={current === null}
-            onChange={(event) => {
-              if (current === null) return;
-              executeIntent(purchase.rushIntentFor(event.target.checked));
-            }}
-            type="checkbox"
-          />
-          Rushed
-        </label>
       </div>
+      <label className="shop-family-participation">
+        <input
+          aria-label={`Purchased Hermes Shrine ${label}`}
+          checked={current !== null}
+          disabled={offer.rewardType === null}
+          {...(offer.rewardType === null ? { title: 'Choose the item first.' } : {})}
+          onChange={(event) =>
+            executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
+          }
+          type="checkbox"
+        />
+        Purchased
+      </label>
     </div>
   );
 }

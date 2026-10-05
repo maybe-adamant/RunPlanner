@@ -249,11 +249,7 @@ export function DirectRoomWorkbench({
       if (view === 'overview') {
         return (
           <>
-            <ShopWorkbench
-              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-              interactions={interactions}
-              room={workbench.shop}
-            />
+            <ShopWorkbench interactions={interactions} room={workbench.shop} />
             {renderFeatures()}
             {renderEncounterStructure()}
           </>

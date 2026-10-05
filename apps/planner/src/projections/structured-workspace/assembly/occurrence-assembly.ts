@@ -352,6 +352,28 @@ export function assembleWorkspaceOccurrence(
   );
   const { encounterPhases, roomLocal, rewardControls: allRewardControls } = rewardLocal;
   const offerRewardRewardsForRoom = offerRewardRewards(input, room, roomLocal, allRewardControls);
+  const featureAssembly = assembleOccurrenceFeatures(
+    {
+      biome: input.biome,
+      catalog: input.catalog,
+      facts: input.facts,
+      ...(input.hermesShrineAssessment === undefined
+        ? {}
+        : { hermesShrineAssessment: input.hermesShrineAssessment }),
+      markerDestinations: input.markerDestinations,
+      occurrence: input.occurrence,
+      ...(input.purgingPoolAssessment === undefined
+        ? {}
+        : { purgingPoolAssessment: input.purgingPoolAssessment }),
+      ...(input.stygianWellAssessment === undefined
+        ? {}
+        : { stygianWellAssessment: input.stygianWellAssessment }),
+    },
+    room,
+    encounterPhases,
+    roomLocal,
+  );
+  const { features, chaosSpawn, zagreusSpawn } = featureAssembly;
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
     biome: input.biome,
@@ -378,6 +400,7 @@ export function assembleWorkspaceOccurrence(
       : { stygianWellAssessment: input.stygianWellAssessment }),
     controls: allRewardControls,
     encounterPhases,
+    features,
     roomLabel: room.label,
     roomLocal,
   });
@@ -489,28 +512,6 @@ export function assembleWorkspaceOccurrence(
             spawned: occurrence.eris !== undefined,
           });
         })();
-  const featureAssembly = assembleOccurrenceFeatures(
-    {
-      biome: input.biome,
-      catalog: input.catalog,
-      facts: input.facts,
-      ...(input.hermesShrineAssessment === undefined
-        ? {}
-        : { hermesShrineAssessment: input.hermesShrineAssessment }),
-      markerDestinations: input.markerDestinations,
-      occurrence: input.occurrence,
-      ...(input.purgingPoolAssessment === undefined
-        ? {}
-        : { purgingPoolAssessment: input.purgingPoolAssessment }),
-      ...(input.stygianWellAssessment === undefined
-        ? {}
-        : { stygianWellAssessment: input.stygianWellAssessment }),
-    },
-    room,
-    encounterPhases,
-    roomLocal,
-  );
-  const { features, chaosSpawn, zagreusSpawn } = featureAssembly;
   const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
@@ -727,14 +728,32 @@ export function assembleWorkspaceOccurrence(
   }
   if (roomLocal.kind === 'shop') {
     input.markerDestinations.setRoomTab(
-      [
-        ...roomLocal.offers.map((offer) => offer.rewardControl.marker),
-        ...roomLocal.supplementalOffers.flatMap((offer) =>
-          offer.kind === 'travelDealRefill' ? [offer.rewardControl.marker] : [],
-        ),
-      ],
+      roomLocal.offers.map((offer) => offer.rewardControl.marker),
       'overview',
     );
+    input.markerDestinations.setRoomTab(
+      roomLocal.supplementalOffers.flatMap((offer) =>
+        offer.kind === 'travelDealRefill' ? [offer.rewardControl.marker] : [],
+      ),
+      'actions',
+    );
+  }
+  // Refill inventory is authored on the timeline: on its Travel Deal line, or
+  // at its own purchase row while no line hosts it.
+  for (const feature of features) {
+    if (feature.kind !== 'hermesShrine' && feature.kind !== 'stygianWell') continue;
+    const refill = feature.travelDealRefill;
+    if (refill === undefined) continue;
+    input.markerDestinations.setRoomTab([refill.marker], 'actions');
+    if (refill.sourceGenerationKey !== undefined) continue;
+    const purchaseKind =
+      feature.kind === 'hermesShrine' ? 'purchaseHermesShrineOffer' : 'purchaseStygianWellOffer';
+    const refillRow = roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === purchaseKind && row.reference.generationKey === 'travelDealRefill',
+    );
+    if (refillRow !== undefined)
+      input.markerDestinations.redirectTo(refill.marker, refillRow.marker, node.key);
   }
   if (roomLocal.kind === 'fields') {
     input.markerDestinations.setRoomTab(

@@ -34,8 +34,8 @@ export interface WorkspaceShopOfferDescriptor {
 
 export type WorkspaceShopSupplementalDescriptor =
   | {
-      readonly kind: 'travelDealPlaceholder' | 'echoDoubleShopPlaceholder';
-      readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
+      readonly kind: 'echoDoubleShopPlaceholder';
+      readonly key: 'echoDoubleShopReward';
       readonly label: string;
       readonly explanation: string;
     }
@@ -126,7 +126,6 @@ export interface WorkspaceHermesShrinePurchaseInteraction {
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchase' }>
   >;
-  readonly rushed: boolean;
   readonly rushIntentFor: (
     rushed: boolean,
   ) => WorkspaceCommandIntent<

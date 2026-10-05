@@ -14,6 +14,7 @@ import {
   semanticAddressKey,
   type RoomOccurrence,
   type RoomActionReference,
+  type RoomActionSemanticAddress,
   type RoomRunStateCheckpointAddress,
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
@@ -28,7 +29,12 @@ import {
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
-import type { WorkspaceRoomActions, WorkspaceFountainRarityControl } from '../contracts/timeline';
+import type {
+  WorkspaceRoomActionRow,
+  WorkspaceRoomActions,
+  WorkspaceFountainRarityControl,
+} from '../contracts/timeline';
+import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { occurrenceActionLabel } from './occurrence-action-label';
 import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
@@ -101,6 +107,8 @@ export function projectFountainRarityControl(
 export interface WorkspaceOccurrenceActionAssemblyInput extends WorkspaceOccurrenceActionsInput {
   readonly controls: readonly WorkspaceRewardControl[];
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
+  /** Room features whose refill inventory is authored on purchase rows. */
+  readonly features: readonly WorkspaceRoomFeature[];
   readonly roomLabel: string;
   readonly roomLocal: WorkspaceRoomLocal;
 }
@@ -116,6 +124,7 @@ function roomActionsForOccurrence(
   roomLocal: WorkspaceRoomLocal,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   controls: readonly WorkspaceRewardControl[],
+  features: readonly WorkspaceRoomFeature[],
 ): WorkspaceRoomActions | undefined {
   const evaluatedRoster = input.evaluatedRoom?.roomActionRoster;
   const roster =
@@ -372,6 +381,7 @@ function roomActionsForOccurrence(
       ? Object.freeze({ ...control, ...children })
       : Object.freeze({ ...control, ...children });
   };
+  const purchaseRowProducts = shopPurchaseRowProducts(input, roomLocal, features);
   const projectedRows = Object.freeze(
     presentedRows.map((row) => {
       const address = createRoomActionAddress(input.biome, input.occurrence.occurrenceId, row.key);
@@ -411,6 +421,7 @@ function roomActionsForOccurrence(
       const participationOwnedByOverview =
         row.reference.kind === 'interactShopOffer' ||
         row.reference.kind === 'purchaseStygianWellOffer' ||
+        row.reference.kind === 'purchaseHermesShrineOffer' ||
         row.reference.kind === 'sellPurgingPoolTrait' ||
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
@@ -579,6 +590,7 @@ function roomActionsForOccurrence(
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
         ...(stygianWellTwist === undefined ? {} : { stygianWellTwist }),
+        ...purchaseRowProducts(row.reference, address),
         executable: row.executable,
       });
     }),
@@ -948,6 +960,110 @@ function roomActionsForOccurrence(
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
   });
+}
+
+type PurchaseRowProducts = Pick<
+  WorkspaceRoomActionRow,
+  'hermesShrinePurchase' | 'travelDealLine' | 'refillPurchaseRemoval'
+>;
+
+/**
+ * Shop-like purchase rows: Shrine Rush, the Travel Deal line under the purchase
+ * the engine names as its trigger, and removal of a refill no line hosts.
+ */
+function shopPurchaseRowProducts(
+  input: WorkspaceOccurrenceActionsInput,
+  roomLocal: WorkspaceRoomLocal,
+  features: readonly WorkspaceRoomFeature[],
+): (reference: RoomActionReference, address: RoomActionSemanticAddress) => PurchaseRowProducts {
+  const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
+  const shrine = features.find(
+    (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'hermesShrine' }> =>
+      feature.kind === 'hermesShrine',
+  );
+  const wellRefill = features.find(
+    (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }> =>
+      feature.kind === 'stygianWell',
+  )?.travelDealRefill;
+  const shopTravel =
+    roomLocal.kind === 'shop'
+      ? roomLocal.supplementalOffers.find(
+          (offer) => offer.kind === 'travelDealRefill' || offer.kind === 'travelDealInvalid',
+        )
+      : undefined;
+  return (reference, address) => {
+    switch (reference.kind) {
+      case 'interactShopOffer':
+        return shopTravel?.kind === 'travelDealRefill' &&
+          shopTravel.sourceOfferKey === reference.offerKey
+          ? { travelDealLine: Object.freeze({ kind: 'worldShop' as const, offer: shopTravel }) }
+          : {};
+      case 'interactAcquisitionEntry':
+        return reference.siteKey === 'roomExit' &&
+          reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
+          shopTravel?.kind === 'travelDealInvalid'
+          ? {
+              refillPurchaseRemoval: Object.freeze({
+                command: Object.freeze({ kind: 'RemoveRoomAction' as const, action: address }),
+              }),
+            }
+          : {};
+      case 'purchaseStygianWellOffer':
+        if (wellRefill?.sourceGenerationKey === reference.generationKey)
+          return {
+            travelDealLine: Object.freeze({ kind: 'stygianWell' as const, refill: wellRefill }),
+          };
+        return reference.generationKey === 'travelDealRefill' &&
+          wellRefill?.sourceGenerationKey === undefined
+          ? {
+              refillPurchaseRemoval: Object.freeze({
+                command: Object.freeze({
+                  kind: 'SetStygianWellPurchase' as const,
+                  occurrence: owner,
+                  generationKey: 'travelDealRefill' as const,
+                  purchased: false,
+                }),
+              }),
+            }
+          : {};
+      case 'purchaseHermesShrineOffer': {
+        const refill = shrine?.travelDealRefill;
+        const purchaseInteractionKey =
+          reference.generationKey === 'travelDealRefill'
+            ? refill?.purchaseInteractionKey
+            : shrine?.slots.find((slot) => `initial:${slot.key}` === reference.generationKey)
+                ?.purchaseInteractionKey;
+        return {
+          ...(purchaseInteractionKey === undefined
+            ? {}
+            : {
+                hermesShrinePurchase: Object.freeze({
+                  purchaseInteractionKey,
+                  rushed: reference.rushed,
+                }),
+              }),
+          ...(refill !== undefined && refill.sourceGenerationKey === reference.generationKey
+            ? { travelDealLine: Object.freeze({ kind: 'hermesShrine' as const, refill }) }
+            : {}),
+          ...(reference.generationKey === 'travelDealRefill' &&
+          refill?.sourceGenerationKey === undefined
+            ? {
+                refillPurchaseRemoval: Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetHermesShrinePurchase' as const,
+                    occurrence: owner,
+                    generationKey: 'travelDealRefill' as const,
+                    purchase: null,
+                  }),
+                }),
+              }
+            : {}),
+        };
+      }
+      default:
+        return {};
+    }
+  };
 }
 
 export { roomActionsForOccurrence };

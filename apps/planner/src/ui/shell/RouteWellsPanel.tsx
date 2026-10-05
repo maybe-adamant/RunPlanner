@@ -21,7 +21,10 @@ export function RouteWellsPanel({ rows }: { readonly rows: readonly RouteStygian
               <span className="route-trait-meta">
                 {biomeKey} ·{' '}
                 {well.interacted
-                  ? well.slots
+                  ? [
+                      ...well.slots,
+                      ...(well.travelDealRefill === undefined ? [] : [well.travelDealRefill]),
+                    ]
                       .map(
                         (slot) =>
                           `${slot.itemLabel ?? 'Unresolved'}${slot.purchased ? ' (bought)' : ''}`,

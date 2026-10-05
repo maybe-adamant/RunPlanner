@@ -30,7 +30,9 @@ export function RoomActionOrderingControls({
   const moves = proposals.filter((proposal) => proposal.kind === 'move');
   const insertions = proposals.filter((proposal) => proposal.kind === 'insert');
   const removalEnabled =
-    removable?.structurallyAuthorable === true || row.shopParticipation !== undefined;
+    removable?.structurallyAuthorable === true ||
+    row.refillPurchaseRemoval !== undefined ||
+    row.shopParticipation !== undefined;
   const explanation = removalEnabled
     ? removable?.kind === 'unplace'
       ? 'Remove this delivery and its reward details while keeping the source purchase.'

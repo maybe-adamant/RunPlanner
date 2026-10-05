@@ -2716,7 +2716,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(resolvedPurchase).getByRole('button', { name: /Trait/ })).toBeTruthy();
   });
 
-  it('authors Travel inventory separately from its Mystery acquisition and preserves repair through Undo and reload', async () => {
+  it('authors Travel inventory on its source purchase line and preserves repair through Undo and reload', async () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const shop = createOccurrenceAddress(goldenFBiome, shopId);
     const project = authorLegalTraitOffers(
@@ -2728,7 +2728,13 @@ describe('OccurrenceEncounterWorkbench', () => {
       current().route.biomes[0]!.topology!.occurrences.find(
         (candidate) => candidate.occurrenceId === shopId,
       )!;
-    await view.user.click(screen.getByRole('button', { name: 'Travel Deal Item' }));
+    openRoomTab('Room Overview');
+    expect(screen.queryByRole('button', { name: 'Travel Deal Item' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Purchased Travel Deal' })).toBeNull();
+    openRoomTab('Room Timeline');
+    const line = () => screen.getByRole('group', { name: 'Travel Deal' });
+    expect(line().closest('li')?.textContent).toContain('Slot 1');
+    await view.user.click(within(line()).getByRole('button', { name: 'Travel Deal Item' }));
     await view.user.click(
       within(await screen.findByRole('listbox')).getByRole('option', { name: 'Mystery Boon' }),
     );
@@ -2742,8 +2748,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Travel Deal' }));
-    openRoomTab('Room Timeline');
+    await view.user.click(within(line()).getByRole('checkbox', { name: 'Purchased Travel Deal' }));
     const purchase = () => screen.getByText('Buy Mystery Boon · Travel Deal Offer').closest('li')!;
     await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -2756,26 +2761,32 @@ describe('OccurrenceEncounterWorkbench', () => {
       room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill
         ?.traitOffersByAcquisitionRole.hiddenSource,
     ).toBeTruthy();
-    openRoomTab('Room Overview');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Travel Deal' }));
+    await view.user.click(within(line()).getByRole('checkbox', { name: 'Purchased Travel Deal' }));
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeTruthy();
     const restoredChild = room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
-    expect(screen.getByRole('checkbox', { name: 'Purchased Travel Deal' })).toHaveProperty(
-      'checked',
-      true,
-    );
+    openRoomTab('Room Timeline');
+    // Without its source purchase the retained refill purchase loses its line and keeps removal.
+    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
       restoredChild,
     );
+    await view.user.click(
+      within(purchase()).getByRole('button', { name: /^Remove .* from timeline$/ }),
+    );
+    expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect(screen.getByRole('button', { name: 'Travel Deal Item' }).textContent).toContain(
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(within(line()).getByRole('button', { name: 'Travel Deal Item' }).textContent).toContain(
       'Mystery Boon',
     );
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
