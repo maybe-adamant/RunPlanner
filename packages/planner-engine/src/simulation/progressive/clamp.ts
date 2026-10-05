@@ -70,6 +70,7 @@ export function clampSelectedProducts(
   const interactionPrefix = retainedInteractionPrefix(
     authoredPrefix,
     unsupported,
+    selectedProducts.history,
   ) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };

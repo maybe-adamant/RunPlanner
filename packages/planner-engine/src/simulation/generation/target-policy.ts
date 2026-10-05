@@ -30,7 +30,6 @@ import type {
   CanonicalPhysicalExit,
   MaterializedBiomePrefix,
 } from '../materialization';
-import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../commerce/hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import { rewardLookupSets, sharedRewardLookups } from '../state/reward-lookups';
 import type {
@@ -210,7 +209,6 @@ function priorPeerGameNames(
 }
 
 function projectRoomGenerationRequirementContext(
-  catalog: Catalog,
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   view: HistoryStateView,
@@ -226,13 +224,6 @@ function projectRoomGenerationRequirementContext(
       'reward-history generation context has no Hub offer lookup checkpoint',
     );
   }
-  // Shrine inventory is a pre-outgoing room fact, but it deliberately never
-  // enters structural Shop settlement or consumes a reward bag.
-  const shopOptions = new Set<string>();
-  if (source.kind === 'authored') {
-    for (const offer of source.entryState?.kind === 'shop' ? source.entryState.offers : [])
-      shopOptions.add(offer.offer.rewardType);
-  }
   const goalsRemaining = view.ledgers.counters.clockworkGoalsRemaining;
   const nonGoalRewardsAcquired = view.ledgers.counters.clockworkNonGoalRewardsAcquired;
   const maxNonGoalRewards = view.ledgers.counters.clockworkMaxNonGoalRewards;
@@ -241,7 +232,7 @@ function projectRoomGenerationRequirementContext(
   if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
     throw new BiomeRoomGenerationContractError('history has partial Clockwork facts');
   }
-  const context = Object.freeze({
+  return Object.freeze({
     routeKey: source.origin.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
@@ -261,7 +252,10 @@ function projectRoomGenerationRequirementContext(
       roomsEntered: Object.freeze(roomsEntered),
       useRecord: rewardHistory?.useRecord ?? Object.freeze({}),
     }),
-    currentRoomShopOptionNames: shopOptions,
+    // Room generation requirements never consult current-room store options
+    // (`assertGenerationRequirement`), so door generation reads no Shop or
+    // Shrine inventory of its source room.
+    currentRoomShopOptionNames: new Set<string>(),
     currentRoomRewardType: source.incomingReward?.offer.rewardType,
     currentRoomStructuralTags: sourceDeclaration.structuralTags,
     rewardLookups: rewardLookups ?? Object.freeze({}),
@@ -282,22 +276,6 @@ function projectRoomGenerationRequirementContext(
       : undefined,
     flags: Object.freeze({ allSpellInvested, pendingSpellDrop }),
   });
-  const shrine = source.hermesShrine;
-  const shrineAssessment =
-    shrine === undefined
-      ? undefined
-      : assessHermesShrine(
-          catalog,
-          sourceDeclaration,
-          view.ledgers.counters.biomeDepthCache,
-          shrine,
-          context,
-          priorTwoSurfaceShopPresence(view.ledgers.roomAppearances),
-        );
-  if (shrineAssessment?.complete === true && shrine !== undefined) {
-    for (const offer of Object.values(shrine.offerBySlot)) shopOptions.add(offer!.rewardType);
-  }
-  return context;
 }
 
 /**

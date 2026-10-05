@@ -50,6 +50,25 @@ export function batchTargetGenerationFinishedBeforeBlock(
   );
 }
 
+/**
+ * The source room's commit and exit follow its complete door batch. A block
+ * after that exit belongs to the next room, so the source keeps its exit work.
+ */
+function sourceExitedBeforeBlock(
+  history: ProgressiveBiomeSelectedProducts['history'] | undefined,
+  located: LocatedFinding,
+  decision: Extract<CanonicalDecision, { readonly kind: 'batch' }>,
+): boolean {
+  if (history === undefined || located.historySequence === undefined) return false;
+  if (decision.parent.origin.kind !== 'occurrence') return false;
+  if (!batchTargetGenerationFinishedBeforeBlock(history, located, decision)) return false;
+  const sourceKey = semanticAddressKey(decision.parent.origin);
+  const exited = history.events.find(
+    (event) => event.kind === 'roomExited' && semanticAddressKey(event.origin) === sourceKey,
+  );
+  return exited !== undefined && located.historySequence > exited.sequence;
+}
+
 export function hubVisitFrontier(
   visit: CanonicalHubVisit,
   location: HubVisitFindingLocation,
@@ -114,6 +133,7 @@ export function exitFrontier(
   decision: Extract<CanonicalDecision, { readonly kind: 'batch' }>,
   targets: readonly CanonicalTarget[] = [],
   additional: readonly CanonicalAdditionalContinuation[] = decision.additional,
+  sourceExited = false,
 ): MaterializedExitDecisionFrontier {
   const partialBatch =
     targets.length > 0
@@ -128,6 +148,7 @@ export function exitFrontier(
     ...(partialBatch === undefined ? {} : { partialBatch, batchState: partialBatch.batchState }),
     selectedExitKey: decision.selectedExitKey,
     selectedOrigin: decision.selectedOrigin,
+    ...(sourceExited && partialBatch !== undefined ? { sourceExited: true as const } : {}),
   });
 }
 
@@ -280,7 +301,12 @@ export function clampPrefix(
         ? [...prefix.decisions]
         : prefix.decisions.slice(0, located.decisionIndex),
     ),
-    frontier: exitFrontier(decision, retainedTargets, retainedAdditional),
+    frontier: exitFrontier(
+      decision,
+      retainedTargets,
+      retainedAdditional,
+      sourceExitedBeforeBlock(history, located, decision),
+    ),
   });
 }
 
@@ -295,6 +321,7 @@ export function clampPrefix(
 export function retainedInteractionPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
+  history: ProgressiveBiomeSelectedProducts['history'],
 ): MaterializedBiomePrefix {
   if (located.fixedRoomIndex !== undefined) {
     return Object.freeze({
@@ -304,14 +331,15 @@ export function retainedInteractionPrefix(
       ),
     });
   }
-  if (located.targetIndex === undefined) return clampPrefix(prefix, located);
+  if (located.targetIndex === undefined) return clampPrefix(prefix, located, history);
   const decision = located.frontierBatch
     ? prefix.frontier?.kind === 'exitDecision'
       ? prefix.frontier.partialBatch
       : undefined
     : prefix.decisions[located.decisionIndex];
-  if (decision === undefined || decision.kind !== 'batch') return clampPrefix(prefix, located);
-  if (decision.parent.origin.kind === 'hubRoom') return clampPrefix(prefix, located);
+  if (decision === undefined || decision.kind !== 'batch')
+    return clampPrefix(prefix, located, history);
+  if (decision.parent.origin.kind === 'hubRoom') return clampPrefix(prefix, located, history);
   // A batch's physical targets share one reward-store envelope.  Interaction
   // replay therefore has to retain the complete authored target set even when
   // the first blocked owner belongs to an earlier peer.  The execution prefix
@@ -332,9 +360,15 @@ export function retainedInteractionPrefix(
         ? [...prefix.decisions]
         : prefix.decisions.slice(0, located.decisionIndex),
     ),
-    frontier: exitFrontier(decision, targets, additional),
+    frontier: exitFrontier(
+      decision,
+      targets,
+      additional,
+      sourceExitedBeforeBlock(history, located, decision),
+    ),
   });
 }
+
 export function encounterBlockProductPrefix(
   prefix: MaterializedBiomePrefix,
   block: EncounterHistoryBlock,
@@ -362,6 +396,13 @@ export function encounterBlockProductPrefix(
   const additional = decision.additional.filter((entry) =>
     created.has(semanticAddressKey(entry.room.origin)),
   );
-  const frontier = exitFrontier(decision, targets, additional);
+  // The blocked room is prepared only after its source room has exited.
+  const blockedRoom = semanticAddressKey(block.room.origin);
+  const sourceExited =
+    decision.parent.origin.kind === 'occurrence' &&
+    [...targets.map((target) => target.room), ...additional.map((entry) => entry.room)].some(
+      (room) => semanticAddressKey(room.origin) === blockedRoom,
+    );
+  const frontier = exitFrontier(decision, targets, additional, sourceExited);
   return Object.freeze({ ...clamped, frontier });
 }

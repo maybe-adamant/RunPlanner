@@ -227,7 +227,6 @@ function prepareTargetGameNameContext(
     throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const context = projectRoomGenerationRequirementContext(
-    catalog,
     source,
     sourceDeclaration,
     before,
@@ -376,7 +375,6 @@ function firstTargetGenerationSupport(
     throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const context = projectRoomGenerationRequirementContext(
-    catalog,
     source,
     sourceDeclaration,
     before,
@@ -994,7 +992,6 @@ export function hubTerminalTakeoverCandidateSupportAtFrontier(
   const terminal = layout.progression.terminal;
   assertGenerationRequirement(terminal.eligibility);
   const context = projectRoomGenerationRequirementContext(
-    catalog,
     owner,
     sourceDeclaration,
     ownerHistory,

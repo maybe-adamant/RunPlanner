@@ -14,6 +14,7 @@ import type {
 import {
   BiomeRoomGenerationContractError,
   appendFinding,
+  assertGenerationRequirement,
   finding,
   generationDecisions,
   projectRoomGenerationRequirementContext,
@@ -36,7 +37,6 @@ interface AdditionalContinuationEntry {
  * a source that the normal target evaluator would immediately reject.
  */
 export function assessChaosPlacement(
-  catalog: Catalog,
   layout: BiomeLayout,
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
@@ -63,12 +63,12 @@ export function assessChaosPlacement(
     sourceDeclaration.secretPointAnchorCount <= 0
   )
     failedConditions.push('physicalCapability');
+  if (declaration?.requirement !== undefined) assertGenerationRequirement(declaration.requirement);
   if (
     declaration?.requirement !== undefined &&
     !evaluateRequirement(
       declaration.requirement,
       projectRoomGenerationRequirementContext(
-        catalog,
         source,
         sourceDeclaration,
         parentHistory.entry,
@@ -109,7 +109,6 @@ export function assessChaosPlacement(
 
 /** Assess the source requirement and entry-consumed Contract cap at one reached Midshop. */
 export function assessZagreusContractPlacement(
-  catalog: Catalog,
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   parentHistory: ProgressiveRoomHistoryViews | undefined,
@@ -131,12 +130,12 @@ export function assessZagreusContractPlacement(
     (appearance) => appearance.gameName === declaration.targetRoomGameName,
   ).length;
   const failedConditions: ('enteredContractCap' | 'sourceRequirement')[] = [];
+  if (declaration.requirement !== undefined) assertGenerationRequirement(declaration.requirement);
   if (
     declaration.requirement !== undefined &&
     !evaluateRequirement(
       declaration.requirement,
       projectRoomGenerationRequirementContext(
-        catalog,
         source,
         sourceDeclaration,
         parentHistory.entry,
@@ -249,7 +248,6 @@ export function evaluateAdditionalContinuationEntries(
       }
       if (!forced && sourceDeclaration !== undefined) {
         const capability = assessChaosPlacement(
-          catalog,
           layout,
           source,
           sourceDeclaration,
@@ -303,7 +301,6 @@ export function evaluateAdditionalContinuationEntries(
     // entry-time cap checkpoint is not yet assessable.
     if (parentHistory?.entry === undefined) continue;
     const contractCapability = assessZagreusContractPlacement(
-      catalog,
       source,
       sourceDeclaration,
       parentHistory,
