@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createExitDecisionAddress,
@@ -23,6 +24,12 @@ import {
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import {
+  qBiome,
+  qOccurrenceIds,
+  surfaceTravelDealRefillAnvilProject,
+  surfaceTravelDealRefillAnvilResult,
+} from '@run-planner/test-fixtures/surface';
 
 it('keeps a purchased Travel Deal boon editable while its trait offer is incomplete', () => {
   const shopId = goldenGOccurrenceId(5, 1);
@@ -231,4 +238,75 @@ it('repairs an invalid Travel Deal refill from its valid items without a clear c
   expect(
     picker.sections.flatMap((section) => section.items).some((item) => item.value === null),
   ).toBe(false);
+});
+
+it('routes a failing Travel Deal refill Anvil to its launcher and the item to its line', () => {
+  const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+  const role = createAcquisitionRoleAddress(refill, 'self');
+  const project = applyProjectCommand(surfaceTravelDealRefillAnvilProject(), catalog, {
+    kind: 'ReplaceAnvilResult',
+    acquisition: role,
+    value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
+  });
+  const { evaluation, workspace } = projectStructuredWorkspaceFixture(project);
+  expect(evaluation.findings).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ code: 'rewardAcquisitionUnavailable', origin: role }),
+      expect.objectContaining({ code: 'rewardAcquisitionUnavailable', origin: refill }),
+    ]),
+  );
+  expect(workspace.focusByOwner.get(semanticAddressKey(role))).toMatchObject({
+    focusAddress: role,
+    roomTab: 'actions',
+  });
+  expect(
+    workspace.interactions.acquisitionConversions.get(semanticAddressKey(role))?.anvil,
+  ).toMatchObject({
+    contextReached: true,
+  });
+  expect(workspace.focusByOwner.get(semanticAddressKey(refill))).toMatchObject({
+    focusAddress: refill,
+    roomTab: 'actions',
+  });
+  expect(workspace.interactions.shopOffers.has(semanticAddressKey(refill))).toBe(true);
+});
+
+it('routes a purchased refill with an item outside its group to its line and purchase row', () => {
+  const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(
+      createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
+      'roomExit',
+    ),
+    'travelDealRefill',
+  );
+  // The refill restocks the Premium Progress slot, so a Survival item is invalid.
+  const project = applyProjectCommand(surfaceTravelDealRefillAnvilProject(), catalog, {
+    kind: 'ReplaceShopOfferOption',
+    offer: refill,
+    value: { optionKey: 'HealBigDrop', offer: { rewardType: 'HealBigDrop' } },
+  });
+  const { evaluation, workspace } = projectStructuredWorkspaceFixture(project);
+  expect(evaluation.findings).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: refill }),
+      expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: entry }),
+    ]),
+  );
+  expect(workspace.focusByOwner.get(semanticAddressKey(refill))).toMatchObject({
+    focusAddress: refill,
+    roomTab: 'actions',
+  });
+  expect(workspace.focusByOwner.get(semanticAddressKey(entry))).toMatchObject({
+    focusAddress: createRoomActionAddress(
+      qBiome,
+      qOccurrenceIds.preboss,
+      roomActionKey({
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'roomExit',
+        entryKey: 'travelDealRefill',
+      }),
+    ),
+    roomTab: 'actions',
+  });
 });
