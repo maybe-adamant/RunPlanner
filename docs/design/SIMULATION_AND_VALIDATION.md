@@ -78,7 +78,9 @@ as user findings.
 reconciliation and derived required-action activation before application history
 publication. It consumes the before
 assembly and returns the final project and its exact assembly. Required Hermes
-obligations are inserted at reached due contacts; optional clocked pickups are
+obligations are inserted at reached due contacts read from the Hermes delivery
+obligation product (`authored-project/hermes-shrine-delivery.ts` owns its
+predicates); optional clocked pickups are
 never accepted automatically. Proven displaced payload and automatic outcomes
 are reset, while unassessed representable authorship remains retained. When a later
 edit reaches inherited timed-effect choices, agreeing current evidence without

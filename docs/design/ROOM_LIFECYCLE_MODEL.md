@@ -1090,7 +1090,11 @@ ordinary encounter clock or acquire a reward. A shorter itinerary never flushes:
 its pending delivery keeps counting down into the Boss encounter, and one still
 pending when the planned route ends stays pending; the purchase is valid, and
 the game owns the item's arrival after the last planned room, so no finding is
-reported. A Hub side-room source is ordinary for
+reported. Each purchase's delivery is one engine obligation (source, generation
+key, reward type, rushed, and once due its host, encounter phase and cause:
+rush, countdown or flush); the frontier, placement assessment, due spawn, edit
+settlement, authored domain and execution assembly all read that obligation
+rather than recomputing the due contact. A Hub side-room source is ordinary for
 scheduling, but cannot advance an older pending delivery; later qualifying main
 Hub visits can advance or host it. Fixed Boss occurrences are ordinary later
 delivery hosts. No feature owns a private purchase order or a completion-only
