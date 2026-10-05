@@ -3,6 +3,7 @@ import {
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
+  hermesShrinePurchaseAction,
   routeRoomShop,
   semanticAddressKey,
   type BiomeAddress,
@@ -186,6 +187,10 @@ function roomFeatures(
   const shrineAssessment = input.hermesShrineAssessment?.(poolOwner);
   const wellAssessment = input.stygianWellAssessment?.(poolOwner);
   const shrine = input.occurrence.hermesShrine;
+  const shrinePurchaseRushed = (
+    generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+  ): boolean =>
+    hermesShrinePurchaseAction(input.occurrence.roomActions.order, generationKey)?.rushed === true;
   const well = input.occurrence.stygianWell;
   const pool = input.occurrence.purgingPool;
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
@@ -395,6 +400,7 @@ function roomFeatures(
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
                         purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
                         purchase: shrine?.purchaseBySlot?.[slotKey] ?? null,
+                        rushed: shrinePurchaseRushed(generationKey),
                       });
                     }),
               ),
@@ -444,6 +450,7 @@ function roomFeatures(
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
                         purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
                         purchase: shrine.travelDealRefill?.purchase ?? null,
+                        rushed: shrinePurchaseRushed('travelDealRefill'),
                       });
                     })(),
                   }),

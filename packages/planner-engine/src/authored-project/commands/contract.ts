@@ -152,6 +152,7 @@ function commandContractAddress(
     case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
+    case 'SetHermesShrinePurchaseRush':
       return command.action;
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;

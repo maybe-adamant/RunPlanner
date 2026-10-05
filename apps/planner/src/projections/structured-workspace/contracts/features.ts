@@ -98,6 +98,8 @@ export type WorkspaceRoomFeature =
         readonly purchaseInteractionKey: string;
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+        /** Rush of the generation's purchase action. */
+        readonly rushed: boolean;
       }[];
       readonly travelDealRefill?: {
         readonly address: RoomFeatureAddress;
@@ -113,6 +115,8 @@ export type WorkspaceRoomFeature =
         readonly purchaseInteractionKey: string;
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+        /** Rush of the generation's purchase action. */
+        readonly rushed: boolean;
       };
     }
   | {

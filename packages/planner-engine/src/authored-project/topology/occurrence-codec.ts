@@ -35,7 +35,11 @@ import {
 } from '../acquisition/pickup-producers';
 import { ERIS_GIFT_SITE_KEY } from '../acquisition/eris-gift';
 import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
-import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import {
+  hermesShrinePurchaseAction,
+  isDeliveryFlushHost,
+  parseHermesShrineDeliveryEntryKey,
+} from '../hermes-shrine-delivery';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
@@ -160,24 +164,12 @@ function decodeOrdinaryHermesShrineState(
         if (!slots.includes(slot as (typeof slots)[number]))
           failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'is not a Shrine slot');
         const purchase = expectRecord(value, `${path}.purchaseBySlot.${slot}`);
-        expectExactKeys(purchase, ['delay', 'rushed'], `${path}.purchaseBySlot.${slot}`);
-        if (
-          ![2, 3, 4, 5, 6, 7, 8].includes(purchase.delay as number) ||
-          typeof purchase.rushed !== 'boolean'
-        )
-          failProjectDocument(
-            `${path}.purchaseBySlot.${slot}`,
-            'must have delay 2 through 8 and boolean rushed',
-          );
+        expectExactKeys(purchase, ['delay'], `${path}.purchaseBySlot.${slot}`);
+        if (![2, 3, 4, 5, 6, 7, 8].includes(purchase.delay as number))
+          failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'must have delay 2 through 8');
         if (offerBySlot[slot as (typeof slots)[number]] === null)
           failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'requires a resolved source offer');
-        return [
-          slot,
-          Object.freeze({
-            delay: purchase.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
-            rushed: purchase.rushed,
-          }),
-        ];
+        return [slot, Object.freeze({ delay: purchase.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8 })];
       }),
     ) as import('../model').HermesShrineState['purchaseBySlot'],
   );
@@ -195,19 +187,13 @@ function decodeOrdinaryHermesShrineState(
             ? undefined
             : (() => {
                 const value = expectRecord(refill.purchase, `${path}.travelDealRefill.purchase`);
-                expectExactKeys(value, ['delay', 'rushed'], `${path}.travelDealRefill.purchase`);
-                if (
-                  ![2, 3, 4, 5, 6, 7, 8].includes(value.delay as number) ||
-                  typeof value.rushed !== 'boolean'
-                )
+                expectExactKeys(value, ['delay'], `${path}.travelDealRefill.purchase`);
+                if (![2, 3, 4, 5, 6, 7, 8].includes(value.delay as number))
                   failProjectDocument(
                     `${path}.travelDealRefill.purchase`,
-                    'must have delay 2 through 8 and a boolean rushed value',
+                    'must have delay 2 through 8',
                   );
-                return Object.freeze({
-                  delay: value.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
-                  rushed: value.rushed,
-                });
+                return Object.freeze({ delay: value.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8 });
               })();
         const offer = decodeHermesShrineInventoryOffer(
           refill.offer,
@@ -258,12 +244,24 @@ function assertHermesShrineDeliveryActionClosure(
   routePosition: ResolvedRoutePosition,
   path: string,
 ): void {
-  const rushed = new Set<import('../model').HermesShrineGenerationKey>(
-    Object.entries(shrine?.purchaseBySlot ?? {})
-      .filter(([, purchase]) => purchase?.rushed === true)
-      .map(([slotKey]) => `initial:${slotKey}` as import('../model').HermesShrineGenerationKey),
+  const purchased = new Set<import('../model').HermesShrineGenerationKey>(
+    (['first', 'secondLeft', 'secondRight'] as const)
+      .filter((slotKey) => shrine?.purchaseBySlot?.[slotKey] !== undefined)
+      .map((slotKey) => `initial:${slotKey}` as const),
   );
-  const actionCounts = new Map<import('../model').HermesShrineGenerationKey, number>();
+  if (shrine?.travelDealRefill?.purchase !== undefined) purchased.add('travelDealRefill');
+  const purchaseActions = roomActions.order.filter(
+    (reference) => reference.kind === 'purchaseHermesShrineOffer',
+  );
+  // Purchase membership is the purchased fact; each purchase owns one action.
+  if (
+    purchaseActions.length !== purchased.size ||
+    purchaseActions.some((reference) => !purchased.has(reference.generationKey))
+  )
+    failProjectDocument(
+      path,
+      'Shrine purchases must exactly match purchaseHermesShrineOffer actions',
+    );
   const finalPrebossHost = isDeliveryFlushHost(catalog.rooms.byKey[source.gameName], routePosition);
   for (const reference of roomActions.order) {
     if (
@@ -272,35 +270,29 @@ function assertHermesShrineDeliveryActionClosure(
     )
       continue;
     const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
-    if (parsed !== undefined) {
-      const sourceIsCurrent =
-        parsed.routeKey === source.routeKey &&
-        parsed.biomeKey === source.biomeKey &&
-        parsed.sourceOccurrenceId === source.occurrenceId;
-      if (sourceIsCurrent && reference.encounterPhaseKey !== undefined)
-        failProjectDocument(
-          path,
-          'same-room Shrine deliveries must use the post-outgoing window without an encounter phase',
-        );
-      if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
-        failProjectDocument(
-          path,
-          'cross-occurrence Shrine deliveries must preserve their due encounter phase',
-        );
-    }
-    if (
-      parsed !== undefined &&
+    if (parsed === undefined) continue;
+    const sourceIsCurrent =
       parsed.routeKey === source.routeKey &&
       parsed.biomeKey === source.biomeKey &&
-      parsed.sourceOccurrenceId === source.occurrenceId &&
-      parsed.generationKey.startsWith('initial:')
+      parsed.sourceOccurrenceId === source.occurrenceId;
+    if (sourceIsCurrent && reference.encounterPhaseKey !== undefined)
+      failProjectDocument(
+        path,
+        'same-room Shrine deliveries must use the post-outgoing window without an encounter phase',
+      );
+    if (!sourceIsCurrent && reference.encounterPhaseKey === undefined && !finalPrebossHost)
+      failProjectDocument(
+        path,
+        'cross-occurrence Shrine deliveries must preserve their due encounter phase',
+      );
+    // A rushed item is optional loot: its purchase may have no ranked pickup,
+    // but a same-room pickup always belongs to one rushed purchase action.
+    if (
+      sourceIsCurrent &&
+      hermesShrinePurchaseAction(roomActions.order, parsed.generationKey)?.rushed !== true
     )
-      actionCounts.set(parsed.generationKey, (actionCounts.get(parsed.generationKey) ?? 0) + 1);
+      failProjectDocument(path, 'same-room Shrine delivery actions require their rushed purchase');
   }
-  // A rushed item is optional loot: its purchase may have no ranked pickup,
-  // but a same-room pickup always belongs to one rushed purchase.
-  if ([...actionCounts].some(([key, count]) => !rushed.has(key) || count !== 1))
-    failProjectDocument(path, 'same-room Shrine delivery actions require their rushed purchase');
 }
 
 function sameStructuredValue(left: unknown, right: unknown): boolean {

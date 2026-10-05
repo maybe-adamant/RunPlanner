@@ -617,6 +617,9 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   ): ExecutionState => {
     if (shrineScheduled || context.input.hermesShrine === undefined) return initial;
     shrineScheduled = true;
+    const purchaseActions = roster.rows.flatMap((row) =>
+      row.reference.kind === 'purchaseHermesShrineOffer' ? [row.reference] : [],
+    );
     const deliveries = Object.entries(context.input.hermesShrine.purchaseBySlot ?? {}).flatMap(
       ([slotKey, purchase]) => {
         const offer =
@@ -631,12 +634,18 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
                   `initial:${slotKey}` as import('../../authored-project/model').HermesShrineGenerationKey,
                 rewardType: offer.rewardType,
                 delay: purchase.delay,
-                rushed: purchase.rushed,
+                rushed:
+                  purchaseActions.find((action) => action.generationKey === `initial:${slotKey}`)
+                    ?.rushed === true,
               }),
             ];
       },
     );
-    if (deliveries.length === 0) return initial;
+    if (
+      deliveries.length === 0 &&
+      context.input.hermesShrine.travelDealRefill?.purchase === undefined
+    )
+      return initial;
     return appendEvent(
       initial,
       { ...context, operationIndex },
@@ -698,6 +707,10 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           kind: 'wellPurchase',
           generationKey: row.reference.generationKey,
         });
+      case 'purchaseHermesShrineOffer':
+        // Shrine purchases are scheduled together at the room's Shrine checkpoint;
+        // the row authors their order and rush.
+        return state;
       case 'interactShopOffer':
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',

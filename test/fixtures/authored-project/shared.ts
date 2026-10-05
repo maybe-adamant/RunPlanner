@@ -16,8 +16,10 @@ export type {
 export {
   authorTestArtificerReplacement,
   editTestRoomActionOrder,
+  purchaseTestHermesShrineOffer,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
+  testHermesShrinePurchaseAction,
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
 export { catalogWithEmptyShopGroup } from './empty-shop-group';

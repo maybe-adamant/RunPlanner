@@ -1,3 +1,7 @@
+import {
+  purchaseTestHermesShrineOffer,
+  testHermesShrinePurchaseAction,
+} from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -66,11 +70,9 @@ describe('authored-project project-state commands', () => {
       slotKey: 'first',
       value: { rewardType: 'HealBigDrop' },
     });
-    const purchased = applyProjectCommand(offered, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: false },
+    const purchased = purchaseTestHermesShrineOffer(offered, catalog, occurrence, 'initial:first', {
+      delay: 2,
+      rushed: false,
     });
     const removed = applyProjectCommand(purchased, catalog, {
       kind: 'SetHermesShrinePresence',
@@ -81,7 +83,9 @@ describe('authored-project project-state commands', () => {
     expect(withoutShrine?.hermesShrine).toBeUndefined();
     expect(
       withoutShrine?.roomActions.order.some(
-        (reference) => reference.kind === 'interactAcquisitionEntry',
+        (reference) =>
+          reference.kind === 'interactAcquisitionEntry' ||
+          reference.kind === 'purchaseHermesShrineOffer',
       ),
     ).toBe(false);
     expect(() =>
@@ -106,16 +110,19 @@ describe('authored-project project-state commands', () => {
       slotKey: 'first',
       value: { rewardType: 'HealBigDrop' },
     });
-    const purchased = applyProjectCommand(offered, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: false },
+    const purchased = purchaseTestHermesShrineOffer(offered, catalog, occurrence, 'initial:first', {
+      delay: 2,
+      rushed: false,
     });
     const postboss = purchased.route?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
     );
-    expect(postboss?.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2, rushed: false });
+    expect(postboss?.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2 });
+    expect(postboss?.roomActions.order).toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+      rushed: false,
+    });
     expect(postboss?.roomActions.order).not.toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
     );
@@ -124,7 +131,22 @@ describe('authored-project project-state commands', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence,
         generationKey: 'bad' as never,
-        purchase: { delay: 9 as never, rushed: 'no' as never },
+        purchase: { delay: 2 },
+      }),
+    ).toThrow(ProjectCommandContractError);
+    expect(() =>
+      applyProjectCommand(offered, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence,
+        generationKey: 'initial:first',
+        purchase: { delay: 9 as never },
+      }),
+    ).toThrow(ProjectCommandContractError);
+    expect(() =>
+      applyProjectCommand(purchased, catalog, {
+        kind: 'SetHermesShrinePurchaseRush',
+        action: testHermesShrinePurchaseAction(occurrence, 'initial:first'),
+        rushed: 'no' as never,
       }),
     ).toThrow(ProjectCommandContractError);
     const refilled = applyProjectCommand(offered, catalog, {
@@ -134,12 +156,13 @@ describe('authored-project project-state commands', () => {
       // structurally editable and candidate evaluation owns its repair.
       value: { rewardType: 'SpellDrop' },
     });
-    const refillPurchased = applyProjectCommand(refilled, catalog, {
-      kind: 'SetHermesShrinePurchase',
+    const refillPurchased = purchaseTestHermesShrineOffer(
+      refilled,
+      catalog,
       occurrence,
-      generationKey: 'travelDealRefill',
-      purchase: { delay: 2, rushed: false },
-    });
+      'travelDealRefill',
+      { delay: 2, rushed: false },
+    );
     const refillCleared = applyProjectCommand(refillPurchased, catalog, {
       kind: 'SetHermesShrinePurchase',
       occurrence,
@@ -158,17 +181,20 @@ describe('authored-project project-state commands', () => {
       siteKey: 'hermesShrineDelivery',
       entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
     });
-    const refillRushed = applyProjectCommand(refilled, catalog, {
-      kind: 'SetHermesShrinePurchase',
+    const refillRushed = purchaseTestHermesShrineOffer(
+      refilled,
+      catalog,
       occurrence,
-      generationKey: 'travelDealRefill',
-      purchase: { delay: 2, rushed: true },
-    });
+      'travelDealRefill',
+      { delay: 2, rushed: true },
+    );
     const rushedPostboss = refillRushed.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
-    expect(rushedPostboss?.hermesShrine?.travelDealRefill?.purchase).toEqual({
-      delay: 2,
+    expect(rushedPostboss?.hermesShrine?.travelDealRefill?.purchase).toEqual({ delay: 2 });
+    expect(rushedPostboss?.roomActions.order).toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'travelDealRefill',
       rushed: true,
     });
     expect(rushedPostboss?.acquisitionSites?.hermesShrineDelivery?.pickupEntries).toHaveProperty(
@@ -196,7 +222,7 @@ describe('authored-project project-state commands', () => {
       completionBiome,
       createOccurrenceId('surface-n-preboss:postboss'),
     );
-    const completion = applyProjectCommand(
+    const completion = purchaseTestHermesShrineOffer(
       applyProjectCommand(loadSurfaceNOProject(), catalog, {
         kind: 'ReplaceHermesShrineOffer',
         occurrence: completionOccurrence,
@@ -204,15 +230,12 @@ describe('authored-project project-state commands', () => {
         value: { rewardType: 'HealBigDrop' },
       }),
       catalog,
-      {
-        kind: 'SetHermesShrinePurchase',
-        occurrence: completionOccurrence,
-        generationKey: 'initial:first',
-        purchase: { delay: 2, rushed: true },
-      },
+      completionOccurrence,
+      'initial:first',
+      { delay: 2, rushed: true },
     );
     const ordinaryOccurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const ordinary = applyProjectCommand(
+    const ordinary = purchaseTestHermesShrineOffer(
       applyProjectCommand(
         applyProjectCommand(loadSurfaceNOProject(), catalog, {
           kind: 'SetHermesShrinePresence',
@@ -228,12 +251,9 @@ describe('authored-project project-state commands', () => {
         },
       ),
       catalog,
-      {
-        kind: 'SetHermesShrinePurchase',
-        occurrence: ordinaryOccurrence,
-        generationKey: 'initial:first',
-        purchase: { delay: 2, rushed: true },
-      },
+      ordinaryOccurrence,
+      'initial:first',
+      { delay: 2, rushed: true },
     );
     const mutate = (
       document: Record<string, unknown>,
@@ -256,25 +276,71 @@ describe('authored-project project-state commands', () => {
       ['completion', completion, completionOccurrence.occurrenceId],
       ['ordinary', ordinary, ordinaryOccurrence.occurrenceId],
     ] as const) {
-      const detailWithoutAction = JSON.parse(encodeProjectDocument(project)) as Record<
-        string,
-        unknown
-      >;
-      mutate(detailWithoutAction, occurrenceId, (occurrence) => {
-        (occurrence.roomActions as { order: unknown[] }).order = [];
-      });
-      // A rushed item left on the floor is representable: the purchase stands alone.
-      expect(() => decodeProjectDocument(detailWithoutAction, catalog), name).not.toThrow();
+      const encoded = () => JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+      const editOrder = (
+        document: Record<string, unknown>,
+        edit: (order: Record<string, unknown>[]) => Record<string, unknown>[],
+      ) =>
+        mutate(document, occurrenceId, (occurrence) => {
+          const actions = occurrence.roomActions as { order: Record<string, unknown>[] };
+          actions.order = edit(actions.order);
+        });
+      const isPurchase = (reference: Record<string, unknown>) =>
+        reference.kind === 'purchaseHermesShrineOffer';
+      const isPickup = (reference: Record<string, unknown>) =>
+        reference.siteKey === 'hermesShrineDelivery';
 
-      const actionWithoutDetail = JSON.parse(encodeProjectDocument(project)) as Record<
-        string,
-        unknown
-      >;
-      mutate(actionWithoutDetail, occurrenceId, (occurrence) => {
+      // A rushed item left on the floor is representable: the purchase stands alone.
+      const pickupLeft = encoded();
+      editOrder(pickupLeft, (order) => order.filter((reference) => !isPickup(reference)));
+      expect(() => decodeProjectDocument(pickupLeft, catalog), name).not.toThrow();
+
+      const purchaseWithoutAction = encoded();
+      editOrder(purchaseWithoutAction, (order) =>
+        order.filter((reference) => !isPurchase(reference) && !isPickup(reference)),
+      );
+      expect(() => decodeProjectDocument(purchaseWithoutAction, catalog), name).toThrow(
+        'Shrine purchases must exactly match purchaseHermesShrineOffer actions',
+      );
+
+      const actionWithoutPurchase = encoded();
+      mutate(actionWithoutPurchase, occurrenceId, (occurrence) => {
         delete (occurrence.hermesShrine as Record<string, unknown>).purchaseBySlot;
       });
-      expect(() => decodeProjectDocument(actionWithoutDetail, catalog), name).toThrow(
+      editOrder(actionWithoutPurchase, (order) =>
+        order.filter((reference) => !isPickup(reference)),
+      );
+      expect(() => decodeProjectDocument(actionWithoutPurchase, catalog), name).toThrow(
+        'Shrine purchases must exactly match purchaseHermesShrineOffer actions',
+      );
+
+      const unrushedPickup = encoded();
+      editOrder(unrushedPickup, (order) =>
+        order.map((reference) =>
+          isPurchase(reference) ? { ...reference, rushed: false } : reference,
+        ),
+      );
+      expect(() => decodeProjectDocument(unrushedPickup, catalog), name).toThrow(
         'same-room Shrine delivery actions require their rushed purchase',
+      );
+
+      const phasedPurchase = encoded();
+      editOrder(phasedPurchase, (order) =>
+        order.map((reference) =>
+          isPurchase(reference) ? { ...reference, encounterPhaseKey: 'Combat1' } : reference,
+        ),
+      );
+      expect(() => decodeProjectDocument(phasedPurchase, catalog), name).toThrow(
+        'is not a project document field',
+      );
+
+      const legacyRush = encoded();
+      mutate(legacyRush, occurrenceId, (occurrence) => {
+        const shrine = occurrence.hermesShrine as { purchaseBySlot: Record<string, object> };
+        shrine.purchaseBySlot.first = { delay: 2, rushed: true };
+      });
+      expect(() => decodeProjectDocument(legacyRush, catalog), name).toThrow(
+        'is not a project document field',
       );
     }
     for (const [name, project, occurrenceId] of [
@@ -289,7 +355,7 @@ describe('authored-project project-state commands', () => {
         const shrine = occurrence.hermesShrine as Record<string, unknown>;
         shrine.travelDealRefill = {
           offer: null,
-          purchase: { delay: 2, rushed: false },
+          purchase: { delay: 2 },
         };
       });
       expect(() => decodeProjectDocument(nullRefillPurchase, catalog), name).toThrow(
@@ -310,12 +376,13 @@ describe('authored-project project-state commands', () => {
       slotKey: 'first',
       value: { rewardType: 'GiftDrop' },
     });
-    const authored = applyProjectCommand(inventoryAuthored, catalog, {
-      kind: 'SetHermesShrinePurchase',
+    const authored = purchaseTestHermesShrineOffer(
+      inventoryAuthored,
+      catalog,
       occurrence,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
-    });
+      'initial:first',
+      { delay: 2, rushed: true },
+    );
     const occurrenceState = authored.route.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
@@ -356,11 +423,9 @@ describe('authored-project project-state commands', () => {
       slotKey: 'secondLeft',
       value: { rewardType: 'BlindBoxLoot' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, occurrence, 'initial:secondLeft', {
+      delay: 2,
+      rushed: true,
     });
     const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:secondLeft');
     const entry = createAcquisitionEntryAddress(

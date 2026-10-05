@@ -1172,6 +1172,23 @@ export function bindOccurrenceLocalInteractions(
                     purchase,
                   }),
                 }),
+              rushed: slot.rushed,
+              rushIntentFor: (rushed: boolean) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetHermesShrinePurchaseRush' as const,
+                    action: createRoomActionAddress(
+                      createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
+                      requirement.owner.occurrenceId,
+                      roomActionKey({
+                        kind: 'purchaseHermesShrineOffer',
+                        generationKey,
+                        rushed: false,
+                      }),
+                    ),
+                    rushed,
+                  }),
+                }),
             }),
           );
         }

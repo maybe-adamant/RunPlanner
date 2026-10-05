@@ -1,7 +1,8 @@
-import type { RoomActionReference, RoomActionState } from '../../model';
+import type { HermesShrineGenerationKey, RoomActionReference, RoomActionState } from '../../model';
 import { roomActionKey } from '../../room-actions/state';
 import {
   expectArray,
+  expectBoolean,
   expectExactKeys,
   expectNonBlankString,
   expectRecord,
@@ -72,6 +73,21 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
     if (!allowed.includes(generationKey))
       failProjectDocument(`${path}.generationKey`, 'must be a declared Well generation key');
     return Object.freeze({ kind, generationKey } as RoomActionReference);
+  }
+  if (kind === 'purchaseHermesShrineOffer') {
+    expectExactKeys(reference, ['kind', 'generationKey', 'rushed'], path);
+    const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
+    if (
+      !['initial:first', 'initial:secondLeft', 'initial:secondRight', 'travelDealRefill'].includes(
+        generationKey,
+      )
+    )
+      failProjectDocument(`${path}.generationKey`, 'must be a declared Shrine generation key');
+    return Object.freeze({
+      kind,
+      generationKey: generationKey as HermesShrineGenerationKey,
+      rushed: expectBoolean(reference.rushed, `${path}.rushed`),
+    });
   }
   if (kind === 'sellPurgingPoolTrait') {
     expectExactKeys(reference, ['kind', 'slotKey'], path);

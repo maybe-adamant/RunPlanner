@@ -148,6 +148,8 @@ function descriptionFor(
       });
     case 'interactEris':
       return Object.freeze({ kind: reference.kind });
+    case 'purchaseHermesShrineOffer':
+      throw new Error('room guide does not publish Shrine purchase actions');
   }
 }
 
@@ -191,6 +193,8 @@ export function assembleExecutionRoomGuide(
   return Object.freeze(
     room.roomLifecycleTimeline.entries.flatMap((entry) => {
       if (entry.kind !== 'action') return [];
+      // Shrine purchases and their rush publish through the room Overview.
+      if (entry.action.reference.kind === 'purchaseHermesShrineOffer') return [];
       const owner = semanticAddressKey(entry.action.owner);
       const transaction = transactionsByOwner.get(owner);
       const convertedReward = timePiecedReward(entry.action.owner);

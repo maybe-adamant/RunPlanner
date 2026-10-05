@@ -8,6 +8,7 @@ import { migrateProjectDocument as migrate86To87 } from '../../../../schema/migr
 import { migrateProjectDocument as migrate87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 import { migrateProjectDocument as migrate88To89 } from '../../../../schema/migrate-project-88-to-89.js';
 import { migrateProjectDocument as migrate89To90 } from '../../../../schema/migrate-project-89-to-90.js';
+import { migrateProjectDocument as migrate90To91 } from '../../../../schema/migrate-project-90-to-91.js';
 import baseline from '../../../../schema/fixtures/route-foundation.runplanner.json';
 
 describe('schema 84 migration fixtures', () => {
@@ -25,8 +26,10 @@ describe('schema 84 migration fixtures', () => {
           biomes: [{ ...baseline.route.biomes[0]!, biomeKey: itinerary[0] }],
         },
       };
-      const migrated = migrate89To90(
-        migrate88To89(migrate87To88(migrate86To87(migrate85To86(migrate84To85(source))))),
+      const migrated = migrate90To91(
+        migrate89To90(
+          migrate88To89(migrate87To88(migrate86To87(migrate85To86(migrate84To85(source))))),
+        ),
       );
       const decoded = decodeProjectDocument(migrated, catalog);
 

@@ -12,6 +12,7 @@ import {
   type HermesShrineState,
   type OccurrenceId,
   type ProjectDocument,
+  type RoomActionReference,
   type RoomOccurrence,
 } from './model';
 import { structurallyActiveOccurrenceIds } from './topology/query';
@@ -64,6 +65,37 @@ export function purchaseFor(
   if (generationKey === 'travelDealRefill') return shrine.travelDealRefill?.purchase;
   const slotKey = hermesShrineInitialSlotKey(generationKey);
   return slotKey === undefined ? undefined : shrine.purchaseBySlot?.[slotKey];
+}
+
+export type HermesShrinePurchaseAction = Extract<
+  RoomActionReference,
+  { readonly kind: 'purchaseHermesShrineOffer' }
+>;
+
+/** The timeline purchase action of one Shrine generation, which owns its rush. */
+export function hermesShrinePurchaseAction(
+  order: readonly RoomActionReference[],
+  generationKey: HermesShrineGenerationKey,
+): HermesShrinePurchaseAction | undefined {
+  return order.find(
+    (reference): reference is HermesShrinePurchaseAction =>
+      reference.kind === 'purchaseHermesShrineOffer' && reference.generationKey === generationKey,
+  );
+}
+
+/**
+ * The first rushed initial purchase in timeline order (`FirstSpeedUpPurchase`);
+ * Travel Deal refills that purchase's slot.
+ */
+export function firstRushedInitialPurchase(
+  order: readonly RoomActionReference[],
+): HermesShrinePurchaseAction | undefined {
+  return order.find(
+    (reference): reference is HermesShrinePurchaseAction =>
+      reference.kind === 'purchaseHermesShrineOffer' &&
+      reference.rushed &&
+      reference.generationKey !== 'travelDealRefill',
+  );
 }
 
 /** The visible inventory offer behind one Shrine generation; `null` is an empty slot. */

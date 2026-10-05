@@ -9,6 +9,7 @@ export {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
+  hermesShrinePurchaseAction,
   isDeliveryFlushHost,
   parseHermesShrineDeliveryEntryKey,
 } from './hermes-shrine-delivery';

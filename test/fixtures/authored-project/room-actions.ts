@@ -246,3 +246,37 @@ export function authorTestArtificerReplacement(
   }
   return document;
 }
+
+/** Purchases one Shrine generation, or clears it, and sets its purchase action's rush. */
+export function purchaseTestHermesShrineOffer(
+  initial: ProjectDocument,
+  catalog: Catalog,
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+  purchase: { readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8; readonly rushed: boolean } | null,
+): ProjectDocument {
+  const purchased = applyProjectCommand(initial, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence,
+    generationKey,
+    purchase: purchase === null ? null : { delay: purchase.delay },
+  });
+  if (purchase === null) return purchased;
+  return applyProjectCommand(purchased, catalog, {
+    kind: 'SetHermesShrinePurchaseRush',
+    action: testHermesShrinePurchaseAction(occurrence, generationKey),
+    rushed: purchase.rushed,
+  });
+}
+
+/** The room-action address of one Shrine generation's purchase. */
+export function testHermesShrinePurchaseAction(
+  occurrence: ReturnType<typeof createOccurrenceAddress>,
+  generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+) {
+  return createRoomActionAddress(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+    occurrence.occurrenceId,
+    roomActionKey({ kind: 'purchaseHermesShrineOffer', generationKey, rushed: false }),
+  );
+}

@@ -21,6 +21,7 @@ import { parseClockedTraitGeneratedPickupEntryKey } from '../authored-project/ac
 import {
   discardDisplacedHermesShrineDelivery,
   hermesShrineDeliverySourceAddress,
+  hermesShrinePurchaseAction,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
   purchaseFor,
@@ -74,12 +75,16 @@ function placements(assembly: ProjectEvaluationAssembly) {
 function purchasedObligation(project: ProjectDocument, entryKey: string) {
   const source = parseHermesShrineDeliveryEntryKey(entryKey);
   if (source === undefined) return undefined;
-  const shrine = occurrenceAt(project, hermesShrineDeliverySourceAddress(source))?.hermesShrine;
+  const occurrence = occurrenceAt(project, hermesShrineDeliverySourceAddress(source));
+  const shrine = occurrence?.hermesShrine;
   const purchase = purchaseFor(shrine, source.generationKey);
   return Object.freeze({
     rewardType: offerFor(shrine, source.generationKey)?.rewardType,
     delay: purchase?.delay,
-    rushed: purchase?.rushed,
+    rushed:
+      occurrence === undefined
+        ? undefined
+        : hermesShrinePurchaseAction(occurrence.roomActions.order, source.generationKey)?.rushed,
   });
 }
 function sameObligation(

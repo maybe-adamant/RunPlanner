@@ -50,16 +50,16 @@ describe('purchaseFor', () => {
       secondLeft: { rewardType: 'MaxHealthDrop' },
       secondRight: null,
     },
-    purchaseBySlot: { secondLeft: { delay: 4, rushed: false } },
+    purchaseBySlot: { secondLeft: { delay: 4 } },
     travelDealRefill: {
       offer: { rewardType: 'MaxManaDrop' },
-      purchase: { delay: 2, rushed: true },
+      purchase: { delay: 2 },
     },
   };
 
   it('reads the initial slot purchase or the Travel Deal refill purchase', () => {
-    expect(purchaseFor(shrine, 'initial:secondLeft')).toEqual({ delay: 4, rushed: false });
-    expect(purchaseFor(shrine, 'travelDealRefill')).toEqual({ delay: 2, rushed: true });
+    expect(purchaseFor(shrine, 'initial:secondLeft')).toEqual({ delay: 4 });
+    expect(purchaseFor(shrine, 'travelDealRefill')).toEqual({ delay: 2 });
   });
 
   it('is undefined for an unpurchased slot or a missing Shrine', () => {

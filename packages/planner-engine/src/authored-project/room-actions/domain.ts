@@ -26,7 +26,12 @@ import {
   acquisitionSiteFromStorageKey,
   parseArtificerReplacementEntryKey,
 } from '../acquisition/artificer';
-import { isDeliveryFlushHost, parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import {
+  firstRushedInitialPurchase,
+  hermesShrinePurchaseAction,
+  isDeliveryFlushHost,
+  parseHermesShrineDeliveryEntryKey,
+} from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -226,6 +231,28 @@ function travelDealSourceAction(
   return undefined;
 }
 
+/**
+ * A rushed Shrine pickup follows its purchase; the refill purchase follows the
+ * first rushed initial purchase that created it.
+ */
+function hermesShrinePurchaseDependencies(
+  occurrence: RoomOccurrence,
+  reference: RoomActionReference,
+  sameRoomDelivery: import('../model').HermesShrineGenerationKey | undefined,
+): readonly RoomActionDependency[] {
+  const order = occurrence.roomActions.order;
+  const source =
+    sameRoomDelivery !== undefined
+      ? hermesShrinePurchaseAction(order, sameRoomDelivery)
+      : reference.kind === 'purchaseHermesShrineOffer' &&
+          reference.generationKey === 'travelDealRefill'
+        ? firstRushedInitialPurchase(order)
+        : undefined;
+  return source === undefined
+    ? []
+    : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
+}
+
 function travelDealDependencies(
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
@@ -280,6 +307,15 @@ function baseContribution(
         'optional',
         frozen({ kind: 'postOutgoing' }),
         travelDealDependencies(occurrence, reference),
+      );
+    case 'purchaseHermesShrineOffer':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'required',
+        frozen({ kind: 'postOutgoing' }),
+        hermesShrinePurchaseDependencies(occurrence, reference, undefined),
       );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
@@ -536,6 +572,13 @@ function baseContribution(
               : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
           ...travelDealDependencies(occurrence, reference),
+          ...hermesShrinePurchaseDependencies(
+            occurrence,
+            reference,
+            sameRoomShrineDelivery && hermesDelivery !== undefined
+              ? hermesDelivery.generationKey
+              : undefined,
+          ),
           ...(producer === undefined
             ? []
             : [frozen({ kind: 'afterAction' as const, action: producer.sourceAction })]),

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 90,
+  "schemaVersion": 91,
   "projectId": "surface-2",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1259,6 +1259,16 @@
                     "kind": "useFountain"
                   },
                   {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "initial:first",
+                    "rushed": true
+                  },
+                  {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "travelDealRefill",
+                    "rushed": false
+                  },
+                  {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "hermesShrineDelivery",
                     "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22surface-n-preboss%3Apostboss%22%2C%22initial%3Afirst%22%5D"
@@ -1279,8 +1289,7 @@
                 },
                 "purchaseBySlot": {
                   "first": {
-                    "delay": 2,
-                    "rushed": true
+                    "delay": 2
                   }
                 },
                 "travelDealRefill": {
@@ -1288,8 +1297,7 @@
                     "rewardType": "ArmorBoost"
                   },
                   "purchase": {
-                    "delay": 2,
-                    "rushed": false
+                    "delay": 2
                   }
                 }
               },

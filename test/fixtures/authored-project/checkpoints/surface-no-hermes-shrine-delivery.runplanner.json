@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 90,
+  "schemaVersion": 91,
   "projectId": "surface-2",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1693,6 +1693,16 @@
                     "wheelKey": "wheel1"
                   },
                   {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "initial:first",
+                    "rushed": true
+                  },
+                  {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "initial:secondLeft",
+                    "rushed": false
+                  },
+                  {
                     "kind": "interactAcquisitionEntry",
                     "siteKey": "hermesShrineDelivery",
                     "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3Afirst%22%5D"
@@ -1713,12 +1723,10 @@
                 },
                 "purchaseBySlot": {
                   "first": {
-                    "delay": 2,
-                    "rushed": true
+                    "delay": 2
                   },
                   "secondLeft": {
-                    "delay": 3,
-                    "rushed": false
+                    "delay": 3
                   }
                 }
               },

@@ -407,9 +407,7 @@ function HermesShrineSlotEditor({
           checked={current !== null}
           disabled={offer.rewardType === null}
           onChange={(event) =>
-            executeIntent(
-              purchase.intentFor(event.target.checked ? { delay: 2, rushed: false } : null),
-            )
+            executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
           }
           type="checkbox"
         />
@@ -447,11 +445,11 @@ function HermesShrineSlotEditor({
         <label className="shop-family-participation">
           <input
             aria-label={`Rush Hermes Shrine ${label}`}
-            checked={current?.rushed ?? false}
+            checked={purchase.rushed}
             disabled={current === null}
             onChange={(event) => {
               if (current === null) return;
-              executeIntent(purchase.intentFor({ ...current, rushed: event.target.checked }));
+              executeIntent(purchase.rushIntentFor(event.target.checked));
             }}
             type="checkbox"
           />

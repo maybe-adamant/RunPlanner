@@ -46,7 +46,7 @@ it.each([
               kind: 'SetHermesShrinePurchase',
               occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
               generationKey: 'initial:secondLeft',
-              purchase: { delay: 4, rushed: false },
+              purchase: { delay: 4 },
             },
           )
         : kind === 'delivery'

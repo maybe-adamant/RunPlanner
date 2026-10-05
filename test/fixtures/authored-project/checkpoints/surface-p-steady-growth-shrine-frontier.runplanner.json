@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 90,
+  "schemaVersion": 91,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -2184,6 +2184,11 @@
                 "order": [
                   {
                     "kind": "useFountain"
+                  },
+                  {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "initial:secondLeft",
+                    "rushed": false
                   }
                 ]
               },
@@ -2201,8 +2206,7 @@
                 },
                 "purchaseBySlot": {
                   "secondLeft": {
-                    "delay": 2,
-                    "rushed": false
+                    "delay": 2
                   }
                 }
               },

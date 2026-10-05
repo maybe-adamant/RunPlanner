@@ -1,3 +1,4 @@
+import { purchaseTestHermesShrineOffer } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
@@ -679,11 +680,9 @@ describe('structured workspace actions assembly', () => {
         value: { rewardType },
       });
     }
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondLeft',
-      purchase: { delay: 3, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondLeft', {
+      delay: 3,
+      rushed: false,
     });
 
     const hostId = oOccurrenceIds.devotion;

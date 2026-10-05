@@ -49,7 +49,11 @@ import {
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { authorLegalTraitOffers, supportedTraitOffer } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  purchaseTestHermesShrineOffer,
+  supportedTraitOffer,
+} from '@run-planner/test-fixtures/shared';
 import {
   renderOccurrenceWorkbench,
   workspaceBiome,
@@ -227,8 +231,12 @@ describe('Hermes Shrine workbench', () => {
         .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
-        )?.hermesShrine?.purchaseBySlot?.first,
-    ).toEqual({ delay: 2, rushed: true });
+        )?.roomActions.order,
+    ).toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+      rushed: true,
+    });
   });
 
   it('authors Mystery Boon identity in inventory and its god only at rushed acquisition', async () => {
@@ -371,11 +379,9 @@ describe('Hermes Shrine workbench', () => {
       slotKey: 'secondRight',
       value: { rewardType: 'BlindBoxLoot' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondRight',
-      purchase: { delay: 3, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondRight', {
+      delay: 3,
+      rushed: false,
     });
     const view = renderOccurrenceWorkbench(
       project,
@@ -443,11 +449,9 @@ describe('Hermes Shrine workbench', () => {
         value: { rewardType },
       });
     }
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondRight',
-      purchase: { delay: 8, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondRight', {
+      delay: 8,
+      rushed: false,
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'Q', occurrence(host.occurrenceId));
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
@@ -536,11 +540,9 @@ describe('Hermes Shrine workbench', () => {
       slotKey: 'secondRight',
       value: { rewardType: 'BlindBoxLoot' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondRight',
-      purchase: { delay: 3, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:secondRight', {
+      delay: 3,
+      rushed: false,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
@@ -627,11 +629,9 @@ describe('Hermes Shrine workbench', () => {
   it('places a matured delayed delivery from its required host timeline row', async () => {
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     let project = completeOrdinaryShrine();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:first',
-      purchase: { delay: 3, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, source, 'initial:first', {
+      delay: 3,
+      rushed: false,
     });
     const application = createApplication();
     const hostId = oOccurrenceIds.devotion;
@@ -774,11 +774,9 @@ describe('Hermes Shrine workbench', () => {
       occurrence: owner,
       value: { rewardType: 'ArmorBoost' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: owner,
-      generationKey: 'travelDealRefill',
-      purchase: { delay: 4, rushed: false },
+    project = purchaseTestHermesShrineOffer(project, catalog, owner, 'travelDealRefill', {
+      delay: 4,
+      rushed: false,
     });
     const view = renderOccurrenceWorkbench(
       project,
@@ -806,8 +804,12 @@ describe('Hermes Shrine workbench', () => {
         .getState()
         .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')!
         .topology!.occurrences.find((room) => room.occurrenceId === oOccurrenceIds.combat07)!
-        .hermesShrine?.travelDealRefill?.purchase,
-    ).toEqual({ delay: 4, rushed: true });
+        .roomActions.order,
+    ).toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'travelDealRefill',
+      rushed: true,
+    });
   });
 
   it('hides the retained Travel Deal refill when Rush is cleared and restores it when rushed again', async () => {
@@ -844,11 +846,9 @@ describe('Hermes Shrine workbench', () => {
       occurrence: owner,
       value: { rewardType: 'ArmorBoost' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
-      occurrence: owner,
-      generationKey: 'initial:first',
-      purchase: { delay: 2, rushed: true },
+    project = purchaseTestHermesShrineOffer(project, catalog, owner, 'initial:first', {
+      delay: 2,
+      rushed: true,
     });
     project = authorLegalTraitOffers({
       ...project,
