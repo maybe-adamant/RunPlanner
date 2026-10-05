@@ -535,12 +535,19 @@ export function retainBlockedRegionProducts(
   // Retain reached dynamic inventory when either it or an acquisition child
   // needs repair. Missing child authorship does not undo inventory generation.
   const rewardOwner = ancestors.rewardOwner;
-  const blockedShopSite =
+  // A blocked Shop-offer role (such as a refill's Anvil) keeps its reached inventory too.
+  const shopOffer =
     rewardOwner?.kind === 'shopOffer'
+      ? rewardOwner
+      : blockedAcquisitionAt?.owner.kind === 'shopOffer'
+        ? blockedAcquisitionAt.owner
+        : undefined;
+  const blockedShopSite =
+    shopOffer !== undefined
       ? createAcquisitionSiteAddress(
           createOccurrenceAddress(
-            createBiomeAddress(rewardOwner.routeKey, rewardOwner.biomeKey),
-            rewardOwner.occurrenceId,
+            createBiomeAddress(shopOffer.routeKey, shopOffer.biomeKey),
+            shopOffer.occurrenceId,
           ),
           'roomExit',
         )

@@ -5,6 +5,7 @@ import * as fixture from './support/progressive-biome-fixtures';
 import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createAcquisitionRoleAddress,
+  createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
@@ -12,11 +13,21 @@ import {
   createLocalRewardAddress,
   createRoomActionAddress,
   createRouteAddress,
+  createShopOfferAddress,
   createTraitAcquisitionTargetAddress,
   decodeProjectDocument,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
-import { authoringReadinessAt } from '@run-planner/engine/simulation';
+import {
+  authoringReadinessAt,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
+} from '@run-planner/engine/simulation';
+import {
+  qBiome,
+  qOccurrenceIds,
+  surfaceTravelDealRefillAnvilProject,
+  surfaceTravelDealRefillAnvilResult,
+} from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
 import { phaseTakesEffectBeforeBlock } from '../../src/simulation/progressive/selected-products';
@@ -1272,5 +1283,27 @@ describe('progressive selected and blocked products', () => {
     expect(capability?.realizedAcquisition).toMatchObject({
       acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
     });
+  });
+
+  it('retains the reached Travel Deal refill when its Anvil role blocks', () => {
+    const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+    const role = createAcquisitionRoleAddress(refill, 'self');
+    // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
+    const project = applyProjectCommand(surfaceTravelDealRefillAnvilProject(), catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: role,
+      value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardAcquisitionUnavailable', origin: role }),
+    );
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
+      'roomExit',
+    );
+    expect(derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site)).toEqual([
+      expect.objectContaining({ kind: 'travelDealRefill', sourceOfferKey: 'PremiumProgress' }),
+    ]);
   });
 });
