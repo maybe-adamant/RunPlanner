@@ -1,6 +1,6 @@
 # Room lifecycle blocking
 
-Status: locked 2026-10-05. Base: `b69eea52`. No schema change.
+Status: locked 2026-10-05; amended 2026-10-05 (doors open in the Timeline). Base: `b69eea52`. No schema change.
 
 ## Objective
 
@@ -8,8 +8,8 @@ A finding stops evaluation at the exact product that cannot settle, and
 nothing reached before that product disappears from the workspace. Three
 contract corrections:
 
-1. A room's exit belongs to the room; the next room's doors and content belong
-   to the next room.
+1. A later room's problem never reaches back into an earlier room: anything
+   owned by the next room leaves the source room fully exited.
 2. Each room settles in three ordered stages: Overview, Timeline, Exit.
 3. An invalid product in the middle of a room's Timeline keeps everything
    before it, makes the whole blocking product the repair region, and shows
@@ -20,12 +20,15 @@ contract corrections:
 | Stage    | Question                                   | Contains                                                                                                                                                                    |
 | -------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Overview | What is the room and what does it contain? | Everything defined on entry: encounter selection and Shop, Shrine, Well and Contract inventory. The room's door reward is generated with the source room's doors, not here. |
-| Timeline | What happens in the room?                  | Ordered room actions, encounters, acquisitions, purchases, refills, deliveries.                                                                                             |
-| Exit     | Where to go next?                          | The room's exit work (pending Shop completion, resource placements, leaving snapshot), then door generation and the door selection.                                         |
+| Timeline | What happens in the room?                  | Ordered room actions, encounters, acquisitions, purchases, refills, deliveries, and the doors opening, which settles the door offers at that point.                         |
+| Exit     | Where to go next?                          | The door selection, then the room's exit work (pending Shop completion, resource placements, leaving snapshot).                                                             |
 
-Each stage settles before the next starts. The room's exit work settles before
-its door generation; door generation belongs to the source room's Exit stage,
-and the next room's Overview belongs to the next room.
+Each stage settles before the next starts. The doors opening is a Timeline fact
+of the source room: the door offers settle when the doors open, usually at the
+room clear, and later Timeline actions (purchases, digging, Shrine and Well
+use) happen after it. The Exits tab is where door offers are authored, as a
+convenience; it does not move their chronology. The next room's Overview
+belongs to the next room.
 
 Any Overview product that reads Timeline-produced state is a modelling error.
 
@@ -36,9 +39,10 @@ Any Overview product that reads Timeline-produced state is a modelling error.
   `:1067`). Shrine and Well inventories are generated in that transition
   (`StoreLogic.lua:436-452`) and only unlocked after the encounter
   (`RoomLogic.lua:4056-4078`); their refills and rerolls happen at purchase.
-- The planner already orders the room's exit work (`roomExited`:
-  pending Shop completion, resource placements, `beforeRoomExit` snapshot)
-  before door generation (`beforeTargetGeneration`).
+- Doors open in the middle of the Timeline: native `DoUnlockRoomExits` creates
+  them and `LeaveRoom` runs after the exit is chosen. The planner matches:
+  outgoing generation precedes `roomCommitted` and `roomExited`, and
+  `beforeRoomExit` already includes the door offers.
 - Today, any finding owned by a room that is a target of decision _i_ clamps to
   "decisions before _i_, frontier at _i_'s exit batch, targets not entered"
   (`simulation/progressive/prefix.ts` `clampPrefix`). The source room never
@@ -59,19 +63,16 @@ Any Overview product that reads Timeline-produced state is a modelling error.
   (`simulation/finding-regions.ts`). Shop settlement uses one region for the
   whole Shop (`ownerRegion(room.origin)`).
 
-## Correction 1: the exit belongs to the room
+## Correction 1: a later room never reaches back
 
-- A block at door generation or later (an invalid door offer, a door-owned
-  finding, anything owned by the next room) runs the source room's
-  `roomExited` before stopping. The source room keeps its exit work and
-  `beforeRoomExit` snapshot.
-- An invalid door offer blocks at the source room's door generation: the
-  door rewards are the repair region; the source room's Overview, Timeline and
-  exit work stay settled.
+- A block owned by the next room (after the whole door batch and after the
+  source room's `roomExited`) runs the source room's commit and exit before
+  stopping. The source room keeps its exit work and `beforeRoomExit` snapshot.
 - Anything in the next room never changes the source room's door selection.
-- Door generation reads the source room's settled products only: the Shrine
-  re-assessment in `generation/target-policy.ts` reuses the stored entry
-  assessment instead of re-running it at the door view.
+- An invalid door offer is a Timeline block of the source room at its doors
+  opening (correction 3), not an Exit block.
+- Door generation reads no Shop options: the unread Shrine door-view
+  re-assessment is removed.
 
 ## Correction 2: stages settle in order
 
@@ -88,6 +89,12 @@ Any Overview product that reads Timeline-produced state is a modelling error.
 
 ## Correction 3: a Timeline block
 
+- The doors opening is one blocking product: an invalid door offer keeps the
+  Timeline before it, makes the door batch (authored on the Exits tab) the
+  repair region, and shows later Timeline actions, the door selection and the
+  exit work read-only. Shop and Story rooms today still commit and exit when
+  their own doors block (`lifecycle/execute.ts` emits no acquisition point for
+  rostered rooms); that stops.
 - The blocking product is the engine atomic region of the blocking finding.
   Every Timeline row that region owns is editable and carries its findings,
   whatever row shows the first finding. The engine publishes that row set; the
@@ -116,10 +123,10 @@ chronology inference. Catalog, schema and game module: untouched.
 
 ## Gates
 
-1. `fix(engine): settle the room's exit before its doors` — correction 1;
-   witnesses for an invalid door offer and a next-room block keeping the source
-   room's exit snapshot, Shop completion and resource placements; Shrine
-   door-view reuse.
+1. `fix(engine): exit the source room before a next-room block` —
+   correction 1; witnesses for a next-room block keeping the source room's
+   exit snapshot, Shop completion and resource placements, and for a source
+   exit-work failure blocking at the source; Shrine door-view removal.
 2. `fix(engine): settle the room Overview on entry` — correction 2; Shop
    inventory blocks at the room's Overview with `roomEntered` kept; Overview
    read-only invariant.
