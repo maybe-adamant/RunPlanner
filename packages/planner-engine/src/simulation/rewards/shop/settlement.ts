@@ -598,6 +598,8 @@ export function settleShopAcquisitionSite(
         if (settled.branches.length === 1) {
           execution.candidate = settled.branches[0]!;
           survivors.push(execution);
+        } else if (settled.findingEmissions.length > 0) {
+          entryPurchaseFailureRecorded = true;
         }
         continue;
       }

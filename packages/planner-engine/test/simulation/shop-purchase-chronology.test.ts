@@ -36,6 +36,13 @@ import {
   echoGoldShop,
 } from './shop-trait-purchase-support';
 import type { TraitOfferEvent } from './shop-trait-purchase-support';
+import { createAcquisitionRoleAddress } from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import {
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIPrebossShopId,
+  goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
 
 describe('Gold Gold Gold Shop pickups', () => {
   it.each([
@@ -835,5 +842,30 @@ describe('Gold Gold Gold Shop pickups', () => {
         ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
       ],
     ).toBeDefined();
+  });
+
+  it('explains a failing owned duplicate of an Anvil purchase at its own entry', () => {
+    const findings = simulateProjectAssembly(catalog, createEchoGoldIAnvilDuplicateProject())
+      .evaluation.findings;
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId),
+      'roomExit',
+    );
+    const duplicate = createAcquisitionEntryAddress(site, ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY);
+
+    expect(findings.map((finding) => semanticAddressKey(finding.origin)).sort()).toEqual(
+      [
+        semanticAddressKey(duplicate),
+        semanticAddressKey(createAcquisitionRoleAddress(duplicate, 'self')),
+      ].sort(),
+    );
+    expect(findings).toContainEqual(
+      expect.objectContaining({ code: 'rewardAcquisitionUnavailable', origin: duplicate }),
+    );
+    expect(findings).not.toContainEqual(
+      expect.objectContaining({
+        evidence: expect.objectContaining({ kind: 'jointPurchaseOrder' }),
+      }),
+    );
   });
 });
