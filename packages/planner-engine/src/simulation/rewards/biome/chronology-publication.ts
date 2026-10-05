@@ -282,5 +282,6 @@ export function publishChronology(
     ),
     traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),
+    encounterEntryVowRanks: walk.encounterEntryVowRanks,
   });
 }

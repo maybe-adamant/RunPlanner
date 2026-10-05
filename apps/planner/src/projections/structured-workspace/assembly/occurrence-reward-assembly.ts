@@ -16,6 +16,8 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createEchoLastRewardAddress,
+  createAetosPhaseAddress,
+  createFigLeafPhaseAddress,
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
@@ -783,6 +785,40 @@ export function requireEncounterEnvelope(catalog: Catalog, room: RoomDeclaration
   return envelope;
 }
 
+/** Ship phase names: each wheel-bearing combat is numbered, other phases keep their slot key. */
+export function shipPhaseLabels(
+  envelope: ReturnType<typeof requireEncounterEnvelope>,
+): ReadonlyMap<string, string> {
+  let combatOrdinal = 0;
+  return new Map(
+    envelope.slots.map((slot) => {
+      if (slot.rewardAttachment?.kind !== 'rewardWheel') return [slot.key, slot.key] as const;
+      combatOrdinal += 1;
+      return [slot.key, `Combat ${combatOrdinal}`] as const;
+    }),
+  );
+}
+
+/** The presentation names of one encounter phase: its own and its identity picker's. */
+function encounterPhaseLabels(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  slotKey: string,
+  phaseCount: number,
+): { readonly label: string; readonly identityLabel: string } {
+  const named = (label: string) => ({ label, identityLabel: label });
+  const phase = (label: string) => ({ label, identityLabel: `${label} encounter` });
+  if (room.encounterEnvelopeKey === 'PEncounter' && slotKey === 'Intro')
+    return named('Opening encounter');
+  if (room.encounterEnvelopeKey === 'PEncounter' && slotKey === 'Combat')
+    return named('Follow-up encounter');
+  if (room.mode.kind === 'authored' && room.mode.templateKey === 'ShipCombat')
+    return phase(shipPhaseLabels(requireEncounterEnvelope(catalog, room)).get(slotKey) ?? slotKey);
+  const cage = slotKey.match(/^Cage0*(\d+)$/)?.[1];
+  if (cage !== undefined) return phase(`Cage ${cage}`);
+  return phaseCount === 1 ? named('Encounter') : phase(slotKey);
+}
+
 export function requireRewardWheelAttachment(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -813,7 +849,7 @@ export function activeEncounterPhasesForOwner(
   options: EncounterPhaseAuthoringRoomOptions = {},
 ): readonly WorkspaceEncounterPhase[] {
   const phases: WorkspaceEncounterPhase[] = [];
-  for (const domain of encounterPhaseAuthoringDomainForRoom(
+  const domains = encounterPhaseAuthoringDomainForRoom(
     input.catalog,
     input.biome,
     room,
@@ -832,7 +868,9 @@ export function activeEncounterPhasesForOwner(
         routePosition: input.routePosition,
       },
     },
-  )) {
+  );
+  const domainCount = domains.length;
+  for (const domain of domains) {
     const address = domain.origin;
     const phaseStatus = input.encounterPhaseStatus(address);
     if (phaseStatus?.kind === 'dormantSuffix') continue;
@@ -1220,27 +1258,24 @@ export function activeEncounterPhasesForOwner(
         ...(compositionView === undefined
           ? {}
           : { composition: projectEncounterComposition(compositionView) }),
-        label:
-          room.encounterEnvelopeKey === 'PEncounter'
-            ? domain.slotKey === 'Intro'
-              ? 'Opening encounter'
-              : domain.slotKey === 'Combat'
-                ? 'Follow-up encounter'
-                : domain.slotKey
-            : domain.slotKey,
+        ...encounterPhaseLabels(input.catalog, room, domain.slotKey, domainCount),
         marker: input.markerDestinations.marker(address),
-        editorAnchor:
-          fieldsPassive && nemesisEvent === undefined
-            ? 'overview'
-            : fieldsPassive ||
+        ...(fieldsPassive && nemesisEvent === undefined
+          ? {}
+          : {
+              timelineAnchor:
+                fieldsPassive ||
                 (customizable &&
                   selectedDefinition !== undefined &&
                   !isCombatBearingEncounterPhaseKind(selectedDefinition.kind))
-              ? 'roomEntered'
-              : 'encounterStart',
+                  ? ('roomEntered' as const)
+                  : ('encounterStart' as const),
+            }),
         ...(aetosWave !== undefined || (aetosSupport?.waves.length ?? 0) > 0
           ? {
               aetos: Object.freeze({
+                address: createAetosPhaseAddress(address),
+                marker: input.markerDestinations.marker(createAetosPhaseAddress(address)),
                 interactionKey: semanticAddressKey(address),
                 contextReached: aetosSupport !== undefined,
                 waves: aetosSupport?.waves ?? Object.freeze([]),
@@ -1251,6 +1286,8 @@ export function activeEncounterPhasesForOwner(
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
           ? {
               figLeaf: Object.freeze({
+                address: createFigLeafPhaseAddress(address),
+                marker: input.markerDestinations.marker(createFigLeafPhaseAddress(address)),
                 interactionKey: semanticAddressKey(address),
                 selected: authoredFigLeafSkip,
                 supported: figLeafSupport?.supported === true,
@@ -1262,6 +1299,8 @@ export function activeEncounterPhasesForOwner(
           ? {}
           : {
               gorgonCondition: Object.freeze({
+                address: gorgonPhaseAddress,
+                marker: gorgonPhaseMarker,
                 interactionKey: semanticAddressKey(address),
                 selected: gorgonResult.athenaTriggerConditionMet,
                 supported: gorgonSupported,

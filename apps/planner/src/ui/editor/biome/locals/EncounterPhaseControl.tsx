@@ -32,6 +32,9 @@ const isCompositionFinding = (finding: { readonly code: string }): boolean =>
   finding.code === 'encounterCustomizationRequired' ||
   finding.code === 'encounterIntroductionRequired';
 
+const isIdentityFinding = (finding: { readonly code: string }): boolean =>
+  !isCompositionFinding(finding);
+
 function isGeneratedEncounterDecision(
   decision: NonNullable<WorkspaceEncounterPhase['customization']>[number],
 ): decision is Extract<
@@ -406,14 +409,10 @@ export function CustomizableEncounterPhaseControl({
         phase.address,
         semanticOwnerControlElementId(phase.address),
         phase.address,
-        (finding) =>
-          !isCompositionFinding(finding) &&
-          finding.code !== 'aetosAppearanceUnavailable' &&
-          finding.code !== 'figLeafSkipUnavailable' &&
-          finding.code !== 'gorgonConditionUnavailable',
+        isIdentityFinding,
       )}
       id={semanticOwnerControlElementId(phase.address)}
-      label="Encounter"
+      label={phase.identityLabel}
       layout="inline"
       loading={step === 'encounter' && candidates.pending}
       model={
@@ -451,6 +450,7 @@ export function CustomizableEncounterPhaseControl({
   );
 }
 
+/** The phase's identity and customization, fixed on entry and authored in the room Overview. */
 export function EncounterPhaseControl({
   interactions,
   phase,
@@ -460,20 +460,70 @@ export function EncounterPhaseControl({
   readonly phase: WorkspaceEncounterPhase;
 }) {
   const findingTarget = useFindingTarget();
+  const customizationControl =
+    phase.customization === undefined && phase.composition === undefined ? null : (
+      <EncounterCustomizationControl interactions={interactions} phase={phase} />
+    );
+  return (
+    <section
+      {...(!phase.customizable &&
+      phase.customization === undefined &&
+      phase.nemesisFeature === undefined
+        ? {
+            ...findingTarget(phase.address, undefined, phase.address, isIdentityFinding),
+            tabIndex: -1,
+          }
+        : {})}
+      aria-label={`${phase.identityLabel} phase`}
+      className="encounter-phase-control"
+    >
+      <div className="encounter-phase-settings">
+        {phase.customizable ? (
+          <CustomizableEncounterPhaseControl
+            interaction={requireWorkspaceInteraction(
+              interactions.encounterPhases,
+              workspaceInteractionKey(phase.address),
+            )}
+            phase={phase}
+          />
+        ) : (
+          <div className="field-control field-control-inline">
+            <span>{phase.identityLabel}</span>
+            <div className="encounter-fixed-value">{phase.selectedEncounter.label}</div>
+          </div>
+        )}
+        {customizationControl}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The Timeline projection of one phase: its settled identity, read-only, and the
+ * events decided when it starts (Fig Leaf, Gorgon, Aetos, a Nemesis response).
+ */
+export function EncounterPhaseTimelineControl({
+  interactions,
+  phase,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
+  const figLeaf = phase.figLeaf;
   const figLeafInteraction =
-    phase.figLeaf === undefined
+    figLeaf === undefined
       ? undefined
-      : requireWorkspaceInteraction(interactions.figLeafSkips, phase.figLeaf.interactionKey);
+      : requireWorkspaceInteraction(interactions.figLeafSkips, figLeaf.interactionKey);
   const figLeafControl =
-    figLeafInteraction === undefined ? null : (
+    figLeaf === undefined || figLeafInteraction === undefined ? null : (
       <label className="encounter-event-control">
         <input
           {...findingTarget(
+            figLeaf.address,
+            semanticOwnerControlElementId(figLeaf.address),
             phase.address,
-            `fig-leaf-${semanticOwnerControlElementId(phase.address)}`,
-            phase.address,
-            (finding) => finding.code === 'figLeafSkipUnavailable',
           )}
           checked={figLeafInteraction.selected}
           disabled={!figLeafInteraction.supported && !figLeafInteraction.selected}
@@ -483,22 +533,19 @@ export function EncounterPhaseControl({
         <span>Skip with Fig Leaf</span>
       </label>
     );
+  const gorgon = phase.gorgonCondition;
   const gorgonInteraction =
-    phase.gorgonCondition === undefined
+    gorgon === undefined
       ? undefined
-      : requireWorkspaceInteraction(
-          interactions.gorgonConditions,
-          phase.gorgonCondition.interactionKey,
-        );
+      : requireWorkspaceInteraction(interactions.gorgonConditions, gorgon.interactionKey);
   const gorgonControl =
-    gorgonInteraction === undefined ? null : (
+    gorgon === undefined || gorgonInteraction === undefined ? null : (
       <label className="encounter-event-control">
         <input
           {...findingTarget(
+            gorgon.address,
+            semanticOwnerControlElementId(gorgon.address),
             phase.address,
-            `gorgon-${semanticOwnerControlElementId(phase.address)}`,
-            phase.address,
-            (finding) => finding.code === 'gorgonConditionUnavailable',
           )}
           checked={gorgonInteraction.selected}
           disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
@@ -508,20 +555,20 @@ export function EncounterPhaseControl({
         <span>Gorgon Amulet: Death Defiance</span>
       </label>
     );
+  const aetos = phase.aetos;
   const aetosInteraction =
-    phase.aetos === undefined
+    aetos === undefined
       ? undefined
-      : requireWorkspaceInteraction(interactions.aetosAppearances, phase.aetos.interactionKey);
+      : requireWorkspaceInteraction(interactions.aetosAppearances, aetos.interactionKey);
   const aetosControl =
-    aetosInteraction === undefined ? null : (
+    aetos === undefined || aetosInteraction === undefined ? null : (
       <div className="encounter-event-control">
         <label className="encounter-event-control">
           <input
             {...findingTarget(
+              aetos.address,
+              semanticOwnerControlElementId(aetos.address),
               phase.address,
-              `aetos-${semanticOwnerControlElementId(phase.address)}`,
-              phase.address,
-              (finding) => finding.code === 'aetosAppearanceUnavailable',
             )}
             checked={aetosInteraction.selectedWave !== undefined}
             disabled={
@@ -564,11 +611,8 @@ export function EncounterPhaseControl({
         </span>
       </div>
     );
-  const ariaLabel = phase.label.endsWith('encounter')
-    ? `${phase.label} phase`
-    : `${phase.label} encounter phase`;
   const nemesisEventSelector =
-    phase.nemesisEvent === undefined
+    phase.nemesisEvent === undefined || phase.customizable
       ? null
       : (() => {
           const interaction = interactions.nemesisEvents.get(
@@ -578,49 +622,23 @@ export function EncounterPhaseControl({
             <NemesisEventSelector interaction={interaction} />
           );
         })();
-  const customizationControl =
-    phase.customization === undefined && phase.composition === undefined ? null : (
-      <EncounterCustomizationControl interactions={interactions} phase={phase} />
-    );
+  const family =
+    phase.nemesisEvent === undefined || !phase.customizable
+      ? undefined
+      : interactions.encounterPhases.get(workspaceInteractionKey(phase.address))?.nemesisEvent
+          ?.familyPicker.selected;
   return (
-    <section
-      {...(!phase.customizable &&
-      phase.customization === undefined &&
-      phase.nemesisFeature === undefined
-        ? {
-            ...findingTarget(
-              phase.address,
-              undefined,
-              phase.address,
-              (finding) =>
-                !isCompositionFinding(finding) &&
-                finding.code !== 'aetosAppearanceUnavailable' &&
-                finding.code !== 'figLeafSkipUnavailable' &&
-                finding.code !== 'gorgonConditionUnavailable',
-            ),
-            tabIndex: -1,
-          }
-        : {})}
-      aria-label={ariaLabel}
-      className="encounter-phase-control"
-    >
+    <section aria-label={`${phase.identityLabel} events`} className="encounter-phase-control">
       <div className="encounter-phase-settings">
-        {phase.customizable ? (
-          <CustomizableEncounterPhaseControl
-            interaction={requireWorkspaceInteraction(
-              interactions.encounterPhases,
-              workspaceInteractionKey(phase.address),
-            )}
-            phase={phase}
-          />
-        ) : (
-          <div className="field-control field-control-inline">
-            <span>{phase.editorAnchor === 'overview' ? 'Passive Encounter' : 'Encounter'}</span>
-            <div className="encounter-fixed-value">{phase.selectedEncounter.label}</div>
+        <div className="field-control field-control-inline">
+          <span>Encounter</span>
+          <div className="encounter-fixed-value">
+            {family === undefined
+              ? phase.selectedEncounter.label
+              : `${phase.selectedEncounter.label} · ${family.label}`}
           </div>
-        )}
-        {customizationControl}
-        {phase.customizable ? null : nemesisEventSelector}
+        </div>
+        {nemesisEventSelector}
       </div>
       {figLeafControl !== null || gorgonControl !== null || aetosControl !== null ? (
         <div

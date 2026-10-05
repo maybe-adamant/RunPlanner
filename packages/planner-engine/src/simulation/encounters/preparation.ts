@@ -103,6 +103,11 @@ export interface EncounterPhaseSequenceStatusEntry {
 export interface PreparedEncounterPhases {
   readonly valid: boolean;
   readonly validPrefix: readonly ResolvedEncounterPhase[];
+  /**
+   * Every active phase's authored identity, recorded when the room is entered
+   * even when one is invalid; that invalidity blocks at the room's Overview.
+   */
+  readonly recordedPhases: readonly ResolvedEncounterPhase[];
   readonly candidates: readonly EncounterPhaseCandidateSupport[];
   readonly generation: readonly GeneratedEncounterCandidateCapability[];
   readonly rosters: readonly InfiniteRosterCandidateCapability[];
@@ -206,12 +211,10 @@ export interface EncounterPreparationRunState {
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
   readonly rewardGeneration?: HistoryStateView | undefined;
-  readonly hordesRankAt?: (
-    selection: GeneratedEncounterSelection,
-    origin: EncounterPhaseAddress,
-  ) => number | undefined;
-  readonly fangsRankAt?: (origin: EncounterPhaseAddress) => number | undefined;
-  readonly menaceRankAt?: (origin: EncounterPhaseAddress) => number | undefined;
+  /** Room-entry vow ranks; every phase's composition reads the same entry state. */
+  readonly hordesRankAt?: (selection: GeneratedEncounterSelection) => number | undefined;
+  readonly fangsRankAt?: () => number | undefined;
+  readonly menaceRankAt?: () => number | undefined;
 }
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
@@ -444,6 +447,8 @@ export function prepareRoomEncounterPhases(
   const statuses: EncounterPhaseSequenceStatusEntry[] = [];
   const findings: SemanticFinding[] = [];
   const validPrefix: ResolvedEncounterPhase[] = [];
+  const recordedPhases: ResolvedEncounterPhase[] = [];
+  let recordable = true;
   let blockedAt: EncounterPhaseAddress | undefined;
   // The caller provides the real roomPrepared checkpoint. Later selected
   // phases advance this transient view through their preceding record facts,
@@ -539,7 +544,6 @@ export function prepareRoomEncounterPhases(
       continue;
     }
     statuses.push(Object.freeze({ origin, status: Object.freeze({ kind: 'active' as const }) }));
-    if (!prefixValid) continue;
     const binding = bindings.get(phase.slotKey);
     if (binding === undefined) {
       throw new Error(`${room.gameName} lost binding ${phase.slotKey}`);
@@ -576,21 +580,33 @@ export function prepareRoomEncounterPhases(
         ? projectRouteEncounterKeyCounts(preparation, routePosition.routeKey)
         : {},
     });
+    // After an invalid phase, later phases are recorded as authored but not assessed.
+    const recordAuthored = (authored: typeof phase) => {
+      const resolved = recordable
+        ? resolveMaterializedEncounterPhase(catalog, declaration, authored, resolution)
+        : undefined;
+      if (resolved === undefined) recordable = false;
+      else recordedPhases.push(resolved);
+    };
+    const shadowed =
+      binding.kind === 'fixed' && binding.shadowEncounterDefinitionKey !== undefined
+        ? {
+            ...phase,
+            authoredChoiceKey:
+              (runState.effectiveShadowRank ?? 0) > 0
+                ? binding.shadowEncounterDefinitionKey
+                : binding.encounterDefinitionKey,
+          }
+        : phase;
+    if (!prefixValid) {
+      recordAuthored(shadowed);
+      continue;
+    }
     if (binding.kind === 'fixed') {
-      const preparedPhase =
-        binding.shadowEncounterDefinitionKey === undefined
-          ? phase
-          : {
-              ...phase,
-              authoredChoiceKey:
-                (runState.effectiveShadowRank ?? 0) > 0
-                  ? binding.shadowEncounterDefinitionKey
-                  : binding.encounterDefinitionKey,
-            };
       let resolvedPhase = resolveMaterializedEncounterPhase(
         catalog,
         declaration,
-        preparedPhase,
+        shadowed,
         resolution,
       );
       if (resolvedPhase === undefined) {
@@ -607,6 +623,7 @@ export function prepareRoomEncounterPhases(
         findings.push(slotActivationFinding(origin, preparation.sequence, phase.slotKey));
         blockedAt ??= origin;
         prefixValid = false;
+        recordAuthored(shadowed);
         continue;
       }
       if (prefixValid) {
@@ -619,6 +636,7 @@ export function prepareRoomEncounterPhases(
           unfinishedIntroductions,
         );
         validPrefix.push(resolvedPhase);
+        recordedPhases.push(resolvedPhase);
         preparation = projectEncounterRecordPreparation(
           preparation,
           room.origin,
@@ -735,12 +753,14 @@ export function prepareRoomEncounterPhases(
       findings.push(slotActivationFinding(origin, preparation.sequence, phase.slotKey));
       blockedAt ??= support.origin;
       prefixValid = false;
+      recordAuthored(phase);
       continue;
     }
     if (!support.selectedPossible) {
       findings.push(selectedEncounterFinding(support, preparation.sequence));
       blockedAt ??= support.origin;
       prefixValid = false;
+      recordAuthored(phase);
       continue;
     }
     if (prefixValid) {
@@ -761,6 +781,7 @@ export function prepareRoomEncounterPhases(
         unfinishedIntroductions,
       );
       validPrefix.push(resolvedPhase);
+      recordedPhases.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
         preparation,
         room.origin,
@@ -774,6 +795,7 @@ export function prepareRoomEncounterPhases(
   return Object.freeze({
     valid: blockedAt === undefined,
     validPrefix: Object.freeze(validPrefix),
+    recordedPhases: Object.freeze(recordedPhases),
     candidates: Object.freeze(candidates),
     generation: Object.freeze(generation),
     rosters: Object.freeze(rosters),

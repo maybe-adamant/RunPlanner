@@ -89,7 +89,7 @@ describe('a dialog whose context is lost closes and needs an explicit reopen', (
       occurrenceById(createOccurrenceId('fresh-4-0')),
     );
     const store = view.application.store;
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const trigger = () => screen.getByRole('button', { name: 'Customize encounter' });
     await view.user.click(trigger());
     expect(await screen.findByRole('dialog')).toBeTruthy();

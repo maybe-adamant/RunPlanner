@@ -2,21 +2,30 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createEncounterPhaseAddress,
+  createFigLeafPhaseAddress,
   createOccurrenceAddress,
   semanticAddressKey,
   createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
+  createCompleteFGProject,
   createFConversionFrontierProject,
   createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
   createSurfaceNOHermesShrineDeliveryCheckpoint,
+  loadSurfaceNOPQProject,
   oBiome,
   oOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
+  reachedPOutdoorIcarusFixture,
 } from '@run-planner/test-fixtures/surface';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
@@ -148,3 +157,97 @@ it.each([
     }
   },
 );
+
+it.each([
+  ['composition', 'Room Overview', 'Customize encounter'],
+  ['figLeaf', 'Room Timeline', 'Skip with Fig Leaf'],
+] as const)('navigates an encounter %s finding to its %s control', async (kind, tab, control) => {
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  );
+  const project = applyProjectCommand(
+    createCompleteFGProject(),
+    catalog,
+    kind === 'figLeaf'
+      ? { kind: 'ReplaceFigLeafSkip', phase, value: true }
+      : {
+          kind: 'ReplaceEncounterCustomization',
+          phase,
+          decisionKey: 'generatedComposition',
+          value: {
+            kind: 'generated',
+            waveCount: 1,
+            waves: [{ waveIndex: 1, typeKeys: ['Guard', 'Guard_Elite'] }],
+          },
+        },
+  );
+  const view = renderWorkspace(project, 'Underworld', 'F');
+  const workspace = workspaceProjection(view.application);
+  const issue = view.application.store.getState().projectWorkspace.assembly!.evaluation.route.issue;
+  expect(issue?.owner).toEqual(kind === 'figLeaf' ? createFigLeafPhaseAddress(phase) : phase);
+  const findings = render(
+    <Provider store={view.application.store}>
+      <ProjectFindings catalog={catalog} issue={issue} focusByOwner={workspace.focusByOwner} />
+    </Provider>,
+  );
+  await view.user.click(findings.container.querySelector('button')!);
+  expect(screen.getByRole('tab', { name: tab }).getAttribute('aria-selected')).toBe('true');
+  const target =
+    kind === 'figLeaf'
+      ? screen.getByRole('checkbox', { name: control })
+      : screen.getByRole('button', { name: control });
+  expect(target.dataset.hasFindings).toBe('true');
+  expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+    workspace.focusByOwner.get(semanticAddressKey(issue!.owner))!.focusAddress,
+  );
+  if (kind === 'figLeaf') await waitFor(() => expect(document.activeElement).toBe(target));
+});
+
+it.each([
+  ['gorgon', 'Gorgon Amulet: Death Defiance'],
+  ['aetos', 'Aetos appearance'],
+] as const)('navigates a P %s finding to its Timeline checkbox', async (kind, control) => {
+  const fixture = reachedPOutdoorIcarusFixture();
+  const project =
+    kind === 'gorgon'
+      ? applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+          kind: 'ReplaceGorgonDeathDefianceCondition',
+          phase: createEncounterPhaseAddress(
+            pBiome,
+            { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
+            'Combat',
+          ),
+          value: true,
+        })
+      : applyProjectCommand(
+          applyProjectCommand(fixture.project, catalog, {
+            kind: 'ReplaceAetosWave',
+            phase: createEncounterPhaseAddress(
+              pBiome,
+              { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
+              'Combat',
+            ),
+            value: 2,
+          }),
+          catalog,
+          { kind: 'ReplaceAetosWave', phase: fixture.encounter, value: 2 },
+        );
+  const view = renderWorkspace(project, 'Surface', 'P');
+  const workspace = workspaceProjection(view.application);
+  const issue = view.application.store.getState().projectWorkspace.assembly!.evaluation.route.issue;
+  expect(issue?.owner.kind).toBe(kind === 'gorgon' ? 'gorgonPhase' : 'aetosPhase');
+  const findings = render(
+    <Provider store={view.application.store}>
+      <ProjectFindings catalog={catalog} issue={issue} focusByOwner={workspace.focusByOwner} />
+    </Provider>,
+  );
+  await view.user.click(findings.container.querySelector('button')!);
+  expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+  const target = screen.getByRole('checkbox', { name: control });
+  expect(target.dataset.hasFindings).toBe('true');
+  await waitFor(() => expect(document.activeElement).toBe(target));
+});

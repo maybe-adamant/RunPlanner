@@ -1,8 +1,4 @@
-export {
-  executeEncounterRecordPrefix,
-  executeRoomLifecycle,
-  LifecycleExecutionContractError,
-} from './execute';
+export { executeRoomLifecycle, LifecycleExecutionContractError } from './execute';
 export {
   type RoomHistoryFragment,
   type RoomHistoryOrigin,

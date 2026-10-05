@@ -5,6 +5,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
+  createGorgonPhaseAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -436,7 +437,7 @@ describe('Vow of Forfeit Red Onion substitution', () => {
       );
       expect(assembly.evaluation.issue).toMatchObject({
         kind: 'invalid',
-        owner: combat1,
+        owner: createGorgonPhaseAddress(combat1),
         reasons: [expect.objectContaining({ code: 'gorgonConditionUnavailable' })],
       });
       return assembly;

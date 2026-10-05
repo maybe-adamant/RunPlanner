@@ -37,15 +37,14 @@ import {
   composeBiomeHistoryPrefixWithEncounterValidation,
   type BiomeHistoryPrefix,
   type CanonicalBiomeHistory,
-  type EncounterHistoryBlock,
   type FigLeafLifecycleState,
 } from '../history';
 import type { MaterializedBiomePrefix } from '../materialization';
 import { evaluateEncounterCandidatesInternal } from '../encounters/candidates';
+import type { EncounterEntryVowRanks } from '../arcana-fear';
 import { structurallyActiveEncounterRooms } from '../encounters/structural';
-import type { EncounterCandidateBoundary } from '../encounters/candidates';
 import { materializeBiomePrefix } from '../materialization';
-import { assessmentRepairOwner, ownerRegion, type FindingRegionEntry } from '../finding-regions';
+import { assessmentRepairOwner, type FindingRegionEntry } from '../finding-regions';
 import { createAssessmentIssue } from '../assessment-issue';
 import {
   evaluateBiomeRewardsAssemblyInternal,
@@ -60,17 +59,12 @@ import { attestPendingHermesSpellDrop } from '../commerce/hermes-shrine';
 import { attestTalentDropsClosed } from '../hex-progress';
 import { attestEffectiveShadowRank } from '../arcana-fear';
 import {
-  compareLocatedFindings,
-  encounterBlockChronology,
-  encounterBlockFinding,
   firstUnsupportedFinding,
   findingsAtRegion,
-  locateFinding,
   findingLocation,
   mergedFindings,
   type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
-import { encounterBlockProductPrefix } from './prefix';
 import { clampSelectedProducts } from './clamp';
 import type {
   BiomeGenerationValidation,
@@ -127,7 +121,6 @@ interface ProgressiveGenerationAssembly {
 interface ProgressiveProducts {
   readonly evaluation: Omit<ProgressiveBiomeEvaluation, 'materializedPrefix' | 'blockedAt'>;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
-  readonly encounterBlock?: EncounterHistoryBlock;
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
 }
@@ -135,9 +128,6 @@ interface ProgressiveProducts {
 function generation(
   catalog: Catalog,
   productPrefix: MaterializedBiomePrefix & {
-    readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
-  },
-  encounterPrefix: MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   },
   history: BiomeHistoryPrefix,
@@ -158,8 +148,8 @@ function generation(
   stygianWells: StygianWellCandidateArtifacts,
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
   fountainRarity: FountainRarityCandidateArtifacts,
+  encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
-  encounterBoundary?: EncounterCandidateBoundary,
   carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -171,24 +161,19 @@ function generation(
     forcedChaosOccurrenceKeys,
     carriedRewardLookups,
   );
-  // An encounter block can occur after the active Hub visit's side-generation
-  // checkpoint. Validate that visit against the selected authored envelope so
-  // an earlier side-generation error remains available for chronological
-  // comparison with the later encounter block.
-  const hub = evaluateHubDecisionGenerationInternal(catalog, encounterPrefix, history);
+  const hub = evaluateHubDecisionGenerationInternal(catalog, productPrefix, history);
   const encounters = evaluateEncounterCandidatesInternal(
     catalog,
-    structurallyActiveEncounterRooms(encounterPrefix),
+    structurallyActiveEncounterRooms(productPrefix),
     new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room.preparation])),
     routePosition,
-    encounterBoundary,
     rewards.figLeafPhaseCandidates,
     attestGorgonBranchState(rewards.branches),
     rewards.gorgonPhaseCandidates,
     rewards.nemesisRandomEventCandidates,
     history.events,
     history.rooms,
-    rewards.runStateSnapshots,
+    encounterEntryVowRanks,
     rewards.targetHistory,
   );
   const validation: BiomeGenerationValidation = Object.freeze({
@@ -250,7 +235,7 @@ function products(
   const lifecycleFigLeafState = figLeafLifecycleState(catalog, context);
   const lifecyclePendingSpellDrop = pendingHermesSpellDropLifecycleState(context);
   const lifecycleAllSpellInvested = talentDropClosureLifecycleState(context);
-  const composed = composeBiomeHistoryPrefixWithEncounterValidation(
+  const history = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
     context.routePosition,
@@ -260,29 +245,12 @@ function products(
     lifecycleAllSpellInvested,
     attestEffectiveShadowRank(context.loadout, context.seed?.rewardBranches),
   );
-  if (composed === null) {
+  if (history === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
   }
-  const encounterBoundary =
-    composed.kind === 'blocked'
-      ? Object.freeze({
-          blocked: Object.freeze({
-            room: composed.block.room,
-            before: composed.block.before,
-          }),
-        })
-      : undefined;
-  const generationPrefix =
-    composed.kind === 'blocked' ? encounterBlockProductPrefix(prefix, composed.block) : prefix;
-  // The encounter-aware composition already contains the exact preparation
-  // checkpoint and every valid predecessor record. Re-composing the bounded
-  // topology would erase that partial lifecycle and publish only creation.
-  const history = composed.history;
   const rewards = evaluateBiomeRewardsAssemblyInternal(
     catalog,
-    generationPrefix as MaterializedBiomePrefix & {
-      readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
-    },
+    prefix,
     history,
     context.routePosition,
     context.loadout,
@@ -292,12 +260,7 @@ function products(
   );
   const roomGeneration = generation(
     catalog,
-    generationPrefix as MaterializedBiomePrefix & {
-      readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
-    },
-    prefix as MaterializedBiomePrefix & {
-      readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
-    },
+    prefix,
     history,
     context.routePosition,
     rewards.simulation,
@@ -316,8 +279,8 @@ function products(
     rewards.stygianWellArtifacts,
     rewards.transcendentEmbryoArtifacts,
     rewards.fountainRarityArtifacts,
+    rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
-    encounterBoundary,
     context.seed === undefined
       ? undefined
       : sharedRewardLookups(context.seed.rewardBranches.map((branch) => branch.state)),
@@ -327,13 +290,9 @@ function products(
       history,
       rewards: rewards.simulation,
       roomGeneration: roomGeneration.validation,
-      findings: Object.freeze(
-        composed.kind === 'blocked' ? [encounterBlockFinding(composed.block)] : [],
-      ),
-      ...(composed.kind === 'blocked' ? { assessmentPrefix: generationPrefix } : {}),
+      findings: Object.freeze([]),
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,
-    ...(composed.kind === 'blocked' ? { encounterBlock: composed.block } : {}),
     findingRegions: Object.freeze([...roomGeneration.findingRegions, ...rewards.findingRegions]),
     traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
   });
@@ -380,26 +339,7 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const evaluated = products(catalog, materializedPrefix, context);
-  const encounterLocated =
-    evaluated.encounterBlock === undefined
-      ? undefined
-      : locateFinding(
-          materializedPrefix,
-          encounterBlockFinding(evaluated.encounterBlock),
-          ownerRegion(evaluated.encounterBlock.blockedAt),
-          encounterBlockChronology(evaluated.encounterBlock),
-        );
-  const unsupported = firstUnsupportedFinding(
-    materializedPrefix,
-    evaluated.findingRegions,
-    () => true,
-    encounterLocated?.regionKey,
-  );
-  const locatedBlock =
-    unsupported !== undefined &&
-    (encounterLocated === undefined || compareLocatedFindings(unsupported, encounterLocated) <= 0)
-      ? unsupported
-      : encounterLocated;
+  const locatedBlock = firstUnsupportedFinding(materializedPrefix, evaluated.findingRegions);
   return Object.freeze({
     evaluation: Object.freeze({
       materializedPrefix,
@@ -469,25 +409,8 @@ export function evaluateProgressiveBiomeAssembly(
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
   const evaluated = products(catalog, authoredPrefix, context);
-  const encounterLocated =
-    evaluated.encounterBlock === undefined
-      ? undefined
-      : locateFinding(
-          authoredPrefix,
-          encounterBlockFinding(evaluated.encounterBlock),
-          ownerRegion(evaluated.encounterBlock.blockedAt),
-          encounterBlockChronology(evaluated.encounterBlock),
-        );
-  const unsupported = firstUnsupportedFinding(
-    authoredPrefix,
-    evaluated.findingRegions,
-    () => true,
-    encounterLocated?.regionKey,
-  );
-  const genericPrecedesEncounter =
-    unsupported !== undefined &&
-    (encounterLocated === undefined || compareLocatedFindings(unsupported, encounterLocated) <= 0);
-  if (genericPrecedesEncounter && unsupported !== undefined) {
+  const unsupported = firstUnsupportedFinding(authoredPrefix, evaluated.findingRegions);
+  if (unsupported !== undefined) {
     return clampSelectedProducts(
       catalog,
       authoredPrefix,
@@ -503,62 +426,13 @@ export function evaluateProgressiveBiomeAssembly(
       unsupported,
     );
   }
-  const blockedAt =
-    evaluated.encounterBlock !== undefined ? evaluated.encounterBlock.blockedAt : undefined;
   return Object.freeze({
     evaluation: Object.freeze({
       ...evaluated.evaluation,
       materializedPrefix: authoredPrefix,
-      ...(evaluated.evaluation.assessmentPrefix === undefined
-        ? {}
-        : { assessmentPrefix: evaluated.evaluation.assessmentPrefix }),
       findings: mergedFindings(evaluated.evaluation),
-      ...(blockedAt === undefined ? {} : { blockedAt }),
-      ...(encounterLocated === undefined
-        ? {}
-        : {
-            blockedKind: isRequiredMissingInputFinding(encounterLocated.finding)
-              ? ('incomplete' as const)
-              : ('invalid' as const),
-            blockedRegionKey: encounterLocated.regionKey,
-            blockedLocation: findingLocation(encounterLocated),
-            issue: createAssessmentIssue(
-              assessmentRepairOwner(encounterLocated.finding.origin),
-              encounterLocated.regionKey,
-              [
-                encounterLocated.finding,
-                ...findingsAtRegion(
-                  authoredPrefix,
-                  evaluated.findingRegions,
-                  encounterLocated.regionKey,
-                ),
-              ],
-            ),
-          }),
     }),
-    candidateArtifacts: createBiomeCandidateArtifacts(
-      evaluated.candidateArtifacts.origin,
-      evaluated.candidateArtifacts.roomTargets,
-      evaluated.candidateArtifacts.rewardProducers,
-      evaluated.candidateArtifacts.roomLifecycles,
-      evaluated.candidateArtifacts.encounters,
-      evaluated.candidateArtifacts.traitOffers,
-      evaluated.candidateArtifacts.levelResolutions,
-      evaluated.candidateArtifacts.judgmentArcana,
-      evaluated.candidateArtifacts.keepsakeSelections,
-      evaluated.candidateArtifacts.keepsakeEquipResults,
-      evaluated.candidateArtifacts.acquisitionConversions,
-      evaluated.candidateArtifacts.derivedAcquisitionEntries,
-      evaluated.candidateArtifacts.steadyGrowth,
-      evaluated.candidateArtifacts.purgingPools,
-      evaluated.candidateArtifacts.hermesShrines,
-      evaluated.candidateArtifacts.stygianWells,
-      evaluated.candidateArtifacts.fountainRarity,
-      evaluated.candidateArtifacts.figurineArcana,
-      evaluated.candidateArtifacts.transcendentEmbryo,
-      evaluated.candidateArtifacts.chaos,
-      evaluated.candidateArtifacts.zagreusContracts,
-    ),
+    candidateArtifacts: evaluated.candidateArtifacts,
   });
 }
 

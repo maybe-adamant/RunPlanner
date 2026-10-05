@@ -1,14 +1,13 @@
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import {
+  createAetosPhaseAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
-  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type EncounterPhaseAddress,
   type NemesisRandomEventAddress,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
-import { projectRoomPreparationCheckpoint } from '../history/facts';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../history/model';
 import {
   targetRewardGeneration,
@@ -25,7 +24,6 @@ import {
 } from '../finding-regions';
 import {
   prepareRoomEncounterPhases,
-  type EncounterAuthoringRoom,
   type EncounterPhaseCandidateSupport,
   type EncounterPhaseSequenceStatus,
   type PreparedEncounterPhases,
@@ -33,8 +31,7 @@ import {
 import type { MaterializedEncounterPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport, TargetRewardHistoryCheckpoint } from '../rewards/model';
-import type { RunStateSnapshot } from '../rewards/run-state';
-import { attestEffectiveHordesRank } from '../arcana-fear';
+import { attestEffectiveHordesRank, type EncounterEntryVowRanks } from '../arcana-fear';
 import { assessGorgonCandidate } from '../keepsakes/encounter-effects';
 import { type GorgonLifecycleStatus } from '../keepsakes/state';
 import type { GorgonPhaseCandidateSupport } from '../rewards/model';
@@ -63,10 +60,10 @@ export interface EncounterCandidateArtifacts {
   readonly roomAt: (origin: OccurrenceAddress) => EncounterRoomCandidateCapability | undefined;
   readonly figLeafAt: (origin: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined;
   /**
-   * Where a reached phase takes effect: its start, or room entry for a phase
-   * whose lifecycle declares no start. Its candidate context reads nothing later.
+   * Where an active phase's identity and composition settle: its room's
+   * preparation. Its candidate context reads nothing later.
    */
-  readonly positionAt: (origin: EncounterPhaseAddress) => HistoryFindingChronology | undefined;
+  readonly preparedAt: (origin: EncounterPhaseAddress) => HistoryFindingChronology | undefined;
 }
 
 export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
@@ -79,7 +76,7 @@ export function createEmptyEncounterCandidateArtifacts(): EncounterCandidateArti
     nemesisAt: () => undefined,
     roomAt: () => undefined,
     figLeafAt: () => undefined,
-    positionAt: () => undefined,
+    preparedAt: () => undefined,
   });
 }
 
@@ -104,64 +101,23 @@ export interface EncounterCandidateEvaluation {
   }[];
 }
 
-export interface EncounterCandidateBoundary {
-  /**
-   * An encounter block has one more precise owner checkpoint: the failed
-   * room itself must evaluate from before its valid record-only prefix.
-   */
-  readonly blocked?: {
-    readonly room: EncounterAuthoringRoom;
-    readonly before: HistoryStateView;
-  };
-}
-
-function candidateContext(
-  room: EncounterAuthoringRoom,
-  views: ReadonlyMap<string, HistoryStateView>,
-  boundary: EncounterCandidateBoundary | undefined,
-): HistoryStateView | undefined {
-  const key = semanticAddressKey(room.origin);
-  const canonical = views.get(key);
-  if (canonical !== undefined) return canonical;
-  if (boundary === undefined) return undefined;
-  if (boundary.blocked !== undefined && key === semanticAddressKey(boundary.blocked.room.origin)) {
-    return projectRoomPreparationCheckpoint(boundary.blocked.before);
-  }
-  return undefined;
-}
-
-function hasExactCandidateContext(
-  room: EncounterAuthoringRoom,
-  views: ReadonlyMap<string, HistoryStateView>,
-  boundary: EncounterCandidateBoundary | undefined,
-): boolean {
-  const key = semanticAddressKey(room.origin);
-  return (
-    views.has(key) ||
-    (boundary?.blocked !== undefined && key === semanticAddressKey(boundary.blocked.room.origin))
-  );
-}
-
 /**
  * Projects candidate support for every structurally active editable phase.
- * Canonically entered rooms use their own preparation checkpoint. A bounded
- * prefix exposes only rooms with exact preparation checkpoints. An
- * encounter-blocked owner restarts from its exact predecessor checkpoint;
- * later authored rooms remain unavailable until their own checkpoint exists.
+ * Each prepared room uses its own preparation checkpoint; a bounded prefix
+ * exposes only rooms with exact preparation checkpoints.
  */
 export function evaluateEncounterCandidatesInternal(
   catalog: Catalog,
   rooms: readonly (CanonicalAuthoredRoom | CanonicalLocalVisitRoom)[],
   views: ReadonlyMap<string, HistoryStateView>,
   routePosition: ResolvedRoutePosition,
-  boundary?: EncounterCandidateBoundary,
   figLeafCandidates: readonly FigLeafPhaseCandidateSupport[] = [],
   gorgonStatus: GorgonLifecycleStatus | undefined = undefined,
   gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[] = [],
   nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[] = [],
   historyEvents: readonly HistoryEvent[] = [],
   historyRooms: readonly ProgressiveRoomHistoryViews[] = [],
-  runStateSnapshots: readonly RunStateSnapshot[] = [],
+  entryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks> = new Map(),
   rewardHistory: readonly TargetRewardHistoryCheckpoint[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
@@ -169,27 +125,21 @@ export function evaluateEncounterCandidatesInternal(
   const rosters = new Map<string, InfiniteRosterCandidateCapability>();
   const resolvedGenerated: EncounterCandidateEvaluation['resolvedGenerated'][number][] = [];
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
-  const positions = new Map<string, HistoryFindingChronology>();
+  const preparedAt = new Map<string, HistoryFindingChronology>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
   const findings: SemanticFinding[] = [];
   const findingChronologies = new Map<string, HistoryFindingChronology>();
-  const phaseStartChronologies = new Map<SemanticFinding, HistoryFindingChronology>();
-  const runStateByOwner = new Map(
-    runStateSnapshots.map((snapshot) => [semanticAddressKey(snapshot.owner), snapshot]),
-  );
   const rewardHistoryByOrigin = new Map(
     rewardHistory.map((checkpoint) => [semanticAddressKey(checkpoint.origin), checkpoint]),
   );
   for (const room of rooms) {
     if (!room.entered) continue;
-    const context = candidateContext(room, views, boundary);
+    const context = views.get(semanticAddressKey(room.origin));
     if (context === undefined) continue;
+    const entryRanks = entryVowRanks.get(semanticAddressKey(room.origin));
     const preparationState = {
       rewardGeneration: targetRewardGenerationCheckpoint(historyRooms, room.origin),
-      hordesRankAt: (
-        selection: import('../../catalog-schema').GeneratedEncounterSelection,
-        origin: EncounterPhaseAddress,
-      ) => {
+      hordesRankAt: (selection: import('../../catalog-schema').GeneratedEncounterSelection) => {
         if (selection.preparation === 'rewardGeneration') {
           const generation = targetRewardGeneration(historyRooms, room.origin);
           const checkpoint =
@@ -200,44 +150,10 @@ export function evaluateEncounterCandidatesInternal(
             ? undefined
             : attestEffectiveHordesRank(checkpoint.states);
         }
-        const owner =
-          room.lifecycleProfileKey === 'ShipCombatRoom'
-            ? createRoomRunStateCheckpointAddress(room.origin, {
-                kind: 'beforeEncounterStart',
-                phaseKey: origin.phaseKey,
-              })
-            : createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
-        const snapshot = runStateByOwner.get(semanticAddressKey(owner));
-        return snapshot === undefined
-          ? undefined
-          : (snapshot.effectiveHordesRank ?? attestEffectiveHordesRank([snapshot]));
+        return entryRanks?.hordes;
       },
-      fangsRankAt: (origin: EncounterPhaseAddress) => {
-        const owner =
-          room.lifecycleProfileKey === 'ShipCombatRoom'
-            ? createRoomRunStateCheckpointAddress(room.origin, {
-                kind: 'beforeEncounterStart',
-                phaseKey: origin.phaseKey,
-              })
-            : createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
-        const snapshot = runStateByOwner.get(semanticAddressKey(owner));
-        return snapshot === undefined
-          ? undefined
-          : (snapshot.arcanaFear.fear.effectiveRanks.EnemyEliteShrineUpgrade ?? 0);
-      },
-      menaceRankAt: (origin: EncounterPhaseAddress) => {
-        const owner =
-          room.lifecycleProfileKey === 'ShipCombatRoom'
-            ? createRoomRunStateCheckpointAddress(room.origin, {
-                kind: 'beforeEncounterStart',
-                phaseKey: origin.phaseKey,
-              })
-            : createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
-        const snapshot = runStateByOwner.get(semanticAddressKey(owner));
-        return snapshot === undefined
-          ? undefined
-          : (snapshot.arcanaFear.fear.effectiveRanks.NextBiomeEnemyShrineUpgrade ?? 0);
-      },
+      fangsRankAt: () => entryRanks?.fangs,
+      menaceRankAt: () => entryRanks?.menace,
     };
     const preparedSource = prepareRoomEncounterPhases(
       catalog,
@@ -296,7 +212,7 @@ export function evaluateEncounterCandidatesInternal(
             ),
           })
         : preparedSource;
-    if (room.kind === 'authored' && hasExactCandidateContext(room, views, boundary)) {
+    if (room.kind === 'authored') {
       const roomKey = semanticAddressKey(room.origin);
       if (roomsByOwner.has(roomKey)) {
         throw new Error(`duplicate encounter room candidate ${roomKey}`);
@@ -333,11 +249,6 @@ export function evaluateEncounterCandidatesInternal(
           Object.freeze({ origin: capability.origin, customization: phase.generatedCustomization }),
         );
     }
-    const entered = historyEvents.find(
-      (event) =>
-        event.kind === 'roomEntered' &&
-        semanticAddressKey(event.origin) === semanticAddressKey(room.origin),
-    );
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);
       if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
@@ -347,19 +258,10 @@ export function evaluateEncounterCandidatesInternal(
           semanticAddressKey(event.origin) === semanticAddressKey(room.origin) &&
           event.phaseKey === entry.origin.phaseKey,
       );
-      // A phase without a declared start takes effect at room entry.
-      const declaresStart = room.roomActionRoster.lifecycleStructure.phases.some(
-        (phase) => phase.phaseKey === entry.origin.phaseKey,
-      );
-      const takesEffect = declaresStart ? started : entered;
-      if (entry.status.kind === 'active' && takesEffect !== undefined)
-        positions.set(
+      if (entry.status.kind === 'active')
+        preparedAt.set(
           key,
-          Object.freeze({
-            kind: 'history',
-            sequence: takesEffect.sequence,
-            boundary: declaresStart ? 'before' : 'at',
-          }),
+          Object.freeze({ kind: 'history', sequence: context.sequence, boundary: 'at' }),
         );
       statuses.set(
         key,
@@ -369,34 +271,13 @@ export function evaluateEncounterCandidatesInternal(
       );
     }
     findings.push(...prepared.findings);
-    prepared.findings.forEach((finding) => {
-      // Finding regions are produced here while the exact room-preparation
-      // checkpoint is still available; do not infer this lifecycle position
-      // later from encounter finding codes.
+    // Identity and composition are fixed when the room is prepared: their
+    // findings belong to the room's Overview.
+    for (const finding of prepared.findings)
       findingChronologies.set(
         semanticAddressKey(finding.origin),
         Object.freeze({ kind: 'history', sequence: context.sequence, boundary: 'at' }),
       );
-      // A missing composition is repaired where its phase starts; room-entry
-      // inputs before that start do not read it.
-      if (
-        finding.code !== 'encounterCustomizationRequired' ||
-        finding.origin.kind !== 'encounterPhase'
-      )
-        return;
-      const phaseKey = finding.origin.phaseKey;
-      const started = historyEvents.find(
-        (event) =>
-          event.kind === 'encounterStarted' &&
-          semanticAddressKey(event.origin) === semanticAddressKey(room.origin) &&
-          event.phaseKey === phaseKey,
-      );
-      if (started !== undefined)
-        phaseStartChronologies.set(
-          finding,
-          Object.freeze({ kind: 'history', sequence: started.sequence, boundary: 'before' }),
-        );
-    });
   }
   const privateEntries = new Map(entries);
   for (const event of historyEvents) {
@@ -416,12 +297,13 @@ export function evaluateEncounterCandidatesInternal(
     if (status?.kind === 'active')
       statuses.set(key, Object.freeze({ ...status, aetos: event.aetos }));
     if (event.aetos.selectedWave !== undefined && event.aetos.reason !== undefined) {
+      const aetosOrigin = createAetosPhaseAddress(origin);
       findings.push(
         Object.freeze({
           code: 'aetosAppearanceUnavailable',
           severity: 'error',
           phase: 'encounterResolution',
-          origin,
+          origin: aetosOrigin,
           evidence: Object.freeze({
             event: 'aetos',
             reason: event.aetos.reason,
@@ -430,7 +312,7 @@ export function evaluateEncounterCandidatesInternal(
         }),
       );
       findingChronologies.set(
-        key,
+        semanticAddressKey(aetosOrigin),
         Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
       );
     }
@@ -473,17 +355,19 @@ export function evaluateEncounterCandidatesInternal(
         privateNemesis.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
-      positionAt: (origin: EncounterPhaseAddress) => positions.get(semanticAddressKey(origin)),
+      preparedAt: (origin: EncounterPhaseAddress) => preparedAt.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),
     resolvedGenerated: Object.freeze(resolvedGenerated),
     findingRegions: Object.freeze(
-      findings.map((finding) => {
-        const chronology =
-          phaseStartChronologies.get(finding) ??
-          findingChronologies.get(semanticAddressKey(finding.origin));
-        return findingRegion(finding, undefined, chronology, 'encounter');
-      }),
+      findings.map((finding) =>
+        findingRegion(
+          finding,
+          undefined,
+          findingChronologies.get(semanticAddressKey(finding.origin)),
+          'encounter',
+        ),
+      ),
     ),
   });
 }

@@ -10,7 +10,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
 } from '../../authored-project/addresses';
-import type { BiomeHistoryPrefix, EncounterHistoryBlock } from '../history';
+import type { BiomeHistoryPrefix } from '../history';
 import type {
   CanonicalBiome,
   CanonicalAuthoredRoom,
@@ -25,7 +25,6 @@ import {
   ownerRegion,
   type FindingAggregate,
   type FindingRegionEntry,
-  type HistoryFindingChronology,
 } from '../finding-regions';
 import type { BiomeRewardSimulation } from '../rewards';
 import type { BiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
@@ -67,6 +66,8 @@ function findingParentAddress(address: SemanticAddress): SemanticAddress | undef
     case 'acquisitionSite':
       return address.owner;
     case 'nemesisRandomEvent':
+    case 'figLeafPhase':
+    case 'aetosPhase':
       return address.encounter;
     case 'acquisitionEntry':
       return address.site;
@@ -830,10 +831,13 @@ export function locateOwner(
       );
     }
     if (entry.kind === 'automaticEffect') return same(entry.address, address);
+    // Fig Leaf, Aetos and the Gorgon condition settle when their phase starts.
     return (
       entry.boundary.kind === 'encounterStart' &&
-      address.kind === 'encounterPhase' &&
-      entry.boundary.phaseKey === address.phaseKey
+      (address.kind === 'figLeafPhase' ||
+        address.kind === 'aetosPhase' ||
+        address.kind === 'gorgonPhase') &&
+      entry.boundary.phaseKey === address.encounter.phaseKey
     );
   });
   const repairRow =
@@ -852,6 +856,8 @@ export function locateOwner(
     repairRow?.stale === true ||
     (repairRow?.rank === null && repairRow.participation === 'required') ||
     address.kind === 'occurrence' ||
+    // Encounter identity and composition are fixed on entry: the room's Overview.
+    address.kind === 'encounterPhase' ||
     (address.kind === 'roomFeature' && chronology?.kind !== 'history') ||
     (chronology?.kind !== 'history' &&
       reward !== undefined &&
@@ -987,24 +993,6 @@ export function findingsAtRegion(
     if (location.regionKey === regionKey) findings.push(finding);
   }
   return Object.freeze(findings);
-}
-
-export function encounterBlockFinding(block: EncounterHistoryBlock): SemanticFinding {
-  const finding = block.preparation.findings.find(
-    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(block.blockedAt),
-  );
-  if (finding === undefined) {
-    throw new Error(`encounter block ${semanticAddressKey(block.blockedAt)} has no finding`);
-  }
-  return finding;
-}
-
-export function encounterBlockChronology(block: EncounterHistoryBlock): HistoryFindingChronology {
-  return Object.freeze({
-    kind: 'history',
-    sequence: block.afterValidRecordPrefix.sequence,
-    boundary: 'at',
-  });
 }
 
 export function compareOwnerLocations(left: OwnerLocation, right: OwnerLocation): number {

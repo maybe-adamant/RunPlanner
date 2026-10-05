@@ -980,7 +980,10 @@ describe('Gorgon Amulet lifecycle', () => {
       (biome) => biome.biomeKey === 'P',
     );
     expect(unsupportedP?.findings).toContainEqual(
-      expect.objectContaining({ code: 'gorgonConditionUnavailable', origin: phase }),
+      expect.objectContaining({
+        code: 'gorgonConditionUnavailable',
+        origin: createGorgonPhaseAddress(phase),
+      }),
     );
 
     let pendingProject = applyProjectCommand(createCompleteRepresentativeNOPProject(), catalog, {

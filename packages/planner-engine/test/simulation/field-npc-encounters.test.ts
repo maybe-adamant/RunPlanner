@@ -21,6 +21,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
+  createRoomRunStateCheckpointAddress,
   createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
@@ -678,6 +679,38 @@ describe('field NPC encounter requirements', () => {
         origin: gNpcPhase,
       }),
     );
+    // The unavailable identity is an Overview block: the room is entered with its
+    // authored identity recorded, its entry Run State published and its Timeline unreached.
+    const assembly = simulateProjectAssembly(catalog, project);
+    const g = assembly.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'G');
+    if (g === undefined || !('rewards' in g)) throw new Error('G lost its evaluation');
+    const roomEvents = g.history.events.filter(
+      (event) =>
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === goldenGOccurrenceId(4, 1),
+    );
+    expect(roomEvents).toContainEqual(
+      expect.objectContaining({ kind: 'encounterRecorded', encounterKey: 'ArtemisCombatG' }),
+    );
+    expect(roomEvents.some((event) => event.kind === 'roomEntered')).toBe(true);
+    expect(roomEvents.some((event) => event.kind === 'encounterStarted')).toBe(false);
+    expect(
+      g.rewards.runStateAvailability.find(
+        (entry) =>
+          semanticAddressKey(entry.owner) ===
+          semanticAddressKey(
+            createRoomRunStateCheckpointAddress(
+              createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(4, 1)),
+              { kind: 'roomEntered' },
+            ),
+          ),
+      )?.availability,
+    ).toBe('available');
+    expect(assembly.evaluation.route.issue?.owner).toEqual(gNpcPhase);
+    expect(authoringReadinessAt(assembly, gNpcPhase)).toBe('editable');
+    expect(
+      encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, gNpcPhase),
+    ).toBeDefined();
   });
 
   it('authors Artemis offers by concrete encounter, retains dormant edits, and equips only when reached', () => {
@@ -1785,6 +1818,19 @@ describe('field NPC encounter requirements', () => {
     expect(
       encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, fixture.encounter),
     ).toMatchObject({ kind: 'active', execution: 'skippedByFigLeaf' });
+    // The cascade suppresses execution only: both phases keep their Overview identity and support.
+    const unskipped = simulateProjectAssembly(catalog, project);
+    for (const owner of [intro, fixture.encounter]) {
+      const identity = (source: typeof assembly) => {
+        const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(source, owner);
+        return status?.kind === 'active' ? status.encounterDefinitionKey : undefined;
+      };
+      expect(identity(assembly)).toBeDefined();
+      expect(identity(assembly)).toBe(identity(unskipped));
+      expect(encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, owner)).toEqual(
+        encounterPhaseCandidateSupportForProjectEvaluationAssembly(unskipped, owner),
+      );
+    }
     expect(
       authoredOccurrence(skipped, 'P', fixture.occurrenceId).encounters.traitOffersByPhase,
     ).toEqual(authoredOccurrence(project, 'P', fixture.occurrenceId).encounters.traitOffersByPhase);
@@ -1793,6 +1839,44 @@ describe('field NPC encounter requirements', () => {
     expect(
       restored.rewards.branches[0]?.state.traitHistory?.equippedTraits.OmegaExplodeBoon,
     ).toMatchObject({ giverKey: 'Icarus' });
+  });
+
+  it('runs an O Icarus Combat1 after an Intro Fig Leaf skip, which does not cascade', () => {
+    const occurrenceId = oOccurrenceIds.combat01;
+    const intro = phase(oBiome, occurrenceId, 'Intro');
+    const icarusPhase = phase(oBiome, occurrenceId, 'Combat1');
+    let project = applyProjectCommand(
+      select(representativeNOPQProject, icarusPhase, 'IcarusCombatO'),
+      catalog,
+      {
+        kind: 'ReplaceStartingKeepsake',
+        selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+        keepsakeKey: 'SkipEncounterKeepsake',
+      },
+    );
+    project = authorLegalTraitOffers(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFigLeafSkip',
+        phase: intro,
+        value: true,
+      }),
+    );
+    const o = evaluatedSurfaceBiome(project, 'O').biome;
+    expect(o.validity).toBe('valid');
+    const events = o.history.events.filter(
+      (event) => event.origin.kind === 'occurrence' && event.origin.occurrenceId === occurrenceId,
+    );
+    expect(
+      events.flatMap((event) =>
+        event.kind === 'encounterStarted' ? [[event.phaseKey, event.execution]] : [],
+      ),
+    ).toEqual([
+      ['Intro', 'skippedByFigLeaf'],
+      ['Combat1', 'normal'],
+    ]);
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: 'encounterInteractionReached', phaseKey: 'Combat1' }),
+    );
   });
 
   it('applies reached Latest Model through the encounter-owned offer and exhausts its exact Hammer target', () => {

@@ -11,6 +11,7 @@ import { loadUnderworldGAnomalyRosterCheckpoint } from '@run-planner/test-fixtur
 import {
   applyProjectCommand,
   createExitSelectionAddress,
+  createFigLeafPhaseAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   decodeProjectDocument,
@@ -254,7 +255,10 @@ describe('Anomaly infinite roster authoring', () => {
     });
     const evaluation = simulateProject(catalog, skipped);
     expect(evaluation.findings).toContainEqual(
-      expect.objectContaining({ code: 'figLeafSkipUnavailable', origin: anomalyRosterPhase }),
+      expect.objectContaining({
+        code: 'figLeafSkipUnavailable',
+        origin: createFigLeafPhaseAddress(anomalyRosterPhase),
+      }),
     );
     expect(evaluation.route.summary.eligibleForExecutionPlan).toBe(false);
   });

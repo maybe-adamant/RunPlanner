@@ -4,6 +4,7 @@ import {
   applyProjectHistoryCommand,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createFigLeafPhaseAddress,
   createFigurineArcanaAddress,
   createFountainRarityOutcomeAddress,
   createHubFountainAddress,
@@ -140,7 +141,7 @@ it('exports the reached Fig Leaf skip and reloads its addressed second-skip repa
   expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toContainEqual(
     expect.objectContaining({
       code: 'figLeafSkipUnavailable',
-      origin: later,
+      origin: createFigLeafPhaseAddress(later),
       evidence: { reason: 'alreadyUsed' },
       phase: 'encounterResolution',
       severity: 'error',

@@ -153,12 +153,12 @@ function projectRoomLifecycleTimeline(
   );
   const supplementForBoundary = (boundary: WorkspaceRoomLifecycleBoundary) => {
     if (boundary.kind === 'roomEntered') {
-      const phase = encounterPhases.find((candidate) => candidate.editorAnchor === 'roomEntered');
+      const phase = encounterPhases.find((candidate) => candidate.timelineAnchor === 'roomEntered');
       return phase === undefined ? undefined : Object.freeze({ kind: 'encounter' as const, phase });
     }
     if (boundary.kind === 'encounterStart') {
       const phase = encounterByPhase.get(boundary.phaseKey);
-      return phase?.editorAnchor === 'encounterStart'
+      return phase?.timelineAnchor === 'encounterStart'
         ? Object.freeze({ kind: 'encounter' as const, phase })
         : undefined;
     }

@@ -33,7 +33,7 @@ describe('Fresh File retained encounter customization', () => {
       'F',
       occurrenceById(freshFileIntroId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const trigger = screen
       .getAllByRole('button', { name: 'Customize encounter' })
       .find((button) => button.dataset.semanticOwner === semanticAddressKey(phase))!;

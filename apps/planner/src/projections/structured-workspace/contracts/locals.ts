@@ -3,7 +3,10 @@ import type {
   AuthoredGeneratedEncounterCustomization,
   AuthoredNemesisRandomEventKind,
   AuthoredNemesisRandomEventOutcome,
+  AetosPhaseAddress,
   EncounterPhaseAddress,
+  FigLeafPhaseAddress,
+  GorgonPhaseAddress,
   FieldsSpatialAddress,
   FieldsSpatialTarget,
   LocalVisitDecisionAddress,
@@ -457,15 +460,25 @@ export interface WorkspaceEncounterPhase {
     readonly selected: boolean;
   };
   readonly label: string;
+  /** The phase's encounter name, labelling its identity picker. */
+  readonly identityLabel: string;
   readonly marker: WorkspaceMarker;
-  /** Application-owned placement for the phase editor, independent of encounter timing. */
-  readonly editorAnchor: 'overview' | 'roomEntered' | 'encounterStart';
+  /**
+   * Where the room Timeline shows this phase's read-only identity and its
+   * events; absent when it has neither a start nor an event. Identity and
+   * customization are always authored in the room Overview.
+   */
+  readonly timelineAnchor?: 'roomEntered' | 'encounterStart';
   readonly figLeaf?: {
+    readonly address: FigLeafPhaseAddress;
+    readonly marker: WorkspaceMarker;
     readonly interactionKey: string;
     readonly selected: boolean;
     readonly supported: boolean;
   };
   readonly aetos?: {
+    readonly address: AetosPhaseAddress;
+    readonly marker: WorkspaceMarker;
     readonly interactionKey: string;
     readonly contextReached: boolean;
     readonly selectedWave?: number;
@@ -474,6 +487,8 @@ export interface WorkspaceEncounterPhase {
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   readonly gorgonCondition?: {
+    readonly address: GorgonPhaseAddress;
+    readonly marker: WorkspaceMarker;
     readonly interactionKey: string;
     readonly selected: boolean;
     readonly supported: boolean;

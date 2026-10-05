@@ -216,6 +216,16 @@ export interface GorgonPhaseAddress extends BiomeOwnedAddress {
   /** Convenience narrowing for generic owner consumers. */
   readonly occurrenceId: OccurrenceId;
 }
+/** The Fig Leaf skip of one encounter phase, settled when that phase starts. */
+export interface FigLeafPhaseAddress extends BiomeOwnedAddress {
+  readonly kind: 'figLeafPhase';
+  readonly encounter: EncounterPhaseAddress;
+}
+/** The Aetos appearance of one encounter phase, settled when that phase starts. */
+export interface AetosPhaseAddress extends BiomeOwnedAddress {
+  readonly kind: 'aetosPhase';
+  readonly encounter: EncounterPhaseAddress;
+}
 /** Exact phase-local child of the one selected Nemesis random-event identity. */
 export interface NemesisRandomEventAddress extends BiomeOwnedAddress {
   readonly kind: 'nemesisRandomEvent';
@@ -398,6 +408,8 @@ export type SemanticAddress =
   | LocalVisitOrderAddress
   | EncounterPhaseAddress
   | GorgonPhaseAddress
+  | FigLeafPhaseAddress
+  | AetosPhaseAddress
   | NemesisRandomEventAddress
   | RewardWheelAddress
   | RewardWheelOfferAddress
@@ -809,6 +821,22 @@ export function createGorgonPhaseAddress(encounter: EncounterPhaseAddress): Gorg
   });
   return Object.freeze(address);
 }
+export function createFigLeafPhaseAddress(encounter: EncounterPhaseAddress): FigLeafPhaseAddress {
+  return Object.freeze({
+    kind: 'figLeafPhase',
+    routeKey: encounter.routeKey,
+    biomeKey: encounter.biomeKey,
+    encounter,
+  });
+}
+export function createAetosPhaseAddress(encounter: EncounterPhaseAddress): AetosPhaseAddress {
+  return Object.freeze({
+    kind: 'aetosPhase',
+    routeKey: encounter.routeKey,
+    biomeKey: encounter.biomeKey,
+    encounter,
+  });
+}
 export function createNemesisRandomEventAddress(
   encounter: EncounterPhaseAddress,
 ): NemesisRandomEventAddress {
@@ -1156,6 +1184,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.owner, address.phaseKey]);
     case 'gorgonPhase':
       return JSON.stringify([...base, semanticAddressKey(address.encounter)]);
+    case 'figLeafPhase':
+    case 'aetosPhase':
     case 'nemesisRandomEvent':
       return JSON.stringify([...base, semanticAddressKey(address.encounter)]);
     case 'rewardWheel':

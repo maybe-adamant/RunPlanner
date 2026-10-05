@@ -1,4 +1,5 @@
 import type { Catalog } from '../../../catalog-schema';
+import type { EncounterEntryVowRanks } from '../../arcana-fear';
 import type {
   HubDecisionAddress,
   OccurrenceAddress,
@@ -112,6 +113,8 @@ export interface ChronologyWalkState {
   /** The prepared cohort entering the current room's Overview. */
   readonly overviewCohort:
     { readonly roomKey: string; readonly branches: readonly RewardBranchState[] } | undefined;
+  /** Each entered room's vow ranks, which every phase's encounter composition reads. */
+  readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;
 }
 
 export function createChronologyWalkState(
@@ -134,6 +137,7 @@ export function createChronologyWalkState(
     hermesShrineAssessments: new Map(),
     shipLifecycleContexts: new Map(),
     overviewCohort: undefined,
+    encounterEntryVowRanks: new Map(),
   });
 }
 

@@ -30,7 +30,10 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
-import { phaseTakesEffectBeforeBlock } from '../../src/simulation/progressive/selected-products';
+import {
+  phasePreparedByBlock,
+  phaseTakesEffectBeforeBlock,
+} from '../../src/simulation/progressive/selected-products';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -83,12 +86,39 @@ const {
   traitGiverForAcquisitionRole,
 } = fixture;
 
-describe('earlier encounter phases retained at a room-local stop', () => {
+describe('encounter phases prepared by a room-local stop', () => {
+  const prepared = Object.freeze({
+    kind: 'history' as const,
+    sequence: 456,
+    boundary: 'at' as const,
+  });
+
+  it('retains every phase of a room prepared at or before the stop', () => {
+    // An Overview stop at the preparation itself keeps every phase's support.
+    expect(phasePreparedByBlock(prepared, { historySequence: 456, historyBoundary: 'at' })).toBe(
+      true,
+    );
+    expect(
+      phasePreparedByBlock(prepared, { historySequence: 463, historyBoundary: 'before' }),
+    ).toBe(true);
+  });
+
+  it('retains nothing for a stop before the room is prepared', () => {
+    expect(
+      phasePreparedByBlock(prepared, { historySequence: 456, historyBoundary: 'before' }),
+    ).toBe(false);
+    expect(phasePreparedByBlock(undefined, { historySequence: 463, historyBoundary: 'at' })).toBe(
+      false,
+    );
+  });
+});
+
+describe('contacts taking effect before a room-local stop', () => {
   const at = (sequence: number, boundary: 'before' | 'at' | 'after') =>
     Object.freeze({ kind: 'history' as const, sequence, boundary });
   const stop = { historySequence: 463, historyBoundary: 'before' as const };
 
-  it('retains a phase that takes effect before the stop', () => {
+  it('retains a contact that takes effect before the stop', () => {
     expect(phaseTakesEffectBeforeBlock(at(458, 'before'), stop)).toBe(true);
     // Room entry precedes a same-sequence stop only by its boundary.
     expect(
@@ -99,7 +129,7 @@ describe('earlier encounter phases retained at a room-local stop', () => {
     ).toBe(true);
   });
 
-  it('retains nothing for a phase taking effect exactly at or after the stop', () => {
+  it('retains nothing for a contact taking effect exactly at or after the stop', () => {
     expect(phaseTakesEffectBeforeBlock(at(463, 'before'), stop)).toBe(false);
     expect(phaseTakesEffectBeforeBlock(at(468, 'before'), stop)).toBe(false);
   });
@@ -108,8 +138,7 @@ describe('earlier encounter phases retained at a room-local stop', () => {
     expect(phaseTakesEffectBeforeBlock(at(458, 'before'), {})).toBe(false);
   });
 
-  it('retains nothing for a declared-start phase whose start the prefix never reached', () => {
-    // A Ship phase beyond the stop has neither its start nor its pre-encounter snapshot.
+  it('retains nothing for a contact the prefix never reached', () => {
     expect(phaseTakesEffectBeforeBlock(undefined, stop)).toBe(false);
   });
 });

@@ -36,6 +36,8 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'shopOffer':
     case 'encounterPhase':
     case 'gorgonPhase':
+    case 'figLeafPhase':
+    case 'aetosPhase':
     case 'nemesisRandomEvent':
     case 'traitOffer':
     case 'traitAcquisitionTarget':

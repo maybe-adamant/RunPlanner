@@ -235,7 +235,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'F',
       occurrenceById(goldenFStartId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     expect(screen.queryByRole('group', { name: 'Events' })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
@@ -260,7 +260,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const launcher = screen.getByRole('button', { name: 'Customize encounter' });
     await view.user.click(launcher);
     await screen.findByRole('dialog', { name: /\(.+\)$/ });
@@ -332,7 +332,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'G',
       occurrenceById(boss.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const summary = screen.getByText('Scylla');
     const control = summary.closest('.encounter-phase-control');
     if (!(control instanceof HTMLElement)) throw new Error('Scylla encounter control is missing');
@@ -381,7 +381,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'Q',
       occurrenceById(boss.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     const firstEggWave = within(dialog).getByRole('button', { name: 'First egg wave' });
@@ -465,7 +465,7 @@ describe('OccurrenceEncounterWorkbench', () => {
           .topology!.occurrences.find((entry) => entry.occurrenceId === occurrenceId)!.encounters
           .customizationByPhase?.Encounter;
       const priorCount = values()?.cocoonCount;
-      openRoomTab('Room Timeline');
+      openRoomTab('Room Overview');
       await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
       const dialog = await screen.findByRole('dialog', { name: 'Customize' });
       const marker = within(dialog).getByRole('button', { name: 'Reward cocoon 1' });
@@ -571,7 +571,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
@@ -638,7 +638,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       encounterKey: 'ArtemisCombatF',
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceById(occurrenceId));
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const trigger = screen.getByRole('button', {
       name: 'Customize encounter',
     }) as HTMLButtonElement;
@@ -660,7 +660,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'G',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
@@ -719,7 +719,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'G',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
@@ -767,7 +767,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const trigger = screen.getByRole('button', { name: 'Customize encounter' });
     act(() =>
       view.application.store.dispatch(
@@ -861,7 +861,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
         ?.encounters.customizationByPhase?.Encounter?.cocoonCount;
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     const slider = within(dialog).getByRole('slider', { name: 'Cocoons' });
@@ -929,7 +929,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'G',
       occurrenceById(boss.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const trigger = screen.getByRole('button', { name: 'Customize encounter' });
     act(() =>
       view.application.store.dispatch(
@@ -974,7 +974,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(boss.occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     for (const name of ['Early summons', 'Late summons']) {
@@ -1159,6 +1159,42 @@ describe('OccurrenceEncounterWorkbench', () => {
         );
       expect(occurrence?.encounters.figLeafSkipByPhase).toMatchObject({ Encounter: true });
     });
+  });
+
+  it('targets an unavailable Fig Leaf skip on its Timeline checkbox, not the Overview identity', async () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: true,
+    });
+    const finding = simulateProject(catalog, project).findings.find(
+      (entry) => entry.code === 'figLeafSkipUnavailable',
+    );
+    if (finding === undefined) throw new Error('Fig Leaf finding missing');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(phase.owner.occurrenceId),
+    );
+    const identity = screen.getByLabelText('Encounter phase');
+    expect(within(identity).getByRole('button', { name: 'Encounter' }).dataset.hasFindings).toBe(
+      'false',
+    );
+    openRoomTab('Room Timeline');
+    act(() => {
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      );
+    });
+    const skip = screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' });
+    expect(skip.dataset.hasFindings).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(skip));
   });
 
   it('groups retained event selections together so conflicting authoring remains repairable', async () => {
@@ -1742,8 +1778,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         semanticAddressKey(phase),
       ),
     ).toBe(true);
-    openRoomTab('Room Timeline');
-    expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
+    openRoomTab('Room Overview');
+    expect(screen.getByLabelText('Encounter phase')).toBeTruthy();
   });
 
   it('keeps the P entrance encounter picker available after selecting Empty', async () => {
@@ -1753,23 +1789,23 @@ describe('OccurrenceEncounterWorkbench', () => {
       'P',
       occurrenceById(pOccurrenceIds.intro),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
 
-    const encounterControl = screen.getByLabelText('Encounter encounter phase');
+    const encounterControl = screen.getByLabelText('Encounter phase');
     await view.user.click(within(encounterControl).getByRole('button', { name: 'Encounter' }));
     await view.user.click(screen.getByRole('option', { name: 'Empty' }));
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
+      expect(screen.getByLabelText('Encounter phase')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain('Empty');
     });
 
-    const retainedControl = screen.getByLabelText('Encounter encounter phase');
+    const retainedControl = screen.getByLabelText('Encounter phase');
     await view.user.click(within(retainedControl).getByRole('button', { name: 'Encounter' }));
     await view.user.click(screen.getByRole('option', { name: 'Opening combat 01' }));
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
+      expect(screen.getByLabelText('Encounter phase')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain(
         'Opening combat 01',
       );
@@ -1787,7 +1823,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'P',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
     const retainedCombat = occurrenceEncounterSelections(
       view.application.store.getState().projectWorkspace.history!.present,
       'Surface',
@@ -1807,7 +1843,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBe(true);
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Opening encounter' }));
     await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
 
     await waitFor(() => expect(screen.queryByLabelText('Follow-up encounter phase')).toBeNull());
@@ -1831,7 +1867,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       false,
     );
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Opening encounter' }));
     await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
 
     await waitFor(() => expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy());
@@ -1879,7 +1915,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
-    openRoomTab('Room Timeline');
+    openRoomTab('Room Overview');
 
     const introControl = screen.getByLabelText('Opening encounter phase');
     const combatControl = screen.getByLabelText('Follow-up encounter phase');
@@ -1888,16 +1924,16 @@ describe('OccurrenceEncounterWorkbench', () => {
         semanticAddressKey(combat),
       ),
     ).toBe(true);
-    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Opening encounter' }));
     await waitFor(() =>
       expect(
         within(introControl)
-          .getByRole('button', { name: 'Encounter' })
+          .getByRole('button', { name: 'Opening encounter' })
           .getAttribute('data-candidate-state'),
       ).toBe('impossible'),
     );
 
-    const combatPicker = within(combatControl).getByRole('button', { name: 'Encounter' });
+    const combatPicker = within(combatControl).getByRole('button', { name: 'Follow-up encounter' });
     expect((combatPicker as HTMLButtonElement).disabled).toBe(false);
     await view.user.click(combatPicker);
     await waitFor(() =>
@@ -1924,7 +1960,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
-    const phase = screen.getByLabelText('Combat2 encounter phase');
+    // The Timeline projects the phase read-only; its identity is authored in Overview.
+    const projected = screen.getByLabelText('Combat 2 encounter events');
+    expect(within(projected).queryByRole('button', { name: 'Encounter' })).toBeNull();
+    openRoomTab('Room Overview');
+    const phase = screen.getByLabelText('Combat 2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(
       oBiome,
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
@@ -1946,7 +1986,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       historyLength,
     );
     expect(phase.dataset.readOnly).toBeUndefined();
-    const encounter = within(phase).getByRole('button', { name: 'Encounter' });
+    const encounter = within(phase).getByRole('button', { name: 'Combat 2 encounter' });
     await view.user.click(encounter);
     await waitFor(() => {
       expect(encounter.getAttribute('data-candidate-state')).toBe('impossible');
@@ -1976,7 +2016,8 @@ describe('OccurrenceEncounterWorkbench', () => {
         'Outgoing generation',
       ),
     ).toBeNull();
-    const encounter = screen.getByLabelText('Encounter encounter phase');
+    openRoomTab('Room Overview');
+    const encounter = screen.getByLabelText('Encounter phase');
     const picker = within(encounter).getByRole('button', { name: 'Encounter' });
 
     await view.user.click(picker);

@@ -127,7 +127,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByLabelText('Room')).toBeNull();
   });
 
-  it('renders Standard room contents in Overview and encounter actions in Timeline', () => {
+  it('renders Standard room contents and its encounter in Overview and its encounter events in Timeline', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
@@ -151,10 +151,15 @@ describe('OccurrenceWorkbench', () => {
     const entryOwner = overviewRunState.getAttribute('data-run-state-launcher');
     expect(overviewRunState.closest('.room-workbench-tab-row')).not.toBeNull();
     expect(overviewRunState.closest('[role="tabpanel"]')).toBeNull();
+    const overviewEncounter = within(
+      screen.getByRole('region', { name: 'Encounter structure' }),
+    ).getByLabelText('Encounter phase');
+    expect(within(overviewEncounter).getByRole('button', { name: 'Encounter' })).toBeTruthy();
     openRoomTab('Room Timeline');
     const standardActions = screen.getByRole('region', { name: 'Room Timeline' });
     const standardStart = within(standardActions).getByLabelText('Start encounter');
-    const standardEncounter = within(standardActions).getByLabelText('Encounter encounter phase');
+    const standardEncounter = within(standardActions).getByLabelText('Encounter events');
+    expect(within(standardEncounter).queryByRole('button', { name: 'Encounter' })).toBeNull();
     const standardEnd = within(standardActions).getByLabelText('Encounter ended');
     const roomEntered = within(standardActions).getByLabelText('Room entered');
     const entryRunState = screen.getByRole('button', { name: 'Run State' });
@@ -574,7 +579,7 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Timeline');
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(nActions).toBeTruthy();
-    expect(within(nActions).getByLabelText('Encounter encounter phase')).toBeTruthy();
+    expect(within(nActions).getByLabelText('Encounter events')).toBeTruthy();
   });
 
   it('allows invalid generation edits, reports checkbox findings, and repairs them without changing visit order', async () => {

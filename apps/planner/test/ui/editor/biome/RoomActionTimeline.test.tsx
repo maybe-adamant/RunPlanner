@@ -436,7 +436,7 @@ describe('OccurrenceRoomActions', () => {
     expect(
       fieldsActions.querySelector('[data-lifecycle-boundary="encounterStart:Passive"]'),
     ).toBeNull();
-    const fieldsEncounter = screen.queryByLabelText('Encounter encounter phase');
+    const fieldsEncounter = screen.queryByLabelText('Encounter phase');
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
     const optionalPool = within(fieldsActions).getByRole('region', { name: 'Optional actions' });
@@ -517,7 +517,7 @@ describe('OccurrenceRoomActions', () => {
     expect(movePickupEarlier.disabled).toBe(false);
     await view.user.click(movePickupEarlier);
     await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: 'Before Clear Cage03' }),
+      within(screen.getByRole('listbox')).getByRole('option', { name: 'Before Clear Cage 3' }),
     );
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
@@ -547,6 +547,28 @@ describe('OccurrenceRoomActions', () => {
     expect(starts[0]?.querySelector('.fields-cage-label')?.getAttribute('id')).toBe(
       semanticOwnerControlElementId(cageOneAction),
     );
+  });
+
+  it('authors every cage encounter in Overview and keeps cage order and read-only cages in Timeline', () => {
+    renderOccurrenceWorkbench(
+      threeCageFieldsProject(),
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat02')),
+    );
+    const structure = screen.getByRole('region', { name: 'Encounter structure' });
+    for (const cage of ['Cage 1', 'Cage 2', 'Cage 3']) {
+      const phase = within(structure).getByLabelText(`${cage} encounter phase`);
+      expect(within(phase).getByRole('button', { name: `${cage} encounter` })).toBeTruthy();
+    }
+    expect(screen.queryByRole('button', { name: 'Combat Order' })).toBeNull();
+    openRoomTab('Room Timeline');
+    expect(screen.getByRole('button', { name: 'Combat Order' })).toBeTruthy();
+    for (const cage of ['Cage 1', 'Cage 2', 'Cage 3']) {
+      const projected = screen.getByLabelText(`${cage} encounter events`);
+      expect(within(projected).queryByRole('button', { name: `${cage} encounter` })).toBeNull();
+    }
+    expect(screen.queryByLabelText('Cage 1 encounter phase')).toBeNull();
   });
 
   it('stages the complete cage order, cancels without editing, and commits two moves in one undo step', async () => {
@@ -659,7 +681,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.toIndex === 0 &&
         athena?.proposalKeys.includes(proposal.key),
     );
-    expect(blockedMove?.explanations).toEqual(['Clear Cage01 to make Athena available.']);
+    expect(blockedMove?.explanations).toEqual(['Clear Cage 1 to make Athena available.']);
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const board = within(actions).getByRole('list', { name: 'Room timeline' });
     const handle = within(actions)
@@ -765,7 +787,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.reference.slotKey === 'optional1',
     );
     expect(unrelated?.explanations).toEqual([
-      'Existing timeline issue: Clear Cage01 to make Athena available.',
+      'Existing timeline issue: Clear Cage 1 to make Athena available.',
     ]);
     const newConflict = actions.proposals.find(
       (proposal) =>
@@ -782,7 +804,7 @@ describe('OccurrenceRoomActions', () => {
         proposal.reference.kind === 'interactLocalReward' &&
         proposal.reference.slotKey === 'cage1',
     );
-    expect(cageReward?.explanations).toEqual(['Clear Cage01 to unlock this reward.']);
+    expect(cageReward?.explanations).toEqual(['Clear Cage 1 to unlock this reward.']);
   });
 
   // This three-cage route is repairable-invalid under the run-scoped ledger,
@@ -829,8 +851,8 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const repairs = within(actions).getByRole('region', { name: 'Timeline repairs' });
-    expect(within(timeline).queryByText('Clear Cage03')).toBeNull();
-    expect(within(repairs).getByText('Clear Cage03')).toBeTruthy();
+    expect(within(timeline).queryByText('Clear Cage 3')).toBeNull();
+    expect(within(repairs).getByText('Clear Cage 3')).toBeTruthy();
     expect(within(repairs).queryByText('This required action has not been placed.')).toBeNull();
     const cageOrder = within(actions).getByRole('button', {
       name: 'Combat Order',

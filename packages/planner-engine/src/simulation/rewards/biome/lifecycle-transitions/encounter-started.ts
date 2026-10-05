@@ -2,6 +2,7 @@ import type { Catalog } from '../../../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createFigLeafPhaseAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../../authored-project/addresses';
@@ -82,18 +83,19 @@ export function applyEncounterStartedTransition(
         selectionAlreadyResolved: event.figLeafSkipOwner !== true,
       });
       if (phase.figLeafSkip === true && !assessment.legal) {
+        const figLeafOrigin = createFigLeafPhaseAddress(origin);
         findings.push(
           Object.freeze({
             finding: Object.freeze({
               code: 'figLeafSkipUnavailable',
               severity: 'error',
               phase: 'encounterResolution',
-              origin,
+              origin: figLeafOrigin,
               evidence: Object.freeze(
                 assessment.reason === undefined ? {} : { reason: assessment.reason },
               ),
             }),
-            region: ownerRegion(origin),
+            region: ownerRegion(figLeafOrigin),
             chronology: Object.freeze({
               kind: 'history',
               sequence: event.sequence,

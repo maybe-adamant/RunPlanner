@@ -43,7 +43,6 @@ export {
 export {
   type EncounterCandidateArtifacts,
   type EncounterCandidateEvaluation,
-  type EncounterCandidateBoundary,
   type EncounterRoomCandidateCapability,
 } from './candidates';
 export {
