@@ -170,6 +170,16 @@ represents a structural offer such as Story or Shop. The producer lifecycle
 owns when each role occurs. The same concrete loot must not encode whether it
 came from a room reward, a cage, a shop purchase, or a multi-stage Devotion.
 
+A concrete acquisition may declare a pickup effect; Anvil of Fates
+(`ChaosWeaponUpgrade`) is the only one. The reward that carries the acquisition
+owns the effect's authored result on that role, wherever the reward settles: a
+Shop slot, the Travel Deal refill, a Contract pedestal or a Gold Gold Gold
+duplicate. Shop purchase versus later pickup is a settlement difference, not an
+ownership difference. Role settlement applies the result only under the
+`normal` disposition, since a Time Piece or Artificer conversion destroys the
+object uncollected; an applicable missing result is `rewardMissing` and an
+illegal one `rewardAcquisitionUnavailable`, both at the acquisition role.
+
 Offer payload authorship and game-visible resolution timing are also separate.
 Most payloads are both authored and resolved at offer generation. A Blind Box
 instead resolves its source at acquisition. For optional generated pickups
@@ -1096,7 +1106,9 @@ a World Shop's authored order. Once
 the Shop kernel accepts the first paid non-`SpellDrop` source, Gold consumes
 the exact Echo acquisition and materializes the singleton free duplicate
 before that paid entry's acquisition roles run.
-Materialization does not acquire the duplicate. A native loot duplicate
+Materialization does not acquire the duplicate. A duplicated Anvil is a second
+Anvil use with its own result, assessed against the branch after the paid
+Anvil settles. A native loot duplicate
 (Boon, Hermes, Hammer, or full Pom) requires pickup; a consumable duplicate,
 including an unopened Mystery Boon, may remain unpicked. Edit settlement inserts
 required Timeline membership when exact prior evidence establishes that the

@@ -357,6 +357,14 @@ purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
 
+An Anvil of Fates result launcher sits on the Timeline row of the reward that
+carries the Anvil, wherever it settles: a Shop slot's purchase row, the Gold
+Gold Gold duplicate's pickup row, or the refill's own purchase row, never the
+Travel Deal line. It stays mounted on every Anvil-bearing role and is disabled
+with a waiting hover title until the engine reaches that role's Anvil frontier,
+which it does only under a `normal` disposition. While the result applies, its
+findings route to the launcher; otherwise they route to the row.
+
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
 Remove control for them. A retained malformed omission is the exception: its

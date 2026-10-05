@@ -339,6 +339,16 @@ reference in the occurrence's one shared `roomActions.order`; there is no
 separate or synthetic one-row order. No pending Artificer map or remaining-use
 counter is authored.
 
+A reward also owns the result of its concrete acquisition's declared pickup
+effect, wherever that reward settles. `anvilResultsByAcquisitionRole` holds one
+Anvil of Fates result per role (its removed Hammer, `null` when none, and two
+acquired Hammers), or `null` while unauthored. The shared reward codec requires
+the entry exactly for roles whose concrete acquisition declares the Anvil
+pickup effect and rejects it elsewhere, on every reward-state owner: a Shop or
+Contract slot, the Travel Deal refill and the Gold Gold Gold duplicate entry
+alike. `ReplaceAnvilResult` addresses the `AcquisitionRoleAddress`, not a Shop
+slot; replacing the reward with a non-Anvil offer drops the result.
+
 ## Common Decision Model
 
 ```ts
@@ -598,9 +608,8 @@ occurrence's `roomActions.order` is both the Purchased fact and the purchase
 order; no purchased set or Shop-private order is persisted. A counted-free
 Preboss keeps its complete resolved offer regardless of selection. A purchased
 Mystery Boon stores its hidden source and trait result at the acquisition entry
-where it resolves, not in generated Shop inventory. A purchased Anvil of Fates
-offer owns its exact removed Hammer and two acquired Hammers at that same
-settlement boundary.
+where it resolves, not in generated Shop inventory. An Anvil of Fates result
+is not Shop state either; it belongs to the reward that carries the Anvil.
 
 A declaration-owned Pool of Purging persists its fixed slots only after the
 player authors interaction; disabling interaction removes sale actions while
@@ -1203,6 +1212,10 @@ Schema 91 moves Shrine rush from the purchase terms onto the purchase action;
 the 90 → 91 migration inserts one action per purchased generation in slot
 order (`first`, `secondLeft`, `secondRight`, then the refill) carrying the old
 rush, before the Shrine room's own pickups, so the refill source is unchanged.
+Schema 92 moves the Anvil result from the Shop slot onto the reward; the
+91 → 92 migration moves each Shop slot's and Travel Deal refill's
+`anvilResult` onto its reward's `self` role and gives every other reward
+carrying an Anvil, such as a Gold Gold Gold duplicate, a `null` result.
 
 ## Undo and Redo
 
