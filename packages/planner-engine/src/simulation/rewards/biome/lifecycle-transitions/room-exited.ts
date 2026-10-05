@@ -3,15 +3,10 @@ import { closePendingTraitOfferRoom, traitOfferRoomKey } from '../../../state/pe
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog } from '../../../../catalog-schema';
 import type { ResourcePlacements } from '../../../../authored-project/model';
-import type { ResolvedRoutePosition } from '../../../../authored-project/route-context';
 import {
-  createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
-import type { PendingHermesShrineDelivery } from '../../../state/model';
-import { findingRegion, ownerRegion } from '../../../finding-regions';
-import { rewardFinding } from '../../findings';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { advanceChaosClock, foldTraitHistoryEvents } from '../../../traits';
@@ -44,42 +39,9 @@ export function applyRoomExitedTransition(
   roomView: ProgressiveRoomHistoryViews | undefined,
   resourcePlacements: ResourcePlacements,
   branches: readonly RewardBranchState[],
-  routePosition: ResolvedRoutePosition,
   resourceFindings: readonly SemanticFinding[] = [],
 ): RoomExitedTransition {
   let next = branches;
-  const findingRegions = [...resourcePlacementFindingRegions(event, resourceFindings)];
-  // No Boss room hosts a delivery flush, so a delivery still counting down
-  // when the route's last Boss is left can never arrive. The purchase owns
-  // the repair; the Boss exit owns the chronology.
-  if (
-    room !== undefined &&
-    room.origin.kind === 'occurrence' &&
-    routePosition.isLast &&
-    catalog.rooms.byKey[room.gameName]?.kind === 'Boss'
-  ) {
-    const unreachable = new Map<string, PendingHermesShrineDelivery>();
-    for (const branch of branches)
-      for (const delivery of Object.values(branch.state.pendingHermesShrineDeliveries))
-        if (delivery.dueAt === undefined) unreachable.set(delivery.sourceKey, delivery);
-    for (const delivery of unreachable.values()) {
-      const purchase = createRoomFeatureAddress(delivery.sourceOrigin, {
-        kind: 'hermesShrineOffer',
-        generationKey: delivery.generationKey,
-      });
-      findingRegions.push(
-        findingRegion(
-          rewardFinding('rewardSourceUnavailable', purchase, {
-            reason: 'routeEndsBeforeDelivery',
-            sourceKey: delivery.sourceKey,
-            hostOccurrenceId: room.origin.occurrenceId,
-          }),
-          ownerRegion(purchase),
-          { kind: 'history', sequence: event.sequence, boundary: 'at', room: room.origin },
-        ),
-      );
-    }
-  }
   if (room?.entryState?.kind === 'shop')
     next = completePendingShopAcquisitionSite(next, room.origin, failRoomExit);
   let checkpoint: RoomExitedTransition['runStateCheckpoint'];
@@ -174,7 +136,7 @@ export function applyRoomExitedTransition(
     }),
   );
   return Object.freeze({
-    findingRegions: Object.freeze(findingRegions),
+    findingRegions: resourcePlacementFindingRegions(event, resourceFindings),
     branches: advanceRewardBranches(next, event.sequence),
     ...(checkpoint === undefined ? {} : { runStateCheckpoint: checkpoint }),
   });

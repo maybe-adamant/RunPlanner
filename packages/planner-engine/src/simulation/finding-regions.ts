@@ -1,8 +1,4 @@
-import {
-  semanticAddressKey,
-  type OccurrenceAddress,
-  type SemanticAddress,
-} from '../authored-project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
 import type { SemanticFinding } from './model';
 import type { ReachedLevelResolutionEvaluation } from './traits/level-effects';
 
@@ -24,8 +20,6 @@ export interface HistoryFindingChronology {
   readonly kind: 'history';
   readonly sequence: number;
   readonly boundary: 'before' | 'at' | 'after';
-  /** The room whose lifecycle event this is, when the owner lives in another room or biome. */
-  readonly room?: OccurrenceAddress;
 }
 
 export type FindingChronology =

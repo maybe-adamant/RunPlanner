@@ -614,12 +614,6 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
         description: 'Remove this delivery from the timeline.',
       });
     }
-    if (finding.evidence.reason === 'routeEndsBeforeDelivery') {
-      return Object.freeze({
-        title: 'Shrine delivery cannot arrive',
-        description: 'The route ends before this delivery is due. Rush or shorten the purchase.',
-      });
-    }
     if (finding.evidence.reason === 'staleClockedTraitPickup') {
       return Object.freeze({
         title: 'Pickup unavailable',

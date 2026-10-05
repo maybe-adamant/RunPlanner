@@ -1088,8 +1088,9 @@ Preboss of the fourth entered biome, entry expires every still-pending delivery
 into a required phase-less post-outgoing pickup; it does not decrement the
 ordinary encounter clock or acquire a reward. A shorter itinerary never flushes:
 its pending delivery keeps counting down into the Boss encounter, and one still
-pending when the route's last Boss is left reports `rewardSourceUnavailable`
-(`routeEndsBeforeDelivery`) at the source Shrine purchase, located at that Boss's exit. A Hub side-room source is ordinary for
+pending when the planned route ends stays pending; the purchase is valid, and
+the game owns the item's arrival after the last planned room, so no finding is
+reported. A Hub side-room source is ordinary for
 scheduling, but cannot advance an older pending delivery; later qualifying main
 Hub visits can advance or host it. Fixed Boss occurrences are ordinary later
 delivery hosts. No feature owns a private purchase order or a completion-only

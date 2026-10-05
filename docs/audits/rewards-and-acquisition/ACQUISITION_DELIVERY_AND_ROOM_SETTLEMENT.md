@@ -306,7 +306,9 @@ each item as a required object (`TraitLogic.lua:1337-1348`). The Q trigger
 fires at the shop, but the shop stands between the entry and the only Boss
 exit, so the planner's room-entry flush is equivalent. Both paths therefore
 flush at the Preboss of the fourth entered biome, never at an earlier or later
-Preboss; a shorter itinerary keeps counting down into its Boss encounter.
+Preboss; a shorter itinerary keeps counting down into its Boss encounter, and
+a delivery still pending when the planned route ends stays pending. The game
+owns its arrival after the last planned room; the planner reports no finding.
 
 An authored Shrine offer has purchase participation and a delivery disposition:
 `Rush now` or an initial delay from `2` through `8`. The engine derives the

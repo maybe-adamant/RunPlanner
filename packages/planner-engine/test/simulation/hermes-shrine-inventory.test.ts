@@ -18,7 +18,6 @@ import {
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
-  createRoomFeatureAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
@@ -758,49 +757,18 @@ describe('Hermes Shrine delayed deliveries', () => {
     },
   );
 
-  it('reports a delivery still pending when a short itinerary leaves its last Boss', () => {
+  it('keeps a delivery pending past the end of a short itinerary without a finding', () => {
     expect(simulateProjectAssembly(catalog, dreamSingleQProject()).evaluation.status).toBe('valid');
     const q = createBiomeAddress('Dream', 'Q');
     const source = createOccurrenceAddress(q, dreamSingleQOccurrenceIds.shrineSource);
     const assembly = simulateProjectAssembly(catalog, dreamSingleQShrineDeliveryProject());
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
-    const purchase = createRoomFeatureAddress(source, {
-      kind: 'hermesShrineOffer',
-      generationKey: 'initial:first',
-    });
-    expect(assembly.evaluation.status).toBe('invalid');
-    expect(assembly.evaluation.issue).toMatchObject({
-      kind: 'invalid',
-      owner: purchase,
-      reasons: [
-        expect.objectContaining({
-          code: 'rewardSourceUnavailable',
-          origin: purchase,
-          evidence: {
-            reason: 'routeEndsBeforeDelivery',
-            sourceKey: entryKey,
-            hostOccurrenceId: dreamSingleQOccurrenceIds.boss,
-          },
-        }),
-      ],
-    });
+    // A delay-8 purchase outlives the single-biome route: the purchase is
+    // valid and the game owns the item's arrival after the last planned room.
+    expect(assembly.evaluation.status).toBe('valid');
     const biome = assembly.evaluation.route.biomes[0];
-    if (
-      biome?.authoring !== 'complete' ||
-      !('rewards' in biome) ||
-      biome.validity !== 'invalid' ||
-      !('assessmentPrefix' in biome)
-    )
-      throw new Error('Dream Q did not publish an invalid assessed biome');
-    // The finding sits at the Boss exit, so the Boss is the withheld fixed room
-    // and every authored room before it stays assessed.
-    expect(biome.materializedPrefix.fixedRoomLinks?.map((link) => link.target.gameName)).toEqual([
-      'Q_Boss01',
-    ]);
-    expect(biome.assessmentPrefix?.fixedRoomLinks).toEqual([]);
-    expect(biome.assessmentPrefix?.decisions.length).toBe(
-      biome.materializedPrefix.decisions.length,
-    );
+    if (biome?.authoring !== 'complete' || !('rewards' in biome))
+      throw new Error('Dream Q did not publish rewards');
     // The first-biome Preboss does not flush: the delivery is still counting down.
     expect(biome.rewards.hermesShrineDeliveries).toEqual([
       expect.objectContaining({ sourceKey: entryKey, deliveryKind: 'pending' }),
@@ -808,6 +776,16 @@ describe('Hermes Shrine delayed deliveries', () => {
     expect(biome.rewards.findings.map((finding) => finding.code)).not.toContain(
       'hermesShrineDeliveryPlacementRequired',
     );
+    expect(assembly.evaluation.findings.map((finding) => finding.code)).not.toContain(
+      'rewardSourceUnavailable',
+    );
+    // The Boss exit leaves the obligation pending in every branch state.
+    expect(biome.rewards.branches.length).toBeGreaterThan(0);
+    for (const branch of biome.rewards.branches) {
+      const pending = branch.state.pendingHermesShrineDeliveries[entryKey];
+      expect(pending).toMatchObject({ sourceKey: entryKey });
+      expect(pending).not.toHaveProperty('dueAt');
+    }
   });
 
   it('clamps an unresolved fixed Boss delivery after Preboss and before Postboss', () => {
