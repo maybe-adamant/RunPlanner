@@ -337,7 +337,9 @@ Preboss `AutocompleteSurfaceShopDelivery` can deliver pending purchases at the
 fourth entered biome. Schema 58 models this source behavior through
 Shrine-owned delayed delivery and the shared fourth-biome Preboss flush; it does
 not collapse that delivery into a World Shop acquisition, and a shorter
-itinerary carries the obligation into the Boss encounter. The planner still collapses Gold costs and discounts.
+itinerary carries the obligation into the Boss encounter; one still pending
+when the planned route ends stays pending without a finding, its arrival owned
+by the game. The planner still collapses Gold costs and discounts.
 Travel Deal remains one refill after its first modeled qualifying purchase, a
 timing simplification rather than a claim that the source paths are literally
 identical.

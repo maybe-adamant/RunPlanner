@@ -125,7 +125,8 @@ ownership.
 The source-backed Hermes deliveries forced at the Preboss of the fourth entered
 biome are required pickups sharing the occurrence's one action chronology with
 World Shop purchases; a Q Preboss reached earlier in a shorter Dream itinerary
-does not flush, and the obligation carries into the Boss encounter. A
+does not flush, and the obligation carries into the Boss encounter; one still
+pending when the planned route ends stays pending without a finding. A
 delivery before a purchase may change the exact Travel Deal or Gold Gold Gold
 payload frontier—for example by locking a fourth god into the pool—while a
 delivery after that purchase cannot alter an already-generated payload.
