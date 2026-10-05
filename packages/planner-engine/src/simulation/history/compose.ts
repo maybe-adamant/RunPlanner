@@ -16,7 +16,7 @@ import type {
   MaterializedBiomePrefix,
   MaterializedHubVisitFrontier,
 } from '../materialization';
-import { selectedBatchContinuation } from '../materialization';
+import { selectedBatchContinuation, selectedBatchContinuationRoom } from '../materialization';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
@@ -64,16 +64,6 @@ function selectedTarget(batch: CanonicalBatch): CanonicalTarget {
   const target = batch.targets.find((candidate) => candidate.picked);
   if (target === undefined) fail(`${semanticAddressKey(batch.origin)} has no selected target`);
   return target;
-}
-
-function selectedContinuation(
-  batch: CanonicalBatch,
-): CanonicalTarget | CanonicalAdditionalContinuation {
-  const continuation = selectedBatchContinuation(batch);
-  if (continuation === undefined) {
-    fail(`${semanticAddressKey(batch.origin)} has no selected continuation`);
-  }
-  return continuation.kind === 'normal' ? continuation.target : continuation.continuation;
 }
 
 function appendBatchState(
@@ -407,6 +397,7 @@ interface ClockworkAwareLifecycleOptions {
   readonly stopAfterOutgoing?: boolean;
   readonly continueThroughAcquisitionPoint?: string;
   readonly continueThroughPostOutgoingActions?: boolean;
+  readonly stopAfterOverview?: boolean;
   readonly beforeEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
 }
@@ -466,6 +457,9 @@ function appendClockworkAwareRoomLifecycle(
     ...(options.continueThroughPostOutgoingActions === undefined
       ? {}
       : { continueThroughPostOutgoingActions: options.continueThroughPostOutgoingActions }),
+    ...(options.stopAfterOverview === undefined
+      ? {}
+      : { stopAfterOverview: options.stopAfterOverview }),
     beforeEvent(beforeWriter, event) {
       options.beforeEvent?.(beforeWriter, event);
       if (
@@ -491,7 +485,7 @@ function appendClockworkAwareRoomLifecycle(
       options.afterEvent?.(afterWriter, event);
     },
   });
-  if (room.clockworkReward !== undefined && !emitted) {
+  if (room.clockworkReward !== undefined && !emitted && options.stopAfterOverview !== true) {
     fail(`${room.gameName} has no Clockwork reward point`);
   }
 }
@@ -573,7 +567,7 @@ function appendCompletedDecision(
     if (current.kind !== 'authored') fail('normal-door batch source must be authored');
     appendRoomWithBatch(writer, catalog, current, decision);
   }
-  return selectedContinuation(decision).room;
+  return selectedBatchContinuationRoom(decision);
 }
 
 function composeBiomeHistoryResult(
@@ -828,6 +822,16 @@ function composeBiomeHistoryPrefixResult(
               ? {}
               : { stopAfterOutgoing: true, ...postOutgoingAcquisitionOption(catalog, current) }),
           });
+          if (frontier.sourceExited === true && frontier.selectedOverview === true) {
+            if (frontier.partialBatch === undefined)
+              fail('an entered Overview frontier has no generated batch');
+            appendClockworkAwareRoomLifecycle(
+              writer,
+              catalog,
+              selectedBatchContinuationRoom(frontier.partialBatch),
+              { stopAfterOverview: true },
+            );
+          }
         }
       } else if (snapshot.frontier?.kind === 'hubBoard') {
         const retainedHub = snapshot.decisions.some((decision) => decision.kind === 'hub');

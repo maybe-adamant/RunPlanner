@@ -4,12 +4,23 @@ import {
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
+  createShopOfferAddress,
   type OccurrenceId,
   type ProjectDocument,
   type RoomRunStateCheckpointAddress,
 } from '@run-planner/engine/authored-project';
 import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
-import { pBiome, surfaceEncounterShowcaseProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  qBiome,
+  qOccurrenceIds,
+  surfaceShrineDeliveriesProject,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+  pOccurrenceIds,
+  surfaceEncounterShowcaseProject,
+} from '@run-planner/test-fixtures/surface';
 
 import * as fixture from './support/progressive-biome-fixtures';
 
@@ -215,7 +226,7 @@ function exited(evaluation: ReturnType<typeof biomeEvaluation>, occurrenceId: Oc
 }
 
 describe('source room exit before a later block', () => {
-  it('settles the source room exit and its resource before a next-room block', () => {
+  it('settles the source room exit and its resource before a next-room Overview block', () => {
     const p = biomeEvaluation(
       blockPCombat07(placeResource(surfaceEncounterShowcaseProject(), 'Pickaxe')),
       'P',
@@ -240,7 +251,16 @@ describe('source room exit before a later block', () => {
           kind: 'roomEntered',
         }),
       ),
-    ).toBe('unavailable');
+    ).toBe('available');
+    // Its encounter composition is an Overview product: the Timeline never starts.
+    expect(
+      p.history.events.some(
+        (event) =>
+          event.kind === 'encounterStarted' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === pCombat07,
+      ),
+    ).toBe(false);
     for (const branch of p.rewards.branches)
       expect(branch.state.traitHistory.events).toContainEqual(
         expect.objectContaining({
@@ -316,5 +336,135 @@ describe('source room exit before a later block', () => {
         value: { rewardType: 'HermesUpgrade' },
       }),
     ).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
+  });
+});
+
+const pCombat12 = fixture.createOccurrenceId('surface-p-8-1-p_combat12');
+const prebossShop = pOccurrenceIds.prebossShop;
+
+function roomEvents(evaluation: ReturnType<typeof biomeEvaluation>, occurrenceId: OccurrenceId) {
+  return evaluation.history.events.filter(
+    (event) => event.origin.kind === 'occurrence' && event.origin.occurrenceId === occurrenceId,
+  );
+}
+
+describe('room Overview block', () => {
+  it('enters a Shop whose inventory blocks and stops before its Timeline', () => {
+    const boon = createShopOfferAddress(pBiome, prebossShop, 'Boon');
+    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: boon,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    const p = biomeEvaluation(project, 'P');
+
+    expect(p.coverage.blockedAt).toEqual(boon);
+    expect(p.findings).toContainEqual(
+      expect.objectContaining({ code: 'shopOfferUnavailable', origin: boon }),
+    );
+    // The source room has exited and the Shop is entered with its entry Run State.
+    expect(exited(p, pCombat12)).toBe(true);
+    for (const [occurrenceId, kind] of [
+      [pCombat12, 'beforeRoomExit'],
+      [prebossShop, 'roomEntered'],
+    ] as const)
+      expect(
+        runStateAvailability(
+          p,
+          createRoomRunStateCheckpointAddress(createOccurrenceAddress(pBiome, occurrenceId), {
+            kind,
+          }),
+        ),
+      ).toBe('available');
+    // Nothing of the Shop's Timeline or Exit is evaluated.
+    expect(roomEvents(p, prebossShop).map((event) => event.kind)).toEqual([
+      'roomCreated',
+      'roomPrepared',
+      'encounterRecorded',
+      'offerPointMaterialized',
+      'roomEntered',
+    ]);
+    expect(
+      bindTestCandidateSession(catalog, project).evaluate({
+        kind: 'shopOffer',
+        offer: boon,
+        value: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      }),
+    ).toMatchObject({ kind: 'shopOffer', result: { supported: true } });
+  });
+});
+
+describe('room Overview block keeps the room entry effects', () => {
+  it('flushes Shrine deliveries at a Q Preboss Shop whose inventory blocks', () => {
+    const entryOwner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(qBiome, qOccurrenceIds.preboss),
+      { kind: 'roomEntered' },
+    );
+    const entrySnapshot = (project: ProjectDocument) => {
+      const q = simulateProject(catalog, project).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'Q',
+      );
+      return q !== undefined && 'rewards' in q
+        ? q.rewards.runStateSnapshots.find(
+            (snapshot) => semanticAddressKey(snapshot.owner) === semanticAddressKey(entryOwner),
+          )
+        : undefined;
+    };
+    const valid = surfaceShrineDeliveriesProject();
+    const blocked = applyProjectCommand(valid, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'MixedProgress1'),
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    expect(biomeEvaluation(blocked, 'Q').coverage.blockedAt).toMatchObject({
+      kind: 'shopOffer',
+      offerKey: 'MixedProgress1',
+    });
+    const flushed = entrySnapshot(valid)?.pendingHermesShrineDeliveries;
+    expect(Object.values(flushed ?? {})).toContainEqual(
+      expect.objectContaining({
+        remainingUses: 0,
+        due: expect.objectContaining({ cause: 'flush' }),
+      }),
+    );
+    expect(entrySnapshot(blocked)?.pendingHermesShrineDeliveries).toEqual(flushed);
+  });
+});
+
+describe('room Overview block for a Shrine inventory', () => {
+  it('enters a Ship Shrine host and stops before its first encounter', () => {
+    const hostId = oOccurrenceIds.combat07;
+    const host = createOccurrenceAddress(oBiome, hostId);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    // SpellDrop belongs to the second group, so the first slot is a wrong-group inventory.
+    for (const [slotKey, rewardType] of [
+      ['first', 'SpellDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    const o = biomeEvaluation(project, 'O');
+
+    expect(o.coverage.blockedAt).toMatchObject({ kind: 'roomFeature', occurrenceId: hostId });
+    // A Ship host has no entry Run State; its entry-time Shrine assessment is published.
+    expect(
+      o.rewards.hermesShrineAssessments.some(
+        (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(host),
+      ),
+    ).toBe(true);
+    expect(roomEvents(o, hostId).some((event) => event.kind === 'roomEntered')).toBe(true);
+    expect(roomEvents(o, hostId).some((event) => event.kind === 'encounterStarted')).toBe(false);
   });
 });

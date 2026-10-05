@@ -489,6 +489,7 @@ export function evaluateProgressiveBiomeAssembly(
     (encounterLocated === undefined || compareLocatedFindings(unsupported, encounterLocated) <= 0);
   if (genericPrecedesEncounter && unsupported !== undefined) {
     return clampSelectedProducts(
+      catalog,
       authoredPrefix,
       (prefix) => products(catalog, prefix, context),
       Object.freeze({
@@ -602,6 +603,7 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
     });
   }
   return clampSelectedProducts(
+    catalog,
     authoredPrefix,
     (prefix) => products(catalog, prefix, context),
     selectedProducts,

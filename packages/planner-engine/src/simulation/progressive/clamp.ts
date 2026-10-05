@@ -2,6 +2,7 @@ import {
   createBiomeCandidateArtifacts,
   type BiomeCandidateArtifacts,
 } from '../evaluation/candidate-artifacts';
+import type { Catalog } from '../../catalog-schema';
 import type { MaterializedBiomePrefix } from '../materialization';
 import { assessmentRepairOwner, type FindingRegionEntry } from '../finding-regions';
 import { createAssessmentIssue } from '../assessment-issue';
@@ -44,6 +45,7 @@ export type EvaluateProgressivePrefix = (
 ) => ProgressivePrefixEvaluation;
 
 export function clampSelectedProducts(
+  catalog: Catalog,
   authoredPrefix: MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   },
@@ -61,7 +63,8 @@ export function clampSelectedProducts(
     unsupported.regionKey,
     retainedFindings,
   );
-  const clamped = clampPrefix(authoredPrefix, unsupported, selectedProducts.history);
+  const selected = Object.freeze({ catalog, history: selectedProducts.history });
+  const clamped = clampPrefix(authoredPrefix, unsupported, selected);
   if (clamped.entryRoom === undefined) return null;
   const executionPrefix = clamped as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
@@ -70,7 +73,7 @@ export function clampSelectedProducts(
   const interactionPrefix = retainedInteractionPrefix(
     authoredPrefix,
     unsupported,
-    selectedProducts.history,
+    selected,
   ) as MaterializedBiomePrefix & {
     readonly entryRoom: NonNullable<MaterializedBiomePrefix['entryRoom']>;
   };
