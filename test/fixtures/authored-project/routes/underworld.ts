@@ -1387,3 +1387,32 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     value: traitDraft,
   });
 }
+
+export const echoGoldIPrebossShopId = createOccurrenceId('golden-i-preboss');
+
+/** Gold held into the I Preboss Shop, whose first purchase is a resolved Anvil and is duplicated. */
+export function createEchoGoldIAnvilDuplicateProject(): ProjectDocument {
+  const shop = createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId);
+  const anvil = createShopOfferAddress(goldenIBiome, echoGoldIPrebossShopId, 'PremiumProgress');
+  let project = applyProjectCommand(createEchoGoldHPrebossProject(), catalog, {
+    kind: 'ReplaceShopOffer',
+    offer: anvil,
+    value: { rewardType: 'ChaosWeaponUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceAnvilResult',
+    offer: anvil,
+    value: {
+      kind: 'anvilOfFates',
+      removedTraitKey: 'StaffDoubleAttackTrait',
+      addedTraitKeys: ['StaffDashAttackTrait', 'StaffTripleShotTrait'],
+    },
+  });
+  project = replaceTestShopOfferActions(project, catalog, shop, ['PremiumProgress']);
+  return applyProjectCommand(project, catalog, {
+    kind: 'PlaceEchoGoldPickup',
+    site: createAcquisitionSiteAddress(shop, 'roomExit'),
+    entryKey: 'echoDoubleShopReward',
+    sourceOfferKey: 'PremiumProgress',
+  });
+}
