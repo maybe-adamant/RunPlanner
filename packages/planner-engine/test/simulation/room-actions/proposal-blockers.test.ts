@@ -144,4 +144,23 @@ describe('room action proposal blockers', () => {
       blockers: [],
     });
   });
+  it('offers no generic removal for purchase rows owned by their feature', () => {
+    const well: RoomActionReference = {
+      kind: 'purchaseStygianWellOffer',
+      generationKey: 'initial:healing',
+    };
+    const staleShrine: RoomActionReference = {
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+      rushed: false,
+    };
+    const roster = assembleRoomActionRoster({
+      owner,
+      lifecycleStructure: structure,
+      order: [well, staleShrine],
+      contributions: [action(well)],
+    });
+    expect(roster.proposals.filter((proposal) => proposal.kind === 'remove')).toEqual([]);
+    expect(roster.proposals.some((proposal) => proposal.kind === 'move')).toBe(true);
+  });
 });
