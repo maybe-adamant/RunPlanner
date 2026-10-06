@@ -9,6 +9,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  createRoomFeatureAddress,
   createTraitOfferAddress,
   roomActionKey,
   type ProjectCommand,
@@ -125,7 +126,10 @@ describe('Purging Pool sales', () => {
     const capability = purgingPoolCandidateForProjectEvaluationAssembly(ready, occurrence);
     expect(capability?.candidateTraitKeysBySlot.left).toContain('ApolloWeaponBoon');
     expect(ready.evaluation.route.biomes[0]?.findings).toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolTraitMissing' }),
+      expect.objectContaining({
+        code: 'purgingPoolTraitMissing',
+        origin: createRoomFeatureAddress(occurrence, { kind: 'purgingPoolOffer', slotKey: 'left' }),
+      }),
     );
     const selected = withPoolSlots(project, [
       'ApolloWeaponBoon',

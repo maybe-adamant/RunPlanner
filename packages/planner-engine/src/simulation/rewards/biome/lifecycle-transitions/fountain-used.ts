@@ -95,16 +95,11 @@ export function applyFountainUsedTransition(
         Object.freeze({
           finding: rewardFinding(
             finding.code,
-            createRoomFeatureAddress(
-              room.origin,
-              finding.slotKey === undefined
-                ? { kind: 'purgingPoolInventory' }
-                : { kind: 'purgingPoolOffer', slotKey: finding.slotKey },
-            ),
-            {
-              ...finding.evidence,
-              ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
-            },
+            createRoomFeatureAddress(room.origin, {
+              kind: 'purgingPoolOffer',
+              slotKey: finding.slotKey,
+            }),
+            { ...finding.evidence, slotKey: finding.slotKey },
           ),
           region: ownerRegion(room.origin),
           chronology: chronology(),

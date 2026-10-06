@@ -8,11 +8,8 @@ export type PurgingPoolSlotKey = keyof PurgingPoolState['traitKeyBySlot'];
 
 export interface PurgingPoolAssessmentFinding {
   readonly code:
-    | 'purgingPoolTraitMissing'
-    | 'purgingPoolTraitUnavailable'
-    | 'purgingPoolTraitDuplicate'
-    | 'purgingPoolWrongCardinality';
-  readonly slotKey?: PurgingPoolSlotKey;
+    'purgingPoolTraitMissing' | 'purgingPoolTraitUnavailable' | 'purgingPoolTraitDuplicate';
+  readonly slotKey: PurgingPoolSlotKey;
   readonly evidence: FindingEvidence;
 }
 
@@ -142,22 +139,19 @@ export function assessPurgingPool(
     }
     validSelectedCount += 1;
   }
-  if (resolvedCount < requiredTraitCount) {
+  // The game's list is unordered; each missing fill marks the next empty slot by planner convention.
+  const emptySlotKeys = SLOT_KEYS.filter((slotKey) => selectedBySlot[slotKey] === null);
+  for (const slotKey of emptySlotKeys.slice(0, Math.max(0, requiredTraitCount - resolvedCount))) {
     findings.push(
       Object.freeze({
         code: 'purgingPoolTraitMissing',
+        slotKey,
         evidence: Object.freeze({ requiredTraitCount, resolvedCount }),
       }),
     );
   }
-  if (resolvedCount > requiredTraitCount) {
-    findings.push(
-      Object.freeze({
-        code: 'purgingPoolWrongCardinality',
-        evidence: Object.freeze({ requiredTraitCount, resolvedCount }),
-      }),
-    );
-  }
+  // Overfilling needs more distinct eligible names than exist, so a slot is already
+  // reported as duplicate or unavailable.
   return Object.freeze({
     eligibleTraitKeys,
     requiredTraitCount,

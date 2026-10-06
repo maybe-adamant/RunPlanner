@@ -427,9 +427,6 @@ const findingCopy = {
   purgingPoolTraitDuplicate: {
     title: 'Duplicate Pool trait',
   },
-  purgingPoolWrongCardinality: {
-    title: 'Wrong Pool offer count',
-  },
   purgingPoolSaleUnavailable: {
     title: 'Pool sale unavailable',
     description: 'Remove the sale or restore its eligible trait.',

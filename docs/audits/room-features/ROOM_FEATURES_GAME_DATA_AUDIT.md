@@ -213,8 +213,12 @@ inventory present at fountain use is therefore the one the Pool opens with.
 admits Hermes and eligible field-loot sources marked
 `TreatAsGodLootByShops`; unslotted and Duo traits can therefore qualify.
 The candidate map is keyed by trait name, and `GenerateSellTraitShop` selects
-up to three distinct random names without replacement. The player may sell
-any displayed entry or none. Selling one displayed name calls
+up to three distinct random names without replacement into a plain list, which
+is shorter when fewer names are eligible (`SellTraitLogic.lua:14-43`).
+`CreateSellButtons` re-keys the options by trait name and lays them out in
+`pairs()` hash order, one per row (`SellTraitLogic.lua:120-142, 316-320`), so a
+shorter list packs upward without gaps and no entry has a stable position. The
+player may sell any displayed entry or none. Selling one displayed name calls
 `RemoveWeaponTrait(name)` until no instance remains, so all stacks of that
 name are removed. Gold amount, permanent-upgrade requirements, and pricing are
 sim-neutral.
@@ -229,10 +233,12 @@ Schema 59 represents forced physical Pools on the F/G/H Postboss occurrences.
 An uninteracted Pool keeps dormant runtime-random inventory and contributes no
 candidate, action, or simulation effect. Interaction activates an exact final
 list of up to three distinct eligible names; the authored list is the outcome
-after unmodeled rerolls. Each selected sale is an ordinary ranked Cleanup
-action, validates against the shop-aware God-trait predicate at Pool entry,
-requires the selected name to remain equipped at its action prefix, removes
-every current stack, and retains previously-picked history for
+after unmodeled rerolls. Its left/middle/right slots are planner presentation of
+that unordered set, and a missing fill is attributed to the first empty slots
+in that order. Each selected sale is an ordinary ranked Cleanup action,
+validates against the shop-aware God-trait predicate at Pool entry, requires
+the selected name to remain equipped at its action prefix, removes every
+current stack, and retains previously-picked history for
 `BlockOfferIfPreviouslyPicked` behavior.
 
 ## Shrines of Hermes
