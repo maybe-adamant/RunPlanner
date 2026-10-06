@@ -1377,6 +1377,16 @@
   grid-column: 5;
 }
 
+/* A wide continuation's label cell carries its whole editor across the row. */
+.timeline-row[data-timeline-span='wide'] > [data-timeline-cell='label'] {
+  grid-column: 3 / -1;
+}
+
+.timeline-row[data-timeline-span='wide']
+  > :is([data-timeline-cell='editors'], [data-timeline-cell='actions']) {
+  display: none;
+}
+
 /* Narrow lists move editors and actions under the label; handle and ordinal stay aligned. */
 @container timeline-list (max-width: 52rem) {
   .timeline-row > [data-timeline-cell='label'] {
@@ -1792,7 +1802,7 @@
   flex: 1 1 auto;
 }
 
-.timeline-cell-editors > .reward-wheel {
+.timeline-cell-label > .reward-wheel {
   flex: 1 1 100%;
   min-width: 0;
   padding: 6px;
