@@ -31,7 +31,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 import type { WorkspaceOccurrenceWorkbenchNode, WorkspaceDoorReward } from '../contracts/structure';
-import type { WorkspaceRoomTab } from '../contracts/navigation';
+import type { WorkspaceMarker, WorkspaceRoomTab } from '../contracts/navigation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   CanonicalAuthoredRoom,
@@ -894,10 +894,31 @@ export function assembleWorkspaceOccurrence(
           conversion.anvilApplies === true ? [conversion.marker.focusKey] : [],
         ),
       );
+      // Trait and Pom findings mark the row's launcher; a restorable entry marks Restore.
+      const rowControlMarks = new Map<string, WorkspaceMarker>();
+      for (const trait of [
+        ...(row.traitOffer === undefined ? [] : [row.traitOffer]),
+        ...(row.rewardPayload?.inlineTraitOffers ?? []),
+      ]) {
+        for (const marker of traitOfferMarkers(trait))
+          rowControlMarks.set(marker.focusKey, trait.marker);
+      }
+      for (const resolution of row.rewardPayload?.inlineLevelResolutions ?? [])
+        rowControlMarks.set(resolution.marker.focusKey, resolution.marker);
+      if (row.placement !== undefined && 'entry' in row.placement.command) {
+        const entry = input.markerDestinations.marker(row.placement.command.entry);
+        rowControlMarks.set(entry.focusKey, entry);
+      }
       for (const marker of acquisitionMarkers) {
         if (anvilFocusKeys.has(marker.focusKey))
           input.markerDestinations.redirect([marker], node.key);
-        else input.markerDestinations.redirectToContext(marker, row.marker, node.key);
+        else
+          input.markerDestinations.redirectToContext(
+            marker,
+            row.marker,
+            node.key,
+            rowControlMarks.get(marker.focusKey),
+          );
       }
       const tab =
         roomLocal.kind === 'ship'

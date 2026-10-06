@@ -6,6 +6,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { isIdentityFinding } from './encounterPhaseFindings';
 
 export function RoomEncounterStructureWorkbench({
   children,
@@ -35,7 +36,7 @@ export function RoomEncounterStructureWorkbench({
             interaction.owner,
             undefined,
             interaction.owner,
-            (finding) => finding.code !== 'encounterCustomizationUnavailable',
+            isIdentityFinding,
           );
           const description = [target['aria-description'], interaction.disabledReason]
             .filter((entry) => entry !== undefined)

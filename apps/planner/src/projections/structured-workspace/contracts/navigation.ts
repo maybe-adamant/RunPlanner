@@ -43,6 +43,8 @@ export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;
   readonly focusAddress: SemanticAddress;
   readonly focusKey: string;
+  /** The control that carries the finding mark when it is nested inside the focus. */
+  readonly markAddress?: SemanticAddress;
   /** Present for trait owners that must open the transient shared dialog. */
   readonly traitDialogTarget?: TraitOfferAddress;
   /** Present for exact Pom owners that must open the transient Pom dialog. */

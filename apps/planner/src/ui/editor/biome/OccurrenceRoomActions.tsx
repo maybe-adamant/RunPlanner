@@ -513,6 +513,7 @@ export function RoomActionsWorkbench({
         />
       ) : (
         <button
+          {...('entry' in placement.command ? findingTarget(placement.command.entry) : {})}
           aria-label={
             row.participation === 'required'
               ? placement.command.kind === 'PlaceHermesShrineDelivery'

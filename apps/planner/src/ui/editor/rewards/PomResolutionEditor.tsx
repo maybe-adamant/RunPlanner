@@ -545,7 +545,14 @@ export function PomResolutionDialog({
       className="trait-offer-dialog-backdrop"
       ref={dialogRef}
     >
-      <div className="trait-offer-dialog" {...findingTarget(target)} tabIndex={-1}>
+      {/* The feedback region lists the dialog's findings; its launcher carries the mark. */}
+      <div
+        className="trait-offer-dialog"
+        {...findingTarget(target)}
+        aria-description={undefined}
+        data-has-findings={false}
+        tabIndex={-1}
+      >
         <header className="panel-heading">
           <div>
             <p className="eyebrow">{eyebrow}</p>

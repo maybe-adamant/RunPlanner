@@ -451,6 +451,8 @@ describe('generated encounter customization workflows', () => {
     );
     const slider = within(view.dialog).getByRole('slider', { name: 'Native base roll' });
     expect((slider as HTMLInputElement).value).toBe('340');
+    expect(slider.dataset.hasIssues).toBe('true');
+    expect(slider.parentElement?.hasAttribute('data-has-issues')).toBe(false);
     fireEvent.keyDown(slider, { key: 'Home' });
     fireEvent.keyUp(slider, { key: 'Home' });
     expect(current(view, owner)).toMatchObject({ baseRoll: 340, waveCount: 2 });
@@ -624,6 +626,10 @@ describe('generated encounter customization workflows', () => {
       name: 'Customize encounter',
     });
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+    expect(trigger.dataset.hasFindings).toBe('true');
+    expect(
+      within(encounters).getByRole('checkbox', { name: 'Nemesis Event' }).dataset.hasFindings,
+    ).toBe('false');
     expect(screen.queryByRole('dialog')).toBeNull();
     await view.user.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
@@ -708,6 +714,8 @@ describe('generated encounter customization workflows', () => {
     const trigger = within(view.dialog).getByRole('button', { name: 'Shared Enemy' });
     expect(trigger.textContent).toContain('Select shared enemy');
     expect(trigger.getAttribute('aria-invalid')).not.toBe('true');
+    expect(trigger.dataset.hasIssues).toBe('true');
+    expect(trigger.closest('.encounter-shared-enemy')?.hasAttribute('data-has-issues')).toBe(false);
     await view.user.click(trigger);
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
     expect(options.map((option) => option.textContent)).not.toContainEqual(

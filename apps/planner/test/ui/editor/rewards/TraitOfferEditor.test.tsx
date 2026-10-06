@@ -1145,7 +1145,7 @@ describe('trait offer editor entry and dialog', () => {
       screen
         .getByRole('button', { name: /spell is not selected/ })
         .getAttribute('data-has-findings'),
-    ).toBe('false');
+    ).toBe('true');
     cleanup();
 
     render(

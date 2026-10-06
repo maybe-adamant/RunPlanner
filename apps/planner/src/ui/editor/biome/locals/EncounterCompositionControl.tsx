@@ -36,12 +36,14 @@ const budgetNumber = new Intl.NumberFormat('en-US', {
 });
 
 function EncounterBudgetSlider({
+  hasIssues,
   id,
   min,
   max,
   value,
   onCommit,
 }: {
+  readonly hasIssues: boolean | undefined;
   readonly id: string;
   readonly min: number;
   readonly max: number;
@@ -58,6 +60,7 @@ function EncounterBudgetSlider({
   };
   return (
     <input
+      data-has-issues={hasIssues}
       id={id}
       aria-label="Native base roll"
       min={min}
@@ -899,22 +902,17 @@ export function EncounterCompositionControl({
       ) : null}
       <div className="encounter-summary-controls">
         {authorable && budgetDomain === undefined ? (
-          <div
-            className="encounter-budget-control"
-            data-has-issues={assessment?.issues.some((issue) => issue.field === 'baseRoll')}
-          >
+          <div className="encounter-budget-control">
             <span>Budget</span>
             <span>{encounterBudget}</span>
           </div>
         ) : null}
         {authorable && budgetDomain !== undefined ? (
-          <div
-            className="encounter-budget-control"
-            data-has-issues={assessment?.issues.some((issue) => issue.field === 'baseRoll')}
-          >
+          <div className="encounter-budget-control">
             <label htmlFor={`generated-base-roll-${idKey}`}>Budget</label>
             <span>{budgetNumber.format(budgetDomain.total.min)}</span>
             <EncounterBudgetSlider
+              hasIssues={assessment?.issues.some((issue) => issue.field === 'baseRoll')}
               id={`generated-base-roll-${idKey}`}
               min={budgetDomain.baseRoll.min}
               max={budgetDomain.baseRoll.max}
@@ -924,13 +922,11 @@ export function EncounterCompositionControl({
             <span>{budgetNumber.format(budgetDomain.total.max)}</span>
           </div>
         ) : null}
-        <div
-          className="encounter-customization-row encounter-waves-control"
-          data-has-issues={assessment?.issues.some((issue) => issue.field === 'waveCount')}
-        >
+        <div className="encounter-customization-row encounter-waves-control">
           <span>Waves</span>
           <div
             aria-invalid={waveCountUnavailable || undefined}
+            data-has-issues={assessment?.issues.some((issue) => issue.field === 'waveCount')}
             className="encounter-wave-count"
             role="radiogroup"
             aria-label="Waves"
@@ -960,11 +956,11 @@ export function EncounterCompositionControl({
         {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
-            data-has-issues={assessment?.issues.some((issue) => issue.field === 'highlight')}
             title="Only used with multiple waves"
           >
             <ContextualPicker
               ariaLabel="Shared Enemy"
+              hasIssues={assessment?.issues.some((issue) => issue.field === 'highlight') === true}
               choiceLabel="Shared Enemy"
               disabled={interaction?.generatedHighlightPicker === undefined}
               id={`generated-highlight-${idKey}`}

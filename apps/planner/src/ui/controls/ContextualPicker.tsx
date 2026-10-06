@@ -33,6 +33,8 @@ interface ContextualPickerProps<T> {
   readonly triggerTitle?: string;
   /** Marks a retained value the current context cannot produce. */
   readonly invalid?: boolean;
+  /** Marks a local customization issue this picker repairs. */
+  readonly hasIssues?: boolean;
 }
 
 function PickerSection<T>({
@@ -195,6 +197,7 @@ export function ContextualPicker<T>({
   triggerLabel,
   triggerTitle,
   invalid = false,
+  hasIssues,
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -241,6 +244,7 @@ export function ContextualPicker<T>({
             {...(ariaLabel === undefined ? {} : { 'aria-label': ariaLabel })}
             className="contextual-picker-trigger"
             data-candidate-state={selected?.state ?? 'unspecified'}
+            data-has-issues={hasIssues || undefined}
             disabled={interactionDisabled}
             {...(disabledTitle !== undefined
               ? { title: disabledTitle }

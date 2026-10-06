@@ -77,3 +77,38 @@ it('groups exact, redirected child, and aggregate findings by the same completed
     indexFindingsByRepairTarget(findings.slice(2), destinations).get(semanticAddressKey(action)),
   ).toEqual([findings[2]]);
 });
+
+it('groups a finding at its marked control when that differs from its navigation focus', () => {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const id = createOccurrenceId('marked-room');
+  const trait = createTraitOfferAddress(createIncomingRewardAddress(biome, id), 'self');
+  const action = createRoomActionAddress(biome, id, 'pickup');
+  const finding: SemanticFinding = {
+    code: 'traitOfferMissing',
+    origin: trait,
+    evidence: {},
+    phase: 'rewardGeneration',
+    severity: 'error',
+  };
+  const index = indexFindingsByRepairTarget(
+    [finding],
+    new Map([
+      [
+        semanticAddressKey(trait),
+        {
+          biomeKey: 'F',
+          routeKey: 'Underworld',
+          ownerAddress: trait,
+          focusAddress: action,
+          focusKey: semanticAddressKey(action),
+          markAddress: trait,
+          region: 'structure',
+          nodeKey: 'room',
+          inspectorSubject: { kind: 'node', nodeKey: 'room' },
+        },
+      ],
+    ]),
+  );
+  expect(index.get(semanticAddressKey(trait))).toEqual([finding]);
+  expect(index.has(semanticAddressKey(action))).toBe(false);
+});

@@ -138,6 +138,8 @@ it.each([
     expect(target?.getAttribute('data-selected-finding')).toBe('true');
     expect(target?.contains(repair)).toBe(true);
     if (kind === 'delivery' || kind === 'ship') {
+      expect(repair.dataset.hasFindings).toBe('true');
+      expect(target?.getAttribute('data-has-findings')).toBe('false');
       await view.user.click(repair);
       expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull();
       expect(

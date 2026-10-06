@@ -171,13 +171,13 @@ function hubOccurrenceMap(
   );
 }
 
-/** Hub main offers retain their semantic owner but navigate to the Hub board. */
+/** Hub main offers navigate to the Hub board and mark their reward control there. */
 function redirectHubMainRewardFocus(
   markerDestinations: WorkspaceMarkerDestinationEmitter,
   hub: WorkspaceMarker,
   mainReward: WorkspaceMarker,
 ): void {
-  markerDestinations.redirectTo(mainReward, hub, `hub:${hub.focusKey}`);
+  markerDestinations.redirectTo(mainReward, hub, `hub:${hub.focusKey}`, mainReward);
 }
 
 function projectHubNode(

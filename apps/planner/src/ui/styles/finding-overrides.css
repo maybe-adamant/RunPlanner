@@ -5,7 +5,9 @@
   scroll-margin-block: calc(35 * var(--app-vh));
 }
 
-.encounter-summary-controls > [data-has-issues='true'] {
+/* Summary issues mark the control that repairs them. */
+.encounter-summary-controls
+  :is(input, [role='radiogroup'], .contextual-picker-trigger)[data-has-issues='true'] {
   outline: 2px solid #da7373;
   outline-offset: 3px;
   border-radius: 4px;
