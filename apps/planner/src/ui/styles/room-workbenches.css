@@ -413,8 +413,7 @@
 }
 
 .ship-phase .encounter-editor,
-.ship-phase .reward-wheel,
-.ship-combat-editor .room-actions-workbench {
+.ship-combat-editor:has(> .room-actions-workbench) {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
@@ -1025,25 +1024,11 @@
   gap: 8px;
 }
 
-/* Ship phases keep the timeline column origin of an ordinary Room Timeline. */
-.ship-phase {
-  display: grid;
-  gap: 6px;
-  margin-inline: -1px;
-  padding: 6px 0;
-  border: 1px solid #3a3b45;
-  border-radius: 10px;
-  background: rgb(126 101 154 / 5%);
-}
-
+/* Ship phases and their repairs keep the ordinary timeline edge and spine, unboxed. */
+.ship-phase,
 .ship-action-repairs {
   display: grid;
-  gap: 6px;
-  margin-inline: -1px;
-  padding: 6px 0;
-  border: 1px solid #79545a;
-  border-radius: 10px;
-  background: rgb(153 76 87 / 8%);
+  gap: 10px;
 }
 
 .reward-wheel {
@@ -1299,9 +1284,13 @@
 }
 
 .room-actions-workbench {
-  gap: 6px;
+  /* Spine gutter and the inset of a row's first column; headings start there too. */
+  --timeline-gutter: 18px;
+  --timeline-row-start: 6px;
+  --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
+  gap: 10px;
   margin-top: 6px;
-  padding: 8px;
+  padding: 10px;
 }
 
 .room-actions-workbench .reward-wheel-offer-card > .exit-content {
@@ -1316,15 +1305,16 @@
   display: grid;
   gap: 4px;
   margin: 0;
-  padding: 2px 0 2px 18px;
+  padding: 0 0 0 var(--timeline-gutter);
   list-style: none;
 }
 
+/* The one timeline spine, drawn once from the first row's middle to the last row's. */
 .room-action-list::before {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
-  left: 5px;
+  top: 16px;
+  bottom: 16px;
+  left: 8px;
   width: 2px;
   border-radius: 999px;
   background: rgb(174 152 202 / 34%);
@@ -1339,19 +1329,20 @@
   align-items: center;
   gap: 4px 8px;
   min-width: 0;
-  padding: 3px 8px 3px 0;
+  padding: 3px 8px 3px var(--timeline-row-start);
   border: 1px solid #34353e;
   border-left: 3px solid rgb(174 152 202 / 36%);
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgb(18 19 24 / 72%);
   scroll-margin-block: 24px;
 }
 
+/* A card's connector tick runs from the spine to its left edge. */
 .timeline-row::before {
   position: absolute;
-  top: 50%;
-  left: -14px;
-  width: 11px;
+  top: calc(50% - 1px);
+  left: -12px;
+  width: 9px;
   height: 2px;
   background: rgb(174 152 202 / 48%);
   content: '';
@@ -1387,6 +1378,17 @@
   display: none;
 }
 
+/* Lifecycle banners read as headings: their title starts at the handle column. */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) {
+  display: none;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='label'] {
+  grid-column: 1 / 4;
+}
+
 /* Narrow lists move editors and actions under the label; handle and ordinal stay aligned. */
 @container timeline-list (max-width: 52rem) {
   .timeline-row > [data-timeline-cell='label'] {
@@ -1401,6 +1403,37 @@
   .timeline-row > [data-timeline-cell='actions'] {
     grid-row: 2;
     grid-column: 5;
+  }
+
+  /* A row without editors keeps its actions on its single line. */
+  .timeline-row:not([data-timeline-span='wide']):has(> [data-timeline-cell='editors']:empty)
+    > [data-timeline-cell='label'] {
+    grid-column: 3 / 5;
+  }
+
+  .timeline-row:not([data-timeline-span='wide']):has(> [data-timeline-cell='editors']:empty)
+    > [data-timeline-cell='editors'] {
+    display: none;
+  }
+
+  .timeline-row:not([data-timeline-span='wide']):has(> [data-timeline-cell='editors']:empty)
+    > [data-timeline-cell='actions'] {
+    grid-row: 1;
+  }
+
+  /* A banner never has actions, so its heading takes the whole first line. */
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+    > [data-timeline-cell='label'],
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):has(
+      > [data-timeline-cell='editors']:empty
+    )
+    > [data-timeline-cell='label'] {
+    grid-column: 1 / -1;
+  }
+
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+    > [data-timeline-cell='actions'] {
+    display: none;
   }
 }
 
@@ -1489,31 +1522,25 @@
 
 /* Row kinds differ only in border, background and type. */
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
-  --timeline-band: rgb(174 152 202 / 16%);
-  min-height: 32px;
+  min-height: 36px;
   padding-block: 1px;
-  border-color: #353640 transparent;
-  border-radius: 0;
-  background: linear-gradient(90deg, var(--timeline-band), rgb(10 11 14 / 40%));
-  box-shadow: 0 2px 0 rgb(0 0 0 / 14%);
+  border-color: transparent;
+  border-bottom-color: rgb(53 54 64 / 70%);
+  background: linear-gradient(90deg, rgb(174 152 202 / 13%), rgb(174 152 202 / 2%));
   color: #e2d8ea;
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
 }
 
-/* Lifecycle bands run under the rail gutter, so action cards read as inset. */
+/* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
 .timeline-row:is(
     [data-timeline-row-kind='boundary'],
     [data-timeline-row-kind='checkpoint']
   )::before {
-  top: -1px;
-  bottom: -1px;
-  left: -21px;
-  width: 18px;
-  height: auto;
-  border-block: 1px solid #353640;
-  border-left: 3px solid #ae98ca;
-  background: var(--timeline-band);
+  top: calc(50% - 4px);
+  left: -16px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ae98ca;
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
@@ -1530,7 +1557,6 @@
 .timeline-row[data-timeline-row-kind='effect'] {
   border-color: transparent;
   border-left-color: rgb(174 152 202 / 36%);
-  border-radius: 0 6px 6px 0;
 }
 
 .timeline-row[data-timeline-row-kind='insertion'] {
@@ -1550,7 +1576,6 @@
 }
 
 .timeline-row:is(
-    [data-timeline-row-kind='effect'],
     [data-timeline-row-kind='insertion'],
     [data-timeline-row-kind='continuation']
   )::before {
@@ -1948,30 +1973,26 @@
   width: 100%;
 }
 
-/* Pools keep the timeline column origin; only the rail is dropped. */
-.room-action-optional-pool {
+/* Pools are grouped by a light heading and their own spine, not another box. */
+.room-action-optional-pool,
+.room-action-repairs {
   display: grid;
   gap: 6px;
-  margin-inline: -1px;
-  padding: 6px 0;
-  border: 1px dashed rgb(143 139 148 / 45%);
-  border-radius: 8px;
-  background: rgb(18 19 24 / 44%);
 }
 
-.room-action-optional-pool > .local-reward-heading,
-.room-action-repairs > .local-reward-heading,
-.ship-action-repairs > .local-reward-heading {
-  padding-inline: 8px;
+:is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
+  > .local-reward-heading {
+  padding-inline: var(--timeline-title-x) 0;
 }
 
-.room-action-optional-pool .room-action-list::before,
-.room-action-optional-pool .timeline-row::before,
-.room-action-repairs .room-action-list::before,
-.room-action-repairs .timeline-row::before,
-.ship-action-repairs .room-action-list::before,
-.ship-action-repairs .timeline-row::before {
-  display: none;
+:is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
+  > .local-reward-heading
+  :is(h4, h5) {
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .hub-owner-assessment {

@@ -327,7 +327,6 @@ export function RoomActionsWorkbench({
           key={`checkpoint:${checkpoint.key}`}
           kind="checkpoint"
           label={<strong>{checkpoint.label}</strong>}
-          ordinal="·"
         />
       ));
   const renderSupplement = (
@@ -780,7 +779,6 @@ export function RoomActionsWorkbench({
                           key={`checkpoint:${checkpoint.key}`}
                           kind="checkpoint"
                           label={<strong>{checkpoint.label}</strong>}
-                          ordinal="·"
                         />
                       ))}
                     </ol>
