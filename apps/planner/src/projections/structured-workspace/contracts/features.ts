@@ -67,7 +67,7 @@ export type WorkspaceRoomFeature =
         readonly label: string;
         readonly address: RoomFeatureAddress;
         readonly marker: WorkspaceMarker;
-        readonly sale?: { readonly sold: boolean };
+        readonly sale: { readonly sold: boolean };
         readonly traitLabel?: string;
         readonly traitKey: string | null;
       }[];
