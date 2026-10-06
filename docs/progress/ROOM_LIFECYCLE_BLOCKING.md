@@ -60,8 +60,11 @@ Any Overview product that reads Timeline-produced state is a modelling error.
   encounters, producers, timed effects and Run State snapshots. Trait offer
   capabilities and level resolutions have none.
 - Findings already carry an engine atomic region with chronology
-  (`simulation/finding-regions.ts`). Shop settlement uses one region for the
-  whole Shop (`ownerRegion(room.origin)`).
+  (`simulation/finding-regions.ts`). Shop purchases settle one row at a time
+  with forward-only shared state (inventory pinned at entry; first purchase,
+  refills and the Gold Gold Gold copy read earlier purchases only), so each
+  purchase owns its own region; only the close-time Gold placement finding is
+  Shop-wide.
 
 ## Correction 1: a later room never reaches back
 
@@ -147,8 +150,10 @@ composition at room preparation.
 - Trait offer capabilities and level resolutions gain positions so one
   position cut replaces the allowlist; the superseded clamp branches and
   allowlist code are deleted.
-- A coarse region (a whole Shop) makes the whole Timeline region editable;
-  nothing is dropped. Splitting coarse regions is a non-goal.
+- Shop findings are atomized per purchase: purchase, Contract, refill and Gold
+  duplicate findings own their entry's region; the refill inventory finding
+  owns the refill offer; the unreachable joint-purchase-order fallback becomes
+  a contract error.
 
 ## Ownership
 
@@ -174,6 +179,8 @@ chronology inference. Catalog, schema and game module: untouched.
    correction 3 for ordinary rooms: positions, region row set, position cut,
    deletion of the superseded allowlist paths; application adapts read-only
    rows.
+   4b. `fix(engine): give each Shop purchase its own finding region` — atomized
+   Shop findings; delete the whole-Shop blocking-row rule.
 5. `feat(engine): …` — correction 3 for fixed rooms, the opening room and Hub
    visit lifecycles, deleting their clamp branches.
 6. Closure: SIMULATION_AND_VALIDATION (completeness table, readiness),
@@ -193,5 +200,5 @@ digests stay unchanged.
 
 ## Non-goals
 
-Splitting coarse engine regions, changing what a finding means, schema or
+Changing what a finding means, schema or
 protocol changes, door generation timing beyond the exit ordering.
