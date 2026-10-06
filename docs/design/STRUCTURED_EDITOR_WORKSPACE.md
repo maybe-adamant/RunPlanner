@@ -928,6 +928,13 @@ the authored offer, with the vow named on hover; no element renders beside the
 control, and the timeline row carries no provenance because its label already
 names the realized pickup.
 
+Stable layout means a control has a reserved home when it appears, not that every
+control always renders. A timeline control (pickup outcome choices, Sea Star,
+Fig Leaf, Gorgon, Aetos) renders only where the engine product says its context
+applies at that point, or where an authored value exists; a retained stale value
+stays visible and editable with its finding. A finding never hides or disables
+its control, and the application never computes applicability itself.
+
 Information notes explain a rule or a result beneath their owning control:
 door pool results occupy a separate area below the editable pool control, and
 Fields, inherited-pool, and hidden-reward explanations share the

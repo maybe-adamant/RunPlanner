@@ -531,7 +531,6 @@ export function EncounterPhaseEvents({
             phase.address,
           )}
           checked={figLeafInteraction.selected}
-          disabled={!figLeafInteraction.supported && !figLeafInteraction.selected}
           onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
@@ -553,7 +552,6 @@ export function EncounterPhaseEvents({
             phase.address,
           )}
           checked={gorgonInteraction.selected}
-          disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
           onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />

@@ -198,10 +198,15 @@ describe('OccurrenceRoomActions', () => {
     const outcome = within(actions).getByRole('button', {
       name: /^Pickup outcome for /,
     });
-    const seaStar = within(actions).getByRole('checkbox', { name: /^Sea Star procced for / });
-    expect(seaStar).toHaveProperty('disabled', true);
-    expect(seaStar.closest('label')?.getAttribute('title')).toBe('Sea Star does not apply here.');
+    // Without the Sea Star keepsake the engine supports no proc, so no checkbox renders.
+    expect(within(actions).queryByRole('checkbox', { name: /^Sea Star procced for / })).toBeNull();
     await view.user.click(outcome);
+    // Only engine-supported outcomes are listed.
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('aria-label') ?? option.textContent?.replace('✓', '')),
+    ).toEqual(['Pickup', 'Timepiece']);
     const timePiece = screen.getByRole('option', {
       name: 'Timepiece',
     });
