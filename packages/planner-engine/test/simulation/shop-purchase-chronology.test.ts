@@ -868,11 +868,6 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(findings).toContainEqual(
       expect.objectContaining({ code: 'rewardAcquisitionUnavailable', origin: duplicate }),
     );
-    expect(findings).not.toContainEqual(
-      expect.objectContaining({
-        evidence: expect.objectContaining({ kind: 'jointPurchaseOrder' }),
-      }),
-    );
   });
 
   it('settles the Gold duplicate of an Anvil with its own result after the first Anvil', () => {

@@ -755,34 +755,47 @@ describe('room Timeline block', () => {
     expect(exited(p, storyId)).toBe(false);
   });
 
-  it('owns every Shop purchase row when the Shop settles as one product', () => {
-    const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
-    const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+  it('blocks at the one failing Shop purchase and keeps the earlier one', () => {
+    const shopId = qOccurrenceIds.preboss;
+    const shop = createOccurrenceAddress(qBiome, shopId);
+    const premium = createShopOfferAddress(qBiome, shopId, 'PremiumProgress');
+    const refill = createShopOfferAddress(qBiome, shopId, 'travelDealRefill');
+    const refillRow = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit' as const,
+      entryKey: 'travelDealRefill',
+    };
+    let project = replaceTestShopOfferActions(
+      surfaceTravelDealRefillAnvilProject(),
+      catalog,
+      shop,
+      ['PremiumProgress', 'MixedProgress1'],
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(qBiome, shopId, rowKey(refillRow)),
+      toIndex: 1,
+    });
     // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
-    const project = applyProjectCommand(surfaceTravelDealRefillAnvilProject(), catalog, {
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAnvilResult',
       acquisition: createAcquisitionRoleAddress(refill, 'self'),
       value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
     });
+    const assembly = simulateProjectAssembly(catalog, project);
     const q = biomeEvaluation(project, 'Q');
 
-    expect(q.issue?.regionKey).toBe(`owner:${semanticAddressKey(shop)}`);
-    // The Premium purchase carries no finding of its own and still belongs to the region.
+    // A (Premium) settles, B (the refill) blocks alone, C (Mixed Progress) is after the block.
+    expect(q.coverage.roomTimeline).toEqual({ room: shop, blockingRowKeys: [rowKey(refillRow)] });
     expect(
-      q.issue?.reasons.every((reason) =>
-        semanticAddressKey(reason.origin).includes('travelDealRefill'),
-      ),
-    ).toBe(true);
-    expect(q.coverage.roomTimeline).toEqual({
-      room: shop,
-      blockingRowKeys: [
-        rowKey({ kind: 'interactShopOffer', offerKey: 'PremiumProgress' }),
-        rowKey({
-          kind: 'interactAcquisitionEntry',
-          siteKey: 'roomExit',
-          entryKey: 'travelDealRefill',
-        }),
-      ],
-    });
+      candidateArtifactsForProjectEvaluationAssembly(assembly)
+        .biomeAt(qBiome)
+        ?.acquisitionConversions.at(createAcquisitionRoleAddress(premium, 'self')),
+    ).toBeDefined();
+    const points = roomEvents(q, shopId).flatMap((event) =>
+      event.kind === 'acquisitionPointReached' ? [event.point] : [],
+    );
+    expect(points).toContain('shopOffer:PremiumProgress');
+    expect(points).not.toContain('shopOffer:MixedProgress1');
   });
 });
