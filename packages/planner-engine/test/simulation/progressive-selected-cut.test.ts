@@ -72,7 +72,7 @@ const {
   source,
 } = fixture;
 
-describe('progressive clamp products', () => {
+describe('selected cut products', () => {
   it('keeps the whole doors opening when a door offer blocks before a later door fails', () => {
     const fixture = partialGWithEarlierInvalidReward();
     const { evaluation } = prefix(fixture.project, 'Underworld', 'G');

@@ -164,7 +164,7 @@ only when the application composition marks a development build.
 Run State remains available through the covered lifecycle checkpoint that
 precedes or contains the first blocking value and unavailable afterward. The
 workspace consumes that engine-published coverage directly; it does not apply
-a second canonical or finding-order clamp.
+a second canonical or finding-order cut.
 
 Only two decision-generation launchers remain public: the `HubDecisionAddress`
 before the Hub board is generated and the Hub-sourced `ExitDecisionAddress`
@@ -272,8 +272,11 @@ control unassessed and does not decide whether that control exists. The
 projector never derives phase activity from a rendered ordinal or finding.
 
 The workspace publishes active phases even behind an invalid evaluated prefix,
-so their retained selections remain editable; only the blocking phase is
-assessed until repair restores an exact later checkpoint. A dormant potential
+so their retained selections remain visible. Every phase of a room entered
+through the [selected cut](SIMULATION_AND_VALIDATION.md#selected-cut),
+including one whose own finding blocks the Overview, keeps its candidate
+support; phases of later rooms are unreached until repair restores an exact
+later checkpoint. A dormant potential
 phase retains its persisted selection but has no live interaction, marker,
 finding, or route-NPC index entry. Singleton phases preserve their exact
 semantic destination without producing no-op controls. This gives finding
@@ -340,8 +343,17 @@ the Room Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench.
 Room Timeline consumes the engine lifecycle timeline plus the one
 occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
-product. A
-section is omitted when its projected product is empty.
+product. A section is omitted when its projected product is empty.
+
+When a block lies in a room's Timeline or doors opening, the application marks
+the rows named by the engine's `roomTimeline.blockingRowKeys` as the blocking
+product; it never infers that row set. Those rows keep their row-level edits
+(order, removal, purchase participation) and findings; an inner picker is
+editable only where the engine published a reached capability, so rows past
+the failing contact show it read-only with the unreached hint. Rows after the
+blocking product, Room Doors and later rooms show their authored values the
+same way. A block at the Overview leaves the Overview as the repair surface and
+the Timeline and Doors read-only.
 
 Timeline action headings use **Buy** for paid World Shop, Shrine and Well
 items and their refills, **Collect** for pickups (including Contract items and
@@ -380,8 +392,9 @@ paths.
 
 Manual tab selection is transient and defaults to Overview for a newly focused
 occurrence. Exact semantic focus overrides it: setup and fixed-slot purchase
-markers open Overview, Travel Deal refill markers and active encounter/action
-owners open the matching Room Timeline tab,
+markers and encounter identity and customization owners open Overview, Travel
+Deal refill markers, Fig Leaf, Gorgon, Aetos and Nemesis-response owners and
+action owners open the matching Room Timeline tab,
 inactive Ship actions open repair, and outgoing owners open Room Doors. The
 application publishes that closed destination; React does not parse addresses
 or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,

@@ -90,9 +90,11 @@ Persisted topology determines which decisions, occurrences and offer-time
 leaves exist. Evaluation overlays only reached facts by semantic owner.
 
 A complete-valid biome may use its canonical snapshot. Other biomes use the
-clamped assessment prefix when present, otherwise their reached materialized
-prefix. Retained materialization beyond assessment cannot supply entered
-state, Clockwork outcomes or other evaluated facts.
+assessment prefix of their
+[selected cut](SIMULATION_AND_VALIDATION.md#selected-cut) when present,
+otherwise their reached materialized prefix. Retained materialization beyond
+assessment cannot supply entered state, Clockwork outcomes or other evaluated
+facts.
 
 `WorkspaceBiomeSource` acquires context-free completeness once for semantic
 and interaction assembly. The full document remains the structural base.
