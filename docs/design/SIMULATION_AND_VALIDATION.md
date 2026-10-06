@@ -139,10 +139,11 @@ Only a complete-valid biome publishes a canonical snapshot, final history,
 completion transition and seed for the next biome.
 
 `materializedPrefix` retains the maximum structurally materializable prefix.
-`assessmentPrefix`, when present, is the smaller prefix through the first
-blocking region. Coverage, history, findings and candidate artifacts refer to
-the assessed product, not every retained materialized leaf. The authored
-document retains any remaining suffix.
+`assessmentPrefix`, when present, is the smaller structure reached by the
+[selected cut](#selected-cut) through the first blocking product. Coverage,
+history, findings and candidate artifacts refer to the assessed product, not
+every retained materialized leaf. The authored document retains any remaining
+suffix.
 
 Canonical rooms retain addresses, resolved identities, active local products
 and the one action roster/timeline. They do not copy catalog predicates,
@@ -154,12 +155,12 @@ Completeness asks whether the required concrete choices exist. Validity asks
 whether reached choices are possible. Coverage says which facts were actually
 assessed. These axes must remain distinct.
 
-| Biome state                                         | Available product                                                           | May seed the next biome? |
-| --------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------ |
-| Start or required field not materializable          | Exact incomplete frontier, no assessed snapshot                             | No                       |
-| Incomplete with a reached prefix                    | Materialized prefix, assessed history and repair contacts                   | No                       |
-| Complete or incomplete with a reached invalid value | Retained materialization and clamped assessment through the blocking region | No                       |
-| Complete and valid                                  | Canonical snapshot, final history and completion transition                 | Yes                      |
+| Biome state                                         | Available product                                                          | May seed the next biome? |
+| --------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------ |
+| Start or required field not materializable          | Exact incomplete frontier, no assessed snapshot                            | No                       |
+| Incomplete with a reached prefix                    | Materialized prefix, assessed history and repair contacts                  | No                       |
+| Complete or incomplete with a reached invalid value | Retained materialization and the selected cut through the blocking product | No                       |
+| Complete and valid                                  | Canonical snapshot, final history and completion transition                | Yes                      |
 
 Route evaluation composes a complete-valid prefix, at most one progressively
 evaluated active biome and an unassessed suffix. A downstream page may expose
@@ -186,8 +187,10 @@ region the user must be able to repair:
 | Outgoing decision   | That outgoing decision     | Selected next occurrence |
 
 Earlier regions stay editable and later authored values remain visible.
-Invalidity alone creates no readiness lock. Unassessed does not automatically
-mean disabled.
+Invalidity alone creates no readiness lock, and unassessed is not itself a
+lock: past a blocking product, a control that needs a reached context has none
+and shows read-only with the unreached hint, which follows coverage, not
+readiness.
 
 The same semantic chronology locates the missing owner, normalized horizon and
 queried command owners. Jointly unordered products, such as a Hub board or
@@ -225,20 +228,49 @@ boundary, while an unpicked generated host retains its structural repair.
 Invalid Fig Leaf choices remain repairable but cannot publish a normally
 executed encounter as assessed continuation.
 
-The blocking owner retains its repair capability when reached. Every encounter
-phase of the blocked room whose room was prepared at or before the stop also
-retains its identity, generation and roster support, since that context reads
-only the room's preparation and entry state; its status, Fig Leaf and Gorgon
-products are not retained, except that a phase blocked by its own Fig Leaf,
-Aetos or Gorgon finding keeps its status without execution and its Fig Leaf
-support. Later
-history effects, findings and capabilities do not become true merely because
-their authored controls still exist. The candidate session answers whether an
+The blocking owner retains its repair capability when reached. Later history
+effects, findings and capabilities do not become true merely because their
+authored controls still exist. The candidate session answers whether an
 exact context exists for a native setting's owner (Ship phase count, reward
 wheel, Hub slot and action order, side-room generation and order, Fields point)
 by reading retained products or authored structure only; it evaluates no
 candidate and replays nothing. No candidate-only evaluation or UI fallback may
 restore withheld semantic facts.
+
+### Selected cut
+
+Every block, in an ordinary, fixed Boss or Postboss, opening or Hub-visit room,
+on the Hub board or its Handoff, or at the biome start, is published through
+one cut of the selected attempt (`simulation/progressive/selected-cut.ts`).
+History, the reward walk, door generation and encounter support are cut at the
+same chronology position; products before it are the selected attempt's own,
+with their candidate capabilities, and nothing after it is evaluated. Every
+blocking finding carries that position; an unpositioned block is a broken
+engine contract.
+
+Where the cut falls follows the room's
+[stages](ROOM_LIFECYCLE_MODEL.md#room-stages):
+
+| Block                                                                                                                          | Cut and published products                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview: Shop, Shrine, Well or Contract inventory; any phase's encounter identity, composition, customization or introduction | After the whole Overview. The room is entered with its `roomEntered` snapshot, its entry effects (Preboss delivery flush, forced-Chaos spark, Fields forfeits) and the continuations created on entry, as on success minus the failed product. The Overview is the repair region; the Timeline and Exit are unreached. |
+| Timeline, including the doors opening                                                                                          | At the start of the blocking product. Earlier Timeline products are kept. Coverage publishes the room's `roomTimeline.blockingRowKeys`: every Timeline row that settles an owner of the blocking region, whether or not it carries a finding. Later rows, the Exit and later rooms are unreached.                      |
+| Exit work                                                                                                                      | At the failing exit contact. The Timeline, door selection, commit and `beforeRoomExit` snapshot are kept; the room does not exit.                                                                                                                                                                                      |
+| The next room                                                                                                                  | The source room has committed and exited first: its Shop completion, resource placements and `beforeRoomExit` snapshot are kept. Nothing in the next room changes the source room's door selection.                                                                                                                    |
+
+Overview assessments read only entry state, never a Timeline product. The
+blocking product is the engine atomic region of the blocking finding, so every
+row it owns stays editable at row level (order, removal, purchase
+participation). Inside it, only rows at or before the failing contact have
+reached inner capabilities; later rows show their inner pickers read-only.
+Findings arise only at or before that contact, so no repair is locked.
+
+Encounter support follows the same cut. Every phase of a room prepared through
+the cut keeps its identity, composition, generation and roster support, since
+those read only the room's preparation and entry state. A phase that started
+before the cut keeps its status and Fig Leaf and Gorgon support; a phase
+blocked at its own start by a Fig Leaf, Aetos or Gorgon finding keeps its
+status without execution and its Fig Leaf support.
 
 ### Generated-batch retention
 
@@ -246,12 +278,15 @@ Outgoing generation publishes one decision-owned assessment, including its
 ordered target assessments and any batch-policy evidence. Each target retains
 its exact generation pressure and target-local evidence.
 
-A block before generation publishes no assessment. A block during generation
-retains completed targets and the bounded repair contact at the failing target.
-A block in a later acquisition child retains the already-generated batch.
-An unresolved trait or Pom must neither equip its effect nor retroactively
-discard the source doors. Shared generation rules serve selected validation,
-candidate support and workspace consumers.
+A block before generation publishes no assessment. The doors opening is one
+blocking product because door offers share one offer-time store: an invalid
+door offer keeps the whole batch, every door's generation and offer
+capability, and blocks at the source room's Timeline, not its Exit. A physical
+target generation failure retains completed targets and the bounded repair
+contact at the failing target. A block in a later acquisition child retains
+the already-generated batch. An unresolved trait or Pom must neither equip its
+effect nor retroactively discard the source doors. Shared generation rules
+serve selected validation, candidate support and workspace consumers.
 
 ## Chronology and History
 
@@ -470,21 +505,25 @@ not the original trait's offer. Extending an address family therefore requires
 a chronological-location test and a real application repair witness, not just
 a codec test.
 
-Individual purchase failures stay on their acquisition entry. Joint inventory
-failure belongs to the Shop with the relevant slots in evidence. A sequence
-failure belongs to chronology, not every supported sibling. Missing trait or
-target authorship retains the exact child finding rather than an additional
-generic purchase failure.
+Shop purchases settle one row at a time over forward-only shared state, so
+each purchase owns its own region: purchase, Contract, refill and Gold Gold
+Gold duplicate findings belong to their acquisition entry, and a Travel Deal
+refill inventory finding to the refill offer. Inventory generation failure
+belongs to the Shop's Overview with the relevant slots in evidence; only the
+close-time Echo Gold pickup placement finding is Shop-wide. A purchase order
+that loses every branch without an entry finding is a broken engine contract.
+A sequence failure belongs to chronology, not every supported sibling. Missing
+trait or target authorship retains the exact child finding rather than an
+additional generic purchase failure.
 
 Encounter preparation owns two Fresh File findings on the exact phase:
 `encounterCustomizationRequired` for a reached generated composition that is
 not authored, and `encounterIntroductionRequired` for a retained enemy whose
 introduction is unfinished. Both are errors that withhold execution. Like every
 encounter identity and composition finding, they stop assessment at the room's
-preparation, its Overview; the
-[introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions) owns the rules.
-Fig Leaf, Aetos and Gorgon findings have their own phase-child owners and stop
-assessment where the phase starts.
+Overview; the [introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
+owns the rules. Fig Leaf, Aetos and Gorgon findings have their own phase-child
+owners and stop assessment where the phase starts.
 
 Participation and position are also different: toggling a participant changes
 membership without replaying chronological candidate legality. Move controls

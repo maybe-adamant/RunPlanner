@@ -99,6 +99,18 @@ picked `nextRoom`:
 - `SetupRoomMultipleEncountersData` resolves an ordered multi-encounter room;
 - otherwise `ChooseEncounter` resolves its one encounter.
 
+The same block also chooses and records each Fields cage encounter
+(`RoomLogic.lua:4376-4389`; multi-encounter construction at `:4421-4450`).
+`ChooseEncounter` returns `SetupEncounter`, which generates a `Generated`
+encounter's enemy composition immediately (`RunLogic.lua:1099-1118`). Every
+phase's identity and generated composition is therefore fixed at the door
+transition from predecessor state plus earlier positions' records:
+single-encounter rooms, Ship phases including whether the optional second
+combat is constructed, both P positions, Fields Passive and cages, field-NPC
+encounters, introductions and the Nemesis random event family. Ship wheels only set the next phase's reward (`UseShipWheel`,
+`RoomLogic.lua:1464-1470`); they neither choose nor regenerate an encounter.
+The planner records this as an Overview product of the entered room.
+
 Initial rooms and other direct `CreateRoom` callers can choose immediately when
 they do not use `SkipChooseEncounter`. Reward-owned special setup such as
 Devotion is another distinct path: `RewardLogic.SetupRoomReward` directly calls
@@ -423,7 +435,12 @@ valid Heracles first selection is the complete active sequence and the second
 position is neither constructed nor recorded.
 
 A successful Fig Leaf roll at the P pre-combat position marks every already
-constructed room encounter as spawn-skipped. Later positions carry the
+constructed room encounter as spawn-skipped. The cascade runs only when the
+skipped encounter declares `SkipEndEncounterEffects`
+(`EncounterLogic.lua:351-366`), and only `GeneratedP_PreCombat` and its
+inheritors declare it (`EncounterData_Generated.lua:1189`); any other skipped
+encounter, including an O Intro, skips only itself. The cascade suppresses
+execution and never changes the recorded identities. Later positions carry the
 multi-encounter propagation marker and do not consume another Fig Leaf use.
 Both P positions still start and complete: the first still suppresses end
 effects, while the terminal position still runs them. Skipped execution is
@@ -466,6 +483,11 @@ and end effects are three independent source facts.
 | Nemesis Bridge  | H     | `H_Bridge01` legal support         | `BridgeNemesisRandomEvent` | no                     | Bridge-specific fixed-room composition                                                          |
 
 No Q named encounter set contains one of these field-NPC encounters.
+
+Icarus appears inside his combat rather than at its start: `BaseIcarusCombat`
+calls `CheckIcarusSpawn` at each wave start with `FirstWaveIcarusChance = 0`
+(`EncounterData_Icarus.lua:60`), so he spawns at the second wave, or at once in
+a one-wave encounter (`EncounterLogic.lua:42-51`).
 
 ### Intro and weight-oriented variants
 

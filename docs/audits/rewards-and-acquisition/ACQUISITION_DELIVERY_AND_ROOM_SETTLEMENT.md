@@ -217,10 +217,13 @@ game's exit lock enforces it.
 
 ### Immediate Shop and Well purchases occur after current outgoing generation
 
-Structural World Shops materialize inventory on entry. Wells of Charon are
-room-local interactions that become usable after the encounter. In both
-families, the current room's outgoing doors and previews already exist before
-the player performs ordinary purchases.
+World Shop, Shrine and Well inventory is generated in the door transition:
+after the predecessor's exit work, `LeaveRoom` calls `RunShopGeneration` for
+the picked room (`RoomLogic.lua:4392-4394`; `StoreLogic.lua:436-452`) before
+its map loads. Shrines and Wells then stay locked until the encounter ends
+(`RoomLogic.lua:4056-4078`); their refills and rerolls happen at purchase. In
+every family, the current room's outgoing doors and previews already exist
+before the player performs ordinary purchases.
 
 `HandleStorePurchase` then applies the purchased option. A trait option is
 added to the hero; a consumable option creates the concrete consumable from
@@ -237,6 +240,24 @@ generate current outgoing offers from pre-purchase state
 
 Those acquisitions cannot retroactively change the already-generated current
 doors. They can affect later lifecycle work.
+
+A purchase only removes its item from the store (`RemoveStoreItem`,
+`StoreLogic.lua:326-434`); it may also spawn the Gold Gold Gold duplicate,
+and the first purchase may trigger the Travel Deal re-pricing and restock.
+Later purchases therefore cannot affect an earlier one: purchase state is
+forward-only.
+
+The Anvil of Fates (`ChaosWeaponUpgrade`) declares `PurchaseRequirements` of
+at least one Hammer in `CurrentRun.LootTypeHistory.WeaponUpgrade`
+(`ConsumableData.lua:1079`), checked at purchase (`InteractLogic.lua:995`),
+and the same predicate as its generation requirement. Any Hammer loot pickup
+increments that count (`InteractLogic.lua:717`), whether a Shop Hammer
+(`CreateWeaponLoot`), a room reward or an Artificer conversion's replacement
+(`GiftLogic.lua:13-30`). The count never decreases, so a generated Anvil is
+always purchasable; the planner models the generation requirement. The health
+and Death Defiance purchase requirements (`RoomRewardHealDrop`'s
+`RequiredHealthFraction`, `MissingLastStand` on Last Stand items) read combat
+state the planner does not model and are deliberately left unmodeled.
 
 The current game interaction does not imply that Shop acquisitions form an
 isolated chronological lane. Other pickups already present in the room can be

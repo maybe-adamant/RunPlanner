@@ -194,6 +194,16 @@ chronology must preserve the exact generation boundary. It may present one
 coherent room sequence, but it must not flatten every room action into one
 unqualified pre-outgoing fold.
 
+The doors therefore open in the middle of the room's chronology: optional
+work after `DoUnlockRoomExits` (purchases, digging, Shrine and Well use) still
+happens in that room. `LeaveRoom` (`RoomLogic.lua:4159`) runs only after the
+player chooses an exit. It performs the departing room's exit work (for
+example room-counted trait uses at `:4243-4273`), appends the room to history,
+and only then prepares the picked room's encounters (`:4376-4389`) and Shop,
+Shrine and Well inventory (`:4392-4394`). The planner places the doors opening
+in the source room's Timeline, the door selection and exit work in its Exit,
+and the next room's preparation in that room's Overview.
+
 ### Gorgon Amulet creates a Death-Defiance-gated forced encounter contact
 
 `AthenaEncounterKeepsake` installs `HandleAthenaSpawn` on the qualifying

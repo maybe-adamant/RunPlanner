@@ -367,11 +367,42 @@ row but cannot erase that cycle. Ship phase grouping consumes the same
 structure's phase attachment; the application does not place wheel or action
 rows by rank arithmetic.
 
-The editor presents this product through Room Overview, Room Timeline, and Room
-Doors. Overview declares room-local setup, Timeline resolves the one chronology,
-and Doors edits the occurrence-owned outgoing decision. These are transient
-views over unchanged semantic owners, not persisted lifecycle events or a
-second room model.
+### Room stages
+
+Each entered room settles in three ordered stages, and each settles before the
+next starts:
+
+| Stage    | Question                                   | Contains                                                                                                                                                                                             |
+| -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview | What is the room and what does it contain? | Everything fixed on entry: every phase's encounter identity and customization, and Shop, Shrine, Well and Contract inventory. The room's own door reward was generated with its source room's doors. |
+| Timeline | What happens in the room?                  | Ordered room actions, read-only encounter phases with their per-encounter events, acquisitions, purchases, refills, deliveries, and the doors opening, which settles the door offers at that point.  |
+| Exit     | Where to go next?                          | The door selection, then the room's exit work (pending Shop completion, resource placements, the `beforeRoomExit` snapshot). The source room exits before anything in the next room is prepared.     |
+
+The native order is the previous room's exit work, then the next room's content
+generation, then room setup, so an Overview product reads only entry state; one
+that reads a Timeline product is a modelling error. The doors opening is a
+Timeline fact of the source room: the door offers settle when the doors open,
+usually at the room clear, and later Timeline actions (purchases, digging,
+Shrine and Well use) follow it without changing the frozen batch. Room Doors is
+where those offers and the selection are authored; it does not move their
+chronology.
+
+Every phase's encounter identity and composition are fixed on entry from
+predecessor state and earlier phases' records, including Ship phases (whether
+the optional Combat 2 plays), P's two phases, Fields Passive and cages, NPC
+encounters and introductions; the Nemesis random-event family is part of that
+identity. The Timeline keeps each phase read-only at its start and end, the
+order it controls (Fields cage order, Ship phase seams and wheel picks) and the
+events decided in the encounter: Fig Leaf (including P's pre-combat cascade,
+which suppresses execution without changing the recorded identity), Gorgon,
+Aetos, NPC trait offers, the Nemesis response and encounter-end checkpoints.
+Fig Leaf, Aetos and Gorgon keep their own phase-child addresses.
+
+The editor presents the stages as Room Overview, Room Timeline and Room Doors.
+These are transient views over unchanged semantic owners, not persisted
+lifecycle events or a second room model. The
+[simulation authority](SIMULATION_AND_VALIDATION.md#selected-cut) owns what a
+block in each stage publishes.
 
 ### Lifecycle Run State checkpoints
 
