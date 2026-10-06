@@ -61,7 +61,8 @@ export type RoomFeatureTarget =
     }
   | { readonly kind: 'hermesShrineInventory' }
   | { readonly kind: 'purgingPoolOffer'; readonly slotKey: 'left' | 'middle' | 'right' }
-  | { readonly kind: 'purgingPoolInventory' };
+  | { readonly kind: 'purgingPoolInventory' }
+  | { readonly kind: 'erisSpawn' };
 export interface RoomFeatureAddress extends BiomeOwnedAddress {
   readonly kind: 'roomFeature';
   readonly occurrenceId: OccurrenceId;

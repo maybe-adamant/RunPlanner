@@ -1395,10 +1395,23 @@ describe('field NPC encounter requirements', () => {
     const initial = createGoldenFGHIProject();
     expect(support(initial, nemesisF)?.candidateEncounterKeys).toContain('NemesisRandomEvent');
     const selected = select(initial, nemesisF, 'NemesisRandomEvent');
-    const assembly = simulateProjectAssembly(catalog, selected);
+    const event = createNemesisRandomEventAddress(nemesisF);
+    const familyMissing = simulateProjectAssembly(catalog, selected);
+    expect(
+      familyMissing.evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F')
+        ?.findings,
+    ).toContainEqual(expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: event }));
+    const assembly = simulateProjectAssembly(
+      catalog,
+      applyProjectCommand(selected, catalog, {
+        kind: 'SelectNemesisRandomEventFamily',
+        event,
+        family: 'freeItem',
+      }),
+    );
     const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
       assembly,
-      createNemesisRandomEventAddress(nemesisF),
+      event,
     );
     expect(capability?.branches.length).toBeGreaterThan(0);
     expect(capability?.familyKeys).toEqual([
@@ -1408,9 +1421,6 @@ describe('field NPC encounter requirements', () => {
       'traitTrade',
       'damageContest',
     ]);
-    expect(
-      assembly.evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F')?.findings,
-    ).toContainEqual(expect.objectContaining({ code: 'nemesisOutcomeMissing' }));
   });
 
   it('records Nemesis Cage01 before evaluating Cage02 without starting its depth effect', () => {

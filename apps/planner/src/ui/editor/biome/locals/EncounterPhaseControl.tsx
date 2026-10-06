@@ -464,6 +464,11 @@ export function EncounterPhaseControl({
     phase.customization === undefined && phase.composition === undefined ? null : (
       <EncounterCustomizationControl interactions={interactions} phase={phase} />
     );
+  // A fixed phase's Nemesis family is fixed when Nemesis spawns on entry.
+  const nemesisInteraction =
+    phase.customizable || phase.nemesisEvent === undefined
+      ? undefined
+      : interactions.nemesisEvents.get(workspaceInteractionKey(phase.nemesisEvent.owner));
   return (
     <section
       {...(!phase.customizable &&
@@ -491,6 +496,9 @@ export function EncounterPhaseControl({
             <span>{phase.identityLabel}</span>
             <div className="encounter-fixed-value">{phase.selectedEncounter.label}</div>
           </div>
+        )}
+        {nemesisInteraction === undefined ? null : (
+          <NemesisEventSelector interaction={nemesisInteraction} />
         )}
         {customizationControl}
       </div>
@@ -611,22 +619,14 @@ export function EncounterPhaseTimelineControl({
         </span>
       </div>
     );
-  const nemesisEventSelector =
-    phase.nemesisEvent === undefined || phase.customizable
-      ? null
-      : (() => {
-          const interaction = interactions.nemesisEvents.get(
-            workspaceInteractionKey(phase.nemesisEvent.owner),
-          );
-          return interaction === undefined ? null : (
-            <NemesisEventSelector interaction={interaction} />
-          );
-        })();
   const family =
-    phase.nemesisEvent === undefined || !phase.customizable
+    phase.nemesisEvent === undefined
       ? undefined
-      : interactions.encounterPhases.get(workspaceInteractionKey(phase.address))?.nemesisEvent
-          ?.familyPicker.selected;
+      : phase.customizable
+        ? interactions.encounterPhases.get(workspaceInteractionKey(phase.address))?.nemesisEvent
+            ?.familyPicker.selected
+        : interactions.nemesisEvents.get(workspaceInteractionKey(phase.nemesisEvent.owner))
+            ?.familyPicker.selected;
   return (
     <section aria-label={`${phase.identityLabel} events`} className="encounter-phase-control">
       <div className="encounter-phase-settings">
@@ -638,7 +638,6 @@ export function EncounterPhaseTimelineControl({
               : `${phase.selectedEncounter.label} · ${family.label}`}
           </div>
         </div>
-        {nemesisEventSelector}
       </div>
       {figLeafControl !== null || gorgonControl !== null || aetosControl !== null ? (
         <div

@@ -76,10 +76,7 @@ const erisInteracted: ChronologySeamHandler<'erisInteracted'> = (context, state,
     authoredRoom(context, event.origin),
     state.branches,
   );
-  return {
-    state: withBranches(state, transition.branches),
-    emissions: [lifecycleFindings(transition.findings)],
-  };
+  return { state: withBranches(state, transition.branches), emissions: [] };
 };
 
 const keepsakeRackUsed: ChronologySeamHandler<'keepsakeRackUsed'> = (context, state, event) => {
@@ -122,11 +119,10 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
     context.views.get(semanticAddressKey(event.origin)),
     context.resourcePlacements,
     state.branches,
-    context.resourceFindings,
   );
   return {
     state: withBranches(state, exited.branches),
-    emissions: [mergedFindings(exited.findingRegions)],
+    emissions: [],
     ...(exited.runStateCheckpoint === undefined
       ? {}
       : { runStateCheckpoint: { ...exited.runStateCheckpoint, against: 'received' as const } }),
@@ -794,6 +790,7 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
     );
   return {
     leadingEmissions: [
+      mergedFindings(resourcePlacementFindingRegions(event, context.resourceFindings)),
       lifecycleFindings(entered.findings),
       { kind: 'generatedPickupPlacements', placements: entered.generatedPickupPlacements },
       {

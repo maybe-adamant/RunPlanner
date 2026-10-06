@@ -426,12 +426,14 @@ exactly once in the Ship repair surface, preserving its finding, semantic
 focus, and explicit removal proposal.
 
 Room features consume closed application presence products for supported
-resources, exits and objects; room-inherent Fields/Nemesis and side-room setup
-retain their own sections. The resulting exit card owns only decision selection, room
+resources, exits, objects and the observed Eris spawn; room-inherent
+Fields/Nemesis and side-room setup retain their own sections. The resulting exit
+card owns only decision selection, room
 navigation, and its remaining door-specific identity controls; Anomaly
 identity/revert remains on its door. A selected F/G Nemesis event's family is
 chosen in the phase's Overview identity picker and its outcome on the Timeline
-interaction row; H projects the outcome editor at the required Passive event
+interaction row; the H Passive event's family is chosen beside its phase in the
+Overview, and H projects the outcome editor at the required Passive event
 row and uses the engine-derived optional-count maximum. Incoming room identity
 and door-visible reward are read-only context in an entered occurrence; their
 editor remains the predecessor's outgoing door.

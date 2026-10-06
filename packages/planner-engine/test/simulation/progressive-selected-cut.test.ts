@@ -304,7 +304,7 @@ describe('source room exit before a later block', () => {
       );
   });
 
-  it('blocks at the source room exit when its own exit work fails', () => {
+  it("blocks a picked host's illegal resource placement at its Overview", () => {
     const p = biomeEvaluation(
       blockPCombat07(placeResource(surfaceEncounterShowcaseProject(), 'Fishing')),
       'P',
@@ -326,33 +326,27 @@ describe('source room exit before a later block', () => {
         }),
       ),
     ).toBe('available');
-    // P_Combat04 keeps its whole Timeline and its door selection; its exit does not settle.
-    expect(exited(p, pCombat04)).toBe(false);
-    expect(roomEvents(p, pCombat04).map((event) => event.kind)).toEqual(
-      expect.arrayContaining([
-        'encounterCompleted',
-        'outgoingGenerationCheckpoint',
-        'roomCommitted',
-      ]),
-    );
-    expect(p.coverage.roomTimeline).toEqual({
-      room: createOccurrenceAddress(pBiome, pCombat04),
-      blockingRowKeys: [],
-    });
-    const views = p.history.rooms.find(
-      (room) => room.origin.kind === 'occurrence' && room.origin.occurrenceId === pCombat04,
-    );
-    expect(views?.postCommit).toBeDefined();
-    expect(views?.exit).toBeUndefined();
-    // The pre-exit capture precedes the exit work it reports on.
-    expect(
-      runStateAvailability(
-        p,
-        createRoomRunStateCheckpointAddress(createOccurrenceAddress(pBiome, pCombat04), {
-          kind: 'beforeRoomExit',
-        }),
-      ),
-    ).toBe('available');
+    // P_Combat04 is entered; its Timeline, doors and exit are unreached.
+    expect(roomEvents(p, pCombat04).map((event) => event.kind)).toEqual([
+      'roomCreated',
+      'roomPrepared',
+      'encounterRecorded',
+      'encounterRecorded',
+      'roomEntered',
+    ]);
+    expect(p.coverage.roomTimeline).toBeUndefined();
+    for (const [kind, availability] of [
+      ['roomEntered', 'available'],
+      ['beforeRoomExit', 'unavailable'],
+    ] as const)
+      expect(
+        runStateAvailability(
+          p,
+          createRoomRunStateCheckpointAddress(createOccurrenceAddress(pBiome, pCombat04), {
+            kind,
+          }),
+        ),
+      ).toBe(availability);
   });
 
   it('keeps an invalid door offer before the source room exit', () => {

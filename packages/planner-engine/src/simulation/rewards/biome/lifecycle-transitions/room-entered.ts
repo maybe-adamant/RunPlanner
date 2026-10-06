@@ -42,6 +42,7 @@ import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-sett
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
+import { erisSpawnFindings } from './eris-interacted';
 import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
 import type {
   DerivedAcquisitionEntryFrontier,
@@ -311,6 +312,8 @@ export function applyRoomEnteredTransition(
       ? dueHermesShrineDeliveryFrontier(catalog, room, room.origin, next, event.sequence, undefined)
       : undefined;
   if (dueDeliveries !== undefined) findings.push(...dueDeliveries.findings);
+  if (room !== undefined)
+    findings.push(...erisSpawnFindings(catalog, room, next, findingChronology));
   if (
     room !== undefined &&
     room.lifecycleProfileKey !== 'ShipCombatRoom' &&

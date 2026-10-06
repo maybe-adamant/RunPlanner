@@ -376,7 +376,7 @@ next starts:
 | -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Overview | What is the room and what does it contain? | Everything fixed on entry: every phase's encounter identity and customization, and Shop, Shrine, Well and Contract inventory. The room's own door reward was generated with its source room's doors. |
 | Timeline | What happens in the room?                  | Ordered room actions, read-only encounter phases with their per-encounter events, acquisitions, purchases, refills, deliveries, and the doors opening, which settles the door offers at that point.  |
-| Exit     | Where to go next?                          | The door selection, then the room's exit work (pending Shop completion, resource placements, the `beforeRoomExit` snapshot). The source room exits before anything in the next room is prepared.     |
+| Exit     | Where to go next?                          | The door selection, then the room's exit work (pending Shop completion, resource element grants, the `beforeRoomExit` snapshot). The source room exits before anything in the next room is prepared. |
 
 The native order is the previous room's exit work, then the next room's content
 generation, then room setup, so an Overview product reads only entry state; one
@@ -387,6 +387,9 @@ Shrine and Well use) follow it without changing the frozen batch. Room Doors is
 where those offers and the selection are authored; it does not move their
 chronology.
 
+A picked host's resource placements are fixed on entry, so their legality is
+an Overview fact; the element a legal placement grants is exit work.
+
 Every phase's encounter identity and composition are fixed on entry from
 predecessor state and earlier phases' records, including Ship phases (whether
 the optional Combat 2 plays), P's two phases, Fields Passive and cages, NPC
@@ -395,7 +398,9 @@ identity. The Timeline keeps each phase read-only at its start and end, the
 order it controls (Fields cage order, Ship phase seams and wheel picks) and the
 events decided in the encounter: Fig Leaf (including P's pre-combat cascade,
 which suppresses execution without changing the recorded identity), Gorgon,
-Aetos, NPC trait offers, the Nemesis response and encounter-end checkpoints.
+Aetos, NPC trait offers, the Nemesis response, the Anomaly capture-point
+outcome (which decides whether the room reward spawns) and encounter-end
+checkpoints.
 Fig Leaf, Aetos and Gorgon keep their own phase-child addresses.
 
 The editor presents the stages as Room Overview, Room Timeline and Room Doors.
@@ -403,6 +408,13 @@ These are transient views over unchanged semantic owners, not persisted
 lifecycle events or a second room model. The
 [simulation authority](SIMULATION_AND_VALIDATION.md#selected-cut) owns what a
 block in each stage publishes.
+
+The Postboss Purging Pool inventory is the declared exception: Overview content
+pinned at fountain use. The Pool unlocks only when the required fountain is
+used, and nothing between that use and opening the Pool removes a listed boon or
+changes its rarity, so it opens with the inventory present at fountain use
+([source audit](../audits/room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md#source-contacts-and-realized-hosts);
+[Room Features at Cleanup](#room-features-at-cleanup)).
 
 ### Lifecycle Run State checkpoints
 
@@ -984,10 +996,12 @@ required objects clear and `DoUnlockRoomExits` rolls the doors afterwards, so
 the gift's resources count toward that batch. The curse's combat effect is not
 modeled.
 
-The curse grant is route trait history. A later intro observation whose talk
-finds the curse already equipped applies nothing, drops no gift and reports
-`erisSpawnUnavailable` on that talk; the observation stays authored for repair.
-An intro without the observation derives no action and reports nothing.
+The curse grant is route trait history. Eris spawns on room entry, so the
+observation is Overview content: an intro observed while the curse is already
+equipped reports `erisSpawnUnavailable` on that observation at the room's
+Overview, and its talk applies nothing and drops no gift; the observation stays
+authored for repair. An intro without the observation derives no action and
+reports nothing.
 
 ### Ephyra Main Target
 

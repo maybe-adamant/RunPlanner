@@ -239,37 +239,11 @@ function StygianWellTwistTimelineContent({
     />
   );
 }
-function ErisObservationToggle({
-  interactions,
-  observation,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly observation: NonNullable<WorkspaceRoomSummary['erisObservation']>;
-}) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.erisObservations,
-    observation.interactionKey,
-  );
-  const executeIntent = useCommandIntent();
-  return (
-    <label className="room-feature-interact-toggle">
-      <input
-        checked={interaction.spawned}
-        onChange={(event) => executeIntent(interaction.intentFor(event.target.checked))}
-        type="checkbox"
-      />
-      Eris has spawned
-    </label>
-  );
-}
-
 export function inspectorRoomActionTrailingContent(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
   row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
 ): ReactNode {
-  if (row.reference.kind === 'interactEris' && room.erisObservation !== undefined)
-    return <ErisObservationToggle interactions={interactions} observation={room.erisObservation} />;
   if (row.reference.kind !== 'interactKeepsakeRack' || room.keepsakeSelection === undefined) {
     return null;
   }
@@ -283,21 +257,6 @@ export function inspectorOptionalRoomActionContent(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
 ): ReactNode {
-  const eris = room.erisObservation;
-  if (eris !== undefined && !eris.spawned)
-    return (
-      <li aria-label="Eris" className="hub-open-room-card room-action-row">
-        <div className="owner-markers room-action-identity">
-          <span aria-hidden="true" className="hub-roster-rank">
-            —
-          </span>
-          <strong>Eris</strong>
-        </div>
-        <div className="hub-rank-actions room-action-controls">
-          <ErisObservationToggle interactions={interactions} observation={eris} />
-        </div>
-      </li>
-    );
   const selection = room.keepsakeSelection;
   if (selection === undefined || selection.selectedKeepsakeKey !== undefined) return null;
   const interaction = interactions.keepsakeSelections.get(

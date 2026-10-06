@@ -8,6 +8,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
 import { ChaosSpawnWorkbench, ZagreusSpawnWorkbench } from './AdditionalExitControls';
+import { ErisSpawnControl } from './ErisSpawnControl';
 import { RoomResourceControls } from './ResourceControls';
 
 type RoomFeaturePresence = Exclude<WorkspaceRoomFeature, { readonly kind: 'nemesisEvent' }>;
@@ -96,6 +97,13 @@ export function RoomFeaturesWorkbench({
         )),
     ...featureEntries('additional-exits', 'Additional Exits', additionalExits),
     ...featureEntries('room-objects', 'Objects', roomObjects),
+    ...(room.erisObservation === undefined
+      ? []
+      : contentEntries(
+          'npcs',
+          'NPCs',
+          <ErisSpawnControl interactions={interactions} observation={room.erisObservation} />,
+        )),
   ]);
   if (groups.length === 0) return null;
   return (

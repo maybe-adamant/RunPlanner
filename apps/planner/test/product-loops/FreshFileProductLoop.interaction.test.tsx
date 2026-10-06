@@ -106,7 +106,7 @@ describe('Fresh File product loop', () => {
     });
   });
 
-  it('observes Eris in the G intro timeline and undoes the observation', async () => {
+  it('observes Eris in the G intro Overview and undoes the observation', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createFreshFileRouteProject()));
     const { user } = renderPlannerForInteraction({ application });
@@ -129,8 +129,10 @@ describe('Fresh File product loop', () => {
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const timeline = () => screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(timeline()).getByText('Talk to Eris')).toBeTruthy();
-    await user.click(within(timeline()).getByRole('checkbox', { name: 'Eris has spawned' }));
+    await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Eris has spawned' }));
     expect(intro().eris).toBeUndefined();
+    await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(within(timeline()).queryByText('Talk to Eris')).toBeNull();
 
     application.store.dispatch(authoredProjectUndoRequested());

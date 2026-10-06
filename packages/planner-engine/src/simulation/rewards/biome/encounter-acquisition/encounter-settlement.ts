@@ -937,13 +937,13 @@ export function applyEncounterSettlementTransition(inputs: {
               );
           }
         });
-      if (familyMissing || interactionMissing || !legal) {
+      if (familyMissing) {
+        // Room preparation reports the missing family; the interaction settles nothing.
+      } else if (interactionMissing || !legal) {
         const finding = rewardFinding(
-          familyMissing || interactionMissing
-            ? 'nemesisOutcomeMissing'
-            : 'nemesisOutcomeUnavailable',
-          familyMissing ? owner : interactionOwner,
-          outcome === null || outcome === undefined ? {} : { kind: outcome.kind },
+          interactionMissing ? 'nemesisOutcomeMissing' : 'nemesisOutcomeUnavailable',
+          interactionOwner,
+          { kind: outcome.kind },
         );
         findings.set(
           findingIdentityKey(finding),

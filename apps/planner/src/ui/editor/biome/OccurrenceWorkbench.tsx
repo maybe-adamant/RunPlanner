@@ -187,6 +187,13 @@ export function OccurrenceWorkbench({
     if (phase === undefined) throw new Error(`No Ship phase for timeline tab ${activeTab}`);
     return { kind: 'shipPhase', phase };
   };
+  // The Anomaly's capture-point outcome is decided at its encounter end, before the reward.
+  const renderBoundaryContent = (boundary: WorkspaceRoomLifecycleBoundary): ReactNode => (
+    <>
+      {boundary.kind === 'encounterEnd' ? <AnomalyClearedControl room={room} /> : null}
+      {renderLifecycleBoundaryContent?.(boundary)}
+    </>
+  );
   const renderDirectRoomWorkbench = (
     view:
       | 'overview'
@@ -201,7 +208,7 @@ export function OccurrenceWorkbench({
       {...(renderRoomActionRowTrailingContent === undefined
         ? {}
         : { renderRoomActionRowTrailingContent })}
-      {...(renderLifecycleBoundaryContent === undefined ? {} : { renderLifecycleBoundaryContent })}
+      renderLifecycleBoundaryContent={renderBoundaryContent}
       {...(renderOptionalRoomActionContent === undefined
         ? {}
         : { renderOptionalRoomActionContent })}
@@ -272,7 +279,6 @@ export function OccurrenceWorkbench({
         {activeTab === 'overview' ? (
           <div className="room-overview-workbench">
             {entryIdentity}
-            <AnomalyClearedControl room={room} />
             {renderDirectRoomWorkbench('overview')}
           </div>
         ) : activeTab === 'sideRooms' && localVisit !== undefined ? (

@@ -38,6 +38,7 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenGBiome,
+  goldenGOccurrenceId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { oOccurrenceIds } from '@run-planner/test-fixtures/surface';
@@ -120,6 +121,32 @@ export function authoredAnomalyProject(): {
     target: createTargetAddress(biome, source, 'exit1'),
   });
   return { occurrenceId: target, project };
+}
+
+/** A golden G Anomaly entered from its source door, so its Timeline is reached. */
+export function reachedAnomalyProject(): {
+  readonly occurrenceId: OccurrenceId;
+  readonly project: ProjectDocument;
+} {
+  const anomaly = goldenGOccurrenceId(3, 2);
+  const source = { kind: 'occurrence' as const, occurrenceId: goldenGOccurrenceId(2, 1) };
+  let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    kind: 'SwitchTargetToAnomaly',
+    target: createTargetAddress(goldenGBiome, source, 'exit2'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'RemoveExitDecision',
+    decision: createExitDecisionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenGOccurrenceId(3, 1),
+    }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, source),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  return { occurrenceId: anomaly, project };
 }
 
 export function occurrenceState(

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +26,17 @@ const candidateHorizonExemptions: Readonly<Record<string, RegExp>> = {
   'rewards/biome/offer-lifecycle/fields-optional-materialization.ts': /\bacquisitionPoints\b/,
 };
 
+/**
+ * Declared exception: the Postboss Purging Pool inventory is Overview content
+ * pinned at fountain use. The Pool unlocks only when the fountain is used, and
+ * nothing between that use and opening the Pool can remove a listed boon or
+ * change its rarity, so native opens the inventory assessed there.
+ */
+const fountainPinnedOverview = {
+  assessment: 'commerce/purging-pool.ts',
+  contact: 'rewards/biome/lifecycle-transitions/fountain-used.ts',
+} as const;
+
 const timelineViews =
   /\b(preOutgoing|outgoingGeneration|targetGenerations|postCommit|acquisitionPoints|encounterStarts)\b|\.exit\b/;
 
@@ -39,6 +50,17 @@ describe('room Overview reads only entry state', () => {
           : [],
       );
     expect(violations).toEqual([]);
+  });
+
+  it('pins the Purging Pool inventory at fountain use as its one declared exception', () => {
+    expect(overviewModules).not.toContain(fountainPinnedOverview.assessment);
+    const callers = readdirSync(sourceRoot, { recursive: true, encoding: 'utf8' }).filter(
+      (path) =>
+        path.endsWith('.ts') &&
+        path !== fountainPinnedOverview.assessment &&
+        /\bassessPurgingPool\(/.test(readFileSync(join(sourceRoot, path), 'utf8')),
+    );
+    expect(callers).toEqual([fountainPinnedOverview.contact]);
   });
 
   it.each([

@@ -19,7 +19,6 @@ import {
   semanticAddressKey,
   roomActionKey,
   createPostbossKeepsakeSelectionAddress,
-  createRoomActionAddress,
   type BiomeAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
@@ -504,14 +503,11 @@ export function assembleWorkspaceOccurrence(
     !input.facts.detailsActive || routeErisHost(room, input.biome.routeKey) === undefined
       ? undefined
       : (() => {
-          const address = createRoomActionAddress(
-            input.biome,
-            occurrence.occurrenceId,
-            roomActionKey({ kind: 'interactEris' }),
-          );
+          const spawn = createRoomFeatureAddress(address, { kind: 'erisSpawn' });
           return Object.freeze({
-            address,
-            interactionKey: semanticAddressKey(address),
+            address: spawn,
+            interactionKey: semanticAddressKey(spawn),
+            marker: input.markerDestinations.marker(spawn),
             spawned: occurrence.eris !== undefined,
           });
         })();
@@ -722,6 +718,7 @@ export function assembleWorkspaceOccurrence(
       ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
       ...workspaceRoomFeatureMarkers(features),
       ...(roomSummary.resources?.map((resource) => resource.marker) ?? []),
+      ...(erisObservation === undefined ? [] : [erisObservation.marker]),
       ...(input.isEntry === true && roomLocal.kind === 'incomingReward'
         ? [roomLocal.control.marker]
         : []),
@@ -762,9 +759,9 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.redirectTo(refill.marker, refillRow.marker, node.key);
   }
   if (roomLocal.kind === 'fields') {
+    // Cage rewards are authored on the source door, which routes them to Room Doors.
     input.markerDestinations.setRoomTab(
       [
-        ...roomLocal.cages.map((cage) => cage.control.marker),
         ...roomLocal.optionalRewards.map((reward) => reward.control.marker),
         roomLocal.optionalRewardCountMarker,
       ],
@@ -780,21 +777,13 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
     }
     const phaseTab = roomTabForPhase(roomLocal, phase.address.phaseKey);
-    // Identity and customization are fixed on entry: every phase is authored in Overview.
+    // Identity, customization and the Nemesis family are fixed on entry: authored in Overview.
     input.markerDestinations.setRoomTab(
-      [
-        phase.marker,
-        ...(phase.customizable && phase.nemesisEvent !== undefined
-          ? [phase.nemesisEvent.marker]
-          : []),
-      ],
+      [phase.marker, ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker])],
       'overview',
     );
     input.markerDestinations.setRoomTab(
       [
-        ...(phase.nemesisEvent === undefined || phase.customizable
-          ? []
-          : [phase.nemesisEvent.marker]),
         ...(phase.figLeaf === undefined ? [] : [phase.figLeaf.marker]),
         ...(phase.aetos === undefined ? [] : [phase.aetos.marker]),
         ...(phase.gorgonCondition === undefined ? [] : [phase.gorgonCondition.marker]),

@@ -37,8 +37,10 @@ import { loadUnderworldFPoolCheckpoint } from '@run-planner/test-fixtures/checkp
 import {
   authoredAnomalyProject,
   decisionContainingOccurrence,
+  expectBefore,
   occurrenceById,
   openRoomTab,
+  reachedAnomalyProject,
 } from '@planner-test/support/occurrence-workbench';
 import {
   renderDecisionWorkbench,
@@ -98,14 +100,14 @@ describe('OccurrenceRoomFeatures', () => {
       occurrenceById(occurrenceId),
       application,
     );
-    const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
-    expect((cleared as HTMLInputElement).checked).toBe(true);
+    // The capture-point outcome is decided in the room, not fixed on entry.
+    expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
     expect(screen.queryByLabelText('Reward')).toBeNull();
     expect(screen.getByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
-    await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
+    view.unmount();
     cleanup();
 
     const door = renderDecisionWorkbench(
@@ -130,11 +132,6 @@ describe('OccurrenceRoomFeatures', () => {
         .map((action) => action.payload),
     ).toEqual([
       {
-        kind: 'ReplaceAnomalySuccess',
-        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
-        success: false,
-      },
-      {
         gameName: 'B_Combat05',
         kind: 'ReplaceAnomalyMap',
         occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
@@ -142,6 +139,45 @@ describe('OccurrenceRoomFeatures', () => {
       {
         kind: 'RevertAnomaly',
         occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
+      },
+    ]);
+  });
+
+  it('decides the Anomaly outcome at its Timeline encounter end, before its reward pickup', async () => {
+    const { occurrenceId, project } = reachedAnomalyProject();
+    const application = createApplication();
+    const dispatch = vi.spyOn(application.store, 'dispatch');
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'G',
+      occurrenceById(occurrenceId),
+      application,
+    );
+    expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
+    openRoomTab('Room Timeline');
+    const timeline = screen.getByRole('tabpanel');
+    const cleared = within(timeline).getByRole('checkbox', { name: 'Cleared' });
+    expect((cleared as HTMLInputElement).checked).toBe(true);
+    const encounterEnd = within(timeline).getByText('Encounter ended');
+    const pickup = within(timeline)
+      .getAllByRole('listitem')
+      .find((row) => row.getAttribute('data-room-action-key')?.includes('interactIncomingReward'));
+    if (pickup === undefined) throw new Error('cleared Anomaly lost its reward pickup');
+    expectBefore(encounterEnd, cleared);
+    expectBefore(cleared, pickup);
+
+    await view.user.click(cleared);
+    expect(
+      dispatch.mock.calls
+        .map(([action]) => action)
+        .filter(authoredProjectCommandDispatched.match)
+        .map((action) => action.payload),
+    ).toEqual([
+      {
+        kind: 'ReplaceAnomalySuccess',
+        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
+        success: false,
       },
     ]);
   });
@@ -161,7 +197,6 @@ describe('OccurrenceRoomFeatures', () => {
       },
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
-    expect(screen.getByRole('checkbox', { name: 'Cleared' })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
     cleanup();
@@ -804,9 +839,10 @@ describe('OccurrenceRoomFeatures', () => {
 
     await view.user.click(within(count).getByRole('radio', { name: '3' }));
     await waitFor(() => expect(authoredFields()?.state).toMatchObject({ optionalRewardCount: 3 }));
-    openRoomTab('Room Timeline');
+    // The Passive event's family is fixed when Nemesis spawns: it is authored in the Overview.
     const beforeEvent = view.application.store.getState().projectWorkspace.history!.present;
-    await view.user.click(screen.getByRole('button', { name: 'Event' }));
+    const structure = screen.getByRole('region', { name: 'Encounter structure' });
+    await view.user.click(within(structure).getByRole('button', { name: 'Event' }));
     await view.user.click(await screen.findByRole('option', { name: 'Damage contest' }));
     expect(authoredFields()?.encounters.nemesisRandomEventByPhase?.Passive).toEqual({
       kind: 'damageContest',
@@ -814,6 +850,8 @@ describe('OccurrenceRoomFeatures', () => {
     });
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(beforeEvent);
+    openRoomTab('Room Timeline');
+    expect(screen.queryByRole('button', { name: 'Event' })).toBeNull();
     const eventActionKey = roomActionKey({ kind: 'interactEncounter', phaseKey: 'Passive' });
     const eventRow = [...document.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
       (row) => row.dataset.roomActionKey === eventActionKey,

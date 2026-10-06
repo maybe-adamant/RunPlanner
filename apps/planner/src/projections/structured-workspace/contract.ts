@@ -92,7 +92,6 @@ import {
   type JudgmentArcanaAddress,
   type KeepsakeEquipResultAddress,
   type KeepsakeSelectionAddress,
-  type RoomActionAddress,
   type LocalVisitSlotAddress,
   type OccurrenceAddress,
   type OccurrenceId,
@@ -648,11 +647,11 @@ export interface WorkspaceRoomSummary {
     /** A keepsake retained where the route has no rack; it can only be removed. */
     readonly unavailableReason?: 'rackUnavailableOnRoute';
   };
-  /** A declared Eris host on this route; spawning is the author's observation. */
+  /** A declared Eris host on this route; spawning is the author's observation, fixed on entry. */
   readonly erisObservation?: {
-    /** The talk's semantic owner, where its findings are addressed. */
-    readonly address: RoomActionAddress;
+    readonly address: RoomFeatureAddress;
     readonly interactionKey: string;
+    readonly marker: WorkspaceMarker;
     readonly spawned: boolean;
   };
 }
