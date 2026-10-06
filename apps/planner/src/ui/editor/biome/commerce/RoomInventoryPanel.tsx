@@ -113,12 +113,7 @@ export function RoomInventoryPanel({
           feature.interactionKey,
         );
         return (
-          <fieldset
-            {...findingTarget(feature.inventoryAddress)}
-            tabIndex={-1}
-            className="room-purging-pool"
-            key="purging-pool"
-          >
+          <fieldset className="room-purging-pool" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
             <div className="room-feature-interaction-header">
               <label className="room-feature-presence-row">
@@ -127,6 +122,7 @@ export function RoomInventoryPanel({
               </label>
               <label className="room-feature-interact-toggle">
                 <input
+                  {...findingTarget(feature.inventoryAddress)}
                   aria-label="Interact with Pool of Purging"
                   checked={feature.interacted}
                   onChange={(event) =>
@@ -154,46 +150,51 @@ export function RoomInventoryPanel({
                           : { selectedLabel: slot.traitLabel })}
                         onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
                       />
-                      {slot.sale === undefined
-                        ? null
-                        : (() => {
-                            const reference = {
-                              kind: 'sellPurgingPoolTrait' as const,
-                              slotKey: slot.key,
-                            };
-                            const proposal = roomActions?.proposals.find(
-                              (candidate) =>
-                                candidate.reference.kind === reference.kind &&
-                                candidate.reference.slotKey === reference.slotKey &&
-                                candidate.kind === (slot.sale?.sold ? 'remove' : 'insert'),
-                            );
-                            const actionInteraction =
-                              roomActions === undefined
-                                ? undefined
-                                : requireWorkspaceInteraction(
-                                    interactions.roomActions,
-                                    roomActions.interactionKey,
-                                  );
-                            return (
-                              <label className="shop-family-participation">
-                                <input
-                                  aria-label={`Sold ${slot.label}`}
-                                  checked={slot.sale.sold}
-                                  disabled={
-                                    proposal?.structurallyAuthorable !== true ||
-                                    actionInteraction === undefined
-                                  }
-                                  onChange={() =>
-                                    proposal === undefined || actionInteraction === undefined
-                                      ? undefined
-                                      : executeIntent(actionInteraction.intentFor(proposal.key))
-                                  }
-                                  type="checkbox"
-                                />
-                                Sold
-                              </label>
-                            );
-                          })()}
+                      {(() => {
+                        const reference = {
+                          kind: 'sellPurgingPoolTrait' as const,
+                          slotKey: slot.key,
+                        };
+                        const proposal = roomActions?.proposals.find(
+                          (candidate) =>
+                            candidate.reference.kind === reference.kind &&
+                            candidate.reference.slotKey === reference.slotKey &&
+                            candidate.kind === (slot.sale.sold ? 'remove' : 'insert'),
+                        );
+                        const actionInteraction =
+                          roomActions === undefined
+                            ? undefined
+                            : requireWorkspaceInteraction(
+                                interactions.roomActions,
+                                roomActions.interactionKey,
+                              );
+                        // A stale sale stays removable; its own finding never disables it.
+                        const disabled =
+                          proposal === undefined ||
+                          actionInteraction === undefined ||
+                          (proposal.structurallyAuthorable !== true && !slot.sale.sold);
+                        return (
+                          <label
+                            className="shop-family-participation"
+                            {...(disabled && slot.traitKey === null
+                              ? { title: 'Choose a trait to sell' }
+                              : {})}
+                          >
+                            <input
+                              aria-label={`Sold ${slot.label}`}
+                              checked={slot.sale.sold}
+                              disabled={disabled}
+                              onChange={() =>
+                                proposal === undefined || actionInteraction === undefined
+                                  ? undefined
+                                  : executeIntent(actionInteraction.intentFor(proposal.key))
+                              }
+                              type="checkbox"
+                            />
+                            Sold
+                          </label>
+                        );
+                      })()}
                     </div>
                   );
                 })

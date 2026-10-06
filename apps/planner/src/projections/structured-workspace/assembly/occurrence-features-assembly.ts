@@ -498,7 +498,7 @@ function roomFeatures(
                       interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}:${slotKey}`,
                       key: slotKey,
                       label: poolSlotLabel(slotKey),
-                      ...(traitKey === null ? {} : { sale: Object.freeze({ sold }) }),
+                      sale: Object.freeze({ sold }),
                       traitKey,
                       ...(traitKey === null
                         ? {}
