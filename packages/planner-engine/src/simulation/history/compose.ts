@@ -27,6 +27,7 @@ import {
   composeBiomeHistoryPrefixWithEncounterValidation as composeValidatedPrefixHistoryEnvelope,
   type HistorySegmentWriter,
   type EncounterValidatedBiomeHistory,
+  type EncounterValidatedBiomeHistoryPrefix,
   type FigLeafLifecycleState,
 } from './composition';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
@@ -655,7 +656,7 @@ function composeBiomeHistoryPrefixResult(
   pendingSpellDrop = false,
   allSpellInvested = false,
   effectiveShadowRank = 0,
-): BiomeHistoryPrefix | null {
+): EncounterValidatedBiomeHistoryPrefix | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
   const options = {
@@ -785,7 +786,7 @@ function composeBiomeHistoryPrefixResult(
   };
   return validateEncounterResolution
     ? composeValidatedPrefixHistoryEnvelope(options)
-    : composePrefixHistoryEnvelope(options);
+    : Object.freeze({ history: composePrefixHistoryEnvelope(options) });
 }
 
 export function composeBiomeHistoryPrefix(
@@ -794,7 +795,7 @@ export function composeBiomeHistoryPrefix(
   routePosition: ResolvedRoutePosition,
   seed?: HistoryStateView,
 ): BiomeHistoryPrefix | null {
-  return composeBiomeHistoryPrefixResult(catalog, snapshot, routePosition, seed);
+  return composeBiomeHistoryPrefixResult(catalog, snapshot, routePosition, seed)?.history ?? null;
 }
 
 export function composeBiomeHistoryPrefixWithEncounterValidation(
@@ -806,7 +807,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   pendingSpellDrop = false,
   allSpellInvested = false,
   effectiveShadowRank = 0,
-): BiomeHistoryPrefix | null {
+): EncounterValidatedBiomeHistoryPrefix | null {
   return composeBiomeHistoryPrefixResult(
     catalog,
     snapshot,

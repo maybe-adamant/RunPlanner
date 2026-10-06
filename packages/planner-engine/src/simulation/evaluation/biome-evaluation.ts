@@ -1,4 +1,3 @@
-import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import { sharedRewardLookups } from '../state/reward-lookups';
@@ -8,7 +7,6 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type NemesisRandomEventAddress,
-  type SemanticAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, ProjectDocument } from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
@@ -84,57 +82,6 @@ import { ProjectSimulationContractError } from './project-evaluation-assembly';
 interface BiomeProjectEvaluationAssembly {
   readonly evaluation: ProjectBiomeEvaluation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
-}
-
-/** Classify only the exact active action that stopped lifecycle execution. */
-function lifecycleBlockFindings(
-  blockedAt: SemanticAddress,
-  snapshot: CanonicalBiome,
-): readonly SemanticFinding[] {
-  for (const room of structurallyActiveEncounterRooms(snapshot)) {
-    const row = room.roomActionRoster.rows.find((candidate) =>
-      blockedAt.kind === 'roomAction'
-        ? room.origin.kind === 'occurrence' &&
-          room.origin.occurrenceId === blockedAt.occurrenceId &&
-          candidate.key === blockedAt.actionKey
-        : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
-    );
-    if (row === undefined || row.stale) continue;
-    const reasons = room.roomActionRoster.issues.flatMap((issue): SemanticFinding[] =>
-      roomActionKey(issue.reference) === row.key &&
-      (issue.kind === 'dependency' || issue.kind === 'window')
-        ? [
-            Object.freeze({
-              code: 'roomActionOrderUnavailable',
-              severity: 'error',
-              phase: 'encounterResolution',
-              origin: blockedAt,
-              evidence: Object.freeze({
-                reason: issue.kind,
-                detail: issue.detail,
-                ...(issue.kind === 'dependency'
-                  ? {
-                      dependencyKind: issue.dependency.kind,
-                      checkpointUnavailable: issue.checkpointUnavailable === true,
-                    }
-                  : {}),
-              }),
-            }),
-          ]
-        : [],
-    );
-    if (reasons.length > 0) return Object.freeze(reasons);
-    break;
-  }
-  return Object.freeze([
-    Object.freeze({
-      code: 'roomActionPlacementRequired',
-      severity: 'error',
-      phase: 'completeness',
-      origin: blockedAt,
-      evidence: Object.freeze({}),
-    }),
-  ]);
 }
 
 /**
@@ -616,10 +563,12 @@ export function evaluateBiomeAssembly(
         `${plan.biomeKey} lifecycle block has no materialized progressive prefix`,
       );
     }
-    const blockedAt = progressive.evaluation.blockedAt ?? composed.blockedAt;
-    if (blockedAt === undefined) {
+    // The progressive prefix stops at the same lifecycle block and publishes it.
+    const blockedAt = progressive.evaluation.blockedAt;
+    const issue = progressive.evaluation.issue;
+    if (blockedAt === undefined || issue === undefined) {
       throw new ProjectSimulationContractError(
-        `${plan.biomeKey} lifecycle block has no semantic repair owner`,
+        `${plan.biomeKey} lifecycle block at ${semanticAddressKey(composed.blockedAt)} has no located repair owner`,
       );
     }
     const assessmentPrefix =
@@ -629,24 +578,7 @@ export function evaluateBiomeAssembly(
       progressive.evaluation.rewards.runStateSnapshots,
       structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
     );
-    // The lifecycle block is itself the invalidity. When the progressive prefix
-    // stops before the blocked room it publishes no reason of its own, and an
-    // invalid biome with no finding has no repairable frontier for the route
-    // assessment to select. The block always owns an exact semantic repair
-    // leaf -- the branch above refuses to continue without one -- so that leaf
-    // carries the finding rather than the invalidity going unexplained.
-    const blockFindings =
-      progressive.evaluation.issue === undefined
-        ? lifecycleBlockFindings(blockedAt, snapshot)
-        : Object.freeze([]);
-    const findings = Object.freeze([...blockFindings, ...progressive.evaluation.findings]);
-    const issue =
-      progressive.evaluation.issue ??
-      createAssessmentIssue(
-        assessmentRepairOwner(blockedAt),
-        authoringRegion(blockedAt),
-        blockFindings,
-      );
+    const findings = progressive.evaluation.findings;
     return Object.freeze({
       evaluation: Object.freeze({
         biomeKey: plan.biomeKey,

@@ -86,9 +86,14 @@ export type EncounterValidatedBiomeHistory =
       readonly blockedAt: import('../../authored-project/addresses').SemanticAddress;
     };
 
-/** Stops history composition before an entered lifecycle whose producer has
- * not been authored. Reward evaluation owns the unresolved frontier and its
- * finding; history must retain only the exact pre-leaf prefix. */
+/** A prefix history and the room action, when present, at which its lifecycle stopped. */
+export interface EncounterValidatedBiomeHistoryPrefix {
+  readonly history: BiomeHistoryPrefix;
+  readonly blockedAt?: import('../../authored-project/addresses').SemanticAddress;
+}
+
+/** Stops composition at an unauthored lifecycle producer or unplaced required
+ * room action; the caller publishes the block over the pre-stop prefix. */
 class RewardAuthorshipBlocked extends Error {
   constructor(readonly blockedAt: import('../../authored-project/addresses').SemanticAddress) {
     super('reward authorship blocks room lifecycle');
@@ -411,7 +416,7 @@ function composeBiomeHistoryPrefixResult({
   allSpellInvested = false,
   effectiveShadowRank = 0,
   compose,
-}: BiomeHistoryPrefixOptions): BiomeHistoryPrefix {
+}: BiomeHistoryPrefixOptions): EncounterValidatedBiomeHistoryPrefix {
   const builder: EventBuilder = {
     events: [],
     sequenceBase: seed?.sequence ?? 0,
@@ -440,8 +445,12 @@ function composeBiomeHistoryPrefixResult({
     compose(segmentWriter(builder));
   } catch (error) {
     if (!(error instanceof RewardAuthorshipBlocked)) throw error;
+    return Object.freeze({
+      history: foldBiomeHistoryPrefixEvents(builder.events, seed),
+      blockedAt: error.blockedAt,
+    });
   }
-  return foldBiomeHistoryPrefixEvents(builder.events, seed);
+  return Object.freeze({ history: foldBiomeHistoryPrefixEvents(builder.events, seed) });
 }
 
 export function composeBiomeHistoryPrefix({
@@ -460,12 +469,12 @@ export function composeBiomeHistoryPrefix({
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution: false,
     compose,
-  });
+  }).history;
 }
 
 export function composeBiomeHistoryPrefixWithEncounterValidation(
   options: Omit<BiomeHistoryPrefixOptions, 'validateEncounterResolution'>,
-): BiomeHistoryPrefix {
+): EncounterValidatedBiomeHistoryPrefix {
   return composeBiomeHistoryPrefixResult({
     ...options,
     validateEncounterResolution: true,
