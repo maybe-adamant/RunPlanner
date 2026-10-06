@@ -4,7 +4,9 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createProjectDocument,
+  createRoomFeatureAddress,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
@@ -87,7 +89,7 @@ describe('first assessment issue', () => {
     expect(evaluate(empty).evaluation.issue).toBeUndefined();
   });
 
-  it('keeps the actual structural prerequisite when a resource host has not reached exit', () => {
+  it("ranks a picked host's resource placement at its Overview, ahead of its Timeline and doors", () => {
     let project = createFStart();
     for (const family of ['Pickaxe', 'Shovel'] as const)
       project = applyProjectCommand(project, catalog, {
@@ -96,13 +98,21 @@ describe('first assessment issue', () => {
         family,
         value: { biomeKey: 'F', occurrenceId: fStartId },
       });
-    // A missing outgoing decision has not reached the exit effect yet.
-    expect(evaluate(project).evaluation.issue?.owner).toEqual(fDecision());
+    const placement = createRoomFeatureAddress(createOccurrenceAddress(fBiome, fStartId), {
+      kind: 'resource',
+      family: 'Pickaxe',
+    });
+    // The placement is fixed on entry: it precedes the missing outgoing decision.
+    expect(evaluate(project).evaluation.issue).toMatchObject({ kind: 'invalid', owner: placement });
     const missing = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStartingReward',
       reward: openingReward,
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
     });
-    expect(evaluate(missing).evaluation.issue?.owner).toEqual(openingTrait);
+    // It also precedes the room's own Timeline pickup, which stays unassessed.
+    expect(evaluate(missing).evaluation.issue?.owner).toEqual(placement);
+    expect(evaluate(missing).evaluation.findings).not.toContainEqual(
+      expect.objectContaining({ origin: openingTrait }),
+    );
   });
 });

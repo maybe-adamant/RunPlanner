@@ -640,16 +640,6 @@ describe('selected resource success legality', () => {
       },
     };
     const evaluated = simulateProject(catalog, invalidProject);
-    const earlierOfferMissing = applyProjectCommand(invalidProject, catalog, {
-      kind: 'ReplaceStartingReward',
-      reward: createStartingRewardAddress('Underworld'),
-      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-    });
-    expect(simulateProject(catalog, earlierOfferMissing).issue).toMatchObject({
-      kind: 'incomplete',
-      owner: { kind: 'traitOffer' },
-      reasons: [expect.objectContaining({ code: 'traitOfferMissing' })],
-    });
     expect(evaluated.issue).toMatchObject({
       kind: 'invalid',
       owner: createRoomFeatureAddress(host.origin, { kind: 'resource', family: 'Pickaxe' }),

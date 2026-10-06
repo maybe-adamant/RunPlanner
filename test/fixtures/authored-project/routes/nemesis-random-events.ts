@@ -48,9 +48,16 @@ function candidateBranches(
   project: ProjectDocument,
   phase: ReturnType<typeof createEncounterPhaseAddress>,
 ) {
+  const event = createNemesisRandomEventAddress(phase);
+  // A missing family blocks at the room Overview; any family reaches the interaction.
+  const reached = applyProjectCommand(project, catalog, {
+    kind: 'SelectNemesisRandomEventFamily',
+    event,
+    family: 'freeItem',
+  });
   const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
-    simulateProjectAssembly(catalog, project),
-    createNemesisRandomEventAddress(phase),
+    simulateProjectAssembly(catalog, reached),
+    event,
   );
   if (capability === undefined)
     throw new Error('selected Nemesis event has no reached candidate support');

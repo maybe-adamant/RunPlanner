@@ -191,6 +191,21 @@ already-generated exits. Physical challenge-switch capacity is shared with
 other switch-backed features; the source exposes no generic room-feature
 count.
 
+The Postboss fountain is `BlockExitUntilUsed`, and `UseHealthFountain`
+unlocks the exits, and so the Pool, after applying its rarity effects
+(`InteractLogic.lua:741-814`; `AddRarityToTraits` has no wait,
+`TraitLogic.lua:2978-3040`). Room setup generates the options
+(`RoomLogic.lua:4908-4918`); `OpenSellTraitMenu` regenerates them only when a
+listed name is no longer held or its rarity changed (`SellTraitLogic.lua:70-91`).
+Between fountain use and opening, the keepsake rack's equip callbacks only add
+traits or reward priorities (`KeepsakeLogic.lua:106-164, 1320-1332`;
+`PowersLogic.lua:4840-4917`) and unequipping removes only the keepsake
+(`KeepsakeLogic.lua:166-258`). Its Fated invalidation removes the Jeweled Pom
+`GrantedTrait` (`KeepsakeLogic.lua:1222-1253`), a Hades boon added without a
+rarity (`PowersLogic.lua:4909-4911`) and so never listed. No Stygian Well item
+removes a held trait or changes its rarity (see **Stygian Wells**). The
+inventory present at fountain use is therefore the one the Pool opens with.
+
 ### Offers and sale effects
 
 `GenerateSellTraitValues` retains current traits only when

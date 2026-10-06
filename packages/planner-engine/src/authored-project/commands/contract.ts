@@ -6,11 +6,9 @@ import {
   createBiomeAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
-  createRoomActionAddress,
   createRoomFeatureAddress,
   createTargetAddress,
 } from '../addresses';
-import { roomActionKey } from '../room-actions/key';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -260,11 +258,7 @@ export function projectCommandAddress(
         generationKey: command.generationKey,
       });
     case 'SetErisSpawned':
-      return createRoomActionAddress(
-        createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
-        command.occurrence.occurrenceId,
-        roomActionKey({ kind: 'interactEris' }),
-      );
+      return createRoomFeatureAddress(command.occurrence, { kind: 'erisSpawn' });
   }
   return commandContractAddress(command);
 }

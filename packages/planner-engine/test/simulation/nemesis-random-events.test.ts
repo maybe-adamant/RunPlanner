@@ -69,6 +69,17 @@ describe('Nemesis random events', () => {
     });
   }
 
+  function selectFamily(
+    project: ProjectDocument,
+    family: AuthoredNemesisRandomEventOutcome['kind'],
+  ) {
+    return applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event: createNemesisRandomEventAddress(phase),
+      family,
+    });
+  }
+
   function insertOptionalResult(project: ProjectDocument) {
     const selected = occurrence(project);
     const reference = {
@@ -113,7 +124,10 @@ describe('Nemesis random events', () => {
   it.each(nemesisRandomEventFamilies)(
     'settles the %s family through the ordinary generated-pickup path',
     (family) => {
-      let project = selectEvent();
+      let project = selectFamily(
+        selectEvent(),
+        family.startsWith('damageContest') ? 'damageContest' : (family as 'freeItem'),
+      );
       const unresolved = simulateProjectAssembly(catalog, project);
       const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
         unresolved,
@@ -322,8 +336,23 @@ describe('Nemesis random events', () => {
       }),
     );
 
-    const assembly = simulateProjectAssembly(catalog, project);
     const event = createNemesisRandomEventAddress(phase);
+    const familyMissing = simulateProjectAssembly(catalog, project);
+    expect(familyMissing.evaluation.findings).toContainEqual(
+      expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: event }),
+    );
+    // The family is fixed on entry: its block stops at the Overview, before the interaction.
+    const blocked = familyMissing.evaluation.route.biomes.find(
+      (biome) => biome.origin.biomeKey === 'F',
+    );
+    if (blocked === undefined || !('coverage' in blocked) || blocked.coverage.kind !== 'prefix')
+      throw new Error('missing blocked F evaluation');
+    expect(blocked.coverage.blockedAt).toEqual(event);
+    expect(blocked.coverage.roomTimeline).toBeUndefined();
+    expect(
+      nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(familyMissing, event),
+    ).toBeUndefined();
+    const assembly = simulateProjectAssembly(catalog, selectFamily(project, 'goldTrade'));
     const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
       assembly,
       event,
@@ -355,9 +384,6 @@ describe('Nemesis random events', () => {
           !branch.damageContestSuccessRewardTypes.includes('TalentDrop'),
       ),
     ).toBe(true);
-    expect(assembly.evaluation.findings).toContainEqual(
-      expect.objectContaining({ code: 'nemesisOutcomeMissing', origin: event }),
-    );
     const f = assembly.evaluation.route.biomes.find((biome) => biome.origin.biomeKey === 'F');
     if (f === undefined || !('rewards' in f)) throw new Error('missing evaluated F rewards');
     const incoming = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(5, 1));

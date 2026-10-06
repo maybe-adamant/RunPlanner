@@ -82,9 +82,12 @@ export function resourcePlacementFindings(
   );
 }
 
-/** An unpicked host has a structural repair, not a fictitious resource-collection exit. */
+/**
+ * A picked host's placement is fixed on entry, so its legality belongs to the
+ * room's Overview; an unpicked host has a structural repair at its door.
+ */
 export function resourcePlacementFindingRegions(
-  event: Extract<HistoryEvent, { readonly kind: 'roomCreated' | 'roomExited' }>,
+  event: Extract<HistoryEvent, { readonly kind: 'roomCreated' | 'roomEntered' }>,
   findings: readonly SemanticFinding[],
 ): readonly FindingRegionEntry[] {
   if (event.kind === 'roomCreated' && event.picked) return Object.freeze([]);

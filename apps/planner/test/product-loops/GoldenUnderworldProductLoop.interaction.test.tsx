@@ -833,6 +833,7 @@ describe('underworld product loop', () => {
       ),
     );
 
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
     const failed = currentProject(application);
     expect(

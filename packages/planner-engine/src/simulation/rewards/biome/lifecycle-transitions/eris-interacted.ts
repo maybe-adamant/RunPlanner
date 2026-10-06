@@ -1,12 +1,13 @@
 import type { Catalog } from '../../../../catalog-schema';
 import {
+  createRoomFeatureAddress,
   semanticAddressKey,
   type RoomActionSemanticAddress,
 } from '../../../../authored-project/addresses';
 import { routeErisHost } from '../../../../authored-project/route-profile';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import { ownerRegion } from '../../../finding-regions';
+import { ownerRegion, type FindingChronology } from '../../../finding-regions';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import { recordFixedAcquisitionTraitGrant } from '../../../traits/offers';
 import type { RewardBranchState } from '../../branch-primitives';
@@ -16,7 +17,6 @@ import type { LifecycleFinding } from './types';
 
 export interface ErisInteractedTransition {
   readonly branches: readonly RewardBranchState[];
-  readonly findings: readonly LifecycleFinding[];
 }
 
 function curseGrantOwnerKey(branch: RewardBranchState, curseTraitKey: string): string | undefined {
@@ -26,9 +26,56 @@ function curseGrantOwnerKey(branch: RewardBranchState, curseTraitKey: string): s
   return grant === undefined ? undefined : semanticAddressKey(grant.owner);
 }
 
+function cursed(
+  room: CanonicalAuthoredRoom,
+  curseTraitKey: string,
+  branches: readonly RewardBranchState[],
+): boolean | undefined {
+  const cursedBefore = branches.map(
+    (branch) => branch.state.traitHistory.equippedTraits[curseTraitKey] !== undefined,
+  );
+  if (cursedBefore.some((value) => value !== cursedBefore[0]))
+    throw new BiomeRewardSimulationContractError(
+      `${room.gameName} branches disagree on an earlier Eris curse`,
+    );
+  return cursedBefore[0];
+}
+
 /**
- * Talking to Eris applies her curse trait (`ApplyErisCurse`). Native spawns
- * her only while the hero lacks it, so a later observation curses nothing.
+ * Eris spawns on room entry only while the hero lacks her curse, so an observed
+ * spawn after an earlier curse is an Overview fact of the room.
+ */
+export function erisSpawnFindings(
+  catalog: Catalog,
+  room: CanonicalAuthoredRoom,
+  branches: readonly RewardBranchState[],
+  chronology: FindingChronology,
+): readonly LifecycleFinding[] {
+  const host = routeErisHost(catalog.rooms.byKey[room.gameName], room.origin.routeKey);
+  if (
+    host === undefined ||
+    !room.roomActionRoster.rows.some(
+      (row) => !row.stale && row.reference.kind === 'interactEris',
+    ) ||
+    cursed(room, host.curseTraitKey, branches) !== true
+  )
+    return [];
+  const owner = createRoomFeatureAddress(room.origin, { kind: 'erisSpawn' });
+  return [
+    Object.freeze({
+      finding: rewardFinding('erisSpawnUnavailable', owner, {
+        reason: 'alreadyCursed',
+        curseTraitKey: host.curseTraitKey,
+      }),
+      region: ownerRegion(owner),
+      chronology,
+    }),
+  ];
+}
+
+/**
+ * Talking to Eris applies her curse trait (`ApplyErisCurse`); an already
+ * cursed hero met no spawned Eris, so the talk curses nothing.
  */
 export function applyErisInteractedTransition(
   catalog: Catalog,
@@ -44,31 +91,7 @@ export function applyErisInteractedTransition(
     throw new BiomeRewardSimulationContractError(
       `${room?.gameName ?? 'unknown room'} reached an Eris interaction without a route host`,
     );
-  const cursedBefore = branches.map(
-    (branch) => branch.state.traitHistory.equippedTraits[host.curseTraitKey] !== undefined,
-  );
-  if (cursedBefore.some((cursed) => cursed !== cursedBefore[0]))
-    throw new BiomeRewardSimulationContractError(
-      `${room!.gameName} branches disagree on an earlier Eris curse`,
-    );
-  if (cursedBefore[0] === true)
-    return Object.freeze({
-      branches,
-      findings: Object.freeze([
-        Object.freeze({
-          finding: rewardFinding('erisSpawnUnavailable', event.owner, {
-            reason: 'alreadyCursed',
-            curseTraitKey: host.curseTraitKey,
-          }),
-          region: ownerRegion(event.owner),
-          chronology: Object.freeze({
-            kind: 'history' as const,
-            sequence: event.sequence,
-            boundary: 'at' as const,
-          }),
-        }),
-      ]),
-    });
+  if (cursed(room!, host.curseTraitKey, branches) === true) return Object.freeze({ branches });
   return Object.freeze({
     branches: Object.freeze(
       branches.map((branch) =>
@@ -88,7 +111,6 @@ export function applyErisInteractedTransition(
         }),
       ),
     ),
-    findings: Object.freeze([]),
   });
 }
 

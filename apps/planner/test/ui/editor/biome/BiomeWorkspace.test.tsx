@@ -15,6 +15,7 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -55,9 +56,11 @@ import {
 import {
   createCompleteFGProject,
   createGoldenFGHIProject,
+  createGoldenFGHProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
+  goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
 import {
@@ -264,6 +267,60 @@ describe('BiomeWorkspace', () => {
     expect(hub.getAttribute('aria-disabled')).not.toBe('true');
     await view.user.click(hub);
     expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
+  });
+
+  it('navigates a Fields cage reward finding to its picker on the source Room Doors', () => {
+    const fieldsId = createOccurrenceId('golden-h-combat03');
+    const original = createGoldenFGHProject();
+    // A missing cage reward is authored on the door that offers the Fields room.
+    const project: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'H' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== fieldsId || room.state.kind !== 'fieldsCombat'
+                      ? room
+                      : {
+                          ...room,
+                          state: { ...room.state, cages: { ...room.state.cages, cage1: null } },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const view = renderWorkspace(project, 'Underworld', 'H');
+    const cage = createLocalRewardAddress(goldenHBiome, fieldsId, 'cages', 'cage1');
+    const finding = view.application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'rewardMissing' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(cage),
+      );
+    if (finding === undefined) throw new Error('missing cage reward finding');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    expect(screen.getByRole('tab', { name: 'Room Doors' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const picker = [...document.querySelectorAll<HTMLElement>('[data-semantic-owner]')].find(
+      (element) => element.dataset.semanticOwner === semanticAddressKey(cage),
+    );
+    if (picker === undefined) throw new Error('cage reward picker is not mounted');
+    expect(picker.getAttribute('data-selected-finding')).toBe('true');
+    expect(document.activeElement).toBe(picker);
   });
 
   it('uses the finding origin for its complete destination instead of redirected focus metadata', () => {

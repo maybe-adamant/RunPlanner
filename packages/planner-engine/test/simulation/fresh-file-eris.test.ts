@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createOccurrenceAddress,
   createRoomActionAddress,
+  createRoomFeatureAddress,
   roomActionKey,
   semanticAddressKey,
   type BiomeAddress,
@@ -122,10 +123,29 @@ describe('Fresh File Eris', () => {
     const repeated = setEris(freshRoute(), freshFileHBiome, freshFileHIntroId, true);
     expect(occurrenceOf(repeated, 'H', freshFileHIntroId).eris).toEqual({ spawned: true });
     const evaluation = simulateProject(catalog, repeated);
-    const owner = semanticAddressKey(erisAction(freshFileHBiome, freshFileHIntroId));
+    const owner = createRoomFeatureAddress(
+      createOccurrenceAddress(freshFileHBiome, freshFileHIntroId),
+      {
+        kind: 'erisSpawn',
+      },
+    );
     expect(
       evaluation.findings.map((finding) => [finding.code, semanticAddressKey(finding.origin)]),
-    ).toEqual([['erisSpawnUnavailable', owner]]);
+    ).toEqual([['erisSpawnUnavailable', semanticAddressKey(owner)]]);
+    // Eris spawns on entry: the observation blocks at the room's Overview, before her talk.
+    const h = evaluation.route.biomes.find((biome) => biome.biomeKey === 'H');
+    if (h === undefined || !('history' in h) || !('coverage' in h) || h.coverage.kind !== 'prefix')
+      throw new Error('H has no blocked evaluation');
+    expect(h.coverage.blockedAt).toEqual(owner);
+    expect(h.coverage.roomTimeline).toBeUndefined();
+    expect(
+      h.history.events.some(
+        (event) =>
+          event.kind === 'erisInteracted' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === freshFileHIntroId,
+      ),
+    ).toBe(false);
     expect(evaluation.findings[0]?.evidence).toEqual({
       reason: 'alreadyCursed',
       curseTraitKey: 'ErisCurseTrait',

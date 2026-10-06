@@ -50,6 +50,7 @@ import {
   createCompleteFGProject,
   createUnderworldFWellCheckpoint,
   goldenFBiome,
+  loadNemesisFieldsCheckpoint,
   goldenGBiome,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
@@ -725,6 +726,58 @@ describe('workspace inspector destinations', () => {
       focusAddress: action,
       inspectorSubject: { kind: 'node', nodeKey: workbench.key },
       roomTab: 'actions',
+    });
+  });
+
+  it('routes a fixed Fields Passive Nemesis family finding to its own Overview selector', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    const passive = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Passive',
+    );
+    const event = createNemesisRandomEventAddress(passive);
+    const original = loadNemesisFieldsCheckpoint();
+    // A retained Passive event without its family is representable but never authored by a command.
+    const document: ProjectDocument = {
+      ...original,
+      route: {
+        ...original.route,
+        biomes: original.route.biomes.map((entry) =>
+          entry.biomeKey !== 'H' || entry.topology === null
+            ? entry
+            : {
+                ...entry,
+                topology: {
+                  ...entry.topology,
+                  occurrences: entry.topology.occurrences.map((room) =>
+                    room.occurrenceId !== occurrenceId
+                      ? room
+                      : {
+                          ...room,
+                          encounters: {
+                            ...room.encounters,
+                            nemesisRandomEventByPhase: { Passive: null },
+                          },
+                        },
+                  ),
+                },
+              },
+        ),
+      },
+    };
+    const missingFamily = assembly(document).evaluation.findings.find(
+      (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(event),
+    );
+    if (missingFamily === undefined) throw new Error('missing Passive Nemesis family finding');
+    const workspace = project(document);
+    expect(destination(workspace, missingFamily.origin)).toMatchObject({
+      focusAddress: event,
+      inspectorSubject: {
+        kind: 'node',
+        nodeKey: occurrenceWorkbenchFor(biome(workspace, 'H'), occurrenceId).key,
+      },
+      roomTab: 'overview',
     });
   });
 
