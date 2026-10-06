@@ -41,7 +41,7 @@ export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSu
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <label className="anomaly-outcome-control">
+    <label className="timeline-checkbox">
       <input
         checked={anomaly.success}
         onChange={(event) =>

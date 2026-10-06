@@ -71,7 +71,7 @@ function PickupOutcomeControls({
         />
       </div>
       <label
-        className="pickup-outcome-control"
+        className="timeline-checkbox"
         {...(seaStarApplies ? {} : { title: 'Sea Star does not apply here.' })}
       >
         <input

@@ -93,7 +93,7 @@ function renderProjectedHarness(
   return { application, user, ...view };
 }
 
-function staticWorkspaceFixture(project: ProjectDocument): {
+export function staticWorkspaceFixture(project: ProjectDocument): {
   readonly store: ReturnType<typeof createStaticPresentationStore>;
   readonly workspace: StructuredWorkspaceProjection;
 } {

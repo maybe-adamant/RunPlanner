@@ -2213,9 +2213,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const actionRow = traitLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (actionRow === null) throw new Error('Wheel reward action row is missing');
     expect(
-      actionRow
-        .querySelector(':scope > .room-action-controls > .room-action-inline-editors')
-        ?.contains(traitLauncher),
+      actionRow.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(traitLauncher),
     ).toBe(true);
     expect(
       actionRow.querySelector('.acquisition-entry-resolution')?.getAttribute('data-empty'),
@@ -2775,8 +2773,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Travel Deal Item' })).toBeNull();
     expect(screen.queryByRole('checkbox', { name: 'Purchased Travel Deal' })).toBeNull();
     openRoomTab('Room Timeline');
-    const line = () => screen.getByRole('group', { name: 'Travel Deal' });
-    expect(line().closest('li')?.textContent).toContain('Slot 1');
+    const line = () => screen.getByRole('listitem', { name: 'Travel Deal' });
+    expect(line().previousElementSibling?.textContent).toContain('Slot 1');
     await view.user.click(within(line()).getByRole('button', { name: 'Travel Deal Item' }));
     await view.user.click(
       within(await screen.findByRole('listbox')).getByRole('option', { name: 'Mystery Boon' }),
@@ -2815,7 +2813,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
     openRoomTab('Room Timeline');
     // Without its source purchase the retained refill purchase loses its line and keeps removal.
-    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
       restoredChild,
     );
@@ -2850,7 +2848,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(qOccurrenceIds.preboss),
     );
     openRoomTab('Room Timeline');
-    const line = screen.getByRole('group', { name: 'Travel Deal' });
+    const line = screen.getByRole('listitem', { name: 'Travel Deal' });
     expect(within(line).queryByRole('button', { name: /^Edit Anvil/ })).toBeNull();
     const refill = screen.getByText('Buy Anvil of Fates · Travel Deal Offer').closest('li');
     if (refill === null) throw new Error('Travel Deal refill purchase row is missing');

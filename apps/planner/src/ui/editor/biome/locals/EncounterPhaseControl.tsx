@@ -526,7 +526,7 @@ export function EncounterPhaseTimelineControl({
       : requireWorkspaceInteraction(interactions.figLeafSkips, figLeaf.interactionKey);
   const figLeafControl =
     figLeaf === undefined || figLeafInteraction === undefined ? null : (
-      <label className="encounter-event-control">
+      <label className="timeline-checkbox">
         <input
           {...findingTarget(
             figLeaf.address,
@@ -548,7 +548,7 @@ export function EncounterPhaseTimelineControl({
       : requireWorkspaceInteraction(interactions.gorgonConditions, gorgon.interactionKey);
   const gorgonControl =
     gorgon === undefined || gorgonInteraction === undefined ? null : (
-      <label className="encounter-event-control">
+      <label className="timeline-checkbox">
         <input
           {...findingTarget(
             gorgon.address,
@@ -571,7 +571,7 @@ export function EncounterPhaseTimelineControl({
   const aetosControl =
     aetos === undefined || aetosInteraction === undefined ? null : (
       <div className="encounter-event-control">
-        <label className="encounter-event-control">
+        <label className="timeline-checkbox">
           <input
             {...findingTarget(
               aetos.address,

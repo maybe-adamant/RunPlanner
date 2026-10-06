@@ -14,6 +14,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { TranscendentEmbryoOutcomeFields } from '../rewards/TranscendentEmbryoOutcomeFields';
+import { TimelineRow } from './TimelineRow';
 
 /** React owner for the automatic Transcendent Embryo transformation row. */
 export function TranscendentEmbryoEffectRow({
@@ -68,15 +69,12 @@ export function TranscendentEmbryoEffectRow({
     if (!nextOpen && focused) setClosedAtNavigationRevision(semanticNavigationRevision);
   };
   return (
-    <li
+    <TimelineRow
       aria-label="Transcendent Embryo"
       aria-description="Automatic effect"
       data-action-accent="automatic"
-      className="room-action-row room-timeline-effect-row"
       data-transcendent-embryo={control.address.phaseKey}
-    >
-      <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
-        <strong>Transcendent Embryo</strong>
+      editors={
         <div className="transcendent-embryo-outcome-row">
           <RandomTraitTargetPicker
             findingTarget={findingTarget(control.address)}
@@ -108,9 +106,13 @@ export function TranscendentEmbryoEffectRow({
             />
           )}
         </div>
-        {selected !== '' ? (
+      }
+      kind="effect"
+      placement={
+        selected !== '' ? (
           <button
-            className="quiet-action effect-repair-action"
+            aria-label="Clear recorded blessing"
+            className="quiet-action action-compact effect-repair-action"
             disabled={domain?.selectedPossible !== false}
             data-inactive={domain?.selectedPossible !== false || undefined}
             title={
@@ -121,10 +123,11 @@ export function TranscendentEmbryoEffectRow({
             onClick={() => executeIntent(interaction.intentFor(null))}
             type="button"
           >
-            Clear recorded blessing
+            Clear
           </button>
-        ) : null}
-      </div>
-    </li>
+        ) : null
+      }
+      label={<strong>Transcendent Embryo</strong>}
+    />
   );
 }

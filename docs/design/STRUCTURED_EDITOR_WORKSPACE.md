@@ -908,10 +908,14 @@ earlier choice or has nothing to target. A message that stands in for a control
 (an ungenerated side-room reward, a door awaiting its room, a hidden or
 absent door reward, a dialog control without a value) keeps the control's label column and value frame through
 `control-placeholder`; section-wide empty states keep their paragraph form.
-Action rows render fixed slots, disabled with a hover title when no proposal
-applies, and the Door Exit continuation names on hover whether a door is still
-unselected or the batch is unfinished. Rows or sections created by an authored
-decision are expected changes. In the Room Timeline action column the
+Every Room Timeline row (action, lifecycle boundary, checkpoint, automatic
+effect, insertion point, Travel Deal line) renders the same cells in one
+list-owned column template: handle, ordinal, label, editors, and the placement
+and delete action slots; an empty cell stays mounted. Action rows keep both
+slots, disabled with a hover title when no proposal applies, and the Door Exit
+continuation names on hover whether a door is still unselected or the batch is
+unfinished. Rows or sections created by an authored decision are expected
+changes. In the Room Timeline action column the
 pickup-outcome control precedes everything that outcome enables: trait, Pom,
 Anvil, Artificer output, and Fountain controls. A reward control names its Vow
 of Forfeit realization inside its own picker trigger text, `(Red Onion)` after

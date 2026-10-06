@@ -689,7 +689,7 @@ describe('OccurrenceRoomActions', () => {
       .closest<HTMLElement>('[data-room-action-key]')
       ?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     if (!handle) throw new Error('Athena drag handle missing');
-    const titled = [...actions.querySelectorAll<HTMLElement>('.room-action-row[title]')].map(
+    const titled = [...actions.querySelectorAll<HTMLElement>('.timeline-row[title]')].map(
       (element) => ({ element, title: element.title }),
     );
     expect(titled.length).toBeGreaterThan(0);
@@ -706,7 +706,7 @@ describe('OccurrenceRoomActions', () => {
     });
     fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
     expect(screen.getByText(`Unavailable: ${blockedMove!.explanations.join(' ')}`)).toBeTruthy();
-    expect(actions.querySelectorAll('.room-action-row[title]')).toHaveLength(0);
+    expect(actions.querySelectorAll('.timeline-row[title]')).toHaveLength(0);
     const preview = actions.querySelector('.room-action-drag-preview');
     expect(preview?.querySelector('.room-action-drag-header strong')?.textContent).toBe(
       'Talk to Athena',
@@ -1161,9 +1161,7 @@ describe('OccurrenceRoomActions', () => {
     expect(pomLauncher.getAttribute('data-trait-status')).toBe('valid');
     const pickupRow = pomLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (pickupRow === null) throw new Error('Nectar pickup row is missing');
-    const column = pickupRow.querySelector<HTMLElement>(
-      ':scope > .room-action-controls > .room-action-inline-editors',
-    );
+    const column = pickupRow.querySelector<HTMLElement>(':scope > [data-timeline-cell="editors"]');
     if (column === null) throw new Error('Nectar inline editor column is missing');
     expect(column.contains(disposition)).toBe(true);
     expect(column.contains(pomLauncher)).toBe(true);
@@ -1184,7 +1182,7 @@ describe('OccurrenceRoomActions', () => {
       const outcome = within(sourceAction).getByRole('button', { name: /^Pickup outcome for / });
       const output = within(sourceAction).getByRole('button', { name: 'Item' });
       const sourceColumn = sourceAction.querySelector<HTMLElement>(
-        ':scope > .room-action-controls > .room-action-inline-editors',
+        ':scope > [data-timeline-cell="editors"]',
       );
       expect(sourceColumn?.contains(outcome)).toBe(true);
       expect(sourceColumn?.contains(output)).toBe(true);
@@ -1226,11 +1224,9 @@ describe('OccurrenceRoomActions', () => {
     expect(row.textContent).not.toMatch(/Forfeit|Zeus|boon|\(Red Onion\)/);
     const outcome = within(row).getByRole('button', { name: /^Pickup outcome for / });
     expect(outcome.textContent).toContain('Pickup');
-    expect(
-      row
-        .querySelector(':scope > .room-action-controls > .room-action-inline-editors')
-        ?.contains(outcome),
-    ).toBe(true);
+    expect(row.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(outcome)).toBe(
+      true,
+    );
     expect(within(row).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     expect(within(actions).queryByTitle('Vow of Forfeit')).toBeNull();
   });
@@ -1631,11 +1627,11 @@ describe('OccurrenceRoomActions', () => {
     if (minor === null) throw new Error('Minor Shop action is missing');
     expect(minor.getAttribute('data-action-accent')).toBe('room');
     expect(minor.getAttribute('title')).toBe('Required before leaving the room.');
-    expect(
-      within(minor).queryByRole('button', {
-        name: 'Remove Buy Max Magick · Slot 3 from timeline',
-      }),
-    ).toBeNull();
+    const minorRemoval = within(minor).getByRole('button', {
+      name: 'Remove Buy Max Magick · Slot 3 from timeline',
+    });
+    expect(minorRemoval).toHaveProperty('disabled', true);
+    expect(minorRemoval.title).toBe('Purchased membership is edited in Room Overview.');
     await view.user.click(
       within(minor).getByRole('button', {
         name: 'Move Buy Max Magick · Slot 3',

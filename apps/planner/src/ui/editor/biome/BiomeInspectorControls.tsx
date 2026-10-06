@@ -22,6 +22,8 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { RoomSelector } from './RoomSelector';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
+import { TimelineRow } from './TimelineRow';
+import type { TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
 
@@ -123,27 +125,30 @@ function JudgmentArcanaControl({
   const control = interactions.judgmentArcana.get(workspaceInteractionKey(judgment.address));
   if (control === undefined) return null;
   return (
-    <li
+    <TimelineRow
       aria-label={`Judgment — choose ${judgment.requiredCount} inactive Arcana cards`}
-      className="room-action-row room-timeline-effect-row"
-    >
-      <button
-        {...findingTarget(control.owner)}
-        className="room-timeline-effect"
-        onClick={() => setOpen(true)}
-        type="button"
-      >
-        Judgment — choose {judgment.requiredCount} inactive Arcana cards
-      </button>
-      {open ? (
-        <ArcanaActivationEditor
-          control={control}
-          title="Judgment editor"
-          requiredCount={judgment.requiredCount}
-          onClose={() => setOpen(false)}
-        />
-      ) : null}
-    </li>
+      editors={
+        open ? (
+          <ArcanaActivationEditor
+            control={control}
+            title="Judgment editor"
+            requiredCount={judgment.requiredCount}
+            onClose={() => setOpen(false)}
+          />
+        ) : null
+      }
+      kind="effect"
+      label={
+        <button
+          {...findingTarget(control.owner)}
+          className="room-timeline-effect"
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          Judgment — choose {judgment.requiredCount} inactive Arcana cards
+        </button>
+      }
+    />
   );
 }
 
@@ -159,27 +164,31 @@ function FigurineArcanaControl({
   const control = interactions.figurineArcana.get(workspaceInteractionKey(figurine.address));
   if (control === undefined) return null;
   return (
-    <li
+    <TimelineRow
       aria-label={`Crystal Figurine — choose ${figurine.requiredCount} inactive Arcana cards`}
-      className="room-action-row room-timeline-effect-row"
-    >
-      <button
-        {...findingTarget(control.owner)}
-        className="room-timeline-effect"
-        onClick={() => setOpen(true)}
-        type="button"
-      >
-        Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards ({figurine.rarity})
-      </button>
-      {open ? (
-        <ArcanaActivationEditor
-          title="Crystal Figurine editor"
-          control={control}
-          requiredCount={figurine.requiredCount}
-          onClose={() => setOpen(false)}
-        />
-      ) : null}
-    </li>
+      editors={
+        open ? (
+          <ArcanaActivationEditor
+            title="Crystal Figurine editor"
+            control={control}
+            requiredCount={figurine.requiredCount}
+            onClose={() => setOpen(false)}
+          />
+        ) : null
+      }
+      kind="effect"
+      label={
+        <button
+          {...findingTarget(control.owner)}
+          className="room-timeline-effect"
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards (
+          {figurine.rarity})
+        </button>
+      }
+    />
   );
 }
 
@@ -239,7 +248,7 @@ function StygianWellTwistTimelineContent({
     />
   );
 }
-export function inspectorRoomActionTrailingContent(
+export function inspectorRoomActionRemoval(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
   row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
@@ -264,35 +273,33 @@ export function inspectorOptionalRoomActionContent(
   );
   if (interaction === undefined) return null;
   return (
-    <li aria-label="Keepsake Rack" className="hub-open-room-card room-action-row">
-      <div className="owner-markers room-action-identity">
-        <span aria-hidden="true" className="hub-roster-rank">
-          —
-        </span>
-        <strong>Keepsake Rack</strong>
-      </div>
-      <div className="hub-rank-actions room-action-controls">
-        <PostbossKeepsakeControl interaction={interaction} />
-      </div>
-    </li>
+    <TimelineRow
+      aria-label="Keepsake Rack"
+      editors={<PostbossKeepsakeControl interaction={interaction} />}
+      kind="action"
+      label={<strong>Keepsake Rack</strong>}
+      ordinal="—"
+    />
   );
 }
 export function inspectorLifecycleBoundaryContent(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
   boundary: WorkspaceRoomLifecycleBoundary,
-): ReactNode {
-  if (boundary.kind !== 'bossDefeated') return null;
-  return (
-    <>
-      {room.judgment === undefined ? null : (
-        <JudgmentArcanaControl interactions={interactions} judgment={room.judgment} />
-      )}
-      {room.figurine === undefined ? null : (
-        <FigurineArcanaControl interactions={interactions} figurine={room.figurine} />
-      )}
-    </>
-  );
+): TimelineBoundaryContent | undefined {
+  if (boundary.kind !== 'bossDefeated') return undefined;
+  return {
+    rows: (
+      <>
+        {room.judgment === undefined ? null : (
+          <JudgmentArcanaControl interactions={interactions} judgment={room.judgment} />
+        )}
+        {room.figurine === undefined ? null : (
+          <FigurineArcanaControl interactions={interactions} figurine={room.figurine} />
+        )}
+      </>
+    ),
+  };
 }
 export function EchoKeepsakeReplayControl({
   interactions,

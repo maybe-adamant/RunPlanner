@@ -13,6 +13,7 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
+import { TimelineRow } from './TimelineRow';
 
 /** React owner for the automatic Steady Growth timeline effect. */
 export function SteadyGrowthEffectRow({
@@ -54,33 +55,36 @@ export function SteadyGrowthEffectRow({
     if (!nextOpen && focused) setClosedAtNavigationRevision(semanticNavigationRevision);
   };
   return (
-    <li
+    <TimelineRow
       aria-label="Steady Growth"
       aria-description="Automatic effect"
       data-action-accent="automatic"
-      className="room-action-row room-timeline-effect-row"
       data-steady-growth={control.address.phaseKey}
-    >
-      <div className="owner-markers room-action-identity scheduled-trait-effect-identity">
-        <strong>Steady Growth</strong>
-        <RandomTraitTargetPicker
-          findingTarget={findingTarget(control.address)}
-          ariaLabel="Steady Growth target"
-          disabled={domain?.emptyNoOp === true && selected === ''}
-          placeholder={domain?.emptyNoOp === true ? 'No eligible trait' : 'Choose a trait'}
-          id={semanticOwnerControlElementId(control.address)}
-          interaction={interaction}
-          label="Target"
-          layout="inline"
-          model={domain?.picker ?? { sections: Object.freeze([]) }}
-          onSelect={(target) => executeIntent(interaction.intentFor(target))}
-          onOpenChange={onOpenChange}
-          open={domain?.emptyNoOp === true && selected === '' ? false : open}
-          selected={selected === '' ? null : selected}
-        />
-        {selected !== '' ? (
+      editors={
+        <div className="scheduled-trait-effect-identity">
+          <RandomTraitTargetPicker
+            findingTarget={findingTarget(control.address)}
+            ariaLabel="Steady Growth target"
+            disabled={domain?.emptyNoOp === true && selected === ''}
+            placeholder={domain?.emptyNoOp === true ? 'No eligible trait' : 'Choose a trait'}
+            id={semanticOwnerControlElementId(control.address)}
+            interaction={interaction}
+            label="Target"
+            layout="inline"
+            model={domain?.picker ?? { sections: Object.freeze([]) }}
+            onSelect={(target) => executeIntent(interaction.intentFor(target))}
+            onOpenChange={onOpenChange}
+            open={domain?.emptyNoOp === true && selected === '' ? false : open}
+            selected={selected === '' ? null : selected}
+          />
+        </div>
+      }
+      kind="effect"
+      placement={
+        selected !== '' ? (
           <button
-            className="quiet-action effect-repair-action"
+            aria-label="Clear recorded target"
+            className="quiet-action action-compact effect-repair-action"
             disabled={domain?.selectedPossible !== false}
             data-inactive={domain?.selectedPossible !== false || undefined}
             title={
@@ -91,10 +95,11 @@ export function SteadyGrowthEffectRow({
             onClick={() => executeIntent(interaction.intentFor(null))}
             type="button"
           >
-            Clear recorded target
+            Clear
           </button>
-        ) : null}
-      </div>
-    </li>
+        ) : null
+      }
+      label={<strong>Steady Growth</strong>}
+    />
   );
 }

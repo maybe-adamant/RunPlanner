@@ -299,19 +299,18 @@ function PurgingPoolTraitPicker({
 export function StygianWellSlotEditor({
   slot,
   interactions,
+  withPurchased = true,
 }: {
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** A Timeline line places Purchased in its own action slot. */
+  readonly withPurchased?: boolean;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const offer = requireWorkspaceInteraction(
     interactions.stygianWellOffers,
     slot.offerInteractionKey,
-  );
-  const purchase = requireWorkspaceInteraction(
-    interactions.stygianWellPurchases,
-    slot.purchaseInteractionKey,
   );
   const offerPicker = useWorkspaceInteraction(offer);
   return (
@@ -331,18 +330,43 @@ export function StygianWellSlotEditor({
         placeholder="Unresolved"
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
-      <label className="shop-family-participation">
-        <input
-          aria-label={`Purchased Stygian Well ${slot.label}`}
-          checked={slot.purchased}
-          disabled={slot.itemKey === null}
-          {...(slot.itemKey === null ? { title: 'Choose the item first.' } : {})}
-          onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
-          type="checkbox"
+      {withPurchased ? (
+        <StygianWellPurchasedControl
+          className="shop-family-participation"
+          interactions={interactions}
+          slot={slot}
         />
-        Purchased
-      </label>
+      ) : null}
     </div>
+  );
+}
+
+export function StygianWellPurchasedControl({
+  className,
+  slot,
+  interactions,
+}: {
+  readonly className: string;
+  readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const purchase = requireWorkspaceInteraction(
+    interactions.stygianWellPurchases,
+    slot.purchaseInteractionKey,
+  );
+  return (
+    <label className={className}>
+      <input
+        aria-label={`Purchased Stygian Well ${slot.label}`}
+        checked={slot.purchased}
+        disabled={slot.itemKey === null}
+        {...(slot.itemKey === null ? { title: 'Choose the item first.' } : {})}
+        onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
+        type="checkbox"
+      />
+      Purchased
+    </label>
   );
 }
 
@@ -353,7 +377,10 @@ export function HermesShrineSlotEditor({
   rewardLabel,
   offer,
   purchase,
+  withPurchased = true,
 }: {
+  /** A Timeline line places Purchased in its own action slot. */
+  readonly withPurchased?: boolean;
   readonly label: string;
   readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
   readonly rewardLabel?: string;
@@ -412,19 +439,43 @@ export function HermesShrineSlotEditor({
           </select>
         </label>
       </div>
-      <label className="shop-family-participation">
-        <input
-          aria-label={`Purchased Hermes Shrine ${label}`}
-          checked={current !== null}
-          disabled={offer.rewardType === null}
-          {...(offer.rewardType === null ? { title: 'Choose the item first.' } : {})}
-          onChange={(event) =>
-            executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
-          }
-          type="checkbox"
+      {withPurchased ? (
+        <HermesShrinePurchasedControl
+          className="shop-family-participation"
+          label={label}
+          offer={offer}
+          purchase={purchase}
         />
-        Purchased
-      </label>
+      ) : null}
     </div>
+  );
+}
+
+export function HermesShrinePurchasedControl({
+  className,
+  label,
+  offer,
+  purchase,
+}: {
+  readonly className: string;
+  readonly label: string;
+  readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
+  readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
+}) {
+  const executeIntent = useCommandIntent();
+  return (
+    <label className={className}>
+      <input
+        aria-label={`Purchased Hermes Shrine ${label}`}
+        checked={purchase.purchase !== null}
+        disabled={offer.rewardType === null}
+        {...(offer.rewardType === null ? { title: 'Choose the item first.' } : {})}
+        onChange={(event) =>
+          executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
+        }
+        type="checkbox"
+      />
+      Purchased
+    </label>
   );
 }

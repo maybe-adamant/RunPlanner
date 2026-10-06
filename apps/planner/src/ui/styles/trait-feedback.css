@@ -7,9 +7,14 @@
   gap: 8px;
 }
 
+/* Outcome and Sea Star flow inline with the launchers that follow them. */
 .reward-acquisition-conversion {
+  display: inline-flex;
   min-width: 0;
   max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .pickup-outcome-control > .contextual-picker {

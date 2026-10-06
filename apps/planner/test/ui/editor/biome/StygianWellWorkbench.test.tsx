@@ -140,7 +140,7 @@ describe('Stygian Well workbench', () => {
     ).toMatchObject({ roomTab: 'actions', focusAddress: { kind: 'roomAction' } });
 
     openTimeline();
-    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     const refillRow = screen.getByText(/· Travel Deal Offer$/).closest('li')!;
     const remove = within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ });
     expect(remove).toHaveProperty('disabled', false);
@@ -174,8 +174,8 @@ describe('Stygian Well workbench', () => {
     openOverview();
     expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
     openTimeline();
-    const line = screen.getByRole('group', { name: 'Travel Deal' });
-    expect(line.closest('li')?.textContent).toContain('Slot 2');
+    const line = screen.getByRole('listitem', { name: 'Travel Deal' });
+    expect(line.previousElementSibling?.textContent).toContain('Slot 2');
     const refillLabel = within(line).getByRole('button', {
       name: 'Stygian Well Travel Deal Item',
     }).textContent;
@@ -187,7 +187,7 @@ describe('Stygian Well workbench', () => {
     const purchase = screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' });
     await view.user.click(purchase);
     openTimeline();
-    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     expect(
       view.application.store
         .getState()
@@ -199,7 +199,7 @@ describe('Stygian Well workbench', () => {
     await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' }));
     openTimeline();
     expect(
-      within(screen.getByRole('group', { name: 'Travel Deal' })).getByRole('button', {
+      within(screen.getByRole('listitem', { name: 'Travel Deal' })).getByRole('button', {
         name: 'Stygian Well Travel Deal Item',
       }).textContent,
     ).toBe(refillLabel);
