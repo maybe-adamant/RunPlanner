@@ -271,6 +271,16 @@ describe('Room Timeline layout contract', () => {
     }
   });
 
+  it('starts lifecycle banner titles at the handle column through a cell span', () => {
+    const source = styles['room-workbenches']!.replace(/\s+/g, ' ');
+    const banner =
+      ".timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])";
+    expect(source).toContain(`${banner} > [data-timeline-cell='label'] { grid-column: 1 / 4; }`);
+    expect(source).toContain(
+      `${banner} > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) { display: none; }`,
+    );
+  });
+
   it('moves editors and actions below the label in one narrow rule', () => {
     const source = styles['room-workbenches']!;
     const narrow = source.indexOf('@container timeline-list (max-width: 52rem)');
