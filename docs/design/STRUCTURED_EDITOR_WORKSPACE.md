@@ -292,11 +292,12 @@ retain their declared defaults; generated customization can reset wholly to
 native control. Identity and customization are fixed on entry, so every
 phase's selector and launcher render in Room Overview; finding navigation
 selects Overview and focuses/highlights the launcher without automatically
-opening the dialog. The Room Timeline names each phase's settled identity in
-its start boundary banner (Start encounter, or Room entered for a phase settled
-on entry): the encounter, prefixed by the phase in a multi-phase room unless a
-Fields cage label already names it, plus a selected Nemesis family. The banner
-identity only navigates to its Overview owner. The events decided at that start
+opening the dialog. The Room Timeline names a definitional encounter's settled
+identity in its Start encounter banner: the encounter, prefixed by the phase in
+a multi-phase room unless a Fields cage label already names it. A non-combat
+encounter settled on entry (a Nemesis event, Empty) leaves its Room entered
+banner plain; a selected Nemesis family is read-only text on its movable
+interaction row. The banner identity only navigates to its Overview owner. The events decided at that start
 (Fig Leaf, Gorgon, Aetos) render in the banner row's editors only when present;
 a Nemesis response stays on its interaction row, and an Anomaly outcome is an
 Encounter ended event. Event findings have their own phase-child owners and

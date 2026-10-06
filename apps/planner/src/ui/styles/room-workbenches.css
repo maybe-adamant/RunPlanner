@@ -1317,7 +1317,7 @@
   left: 8px;
   width: 2px;
   border-radius: 999px;
-  background: rgb(174 152 202 / 34%);
+  background: var(--timeline-spine);
   content: '';
 }
 
@@ -1330,10 +1330,10 @@
   gap: 4px 8px;
   min-width: 0;
   padding: 3px 8px 3px var(--timeline-row-start);
-  border: 1px solid #34353e;
-  border-left: 3px solid rgb(174 152 202 / 36%);
+  border: 1px solid var(--timeline-card-border);
+  border-left: 3px solid var(--timeline-stripe);
   border-radius: 6px;
-  background: rgb(18 19 24 / 72%);
+  background: var(--timeline-card);
   scroll-margin-block: 24px;
 }
 
@@ -1344,7 +1344,7 @@
   left: -12px;
   width: 9px;
   height: 2px;
-  background: rgb(174 152 202 / 48%);
+  background: var(--timeline-spine);
   content: '';
 }
 
@@ -1368,13 +1368,18 @@
   grid-column: 5;
 }
 
-/* A wide continuation's label cell carries its whole editor across the row. */
+/* A wide row is one card: its label cell carries the whole editor from the handle column. */
 .timeline-row[data-timeline-span='wide'] > [data-timeline-cell='label'] {
-  grid-column: 3 / -1;
+  grid-column: 1 / -1;
 }
 
 .timeline-row[data-timeline-span='wide']
-  > :is([data-timeline-cell='editors'], [data-timeline-cell='actions']) {
+  > :is(
+    [data-timeline-cell='handle'],
+    [data-timeline-cell='ordinal'],
+    [data-timeline-cell='editors'],
+    [data-timeline-cell='actions']
+  ) {
   display: none;
 }
 
@@ -1449,7 +1454,7 @@
 }
 
 .timeline-cell-ordinal {
-  color: #e2b971;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -1465,6 +1470,19 @@
 .timeline-cell-label > strong {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Row titles are semibold; banner titles stay bold as the headings above them. */
+.timeline-cell-label > strong,
+.nemesis-interaction-phrase > strong,
+.timeline-row-family {
+  font-weight: 600;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > .timeline-cell-label
+  > strong {
+  font-weight: 700;
 }
 
 .timeline-cell-editors {
@@ -1525,9 +1543,9 @@
   min-height: 36px;
   padding-block: 1px;
   border-color: transparent;
-  border-bottom-color: rgb(53 54 64 / 70%);
-  background: linear-gradient(90deg, rgb(174 152 202 / 13%), rgb(174 152 202 / 2%));
-  color: #e2d8ea;
+  border-bottom-color: var(--timeline-band-divider);
+  background: var(--timeline-band);
+  color: var(--text);
 }
 
 /* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
@@ -1540,7 +1558,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ae98ca;
+  background: var(--timeline-node);
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
@@ -1550,13 +1568,12 @@
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
   > .timeline-cell-ordinal {
-  color: #d4b9e7;
   font-size: 1rem;
 }
 
 .timeline-row[data-timeline-row-kind='effect'] {
   border-color: transparent;
-  border-left-color: rgb(174 152 202 / 36%);
+  border-left-color: var(--timeline-stripe);
 }
 
 .timeline-row[data-timeline-row-kind='insertion'] {
@@ -1564,7 +1581,7 @@
   background: transparent;
 }
 
-.timeline-row[data-timeline-row-kind='continuation'] {
+.timeline-row[data-timeline-row-kind='continuation']:not([data-timeline-span='wide']) {
   border-top-style: dashed;
   border-top-color: rgb(174 152 202 / 24%);
   background: rgb(18 19 24 / 44%);
@@ -1577,14 +1594,13 @@
 
 .timeline-row:is(
     [data-timeline-row-kind='insertion'],
-    [data-timeline-row-kind='continuation']
+    [data-timeline-row-kind='continuation']:not([data-timeline-span='wide'])
   )::before {
   content: none;
 }
 
 .timeline-row[data-action-accent] {
   border-left-color: var(--timeline-accent);
-  background: color-mix(in srgb, var(--timeline-accent) 9%, transparent);
 }
 
 .timeline-row[data-dragging='true'] {
@@ -1748,20 +1764,35 @@
   font-size: 0.72rem;
 }
 
+/* Timeline palette: neutral rows and bands; category hue only on stripes and the legend. */
+:root {
+  --timeline-optional: #70a9eb;
+  --timeline-required-now: #ea87b0;
+  --timeline-before-leaving: #ce9f30;
+  --timeline-automatic: #41b8a4;
+  --timeline-card: #191a20;
+  --timeline-card-border: #34353e;
+  --timeline-stripe: #4b4c58;
+  --timeline-spine: #4b4c58;
+  --timeline-node: #8e8b97;
+  --timeline-band: rgb(255 255 255 / 4%);
+  --timeline-band-divider: rgb(255 255 255 / 6%);
+}
+
 [data-action-accent='optional'] {
-  --timeline-accent: #72a7ee;
+  --timeline-accent: var(--timeline-optional);
 }
 
 [data-action-accent='phase'] {
-  --timeline-accent: #db8fd1;
+  --timeline-accent: var(--timeline-required-now);
 }
 
 [data-action-accent='room'] {
-  --timeline-accent: #caa35e;
+  --timeline-accent: var(--timeline-before-leaving);
 }
 
 [data-action-accent='automatic'] {
-  --timeline-accent: #719b9b;
+  --timeline-accent: var(--timeline-automatic);
 }
 
 .room-timeline-legend > li {
@@ -1809,7 +1840,7 @@
 .timeline-banner-identity {
   padding: 0;
   border: 0;
-  color: #d4b9e7;
+  color: var(--selection-accent);
   background: transparent;
   font: inherit;
   font-weight: 700;
@@ -1827,10 +1858,13 @@
   flex: 1 1 auto;
 }
 
+/* The wheel is its card: no second panel inside the row. */
 .timeline-cell-label > .reward-wheel {
   flex: 1 1 100%;
   min-width: 0;
-  padding: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
 }
 
 .timeline-cell-editors > .trait-offer-launcher {
@@ -1964,8 +1998,12 @@
 }
 
 /* Banner names share the label's type and differ only in color. */
+.fields-cage-label,
+.timeline-row-family {
+  color: var(--selection-accent);
+}
+
 .fields-cage-label {
-  color: #d4b9e7;
   font-weight: 700;
 }
 

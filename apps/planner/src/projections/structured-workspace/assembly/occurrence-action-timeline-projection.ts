@@ -159,11 +159,18 @@ function projectRoomLifecycleTimeline(
       family === undefined
         ? phase.selectedEncounter.label
         : `${phase.selectedEncounter.label} · ${nemesisFamilyLabel(family)}`;
+    // Only a definitional encounter start names its identity; one settled on entry does not.
     return Object.freeze({
       kind: 'encounter' as const,
       phase,
-      identityLabel:
-        encounterPhases.length > 1 && !cageNamed ? `${phase.label} · ${encounter}` : encounter,
+      ...(phase.timelineAnchor === 'encounterStart'
+        ? {
+            identityLabel:
+              encounterPhases.length > 1 && !cageNamed
+                ? `${phase.label} · ${encounter}`
+                : encounter,
+          }
+        : {}),
     });
   };
   const supplementForBoundary = (boundary: WorkspaceRoomLifecycleBoundary) => {
@@ -189,9 +196,14 @@ function projectRoomLifecycleTimeline(
     if (action.kind !== 'action' || action.action.reference.kind !== 'interactEncounter')
       return undefined;
     const phase = encounterByPhase.get(action.action.reference.phaseKey);
+    const family = phase?.nemesisEvent?.value?.kind;
     return phase?.nemesisEvent === undefined
       ? undefined
-      : Object.freeze({ kind: 'nemesisInteraction' as const, owner: phase.nemesisEvent.owner });
+      : Object.freeze({
+          kind: 'nemesisInteraction' as const,
+          owner: phase.nemesisEvent.owner,
+          ...(family === undefined ? {} : { familyLabel: nemesisFamilyLabel(family) }),
+        });
   };
   const entries: WorkspaceRoomLifecycleTimelineEntry[] = [];
   const activeWheelKeys = new Set(
