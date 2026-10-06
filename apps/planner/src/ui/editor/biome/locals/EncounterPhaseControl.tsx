@@ -506,11 +506,8 @@ export function EncounterPhaseControl({
   );
 }
 
-/**
- * The Timeline projection of one phase: its settled identity, read-only, and the
- * events decided when it starts (Fig Leaf, Gorgon, Aetos, a Nemesis response).
- */
-export function EncounterPhaseTimelineControl({
+/** The events decided when one phase starts (Fig Leaf, Gorgon, Aetos); none renders nothing. */
+export function EncounterPhaseEvents({
   interactions,
   phase,
 }: {
@@ -619,40 +616,16 @@ export function EncounterPhaseTimelineControl({
         </span>
       </div>
     );
-  const family =
-    phase.nemesisEvent === undefined
-      ? undefined
-      : phase.customizable
-        ? interactions.encounterPhases.get(workspaceInteractionKey(phase.address))?.nemesisEvent
-            ?.familyPicker.selected
-        : interactions.nemesisEvents.get(workspaceInteractionKey(phase.nemesisEvent.owner))
-            ?.familyPicker.selected;
+  if (figLeafControl === null && gorgonControl === null && aetosControl === null) return null;
   return (
-    <section aria-label={`${phase.identityLabel} events`} className="encounter-phase-control">
-      <div className="encounter-phase-settings">
-        <div className="field-control field-control-inline">
-          <span>Encounter</span>
-          <div className="encounter-fixed-value">
-            {family === undefined
-              ? phase.selectedEncounter.label
-              : `${phase.selectedEncounter.label} · ${family.label}`}
-          </div>
-        </div>
-      </div>
-      {figLeafControl !== null || gorgonControl !== null || aetosControl !== null ? (
-        <div
-          aria-label="Events"
-          className="field-control field-control-inline encounter-events"
-          role="group"
-        >
-          <span>Events</span>
-          <div className="encounter-event-controls">
-            {figLeafControl}
-            {gorgonControl}
-            {aetosControl}
-          </div>
-        </div>
-      ) : null}
-    </section>
+    <div
+      aria-label={`${phase.identityLabel} events`}
+      className="encounter-event-controls"
+      role="group"
+    >
+      {figLeafControl}
+      {gorgonControl}
+      {aetosControl}
+    </div>
   );
 }

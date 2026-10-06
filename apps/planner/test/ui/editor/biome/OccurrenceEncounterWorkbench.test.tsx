@@ -236,7 +236,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(goldenFStartId),
     );
     openRoomTab('Room Overview');
-    expect(screen.queryByRole('group', { name: 'Events' })).toBeNull();
+    expect(screen.queryByRole('group', { name: /events$/i })).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
@@ -1020,9 +1020,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       name: 'Gorgon Amulet: Death Defiance',
     }) as HTMLInputElement;
     expect(condition.disabled).toBe(false);
-    expect(within(screen.getByRole('group', { name: 'Events' })).getByRole('checkbox')).toBe(
-      condition,
-    );
+    expect(
+      within(screen.getByRole('group', { name: /encounter events$|^Encounter events$/ })).getByRole(
+        'checkbox',
+      ),
+    ).toBe(condition);
     await view.user.click(screen.getByText('Gorgon Amulet: Death Defiance'));
     await waitFor(() => {
       const launcher = screen.getByRole('button', {
@@ -1148,7 +1150,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const skip = screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' });
     expect((skip as HTMLInputElement).disabled).toBe(false);
-    expect(within(screen.getByRole('group', { name: 'Events' })).getByRole('checkbox')).toBe(skip);
+    expect(
+      within(screen.getByRole('group', { name: /encounter events$|^Encounter events$/ })).getByRole(
+        'checkbox',
+      ),
+    ).toBe(skip);
     (skip as HTMLInputElement).focus();
     await view.user.keyboard(' ');
     await waitFor(() => {
@@ -1222,7 +1228,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const events = screen.getByRole('group', { name: 'Events' });
+    const events = screen.getByRole('group', { name: /encounter events$|^Encounter events$/ });
     expect(
       within(events)
         .getAllByRole('checkbox')
@@ -1961,9 +1967,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
-    // The Timeline projects the phase read-only; its identity is authored in Overview.
-    const projected = screen.getByLabelText('Combat 2 encounter events');
-    expect(within(projected).queryByRole('button', { name: 'Encounter' })).toBeNull();
+    // The Timeline banner names the phase read-only; its identity is authored in Overview.
+    const start = screen.getByLabelText('Start encounter');
+    expect(start.querySelector('.timeline-banner-identity')?.textContent).toMatch(/^Combat 2 · /);
+    expect(within(start).queryByRole('button', { name: 'Encounter' })).toBeNull();
     openRoomTab('Room Overview');
     const phase = screen.getByLabelText('Combat 2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(

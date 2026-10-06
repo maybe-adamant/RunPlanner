@@ -13,10 +13,7 @@ import type {
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
-import {
-  EncounterPhaseControl,
-  EncounterPhaseTimelineControl,
-} from './locals/EncounterPhaseControl';
+import { EncounterPhaseControl, EncounterPhaseEvents } from './locals/EncounterPhaseControl';
 import { FieldsWorkbench } from './locals/FieldsWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
@@ -156,7 +153,7 @@ export function DirectRoomWorkbench({
 }) {
   const workbench = room.workbench;
   const renderEncounterPhase = (phase: WorkspaceEncounterPhase): ReactNode => (
-    <EncounterPhaseTimelineControl interactions={interactions} phase={phase} />
+    <EncounterPhaseEvents interactions={interactions} phase={phase} />
   );
   // Every phase's identity and customization are fixed on entry: the room Overview.
   const renderOverviewEncounterPhases = (): ReactNode =>

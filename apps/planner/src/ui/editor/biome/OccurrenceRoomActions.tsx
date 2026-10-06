@@ -422,6 +422,14 @@ export function RoomActionsWorkbench({
           }
           label={entry.label}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
+          {...(entry.supplement?.kind === 'encounter'
+            ? {
+                identity: {
+                  label: entry.supplement.identityLabel,
+                  owner: entry.supplement.phase.address,
+                },
+              }
+            : {})}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
         {content?.rows}

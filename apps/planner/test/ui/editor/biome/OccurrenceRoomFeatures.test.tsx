@@ -166,6 +166,10 @@ describe('OccurrenceRoomFeatures', () => {
     if (pickup === undefined) throw new Error('cleared Anomaly lost its reward pickup');
     expectBefore(encounterEnd, cleared);
     expectBefore(cleared, pickup);
+    // The outcome is an End Encounter event: it sits in that row's editors cell only.
+    expect(cleared.closest('[data-timeline-cell="editors"]')?.parentElement).toBe(
+      within(timeline).getByLabelText('Encounter ended'),
+    );
 
     await view.user.click(cleared);
     expect(

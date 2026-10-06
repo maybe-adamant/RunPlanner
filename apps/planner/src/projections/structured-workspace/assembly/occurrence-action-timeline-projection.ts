@@ -18,6 +18,7 @@ import type {
   WorkspaceTranscendentEmbryoControl,
 } from '../contracts/timeline';
 import { runStateLauncher } from './occurrence-action-run-state';
+import { nemesisFamilyLabel } from '../interactions/occurrence-interaction-binding';
 import type { WorkspaceOccurrenceActionsInput } from './occurrence-action-row-projection';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 
@@ -151,15 +152,29 @@ function projectRoomLifecycleTimeline(
   const encounterByPhase = new Map(
     encounterPhases.map((phase) => [phase.address.phaseKey, phase] as const),
   );
+  // A multi-phase banner names its phase unless its Fields cage already does.
+  const encounterSupplement = (phase: WorkspaceEncounterPhase, cageNamed: boolean) => {
+    const family = phase.nemesisEvent?.value?.kind;
+    const encounter =
+      family === undefined
+        ? phase.selectedEncounter.label
+        : `${phase.selectedEncounter.label} · ${nemesisFamilyLabel(family)}`;
+    return Object.freeze({
+      kind: 'encounter' as const,
+      phase,
+      identityLabel:
+        encounterPhases.length > 1 && !cageNamed ? `${phase.label} · ${encounter}` : encounter,
+    });
+  };
   const supplementForBoundary = (boundary: WorkspaceRoomLifecycleBoundary) => {
     if (boundary.kind === 'roomEntered') {
       const phase = encounterPhases.find((candidate) => candidate.timelineAnchor === 'roomEntered');
-      return phase === undefined ? undefined : Object.freeze({ kind: 'encounter' as const, phase });
+      return phase === undefined ? undefined : encounterSupplement(phase, false);
     }
     if (boundary.kind === 'encounterStart') {
       const phase = encounterByPhase.get(boundary.phaseKey);
       return phase?.timelineAnchor === 'encounterStart'
-        ? Object.freeze({ kind: 'encounter' as const, phase })
+        ? encounterSupplement(phase, cageLabelByBoundaryKey.has(boundary.key))
         : undefined;
     }
     if (boundary.kind === 'nextPhase' && roomLocal.kind === 'ship') {

@@ -292,10 +292,15 @@ retain their declared defaults; generated customization can reset wholly to
 native control. Identity and customization are fixed on entry, so every
 phase's selector and launcher render in Room Overview; finding navigation
 selects Overview and focuses/highlights the launcher without automatically
-opening the dialog. The Room Timeline shows each phase read-only at its start
-with the events decided there (Fig Leaf, Gorgon, Aetos, a Nemesis response);
-their findings have their own phase-child owners and navigate to that Timeline
-control.
+opening the dialog. The Room Timeline names each phase's settled identity in
+its start boundary banner (Start encounter, or Room entered for a phase settled
+on entry): the encounter, prefixed by the phase in a multi-phase room unless a
+Fields cage label already names it, plus a selected Nemesis family. The banner
+identity only navigates to its Overview owner. The events decided at that start
+(Fig Leaf, Gorgon, Aetos) render in the banner row's editors only when present;
+a Nemesis response stays on its interaction row, and an Anomaly outcome is an
+Encounter ended event. Event findings have their own phase-child owners and
+navigate to that Timeline control.
 
 Opening generated composition is read-only. Edit initializes a complete value
 through the exact engine capability; Reset removes that value. Customized controls
@@ -411,8 +416,8 @@ directly, without a second child heading that repeats the action's subject.
 ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
 Timeline, Combat 1 Timeline, structurally active Combat 2 Timeline, and Room
 Doors. Overview owns encounter count, every phase's encounter and room features.
-Each phase tab contains its read-only encounter and events at Start encounter,
-its post-combat actions,
+Each phase tab contains its Start encounter banner and events, its post-combat
+actions,
 and the declaration-attached wheel editor at the following `nextPhase`
 boundary. Wheel 1's structural editor therefore appears under Intro, Wheel 2's
 under Combat 1 when active, and final Combat 2 has no following wheel editor.

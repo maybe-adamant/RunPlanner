@@ -464,9 +464,9 @@ export interface WorkspaceEncounterPhase {
   readonly identityLabel: string;
   readonly marker: WorkspaceMarker;
   /**
-   * Where the room Timeline shows this phase's read-only identity and its
-   * events; absent when it has neither a start nor an event. Identity and
-   * customization are always authored in the room Overview.
+   * The Timeline boundary whose banner names this phase's settled identity and
+   * whose row hosts its events; absent when it has neither a start nor an event.
+   * Identity and customization are always authored in the room Overview.
    */
   readonly timelineAnchor?: 'roomEntered' | 'encounterStart';
   readonly figLeaf?: {
