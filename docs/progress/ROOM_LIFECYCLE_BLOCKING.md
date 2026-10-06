@@ -133,8 +133,12 @@ composition at room preparation.
   application never infers it.
 - Products positioned before the blocking product are published from the
   selected attempt, not re-evaluated, with their candidate capabilities.
-- Rows of the blocking product keep the capabilities they reached; rows past
-  the failure inside the product stay editable with declared domains.
+- Every row of the blocking product keeps its row-level edits (order, removal,
+  purchase participation). Inner pickers are editable only where the selected
+  attempt reached them: rows before or at the failure keep their reached
+  capabilities; rows past the failure inside the product show their inner
+  pickers read-only with the unreached hint. Findings only arise at or before
+  the failure, so no repair is locked.
 - Rows after the blocking product, the room's Exit and later rooms show their
   authored values read-only (existing unreached hint); nothing after the
   blocking product is evaluated.
