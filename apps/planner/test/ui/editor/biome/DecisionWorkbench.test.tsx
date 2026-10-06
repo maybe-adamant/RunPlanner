@@ -63,7 +63,6 @@ import {
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
-  loadSurfaceNEntryFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
   nBiome,
   nOccurrenceIds,
@@ -228,7 +227,7 @@ function fTwoDoorBatchProject(): {
 }
 
 function nOpeningPreHubProject(): ProjectDocument {
-  return loadSurfaceNEntryFrontierProject();
+  return loadSurfaceNEntryFrontierResolvedProject();
 }
 
 function nOpeningDecisionProject(): ProjectDocument {

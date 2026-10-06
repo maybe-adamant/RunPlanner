@@ -1,10 +1,12 @@
 import type { Catalog } from '../../catalog-schema';
 import { sharedRewardLookups } from '../state/reward-lookups';
-import { isRequiredMissingInputFinding } from '../model';
+import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
+import { roomActionKey } from '../../authored-project/room-actions/key';
 import {
   createBiomeAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type SemanticAddress,
 } from '../../authored-project/addresses';
 import type {
   AuthoredBiomePlan,
@@ -42,9 +44,12 @@ import {
 import type { MaterializedBiomePrefix } from '../materialization';
 import { evaluateEncounterCandidatesInternal } from '../encounters/candidates';
 import type { EncounterEntryVowRanks } from '../arcana-fear';
-import { structurallyActiveEncounterRooms } from '../encounters/structural';
+import {
+  structurallyActiveEncounterRooms,
+  type EncounterStructuralSnapshot,
+} from '../encounters/structural';
 import { materializeBiomePrefix } from '../materialization';
-import { assessmentRepairOwner, type FindingRegionEntry } from '../finding-regions';
+import { assessmentRepairOwner, findingRegion, type FindingRegionEntry } from '../finding-regions';
 import { createAssessmentIssue } from '../assessment-issue';
 import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
@@ -107,6 +112,57 @@ function pendingHermesSpellDropLifecycleState(context: ProgressiveBiomeContext):
 
 function talentDropClosureLifecycleState(context: ProgressiveBiomeContext): boolean {
   return context.seed === undefined ? false : attestTalentDropsClosed(context.seed.rewardBranches);
+}
+
+/** Classify only the exact active action that stopped lifecycle execution. */
+function lifecycleBlockFindings(
+  blockedAt: SemanticAddress,
+  snapshot: EncounterStructuralSnapshot,
+): readonly SemanticFinding[] {
+  for (const room of structurallyActiveEncounterRooms(snapshot)) {
+    const row = room.roomActionRoster.rows.find((candidate) =>
+      blockedAt.kind === 'roomAction'
+        ? room.origin.kind === 'occurrence' &&
+          room.origin.occurrenceId === blockedAt.occurrenceId &&
+          candidate.key === blockedAt.actionKey
+        : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
+    );
+    if (row === undefined || row.stale) continue;
+    const reasons = room.roomActionRoster.issues.flatMap((issue): SemanticFinding[] =>
+      roomActionKey(issue.reference) === row.key &&
+      (issue.kind === 'dependency' || issue.kind === 'window')
+        ? [
+            Object.freeze({
+              code: 'roomActionOrderUnavailable',
+              severity: 'error',
+              phase: 'encounterResolution',
+              origin: blockedAt,
+              evidence: Object.freeze({
+                reason: issue.kind,
+                detail: issue.detail,
+                ...(issue.kind === 'dependency'
+                  ? {
+                      dependencyKind: issue.dependency.kind,
+                      checkpointUnavailable: issue.checkpointUnavailable === true,
+                    }
+                  : {}),
+              }),
+            }),
+          ]
+        : [],
+    );
+    if (reasons.length > 0) return Object.freeze(reasons);
+    break;
+  }
+  return Object.freeze([
+    Object.freeze({
+      code: 'roomActionPlacementRequired',
+      severity: 'error',
+      phase: 'completeness',
+      origin: blockedAt,
+      evidence: Object.freeze({}),
+    }),
+  ]);
 }
 
 interface ProgressiveGenerationAssembly {
@@ -232,7 +288,7 @@ function products(
   const lifecycleFigLeafState = figLeafLifecycleState(catalog, context);
   const lifecyclePendingSpellDrop = pendingHermesSpellDropLifecycleState(context);
   const lifecycleAllSpellInvested = talentDropClosureLifecycleState(context);
-  const history = composeBiomeHistoryPrefixWithEncounterValidation(
+  const composed = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
     context.routePosition,
@@ -242,9 +298,24 @@ function products(
     lifecycleAllSpellInvested,
     attestEffectiveShadowRank(context.loadout, context.seed?.rewardBranches),
   );
-  if (history === null) {
+  if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
   }
+  const history = composed.history;
+  // A stopped lifecycle blocks at its room action, after the last composed event.
+  const lifecycleFindings =
+    composed.blockedAt === undefined
+      ? Object.freeze([])
+      : lifecycleBlockFindings(composed.blockedAt, prefix);
+  const lastSequence = history.events.at(-1)?.sequence;
+  const lifecycleStop =
+    lastSequence === undefined
+      ? undefined
+      : Object.freeze({
+          kind: 'history' as const,
+          sequence: lastSequence,
+          boundary: 'after' as const,
+        });
   const rewards = evaluateBiomeRewardsAssemblyInternal(
     catalog,
     prefix,
@@ -287,10 +358,14 @@ function products(
       history,
       rewards: rewards.simulation,
       roomGeneration: roomGeneration.validation,
-      findings: Object.freeze([]),
+      findings: lifecycleFindings,
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,
-    findingRegions: Object.freeze([...roomGeneration.findingRegions, ...rewards.findingRegions]),
+    findingRegions: Object.freeze([
+      ...lifecycleFindings.map((finding) => findingRegion(finding, undefined, lifecycleStop)),
+      ...roomGeneration.findingRegions,
+      ...rewards.findingRegions,
+    ]),
     rewardsThrough: rewards.through,
   });
 }

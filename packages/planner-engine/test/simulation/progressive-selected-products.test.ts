@@ -83,12 +83,9 @@ const {
 } = fixture;
 
 describe('progressive selected and blocked products', () => {
-  it('publishes a repair leaf for a lifecycle block the assessment prefix never reaches', () => {
+  it('publishes a repair leaf for a lifecycle block in a complete biome', () => {
     // A saved project can drop a required room action: the lifecycle then blocks
-    // at that anchor, and the assessment prefix stops in an earlier room with no
-    // reason of its own. The biome is invalid either way, so the block publishes
-    // its own finding at the exact leaf rather than leaving the route assessment
-    // with an invalid biome it cannot explain or repair.
+    // at that anchor, which publishes its own finding at the exact leaf.
     const occurrenceId = createOccurrenceId('golden-h-combat02');
     const authored = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceFieldsCageOutcome',
@@ -149,6 +146,81 @@ describe('progressive selected and blocked products', () => {
     expect(evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'roomActionPlacementRequired', origin: address }),
     );
+    expect(evaluation.authoringHorizon).toEqual({
+      kind: 'incomplete',
+      blockedAfter: createOccurrenceAddress(goldenHBiome, occurrenceId),
+    });
+  });
+
+  it('blocks an incomplete biome at an unplaced required pickup before later authored rooms', () => {
+    const pickupHostId = createOccurrenceId('golden-f-b1-e1');
+    const missingDecisionSourceId = createOccurrenceId('golden-f-b3-e1');
+    const incomplete = incompleteAtMissingDecision(
+      createCompleteFGProject(),
+      goldenFBiome,
+      missingDecisionSourceId,
+    );
+    const project = decodeProjectDocument(
+      {
+        ...incomplete,
+        route: {
+          ...incomplete.route,
+          biomes: incomplete.route.biomes.map((biome) =>
+            biome.biomeKey !== 'F' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== pickupHostId
+                        ? occurrence
+                        : { ...occurrence, roomActions: { order: [] } },
+                    ),
+                  },
+                },
+          ),
+        },
+      },
+      catalog,
+    );
+    const pickup = createRoomActionAddress(
+      goldenFBiome,
+      pickupHostId,
+      roomActionKey({
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      }),
+    );
+    const missingDecision = createExitDecisionAddress(
+      goldenFBiome,
+      source(missingDecisionSourceId),
+    );
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    const f = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f?.authoring !== 'incomplete' || f.coverage.kind !== 'prefix' || !('history' in f)) {
+      throw new Error('F did not produce an incomplete assessed prefix');
+    }
+
+    expect(f.coverage.blockedAt).toEqual(pickup);
+    expect(f.requiredInput).toEqual(pickup);
+    expect(f.findings).toContainEqual(
+      expect.objectContaining({ code: 'roomActionPlacementRequired', origin: pickup }),
+    );
+    expect(assembly.evaluation.route.issue).toMatchObject({ owner: pickup, kind: 'incomplete' });
+    expect(assembly.evaluation.authoringHorizon).toEqual({
+      kind: 'incomplete',
+      blockedAfter: createOccurrenceAddress(goldenFBiome, pickupHostId),
+    });
+    // Later authored rooms and the missing decision are beyond the block.
+    expect(f.history.rooms.map((room) => room.origin)).not.toContainEqual(
+      expect.objectContaining({ occurrenceId: missingDecisionSourceId }),
+    );
+    expect(f.coverage.through.owner).not.toEqual(missingDecision);
+    expect(authoringReadinessAt(assembly, pickup)).toBe('editable');
+    expect(authoringReadinessAt(assembly, missingDecision)).toBe('locked');
   });
 
   it('retains reached Well and Shrine placement capabilities before biome completion', () => {

@@ -5,7 +5,11 @@ export {
   composeBiomeHistoryPrefixWithEncounterValidation,
   BiomeHistoryCompositionContractError,
 } from './compose';
-export type { EncounterValidatedBiomeHistory, FigLeafLifecycleState } from './composition';
+export type {
+  EncounterValidatedBiomeHistory,
+  EncounterValidatedBiomeHistoryPrefix,
+  FigLeafLifecycleState,
+} from './composition';
 export {
   projectEncounterRecordPreparation,
   projectOfferedExitCount,

@@ -17,7 +17,7 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import {
-  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
   loadSurfaceNProject,
   nBiome,
   nOccurrenceIds,
@@ -31,7 +31,7 @@ import { renderHubDecisionWorkbench } from '@planner-test/support/biome-workbenc
 
 describe('HubMembershipBoard', () => {
   it('keeps keyboard membership selection in its source batch after the Hub is authored', async () => {
-    let project = loadSurfaceNEntryFrontierProject();
+    let project = loadSurfaceNEntryFrontierResolvedProject();
     project = applyProjectCommand(project, catalog, {
       decision: createExitDecisionAddress(nBiome, {
         kind: 'occurrence',
