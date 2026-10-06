@@ -416,7 +416,7 @@ export function RoomActionsWorkbench({
           dropIndex={entry.dropIndex}
           editors={
             <>
-              {renderSupplement(entry.supplement)}
+              {entry.supplement?.kind === 'rewardWheel' ? null : renderSupplement(entry.supplement)}
               {content?.editors}
             </>
           }
@@ -432,6 +432,10 @@ export function RoomActionsWorkbench({
             : {})}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
+        {entry.supplement?.kind === 'rewardWheel' ? (
+          // A multi-line editor attached to a band continues below it across the row.
+          <TimelineRow kind="continuation" label={renderSupplement(entry.supplement)} span="wide" />
+        ) : null}
         {content?.rows}
         {entry.boundary.kind === 'encounterStart'
           ? null

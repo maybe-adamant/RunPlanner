@@ -16,8 +16,11 @@ export function TimelineRow({
   editors,
   placement,
   removal,
+  span,
   ...item
 }: Omit<LiHTMLAttributes<HTMLLIElement>, 'children'> & {
+  /** A wide continuation spans its label cell from the label column to the row end. */
+  readonly span?: 'wide';
   readonly kind: TimelineRowKind;
   readonly handle?: ReactNode;
   readonly ordinal?: ReactNode;
@@ -31,6 +34,7 @@ export function TimelineRow({
       {...item}
       className={className === undefined ? 'timeline-row' : `timeline-row ${className}`}
       data-timeline-row-kind={kind}
+      data-timeline-span={span}
     >
       <span aria-hidden="true" className="timeline-cell-handle" data-timeline-cell="handle">
         {handle}

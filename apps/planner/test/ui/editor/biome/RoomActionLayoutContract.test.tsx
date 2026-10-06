@@ -35,6 +35,13 @@ import {
 afterEach(cleanup);
 
 const cellOrder = ['handle', 'ordinal', 'label', 'editors', 'actions'];
+const multiLineEditors = [
+  '.reward-wheel',
+  '.transcendent-embryo-outcome-row',
+  '.scheduled-trait-effect-identity',
+  '.shop-family-offer-row',
+  '.room-overview-panel',
+].join(', ');
 
 /** Every timeline list child is one row of the five fixed cells and two action slots. */
 function expectTimelineRows(root: HTMLElement, kinds: Set<string>): number {
@@ -52,7 +59,20 @@ function expectTimelineRows(root: HTMLElement, kinds: Set<string>): number {
         [...actions.children].map((slot) => slot.getAttribute('data-timeline-action-slot')),
         where,
       ).toEqual(['placement', 'delete']);
-      kinds.add(row.getAttribute('data-timeline-row-kind') ?? '');
+      const kind = row.getAttribute('data-timeline-row-kind') ?? '';
+      kinds.add(kind);
+      // Bands hold only single-line controls; multi-line editors continue below them.
+      if (kind === 'boundary' || kind === 'checkpoint')
+        expect(row.querySelector(multiLineEditors), where).toBeNull();
+      if (row.querySelector('.reward-wheel') !== null) {
+        expect(kind, where).toBe('continuation');
+        expect(row.getAttribute('data-timeline-span'), where).toBe('wide');
+        expect(
+          row.querySelector(':scope > [data-timeline-cell="label"] > .reward-wheel'),
+          where,
+        ).not.toBeNull();
+        kinds.add('wide-continuation');
+      }
       const restore = actions.querySelector('[aria-label="Restore required action"]');
       if (restore?.parentElement?.getAttribute('data-timeline-action-slot') === 'placement')
         kinds.add('restore-required');
@@ -173,6 +193,7 @@ describe('Room Timeline row structure', () => {
         'effect',
         'insertion',
         'restore-required',
+        'wide-continuation',
       ]),
     );
   });
