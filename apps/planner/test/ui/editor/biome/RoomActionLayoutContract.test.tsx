@@ -281,6 +281,15 @@ describe('Room Timeline layout contract', () => {
     );
   });
 
+  it('spans a wide card from the handle column with its other cells hidden', () => {
+    const source = styles['room-workbenches']!.replace(/\s+/g, ' ');
+    const wide = ".timeline-row[data-timeline-span='wide']";
+    expect(source).toContain(`${wide} > [data-timeline-cell='label'] { grid-column: 1 / -1; }`);
+    expect(source).toContain(
+      `${wide} > :is( [data-timeline-cell='handle'], [data-timeline-cell='ordinal'], [data-timeline-cell='editors'], [data-timeline-cell='actions'] ) { display: none; }`,
+    );
+  });
+
   it('moves editors and actions below the label in one narrow rule', () => {
     const source = styles['room-workbenches']!;
     const narrow = source.indexOf('@container timeline-list (max-width: 52rem)');

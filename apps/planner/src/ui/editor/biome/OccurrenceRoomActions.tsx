@@ -421,7 +421,8 @@ export function RoomActionsWorkbench({
           }
           label={entry.label}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
-          {...(entry.supplement?.kind === 'encounter'
+          {...(entry.supplement?.kind === 'encounter' &&
+          entry.supplement.identityLabel !== undefined
             ? {
                 identity: {
                   label: entry.supplement.identityLabel,
@@ -571,6 +572,12 @@ export function RoomActionsWorkbench({
           ordinal={row.rank ?? '—'}
           label={
             <>
+              {supplement?.kind === 'nemesisInteraction' && supplement.familyLabel !== undefined ? (
+                <>
+                  <span className="timeline-row-family">{supplement.familyLabel}</span>
+                  <span aria-hidden="true">·</span>
+                </>
+              ) : null}
               {nemesisInteraction === undefined || nemesisInteraction.value === null ? (
                 <strong>{row.label}</strong>
               ) : (

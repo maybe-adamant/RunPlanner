@@ -202,8 +202,11 @@ export type WorkspaceRoomLifecycleTimelineEntry =
         | {
             readonly kind: 'encounter';
             readonly phase: WorkspaceEncounterPhase;
-            /** Settled identity named in the boundary banner; it is edited in the Overview. */
-            readonly identityLabel: string;
+            /**
+             * Settled identity named in the banner of a definitional encounter start; absent
+             * for an encounter settled on entry by interaction (Nemesis event, Empty).
+             */
+            readonly identityLabel?: string;
           }
         | { readonly kind: 'rewardWheel'; readonly wheel: WorkspaceRewardWheelDescriptor };
       /** Read-only identity of the cage assigned to this encounter cycle. */
@@ -221,6 +224,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly supplement?: {
         readonly kind: 'nemesisInteraction';
         readonly owner: NemesisRandomEventAddress;
+        /** Read-only selected family, carried by the movable interaction row. */
+        readonly familyLabel?: string;
       };
     }
   | {

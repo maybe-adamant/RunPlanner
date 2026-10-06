@@ -9,8 +9,11 @@
   --border: #3b3c46;
   --muted: #aaa7af;
   --danger: #e7a1a1;
+  --text: #ede8df;
+  /* Gold of chosen values: selected radios and checkboxes, focus and selected offer cards. */
+  --selection-accent: #e2b971;
 
-  color: #ede8df;
+  color: var(--text);
   background: #111216;
   font-size: 15px;
   font-family:

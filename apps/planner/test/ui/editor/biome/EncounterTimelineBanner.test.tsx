@@ -6,9 +6,12 @@ import {
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createRouteStartKeepsakeSelectionAddress,
+  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
+import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
@@ -104,7 +107,7 @@ describe('Encounter Timeline banner', () => {
     ]);
   });
 
-  it('folds the selected Nemesis family into the banner', () => {
+  it('moves the Nemesis family from the banner to its interaction row', () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -124,10 +127,15 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    const identities = [...timeline.querySelectorAll('.timeline-banner-identity')].map(
-      (identity) => identity.textContent,
+    // The movable interaction encounter names nothing on its banner; its row carries the family.
+    expect(timeline.querySelector('.timeline-banner-identity')).toBeNull();
+    expect(banner('Room entered').textContent).toBe('Room entered');
+    const row = [...timeline.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
+      (candidate) =>
+        candidate.dataset.roomActionKey ===
+        roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
     );
-    expect(identities).toEqual(['Nemesis event · Gold trade']);
+    expect(row?.querySelector('.timeline-row-family')?.textContent).toBe('Gold trade');
   });
 
   it('hosts a phase event in its start banner row and routes its finding to that control', () => {
@@ -169,5 +177,25 @@ describe('Encounter Timeline banner', () => {
     expect(
       (screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' }) as HTMLInputElement).checked,
     ).toBe(true);
+  });
+
+  it('keeps the Fields Passive Nemesis family off the Room entered banner', () => {
+    renderOccurrenceWorkbench(loadNemesisFieldsCheckpoint(), 'Underworld', 'H', (biome) =>
+      biome.nodes.find(
+        (node): node is WorkspaceOccurrenceWorkbenchNode =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.encounterPhases.some(
+            (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
+          ),
+      ),
+    );
+    openRoomTab('Room Timeline');
+    expect(banner('Room entered').textContent).toBe('Room entered');
+    const family = screen
+      .getByRole('region', { name: 'Room Timeline' })
+      .querySelector<HTMLElement>('[data-room-action-key] .timeline-row-family');
+    expect(family?.textContent).toBe('Free item');
+    // Combat cage banners keep their identity.
+    expect(bannerIdentities('Start encounter 1')).toEqual(['Combat']);
   });
 });
