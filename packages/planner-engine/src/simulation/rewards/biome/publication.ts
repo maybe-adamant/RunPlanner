@@ -19,19 +19,9 @@ import type {
   TraitOfferCandidateArtifacts,
 } from '../../candidates/trait-offer/capability';
 import type { FindingRegionEntry, HistoryFindingChronology } from '../../finding-regions';
-import type { BiomeRewardSimulation, RewardBranch } from '../model';
+import type { BiomeRewardSimulation } from '../model';
 import type { RoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import type { RewardProducerCandidateArtifacts } from '../producer-frontiers';
-import type { RunStateSnapshot } from '../run-state';
-
-export interface TraitChildSettlementCheckpoint {
-  readonly branches: readonly RewardBranch[];
-  readonly runStateSnapshots: readonly RunStateSnapshot[];
-}
-
-export interface TraitChildSettlementCheckpoints {
-  readonly at: (address: SemanticAddress) => TraitChildSettlementCheckpoint | undefined;
-}
 
 export interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
@@ -51,7 +41,6 @@ export interface BiomeRewardEvaluationAssembly {
   readonly hermesShrineArtifacts: HermesShrineCandidateArtifacts;
   readonly stygianWellArtifacts: StygianWellCandidateArtifacts;
   readonly fountainRarityArtifacts: FountainRarityCandidateArtifacts;
-  readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
   /** Each entered room's vow ranks, read by its encounter compositions. */
   readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;

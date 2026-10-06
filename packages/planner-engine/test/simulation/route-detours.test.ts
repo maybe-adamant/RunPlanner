@@ -197,6 +197,7 @@ function replaceIncomingReward(
   rewardType:
     | 'MaxHealthDrop'
     | 'MaxManaDrop'
+    | 'MetaCurrencyDrop'
     | 'MetaCurrencyBigDrop'
     | 'MetaCardPointsCommonBigDrop'
     | 'RoomMoneyDrop',
@@ -815,9 +816,9 @@ describe('route-detour simulation', () => {
       additional: firstAdditional,
       occurrenceId: firstChaos,
     });
-    project = replaceBatchStore(project, fBiome, opening, 'RunProgress');
-    project = addTarget(project, fBiome, opening, 'exit1', firstCombat, 'F_Combat01');
-    project = replaceIncomingReward(project, fBiome, firstCombat, 'MaxHealthDrop');
+    project = replaceBatchStore(project, fBiome, opening, 'MetaProgress');
+    project = addTarget(project, fBiome, opening, 'exit1', firstCombat, 'F_Combat02');
+    project = replaceIncomingReward(project, fBiome, firstCombat, 'MetaCurrencyDrop');
     project = setNormalSelection(project, fBiome, opening, 'exit1');
     const secondAdditional = createAdditionalExitAddress(fBiome, firstCombat, 'chaos');
     project = applyProjectCommand(project, catalog, {
@@ -826,7 +827,7 @@ describe('route-detour simulation', () => {
       occurrenceId: secondChaos,
     });
     project = replaceBatchStore(project, fBiome, firstCombat, 'RunProgress');
-    project = addTarget(project, fBiome, firstCombat, 'exit1', secondCombat, 'F_Combat02');
+    project = addTarget(project, fBiome, firstCombat, 'exit1', secondCombat, 'F_Combat03');
     project = replaceIncomingReward(project, fBiome, secondCombat, 'MaxManaDrop');
     const { snapshot, history } = prefix(project, fBiome);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 1);

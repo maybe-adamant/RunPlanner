@@ -10,6 +10,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   activateTemporaryArcana,
@@ -558,27 +559,15 @@ describe('Judgment fixed Boss lifecycle', () => {
     });
     if (evaluated.materializedPrefix.entryRoom === undefined)
       throw new Error('N terminal prefix must retain its fixed entry room');
-    const directPrefixRewards = evaluateBiomeRewardsAssemblyInternal(
-      catalog,
-      Object.freeze({
-        ...evaluated.materializedPrefix,
-        entryRoom: evaluated.materializedPrefix.entryRoom,
-      }),
-      evaluated.history,
-      ordinaryPositionFor(
-        catalog,
-        Object.freeze({
-          ...evaluated.materializedPrefix,
-          entryRoom: evaluated.materializedPrefix.entryRoom,
-        }),
+    // The Boss is published up to its completion; the Postboss is never entered.
+    const postboss = evaluated.materializedPrefix.fixedRoomLinks?.[1]?.target.origin;
+    expect(
+      evaluated.history.events.some(
+        (event) =>
+          postboss !== undefined &&
+          semanticAddressKey(event.origin) === semanticAddressKey(postboss),
       ),
-      project.route!.loadout,
-    );
-    expect(directPrefixRewards.simulation.findings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'judgmentOutcomeMissing', origin: owner }),
-      ]),
-    );
+    ).toBe(false);
     expect(evaluated.findings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'judgmentOutcomeMissing', origin: owner }),

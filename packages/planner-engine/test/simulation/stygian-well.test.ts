@@ -976,8 +976,8 @@ describe('Stygian Well consequential purchase state', () => {
 
     let refillProject = createUnderworldFWellCheckpoint(false);
     for (const [slotKey, itemKey] of [
-      ['healing', 'TemporaryDiscountTrait'],
-      ['secondLeft', 'TemporaryImprovedCastTrait'],
+      ['healing', 'ArmorBoostStore'],
+      ['secondLeft', 'TemporaryDiscountTrait'],
       ['secondRight', 'LimitedSwapTraitDrop'],
     ] as const) {
       refillProject = applyProjectCommand(refillProject, catalog, {
@@ -1002,7 +1002,7 @@ describe('Stygian Well consequential purchase state', () => {
     refillProject = applyProjectCommand(refillProject, catalog, {
       kind: 'SetStygianWellPurchase',
       occurrence: well,
-      generationKey: 'initial:healing',
+      generationKey: 'initial:secondLeft',
       purchased: true,
     });
     refillProject = applyProjectCommand(refillProject, catalog, {

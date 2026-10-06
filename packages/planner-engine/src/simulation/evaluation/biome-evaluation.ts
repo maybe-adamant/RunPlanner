@@ -207,14 +207,6 @@ function structurallyEligibleRunStateOwners(
       for (const local of visit.enteredLocalRooms) appendRoom(local);
     }
   }
-  const activeHubVisit =
-    prefix.frontier?.kind === 'hubVisit' && 'phase' in prefix.frontier
-      ? prefix.frontier
-      : undefined;
-  if (activeHubVisit !== undefined) {
-    appendRoom(activeHubVisit.target.room);
-    for (const local of activeHubVisit.enteredLocalRooms) appendRoom(local);
-  }
   for (const link of prefix.fixedRoomLinks ?? []) appendRoom(link.target);
   for (const room of enteredRooms) {
     if (room.lifecycleProfileKey === 'ShipCombatRoom') {
@@ -372,10 +364,11 @@ export function materializedBiomePrefixCoveragePoint(
     prefix.frontier?.kind === 'hubFountain'
   ) {
     if (prefix.frontier.kind === 'hubVisit' && 'phase' in prefix.frontier) {
+      // The visit's target exists and is entered; its own side doors are not generated.
       if (prefix.frontier.phase === 'targetLifecycle') {
         return Object.freeze({
-          owner: prefix.frontier.origin,
-          checkpoint: 'beforeTargetGeneration',
+          owner: prefix.frontier.target.origin,
+          checkpoint: 'afterTargetGeneration',
         });
       }
       if (prefix.frontier.phase === 'sideGeneration') {
@@ -818,7 +811,6 @@ export function evaluateBiomeAssembly(
       }),
       roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,
-      traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
       rewardsThrough: rewards.through,
     }),
   );

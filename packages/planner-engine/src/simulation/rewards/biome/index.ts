@@ -9,10 +9,6 @@ import type { BiomeRewardEvaluationAssembly } from './publication';
 import type { SemanticFinding } from '../../model';
 
 export type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
-export type {
-  TraitChildSettlementCheckpoint,
-  TraitChildSettlementCheckpoints,
-} from './publication';
 export { BiomeRewardSimulationContractError } from './biome-contract';
 
 /** The supported internal contact used by project evaluation composition. */

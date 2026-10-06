@@ -15,9 +15,12 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
+  createShopOfferAddress,
   createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -36,6 +39,7 @@ import {
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
+  nOccurrenceIds,
   nOpenSlotKeys,
 } from '@run-planner/test-fixtures/surface';
 
@@ -790,5 +794,140 @@ describe('Hub progressive biome evaluation', () => {
     expect(plan?.topology?.decisions).toContainEqual(
       expect.objectContaining({ kind: 'hub', actions: hubVisitActions(['combat05']) }),
     );
+  });
+});
+
+describe('Hub visit blocks', () => {
+  /** The selected N trait offer of one room's incoming reward, made illegal by a Heroic option. */
+  function illegalIncomingTraitOffer(occurrenceId: ReturnType<typeof createOccurrenceId>) {
+    const project = authorLegalTraitOffers(loadSurfaceNProject());
+    const evaluated = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'N',
+    );
+    const selected =
+      evaluated !== undefined && 'rewards' in evaluated
+        ? evaluated.rewards.selectedTraitOffers.find(
+            (offer) =>
+              offer.address.owner.kind === 'incomingReward' &&
+              offer.address.owner.occurrenceId === occurrenceId,
+          )
+        : undefined;
+    if (selected?.offer.kind !== 'traits') throw new Error(`${occurrenceId} has no trait offer`);
+    const [first, ...rest] = selected.offer.options;
+    if (first === undefined) throw new Error(`${occurrenceId} trait offer is empty`);
+    return Object.freeze({
+      trait: selected.address,
+      project: applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: selected.address,
+        value: { ...selected.offer, options: [{ ...first, rarity: 'Heroic' }, ...rest] },
+      }),
+    });
+  }
+
+  function blockedN(project: ReturnType<typeof loadSurfaceNProject>) {
+    const biome = simulateProject(catalog, project).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'N',
+    );
+    if (biome === undefined || !('assessmentPrefix' in biome) || biome.coverage.kind !== 'prefix')
+      throw new Error('N lost its blocked evaluation');
+    return Object.freeze({ ...biome, coverage: biome.coverage });
+  }
+
+  const entered = (biome: ReturnType<typeof blockedN>, occurrenceId: string) =>
+    biome.history.events.some(
+      (event) =>
+        event.kind === 'roomEntered' &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === occurrenceId,
+    );
+
+  it('keeps the Hub board and earlier visits before a blocking side-room Fig Leaf', () => {
+    const side = nLocalOccurrenceId('combat11', 'sideDoor1');
+    const phase = createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: side },
+      'Encounter',
+    );
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase,
+      value: true,
+    });
+    const n = blockedN(project);
+
+    expect(n.coverage.blockedAt).toMatchObject({ kind: 'figLeafPhase', encounter: phase });
+    expect(n.coverage.roomTimeline?.room).toEqual(createOccurrenceAddress(nBiome, side));
+    // The board and the earlier visits, each returned to the Hub, are kept.
+    expect(
+      n.history.ledgers.roomCreations.filter((event) => event.source === 'hubTarget'),
+    ).toHaveLength(9);
+    expect(
+      n.history.ledgers.roomRestores.filter((event) => event.restoreKind === 'hub'),
+    ).toHaveLength(3);
+    expect(entered(n, side)).toBe(true);
+    expect(n.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      origin: createHubVisitAddress(nBiome, 'hub', 4),
+      phase: 'localRoomLifecycle',
+      enteredLocalRooms: [expect.objectContaining({ occurrenceId: side })],
+    });
+  });
+
+  it('enters the Preboss after the Hub handoff when its Shop inventory blocks its Overview', () => {
+    const preboss = createOccurrenceAddress(nBiome, nOccurrenceIds.preboss);
+    const offer = createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon');
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'WeaponUpgradeDrop' },
+    });
+    const n = blockedN(project);
+
+    expect(n.coverage.blockedAt).toEqual(offer);
+    expect(n.coverage.roomTimeline).toBeUndefined();
+    // Every visit returned to the Hub before its handoff generated the Preboss.
+    expect(
+      n.history.ledgers.roomRestores.filter((event) => event.restoreKind === 'hub'),
+    ).toHaveLength(6);
+    expect(entered(n, nOccurrenceIds.preboss)).toBe(true);
+    expect(
+      n.history.events.some(
+        (event) =>
+          'operationIndex' in event &&
+          event.kind !== 'roomPrepared' &&
+          event.kind !== 'encounterRecorded' &&
+          event.kind !== 'offerPointMaterialized' &&
+          event.kind !== 'roomEntered' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(preboss),
+      ),
+    ).toBe(false);
+    // The Hub-owned handoff is reached; the Boss beyond the Preboss is not.
+    expect(n.assessmentPrefix?.decisions.at(-1)).toMatchObject({
+      kind: 'batch',
+      parent: { origin: { kind: 'hubRoom' } },
+      targets: [expect.objectContaining({ room: expect.objectContaining({ origin: preboss }) })],
+    });
+    expect(n.assessmentPrefix?.fixedRoomLinks).toEqual([]);
+  });
+
+  it('enters a Hub visit target whose reward blocks its Timeline', () => {
+    const target = nOccurrenceId('combat11');
+    const { trait, project } = illegalIncomingTraitOffer(target);
+    const n = blockedN(project);
+
+    expect(n.coverage.blockedAt).toEqual(trait);
+    expect(n.coverage.roomTimeline?.room).toEqual(createOccurrenceAddress(nBiome, target));
+    expect(entered(n, target)).toBe(true);
+    expect(n.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'hubVisit',
+      origin: createHubVisitAddress(nBiome, 'hub', 4),
+      phase: 'targetLifecycle',
+    });
   });
 });

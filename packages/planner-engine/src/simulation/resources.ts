@@ -101,9 +101,8 @@ export function resourcePlacementFindingRegions(
         findingRegion(
           finding,
           ownerRegion(finding.origin),
-          event.kind === 'roomExited'
-            ? { kind: 'history', sequence: event.sequence, boundary: 'at' }
-            : undefined,
+          // An unpicked host's placement is assessed as its door is created.
+          { kind: 'history', sequence: event.sequence, boundary: 'at' },
         ),
       ),
   );

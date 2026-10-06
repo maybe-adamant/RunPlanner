@@ -12,7 +12,7 @@ const {
   defaultRouteLoadout,
   EMPTY_RESOURCE_PLACEMENTS,
   evaluateProgressiveBiomeAssembly,
-  evaluateProgressiveBiomeAssemblyBeforeClamp,
+  evaluateSelectedProgressiveBiomeAssembly,
   createCompleteFGProject,
   createExitDecisionAddress,
   createFGenerationProject,
@@ -373,12 +373,7 @@ describe('progressive prefix and frontier products', () => {
       },
     } as const;
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenHBiome, plan, options);
-    const selected = evaluateProgressiveBiomeAssemblyBeforeClamp(
-      catalog,
-      goldenHBiome,
-      plan,
-      options,
-    );
+    const selected = evaluateSelectedProgressiveBiomeAssembly(catalog, goldenHBiome, plan, options);
     const blockedDecision = createExitDecisionAddress(
       goldenHBiome,
       source(createOccurrenceId('golden-h-miniboss01')),

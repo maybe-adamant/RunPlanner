@@ -1,4 +1,4 @@
-import { semanticAddressKey, type SemanticAddress } from '../../../authored-project/addresses';
+import { semanticAddressKey } from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
 import {
@@ -25,12 +25,10 @@ import { type ChronologyWalkContext, type ChronologyWalkState } from './chronolo
 import {
   publishBiomeRewardEvaluationAssembly,
   type BiomeRewardEvaluationAssembly,
-  type TraitChildSettlementCheckpoints,
 } from './publication';
 
 import { createRewardProducerCandidateArtifacts } from '../producer-frontiers';
 import { publicRewardBranch } from '../branch-lifecycle';
-import { mergeEquivalentRewardBranches } from '../branch-primitives';
 import { createJudgmentArcanaCandidateArtifacts } from '../../arcana-fear';
 import {
   createFigurineArcanaCandidateArtifacts,
@@ -44,6 +42,8 @@ export function publishChronology(
   walk: ChronologyWalkState,
   accumulation: ChronologyAccumulation,
   through: BiomeRewardEvaluationAssembly['through'],
+  /** The last history sequence the published walk reached; producer acquisitions stop there. */
+  reachedThrough = Number.POSITIVE_INFINITY,
 ): BiomeRewardEvaluationAssembly {
   const { catalog, snapshot } = context;
   const immutableFindingRegions = accumulation.findingRegions;
@@ -84,22 +84,6 @@ export function publishChronology(
     discoveredRunStateSnapshots,
     discoveredRunStateSnapshots,
   );
-  const traitChildSettlementProducts = new Map(
-    [...accumulation.traitChildSettlements].map(([key, checkpoint]) =>
-      Object.freeze([
-        key,
-        Object.freeze({
-          branches: Object.freeze(
-            mergeEquivalentRewardBranches(checkpoint.branches).map(publicRewardBranch),
-          ),
-          runStateSnapshots: Object.freeze([...checkpoint.runStateSnapshots.values()]),
-        }),
-      ] as const),
-    ),
-  );
-  const traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints = Object.freeze({
-    at: (address: SemanticAddress) => traitChildSettlementProducts.get(semanticAddressKey(address)),
-  });
   const publishedHermesShrineAssessments = Object.freeze(
     [...walk.hermesShrineAssessments.values()].map(({ origin, assessments }) => {
       const travelDealRefills = walk.hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
@@ -216,7 +200,10 @@ export function publishChronology(
   });
   return publishBiomeRewardEvaluationAssembly({
     simulation,
-    producerArtifacts: createRewardProducerCandidateArtifacts(accumulation.producerFrontiers),
+    producerArtifacts: createRewardProducerCandidateArtifacts(
+      accumulation.producerFrontiers,
+      reachedThrough,
+    ),
     lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(
       walk.shipLifecycleContexts,
       accumulation.timedEffects,
@@ -281,7 +268,6 @@ export function publishChronology(
         ]),
       ),
     ),
-    traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,
     through,

@@ -30,7 +30,7 @@ vi.mock('../../src/simulation/rewards/biome', async (importOriginal) => {
 });
 
 describe('complete-invalid progressive work count', () => {
-  it('reuses the selected full products before the two bounded clamp replays', () => {
+  it('publishes the selected full products through the block without replaying a prefix', () => {
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
@@ -43,8 +43,6 @@ describe('complete-invalid progressive work count', () => {
     expect(evaluation.status).toBe('invalid');
     expect(rewardAssemblyCalls.filter((call) => call.biomeKey === 'F')).toEqual([
       { biomeKey: 'F', materializationKind: 'biome' },
-      { biomeKey: 'F', materializationKind: 'biomePrefix' },
-      { biomeKey: 'F', materializationKind: 'biomePrefix' },
     ]);
   });
 });

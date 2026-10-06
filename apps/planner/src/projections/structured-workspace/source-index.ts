@@ -328,33 +328,22 @@ function appendHubVisitOwners(keys: Set<string>, visit: CanonicalHubVisit): void
   appendOwner(keys, visit.hubRestore.room.origin);
 }
 
-function appendHubOwners(
-  keys: Set<string>,
-  hub: CanonicalHubDecision,
-  omittedBoardTargetKey?: string,
-): void {
+function appendHubOwners(keys: Set<string>, hub: CanonicalHubDecision): void {
   appendOwner(keys, hub.origin);
   appendOwner(keys, hub.room.origin);
   appendOwner(keys, hub.board.origin);
   appendOwner(keys, hub.board.room.origin);
-  for (const target of hub.board.targets) {
-    if (semanticAddressKey(target.origin) !== omittedBoardTargetKey)
-      appendHubTargetOwners(keys, target);
-  }
+  for (const target of hub.board.targets) appendHubTargetOwners(keys, target);
   for (const visit of hub.visits) appendHubVisitOwners(keys, visit);
 }
 
-function appendDecisionOwners(
-  keys: Set<string>,
-  decision: CanonicalDecision,
-  omittedHubBoardTargetKey?: string,
-): void {
+function appendDecisionOwners(keys: Set<string>, decision: CanonicalDecision): void {
   switch (decision.kind) {
     case 'batch':
       appendBatchOwners(keys, decision);
       return;
     case 'hub':
-      appendHubOwners(keys, decision, omittedHubBoardTargetKey);
+      appendHubOwners(keys, decision);
       return;
   }
 }
@@ -378,10 +367,6 @@ function appendPrefixOwners(
 ): void {
   const frontier = prefix.frontier;
   const hubVisitFrontier = isHubVisitFrontier(frontier) ? frontier : undefined;
-  const omittedHubTargetKey =
-    hubVisitFrontier?.phase === 'targetLifecycle'
-      ? semanticAddressKey(hubVisitFrontier.target.origin)
-      : undefined;
   const derivedCoverage = materializedBiomePrefixCoveragePoint(prefix);
   if (
     derivedCoverage.checkpoint !== evaluation.coverage.through.checkpoint ||
@@ -394,12 +379,7 @@ function appendPrefixOwners(
   }
 
   if (prefix.entryRoom !== undefined) appendAuthoredRoomOwners(keys, prefix.entryRoom);
-  for (const decision of prefix.decisions) {
-    // A clamped target-lifecycle frontier still retains its board target for
-    // diagnosis, but coverage stops before that target. Earlier completed
-    // visits remain independently covered even if malformed state reuses it.
-    appendDecisionOwners(keys, decision, omittedHubTargetKey);
-  }
+  for (const decision of prefix.decisions) appendDecisionOwners(keys, decision);
   for (const link of prefix.fixedRoomLinks ?? []) appendAuthoredRoomOwners(keys, link.target);
 
   if (frontier?.kind === 'exitDecision') {
@@ -412,15 +392,14 @@ function appendPrefixOwners(
       appendAdditionalContinuationOwners(keys, continuation);
     }
   }
+  // A stopped visit has entered its target: the cut publishes it through the stop.
   if (hubVisitFrontier !== undefined) {
-    if (hubVisitFrontier.phase !== 'targetLifecycle') {
-      appendOwner(keys, hubVisitFrontier.origin);
-      appendHubTargetOwners(keys, hubVisitFrontier.target);
-      for (const local of hubVisitFrontier.localSlots) appendLocalVisitRoomOwners(keys, local);
-      for (const restore of hubVisitFrontier.parentRestores) {
-        appendOwner(keys, restore.after);
-        appendOwner(keys, restore.room.origin);
-      }
+    appendOwner(keys, hubVisitFrontier.origin);
+    appendHubTargetOwners(keys, hubVisitFrontier.target);
+    for (const local of hubVisitFrontier.localSlots) appendLocalVisitRoomOwners(keys, local);
+    for (const restore of hubVisitFrontier.parentRestores) {
+      appendOwner(keys, restore.after);
+      appendOwner(keys, restore.room.origin);
     }
   }
 

@@ -99,7 +99,7 @@ describe('candidate application boundary', () => {
       const relativePath = relative(candidateRoot, path).replaceAll('\\', '/');
       for (const forbidden of [
         'evaluateProgressiveBiomeAssembly',
-        'evaluateProgressiveBiomeAssemblyBeforeClamp',
+        'evaluateSelectedProgressiveBiomeAssembly',
       ]) {
         expect(
           source,

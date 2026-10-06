@@ -30,10 +30,6 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
-import {
-  phasePreparedByBlock,
-  phaseTakesEffectBeforeBlock,
-} from '../../src/simulation/progressive/selected-products';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -57,7 +53,7 @@ const {
   createTraitOfferAddress,
   defaultRouteLoadout,
   evaluateProgressiveBiomeAssembly,
-  evaluateProgressiveBiomeAssemblyBeforeClamp,
+  evaluateSelectedProgressiveBiomeAssembly,
   fGenerationBaselineBatches,
   fGenerationBiome,
   fGenerationOccurrenceId,
@@ -85,63 +81,6 @@ const {
   source,
   traitGiverForAcquisitionRole,
 } = fixture;
-
-describe('encounter phases prepared by a room-local stop', () => {
-  const prepared = Object.freeze({
-    kind: 'history' as const,
-    sequence: 456,
-    boundary: 'at' as const,
-  });
-
-  it('retains every phase of a room prepared at or before the stop', () => {
-    // An Overview stop at the preparation itself keeps every phase's support.
-    expect(phasePreparedByBlock(prepared, { historySequence: 456, historyBoundary: 'at' })).toBe(
-      true,
-    );
-    expect(
-      phasePreparedByBlock(prepared, { historySequence: 463, historyBoundary: 'before' }),
-    ).toBe(true);
-  });
-
-  it('retains nothing for a stop before the room is prepared', () => {
-    expect(
-      phasePreparedByBlock(prepared, { historySequence: 456, historyBoundary: 'before' }),
-    ).toBe(false);
-    expect(phasePreparedByBlock(undefined, { historySequence: 463, historyBoundary: 'at' })).toBe(
-      false,
-    );
-  });
-});
-
-describe('contacts taking effect before a room-local stop', () => {
-  const at = (sequence: number, boundary: 'before' | 'at' | 'after') =>
-    Object.freeze({ kind: 'history' as const, sequence, boundary });
-  const stop = { historySequence: 463, historyBoundary: 'before' as const };
-
-  it('retains a contact that takes effect before the stop', () => {
-    expect(phaseTakesEffectBeforeBlock(at(458, 'before'), stop)).toBe(true);
-    // Room entry precedes a same-sequence stop only by its boundary.
-    expect(
-      phaseTakesEffectBeforeBlock(at(456, 'at'), {
-        historySequence: 456,
-        historyBoundary: 'after',
-      }),
-    ).toBe(true);
-  });
-
-  it('retains nothing for a contact taking effect exactly at or after the stop', () => {
-    expect(phaseTakesEffectBeforeBlock(at(463, 'before'), stop)).toBe(false);
-    expect(phaseTakesEffectBeforeBlock(at(468, 'before'), stop)).toBe(false);
-  });
-
-  it('retains nothing extra for a stop without a history position', () => {
-    expect(phaseTakesEffectBeforeBlock(at(458, 'before'), {})).toBe(false);
-  });
-
-  it('retains nothing for a contact the prefix never reached', () => {
-    expect(phaseTakesEffectBeforeBlock(undefined, stop)).toBe(false);
-  });
-});
 
 describe('progressive selected and blocked products', () => {
   it('publishes a repair leaf for a lifecycle block the assessment prefix never reaches', () => {
@@ -955,7 +894,7 @@ describe('progressive selected and blocked products', () => {
       loadout: defaultRouteLoadout,
       seed,
     });
-    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, goldenGBiome, plan, {
+    const beforeClamp = evaluateSelectedProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Underworld', 'G'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
@@ -1017,7 +956,7 @@ describe('progressive selected and blocked products', () => {
       loadout: defaultRouteLoadout,
       seed: blockedSeed,
     });
-    const blockedBeforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(
+    const selectedAttempt = evaluateSelectedProgressiveBiomeAssembly(
       catalog,
       goldenGBiome,
       blockedPlan,
@@ -1037,10 +976,10 @@ describe('progressive selected and blocked products', () => {
     const retainedBlockedProducer =
       blockedClamped?.candidateArtifacts.rewardProducers.at(blockedOwner);
     expect(retainedBlockedProducer).toMatchObject({ acquisitionHorizon: 'ownEnteredLifecycle' });
-    expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(blockedOwner)).toMatchObject({
+    expect(selectedAttempt?.candidateArtifacts.rewardProducers.at(blockedOwner)).toMatchObject({
       acquisitionHorizon: 'ownEnteredLifecycle',
     });
-    expect(blockedBeforeClamp?.candidateArtifacts.rewardProducers.at(foreignOwner)).toBeUndefined();
+    expect(selectedAttempt?.candidateArtifacts.rewardProducers.at(foreignOwner)).toBeUndefined();
     expect(
       blockedClamped?.candidateArtifacts.rewardProducers.at(
         createIncomingRewardAddress(
@@ -1182,7 +1121,7 @@ describe('progressive selected and blocked products', () => {
       loadout: defaultRouteLoadout,
       seed,
     });
-    const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, {
+    const beforeClamp = evaluateSelectedProgressiveBiomeAssembly(catalog, oBiome, plan, {
       routePosition: ordinaryRoutePosition(catalog, 'Surface', 'O'),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,

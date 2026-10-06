@@ -14,7 +14,6 @@ import type {
   CanonicalRoomRestore,
   CanonicalTarget,
   MaterializedBiomePrefix,
-  MaterializedHubVisitFrontier,
 } from '../materialization';
 import { selectedBatchContinuation, selectedBatchContinuationRoom } from '../materialization';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
@@ -293,53 +292,6 @@ function appendVisit(
 }
 
 /**
- * A blocked visit is not a completed visit. Its frontier carries exactly the
- * lifecycle phase reached before the invalid owner, so replay never invents a
- * later local entry, parent restore, or return to the persistent Hub.
- */
-function appendHubVisitFrontier(
-  writer: HistorySegmentWriter,
-  catalog: Catalog,
-  visit: MaterializedHubVisitFrontier,
-): void {
-  if (visit.phase === 'targetLifecycle') {
-    appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
-      stopAfterOutgoing: true,
-    });
-    return;
-  }
-  if (visit.phase === 'sideGeneration') {
-    appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
-      outgoing(outgoingWriter) {
-        appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
-      },
-      stopAfterOutgoing: true,
-    });
-    return;
-  }
-  appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
-    outgoing(outgoingWriter) {
-      appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
-    },
-  });
-  for (const [index, local] of visit.enteredLocalRooms.entries()) {
-    if (!local.entered || local.localVisit.generation !== 'generated') {
-      fail(`Hub visit ${visit.origin.visitIndex} enters an unavailable frontier side room`);
-    }
-    appendCanonicalRoomLifecycle(writer, catalog, local, fail);
-    const restore = visit.parentRestores[index];
-    if (restore === undefined) {
-      if (index === visit.enteredLocalRooms.length - 1) return;
-      fail(`Hub visit ${visit.origin.visitIndex} loses a non-final parent restore`);
-    }
-    appendRestore(writer, restore, visit.target.room, 'parent');
-  }
-  if (visit.enteredLocalRooms.length === 0) {
-    fail(`Hub visit ${visit.origin.visitIndex} local lifecycle frontier has no stopping room`);
-  }
-}
-
-/**
  * A Hub owns both its declaration-ordered board and its eventual Handoff
  * batch. The board is generated when the Hub reaches its outgoing checkpoint;
  * the Handoff target is appended after the chosen visits, but remains in that
@@ -396,7 +348,6 @@ interface ClockworkAwareLifecycleOptions {
   readonly stopAfterOutgoing?: boolean;
   readonly continueThroughAcquisitionPoint?: string;
   readonly continueThroughPostOutgoingActions?: boolean;
-  readonly stopAfterOverview?: boolean;
   readonly beforeEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
   readonly afterEvent?: (writer: HistorySegmentWriter, event: RoomLifecycleEvent) => void;
 }
@@ -456,9 +407,6 @@ function appendClockworkAwareRoomLifecycle(
     ...(options.continueThroughPostOutgoingActions === undefined
       ? {}
       : { continueThroughPostOutgoingActions: options.continueThroughPostOutgoingActions }),
-    ...(options.stopAfterOverview === undefined
-      ? {}
-      : { stopAfterOverview: options.stopAfterOverview }),
     beforeEvent(beforeWriter, event) {
       options.beforeEvent?.(beforeWriter, event);
       if (
@@ -484,7 +432,7 @@ function appendClockworkAwareRoomLifecycle(
       options.afterEvent?.(afterWriter, event);
     },
   });
-  if (room.clockworkReward !== undefined && !emitted && options.stopAfterOverview !== true) {
+  if (room.clockworkReward !== undefined && !emitted) {
     fail(`${room.gameName} has no Clockwork reward point`);
   }
 }
@@ -815,24 +763,9 @@ function composeBiomeHistoryPrefixResult(
               }
               appendGeneratedTargets(outgoingWriter, current.origin, frontier.targets);
             },
-            // A block inside the selected target follows the source room's
-            // commit and exit; only the target's own lifecycle is withheld.
-            ...(frontier.sourceExited === true
-              ? {}
-              : { stopAfterOutgoing: true, ...postOutgoingAcquisitionOption(catalog, current) }),
+            stopAfterOutgoing: true,
+            ...postOutgoingAcquisitionOption(catalog, current),
           });
-          if (frontier.selectedTimeline === true)
-            fail('a Timeline cut publishes the selected history and is never composed');
-          if (frontier.sourceExited === true && frontier.selectedOverview === true) {
-            if (frontier.partialBatch === undefined)
-              fail('an entered Overview frontier has no generated batch');
-            appendClockworkAwareRoomLifecycle(
-              writer,
-              catalog,
-              selectedBatchContinuationRoom(frontier.partialBatch),
-              { stopAfterOverview: true },
-            );
-          }
         }
       } else if (snapshot.frontier?.kind === 'hubBoard') {
         const retainedHub = snapshot.decisions.some((decision) => decision.kind === 'hub');
@@ -844,8 +777,7 @@ function composeBiomeHistoryPrefixResult(
           fail('retained Hub board did not restore the Hub lifecycle');
         }
       } else if (snapshot.frontier?.kind === 'hubVisit' && 'phase' in snapshot.frontier) {
-        if (current.kind !== 'hub') fail('Hub visit frontier does not follow the persistent Hub');
-        appendHubVisitFrontier(writer, catalog, snapshot.frontier);
+        fail('a Hub visit cut publishes the selected history and is never composed');
       } else if (snapshot.frontier?.kind === 'hubFountain' && current.kind !== 'hub') {
         fail('Hub fountain frontier does not follow the persistent Hub');
       }

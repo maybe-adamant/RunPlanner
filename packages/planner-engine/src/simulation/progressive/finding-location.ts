@@ -7,7 +7,6 @@ import {
   type AcquisitionRoleAddress,
   type OccurrenceAddress,
   type SemanticAddress,
-  type TargetAddress,
   type TraitOfferAddress,
 } from '../../authored-project/addresses';
 import type { BiomeHistoryPrefix } from '../history';
@@ -29,15 +28,8 @@ import {
 import type { BiomeRewardSimulation } from '../rewards';
 import type { BiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import type { RewardProducerOwnerAddress } from '../rewards/producer-frontiers';
-import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import type { BiomeRewardEvaluationAssembly } from '../rewards/biome/publication';
 import type { BiomeGenerationValidation, ProgressiveBiomeEvaluation } from './products';
-
-export interface BlockedAncestorChain {
-  readonly rewardOwner?: RewardProducerOwnerAddress | undefined;
-  readonly occurrenceOwner?: OccurrenceAddress | undefined;
-  readonly target?: TargetAddress | undefined;
-}
 
 function traitOfferAncestor(address: SemanticAddress): TraitOfferAddress | undefined {
   switch (address.kind) {
@@ -80,9 +72,7 @@ function findingParentAddress(address: SemanticAddress): SemanticAddress | undef
   }
 }
 
-export function rewardOwnerAddress(
-  address: SemanticAddress,
-): RewardProducerOwnerAddress | undefined {
+function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddress | undefined {
   const trait = traitOfferAncestor(address);
   if (trait !== undefined) return rewardOwnerAddress(trait.owner);
   switch (address.kind) {
@@ -99,9 +89,7 @@ export function rewardOwnerAddress(
   }
 }
 
-export function acquisitionRoleAncestor(
-  address: SemanticAddress,
-): AcquisitionRoleAddress | undefined {
+function acquisitionRoleAncestor(address: SemanticAddress): AcquisitionRoleAddress | undefined {
   if (address.kind === 'acquisitionRole') return address;
   const trait = traitOfferAncestor(address);
   if (trait !== undefined) return createAcquisitionRoleAddress(trait.owner, trait.acquisitionRole);
@@ -159,71 +147,18 @@ export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddr
   return undefined;
 }
 
-export function targetForOccurrence(
-  prefix: CanonicalBiome | MaterializedBiomePrefix,
-  occurrenceId: OccurrenceAddress['occurrenceId'],
-): TargetAddress | undefined {
-  for (const { decision } of prefixDecisionEntries(prefix)) {
-    if (decision.kind === 'batch') {
-      const target = decision.targets.find(
-        (candidate) => candidate.room.occurrenceId === occurrenceId,
-      );
-      if (target !== undefined) return target.origin;
-      continue;
-    }
-    // Hub targets are HubSlotAddress owners rather than ordinary TargetAddress
-    // owners; their parent-local capability is represented by the lifecycle
-    // artifact, not the ordinary room-target candidate surface.
-  }
-  return undefined;
-}
-
-export function blockedAncestorChain(
-  prefix: CanonicalBiome | MaterializedBiomePrefix,
-  located: LocatedFinding,
-): BlockedAncestorChain {
-  const occurrenceOwner = occurrenceOwnerAddress(located.finding.origin);
-  const target =
-    located.decisionIndex < 0
-      ? occurrenceOwner === undefined
-        ? undefined
-        : targetForOccurrence(prefix, occurrenceOwner.occurrenceId)
-      : (() => {
-          const entry = prefixDecisionEntries(prefix).find(
-            (candidate) => candidate.decisionIndex === located.decisionIndex,
-          );
-          if (entry?.decision.kind === 'batch' && located.targetIndex !== undefined) {
-            return entry.decision.targets[located.targetIndex]?.origin;
-          }
-          return occurrenceOwner === undefined
-            ? undefined
-            : targetForOccurrence(prefix, occurrenceOwner.occurrenceId);
-        })();
-  return Object.freeze({
-    ...(rewardOwnerAddress(located.finding.origin) === undefined
-      ? {}
-      : { rewardOwner: rewardOwnerAddress(located.finding.origin) }),
-    ...(occurrenceOwner === undefined ? {} : { occurrenceOwner }),
-    ...(target === undefined ? {} : { target }),
-  });
-}
-
 /**
- * Products from a complete canonical attempt that remain authoritative while
- * the authored prefix is replayed at its first unsupported region. The
- * complete path has already paid to produce these opaque capabilities and
- * finding regions; the clamp must not rebuild the same full prefix merely to
- * rediscover them.
+ * Products of the complete selected attempt. A block publishes them through
+ * its chronology cut; nothing is evaluated again.
  */
 export interface ProgressiveBiomeSelectedProducts {
-  /** The complete history assembled before progressive validity clamping. */
+  /** The complete history assembled before the block is located. */
   readonly history: BiomeHistoryPrefix;
   /** Generation validation already evaluated against that complete history. */
   readonly roomGeneration: BiomeGenerationValidation;
   readonly rewards: BiomeRewardSimulation;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
-  readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   /** The same reward walk published through an earlier chronology cut. */
   readonly rewardsThrough: BiomeRewardEvaluationAssembly['through'];
 }
@@ -406,7 +341,7 @@ function localSlotIndex(visit: CanonicalHubVisit, address: SemanticAddress): num
   return index < 0 ? undefined : index;
 }
 
-export interface HubVisitFindingLocation {
+interface HubVisitFindingLocation {
   readonly visitIndex: number;
   readonly phase: MaterializedHubVisitFrontier['phase'];
   readonly localLifecycleIndex?: number;
@@ -597,8 +532,7 @@ function locateStructuralOwner(
     });
   }
   // Fixed Boss/Postboss occurrences are real ordered lifecycle owners but are
-  // not ordinary topology decisions. Preserve their exact position so prefix
-  // clamping can retain prior rooms without admitting later fixed rooms.
+  // not ordinary topology decisions; they follow every decision in order.
   if (
     'routeKey' in address &&
     'biomeKey' in address &&
@@ -618,9 +552,15 @@ function locateStructuralOwner(
     });
   }
   // Retained Pool sales are occurrence-owned Postboss actions. They remain
-  // repairable at the completed biome's final fixed-room region even when
-  // their slot was cleared and therefore no longer has an active contribution.
+  // repairable at their room even when their slot was cleared and therefore
+  // no longer has an active contribution.
   const automaticRoomAction = address.kind === 'roomAction' ? address : undefined;
+  const automaticFixedRoomIndex =
+    automaticRoomAction === undefined
+      ? -1
+      : (prefix.fixedRoomLinks ?? []).findIndex(
+          (link) => link.target.occurrenceId === automaticRoomAction.occurrenceId,
+        );
   if (
     automaticRoomAction !== undefined &&
     automaticRoomAction.routeKey === prefix.routeKey &&
@@ -633,6 +573,7 @@ function locateStructuralOwner(
   ) {
     return Object.freeze({
       decisionIndex: prefix.decisions.length - 1,
+      ...(automaticFixedRoomIndex < 0 ? {} : { fixedRoomIndex: automaticFixedRoomIndex }),
       ...(historyChronology === undefined
         ? {}
         : {
@@ -920,10 +861,6 @@ export function findingLocation(located: LocatedFinding): OwnerLocation {
       ? {}
       : { hubFountainPrecedingVisitCount: located.hubFountainPrecedingVisitCount }),
   });
-}
-
-export function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
-  return ownerOrigin(finding.origin);
 }
 
 export function locateFinding(

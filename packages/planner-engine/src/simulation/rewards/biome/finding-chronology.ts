@@ -1,6 +1,6 @@
 import type { FindingChronology, HistoryFindingChronology } from '../../finding-regions';
 import type { BiomeRewardSnapshot } from './evaluation-contract';
-import { preparedHubVisitFrontier, samePreparedRewardRoomOwner } from './prepared-inputs';
+import { samePreparedRewardRoomOwner } from './prepared-inputs';
 
 export type RewardRoomOwner = {
   readonly kind: string;
@@ -46,27 +46,7 @@ function hubFindingChronology(
         });
     }
   }
-  const frontier = preparedHubVisitFrontier(snapshot);
-  if (frontier === undefined) return undefined;
-  if (samePreparedRewardRoomOwner(frontier.target.room.origin, owner))
-    return Object.freeze({
-      kind: 'hubVisit',
-      visitIndex: frontier.origin.visitIndex - 1,
-      phase: 'targetLifecycle',
-      history: historyFindingChronology(sequence),
-    });
-  const local = frontier.localSlots.find((slot) => samePreparedRewardRoomOwner(slot.origin, owner));
-  if (local === undefined) return undefined;
-  const localLifecycleIndex = frontier.enteredLocalRooms.findIndex((slot) =>
-    samePreparedRewardRoomOwner(slot.origin, local.origin),
-  );
-  return Object.freeze({
-    kind: 'hubVisit',
-    visitIndex: frontier.origin.visitIndex - 1,
-    phase,
-    ...(phase === 'localRoomLifecycle' && localLifecycleIndex >= 0 ? { localLifecycleIndex } : {}),
-    history: historyFindingChronology(sequence),
-  });
+  return undefined;
 }
 
 export function rewardFindingChronologyForRoom(

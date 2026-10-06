@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   createAcquisitionRoleAddress,
+  createBiomeAddress,
+  createAdditionalExitAddress,
   createEncounterPhaseAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
@@ -20,7 +22,9 @@ import {
   generatedEncounterSupportForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
+  createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNOProject,
+  nBiome,
   qBiome,
   qOccurrenceIds,
   surfaceShrineDeliveriesProject,
@@ -34,9 +38,11 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
+  createUnderworldFPoolCheckpoint,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { freshFileRouteFrontierWalk } from '@run-planner/test-fixtures/fresh-file';
 
 import * as fixture from './support/progressive-biome-fixtures';
 
@@ -442,6 +448,50 @@ describe('room Overview block', () => {
   });
 });
 
+describe('room Overview block keeps its incoming reward candidates', () => {
+  it('assesses an Overview-stopped room reward offer without its unreached pickup', () => {
+    // fresh-3-0 stops at its encounter Overview; its Apollo Boon offer has no trait offer yet.
+    const project = freshFileRouteFrontierWalk()[3]!;
+    const room = createOccurrenceId('fresh-3-0');
+    const f = biomeEvaluation(project, 'F');
+    expect(f.coverage.blockedAt).toMatchObject({ kind: 'encounterPhase', phaseKey: 'Encounter' });
+
+    expect(
+      bindTestCandidateSession(catalog, project).evaluate({
+        kind: 'incomingReward',
+        reward: createIncomingRewardAddress(createBiomeAddress('FreshFile', 'F'), room),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      }),
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true } });
+  });
+});
+
+describe('room Overview block keeps its entry continuations', () => {
+  it('creates the Chaos gate of a host whose encounter blocks its Overview', () => {
+    const chaosId = createOccurrenceId('progressive-overview-chaos');
+    let project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'AddChaos',
+      additional: createAdditionalExitAddress(pBiome, pCombat07, 'chaos'),
+      occurrenceId: chaosId,
+    });
+    project = blockPCombat07(project);
+    const p = biomeEvaluation(project, 'P');
+
+    expect(p.coverage.blockedAt).toMatchObject({ kind: 'encounterPhase', phaseKey: 'Intro' });
+    expect(roomEvents(p, pCombat07).some((event) => event.kind === 'roomEntered')).toBe(true);
+    // The gate is created on the host's entry, inside its Overview.
+    expect(
+      p.history.events.some(
+        (event) =>
+          event.kind === 'roomCreated' &&
+          event.source === 'additionalExit' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === chaosId,
+      ),
+    ).toBe(true);
+  });
+});
+
 describe('room Overview block keeps the room entry effects', () => {
   it('flushes Shrine deliveries at a Q Preboss Shop whose inventory blocks', () => {
     const entryOwner = createRoomRunStateCheckpointAddress(
@@ -797,5 +847,137 @@ describe('room Timeline block', () => {
     );
     expect(points).toContain('shopOffer:PremiumProgress');
     expect(points).not.toContain('shopOffer:MixedProgress1');
+  });
+});
+
+describe('fixed room blocks', () => {
+  it('keeps the Preboss settled and the Boss Timeline before its blocking delivery', () => {
+    const n = biomeEvaluation(createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(), 'N');
+    const [bossLink, postbossLink] = n.materializedPrefix.fixedRoomLinks ?? [];
+    if (bossLink === undefined || postbossLink === undefined)
+      throw new Error('N lost its fixed rooms');
+    const preboss = bossLink.source.origin;
+    const boss = bossLink.target.origin;
+
+    expect(n.coverage.roomTimeline?.room).toEqual(boss);
+    // The Preboss settled through its exit; the Boss is entered and fought.
+    expect(exited(n, preboss.occurrenceId)).toBe(true);
+    expect(
+      runStateAvailability(
+        n,
+        createRoomRunStateCheckpointAddress(preboss, { kind: 'beforeRoomExit' }),
+      ),
+    ).toBe('available');
+    const events = roomEvents(n, boss.occurrenceId).map((event) => event.kind);
+    expect(events).toEqual(
+      expect.arrayContaining(['roomEntered', 'encounterStarted', 'encounterCompleted']),
+    );
+    expect(events).not.toContain('roomExited');
+    expect(roomEvents(n, postbossLink.target.occurrenceId)).toEqual([]);
+    expect(n.assessmentPrefix?.fixedRoomLinks?.map((link) => link.target.gameName)).toEqual([
+      'N_Boss01',
+    ]);
+  });
+
+  it('keeps the Boss settled before a blocking Postboss Pool', () => {
+    const pool = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const project = applyProjectCommand(createUnderworldFPoolCheckpoint(), catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: pool,
+      slotKey: 'left',
+      traitKey: null,
+    });
+    const f = biomeEvaluation(project, 'F');
+    const [bossLink, postbossLink] = f.materializedPrefix.fixedRoomLinks ?? [];
+    if (bossLink === undefined || postbossLink === undefined)
+      throw new Error('F lost its fixed rooms');
+    const postboss = postbossLink.target.origin;
+
+    // The cleared sold slot leaves the Pool inventory short at its use.
+    expect(f.coverage.blockedAt).toMatchObject({
+      kind: 'roomFeature',
+      occurrenceId: postboss.occurrenceId,
+      target: { kind: 'purgingPoolInventory' },
+    });
+    expect(f.coverage.roomTimeline?.room).toEqual(postboss);
+    expect(exited(f, bossLink.target.occurrenceId)).toBe(true);
+    const events = roomEvents(f, postboss.occurrenceId).map((event) => event.kind);
+    expect(events).toEqual(expect.arrayContaining(['roomEntered', 'fountainUsed']));
+    expect(events).not.toContain('roomExited');
+    expect(f.assessmentPrefix?.fixedRoomLinks).toHaveLength(2);
+  });
+});
+
+describe('opening room blocks', () => {
+  const nOpening = createOccurrenceId('surface-n-opening');
+  const pIntro = createOccurrenceId('surface-p-intro');
+  const pCombat03 = createOccurrenceId('surface-p-1-1-p_combat03');
+
+  it('enters the opening room whose encounter composition blocks its Overview', () => {
+    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOpening },
+        'Encounter',
+      ),
+      decisionKey: 'generatedComposition',
+      value: {
+        kind: 'generated',
+        baseRoll: 9999,
+        waveCount: 1,
+        waves: [
+          { waveIndex: 1, typeKeys: ['SentryBot', 'Dragon'], allocations: { SentryBot: 206 } },
+        ],
+      },
+    });
+    const n = biomeEvaluation(project, 'N');
+
+    expect(n.coverage.blockedAt).toMatchObject({ kind: 'encounterPhase', phaseKey: 'Encounter' });
+    expect(n.coverage.roomTimeline).toBeUndefined();
+    expect(roomEvents(n, nOpening).map((event) => event.kind)).toEqual([
+      'roomCreated',
+      'roomPrepared',
+      'encounterRecorded',
+      'roomEntered',
+    ]);
+    expect(
+      runStateAvailability(
+        n,
+        createRoomRunStateCheckpointAddress(createOccurrenceAddress(nBiome, nOpening), {
+          kind: 'roomEntered',
+        }),
+      ),
+    ).toBe('available');
+    expect(n.assessmentPrefix?.decisions).toEqual([]);
+  });
+
+  it('keeps the opening encounter before a blocking door offer', () => {
+    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(pBiome, pCombat03),
+      value: { rewardType: 'MetaCardPointsCommonDrop' },
+    });
+    const p = biomeEvaluation(project, 'P');
+
+    expect(p.coverage.blockedAt).toEqual(createIncomingRewardAddress(pBiome, pCombat03));
+    expect(p.coverage.roomTimeline?.room).toEqual(createOccurrenceAddress(pBiome, pIntro));
+    const events = roomEvents(p, pIntro).map((event) => event.kind);
+    expect(events).toEqual(
+      expect.arrayContaining([
+        'encounterStarted',
+        'encounterCompleted',
+        'outgoingGenerationCheckpoint',
+      ]),
+    );
+    expect(events).not.toContain('roomCommitted');
+    expect(p.assessmentPrefix?.decisions).toEqual([]);
+    expect(p.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'exitDecision',
+      origin: createExitDecisionAddress(pBiome, source(pIntro)),
+    });
   });
 });
