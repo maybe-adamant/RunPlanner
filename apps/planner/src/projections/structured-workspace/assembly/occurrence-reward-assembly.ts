@@ -1283,7 +1283,8 @@ export function activeEncounterPhasesForOwner(
               }),
             }
           : {}),
-        ...(figLeafSupport !== undefined || authoredFigLeafSkip
+        // Fig Leaf appears where the engine supports a skip or a skip is authored.
+        ...(figLeafSupport?.supported === true || authoredFigLeafSkip
           ? {
               figLeaf: Object.freeze({
                 address: createFigLeafPhaseAddress(address),

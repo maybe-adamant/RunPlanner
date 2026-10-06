@@ -18,6 +18,8 @@ import {
 import {
   loadSurfaceNOPQProject,
   loadSurfaceNProject,
+  nBiome,
+  nOccurrenceId,
   nOccurrenceIds,
   oOccurrenceIds,
   pOccurrenceId,
@@ -140,5 +142,32 @@ describe('Encounter Timeline banner', () => {
     expect(skip.closest('li')).toBe(banner('Start encounter'));
     expect(editorsOf(banner('Start encounter')).contains(skip)).toBe(true);
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
+  });
+
+  it('shows Fig Leaf only where the engine supports a skip or one is authored', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOccurrenceIds.preHub },
+        'Encounter',
+      ),
+      value: true,
+    });
+    // The skip already spent in N leaves later N phases without Fig Leaf support.
+    renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceId('combat05')));
+    openRoomTab('Room Timeline');
+    expect(screen.queryByRole('checkbox', { name: 'Skip with Fig Leaf' })).toBeNull();
+    cleanup();
+    renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
+    openRoomTab('Room Timeline');
+    expect(
+      (screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' }) as HTMLInputElement).checked,
+    ).toBe(true);
   });
 });

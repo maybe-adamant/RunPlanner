@@ -32,57 +32,55 @@ function PickupOutcomeControls({
     workspaceInteractionKey(conversion.address),
   );
   if (!interaction.visible) return null;
-  const seaStarApplies = interaction.seaStarSupported || interaction.seaStarProcced;
+  // Each control renders only where the engine says it applies or an authored value remains.
+  const kind = conversion.value.kind;
+  const timePiece = interaction.timePieceSupported || kind === 'timePiece';
+  const artificer = interaction.artificerSupported || kind === 'artificer';
+  const seaStar = interaction.seaStarSupported || interaction.seaStarProcced;
   return (
     <div className="reward-acquisition-conversion">
-      <div className="pickup-outcome-control">
-        <ContextualPicker
-          id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
-          label="Outcome"
-          ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
-          layout="inline"
-          placeholder="Choose a pickup outcome"
-          model={declaredChoicesPicker(
-            [
-              { key: 'normal', value: 'normal', label: 'Pickup' },
-              {
-                key: 'timePiece',
-                value: 'timePiece',
-                label: 'Timepiece',
-                disabled: !interaction.timePieceSupported && conversion.value.kind !== 'timePiece',
-              },
-              {
-                key: 'artificer',
-                value: 'artificer',
-                label: 'Artificer',
-                disabled: !interaction.artificerSupported && conversion.value.kind !== 'artificer',
-              },
-            ],
-            conversion.value.kind,
-          )}
-          onSelect={(kind) => {
-            if (kind === 'normal' || kind === 'timePiece') {
-              executeIntent(interaction.intentFor(Object.freeze({ kind })));
-              return;
-            }
-            if (kind === 'artificer')
-              executeIntent(interaction.intentFor(Object.freeze({ kind: 'artificer' })));
-          }}
-        />
-      </div>
-      <label
-        className="timeline-checkbox"
-        {...(seaStarApplies ? {} : { title: 'Sea Star does not apply here.' })}
-      >
-        <input
-          aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
-          checked={interaction.seaStarProcced}
-          disabled={!seaStarApplies}
-          onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}
-          type="checkbox"
-        />
-        <span>Sea Star procced</span>
-      </label>
+      {timePiece || artificer ? (
+        <div className="pickup-outcome-control">
+          <ContextualPicker
+            id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
+            label="Outcome"
+            ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
+            layout="inline"
+            placeholder="Choose a pickup outcome"
+            model={declaredChoicesPicker(
+              [
+                { key: 'normal', value: 'normal', label: 'Pickup' },
+                ...(timePiece
+                  ? [{ key: 'timePiece', value: 'timePiece', label: 'Timepiece' } as const]
+                  : []),
+                ...(artificer
+                  ? [{ key: 'artificer', value: 'artificer', label: 'Artificer' } as const]
+                  : []),
+              ],
+              kind,
+            )}
+            onSelect={(next) => {
+              if (next === 'normal' || next === 'timePiece') {
+                executeIntent(interaction.intentFor(Object.freeze({ kind: next })));
+                return;
+              }
+              if (next === 'artificer')
+                executeIntent(interaction.intentFor(Object.freeze({ kind: 'artificer' })));
+            }}
+          />
+        </div>
+      ) : null}
+      {seaStar ? (
+        <label className="timeline-checkbox">
+          <input
+            aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
+            checked={interaction.seaStarProcced}
+            onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}
+            type="checkbox"
+          />
+          <span>Sea Star procced</span>
+        </label>
+      ) : null}
     </div>
   );
 }
