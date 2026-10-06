@@ -149,7 +149,7 @@ function intersectNemesisBranchValues(
   );
 }
 
-function nemesisFamilyLabel(family: AuthoredNemesisRandomEventKind): string {
+export function nemesisFamilyLabel(family: AuthoredNemesisRandomEventKind): string {
   switch (family) {
     case 'freeItem':
       return 'Free item';

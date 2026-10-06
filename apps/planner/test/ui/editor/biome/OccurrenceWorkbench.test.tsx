@@ -127,7 +127,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByLabelText('Room')).toBeNull();
   });
 
-  it('renders Standard room contents and its encounter in Overview and its encounter events in Timeline', () => {
+  it('renders Standard room contents and its encounter in Overview and names it in the Timeline banner', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
@@ -154,12 +154,18 @@ describe('OccurrenceWorkbench', () => {
     const overviewEncounter = within(
       screen.getByRole('region', { name: 'Encounter structure' }),
     ).getByLabelText('Encounter phase');
-    expect(within(overviewEncounter).getByRole('button', { name: 'Encounter' })).toBeTruthy();
+    const overviewEncounterLabel = within(overviewEncounter)
+      .getByRole('button', { name: 'Encounter' })
+      .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
     const standardActions = screen.getByRole('region', { name: 'Room Timeline' });
     const standardStart = within(standardActions).getByLabelText('Start encounter');
-    const standardEncounter = within(standardActions).getByLabelText('Encounter events');
-    expect(within(standardEncounter).queryByRole('button', { name: 'Encounter' })).toBeNull();
+    // A phase without events shows only its banner; identity stays in Overview.
+    expect(within(standardActions).queryByLabelText('Encounter events')).toBeNull();
+    const standardEncounter = within(standardStart).getByRole('button', {
+      name: overviewEncounterLabel,
+    });
+    expect(within(standardActions).queryByRole('button', { name: 'Encounter' })).toBeNull();
     const standardEnd = within(standardActions).getByLabelText('Encounter ended');
     const roomEntered = within(standardActions).getByLabelText('Room entered');
     const entryRunState = screen.getByRole('button', { name: 'Run State' });
@@ -579,7 +585,9 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Timeline');
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(nActions).toBeTruthy();
-    expect(within(nActions).getByLabelText('Encounter events')).toBeTruthy();
+    expect(
+      within(nActions).getByLabelText('Start encounter').querySelector('.timeline-banner-identity'),
+    ).not.toBeNull();
   });
 
   it('allows invalid generation edits, reports checkbox findings, and repairs them without changing visit order', async () => {

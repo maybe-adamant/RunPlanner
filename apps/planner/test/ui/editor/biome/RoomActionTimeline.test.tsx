@@ -564,10 +564,14 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.queryByRole('button', { name: 'Combat Order' })).toBeNull();
     openRoomTab('Room Timeline');
     expect(screen.getByRole('button', { name: 'Combat Order' })).toBeTruthy();
-    for (const cage of ['Cage 1', 'Cage 2', 'Cage 3']) {
-      const projected = screen.getByLabelText(`${cage} encounter events`);
-      expect(within(projected).queryByRole('button', { name: `${cage} encounter` })).toBeNull();
+    // Each cage start banner names its encounter read-only; identity stays in Overview.
+    for (const ordinal of [1, 2, 3]) {
+      const start = screen.getByLabelText(`Start encounter ${ordinal}`);
+      expect(start.querySelector('.fields-cage-label')).not.toBeNull();
+      expect(start.querySelector('.timeline-banner-identity')?.textContent).not.toMatch(/Cage/);
     }
+    for (const cage of ['Cage 1', 'Cage 2', 'Cage 3'])
+      expect(screen.queryByRole('button', { name: `${cage} encounter` })).toBeNull();
     expect(screen.queryByLabelText('Cage 1 encounter phase')).toBeNull();
   });
 

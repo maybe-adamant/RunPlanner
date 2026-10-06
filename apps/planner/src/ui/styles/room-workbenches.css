@@ -1749,16 +1749,21 @@
   height: var(--timeline-control-height);
 }
 
-/* A Timeline encounter is inline row content, not a nested card. */
-.timeline-cell-editors > .encounter-phase-control {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px 12px;
+/* The banner's identity is navigation to its Overview picker, styled as text. */
+.timeline-banner-identity {
   padding: 0;
   border: 0;
+  color: inherit;
   background: transparent;
+  font: inherit;
+  font-weight: 400;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.timeline-banner-identity:hover,
+.timeline-banner-identity:focus-visible {
+  text-decoration: underline;
 }
 
 /* Sized or wrapping editor groups fill their editors cell instead of their widest item. */

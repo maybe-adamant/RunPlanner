@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
+import type { EncounterPhaseAddress } from '@run-planner/engine/authored-project';
 import type {
   WorkspaceFieldsCageLabel,
   WorkspaceRoomLifecycleBoundary,
 } from '@planner/projections/structured-workspace';
+import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
+import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TimelineRow } from './TimelineRow';
 
@@ -14,6 +17,7 @@ export function LifecycleBoundaryRow({
   dropState,
   editors,
   fieldsCage,
+  identity,
 }: {
   readonly boundary: WorkspaceRoomLifecycleBoundary;
   readonly label: string;
@@ -21,8 +25,11 @@ export function LifecycleBoundaryRow({
   readonly dropState?: 'available' | 'unavailable';
   readonly editors?: ReactNode;
   readonly fieldsCage?: WorkspaceFieldsCageLabel;
+  /** The phase's settled identity; it navigates to its Overview picker and never edits. */
+  readonly identity?: { readonly label: string; readonly owner: EncounterPhaseAddress };
 }) {
   const findingTarget = useFindingTarget();
+  const dispatch = useAppDispatch();
   return (
     <TimelineRow
       aria-label={label}
@@ -38,6 +45,19 @@ export function LifecycleBoundaryRow({
             <span className="fields-cage-label" {...findingTarget(fieldsCage.owner)} tabIndex={-1}>
               {fieldsCage.label}
             </span>
+          )}
+          {identity === undefined ? null : (
+            <>
+              <span aria-hidden="true">·</span>
+              <button
+                className="timeline-banner-identity"
+                onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
+                title="Edit in Room Overview"
+                type="button"
+              >
+                {identity.label}
+              </button>
+            </>
           )}
         </>
       }

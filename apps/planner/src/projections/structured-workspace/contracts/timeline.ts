@@ -199,7 +199,12 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly runState?: WorkspaceRunStateLauncher;
       /** Exact projected child placed at this lifecycle seam. */
       readonly supplement?:
-        | { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase }
+        | {
+            readonly kind: 'encounter';
+            readonly phase: WorkspaceEncounterPhase;
+            /** Settled identity named in the boundary banner; it is edited in the Overview. */
+            readonly identityLabel: string;
+          }
         | { readonly kind: 'rewardWheel'; readonly wheel: WorkspaceRewardWheelDescriptor };
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;

@@ -372,11 +372,11 @@ rows by rank arithmetic.
 Each entered room settles in three ordered stages, and each settles before the
 next starts:
 
-| Stage    | Question                                   | Contains                                                                                                                                                                                             |
-| -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview | What is the room and what does it contain? | Everything fixed on entry: every phase's encounter identity and customization, and Shop, Shrine, Well and Contract inventory. The room's own door reward was generated with its source room's doors. |
-| Timeline | What happens in the room?                  | Ordered room actions, read-only encounter phases with their per-encounter events, acquisitions, purchases, refills, deliveries, and the doors opening, which settles the door offers at that point.  |
-| Exit     | Where to go next?                          | The door selection, then the room's exit work (pending Shop completion, resource element grants, the `beforeRoomExit` snapshot). The source room exits before anything in the next room is prepared. |
+| Stage    | Question                                   | Contains                                                                                                                                                                                                   |
+| -------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview | What is the room and what does it contain? | Everything fixed on entry: every phase's encounter identity and customization, and Shop, Shrine, Well and Contract inventory. The room's own door reward was generated with its source room's doors.       |
+| Timeline | What happens in the room?                  | Ordered room actions, encounter banners naming each phase with its per-encounter events, acquisitions, purchases, refills, deliveries, and the doors opening, which settles the door offers at that point. |
+| Exit     | Where to go next?                          | The door selection, then the room's exit work (pending Shop completion, resource element grants, the `beforeRoomExit` snapshot). The source room exits before anything in the next room is prepared.       |
 
 The native order is the previous room's exit work, then the next room's content
 generation, then room setup, so an Overview product reads only entry state; one
