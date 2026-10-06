@@ -60,6 +60,13 @@ import {
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import {
+  qBiome,
+  qOccurrenceIds,
+  surfaceTravelDealRefillAnvilProject,
+  surfaceTravelDealRefillAnvilResult,
+} from '@run-planner/test-fixtures/surface';
+import { bind } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
@@ -1708,5 +1715,55 @@ describe('room Timeline block', () => {
     // The reward pickup is the repair region; the doors never opened, so the Exit is unassessed.
     expect(pickup?.blockingProduct).toBe(true);
     expect(exit?.marker.assessment).toBe('unassessed');
+  });
+  it('keeps row-level edits on a Shop row past the failure inside the blocking product', () => {
+    const shopId = qOccurrenceIds.preboss;
+    const shop = createOccurrenceAddress(qBiome, shopId);
+    const refillOffer = createShopOfferAddress(qBiome, shopId, 'travelDealRefill');
+    const refillRow = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit' as const,
+      entryKey: 'travelDealRefill',
+    };
+    let project = replaceTestShopOfferActions(
+      surfaceTravelDealRefillAnvilProject(),
+      catalog,
+      shop,
+      ['PremiumProgress', 'MixedProgress1'],
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(qBiome, shopId, roomActionKey(refillRow)),
+      toIndex: 1,
+    });
+    // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: createAcquisitionRoleAddress(refillOffer, 'self'),
+      value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
+    });
+    const { assembly, interactions } = bind(project, 'Surface', 'Q');
+    const node = assembly.nodes.find(
+      (candidate) =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === shopId,
+    );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error('Q Shop workbench is missing');
+    const rows = node.room.roomActions?.rows ?? [];
+    const later = rows.find(
+      (row) => row.key === roomActionKey({ kind: 'interactShopOffer', offerKey: 'MixedProgress1' }),
+    );
+    const refill = rows.find((row) => row.key === roomActionKey(refillRow));
+    expect([...rows].sort((left, right) => (left.rank ?? 0) - (right.rank ?? 0))[2]).toBe(later);
+    expect(refill?.blockingProduct).toBe(true);
+    // Past the failure inside the whole-Shop product: order and participation stay bound.
+    expect(later?.blockingProduct).toBe(true);
+    expect(later?.proposalKeys.length).toBeGreaterThan(0);
+    expect(interactions.roomActions.get(semanticAddressKey(shop))).toMatchObject({ owner: shop });
+    const participation = later?.shopParticipation;
+    expect(
+      participation === undefined
+        ? undefined
+        : interactions.shopPurchaseParticipations.get(participation.interactionKey),
+    ).toMatchObject({ purchased: true });
   });
 });
