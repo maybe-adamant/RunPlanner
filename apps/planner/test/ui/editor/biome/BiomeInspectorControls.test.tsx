@@ -331,7 +331,7 @@ describe('Biome inspector controls', () => {
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(
-      within(screen.getByRole('region', { name: 'Room features' })).queryByRole('heading', {
+      within(screen.getByRole('tabpanel', { name: 'Room Overview' })).queryByRole('heading', {
         name: 'Features',
       }),
     ).toBeNull();

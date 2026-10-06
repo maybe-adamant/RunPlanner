@@ -1,4 +1,3 @@
-.room-features-workbench,
 .room-structure-workbench,
 .fields-room-editor,
 .ephyra-side-editor,
@@ -30,6 +29,11 @@
   font-size: 0.7rem;
   letter-spacing: 0;
   text-transform: none;
+}
+
+/* Overview slots only carry their section key; the section owns its layout. */
+.room-overview-slot {
+  display: contents;
 }
 
 .room-overview-section {
@@ -82,7 +86,6 @@
   }
 }
 
-.room-features-workbench > .room-feature-category-heading:first-child,
 .room-structure-workbench > .room-feature-category-heading:first-child {
   margin-top: 0;
 }
@@ -313,10 +316,7 @@
   }
 }
 
-.room-overview-workbench > .room-features-workbench,
-.room-overview-workbench > .room-structure-workbench,
-.room-overview-workbench > .shop-editor,
-.room-overview-workbench > .fields-room-editor,
+.room-overview-slot > :is(.room-structure-workbench, .shop-editor, .fields-room-editor),
 .room-overview-workbench > .ephyra-side-editor {
   margin-top: 0;
   padding-top: 0;

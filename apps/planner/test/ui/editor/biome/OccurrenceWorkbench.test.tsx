@@ -137,7 +137,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    const standardFeatures = screen.getByLabelText('Room features');
+    const standardFeatures = screen.getByRole('tabpanel', { name: 'Room Overview' });
     expect(standardFeatures).toBeTruthy();
     expect(within(standardFeatures).queryByRole('heading', { name: 'Features' })).toBeNull();
     expect(within(standardFeatures).getByRole('heading', { name: /^Resources/ })).toBeTruthy();
@@ -935,13 +935,13 @@ describe('OccurrenceWorkbench', () => {
     renderStaticOccurrenceWorkbench(shop.project, 'Underworld', 'F', occurrenceById(shop.shopId));
     const inventory = screen.getByLabelText('Shop inventory');
     expect(inventory).toBeTruthy();
-    const shopFeatures = screen.getByLabelText('Room features');
+    const shopFeatures = screen.getByRole('tabpanel', { name: 'Room Overview' });
     expect(shopFeatures).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Features' })).toBeNull();
     openRoomTab('Room Timeline');
     const shopActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(shopActions).toBeTruthy();
     expect(screen.queryByLabelText('Shop inventory')).toBeNull();
-    expect(screen.queryByLabelText('Room features')).toBeNull();
+    expect(document.querySelector('[data-overview-section]')).toBeNull();
   });
 });

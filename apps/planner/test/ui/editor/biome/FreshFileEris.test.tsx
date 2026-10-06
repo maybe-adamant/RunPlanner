@@ -43,7 +43,7 @@ describe('Fresh File Eris', () => {
         semanticOwnerFocused(createOccurrenceAddress(freshFileGBiome, freshFileGIntroId)),
       ),
     );
-    const overview = () => screen.getByRole('region', { name: 'Room features' });
+    const overview = () => screen.getByRole('tabpanel', { name: 'Room Overview' });
     const timeline = () => screen.getByRole('region', { name: 'Room Timeline' });
     const spawned = () => within(overview()).getByRole('checkbox', { name: 'Eris has spawned' });
     const openTab = (name: string) => view.user.click(screen.getByRole('tab', { name }));

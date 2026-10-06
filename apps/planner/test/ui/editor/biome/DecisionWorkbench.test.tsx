@@ -366,7 +366,7 @@ describe('DecisionWorkbench', () => {
       occurrenceForId(source.occurrenceId),
     );
     await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    const features = screen.getByLabelText('Room features');
+    const features = screen.getByRole('tabpanel', { name: 'Room Overview' });
     const before = sourceView.application.store.getState().projectWorkspace.history!.past.length;
     await sourceView.user.click(within(features).getByRole('checkbox', { name: 'Chaos Gate' }));
     expect(sourceView.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -515,9 +515,12 @@ describe('DecisionWorkbench', () => {
       occurrenceForId(occurrenceId),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    const presence = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
-      name: 'Chaos Gate',
-    });
+    const presence = within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole(
+      'checkbox',
+      {
+        name: 'Chaos Gate',
+      },
+    );
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
 
     expect(presence).toHaveProperty('disabled', false);
@@ -572,9 +575,12 @@ describe('DecisionWorkbench', () => {
     );
 
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    const addChaos = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
-      name: 'Chaos Gate',
-    });
+    const addChaos = within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole(
+      'checkbox',
+      {
+        name: 'Chaos Gate',
+      },
+    );
     expect(addChaos).toHaveProperty('checked', true);
     expect(addChaos).toHaveProperty('disabled', true);
     const position = screen.getByRole('radiogroup', { name: 'Position' });
@@ -651,7 +657,7 @@ describe('DecisionWorkbench', () => {
     );
     await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(
-      within(screen.getByLabelText('Room features')).getByRole('checkbox', {
+      within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole('checkbox', {
         name: 'Zagreus Contract',
       }),
     ).toBeTruthy();

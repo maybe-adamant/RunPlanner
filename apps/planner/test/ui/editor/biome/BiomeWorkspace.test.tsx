@@ -1087,7 +1087,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(screen.getByRole('region', { name: 'Room features' })).toBeTruthy();
+    expect(document.querySelector('[data-overview-section]')).not.toBeNull();
   });
 
   it('summarizes the Hub door reward in Overview without exposing another editor', async () => {
