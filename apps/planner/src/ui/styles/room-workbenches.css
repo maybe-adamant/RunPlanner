@@ -1478,16 +1478,37 @@
 }
 
 /* Row kinds differ only in border, background and type. */
-.timeline-row[data-timeline-row-kind='boundary'],
-.timeline-row[data-timeline-row-kind='checkpoint'] {
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+  --timeline-band: rgb(174 152 202 / 16%);
+  min-height: 32px;
+  padding-block: 1px;
   border-color: #353640 transparent;
-  border-left-color: #ae98ca;
   border-radius: 0;
-  background: linear-gradient(90deg, rgb(174 152 202 / 16%), rgb(10 11 14 / 40%));
+  background: linear-gradient(90deg, var(--timeline-band), rgb(10 11 14 / 40%));
   box-shadow: 0 2px 0 rgb(0 0 0 / 14%);
   color: #e2d8ea;
   font-size: 0.82rem;
   letter-spacing: 0.02em;
+}
+
+/* Lifecycle bands run under the rail gutter, so action cards read as inset. */
+.timeline-row:is(
+    [data-timeline-row-kind='boundary'],
+    [data-timeline-row-kind='checkpoint']
+  )::before {
+  top: -1px;
+  bottom: -1px;
+  left: -21px;
+  width: 18px;
+  height: auto;
+  border-block: 1px solid #353640;
+  border-left: 3px solid #ae98ca;
+  background: var(--timeline-band);
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > :is(.timeline-cell-handle, .timeline-cell-ordinal) {
+  min-block-size: 0;
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
@@ -1753,10 +1774,10 @@
 .timeline-banner-identity {
   padding: 0;
   border: 0;
-  color: inherit;
+  color: #d4b9e7;
   background: transparent;
   font: inherit;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: inherit;
   cursor: pointer;
 }
@@ -1907,9 +1928,10 @@
   flex: 0 1 auto;
 }
 
+/* Banner names share the label's type and differ only in color. */
 .fields-cage-label {
-  margin-left: 6px;
-  font-weight: normal;
+  color: #d4b9e7;
+  font-weight: 700;
 }
 
 .fields-cage-order .contextual-picker {
