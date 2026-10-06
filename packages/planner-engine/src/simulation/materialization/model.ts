@@ -536,6 +536,12 @@ export interface MaterializedExitDecisionFrontier {
   /** With `sourceExited`, the selected continuation is entered and stops after its Overview. */
   readonly selectedOverview?: true;
   /**
+   * With `sourceExited`, the selected continuation is entered and assessed
+   * through a blocking product in its Timeline or exit work. The selected
+   * attempt publishes its history; this frontier is never composed.
+   */
+  readonly selectedTimeline?: true;
+  /**
    * The current bounded Hub data has two exact empty envelopes whose source
    * room still completes its lifecycle despite the absent ordinary target:
    * the Opening entry picker and the PreHub terminal takeover. This is a

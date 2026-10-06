@@ -99,6 +99,8 @@ export interface WorkspaceRoomActionRow {
     readonly showOffer: boolean;
   };
   readonly placementAssessment?: import('@run-planner/engine/simulation').RoomActionRow['placementAssessment'];
+  /** The room's assessment stops at the product this row belongs to: its repair region. */
+  readonly blockingProduct?: true;
   readonly stale: boolean;
   /** Specialized removal authority for a retained stale base Shop purchase. */
   readonly shopParticipation?: {

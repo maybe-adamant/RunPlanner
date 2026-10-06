@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createAcquisitionRoleAddress,
   createEncounterPhaseAddress,
+  createRoomActionAddress,
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
@@ -8,6 +10,7 @@ import {
   createShopOfferAddress,
   type OccurrenceId,
   type ProjectDocument,
+  roomActionKey,
   type RoomRunStateCheckpointAddress,
 } from '@run-planner/engine/authored-project';
 import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
@@ -26,7 +29,14 @@ import {
   pBiome,
   pOccurrenceIds,
   surfaceEncounterShowcaseProject,
+  surfaceTravelDealRefillAnvilProject,
+  surfaceTravelDealRefillAnvilResult,
 } from '@run-planner/test-fixtures/surface';
+import {
+  createCompleteFGProject,
+  underworldWorldShopTravelDealProject,
+} from '@run-planner/test-fixtures/underworld';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 
 import * as fixture from './support/progressive-biome-fixtures';
 
@@ -45,6 +55,8 @@ const {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
+  goldenGOccurrenceId,
+  goldenHBiome,
   createGoldenFGHIProject,
   partialGWithEarlierInvalidReward,
   prefix,
@@ -55,7 +67,7 @@ const {
 } = fixture;
 
 describe('progressive clamp products', () => {
-  it('clamps a same-batch reward failure before a later physical target failure', () => {
+  it('keeps the whole doors opening when a door offer blocks before a later door fails', () => {
     const fixture = partialGWithEarlierInvalidReward();
     const { evaluation } = prefix(fixture.project, 'Underworld', 'G');
 
@@ -92,19 +104,28 @@ describe('progressive clamp products', () => {
         value: { rewardType: 'MetaCardPointsCommonBigDrop' },
       }),
     ).toMatchObject({ kind: 'unavailable' });
+    // Door offers share one store: the later door's generation belongs to the same blocking product.
     expect(
       bindTestCandidateSession(catalog, fixture.project).evaluate({
         kind: 'roomTarget',
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    ).toMatchObject({ kind: 'roomTarget' });
     const retainedBatch = evaluation.roomGeneration.ordinary.ordinaryBatches.find(
       (batch) =>
         semanticAddressKey(batch.origin) ===
         semanticAddressKey(createExitDecisionAddress(goldenGBiome, source(fixture.source))),
     );
-    expect(retainedBatch?.targets.map((target) => target.origin.exitKey)).toEqual(['exit1']);
+    expect(retainedBatch?.targets.map((target) => target.origin.exitKey)).toEqual([
+      'exit1',
+      'exit2',
+    ]);
+    expect(evaluation.findings).toContainEqual(
+      expect.objectContaining({
+        origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
+      }),
+    );
   });
 
   it('replays every physical peer when a later forced room changes the shared batch store', () => {
@@ -299,7 +320,25 @@ describe('source room exit before a later block', () => {
         }),
       ),
     ).toBe('available');
+    // P_Combat04 keeps its whole Timeline and its door selection; its exit does not settle.
     expect(exited(p, pCombat04)).toBe(false);
+    expect(roomEvents(p, pCombat04).map((event) => event.kind)).toEqual(
+      expect.arrayContaining([
+        'encounterCompleted',
+        'outgoingGenerationCheckpoint',
+        'roomCommitted',
+      ]),
+    );
+    expect(p.coverage.roomTimeline).toEqual({
+      room: createOccurrenceAddress(pBiome, pCombat04),
+      blockingRowKeys: [],
+    });
+    const views = p.history.rooms.find(
+      (room) => room.origin.kind === 'occurrence' && room.origin.occurrenceId === pCombat04,
+    );
+    expect(views?.postCommit).toBeDefined();
+    expect(views?.exit).toBeUndefined();
+    // The pre-exit capture precedes the exit work it reports on.
     expect(
       runStateAvailability(
         p,
@@ -307,7 +346,7 @@ describe('source room exit before a later block', () => {
           kind: 'beforeRoomExit',
         }),
       ),
-    ).toBe('unavailable');
+    ).toBe('available');
   });
 
   it('keeps an invalid door offer before the source room exit', () => {
@@ -557,5 +596,193 @@ describe('encounters in the room Overview', () => {
         activatedThisBiome: entry?.keepsakes.figLeaf?.activatedThisBiome,
       },
     );
+  });
+});
+
+describe('room Timeline block', () => {
+  const rowKey = (reference: Parameters<typeof roomActionKey>[0]) => roomActionKey(reference);
+
+  it('keeps an earlier Shop purchase offer when the Travel Deal refill offer is missing', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const shop = createOccurrenceAddress(goldenFBiome, shopId);
+    const boon = createShopOfferAddress(goldenFBiome, shopId, 'Boon');
+    const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
+    const refillRow = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit' as const,
+      entryKey: 'travelDealRefill',
+    };
+    let project = replaceTestShopOfferActions(
+      underworldWorldShopTravelDealProject(),
+      catalog,
+      shop,
+      ['Boon'],
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, shopId, rowKey(refillRow)),
+      toIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: refill,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    project = authorLegalTraitOffers(project);
+    // A new refill source resets its offer: the purchased Boon's offer stays authored.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: refill,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const f = biomeEvaluation(project, 'F');
+    const refillTrait = createTraitOfferAddress(refill, 'source');
+    const boonTrait = createTraitOfferAddress(boon, 'source');
+
+    expect(f.coverage.blockedAt).toEqual(refillTrait);
+    expect(f.coverage.roomTimeline).toEqual({ room: shop, blockingRowKeys: [rowKey(refillRow)] });
+    expect(f.rewards.selectedTraitOffers).toContainEqual(
+      expect.objectContaining({ address: boonTrait }),
+    );
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(assembly).biomeAt(goldenFBiome);
+    expect(artifacts?.traitOffers.at(boonTrait)).toBeDefined();
+    // The blocking contact keeps its own pre-offer capability.
+    expect(artifacts?.traitOffers.at(refillTrait)).toBeDefined();
+    expect(exited(f, shopId)).toBe(false);
+  });
+
+  it("keeps a combat room's encounter and entry Run State before its invalid reward offer", () => {
+    const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
+    const minibossId = createOccurrenceId('golden-h-miniboss01');
+    const h = simulateProject(catalog, completeProject).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'H',
+    );
+    const selected =
+      h !== undefined && 'rewards' in h
+        ? h.rewards.selectedTraitOffers.find(
+            (offer) =>
+              offer.address.owner.kind === 'incomingReward' &&
+              offer.address.owner.occurrenceId === minibossId,
+          )
+        : undefined;
+    if (selected === undefined || selected.offer.kind !== 'traits')
+      throw new Error('H miniboss has no selected trait offer');
+    const [first, second, third] = selected.offer.options;
+    if (first === undefined || second === undefined || third === undefined)
+      throw new Error('H miniboss trait offer is incomplete');
+    const project = applyProjectCommand(completeProject, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: selected.address,
+      value: {
+        ...selected.offer,
+        options: [{ ...first, rarity: 'Heroic' }, second, third],
+      },
+    });
+    const blocked = biomeEvaluation(project, 'H');
+    const miniboss = createOccurrenceAddress(goldenHBiome, minibossId);
+
+    expect(blocked.coverage.blockedAt).toEqual(selected.address);
+    const events = roomEvents(blocked, minibossId).map((event) => event.kind);
+    expect(events).toEqual(expect.arrayContaining(['encounterStarted', 'encounterCompleted']));
+    // Nothing after the reward pickup is assessed: its doors never open.
+    expect(events).not.toContain('outgoingGenerationCheckpoint');
+    expect(
+      runStateAvailability(
+        blocked,
+        createRoomRunStateCheckpointAddress(miniboss, { kind: 'roomEntered' }),
+      ),
+    ).toBe('available');
+    expect(
+      runStateAvailability(
+        blocked,
+        createRoomRunStateCheckpointAddress(miniboss, { kind: 'beforeRoomExit' }),
+      ),
+    ).toBe('unavailable');
+    expect(blocked.coverage.roomTimeline?.room).toEqual(miniboss);
+    expect(blocked.coverage.roomTimeline?.blockingRowKeys).toContain(
+      rowKey({
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: selected.address.acquisitionRole,
+      }),
+    );
+  });
+
+  it('blocks an invalid Shop door offer at the doors opening without committing the Shop', () => {
+    const shopId = goldenGOccurrenceId(5, 1);
+    const shop = createOccurrenceAddress(goldenGBiome, shopId);
+    let project = replaceTestShopOfferActions(createCompleteFGProject(), catalog, shop, ['Minor']);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenGBiome, goldenGOccurrenceId(6, 1)),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    const g = biomeEvaluation(project, 'G');
+
+    expect(g.coverage.blockedAt).toMatchObject({ kind: 'incomingReward' });
+    expect(g.coverage.roomTimeline).toEqual({ room: shop, blockingRowKeys: [] });
+    const events = roomEvents(g, shopId).map((event) => event.kind);
+    expect(events).toEqual(expect.arrayContaining(['roomEntered', 'outgoingGenerationCheckpoint']));
+    // The purchase after the doors opening, the commit and the exit are never assessed.
+    expect(events).not.toContain('acquisitionPointReached');
+    expect(events).not.toContain('roomCommitted');
+    expect(exited(g, shopId)).toBe(false);
+    expect(
+      runStateAvailability(g, createRoomRunStateCheckpointAddress(shop, { kind: 'roomEntered' })),
+    ).toBe('available');
+    expect(g.assessmentPrefix?.frontier).toMatchObject({
+      kind: 'exitDecision',
+      origin: createExitDecisionAddress(goldenGBiome, source(shopId)),
+    });
+  });
+
+  it('blocks an invalid Story room door offer at the doors opening without committing it', () => {
+    const storyId = createOccurrenceId('surface-p-7-1-p_story01');
+    const project = applyProjectCommand(surfaceEncounterShowcaseProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(pBiome, pCombat12),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    const p = biomeEvaluation(project, 'P');
+
+    expect(p.coverage.blockedAt).toEqual(createIncomingRewardAddress(pBiome, pCombat12));
+    expect(p.coverage.roomTimeline?.room).toEqual(createOccurrenceAddress(pBiome, storyId));
+    const events = roomEvents(p, storyId).map((event) => event.kind);
+    expect(events).toContain('outgoingGenerationCheckpoint');
+    expect(events).not.toContain('roomCommitted');
+    expect(exited(p, storyId)).toBe(false);
+  });
+
+  it('owns every Shop purchase row when the Shop settles as one product', () => {
+    const shop = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
+    const refill = createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'travelDealRefill');
+    // Removing a Hammer the run does not hold makes the refill's Anvil illegal.
+    const project = applyProjectCommand(surfaceTravelDealRefillAnvilProject(), catalog, {
+      kind: 'ReplaceAnvilResult',
+      acquisition: createAcquisitionRoleAddress(refill, 'self'),
+      value: { ...surfaceTravelDealRefillAnvilResult, removedTraitKey: 'StaffTripleShotTrait' },
+    });
+    const q = biomeEvaluation(project, 'Q');
+
+    expect(q.issue?.regionKey).toBe(`owner:${semanticAddressKey(shop)}`);
+    // The Premium purchase carries no finding of its own and still belongs to the region.
+    expect(
+      q.issue?.reasons.every((reason) =>
+        semanticAddressKey(reason.origin).includes('travelDealRefill'),
+      ),
+    ).toBe(true);
+    expect(q.coverage.roomTimeline).toEqual({
+      room: shop,
+      blockingRowKeys: [
+        rowKey({ kind: 'interactShopOffer', offerKey: 'PremiumProgress' }),
+        rowKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'roomExit',
+          entryKey: 'travelDealRefill',
+        }),
+      ],
+    });
   });
 });

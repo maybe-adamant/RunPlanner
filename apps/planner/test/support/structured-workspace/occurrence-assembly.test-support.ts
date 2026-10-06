@@ -141,8 +141,13 @@ export function assemble(
   ) => NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
   steadyGrowthOutcomes?: Parameters<typeof assembleWorkspaceOccurrence>[0]['steadyGrowthOutcomes'],
   sourceCatalog: Catalog = catalog,
+  sourceTransform: (source: ReturnType<typeof biomeSource>) => ReturnType<typeof biomeSource> = (
+    source,
+  ) => source,
 ) {
-  const source = biomeSource(project, routeKey, biomeKey, gorgonSupport, sourceCatalog);
+  const source = sourceTransform(
+    biomeSource(project, routeKey, biomeKey, gorgonSupport, sourceCatalog),
+  );
   const occurrence = source.occurrence(occurrenceId);
   if (occurrence === undefined) throw new Error(`${occurrenceId} occurrence is missing`);
   const evaluatedRoom = (() => {

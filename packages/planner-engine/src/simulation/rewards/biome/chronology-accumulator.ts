@@ -275,6 +275,10 @@ export interface ChronologyAccumulation {
  */
 export interface ChronologyAccumulator {
   mergeEmissions(emissions: readonly ChronologyEmission[]): void;
+  /** How many emissions have been merged so far, in order. */
+  emissionCount(): number;
+  /** The first `count` merged emissions, for publishing the walk through an earlier step. */
+  emissionsThrough(count: number): readonly ChronologyEmission[];
   findingEntries(): readonly FindingRegionEntry[];
   derivedAcquisitionEntryFrontiers(key: string): readonly DerivedAcquisitionEntryFrontier[];
   gorgonPhaseCandidate(key: string): GorgonPhaseCandidateSupport | undefined;
@@ -363,6 +367,7 @@ export function createChronologyAccumulator(
   rooms: ReadonlyMap<string, CanonicalAuthoredRoom | CanonicalHubRoom>,
 ): ChronologyAccumulator {
   let finished = false;
+  const merged: ChronologyEmission[] = [];
   const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const reachedTraitOfferCandidateContexts = new Map<string, TraitOfferCandidateContext[]>();
@@ -822,8 +827,13 @@ export function createChronologyAccumulator(
     mergeEmissions(emissions: readonly ChronologyEmission[]): void {
       if (finished)
         throw new BiomeRewardSimulationContractError('chronology accumulator is already finished');
-      for (const emission of emissions) mergeEmission(emission);
+      for (const emission of emissions) {
+        merged.push(emission);
+        mergeEmission(emission);
+      }
     },
+    emissionCount: () => merged.length,
+    emissionsThrough: (count: number) => Object.freeze(merged.slice(0, count)),
     findingEntries: () => Object.freeze([...findings.values()]),
     derivedAcquisitionEntryFrontiers: (key: string) =>
       derivedAcquisitionEntryContexts.get(key) ?? Object.freeze([]),

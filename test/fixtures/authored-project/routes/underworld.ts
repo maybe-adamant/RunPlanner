@@ -714,8 +714,10 @@ export interface GContractAvailabilityFixture {
 }
 
 /**
- * Two reached G Midshops with an earlier Contract either entered or skipped.
- * Shared by the engine capability and workspace-presence witnesses.
+ * A later G Midshop after an earlier Contract either entered or skipped. A
+ * second G Midshop cannot follow the first, so the first Midshop's doors block
+ * and the later Midshop stays unreached. Shared by the engine capability and
+ * workspace-presence witnesses.
  */
 export function createGContractAvailabilityProject(
   enterEarlierContract: boolean,

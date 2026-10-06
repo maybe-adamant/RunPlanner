@@ -582,19 +582,29 @@ describe('Pom level resolutions', () => {
       kind: 'CreateTarget',
       target: createTargetAddress(goldenFBiome, decision.source, 'exit1'),
       occurrenceId: createOccurrenceId('midshop-pom-continuation'),
-      gameName: 'F_Story01',
+      gameName: 'F_MiniBoss01',
     });
     continued = applyProjectCommand(continued, catalog, {
       kind: 'CreateTarget',
       target: createTargetAddress(goldenFBiome, decision.source, 'exit2'),
       occurrenceId: createOccurrenceId('midshop-pom-alternate'),
-      gameName: 'F_Story01',
+      gameName: 'F_MiniBoss02',
     });
     continued = applyProjectCommand(continued, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenFBiome, decision.source),
       value: { kind: 'normal', exitKey: 'exit1' },
     });
+    // The doors open validly before the purchase, so both projects reach the same Pom.
+    for (const [occurrenceId, source] of [
+      ['midshop-pom-continuation', 'ZeusUpgrade'],
+      ['midshop-pom-alternate', 'ApolloUpgrade'],
+    ] as const)
+      continued = applyProjectCommand(continued, catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(goldenFBiome, createOccurrenceId(occurrenceId)),
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+      });
 
     const frontierAssembly = simulateProjectAssembly(catalog, frontier);
     const continuedAssembly = simulateProjectAssembly(catalog, continued);
@@ -628,7 +638,14 @@ describe('Pom level resolutions', () => {
         ),
       );
 
-    expect(settled(frontierAssembly)).toEqual(settled(continuedAssembly));
+    // The continued doors open first, so only history numbering differs.
+    const unnumbered = (value: unknown): unknown =>
+      JSON.parse(
+        JSON.stringify(value, (key, entry: unknown) =>
+          /^(history|reward)?[sS]equence$/.test(key) ? 0 : entry,
+        ),
+      );
+    expect(unnumbered(settled(frontierAssembly))).toEqual(unnumbered(settled(continuedAssembly)));
     expect(siteFindings(frontierAssembly)).toEqual(siteFindings(continuedAssembly));
     expect(
       rewardProduct(frontierAssembly).selectedLevelResolutions.filter(
@@ -659,8 +676,14 @@ describe('Pom level resolutions', () => {
       ),
     );
     expect(
-      rewardProduct(frontierAssembly).branches.map((branch) => branch.state.traitHistory),
-    ).toEqual(rewardProduct(continuedAssembly).branches.map((branch) => branch.state.traitHistory));
+      unnumbered(
+        rewardProduct(frontierAssembly).branches.map((branch) => branch.state.traitHistory),
+      ),
+    ).toEqual(
+      unnumbered(
+        rewardProduct(continuedAssembly).branches.map((branch) => branch.state.traitHistory),
+      ),
+    );
   });
 
   it('retains exact Pom assessments and capabilities for downstream findings after an upstream edit', () => {

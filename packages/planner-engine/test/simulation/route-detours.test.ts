@@ -1,4 +1,5 @@
 import { ordinaryPositionFor } from '../support/route-position';
+import { evaluateBiomeRoomGenerationAssemblyInternal } from '../../src/simulation/generation/biome';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -32,7 +33,6 @@ import {
   evaluateBiomeRoomGeneration,
   materializeBiomePrefix,
   chaosCandidateForProjectEvaluationAssembly,
-  zagreusContractCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
   evaluateBiomeCompleteness,
@@ -45,7 +45,6 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   createCompleteFGProject,
-  createGContractAvailabilityProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
@@ -1404,27 +1403,26 @@ describe('route-detour simulation', () => {
   });
 
   it('publishes entry-consumed Contract capabilities at a later Midshop', () => {
-    const entered = createGContractAvailabilityProject(true);
-    const enteredAssembly = simulateProjectAssembly(catalog, entered.project);
-    expect(
-      zagreusContractCandidateForProjectEvaluationAssembly(
-        enteredAssembly,
-        createOccurrenceAddress(gBiome, entered.laterShop),
-      ),
-    ).toMatchObject({
+    const laterCapability = (selectContract: boolean) => {
+      const first = prefix(
+        buildMidshopProject({ normalTargets: true, selectContract }).project,
+        fBiome,
+      );
+      const later = buildUnpickedGContractProject();
+      const second = prefix(later.project, gBiome, first.history.current);
+      return evaluateBiomeRoomGenerationAssemblyInternal(
+        catalog,
+        second.snapshot,
+        second.history,
+        2,
+      ).zagreusContracts.at(createOccurrenceAddress(gBiome, later.shop));
+    };
+    expect(laterCapability(true)).toMatchObject({
       placementEligible: false,
       enteredContractCount: 1,
       maximumEnteredThisRoute: 0,
     });
-
-    const skipped = createGContractAvailabilityProject(false);
-    const skippedAssembly = simulateProjectAssembly(catalog, skipped.project);
-    expect(
-      zagreusContractCandidateForProjectEvaluationAssembly(
-        skippedAssembly,
-        createOccurrenceAddress(gBiome, skipped.laterShop),
-      ),
-    ).toMatchObject({
+    expect(laterCapability(false)).toMatchObject({
       placementEligible: true,
       enteredContractCount: 0,
       maximumEnteredThisRoute: 0,

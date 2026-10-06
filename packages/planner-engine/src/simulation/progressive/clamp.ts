@@ -23,6 +23,7 @@ import {
   retainBlockedRegionProducts,
 } from './selected-products';
 import type { ProgressiveBiomeEvaluationAssembly, ProgressiveBiomeEvaluation } from './products';
+import { publishRoomTimelineBlock } from './timeline-cut';
 
 export interface ProgressiveClampProducts {
   readonly history: ProgressiveBiomeEvaluation['history'];
@@ -53,6 +54,9 @@ export function clampSelectedProducts(
   selectedProducts: ProgressiveBiomeSelectedProducts,
   unsupported: LocatedFinding,
 ): ProgressiveBiomeEvaluationAssembly | null {
+  // An ordinary room's Timeline, doors opening or exit work publishes the selected attempt.
+  const timeline = publishRoomTimelineBlock(catalog, authoredPrefix, selectedProducts, unsupported);
+  if (timeline !== undefined) return timeline;
   const retainedFindings = findingsAtRegion(
     authoredPrefix,
     selectedProducts.findingRegions,
@@ -98,10 +102,6 @@ export function clampSelectedProducts(
     unsupported,
     unsupported.regionKey,
     selectedProducts.findingRegions,
-    authoredPrefix.frontier?.kind === 'exitDecision' &&
-      authoredPrefix.frontier.parent.origin.kind === 'occurrence'
-      ? authoredPrefix.frontier.parent.origin
-      : undefined,
     retainedRoomGeneration.ordinary.ordinaryBatches,
   );
   const retainedRewards = blockedProducts.rewards;

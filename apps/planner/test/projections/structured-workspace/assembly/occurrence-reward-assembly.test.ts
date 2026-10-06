@@ -286,9 +286,11 @@ describe('structured workspace reward assembly', () => {
     });
     if (retained?.gorgonAthena?.offer?.kind !== 'traits')
       throw new Error('retained Gorgon Athena offer is missing');
-    expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === undefined)).toBe(
+    // The phase starts before the room's block, so its reached Gorgon rarity is published.
+    expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === 'Epic')).toBe(
       true,
     );
+    expect(retained.gorgonAthena.status).toBe('invalid');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,

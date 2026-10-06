@@ -43,6 +43,7 @@ export function publishChronology(
   context: ChronologyWalkContext,
   walk: ChronologyWalkState,
   accumulation: ChronologyAccumulation,
+  through: BiomeRewardEvaluationAssembly['through'],
 ): BiomeRewardEvaluationAssembly {
   const { catalog, snapshot } = context;
   const immutableFindingRegions = accumulation.findingRegions;
@@ -283,5 +284,6 @@ export function publishChronology(
     traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,
+    through,
   });
 }

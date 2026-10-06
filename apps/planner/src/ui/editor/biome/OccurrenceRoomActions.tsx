@@ -472,6 +472,7 @@ export function RoomActionsWorkbench({
         <li
           className="hub-open-room-card room-action-row"
           data-action-accent={actionAccent}
+          data-blocking-product={row.blockingProduct}
           // A row title would follow the pointer as a native tooltip during a drag.
           title={
             dragging

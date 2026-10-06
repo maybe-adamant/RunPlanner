@@ -51,7 +51,10 @@ import {
   type ProgressiveBiomeContext,
 } from '../progressive/biome';
 import { locateOwner } from '../progressive/finding-location';
-import type { BiomeGenerationValidation } from '../progressive/products';
+import type {
+  BiomeGenerationValidation,
+  ProgressiveBiomeEvaluation,
+} from '../progressive/products';
 import {
   effectiveRouteResourcePlacements,
   resourcePlacementFindings,
@@ -72,6 +75,7 @@ import type {
 } from '../candidates/trait-offer/capability';
 import type {
   BiomeEvaluationPoint,
+  PrefixBiomeEvaluationCoverage,
   ProjectBiomeEvaluation,
   ProjectEvaluation,
 } from './evaluation-products';
@@ -347,6 +351,12 @@ function generation(
   });
 }
 
+function roomTimelineCoverage(
+  evaluation: ProgressiveBiomeEvaluation,
+): Pick<PrefixBiomeEvaluationCoverage, 'roomTimeline'> {
+  return evaluation.roomTimeline === undefined ? {} : { roomTimeline: evaluation.roomTimeline };
+}
+
 export function materializedBiomePrefixCoveragePoint(
   prefix: MaterializedBiomePrefix,
 ): BiomeEvaluationPoint {
@@ -542,6 +552,7 @@ export function evaluateBiomeAssembly(
           kind: 'prefix',
           through: coveragePoint,
           ...(blockedAt === undefined ? {} : { blockedAt }),
+          ...roomTimelineCoverage(progressive.evaluation),
         }),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
@@ -663,6 +674,7 @@ export function evaluateBiomeAssembly(
           kind: 'prefix',
           through: materializedBiomePrefixCoveragePoint(assessmentPrefix),
           blockedAt,
+          ...roomTimelineCoverage(progressive.evaluation),
         }),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
@@ -807,6 +819,7 @@ export function evaluateBiomeAssembly(
       roomGeneration: roomGeneration.validation,
       findingRegions: selectedFindingRegions,
       traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
+      rewardsThrough: rewards.through,
     }),
   );
   if (progressive === null) {
@@ -845,6 +858,7 @@ export function evaluateBiomeAssembly(
         ...(progressive.evaluation.blockedAt === undefined
           ? {}
           : { blockedAt: progressive.evaluation.blockedAt }),
+        ...roomTimelineCoverage(progressive.evaluation),
       }),
       materializedPrefix: progressive.evaluation.materializedPrefix,
       ...(progressive.evaluation.assessmentPrefix === undefined

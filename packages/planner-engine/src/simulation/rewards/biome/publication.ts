@@ -18,7 +18,7 @@ import type {
   LevelResolutionCandidateArtifacts,
   TraitOfferCandidateArtifacts,
 } from '../../candidates/trait-offer/capability';
-import type { FindingRegionEntry } from '../../finding-regions';
+import type { FindingRegionEntry, HistoryFindingChronology } from '../../finding-regions';
 import type { BiomeRewardSimulation, RewardBranch } from '../model';
 import type { RoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import type { RewardProducerCandidateArtifacts } from '../producer-frontiers';
@@ -55,6 +55,14 @@ export interface BiomeRewardEvaluationAssembly {
   readonly findingRegions: readonly FindingRegionEntry[];
   /** Each entered room's vow ranks, read by its encounter compositions. */
   readonly encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>;
+  /**
+   * This walk's products published through an earlier chronology cut, without
+   * walking again; the blocked owner names the contact's reached checkpoint.
+   */
+  readonly through: (
+    cut: HistoryFindingChronology,
+    blockedAt?: SemanticAddress,
+  ) => BiomeRewardEvaluationAssembly;
 }
 
 /** Freezes the complete product accumulated by the chronological evaluator. */

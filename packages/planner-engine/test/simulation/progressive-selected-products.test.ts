@@ -342,6 +342,7 @@ describe('progressive selected and blocked products', () => {
           event.origin.occurrenceId === 'golden-h-miniboss01',
       ),
     ).toBe(true);
+    // The miniboss is entered and its Timeline published up to the blocked offer.
     expect(
       blocked.history.events.some(
         (event) =>
@@ -349,7 +350,7 @@ describe('progressive selected and blocked products', () => {
           event.origin.kind === 'occurrence' &&
           event.origin.occurrenceId === 'golden-h-miniboss01',
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('retains the complete normal batch when selected Chaos blocks at its trait child', () => {

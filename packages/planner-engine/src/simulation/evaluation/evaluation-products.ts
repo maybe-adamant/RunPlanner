@@ -1,4 +1,8 @@
-import type { BiomeAddress, SemanticAddress } from '../../authored-project/addresses';
+import type {
+  BiomeAddress,
+  OccurrenceAddress,
+  SemanticAddress,
+} from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { CanonicalBiome, MaterializedBiomePrefix } from '../materialization';
 import type { BiomeHistoryPrefix, CanonicalBiomeHistory } from '../history';
@@ -95,10 +99,21 @@ export interface NoBiomeEvaluationCoverage {
   readonly reason: 'notEvaluated';
 }
 
+/**
+ * Coverage through a block inside an entered room's Timeline, doors opening
+ * or exit work: the room is assessed up to its blocking product.
+ */
+export interface RoomTimelineCoverage {
+  readonly room: OccurrenceAddress;
+  /** Room action keys of the blocking product's Timeline rows, in Timeline order. */
+  readonly blockingRowKeys: readonly string[];
+}
+
 export interface PrefixBiomeEvaluationCoverage {
   readonly kind: 'prefix';
   readonly through: BiomeEvaluationPoint;
   readonly blockedAt?: SemanticAddress;
+  readonly roomTimeline?: RoomTimelineCoverage;
 }
 
 export interface CompleteBiomeEvaluationCoverage {

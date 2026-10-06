@@ -45,6 +45,8 @@ export interface ProgressiveBiomeEvaluation {
   readonly blockedKind?: 'incomplete' | 'invalid';
   readonly blockedRegionKey?: string;
   readonly blockedLocation?: import('./finding-location').OwnerLocation;
+  /** A block inside an entered room's Timeline, doors opening or exit work. */
+  readonly roomTimeline?: import('../evaluation/evaluation-products').RoomTimelineCoverage;
 }
 
 /** The progressive evaluation plus the candidate artifacts it publishes. */

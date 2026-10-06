@@ -80,6 +80,8 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly stygianWellAssessment?: (
     owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  /** Engine-published Timeline rows of the product this room's assessment stops at. */
+  readonly blockingRowKeys?: ReadonlySet<string>;
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -803,12 +805,13 @@ function roomActionsForOccurrence(
           ];
         })()
       : [];
-  const allProjectedRows: WorkspaceRoomActions['rows'] = Object.freeze([
-    ...projectedRows,
-    ...dueShrineRows,
-    ...clockedTraitPickupRows,
-    ...goldPickupRows,
-  ]);
+  const allProjectedRows: WorkspaceRoomActions['rows'] = Object.freeze(
+    [...projectedRows, ...dueShrineRows, ...clockedTraitPickupRows, ...goldPickupRows].map((row) =>
+      input.blockingRowKeys?.has(row.key) === true
+        ? Object.freeze({ ...row, blockingProduct: true as const })
+        : row,
+    ),
+  );
   const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
       if (skippedInteractionKeys.has(key)) return [];

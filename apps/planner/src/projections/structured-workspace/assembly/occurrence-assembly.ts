@@ -247,6 +247,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
+  /** Engine-published Timeline rows of the product this room's assessment stops at. */
+  readonly blockingRowKeys?: ReadonlySet<string>;
   readonly judgmentArcanaCapability?: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
@@ -398,6 +400,7 @@ export function assembleWorkspaceOccurrence(
     ...(input.stygianWellAssessment === undefined
       ? {}
       : { stygianWellAssessment: input.stygianWellAssessment }),
+    ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
     controls: allRewardControls,
     encounterPhases,
     features,

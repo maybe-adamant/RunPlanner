@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
+  catalog,
+  createCompleteFGProject,
   createGoldenFGHIProject,
   createOccurrenceId,
   loadSurfaceNOPProject,
   oOccurrenceIds,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
-import { createGContractAvailabilityProject } from '@run-planner/test-fixtures/underworld';
 
 describe('structured workspace features assembly', () => {
   it('projects declared Stygian Well features for an F Postboss room', () => {
@@ -48,19 +49,42 @@ describe('structured workspace features assembly', () => {
   });
 
   it('omits a consumed Contract and enables one after an earlier offer was skipped', () => {
-    const entered = createGContractAvailabilityProject(true);
-    const enteredRoom = assemble(entered.project, 'Underworld', 'G', entered.laterShop).assembly
-      .node.room;
-    expect(
-      enteredRoom.workbench.features.some((feature) => feature.kind === 'zagreusContract'),
-    ).toBe(false);
+    const midshop = createOccurrenceId('golden-g-b5-e1');
+    const contractFeature = (
+      zagreusContractAssessment?: () => {
+        readonly placementEligible: boolean;
+        readonly failedConditions: readonly ('enteredContractCap' | 'sourceRequirement')[];
+        readonly enteredContractCount: number;
+        readonly maximumEnteredThisRoute: number;
+      },
+    ) =>
+      assemble(
+        createCompleteFGProject(),
+        'Underworld',
+        'G',
+        midshop,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        catalog,
+        (source) =>
+          zagreusContractAssessment === undefined
+            ? source
+            : Object.freeze({ ...source, zagreusContractAssessment }),
+      ).assembly.node.room.workbench.features.find((feature) => feature.kind === 'zagreusContract');
 
-    const skipped = createGContractAvailabilityProject(false);
-    const skippedRoom = assemble(skipped.project, 'Underworld', 'G', skipped.laterShop).assembly
-      .node.room;
+    // The engine's entry-consumed policy reports the earlier Contract; the app omits the door.
     expect(
-      skippedRoom.workbench.features.find((feature) => feature.kind === 'zagreusContract'),
-    ).toMatchObject({
+      contractFeature(() => ({
+        placementEligible: false,
+        failedConditions: ['enteredContractCap'],
+        enteredContractCount: 1,
+        maximumEnteredThisRoute: 0,
+      })),
+    ).toBeUndefined();
+    // No earlier Contract: the reached Midshop offers its door.
+    expect(contractFeature()).toMatchObject({
       action: 'add',
       presence: { kind: 'optionalAbsent', enabled: true },
     });
