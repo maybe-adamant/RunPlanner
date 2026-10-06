@@ -12,7 +12,6 @@ import type {
   CanonicalHubDecision,
   CanonicalHubVisit,
   MaterializedBiomePrefix,
-  MaterializedHubVisitFrontier,
 } from '../materialization';
 import type {
   BiomeHistoryPrefix,
@@ -47,17 +46,6 @@ export type HubGenerationHistory = CanonicalBiomeHistory | BiomeHistoryPrefix;
 interface HubGenerationValidationWithRegions extends HubRoomGenerationValidation {
   readonly findingRegions: readonly FindingRegionEntry[];
 }
-
-/**
- * The active Hub visit frontier is intentionally smaller than a completed
- * CanonicalHubVisit: it has not acquired a return restore yet. Generation
- * validation only needs the visit's physical target and local-slot envelope,
- * so keep that checkpoint product independent of completion-only topology.
- */
-type HubVisitGenerationShape = Pick<
-  CanonicalHubVisit,
-  'origin' | 'visitIndex' | 'target' | 'localSlots' | 'enteredLocalRooms'
->;
 
 function fail(detail: string): never {
   throw new HubDecisionGenerationContractError(detail);
@@ -158,8 +146,12 @@ function hubBoardChronology(
   const room = history.rooms.find(
     (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(roomOrigin),
   );
+  // The board's slots, not the Handoff generated after the visits.
   const sequence = room?.targetGenerations.reduce(
-    (latest, target) => Math.max(latest, target.roomCreationSequence),
+    (latest, target) =>
+      target.targetOrigin.kind === 'hubSlot'
+        ? Math.max(latest, target.roomCreationSequence)
+        : latest,
     -1,
   );
   return sequence === undefined || sequence < 0
@@ -195,17 +187,11 @@ function assertBoardIdentity(
 
 function validateVisit(
   descriptor: HubDecisionDescriptor,
-  visit: HubVisitGenerationShape,
+  visit: CanonicalHubVisit,
   views: ReadonlyMap<string, ProgressiveRoomHistoryViews>,
   findings: SemanticFinding[],
   findingRegions: FindingRegionEntry[],
-  activeFrontierPhase?: MaterializedHubVisitFrontier['phase'],
 ): readonly HubSideRoomGenerationSupportEntry[] {
-  // Reaching local lifecycle already proves the visit's outgoing generation
-  // checkpoint.  The active frontier must remain available for locating and
-  // clamping later local findings, but it must not re-emit an earlier
-  // side-generation decision as a competing blocker.
-  if (activeFrontierPhase === 'localRoomLifecycle') return Object.freeze([]);
   const view = views.get(semanticAddressKey(visit.target.room.origin));
   const generatedBefore = view?.preOutgoing?.ledgers.counters.numSubRoomsSpawned;
   if (generatedBefore === undefined) {
@@ -214,6 +200,10 @@ function validateVisit(
     // Leave that later visit unavailable until its own history context exists.
     return Object.freeze([]);
   }
+  // The side doors are one generation set, settled once the last of them exists.
+  const sideDoors = view?.outgoingGeneration;
+  if (sideDoors === undefined)
+    fail(`Hub visit ${visit.visitIndex} reached its side doors without generating them`);
   const required = requiredGeneratedCount(descriptor, visit.visitIndex);
   let generated = generatedBefore;
   const ordered = [...visit.localSlots].sort(
@@ -253,6 +243,7 @@ function validateVisit(
         // the authored visitIndex itself is one-based.
         visitIndex: visit.visitIndex - 1,
         phase: 'sideGeneration',
+        history: { kind: 'history', sequence: sideDoors.sequence, boundary: 'after' },
       };
       findingRegions.push(
         findingRegion(value, ownerRegion(value.origin), chronology, 'generation'),
@@ -261,10 +252,7 @@ function validateVisit(
     if (slot.localVisit.generation === 'generated') generated += 1;
     return entry;
   });
-  if (
-    activeFrontierPhase === undefined &&
-    view?.outgoingGeneration?.ledgers.counters.numSubRoomsSpawned !== generated
-  ) {
+  if (sideDoors.ledgers.counters.numSubRoomsSpawned !== generated) {
     fail(`Hub visit ${visit.visitIndex} side-generation history diverges from authored state`);
   }
   return Object.freeze(entries);
@@ -291,25 +279,7 @@ export function evaluateHubDecisionGenerationInternal(
   if (snapshot.kind === 'biome' && decision.visits.length !== descriptor.requiredVisits) {
     fail(`${descriptor.hubKey} requires exactly ${descriptor.requiredVisits} visits`);
   }
-  const activeFrontier =
-    snapshot.kind === 'biomePrefix' &&
-    snapshot.frontier?.kind === 'hubVisit' &&
-    'target' in snapshot.frontier
-      ? snapshot.frontier
-      : undefined;
-  const visits: readonly HubVisitGenerationShape[] =
-    activeFrontier === undefined
-      ? decision.visits
-      : Object.freeze([
-          ...decision.visits,
-          Object.freeze({
-            origin: activeFrontier.origin,
-            visitIndex: activeFrontier.origin.visitIndex,
-            target: activeFrontier.target,
-            localSlots: activeFrontier.localSlots,
-            enteredLocalRooms: activeFrontier.enteredLocalRooms,
-          }),
-        ]);
+  const visits = decision.visits;
   const visited = new Set<string>();
   for (const [index, visit] of visits.entries()) {
     if (
@@ -339,22 +309,8 @@ export function evaluateHubDecisionGenerationInternal(
   );
   const views = roomViews(history);
   const sideRoomGenerations = Object.freeze(
-    visits.flatMap((visit) =>
-      validateVisit(
-        descriptor,
-        visit,
-        views,
-        findings,
-        findingRegions,
-        activeFrontier?.origin === visit.origin ? activeFrontier.phase : undefined,
-      ),
-    ),
+    visits.flatMap((visit) => validateVisit(descriptor, visit, views, findings, findingRegions)),
   );
-  const tracked = new Set(findingRegions.map((entry) => entry.finding));
-  for (const value of findings) {
-    if (!tracked.has(value))
-      findingRegions.push(findingRegion(value, ownerRegion(value.origin), undefined, 'generation'));
-  }
   return Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',

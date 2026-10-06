@@ -139,7 +139,11 @@ export function generateLocalRewards(
             : 'ownEnteredLifecycle',
         owners: Object.freeze([localReward.origin]),
         resolvedStoreKey: localReward.resolvedStoreKey,
-        evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+        evaluateOffer: (
+          owner: SemanticAddress,
+          offer: ResolvedRewardOffer,
+          reachedThrough: number,
+        ) => {
           if (semanticAddressKey(owner) !== ownerKey)
             throw new BiomeRewardSimulationContractError(
               'local reward frontier received a foreign owner',
@@ -155,6 +159,7 @@ export function generateLocalRewards(
           if (
             candidateBranches.length > 0 &&
             acquisition.event !== undefined &&
+            acquisition.event.sequence <= reachedThrough &&
             acquisition.view !== undefined
           ) {
             const settlement = settleOwnedAcquisitionSite(
@@ -227,7 +232,11 @@ export function generateLocalRewards(
             : 'ownEnteredLifecycle',
         owners: Object.freeze([unresolved.origin]),
         resolvedStoreKey: unresolved.resolvedStoreKey,
-        evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+        evaluateOffer: (
+          owner: SemanticAddress,
+          offer: ResolvedRewardOffer,
+          reachedThrough: number,
+        ) => {
           if (semanticAddressKey(owner) !== ownerKey)
             throw new BiomeRewardSimulationContractError(
               'unresolved local reward frontier received a foreign owner',
@@ -280,6 +289,7 @@ export function generateLocalRewards(
           if (
             candidateBranches.length > 0 &&
             acquisition.event !== undefined &&
+            acquisition.event.sequence <= reachedThrough &&
             acquisition.view !== undefined
           ) {
             const settlement = settleOwnedAcquisitionSite(

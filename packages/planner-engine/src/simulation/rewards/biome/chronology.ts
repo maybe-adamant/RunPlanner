@@ -97,7 +97,6 @@ function createWalkContext(
   // Hub visit targets and their entered local rooms restore to an existing
   // parent rather than generating another ordinary decision. Their outgoing
   // checkpoints must still advance reward history without inventing a batch.
-  const activeHubVisit = prepared.activeHubVisit;
   const hubRestoringSources = new Set([
     ...snapshot.decisions
       .filter(
@@ -110,12 +109,6 @@ function createWalkContext(
           ...visit.enteredLocalRooms.map((room) => semanticAddressKey(room.origin)),
         ]),
       ),
-    ...(activeHubVisit === undefined
-      ? []
-      : [
-          semanticAddressKey(activeHubVisit.target.room.origin),
-          ...activeHubVisit.enteredLocalRooms.map((room) => semanticAddressKey(room.origin)),
-        ]),
   ]);
   const frontierSource =
     snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
@@ -444,6 +437,7 @@ export function evaluateBiomeRewardChronology(
       child === undefined ? received : withBranches(received, child.branches),
       accumulation,
       through,
+      cut.boundary === 'before' ? cut.sequence - 1 : cut.sequence,
     );
   };
   return publishChronology(context, walk, accumulator.finish(), through);

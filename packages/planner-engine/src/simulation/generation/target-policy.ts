@@ -824,6 +824,18 @@ function generationFindingChronology(
   if (additional !== undefined) {
     return Object.freeze({ kind: 'history', sequence: additional.sequence, boundary: 'before' });
   }
+  // A decision-wide failure stops its source's doors as they open, before any door exists.
+  if (origin.kind === 'exitDecision' && origin.source.kind === 'occurrence') {
+    const sourceId = origin.source.occurrenceId;
+    const opening = history.events.find(
+      (event) =>
+        event.kind === 'outgoingGenerationCheckpoint' &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === sourceId,
+    );
+    if (opening !== undefined)
+      return Object.freeze({ kind: 'history', sequence: opening.sequence, boundary: 'after' });
+  }
   const fields = history.events.find(
     (event) =>
       event.kind === 'fieldsBatchOutcomeRecorded' &&

@@ -121,7 +121,11 @@ export function materializeFieldsOptionalOfferPoint(
         hubBoardLookups: 'notConsulted',
       }),
   });
-  const evaluateOptionalCohort = (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+  const evaluateOptionalCohort = (
+    owner: SemanticAddress,
+    offer: ResolvedRewardOffer,
+    reachedThrough: number,
+  ) => {
     const ownerKey = semanticAddressKey(owner);
     const selectedReward = [...optionalRewards, ...unresolvedOptionals].find(
       (reward) => semanticAddressKey(reward.origin) === ownerKey,
@@ -189,6 +193,7 @@ export function materializeFieldsOptionalOfferPoint(
     if (
       candidateBranches.length > 0 &&
       acquisitionEvent !== undefined &&
+      acquisitionEvent.sequence <= reachedThrough &&
       acquisitionView !== undefined
     ) {
       const settlement = settleOwnedAcquisitionSite(

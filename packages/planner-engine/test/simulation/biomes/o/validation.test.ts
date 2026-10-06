@@ -680,7 +680,7 @@ describe('selected O validation', () => {
       result: {
         supportEncounterCounts: [2],
         selectedPossible: false,
-        // The entered room's lifecycle also asks for the activated wheel's reward.
+        // The activated wheel's reward is in the unreached Timeline.
         findings: [
           expect.objectContaining({
             code: 'encounterSlotActivationUnavailable',
@@ -690,7 +690,6 @@ describe('selected O validation', () => {
               'Combat2',
             ),
           }),
-          expect.objectContaining({ code: 'rewardMissing' }),
         ],
       },
     });
@@ -902,10 +901,8 @@ describe('selected O validation', () => {
       }),
     ).toMatchObject({
       kind: 'rewardWheelOffer',
-      result: {
-        supported: true,
-        findings: [expect.objectContaining({ code: 'missingPomTarget' })],
-      },
+      // The wheel's pick follows the blocking offer, so its acquisition is not modelled.
+      result: { supported: true, findings: [] },
     });
     expect(
       session.evaluate({

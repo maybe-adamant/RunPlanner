@@ -233,7 +233,7 @@ export function shopOfferAssessmentForProjectEvaluationAssembly(
     ?.shopSlotAssessment?.(offer);
 }
 
-/** Exact Pool generation capability retained when progressive assessment clamps its reward view. */
+/** Exact Pool generation capability published through the progressive assessment cut. */
 export function purgingPoolCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   occurrence: import('../../authored-project/addresses').OccurrenceAddress,

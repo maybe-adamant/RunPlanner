@@ -215,7 +215,11 @@ export function applyRewardWheelOfferPointMaterialization(
         : 'ownEnteredLifecycle',
     owners,
     resolvedStoreKey: wheel.storeKey,
-    evaluateOffer: (owner: SemanticAddress, offer: CanonicalResolvedIncomingReward['offer']) => {
+    evaluateOffer: (
+      owner: SemanticAddress,
+      offer: CanonicalResolvedIncomingReward['offer'],
+      reachedThrough: number,
+    ) => {
       const ownerKey = semanticAddressKey(owner);
       if (!ownerKeys.has(ownerKey))
         throw new BiomeRewardSimulationContractError(
@@ -295,7 +299,8 @@ export function applyRewardWheelOfferPointMaterialization(
         candidateBranches.length > 0 &&
         selectedOffer?.picked === true &&
         acquisitionView !== undefined &&
-        acquisitionEvent?.kind === 'offerPointAcquired'
+        acquisitionEvent?.kind === 'offerPointAcquired' &&
+        acquisitionEvent.sequence <= reachedThrough
       ) {
         const source = shipWheelRoomRewardSource(wheel, selectedOffer, offer);
         const settlement = settleOwnedAcquisitionSite(

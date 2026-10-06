@@ -46,10 +46,7 @@ import { structurallyActiveEncounterRooms } from '../encounters/structural';
 import { materializeBiomePrefix } from '../materialization';
 import { assessmentRepairOwner, type FindingRegionEntry } from '../finding-regions';
 import { createAssessmentIssue } from '../assessment-issue';
-import {
-  evaluateBiomeRewardsAssemblyInternal,
-  type TraitChildSettlementCheckpoints,
-} from '../rewards/biome';
+import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
@@ -65,7 +62,7 @@ import {
   mergedFindings,
   type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
-import { clampSelectedProducts } from './clamp';
+import { publishSelectedCut } from './selected-cut';
 import type {
   BiomeGenerationValidation,
   ProgressiveBiomeEvaluation,
@@ -122,7 +119,6 @@ interface ProgressiveProducts {
   readonly evaluation: Omit<ProgressiveBiomeEvaluation, 'materializedPrefix' | 'blockedAt'>;
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
-  readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly rewardsThrough: ProgressiveBiomeSelectedProducts['rewardsThrough'];
 }
 
@@ -295,30 +291,23 @@ function products(
     }),
     candidateArtifacts: roomGeneration.candidateArtifacts,
     findingRegions: Object.freeze([...roomGeneration.findingRegions, ...rewards.findingRegions]),
-    traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
     rewardsThrough: rewards.through,
   });
 }
 
-/**
- * A generic clamp may retain a target only as an interaction frontier. Trait
- * acquisition happens during that target's room lifecycle, so the selected
- * offer and its opaque pre-offer capability must be carried from the original
- * selected-path assembly into the retained interaction product. Nothing after
- * the blocked offer is admitted.
- */
-export function evaluateProgressiveBiomeBeforeClamp(
+/** The complete selected attempt, with its first block located but not yet published. */
+export function evaluateSelectedProgressiveBiome(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluation | null {
   return (
-    evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, biome, plan, context)?.evaluation ?? null
+    evaluateSelectedProgressiveBiomeAssembly(catalog, biome, plan, context)?.evaluation ?? null
   );
 }
 
-export function evaluateProgressiveBiomeAssemblyBeforeClamp(
+export function evaluateSelectedProgressiveBiomeAssembly(
   catalog: Catalog,
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
@@ -375,8 +364,8 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
 }
 
 /**
- * Evaluates the maximum materializable authored prefix, then clamps once at
- * the first unsupported semantic owner. The retained prefix is replayed so no
+ * Evaluates the maximum materializable authored prefix, then publishes it
+ * through the first unsupported semantic owner's chronology cut, so no
  * history, reward, or candidate product claims coverage beyond that owner.
  */
 export function evaluateProgressiveBiome(
@@ -413,17 +402,15 @@ export function evaluateProgressiveBiomeAssembly(
   const evaluated = products(catalog, authoredPrefix, context);
   const unsupported = firstUnsupportedFinding(authoredPrefix, evaluated.findingRegions);
   if (unsupported !== undefined) {
-    return clampSelectedProducts(
+    return publishSelectedCut(
       catalog,
       authoredPrefix,
-      (prefix) => products(catalog, prefix, context),
       Object.freeze({
         history: evaluated.evaluation.history,
         roomGeneration: evaluated.evaluation.roomGeneration,
         rewards: evaluated.evaluation.rewards,
         candidateArtifacts: evaluated.candidateArtifacts,
         findingRegions: evaluated.findingRegions,
-        traitChildSettlementCheckpoints: evaluated.traitChildSettlementCheckpoints,
         rewardsThrough: evaluated.rewardsThrough,
       }),
       unsupported,
@@ -440,8 +427,8 @@ export function evaluateProgressiveBiomeAssembly(
 }
 
 /**
- * Clamps a complete-invalid canonical attempt using its already selected
- * products. Only the bounded execution and interaction prefixes are replayed.
+ * Publishes a complete-invalid canonical attempt's already selected products
+ * through its first block. Nothing is replayed.
  */
 export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   catalog: Catalog,
@@ -479,11 +466,5 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
       candidateArtifacts: selectedProducts.candidateArtifacts,
     });
   }
-  return clampSelectedProducts(
-    catalog,
-    authoredPrefix,
-    (prefix) => products(catalog, prefix, context),
-    selectedProducts,
-    unsupported,
-  );
+  return publishSelectedCut(catalog, authoredPrefix, selectedProducts, unsupported);
 }

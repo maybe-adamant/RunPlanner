@@ -56,7 +56,19 @@ export interface RewardProducerCandidateCapability {
   readonly shopSlotAssessment?: (owner: ShopOfferAddress) => ShopSlotAssessment | undefined;
 }
 
-export interface RewardProducerFrontier extends RewardProducerCandidateCapability {
+export interface RewardProducerFrontier extends Omit<
+  RewardProducerCandidateCapability,
+  'evaluateOffer'
+> {
+  /**
+   * Evaluates an offer whose own acquisition is modelled only at contacts the
+   * published attempt reached: those at or before `reachedThrough`.
+   */
+  readonly evaluateOffer: (
+    owner: RewardProducerOwnerAddress,
+    offer: ResolvedRewardOffer,
+    reachedThrough: number,
+  ) => RewardProducerCandidateResult;
   readonly generationPolicy: RewardProducerGenerationPolicy;
   readonly generationHistorySequence: number;
   readonly reachableBranchCount: number;
@@ -89,6 +101,7 @@ export function indexRewardProducerFrontier(
 
 export function createRewardProducerCandidateArtifacts(
   frontiers: ReadonlyMap<string, RewardProducerFrontier>,
+  reachedThrough = Number.POSITIVE_INFINITY,
 ): RewardProducerCandidateArtifacts {
   const privateFrontiers = new Map<string, RewardProducerCandidateCapability>();
   for (const [key, frontier] of frontiers) {
@@ -97,7 +110,8 @@ export function createRewardProducerCandidateArtifacts(
       Object.freeze({
         generationHistorySequence: frontier.generationHistorySequence,
         acquisitionHorizon: frontier.acquisitionHorizon,
-        evaluateOffer: frontier.evaluateOffer,
+        evaluateOffer: (owner: RewardProducerOwnerAddress, offer: ResolvedRewardOffer) =>
+          frontier.evaluateOffer(owner, offer, reachedThrough),
         ...(frontier.evaluateShopOption === undefined
           ? {}
           : { evaluateShopOption: frontier.evaluateShopOption }),

@@ -374,9 +374,12 @@ describe('Purging Pool sales', () => {
       },
     };
     const evaluated = fRewards(stale);
-    expect(evaluated.findings).toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
-    );
+    // The stale sale shares the Pool's region, so the blocking product reports it.
+    expect(
+      simulateProjectAssembly(catalog, stale).evaluation.route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'F',
+      )?.findings,
+    ).toContainEqual(expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }));
     expect(
       evaluated.branches.every(
         (branch) => branch.state.traitHistory?.equippedTraits[middle!] !== undefined,

@@ -895,7 +895,7 @@ function assembleBatchDecision(
     source.occurrence,
     decision,
   );
-  // Evaluation may clamp away the target whose cage needs repair. Activation
+  // Assessment may stop before the target whose cage needs repair. Activation
   // remains a fact of the complete authored batch, not overlay membership.
   const authoredFieldsFacts = fieldsBatchFacts(
     input.catalog,

@@ -30,10 +30,7 @@ import {
 import type { CanonicalHubDecision } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
-import {
-  evaluateProgressiveBiome,
-  evaluateProgressiveBiomeBeforeClamp,
-} from '../progressive/biome';
+import { evaluateProgressiveBiome, evaluateSelectedProgressiveBiome } from '../progressive/biome';
 import { ownsOccurrence } from '../progressive/finding-location';
 import {
   effectiveRouteResourcePlacements,
@@ -364,7 +361,7 @@ function hubRegionEvaluation(
 }
 
 /**
- * Replays an aggregate Hub proposal before clamping so candidate evidence
+ * Replays an aggregate Hub proposal before its block is published so candidate evidence
  * retains every affected visit and room-local finding, not only the first
  * currently reachable visit.
  */
@@ -378,7 +375,7 @@ function hubActionOrderEvaluation(
 ) {
   const regionalPlan = hubRegionalPlan(project, routeKey, biomeKey, hubKey, undefined);
   if (regionalPlan === undefined) return undefined;
-  return evaluateProgressiveBiomeBeforeClamp(
+  return evaluateSelectedProgressiveBiome(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,

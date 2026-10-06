@@ -822,7 +822,7 @@ describe('Hermes Shrine delayed deliveries', () => {
     ).toEqual(['N_Boss01', 'N_PostBoss01']);
   });
 
-  it('preserves a reached automatic outcome while an unresolved Shrine is added and removed', () => {
+  it('withholds the host automatic outcome behind its Shrine Overview block and restores it', () => {
     const project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
     const finding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
       (candidate) =>
@@ -834,23 +834,26 @@ describe('Hermes Shrine delayed deliveries', () => {
       throw new Error('checkpoint lost the reached P outcome');
     const host = finding.origin.owner;
     const outcomeKey = semanticAddressKey(finding.origin);
-    const assertReachedOutcome = (candidate: typeof project) => {
+    const assertOutcome = (candidate: typeof project, reached: boolean) => {
       const biome = simulateProjectAssembly(catalog, candidate).evaluation.route.biomes.find(
         (item) => item.biomeKey === 'P',
       );
       if (biome === undefined || !('rewards' in biome))
         throw new Error('checkpoint lost its P reward evaluation');
       expect(
-        biome.rewards.steadyGrowthOutcomes.map((outcome) => semanticAddressKey(outcome.address)),
-      ).toContain(outcomeKey);
+        biome.rewards.steadyGrowthOutcomes.some(
+          (outcome) => semanticAddressKey(outcome.address) === outcomeKey,
+        ),
+      ).toBe(reached);
       expect(
         biome.rewards.findings.some(
           (finding) =>
             finding.code === 'steadyGrowthOutcomeMissing' &&
             semanticAddressKey(finding.origin) === outcomeKey,
         ),
-      ).toBe(true);
+      ).toBe(reached);
     };
+    const assertReachedOutcome = (candidate: typeof project) => assertOutcome(candidate, true);
 
     assertReachedOutcome(project);
     const added = applyProjectCommand(project, catalog, {
@@ -858,7 +861,8 @@ describe('Hermes Shrine delayed deliveries', () => {
       occurrence: host,
       present: true,
     });
-    assertReachedOutcome(added);
+    // The unresolved Shrine stops the host at its Overview, before the encounter's end effects.
+    assertOutcome(added, false);
     const removed = applyProjectCommand(added, catalog, {
       kind: 'SetHermesShrinePresence',
       occurrence: host,

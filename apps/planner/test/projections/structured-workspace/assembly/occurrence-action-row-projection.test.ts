@@ -51,6 +51,7 @@ import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   createRoomFeatureAddress,
+  createRouteStartKeepsakeSelectionAddress,
   type RoomActionReference,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -61,6 +62,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
+  createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   qBiome,
   qOccurrenceIds,
   surfaceTravelDealRefillAnvilProject,
@@ -1766,5 +1768,111 @@ describe('room Timeline block', () => {
         ? undefined
         : interactions.shopPurchaseParticipations.get(participation.interactionKey),
     ).toMatchObject({ purchased: true });
+  });
+});
+
+describe('room Timeline block in opening, fixed and Hub rooms', () => {
+  function workbenches(project: ProjectDocument) {
+    return projectStructuredWorkspaceFixture(project)
+      .workspace.route.biomes.flatMap((biome) => biome.nodes)
+      .flatMap((node) => (node.kind === 'occurrenceWorkbench' ? [node] : []));
+  }
+
+  function workbench(project: ProjectDocument, occurrenceId: string) {
+    const node = workbenches(project).find(
+      (candidate) => candidate.room.occurrenceId === occurrenceId,
+    );
+    if (node === undefined) throw new Error(`${occurrenceId} workbench is missing`);
+    return node;
+  }
+
+  function skipEncounter(project: ProjectDocument, occurrenceId: string): ProjectDocument {
+    const withFigLeaf = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    return applyProjectCommand(withFigLeaf, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId(occurrenceId) },
+        'Encounter',
+      ),
+      value: true,
+    });
+  }
+
+  it('keeps the opening reward reached before its blocking encounter start', () => {
+    const project = skipEncounter(loadSurfaceNOPQProject(), 'surface-n-opening');
+    const pickup = workbench(project, 'surface-n-opening').room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward',
+    );
+
+    expect(pickup?.rewardPayload?.inlineTraitOffers.map((offer) => offer.contextReached)).toEqual([
+      true,
+    ]);
+    // The opening never opens its doors, so the next room is never assessed.
+    expect(workbench(project, 'surface-n-prehub').marker.assessment).toBe('unassessed');
+  });
+
+  it('marks the blocking Boss delivery and leaves the Postboss unassessed', () => {
+    const project = createSurfaceNUnresolvedBossHermesDeliveryCheckpoint();
+    const rows = workbench(project, 'surface-n-preboss:boss').room.roomActions?.rows ?? [];
+
+    expect(
+      rows.find((row) => row.reference.kind === 'collectRequiredReward')?.blockingProduct,
+    ).toBe(undefined);
+    expect(
+      rows.find(
+        (row) =>
+          row.reference.kind === 'interactAcquisitionEntry' &&
+          row.reference.siteKey === 'hermesShrineDelivery',
+      )?.blockingProduct,
+    ).toBe(true);
+    expect(workbench(project, 'surface-n-preboss').marker.assessment).toBe('assessed');
+    expect(workbench(project, 'surface-n-preboss:postboss').marker.assessment).toBe('unassessed');
+  });
+
+  it('enters a Hub visit target whose reward offer blocks its Timeline', () => {
+    const base = authorLegalTraitOffers(loadSurfaceNOPQProject());
+    const n = projectStructuredWorkspaceFixture(base).evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'N',
+    );
+    const selected =
+      n !== undefined && 'rewards' in n
+        ? n.rewards.selectedTraitOffers.find(
+            (offer) =>
+              offer.address.owner.kind === 'incomingReward' &&
+              offer.address.owner.occurrenceId === 'surface-n-combat11',
+          )
+        : undefined;
+    if (selected?.offer.kind !== 'traits') throw new Error('N combat11 has no trait offer');
+    const [first, ...rest] = selected.offer.options;
+    if (first === undefined) throw new Error('N combat11 trait offer is empty');
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: selected.address,
+      value: { ...selected.offer, options: [{ ...first, rarity: 'Heroic' }, ...rest] },
+    });
+    const pickup = (occurrenceId: string) =>
+      workbench(project, occurrenceId).room.roomActions?.rows.find(
+        (row) => row.reference.kind === 'interactIncomingReward',
+      );
+
+    // The stopped visit's target is entered and its reward pickup is the repair region.
+    expect(workbench(project, 'surface-n-combat11').marker.assessment).toBe('assessed');
+    expect(pickup('surface-n-combat11')?.blockingProduct).toBe(true);
+    // An earlier visit keeps its reached offer; a later visit is read-only.
+    expect(
+      pickup('surface-n-combat05')?.rewardPayload?.inlineTraitOffers.map(
+        (offer) => offer.contextReached,
+      ),
+    ).toEqual([true]);
+    expect(
+      pickup('surface-n-combat23')?.rewardPayload?.inlineTraitOffers.map(
+        (offer) => offer.contextReached,
+      ),
+    ).toEqual([false]);
   });
 });

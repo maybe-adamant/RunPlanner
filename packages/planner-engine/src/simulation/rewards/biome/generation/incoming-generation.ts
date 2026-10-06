@@ -66,6 +66,8 @@ interface IncomingOfferCandidateContext {
     HistoryEvent,
     { readonly kind: 'producerPointReached' }
   >[];
+  /** The last history sequence the published attempt reached. */
+  readonly reachedThrough: number;
 }
 
 function completeIncomingOfferCandidate(
@@ -102,7 +104,8 @@ function completeIncomingOfferCandidate(
         : Object.freeze(
             lifecycle.acquisitionLifecycle.flatMap((binding) => {
               const reached = entry.producerPoints.find(
-                (point) => point.point === binding.lifecyclePoint,
+                (point) =>
+                  point.point === binding.lifecyclePoint && point.sequence <= entry.reachedThrough,
               );
               return reached === undefined
                 ? []
@@ -274,7 +277,11 @@ export function generateIncomingReward(
         ...(unresolved.resolvedStoreKey === undefined
           ? {}
           : { resolvedStoreKey: unresolved.resolvedStoreKey }),
-        evaluateOffer: (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
+        evaluateOffer: (
+          owner: SemanticAddress,
+          offer: ResolvedRewardOffer,
+          reachedThrough: number,
+        ) => {
           if (semanticAddressKey(owner) !== ownerKey)
             throw new BiomeRewardSimulationContractError(
               'unresolved reward frontier received a foreign owner',
@@ -308,6 +315,7 @@ export function generateIncomingReward(
               incoming: candidate,
               ...(acquisitionView === undefined ? {} : { acquisitionView }),
               producerPoints,
+              reachedThrough,
             }),
             offer,
             branches,
@@ -374,7 +382,11 @@ export function generateIncomingReward(
       ...(binding === undefined || incoming.resolvedStoreKey === undefined
         ? {}
         : { resolvedStoreKey: incoming.resolvedStoreKey }),
-      evaluateOffer: (owner: SemanticAddress, offer: CanonicalResolvedIncomingReward['offer']) => {
+      evaluateOffer: (
+        owner: SemanticAddress,
+        offer: CanonicalResolvedIncomingReward['offer'],
+        reachedThrough: number,
+      ) => {
         if (semanticAddressKey(owner) !== ownerKey)
           throw new BiomeRewardSimulationContractError(
             'sequential reward frontier received a foreign owner',
@@ -402,6 +414,7 @@ export function generateIncomingReward(
             incoming: candidate,
             ...(acquisitionView === undefined ? {} : { acquisitionView }),
             producerPoints,
+            reachedThrough,
           }),
           offer,
           candidateBranches,

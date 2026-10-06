@@ -10,8 +10,6 @@ import type {
   CanonicalHubRoom,
   CanonicalHubTarget,
   CanonicalTarget,
-  MaterializedBiomePrefix,
-  MaterializedHubVisitFrontier,
 } from '../../materialization';
 import type { CanonicalDecision } from '../../materialization/model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
@@ -119,7 +117,6 @@ export interface PreparedRewardEvaluationInputs {
   readonly additionalContinuations: ReadonlyMap<string, CanonicalAdditionalContinuation>;
   readonly hubTargetByOrigin: ReadonlyMap<string, CanonicalHubTarget>;
   readonly batchesByParent: ReadonlyMap<string, CanonicalBatch>;
-  readonly activeHubVisit: MaterializedHubVisitFrontier | undefined;
   readonly lifecycle: RewardLifecycleReferences;
 }
 
@@ -141,23 +138,6 @@ function frontierAdditional(
 
 function decisions(snapshot: BiomeRewardSnapshot): readonly CanonicalDecision[] {
   return Object.freeze([...snapshot.decisions, ...frontierBatch(snapshot)]);
-}
-
-function hasHubVisitDetails(
-  frontier: MaterializedBiomePrefix['frontier'] | undefined,
-): frontier is MaterializedHubVisitFrontier {
-  return frontier?.kind === 'hubVisit' && 'phase' in frontier;
-}
-
-function activeHubVisit(snapshot: BiomeRewardSnapshot): MaterializedHubVisitFrontier | undefined {
-  const frontier = snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined;
-  return hasHubVisitDetails(frontier) ? frontier : undefined;
-}
-
-export function preparedHubVisitFrontier(
-  snapshot: BiomeRewardSnapshot,
-): MaterializedHubVisitFrontier | undefined {
-  return activeHubVisit(snapshot);
 }
 
 export function samePreparedRewardRoomOwner(
@@ -203,11 +183,7 @@ export function preparedAcquisitionSiteOwner(
     );
     if (visit !== undefined) return visit.origin;
   }
-  const frontier = activeHubVisit(snapshot);
-  return frontier !== undefined &&
-    samePreparedRewardRoomOwner(frontier.target.room.origin, room.origin)
-    ? frontier.origin
-    : room.origin;
+  return room.origin;
 }
 
 function requireLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLayout {
@@ -282,7 +258,6 @@ export function prepareRewardEvaluationInputs(
   history: BiomeRewardHistory,
 ): PreparedRewardEvaluationInputs {
   const allDecisions = decisions(snapshot);
-  const hubFrontier = activeHubVisit(snapshot);
   const rooms = [
     snapshot.entryRoom,
     ...allDecisions.flatMap((decision) =>
@@ -298,7 +273,6 @@ export function prepareRewardEvaluationInputs(
           ],
     ),
     ...frontierAdditional(snapshot).map((continuation) => continuation.room),
-    ...(hubFrontier === undefined ? [] : [hubFrontier.target.room, ...hubFrontier.localSlots]),
     ...(snapshot.fixedRoomLinks ?? []).map((link) => link.target),
   ];
   const batchDecisions = allDecisions.filter(
@@ -334,7 +308,6 @@ export function prepareRewardEvaluationInputs(
     batchesByParent: new ImmutableMapView(
       batchDecisions.map((batch) => [semanticAddressKey(batch.parent.origin), batch] as const),
     ),
-    activeHubVisit: hubFrontier,
     lifecycle: lifecycleReferences(history.events),
   });
 }

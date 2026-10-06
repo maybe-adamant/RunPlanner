@@ -46,7 +46,7 @@ import {
 } from './f-generation-project';
 import {
   evaluateProgressiveBiomeAssembly,
-  evaluateProgressiveBiomeAssemblyBeforeClamp,
+  evaluateSelectedProgressiveBiomeAssembly,
 } from '../../../src/simulation/progressive/biome';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../src/authored-project/defaults';
@@ -463,7 +463,7 @@ export {
   defaultRouteLoadout,
   evaluateBiomeRewards,
   evaluateProgressiveBiomeAssembly,
-  evaluateProgressiveBiomeAssemblyBeforeClamp,
+  evaluateSelectedProgressiveBiomeAssembly,
   fBiome,
   fCombatId,
   fGenerationBaselineBatches,
