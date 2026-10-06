@@ -346,6 +346,9 @@ inventories likewise hold only their fixed slots (a Shrine slot shows Item,
 Delay and Purchased). Shrine rush and every Travel Deal refill are authored on
 the Room Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench.
+Every Overview renders its sections in one order, showing only those the room
+has: Encounters, room contents (Shop inventory, Fields optional rewards),
+Additional Exits, Objects, Resources, NPCs.
 Room Timeline consumes the engine lifecycle timeline plus the one
 occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
 product. A section is omitted when its projected product is empty.

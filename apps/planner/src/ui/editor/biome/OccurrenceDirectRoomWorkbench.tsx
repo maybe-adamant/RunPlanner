@@ -11,7 +11,8 @@ import type {
   WorkspaceBossDoorRewardStoreControl,
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
-import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
+import { roomFeatureSections } from './room-features/roomFeatureSections';
+import { RoomOverviewSections, type RoomOverviewSectionContent } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import { EncounterPhaseControl, EncounterPhaseEvents } from './locals/EncounterPhaseControl';
 import { FieldsWorkbench } from './locals/FieldsWorkbench';
@@ -172,12 +173,20 @@ export function DirectRoomWorkbench({
   ): ReactNode => (
     <RewardWheelWorkbench interactions={interactions} occurrence={room.address} wheel={wheel} />
   );
-  const renderFeatures = (): ReactNode => (
-    <RoomFeaturesWorkbench
-      features={workbench.features}
-      interactions={interactions}
-      room={room}
-      {...(workbench.roomActions === undefined ? {} : { roomActions: workbench.roomActions })}
+  // Each room kind contributes its sections; RoomOverviewSections owns their order.
+  const renderOverview = (
+    sections: Pick<RoomOverviewSectionContent, 'encounters' | 'contents'>,
+  ): ReactNode => (
+    <RoomOverviewSections
+      sections={{
+        ...sections,
+        ...roomFeatureSections({
+          features: workbench.features,
+          interactions,
+          room,
+          ...(workbench.roomActions === undefined ? {} : { roomActions: workbench.roomActions }),
+        }),
+      }}
     />
   );
   const renderEncounterStructure = (children?: ReactNode): ReactNode => (
@@ -188,12 +197,9 @@ export function DirectRoomWorkbench({
   switch (workbench.kind) {
     case 'standard':
       if (view === 'overview') {
-        return (
-          <>
-            {renderFeatures()}
-            {renderEncounterStructure(renderOverviewEncounterPhases())}
-          </>
-        );
+        return renderOverview({
+          encounters: renderEncounterStructure(renderOverviewEncounterPhases()),
+        });
       }
       return (
         <RoomActionsWorkbench
@@ -218,13 +224,10 @@ export function DirectRoomWorkbench({
       );
     case 'fields':
       if (view === 'overview') {
-        return (
-          <>
-            {renderEncounterStructure(renderOverviewEncounterPhases())}
-            {renderFeatures()}
-            <FieldsWorkbench interactions={interactions} room={workbench.fields} />
-          </>
-        );
+        return renderOverview({
+          encounters: renderEncounterStructure(renderOverviewEncounterPhases()),
+          contents: <FieldsWorkbench interactions={interactions} room={workbench.fields} />,
+        });
       }
       return (
         <RoomActionsWorkbench
@@ -248,13 +251,10 @@ export function DirectRoomWorkbench({
       );
     case 'shop':
       if (view === 'overview') {
-        return (
-          <>
-            <ShopWorkbench interactions={interactions} room={workbench.shop} />
-            {renderFeatures()}
-            {renderEncounterStructure(renderOverviewEncounterPhases())}
-          </>
-        );
+        return renderOverview({
+          encounters: renderEncounterStructure(renderOverviewEncounterPhases()),
+          contents: <ShopWorkbench interactions={interactions} room={workbench.shop} />,
+        });
       }
       return (
         <RoomActionsWorkbench
@@ -277,21 +277,18 @@ export function DirectRoomWorkbench({
       );
     case 'ship':
       if (view === 'overview') {
-        return (
-          <>
-            {renderFeatures()}
-            {renderEncounterStructure(
-              <>
-                <ShipCombatPhaseCountWorkbench
-                  occurrence={room.address}
-                  interactions={interactions}
-                  nested
-                />
-                {renderOverviewEncounterPhases()}
-              </>,
-            )}
-          </>
-        );
+        return renderOverview({
+          encounters: renderEncounterStructure(
+            <>
+              <ShipCombatPhaseCountWorkbench
+                occurrence={room.address}
+                interactions={interactions}
+                nested
+              />
+              {renderOverviewEncounterPhases()}
+            </>,
+          ),
+        });
       }
       if (typeof view === 'string') throw new Error('Ship timeline requires an explicit phase');
       return (
