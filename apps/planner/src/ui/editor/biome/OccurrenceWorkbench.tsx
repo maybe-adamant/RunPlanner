@@ -18,7 +18,7 @@ import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { AnomalyClearedControl } from './room-features/AnomalyControls';
-import { RoomActionsWorkbench } from './OccurrenceRoomActions';
+import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
@@ -38,13 +38,13 @@ interface OccurrenceWorkbenchProps {
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly doors?: ReactNode;
-  /** Exact room-owned additions to ordinary lifecycle rows. */
+  /** Exact room-owned additions to ordinary lifecycle rows; the removal fills the delete slot. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  readonly renderRoomActionRowTrailingContent?: (
-    row: WorkspaceRoomActions['rows'][number],
-  ) => ReactNode;
+  readonly renderRoomActionRowRemoval?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
-  readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
+  readonly renderLifecycleBoundaryContent?: (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ) => TimelineBoundaryContent | undefined;
   /** Exact room-owned optional interaction shown before its authored action exists. */
   readonly renderOptionalRoomActionContent?: () => ReactNode;
 }
@@ -63,7 +63,7 @@ export function OccurrenceWorkbench({
   initialSideRoomSlotKey,
   room,
   renderRoomActionRowContent,
-  renderRoomActionRowTrailingContent,
+  renderRoomActionRowRemoval,
   renderLifecycleBoundaryContent,
   renderOptionalRoomActionContent,
   runState,
@@ -188,12 +188,21 @@ export function OccurrenceWorkbench({
     return { kind: 'shipPhase', phase };
   };
   // The Anomaly's capture-point outcome is decided at its encounter end, before the reward.
-  const renderBoundaryContent = (boundary: WorkspaceRoomLifecycleBoundary): ReactNode => (
-    <>
-      {boundary.kind === 'encounterEnd' ? <AnomalyClearedControl room={room} /> : null}
-      {renderLifecycleBoundaryContent?.(boundary)}
-    </>
-  );
+  const renderBoundaryContent = (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ): TimelineBoundaryContent | undefined => {
+    const content = renderLifecycleBoundaryContent?.(boundary);
+    if (boundary.kind !== 'encounterEnd' || room.anomaly === undefined) return content;
+    return {
+      editors: (
+        <>
+          <AnomalyClearedControl room={room} />
+          {content?.editors}
+        </>
+      ),
+      rows: content?.rows,
+    };
+  };
   const renderDirectRoomWorkbench = (
     view:
       | 'overview'
@@ -205,9 +214,7 @@ export function OccurrenceWorkbench({
       interactions={interactions}
       room={room}
       {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
-      {...(renderRoomActionRowTrailingContent === undefined
-        ? {}
-        : { renderRoomActionRowTrailingContent })}
+      {...(renderRoomActionRowRemoval === undefined ? {} : { renderRoomActionRowRemoval })}
       renderLifecycleBoundaryContent={renderBoundaryContent}
       {...(renderOptionalRoomActionContent === undefined
         ? {}

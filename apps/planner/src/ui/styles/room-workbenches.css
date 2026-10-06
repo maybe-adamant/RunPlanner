@@ -1012,14 +1012,12 @@
   max-width: 100%;
 }
 
-.nemesis-response-control {
+.nemesis-interaction-phrase {
   display: inline-flex;
-  flex: 0 0 auto;
+  min-width: 0;
   align-items: center;
-  min-height: 36px;
-  gap: 7px;
-  margin-inline-start: 16px;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .ship-phase-list {
@@ -1027,10 +1025,12 @@
   gap: 8px;
 }
 
+/* Ship phases keep the timeline column origin of an ordinary Room Timeline. */
 .ship-phase {
   display: grid;
   gap: 6px;
-  padding: 6px;
+  margin-inline: -1px;
+  padding: 6px 0;
   border: 1px solid #3a3b45;
   border-radius: 10px;
   background: rgb(126 101 154 / 5%);
@@ -1039,7 +1039,8 @@
 .ship-action-repairs {
   display: grid;
   gap: 6px;
-  padding: 6px;
+  margin-inline: -1px;
+  padding: 6px 0;
   border: 1px solid #79545a;
   border-radius: 10px;
   background: rgb(153 76 87 / 8%);
@@ -1303,22 +1304,19 @@
   padding: 8px;
 }
 
-.room-actions-workbench .encounter-phase-control,
-.room-actions-workbench .reward-wheel {
-  padding: 6px;
-}
-
 .room-actions-workbench .reward-wheel-offer-card > .exit-content {
   padding: 6px;
 }
 
+/* Every timeline list shares one column template: handle, ordinal, label, editors, actions. */
 .room-action-list {
+  --timeline-columns: 28px 1.5rem minmax(0, 40fr) minmax(0, 60fr) 8rem;
   container: timeline-list / inline-size;
   position: relative;
   display: grid;
   gap: 4px;
   margin: 0;
-  padding: 2px 0 2px 10px;
+  padding: 2px 0 2px 18px;
   list-style: none;
 }
 
@@ -1326,62 +1324,221 @@
   position: absolute;
   top: 8px;
   bottom: 8px;
-  left: 13px;
+  left: 5px;
   width: 2px;
   border-radius: 999px;
   background: rgb(174 152 202 / 34%);
   content: '';
 }
 
-.room-action-row {
-  container: room-action / inline-size;
+.timeline-row {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+  grid-template-columns: var(--timeline-columns);
   align-items: center;
   gap: 4px 8px;
-  margin-left: 18px;
-  padding: 3px 8px;
+  min-width: 0;
+  padding: 3px 8px 3px 0;
   border: 1px solid #34353e;
-  border-left: 2px solid rgb(174 152 202 / 36%);
+  border-left: 3px solid rgb(174 152 202 / 36%);
   border-radius: 8px;
   background: rgb(18 19 24 / 72%);
+  scroll-margin-block: 24px;
 }
 
-.room-action-row::before {
+.timeline-row::before {
   position: absolute;
-  top: 19px;
+  top: 50%;
   left: -14px;
-  width: 12px;
+  width: 11px;
   height: 2px;
   background: rgb(174 152 202 / 48%);
   content: '';
 }
 
-.room-action-row > .room-action-identity {
+.timeline-row > [data-timeline-cell='handle'] {
+  grid-column: 1;
+}
+
+.timeline-row > [data-timeline-cell='ordinal'] {
+  grid-column: 2;
+}
+
+.timeline-row > [data-timeline-cell='label'] {
+  grid-column: 3;
+}
+
+.timeline-row > [data-timeline-cell='editors'] {
+  grid-column: 4;
+}
+
+.timeline-row > [data-timeline-cell='actions'] {
+  grid-column: 5;
+}
+
+/* Narrow lists move editors and actions under the label; handle and ordinal stay aligned. */
+@container timeline-list (max-width: 52rem) {
+  .timeline-row > [data-timeline-cell='label'] {
+    grid-column: 3 / -1;
+  }
+
+  .timeline-row > [data-timeline-cell='editors'] {
+    grid-row: 2;
+    grid-column: 3 / 5;
+  }
+
+  .timeline-row > [data-timeline-cell='actions'] {
+    grid-row: 2;
+    grid-column: 5;
+  }
+}
+
+.timeline-cell-handle,
+.timeline-cell-ordinal {
+  display: grid;
+  min-block-size: 32px;
+  place-items: center;
+}
+
+.timeline-cell-handle > .hub-roster-drag-handle {
+  min-block-size: 0;
+}
+
+.timeline-cell-ordinal {
+  color: #e2b971;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.timeline-cell-label {
+  display: flex;
   min-width: 0;
-  flex-wrap: nowrap;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.timeline-cell-label > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.timeline-cell-editors {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 5px;
+}
+
+.timeline-cell-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
   gap: 4px;
 }
 
-.room-action-identity > .hub-roster-drag-handle,
-.room-action-identity:not(:has(> .hub-roster-drag-handle))::before {
-  width: 28px;
-  flex: 0 0 28px;
-  content: '';
+.timeline-action-slot {
+  display: flex;
+  min-width: 0;
+  align-items: center;
 }
 
-.room-timeline-effect-row > .room-action-identity::before {
+.timeline-action-slot[data-timeline-action-slot='placement'] {
+  flex: 1 1 auto;
+}
+
+.timeline-action-slot[data-timeline-action-slot='delete'] {
+  flex: 0 0 var(--timeline-control-height);
+}
+
+.timeline-action-slot > .secondary-action,
+.timeline-action-slot > .room-action-placement-picker {
+  width: 100%;
+  white-space: nowrap;
+}
+
+/* One checkbox presentation for every timeline toggle. */
+.timeline-checkbox {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: var(--timeline-control-height);
+  align-items: center;
+  gap: 6px;
+  color: #d8d3cb;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.timeline-checkbox > input {
+  margin: 0;
+}
+
+/* Row kinds differ only in border, background and type. */
+.timeline-row[data-timeline-row-kind='boundary'],
+.timeline-row[data-timeline-row-kind='checkpoint'] {
+  border-color: #353640 transparent;
+  border-left-color: #ae98ca;
+  border-radius: 0;
+  background: linear-gradient(90deg, rgb(174 152 202 / 16%), rgb(10 11 14 / 40%));
+  box-shadow: 0 2px 0 rgb(0 0 0 / 14%);
+  color: #e2d8ea;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > .timeline-cell-ordinal {
+  color: #d4b9e7;
+  font-size: 1rem;
+}
+
+.timeline-row[data-timeline-row-kind='effect'] {
+  border-color: transparent;
+  border-left-color: rgb(174 152 202 / 36%);
+  border-radius: 0 6px 6px 0;
+}
+
+.timeline-row[data-timeline-row-kind='insertion'] {
+  border-color: transparent;
+  background: transparent;
+}
+
+.timeline-row[data-timeline-row-kind='continuation'] {
+  border-top-style: dashed;
+  border-top-color: rgb(174 152 202 / 24%);
+  background: rgb(18 19 24 / 44%);
+}
+
+.timeline-continuation-label {
+  color: #aaa7af;
+  font-size: 0.78rem;
+}
+
+.timeline-row:is(
+    [data-timeline-row-kind='effect'],
+    [data-timeline-row-kind='insertion'],
+    [data-timeline-row-kind='continuation']
+  )::before {
   content: none;
 }
 
-.room-action-identity > .hub-roster-rank {
-  flex-shrink: 0;
+.timeline-row[data-action-accent] {
+  border-left-color: var(--timeline-accent);
+  background: color-mix(in srgb, var(--timeline-accent) 9%, transparent);
 }
 
-.room-action-identity > .hub-roster-rank {
-  min-width: 1.5rem;
+.timeline-row[data-dragging='true'] {
+  border-style: dashed;
+  opacity: 0.42;
+}
+
+.timeline-row[data-placing='true'] {
+  outline: 1px solid #c6c3cd;
+  outline-offset: 2px;
 }
 
 .room-action-placement-picker .contextual-picker > label {
@@ -1396,17 +1553,12 @@
   font-size: 0.75rem;
 }
 
-.room-action-insertion {
-  margin-left: 18px;
-  list-style: none;
-}
-
 .room-action-insertion-button {
   opacity: 0.45;
   transition: opacity 120ms;
 }
 
-.room-action-insertion:hover .room-action-insertion-button,
+.timeline-row:hover .room-action-insertion-button,
 .room-action-insertion-button:focus-visible {
   opacity: 1;
 }
@@ -1417,14 +1569,9 @@
   }
 }
 
-.room-action-insertion button[aria-disabled='true'] {
+.room-action-insertion-button[aria-disabled='true'] {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.room-action-row[data-placing='true'] {
-  outline: 1px solid #c6c3cd;
-  outline-offset: 2px;
 }
 
 .room-action-placement-notice {
@@ -1482,8 +1629,8 @@
   flex: 0 0 auto;
 }
 
-.room-action-row[data-drop-before]::after,
-.room-action-row[data-drop-after]::after,
+.timeline-row[data-drop-before]::after,
+.timeline-row[data-drop-after]::after,
 .ephyra-side-visit-list > li[data-drop-before]::after,
 .ephyra-side-visit-list > li[data-drop-after]::after {
   position: absolute;
@@ -1495,43 +1642,43 @@
   background: #c98787;
 }
 
-.room-action-row[data-drop-before]::after,
+.timeline-row[data-drop-before]::after,
 .ephyra-side-visit-list > li[data-drop-before]::after {
   top: -5px;
 }
 
-.room-action-row[data-drop-after]::after,
+.timeline-row[data-drop-after]::after,
 .ephyra-side-visit-list > li[data-drop-after]::after {
   bottom: -5px;
 }
 
-.room-action-row[data-drop-before='available']::after,
-.room-action-row[data-drop-after='available']::after,
+.timeline-row[data-drop-before='available']::after,
+.timeline-row[data-drop-after='available']::after,
 .ephyra-side-visit-list > li[data-drop-before='available']::after,
 .ephyra-side-visit-list > li[data-drop-after='available']::after {
   background: #83b98d;
 }
 
-.room-action-row[data-inline-layout='sentence'] > .room-action-identity {
-  grid-column: 1;
-  align-items: flex-start;
+.timeline-row[data-drop-position]::after {
+  position: absolute;
+  right: 6px;
+  bottom: -4px;
+  left: 0;
+  z-index: 2;
+  border-top: 1px dashed rgb(143 139 148 / 60%);
+  content: '';
+  pointer-events: none;
 }
 
-.room-action-identity > strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.timeline-row[data-drop-position='available']::after {
+  border-color: #e2b971;
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgb(226 185 113 / 12%);
 }
 
-.room-timeline-effect-row {
-  margin-left: 18px;
-  padding: 3px 8px;
-  border: 0;
-  border-radius: 0 6px 6px 0;
-  box-shadow: none;
-}
-
-.room-timeline-effect-row::before {
-  content: none;
+.timeline-row[data-drop-position='unavailable']::after {
+  border-color: #8a7478;
 }
 
 .room-timeline-legend {
@@ -1561,11 +1708,6 @@
   --timeline-accent: #719b9b;
 }
 
-.room-action-row[data-action-accent] {
-  border-left: 3px solid var(--timeline-accent);
-  background: color-mix(in srgb, var(--timeline-accent) 9%, transparent);
-}
-
 .room-timeline-legend > li {
   display: inline-flex;
   align-items: center;
@@ -1581,36 +1723,12 @@
   content: '';
 }
 
-.room-timeline-effect-row > .room-action-identity {
-  grid-column: 1 / -1;
-  flex-wrap: wrap;
-}
-
-.scheduled-trait-effect-identity > .transcendent-embryo-outcome-row {
-  flex: 1 1 20rem;
-}
-
-.room-action-inline-editors {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 0;
-  max-width: 100%;
-  gap: 5px;
-}
-
-.room-action-inline-editors:empty {
-  display: none;
-}
-
 /* Inline timeline controls share a baseline; expanded editors retain their own sizing. */
-:is(.room-actions-workbench, .room-action-row) {
+.room-actions-workbench {
   --timeline-control-height: 26px;
 }
 
-:is(.room-actions-workbench, .room-action-row)
+.room-actions-workbench
   :is(
     .contextual-picker-trigger,
     .primary-action,
@@ -1627,11 +1745,34 @@
   line-height: 1.2;
 }
 
-:is(.room-actions-workbench, .room-action-row) .encounter-event-wave-slot {
+.room-actions-workbench .encounter-event-wave-slot {
   height: var(--timeline-control-height);
 }
 
-.room-action-inline-editors > .trait-offer-launcher {
+/* A Timeline encounter is inline row content, not a nested card. */
+.timeline-cell-editors > .encounter-phase-control {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* Sized or wrapping editor groups fill their editors cell instead of their widest item. */
+.timeline-cell-editors > :is(.transcendent-embryo-outcome-row, .shop-family-offer-row) {
+  flex: 1 1 auto;
+}
+
+.timeline-cell-editors > .reward-wheel {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 6px;
+}
+
+.timeline-cell-editors > .trait-offer-launcher {
   width: max-content;
   min-width: 0;
   max-width: min(100%, 18rem);
@@ -1649,89 +1790,6 @@
 
 .room-action-inline-reward .field-control-inline {
   grid-template-columns: minmax(0, 1fr);
-}
-
-/* All rows share the action/detail split and the same trailing action width. */
-.room-action-row > .room-action-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 8rem;
-  min-width: 0;
-  max-width: 100%;
-  align-items: center;
-  gap: 8px;
-}
-
-.room-action-row[data-inline-layout='sentence'] {
-  grid-template-columns: minmax(0, 1fr) 8rem;
-}
-
-.room-action-row[data-inline-layout='sentence'] > .room-action-controls {
-  display: flex;
-  grid-column: 2;
-}
-
-.room-action-inline-editors {
-  grid-column: 1;
-}
-
-.room-action-ordering {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.room-action-row
-  > .room-action-controls
-  > :not(.room-action-inline-editors, .room-action-ordering) {
-  grid-column: 1 / -1;
-}
-
-/* The Travel Deal refill is a second line spanning its triggering purchase row. */
-.room-action-row > .room-action-travel-deal {
-  grid-column: 1 / -1;
-  min-width: 0;
-  padding: 3px 0 0 28px;
-  border-top: 1px dashed rgb(174 152 202 / 24%);
-}
-
-.room-action-travel-deal > .shop-family-offer-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-@container timeline-list (max-width: 52rem) {
-  .room-action-row,
-  .room-action-row[data-inline-layout='sentence'] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .room-action-row > .room-action-controls,
-  .room-action-row[data-inline-layout='sentence'] > .room-action-controls {
-    grid-column: 1;
-  }
-}
-
-.room-action-ordering {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-  width: 100%;
-  max-width: 100%;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-}
-
-.room-action-ordering > .room-action-placement-toggle {
-  width: 100%;
-  min-height: var(--timeline-control-height);
-  white-space: nowrap;
-}
-
-.room-action-row[data-inline-layout='compact'] > .room-action-controls {
-  justify-content: flex-start;
-}
-
-.room-action-row[data-inline-layout='compact'] .room-action-inline-editors {
-  justify-content: flex-start;
 }
 
 .hub-fountain-controls {
@@ -1777,7 +1835,7 @@
   place-items: center;
 }
 
-.room-action-row .room-action-delete {
+.timeline-row .room-action-delete {
   width: var(--timeline-control-height);
   min-width: var(--timeline-control-height);
   height: var(--timeline-control-height);
@@ -1799,11 +1857,7 @@
   opacity: 0.45;
 }
 
-.room-action-row > .field-control {
-  grid-column: 1 / -1;
-}
-
-.room-action-inline-editors > .acquisition-entry-resolution {
+.timeline-cell-editors > .acquisition-entry-resolution {
   flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
@@ -1812,11 +1866,11 @@
   border: 0;
 }
 
-.room-action-row .pickup-outcome-control {
+.timeline-cell-editors .pickup-outcome-control {
   gap: 4px 6px;
 }
 
-.room-action-row .pickup-outcome-control > .contextual-picker {
+.timeline-cell-editors .pickup-outcome-control > .contextual-picker {
   width: 12rem;
   max-width: 100%;
   min-width: 0;
@@ -1825,7 +1879,7 @@
   column-gap: 6px;
 }
 
-.room-action-row .room-action-artificer-output {
+.timeline-cell-editors .room-action-artificer-output {
   display: flex;
   min-width: 0;
   max-width: 100%;
@@ -1834,47 +1888,18 @@
   gap: 4px 6px;
 }
 
-.room-action-row .room-action-artificer-output .field-control-inline {
+.timeline-cell-editors .room-action-artificer-output .field-control-inline {
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   column-gap: 6px;
 }
 
-.room-action-row .room-action-artificer-output > .reward-value-editor,
-.room-action-row .room-action-artificer-output > .counted-reward-editor {
+.timeline-cell-editors .room-action-artificer-output > .reward-value-editor,
+.timeline-cell-editors .room-action-artificer-output > .counted-reward-editor {
   min-width: 0;
   width: max-content;
   max-width: 100%;
   flex: 0 1 auto;
-}
-
-.room-action-checkpoint,
-.room-action-lifecycle-boundary {
-  container: room-action / inline-size;
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-height: 32px;
-  padding: 3px 8px;
-  margin: 0;
-  border-block: 1px solid #353640;
-  border-left: 3px solid #ae98ca;
-  background: linear-gradient(90deg, rgb(174 152 202 / 16%), rgb(10 11 14 / 40%));
-  box-shadow: 0 2px 0 rgb(0 0 0 / 14%);
-  color: #e2d8ea;
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
-}
-
-.room-action-lifecycle-boundary .hub-roster-rank,
-.room-action-checkpoint .hub-roster-rank {
-  min-block-size: 0;
-  color: #d4b9e7;
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .fields-cage-label {
@@ -1886,57 +1911,30 @@
   width: 100%;
 }
 
-.room-action-lifecycle-boundary[data-drop-position]::after {
-  position: absolute;
-  right: 6px;
-  bottom: -4px;
-  left: 18px;
-  z-index: 2;
-  border-top: 1px dashed rgb(143 139 148 / 60%);
-  content: '';
-  pointer-events: none;
-}
-
-.room-action-lifecycle-boundary[data-drop-position='available']::after {
-  border-color: #e2b971;
-  border-style: solid;
-  border-width: 2px;
-  box-shadow: 0 0 0 3px rgb(226 185 113 / 12%);
-}
-
-.room-action-lifecycle-boundary[data-drop-position='unavailable']::after {
-  border-color: #8a7478;
-}
-
+/* Pools keep the timeline column origin; only the rail is dropped. */
 .room-action-optional-pool {
   display: grid;
   gap: 6px;
-  padding: 6px;
+  margin-inline: -1px;
+  padding: 6px 0;
   border: 1px dashed rgb(143 139 148 / 45%);
   border-radius: 8px;
   background: rgb(18 19 24 / 44%);
 }
 
-.room-action-optional-pool .room-action-list,
-.room-action-repairs .room-action-list,
-.ship-action-repairs .room-action-list {
-  container: timeline-list / inline-size;
-  padding-left: 0;
+.room-action-optional-pool > .local-reward-heading,
+.room-action-repairs > .local-reward-heading,
+.ship-action-repairs > .local-reward-heading {
+  padding-inline: 8px;
 }
 
 .room-action-optional-pool .room-action-list::before,
-.room-action-optional-pool .room-action-row::before,
+.room-action-optional-pool .timeline-row::before,
 .room-action-repairs .room-action-list::before,
-.room-action-repairs .room-action-row::before,
+.room-action-repairs .timeline-row::before,
 .ship-action-repairs .room-action-list::before,
-.ship-action-repairs .room-action-row::before {
+.ship-action-repairs .timeline-row::before {
   display: none;
-}
-
-.room-action-optional-pool .room-action-row,
-.room-action-repairs .room-action-row,
-.ship-action-repairs .room-action-row {
-  margin-left: 0;
 }
 
 .hub-owner-assessment {
@@ -2322,10 +2320,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-}
-
-.room-action-ordering > .room-action-delete:last-child {
-  margin-inline-start: auto;
 }
 
 .effect-repair-action[data-inactive] {

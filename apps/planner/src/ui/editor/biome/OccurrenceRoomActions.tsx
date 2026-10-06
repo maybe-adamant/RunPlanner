@@ -27,13 +27,20 @@ import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 export { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
+import { TimelineRow } from './TimelineRow';
 import { FieldsCageOrderControl } from './FieldsCageOrderControl';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import { RoomActionInlineEditors } from './RoomActionInlineEditors';
-import { RoomActionOrderingControls } from './RoomActionOrderingControls';
+import { RoomActionPlacementControl, RoomActionRemovalControl } from './RoomActionOrderingControls';
 import { roomActionDestinationLabel } from './room-action-placement';
-import { NemesisInteractionEditor } from './NemesisEventEditor';
+import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { HermesShrineRushControl, TravelDealLine } from './commerce/PurchaseRowControls';
+/** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
+export interface TimelineBoundaryContent {
+  readonly editors?: ReactNode;
+  readonly rows?: ReactNode;
+}
+
 interface PendingRoomActionPointerDrag {
   readonly actionKey: string;
   readonly handle: HTMLElement;
@@ -100,7 +107,7 @@ export function RoomActionsWorkbench({
   renderEncounterPhase,
   renderRewardWheel,
   renderRowContent,
-  renderRowTrailingContent,
+  renderRowRemoval,
   renderBoundaryContent,
   mode,
 }: {
@@ -116,9 +123,11 @@ export function RoomActionsWorkbench({
   readonly renderRewardWheel?: (wheel: WorkspaceRewardWheelDescriptor) => ReactNode;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  /** Consumer-owned controls placed after the shared ordering controls. */
-  readonly renderRowTrailingContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  readonly renderBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
+  /** Consumer-owned removal that fills the row's delete slot. */
+  readonly renderRowRemoval?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  readonly renderBoundaryContent?: (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ) => TimelineBoundaryContent | undefined;
   readonly mode:
     | { readonly kind: 'roomTimeline' }
     | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation }
@@ -314,12 +323,12 @@ export function RoomActionsWorkbench({
       )
       .filter((checkpoint) => checkpoint.afterRank === afterRank)
       .map((checkpoint) => (
-        <li className="room-action-checkpoint" key={`checkpoint:${checkpoint.key}`}>
-          <span aria-hidden="true" className="hub-roster-rank">
-            ·
-          </span>
-          <strong>{checkpoint.label}</strong>
-        </li>
+        <TimelineRow
+          key={`checkpoint:${checkpoint.key}`}
+          kind="checkpoint"
+          label={<strong>{checkpoint.label}</strong>}
+          ordinal="·"
+        />
       ));
   const renderSupplement = (
     supplement: Extract<
@@ -369,25 +378,29 @@ export function RoomActionsWorkbench({
     if (proposal === undefined || renderedInsertions.has(proposal.key)) return null;
     renderedInsertions.add(proposal.key);
     return (
-      <li className="room-action-insertion" key={`insert:${key}`}>
-        <button
-          aria-label={`Add ${placingRow.label} here: ${roomActionDestinationLabel(actions?.rows ?? [], toIndex)}`}
-          aria-disabled={!proposal.structurallyAuthorable}
-          aria-description={proposal.explanations.join(' ') || undefined}
-          className="contextual-picker-trigger room-action-insertion-button"
-          title={proposal.structurallyAuthorable ? undefined : proposal.explanations.join(' ')}
-          onClick={() => {
-            if (!proposal.structurallyAuthorable) return;
-            pendingPlacementFocus.current = { owner: placementOwner, actionKey: placingRow.key };
-            apply(proposal.key);
-            setPlacementRequest(undefined);
-            setAnnouncement(`${placingRow.label} added to the timeline.`);
-          }}
-          type="button"
-        >
-          {proposal.structurallyAuthorable ? '+ Add action here' : 'Unavailable here'}
-        </button>
-      </li>
+      <TimelineRow
+        key={`insert:${key}`}
+        kind="insertion"
+        label={
+          <button
+            aria-label={`Add ${placingRow.label} here: ${roomActionDestinationLabel(actions?.rows ?? [], toIndex)}`}
+            aria-disabled={!proposal.structurallyAuthorable}
+            aria-description={proposal.explanations.join(' ') || undefined}
+            className="contextual-picker-trigger room-action-insertion-button"
+            title={proposal.structurallyAuthorable ? undefined : proposal.explanations.join(' ')}
+            onClick={() => {
+              if (!proposal.structurallyAuthorable) return;
+              pendingPlacementFocus.current = { owner: placementOwner, actionKey: placingRow.key };
+              apply(proposal.key);
+              setPlacementRequest(undefined);
+              setAnnouncement(`${placingRow.label} added to the timeline.`);
+            }}
+            type="button"
+          >
+            {proposal.structurallyAuthorable ? '+ Add action here' : 'Unavailable here'}
+          </button>
+        }
+      />
     );
   };
   const renderBoundary = (
@@ -395,17 +408,23 @@ export function RoomActionsWorkbench({
   ) => {
     const target = Object.freeze({ kind: 'position' as const, toIndex: entry.dropIndex });
     const targetState = dropState(target);
+    const content = renderBoundaryContent?.(entry.boundary);
     return (
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow
           boundary={entry.boundary}
           dropIndex={entry.dropIndex}
+          editors={
+            <>
+              {renderSupplement(entry.supplement)}
+              {content?.editors}
+            </>
+          }
           label={entry.label}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
-        {renderSupplement(entry.supplement)}
-        {renderBoundaryContent?.(entry.boundary)}
+        {content?.rows}
         {entry.boundary.kind === 'encounterStart'
           ? null
           : renderInsertion(entry.dropIndex, entry.boundary.key)}
@@ -467,10 +486,38 @@ export function RoomActionsWorkbench({
         );
       }
     };
+    const placementControl =
+      placement === undefined ? (
+        <RoomActionPlacementControl
+          onApply={apply}
+          onBeginAdd={(button) => {
+            placementTrigger.current = button;
+            setPlacementRequest({ owner: placementOwner, actionKey: row.key });
+            setAnnouncement(`Choose where to add ${row.label}.`);
+          }}
+          proposals={proposals}
+          row={row}
+          rows={actions.rows}
+        />
+      ) : (
+        <button
+          aria-label={
+            row.participation === 'required'
+              ? placement.command.kind === 'PlaceHermesShrineDelivery'
+                ? 'Restore delivery'
+                : 'Restore pickup'
+              : 'Take pickup'
+          }
+          className="secondary-action action-compact"
+          onClick={() => executeIntent(placement)}
+          type="button"
+        >
+          {row.participation === 'required' ? 'Restore' : 'Take'}
+        </button>
+      );
     return (
       <Fragment key={row.key}>
-        <li
-          className="hub-open-room-card room-action-row"
+        <TimelineRow
           data-action-accent={actionAccent}
           data-blocking-product={row.blockingProduct}
           // A row title would follow the pointer as a native tooltip during a drag.
@@ -494,23 +541,13 @@ export function RoomActionsWorkbench({
           }
           data-in-order={row.rank === null ? 'false' : 'true'}
           data-placing={placingRow?.key === row.key || undefined}
-          data-inline-layout={
-            nemesisInteraction !== undefined
-              ? 'sentence'
-              : row.reference.kind === 'interactKeepsakeRack' || row.fountainRarity !== undefined
-                ? 'compact'
-                : inlineMysteryBoonOffer
-                  ? 'mystery-boon'
-                  : undefined
-          }
           data-room-action-key={row.key}
           {...findingTarget(row.address)}
           tabIndex={-1}
-        >
-          <div className="owner-markers room-action-identity">
-            {canDrag ? (
+          kind="action"
+          handle={
+            canDrag ? (
               <span
-                aria-hidden="true"
                 className="hub-roster-drag-handle"
                 data-dragging={pointerDrag?.actionKey === row.key || undefined}
                 data-room-action-drag-handle
@@ -518,22 +555,24 @@ export function RoomActionsWorkbench({
               >
                 ⠿
               </span>
-            ) : null}
-            <span aria-hidden="true" className="hub-roster-rank">
-              {row.rank ?? '—'}
-            </span>
-            {nemesisInteraction === undefined ? (
-              <strong>{row.label}</strong>
-            ) : (
-              <NemesisInteractionEditor interaction={nemesisInteraction} />
-            )}
-            {row.stale ? <span className="neutral-status">stale</span> : null}
-            {row.rank === null && row.participation === 'required' ? (
-              <span className="neutral-status">required</span>
-            ) : null}
-          </div>
-          <div className="hub-rank-actions room-action-controls">
-            <div className="room-action-inline-editors">
+            ) : null
+          }
+          ordinal={row.rank ?? '—'}
+          label={
+            <>
+              {nemesisInteraction === undefined || nemesisInteraction.value === null ? (
+                <strong>{row.label}</strong>
+              ) : (
+                <NemesisInteractionPhrase interaction={nemesisInteraction} />
+              )}
+              {row.stale ? <span className="neutral-status">stale</span> : null}
+              {row.rank === null && row.participation === 'required' ? (
+                <span className="neutral-status">required</span>
+              ) : null}
+            </>
+          }
+          editors={
+            <>
               {row.hermesShrinePurchase === undefined ? null : (
                 <HermesShrineRushControl
                   interactions={interactions}
@@ -552,61 +591,40 @@ export function RoomActionsWorkbench({
                 interactions={interactions}
                 row={row}
               />
-              {nemesisInteraction === undefined ? renderSupplement(supplement) : null}
-            </div>
-            <div className="room-action-ordering">
-              {placement === undefined ? (
-                <RoomActionOrderingControls
-                  onApply={apply}
-                  onRemove={removeRow}
-                  onBeginAdd={(button) => {
-                    placementTrigger.current = button;
-                    setPlacementRequest({ owner: placementOwner, actionKey: row.key });
-                    setAnnouncement(`Choose where to add ${row.label}.`);
-                  }}
-                  proposals={proposals}
-                  row={row}
-                  rows={actions.rows}
-                  showRemoval={
-                    row.reference.kind !== 'interactKeepsakeRack' &&
-                    row.reference.kind !== 'interactEris' &&
-                    (!row.participationOwnedByOverview ||
-                      row.stale ||
-                      row.refillPurchaseRemoval !== undefined)
-                  }
-                />
+              {nemesisInteraction === undefined ? (
+                renderSupplement(supplement)
               ) : (
-                <button
-                  aria-label={
-                    row.participation === 'required'
-                      ? placement.command.kind === 'PlaceHermesShrineDelivery'
-                        ? 'Restore delivery'
-                        : 'Restore pickup'
-                      : 'Take pickup'
-                  }
-                  className="secondary-action action-compact room-action-placement-toggle"
-                  onClick={() => executeIntent(placement)}
-                  type="button"
-                >
-                  {placement.command.kind === 'PlaceHermesShrineDelivery'
-                    ? 'Restore delivery'
-                    : row.participation === 'required'
-                      ? 'Restore pickup'
-                      : 'Take pickup'}
-                </button>
+                <NemesisInteractionEditor interaction={nemesisInteraction} />
               )}
-              {renderRowTrailingContent?.(row)}
-            </div>
-          </div>
-          {row.travelDealLine === undefined ? null : (
-            <TravelDealLine
-              interactions={interactions}
-              line={row.travelDealLine}
-              onApply={apply}
-              proposals={actions.proposals}
-            />
-          )}
-        </li>
+            </>
+          }
+          placement={placementControl}
+          removal={
+            renderRowRemoval?.(row) ?? (
+              <RoomActionRemovalControl
+                onRemove={removeRow}
+                proposals={placement === undefined ? proposals : []}
+                row={row}
+                showRemoval={
+                  placement === undefined &&
+                  row.reference.kind !== 'interactKeepsakeRack' &&
+                  row.reference.kind !== 'interactEris' &&
+                  (!row.participationOwnedByOverview ||
+                    row.stale ||
+                    row.refillPurchaseRemoval !== undefined)
+                }
+              />
+            )
+          }
+        />
+        {row.travelDealLine === undefined ? null : (
+          <TravelDealLine
+            interactions={interactions}
+            line={row.travelDealLine}
+            onApply={apply}
+            proposals={actions.proposals}
+          />
+        )}
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
         {row.rank === null ? null : renderInsertion(row.rank, row.key)}
       </Fragment>
@@ -746,12 +764,12 @@ export function RoomActionsWorkbench({
                       {checkpointRows(0, phase.checkpoints)}
                       {phase.timeline.flatMap(renderPhaseTimelineEntry)}
                       {trailingCheckpoints.map((checkpoint) => (
-                        <li className="room-action-checkpoint" key={`checkpoint:${checkpoint.key}`}>
-                          <span aria-hidden="true" className="hub-roster-rank">
-                            ·
-                          </span>
-                          <strong>{checkpoint.label}</strong>
-                        </li>
+                        <TimelineRow
+                          key={`checkpoint:${checkpoint.key}`}
+                          kind="checkpoint"
+                          label={<strong>{checkpoint.label}</strong>}
+                          ordinal="·"
+                        />
                       ))}
                     </ol>
                   )}

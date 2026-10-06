@@ -10,7 +10,7 @@ import type {
   WorkspaceShipPhasePresentation,
   WorkspaceBossDoorRewardStoreControl,
 } from '@planner/projections/structured-workspace';
-import { RoomActionsWorkbench } from './OccurrenceRoomActions';
+import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { RoomFeaturesWorkbench } from './room-features/RoomFeaturesWorkbench';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import {
@@ -136,7 +136,7 @@ export function DirectRoomWorkbench({
   room,
   view,
   renderRoomActionRowContent,
-  renderRoomActionRowTrailingContent,
+  renderRoomActionRowRemoval,
   renderLifecycleBoundaryContent,
   renderOptionalRoomActionContent,
 }: {
@@ -148,10 +148,10 @@ export function DirectRoomWorkbench({
     | 'actions'
     | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation };
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  readonly renderRoomActionRowTrailingContent?: (
-    row: WorkspaceRoomActions['rows'][number],
-  ) => ReactNode;
-  readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
+  readonly renderRoomActionRowRemoval?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  readonly renderLifecycleBoundaryContent?: (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ) => TimelineBoundaryContent | undefined;
   readonly renderOptionalRoomActionContent?: () => ReactNode;
 }) {
   const workbench = room.workbench;
@@ -211,9 +211,9 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowTrailingContent === undefined
+          {...(renderRoomActionRowRemoval === undefined
             ? {}
-            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
+            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -241,9 +241,9 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowTrailingContent === undefined
+          {...(renderRoomActionRowRemoval === undefined
             ? {}
-            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
+            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -270,9 +270,9 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowTrailingContent === undefined
+          {...(renderRoomActionRowRemoval === undefined
             ? {}
-            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
+            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -309,9 +309,9 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowTrailingContent === undefined
+          {...(renderRoomActionRowRemoval === undefined
             ? {}
-            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
+            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}

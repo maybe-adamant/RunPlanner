@@ -744,7 +744,3 @@
   flex: 1 1 10rem;
   min-width: 0;
 }
-
-.room-timeline-effect-row > .field-control {
-  grid-column: 1 / -1;
-}

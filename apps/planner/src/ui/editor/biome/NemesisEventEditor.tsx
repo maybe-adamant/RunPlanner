@@ -37,6 +37,41 @@ export function NemesisEventSelector({
   );
 }
 
+/** Action-row sentence head: the contest result and the family's phrase. */
+export function NemesisInteractionPhrase({
+  interaction,
+}: {
+  readonly interaction: WorkspaceNemesisEventInteraction;
+}) {
+  const executeIntent = useCommandIntent();
+  const value = interaction.value;
+  if (value === null) return null;
+  return (
+    <span className="nemesis-interaction-phrase">
+      {value.kind === 'damageContest' ? (
+        <select
+          aria-label="Contest result"
+          className="nemesis-contest-result"
+          onChange={(event) =>
+            executeIntent(
+              interaction.detailIntentFor({
+                ...value,
+                result: event.target.value === 'success' ? 'success' : 'failure',
+                reward: interaction.reward,
+              }),
+            )
+          }
+          value={value.result}
+        >
+          <option value="success">Succeed</option>
+          <option value="failure">Fail</option>
+        </select>
+      ) : null}
+      <strong>{interactionPhrases[value.kind]}</strong>
+    </span>
+  );
+}
+
 /** Action-row detail for the already selected Nemesis family. */
 export function NemesisInteractionEditor({
   interaction,
@@ -62,20 +97,6 @@ export function NemesisInteractionEditor({
   const traitPicker = candidates.result?.traitPicker ?? emptyPicker;
   return (
     <div className="nemesis-interaction-controls">
-      {value.kind === 'damageContest' ? (
-        <select
-          aria-label="Contest result"
-          className="nemesis-contest-result"
-          onChange={(event) =>
-            commit({ ...value, result: event.target.value === 'success' ? 'success' : 'failure' })
-          }
-          value={value.result}
-        >
-          <option value="success">Succeed</option>
-          <option value="failure">Fail</option>
-        </select>
-      ) : null}
-      <strong>{interactionPhrases[value.kind]}</strong>
       {value.kind === 'traitTrade' ? (
         <ContextualPicker
           ariaLabel="Boon offered"
@@ -122,7 +143,7 @@ export function NemesisInteractionEditor({
         </div>
       )}
       {value.kind === 'goldTrade' || value.kind === 'damageTrade' || value.kind === 'traitTrade' ? (
-        <label className="field-control nemesis-response-control">
+        <label className="timeline-checkbox">
           <input
             checked={value.response === 'accept'}
             onChange={(event) =>

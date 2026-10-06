@@ -532,7 +532,7 @@ describe('OccurrenceRoomFeatures', () => {
     await chooseNemesisEvent(view.user, 'Damage contest');
     openRoomTab('Room Timeline');
     const phrase = screen.getByText('at Nemesis’s damage challenge →');
-    const sentence = phrase.parentElement!;
+    const sentence = phrase.closest('li')!;
     const result = within(sentence).getByRole('combobox', { name: 'Contest result' });
     expect((result as HTMLSelectElement).value).toBe('failure');
     expect(result.compareDocumentPosition(phrase) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -193,10 +193,10 @@ describe('Hermes Shrine workbench', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
     const purchaseRow = screen.getByText('Buy Big Heal · Slot 1').closest('li');
     if (purchaseRow === null) throw new Error('Shrine purchase row is missing');
-    // Purchased owns membership in the overview; the row offers no removal.
+    // Purchased owns membership in the overview; the row's delete slot stays disabled.
     expect(
-      within(purchaseRow).queryByRole('button', { name: /^Remove .* from timeline$/ }),
-    ).toBeNull();
+      within(purchaseRow).getByRole('button', { name: /^Remove .* from timeline$/ }),
+    ).toHaveProperty('disabled', true);
     await view.user.click(
       within(purchaseRow).getByRole('checkbox', { name: 'Rush Buy Big Heal · Slot 1' }),
     );
@@ -314,17 +314,16 @@ describe('Hermes Shrine workbench', () => {
     const resolvedDeliveryRow = screen.getByText(/^Collect Mystery Boon/).closest('li');
     if (resolvedDeliveryRow === null)
       throw new Error('resolved rushed Mystery Boon delivery row is missing');
-    expect(resolvedDeliveryRow.getAttribute('data-inline-layout')).toBe('mystery-boon');
     expect(within(resolvedDeliveryRow).queryByText('Collect Mystery Boon · Apollo')).toBeNull();
     const inlineEditors = resolvedDeliveryRow.querySelector<HTMLElement>(
-      ':scope > .room-action-controls > .room-action-inline-editors',
+      ':scope > [data-timeline-cell="editors"]',
     );
     if (inlineEditors === null) throw new Error('Mystery Boon inline editors are missing');
     const sourcePicker = within(inlineEditors).getByRole('button', { name: 'Reward' });
     expect(sourcePicker.textContent).toContain('Apollo');
     expect(sourcePicker.textContent).not.toContain('Mystery Boon');
     expect(within(inlineEditors).getByRole('button', { name: /Trait/ })).toBeTruthy();
-    const ordering = resolvedDeliveryRow.querySelector('.room-action-ordering');
+    const ordering = resolvedDeliveryRow.querySelector(':scope > [data-timeline-cell="actions"]');
     expect(ordering).not.toBeNull();
     expect(
       within(ordering as HTMLElement).getByRole('button', { name: /^Move Collect Mystery Boon/ }),
@@ -798,7 +797,7 @@ describe('Hermes Shrine workbench', () => {
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     const refillRow = () => screen.getByText(/· Travel Deal Offer$/).closest('li')!;
     const rush = within(refillRow()).getByRole('checkbox', { name: /^Rush / });
     expect((rush as HTMLInputElement).checked).toBe(false);
@@ -871,7 +870,9 @@ describe('Hermes Shrine workbench', () => {
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     const sourceRow = () => screen.getByText(/· Slot 1$/).closest('li')!;
-    const line = within(sourceRow()).getByRole('group', { name: 'Travel Deal' });
+    const travelDealLine = () => screen.getByRole('listitem', { name: 'Travel Deal' });
+    const line = travelDealLine();
+    expect(line.previousElementSibling).toBe(sourceRow());
     expect(
       within(line).getByRole('button', { name: 'Hermes Shrine Travel Deal Item' }),
     ).toBeTruthy();
@@ -889,16 +890,18 @@ describe('Hermes Shrine workbench', () => {
       false,
     );
     await view.user.click(
-      within(sourceRow()).getByRole('checkbox', { name: 'Purchased Hermes Shrine Travel Deal' }),
+      within(travelDealLine()).getByRole('checkbox', {
+        name: 'Purchased Hermes Shrine Travel Deal',
+      }),
     );
     expect(shrine().hermesShrine?.travelDealRefill?.purchase).toBeUndefined();
 
     const rush = within(sourceRow()).getByRole('checkbox', { name: /^Rush / });
     await view.user.click(rush);
-    expect(screen.queryByRole('group', { name: 'Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual({ rewardType: 'ArmorBoost' });
     await view.user.click(within(sourceRow()).getByRole('checkbox', { name: /^Rush / }));
-    expect(within(sourceRow()).getByRole('group', { name: 'Travel Deal' })).toBeTruthy();
+    expect(travelDealLine().previousElementSibling).toBe(sourceRow());
   });
 
   it('indexes only present Shrines and navigates to their owning room', async () => {
