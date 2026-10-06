@@ -140,12 +140,56 @@ describe('Purging Pool generation assessment', () => {
   ] as const)('requires min(3, eligible) at cardinality %s', (entries, expected) => {
     const assessment = assessPurgingPool(catalog, pool(), equipped(...entries));
     expect(assessment.requiredTraitCount).toBe(expected);
-    expect(assessment.findings.map((finding) => finding.code)).toEqual(
-      expected === 0 ? [] : ['purgingPoolTraitMissing'],
+    expect(assessment.findings.map((finding) => [finding.code, finding.slotKey])).toEqual(
+      (['left', 'middle', 'right'] as const)
+        .slice(0, expected)
+        .map((slotKey) => ['purgingPoolTraitMissing', slotKey]),
     );
   });
 
-  it('retains duplicates and ineligible values as repairable findings while excluding selected siblings', () => {
+  it.each([
+    ['left filled', pool('ApolloWeaponBoon'), ['middle']],
+    ['right filled', pool(null, null, 'ApolloWeaponBoon'), ['left']],
+    ['middle filled', pool(null, 'HermesWeaponBoon'), ['left']],
+    ['both filled', pool('ApolloWeaponBoon', null, 'HermesWeaponBoon'), []],
+  ] as const)(
+    'marks only the first empty slot still needed with two eligible traits (%s)',
+    (_case, state, expected) => {
+      const assessment = assessPurgingPool(
+        catalog,
+        state,
+        equipped(['ApolloWeaponBoon', 'Common'], ['HermesWeaponBoon', 'Rare']),
+      );
+      expect(
+        assessment.findings
+          .filter((finding) => finding.code === 'purgingPoolTraitMissing')
+          .map((finding) => finding.slotKey),
+      ).toEqual(expected);
+    },
+  );
+
+  it('marks every empty slot still needed when three or more traits are eligible', () => {
+    const assessment = assessPurgingPool(
+      catalog,
+      pool(null, 'HermesWeaponBoon'),
+      equipped(
+        ['ApolloWeaponBoon', 'Common'],
+        ['HermesWeaponBoon', 'Rare'],
+        ['AthenaProjectileBoon', 'Epic'],
+        ['GoodStuffBoon', 'Duo'],
+      ),
+    );
+    expect(assessment.findings).toEqual([
+      expect.objectContaining({
+        code: 'purgingPoolTraitMissing',
+        slotKey: 'left',
+        evidence: { requiredTraitCount: 3, resolvedCount: 1 },
+      }),
+      expect.objectContaining({ code: 'purgingPoolTraitMissing', slotKey: 'right' }),
+    ]);
+  });
+
+  it('reports an overfilled Pool through its duplicate and ineligible slots while excluding selected siblings', () => {
     const assessment = assessPurgingPool(
       catalog,
       pool('ApolloWeaponBoon', 'ApolloWeaponBoon', 'HadesLifestealBoon'),
@@ -155,8 +199,8 @@ describe('Purging Pool generation assessment', () => {
     expect(assessment.findings.map((finding) => finding.code)).toEqual([
       'purgingPoolTraitDuplicate',
       'purgingPoolTraitUnavailable',
-      'purgingPoolWrongCardinality',
     ]);
+    expect(assessment.findings.map((finding) => finding.slotKey)).toEqual(['middle', 'right']);
     expect(assessment.candidateTraitKeysBySlot.left).toEqual(['HermesWeaponBoon']);
   });
 

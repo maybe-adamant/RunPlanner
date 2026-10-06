@@ -86,7 +86,6 @@ export type RewardGenerationFindingCode =
   | 'purgingPoolTraitMissing'
   | 'purgingPoolTraitUnavailable'
   | 'purgingPoolTraitDuplicate'
-  | 'purgingPoolWrongCardinality'
   | 'hermesShrinePlacementUnavailable'
   | 'hermesShrineInventoryMissing'
   | 'hermesShrineInventoryWrongGroup'

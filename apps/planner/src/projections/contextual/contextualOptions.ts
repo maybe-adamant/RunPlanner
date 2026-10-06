@@ -268,13 +268,11 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'resourcePlacementUnavailable':
       return { kind: 'generic', message: 'This selected resource success needs repair.' };
     case 'purgingPoolTraitMissing':
-      return { kind: 'trait', message: 'Choose every currently available Pool trait.' };
+      return { kind: 'trait', message: 'Choose an available trait for this Pool slot.' };
     case 'purgingPoolTraitUnavailable':
       return { kind: 'trait', message: 'Choose a trait currently eligible for the Pool.' };
     case 'purgingPoolTraitDuplicate':
       return { kind: 'trait', message: 'Each Pool slot must name a different trait.' };
-    case 'purgingPoolWrongCardinality':
-      return { kind: 'trait', message: 'Use exactly the number of traits the Pool can offer.' };
     case 'purgingPoolSaleUnavailable':
       return {
         kind: 'trait',

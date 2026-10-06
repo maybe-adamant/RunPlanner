@@ -890,11 +890,11 @@ describe('fixed room blocks', () => {
       throw new Error('F lost its fixed rooms');
     const postboss = postbossLink.target.origin;
 
-    // The cleared sold slot leaves the Pool inventory short at its use.
+    // The cleared sold slot leaves that Pool slot unfilled at its use.
     expect(f.coverage.blockedAt).toMatchObject({
       kind: 'roomFeature',
       occurrenceId: postboss.occurrenceId,
-      target: { kind: 'purgingPoolInventory' },
+      target: { kind: 'purgingPoolOffer', slotKey: 'left' },
     });
     expect(f.coverage.roomTimeline?.room).toEqual(postboss);
     expect(exited(f, bossLink.target.occurrenceId)).toBe(true);
