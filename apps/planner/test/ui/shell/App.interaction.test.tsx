@@ -2159,8 +2159,9 @@ describe('planner history interaction', () => {
     const actionRow = document.getElementById(
       semanticOwnerControlElementId(destination.focusAddress),
     );
-    expect(actionRow?.getAttribute('data-has-findings')).toBe('true');
+    expect(actionRow?.getAttribute('data-has-findings')).toBe('false');
     const traitLauncher = within(actionRow!).getByRole('button', { name: /Trait/ });
+    expect(traitLauncher.getAttribute('data-has-findings')).toBe('true');
     await view.user.click(traitLauncher);
 
     const dialog = await screen.findByRole('dialog');

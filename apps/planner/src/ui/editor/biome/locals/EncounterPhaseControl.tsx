@@ -23,17 +23,10 @@ import {
 import { CocoonCountControl } from './CocoonCountControl';
 import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
+import { isCompositionFinding, isIdentityFinding } from './encounterPhaseFindings';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
-
-const isCompositionFinding = (finding: { readonly code: string }): boolean =>
-  finding.code === 'encounterCustomizationUnavailable' ||
-  finding.code === 'encounterCustomizationRequired' ||
-  finding.code === 'encounterIntroductionRequired';
-
-const isIdentityFinding = (finding: { readonly code: string }): boolean =>
-  !isCompositionFinding(finding);
 
 function isGeneratedEncounterDecision(
   decision: NonNullable<WorkspaceEncounterPhase['customization']>[number],

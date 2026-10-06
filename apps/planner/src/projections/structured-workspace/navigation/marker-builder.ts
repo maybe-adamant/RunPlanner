@@ -20,9 +20,20 @@ import type {
 export interface WorkspaceMarkerDestinationEmitter {
   marker(address: SemanticAddress, nodeKey?: string): WorkspaceMarker;
   redirect(markers: Iterable<WorkspaceMarker>, nodeKey: string): void;
-  redirectTo(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
+  /** `mark` names the nested control that carries the finding inside the focus. */
+  redirectTo(
+    marker: WorkspaceMarker,
+    focus: WorkspaceMarker,
+    nodeKey: string,
+    mark?: WorkspaceMarker,
+  ): void;
   /** Route a nested finding to a visible containing control without opening its leaf dialog. */
-  redirectToContext(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
+  redirectToContext(
+    marker: WorkspaceMarker,
+    focus: WorkspaceMarker,
+    nodeKey: string,
+    mark?: WorkspaceMarker,
+  ): void;
   setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void;
   setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
   setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void;
@@ -103,8 +114,14 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
         destinations.set(marker.focusKey, Object.freeze({ ...destination, nodeKey }));
       }
     },
-    redirectTo(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void {
-      const existing = requireRegistered(marker);
+    redirectTo(
+      marker: WorkspaceMarker,
+      focus: WorkspaceMarker,
+      nodeKey: string,
+      mark?: WorkspaceMarker,
+    ): void {
+      const { markAddress: _markAddress, ...existing } = requireRegistered(marker);
+      void _markAddress;
       destinations.set(
         marker.focusKey,
         Object.freeze({
@@ -112,6 +129,7 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
           biomeKey: input.biome.biomeKey,
           focusAddress: focus.address,
           focusKey: focus.focusKey,
+          ...(mark === undefined ? {} : { markAddress: mark.address }),
           nodeKey,
           ownerAddress: marker.address,
           region: 'structure',
@@ -119,14 +137,21 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
         }),
       );
     },
-    redirectToContext(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void {
+    redirectToContext(
+      marker: WorkspaceMarker,
+      focus: WorkspaceMarker,
+      nodeKey: string,
+      mark?: WorkspaceMarker,
+    ): void {
       const existing = requireRegistered(marker);
       const {
         levelResolutionDialogTarget: _levelResolutionDialogTarget,
+        markAddress: _markAddress,
         traitDialogTarget: _traitDialogTarget,
         ...context
       } = existing;
       void _levelResolutionDialogTarget;
+      void _markAddress;
       void _traitDialogTarget;
       destinations.set(
         marker.focusKey,
@@ -135,6 +160,7 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
           biomeKey: input.biome.biomeKey,
           focusAddress: focus.address,
           focusKey: focus.focusKey,
+          ...(mark === undefined ? {} : { markAddress: mark.address }),
           nodeKey,
           ownerAddress: marker.address,
           region: 'structure',

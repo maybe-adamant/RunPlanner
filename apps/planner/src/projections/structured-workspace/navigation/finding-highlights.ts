@@ -11,7 +11,7 @@ export function indexFindingsByRepairTarget(
   for (const finding of findings) {
     const destination = destinations.get(semanticAddressKey(finding.origin));
     if (destination === undefined) continue;
-    const key = semanticAddressKey(destination.focusAddress);
+    const key = semanticAddressKey(destination.markAddress ?? destination.focusAddress);
     const group = result.get(key) ?? [];
     group.push(finding);
     result.set(key, group);

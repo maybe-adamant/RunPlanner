@@ -90,6 +90,23 @@ describe('structured workspace marker destination builder', () => {
       ownerAddress: trait.address,
     });
     expect(value.destinations().get(trait.focusKey)).not.toHaveProperty('traitDialogTarget');
+    expect(value.destinations().get(trait.focusKey)).not.toHaveProperty('markAddress');
+  });
+
+  it('marks a nested launcher while navigation keeps its visible context', () => {
+    const value = builder();
+    const reward = createIncomingRewardAddress(biome, createOccurrenceId('marked-trait-reward'));
+    const trait = value.emitter.marker(createTraitOfferAddress(reward, 'self'));
+    const action = value.emitter.marker(reward, 'action-node');
+
+    value.emitter.redirectToContext(trait, action, 'action-node', trait);
+    expect(value.destinations().get(trait.focusKey)).toMatchObject({
+      focusAddress: action.address,
+      markAddress: trait.address,
+    });
+
+    value.emitter.redirectToContext(trait, action, 'action-node');
+    expect(value.destinations().get(trait.focusKey)).not.toHaveProperty('markAddress');
   });
 
   it('routes an exact All Together child through its containing trait dialog', () => {
