@@ -30,6 +30,7 @@ import type { BiomeRewardSimulation } from '../rewards';
 import type { BiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import type { RewardProducerOwnerAddress } from '../rewards/producer-frontiers';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
+import type { BiomeRewardEvaluationAssembly } from '../rewards/biome/publication';
 import type { BiomeGenerationValidation, ProgressiveBiomeEvaluation } from './products';
 
 export interface BlockedAncestorChain {
@@ -223,6 +224,8 @@ export interface ProgressiveBiomeSelectedProducts {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
+  /** The same reward walk published through an earlier chronology cut. */
+  readonly rewardsThrough: BiomeRewardEvaluationAssembly['through'];
 }
 
 export function mergedFindings(
@@ -782,6 +785,22 @@ function locateStructuralOwner(
   });
 }
 
+/** Whether a Timeline action row is the one that settles this owner. */
+export function roomActionOwns(
+  action: CanonicalAuthoredRoom['roomActionRoster']['rows'][number],
+  address: SemanticAddress,
+): boolean {
+  if (address.kind === 'roomAction') return action.key === address.actionKey;
+  const owner = semanticAddressKey(action.owner);
+  const role = acquisitionRoleAncestor(address);
+  const reward = rewardOwnerAddress(address);
+  return (
+    owner === semanticAddressKey(ownerOrigin(address)) ||
+    (role !== undefined && owner === semanticAddressKey(role)) ||
+    (reward !== undefined && owner === semanticAddressKey(reward))
+  );
+}
+
 /** Shared finding/edit locator over materialization's existing timeline and Hub phases. */
 export function locateOwner(
   prefix: CanonicalBiome | MaterializedBiomePrefix,
@@ -816,20 +835,11 @@ export function locateOwner(
   rooms.push(...(prefix.fixedRoomLinks ?? []).map((link) => link.target));
   const room = rooms.find((room) => room.occurrenceId === occurrence.occurrenceId);
   if (room === undefined) return structural;
-  const root = ownerOrigin(address);
   const reward = rewardOwnerAddress(address);
-  const role = acquisitionRoleAncestor(address);
   const same = (left: SemanticAddress, right: SemanticAddress) =>
     semanticAddressKey(left) === semanticAddressKey(right);
   let entryIndex = room.roomLifecycleTimeline.entries.findIndex((entry) => {
-    if (entry.kind === 'action') {
-      if (address.kind === 'roomAction') return entry.action.key === address.actionKey;
-      return (
-        same(entry.action.owner, root) ||
-        (role !== undefined && same(entry.action.owner, role)) ||
-        (reward !== undefined && same(entry.action.owner, reward))
-      );
-    }
+    if (entry.kind === 'action') return roomActionOwns(entry.action, address);
     if (entry.kind === 'automaticEffect') return same(entry.address, address);
     // Fig Leaf, Aetos and the Gorgon condition settle when their phase starts.
     return (

@@ -462,6 +462,7 @@ export type {
   IncompleteBiomeProjectEvaluation,
   NoBiomeEvaluationCoverage,
   PrefixBiomeEvaluationCoverage,
+  RoomTimelineCoverage,
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   ProjectEvaluationAssembly,

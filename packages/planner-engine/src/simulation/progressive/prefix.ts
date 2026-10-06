@@ -167,7 +167,7 @@ export function exitFrontier(
   targets: readonly CanonicalTarget[] = [],
   additional: readonly CanonicalAdditionalContinuation[] = decision.additional,
   sourceExited = false,
-  selectedOverview = false,
+  selectedStage?: 'overview' | 'timeline',
 ): MaterializedExitDecisionFrontier {
   const partialBatch =
     targets.length > 0
@@ -183,8 +183,11 @@ export function exitFrontier(
     selectedExitKey: decision.selectedExitKey,
     selectedOrigin: decision.selectedOrigin,
     ...(sourceExited && partialBatch !== undefined ? { sourceExited: true as const } : {}),
-    ...(sourceExited && selectedOverview && partialBatch !== undefined
+    ...(sourceExited && selectedStage === 'overview' && partialBatch !== undefined
       ? { selectedOverview: true as const }
+      : {}),
+    ...(sourceExited && selectedStage === 'timeline' && partialBatch !== undefined
+      ? { selectedTimeline: true as const }
       : {}),
   });
 }
@@ -344,7 +347,7 @@ export function clampPrefix(
       retainedTargets,
       retainedAdditional,
       sourceExitedBeforeBlock(history, located, decision),
-      selectedOverviewBlock(selected, located, decision),
+      selectedOverviewBlock(selected, located, decision) ? 'overview' : undefined,
     ),
   });
 }
@@ -405,7 +408,7 @@ export function retainedInteractionPrefix(
       targets,
       additional,
       sourceExitedBeforeBlock(history, located, decision),
-      selectedOverviewBlock(selected, located, decision),
+      selectedOverviewBlock(selected, located, decision) ? 'overview' : undefined,
     ),
   });
 }

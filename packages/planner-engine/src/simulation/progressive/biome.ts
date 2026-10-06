@@ -123,6 +123,7 @@ interface ProgressiveProducts {
   readonly candidateArtifacts: BiomeCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
+  readonly rewardsThrough: ProgressiveBiomeSelectedProducts['rewardsThrough'];
 }
 
 function generation(
@@ -295,6 +296,7 @@ function products(
     candidateArtifacts: roomGeneration.candidateArtifacts,
     findingRegions: Object.freeze([...roomGeneration.findingRegions, ...rewards.findingRegions]),
     traitChildSettlementCheckpoints: rewards.traitChildSettlementCheckpoints,
+    rewardsThrough: rewards.through,
   });
 }
 
@@ -422,6 +424,7 @@ export function evaluateProgressiveBiomeAssembly(
         candidateArtifacts: evaluated.candidateArtifacts,
         findingRegions: evaluated.findingRegions,
         traitChildSettlementCheckpoints: evaluated.traitChildSettlementCheckpoints,
+        rewardsThrough: evaluated.rewardsThrough,
       }),
       unsupported,
     );

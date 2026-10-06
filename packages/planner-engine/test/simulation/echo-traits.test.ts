@@ -788,15 +788,12 @@ describe('Echo Gate A direct choices', () => {
     expect(h.findings).toContainEqual(
       expect.objectContaining({ code: 'echoPomTargetUnavailable', origin: child }),
     );
-    const echoSnapshots = h.rewards.runStateSnapshots.filter(
-      (snapshot) => snapshot.traits.equippedTraits.EchoDoubleLevelBoon !== undefined,
-    );
-    expect(echoSnapshots).toHaveLength(1);
-    expect(echoSnapshots[0]?.traits.equippedTraits.EchoDoubleLevelBoon?.rarity).toBeUndefined();
-    expect(echoSnapshots[0]?.owner).toMatchObject({
-      kind: 'exitDecision',
-      source: { kind: 'occurrence', occurrenceId: bridgeId },
-    });
+    // Every published capture precedes the blocked Echo interaction.
+    expect(
+      h.rewards.runStateSnapshots.some(
+        (snapshot) => snapshot.traits.equippedTraits.EchoDoubleLevelBoon !== undefined,
+      ),
+    ).toBe(false);
     expect(
       h.rewards.runStateAvailability.some((entry) => entry.availability === 'unavailable'),
     ).toBe(true);

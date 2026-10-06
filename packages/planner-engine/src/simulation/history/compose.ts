@@ -821,6 +821,8 @@ function composeBiomeHistoryPrefixResult(
               ? {}
               : { stopAfterOutgoing: true, ...postOutgoingAcquisitionOption(catalog, current) }),
           });
+          if (frontier.selectedTimeline === true)
+            fail('a Timeline cut publishes the selected history and is never composed');
           if (frontier.sourceExited === true && frontier.selectedOverview === true) {
             if (frontier.partialBatch === undefined)
               fail('an entered Overview frontier has no generated batch');

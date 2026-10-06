@@ -1,5 +1,4 @@
 import {
-  createAcquisitionSiteAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
@@ -148,6 +147,11 @@ function blockedEncounterPhase(blockedAt: SemanticAddress): EncounterPhaseAddres
   }
 }
 
+/**
+ * Products a clamped re-evaluation cannot reach: Overview stops, the opening
+ * room, fixed rooms and Hub lifecycles. Ordinary room Timelines publish the
+ * selected attempt through their blocking product instead.
+ */
 export function retainBlockedRegionProducts(
   retainedRewards: BiomeRewardSimulation,
   retainedArtifacts: BiomeCandidateArtifacts,
@@ -159,7 +163,6 @@ export function retainBlockedRegionProducts(
   block: LocatedFinding,
   blockedRegionKey: string,
   selectedFindingRegions: readonly FindingRegionEntry[],
-  frontierSettlementOwner: OccurrenceAddress | undefined,
   retainedOrdinaryBatches: readonly OrdinaryBatchGenerationAssessment[],
 ): { readonly rewards: BiomeRewardSimulation; readonly artifacts: BiomeCandidateArtifacts } {
   const blockedAt = block.finding.origin;
@@ -331,29 +334,6 @@ export function retainBlockedRegionProducts(
       return true;
     }),
   ]);
-  // A room-exit acquisition child is assessed after the source room's outgoing
-  // checkpoint. When that child is the progressive blocker, the clamped
-  // execution prefix intentionally stops at the outgoing frontier, but the
-  // selected attempt has already produced the bounded settlement result. Keep
-  // that exact post-settlement branch product visible at the frontier; it is
-  // the current room's state, not a replay of later topology.
-  const settledCurrentSiteBranches =
-    ancestors.occurrenceOwner === undefined ||
-    frontierSettlementOwner === undefined ||
-    semanticAddressKey(ancestors.occurrenceOwner) !== semanticAddressKey(frontierSettlementOwner) ||
-    blockedAt.kind !== 'levelResolution'
-      ? undefined
-      : selectedRewards.branches.some((branch) =>
-            branch.events.some(
-              (event) =>
-                event.kind === 'concreteAcquisition' &&
-                event.settlement !== undefined &&
-                semanticAddressKey(event.settlement.site.owner) ===
-                  semanticAddressKey(ancestors.occurrenceOwner!),
-            ),
-          )
-        ? selectedRewards.branches
-        : undefined;
   const blockedCapability =
     blockedTraitCapabilityAddress === undefined
       ? undefined
@@ -540,7 +520,7 @@ export function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.derivedAcquisitionEntries.at(blockedDerivedAcquisitionAt) ??
         blockedArtifacts.derivedAcquisitionEntries.at(blockedDerivedAcquisitionAt));
-  const retainedDerivedEntries: DerivedAcquisitionEntryCandidateArtifacts =
+  const derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts =
     blockedDerivedAcquisitionAt === undefined || blockedDerivedAcquisitionCapability === undefined
       ? retainedArtifacts.derivedAcquisitionEntries
       : Object.freeze({
@@ -569,60 +549,7 @@ export function retainBlockedRegionProducts(
             ]);
           },
         });
-  // Retain reached dynamic inventory when either it or an acquisition child
-  // needs repair. Missing child authorship does not undo inventory generation.
   const rewardOwner = ancestors.rewardOwner;
-  // A blocked Shop-offer role (such as a refill's Anvil) keeps its reached inventory too.
-  const shopOffer =
-    rewardOwner?.kind === 'shopOffer'
-      ? rewardOwner
-      : blockedAcquisitionAt?.owner.kind === 'shopOffer'
-        ? blockedAcquisitionAt.owner
-        : undefined;
-  const blockedShopSite =
-    shopOffer !== undefined
-      ? createAcquisitionSiteAddress(
-          createOccurrenceAddress(
-            createBiomeAddress(shopOffer.routeKey, shopOffer.biomeKey),
-            shopOffer.occurrenceId,
-          ),
-          'roomExit',
-        )
-      : rewardOwner?.kind === 'acquisitionEntry' && rewardOwner.site.pointKey === 'roomExit'
-        ? rewardOwner.site
-        : undefined;
-  const blockedShopEntries =
-    blockedShopSite === undefined
-      ? []
-      : [blockedArtifacts, selectedArtifacts]
-          .flatMap((artifacts) => artifacts.derivedAcquisitionEntries.entriesAt(blockedShopSite))
-          .filter(
-            (entry) =>
-              entry.capability.kind === 'travelDealRefill' ||
-              entry.capability.kind === 'echoDoubleShopReward',
-          );
-  const reachedShopEntries = new Map(
-    blockedShopEntries.map((entry) => [semanticAddressKey(entry.address), entry]),
-  );
-  const derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts =
-    blockedShopSite === undefined || reachedShopEntries.size === 0
-      ? retainedDerivedEntries
-      : Object.freeze({
-          at: (address: AcquisitionEntryAddress) =>
-            reachedShopEntries.get(semanticAddressKey(address))?.capability ??
-            retainedDerivedEntries.at(address),
-          entriesAt: (site: import('../../authored-project/addresses').AcquisitionSiteAddress) => {
-            const entries = retainedDerivedEntries.entriesAt(site);
-            return semanticAddressKey(site) !== semanticAddressKey(blockedShopSite)
-              ? entries
-              : Object.freeze([
-                  ...entries.filter(
-                    (entry) => !reachedShopEntries.has(semanticAddressKey(entry.address)),
-                  ),
-                  ...reachedShopEntries.values(),
-                ]);
-          },
-        });
   const rewardCapability =
     rewardOwner === undefined
       ? undefined
@@ -839,17 +766,14 @@ export function retainBlockedRegionProducts(
       steadyGrowthOutcomes.length === retainedRewards.steadyGrowthOutcomes.length &&
       transcendentEmbryoOutcomes.length === retainedRewards.transcendentEmbryoOutcomes.length &&
       rewardFindings.length === retainedRewards.findings.length &&
-      blockedChildSettlement === undefined &&
-      settledCurrentSiteBranches === undefined
+      blockedChildSettlement === undefined
         ? retainedRewards
         : Object.freeze({
             ...retainedRewards,
             ...(generatedPickupPlacements.length === 0 ? {} : { generatedPickupPlacements }),
-            ...(settledCurrentSiteBranches === undefined
-              ? blockedChildSettlement === undefined
-                ? {}
-                : { branches: blockedChildSettlement.branches }
-              : { branches: settledCurrentSiteBranches }),
+            ...(blockedChildSettlement === undefined
+              ? {}
+              : { branches: blockedChildSettlement.branches }),
             validity: rewardFindings.length === 0 ? retainedRewards.validity : 'invalid',
             findings: rewardFindings,
             runStateSnapshots,

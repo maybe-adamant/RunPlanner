@@ -210,10 +210,11 @@ describe('Fig Leaf state contract', () => {
       .filter(
         (event) => event.origin.kind === 'occurrence' && event.origin.occurrenceId === occurrenceId,
       );
-    const introEvents = events.filter((event) => event.phaseKey === 'Intro');
-    const combat1Events = events.filter((event) => event.phaseKey === 'Combat1');
-    expect(introEvents).toHaveLength(0);
-    expect(combat1Events).toHaveLength(0);
+    // The skipped Intro precedes the blocked phase start and stays published.
+    expect(events.map((event) => [event.phaseKey, event.execution])).toEqual([
+      ['Intro', 'skippedByFigLeaf'],
+      ['Intro', 'skippedByFigLeaf'],
+    ]);
     expect(evaluation.issue).toMatchObject({
       kind: 'invalid',
       owner: createFigLeafPhaseAddress(combat1),

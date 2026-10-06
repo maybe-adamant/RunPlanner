@@ -131,6 +131,8 @@ export interface WorkspaceBiomeSource {
   readonly findingsFor: (owner: SemanticAddress) => readonly SemanticFinding[];
   readonly hubDecision: (hubKey: string) => HubDecision | undefined;
   readonly isAssessed: (owner: SemanticAddress) => boolean;
+  /** Engine-published Timeline rows of the product a room's assessment stops at. */
+  readonly blockingRowKeys: (owner: OccurrenceAddress) => ReadonlySet<string> | undefined;
   /** Exact engine-reached trait child coverage; authored dormant children stay retained. */
   readonly isActiveTraitOffer: (
     owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
@@ -917,6 +919,14 @@ function createWorkspaceBiomeSource(
     hubDecision: (hubKey: string) =>
       hubDecisionsByKey.get(semanticAddressKey(createHubDecisionAddress(biome, hubKey))),
     isAssessed: coverage.isAssessed,
+    blockingRowKeys: (owner: OccurrenceAddress) => {
+      const timeline =
+        evaluation?.coverage.kind === 'prefix' ? evaluation.coverage.roomTimeline : undefined;
+      return timeline !== undefined &&
+        semanticAddressKey(timeline.room) === semanticAddressKey(owner)
+        ? new Set(timeline.blockingRowKeys)
+        : undefined;
+    },
     isActiveTraitOffer,
     isActiveShopOffer,
     shopOfferAssessment,

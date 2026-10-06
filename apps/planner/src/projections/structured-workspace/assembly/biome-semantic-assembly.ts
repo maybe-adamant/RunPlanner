@@ -582,6 +582,9 @@ export function assembleWorkspaceBiomeSemantics(
     }
     const evaluatedRoom =
       request.evaluatedRoom ?? source.blockedOccurrenceRoom(request.occurrence.occurrenceId);
+    const blockingRowKeys = source.blockingRowKeys(
+      createOccurrenceAddress(biome, request.occurrence.occurrenceId),
+    );
     const bossDoorRewardStore = bossDoorRewardStoreControl(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
       configuredRivalsRank: source.configuredRivalsRank,
@@ -612,6 +615,7 @@ export function assembleWorkspaceBiomeSemantics(
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
+      ...(blockingRowKeys === undefined ? {} : { blockingRowKeys }),
       judgmentArcanaCapability,
       figurineArcanaCapability,
       keepsakeEquipResultSupported,

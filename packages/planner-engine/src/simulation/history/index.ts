@@ -16,6 +16,7 @@ export {
   projectRouteEncounterKeyCounts,
   type RecentEncounterEnvelopeSlotFact,
 } from './facts';
+export { biomeHistoryThrough } from './cut';
 export { foldHistoryEvents, HistoryFoldContractError } from './fold';
 export type {
   BiomeCompletedHistoryEvent,

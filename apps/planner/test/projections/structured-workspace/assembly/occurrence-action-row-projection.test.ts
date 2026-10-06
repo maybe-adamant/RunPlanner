@@ -42,6 +42,7 @@ import {
 import {
   clockedTraitGeneratedPickupEntryKey,
   createAcquisitionRoleAddress,
+  createExitDecisionAddress,
   createFountainRarityOutcomeAddress,
   createIncomingRewardAddress,
   createNemesisRandomEventAddress,
@@ -56,7 +57,9 @@ import {
 import {
   goldenFOccurrenceId,
   replaceNemesisRandomEventInteraction,
+  underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
@@ -1580,5 +1583,130 @@ describe('shop-like purchase rows', () => {
       command: { kind: 'RemoveRoomAction', action: refill?.address },
     });
     expect(stranded?.some((row) => row.travelDealLine !== undefined)).toBe(false);
+  });
+});
+
+describe('room Timeline block', () => {
+  const shopId = createOccurrenceId('golden-f-preboss-shop');
+  const shop = createOccurrenceAddress(goldenFBiome, shopId);
+  const boon = createShopOfferAddress(goldenFBiome, shopId, 'Boon');
+  const refill = createShopOfferAddress(goldenFBiome, shopId, 'travelDealRefill');
+  const refillReference = {
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit' as const,
+    entryKey: 'travelDealRefill',
+  };
+
+  /** A purchased Boon, then a Travel Deal refill Boon whose offer is missing. */
+  function missingRefillOffer(): ProjectDocument {
+    let project = replaceTestShopOfferActions(
+      underworldWorldShopTravelDealProject(),
+      catalog,
+      shop,
+      ['Boon'],
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, shopId, roomActionKey(refillReference)),
+      toIndex: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: refill,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    project = authorLegalTraitOffers(project);
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: refill,
+      value: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+  }
+
+  function shopRows(project: ProjectDocument) {
+    const node = projectStructuredWorkspaceFixture(project)
+      .workspace.route.biomes.flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === shopId,
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error('F Shop workbench is missing');
+    return node.room.roomActions?.rows ?? [];
+  }
+
+  it('keeps earlier rows reached and marks the blocking product rows with their findings', () => {
+    const rows = shopRows(missingRefillOffer());
+    const purchase = rows.find(
+      (row) => row.key === roomActionKey({ kind: 'interactShopOffer', offerKey: 'Boon' }),
+    );
+    const blocked = rows.find((row) => row.key === roomActionKey(refillReference));
+
+    // The earlier purchase keeps its reached offer control and is not the repair region.
+    expect(purchase?.blockingProduct).toBeUndefined();
+    expect(purchase?.rewardPayload?.inlineTraitOffers).toContainEqual(
+      expect.objectContaining({
+        address: createTraitOfferAddress(boon, 'source'),
+        contextReached: true,
+      }),
+    );
+    // The blocking row is the repair region, editable from its own reached contact.
+    expect(blocked?.blockingProduct).toBe(true);
+    expect(blocked?.rewardPayload?.inlineTraitOffers).toContainEqual(
+      expect.objectContaining({
+        address: createTraitOfferAddress(refill, 'source'),
+        contextReached: true,
+        status: 'unspecified',
+      }),
+    );
+  });
+
+  it('keeps the room Exit read-only behind a blocking reward offer', () => {
+    const minibossId = createOccurrenceId('golden-h-miniboss01');
+    let project = authorLegalTraitOffers(createGoldenFGHIProject());
+    const before = projectStructuredWorkspaceFixture(project).evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    );
+    const selected =
+      before !== undefined && 'rewards' in before
+        ? before.rewards.selectedTraitOffers.find(
+            (offer) =>
+              offer.address.owner.kind === 'incomingReward' &&
+              offer.address.owner.occurrenceId === minibossId,
+          )
+        : undefined;
+    if (selected?.offer.kind !== 'traits') throw new Error('H miniboss has no trait offer');
+    const [first, second, third] = selected.offer.options;
+    if (first === undefined || second === undefined || third === undefined)
+      throw new Error('H miniboss trait offer is incomplete');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: selected.address,
+      value: { ...selected.offer, options: [{ ...first, rarity: 'Heroic' }, second, third] },
+    });
+    const nodes = projectStructuredWorkspaceFixture(project).workspace.route.biomes.flatMap(
+      (biome) => biome.nodes,
+    );
+    const room = nodes.find(
+      (candidate) =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === minibossId,
+    );
+    const exit = nodes.find(
+      (candidate) =>
+        candidate.kind === 'ordinaryBatch' &&
+        semanticAddressKey(candidate.owner) ===
+          semanticAddressKey(
+            createExitDecisionAddress(goldenHBiome, {
+              kind: 'occurrence',
+              occurrenceId: minibossId,
+            }),
+          ),
+    );
+    if (room?.kind !== 'occurrenceWorkbench') throw new Error('H miniboss workbench is missing');
+    const pickup = room.room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward',
+    );
+    // The reward pickup is the repair region; the doors never opened, so the Exit is unassessed.
+    expect(pickup?.blockingProduct).toBe(true);
+    expect(exit?.marker.assessment).toBe('unassessed');
   });
 });

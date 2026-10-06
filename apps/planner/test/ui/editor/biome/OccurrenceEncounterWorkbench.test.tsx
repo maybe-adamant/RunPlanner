@@ -1080,10 +1080,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
+    // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
     const launcher = screen.getByRole('button', {
-      name: /Edit Trait · Divine Dash; trait configuration has no findings/,
+      name: /Edit Trait · Divine Dash; trait configuration needs attention/,
     });
-    expect(launcher.getAttribute('data-trait-status')).toBe('valid');
+    expect(launcher.getAttribute('data-trait-status')).toBe('invalid');
     await view.user.click(condition);
     await waitFor(() => {
       expect(screen.queryByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' })).toBeNull();

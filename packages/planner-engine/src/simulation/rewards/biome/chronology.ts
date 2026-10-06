@@ -6,12 +6,13 @@ import {
   createRoomRunStateCheckpointAddress,
   createTargetAddress,
   semanticAddressKey,
+  type SemanticAddress,
 } from '../../../authored-project/addresses';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/acquisition/sea-star';
 import type { CanonicalDecision } from '../../materialization/model';
-import { ownerRegion } from '../../finding-regions';
+import { ownerRegion, type HistoryFindingChronology } from '../../finding-regions';
 import { bossDoorRewardStoreMissingFinding } from '../../completeness';
 import type { RewardBranch } from '../model';
 import { createRunStateDerivationCache } from '../run-state';
@@ -407,11 +408,90 @@ export function evaluateBiomeRewardChronology(
       ),
     ),
   );
+  const steps: WalkStep[] = [];
   for (const event of history.events) {
     if (walk.branches.length === 0) break;
+    steps.push({
+      sequence: event.sequence,
+      received: walk,
+      emissionCount: accumulator.emissionCount(),
+    });
     walk = walkHistoryEvent(context, accumulator, walk, event);
     if (walk.halted) break;
   }
   finalizeWalk(context, accumulator, walk);
-  return publishChronology(context, walk, accumulator.finish());
+  // A cut through the last walked event also reaches what the walk settles after it.
+  const walked: WalkStep = Object.freeze({
+    sequence: Number.POSITIVE_INFINITY,
+    received: walk,
+    emissionCount: accumulator.emissionCount(),
+  });
+  const through = (
+    cut: HistoryFindingChronology,
+    blockedAt?: SemanticAddress,
+  ): BiomeRewardEvaluationAssembly => {
+    const { received, emissionCount, settled } = walkThrough(steps, walked, cut);
+    const replay = createChronologyAccumulator(prepared.rooms);
+    replay.mergeEmissions(accumulator.emissionsThrough(emissionCount));
+    const accumulation = replay.finish();
+    // A blocked trait child keeps its exact pre-effect checkpoint as the reached state.
+    const child =
+      settled || blockedAt === undefined
+        ? undefined
+        : accumulation.traitChildSettlements.get(semanticAddressKey(blockedAt));
+    return publishChronology(
+      context,
+      child === undefined ? received : withBranches(received, child.branches),
+      accumulation,
+      through,
+    );
+  };
+  return publishChronology(context, walk, accumulator.finish(), through);
+}
+
+/** The walk state an event received and how many emissions preceded its step. */
+interface WalkStep {
+  readonly sequence: number;
+  readonly received: ChronologyWalkState;
+  readonly emissionCount: number;
+}
+
+/**
+ * The selected walk through a chronology cut. Unless the cut lies before it,
+ * the cut event is the blocking contact: its emissions and the state it
+ * settles are reached. A contact that leaves no branch, or the last event of a
+ * walk that stopped before the cut, keeps the branches it received.
+ */
+function walkThrough(
+  steps: readonly WalkStep[],
+  walked: WalkStep,
+  cut: HistoryFindingChronology,
+): {
+  readonly received: ChronologyWalkState;
+  readonly emissionCount: number;
+  /** Whether the reached state settled every branch it received. */
+  readonly settled: boolean;
+} {
+  const index = steps.findIndex((step) => step.sequence >= cut.sequence);
+  if (index < 0) {
+    const settled = walked.received.branches.length > 0;
+    const last = steps.at(-1);
+    return {
+      received:
+        settled || last === undefined
+          ? walked.received
+          : withBranches(walked.received, last.received.branches),
+      emissionCount: walked.emissionCount,
+      settled,
+    };
+  }
+  const step = steps[index]!;
+  if (step.sequence > cut.sequence || cut.boundary === 'before') return { ...step, settled: true };
+  const next = steps[index + 1] ?? walked;
+  const settled = next.received.branches.length > 0;
+  return {
+    received: settled ? next.received : withBranches(next.received, step.received.branches),
+    emissionCount: next.emissionCount,
+    settled,
+  };
 }
