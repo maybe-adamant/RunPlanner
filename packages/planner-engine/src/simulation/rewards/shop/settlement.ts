@@ -277,7 +277,7 @@ export function settleShopAcquisitionSite(
             branchCohortSize,
           },
           context.facts,
-          ownerRegion(room.origin),
+          ownerRegion(createAcquisitionEntryAddress(site, offer.offerKey)),
           context.findingChronology,
         )
       : settleOwnedAcquisitionSite(
@@ -285,7 +285,7 @@ export function settleShopAcquisitionSite(
           current,
           { ...request, source, deferArtificerReplacement: true },
           context.facts,
-          ownerRegion(room.origin),
+          ownerRegion(createAcquisitionEntryAddress(site, offer.offerKey)),
           context.findingChronology,
         );
     mergeRewardFindingEmissions(findings, settled.findingEmissions);
@@ -325,7 +325,7 @@ export function settleShopAcquisitionSite(
               createAcquisitionEntryAddress(site, entryKey),
               { kind: 'infernalContractUnavailable' },
             ),
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
           continue;
@@ -361,7 +361,7 @@ export function settleShopAcquisitionSite(
               createAcquisitionEntryAddress(site, entryKey),
               { kind: 'travelDealRefillUnavailable' },
             ),
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
           continue;
@@ -386,7 +386,7 @@ export function settleShopAcquisitionSite(
               createAcquisitionEntryAddress(site, entryKey),
               { kind: 'travelDealRefillUnavailable' },
             ),
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
           continue;
@@ -461,7 +461,7 @@ export function settleShopAcquisitionSite(
               createAcquisitionEntryAddress(site, entryKey),
               { kind: 'echoShopDuplicateUnavailable' },
             ),
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
           continue;
@@ -492,7 +492,7 @@ export function settleShopAcquisitionSite(
                 : { timelineOwner: actionOwnerForOffer(entryKey)! }),
             },
             context.facts,
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology,
           );
           mergeRewardFindingEmissions(findings, settled.findingEmissions);
@@ -528,7 +528,7 @@ export function settleShopAcquisitionSite(
           addRewardFinding(
             findings,
             rewardFinding('rewardMissing', createAcquisitionEntryAddress(site, entryKey), {}),
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
           continue;
@@ -547,7 +547,7 @@ export function settleShopAcquisitionSite(
                 sourceOfferKey: materialization.sourceOfferKey,
               },
             ),
-            ownerRegion(room.origin),
+            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
             context.findingChronology ?? historyChronology(historySequence),
           );
           continue;
@@ -597,7 +597,7 @@ export function settleShopAcquisitionSite(
                 }),
           },
           context.facts,
-          ownerRegion(room.origin),
+          ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
           context.findingChronology,
         );
         mergeRewardFindingEmissions(findings, settled.findingEmissions);
@@ -635,7 +635,7 @@ export function settleShopAcquisitionSite(
             kind: 'shopOfferPurchase',
             offerKey: entryKey,
           }),
-          ownerRegion(room.origin),
+          ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
           context.findingChronology ?? historyChronology(historySequence),
         );
         continue;
@@ -765,7 +765,7 @@ export function settleShopAcquisitionSite(
                   : rewardFinding('shopPurchaseUnavailable', inventoryOwner, {
                       kind: 'travelDealRefillUnavailable',
                     }),
-                ownerRegion(room.origin),
+                ownerRegion(inventoryOwner),
                 context.findingChronology ?? historyChronology(historySequence),
               );
             }
@@ -876,17 +876,16 @@ export function settleShopAcquisitionSite(
   const stoppedOnlyForMissingAuthorship =
     settlementFindings.length > 0 &&
     settlementFindings.every(isAcquisitionAuthorshipMissingFinding);
-  if (next.length === 0 && !entryPurchaseFailureRecorded && !stoppedOnlyForMissingAuthorship) {
-    addRewardFinding(
-      findings,
-      rewardFinding('shopPurchaseUnavailable', site, {
-        kind: 'jointPurchaseOrder',
-        offerKeys: context.order ?? [],
-      }),
-      ownerRegion(room.origin),
-      context.findingChronology ?? historyChronology(historySequence),
+  // Every purchase that drops its branches explains itself on its own entry.
+  if (
+    branchCohortSize > 0 &&
+    next.length === 0 &&
+    !entryPurchaseFailureRecorded &&
+    !stoppedOnlyForMissingAuthorship
+  )
+    return fail(
+      `${room.gameName} purchases ${JSON.stringify(context.order ?? [])} lost every branch`,
     );
-  }
   return Object.freeze({
     site,
     entries: Object.freeze(

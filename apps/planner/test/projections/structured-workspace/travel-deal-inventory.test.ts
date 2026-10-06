@@ -287,12 +287,21 @@ it('routes a purchased refill with an item outside its group to its line and pur
     value: { optionKey: 'HealBigDrop', offer: { rewardType: 'HealBigDrop' } },
   });
   const { evaluation, workspace } = projectStructuredWorkspaceFixture(project);
-  expect(evaluation.findings).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: refill }),
-      expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: entry }),
-    ]),
+  // The refill's inventory blocks at its triggering purchase; the refill pickup is never reached.
+  expect(evaluation.findings).toContainEqual(
+    expect.objectContaining({ code: 'shopPurchaseUnavailable', origin: refill }),
   );
+  expect(evaluation.findings).not.toContainEqual(expect.objectContaining({ origin: entry }));
+  const q = evaluation.route.biomes.find((biome) => biome.biomeKey === 'Q');
+  expect(
+    q?.coverage.kind === 'prefix' ? q.coverage.roomTimeline?.blockingRowKeys : undefined,
+  ).toEqual([
+    roomActionKey({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    }),
+  ]);
   expect(workspace.focusByOwner.get(semanticAddressKey(refill))).toMatchObject({
     focusAddress: refill,
     roomTab: 'actions',

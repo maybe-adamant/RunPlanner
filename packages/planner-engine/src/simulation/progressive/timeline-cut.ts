@@ -7,14 +7,12 @@ import {
   type OccurrenceAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
-import type { RoomActionReference } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { createAssessmentIssue } from '../assessment-issue';
 import type { EncounterCandidateArtifacts } from '../encounters/candidates';
 import { createBiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
 import {
   assessmentRepairOwner,
-  ownerRegion,
   type FindingRegionEntry,
   type HistoryFindingChronology,
 } from '../finding-regions';
@@ -233,25 +231,15 @@ function timelineAssessmentPrefix(
   });
 }
 
-function isShopPurchase(reference: RoomActionReference): boolean {
-  return (
-    reference.kind === 'interactShopOffer' ||
-    (reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'roomExit')
-  );
-}
-
 /**
  * The Timeline rows the blocking region owns, whether or not a row carries a
- * finding: every row that settles an owner of the region, and for the Shop,
- * whose purchases settle as one product, every purchase row.
+ * finding: every row that settles an owner of the region.
  */
 function blockingRowKeys(
   block: RoomTimelineBlock,
   regionKey: string,
   findingRegions: readonly FindingRegionEntry[],
 ): readonly string[] {
-  const wholeShop =
-    block.room.entryState?.kind === 'shop' && regionKey === ownerRegion(block.room.origin);
   const owners = findingRegions.flatMap((entry) =>
     entry.atomicRegion !== regionKey
       ? []
@@ -259,9 +247,7 @@ function blockingRowKeys(
   );
   return Object.freeze(
     block.room.roomLifecycleTimeline.entries.flatMap((entry) =>
-      entry.kind === 'action' &&
-      ((wholeShop && isShopPurchase(entry.action.reference)) ||
-        owners.some((owner) => roomActionOwns(entry.action, owner)))
+      entry.kind === 'action' && owners.some((owner) => roomActionOwns(entry.action, owner))
         ? [entry.action.key]
         : [],
     ),

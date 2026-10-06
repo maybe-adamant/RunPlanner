@@ -1716,7 +1716,7 @@ describe('room Timeline block', () => {
     expect(pickup?.blockingProduct).toBe(true);
     expect(exit?.marker.assessment).toBe('unassessed');
   });
-  it('keeps row-level edits on a Shop row past the failure inside the blocking product', () => {
+  it('keeps existing row-level edits on a Shop purchase after the blocking purchase', () => {
     const shopId = qOccurrenceIds.preboss;
     const shop = createOccurrenceAddress(qBiome, shopId);
     const refillOffer = createShopOfferAddress(qBiome, shopId, 'travelDealRefill');
@@ -1754,9 +1754,10 @@ describe('room Timeline block', () => {
     );
     const refill = rows.find((row) => row.key === roomActionKey(refillRow));
     expect([...rows].sort((left, right) => (left.rank ?? 0) - (right.rank ?? 0))[2]).toBe(later);
+    // Each purchase is its own product: only the failing refill is the repair region.
     expect(refill?.blockingProduct).toBe(true);
-    // Past the failure inside the whole-Shop product: order and participation stay bound.
-    expect(later?.blockingProduct).toBe(true);
+    // The later purchase is after the block; its row-level order and participation stay bound.
+    expect(later?.blockingProduct).toBeUndefined();
     expect(later?.proposalKeys.length).toBeGreaterThan(0);
     expect(interactions.roomActions.get(semanticAddressKey(shop))).toMatchObject({ owner: shop });
     const participation = later?.shopParticipation;

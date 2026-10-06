@@ -1251,9 +1251,6 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect([...result.findings.values()].map((entry) => entry.finding.code)).toContain(
       'rewardAcquisitionUnavailable',
     );
-    expect(
-      [...result.findings.values()].map((entry) => entry.finding.evidence?.['kind']),
-    ).not.toContain('jointPurchaseOrder');
   });
 
   it('explains a failing Travel Deal refill at its own entry, not at the Shop site', () => {
