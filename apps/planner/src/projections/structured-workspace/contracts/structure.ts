@@ -277,6 +277,22 @@ export interface WorkspaceHubFountain {
   };
 }
 
+/** What each Hub tab still requires, from the authored board and its declaration. */
+export interface WorkspaceHubRequirements {
+  readonly openRooms: {
+    readonly current: number;
+    readonly min: number;
+    readonly max: number;
+    readonly met: boolean;
+  };
+  readonly visits: {
+    readonly planned: number;
+    readonly required: number;
+    readonly met: boolean;
+    readonly fountainUsed: boolean;
+  };
+}
+
 export interface WorkspaceHubDecisionNode {
   readonly authoring: 'authored';
   readonly kind: 'hubDecision';
@@ -289,6 +305,7 @@ export interface WorkspaceHubDecisionNode {
   readonly openSlotCount: { readonly current: number; readonly min: number; readonly max: number };
   readonly owner: HubDecisionAddress;
   readonly requiredVisitCount: number;
+  readonly requirements: WorkspaceHubRequirements;
   /** The declaration-owned fixed exit and its exact authored readiness state. */
   readonly completedExit:
     | {

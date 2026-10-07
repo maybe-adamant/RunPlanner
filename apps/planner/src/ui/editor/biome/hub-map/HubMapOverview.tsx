@@ -31,6 +31,8 @@ interface HubMapOverviewProps {
   readonly hubIdentity: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
+  /** What the Overview still requires, beside the map controls. */
+  readonly requirement: ReactNode;
   readonly resetBoardControl: ReactNode;
   readonly detailsControl: ReactNode;
 }
@@ -254,6 +256,7 @@ export function HubMapOverview({
   hubIdentity,
   interactions,
   node,
+  requirement,
   resetBoardControl,
   detailsControl,
 }: HubMapOverviewProps) {
@@ -261,18 +264,21 @@ export function HubMapOverview({
     <section aria-label="Ephyra Hub map" className="hub-map-overview">
       <RoomMapViewport
         asset={roomMapAssetFor(node.gameName)}
-        controlsPlacement="overlay"
+        controlsPlacement="collapsible-overlay"
         key={hubIdentity}
         overlay={<HubMapMarkerLayer interactions={interactions} node={node} />}
         title="Ephyra Hub"
         viewportOverlay={
-          <div className="hub-map-corner-actions">
-            <div className="hub-map-board-actions">
-              {resetBoardControl}
-              {detailsControl}
+          <>
+            {requirement}
+            <div className="hub-map-corner-actions">
+              <div className="hub-map-board-actions">
+                {resetBoardControl}
+                {detailsControl}
+              </div>
+              <HubMapQualityLegend />
             </div>
-            <HubMapQualityLegend />
-          </div>
+          </>
         }
       />
     </section>

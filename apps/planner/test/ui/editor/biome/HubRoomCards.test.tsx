@@ -74,7 +74,7 @@ describe('HubRoomCards', () => {
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
     expect(document.activeElement).not.toBe(openedCard);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
-    expect(screen.getByText('10 open · 9–10 required')).toBeTruthy();
+    expect(screen.getByText('10 rooms open')).toBeTruthy();
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
     await view.user.click(within(openedCard).getByLabelText('Reward'));
     const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -136,7 +136,7 @@ describe('HubRoomCards', () => {
     expect(
       screen.getByRole('group', { name: 'Hub room set' }).contains(document.activeElement),
     ).toBe(true);
-    expect(screen.getByText('9 open · 9–10 required')).toBeTruthy();
+    expect(screen.getByText('9 rooms open')).toBeTruthy();
     expect(
       within(screen.getByRole('article', { name: 'Combat 04 Hub room' })).getByText(
         'Open this room to edit its reward.',

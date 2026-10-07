@@ -41,11 +41,14 @@ import {
 
 afterEach(cleanup);
 
-/** Dialog outcome sections are the only containers that still carry their own mark. */
+/** Containers that carry their own mark; every other container is a navigation anchor. */
 const approvedContainers = [
+  // Dialog outcome sections, pending their own policy.
   'trait-stone-outcome',
   'trait-selected-outcome-detail',
   'echo-last-run-choice',
+  // A Hub requirement spread across the whole board or map has no single control.
+  'hub-requirement-box',
 ] as const;
 const controlTags = new Set(['BUTTON', 'INPUT', 'SELECT', 'TEXTAREA']);
 const controlRoles = new Set(['radio', 'radiogroup', 'checkbox', 'combobox']);

@@ -8,7 +8,7 @@ import {
 } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
-import type { HubAction, SemanticAddress } from '@run-planner/engine/authored-project';
+import type { HubAction } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -27,7 +27,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   HubMapQualityLegend,
   hubMapAnnotations,
@@ -45,6 +45,8 @@ interface HubMapTimelineProps {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
   readonly node: WorkspaceHubDecisionNode;
+  /** What the Timeline still requires, beside the map controls. */
+  readonly requirement: ReactNode;
   readonly resetVisitsControl: ReactNode;
 }
 
@@ -147,7 +149,6 @@ function TimelineMapMarker({
   atCapacity,
   complete,
   locked,
-  nextVisitOwner,
   onAppend,
   readinessOwner,
   slot,
@@ -155,8 +156,6 @@ function TimelineMapMarker({
   visitPosition,
   waiting,
 }: {
-  /** The next visit, chosen by appending any unvisited room. */
-  readonly nextVisitOwner: SemanticAddress | undefined;
   readonly waiting: boolean;
   readonly actionPosition: number | undefined;
   readonly annotation: HubMapAnnotation;
@@ -170,7 +169,6 @@ function TimelineMapMarker({
   readonly visitPosition: number;
 }) {
   const findingTarget = useFindingTarget();
-  const findingMark = useFindingMark();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const marker = useRef<HTMLButtonElement>(null);
@@ -217,10 +215,6 @@ function TimelineMapMarker({
           data-room-map-overlay-control
           data-visited={isVisited}
           {...(markerTarget ?? {})}
-          // Every room that can be appended next repairs the next missing visit.
-          {...(nextVisitOwner === undefined || !canAppend || locked || waiting
-            ? {}
-            : findingMark(nextVisitOwner, 'visitChoice'))}
           ref={(element) => {
             marker.current = element;
             markerTarget?.ref(element);
@@ -255,7 +249,6 @@ function TimelineFountainMarker({
   locked,
   complete,
   onAppend,
-  readinessOwner,
   waiting,
 }: {
   readonly waiting: boolean;
@@ -263,13 +256,10 @@ function TimelineFountainMarker({
   readonly locked: boolean;
   readonly complete: boolean;
   readonly onAppend: (actions: readonly HubAction[]) => void;
-  readonly readinessOwner: WorkspaceHubDecisionNode['owner'];
 }) {
-  const findingTarget = useFindingTarget();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const marker = useRef<HTMLButtonElement>(null);
-  const target = findingTarget(fountain.address, undefined, readinessOwner);
   const appendActions = fountain.appendActions;
   const canAppend = appendActions !== undefined;
   const canOpen = !canAppend && complete;
@@ -296,11 +286,7 @@ function TimelineFountainMarker({
         onNavigate={() => dispatch(semanticOwnerFocused(fountain.outcomeMarker.address))}
       >
         <button
-          {...target}
-          ref={(element) => {
-            marker.current = element;
-            target.ref(element);
-          }}
+          ref={marker}
           aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
           aria-label={
             fountain.actionPosition === undefined
@@ -337,6 +323,7 @@ export function HubMapTimeline({
   interactions,
   locked,
   node,
+  requirement,
   resetVisitsControl,
 }: HubMapTimelineProps) {
   const openSlots = node.slots.filter((slot) => slot.open);
@@ -376,7 +363,7 @@ export function HubMapTimeline({
     >
       <RoomMapViewport
         asset={roomMapAssetFor(node.gameName)}
-        controlsPlacement="overlay"
+        controlsPlacement="collapsible-overlay"
         key={hubIdentity}
         overlay={
           <div aria-label="Ephyra Hub timeline map controls" className="hub-map-marker-layer">
@@ -404,7 +391,6 @@ export function HubMapTimeline({
                   complete={complete}
                   key={annotation.hubSlotKey}
                   locked={locked}
-                  nextVisitOwner={node.visits[visitOrder.length]?.marker.address}
                   onAppend={appendVisit}
                   waiting={waiting}
                   readinessOwner={node.owner}
@@ -419,17 +405,19 @@ export function HubMapTimeline({
               complete={complete}
               locked={locked}
               onAppend={replaceActions}
-              readinessOwner={node.owner}
               waiting={waiting}
             />
           </div>
         }
         title="Ephyra Hub timeline"
         viewportOverlay={
-          <div className="hub-map-corner-actions">
-            {resetVisitsControl}
-            <HubMapQualityLegend />
-          </div>
+          <>
+            {requirement}
+            <div className="hub-map-corner-actions">
+              {resetVisitsControl}
+              <HubMapQualityLegend />
+            </div>
+          </>
         }
       />
     </section>

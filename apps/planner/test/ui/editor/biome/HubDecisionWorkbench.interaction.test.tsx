@@ -63,7 +63,7 @@ describe('HubDecisionWorkbench interaction', () => {
       'disabled',
       true,
     );
-    expect(screen.getByRole('button', { name: 'Fit' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Map controls' })).toBeTruthy();
   });
 
   it('resets only the finding-requested Overview view to List and keeps Timeline map-only', () => {
@@ -132,7 +132,9 @@ describe('HubDecisionWorkbench interaction', () => {
     fireEvent.click(back);
     expect(screen.getByRole('region', { name: 'Hub room participation' })).toBe(panel);
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Details →' }));
-    expect(screen.getByRole('button', { name: 'Fit' }).closest('.room-map-canvas')).not.toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Map controls' }).closest('.room-map-canvas'),
+    ).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /Opened|Closed/ })).toHaveLength(26);
     const healthMarker = screen.getByRole('button', {
       name: 'Combat 01: Opened. Edit reward or close room.',
@@ -144,6 +146,9 @@ describe('HubDecisionWorkbench interaction', () => {
     const closedMarker = screen.getByRole('button', { name: 'Combat 04: Closed. Open room.' });
     expect(within(closedMarker).getByText('Closed')).toBeTruthy();
     expect(closedMarker.querySelector('img')).toBeNull();
+    // Zoom controls stay collapsed until the map controls are expanded.
+    expect(screen.queryByRole('button', { name: 'Zoom in' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Map controls' }));
     fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
     expect(screen.getByText('125%')).toBeTruthy();
 
@@ -156,13 +161,15 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.getByLabelText('Ephyra Hub timeline map controls')).toBeTruthy();
     const timelinePanel = screen.getByRole('region', { name: 'Ephyra Hub timeline map' });
     expect(timelinePanel.classList.contains('hub-board')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Fit' }).closest('.hub-board')).toBe(timelinePanel);
+    expect(screen.getByRole('button', { name: 'Map controls' }).closest('.hub-board')).toBe(
+      timelinePanel,
+    );
     expect(screen.getByRole('button', { name: 'Reset visits' }).closest('.hub-board')).toBe(
       timelinePanel,
     );
     expect(timelinePanel.querySelector('.room-map-toolbar')).toBeNull();
     expect(screen.getByRole('button', { name: 'Reset visits' }).closest('.room-map-canvas')).toBe(
-      screen.getByRole('button', { name: 'Fit' }).closest('.room-map-canvas'),
+      screen.getByRole('button', { name: 'Map controls' }).closest('.room-map-canvas'),
     );
 
     fireEvent.keyDown(timeline, { key: 'End' });
