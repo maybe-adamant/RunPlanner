@@ -17,6 +17,8 @@ interface TargetFeedback {
   readonly authoringReadiness: StructuredWorkspaceProjection['authoringReadiness'] | undefined;
   readonly findings: StructuredWorkspaceProjection['findingsByRepairTarget'];
   readonly selectedKey: string | undefined;
+  /** The selection names the assessment issue whose reasons the findings index holds. */
+  readonly issueSelected: boolean;
   readonly focusKey: string | undefined;
   readonly revision: number;
 }
@@ -25,6 +27,7 @@ const feedback = createContext<TargetFeedback>({
   authoringReadiness: undefined,
   findings: emptyFindings,
   selectedKey: undefined,
+  issueSelected: false,
   focusKey: undefined,
   revision: 0,
 });
@@ -41,15 +44,19 @@ export function FindingTargetScope({
   const selected = useAppSelector((state) => state.editorSession.selectedFinding);
   const focused = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const revision = useAppSelector((state) => state.editorSession.semanticNavigationRevision);
+  const issueKey = useAppSelector(
+    (state) => state.projectWorkspace.assembly?.evaluation.issue?.regionKey,
+  );
   const value = useMemo(
     () => ({
       authoringReadiness,
       findings: findings ?? emptyFindings,
       selectedKey: selected?.key,
+      issueSelected: selected != null && selected.key === issueKey,
       focusKey: focused == null ? undefined : semanticAddressKey(focused),
       revision,
     }),
-    [authoringReadiness, findings, selected, focused, revision],
+    [authoringReadiness, findings, selected, focused, revision, issueKey],
   );
   return <feedback.Provider value={value}>{children}</feedback.Provider>;
 }
@@ -80,22 +87,61 @@ export function useFindingExplanations(
     .map((finding) => formatFindingExplanation(presentFinding(finding)));
 }
 
+type FocusTarget = (anchor: HTMLElement) => HTMLElement | null;
+
+const nativeControls = 'button, input, select, textarea';
+
+function isEnabled(element: Element): boolean {
+  return !element.matches(':disabled') && element.getAttribute('aria-disabled') !== 'true';
+}
+
+/** The marked element itself, or the first enabled control inside a marked group. */
+function focusableMark(marked: HTMLElement): HTMLElement | null {
+  if (marked.matches(nativeControls)) return isEnabled(marked) ? marked : null;
+  const inner = [...marked.querySelectorAll<HTMLElement>(nativeControls)].find(isEnabled);
+  return inner ?? (marked.hasAttribute('tabindex') ? marked : null);
+}
+
+/** Navigation lands on the selected finding's mark inside the anchor, else on the anchor. */
+function navigationFocus(anchor: HTMLElement, markKeys: ReadonlySet<string>): HTMLElement {
+  for (const marked of anchor.querySelectorAll<HTMLElement>(
+    '[data-semantic-owner][data-has-findings="true"]',
+  )) {
+    if (!markKeys.has(marked.dataset.semanticOwner ?? '')) continue;
+    const control = focusableMark(marked);
+    if (control !== null) return control;
+  }
+  return anchor;
+}
+
 /** Binds feedback directly to an existing control or truthful group, including mapped controls. */
 // eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
 export function useFindingTarget() {
+  const bind = useTargetBinder();
+  return (
+    address: SemanticAddress,
+    id = semanticOwnerControlElementId(address),
+    readinessOwner: SemanticAddress = address,
+    filter?: FindingTargetFilter,
+  ): FindingTargetProps => bind(address, id, readinessOwner, filter);
+}
+
+function useTargetBinder() {
   const {
     authoringReadiness,
     findings: findingsByTarget,
     selectedKey,
+    issueSelected,
     focusKey,
     revision,
   } = useContext(feedback);
   const handledRequest = useRef<string | undefined>(undefined);
   return (
     address: SemanticAddress,
-    id = semanticOwnerControlElementId(address),
-    readinessOwner: SemanticAddress = address,
-    filter?: FindingTargetFilter,
+    id: string,
+    readinessOwner: SemanticAddress,
+    filter: FindingTargetFilter | undefined,
+    focusTarget?: FocusTarget,
   ): FindingTargetProps => {
     const key = semanticAddressKey(address);
     const locked = authoringReadiness?.(readinessOwner) === 'locked';
@@ -122,7 +168,17 @@ export function useFindingTarget() {
       ref: (element) => {
         if (element === null || !selectedAtTarget || handledRequest.current === request) return;
         handledRequest.current = request;
-        element.focus({ preventScroll: true });
+        const markKeys = new Set(
+          [...findingsByTarget]
+            .filter(
+              ([, marked]) =>
+                issueSelected ||
+                marked.some((finding) => semanticFindingKey(finding) === selectedKey),
+            )
+            .map(([markKey]) => markKey),
+        );
+        const landing = navigationFocus(focusTarget?.(element) ?? element, markKeys);
+        landing.focus({ preventScroll: true, focusVisible: true });
         element.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       },
     };
@@ -137,33 +193,30 @@ export type FindingAnchorProps = Omit<FindingTargetProps, 'data-has-findings' | 
  */
 // eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
 export function useFindingAnchor() {
-  const findingTarget = useFindingTarget();
+  const bind = useTargetBinder();
   return (
     address: SemanticAddress,
     options: {
       readonly id?: string;
       readonly readinessOwner?: SemanticAddress;
       /** The element inside the anchor that navigation focuses, when one exists. */
-      readonly focusTarget?: (anchor: HTMLElement) => HTMLElement | null;
+      readonly focusTarget?: FocusTarget;
     } = {},
   ): FindingAnchorProps => {
     const {
       'data-has-findings': _hasFindings,
       'aria-description': _description,
       ...anchor
-    } = findingTarget(address, options.id, options.readinessOwner);
+    } = bind(
+      address,
+      options.id ?? semanticOwnerControlElementId(address),
+      options.readinessOwner ?? address,
+      undefined,
+      options.focusTarget,
+    );
     void _hasFindings;
     void _description;
-    const focusTarget = options.focusTarget;
-    if (focusTarget === undefined) return anchor;
-    return {
-      ...anchor,
-      ref: (element) => {
-        if (element === null) return anchor.ref(null);
-        const inner = focusTarget(element);
-        anchor.ref(inner ?? element);
-      },
-    };
+    return anchor;
   };
 }
 

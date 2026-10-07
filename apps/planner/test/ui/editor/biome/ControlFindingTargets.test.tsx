@@ -78,7 +78,7 @@ it.each([
   ['Pom', loadNemesisPomSeaStarCheckpoint, 'Underworld', 'F', /^Edit Pom/],
   ['Pom Slice', loadUnderworldFMidshopPomFrontierCheckpoint, 'Underworld', 'F', /^Edit Pom/],
 ] as const satisfies readonly (readonly [string, () => ProjectDocument, string, string, RegExp])[])(
-  'marks the %s launcher while navigation keeps its Timeline row',
+  'marks and focuses the %s launcher inside its navigated Timeline row',
   async (_family, load, routeKey, biomeKey, launcherName) => {
     const view = renderWorkspace(load(), routeKey, biomeKey);
     const row = await openFirstFinding(view);
@@ -87,6 +87,7 @@ it.each([
     expect(launcher.getAttribute('aria-description')).not.toBeNull();
     expect(row.hasAttribute('data-has-findings')).toBe(false);
     expect(row.getAttribute('aria-description')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(launcher));
   },
 );
 
@@ -97,6 +98,7 @@ it('marks a Hub main reward picker while navigation keeps the Hub board', async 
   const picker = within(card).getByRole('button', { name: 'Reward' });
   expect(picker.dataset.hasFindings).toBe('true');
   expect(board.hasAttribute('data-has-findings')).toBe(false);
+  await waitFor(() => expect(document.activeElement).toBe(picker));
 });
 
 /** Every element that paints a finding inside the rendered workspace. */
@@ -123,7 +125,9 @@ it('marks the Nemesis interaction choice its action row needs, not the row', asy
   const view = renderWorkspace(project, 'Underworld', 'F');
   const row = await openFirstFinding(view);
   expect(row.hasAttribute('data-has-findings')).toBe(false);
-  expect(paintedFindings()).toEqual([within(row).getByRole('button', { name: 'Reward' })]);
+  const reward = within(row).getByRole('button', { name: 'Reward' });
+  expect(paintedFindings()).toEqual([reward]);
+  await waitFor(() => expect(document.activeElement).toBe(reward));
 });
 
 it('marks Delete on a Timeline action that should not exist', async () => {
@@ -131,9 +135,9 @@ it('marks Delete on a Timeline action that should not exist', async () => {
   const view = renderWorkspace(project, host.routeKey, host.biomeKey);
   const row = await openFirstFinding(view);
   expect(row.hasAttribute('data-has-findings')).toBe(false);
-  expect(paintedFindings()).toEqual([
-    within(row).getByRole('button', { name: /^Remove .* from timeline$/ }),
-  ]);
+  const remove = within(row).getByRole('button', { name: /^Remove .* from timeline$/ });
+  expect(paintedFindings()).toEqual([remove]);
+  await waitFor(() => expect(document.activeElement).toBe(remove));
 });
 
 it('rings every pickable door of a missing selection and focuses the first', async () => {
@@ -198,5 +202,7 @@ it('renders a Fields cage with an ordering issue as a movable row', async () => 
   const view = renderWorkspace(cageBeforeAthenaProject(), 'Underworld', 'H');
   const row = await openFirstFinding(view);
   expect(row.tagName).toBe('LI');
-  expect(paintedFindings()).toEqual([within(row).getByRole('button', { name: /^Move / })]);
+  const move = within(row).getByRole('button', { name: /^Move / });
+  expect(paintedFindings()).toEqual([move]);
+  await waitFor(() => expect(document.activeElement).toBe(move));
 });
