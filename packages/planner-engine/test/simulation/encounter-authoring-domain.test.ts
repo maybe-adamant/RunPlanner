@@ -423,17 +423,35 @@ describe('encounter phase authored domains', () => {
       )[0]?.customization?.find((decision) => decision.key === 'earlySummons')?.orderedPrefixUses;
     };
 
-    expect(uses(undefined)).toEqual([
+    const prefix = (...choiceKeys: string[]) => ({ kind: 'orderedPrefix', choiceKeys });
+    const empty = uses(undefined);
+    expect(empty).toMatchObject([
       { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: false },
       { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: true },
     ]);
-    expect(uses(['swab'])).toEqual([
+    expect(empty?.[0]?.valueByChoiceKey.swab).toEqual(prefix('swab'));
+    expect(empty?.[0]?.defaultValue).toBeNull();
+    expect(empty?.[1]?.valueByChoiceKey).toEqual({});
+
+    const one = uses(['swab']);
+    expect(one).toMatchObject([
       { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: false },
       { availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'], requiresEarlierUse: false },
     ]);
-    expect(uses(['swab', 'turtle'])).toEqual([
+    // Setting use 1 replaces it; setting use 2 appends after it.
+    expect(one?.[0]?.valueByChoiceKey.harpy).toEqual(prefix('harpy'));
+    expect(one?.[1]?.valueByChoiceKey.turtle).toEqual(prefix('swab', 'turtle'));
+    expect(one?.[1]?.defaultValue).toEqual(prefix('swab'));
+
+    const two = uses(['swab', 'turtle']);
+    expect(two).toMatchObject([
       { availableChoiceKeys: ['harpy', 'swab', 'jellyfish'], requiresEarlierUse: false },
       { availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'], requiresEarlierUse: false },
     ]);
+    expect(two?.[0]?.valueByChoiceKey.harpy).toEqual(prefix('harpy', 'turtle'));
+    expect(two?.[1]?.valueByChoiceKey.jellyfish).toEqual(prefix('swab', 'jellyfish'));
+    // Default at use 1 truncates the prefix; Default at use 2 keeps use 1.
+    expect(two?.[0]?.defaultValue).toBeNull();
+    expect(two?.[1]?.defaultValue).toEqual(prefix('swab'));
   });
 });
