@@ -516,6 +516,11 @@ type WorkspaceEncounterCustomizationDecisionBase = {
   readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
 };
 
+type WorkspaceOrderedPrefixValue = Extract<
+  import('@run-planner/engine/authored-project').AuthoredEncounterCustomization,
+  { readonly kind: 'orderedPrefix' }
+>;
+
 export type WorkspaceEncounterCustomizationDecision =
   | (WorkspaceEncounterCustomizationDecisionBase & {
       readonly selection: {
@@ -539,6 +544,10 @@ export type WorkspaceEncounterCustomizationDecision =
         readonly uses: readonly {
           readonly availableChoiceKeys: readonly string[];
           readonly requiresEarlierUse: boolean;
+          /** The authored value after choosing each available choice at this use. */
+          readonly valueByChoiceKey: Readonly<Record<string, WorkspaceOrderedPrefixValue>>;
+          /** The authored value after resetting this use; null clears the decision. */
+          readonly defaultValue: WorkspaceOrderedPrefixValue | null;
         }[];
       };
     })

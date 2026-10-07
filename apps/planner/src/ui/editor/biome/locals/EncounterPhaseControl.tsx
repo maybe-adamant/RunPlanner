@@ -260,22 +260,6 @@ function EncounterCustomizationControl({
               }
               const prefixSelection = decision.selection;
               const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
-              const replace = (index: number, choiceKey: string): void => {
-                const next =
-                  choiceKey === ''
-                    ? selected.slice(0, index)
-                    : (() => {
-                        const preserved = [...selected];
-                        preserved[index] = choiceKey;
-                        return preserved;
-                      })();
-                executeIntent(
-                  interaction.intentFor(
-                    decision.key,
-                    next.length === 0 ? null : { kind: 'orderedPrefix', choiceKeys: next },
-                  ),
-                );
-              };
               return (
                 <section
                   aria-labelledby={`encounter-customization-group-${customizationId}-${decision.key}`}
@@ -325,7 +309,12 @@ function EncounterCustomizationControl({
                         ],
                         selected[index] ?? '',
                       )}
-                      onSelect={(choiceKey) => replace(index, choiceKey)}
+                      onSelect={(choiceKey) => {
+                        const next =
+                          choiceKey === '' ? use.defaultValue : use.valueByChoiceKey[choiceKey];
+                        if (next !== undefined)
+                          executeIntent(interaction.intentFor(decision.key, next));
+                      }}
                     />
                   ))}
                 </section>

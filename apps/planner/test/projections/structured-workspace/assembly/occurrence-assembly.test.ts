@@ -82,9 +82,29 @@ describe('structured workspace composer assembly', () => {
       (candidate) => candidate.key === 'earlySummons',
     );
     if (decision?.selection.kind !== 'orderedPrefix') throw new Error('Eris prefix is missing');
+    const prefix = (...choiceKeys: string[]) => ({ kind: 'orderedPrefix', choiceKeys });
     expect(decision.selection.uses).toEqual([
-      { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: false },
-      { availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+      {
+        availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'],
+        requiresEarlierUse: false,
+        valueByChoiceKey: {
+          harpy: prefix('harpy'),
+          swab: prefix('swab'),
+          jellyfish: prefix('jellyfish'),
+          turtle: prefix('turtle'),
+        },
+        defaultValue: null,
+      },
+      {
+        availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'],
+        requiresEarlierUse: false,
+        valueByChoiceKey: {
+          harpy: prefix('swab', 'harpy'),
+          jellyfish: prefix('swab', 'jellyfish'),
+          turtle: prefix('swab', 'turtle'),
+        },
+        defaultValue: prefix('swab'),
+      },
     ]);
   });
 
