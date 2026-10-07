@@ -13,7 +13,6 @@ export type CompletenessFindingCode =
   | 'continuationMissing'
   | 'hubOpenSetIncomplete'
   | 'hubVisitOrderIncomplete'
-  | 'pickedShopStateMissing'
   | 'pickedTargetMissing'
   | 'roomActionPlacementRequired'
   | 'targetMissing';
@@ -81,7 +80,6 @@ export type RewardGenerationFindingCode =
   | 'fieldsOptionalCapacityUnavailable'
   | 'nemesisOutcomeMissing'
   | 'nemesisOutcomeUnavailable'
-  | 'purgingPoolSaleUnavailable'
   | 'purgingPoolUnavailable'
   | 'purgingPoolTraitMissing'
   | 'purgingPoolTraitUnavailable'
@@ -202,7 +200,6 @@ export function isRequiredMissingInputFinding(
     case 'continuationMissing':
     case 'hubOpenSetIncomplete':
     case 'hubVisitOrderIncomplete':
-    case 'pickedShopStateMissing':
     case 'pickedTargetMissing':
     case 'roomActionPlacementRequired':
     case 'targetMissing':

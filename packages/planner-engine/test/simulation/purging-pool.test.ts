@@ -46,14 +46,6 @@ function equipped(...entries: readonly (readonly [string, EquippedTrait['rarity'
   ) as Readonly<Record<string, EquippedTrait>>;
 }
 
-function underworldFRewards(project: ProjectDocument) {
-  const biome = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
-    (candidate) => candidate.biomeKey === 'F',
-  );
-  if (biome?.authoring !== 'complete') throw new Error('expected complete F evaluation');
-  return biome.rewards;
-}
-
 const fPostboss = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
   createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -91,10 +83,6 @@ describe('Purging Pool generation assessment', () => {
       const candidate = purgingPoolCandidateForProjectEvaluationAssembly(assembly, fPostboss);
       expect(candidate).toBeDefined();
       expect(candidate?.assessments.length).toBeGreaterThan(0);
-      const rewards = underworldFRewards(assembly.project);
-      expect(rewards.findings).not.toContainEqual(
-        expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
-      );
     }
     expect(candidates[0]).toEqual(candidates[1]);
   });

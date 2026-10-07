@@ -1110,7 +1110,7 @@ the rack, and the forced Postboss Well is not required. State retained from
 before such an exclusion still decodes but is context-invalid: a Well reports
 `stygianWellPlacementUnavailable`, a rack equip reports `keepsakeUnavailable`
 without equipping, and an interacted Pool reports `purgingPoolUnavailable` and is
-never assessed, so its sales report `purgingPoolSaleUnavailable`. A Fresh File attempt has none of these
+never assessed, so its sales have no effect. A Fresh File attempt has none of these
 features; the H Postboss Pool object it shows natively is locked and is not an
 authorable inventory. Likewise, a customization the route-free binding owned on
 a phase a contextual entry rule fixes on this route (a GeneratedF

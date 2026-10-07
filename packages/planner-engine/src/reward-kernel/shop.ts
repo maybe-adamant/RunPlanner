@@ -17,6 +17,7 @@ import type {
   ShopPurchaseGateResult,
   ShopPurchaseResult,
   ShopPurchaseSimulation,
+  ShopRepeatedSlot,
   ShopSlotAssessment,
 } from './model';
 import { isOfferSupportedAtResolutionPoint, locallyValidRewardOffers } from './support';
@@ -170,12 +171,15 @@ export function assessShopInventory(
       slots: Object.freeze([]),
       witnesses: Object.freeze([]),
       jointlyUnavailable: true,
+      repeatedSlots: Object.freeze([]),
     });
   }
   let offset = 0;
   let witnesses: readonly (readonly (string | null)[])[] = [[]];
   const slots: ShopSlotAssessment[] = [];
+  const repeatedSlots: ShopRepeatedSlot[] = [];
   for (const group of profile.groups.values) {
+    const groupOffset = offset;
     const groupAuthored = authored.slice(offset, offset + group.offerCount);
     offset += group.offerCount;
     const supported = groupAuthored.map(
@@ -221,6 +225,35 @@ export function assessShopInventory(
             constraints,
           )
         : [];
+    if (
+      groupAssignments.length === 0 &&
+      concrete.length === groupAuthored.length &&
+      supported.every(Boolean)
+    ) {
+      const assignable = (offers: readonly AuthoredShopOffer[]) =>
+        assignments(
+          catalog,
+          group.options.values,
+          offers,
+          facts,
+          additionalOptionRequirements,
+          constraints,
+        ).length > 0;
+      // The draw is without replacement: the first slot that cannot follow its
+      // predecessors repeats the earliest predecessor it conflicts with.
+      const slotIndex = concrete.findIndex((_, index) => !assignable(concrete.slice(0, index + 1)));
+      if (slotIndex > 0) {
+        const conflict = concrete
+          .slice(0, slotIndex)
+          .findIndex((earlier) => !assignable([earlier, concrete[slotIndex]!]));
+        repeatedSlots.push(
+          Object.freeze({
+            slotIndex: groupOffset + slotIndex,
+            repeatsSlotIndex: groupOffset + (conflict < 0 ? slotIndex - 1 : conflict),
+          }),
+        );
+      }
+    }
     witnesses = witnesses.flatMap((prefix) =>
       groupAssignments.map((assignment) => [...prefix, ...assignment]),
     );
@@ -234,6 +267,7 @@ export function assessShopInventory(
     jointlyUnavailable:
       normalizedWitnesses.length === 0 &&
       slots.every((slot) => slot === 'complete' || slot === 'validEmpty'),
+    repeatedSlots: Object.freeze(repeatedSlots),
   });
 }
 

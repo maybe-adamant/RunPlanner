@@ -30,6 +30,7 @@ import {
   semanticAddressKey,
 } from '../../src/authored-project';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { simulateProject } from '../../src/simulation';
 import { deriveTravelRefill } from '../../src/simulation/rewards/shop/derived-rewards';
 import { cohortSlotAssessment } from '../../src/simulation/rewards/shop/inventory';
@@ -317,5 +318,36 @@ describe('Shop slot assessment across a branch cohort', () => {
     expect(cohortSlotAssessment(['selectedInvalid', 'complete'])).toBe('complete');
     expect(cohortSlotAssessment(['selectedInvalid', 'selectedInvalid'])).toBe('selectedInvalid');
     expect(cohortSlotAssessment([])).not.toBe('validEmpty');
+  });
+});
+
+describe('Shop draw without replacement', () => {
+  it('reports the later slot of a repeated two-offer draw on that offer', () => {
+    const project = loadSurfaceNOPQProject();
+    const shop = project.route.biomes
+      .find((candidate) => candidate.biomeKey === 'Q')
+      ?.topology?.occurrences.find((room) => room.occurrenceId === qOccurrenceIds.preboss);
+    const first =
+      shop?.state.kind === 'shop'
+        ? shop.state.shop?.offers.MixedProgress1?.reward?.offer
+        : undefined;
+    if (first === undefined || first === null) throw new Error('Q Shop lost MixedProgress1');
+    const repeated = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'MixedProgress2'),
+      value: first,
+    });
+    const findings = simulateProject(catalog, repeated).findings.filter(
+      (finding) => finding.code === 'shopOfferUnavailable',
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({
+        origin: createShopOfferAddress(qBiome, qOccurrenceIds.preboss, 'MixedProgress2'),
+        evidence: expect.objectContaining({
+          kind: 'repeatedOption',
+          repeatsOfferKey: 'MixedProgress1',
+        }),
+      }),
+    ]);
   });
 });

@@ -83,6 +83,7 @@ export type {
   SaveFileGodHistory,
   ShopGenerationWitness,
   ShopInventoryAssessment,
+  ShopRepeatedSlot,
   ShopSlotAssessment,
   ShopGenerationConstraints,
   ShopGroupDeclaration,

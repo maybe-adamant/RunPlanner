@@ -58,7 +58,6 @@ const allFindingCodes = [
   'hubOpenSlotUnavailable',
   'biomeTopologyMissing',
   'continuationMissing',
-  'pickedShopStateMissing',
   'pickedTargetMissing',
   'targetMissing',
   'targetRoomSupportEmpty',
@@ -221,7 +220,7 @@ describe('evaluation presentation', () => {
       finding('targetRoomSupportEmpty', target),
       finding('targetRoomUnavailable', target),
     ];
-    const roomFinding = finding('pickedShopStateMissing', room);
+    const roomFinding = finding('purgingPoolUnavailable', room);
 
     const index = indexFindingsByOwner([...targetFindings, roomFinding]);
 

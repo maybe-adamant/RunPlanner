@@ -760,27 +760,18 @@ describe('chronological authoring horizon', () => {
 
   it('keeps the completed Hub prefix editable when selected Preboss generation needs repair', () => {
     const original = loadSurfaceNProject();
-    const project = {
-      ...original,
-      route: {
-        ...original.route,
-        biomes: original.route.biomes.map((biome) =>
-          biome.biomeKey !== 'N' || biome.topology === null
-            ? biome
-            : {
-                ...biome,
-                topology: {
-                  ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((room) =>
-                    room.occurrenceId !== nOccurrenceIds.preboss || room.state.kind !== 'shop'
-                      ? room
-                      : { ...room, state: { kind: 'shop' as const } },
-                  ),
-                },
-              },
-        ),
-      },
-    };
+    const prebossShop = original.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.occurrences.find((room) => room.occurrenceId === nOccurrenceIds.preboss);
+    const offerKey =
+      prebossShop?.state.kind === 'shop' && prebossShop.state.shop !== undefined
+        ? Object.keys(prebossShop.state.shop.offers)[0]
+        : undefined;
+    if (offerKey === undefined) throw new Error('N Preboss lost its Shop inventory');
+    const project = applyProjectCommand(original, catalog, {
+      kind: 'ClearShopOffer',
+      offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, offerKey),
+    });
     const assembly = simulateProjectAssembly(catalog, project);
     const preboss = createOccurrenceAddress(nBiome, nOccurrenceIds.preboss);
     const boss = createOccurrenceAddress(

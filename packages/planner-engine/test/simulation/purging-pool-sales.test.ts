@@ -144,9 +144,6 @@ describe('Purging Pool sales', () => {
       rarity: 'Heroic',
     });
     const afterSale = fRewards(sell(selected, 'left'));
-    expect(afterSale.findings).not.toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
-    );
     expect(afterSale.branches.length).toBeGreaterThan(0);
     expect(
       afterSale.branches.every(
@@ -232,9 +229,6 @@ describe('Purging Pool sales', () => {
     ).toContain(left);
 
     const partial = fRewards(sell(resolved, 'middle'));
-    expect(partial.findings).not.toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
-    );
     expect(
       partial.branches.every(
         (branch) => branch.state.traitHistory?.equippedTraits[middle!] === undefined,
@@ -322,9 +316,6 @@ describe('Purging Pool sales', () => {
       'ZeusSpecialBoon',
     ]);
     const sold = fRewards(sell(configured, 'left'));
-    expect(sold.findings).not.toContainEqual(
-      expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
-    );
     expect(sold.branches.length).toBeGreaterThan(0);
     expect(
       sold.branches.every(
@@ -378,15 +369,45 @@ describe('Purging Pool sales', () => {
       },
     };
     const evaluated = fRewards(stale);
-    // The stale sale shares the Pool's region, so the blocking product reports it.
-    expect(
+    // The cleared slot is the Overview repair; its sale adds no finding of its own.
+    const findings =
       simulateProjectAssembly(catalog, stale).evaluation.route?.biomes.find(
         (candidate) => candidate.biomeKey === 'F',
-      )?.findings,
-    ).toContainEqual(expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }));
+      )?.findings ?? [];
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        code: 'purgingPoolTraitMissing',
+        origin: createRoomFeatureAddress(occurrence, { kind: 'purgingPoolOffer', slotKey: 'left' }),
+      }),
+    );
+    expect(
+      findings.every(
+        (finding) =>
+          finding.origin.kind === 'roomFeature' &&
+          finding.origin.target.kind === 'purgingPoolOffer',
+      ),
+    ).toBe(true);
     expect(
       evaluated.branches.every(
         (branch) => branch.state.traitHistory?.equippedTraits[middle!] !== undefined,
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps each sold name equipped until its own sale removes it', () => {
+    const project = createCompleteFGProject();
+    const poolTraitKeys = Object.keys(
+      fRewards(project).branches[0]?.state.traitHistory?.equippedTraits ?? {},
+    ).slice(0, 3);
+    if (poolTraitKeys.length !== 3) throw new Error('fixture has too few Pool candidates');
+    let sold = withPoolSlots(project, poolTraitKeys);
+    for (const slotKey of ['left', 'middle', 'right'] as const) sold = sell(sold, slotKey);
+    // A sale removes its trait only when that trait is equipped at the sale.
+    const rewards = fRewards(sold);
+    expect(rewards.findings).toEqual([]);
+    expect(
+      rewards.branches.every((branch) =>
+        poolTraitKeys.every((key) => branch.state.traitHistory?.equippedTraits[key] === undefined),
       ),
     ).toBe(true);
   });
@@ -402,9 +423,7 @@ describe('Purging Pool sales', () => {
       throw new Error('fixture has too few Pool candidates');
     for (const project of [withG, tail]) {
       const sold = fRewards(sell(withPoolSlots(project, poolTraitKeys), 'left'));
-      expect(sold.findings).not.toContainEqual(
-        expect.objectContaining({ code: 'purgingPoolSaleUnavailable' }),
-      );
+      expect(sold.findings).toEqual([]);
       expect(
         sold.branches.every(
           (branch) => branch.state.traitHistory?.equippedTraits[traitKey] === undefined,

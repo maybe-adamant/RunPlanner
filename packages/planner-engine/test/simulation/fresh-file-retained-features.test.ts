@@ -116,7 +116,6 @@ describe('Fresh File retained content', () => {
       expect.arrayContaining([
         ['stygianWellPlacementUnavailable', null],
         ['purgingPoolUnavailable', null],
-        ['purgingPoolSaleUnavailable', null],
       ]),
     );
 
