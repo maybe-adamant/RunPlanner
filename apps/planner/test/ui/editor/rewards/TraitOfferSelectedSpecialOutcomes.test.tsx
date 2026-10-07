@@ -132,6 +132,7 @@ describe('selected outcomes', () => {
     const view = (offer: AuthoredTraitOfferTraits) => (
       <Provider store={application.store}>
         <TraitOfferSelectedOutcome
+          authoredDraft
           interaction={interaction}
           value={offer}
           onUpdate={onUpdate}

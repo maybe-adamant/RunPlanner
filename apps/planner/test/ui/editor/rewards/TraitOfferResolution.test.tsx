@@ -31,6 +31,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import type {
   WorkspaceEchoLastRunBoonDraftRow,
@@ -215,7 +216,12 @@ describe('resolution outcomes', () => {
               ? []
               : [
                   Object.freeze({
-                    child: control,
+                    child: Object.freeze({
+                      ...control,
+                      authoredComplete:
+                        'echoLastRunBoon' in draft.options[0]! &&
+                        draft.options[0].echoLastRunBoon !== undefined,
+                    }),
                     update: (
                       offer: AuthoredTraitOfferTraits,
                       value: AuthoredEchoLastRunBoonOffer,
@@ -501,7 +507,6 @@ describe('resolution outcomes', () => {
         <TraitOfferEditor
           address={interaction.owner}
           interactions={interactions}
-          onChildCommit={commit}
           onCommit={commit}
         />
       </Provider>,
@@ -549,6 +554,13 @@ describe('resolution outcomes', () => {
     }
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
     expect(screen.getByRole('button', { name: 'Edit choice' })).toBeDefined();
+    // The nested Save writes into the offer draft; only the offer's Save commits.
+    expect(commit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Edit choice' }));
+    await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
+    await user.click(await screen.findByText('Demeter · Natural Selection'));
+    await user.click(screen.getByRole('button', { name: 'Back to Echo offer' }));
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(commit).toHaveBeenCalledTimes(1);
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(saved.options[0]).toMatchObject({
@@ -614,7 +626,7 @@ describe('resolution outcomes', () => {
           <TraitOfferEditor
             address={retainedInvalidInteraction.owner}
             interactions={retainedInvalidInteractions}
-            onChildCommit={commit}
+            onCommit={commit}
           />
         </Provider>
       </StrictMode>
@@ -663,7 +675,7 @@ describe('resolution outcomes', () => {
         <TraitOfferEditor
           address={naturalInteraction.owner}
           interactions={naturalInteractions}
-          onChildCommit={commit}
+          onCommit={commit}
         />
       </Provider>,
     );
@@ -672,6 +684,9 @@ describe('resolution outcomes', () => {
     await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
     await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
+    expect(commit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(commit).toHaveBeenCalledTimes(1);
     const naturalSaved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(naturalSaved.options[0]).toMatchObject({
       traitKey: 'EchoLastRunBoon',
@@ -767,7 +782,7 @@ describe('resolution outcomes', () => {
     });
     const commit = vi.fn();
     const user = userEvent.setup();
-    render(
+    const rendered = render(
       <Provider store={application.store}>
         <TraitOfferEditor
           address={interaction.owner}
@@ -778,7 +793,18 @@ describe('resolution outcomes', () => {
     );
 
     expect(screen.getByText('Spawns: Gold')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Configure in Room Timeline' })).toBeDefined();
+    const configure = () => screen.getByRole('button', { name: 'Configure in Room Timeline' });
+    expect(configure()).toHaveProperty('disabled', false);
+    expect(configure().title).toBe('');
+    const selectedRadios = () => rendered.container.querySelectorAll('input[name$="-selected"]');
+    await user.click(selectedRadios()[1]!);
+    expect(configure()).toHaveProperty('disabled', true);
+    expect(configure().title).toBe('Save or cancel first.');
+    await user.click(selectedRadios()[0]!);
+    expect(configure()).toHaveProperty('disabled', false);
+    application.store.dispatch(traitOfferDialogOpened(interaction.owner));
+    await user.click(configure());
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(saved.options[0]).toEqual({ traitKey: 'EchoLastReward' });
