@@ -100,11 +100,36 @@ popover that commits on Finish.
   invariant.
 - Commit: `fix(planner): show inner findings in every draft editor`.
 
-## Gate 6 — labels and layout
+## Gate 6 — outcome block, labels and layout
 
-- All Together grants show catalog labels, not keys.
-- Owner-reviewed minor layout adjustments per editor, with screenshots.
-- Commit: `style(planner): align popup editor layouts`.
+Slices, each its own commit:
+
+1. Anvil feedback reads the engine draft assessment (`assess`); Save stays
+   gated on completeness only.
+2. The Echo Reward Reward Reward outcome is removed: its findings and markers
+   point at the Timeline pickup row that carries the replay, then the fieldset,
+   its feedback member and producer, and the Configure equality wiring go.
+3. One selected-outcome block: heading "Selected outcome · {trait}", then one
+   labelled row per choice; no repeated trait name, legends or explanatory
+   text.
+   - Target traits, Echo Pom Pom Pom, Latest Model ("Hammer 1", "Hammer 2"):
+     picker rows.
+   - Circe: one row whose trigger opens the card board.
+   - Echo Boon Boon Boon: one row opening the nested view, which loses its
+     eyebrow, explanation and Back button.
+   - Concave Stone: one row with the Activated checkbox and the target picker,
+     disabled until activated; the chosen option's follow-ups are rows
+     beneath.
+   - Chaos: Blessing and Rarity picker rows, then one slider row per value,
+     curse values first.
+   - Hex: rows unchanged under the shared heading.
+   - Ransom: a read-only "Effect" row.
+   - All Together and Natural Selection keep their staged pickers here.
+4. All Together and Natural Selection per-row pickers replace the staged
+   "Choose all" popovers, reviewed against slice 3 by screenshot before
+   either is kept.
+5. All Together grants show catalog labels, not keys.
+6. Owner-reviewed minor layout adjustments per editor.
 
 ## Exclusions
 
