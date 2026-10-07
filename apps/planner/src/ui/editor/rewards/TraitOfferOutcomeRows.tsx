@@ -1,6 +1,6 @@
 import type { AuthoredAllTogetherResult } from '@run-planner/engine/authored-project';
 import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
@@ -141,6 +141,19 @@ export function NaturalSelectionOutcomeRows({
     WorkspaceNaturalSelectionDomain | undefined
   >();
   const domain = loaded.result;
+  // One eligible core leaves no choice, so its allocation seeds an unresolved draft.
+  const seed =
+    authored === undefined &&
+    domain?.rows.length === 1 &&
+    domain.rows[0]!.forcedTraitKey !== undefined
+      ? domain.completedTargets
+      : undefined;
+  const seeded = useRef<readonly string[] | undefined>(undefined);
+  useEffect(() => {
+    if (seed === undefined || seeded.current === seed) return;
+    seeded.current = seed;
+    onSelect(seed);
+  }, [onSelect, seed]);
   const choose = (position: number, traitKey: string) => {
     const next = Object.freeze([...picks.slice(0, position), traitKey]);
     const completed = nextController.activate(loadableFor(next))?.completedTargets;

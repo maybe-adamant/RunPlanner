@@ -33,7 +33,10 @@ import {
   traitOfferDialogClosed,
   traitOfferDialogOpened,
 } from '@planner/state/editorSessionSlice';
-import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceInteractionCatalog,
+  WorkspaceNaturalSelectionDomain,
+} from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
 import { TraitOfferSelectedOutcome } from '@planner/ui/editor/rewards/TraitOfferSelectedOutcome';
@@ -90,7 +93,7 @@ describe('per-row outcome pickers', () => {
     onSelect = vi.fn(),
     onClear = vi.fn(),
     loadableFor: (targets: readonly string[]) => {
-      load: () => ReturnType<typeof firstPassDomain> | undefined;
+      load: () => WorkspaceNaturalSelectionDomain | undefined;
     } = (targets) => ({ load: () => firstPassDomain(targets) }),
   ) => (
     <NaturalSelectionOutcomeRows
@@ -138,6 +141,25 @@ describe('per-row outcome pickers', () => {
     rerender(naturalRows(undefined, onSelect, onClear));
     expect(core('1st').textContent).toContain('Label C');
     expect(core('2nd').textContent).not.toContain('Label');
+  });
+
+  it('seeds a single forced core only into an unresolved draft', () => {
+    const single = () => ({
+      load: () => ({
+        complete: true,
+        rows: [{ picker: pickerModel([]), requiresEarlierRow: false, forcedTraitKey: 'A' }],
+        completedTargets: ['A', 'A'],
+        levelsLabel: 'Label A ×2',
+      }),
+    });
+    const onSelect = vi.fn();
+    const { unmount } = render(naturalRows(undefined, onSelect, vi.fn(), single));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(['A', 'A']);
+    unmount();
+    const retained = vi.fn();
+    render(naturalRows(['B'], retained, vi.fn(), single));
+    expect(retained).not.toHaveBeenCalled();
   });
 
   it('labels authored targets from the projection when the domain publishes no rows', () => {
@@ -934,6 +956,148 @@ describe('selected outcomes', () => {
     expect(
       (commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.naturalSelectionTargets,
     ).toEqual(['ApolloWeaponBoon', 'ZeusWeaponBoon', 'ApolloWeaponBoon']);
+    application.dispose();
+  });
+
+  it('seeds the draft with the forced allocation of a single eligible core', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind !== 'hammer',
+    );
+    if (base === undefined) throw new Error('Natural Selection editor fixture is missing');
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: base.giver.key,
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'GoodStuffBoon', rarity: 'Duo' as const }),
+        Object.freeze({ traitKey: 'DemeterSpecialBoon', rarity: 'Epic' as const }),
+        Object.freeze({ traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' as const }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+    });
+    const result = createNaturalSelectionResultAddress(base.owner, 'option1');
+    const natural = {
+      child: Object.freeze({
+        kind: 'naturalSelectionResult' as const,
+        address: result,
+        marker: Object.freeze({
+          address: result,
+          assessment: 'assessed' as const,
+          findingCount: 1,
+          focusKey: 'test-natural-selection-early',
+        }),
+        optionKey: 'option1' as const,
+        traitKey: 'GoodStuffBoon',
+        slotCount: 8,
+        authoredComplete: false,
+      }),
+      forOffer: (draft: AuthoredTraitOfferTraits) => ({
+        load: () => {
+          void draft;
+          return Object.freeze({
+            complete: true,
+            rows: [
+              {
+                picker: pickerModel([{ label: 'ZeusWeaponBoon', value: 'ZeusWeaponBoon' }]),
+                requiresEarlierRow: false,
+                forcedTraitKey: 'ZeusWeaponBoon',
+              },
+            ],
+            completedTargets: ['ZeusWeaponBoon', 'ZeusWeaponBoon'],
+            levelsLabel: 'ZeusWeaponBoon ×2',
+          });
+        },
+      }),
+      traitLabel: (traitKey: string) => traitKey,
+      update: (
+        draft: AuthoredTraitOfferTraits,
+        targets: NonNullable<
+          import('@run-planner/engine/authored-project').AuthoredEchoLastRunBoonOption['naturalSelectionTargets']
+        >,
+      ) => ({
+        ...draft,
+        options: Object.freeze([
+          { ...draft.options[0]!, naturalSelectionTargets: targets },
+          ...draft.options.slice(1),
+        ]) as AuthoredTraitOfferTraits['options'],
+      }),
+    };
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      load: () =>
+        Object.freeze([
+          Object.freeze({
+            value,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
+                findings: Object.freeze([]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') =>
+        Object.freeze({
+          children: Object.freeze([]),
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: () => undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
+            }),
+          ...(draft.kind === 'traits' && optionKey === 'option1'
+            ? {
+                children: Object.freeze([
+                  Object.freeze({
+                    ...natural,
+                    child: Object.freeze({
+                      ...natural.child,
+                      authoredComplete: draft.options[0]?.naturalSelectionTargets !== undefined,
+                    }),
+                  }),
+                ]),
+              }
+            : {}),
+        }),
+    });
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[base.key, interaction]]),
+    });
+    const commit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={base.owner}
+          interactions={interactions as WorkspaceInteractionCatalog}
+          onCommit={commit}
+        />
+      </Provider>,
+    );
+    expect(screen.getByLabelText('Natural Selection 1st core').textContent).toBe('ZeusWeaponBoon');
+    expect(screen.getByLabelText('Natural Selection levels').textContent).toBe('ZeusWeaponBoon ×2');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+        'disabled',
+        false,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(
+      (commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.naturalSelectionTargets,
+    ).toEqual(['ZeusWeaponBoon', 'ZeusWeaponBoon']);
     application.dispose();
   });
 
