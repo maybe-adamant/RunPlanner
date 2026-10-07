@@ -4,9 +4,12 @@ import type {
   WorkspaceJudgmentArcanaInteraction,
 } from '@planner/projections/structured-workspace';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
-import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  EditorDialogFeedback,
+} from '@planner/ui/controls/EditorDialog';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { TraitOfferFeedbackRegion } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 
@@ -15,11 +18,14 @@ export function ArcanaActivationEditor({
   title,
   requiredCount,
   onClose,
+  returnFocusId,
 }: {
   readonly control: WorkspaceJudgmentArcanaInteraction | WorkspaceFigurineArcanaInteraction;
   readonly title: string;
   readonly requiredCount: number;
   readonly onClose: () => void;
+  /** The launcher that regains focus after the dialog unmounts. */
+  readonly returnFocusId?: string;
 }) {
   const dispatch = useAppDispatch();
   const [draft, setDraft] = useState(control.value);
@@ -32,13 +38,28 @@ export function ArcanaActivationEditor({
       ? result.result
       : undefined;
   return (
-    <ArcanaFearDialog
+    <EditorDialog
+      eyebrow="Arcana"
+      feedback={<EditorDialogFeedback name="Arcana feedback" />}
+      footer={
+        <EditorDialogDraftActions
+          onCancel={onClose}
+          onSave={() => {
+            dispatch(authoredProjectCommandDispatched(control.intentFor(draft).command));
+            onClose();
+          }}
+          saveDisabled={domain === undefined}
+          secondary={
+            <button className="quiet-action" onClick={() => setDraft([])} type="button">
+              Clear
+            </button>
+          }
+        />
+      }
+      model={{ kind: 'draft', onCancel: onClose }}
+      {...(returnFocusId === undefined ? {} : { returnFocusId })}
+      size="cards"
       title={title}
-      kind="arcana"
-      onClose={onClose}
-      onReset={() => setDraft([])}
-      saveDisabled={domain === undefined}
-      onSave={() => dispatch(authoredProjectCommandDispatched(control.intentFor(draft).command))}
     >
       <p className="route-loadout-summary">
         Choose {requiredCount} inactive Arcana cards in order.
@@ -73,7 +94,6 @@ export function ArcanaActivationEditor({
           </div>
         )}
       </div>
-      <TraitOfferFeedbackRegion label="Arcana feedback" entries={[]} />
-    </ArcanaFearDialog>
+    </EditorDialog>
   );
 }

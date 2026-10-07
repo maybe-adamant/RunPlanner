@@ -2,15 +2,19 @@ import type {
   AcquisitionRoleAddress,
   AuthoredAnvilResult,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  EditorDialogFeedback,
+} from '@planner/ui/controls/EditorDialog';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
-import { TraitOfferFeedbackRegion } from './TraitOfferForm';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 type AnvilDraft = {
@@ -105,69 +109,41 @@ function resultFor(draft: AnvilDraft): AuthoredAnvilResult | undefined {
 
 function AnvilResultDialog({
   interaction,
+  launcherId,
   onClose,
 }: {
   readonly interaction: AnvilInteraction;
+  readonly launcherId: string;
   readonly onClose: () => void;
 }) {
   const executeIntent = useCommandIntent();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    if (typeof dialog.showModal === 'function' && !dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        dialog.setAttribute('open', '');
-      }
-    } else if (!dialog.open) dialog.setAttribute('open', '');
-    const cancel = (event: Event) => {
-      event.preventDefault();
-      onClose();
-    };
-    dialog.addEventListener('cancel', cancel);
-    return () => dialog.removeEventListener('cancel', cancel);
-  }, [onClose]);
   return (
-    <dialog
-      aria-labelledby="anvil-result-dialog-title"
-      aria-modal="true"
-      className="trait-offer-dialog-backdrop"
-      ref={dialogRef}
+    <EditorDialog
+      eyebrow="Anvil of Fates"
+      model={{ kind: 'draft', onCancel: onClose }}
+      returnFocusId={launcherId}
+      title="Choose Hammer result"
     >
-      <div className="trait-offer-dialog anvil-result-dialog">
-        <header className="panel-heading">
-          <div>
-            <p className="eyebrow">Anvil of Fates</p>
-            <h2 id="anvil-result-dialog-title">Choose Hammer result</h2>
-          </div>
-          <button
-            aria-label="Close Anvil result"
-            className="quiet-action"
-            onClick={onClose}
-            type="button"
-          >
-            Close
-          </button>
-        </header>
-        <AnvilResultEditor
-          interaction={interaction}
-          onCommit={(result) => {
-            executeIntent(interaction.intentFor(result));
-            onClose();
-          }}
-        />
-      </div>
-    </dialog>
+      <AnvilResultEditor
+        interaction={interaction}
+        onCancel={onClose}
+        onCommit={(result) => {
+          executeIntent(interaction.intentFor(result));
+          onClose();
+        }}
+      />
+    </EditorDialog>
   );
 }
 
 export function AnvilResultEditor({
   interaction,
+  onCancel,
   onCommit,
 }: {
   readonly interaction: AnvilInteraction;
+  /** Discards the draft; absent outside a dialog. */
+  readonly onCancel?: () => void;
   readonly onCommit: (result: AuthoredAnvilResult) => void;
 }) {
   const [draft, setDraft] = useState(() => draftFor(interaction.value));
@@ -251,17 +227,15 @@ export function AnvilResultEditor({
             : { triggerLabel: interaction.traitLabel(draft.secondAddedTraitKey) })}
         />
       </div>
-      <button
-        className="primary-action"
-        disabled={result === undefined}
-        onClick={() => {
+      <EditorDialogFeedback name="Anvil feedback" />
+      <EditorDialogDraftActions
+        {...(onCancel === undefined ? {} : { onCancel })}
+        onSave={() => {
           if (result !== undefined) onCommit(result);
         }}
-        type="button"
-      >
-        Save Anvil result
-      </button>
-      <TraitOfferFeedbackRegion label="Anvil feedback" entries={[]} />
+        saveDisabled={result === undefined}
+        saveName="Save Anvil result"
+      />
     </>
   );
 }
@@ -284,10 +258,11 @@ export function AnvilResultLauncher({
             ? 'No removal'
             : interaction.traitLabel(interaction.value.removedTraitKey)
         } → ${interaction.value.addedTraitKeys.map(interaction.traitLabel).join(', ')}`;
+  const launcher = findingTarget(owner);
   return (
     <>
       <button
-        {...findingTarget(owner)}
+        {...launcher}
         className="trait-offer-launcher quiet-action action-compact"
         disabled={!interaction.contextReached || undefined}
         onClick={() => setOpen(true)}
@@ -296,7 +271,9 @@ export function AnvilResultLauncher({
       >
         {label}
       </button>
-      {open ? <AnvilResultDialog interaction={interaction} onClose={close} /> : null}
+      {open ? (
+        <AnvilResultDialog interaction={interaction} launcherId={launcher.id} onClose={close} />
+      ) : null}
     </>
   );
 }

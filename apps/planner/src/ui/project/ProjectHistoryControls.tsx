@@ -16,10 +16,13 @@ import { ActionIcon } from '../controls/ActionIcon';
 export function ProjectHistoryControls({ hasProject = true }: { readonly hasProject?: boolean }) {
   const canUndo = useAppSelector(selectCanUndoProject);
   const canRedo = useAppSelector(selectCanRedoProject);
+  // History shortcuts wait while a dialog holds an unsaved draft.
+  const draftOpen = useAppSelector((state) => state.editorSession.openDraftEditors > 0);
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (draftOpen) return;
       const shortcut = projectHistoryShortcut(event);
       if (shortcut === 'undo' && canUndo) {
         event.preventDefault();
@@ -31,7 +34,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
     };
     globalThis.addEventListener('keydown', handleKeyDown);
     return () => globalThis.removeEventListener('keydown', handleKeyDown);
-  }, [canRedo, canUndo, dispatch]);
+  }, [canRedo, canUndo, dispatch, draftOpen]);
 
   if (!hasProject) return null;
   return (

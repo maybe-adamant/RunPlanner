@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { AuthoredNemesisRandomEventKind } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
@@ -15,6 +15,7 @@ import {
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import type { FeedbackEntry } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -51,7 +52,6 @@ function EncounterCustomizationControl({
   const executeIntent = useCommandIntent();
   const [manualOpen, setManualOpen] = useState(false);
   const [initializationFailure, setInitializationFailure] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const interactionKey = workspaceInteractionKey(phase.address);
   const interaction =
     phase.customization === undefined
@@ -84,23 +84,6 @@ function EncounterCustomizationControl({
     (phase.customization?.some((decision) => decision.selection.kind === 'infiniteRoster') ===
       true &&
       interaction?.infiniteRosterDraftFor === undefined);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    if (manualOpen && !dialog.open) {
-      if (typeof dialog.showModal === 'function') {
-        try {
-          dialog.showModal();
-        } catch {
-          dialog.setAttribute('open', '');
-        }
-      } else dialog.setAttribute('open', '');
-    }
-    if (!manualOpen && dialog.open) {
-      if (typeof dialog.close === 'function') dialog.close();
-      else dialog.removeAttribute('open');
-    }
-  }, [manualOpen]);
   const close = (): void => {
     setManualOpen(false);
   };
@@ -155,225 +138,206 @@ function EncounterCustomizationControl({
         {editable ? 'Customize encounter' : 'Inspect encounter'}
       </button>
       {manualOpen ? (
-        <dialog
-          aria-labelledby={`encounter-customization-title-${customizationId}`}
-          aria-modal="true"
-          className="trait-offer-dialog-backdrop"
-          onCancel={(event) => {
-            event.preventDefault();
-            close();
-          }}
-          ref={dialogRef}
+        <EditorDialog
+          eyebrow="Encounter"
+          feedback={<CustomizationFindings entries={findingEntries} warnings={warnings} />}
+          model={{ kind: 'live', onDone: close }}
+          returnFocusId={customizationId}
+          size="narrow"
+          title={
+            composition === undefined
+              ? 'Customize'
+              : `${composition.label} (${phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key})`
+          }
         >
-          <div className="trait-offer-dialog encounter-customization-dialog">
-            <header className="encounter-customization-header">
-              <h2 id={`encounter-customization-title-${customizationId}`}>
-                {composition === undefined
-                  ? 'Customize'
-                  : `${composition.label} (${phase.selectedEncounter.nativeEncounterDefinitionKey ?? phase.selectedEncounter.key})`}
-              </h2>
-              <button
-                aria-label="Close encounter customization"
-                className="quiet-action"
-                onClick={close}
-                type="button"
-              >
-                Close
-              </button>
-            </header>
-            <div className="encounter-customization-fields">
-              {composition === undefined ? (
-                generatedDecision?.value === undefined || interaction === undefined ? null : (
-                  <section className="encounter-generated-customization">
-                    <div className="encounter-generated-heading">
-                      <h3>Encounter Composition</h3>
-                      <button
-                        className="danger-action action-compact"
-                        onClick={() =>
-                          executeIntent(interaction.intentFor(generatedDecision.key, null))
-                        }
-                        type="button"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  </section>
-                )
-              ) : (
-                <EncounterCompositionControl
-                  hasRequiredFindings={required.length > 0}
-                  onInitializationFailure={setInitializationFailure}
-                  composition={composition}
-                  {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
-                  idKey={interactionKey}
-                  {...(interaction === undefined ? {} : { interaction })}
-                />
-              )}
-              {phase.customization?.map((decision) => {
-                const value = decision.value;
-                if (interaction === undefined || isGeneratedEncounterDecision(decision))
-                  return null;
-                if (decision.selection.kind === 'cocoonCount') {
-                  return (
-                    <CocoonCountControl
-                      decision={{ ...decision, selection: decision.selection }}
+          <div className="encounter-customization-fields">
+            {composition === undefined ? (
+              generatedDecision?.value === undefined || interaction === undefined ? null : (
+                <section className="encounter-generated-customization">
+                  <div className="encounter-generated-heading">
+                    <h3>Encounter Composition</h3>
+                    <button
+                      className="danger-action action-compact"
+                      onClick={() =>
+                        executeIntent(interaction.intentFor(generatedDecision.key, null))
+                      }
+                      type="button"
+                    >
+                      Reset to default
+                    </button>
+                  </div>
+                </section>
+              )
+            ) : (
+              <EncounterCompositionControl
+                hasRequiredFindings={required.length > 0}
+                onInitializationFailure={setInitializationFailure}
+                composition={composition}
+                {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}
+                idKey={interactionKey}
+                {...(interaction === undefined ? {} : { interaction })}
+              />
+            )}
+            {phase.customization?.map((decision) => {
+              const value = decision.value;
+              if (interaction === undefined || isGeneratedEncounterDecision(decision)) return null;
+              if (decision.selection.kind === 'cocoonCount') {
+                return (
+                  <CocoonCountControl
+                    decision={{ ...decision, selection: decision.selection }}
+                    id={`encounter-customization-${customizationId}-${decision.key}`}
+                    interaction={interaction}
+                    key={decision.key}
+                  />
+                );
+              }
+              if (decision.selection.kind === 'cocoonRewardPoint') {
+                return (
+                  <CocoonRewardPointControl
+                    key={decision.key}
+                    decision={{ ...decision, selection: decision.selection }}
+                    id={`encounter-customization-${customizationId}-${decision.key}`}
+                    interaction={interaction}
+                  />
+                );
+              }
+              if (decision.selection.kind === 'infiniteRoster') {
+                return (
+                  <InfiniteRosterControl
+                    decision={{ ...decision, selection: decision.selection }}
+                    id={`encounter-customization-${customizationId}-${decision.key}`}
+                    interaction={interaction}
+                    key={decision.key}
+                  />
+                );
+              }
+              if (decision.selection.kind === 'single') {
+                const selected = value?.kind === 'single' ? value.choiceKey : '';
+                return (
+                  <div key={decision.key}>
+                    <ContextualPicker
+                      label={decision.label}
+                      layout="inline"
+                      ariaLabel={decision.label}
+                      placeholder="Default"
+                      {...(!decision.valueSupported && value !== undefined
+                        ? { invalid: true, triggerTitle: unavailableTitle }
+                        : {})}
+                      model={declaredChoicesPicker(
+                        [
+                          { key: 'default', value: '', label: 'Default' },
+                          ...(!decision.valueSupported &&
+                          selected !== '' &&
+                          !decision.selection.choices.some((choice) => choice.key === selected)
+                            ? [
+                                {
+                                  key: selected,
+                                  value: selected,
+                                  label: `${retainedLabel(decision, selected)} (unavailable)`,
+                                  disabled: true,
+                                },
+                              ]
+                            : []),
+                          ...decision.selection.choices.map((choice) => ({
+                            ...choice,
+                            value: choice.key,
+                          })),
+                        ],
+                        selected,
+                      )}
                       id={`encounter-customization-${customizationId}-${decision.key}`}
-                      interaction={interaction}
-                      key={decision.key}
+                      onSelect={(choiceKey) =>
+                        executeIntent(
+                          interaction.intentFor(
+                            decision.key,
+                            choiceKey === '' ? null : { kind: 'single', choiceKey },
+                          ),
+                        )
+                      }
                     />
-                  );
-                }
-                if (decision.selection.kind === 'cocoonRewardPoint') {
-                  return (
-                    <CocoonRewardPointControl
-                      key={decision.key}
-                      decision={{ ...decision, selection: decision.selection }}
-                      id={`encounter-customization-${customizationId}-${decision.key}`}
-                      interaction={interaction}
-                    />
-                  );
-                }
-                if (decision.selection.kind === 'infiniteRoster') {
-                  return (
-                    <InfiniteRosterControl
-                      decision={{ ...decision, selection: decision.selection }}
-                      id={`encounter-customization-${customizationId}-${decision.key}`}
-                      interaction={interaction}
-                      key={decision.key}
-                    />
-                  );
-                }
-                if (decision.selection.kind === 'single') {
-                  const selected = value?.kind === 'single' ? value.choiceKey : '';
-                  return (
-                    <div key={decision.key}>
-                      <ContextualPicker
-                        label={decision.label}
-                        layout="inline"
-                        ariaLabel={decision.label}
-                        placeholder="Default"
-                        {...(!decision.valueSupported && value !== undefined
+                  </div>
+                );
+              }
+              const prefixSelection = decision.selection;
+              const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
+              const replace = (index: number, choiceKey: string): void => {
+                const next =
+                  choiceKey === ''
+                    ? selected.slice(0, index)
+                    : (() => {
+                        const preserved = [...selected];
+                        preserved[index] = choiceKey;
+                        return preserved;
+                      })();
+                executeIntent(
+                  interaction.intentFor(
+                    decision.key,
+                    next.length === 0 ? null : { kind: 'orderedPrefix', choiceKeys: next },
+                  ),
+                );
+              };
+              return (
+                <section
+                  aria-labelledby={`encounter-customization-group-${customizationId}-${decision.key}`}
+                  className="encounter-customization-group"
+                  key={decision.key}
+                >
+                  <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
+                    {decision.label}
+                  </h3>
+                  {Array.from({ length: prefixSelection.maximumLength }, (_, index) => (
+                    <ContextualPicker
+                      key={index}
+                      id={`encounter-customization-${customizationId}-${decision.key}${index === 0 ? '' : `-${index}`}`}
+                      label={`Use ${index + 1}`}
+                      layout="inline"
+                      ariaLabel={`${decision.label} use ${index + 1}`}
+                      {...(index > 0 && selected[0] === undefined
+                        ? { disabledTitle: 'Choose the first summon first' }
+                        : !decision.valueSupported && selected[index] !== undefined
                           ? { invalid: true, triggerTitle: unavailableTitle }
                           : {})}
-                        model={declaredChoicesPicker(
-                          [
-                            { key: 'default', value: '', label: 'Default' },
-                            ...(!decision.valueSupported &&
-                            selected !== '' &&
-                            !decision.selection.choices.some((choice) => choice.key === selected)
-                              ? [
-                                  {
-                                    key: selected,
-                                    value: selected,
-                                    label: `${retainedLabel(decision, selected)} (unavailable)`,
-                                    disabled: true,
-                                  },
-                                ]
-                              : []),
-                            ...decision.selection.choices.map((choice) => ({
+                      placeholder="Default"
+                      model={declaredChoicesPicker(
+                        [
+                          { key: 'default', value: '', label: 'Default' },
+                          ...(!decision.valueSupported &&
+                          selected[index] !== undefined &&
+                          !prefixSelection.choices.some((choice) => choice.key === selected[index])
+                            ? [
+                                {
+                                  key: selected[index]!,
+                                  value: selected[index]!,
+                                  label: `${retainedLabel(decision, selected[index]!)} (unavailable)`,
+                                  disabled: true,
+                                },
+                              ]
+                            : []),
+                          ...prefixSelection.choices.map((choice) => {
+                            const alreadyUsed = selected.some(
+                              (selectedKey, selectedIndex) =>
+                                selectedIndex !== index && selectedKey === choice.key,
+                            );
+                            return {
                               ...choice,
                               value: choice.key,
-                            })),
-                          ],
-                          selected,
-                        )}
-                        id={`encounter-customization-${customizationId}-${decision.key}`}
-                        onSelect={(choiceKey) =>
-                          executeIntent(
-                            interaction.intentFor(
-                              decision.key,
-                              choiceKey === '' ? null : { kind: 'single', choiceKey },
-                            ),
-                          )
-                        }
-                      />
-                    </div>
-                  );
-                }
-                const prefixSelection = decision.selection;
-                const selected = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
-                const replace = (index: number, choiceKey: string): void => {
-                  const next =
-                    choiceKey === ''
-                      ? selected.slice(0, index)
-                      : (() => {
-                          const preserved = [...selected];
-                          preserved[index] = choiceKey;
-                          return preserved;
-                        })();
-                  executeIntent(
-                    interaction.intentFor(
-                      decision.key,
-                      next.length === 0 ? null : { kind: 'orderedPrefix', choiceKeys: next },
-                    ),
-                  );
-                };
-                return (
-                  <section
-                    aria-labelledby={`encounter-customization-group-${customizationId}-${decision.key}`}
-                    className="encounter-customization-group"
-                    key={decision.key}
-                  >
-                    <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
-                      {decision.label}
-                    </h3>
-                    {Array.from({ length: prefixSelection.maximumLength }, (_, index) => (
-                      <ContextualPicker
-                        key={index}
-                        id={`encounter-customization-${customizationId}-${decision.key}${index === 0 ? '' : `-${index}`}`}
-                        label={`Use ${index + 1}`}
-                        layout="inline"
-                        ariaLabel={`${decision.label} use ${index + 1}`}
-                        {...(index > 0 && selected[0] === undefined
-                          ? { disabledTitle: 'Choose the first summon first' }
-                          : !decision.valueSupported && selected[index] !== undefined
-                            ? { invalid: true, triggerTitle: unavailableTitle }
-                            : {})}
-                        placeholder="Default"
-                        model={declaredChoicesPicker(
-                          [
-                            { key: 'default', value: '', label: 'Default' },
-                            ...(!decision.valueSupported &&
-                            selected[index] !== undefined &&
-                            !prefixSelection.choices.some(
-                              (choice) => choice.key === selected[index],
-                            )
-                              ? [
-                                  {
-                                    key: selected[index]!,
-                                    value: selected[index]!,
-                                    label: `${retainedLabel(decision, selected[index]!)} (unavailable)`,
-                                    disabled: true,
-                                  },
-                                ]
-                              : []),
-                            ...prefixSelection.choices.map((choice) => {
-                              const alreadyUsed = selected.some(
-                                (selectedKey, selectedIndex) =>
-                                  selectedIndex !== index && selectedKey === choice.key,
-                              );
-                              return {
-                                ...choice,
-                                value: choice.key,
-                                disabled: alreadyUsed,
-                                ...(alreadyUsed
-                                  ? { explanation: 'Already chosen for another use' }
-                                  : {}),
-                              };
-                            }),
-                          ],
-                          selected[index] ?? '',
-                        )}
-                        onSelect={(choiceKey) => replace(index, choiceKey)}
-                      />
-                    ))}
-                  </section>
-                );
-              })}
-              <CustomizationFindings entries={findingEntries} warnings={warnings} />
-            </div>
+                              disabled: alreadyUsed,
+                              ...(alreadyUsed
+                                ? { explanation: 'Already chosen for another use' }
+                                : {}),
+                            };
+                          }),
+                        ],
+                        selected[index] ?? '',
+                      )}
+                      onSelect={(choiceKey) => replace(index, choiceKey)}
+                    />
+                  ))}
+                </section>
+              );
+            })}
           </div>
-        </dialog>
+        </EditorDialog>
       ) : null}
     </>
   );

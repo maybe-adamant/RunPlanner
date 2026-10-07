@@ -264,7 +264,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const launcher = screen.getByRole('button', { name: 'Customize encounter' });
     await view.user.click(launcher);
     await screen.findByRole('dialog', { name: /\(.+\)$/ });
-    await view.user.click(screen.getByRole('button', { name: 'Close encounter customization' }));
+    await view.user.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(
       encodeProjectDocument(view.application.store.getState().projectWorkspace.history!.present),
@@ -356,9 +356,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         choiceKey: 'charybdis',
       });
     });
-    await view.user.click(
-      within(dialog).getByRole('button', { name: 'Close encounter customization' }),
-    );
+    await view.user.click(within(dialog).getByRole('button', { name: 'Done' }));
     expect(screen.queryByRole('dialog', { name: 'Customize' })).toBeNull();
     expect(dialog.isConnected).toBe(false);
     await view.user.click(within(control).getByRole('button', { name: 'Customize encounter' }));
@@ -600,9 +598,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(pointSelector);
     await view.user.click(screen.getByRole('option', { name: 'Any' }));
     await waitFor(() => expect(point()).toBeUndefined());
-    expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(
+      within(dialog).getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled'),
+    ).toBe(true);
 
     fireEvent.change(slider, { target: { value: '4' } });
     fireEvent.keyUp(slider, { key: 'ArrowRight' });
@@ -611,7 +609,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       within(dialog).getByRole('slider', { name: 'Cocoons' }).getAttribute('aria-valuetext'),
     ).toBe('11');
 
-    await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Reset to default' }));
     await waitFor(() => expect(cocoonCount(view)).toBeUndefined());
 
     fireEvent.change(within(dialog).getByRole('slider', { name: 'Cocoons' }), {
@@ -663,9 +661,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
-    expect(within(dialog).getByRole('button', { name: 'Reset' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(
+      within(dialog).getByRole('button', { name: 'Reset to default' }).hasAttribute('disabled'),
+    ).toBe(true);
 
     // Normal-then-elite SpreadShot is not a native draw order.
     await view.user.click(within(dialog).getByRole('button', { name: 'Enemy roster' }));
@@ -693,7 +691,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'Elite Wretched Witch · Wretched Witch · Burn-Flinger',
     );
 
-    await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Reset to default' }));
     await waitFor(() => expect(roster(view)).toBeUndefined());
   });
 
@@ -723,10 +721,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(screen.getByRole('button', { name: 'Customize encounter' }));
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    const findingsRegion = within(dialog).getByRole('region', { name: 'Customization findings' });
+    const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
     expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
     // The one feedback region closes the dialog body, after every decision row.
-    expect(dialog.querySelector('.encounter-customization-fields')?.lastElementChild).toBe(
+    expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
       findingsRegion,
     );
     expect(
@@ -788,10 +786,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    const findingsRegion = within(dialog).getByRole('region', { name: 'Customization findings' });
+    const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
     expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
     // The one feedback region closes the dialog body, after every decision row.
-    expect(dialog.querySelector('.encounter-customization-fields')?.lastElementChild).toBe(
+    expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
       findingsRegion,
     );
     const point = () =>
@@ -812,7 +810,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       expect(point()).toEqual({ kind: 'cocoonRewardPoint', spawnPointId: Number(validId) }),
     );
     expect(
-      within(dialog).getByRole('region', { name: 'Customization findings' }).textContent,
+      within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
     ).not.toContain('Retained choice is unavailable here.');
     expect(selector.getAttribute('title')).toBeNull();
     await view.user.click(selector);
@@ -870,10 +868,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(slider.getAttribute('aria-invalid')).toBe('true');
     expect(slider.getAttribute('title')).toBe('Retained count 20 is unavailable here.');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
-    const findingsRegion = within(dialog).getByRole('region', { name: 'Customization findings' });
+    const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
     expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
     // The one feedback region closes the dialog body, after every decision row.
-    expect(dialog.querySelector('.encounter-customization-fields')?.lastElementChild).toBe(
+    expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
       findingsRegion,
     );
 
@@ -883,7 +881,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     // The findings region stays mounted after the repair clears its entry.
     await waitFor(() =>
       expect(
-        within(dialog).getByRole('region', { name: 'Customization findings' }).textContent,
+        within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
       ).not.toContain('Retained choice is unavailable here.'),
     );
     expect(slider.getAttribute('aria-invalid')).toBeNull();

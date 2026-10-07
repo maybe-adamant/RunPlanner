@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { selectPresentProject, useAppSelector } from '@planner/state/store';
 import type { BugReportContents, BugReportOperations } from '@planner/workspace/bugReport';
-import { ModalDialog } from './ModalDialog';
+import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 
 type Stage =
   | { readonly kind: 'choosing' }
@@ -65,7 +65,12 @@ export function BugReportDialog({
   );
 
   return (
-    <ModalDialog wide={false} labelledBy="bug-report-title" onCancel={onClose} pending={saving}>
+    <ModalDialog
+      className="game-publication-dialog"
+      labelledBy="bug-report-title"
+      onCancel={onClose}
+      pending={saving}
+    >
       <header className="panel-heading">
         <h2 id="bug-report-title">Create bug report</h2>
       </header>

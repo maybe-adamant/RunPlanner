@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
+import { EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+
 /** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
 export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
 
@@ -36,32 +38,6 @@ export function useOutcomeFeedback(): readonly [readonly FeedbackEntry[], Outcom
     });
   }, []);
   return [[...feedback], report];
-}
-
-/** The always-mounted feedback region at the bottom of a trait-form dialog body. */
-export function TraitOfferFeedbackRegion({
-  children,
-  label,
-  entries,
-}: {
-  readonly children?: ReactNode;
-  readonly label: string;
-  readonly entries: readonly FeedbackEntry[];
-}) {
-  return (
-    <section aria-label={label} className="trait-offer-feedback" role="status">
-      <h3>{label}</h3>
-      {children === undefined && entries.length === 0 ? (
-        <p className="trait-offer-feedback-empty">No current findings.</p>
-      ) : null}
-      {children}
-      {entries.map(([key, message]) => (
-        <p className="feedback-text" key={key}>
-          {message}
-        </p>
-      ))}
-    </section>
-  );
 }
 
 export function TraitOfferShapeActions({
@@ -107,6 +83,7 @@ export function TraitOfferShapeActions({
  * semantics and pass only rendered, supported sections and actions.
  */
 export function TraitOfferForm({
+  cancel,
   content,
   feedback,
   options,
@@ -117,6 +94,8 @@ export function TraitOfferForm({
   shapeActions,
   state,
 }: {
+  /** Discards the draft; absent outside a dialog. */
+  readonly cancel?: () => void;
   readonly content?: ReactNode;
   readonly feedback?: ReactNode;
   readonly options: ReactNode;
@@ -124,6 +103,7 @@ export function TraitOfferForm({
   readonly reset?: ReactNode;
   readonly save: {
     readonly disabled: boolean;
+    /** Accessible name naming what Save commits. */
     readonly label: string;
     readonly onClick: () => void;
   };
@@ -147,16 +127,20 @@ export function TraitOfferForm({
         </>
       )}
       {feedback}
-      {recovery}
-      <button
-        className="primary-action"
-        disabled={save.disabled}
-        onClick={save.onClick}
-        type="button"
-      >
-        {save.label}
-      </button>
-      {reset}
+      <EditorDialogDraftActions
+        {...(cancel === undefined ? {} : { onCancel: cancel })}
+        onSave={save.onClick}
+        saveDisabled={save.disabled}
+        saveName={save.label}
+        secondary={
+          recovery === undefined && reset === undefined ? undefined : (
+            <>
+              {recovery}
+              {reset}
+            </>
+          )
+        }
+      />
     </div>
   );
 }

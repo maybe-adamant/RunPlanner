@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import type { AuthoredGeneratedEncounterCustomization } from '@run-planner/engine/authored-project';
+import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import type {
   WorkspaceCommandIntent,
   WorkspaceEncounterComposition,
@@ -830,7 +831,7 @@ export function EncounterCompositionControl({
               onClick={() => replace(null)}
               type="button"
             >
-              Reset
+              Reset to default
             </button>
           </>
         )}
@@ -1085,21 +1086,21 @@ export function CustomizationFindings({
   readonly warnings?: readonly string[];
 }) {
   return (
-    <section className="encounter-composition-findings" aria-label="Customization findings">
-      <h4>Findings</h4>
-      {entries.length === 0 && warnings.length === 0 ? (
-        <p className="trait-offer-feedback-empty">No current findings.</p>
-      ) : null}
-      {entries.map(([key, message]) => (
-        <p className="encounter-customization-repair" key={key}>
-          {message}
-        </p>
-      ))}
-      {warnings.map((warning) => (
-        <p className="encounter-composition-warning" key={warning}>
-          {warning}
-        </p>
-      ))}
-    </section>
+    <EditorDialogFeedback name="Encounter feedback">
+      {entries.length === 0 && warnings.length === 0 ? undefined : (
+        <>
+          {entries.map(([key, message]) => (
+            <p className="encounter-customization-repair" key={key}>
+              {message}
+            </p>
+          ))}
+          {warnings.map((warning) => (
+            <p className="encounter-composition-warning" key={warning}>
+              {warning}
+            </p>
+          ))}
+        </>
+      )}
+    </EditorDialogFeedback>
   );
 }

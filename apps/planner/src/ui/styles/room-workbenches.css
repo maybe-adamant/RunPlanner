@@ -481,31 +481,6 @@
   font-size: inherit;
 }
 
-.trait-offer-dialog.encounter-customization-dialog {
-  max-width: 48rem;
-  width: min(100%, 48rem);
-}
-
-.encounter-customization-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.encounter-customization-header > h2 {
-  margin: 0;
-  color: #e0cbed;
-  font-family: inherit;
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: 0.02em;
-}
-
 .encounter-customization-fields {
   display: grid;
   gap: 16px;
@@ -745,8 +720,7 @@
   box-shadow: inset 0 0 0 2px #da7373;
 }
 
-.encounter-composition-help,
-.encounter-composition-findings {
+.encounter-composition-help {
   display: grid;
   gap: 8px;
   min-height: 5rem;
@@ -755,8 +729,7 @@
   border-radius: 8px;
 }
 
-.encounter-composition-help :is(h4, p),
-.encounter-composition-findings h4 {
+.encounter-composition-help :is(h4, p) {
   margin: 0;
 }
 

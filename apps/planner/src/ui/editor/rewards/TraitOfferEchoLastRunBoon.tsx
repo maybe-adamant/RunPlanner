@@ -7,6 +7,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
   WorkspaceEchoLastRunBoonDomain,
@@ -19,7 +20,6 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import {
-  TraitOfferFeedbackRegion,
   TraitOfferForm,
   TraitOfferShapeActions,
   useOutcomeFeedback,
@@ -298,7 +298,7 @@ function EchoLastRunBoonChoiceEditor({
           );
         })}
         selectedOutcome={selectedPayload}
-        feedback={<TraitOfferFeedbackRegion label="Choice feedback" entries={feedbackEntries} />}
+        feedback={<EditorDialogFeedback entries={feedbackEntries} name="Choice feedback" />}
         shapeActions={
           <TraitOfferShapeActions
             {...(nextDraft === undefined ? {} : { onAdd: () => applySize(nextDraft) })}
@@ -314,11 +314,7 @@ function EchoLastRunBoonChoiceEditor({
               onComplete(completed);
           },
         }}
-        reset={
-          <button className="quiet-action" onClick={onBack} type="button">
-            Cancel
-          </button>
-        }
+        cancel={onBack}
       />
     </section>
   );

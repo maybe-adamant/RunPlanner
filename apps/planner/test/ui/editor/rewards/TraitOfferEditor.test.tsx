@@ -179,7 +179,7 @@ describe('trait offer editor entry and dialog', () => {
       expect(screen.queryByRole('button', { name: 'Concave Stone target' })).toBeNull();
       if (kind === 'proc') await user.click(checkbox);
       // Opening and editing the Stone child must not publish a partial command.
-      expect(application.store.getState()).toBe(before);
+      expect(application.store.getState().projectWorkspace).toBe(before.projectWorkspace);
       await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
       const savedWorkspace = application.selectStructuredWorkspace(application.store.getState())!;
       const saved = savedWorkspace.interactions.traitOffers.get(semanticAddressKey(address))?.value;

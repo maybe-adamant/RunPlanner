@@ -64,6 +64,8 @@ export interface EditorSessionState {
   readonly runStateTarget?: RunStateOwner | null;
   /** Advances for every explicit semantic navigation, including repeat visits. */
   readonly semanticNavigationRevision: number;
+  /** Open dialogs holding an unsaved local draft; history shortcuts wait while any is open. */
+  readonly openDraftEditors: number;
 }
 
 const routeOverviewPanel: RoutePanel = Object.freeze({ kind: 'overview' });
@@ -75,6 +77,7 @@ const emptyState: EditorSessionState = {
   focusedSemanticOwner: null,
   selectedFinding: null,
   semanticNavigationRevision: 0,
+  openDraftEditors: 0,
 };
 
 function routeKey(origin: SemanticAddress): string | null {
@@ -219,10 +222,18 @@ const editorSessionSlice = createSlice({
     runStateClosed(state) {
       state.runStateTarget = null;
     },
+    draftEditorOpened(state) {
+      state.openDraftEditors += 1;
+    },
+    draftEditorClosed(state) {
+      state.openDraftEditors = Math.max(0, state.openDraftEditors - 1);
+    },
   },
 });
 
 export const {
+  draftEditorClosed,
+  draftEditorOpened,
   editorSessionReconciled,
   findingSelected,
   routePanelSelected,
@@ -277,6 +288,8 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
         levelResolutionDialogTarget: null,
         runStateTarget: null,
         semanticNavigationRevision: state.semanticNavigationRevision,
+        // Mounted draft dialogs unregister themselves when they unmount.
+        openDraftEditors: state.openDraftEditors,
         workspaceReplacementRevision: state.workspaceReplacementRevision + 1,
       };
     }
