@@ -9,9 +9,9 @@ import {
   EditorDialogDraftActions,
   EditorDialogFeedback,
 } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch } from '@planner/state/store';
 
 export function ArcanaActivationEditor({
   control,
@@ -27,8 +27,16 @@ export function ArcanaActivationEditor({
   /** The launcher that regains focus after the dialog unmounts. */
   readonly returnFocusId?: string;
 }) {
-  const dispatch = useAppDispatch();
-  const [draft, setDraft] = useState(control.value);
+  const executeIntent = useCommandIntent();
+  // A changed authored draw replaces the draft; a changed context keeps it.
+  const valueIdentity = draftValueIdentity(control.value);
+  const [draftState, setDraftState] = useState(() => ({
+    identity: valueIdentity,
+    keys: control.value,
+  }));
+  const draft = draftState.identity === valueIdentity ? draftState.keys : control.value;
+  const setDraft = (keys: readonly string[]): void =>
+    setDraftState({ identity: valueIdentity, keys });
   const { activate, result } = useWorkspaceInteraction(control);
   useEffect(() => {
     activate();
@@ -45,7 +53,7 @@ export function ArcanaActivationEditor({
         <EditorDialogDraftActions
           onCancel={onClose}
           onSave={() => {
-            dispatch(authoredProjectCommandDispatched(control.intentFor(draft).command));
+            executeIntent(control.intentFor(draft));
             onClose();
           }}
           saveDisabled={domain === undefined}

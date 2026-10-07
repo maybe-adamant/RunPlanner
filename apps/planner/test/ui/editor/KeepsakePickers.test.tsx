@@ -7,13 +7,21 @@ import {
   type AuthoredKeepsakeEquipResults,
 } from '@run-planner/engine/authored-project';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { WorkspaceTranscendentEmbryoEquipResultInteraction } from '@planner/projections/structured-workspace';
-import { KeepsakeEquipResultPicker } from '@planner/ui/editor/KeepsakePickers';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import type { WorkspaceKeepsakeSelectionInteraction } from '@planner/projections/structured-workspace';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  KeepsakeEquipResultPicker,
+  KeepsakeSelectionPicker,
+} from '@planner/ui/editor/KeepsakePickers';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -126,6 +134,46 @@ describe('KeepsakeEquipResultPicker', () => {
       </Provider>,
     );
     expect(screen.queryByLabelText('Property speed')).toBeNull();
+    application.dispose();
+  });
+});
+
+describe('KeepsakeSelectionPicker', () => {
+  it('dispatches its selection through the bound intent, including its declared focus', async () => {
+    const application = createApplication();
+    const dispatch = vi
+      .spyOn(application.store, 'dispatch')
+      .mockImplementation((action) => action as never);
+    const owner = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const command = {
+      kind: 'ReplaceStartingKeepsake' as const,
+      selection: owner,
+      keepsakeKey: 'BlockDeathKeepsake',
+    };
+    const interaction: WorkspaceKeepsakeSelectionInteraction = {
+      key: semanticAddressKey(owner),
+      load: () =>
+        declaredChoicesPicker(
+          [{ key: 'BlockDeathKeepsake', value: 'BlockDeathKeepsake', label: 'Silver Wheel' }],
+          '',
+        ),
+      owner,
+      selectedLabel: 'Choose keepsake',
+      replaceIntent: () => ({ command, focus: { owner, timing: 'after' } }) as never,
+    };
+    render(
+      <Provider store={application.store}>
+        <KeepsakeSelectionPicker id="keepsake" interaction={interaction} label="Keepsake" />
+      </Provider>,
+    );
+    const user = userEvent.setup();
+    await user.click(document.getElementById('keepsake')!);
+    dispatch.mockClear();
+    await user.click(await screen.findByRole('option', { name: /Silver Wheel/ }));
+    expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
+      authoredProjectCommandDispatched(command as never),
+      semanticOwnerFocused(owner),
+    ]);
     application.dispose();
   });
 });

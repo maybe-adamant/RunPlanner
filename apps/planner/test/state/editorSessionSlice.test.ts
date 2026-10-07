@@ -1,6 +1,10 @@
 import {
+  createAcquisitionRoleAddress,
   createBiomeAddress,
+  createCirceResolutionAddress,
   createEncounterPhaseAddress,
+  createIncomingRewardAddress,
+  createJudgmentArcanaAddress,
   createEchoLastRunBoonAddress,
   createLevelResolutionAddress,
   createOccurrenceId,
@@ -17,6 +21,11 @@ import type { Catalog, RouteDeclaration } from '@run-planner/engine/catalog-sche
 import { describe, expect, it } from 'vitest';
 
 import {
+  anvilResultDialogClosed,
+  anvilResultDialogOpened,
+  arcanaActivationDialogOpened,
+  circeResolutionDialogClosed,
+  circeResolutionDialogOpened,
   createEditorSessionReducer,
   editorSessionReconciled,
   findingSelected,
@@ -28,6 +37,7 @@ import {
   semanticOwnerFocused,
   semanticOwnerNavigated,
   settingsSelected,
+  traitOfferDialogClosed,
   traitOfferDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -366,6 +376,60 @@ describe('editor session navigation', () => {
     expect(replacement.workspaceReplacementRevision).toBe(
       selected.workspaceReplacementRevision + 1,
     );
+  });
+
+  it('holds every draft dialog target transiently and closes them on navigation or replacement', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const reward = createIncomingRewardAddress(biome, createOccurrenceId('draft-dialogs'));
+    const trait = createTraitOfferAddress(reward, 'source');
+    const anvil = createAcquisitionRoleAddress(reward, 'self');
+    const judgment = createJudgmentArcanaAddress(
+      createOccurrenceAddress(biome, createOccurrenceId('draft-dialogs:boss')),
+      'Encounter',
+    );
+    const circe = createCirceResolutionAddress(trait, 'option1');
+
+    let state = reducer(undefined, anvilResultDialogOpened(anvil));
+    expect(state.anvilDialogTarget).toEqual(anvil);
+    state = reducer(state, anvilResultDialogClosed());
+    expect(state.anvilDialogTarget).toBeNull();
+
+    state = reducer(state, arcanaActivationDialogOpened(judgment));
+    state = reducer(state, traitOfferDialogOpened(trait));
+    state = reducer(state, circeResolutionDialogOpened(circe));
+    expect(state).toMatchObject({
+      arcanaActivationDialogTarget: judgment,
+      circeDialogTarget: circe,
+      traitDialogTarget: trait,
+    });
+    expect(reducer(state, circeResolutionDialogClosed())).toMatchObject({
+      circeDialogTarget: null,
+      traitDialogTarget: trait,
+    });
+    // The nested Circe dialog never outlives the trait dialog that owns its draft.
+    expect(reducer(state, traitOfferDialogClosed()).circeDialogTarget).toBeNull();
+
+    const navigated = reducer(
+      state,
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'G' } }),
+    );
+    expect(navigated).toMatchObject({
+      anvilDialogTarget: null,
+      arcanaActivationDialogTarget: null,
+      circeDialogTarget: null,
+      traitDialogTarget: null,
+    });
+    const replaced = reducer(
+      reducer(state, anvilResultDialogOpened(anvil)),
+      authoredProjectReplaced(
+        createProjectDocument(catalog, { projectId: 'replacement', routeKey: 'Surface' }),
+      ),
+    );
+    expect(replaced).toMatchObject({
+      anvilDialogTarget: null,
+      arcanaActivationDialogTarget: null,
+      circeDialogTarget: null,
+    });
   });
 
   it('rejects session addresses with unknown catalog identities', () => {

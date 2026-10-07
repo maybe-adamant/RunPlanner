@@ -396,38 +396,35 @@ describe('Pom resolution editor', () => {
     expect(onCommit).toHaveBeenCalledWith({ kind: 'random', targetTraitKey: 'A' });
   });
 
-  it('reconciles its draft when the authoritative interaction changes', async () => {
+  it('keeps its draft and rebinds evaluation when only the context changes', async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
-    const supportedInteraction = (targetTraitKey: string) =>
+    const loads = vi.fn();
+    // A new interaction object with the same authored value is a changed context.
+    const contextInteraction = (context: string) =>
       interaction({
-        value: { kind: 'random', targetTraitKey },
-        load: (value) =>
-          Object.freeze({
-            groups: Object.freeze([
-              group(
-                'branch-0',
-                'random',
-                [targetTraitKey],
-                value.kind === 'random' && value.targetTraitKey === targetTraitKey,
-              ),
-            ]),
-          }),
+        value: { kind: 'random', targetTraitKey: 'A' },
+        load: (value) => {
+          loads(context, value);
+          return Object.freeze({
+            groups: Object.freeze([group('branch-0', 'random', ['A', 'B'], true)]),
+          });
+        },
       });
     const view = render(
-      <PomResolutionEditor interaction={supportedInteraction('A')} onCommit={onCommit} />,
+      <PomResolutionEditor interaction={contextInteraction('first')} onCommit={onCommit} />,
     );
-    expect(await screen.findByText('Trait A')).not.toBeNull();
-
+    await user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
+    await user.click(await screen.findByRole('option', { name: 'Trait B' }));
     view.rerender(
-      <PomResolutionEditor interaction={supportedInteraction('B')} onCommit={onCommit} />,
+      <PomResolutionEditor interaction={contextInteraction('second')} onCommit={onCommit} />,
     );
-    expect(await screen.findByText('Trait B')).not.toBeNull();
     await waitFor(() =>
-      expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
-        false,
-      ),
+      expect(loads).toHaveBeenLastCalledWith('second', { kind: 'random', targetTraitKey: 'B' }),
     );
+    expect(
+      screen.getByRole('button', { name: 'Recorded random Pom target' }).textContent,
+    ).toContain('Trait B');
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     expect(onCommit).toHaveBeenLastCalledWith({ kind: 'random', targetTraitKey: 'B' });
   });

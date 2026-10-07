@@ -4,9 +4,22 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
+  createAcquisitionSiteAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+} from '@run-planner/engine/authored-project';
+import { Provider } from 'react-redux';
+
+import { createApplication } from '@planner/composition/createApplication';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 
-import { AnvilResultEditor } from '@planner/ui/editor/rewards/AnvilResultEditor';
+import {
+  AnvilResultEditor,
+  AnvilResultLauncher,
+} from '@planner/ui/editor/rewards/AnvilResultEditor';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
@@ -62,5 +75,49 @@ describe('Anvil result editor', () => {
       removedTraitKey: 'OldHammer',
       addedTraitKeys: ['FirstHammer', 'SecondHammer'],
     });
+  });
+
+  it('closes its open dialog and clears the session target when the context is lost', async () => {
+    const application = createApplication();
+    const owner = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(
+            { kind: 'biome', routeKey: 'Underworld', biomeKey: 'I' },
+            createOccurrenceId('anvil-shop'),
+          ),
+          'roomExit',
+        ),
+        'anvil',
+      ),
+      'self',
+    );
+    const interaction = (contextReached: boolean): AnvilInteraction => ({
+      contextReached,
+      value: null,
+      removableTraitKeys: [],
+      addedTraitKeysFor: () => [],
+      traitLabel: (traitKey) => traitKey,
+      intentFor: () => {
+        throw new Error('closing must not bind commands');
+      },
+    });
+    const launcher = (contextReached: boolean) => (
+      <Provider store={application.store}>
+        <AnvilResultLauncher interaction={interaction(contextReached)} owner={owner} />
+      </Provider>
+    );
+    const user = userEvent.setup();
+    const view = render(launcher(true));
+    await user.click(screen.getByRole('button', { name: 'Edit Anvil: Choose result' }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(application.store.getState().editorSession.anvilDialogTarget).toEqual(owner);
+    view.rerender(launcher(false));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(application.store.getState().editorSession.anvilDialogTarget ?? null).toBeNull();
+    view.rerender(launcher(true));
+    // A later reach needs an explicit reopen.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    application.dispose();
   });
 });

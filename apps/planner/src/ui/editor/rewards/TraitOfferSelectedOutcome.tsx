@@ -390,6 +390,7 @@ export function TraitOfferSelectedOutcome({
       )}
       {circeChild === undefined ? null : (
         <TraitOfferCirceResolution
+          address={circeChild.child.address}
           key={semanticOwnerControlElementId(circeChild.child.address)}
           findingTarget={findingTarget(circeChild.child.address)}
           controlId={semanticOwnerControlElementId(circeChild.child.address)}

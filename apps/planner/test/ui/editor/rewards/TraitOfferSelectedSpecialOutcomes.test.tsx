@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -28,7 +28,11 @@ import {
   authoredProjectUndoRequested,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerNavigated, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
+import {
+  semanticOwnerNavigated,
+  traitOfferDialogClosed,
+  traitOfferDialogOpened,
+} from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
@@ -165,8 +169,91 @@ describe('selected outcomes', () => {
     expect(onUpdate.mock.calls.at(-1)![0].options[0].icarusHammerTargets).toEqual([second, first]);
   });
 
+  it('keeps a Circe draft across a context change, follows its outcome, and closes with the trait dialog', async () => {
+    const application = createApplication();
+    const user = userEvent.setup();
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      'source',
+    );
+    const address = createCirceResolutionAddress(trait, 'option1');
+    const arcanaPicker = pickerModel([
+      Object.freeze({ label: 'The Sorceress', value: 'ArcanaSorceress' }),
+      Object.freeze({ label: 'The Titan', value: 'ArcanaTitan' }),
+    ]);
+    const domain = () =>
+      Object.freeze({
+        resultRarity: 'Epic' as const,
+        arcanaCards: [
+          { key: 'ArcanaSorceress', label: 'The Sorceress', rarity: null },
+          { key: 'ArcanaTitan', label: 'The Titan', rarity: null },
+        ],
+        arcanaPicker,
+        arcanaPickerFor: () => arcanaPicker,
+        branchAgreement: true,
+        effect: 'activateArcana' as const,
+        outerAvailable: true,
+        requiredCount: 2,
+        vowPicker: arcanaPicker,
+        vowPickerFor: () => arcanaPicker,
+      });
+    const view = (
+      currentDomain: ReturnType<typeof domain>,
+      option: AuthoredTraitOfferTraits['options'][number],
+    ) => (
+      <Provider store={application.store}>
+        <TraitOfferCirceResolution
+          address={address}
+          controlId="circe-lifecycle"
+          domain={currentDomain}
+          onSelect={() => undefined}
+          option={option}
+        />
+      </Provider>
+    );
+    const option = Object.freeze({ traitKey: 'RandomArcanaTrait' });
+    act(() => application.store.dispatch(traitOfferDialogOpened(trait)));
+    const { rerender } = render(view(domain(), option));
+    await user.click(screen.getByLabelText('Red Citrine Arcana'));
+    expect(application.store.getState().editorSession.circeDialogTarget).toEqual(address);
+    await user.click(screen.getByText('The Sorceress'));
+    const pressed = () =>
+      within(screen.getByRole('dialog'))
+        .queryAllByRole('button', { pressed: true })
+        .map((card) => card.textContent);
+    expect(pressed()).toEqual([expect.stringContaining('The Sorceress')]);
+
+    // A new domain for the same outcome is a context change: the draft stays.
+    rerender(view(domain(), option));
+    expect(pressed()).toEqual([expect.stringContaining('The Sorceress')]);
+
+    // A changed outcome in the trait draft replaces the Circe draft.
+    rerender(
+      view(
+        domain(),
+        Object.freeze({
+          ...option,
+          circeResolution: { kind: 'activateArcana' as const, arcanaKeys: ['ArcanaTitan'] },
+        }),
+      ),
+    );
+    expect(pressed()).toEqual([expect.stringContaining('The Titan')]);
+
+    act(() => application.store.dispatch(traitOfferDialogClosed()));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(application.store.getState().editorSession.circeDialogTarget ?? null).toBeNull();
+    application.dispose();
+  });
+
   it('resets an incomplete Circe Arcana draft when the resolution effect changes', async () => {
     const application = createApplication();
+    const circeAddress = createCirceResolutionAddress(
+      createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        'source',
+      ),
+      'option1',
+    );
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const arcanaPicker = pickerModel([
@@ -194,6 +281,7 @@ describe('selected outcomes', () => {
     const { rerender } = render(
       <Provider store={application.store}>
         <TraitOfferCirceResolution
+          address={circeAddress}
           controlId="circe-effect-switch"
           domain={activation}
           onSelect={onSelect}
@@ -207,6 +295,7 @@ describe('selected outcomes', () => {
     rerender(
       <Provider store={application.store}>
         <TraitOfferCirceResolution
+          address={circeAddress}
           controlId="circe-effect-switch"
           domain={fear}
           onSelect={onSelect}

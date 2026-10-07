@@ -1,17 +1,24 @@
-import type {
-  AcquisitionRoleAddress,
-  AuthoredAnvilResult,
+import {
+  semanticAddressKey,
+  type AcquisitionRoleAddress,
+  type AuthoredAnvilResult,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
+import {
+  anvilResultDialogClosed,
+  anvilResultDialogOpened,
+} from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import {
   EditorDialog,
   EditorDialogDraftActions,
   EditorDialogFeedback,
 } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -126,6 +133,8 @@ function AnvilResultDialog({
     >
       <AnvilResultEditor
         interaction={interaction}
+        // A changed authored result replaces the draft; a changed context keeps it.
+        key={draftValueIdentity(interaction.value)}
         onCancel={onClose}
         onCommit={(result) => {
           executeIntent(interaction.intentFor(result));
@@ -248,8 +257,16 @@ export function AnvilResultLauncher({
   readonly owner: AcquisitionRoleAddress;
 }) {
   const findingTarget = useFindingTarget();
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+  const dispatch = useAppDispatch();
+  const open = useAppSelector((state) => {
+    const target = state.editorSession.anvilDialogTarget ?? null;
+    return target !== null && semanticAddressKey(target) === semanticAddressKey(owner);
+  });
+  const close = useCallback(() => dispatch(anvilResultDialogClosed()), [dispatch]);
+  // The system closes a dialog whose context is lost; a later reach needs an explicit reopen.
+  useEffect(() => {
+    if (open && !interaction.contextReached) close();
+  }, [close, interaction.contextReached, open]);
   const label =
     interaction.value === null
       ? 'Edit Anvil: Choose result'
@@ -265,13 +282,13 @@ export function AnvilResultLauncher({
         {...launcher}
         className="trait-offer-launcher quiet-action action-compact"
         disabled={!interaction.contextReached || undefined}
-        onClick={() => setOpen(true)}
+        onClick={() => dispatch(anvilResultDialogOpened(owner))}
         title={interaction.contextReached ? undefined : candidateWaitingTitle}
         type="button"
       >
         {label}
       </button>
-      {open ? (
+      {open && interaction.contextReached ? (
         <AnvilResultDialog interaction={interaction} launcherId={launcher.id} onClose={close} />
       ) : null}
     </>

@@ -1,6 +1,5 @@
 import {
   optionIndex,
-  type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
 } from '@run-planner/engine/authored-project';
@@ -8,11 +7,6 @@ import type {
   WorkspaceCirceResolutionDomain,
   WorkspaceTraitOptionDomainInteraction,
 } from '@planner/projections/structured-workspace';
-
-/** The value identity that keys a trait dialog's draft to its authored offer. */
-export function traitOfferValueIdentity(value: AuthoredTraitOffer | null): string {
-  return JSON.stringify(value);
-}
 
 /** Why this Circe outcome cannot be chosen here; shown in the dialog's feedback region. */
 export function circeUnavailableMessage(

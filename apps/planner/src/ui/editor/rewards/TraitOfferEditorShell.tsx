@@ -12,13 +12,14 @@ import {
 } from '@planner/projections/rewards/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
 import { TraitOfferForm, TraitOfferShapeActions, useOutcomeFeedback } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
-import { selectedTraitOutcomeDraftComplete, traitOfferValueIdentity } from './traitOfferOptions';
+import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -296,9 +297,7 @@ export function TraitOfferEditorShell({
         }
         selectedOutcome={
           <TraitOfferSelectedOutcome
-            authoredDraft={
-              traitOfferValueIdentity(value) === traitOfferValueIdentity(interaction.value)
-            }
+            authoredDraft={draftValueIdentity(value) === draftValueIdentity(interaction.value)}
             interaction={interaction}
             onFeedback={reportOutcomeFeedback}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}

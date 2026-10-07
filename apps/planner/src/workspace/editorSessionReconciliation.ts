@@ -74,6 +74,21 @@ export function deriveEditorSessionReconciliation(
   const clearLevelResolutionDialogTarget =
     levelResolutionDialogTarget !== null &&
     !hasExactDestination(focusByOwner, semanticAddressKey(levelResolutionDialogTarget));
+  const anvilDialogTarget = session.anvilDialogTarget ?? null;
+  const clearAnvilDialogTarget =
+    anvilDialogTarget !== null &&
+    !hasExactDestination(focusByOwner, semanticAddressKey(anvilDialogTarget));
+  const arcanaActivationDialogTarget = session.arcanaActivationDialogTarget ?? null;
+  const clearArcanaActivationDialogTarget =
+    arcanaActivationDialogTarget !== null &&
+    !hasExactDestination(focusByOwner, semanticAddressKey(arcanaActivationDialogTarget));
+  // Circe edits the trait dialog's draft, so it lives exactly as long as that dialog.
+  const circeDialogTarget = session.circeDialogTarget ?? null;
+  const clearCirceDialogTarget =
+    circeDialogTarget !== null &&
+    (traitDialogTarget === null ||
+      clearTraitDialogTarget ||
+      semanticAddressKey(circeDialogTarget.trait) !== semanticAddressKey(traitDialogTarget));
   const runStateTarget = session.runStateTarget ?? null;
   const clearRunStateTarget =
     runStateTarget !== null &&
@@ -85,6 +100,9 @@ export function deriveEditorSessionReconciliation(
     !clearSelectedFinding &&
     !clearTraitDialogTarget &&
     !clearLevelResolutionDialogTarget &&
+    !clearAnvilDialogTarget &&
+    !clearArcanaActivationDialogTarget &&
+    !clearCirceDialogTarget &&
     !clearRunStateTarget
   ) {
     return null;
@@ -94,6 +112,9 @@ export function deriveEditorSessionReconciliation(
     clearSelectedFinding,
     ...(traitDialogTarget === null ? {} : { clearTraitDialogTarget }),
     ...(levelResolutionDialogTarget === null ? {} : { clearLevelResolutionDialogTarget }),
+    ...(anvilDialogTarget === null ? {} : { clearAnvilDialogTarget }),
+    ...(arcanaActivationDialogTarget === null ? {} : { clearArcanaActivationDialogTarget }),
+    ...(circeDialogTarget === null ? {} : { clearCirceDialogTarget }),
     ...(runStateTarget === null ? {} : { clearRunStateTarget }),
   });
 }
@@ -119,6 +140,9 @@ export function createEditorSessionReconciliationCoordinator(options: {
       state.editorSession.selectedFinding === null &&
       (state.editorSession.traitDialogTarget ?? null) === null &&
       (state.editorSession.levelResolutionDialogTarget ?? null) === null &&
+      (state.editorSession.anvilDialogTarget ?? null) === null &&
+      (state.editorSession.arcanaActivationDialogTarget ?? null) === null &&
+      (state.editorSession.circeDialogTarget ?? null) === null &&
       (state.editorSession.runStateTarget ?? null) === null
     ) {
       return;
