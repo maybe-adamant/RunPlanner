@@ -254,10 +254,26 @@ do not become multiple tasks or an expanded findings list.
 
 Global counts, highlights and selected-repair identity use this one issue;
 detailed explanations and exact child feedback remain in their local editors.
-Repair feedback applies a persistent red border to the existing control or the
-smallest truthful container. No numbered inline badge requires separate
-placement, and later detailed findings do not become additional highlighted
-route tasks.
+Repair feedback marks the control whose edit repairs the finding; containers
+are navigation anchors and never paint. No numbered inline badge requires
+separate placement, and later detailed findings do not become additional
+highlighted route tasks.
+
+The engine names the exact repair, and the projection maps it to a control:
+
+- a sequential repair (batch rule, then doors one by one, then the door
+  selection) names only its next edit;
+- one choice spread over several controls (door or wheel pick radios, Hub
+  open-set toggles, the next Hub visit markers) rings each enabled control;
+- an action that should not exist marks its Delete, a misplaced action its
+  Move, and an unplaced action its Restore or Add; removing the offending
+  action is preferred over requiring an unrelated one;
+- a duplicate in an unordered or sequential draw marks the slot that repeats
+  an earlier slot;
+- a finding that only restates another finding is not published.
+
+An addressless row control is named by the projection (`WorkspaceFindingControl`),
+never inferred in React. Guard tests keep finding paint on controls.
 
 Fine-grained findings require exact existing destinations. A truly coarse
 finding may belong to its biome shell, but a missing child destination is a
