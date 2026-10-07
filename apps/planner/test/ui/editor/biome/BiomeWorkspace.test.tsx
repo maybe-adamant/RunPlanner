@@ -464,20 +464,20 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    const count = screen.getByText('2 of 6 planned');
-    expect(count.getAttribute('data-semantic-owner')).toBe(
+    const box = document.querySelector<HTMLElement>('.hub-requirement-box')!;
+    expect(box.textContent).toBe('Visit 6 rooms · 2 planned · Fountain used');
+    expect(box.getAttribute('data-semantic-owner')).toBe(
       semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 3)),
     );
-    expect(count.getAttribute('data-selected-finding')).toBe('true');
-    // Navigation lands on the first room that can be visited next.
-    const nextRooms = () =>
-      [...document.querySelectorAll<HTMLElement>('.hub-timeline-map-marker')].filter(
-        (marker) => marker.dataset.hasFindings === 'true',
-      );
-    expect(nextRooms().length).toBeGreaterThan(1);
-    await waitFor(() => expect(document.activeElement).toBe(nextRooms()[0]));
+    expect(box.getAttribute('data-has-findings')).toBe('true');
+    expect(box.getAttribute('data-selected-finding')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(box));
     await view.user.click(screen.getByRole('button', { name: 'Combat 01: Unvisited. Add visit.' }));
-    await waitFor(() => expect(screen.getByText('3 of 6 planned')).toBeTruthy());
+    await waitFor(() =>
+      expect(document.querySelector('.hub-requirement-box')?.textContent).toBe(
+        'Visit 6 rooms · 3 planned · Fountain used',
+      ),
+    );
 
     const repeatedFinding = findingForNextVisit();
     act(() =>
@@ -488,11 +488,11 @@ describe('BiomeWorkspace', () => {
         }),
       ),
     );
-    const nextCount = screen.getByText('3 of 6 planned');
-    expect(nextCount.getAttribute('data-semantic-owner')).toBe(
+    const nextBox = document.querySelector<HTMLElement>('.hub-requirement-box')!;
+    expect(nextBox.getAttribute('data-semantic-owner')).toBe(
       semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 4)),
     );
-    await waitFor(() => expect(document.activeElement).toBe(nextRooms()[0]));
+    await waitFor(() => expect(document.activeElement).toBe(nextBox));
   });
 
   it('routes the combined Hub action finding to the Timeline fountain and repairs it there', async () => {
@@ -520,10 +520,13 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
     );
+    const box = document.querySelector<HTMLElement>('.hub-requirement-box')!;
+    expect(box.textContent).toBe('6 planned · Fountain unused');
+    expect(box.getAttribute('data-semantic-owner')).toBe(semanticAddressKey(fountain));
+    expect(box.getAttribute('data-selected-finding')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(box));
     const marker = screen.getByRole('button', { name: 'Hub fountain: Unused. Use fountain.' });
-    expect(marker.getAttribute('data-semantic-owner')).toBe(semanticAddressKey(fountain));
-    expect(marker.getAttribute('data-selected-finding')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(marker));
+    expect(marker.hasAttribute('data-has-findings')).toBe(false);
     await view.user.click(marker);
     await waitFor(() =>
       expect(

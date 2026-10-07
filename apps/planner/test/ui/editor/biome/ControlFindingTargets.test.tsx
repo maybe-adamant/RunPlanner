@@ -161,7 +161,7 @@ it('rings every pickable door of a missing selection and focuses the first', asy
   await waitFor(() => expect(document.activeElement).toBe(radios.find((radio) => !radio.disabled)));
 });
 
-it('rings every enabled Hub membership toggle of an incomplete open set', async () => {
+it('marks the Overview requirement box for an incomplete Hub open set', async () => {
   const biome = createBiomeAddress('Surface', 'N');
   const project = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
     kind: 'ReplaceWithHubDecision',
@@ -172,25 +172,20 @@ it('rings every enabled Hub membership toggle of an incomplete open set', async 
     hub: createHubDecisionAddress(biome, 'hub'),
   });
   const view = renderWorkspace(project, 'Surface', 'N');
-  const grid = await openFirstFinding(view);
-  expect(grid.hasAttribute('data-has-findings')).toBe(false);
-  const toggles = within(grid)
-    .getAllByRole('checkbox')
-    .filter((toggle) => !(toggle as HTMLInputElement).disabled);
-  expect(toggles.length).toBeGreaterThan(0);
-  expect(paintedFindings()).toEqual(toggles);
+  const box = await openFirstFinding(view);
+  expect(box.getAttribute('role')).toBe('status');
+  expect(box.textContent).toMatch(/^Open 9–10 rooms · \d+ open$/);
+  expect(paintedFindings()).toEqual([box]);
+  await waitFor(() => expect(document.activeElement).toBe(box));
 });
 
-it('rings every room that can be visited next and focuses the first', async () => {
+it('marks the Timeline requirement box for an incomplete Hub visit order', async () => {
   const view = renderWorkspace(loadSurfaceNPartialHubCheckpoint(), 'Surface', 'N');
-  await openFirstFinding(view);
-  const markers = paintedFindings();
-  expect(markers.length).toBeGreaterThan(1);
-  for (const marker of markers) {
-    expect(marker.classList.contains('hub-timeline-map-marker')).toBe(true);
-    expect(marker.getAttribute('aria-label')).toMatch(/: Unvisited\. Add visit\.$/);
-  }
-  await waitFor(() => expect(document.activeElement).toBe(markers[0]));
+  const box = await openFirstFinding(view);
+  expect(box.getAttribute('role')).toBe('status');
+  expect(box.textContent).toBe('Visit 6 rooms · 3 planned · Fountain used');
+  expect(paintedFindings()).toEqual([box]);
+  await waitFor(() => expect(document.activeElement).toBe(box));
 });
 
 it('marks Restore on an Anomaly its source cannot produce', async () => {

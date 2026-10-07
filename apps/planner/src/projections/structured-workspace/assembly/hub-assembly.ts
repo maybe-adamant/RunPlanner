@@ -11,6 +11,7 @@ import {
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   hubFountainPrecedingVisitCount,
+  hubDecisionHandoffReadiness,
   hubVisitSlotKeys,
   routeRoomDeclaration,
   semanticAddressKey,
@@ -188,6 +189,7 @@ function projectHubNode(
 ): WorkspaceHubAssembly {
   const { biome, catalog, descriptor, markerDestinations, topology } = input;
   const visitOrder = hubVisitSlotKeys(hub);
+  const readiness = hubDecisionHandoffReadiness(descriptor, hub);
   const hubMarker = markerDestinations.marker(owner);
   const occurrences = hubOccurrenceMap(topology);
   const hubInteractionRequirements: WorkspaceHubInteractionRequirement[] = [];
@@ -621,6 +623,20 @@ function projectHubNode(
     }),
     owner,
     requiredVisitCount: descriptor.requiredVisits,
+    requirements: Object.freeze({
+      openRooms: Object.freeze({
+        current: targets.size,
+        min: descriptor.openCount.min,
+        max: descriptor.openCount.max,
+        met: readiness.kind !== 'missing' && readiness.kind !== 'openSetIncomplete',
+      }),
+      visits: Object.freeze({
+        planned: visitOrder.length,
+        required: descriptor.requiredVisits,
+        met: readiness.kind === 'ready',
+        fountainUsed: fountainIndex !== -1,
+      }),
+    }),
     completedExit,
     slots: Object.freeze(slots),
     visits: Object.freeze(visits),

@@ -321,6 +321,7 @@ export {
   type DeclaredPhysicalExit,
   type CompletedHubHandoff,
   hubVisitSlotKeys,
+  hubDecisionHandoffReadiness,
   hubFountainPrecedingVisitCount,
   isHubAction,
   type OrdinaryTargetAuthoringEligibility,

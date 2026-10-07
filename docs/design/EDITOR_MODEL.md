@@ -263,8 +263,9 @@ The engine names the exact repair, and the projection maps it to a control:
 
 - a sequential repair (batch rule, then doors one by one, then the door
   selection) names only its next edit;
-- one choice spread over several controls (door or wheel pick radios, Hub
-  open-set toggles, the next Hub visit markers) rings each enabled control;
+- one choice spread over several controls (door or wheel pick radios) rings
+  each enabled control;
+- a requirement spread across a map marks that map's requirement box;
 - an action that should not exist marks its Delete, a misplaced action its
   Move, and an unplaced action its Restore or Add; removing the offending
   action is preferred over requiring an unrelated one;

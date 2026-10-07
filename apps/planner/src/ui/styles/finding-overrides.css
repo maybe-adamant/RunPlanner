@@ -1,6 +1,6 @@
 /*
  * Findings mark the control that repairs them. Containers are navigation
- * anchors; only dialog outcome sections still carry their own mark.
+ * anchors; dialog outcome sections and the Hub requirement box carry their own mark.
  * Finding feedback wins over ordinary structural, selection, and drag-state shadows.
  */
 :is(
@@ -11,7 +11,8 @@
     [role='radiogroup'],
     .trait-stone-outcome,
     .trait-selected-outcome-detail,
-    .echo-last-run-choice
+    .echo-last-run-choice,
+    .hub-requirement-box
   )[data-semantic-owner][data-has-findings='true'],
 .encounter-composition-edit[data-has-findings='true'] {
   box-shadow: inset 0 0 0 2px #da7373;

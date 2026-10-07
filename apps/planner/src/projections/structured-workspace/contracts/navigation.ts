@@ -49,8 +49,7 @@ export type WorkspaceFindingControl =
   | 'wheelChoice'
   | 'pickupOutcome'
   | 'seaStar'
-  | 'revertAnomaly'
-  | 'visitChoice';
+  | 'revertAnomaly';
 
 export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;

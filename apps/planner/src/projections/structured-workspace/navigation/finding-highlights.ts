@@ -34,9 +34,6 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
 function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
   if (finding.origin.kind === 'acquisitionRole' && finding.code === 'seaStarDuplicationUnavailable')
     return 'seaStar';
-  // The next visit is chosen by appending any unvisited room.
-  if (finding.origin.kind === 'hubVisit' && finding.code === 'hubVisitOrderIncomplete')
-    return 'visitChoice';
   return undefined;
 }
 

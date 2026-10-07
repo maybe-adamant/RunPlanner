@@ -190,19 +190,3 @@ export function useFindingMark() {
     };
   };
 }
-
-/** Combines the marks of several owners that one control repairs. */
-// eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
-export function combineFindingMarks(...marks: readonly FindingMarkProps[]): FindingMarkProps {
-  const marked = marks.filter((mark) => mark['data-has-findings']);
-  const primary = marked[0] ?? marks[0];
-  if (primary === undefined) throw new Error('combineFindingMarks requires a mark');
-  const descriptions = marked.flatMap((mark) =>
-    mark['aria-description'] === undefined ? [] : [mark['aria-description']],
-  );
-  return {
-    'data-semantic-owner': primary['data-semantic-owner'],
-    'data-has-findings': marked.length > 0,
-    'aria-description': descriptions.length === 0 ? undefined : descriptions.join(' '),
-  };
-}

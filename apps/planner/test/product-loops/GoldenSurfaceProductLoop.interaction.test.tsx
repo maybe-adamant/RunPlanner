@@ -206,7 +206,7 @@ describe('surface product loop', () => {
     );
     expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Details →' }));
-    expect(screen.getByRole('heading', { name: 'Open rooms' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Hub room set' })).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
     expect(
       document.querySelectorAll('[data-hub-card-presentation="overview"][data-open="true"]'),

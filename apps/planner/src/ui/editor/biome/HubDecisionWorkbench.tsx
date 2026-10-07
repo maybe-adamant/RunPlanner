@@ -10,7 +10,8 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { HubRequirementBox } from './hub-map/HubRequirementBox';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
@@ -64,6 +65,7 @@ export function HubDecisionWorkbench({
   node,
 }: HubDecisionWorkbenchProps) {
   const findingAnchor = useFindingAnchor();
+  const findingTarget = useFindingTarget();
   const hubTarget = findingAnchor(node.owner);
   const hubTargetProps = {
     'data-selected-finding': hubTarget['data-selected-finding'],
@@ -71,7 +73,12 @@ export function HubDecisionWorkbench({
     id: hubTarget.id,
     ref: hubTarget.ref,
   };
-  const openSetTarget = findingAnchor(node.openSet.address);
+  const openRoomsRequirement = (
+    <HubRequirementBox
+      findingTarget={findingTarget(node.openSet.address, undefined, node.owner)}
+      requirement={{ kind: 'openRooms', value: node.requirements.openRooms }}
+    />
+  );
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const handoff =
@@ -179,19 +186,17 @@ export function HubDecisionWorkbench({
     });
   }
   const activeTab = tabState.active;
-  const nextVisitTarget =
-    activeTab !== 'timeline' || nextVisit === undefined
-      ? undefined
-      : findingAnchor(nextVisit.marker.address, {
-          readinessOwner: node.owner,
-          // Navigation lands on the first room that can be visited next.
-          focusTarget: (anchor) =>
-            anchor
-              .closest('.hub-decision-workbench')
-              ?.querySelector<HTMLElement>(
-                '.hub-timeline-map-marker[data-has-findings="true"]:not(:disabled)',
-              ) ?? null,
-        });
+  // Visit findings name the next visit; once all are planned, the fountain use.
+  const visitsRequirement = (
+    <HubRequirementBox
+      findingTarget={findingTarget(
+        nextVisit === undefined ? node.fountain.address : nextVisit.marker.address,
+        undefined,
+        node.owner,
+      )}
+      requirement={{ kind: 'visits', value: node.requirements.visits }}
+    />
+  );
   const setActiveTab = (tab: WorkspaceHubTab): void =>
     setTabState({
       active: tab,
@@ -300,19 +305,6 @@ export function HubDecisionWorkbench({
     >
       <header className="room-card-heading">
         <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
-        <div className="hub-board-status">
-          <span className="neutral-status">
-            {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
-            required
-          </span>
-          <span
-            {...nextVisitTarget}
-            className="neutral-status"
-            tabIndex={nextVisitTarget === undefined ? undefined : -1}
-          >
-            {authoredVisitCount} of {node.requiredVisitCount} planned
-          </span>
-        </div>
       </header>
       <div className="room-workbench-tab-row">
         <nav
@@ -367,6 +359,7 @@ export function HubDecisionWorkbench({
                     hubIdentity={hubIdentity}
                     interactions={interactions}
                     node={node}
+                    requirement={openRoomsRequirement}
                     resetBoardControl={resetBoardControl}
                     detailsControl={overviewNavigationControl}
                   />
@@ -375,7 +368,7 @@ export function HubDecisionWorkbench({
                     <header className="hub-board-heading">
                       <div className="hub-board-heading-row">
                         <div className="owner-markers">
-                          <h4>Open rooms</h4>
+                          {openRoomsRequirement}
                           <MarkerAssessment marker={node.openSet} />
                         </div>
                         <div className="hub-board-heading-actions">
@@ -383,16 +376,11 @@ export function HubDecisionWorkbench({
                           {resetBoardControl}
                         </div>
                       </div>
-                      <p>Open or close the rooms available on this Hub board.</p>
                     </header>
                     <div
-                      {...openSetTarget}
                       aria-label="Hub room set"
                       className="hub-overview-room-grid"
-                      ref={(element) => {
-                        overviewOpenMembershipRegion.current = element;
-                        openSetTarget.ref(element);
-                      }}
+                      ref={overviewOpenMembershipRegion}
                       role="group"
                       tabIndex={-1}
                     >
@@ -403,7 +391,6 @@ export function HubDecisionWorkbench({
                             interactions={interactions}
                             key={slot.hubSlotKey}
                             onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                            openSetOwner={node.openSet.address}
                             slot={slot}
                           />
                         ) : (
@@ -411,7 +398,6 @@ export function HubDecisionWorkbench({
                             interactions={interactions}
                             key={slot.hubSlotKey}
                             onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                            openSetOwner={node.openSet.address}
                             slot={slot}
                           />
                         ),
@@ -427,6 +413,7 @@ export function HubDecisionWorkbench({
                   interactions={interactions}
                   locked={hubTarget.inert}
                   node={node}
+                  requirement={visitsRequirement}
                   resetVisitsControl={resetVisitsControl}
                 />
               </>
