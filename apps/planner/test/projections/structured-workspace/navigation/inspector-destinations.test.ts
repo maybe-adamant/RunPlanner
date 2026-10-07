@@ -1237,8 +1237,9 @@ describe('workspace inspector destinations', () => {
       expect(
         evaluated.evaluation.findings.some(
           (finding) =>
-            finding.code === 'continuationMissing' &&
-            semanticAddressKey(finding.origin) === semanticAddressKey(owner),
+            finding.code === 'targetMissing' &&
+            semanticAddressKey(finding.origin) ===
+              semanticAddressKey(createTargetAddress(nBiome, owner.source, 'exit1')),
         ),
       ).toBe(true);
       const workspace = structuredWorkspace.project(evaluated);

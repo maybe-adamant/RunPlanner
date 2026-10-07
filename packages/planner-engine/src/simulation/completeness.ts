@@ -15,6 +15,7 @@ import {
   type HubVisitAddress,
   type ExitDecisionSourceAddress,
   type SemanticAddress,
+  type TargetAddress,
 } from '../authored-project/addresses';
 import type {
   AuthoredBiomeState,
@@ -25,6 +26,7 @@ import type {
   OccurrenceId,
   RoomOccurrence,
 } from '../authored-project/model';
+import { createInitialExitDecision } from '../authored-project/batchState';
 import {
   additionalExitsForDecision,
   bossDoorRewardStoreLinkForSource,
@@ -139,14 +141,14 @@ function isTakeoverBatch(
   });
 }
 
-function findMissingTargets(
-  findings: SemanticFinding[],
+/** Doors are authored in physical order, so only the first unfilled door is the next edit. */
+function firstMissingTarget(
   biome: BiomeAddress,
   layout: BiomeLayout,
   topology: BiomeTopology,
   decision: ExitDecision,
-  room: RoomDeclaration | undefined,
-): void {
+  room: RoomDeclaration,
+): SemanticFinding | undefined {
   const exits = declaredPhysicalExitsForSourceRoom(
     layout,
     topology.startOccurrenceId,
@@ -156,21 +158,19 @@ function findMissingTargets(
   if (exits === undefined) {
     throw new CompletenessContractError('trusted decision source lost declared physical exits');
   }
-  for (const exit of exits) {
-    const exitKey = exit.exitKey;
-    if (!decision.normal.targets.some((target) => target.exitKey === exitKey)) {
-      findings.push(
-        finding(
-          'targetMissing',
-          createTargetAddress(biome, sourceAddress(decision.source), exitKey),
-          {
-            exitKey,
-            ...(room === undefined ? {} : { parentGameName: room.gameName }),
-          },
-        ),
+  const exit = exits.find(
+    (candidate) => !decision.normal.targets.some((target) => target.exitKey === candidate.exitKey),
+  );
+  return exit === undefined
+    ? undefined
+    : finding(
+        'targetMissing',
+        createTargetAddress(biome, sourceAddress(decision.source), exit.exitKey),
+        {
+          exitKey: exit.exitKey,
+          parentGameName: room.gameName,
+        },
       );
-    }
-  }
 }
 
 function findPickedShopState(
@@ -250,13 +250,7 @@ function evaluateHubDecisionCompleteness(
         fountainUsed,
       );
     case 'missing':
-      return Object.freeze({
-        completion: 'incomplete',
-        frontier: hub,
-        findings: Object.freeze([
-          finding('continuationMissing', hub, { hubKey: layout.progression.hubKey }),
-        ]),
-      });
+      throw new CompletenessContractError(`${hub.hubKey} completeness lost its authored Hub`);
     case 'openSetIncomplete': {
       const origin = createHubOpenSetAddress(biome, layout.progression.hubKey);
       return Object.freeze({
@@ -281,6 +275,19 @@ function evaluateHubDecisionCompleteness(
   }
 }
 
+/** The Hub takes over its source room's first physical door. */
+function terminalTakeoverDoor(
+  biome: BiomeAddress,
+  source: ExitDecisionSource,
+  room: RoomDeclaration,
+): TargetAddress {
+  const first = [...room.exits].sort((left, right) => left.index - right.index)[0];
+  if (first === undefined) {
+    throw new CompletenessContractError(`${room.gameName} has no door for its Hub takeover`);
+  }
+  return createTargetAddress(biome, sourceAddress(source), `exit${first.index}`);
+}
+
 /** Six room visits plus the fountain use, addressed to the next missing action. */
 function hubActionsIncomplete(
   origin: HubVisitAddress | HubFountainAddress,
@@ -300,12 +307,13 @@ function hubActionsIncomplete(
 function incomplete(
   findings: readonly SemanticFinding[],
   requiredInput?: SemanticAddress,
+  frontier?: SemanticAddress,
 ): IncompleteBiomeCompletenessResult {
   const first = findings[0];
   if (first === undefined) throw new CompletenessContractError('incomplete result needs a finding');
   return Object.freeze({
     completion: 'incomplete',
-    frontier: first.origin,
+    frontier: frontier ?? first.origin,
     ...(requiredInput === undefined ? {} : { requiredInput }),
     findings: Object.freeze(findings),
   });
@@ -424,21 +432,49 @@ export function evaluateBiomeCompleteness(
           })
         : incomplete(findings);
     }
-    if (decision === undefined) {
-      const origin = createExitDecisionAddress(biome, sourceAddress(source));
-      return incomplete([
-        ...findings,
-        finding('continuationMissing', origin, { parentGameName: room.gameName }),
-      ]);
-    }
-
     const terminal = hubTerminalTakeoverForSource(catalog, layout, topology, source);
-    if (terminal !== undefined && isExactTerminalTakeoverEnvelope(decision)) {
-      const origin = createExitDecisionAddress(biome, sourceAddress(source));
-      return incomplete([
-        ...findings,
-        finding('continuationMissing', origin, { hubKey: terminal.hubKey }),
-      ]);
+    if (
+      terminal !== undefined &&
+      (decision === undefined || isExactTerminalTakeoverEnvelope(decision))
+    ) {
+      const door = terminalTakeoverDoor(biome, source, room);
+      return incomplete(
+        [
+          ...findings,
+          finding('targetMissing', door, { exitKey: door.exitKey, parentGameName: room.gameName }),
+        ],
+        door,
+        createExitDecisionAddress(biome, sourceAddress(source)),
+      );
+    }
+    if (decision === undefined) {
+      // An unauthored decision is assessed as its initial envelope.
+      const progression = normalDecisionProgressionForLayout(layout);
+      if (progression === undefined) {
+        throw new CompletenessContractError(`${room.gameName} has no normal door progression`);
+      }
+      const initial = evaluateBatchCompleteness(
+        catalog,
+        biome,
+        layout,
+        topology,
+        occurrences,
+        createInitialExitDecision(
+          progression,
+          source,
+          room.mode.kind === 'authored' ? room.mode.templateKey : undefined,
+        ),
+        room,
+      );
+      const next = initial.findings[0];
+      if (next === undefined) {
+        throw new CompletenessContractError(`${room.gameName} initial envelope has no next edit`);
+      }
+      return incomplete(
+        [...findings, ...initial.findings],
+        initial.requiredInput ?? next.origin,
+        createExitDecisionAddress(biome, sourceAddress(source)),
+      );
     }
     const batch = evaluateBatchCompleteness(
       catalog,
@@ -518,48 +554,34 @@ function evaluateBatchCompleteness(
   decision: ExitDecision,
   room: RoomDeclaration | undefined,
 ): { readonly findings: readonly SemanticFinding[]; readonly requiredInput?: SemanticAddress } {
-  const findings: SemanticFinding[] = [];
-  let requiredInput: SemanticAddress | undefined;
   const source = sourceAddress(decision.source);
-  const takeover = isTakeoverBatch(decision, occurrences, catalog);
-  const emptyOrdinaryEnvelope = !takeover && decision.normal.targets.length === 0;
-  // The first physical door is the authoring frontier of an empty envelope.
-  // Setup remains a finding and still blocks ordinary target creation, but it
-  // must not hide the decision's Room choice or reclassify the envelope as an
-  // invalid extra batch.
-  if (emptyOrdinaryEnvelope && room !== undefined) {
-    findMissingTargets(findings, biome, layout, topology, decision, room);
+  const parent = room === undefined ? {} : { parentGameName: room.gameName };
+  const result = (next: SemanticFinding | undefined, requiredInput?: SemanticAddress) =>
+    Object.freeze({
+      findings: Object.freeze(next === undefined ? [] : [next]),
+      ...(requiredInput === undefined ? {} : { requiredInput }),
+    });
+  // The batch rule blocks door creation, so it is the next edit while unset.
+  if (!isTakeoverBatch(decision, occurrences, catalog)) {
+    if (
+      decision.normal.rewardStore.kind === 'authoredBaseStore' &&
+      decision.normal.rewardStore.baseRewardStoreKey === null
+    ) {
+      const origin = createBatchRewardStoreAddress(biome, source);
+      return result(finding('batchRewardStoreMissing', origin, parent), origin);
+    }
+    if (
+      normalDecisionProgressionForLayout(layout)?.batchPolicy.kind === 'fields' &&
+      decision.normal.batchState === null
+    ) {
+      const origin = createExitDecisionAddress(biome, source);
+      return result(
+        finding('batchStateMissing', origin, { batchPolicy: 'fields', ...parent }),
+        origin,
+      );
+    }
   }
-  if (
-    !takeover &&
-    decision.normal.rewardStore.kind === 'authoredBaseStore' &&
-    decision.normal.rewardStore.baseRewardStoreKey === null
-  ) {
-    requiredInput = createBatchRewardStoreAddress(biome, source);
-    findings.push(
-      finding('batchRewardStoreMissing', requiredInput, {
-        ...(room === undefined ? {} : { parentGameName: room.gameName }),
-      }),
-    );
-  }
-  if (
-    !takeover &&
-    normalDecisionProgressionForLayout(layout)?.batchPolicy.kind === 'fields' &&
-    decision.normal.batchState === null
-  ) {
-    requiredInput ??= createExitDecisionAddress(biome, source);
-    findings.push(
-      finding('batchStateMissing', createExitDecisionAddress(biome, source), {
-        batchPolicy: 'fields',
-        ...(room === undefined ? {} : { parentGameName: room.gameName }),
-      }),
-    );
-  }
-  if (!emptyOrdinaryEnvelope && room !== undefined) {
-    findMissingTargets(findings, biome, layout, topology, decision, room);
-  }
-  return Object.freeze({
-    findings: Object.freeze(findings),
-    ...(requiredInput === undefined ? {} : { requiredInput }),
-  });
+  return result(
+    room === undefined ? undefined : firstMissingTarget(biome, layout, topology, decision, room),
+  );
 }

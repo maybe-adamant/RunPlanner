@@ -148,7 +148,9 @@ describe('chronological authoring horizon', () => {
       decision,
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    expect(assembly.evaluation.issue?.owner).toEqual(decision);
+    expect(assembly.evaluation.issue?.owner).toEqual(
+      createBatchRewardStoreAddress(goldenGBiome, decision.source),
+    );
     expect(authoringReadinessAt(assembly, decision)).toBe('editable');
     expect(authoringReadinessAt(assembly, createOccurrenceAddress(goldenGBiome, contractId))).toBe(
       'editable',
@@ -190,7 +192,9 @@ describe('chronological authoring horizon', () => {
       decision,
     });
     const assembly = simulateProjectAssembly(catalog, project);
-    expect(assembly.evaluation.issue?.owner).toEqual(decision);
+    expect(assembly.evaluation.issue?.owner).toEqual(
+      createBatchRewardStoreAddress(goldenGBiome, decision.source),
+    );
     expect(authoringReadinessAt(assembly, decision)).toBe('editable');
     expect(authoringReadinessAt(assembly, createOccurrenceAddress(goldenGBiome, roomId))).toBe(
       'editable',
@@ -657,6 +661,11 @@ describe('chronological authoring horizon', () => {
     expect(
       authoringReadinessAt(uncreated, createTargetAddress(nBiome, entry.source, 'exit1')),
     ).toBe('editable');
+    // The Hub is chosen at the takeover door before it exists.
+    expect(uncreated.evaluation.issue).toMatchObject({
+      owner: createTargetAddress(nBiome, entry.source, 'exit1'),
+      reasons: [{ code: 'targetMissing', evidence: { exitKey: 'exit1' } }],
+    });
     expect(authoringReadinessAt(uncreated, hub)).toBe('locked');
     expect(authoringReadinessAt(uncreated, createHubOpenSetAddress(nBiome, 'hub'))).toBe('locked');
 

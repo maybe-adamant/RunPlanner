@@ -411,7 +411,10 @@ describe('F candidate support', () => {
 
     expect(evaluation.status).toBe('incomplete');
     expect(evaluation.findings).toMatchObject([
-      { code: 'continuationMissing', origin: createExitDecisionAddress(fBiome, target.source) },
+      {
+        code: 'batchRewardStoreMissing',
+        origin: createBatchRewardStoreAddress(fBiome, target.source),
+      },
     ]);
     expect(
       candidateSession(project).evaluate([
@@ -507,7 +510,7 @@ describe('F candidate support', () => {
 
     const evaluation = simulateProject(catalog, project);
     expect(evaluation.status).toBe('incomplete');
-    expect(evaluation.findings).toMatchObject([{ code: 'continuationMissing' }]);
+    expect(evaluation.findings).toMatchObject([{ code: 'batchRewardStoreMissing' }]);
     const results = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),

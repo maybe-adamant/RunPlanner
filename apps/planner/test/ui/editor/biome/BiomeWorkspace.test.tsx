@@ -241,10 +241,11 @@ describe('BiomeWorkspace', () => {
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(
         (candidate) =>
-          candidate.code === 'continuationMissing' &&
-          semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
+          candidate.code === 'targetMissing' &&
+          semanticAddressKey(candidate.origin) ===
+            semanticAddressKey(createTargetAddress(nBiome, owner.source, 'exit1')),
       );
-    if (finding === undefined) throw new Error('Hub continuation finding is missing');
+    if (finding === undefined) throw new Error('Hub takeover door finding is missing');
     act(() =>
       view.application.store.dispatch(
         semanticOwnerFocused(createOccurrenceAddress(nBiome, occurrenceId)),

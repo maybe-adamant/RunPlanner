@@ -47,7 +47,7 @@ function routeStartState(project: ProjectDocument) {
 describe('Fresh File route start', () => {
   it('continues past the empty opening without a starting-reward finding', () => {
     const evaluation = simulateProject(catalog, freshProject());
-    expect(evaluation.findings.map((finding) => finding.code)).toEqual(['continuationMissing']);
+    expect(evaluation.findings.map((finding) => finding.code)).toEqual(['batchRewardStoreMissing']);
     expect(evaluation.authoringHorizon).toMatchObject({
       kind: 'incomplete',
       blockedAfter: { kind: 'exitDecision', routeKey: 'FreshFile', biomeKey: 'F' },

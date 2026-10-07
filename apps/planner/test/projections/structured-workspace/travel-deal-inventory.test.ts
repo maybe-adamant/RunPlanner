@@ -5,6 +5,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createBatchRewardStoreAddress,
   createExitDecisionAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
@@ -89,8 +90,11 @@ it('keeps a purchased Travel Deal boon editable while its trait offer is incompl
   const settled = projectStructuredWorkspaceFixture(project);
   expect(settled.evaluation.findings).toEqual([
     expect.objectContaining({
-      code: 'continuationMissing',
-      origin: createExitDecisionAddress(goldenGBiome, { kind: 'occurrence', occurrenceId: shopId }),
+      code: 'batchRewardStoreMissing',
+      origin: createBatchRewardStoreAddress(goldenGBiome, {
+        kind: 'occurrence',
+        occurrenceId: shopId,
+      }),
     }),
   ]);
 });
@@ -113,7 +117,10 @@ it('replaces the Travel Deal placeholder with editable inventory before outgoing
   project = authorLegalTraitOffers(project);
   const waiting = projectStructuredWorkspaceFixture(project);
   expect(waiting.evaluation.findings).toEqual([
-    expect.objectContaining({ code: 'continuationMissing', origin: decision }),
+    expect.objectContaining({
+      code: 'batchRewardStoreMissing',
+      origin: createBatchRewardStoreAddress(goldenGBiome, decision.source),
+    }),
   ]);
   expect(derivedAcquisitionEntriesForProjectEvaluationAssembly(waiting.assembly, site)).toEqual([
     expect.objectContaining({ address: entry, kind: 'travelDealPlaceholder' }),
@@ -144,7 +151,10 @@ it('replaces the Travel Deal placeholder with editable inventory before outgoing
   project = applyProjectCommand(project, catalog, interaction.intentFor(mystery.value).command);
   const authored = projectStructuredWorkspaceFixture(project);
   expect(authored.evaluation.findings).toEqual([
-    expect.objectContaining({ code: 'continuationMissing', origin: decision }),
+    expect.objectContaining({
+      code: 'batchRewardStoreMissing',
+      origin: createBatchRewardStoreAddress(goldenGBiome, decision.source),
+    }),
   ]);
   expect(
     authored.workspace.interactions.shopOffers.get(semanticAddressKey(inventory))?.selected,
@@ -177,7 +187,10 @@ it('replaces the Travel Deal placeholder with editable inventory before outgoing
   project = authorLegalTraitOffers(project);
   const settled = projectStructuredWorkspaceFixture(project);
   expect(settled.evaluation.findings).toEqual([
-    expect.objectContaining({ code: 'continuationMissing', origin: decision }),
+    expect.objectContaining({
+      code: 'batchRewardStoreMissing',
+      origin: createBatchRewardStoreAddress(goldenGBiome, decision.source),
+    }),
   ]);
   expect(
     settled.workspace.interactions.shopOffers.get(semanticAddressKey(inventory))?.selected,
