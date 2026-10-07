@@ -60,7 +60,11 @@ export type HermesShrineInventoryIssue =
       readonly kind: 'wrongGroup';
       readonly slotKey: import('../../authored-project/model').HermesShrineSlotKey;
     }
-  | { readonly kind: 'duplicateSecondGroup' }
+  | {
+      /** The right second-group slot repeats the left one. */
+      readonly kind: 'duplicateSecondGroup';
+      readonly slotKey: 'secondRight';
+    }
   | {
       readonly kind: 'requirement';
       readonly slotKey: import('../../authored-project/model').HermesShrineSlotKey;
@@ -279,7 +283,7 @@ export function assessHermesShrineInventory(
   const left = shrine.offerBySlot.secondLeft;
   const right = shrine.offerBySlot.secondRight;
   if (left !== null && right !== null && left.rewardType === right.rewardType)
-    issues.push(Object.freeze({ kind: 'duplicateSecondGroup' }));
+    issues.push(Object.freeze({ kind: 'duplicateSecondGroup', slotKey: 'secondRight' }));
   return Object.freeze(issues);
 }
 

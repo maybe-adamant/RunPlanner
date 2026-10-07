@@ -503,16 +503,19 @@ export function applyRoomEnteredTransition(
                 : issue.kind === 'duplicate'
                   ? 'stygianWellDuplicate'
                   : 'stygianWellWrongGroup';
-          const origin =
-            issue.kind === 'duplicate'
-              ? createRoomFeatureAddress(room.origin, { kind: 'stygianWellInventory' })
-              : createRoomFeatureAddress(room.origin, {
-                  kind: 'stygianWellOffer',
-                  generationKey: issue.generationKey,
-                });
+          const origin = createRoomFeatureAddress(room.origin, {
+            kind: 'stygianWellOffer',
+            generationKey: issue.generationKey,
+          });
           findings.push(
             Object.freeze({
-              finding: rewardFinding(code, origin, { reason: issue.kind }),
+              finding: rewardFinding(
+                code,
+                origin,
+                issue.kind === 'duplicate'
+                  ? { reason: issue.kind, slotKey: issue.generationKey.slice('initial:'.length) }
+                  : { reason: issue.kind },
+              ),
               region: ownerRegion(room.origin),
               chronology: findingChronology,
             }),

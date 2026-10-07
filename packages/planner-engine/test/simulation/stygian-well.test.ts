@@ -5,6 +5,7 @@ import {
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomFeatureAddress,
   createIncomingRewardAddress,
   createTraitOfferAddress,
   forcedChaosOccurrenceKeys,
@@ -508,6 +509,33 @@ describe('Stygian Well consequential purchase state', () => {
     const nextRoom = h?.occurrences.find((occurrence) => occurrence.occurrenceId === nextId);
     expect(intro?.additionalExits.filter((exit) => exit.kind === 'chaos')).toHaveLength(1);
     expect(nextRoom?.additionalExits.filter((exit) => exit.kind === 'chaos')).toHaveLength(1);
+  });
+
+  it('reports a repeated Well item on the slot that repeats it', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = createUnderworldFWellCheckpoint(false);
+    for (const slotKey of ['secondLeft', 'secondRight'] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: well,
+        slotKey,
+        itemKey: 'TemporaryForcedSecretDoorTrait',
+      });
+    const duplicates = simulateProjectAssembly(catalog, project).evaluation.findings.filter(
+      (finding) => finding.code === 'stygianWellDuplicate',
+    );
+    expect(duplicates).toEqual([
+      expect.objectContaining({
+        origin: createRoomFeatureAddress(well, {
+          kind: 'stygianWellOffer',
+          generationKey: 'initial:secondRight',
+        }),
+        evidence: { reason: 'duplicate', slotKey: 'secondRight' },
+      }),
+    ]);
   });
 
   it('reassigns generated gate ownership when earlier Ixion purchases are removed', () => {

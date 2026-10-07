@@ -438,21 +438,8 @@ export function applyAcquisitionPointReachedTransition(
         const equipped = branch.state.traitHistory.equippedTraits[traitKey];
         return equipped !== undefined && isPurgingPoolEligibleTrait(catalog, equipped);
       });
-    if (!available) {
-      addRewardFinding(
-        findings,
-        rewardFinding('purgingPoolSaleUnavailable', owner, {
-          slotKey: poolSlot,
-          ...(traitKey === null || traitKey === undefined ? {} : { traitKey }),
-        }),
-        // A stale sale no longer contributes an active action region. Keep
-        // the finding at the exact action while the occurrence owns its
-        // progressive visibility envelope.
-        ownerRegion(room.origin),
-        chronology,
-      );
-      return publish({ branches: inputs.sourceBranches, findings });
-    }
+    // An incomplete Pool or empty slot is its Overview finding; the sale has no effect.
+    if (!available) return publish({ branches: inputs.sourceBranches, findings });
     return publish({
       branches: inputs.sourceBranches.map((branch) => {
         const before = branch.state.traitHistory;

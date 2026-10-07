@@ -184,15 +184,42 @@ export function processShopInventory(
       );
     }
     if (unsupportedIndexes.length === 0) {
-      addRewardFinding(
-        findings,
-        rewardFinding('shopOfferUnavailable', room.origin, {
-          offerKeys: entry.offers.map((offer) => offer.offerKey),
-          kind: 'jointOfferSet',
-        }),
-        ownerRegion(room.origin),
-        context.findingChronology ?? historyChronology(historySequence),
+      const repeated = new Map(
+        assessments.flatMap((assessment) =>
+          assessment.repeatedSlots.map((slot) => [slot.slotIndex, slot] as const),
+        ),
       );
+      // Branches that disagree on which slot fails mark every slot one rejects.
+      const branchRejected = profile.slots.values.flatMap((slot, index) =>
+        repeated.size === 0 &&
+        assessments.some((assessment) => assessment.slots[index] === 'selectedInvalid')
+          ? [index]
+          : [],
+      );
+      for (const index of branchRejected) {
+        const offer = offersByKey.get(profile.slots.values[index]!.key)!;
+        addRewardFinding(
+          findings,
+          rewardFinding('shopOfferUnavailable', offer.offerOrigin, offerEvidence(offer.offer)),
+          ownerRegion(room.origin),
+          context.findingChronology ?? historyChronology(historySequence),
+        );
+      }
+      if (repeated.size === 0 && branchRejected.length === 0)
+        return fail(`${room.gameName} Shop has no generation and no rejected slot`);
+      for (const slot of repeated.values()) {
+        const offer = offersByKey.get(profile.slots.values[slot.slotIndex]!.key)!;
+        addRewardFinding(
+          findings,
+          rewardFinding('shopOfferUnavailable', offer.offerOrigin, {
+            ...offerEvidence(offer.offer),
+            kind: 'repeatedOption',
+            repeatsOfferKey: profile.slots.values[slot.repeatsSlotIndex]!.key,
+          }),
+          ownerRegion(room.origin),
+          context.findingChronology ?? historyChronology(historySequence),
+        );
+      }
     }
   }
   const contractProfileKey = declaration.infernalContractReward?.generationProfileKey;

@@ -46,12 +46,11 @@ export interface StygianWellAssessment {
   readonly issues: readonly StygianWellInventoryAssessmentIssue[];
 }
 
-export type StygianWellInventoryAssessmentIssue =
-  | {
-      readonly kind: 'missing' | 'wrongGroup';
-      readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
-    }
-  | { readonly kind: 'duplicate' };
+/** A duplicate names the slot that repeats an earlier slot. */
+export interface StygianWellInventoryAssessmentIssue {
+  readonly kind: 'missing' | 'wrongGroup' | 'duplicate';
+  readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
+}
 
 export interface StygianWellPlacementAssessment {
   readonly forced: boolean;
@@ -189,7 +188,6 @@ export function assessStygianWell(
       candidateItemKeysBySlot: domains,
       issues: Object.freeze([]),
     });
-  const values = STYGIAN_WELL_SLOT_KEYS.map((key) => well.offerKeyBySlot[key]);
   const issues: StygianWellInventoryAssessmentIssue[] = [];
   for (const key of STYGIAN_WELL_SLOT_KEYS) {
     const generationKey = `initial:${key}` as const;
@@ -199,8 +197,16 @@ export function assessStygianWell(
       issues.push({ kind: 'wrongGroup', generationKey });
     }
   }
-  const selected = values.filter((value): value is string => value !== null);
-  if (new Set(selected).size !== selected.length) issues.push({ kind: 'duplicate' });
+  STYGIAN_WELL_SLOT_KEYS.forEach((key, index) => {
+    const value = well.offerKeyBySlot[key];
+    if (
+      value !== null &&
+      STYGIAN_WELL_SLOT_KEYS.slice(0, index).some(
+        (earlier) => well.offerKeyBySlot[earlier] === value,
+      )
+    )
+      issues.push({ kind: 'duplicate', generationKey: `initial:${key}` });
+  });
   return Object.freeze({
     placement,
     interacted: true,

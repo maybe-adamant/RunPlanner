@@ -104,9 +104,6 @@ const findingCopy = {
   hubOpenSlotUnavailable: {
     title: 'Hub rooms conflict',
   },
-  pickedShopStateMissing: {
-    title: 'Complete Shop inventory',
-  },
   pickedTargetMissing: {
     title: 'Choose the door taken',
   },
@@ -427,10 +424,6 @@ const findingCopy = {
   purgingPoolTraitDuplicate: {
     title: 'Duplicate Pool trait',
   },
-  purgingPoolSaleUnavailable: {
-    title: 'Pool sale unavailable',
-    description: 'Remove the sale or restore its eligible trait.',
-  },
   purgingPoolUnavailable: {
     title: 'Pool unavailable',
     description: 'This route has no usable Pool; stop interacting with it.',
@@ -448,7 +441,7 @@ const findingCopy = {
   },
   hermesShrineInventoryDuplicate: {
     title: 'Duplicate Shrine offer',
-    description: 'The two second-group offers must differ.',
+    description: 'This offer repeats the other second-group offer.',
   },
   hermesShrineInventoryRequirement: {
     title: 'Shrine offer unavailable',
@@ -485,7 +478,7 @@ const findingCopy = {
   },
   stygianWellDuplicate: {
     title: 'Duplicate Well item',
-    description: 'The three initial items must differ.',
+    description: 'This item repeats an earlier Well item.',
   },
   stygianWellPlacementUnavailable: {
     title: 'Well placement unavailable',

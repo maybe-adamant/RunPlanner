@@ -273,11 +273,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Choose a trait currently eligible for the Pool.' };
     case 'purgingPoolTraitDuplicate':
       return { kind: 'trait', message: 'Each Pool slot must name a different trait.' };
-    case 'purgingPoolSaleUnavailable':
-      return {
-        kind: 'trait',
-        message: 'This Pool sale is no longer available at its timeline point.',
-      };
     case 'purgingPoolUnavailable':
       return { kind: 'generic', message: 'This route has no usable Pool.' };
     case 'hermesShrinePlacementUnavailable':
@@ -569,7 +564,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'continuationMissing':
     case 'hubOpenSetIncomplete':
     case 'hubVisitOrderIncomplete':
-    case 'pickedShopStateMissing':
     case 'pickedTargetMissing':
     case 'targetMissing':
       return {

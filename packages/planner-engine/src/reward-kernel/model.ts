@@ -326,6 +326,13 @@ export interface ShopInventoryAssessment {
   readonly witnesses: readonly ShopGenerationWitness[];
   /** Every slot is locally complete or validly empty, yet no joint generation exists. */
   readonly jointlyUnavailable: boolean;
+  /** Slots whose offer can only repeat an earlier slot's option in the same draw. */
+  readonly repeatedSlots: readonly ShopRepeatedSlot[];
+}
+
+export interface ShopRepeatedSlot {
+  readonly slotIndex: number;
+  readonly repeatsSlotIndex: number;
 }
 
 export interface ShopGenerationConstraints {

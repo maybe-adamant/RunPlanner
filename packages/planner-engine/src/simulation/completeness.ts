@@ -8,7 +8,6 @@ import {
   createHubOpenSetAddress,
   createHubFountainAddress,
   createHubVisitAddress,
-  createOccurrenceAddress,
   createTargetAddress,
   type BiomeAddress,
   type HubFountainAddress,
@@ -171,20 +170,6 @@ function firstMissingTarget(
           parentGameName: room.gameName,
         },
       );
-}
-
-function findPickedShopState(
-  findings: SemanticFinding[],
-  biome: BiomeAddress,
-  occurrence: RoomOccurrence,
-): void {
-  if (occurrence.state.kind === 'shop' && occurrence.state.shop === undefined) {
-    findings.push(
-      finding('pickedShopStateMissing', createOccurrenceAddress(biome, occurrence.occurrenceId), {
-        gameName: occurrence.gameName,
-      }),
-    );
-  }
 }
 
 /**
@@ -361,18 +346,12 @@ export function evaluateBiomeCompleteness(
   }
 
   const occurrences = occurrenceMap(topology);
-  const findings: SemanticFinding[] = [];
   const traversed = new Set<OccurrenceId>();
   let current = topology.startOccurrenceId;
 
   while (!traversed.has(current)) {
     traversed.add(current);
-    const occurrence = occurrences.get(current);
-    if (occurrence === undefined) {
-      throw new CompletenessContractError(`trusted topology lost occurrence ${current}`);
-    }
     const room = sourceRoom(catalog, occurrences, current);
-    findPickedShopState(findings, biome, occurrence);
 
     const source: ExitDecisionSource = Object.freeze({ kind: 'occurrence', occurrenceId: current });
     const decision = exitDecisionForSource(topology, source);
@@ -418,19 +397,16 @@ export function evaluateBiomeCompleteness(
       if (preboss === undefined) {
         throw new CompletenessContractError(`trusted Hub exit lost ${selected.occurrenceId}`);
       }
-      findPickedShopState(findings, biome, preboss);
       const hubBossDoor = findBossDoorRewardStore(catalog, biome, topology, preboss.occurrenceId);
       if (hubBossDoor !== undefined) {
-        return incomplete([...findings, hubBossDoor.finding], hubBossDoor.requiredInput);
+        return incomplete([hubBossDoor.finding], hubBossDoor.requiredInput);
       }
-      return findings.length === 0
-        ? Object.freeze({
-            completion: 'complete',
-            biomeState: plan.state,
-            topology,
-            findings: Object.freeze([]) as readonly [],
-          })
-        : incomplete(findings);
+      return Object.freeze({
+        completion: 'complete',
+        biomeState: plan.state,
+        topology,
+        findings: Object.freeze([]) as readonly [],
+      });
     }
     const terminal = hubTerminalTakeoverForSource(catalog, layout, topology, source);
     if (
@@ -439,10 +415,7 @@ export function evaluateBiomeCompleteness(
     ) {
       const door = terminalTakeoverDoor(biome, source, room);
       return incomplete(
-        [
-          ...findings,
-          finding('targetMissing', door, { exitKey: door.exitKey, parentGameName: room.gameName }),
-        ],
+        [finding('targetMissing', door, { exitKey: door.exitKey, parentGameName: room.gameName })],
         door,
         createExitDecisionAddress(biome, sourceAddress(source)),
       );
@@ -471,7 +444,7 @@ export function evaluateBiomeCompleteness(
         throw new CompletenessContractError(`${room.gameName} initial envelope has no next edit`);
       }
       return incomplete(
-        [...findings, ...initial.findings],
+        initial.findings,
         initial.requiredInput ?? next.origin,
         createExitDecisionAddress(biome, sourceAddress(source)),
       );
@@ -486,7 +459,7 @@ export function evaluateBiomeCompleteness(
       room,
     );
     if (batch.findings.length !== 0) {
-      return incomplete([...findings, ...batch.findings], batch.requiredInput);
+      return incomplete(batch.findings, batch.requiredInput);
     }
 
     const selected = selectedExitContinuation(
@@ -496,7 +469,6 @@ export function evaluateBiomeCompleteness(
     if (selected === undefined) {
       const origin = createExitSelectionAddress(biome, sourceAddress(decision.source));
       return incomplete([
-        ...findings,
         finding('pickedTargetMissing', origin, {
           continuationKind: 'batch',
         }),
@@ -512,14 +484,12 @@ export function evaluateBiomeCompleteness(
         `trusted decision lost occurrence ${selectedOccurrenceId}`,
       );
     }
-    findPickedShopState(findings, biome, selectedOccurrence);
     const selectedRoom = catalog.rooms.byKey[selectedOccurrence.gameName];
     if (selectedRoom === undefined) {
       throw new CompletenessContractError(
         `trusted topology lost room ${selectedOccurrence.gameName}`,
       );
     }
-    if (findings.length !== 0) return incomplete(findings);
     if (selectedRoom.kind === 'Preboss') {
       const bossDoor = findBossDoorRewardStore(
         catalog,
@@ -528,16 +498,14 @@ export function evaluateBiomeCompleteness(
         selectedOccurrence.occurrenceId,
       );
       if (bossDoor !== undefined) {
-        return incomplete([...findings, bossDoor.finding], bossDoor.requiredInput);
+        return incomplete([bossDoor.finding], bossDoor.requiredInput);
       }
-      return findings.length === 0
-        ? Object.freeze({
-            completion: 'complete',
-            biomeState: plan.state,
-            topology,
-            findings: Object.freeze([]) as readonly [],
-          })
-        : incomplete(findings);
+      return Object.freeze({
+        completion: 'complete',
+        biomeState: plan.state,
+        topology,
+        findings: Object.freeze([]) as readonly [],
+      });
     }
     current = selectedOccurrence.occurrenceId;
   }

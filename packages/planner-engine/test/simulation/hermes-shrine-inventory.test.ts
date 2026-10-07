@@ -14,6 +14,7 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createRoomFeatureAddress,
   createOccurrenceId,
   createProjectDocument,
   createRoomActionAddress,
@@ -307,7 +308,40 @@ describe('Hermes Shrine entry inventory gate', () => {
       { kind: 'wrongGroup', slotKey: 'first' },
     ]);
     expect(assessHermesShrineInventory(catalog, complete({ secondRight: 'SpellDrop' }))).toEqual([
-      { kind: 'duplicateSecondGroup' },
+      { kind: 'duplicateSecondGroup', slotKey: 'secondRight' },
+    ]);
+  });
+
+  it('reports a repeated second-group offer on the slot that repeats it', () => {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxHealthDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    const duplicates = simulateProject(catalog, project).findings.filter(
+      (finding) => finding.code === 'hermesShrineInventoryDuplicate',
+    );
+    expect(duplicates).toEqual([
+      expect.objectContaining({
+        origin: createRoomFeatureAddress(host, {
+          kind: 'hermesShrineOffer',
+          generationKey: 'initial:secondRight',
+        }),
+        evidence: { slotKey: 'secondRight' },
+      }),
     ]);
   });
 

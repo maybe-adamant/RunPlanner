@@ -1296,6 +1296,7 @@ describe('ordered shop transitions', () => {
     expect(support.witnesses).toEqual([]);
     expect(support.slots.every((slot) => slot === 'complete')).toBe(true);
     expect(support.jointlyUnavailable).toBe(true);
+    expect(support.repeatedSlots).toEqual([{ slotIndex: 1, repeatsSlotIndex: 0 }]);
   });
 
   it('executes the one exact authored purchase order', () => {
