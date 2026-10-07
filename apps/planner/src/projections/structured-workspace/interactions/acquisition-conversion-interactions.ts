@@ -68,6 +68,9 @@ export function bindAcquisitionConversionInteractions(input: {
               value: anvilResult,
               pickersFor: (draft: AnvilResultDraft) =>
                 projectAnvilResultPickers(anvilDomain, draft),
+              assess:
+                anvilCapability?.assess ??
+                (() => Object.freeze({ legal: false, findings: Object.freeze([]) })),
               intentFor: (
                 value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
               ) =>

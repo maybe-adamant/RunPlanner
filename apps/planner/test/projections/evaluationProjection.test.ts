@@ -46,6 +46,7 @@ import {
   presentBlockedView,
   presentBiomeStatus,
   presentFinding,
+  presentAnvilDraftFinding,
   presentLevelResolutionCandidateFinding,
   presentAssessmentIssue,
   presentProjectStatus,
@@ -466,6 +467,29 @@ describe('Pom draft finding copy', () => {
     expect(codes.length).toBeGreaterThan(0);
     for (const code of codes)
       expect(presentLevelResolutionCandidateFinding(code).title, code).not.toBe(code);
+  });
+});
+
+describe('Anvil draft finding copy', () => {
+  it('has shared copy for every Anvil assessment code the engine emits', () => {
+    const source = readFileSync(
+      fileURLToPath(
+        new URL(
+          '../../../../packages/planner-engine/src/simulation/rewards/anvil-settlement.ts',
+          import.meta.url,
+        ),
+      ),
+      'utf8',
+    );
+    const codes = [
+      ...source.matchAll(/findings\.push\(\s*[`']([A-Za-z]+)(:\$\{[^}]+\})?[`']/g),
+    ].map((match) => (match[2] === undefined ? match[1]! : `${match[1]!}:SomeHammer`));
+    expect(codes.length).toBeGreaterThan(0);
+    for (const code of codes) {
+      const copy = presentAnvilDraftFinding(code, (traitKey) => `label ${traitKey}`);
+      expect(copy.title, code).not.toBe(code);
+      if (code.includes(':')) expect(copy.description, code).toBe('label SomeHammer');
+    }
   });
 });
 

@@ -827,6 +827,25 @@ export function presentLevelResolutionCandidateFinding(code: string): FindingPre
   );
 }
 
+const anvilDraftCopy = {
+  resultMissing: { title: 'Choose the Anvil result' },
+  removedHammerUnavailable: { title: 'Removed Hammer unavailable' },
+  exactlyTwoAdditionsRequired: { title: 'Choose two added Hammers' },
+  additionsMustBeDistinct: { title: 'Added Hammers must differ' },
+  additionUnavailable: { title: 'Added Hammer unavailable' },
+} as const satisfies Readonly<Record<string, FindingPresentation>>;
+
+/** Present an Anvil draft assessment code; an unavailable addition names its Hammer. */
+export function presentAnvilDraftFinding(
+  code: string,
+  traitLabel: (traitKey: string) => string,
+): FindingPresentation {
+  const [kind, traitKey] = code.split(':');
+  const copy = (anvilDraftCopy as Readonly<Record<string, FindingPresentation>>)[kind ?? ''];
+  if (copy === undefined) return { title: code };
+  return traitKey === undefined ? copy : { ...copy, description: traitLabel(traitKey) };
+}
+
 export function semanticFindingKey(finding: SemanticFinding): string {
   return JSON.stringify([
     finding.code,
