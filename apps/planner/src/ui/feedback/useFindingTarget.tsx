@@ -88,6 +88,18 @@ export function useFindingExplanations(
     .map((finding) => formatFindingExplanation(presentFinding(finding)));
 }
 
+/** The owner's findings as dialog feedback entries, folded as its launcher marks them. */
+// eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
+export function useFindingFeedbackEntries(
+  address: SemanticAddress,
+): readonly (readonly [key: string, message: string])[] {
+  const { findings } = useContext(feedback);
+  return (findings.get(semanticAddressKey(address)) ?? []).map(
+    (finding) =>
+      [semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding))] as const,
+  );
+}
+
 type FocusTarget = (anchor: HTMLElement) => HTMLElement | null;
 
 const nativeControls = 'button, input, select, textarea';

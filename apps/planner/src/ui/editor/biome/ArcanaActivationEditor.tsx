@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type {
   WorkspaceFigurineArcanaInteraction,
   WorkspaceJudgmentArcanaInteraction,
 } from '@planner/projections/structured-workspace';
+import {
+  formatFindingExplanation,
+  presentFinding,
+  semanticFindingKey,
+} from '@planner/projections/evaluationProjection';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import {
   EditorDialog,
@@ -11,7 +16,19 @@ import {
 } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useOptionalWorkspaceInteraction,
+  useWorkspaceInteraction,
+} from '@planner/ui/controls/useWorkspaceInteraction';
+import { useFindingFeedbackEntries } from '@planner/ui/feedback/useFindingTarget';
+
+function draftAssessmentLoadable(
+  control: WorkspaceJudgmentArcanaInteraction | WorkspaceFigurineArcanaInteraction,
+  draft: readonly string[],
+): { readonly load: () => ReturnType<typeof control.load> } {
+  const load = control.load;
+  return Object.freeze({ load: () => load(draft) });
+}
 
 export function ArcanaActivationEditor({
   control,
@@ -28,6 +45,7 @@ export function ArcanaActivationEditor({
   readonly returnFocusId?: string;
 }) {
   const executeIntent = useCommandIntent();
+  const findingEntries = useFindingFeedbackEntries(control.owner);
   // A changed authored draw replaces the draft; a changed context keeps it.
   const valueIdentity = draftValueIdentity(control.value);
   const [draftState, setDraftState] = useState(() => ({
@@ -45,10 +63,35 @@ export function ArcanaActivationEditor({
     result?.kind === 'judgmentArcana' || result?.kind === 'figurineArcana'
       ? result.result
       : undefined;
+  // At rest the region matches the launcher; an edited draft shows its own assessment.
+  const atRest = draftValueIdentity(draft) === valueIdentity;
+  const draftLoadable = useMemo(
+    () => (atRest ? undefined : draftAssessmentLoadable(control, draft)),
+    [atRest, control, draft],
+  );
+  const draftAssessment = useOptionalWorkspaceInteraction(draftLoadable);
+  const activateDraftAssessment = draftAssessment.activate;
+  useEffect(() => {
+    activateDraftAssessment();
+    // Activation follows the assessed draft, not each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftLoadable]);
+  const assessed = draftAssessment.result;
+  const feedbackEntries = atRest
+    ? findingEntries
+    : assessed?.kind === 'judgmentArcana' || assessed?.kind === 'figurineArcana'
+      ? assessed.result.findings.map(
+          (finding) =>
+            [
+              semanticFindingKey(finding),
+              formatFindingExplanation(presentFinding(finding)),
+            ] as const,
+        )
+      : [];
   return (
     <EditorDialog
       eyebrow="Arcana"
-      feedback={<EditorDialogFeedback name="Arcana feedback" />}
+      feedback={<EditorDialogFeedback name="Arcana feedback" entries={feedbackEntries} />}
       footer={
         <EditorDialogDraftActions
           onCancel={onClose}

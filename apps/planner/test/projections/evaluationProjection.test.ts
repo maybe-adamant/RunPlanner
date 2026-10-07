@@ -34,6 +34,8 @@ import {
   type ProjectRouteEvaluation,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -44,6 +46,7 @@ import {
   presentBlockedView,
   presentBiomeStatus,
   presentFinding,
+  presentLevelResolutionCandidateFinding,
   presentAssessmentIssue,
   presentProjectStatus,
   presentRouteStatus,
@@ -444,6 +447,25 @@ describe('evaluation presentation', () => {
       'Ephyra',
     );
     expect(findingDestinationLabel(catalog, createHubRoomAddress(nBiome, 'hub'))).toBe('Ephyra');
+  });
+});
+
+describe('Pom draft finding copy', () => {
+  it('has shared copy for every Pom draft finding code the engine declares', () => {
+    const source = readFileSync(
+      fileURLToPath(
+        new URL(
+          '../../../../packages/planner-engine/src/simulation/traits/level-effects.ts',
+          import.meta.url,
+        ),
+      ),
+      'utf8',
+    );
+    const union = /export type LevelResolutionFindingCode =([^;]+);/.exec(source)?.[1];
+    const codes = [...(union ?? '').matchAll(/'([A-Za-z]+)'/g)].map((match) => match[1]!);
+    expect(codes.length).toBeGreaterThan(0);
+    for (const code of codes)
+      expect(presentLevelResolutionCandidateFinding(code).title, code).not.toBe(code);
   });
 });
 

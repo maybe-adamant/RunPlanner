@@ -1535,9 +1535,15 @@ describe('selected outcomes', () => {
         expect(circeGroup?.contains(message)).toBe(false);
       }
       if (!branchAgreement) {
-        const message = screen.getByText('No outcome is supported across every route branch.');
-        expect(feedback.contains(message)).toBe(true);
+        const message = within(feedback).getByText(
+          'No outcome is supported across every route branch.',
+        );
         expect(circeGroup?.contains(message)).toBe(false);
+        // An open Circe dialog repeats the reason its Save is disabled.
+        if (effect === 'promoteArcana')
+          expect(screen.getByRole('status', { name: 'Circe feedback' }).textContent).toContain(
+            'No outcome is supported across every route branch.',
+          );
       }
       application.dispose();
     },

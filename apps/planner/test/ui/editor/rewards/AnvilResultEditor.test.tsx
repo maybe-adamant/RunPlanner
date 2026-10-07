@@ -10,10 +10,18 @@ import {
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import {
+  createEchoGoldIAnvilDuplicateProject,
+  echoGoldIPrebossShopId,
+  goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
 import { Provider } from 'react-redux';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
 import { projectAnvilResultPickers } from '@planner/projections/contextual/anvilResultPickers';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 
@@ -127,6 +135,41 @@ describe('Anvil result editor', () => {
     view.rerender(launcher(true));
     // A later reach needs an explicit reopen.
     expect(screen.queryByRole('dialog')).toBeNull();
+    application.dispose();
+  });
+
+  it('lists the Anvil owner findings its launcher marks', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createEchoGoldIAnvilDuplicateProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const owner = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenIBiome, echoGoldIPrebossShopId),
+          'roomExit',
+        ),
+        'echoDoubleShopReward',
+      ),
+      'self',
+    );
+    const anvil = workspace.interactions.acquisitionConversions.get(
+      semanticAddressKey(owner),
+    )?.anvil;
+    if (anvil === undefined) throw new Error('Gold duplicate Anvil is not bound');
+    render(
+      <Provider store={application.store}>
+        <FindingTargetScope findings={workspace.findingsByRepairTarget}>
+          <AnvilResultLauncher interaction={anvil} owner={owner} />
+        </FindingTargetScope>
+      </Provider>,
+    );
+    const launcher = screen.getByRole('button', { name: 'Edit Anvil: Choose result' });
+    const marked = launcher.getAttribute('aria-description');
+    if (marked === null) throw new Error('the missing Anvil result marks no launcher finding');
+    await userEvent.setup().click(launcher);
+    const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
+    expect(feedback.textContent).not.toContain('No current findings.');
+    expect(feedback.textContent).toContain(marked.replace(/\.$/, ''));
     application.dispose();
   });
 });
