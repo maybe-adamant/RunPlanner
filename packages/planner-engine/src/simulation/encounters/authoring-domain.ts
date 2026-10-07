@@ -28,6 +28,8 @@ import {
   customizationDecisionOnRoute,
   customizationValueKnown,
   customizationValueRouteExcluded,
+  orderedPrefixUseDomains,
+  type OrderedPrefixUseDomain,
   supportsGeneratedEncounterCustomization,
 } from '../../authored-project/room-state/encounter-customization';
 import { resolveEncounterAuthoringProfile, type EncounterResolutionContext } from './resolve';
@@ -61,6 +63,8 @@ export interface EncounterPhaseAuthoringDomain {
     readonly valueSupported: boolean;
     readonly cocoonRewardPointIds?: readonly number[];
     readonly retainedChoiceLabels?: readonly { readonly key: string; readonly label: string }[];
+    /** Present for an ordered prefix, one entry per use. */
+    readonly orderedPrefixUses?: readonly OrderedPrefixUseDomain[];
   }[];
 }
 
@@ -229,12 +233,15 @@ export function encounterPhaseAuthoringDomainForRoom(
       const value = encounters.customizationByPhase?.[binding.slotKey]?.[decision.key];
       if (value === undefined) return [];
       const retainedChoiceLabels = retainedChoiceLabelsFor(catalog, decision, value);
+      const onRoute = customizationDecisionOnRoute(decision, biome.routeKey);
+      const orderedPrefixUses = orderedPrefixUseDomains(onRoute, value);
       return [
         Object.freeze({
-          ...customizationDecisionOnRoute(decision, biome.routeKey),
+          ...onRoute,
           valueSupported: false,
           value,
           ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),
+          ...(orderedPrefixUses === undefined ? {} : { orderedPrefixUses }),
         }),
       ];
     });
@@ -256,14 +263,17 @@ export function encounterPhaseAuthoringDomainForRoom(
                     !customizationValueRouteExcluded(decision, value, biome.routeKey) &&
                     cocoonRewardPointSupported(room, value));
                 const retainedChoiceLabels = retainedChoiceLabelsFor(catalog, decision, value);
+                const onRoute = customizationDecisionOnRoute(decision, biome.routeKey);
+                const orderedPrefixUses = orderedPrefixUseDomains(onRoute, value);
                 return Object.freeze({
-                  ...customizationDecisionOnRoute(decision, biome.routeKey),
+                  ...onRoute,
                   ...(decision.selection.kind === 'cocoonRewardPoint'
                     ? { cocoonRewardPointIds: room.cocoonRewardPointIds ?? Object.freeze([]) }
                     : {}),
                   valueSupported,
                   ...(value === undefined ? {} : { value }),
                   ...(retainedChoiceLabels.length === 0 ? {} : { retainedChoiceLabels }),
+                  ...(orderedPrefixUses === undefined ? {} : { orderedPrefixUses }),
                 });
               }),
           );

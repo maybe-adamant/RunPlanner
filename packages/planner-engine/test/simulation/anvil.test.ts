@@ -91,7 +91,19 @@ function branchWithHammerFrontier(traitKey: string, experimentalHammerTraitKey?:
   });
 }
 
-function anvilCapabilityFor(branch: ReturnType<typeof branchWithHammerFrontier>) {
+function branchWithoutHammers() {
+  return initializeTestRewardBranchesForRoute(
+    undefined,
+    createTestArcanaFearState(),
+    catalog,
+    undefined,
+    undefined,
+    'Underworld',
+    { ...createDefaultRouteLoadout(catalog), ...staffLoadout },
+  )[0]!;
+}
+
+function anvilCapabilityFor(...branches: readonly ReturnType<typeof branchWithHammerFrontier>[]) {
   const biome = createBiomeAddress('Surface', 'Q');
   const occurrence = createOccurrenceAddress(biome, createOccurrenceId('anvil-candidates'));
   const site = createAcquisitionSiteAddress(occurrence, 'shopPurchase');
@@ -99,7 +111,7 @@ function anvilCapabilityFor(branch: ReturnType<typeof branchWithHammerFrontier>)
   return createAnvilCandidateCapability(catalog, [
     Object.freeze({
       address: createAcquisitionRoleAddress(entry, 'self'),
-      branchesBeforeRole: Object.freeze([branch]),
+      branchesBeforeRole: Object.freeze(branches),
       source: Object.freeze({
         offer: Object.freeze({ rewardType: 'ChaosWeaponUpgrade' }),
         traitContext: {},
@@ -209,18 +221,26 @@ describe('Anvil of Fates acquisition settlement', () => {
       branchWithHammerFrontier('StaffDoubleAttackTrait', 'StaffJumpSpecialTrait'),
     );
 
-    expect(capability?.removableTraitKeys).toEqual(['StaffDoubleAttackTrait']);
+    expect(capability?.removedTraitKeys).toEqual(['StaffDoubleAttackTrait']);
     expect(capability?.addedTraitKeysFor('StaffDoubleAttackTrait', [])).not.toContain(
       'StaffJumpSpecialTrait',
     );
+  });
+
+  it('removes nothing only where every branch has no permanent Hammer', () => {
+    expect(anvilCapabilityFor(branchWithoutHammers())?.removedTraitKeys).toEqual([null]);
+    expect(
+      anvilCapabilityFor(branchWithoutHammers(), branchWithHammerFrontier('StaffDoubleAttackTrait'))
+        ?.removedTraitKeys,
+    ).toEqual([]);
   });
 
   it('rebuilds its candidate domains from an earlier Hammer frontier edit', () => {
     const before = anvilCapabilityFor(branchWithHammerFrontier('StaffDoubleAttackTrait'));
     const after = anvilCapabilityFor(branchWithHammerFrontier('StaffLongAttackTrait'));
 
-    expect(before?.removableTraitKeys).toEqual(['StaffDoubleAttackTrait']);
-    expect(after?.removableTraitKeys).toEqual(['StaffLongAttackTrait']);
+    expect(before?.removedTraitKeys).toEqual(['StaffDoubleAttackTrait']);
+    expect(after?.removedTraitKeys).toEqual(['StaffLongAttackTrait']);
     expect(before?.addedTraitKeysFor('StaffDoubleAttackTrait', [])).toContain(
       'StaffLongAttackTrait',
     );

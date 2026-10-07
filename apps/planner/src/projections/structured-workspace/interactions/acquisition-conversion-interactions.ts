@@ -56,7 +56,7 @@ export function bindAcquisitionConversionInteractions(input: {
           : Object.freeze({
               contextReached: anvilCapability !== undefined,
               value: anvilResult,
-              removableTraitKeys: anvilCapability?.removableTraitKeys ?? Object.freeze([]),
+              removableTraitKeys: anvilCapability?.removedTraitKeys ?? Object.freeze([]),
               addedTraitKeysFor: anvilCapability?.addedTraitKeysFor ?? (() => Object.freeze([])),
               traitLabel: (traitKey: string) =>
                 input.catalog.traits.byKey[traitKey]?.label ?? traitKey,

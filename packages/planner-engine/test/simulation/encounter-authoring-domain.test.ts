@@ -388,4 +388,52 @@ describe('encounter phase authored domains', () => {
       });
     }
   });
+
+  it('keeps each Eris summon use distinct and filled from the first use', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Surface' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const bossId = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'O_Boss02')?.occurrenceId;
+    if (bossId === undefined) throw new Error('Rival Eris is missing');
+    const uses = (choiceKeys: readonly string[] | undefined) => {
+      if (choiceKeys !== undefined)
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceEncounterCustomization',
+          phase: createEncounterPhaseAddress(
+            oBiome,
+            { kind: 'occurrence', occurrenceId: bossId },
+            'Encounter',
+          ),
+          decisionKey: 'earlySummons',
+          value: { kind: 'orderedPrefix', choiceKeys },
+        });
+      const value = occurrence(project, 'Surface', 'O', bossId);
+      return encounterPhaseAuthoringDomainForRoom(
+        catalog,
+        oBiome,
+        roomFor(value),
+        { kind: 'occurrence', occurrenceId: bossId },
+        value.encounters,
+        { includeFixedPhases: true, preparedDefinitionKeysBySlot: { Encounter: 'BossEris02' } },
+      )[0]?.customization?.find((decision) => decision.key === 'earlySummons')?.orderedPrefixUses;
+    };
+
+    expect(uses(undefined)).toEqual([
+      { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+      { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: true },
+    ]);
+    expect(uses(['swab'])).toEqual([
+      { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+      { availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+    ]);
+    expect(uses(['swab', 'turtle'])).toEqual([
+      { availableChoiceKeys: ['harpy', 'swab', 'jellyfish'], requiresEarlierUse: false },
+      { availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+    ]);
+  });
 });

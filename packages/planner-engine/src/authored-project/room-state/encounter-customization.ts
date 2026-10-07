@@ -129,6 +129,35 @@ export function customizationValueRouteExcluded(
   );
 }
 
+export interface OrderedPrefixUseDomain {
+  /** Choices no other use holds. */
+  readonly availableChoiceKeys: readonly string[];
+  /** A later use opens only once every earlier use is chosen. */
+  readonly requiresEarlierUse: boolean;
+}
+
+/** Per-use domains of an ordered prefix: distinct choices, filled from the first use. */
+export function orderedPrefixUseDomains(
+  decision: EncounterCustomizationDecision,
+  value: AuthoredEncounterCustomization | undefined,
+): readonly OrderedPrefixUseDomain[] | undefined {
+  if (decision.selection.kind !== 'orderedPrefix') return undefined;
+  const chosen = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
+  const choices = decision.selection.choices;
+  return Object.freeze(
+    Array.from({ length: decision.selection.maximumLength }, (_, index) =>
+      Object.freeze({
+        availableChoiceKeys: Object.freeze(
+          choices
+            .filter((choice) => !chosen.some((key, use) => use !== index && key === choice.key))
+            .map((choice) => choice.key),
+        ),
+        requiresEarlierUse: index > chosen.length,
+      }),
+    ),
+  );
+}
+
 /** The decision restricted to the choices its route can produce. */
 export function customizationDecisionOnRoute<Decision extends EncounterCustomizationDecision>(
   decision: Decision,

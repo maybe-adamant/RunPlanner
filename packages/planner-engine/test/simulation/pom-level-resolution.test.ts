@@ -438,22 +438,41 @@ describe('Pom level resolutions', () => {
         levelCount: 1,
         requiredOfferCount: 1,
         eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
+        startingResolution: {
+          kind: 'choice',
+          offeredTraitKeys: ['ApolloWeaponBoon'],
+          selectedTraitKey: 'ApolloWeaponBoon',
+        },
       },
       {
         effectKind: 'choice',
         levelCount: 1,
         requiredOfferCount: 2,
         eligibleTargetTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
+        startingResolution: {
+          kind: 'choice',
+          offeredTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
+          selectedTraitKey: 'ApolloWeaponBoon',
+        },
       },
     ]);
+    for (const [index, branch] of capability!.branches.entries())
+      expect(capability!.evaluate(branch.startingResolution!)[index]).toMatchObject({
+        supported: true,
+      });
     const value = {
       kind: 'choice' as const,
       offeredTraitKeys: ['ApolloWeaponBoon'],
       selectedTraitKey: 'ApolloWeaponBoon',
     };
     expect(capability?.evaluate(value)).toEqual([
-      { branchIndex: 0, supported: true, findings: [] },
-      { branchIndex: 1, supported: false, findings: ['wrongOfferCount'] },
+      { branchIndex: 0, supported: true, findings: [], availableTargetTraitKeys: [] },
+      {
+        branchIndex: 1,
+        supported: false,
+        findings: ['wrongOfferCount'],
+        availableTargetTraitKeys: ['HestiaSpecialBoon'],
+      },
     ]);
     expect(
       capability?.evaluate({
@@ -466,9 +485,39 @@ describe('Pom level resolutions', () => {
         branchIndex: 0,
         supported: false,
         findings: ['wrongOfferCount', 'duplicateTargets'],
+        availableTargetTraitKeys: [],
       },
-      { branchIndex: 1, supported: false, findings: ['duplicateTargets'] },
+      {
+        branchIndex: 1,
+        supported: false,
+        findings: ['duplicateTargets'],
+        availableTargetTraitKeys: ['HestiaSpecialBoon'],
+      },
     ]);
+  });
+
+  it('gives a random Pom its whole eligible domain and no starting choice', () => {
+    const capability = createLevelResolutionCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(levelAddress),
+          [
+            {
+              address: levelAddress,
+              before: twoTargetHistory(),
+              levelCount: 1,
+              effectKind: 'random' as const,
+            },
+          ],
+        ],
+      ]),
+    ).at(levelAddress);
+    expect(capability?.branches[0]?.startingResolution).toBeUndefined();
+    expect(
+      capability?.evaluate({ kind: 'random', targetTraitKey: 'ApolloWeaponBoon' })[0]
+        ?.availableTargetTraitKeys,
+    ).toEqual(['ApolloWeaponBoon', 'HestiaSpecialBoon']);
   });
 
   it('retains the first blocking reached Pom assessment and exact capability', () => {

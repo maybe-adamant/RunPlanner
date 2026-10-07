@@ -56,6 +56,73 @@ export function assessStartingArcanaGrasp(
   });
 }
 
+export interface ManualArcanaToggle {
+  readonly key: string;
+  readonly selected: boolean;
+  /** The manual selection after toggling this card, in catalog order. */
+  readonly arcanaKeys: readonly string[];
+  readonly grasp: StartingArcanaGraspAssessment;
+}
+
+export interface FearVowRankDomain {
+  readonly key: string;
+  readonly rank: number;
+  readonly maximum: number;
+  /** Ranks whose starting Grasp capacity still holds the manual selection. */
+  readonly legalRanks: readonly number[];
+}
+
+export interface RouteLoadoutEditDomain {
+  readonly manualArcana: readonly ManualArcanaToggle[];
+  readonly fearVows: readonly FearVowRankDomain[];
+}
+
+/** The Arcana toggles and Vow ranks the loadout commands accept from this loadout. */
+export function routeLoadoutEditDomain(
+  catalog: Catalog,
+  loadout: Pick<RouteLoadout, 'manualArcanaKeys' | 'fearRanks'>,
+): RouteLoadoutEditDomain {
+  const manual = new Set(loadout.manualArcanaKeys);
+  const manualArcana = catalog.arcanaCards.values
+    .filter((card) => card.activation.kind === 'manual')
+    .map((card) => {
+      const selected = manual.has(card.key);
+      const arcanaKeys = Object.freeze(
+        catalog.arcanaCards.values
+          .filter((candidate) =>
+            candidate.key === card.key ? !selected : manual.has(candidate.key),
+          )
+          .map((candidate) => candidate.key),
+      );
+      return Object.freeze({
+        key: card.key,
+        selected,
+        arcanaKeys,
+        grasp: assessStartingArcanaGrasp(catalog, arcanaKeys, loadout.fearRanks),
+      });
+    });
+  const fearVows = catalog.fearVows.values.map((vow) =>
+    Object.freeze({
+      key: vow.key,
+      rank: loadout.fearRanks[vow.key] ?? 0,
+      maximum: vow.incrementalFear.length,
+      legalRanks: Object.freeze(
+        Array.from({ length: vow.incrementalFear.length + 1 }, (_, rank) => rank).filter(
+          (rank) =>
+            assessStartingArcanaGrasp(catalog, loadout.manualArcanaKeys, {
+              ...loadout.fearRanks,
+              [vow.key]: rank,
+            }).legal,
+        ),
+      ),
+    }),
+  );
+  return Object.freeze({
+    manualArcana: Object.freeze(manualArcana),
+    fearVows: Object.freeze(fearVows),
+  });
+}
+
 /** A mature save's loadout, whose equipment and keepsake are authored selections. */
 export type MatureRouteLoadout = RouteLoadout & {
   readonly weaponKey: string;
