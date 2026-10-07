@@ -686,18 +686,39 @@ describe('trait-offers/bind', () => {
     );
     const candidateSession = Object.freeze({
       ...baseCandidateSession,
-      traitCarrierChildDomain: () =>
-        Object.freeze({
+      // The first pass places Apollo first; the remaining core is then forced.
+      traitCarrierChildDomain: (_owner: unknown, offer: AuthoredTraitOfferTraits) => {
+        const placed = (offer.options[0]?.naturalSelectionTargets ?? []).length > 0;
+        return Object.freeze({
           kind: 'naturalSelectionResult' as const,
           result: Object.freeze({
-            branchSupport: Object.freeze([false]),
+            branchSupport: Object.freeze([true]),
             complete: false,
             findings: Object.freeze([]),
-            firstPassRows: Object.freeze([]),
+            firstPassRows: Object.freeze([
+              {
+                availableTraitKeys: ['ApolloWeaponBoon', 'DemeterSpecialBoon'],
+                requiresEarlierRow: false,
+              },
+              placed
+                ? {
+                    availableTraitKeys: ['DemeterSpecialBoon'],
+                    requiresEarlierRow: false,
+                    forcedTraitKey: 'DemeterSpecialBoon',
+                  }
+                : { availableTraitKeys: ['DemeterSpecialBoon'], requiresEarlierRow: true },
+            ]),
+            ...(placed
+              ? {
+                  completedTargets: ['ApolloWeaponBoon', 'DemeterSpecialBoon', 'ApolloWeaponBoon'],
+                  levelCountsByTraitKey: { ApolloWeaponBoon: 2, DemeterSpecialBoon: 1 },
+                }
+              : {}),
             nextTargetTraitKeys: Object.freeze(['ApolloWeaponBoon']),
-            supported: false,
+            supported: true,
           }),
-        }),
+        });
+      },
     }) as CandidateProjectionSession;
     const bound = bind(project, 'Underworld', 'F', undefined, candidateSession);
     const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
@@ -716,8 +737,32 @@ describe('trait-offers/bind', () => {
     expect(natural.child.address).toEqual(createNaturalSelectionResultAddress(trait, 'option1'));
     const domain = natural.forOffer(value).load();
     expect(domain?.complete).toBe(false);
-    const retained = natural.forOffer(value, 'HestiaWeaponBoon').load();
-    const retainedItem = retained?.picker.sections
+    const values = (picker: NonNullable<typeof domain>['rows'][number]['picker']) =>
+      picker.sections.flatMap((section) => section.items.map((item) => item.value));
+    expect(domain?.rows.map((row) => row.requiresEarlierRow)).toEqual([false, true]);
+    expect(values(domain!.rows[0]!.picker)).toEqual(['ApolloWeaponBoon', 'DemeterSpecialBoon']);
+    expect(domain?.completedTargets).toBeUndefined();
+    const withTargets = (targets: readonly string[]) =>
+      Object.freeze({
+        ...value,
+        options: Object.freeze([
+          Object.freeze({ ...value.options[0]!, naturalSelectionTargets: targets }),
+          ...value.options.slice(1),
+        ]) as unknown as AuthoredTraitOfferTraits['options'],
+      });
+    const placed = natural.forOffer(withTargets(['ApolloWeaponBoon'])).load();
+    expect(placed?.rows[1]?.forcedTraitKey).toBe('DemeterSpecialBoon');
+    expect(placed?.completedTargets).toEqual([
+      'ApolloWeaponBoon',
+      'DemeterSpecialBoon',
+      'ApolloWeaponBoon',
+    ]);
+    expect(placed?.levelsLabel).toBe(
+      `${catalog.traits.byKey.ApolloWeaponBoon!.label} ×2 · ${catalog.traits.byKey.DemeterSpecialBoon!.label} ×1`,
+    );
+    // An authored target outside the row's domain stays selected as unavailable.
+    const retained = natural.forOffer(withTargets(['HestiaWeaponBoon'])).load();
+    const retainedItem = retained?.rows[0]?.picker.sections
       .flatMap((section) => section.items)
       .find((item) => item.value === 'HestiaWeaponBoon');
     expect(retainedItem).toMatchObject({ selected: true, state: 'impossible' });

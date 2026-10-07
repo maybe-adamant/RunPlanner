@@ -31,6 +31,7 @@ export function TraitOfferCirceResolution({
   controlId,
   findingTarget,
   domain,
+  keyLabel,
   option,
   onSelect,
 }: {
@@ -38,6 +39,7 @@ export function TraitOfferCirceResolution({
   readonly controlId: string;
   readonly findingTarget?: FindingTargetProps;
   readonly domain: WorkspaceCirceResolutionDomain | undefined;
+  readonly keyLabel: (key: string) => string;
   readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
 }) {
@@ -83,9 +85,6 @@ export function TraitOfferCirceResolution({
     dispatch(circeResolutionDialogClosed());
   };
   const picker = fear ? domain?.vowPicker : domain?.arcanaPicker;
-  const labelFor = (key: string) =>
-    picker?.sections.flatMap((section) => section.items).find((item) => item.value === key)
-      ?.label ?? key;
   const unavailable = circeUnavailableMessage(domain);
   const disabled = domain === undefined || unavailable !== undefined;
   const findingEntries = useFindingFeedbackEntries(address);
@@ -117,7 +116,7 @@ export function TraitOfferCirceResolution({
         >
           <span>
             {currentKeys.length > 0
-              ? currentKeys.map(labelFor).join(' · ')
+              ? currentKeys.map(keyLabel).join(' · ')
               : domain === undefined || domain.requiredCount === 0
                 ? '—'
                 : `Choose ${domain.requiredCount}`}

@@ -1,3 +1,4 @@
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { EvaluatedDirectTraitOutcomeCandidate } from '@run-planner/engine/simulation';
 
 import type {
@@ -101,4 +102,11 @@ export function withDirectTraitOutcomeSelection<T>(
       }),
     ),
   );
+}
+
+/** The label of one All Together set result; null is an exhausted set. */
+export function allTogetherResultLabel(catalog: Catalog, result: string | null): string {
+  return result === null
+    ? 'No grant (set exhausted)'
+    : (catalog.traits.byKey[result]?.label ?? result);
 }

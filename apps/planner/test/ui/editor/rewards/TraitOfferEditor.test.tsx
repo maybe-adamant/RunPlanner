@@ -67,6 +67,20 @@ import {
 
 afterEach(cleanup);
 
+/** The choosable outcome rows: every All Together set, or each open first-pass core. */
+async function* outcomeRows(effect: 'All Together' | 'Natural Selection') {
+  if (effect === 'All Together') {
+    for (const set of ['Earth', 'Fire', 'Air', 'Water']) yield `All Together ${set}`;
+    return;
+  }
+  for (const ordinal of ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th']) {
+    const name = `Natural Selection ${ordinal} core`;
+    await screen.findAllByLabelText(name);
+    if (screen.queryByRole('button', { name }) === null) return;
+    yield name;
+  }
+}
+
 function findTraitOfferControl(
   workspace: StructuredWorkspaceProjection,
   address: import('@run-planner/engine/authored-project').TraitOfferAddress,
@@ -465,15 +479,9 @@ describe('trait offer editor entry and dialog', () => {
         if (enabled === undefined) throw new Error('real Echo domain has no repair choice');
         await user.click(enabled);
       };
-      if (effect === 'All Together') {
-        await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
-        for (let index = 0; index < 4; index++) await chooseEnabled();
-      } else {
-        await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
-        for (let index = 1; index <= 8; index++) {
-          await screen.findByText(`Target ${index} of 8`);
-          await chooseEnabled();
-        }
+      for await (const row of outcomeRows(effect)) {
+        await user.click(await screen.findByRole('button', { name: row }));
+        await chooseEnabled();
       }
       await waitFor(() =>
         expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
@@ -528,7 +536,7 @@ describe('trait offer editor entry and dialog', () => {
       await user.click(await screen.findByRole('button', { name: 'Boon Boon Boon choice' }));
       expect(
         await screen.findByRole('group', {
-          name: effect === 'All Together' ? 'Grants' : 'Targets',
+          name: effect === 'All Together' ? 'All Together grants' : 'Natural Selection targets',
         }),
       ).toBeTruthy();
       const nestedOwner = screen.getByRole('region', { name: 'Boon Boon Boon choice' });
@@ -645,13 +653,8 @@ describe('trait offer editor entry and dialog', () => {
         'disabled',
         true,
       );
-      await user.click(
-        await screen.findByRole('button', {
-          name: effect === 'All Together' ? 'Choose all grants' : 'Choose all targets',
-        }),
-      );
-      for (let index = 0; index < (effect === 'All Together' ? 4 : 8); index++) {
-        if (effect === 'Natural Selection') await screen.findByText(`Target ${index + 1} of 8`);
+      for await (const row of outcomeRows(effect)) {
+        await user.click(await screen.findByRole('button', { name: row }));
         const choices = await screen.findAllByRole('option');
         const enabled = choices.find(
           (item) =>

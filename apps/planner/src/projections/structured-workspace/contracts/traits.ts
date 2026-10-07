@@ -193,9 +193,22 @@ export interface WorkspaceAllTogetherSetDomain {
   readonly picker: ContextualPickerModel<string | null>;
 }
 
+export interface WorkspaceNaturalSelectionRow {
+  /** Eligible cores no earlier row placed, plus this row's own target. */
+  readonly picker: ContextualPickerModel<string>;
+  readonly requiresEarlierRow: boolean;
+  /** The one remaining core, which this row takes without a choice. */
+  readonly forcedTraitKey?: string;
+}
+
 export interface WorkspaceNaturalSelectionDomain {
   readonly complete: boolean;
-  readonly picker: ContextualPickerModel<string>;
+  /** One row per eligible core in first-pass order; empty when route branches disagree. */
+  readonly rows: readonly WorkspaceNaturalSelectionRow[];
+  /** The persisted target list once the first-pass order is chosen. */
+  readonly completedTargets?: readonly string[];
+  /** Levels each core gains from the completed targets. */
+  readonly levelsLabel?: string;
 }
 
 export interface WorkspaceLatestModelHammerRow {
@@ -251,16 +264,14 @@ export type WorkspaceTraitCarrierChildInteraction =
         offer: AuthoredTraitOfferTraits,
         result: AuthoredAllTogetherResult,
       ) => AuthoredTraitOfferTraits;
+      readonly resultLabel: (result: string | null) => string;
     }
   | {
       readonly child: Extract<
         WorkspaceTraitCarrierChildControl,
         { readonly kind: 'naturalSelectionResult' }
       >;
-      readonly forOffer: (
-        offer: AuthoredTraitOfferTraits,
-        retainedTargetKey?: string,
-      ) => {
+      readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
         readonly load: () => WorkspaceNaturalSelectionDomain | undefined;
       };
       readonly update: (
@@ -332,6 +343,8 @@ export interface WorkspaceCirceResolutionInteraction {
     offer: AuthoredTraitOfferTraits,
     value: AuthoredCirceResolution,
   ) => AuthoredTraitOfferTraits;
+  /** The catalog label of one chosen Arcana card or Vow. */
+  readonly keyLabel: (key: string) => string;
   /** Binds the current draft before handing its loader to the sole React adapter. */
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceCirceResolutionDomain | undefined;
@@ -349,6 +362,7 @@ export interface WorkspaceEchoPomTargetInteraction {
     offer: AuthoredTraitOfferTraits,
     value: string | null,
   ) => AuthoredTraitOfferTraits;
+  readonly targetLabel: (target: string | null) => string;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceEchoPomTargetDomain | undefined;
   };
@@ -373,16 +387,15 @@ export type WorkspaceEchoLastRunBoonCarrierDomain =
       readonly sets: readonly {
         readonly setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey;
         readonly picker: ContextualPickerModel<string | null>;
+        readonly resultLabel: (result: string | null) => string;
       }[];
     }
-  | {
+  | (WorkspaceNaturalSelectionDomain & {
       readonly kind: 'naturalSelection';
       readonly slotCount: number;
-      readonly complete: boolean;
       readonly supported: boolean;
-      readonly picker: ContextualPickerModel<string>;
       readonly traitLabel: (traitKey: string) => string;
-    };
+    });
 
 export interface WorkspaceEchoLastRunBoonDraftSupport {
   readonly rowSupport: readonly boolean[];
@@ -418,6 +431,7 @@ export interface WorkspaceEchoLastRunBoonDomain {
     identity: WorkspaceEchoLastRunBoonTraitIdentity,
   ) => number | undefined;
   readonly labelFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => string;
+  readonly traitLabel: (traitKey: string) => string;
   readonly summaryFor: (value: AuthoredEchoLastRunBoonOffer) => string;
   readonly rarityPickerFor: (
     identity: WorkspaceEchoLastRunBoonTraitIdentity,
@@ -433,14 +447,12 @@ export interface WorkspaceEchoLastRunBoonDomain {
   readonly carrierForDraft: (
     rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
     selectedIndex: number,
-    retainedTargetKey?: string,
   ) => {
     readonly load: () => WorkspaceEchoLastRunBoonCarrierDomain | undefined;
   };
   readonly naturalSelectionForDraft: (
     rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
     selectedIndex: number,
-    retainedTargetKey?: string,
   ) => { readonly load: () => WorkspaceNaturalSelectionDomain | undefined };
   /** Engine-owned trait distinctness for one transient compound-draft row. */
   readonly traitPickerFor: (
