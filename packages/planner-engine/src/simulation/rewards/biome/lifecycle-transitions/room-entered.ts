@@ -419,13 +419,11 @@ export function applyRoomEnteredTransition(
             Object.freeze({
               finding: rewardFinding(
                 code,
-                'slotKey' in issue
-                  ? createRoomFeatureAddress(room.origin, {
-                      kind: 'hermesShrineOffer',
-                      generationKey: `initial:${issue.slotKey}`,
-                    })
-                  : createRoomFeatureAddress(room.origin, { kind: 'hermesShrineInventory' }),
-                'slotKey' in issue ? { slotKey: issue.slotKey } : {},
+                createRoomFeatureAddress(room.origin, {
+                  kind: 'hermesShrineOffer',
+                  generationKey: `initial:${issue.slotKey}`,
+                }),
+                { slotKey: issue.slotKey },
               ),
               region: ownerRegion(room.origin),
               chronology: findingChronology,
