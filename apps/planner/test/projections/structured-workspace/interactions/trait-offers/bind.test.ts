@@ -1098,6 +1098,24 @@ describe('trait-offers/bind', () => {
           kind: 'traitAcquisitionTarget' as const,
           result: { traitKey, supported: true, branchSupport: [true], findings: [] },
         })),
+        rows: [
+          {
+            availableTargetTraitKeys: ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait'],
+            requiresEarlierRow: false,
+            valueByTraitKey: {
+              StaffDoubleAttackTrait: ['StaffDoubleAttackTrait'],
+              StaffFastSpecialTrait: ['StaffFastSpecialTrait'],
+            },
+          },
+          {
+            availableTargetTraitKeys: ['StaffFastSpecialTrait'],
+            requiresEarlierRow: false,
+            valueByTraitKey: {
+              StaffFastSpecialTrait: ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait'],
+            },
+          },
+          { availableTargetTraitKeys: [], requiresEarlierRow: true, valueByTraitKey: {} },
+        ],
       },
     }));
     const { interactions } = bind(project, 'Underworld', 'F', undefined, {
@@ -1135,20 +1153,19 @@ describe('trait-offers/bind', () => {
     const chosen = latest.update(draft, ['StaffDoubleAttackTrait']);
     const rows = latest.forOffer(chosen).load()!;
     const values = (index: number) =>
-      rows.hammers[index]!.sections.flatMap((section) => section.items.map((item) => item.value));
-    // A row never offers a Hammer another row holds.
+      rows.hammers[index]!.picker.sections.flatMap((section) =>
+        section.items.map((item) => item.value),
+      );
+    // Each row's picker, gate and resulting targets come from the engine row.
     expect(values(0)).toEqual(['StaffDoubleAttackTrait', 'StaffFastSpecialTrait']);
-    expect(rows.hammers[0]!.selected?.value).toBe('StaffDoubleAttackTrait');
+    expect(rows.hammers[0]!.picker.selected?.value).toBe('StaffDoubleAttackTrait');
     expect(values(1)).toEqual(['StaffFastSpecialTrait']);
-    expect(rows.targetsFor(1, 'StaffFastSpecialTrait')).toEqual([
+    expect(rows.hammers[1]!.valueByTraitKey['StaffFastSpecialTrait']).toEqual([
       'StaffDoubleAttackTrait',
       'StaffFastSpecialTrait',
     ]);
-    const both = latest.update(draft, ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait']);
-    // Choosing the second row's Hammer for the first keeps the targets distinct.
-    expect(latest.forOffer(both).load()!.targetsFor(0, 'StaffFastSpecialTrait')).toEqual([
-      'StaffFastSpecialTrait',
-    ]);
+    expect(rows.hammers.map((row) => row.requiresEarlierRow)).toEqual([false, false, true]);
+    expect(values(2)).toEqual([]);
   });
 
   it('bounds the largest declared Hammer domain to one focused query batch', async () => {

@@ -150,7 +150,7 @@ function LatestModelTargetsOutcome({
   const result = domain.result;
   return (
     <>
-      {result.hammers.map((picker, index) => (
+      {result.hammers.map((row, index) => (
         <ContextualPicker
           key={index}
           {...(index === 0 ? { findingTarget } : {})}
@@ -159,13 +159,12 @@ function LatestModelTargetsOutcome({
           label={`Hammer ${index + 1}`}
           layout="inline"
           disabled={!result.branchAgreement}
-          {...(index > 0 && current.length < index
-            ? { disabledTitle: `Choose Hammer ${index} first` }
-            : {})}
-          model={picker}
-          onSelect={(target: string) =>
-            onUpdate(child.update(value, result.targetsFor(index, target)))
-          }
+          {...(row.requiresEarlierRow ? { disabledTitle: `Choose Hammer ${index} first` } : {})}
+          model={row.picker}
+          onSelect={(target: string) => {
+            const targets = row.valueByTraitKey[target];
+            if (targets !== undefined) onUpdate(child.update(value, targets));
+          }}
           placeholder="Choose a Rank I Hammer"
           {...(current[index] === undefined
             ? {}
