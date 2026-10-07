@@ -124,6 +124,7 @@ function JudgmentArcanaControl({
   const [open, setOpen] = useState(false);
   const control = interactions.judgmentArcana.get(workspaceInteractionKey(judgment.address));
   if (control === undefined) return null;
+  const launcher = findingTarget(control.owner);
   return (
     <TimelineRow
       aria-label={`Judgment — choose ${judgment.requiredCount} inactive Arcana cards`}
@@ -134,13 +135,14 @@ function JudgmentArcanaControl({
             title="Judgment editor"
             requiredCount={judgment.requiredCount}
             onClose={() => setOpen(false)}
+            returnFocusId={launcher.id}
           />
         ) : null
       }
       kind="effect"
       label={
         <button
-          {...findingTarget(control.owner)}
+          {...launcher}
           className="room-timeline-effect"
           onClick={() => setOpen(true)}
           type="button"
@@ -163,6 +165,7 @@ function FigurineArcanaControl({
   const [open, setOpen] = useState(false);
   const control = interactions.figurineArcana.get(workspaceInteractionKey(figurine.address));
   if (control === undefined) return null;
+  const launcher = findingTarget(control.owner);
   return (
     <TimelineRow
       aria-label={`Crystal Figurine — choose ${figurine.requiredCount} inactive Arcana cards`}
@@ -173,13 +176,14 @@ function FigurineArcanaControl({
             control={control}
             requiredCount={figurine.requiredCount}
             onClose={() => setOpen(false)}
+            returnFocusId={launcher.id}
           />
         ) : null
       }
       kind="effect"
       label={
         <button
-          {...findingTarget(control.owner)}
+          {...launcher}
           className="room-timeline-effect"
           onClick={() => setOpen(true)}
           type="button"

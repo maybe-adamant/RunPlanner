@@ -75,6 +75,7 @@ describe('editor session navigation', () => {
       selectedFinding: null,
       semanticNavigationRevision: 0,
       workspaceReplacementRevision: 0,
+      openDraftEditors: 0,
     });
   });
 

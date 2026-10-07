@@ -11,16 +11,12 @@ import {
   projectTraitOfferState,
 } from '@planner/projections/rewards/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
+import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
-import {
-  TraitOfferFeedbackRegion,
-  TraitOfferForm,
-  TraitOfferShapeActions,
-  useOutcomeFeedback,
-} from './TraitOfferForm';
+import { TraitOfferForm, TraitOfferShapeActions, useOutcomeFeedback } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete, traitOfferValueIdentity } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
@@ -38,12 +34,14 @@ export function TraitOfferEditorShell({
   initialValue,
   initialView,
   interaction,
+  onCancel,
   onCommit,
   onReset,
 }: {
   readonly initialValue: AuthoredTraitOffer;
   readonly initialView: 'outer' | 'echoLastRunBoon';
   readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly onCancel?: () => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
@@ -160,8 +158,8 @@ export function TraitOfferEditorShell({
     );
   }
   const feedbackSection = (
-    <TraitOfferFeedbackRegion
-      label="Offer feedback"
+    <EditorDialogFeedback
+      name="Offer feedback"
       entries={
         offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries]
       }
@@ -191,7 +189,7 @@ export function TraitOfferEditorShell({
               </div>
             ),
           )}
-    </TraitOfferFeedbackRegion>
+    </EditorDialogFeedback>
   );
   const recoveryAction =
     recoveryDraft === undefined ? undefined : (
@@ -326,6 +324,7 @@ export function TraitOfferEditorShell({
         recovery={recoveryAction}
         reset={resetAction}
         save={save}
+        {...(onCancel === undefined ? {} : { cancel: onCancel })}
       />
     );
   }
@@ -349,6 +348,7 @@ export function TraitOfferEditorShell({
       recovery={recoveryAction}
       reset={resetAction}
       save={save}
+      {...(onCancel === undefined ? {} : { cancel: onCancel })}
       shapeActions={
         value.kind === 'fallbackGold' && ordinary ? (
           <TraitOfferShapeActions

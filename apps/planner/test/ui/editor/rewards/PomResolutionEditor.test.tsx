@@ -15,6 +15,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { useAppSelector } from '@planner/state/store';
 import {
   authoredProjectRedoRequested,
   authoredProjectReplaced,
@@ -116,12 +117,21 @@ describe('Pom resolution editor', () => {
     expect(application.store.getState().editorSession.levelResolutionDialogTarget).toEqual(
       control.owner,
     );
+    // Mounted while its session target is set, as the application shell does.
+    function PomDialogHost() {
+      const target = useAppSelector(
+        (state) => state.editorSession.levelResolutionDialogTarget ?? null,
+      );
+      return target === null ? null : (
+        <PomResolutionDialog interactions={workspace.interactions} target={target} />
+      );
+    }
     render(
       <Provider store={application.store}>
-        <PomResolutionDialog interactions={workspace.interactions} target={control.owner} />
+        <PomDialogHost />
       </Provider>,
     );
-    await user.click(screen.getByRole('button', { name: 'Close Pom' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(application.store.getState().editorSession.levelResolutionDialogTarget).toBeNull();
     expect(document.activeElement).toBe(
       screen.getByRole('button', { name: /Edit Pom: Choose target \+1/i }),

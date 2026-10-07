@@ -322,7 +322,7 @@ describe('surface product loop', () => {
     );
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByLabelText('option1 rarity')).toBeNull();
-    expect(within(dialog).getByRole('button', { name: 'Close trait offer' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeTruthy();
     application.dispose();
   });
 

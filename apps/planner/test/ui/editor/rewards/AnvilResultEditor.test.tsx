@@ -40,7 +40,8 @@ describe('Anvil result editor', () => {
 
     const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
     expect(feedback.textContent).toContain('No current findings.');
-    expect(feedback.parentElement?.lastElementChild).toBe(feedback);
+    // The feedback region closes the editor body, directly above its footer.
+    expect(feedback.nextElementSibling?.tagName).toBe('FOOTER');
 
     expect(
       (screen.getByRole('button', { name: 'Added Hammer 1' }) as HTMLButtonElement).disabled,

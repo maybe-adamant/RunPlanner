@@ -35,7 +35,7 @@ import {
 import { ContextualPicker } from '../controls/ContextualPicker';
 import { ExternalPageLink } from '../controls/ExternalPageLink';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
-import { ModalDialog } from './ModalDialog';
+import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 import { BugReportDialog } from './BugReportDialog';
 
 function ConfirmationDialog({

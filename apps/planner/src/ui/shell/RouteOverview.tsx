@@ -32,7 +32,7 @@ import { RouteWeaponPicker } from './RouteWeaponPicker';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 
-import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
+import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -324,7 +324,13 @@ function MatureRouteLoadout({
           />
         )}
         {dialog === 'Arcana' ? (
-          <ArcanaFearDialog title="Arcana" kind="arcana" onClose={() => setDialog(undefined)}>
+          <EditorDialog
+            eyebrow="Loadout"
+            model={{ kind: 'live', onDone: () => setDialog(undefined) }}
+            returnFocusId={`${workspaceRoute.routeKey}-arcana`}
+            size="cards"
+            title="Arcana"
+          >
             <section
               role="group"
               aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
@@ -388,10 +394,16 @@ function MatureRouteLoadout({
                 })}
               </div>
             </section>
-          </ArcanaFearDialog>
+          </EditorDialog>
         ) : null}
         {dialog === 'Fear' ? (
-          <ArcanaFearDialog title="Fear" kind="fear" onClose={() => setDialog(undefined)}>
+          <EditorDialog
+            eyebrow="Loadout"
+            model={{ kind: 'live', onDone: () => setDialog(undefined) }}
+            returnFocusId={`${workspaceRoute.routeKey}-fear`}
+            size="cards"
+            title="Fear"
+          >
             <section
               role="group"
               aria-label={`Fear, ${derivedLoadout.fearTotal} total`}
@@ -452,7 +464,7 @@ function MatureRouteLoadout({
                 })}
               </div>
             </section>
-          </ArcanaFearDialog>
+          </EditorDialog>
         ) : null}
       </div>
       <div className="route-configuration">

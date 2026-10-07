@@ -1423,7 +1423,7 @@ describe('planner history interaction', () => {
     expect(actions.contains(traitLauncher)).toBe(true);
     await view.user.click(traitLauncher);
     const dialog = await screen.findByRole('dialog');
-    await view.user.click(within(dialog).getByRole('button', { name: 'Close trait offer' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(trait.address);
@@ -2336,18 +2336,14 @@ describe('planner history interaction', () => {
     );
     const ordinaryDialog = await screen.findByRole('dialog');
     expect(within(ordinaryDialog).getByLabelText('option1 rarity')).toBeTruthy();
-    await view.user.click(
-      within(ordinaryDialog).getByRole('button', { name: 'Close trait offer' }),
-    );
+    await view.user.click(within(ordinaryDialog).getByRole('button', { name: 'Cancel' }));
 
     const roomHammer = visibleLauncher('hammer', 'incomingReward', false);
     application.store.dispatch(semanticOwnerNavigated(roomHammer.owner));
     const roomHammerDialog = await screen.findByRole('dialog');
     expect(within(roomHammerDialog).queryByLabelText('option1 rarity')).toBeNull();
     expect(within(roomHammerDialog).queryByText('Rarity', { selector: 'span' })).toBeNull();
-    await view.user.click(
-      within(roomHammerDialog).getByRole('button', { name: 'Close trait offer' }),
-    );
+    await view.user.click(within(roomHammerDialog).getByRole('button', { name: 'Cancel' }));
 
     // The acquired Shop Hammer lies beyond the reached context: navigation opens no editor.
     const shopHammer = visibleLauncher('hammer', 'shopOffer', false);
@@ -2496,13 +2492,16 @@ describe('route loadout interaction', () => {
     for (const title of ['Arcana', 'Fear']) {
       const launcher = screen.getByRole('button', { name: `Edit ${title}` });
       await user.click(launcher);
-      expect(screen.getByRole('dialog', { name: title })).toBeTruthy();
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: `Close ${title}` }));
+      const dialog = screen.getByRole('dialog', { name: title });
+      // Initial focus lands on the first enabled control of the dialog body.
+      expect(document.activeElement).toBe(
+        dialog.querySelector('.editor-dialog-body button:not([disabled])'),
+      );
       await user.keyboard('{Escape}');
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(document.activeElement).toBe(launcher);
       await user.click(launcher);
-      await user.click(screen.getByRole('button', { name: `Close ${title}` }));
+      await user.click(screen.getByRole('button', { name: 'Done' }));
       expect(document.activeElement).toBe(launcher);
     }
     expect(screen.getByRole('button', { name: 'Starting weapon' })).toBeTruthy();
@@ -2537,7 +2536,7 @@ describe('route loadout interaction', () => {
     expect(arcana.textContent).toContain('30 / 30 Grasp');
     expect(screen.getByRole('button', { name: 'The Sorceress' })).toHaveProperty('disabled', true);
 
-    await user.click(screen.getByRole('button', { name: 'Close Arcana' }));
+    await user.click(screen.getByRole('button', { name: 'Done' }));
     await user.click(screen.getByRole('button', { name: 'Edit Fear' }));
     const fear = screen.getByRole('group', { name: 'Fear, 0 total' });
     expect(
@@ -2809,7 +2808,7 @@ describe('route loadout interaction', () => {
         .manualArcanaKeys,
     ).toEqual(['ChanneledCast']);
     expect(screen.getByRole('group', { name: 'Arcana, 3 active' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Close Arcana' }));
+    await user.click(screen.getByRole('button', { name: 'Done' }));
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(
@@ -2844,7 +2843,7 @@ describe('route loadout interaction', () => {
         .EnemyDamageShrineUpgrade,
     ).toBe(3);
     expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Close Fear' }));
+    await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.getByRole('button', { name: 'Edit Fear' }).textContent).toBe(
       'Fear · 1 active · 5/67 Fear',
     );

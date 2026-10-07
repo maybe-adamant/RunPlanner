@@ -74,7 +74,7 @@ export function InfiniteRosterControl({
         onClick={() => executeIntent(interaction.intentFor(decision.key, null))}
         type="button"
       >
-        Reset
+        Reset to default
       </button>
     </div>
   );

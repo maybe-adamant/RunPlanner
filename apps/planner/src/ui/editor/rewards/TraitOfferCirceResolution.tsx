@@ -6,7 +6,7 @@ import { useState } from 'react';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
-import { ArcanaFearDialog } from '@planner/ui/controls/arcana-fear/ArcanaFearDialog';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { circeUnavailableMessage } from './traitOfferOptions';
 
@@ -86,20 +86,36 @@ export function TraitOfferCirceResolution({
         </button>
       </fieldset>
       {draft === null ? null : (
-        <ArcanaFearDialog
+        <EditorDialog
+          eyebrow="Circe"
+          footer={
+            <EditorDialogDraftActions
+              onCancel={() => setDraft(null)}
+              onSave={() => {
+                if (domain === undefined) return;
+                onSelect(
+                  domain.effect === 'disableFear'
+                    ? { kind: 'disableFear', vowKeys: draft.keys }
+                    : { kind: domain.effect, arcanaKeys: draft.keys },
+                );
+                setDraft(null);
+              }}
+              saveDisabled={disabled || !complete}
+              secondary={
+                <button
+                  className="quiet-action"
+                  onClick={() => setDraft({ ...draft, keys: [] })}
+                  type="button"
+                >
+                  Clear
+                </button>
+              }
+            />
+          }
+          model={{ kind: 'draft', onCancel: () => setDraft(null) }}
+          returnFocusId={controlId}
+          size="cards"
           title={draft.title}
-          kind={draft.kind}
-          onClose={() => setDraft(null)}
-          onReset={() => setDraft({ ...draft, keys: [] })}
-          saveDisabled={disabled || !complete}
-          onSave={() => {
-            if (domain === undefined) return;
-            onSelect(
-              domain.effect === 'disableFear'
-                ? { kind: 'disableFear', vowKeys: draft.keys }
-                : { kind: domain.effect, arcanaKeys: draft.keys },
-            );
-          }}
         >
           <div className="trait-choice-region">
             {domain === undefined ? (
@@ -159,7 +175,7 @@ export function TraitOfferCirceResolution({
               </>
             )}
           </div>
-        </ArcanaFearDialog>
+        </EditorDialog>
       )}
     </>
   );

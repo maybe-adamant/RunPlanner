@@ -3,7 +3,7 @@ import {
   type AuthoredLevelResolution,
   type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
@@ -21,6 +21,11 @@ import {
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  EditorDialogFeedback,
+} from '@planner/ui/controls/EditorDialog';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
@@ -226,9 +231,12 @@ export function PomResolutionLauncher({
 
 export function PomResolutionEditor({
   interaction,
+  onCancel,
   onCommit,
 }: {
   readonly interaction: WorkspaceLevelResolutionInteraction;
+  /** Discards the draft; absent outside a dialog. */
+  readonly onCancel?: () => void;
   readonly onCommit: (value: AuthoredLevelResolution) => void;
 }) {
   const initialChoice = interaction.value.kind === 'choice' ? interaction.value : undefined;
@@ -473,26 +481,21 @@ export function PomResolutionEditor({
           selected={randomTarget}
         />
       )}
-      <section aria-label="Pom feedback" className="trait-offer-feedback" role="status">
-        <h3>Pom feedback</h3>
-        {findings.length === 0 ? (
-          <p className="trait-offer-feedback-empty">No current findings.</p>
-        ) : (
+      <EditorDialogFeedback name="Pom feedback">
+        {findings.length === 0 ? undefined : (
           <ul className="trait-option-feedback">
             {[...new Set(findings)].map((finding) => (
               <li key={finding}>{findingMessage(finding)}</li>
             ))}
           </ul>
         )}
-      </section>
-      <button
-        className="primary-action"
-        disabled={!supported}
-        onClick={() => onCommit(draft)}
-        type="button"
-      >
-        Save Pom
-      </button>
+      </EditorDialogFeedback>
+      <EditorDialogDraftActions
+        {...(onCancel === undefined ? {} : { onCancel })}
+        onSave={() => onCommit(draft)}
+        saveDisabled={!supported}
+        saveName="Save Pom"
+      />
     </div>
   );
 }
@@ -507,69 +510,34 @@ export function PomResolutionDialog({
   const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   // A stale target from navigation or a finding may name an unprojected Pom.
   const interaction = interactions.levelResolutions.get(workspaceInteractionKey(target));
   const close = useCallback(() => {
     dispatch(levelResolutionDialogClosed());
-    (document.getElementById(launcherId(target)) ?? previousFocusRef.current)?.focus();
-  }, [dispatch, target]);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    previousFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (typeof dialog.showModal === 'function' && !dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        dialog.setAttribute('open', '');
-      }
-    } else if (!dialog.open) dialog.setAttribute('open', '');
-    const onCancel = (event: Event) => {
-      event.preventDefault();
-      close();
-    };
-    dialog.addEventListener('cancel', onCancel);
-    return () => dialog.removeEventListener('cancel', onCancel);
-  }, [close]);
+  }, [dispatch]);
   // The system closes a dialog whose context is lost; a later reach needs an explicit reopen.
   const unavailable = interaction === undefined || !interaction.contextReached;
   useEffect(() => {
     if (unavailable) dispatch(levelResolutionDialogClosed());
   }, [dispatch, unavailable]);
   if (interaction === undefined || unavailable) return null;
-  const eyebrow = interaction.value.kind === 'random' ? 'Random Pom' : 'Pom choice';
-  const dialogTitleId = `pom-dialog-title-${pomDomKey(target)}`;
   return (
-    <dialog
-      aria-labelledby={dialogTitleId}
-      aria-modal="true"
-      className="trait-offer-dialog-backdrop"
-      ref={dialogRef}
+    <EditorDialog
+      // The feedback region lists the dialog's findings; its launcher carries the mark.
+      anchorProps={{ ...findingAnchor(target), tabIndex: -1 }}
+      eyebrow={interaction.value.kind === 'random' ? 'Random Pom' : 'Pom choice'}
+      model={{ kind: 'draft', onCancel: close }}
+      returnFocusId={launcherId(target)}
+      title="Pom target"
     >
-      {/* The feedback region lists the dialog's findings; its launcher carries the mark. */}
-      <div className="trait-offer-dialog" {...findingAnchor(target)} tabIndex={-1}>
-        <header className="panel-heading">
-          <div>
-            <p className="eyebrow">{eyebrow}</p>
-            <h2 id={dialogTitleId}>Pom target</h2>
-          </div>
-          <div className="panel-heading-actions">
-            <button aria-label="Close Pom" className="quiet-action" onClick={close} type="button">
-              Close
-            </button>
-          </div>
-        </header>
-        <PomResolutionEditor
-          interaction={interaction}
-          onCommit={(value) => {
-            executeIntent(interaction.intentFor(value));
-            close();
-          }}
-        />
-      </div>
-    </dialog>
+      <PomResolutionEditor
+        interaction={interaction}
+        onCancel={close}
+        onCommit={(value) => {
+          executeIntent(interaction.intentFor(value));
+          close();
+        }}
+      />
+    </EditorDialog>
   );
 }

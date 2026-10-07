@@ -166,6 +166,7 @@ describe('selected outcomes', () => {
   });
 
   it('resets an incomplete Circe Arcana draft when the resolution effect changes', async () => {
+    const application = createApplication();
     const user = userEvent.setup();
     const onSelect = vi.fn();
     const arcanaPicker = pickerModel([
@@ -191,23 +192,27 @@ describe('selected outcomes', () => {
     });
     const fear = Object.freeze({ ...activation, effect: 'disableFear' as const, requiredCount: 1 });
     const { rerender } = render(
-      <TraitOfferCirceResolution
-        controlId="circe-effect-switch"
-        domain={activation}
-        onSelect={onSelect}
-        option={option}
-      />,
+      <Provider store={application.store}>
+        <TraitOfferCirceResolution
+          controlId="circe-effect-switch"
+          domain={activation}
+          onSelect={onSelect}
+          option={option}
+        />
+      </Provider>,
     );
     await user.click(screen.getByLabelText('Red Citrine Arcana'));
     await user.click(screen.getByText('The Sorceress'));
-    await user.click(screen.getByRole('button', { name: 'Close Red Citrine Arcana' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     rerender(
-      <TraitOfferCirceResolution
-        controlId="circe-effect-switch"
-        domain={fear}
-        onSelect={onSelect}
-        option={option}
-      />,
+      <Provider store={application.store}>
+        <TraitOfferCirceResolution
+          controlId="circe-effect-switch"
+          domain={fear}
+          onSelect={onSelect}
+          option={option}
+        />
+      </Provider>,
     );
     await user.click(screen.getByLabelText('Black Night Vow'));
     await user.click(screen.getByText('Vow of Rivals'));
@@ -215,6 +220,7 @@ describe('selected outcomes', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(screen.queryByRole('dialog', { name: 'Black Night Vow' })).toBeNull();
     expect(onSelect).toHaveBeenLastCalledWith({ kind: 'disableFear', vowKeys: ['VowRivals'] });
+    application.dispose();
   });
 
   it('starts All Together unresolved and applies one complete four-role draft', async () => {
@@ -1181,16 +1187,16 @@ describe('selected outcomes', () => {
         }),
       );
       const effectDialog = screen.getByRole('dialog');
-      expect(within(effectDialog).queryByRole('button', { name: 'Cancel' })).toBeNull();
+      expect(within(effectDialog).getByRole('button', { name: 'Cancel' })).toBeTruthy();
       const savedSelectionCount = within(effectDialog).getAllByRole('button', {
         pressed: true,
       }).length;
-      await user.click(within(effectDialog).getByRole('button', { name: 'Reset' }));
+      await user.click(within(effectDialog).getByRole('button', { name: 'Clear' }));
       expect(within(effectDialog).queryAllByRole('button', { pressed: true })).toHaveLength(0);
       expect(
         (within(effectDialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled,
       ).toBe(true);
-      await user.click(within(effectDialog).getByRole('button', { name: /^Close / }));
+      await user.click(within(effectDialog).getByRole('button', { name: 'Cancel' }));
       expect(document.activeElement).toBe(
         screen.getByRole('button', {
           name: effect === 'promoteArcana' ? 'Promoted Arcana' : label,
@@ -1204,7 +1210,7 @@ describe('selected outcomes', () => {
       expect(
         within(screen.getByRole('dialog')).getAllByRole('button', { pressed: true }),
       ).toHaveLength(savedSelectionCount);
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Close / }));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
       expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
         'disabled',
         false,
@@ -1238,7 +1244,10 @@ describe('selected outcomes', () => {
       const sessionBeforeEscape = application.store.getState().editorSession;
       await user.keyboard('{Escape}');
       expect(screen.getAllByRole('dialog')).toHaveLength(1);
-      expect(application.store.getState().editorSession).toBe(sessionBeforeEscape);
+      // The nested Escape closes only the Circe draft; the trait dialog stays open.
+      const sessionAfterEscape = application.store.getState().editorSession;
+      expect(sessionAfterEscape.traitDialogTarget).toBe(sessionBeforeEscape.traitDialogTarget);
+      expect(sessionAfterEscape.openDraftEditors).toBe(sessionBeforeEscape.openDraftEditors - 1);
       expect(document.activeElement).toBe(launcher);
       application.dispose();
     },

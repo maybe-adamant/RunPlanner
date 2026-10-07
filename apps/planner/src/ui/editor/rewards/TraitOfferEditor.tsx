@@ -3,7 +3,7 @@ import {
   type AuthoredTraitOffer,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -14,6 +14,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
@@ -100,12 +101,15 @@ export function TraitOfferEditor({
   address,
   initialView = 'outer',
   interactions,
+  onCancel,
   onCommit,
   onReset,
 }: {
   readonly address: TraitOfferAddress;
   readonly initialView?: 'outer' | 'echoLastRunBoon';
   readonly interactions: WorkspaceInteractionCatalog;
+  /** Discards the draft; absent outside a dialog. */
+  readonly onCancel?: () => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
@@ -125,6 +129,7 @@ export function TraitOfferEditor({
       initialView={initialView}
       interaction={interaction}
       key={traitOfferRevision(interaction)}
+      {...(onCancel === undefined ? {} : { onCancel })}
       {...(onCommit === undefined ? {} : { onCommit })}
       {...(onReset === undefined ? {} : { onReset })}
     />
@@ -142,140 +147,59 @@ export function TraitOfferDialog({
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   // A stale target may name an offer that is no longer projected.
   const interaction = interactions.traitOffers.get(workspaceInteractionKey(target));
   const unavailable = interaction === undefined || !interaction.contextReached;
   const close = useCallback((): void => {
     dispatch(traitOfferDialogClosed());
-    const launcher = document.getElementById(launcherId(target));
-    (launcher ?? previousFocusRef.current)?.focus();
-  }, [dispatch, target]);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog === null) return;
-    previousFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-    const inertSiblings: HTMLElement[] = [];
-    const parent = dialog.parentElement;
-    const supportsModal = typeof dialog.showModal === 'function';
-    if (!supportsModal && parent !== null) {
-      for (const sibling of Array.from(parent.children)) {
-        if (sibling === dialog || !(sibling instanceof HTMLElement)) continue;
-        inertSiblings.push(sibling);
-        (sibling as HTMLElement & { inert: boolean }).inert = true;
-      }
-    }
-
-    if (supportsModal && !dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        // A test DOM may expose showModal without implementing the top layer.
-        dialog.setAttribute('open', '');
-      }
-    } else if (!dialog.open) {
-      dialog.setAttribute('open', '');
-    }
-
-    const exactControl =
-      (focusedSemanticOwner?.kind === 'allTogetherSet' ||
-        focusedSemanticOwner?.kind === 'traitAcquisitionTarget' ||
-        focusedSemanticOwner?.kind === 'circeResolution' ||
-        focusedSemanticOwner?.kind === 'echoPomTarget' ||
-        focusedSemanticOwner?.kind === 'echoLastRunBoon' ||
-        focusedSemanticOwner?.kind === 'naturalSelectionResult') &&
-      semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
-        ? document.getElementById(semanticOwnerControlElementId(focusedSemanticOwner))
-        : null;
-    const first = dialog.querySelector<HTMLElement>('select, input, button');
-    (exactControl instanceof HTMLElement && dialog.contains(exactControl)
-      ? exactControl
-      : first
-    )?.focus();
-    const onCancel = (event: Event): void => {
-      event.preventDefault();
-      close();
-    };
-    const onKeyDown = (event: KeyboardEvent): void => {
-      // Native modal dialogs emit `cancel`; this local fallback only covers
-      // DOMs that cannot implement the dialog top layer (for example jsdom).
-      // A nested picker handles its own Escape first and prevents the default;
-      // preserve the in-progress local draft until a later Escape reaches us.
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
-      event.preventDefault();
-      close();
-    };
-    dialog.addEventListener('cancel', onCancel);
-    dialog.addEventListener('keydown', onKeyDown);
-    return () => {
-      dialog.removeEventListener('cancel', onCancel);
-      dialog.removeEventListener('keydown', onKeyDown);
-      for (const sibling of inertSiblings) {
-        (sibling as HTMLElement & { inert: boolean }).inert = false;
-      }
-      if (dialog.open && typeof dialog.close === 'function') dialog.close();
-    };
-  }, [close, focusedSemanticOwner, target]);
+  }, [dispatch]);
   // Every entry point shares this guard: an unreached offer has no editor.
   // The system closes a dialog whose context is lost; a later reach needs an explicit reopen.
   useEffect(() => {
     if (unavailable) dispatch(traitOfferDialogClosed());
   }, [dispatch, unavailable]);
   if (unavailable) return null;
+  const exactChild =
+    (focusedSemanticOwner?.kind === 'allTogetherSet' ||
+      focusedSemanticOwner?.kind === 'traitAcquisitionTarget' ||
+      focusedSemanticOwner?.kind === 'circeResolution' ||
+      focusedSemanticOwner?.kind === 'echoPomTarget' ||
+      focusedSemanticOwner?.kind === 'echoLastRunBoon' ||
+      focusedSemanticOwner?.kind === 'naturalSelectionResult') &&
+    semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
+      ? focusedSemanticOwner
+      : undefined;
   return (
-    <dialog
-      aria-labelledby={`trait-offer-dialog-title-${semanticAddressKey(target)}`}
-      aria-modal="true"
-      className="trait-offer-dialog-backdrop"
-      ref={dialogRef}
+    <EditorDialog
+      // The feedback region lists the dialog's findings; its launcher carries the mark.
+      anchorProps={{ ...findingAnchor(target), tabIndex: -1 }}
+      eyebrow="Trait offer"
+      {...(exactChild === undefined
+        ? {}
+        : { initialFocusId: semanticOwnerControlElementId(exactChild) })}
+      model={{ kind: 'draft', onCancel: close }}
+      returnFocusId={launcherId(target)}
+      title={interaction.giver.label}
     >
-      {/* The feedback region lists the dialog's findings; its launcher carries the mark. */}
-      <div className="trait-offer-dialog" {...findingAnchor(target)} tabIndex={-1}>
-        <header className="panel-heading">
-          <div>
-            <p className="eyebrow">Trait offer</p>
-            <h2 id={`trait-offer-dialog-title-${semanticAddressKey(target)}`}>
-              {interaction.giver.label}
-            </h2>
-          </div>
-          <div className="panel-heading-actions">
-            <button
-              aria-label="Close trait offer"
-              className="quiet-action"
-              onClick={close}
-              type="button"
-            >
-              Close
-            </button>
-          </div>
-        </header>
-        <TraitOfferEditor
-          address={target}
-          initialView={
-            focusedSemanticOwner?.kind === 'echoLastRunBoon' &&
-            semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
-              ? 'echoLastRunBoon'
-              : 'outer'
-          }
-          interactions={interactions}
-          key={`${semanticAddressKey(target)}:${traitOfferRevision(interaction)}`}
-          onCommit={(value) => {
-            executeIntent(interaction.intentFor(value));
-            close();
-          }}
-          {...(interaction.resetIntent === undefined
-            ? {}
-            : {
-                onReset: () => {
-                  executeIntent(interaction.resetIntent!);
-                  close();
-                },
-              })}
-        />
-      </div>
-    </dialog>
+      <TraitOfferEditor
+        address={target}
+        initialView={exactChild?.kind === 'echoLastRunBoon' ? 'echoLastRunBoon' : 'outer'}
+        interactions={interactions}
+        key={`${semanticAddressKey(target)}:${traitOfferRevision(interaction)}`}
+        onCancel={close}
+        onCommit={(value) => {
+          executeIntent(interaction.intentFor(value));
+          close();
+        }}
+        {...(interaction.resetIntent === undefined
+          ? {}
+          : {
+              onReset: () => {
+                executeIntent(interaction.resetIntent!);
+                close();
+              },
+            })}
+      />
+    </EditorDialog>
   );
 }

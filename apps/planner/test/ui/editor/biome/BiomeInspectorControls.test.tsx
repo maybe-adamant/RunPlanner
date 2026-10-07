@@ -616,9 +616,8 @@ describe('Biome inspector controls', () => {
     expect(judgmentPopup.querySelector('.trait-choice-region .arcana-board')).toBeTruthy();
     const arcanaFeedback = within(judgmentPopup).getByRole('status', { name: 'Arcana feedback' });
     expect(arcanaFeedback.textContent).toContain('No current findings.');
-    expect(judgmentPopup.querySelector('.arcana-fear-dialog-content')?.lastElementChild).toBe(
-      arcanaFeedback,
-    );
+    // The feedback region closes the dialog body, directly above its footer.
+    expect(arcanaFeedback.nextElementSibling?.tagName).toBe('FOOTER');
     for (let index = 0; index < 5; index += 1) {
       const next = within(judgmentPopup)
         .getAllByRole<HTMLButtonElement>('button', { pressed: false })
@@ -627,7 +626,7 @@ describe('Biome inspector controls', () => {
       act(() => next.click());
     }
     const closeJudgment = within(judgmentPopup).getByRole('button', {
-      name: 'Close Judgment editor',
+      name: 'Cancel',
     });
     expect(closeJudgment.classList.contains('quiet-action')).toBe(true);
     act(() => within(judgmentPopup).getByRole('button', { name: 'Save' }).click());
@@ -638,11 +637,9 @@ describe('Biome inspector controls', () => {
         .click(),
     );
     const reopenedJudgment = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
-    act(() => within(reopenedJudgment).getByRole('button', { name: 'Reset' }).click());
+    act(() => within(reopenedJudgment).getByRole('button', { name: 'Clear' }).click());
     expect(within(reopenedJudgment).queryAllByRole('button', { pressed: true })).toHaveLength(0);
-    act(() =>
-      within(reopenedJudgment).getByRole('button', { name: 'Close Judgment editor' }).click(),
-    );
+    act(() => within(reopenedJudgment).getByRole('button', { name: 'Cancel' }).click());
     const updatedWorkspace = workspaceProjection(view.application);
     expect(
       updatedWorkspace.interactions.figurineArcana.has(semanticAddressKey(figurineOwner)),

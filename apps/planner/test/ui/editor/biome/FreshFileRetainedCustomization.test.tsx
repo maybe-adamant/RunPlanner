@@ -46,7 +46,7 @@ describe('Fresh File retained encounter customization', () => {
         .getAllByRole('button')
         .filter((button) => !(button as HTMLButtonElement).disabled)
         .map((button) => button.textContent),
-    ).toEqual(['Close', 'Help', 'Reset']);
+    ).toEqual(['Help', 'Reset to default', 'Done']);
     // Removal-only: the fixed wave count and no budget controls are offered.
     expect((within(dialog).getByRole('radio', { name: '4' }) as HTMLInputElement).disabled).toBe(
       true,
@@ -56,7 +56,7 @@ describe('Fresh File retained encounter customization', () => {
       within(dialog).queryByText('Complete earlier choices to evaluate this encounter.'),
     ).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(within(dialog).getByRole('button', { name: 'Reset' }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Reset to default' }));
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );

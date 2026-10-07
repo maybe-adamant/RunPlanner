@@ -22,42 +22,6 @@
   max-width: 100%;
 }
 
-.trait-offer-dialog-backdrop {
-  align-items: center;
-  background: rgb(8 12 20 / 72%);
-  border: 0;
-  height: 100%;
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  margin: 0;
-  max-height: none;
-  max-width: none;
-  padding: 1rem;
-  position: fixed;
-  width: 100%;
-  z-index: 20;
-}
-
-.trait-offer-dialog-backdrop::backdrop {
-  background: rgb(8 12 20 / 72%);
-}
-
-.trait-offer-dialog {
-  background: var(--surface, #fff);
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.65rem;
-  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
-  color: #ede8df;
-  max-height: calc(100 * var(--app-vh) - 2rem);
-  max-width: 54rem;
-  min-width: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 1rem;
-  width: min(100%, 54rem);
-}
-
 .anvil-result-pickers {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -395,32 +359,6 @@
   gap: 0.5rem;
 }
 
-.trait-offer-feedback {
-  display: grid;
-  min-height: 5rem;
-  min-width: 0;
-  gap: 0.55rem;
-  padding: 0.75rem;
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.45rem;
-  background: rgb(255 255 255 / 2%);
-}
-
-.trait-offer-feedback h3,
-.trait-offer-feedback p {
-  margin: 0;
-}
-
-.trait-offer-feedback h3 {
-  color: #f2ede5;
-  font-size: 0.9rem;
-}
-
-.trait-offer-feedback-empty {
-  color: var(--muted, #667085);
-  font-size: 0.84rem;
-}
-
 .trait-offer-feedback-item {
   display: grid;
   gap: 0.3rem;
@@ -444,13 +382,13 @@
 
 .trait-option-feedback li,
 .trait-option-replacement,
-.trait-offer-feedback .feedback-text {
+.editor-dialog-feedback .feedback-text {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .trait-option-replacement,
-.trait-offer-feedback .feedback-text {
+.editor-dialog-feedback .feedback-text {
   color: #e2b971;
   font-size: 0.82rem;
 }
