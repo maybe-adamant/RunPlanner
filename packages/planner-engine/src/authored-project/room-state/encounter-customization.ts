@@ -134,6 +134,21 @@ export interface OrderedPrefixUseDomain {
   readonly availableChoiceKeys: readonly string[];
   /** A later use opens only once every earlier use is chosen. */
   readonly requiresEarlierUse: boolean;
+  /** The authored value after choosing each available choice at this use. */
+  readonly valueByChoiceKey: Readonly<Record<string, OrderedPrefixCustomization>>;
+  /** The authored value after resetting this use, which drops every later use; null clears it. */
+  readonly defaultValue: OrderedPrefixCustomization | null;
+}
+
+type OrderedPrefixCustomization = Extract<
+  AuthoredEncounterCustomization,
+  { kind: 'orderedPrefix' }
+>;
+
+function orderedPrefixValue(choiceKeys: readonly string[]): OrderedPrefixCustomization | null {
+  return choiceKeys.length === 0
+    ? null
+    : Object.freeze({ kind: 'orderedPrefix' as const, choiceKeys: Object.freeze([...choiceKeys]) });
 }
 
 /** Per-use domains of an ordered prefix: distinct choices, filled from the first use. */
@@ -145,16 +160,33 @@ export function orderedPrefixUseDomains(
   const chosen = value?.kind === 'orderedPrefix' ? value.choiceKeys : [];
   const choices = decision.selection.choices;
   return Object.freeze(
-    Array.from({ length: decision.selection.maximumLength }, (_, index) =>
-      Object.freeze({
-        availableChoiceKeys: Object.freeze(
-          choices
-            .filter((choice) => !chosen.some((key, use) => use !== index && key === choice.key))
-            .map((choice) => choice.key),
+    Array.from({ length: decision.selection.maximumLength }, (_, index) => {
+      const availableChoiceKeys = Object.freeze(
+        choices
+          .filter((choice) => !chosen.some((key, use) => use !== index && key === choice.key))
+          .map((choice) => choice.key),
+      );
+      const requiresEarlierUse = index > chosen.length;
+      return Object.freeze({
+        availableChoiceKeys,
+        requiresEarlierUse,
+        valueByChoiceKey: Object.freeze(
+          Object.fromEntries(
+            requiresEarlierUse
+              ? []
+              : availableChoiceKeys.map((choiceKey) => [
+                  choiceKey,
+                  orderedPrefixValue([
+                    ...chosen.slice(0, index),
+                    choiceKey,
+                    ...chosen.slice(index + 1),
+                  ])!,
+                ]),
+          ),
         ),
-        requiresEarlierUse: index > chosen.length,
-      }),
-    ),
+        defaultValue: orderedPrefixValue(chosen.slice(0, index)),
+      });
+    }),
   );
 }
 
