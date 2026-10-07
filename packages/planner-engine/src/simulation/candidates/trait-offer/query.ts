@@ -249,6 +249,17 @@ export interface EvaluatedTraitAcquisitionTargetDomain {
   };
 }
 
+export type LatestModelHammerTargets = readonly [string] | readonly [string, string];
+
+export interface LatestModelHammerRow {
+  /** Candidate Hammers no other row holds; a row may keep its own. */
+  readonly availableTargetTraitKeys: readonly string[];
+  /** A later row opens only once every earlier row is chosen. */
+  readonly requiresEarlierRow: boolean;
+  /** The complete target list after choosing each candidate Hammer at this row. */
+  readonly valueByTraitKey: Readonly<Record<string, LatestModelHammerTargets>>;
+}
+
 export interface EvaluatedLatestModelTargetsDomain {
   readonly kind: 'latestModelTargetsDomain';
   readonly result: {
@@ -256,7 +267,45 @@ export interface EvaluatedLatestModelTargetsDomain {
     readonly requiredCount: number;
     readonly branchAgreement: boolean;
     readonly candidates: readonly EvaluatedTraitAcquisitionTargetCandidate[];
+    /** One row per required or retained target. */
+    readonly rows: readonly LatestModelHammerRow[];
   };
+}
+
+/** Per-row Latest Model target domains: distinct Hammers, filled from the first row. */
+export function latestModelHammerRows(
+  candidateTraitKeys: readonly string[],
+  requiredCount: number,
+  targets: readonly string[],
+): readonly LatestModelHammerRow[] {
+  return Object.freeze(
+    Array.from({ length: Math.max(requiredCount, targets.length) }, (_, index) => {
+      const requiresEarlierRow = index > targets.length;
+      return Object.freeze({
+        availableTargetTraitKeys: Object.freeze(
+          candidateTraitKeys.filter((traitKey) =>
+            targets.every((target, row) => row === index || target !== traitKey),
+          ),
+        ),
+        requiresEarlierRow,
+        valueByTraitKey: Object.freeze(
+          Object.fromEntries(
+            requiresEarlierRow
+              ? []
+              : candidateTraitKeys.map((traitKey) => {
+                  const next = [...targets];
+                  next[index] = traitKey;
+                  // Choosing another row's Hammer moves it here rather than duplicating it.
+                  const distinct = next.filter(
+                    (target, row) => row === index || target !== traitKey,
+                  );
+                  return [traitKey, Object.freeze(distinct) as LatestModelHammerTargets];
+                }),
+          ),
+        ),
+      });
+    }),
+  );
 }
 
 export interface TraitOfferCandidateBranch {
@@ -797,6 +846,11 @@ export function evaluateTraitCarrierChildDomain(
           requiredCount,
           branchAgreement,
           candidates: Object.freeze(candidates),
+          rows: latestModelHammerRows(
+            candidates.map((candidate) => candidate.result.traitKey),
+            requiredCount,
+            retained,
+          ),
         }),
       });
     }
