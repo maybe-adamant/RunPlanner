@@ -14,7 +14,10 @@ import {
   createOccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceNBuriedTreasureCheckpoint,
+  surfaceCheckpointArtifacts,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   createCompleteFGProject,
@@ -28,11 +31,14 @@ import {
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
+import { createApplication } from '@planner/composition/createApplication';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import {
   artemisSourceAnomalyProject,
   cageBeforeAthenaProject,
@@ -161,6 +167,21 @@ describe('finding paint targets', () => {
       ).toEqual([]);
     },
   );
+
+  it('paints an invalid route trait on its launcher, not its row', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNBuriedTreasureCheckpoint()));
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Traits' }));
+    const painted = [
+      ...view.container.querySelectorAll<HTMLElement>(
+        '.route-traits-panel [data-has-findings="true"]',
+      ),
+    ];
+    expect(painted.map((element) => element.getAttribute('aria-label'))).toEqual([
+      expect.stringMatching(/^Edit Trait: Buried Treasure/),
+    ]);
+  });
 });
 
 const uiRoot = join(dirname(fileURLToPath(import.meta.url)), '../../src/ui');
@@ -209,7 +230,7 @@ describe('finding paint styles', () => {
       const source = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
       for (const rule of source.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
         for (const selector of selectorList(rule[1]!)) {
-          if (!/data-has-(?:findings|issues)/.test(selector)) continue;
+          if (!/data-has-(?:findings|issues)|data-invalid/.test(selector)) continue;
           const subject = selector.split(/\s+(?![^(]*\))/).at(-1) ?? '';
           const isList = /^:is\(([^)]*)\)/.exec(subject)?.[1];
           const allowed =

@@ -31,7 +31,7 @@ export function RouteTraitsPanel({
               row.rarity === undefined ? '' : ` · ${row.rarity}`
             }`;
             return (
-              <li className="route-trait-row" data-invalid={row.invalid} key={row.interactionKey}>
+              <li className="route-trait-row" key={row.interactionKey}>
                 <div>
                   <strong>{row.selectedTraitLabel}</strong>
                   <span className="route-trait-meta">
@@ -49,6 +49,9 @@ export function RouteTraitsPanel({
                 <button
                   aria-label={editLabel}
                   className="quiet-action action-compact"
+                  // An illegal offer trace marks its launcher with the shared finding style.
+                  data-has-findings={row.invalid}
+                  data-semantic-owner={semanticAddressKey(row.address)}
                   id={`trait-launcher-${semanticAddressKey(row.address)}`}
                   onClick={() => dispatch(semanticOwnerNavigated(row.address))}
                   type="button"

@@ -484,10 +484,6 @@
   padding: 0.75rem;
 }
 
-.route-trait-row[data-invalid='true'] {
-  border-color: var(--danger, #b42318);
-}
-
 .route-trait-meta {
   color: var(--muted, #667085);
   display: block;

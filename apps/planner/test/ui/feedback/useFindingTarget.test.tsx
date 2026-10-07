@@ -13,7 +13,13 @@ import { useState } from 'react';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { findingSelected } from '@planner/state/editorSessionSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { FindingTargetScope, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { findingControlKey } from '@planner/projections/structured-workspace';
+import {
+  FindingTargetScope,
+  useFindingAnchor,
+  useFindingMark,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 
 afterEach(cleanup);
 const owner = createOccurrenceAddress(
@@ -102,4 +108,44 @@ it('makes a locked semantic control root inert before its input can be used', ()
   expect(target.hasAttribute('inert')).toBe(true);
   expect(target.getAttribute('aria-disabled')).toBe('true');
   expect(target.dataset.authoringLocked).toBe('true');
+});
+
+function AnchoredRow() {
+  const anchor = useFindingAnchor();
+  const mark = useFindingMark();
+  return (
+    <li {...anchor(owner)} aria-label="Row" tabIndex={-1}>
+      <button type="button">Edit</button>
+      <button {...mark(owner, 'move')} disabled type="button">
+        Move earlier
+      </button>
+      <button {...mark(owner, 'move')} type="button">
+        Move later
+      </button>
+    </li>
+  );
+}
+
+it.each([
+  ['the first enabled marked control', findingControlKey(owner, 'move'), 'Move later'],
+  ['the anchor when nothing inside it is marked', semanticAddressKey(owner), 'Row'],
+] as const)('lands navigation on %s', (_case, markKey, landing) => {
+  const application = createOpenTestApplication();
+  render(
+    <Provider store={application.store}>
+      <FindingTargetScope findings={new Map([[markKey, [first]]])}>
+        <ul>
+          <AnchoredRow />
+        </ul>
+      </FindingTargetScope>
+    </Provider>,
+  );
+  act(() =>
+    application.store.dispatch(
+      findingSelected({ key: semanticFindingKey(first), origin: owner, focusAddress: owner }),
+    ),
+  );
+  expect(
+    document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent,
+  ).toBe(landing);
 });
