@@ -3,6 +3,7 @@ import {
   assessStartingArcanaGrasp,
   createDefaultRouteLoadout,
   deriveRouteLoadout,
+  routeLoadoutEditDomain,
   type RouteLoadout,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -100,5 +101,38 @@ describe('route loadout derivation', () => {
       capacity: 30,
       legal: true,
     });
+  });
+
+  it('proposes each manual toggle and Vow rank against the starting Grasp', () => {
+    const defaults = createDefaultRouteLoadout(catalog);
+    const domain = routeLoadoutEditDomain(catalog, {
+      manualArcanaKeys: ['ChanneledCast', 'StartingGold'],
+      fearRanks: { ...defaults.fearRanks, LimitGraspShrineUpgrade: 3 },
+    });
+    const toggle = (key: string) => domain.manualArcana.find((card) => card.key === key);
+
+    expect(toggle('StartingGold')).toEqual({
+      key: 'StartingGold',
+      selected: true,
+      arcanaKeys: ['ChanneledCast'],
+      grasp: expect.objectContaining({ capacity: 6, legal: true }),
+    });
+    expect(toggle('HealthRegen')).toMatchObject({
+      selected: false,
+      arcanaKeys: expect.arrayContaining(['ChanneledCast', 'StartingGold', 'HealthRegen']),
+      grasp: { capacity: 6, legal: false },
+    });
+    expect(domain.manualArcana.some((card) => card.key === 'BonusRarity')).toBe(false);
+    expect(domain.fearVows.find((vow) => vow.key === 'LimitGraspShrineUpgrade')).toEqual({
+      key: 'LimitGraspShrineUpgrade',
+      rank: 3,
+      maximum: 4,
+      legalRanks: [0, 1, 2, 3],
+    });
+    expect(
+      domain.fearVows.find((vow) => vow.key === 'EnemyDamageShrineUpgrade')?.legalRanks,
+    ).toHaveLength(
+      (domain.fearVows.find((vow) => vow.key === 'EnemyDamageShrineUpgrade')?.maximum ?? 0) + 1,
+    );
   });
 });

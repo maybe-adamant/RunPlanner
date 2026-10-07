@@ -49,7 +49,7 @@ export interface WorkspaceAcquisitionConversionInteraction {
     /** Whether the engine reached this role's Anvil frontier; only then can its editor open. */
     readonly contextReached: boolean;
     readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
-    readonly removableTraitKeys: readonly string[];
+    readonly removableTraitKeys: readonly (string | null)[];
     readonly addedTraitKeysFor: (
       removedTraitKey: string | null,
       priorAddedTraitKeys: readonly string[],

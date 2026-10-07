@@ -424,7 +424,11 @@ export {
   assessStartingArcanaGrasp,
   createDefaultRouteLoadout,
   deriveRouteLoadout,
+  routeLoadoutEditDomain,
   type DerivedRouteLoadout,
+  type FearVowRankDomain,
+  type ManualArcanaToggle,
+  type RouteLoadoutEditDomain,
   type StartingArcanaGraspAssessment,
 } from './loadout';
 export { chaosGateSpawnPointIndices } from './chaos-gate-position';

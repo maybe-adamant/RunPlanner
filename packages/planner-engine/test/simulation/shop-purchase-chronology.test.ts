@@ -887,8 +887,8 @@ describe('Gold Gold Gold Shop pickups', () => {
       duplicate,
     )?.anvil;
     // The first Anvil already replaced Double Attack with its two additions.
-    expect(anvil?.removableTraitKeys).not.toContain('StaffDoubleAttackTrait');
-    expect(anvil?.removableTraitKeys).toEqual(
+    expect(anvil?.removedTraitKeys).not.toContain('StaffDoubleAttackTrait');
+    expect(anvil?.removedTraitKeys).toEqual(
       expect.arrayContaining(['StaffDashAttackTrait', 'StaffTripleShotTrait']),
     );
     const removedTraitKey = 'StaffDashAttackTrait';

@@ -229,6 +229,8 @@ export interface LevelResolutionCandidateBranch {
   readonly requiredOfferCount?: number;
   /** Exact pre-acquisition target domain for this simulation branch. */
   readonly eligibleTargetTraitKeys: readonly string[];
+  /** An unresolved choice's starting draft: the first required targets, the first selected. */
+  readonly startingResolution?: AuthoredLevelResolution;
 }
 
 export interface LevelResolutionCandidateEvaluation {
@@ -236,6 +238,8 @@ export interface LevelResolutionCandidateEvaluation {
   readonly branchIndex: number;
   readonly supported: boolean;
   readonly findings: readonly string[];
+  /** Eligible targets no offered slot holds; an offered slot may keep its own target. */
+  readonly availableTargetTraitKeys: readonly string[];
 }
 
 export interface LevelResolutionCandidateCapability {
@@ -268,17 +272,32 @@ export function createLevelResolutionCandidateArtifacts(
       const branches = privateContexts.get(semanticAddressKey(address));
       if (branches === undefined) return undefined;
       const surfaces = Object.freeze(
-        branches.map((branch) =>
-          Object.freeze({
+        branches.map((branch) => {
+          const eligibleTargetTraitKeys = pomEligibleTargetKeys(catalog, branch.before);
+          if (branch.effectKind !== 'choice')
+            return Object.freeze({
+              effectKind: branch.effectKind,
+              ...(branch.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
+              levelCount: branch.levelCount,
+              eligibleTargetTraitKeys,
+            });
+          const requiredOfferCount = Math.min(3, branch.before.upgradableTraitCount);
+          const offeredTraitKeys = Object.freeze(
+            eligibleTargetTraitKeys.slice(0, requiredOfferCount),
+          );
+          return Object.freeze({
             effectKind: branch.effectKind,
             ...(branch.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
             levelCount: branch.levelCount,
-            ...(branch.effectKind === 'choice'
-              ? { requiredOfferCount: Math.min(3, branch.before.upgradableTraitCount) }
-              : {}),
-            eligibleTargetTraitKeys: pomEligibleTargetKeys(catalog, branch.before),
-          }),
-        ),
+            requiredOfferCount,
+            eligibleTargetTraitKeys,
+            startingResolution: Object.freeze({
+              kind: 'choice' as const,
+              offeredTraitKeys,
+              selectedTraitKey: offeredTraitKeys[0] ?? null,
+            }),
+          });
+        }),
       );
       return Object.freeze({
         branches: surfaces,
@@ -295,10 +314,16 @@ export function createLevelResolutionCandidateArtifacts(
                 branch.effectKind,
                 branch.emptyTargetAllowed ?? false,
               );
+              const offered = value.kind === 'choice' ? value.offeredTraitKeys : [];
               return Object.freeze({
                 branchIndex,
                 supported: evaluation.findings.length === 0,
                 findings: evaluation.findings,
+                availableTargetTraitKeys: Object.freeze(
+                  surfaces[branchIndex]!.eligibleTargetTraitKeys.filter(
+                    (traitKey) => !offered.includes(traitKey),
+                  ),
+                ),
               });
             }),
           ),

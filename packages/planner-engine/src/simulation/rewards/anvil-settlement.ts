@@ -17,7 +17,8 @@ export interface AnvilResultAssessment {
 }
 
 export interface AnvilCandidateCapability {
-  readonly removableTraitKeys: readonly string[];
+  /** Exact removal domain; null, removing nothing, only where no permanent Hammer is equipped. */
+  readonly removedTraitKeys: readonly (string | null)[];
   readonly addedTraitKeysFor: (
     removedTraitKey: string | null,
     priorAddedTraitKeys: readonly string[],
@@ -236,14 +237,19 @@ export function createAnvilCandidateCapability(
       ),
     );
   if (frontiers.length === 0) return undefined;
-  const intersect = (domains: readonly (readonly string[])[]): readonly string[] =>
+  const intersect = <Key>(domains: readonly (readonly Key[])[]): readonly Key[] =>
     Object.freeze(
       (domains[0] ?? []).filter((traitKey) => domains.every((domain) => domain.includes(traitKey))),
     );
-  const removableTraitKeys = intersect(
-    frontiers.map(({ state, temporaryHammerTraitKeys }) =>
-      anvilHammerCandidates(catalog, state.traitHistory, temporaryHammerTraitKeys),
-    ),
+  const removedTraitKeys = intersect<string | null>(
+    frontiers.map(({ state, temporaryHammerTraitKeys }) => {
+      const removable = anvilHammerCandidates(
+        catalog,
+        state.traitHistory,
+        temporaryHammerTraitKeys,
+      );
+      return removable.length === 0 ? [null] : removable;
+    }),
   );
   const addedTraitKeysFor = (
     removedTraitKey: string | null,
@@ -262,7 +268,7 @@ export function createAnvilCandidateCapability(
       ),
     );
   return Object.freeze({
-    removableTraitKeys,
+    removedTraitKeys,
     addedTraitKeysFor,
   });
 }
