@@ -1219,11 +1219,17 @@ describe('progressive selected and blocked products', () => {
     );
     if (evaluation === undefined) throw new Error('fixture lost H');
 
+    // The Fields roll is set on the exit decision; doors wait for it.
+    const fieldsRoll = createExitDecisionAddress(goldenHBiome, fixture.target.source);
     expect(evaluation).toMatchObject({
       authoring: 'incomplete',
       coverage: { kind: 'prefix' },
-      frontier: fixture.target,
+      frontier: fieldsRoll,
+      requiredInput: fieldsRoll,
     });
+    expect(evaluation.findings.filter((finding) => finding.phase === 'completeness')).toEqual([
+      expect.objectContaining({ code: 'batchStateMissing', origin: fieldsRoll }),
+    ]);
     expect(
       bindTestCandidateSession(catalog, fixture.project).evaluate({
         kind: 'roomTarget',

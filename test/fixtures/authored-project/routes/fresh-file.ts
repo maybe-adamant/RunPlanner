@@ -700,7 +700,9 @@ export function authorFreshFileRoomIssues(
       label = `trait:${owner.owner.kind === 'localReward' ? owner.owner.slotKey : owner.owner.kind}`;
       current = authorLegalTraitOffers(current);
     } else if (
-      owner.kind === 'exitDecision' &&
+      (owner.kind === 'exitDecision' ||
+        owner.kind === 'batchRewardStore' ||
+        owner.kind === 'target') &&
       owner.source.kind === 'occurrence' &&
       owner.source.occurrenceId === roomId
     ) {

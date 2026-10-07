@@ -46,22 +46,20 @@ describe('first assessment issue', () => {
       reasons: [expect.objectContaining({ code: 'traitOfferMissing' })],
     });
     expect(first.evaluation.findings).toContainEqual(
-      expect.objectContaining({ code: 'continuationMissing' }),
+      expect.objectContaining({ code: 'batchRewardStoreMissing' }),
     );
     expect(authoringReadinessAt(first, openingTrait)).toBe('editable');
     expect(authoringReadinessAt(first, fDecision())).toBe('locked');
 
-    expect(evaluate(repaired).evaluation.issue).toMatchObject({
-      kind: 'incomplete',
-      owner: fDecision(),
-      reasons: [expect.objectContaining({ code: 'continuationMissing' })],
-    });
-    const batch = evaluate(createUnresolvedFOpeningBatch(repaired));
-    expect(batch.evaluation.issue).toMatchObject({
+    // An absent decision reports the same next edit as its initial envelope.
+    const absent = evaluate(repaired);
+    expect(absent.evaluation.issue).toMatchObject({
       kind: 'incomplete',
       owner: createBatchRewardStoreAddress(fBiome, fDecision().source),
       reasons: [expect.objectContaining({ code: 'batchRewardStoreMissing' })],
     });
+    const batch = evaluate(createUnresolvedFOpeningBatch(repaired));
+    expect(batch.evaluation.issue).toEqual(absent.evaluation.issue);
     expect(
       authoringReadinessAt(batch, createBatchRewardStoreAddress(fBiome, fDecision().source)),
     ).toBe('editable');

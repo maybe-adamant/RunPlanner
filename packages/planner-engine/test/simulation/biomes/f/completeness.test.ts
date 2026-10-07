@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
@@ -25,6 +26,7 @@ import {
   createFOpeningTarget,
   createFProject,
   createFStart,
+  createUnresolvedFOpeningBatch,
   fBiome,
   fCombatId,
   fDecision,
@@ -113,10 +115,41 @@ describe('F takeover completeness', () => {
     expect(Object.isFrozen(result.findings)).toBe(true);
   });
 
-  it('keeps a missing exit decision distinct from an unresolved batch', () => {
+  it('assesses a missing exit decision over its initial envelope', () => {
+    const store = createBatchRewardStoreAddress(fBiome, fDecision().source);
+    const absent = evaluate(createFStart());
+    const empty = evaluate(createUnresolvedFOpeningBatch());
+
+    expect(absent).toMatchObject({
+      completion: 'incomplete',
+      frontier: fDecision(),
+      requiredInput: store,
+    });
     expect(findingKeys(createFStart())).toEqual([
-      `continuationMissing:${semanticAddressKey(fDecision())}`,
+      `batchRewardStoreMissing:${semanticAddressKey(store)}`,
     ]);
+    expect(absent.findings).toEqual(empty.findings);
+  });
+
+  it('reports only the missing reward pool of an empty envelope', () => {
+    const store = createBatchRewardStoreAddress(fBiome, fDecision(fCombatId).source);
+    const empty = applyProjectCommand(createFOpeningTarget(), catalog, {
+      kind: 'CreateBatch',
+      decision: fDecision(fCombatId),
+    });
+    expect(findingKeys(empty)).toEqual([`batchRewardStoreMissing:${semanticAddressKey(store)}`]);
+  });
+
+  it('reports only the first unfilled door once the reward pool is set', () => {
+    const source = fDecision(fCombatId).source;
+    const door = (exitKey: string) =>
+      `targetMissing:${semanticAddressKey(createTargetAddress(fBiome, source, exitKey))}`;
+    const batch = createFCombatBatch();
+    expect(findingKeys(batch)).toEqual([door('exit1')]);
+    const first = createFCombatTarget(batch, 'exit1', 'f-takeover-door-1', 'F_Combat03');
+    expect(findingKeys(first)).toEqual([door('exit2')]);
+    const both = createFCombatTarget(first, 'exit2', 'f-takeover-door-2', 'F_Combat03');
+    expect(evaluate(both).findings.map((finding) => finding.code)).toEqual(['pickedTargetMissing']);
   });
 
   it('installs the declaration-owned batch store when target creation makes it active', () => {
@@ -126,7 +159,13 @@ describe('F takeover completeness', () => {
     expect(result).toMatchObject({
       completion: 'incomplete',
       frontier: fDecision(fCombatId),
-      findings: [{ code: 'continuationMissing', origin: fDecision(fCombatId) }],
+      requiredInput: createBatchRewardStoreAddress(fBiome, fDecision(fCombatId).source),
+      findings: [
+        {
+          code: 'batchRewardStoreMissing',
+          origin: createBatchRewardStoreAddress(fBiome, fDecision(fCombatId).source),
+        },
+      ],
     });
     const openingSource = fDecision().source;
     if (openingSource.kind !== 'occurrence') throw new Error('F opening must be occurrence-owned');
@@ -156,7 +195,13 @@ describe('F takeover completeness', () => {
     expect(result).toMatchObject({
       completion: 'incomplete',
       frontier: fDecision(fCombatId),
-      findings: [{ code: 'continuationMissing', origin: fDecision(fCombatId) }],
+      requiredInput: createBatchRewardStoreAddress(fBiome, fDecision(fCombatId).source),
+      findings: [
+        {
+          code: 'batchRewardStoreMissing',
+          origin: createBatchRewardStoreAddress(fBiome, fDecision(fCombatId).source),
+        },
+      ],
     });
   });
 

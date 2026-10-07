@@ -110,7 +110,7 @@ describe('Fresh File first sequence', () => {
   it('reaches FIntroFight and the Common Apollo trio after the empty opening', () => {
     const project = freshSequence();
     expect(simulateProject(catalog, project).findings.map((finding) => finding.code)).toEqual([
-      'continuationMissing',
+      'batchRewardStoreMissing',
     ]);
     expect(introEncounterKey(project)).toBe('FIntroFight');
     const state = combat01(project).state;
@@ -235,7 +235,7 @@ describe('Fresh File first sequence', () => {
     });
     expect(combat01(cleared).encounters.customizationByPhase).toBeUndefined();
     expect(simulateProject(catalog, cleared).findings.map((finding) => finding.code)).toEqual([
-      'continuationMissing',
+      'batchRewardStoreMissing',
     ]);
   });
 
@@ -318,7 +318,7 @@ describe('Fresh File first sequence', () => {
   it('keeps mature F_Combat01 on GeneratedF with a counted draw and the ordinary offer', () => {
     const project = createMatureCombat01Sequence();
     expect(simulateProject(catalog, project).findings.map((finding) => finding.code)).toEqual([
-      'continuationMissing',
+      'batchRewardStoreMissing',
     ]);
     expect(introEncounterKey(project)).toBe('GeneratedF');
     const before = runProgressRemaining(project, `"${matureStartId}","roomEntered"`);
@@ -347,6 +347,6 @@ describe('Fresh File first sequence', () => {
           value: { rewardType: 'MaxHealthDrop' },
         }),
       ).findings.map((finding) => finding.code),
-    ).toEqual(['continuationMissing']);
+    ).toEqual(['batchRewardStoreMissing']);
   });
 });

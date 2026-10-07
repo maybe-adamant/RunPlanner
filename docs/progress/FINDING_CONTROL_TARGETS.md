@@ -45,9 +45,10 @@ nothing.
   and the Pool can cause (`ROOM_FEATURES_GAME_DATA_AUDIT.md`, Pools of
   Purging).
 - A Hub entry has two whole-owner `continuationMissing` findings
-  (`completeness.ts`: missing Hub decision; exact terminal takeover envelope).
-  Their first edit is the Hub open set. The completed-Hub handoff
-  `continuationMissing` already marks "Open next room".
+  (`completeness.ts`: missing Hub decision; exact terminal takeover envelope
+  or missing decision at the terminal source). The Hub is created by choosing
+  it in the terminal source's first door, so that door is the first edit. The
+  completed-Hub handoff `continuationMissing` already marks "Open next room".
 
 ## Gate 1 — engine: next-edit door and Hub entry findings
 
@@ -57,10 +58,11 @@ nothing.
 - An ordinary room with no exit decision is assessed over its initial
   envelope (`createInitialExitDecision`) and reports the same next edit; it
   no longer reports `continuationMissing`.
-- Fields `batchStateMissing` is owned by the Fields roll address, the control
-  that sets it.
-- A missing Hub decision and an exact terminal takeover envelope report
-  `hubOpenSetIncomplete` at the Hub open set.
+- Fields `batchStateMissing` stays at the exit decision address, which is the
+  Fields roll picker's own address.
+- An exact terminal takeover envelope, or a missing decision at the terminal
+  source, reports `targetMissing` at its first door. An authored Hub with an
+  incomplete open set keeps `hubOpenSetIncomplete`.
 - `continuationMissing` remains only for the completed-Hub handoff.
 - Primary tests: `biomes/f/completeness.test.ts`,
   `progressive-prefix-frontier.test.ts`, selected-cut and Hub completeness
