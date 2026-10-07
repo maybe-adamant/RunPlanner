@@ -4,6 +4,10 @@ import {
   type AcquisitionDisposition,
 } from '@run-planner/engine/authored-project';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
+import {
+  projectAnvilResultPickers,
+  type AnvilResultDraft,
+} from '@planner/projections/contextual/anvilResultPickers';
 
 import { workspaceInteractionKey } from '../contract';
 import type { WorkspaceAcquisitionConversionInteraction } from '../contracts/traits';
@@ -50,16 +54,20 @@ export function bindAcquisitionConversionInteractions(input: {
       const anvilResult = conversion.anvilResult;
       const anvilCapability =
         anvilResult === undefined ? undefined : input.candidates.anvilResult(conversion.address);
+      const anvilDomain = Object.freeze({
+        removedTraitKeys: anvilCapability?.removedTraitKeys ?? Object.freeze([]),
+        addedTraitKeysFor: anvilCapability?.addedTraitKeysFor ?? (() => Object.freeze([])),
+        traitLabel: (traitKey: string) => input.catalog.traits.byKey[traitKey]?.label ?? traitKey,
+      });
       const anvil =
         anvilResult === undefined
           ? undefined
           : Object.freeze({
+              ...anvilDomain,
               contextReached: anvilCapability !== undefined,
               value: anvilResult,
-              removableTraitKeys: anvilCapability?.removedTraitKeys ?? Object.freeze([]),
-              addedTraitKeysFor: anvilCapability?.addedTraitKeysFor ?? (() => Object.freeze([])),
-              traitLabel: (traitKey: string) =>
-                input.catalog.traits.byKey[traitKey]?.label ?? traitKey,
+              pickersFor: (draft: AnvilResultDraft) =>
+                projectAnvilResultPickers(anvilDomain, draft),
               intentFor: (
                 value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
               ) =>

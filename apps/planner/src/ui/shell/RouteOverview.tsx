@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  assessStartingArcanaGrasp,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createKeepsakeEquipResultAddress,
@@ -192,8 +191,11 @@ function MatureRouteLoadout({
     const vow = catalog.fearVows.byKey[key];
     return vow === undefined ? [] : [vow];
   });
-  const manualArcanaKeys = authoredRoute.loadout.manualArcanaKeys;
   const fearRanks = authoredRoute.loadout.fearRanks;
+  const manualArcana = new Map(
+    workspaceRoute.loadoutEditDomain.manualArcana.map((toggle) => [toggle.key, toggle]),
+  );
+  const vowRanks = new Map(workspaceRoute.loadoutEditDomain.fearVows.map((vow) => [vow.key, vow]));
   const activeFearCount = fearVows.filter((vow) => fearRanks[vow.key]! > 0).length;
   const maximumFear = fearVows.reduce(
     (total, vow) => total + vow.incrementalFear.reduce((sum, fear) => sum + fear, 0),
@@ -349,17 +351,13 @@ function MatureRouteLoadout({
               </div>
               <div className="arcana-board">
                 {arcanaCards.map((card) => {
-                  const automatic = card.activation.kind === 'automatic';
-                  const selected = automatic
-                    ? derivedLoadout.automaticArcanaKeys.includes(card.key)
-                    : manualArcanaKeys.includes(card.key);
-                  const proposedManualArcanaKeys = selected
-                    ? manualArcanaKeys.filter((key) => key !== card.key)
-                    : [...manualArcanaKeys, card.key];
-                  const proposal = automatic
-                    ? undefined
-                    : assessStartingArcanaGrasp(catalog, proposedManualArcanaKeys, fearRanks);
-                  const exceedsGrasp = !selected && proposal?.legal === false;
+                  const toggle = manualArcana.get(card.key);
+                  const automatic = toggle === undefined;
+                  const selected =
+                    toggle?.selected ?? derivedLoadout.automaticArcanaKeys.includes(card.key);
+                  // Deselecting stays available so an over-capacity selection can be repaired.
+                  const exceedsGrasp =
+                    toggle !== undefined && !toggle.selected && !toggle.grasp.legal;
                   return (
                     <ArcanaCard
                       key={card.key}
@@ -373,18 +371,19 @@ function MatureRouteLoadout({
                       aria-pressed={selected}
                       disabled={automatic || exceedsGrasp}
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        if (toggle === undefined) return;
                         dispatch(
                           authoredProjectCommandDispatched({
                             kind: 'ReplaceManualArcanaSelection',
                             route: createRouteAddress(workspaceRoute.routeKey),
-                            arcanaKeys: proposedManualArcanaKeys,
+                            arcanaKeys: toggle.arcanaKeys,
                           }),
-                        )
-                      }
+                        );
+                      }}
                       title={
                         exceedsGrasp
-                          ? `${proposal.cost} Grasp exceeds the starting capacity of ${proposal.capacity}`
+                          ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}`
                           : automatic
                             ? 'Activates automatically when its conditions are met.'
                             : undefined
@@ -415,17 +414,11 @@ function MatureRouteLoadout({
               <p className="panel-description">Click to cycle ranks · Right-click to reset</p>
               <div className="fear-rank-list">
                 {fearVows.map((vow) => {
-                  const rank = fearRanks[vow.key] ?? 0;
-                  const maximum = vow.incrementalFear.length;
+                  const { rank, maximum, legalRanks } = vowRanks.get(vow.key)!;
                   const nextRank = rank >= maximum ? 0 : rank + 1;
-                  const canSetRank = (value: number) =>
-                    assessStartingArcanaGrasp(catalog, manualArcanaKeys, {
-                      ...fearRanks,
-                      [vow.key]: value,
-                    }).legal;
-                  const canAdvance = canSetRank(nextRank);
+                  const canAdvance = legalRanks.includes(nextRank);
                   const setRank = (value: number) => {
-                    if (value === rank || !canSetRank(value)) return;
+                    if (value === rank || !legalRanks.includes(value)) return;
                     dispatch(
                       authoredProjectCommandDispatched({
                         kind: 'ReplaceFearVowRank',

@@ -1050,6 +1050,7 @@ export function activeEncounterPhasesForOwner(
                 selection: Object.freeze({
                   kind: 'orderedPrefix' as const,
                   maximumLength: decision.selection.maximumLength,
+                  uses: decision.orderedPrefixUses ?? Object.freeze([]),
                   choices: Object.freeze(
                     decision.selection.choices.map((choice) =>
                       Object.freeze({ key: choice.key, label: choice.label }),

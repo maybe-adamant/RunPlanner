@@ -588,6 +588,8 @@ export interface WorkspaceRoute {
   readonly startingReward?: WorkspaceRewardControl;
   readonly startingArcana: readonly { readonly key: string; readonly rarity: string }[];
   readonly aspectHexTree?: WorkspaceAspectHexTreeControl;
+  /** Engine-assessed Arcana toggles and Vow ranks from the authored loadout. */
+  readonly loadoutEditDomain: import('@run-planner/engine/authored-project').RouteLoadoutEditDomain;
   readonly biomes: readonly WorkspaceBiome[];
   readonly label: string;
   readonly marker: WorkspaceMarker;

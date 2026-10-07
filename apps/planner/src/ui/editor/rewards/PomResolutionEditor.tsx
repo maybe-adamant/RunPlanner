@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { projectLevelResolutionTargetPicker } from '@planner/projections/contextual/levelResolutionTargetPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -76,62 +77,6 @@ function levelResolutionLoadable(
 ): { readonly load: () => ReturnType<WorkspaceLevelResolutionInteraction['load']> } {
   const load = interaction.load;
   return Object.freeze({ load: () => load(value) });
-}
-
-function candidatePicker(
-  interaction: WorkspaceLevelResolutionInteraction,
-  group: LevelResolutionCandidateGroup | undefined,
-  selected: string | null,
-  siblingSelections: readonly (string | null)[],
-): ContextualPickerModel<string> {
-  const targets = new Set(group?.surface.eligibleTargetTraitKeys ?? []);
-  if (selected !== null) targets.add(selected);
-  const items = [...targets].map((target) => {
-    const supported = group?.surface.eligibleTargetTraitKeys.includes(target) ?? false;
-    const isSelected = target === selected;
-    const usedBySibling = siblingSelections.includes(target);
-    return Object.freeze({
-      disabled: usedBySibling || (!supported && !isSelected),
-      key: target,
-      label: interaction.traitLabel(target),
-      selected: isSelected,
-      state: supported ? ('possible' as const) : ('impossible' as const),
-      ...(isSelected && !supported ? { status: 'Current · unavailable' } : {}),
-      ...(isSelected && !supported
-        ? {
-            explanation: findingMessage(group?.evaluations[0]?.findings[0] ?? 'targetUnavailable'),
-          }
-        : {}),
-      value: target,
-    });
-  });
-  const possible = items.filter((item) => item.state === 'possible');
-  const invalid = items.filter((item) => item.selected && item.state === 'impossible');
-  return Object.freeze({
-    ...(items.find((item) => item.selected) === undefined
-      ? {}
-      : { selected: items.find((item) => item.selected)! }),
-    sections: Object.freeze([
-      ...(invalid.length === 0
-        ? []
-        : [
-            Object.freeze({
-              collapsible: false,
-              items: Object.freeze(invalid),
-              key: 'selected-invalid',
-              kind: 'selectedInvalid' as const,
-              label: 'Current target',
-            }),
-          ]),
-      Object.freeze({
-        collapsible: false,
-        items: Object.freeze(possible),
-        key: 'eligible',
-        kind: 'category' as const,
-        label: 'Eligible traits',
-      }),
-    ]),
-  });
 }
 
 /** Shared single-target presentation leaf for random Pom-like effects. */
@@ -251,7 +196,7 @@ export function PomResolutionEditor({
     interaction.value.kind === 'random' ? interaction.value.targetTraitKey : null,
   );
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
-  const [autoFilledGroupKey, setAutoFilledGroupKey] = useState<string | null>(null);
+  const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
   const draft: AuthoredLevelResolution =
     interaction.value.kind === 'choice'
       ? Object.freeze({
@@ -295,56 +240,40 @@ export function PomResolutionEditor({
   const domKey = pomDomKey(interaction.owner);
   const authoredChoice = interaction.value.kind === 'choice' ? interaction.value : undefined;
   const authoredRandom = interaction.value.kind === 'random' ? interaction.value : undefined;
-  const authoredChoiceIsPristine =
+  const authoredChoiceUnresolved =
     authoredChoice !== undefined &&
     authoredChoice.offeredTraitKeys.length === 0 &&
     authoredChoice.selectedTraitKey === null;
-  if (
-    authoredChoiceIsPristine &&
-    activeGroup !== undefined &&
-    autoFilledGroupKey !== activeGroup.key
-  ) {
-    const targets = Object.freeze(
-      activeGroup.surface.eligibleTargetTraitKeys.slice(
-        0,
-        activeGroup.surface.requiredOfferCount ?? 0,
-      ),
-    );
-    const selected = targets[0] ?? null;
-    const next = Object.freeze({
-      kind: 'choice' as const,
-      offeredTraitKeys: targets,
-      selectedTraitKey: selected,
-    });
-    setAutoFilledGroupKey(activeGroup.key);
-    setChoiceSlots(targets);
-    setSelectedChoice(selected);
-    setEvaluated(next);
-  }
+  const seedChoice = (group: LevelResolutionCandidateGroup): void => {
+    const start = group.surface.startingResolution;
+    if (start?.kind !== 'choice') return;
+    setSeededGroupKey(group.key);
+    setActiveGroupKey(group.key);
+    setChoiceSlots(start.offeredTraitKeys);
+    setSelectedChoice(start.selectedTraitKey);
+    setEvaluated(start);
+  };
+  if (authoredChoiceUnresolved && activeGroup !== undefined && seededGroupKey !== activeGroup.key)
+    seedChoice(activeGroup);
   const selectGroup = (key: string): void => {
     const group = groups.find((candidate) => candidate.key === key);
     if (group === undefined) return;
     setActiveGroupKey(group.key);
-    if (authoredChoice !== undefined) {
-      const slots = authoredChoiceIsPristine
-        ? group.surface.eligibleTargetTraitKeys.slice(0, group.surface.requiredOfferCount ?? 0)
-        : Array.from(
-            { length: group.surface.requiredOfferCount ?? 0 },
-            (_, index) => authoredChoice.offeredTraitKeys[index] ?? null,
-          );
-      const selected = authoredChoiceIsPristine
-        ? (slots[0] ?? null)
-        : authoredChoice.selectedTraitKey;
-      setAutoFilledGroupKey(authoredChoiceIsPristine ? group.key : null);
+    if (authoredChoiceUnresolved) seedChoice(group);
+    else if (authoredChoice !== undefined) {
+      const slots = Array.from(
+        { length: group.surface.requiredOfferCount ?? 0 },
+        (_, index) => authoredChoice.offeredTraitKeys[index] ?? null,
+      );
       setChoiceSlots(slots);
-      setSelectedChoice(selected);
+      setSelectedChoice(authoredChoice.selectedTraitKey);
       evaluateDraft(
         Object.freeze({
           kind: 'choice',
           offeredTraitKeys: Object.freeze(
             slots.filter((target): target is string => target !== null),
           ),
-          selectedTraitKey: selected,
+          selectedTraitKey: authoredChoice.selectedTraitKey,
         }),
       );
     } else if (authoredRandom !== undefined) {
@@ -352,6 +281,13 @@ export function PomResolutionEditor({
       evaluateDraft(authoredRandom);
     }
   };
+  const targetPicker = (current: string | null): ContextualPickerModel<string> =>
+    projectLevelResolutionTargetPicker({
+      group: activeGroup,
+      current,
+      traitLabel: interaction.traitLabel,
+      findingCopy: findingMessage,
+    });
   const updateChoiceSlot = (index: number, target: string): void => {
     const slots = Array.from({ length: count }, (_, slot) => choiceSlots[slot] ?? null);
     slots[index] = target;
@@ -403,7 +339,6 @@ export function PomResolutionEditor({
         <div className="trait-offer-options">
           {rows.map((index) => {
             const current = choiceSlots[index] ?? null;
-            const siblings = choiceSlots.filter((_, slot) => slot !== index);
             return (
               <fieldset className="trait-offer-option" key={index}>
                 <legend>Target {index + 1}</legend>
@@ -411,7 +346,7 @@ export function PomResolutionEditor({
                   ariaLabel={`Pom target ${index + 1}`}
                   id={`${domKey}-pom-target-${index}`}
                   label="Trait"
-                  model={candidatePicker(interaction, activeGroup, current, siblings)}
+                  model={targetPicker(current)}
                   onSelect={(target) => updateChoiceSlot(index, target)}
                   placeholder="Choose a trait"
                   {...(current === null ? {} : { triggerLabel: interaction.traitLabel(current) })}
@@ -458,7 +393,7 @@ export function PomResolutionEditor({
           ariaLabel="Recorded random Pom target"
           id={`${domKey}-pom-target`}
           interaction={interaction}
-          model={candidatePicker(interaction, activeGroup, randomTarget, [])}
+          model={targetPicker(randomTarget)}
           onSelect={(target) => {
             setRandomTarget(target);
             evaluateDraft(Object.freeze({ kind: 'random', targetTraitKey: target }));

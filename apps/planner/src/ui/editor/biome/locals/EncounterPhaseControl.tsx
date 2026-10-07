@@ -285,14 +285,14 @@ function EncounterCustomizationControl({
                   <h3 id={`encounter-customization-group-${customizationId}-${decision.key}`}>
                     {decision.label}
                   </h3>
-                  {Array.from({ length: prefixSelection.maximumLength }, (_, index) => (
+                  {prefixSelection.uses.map((use, index) => (
                     <ContextualPicker
                       key={index}
                       id={`encounter-customization-${customizationId}-${decision.key}${index === 0 ? '' : `-${index}`}`}
                       label={`Use ${index + 1}`}
                       layout="inline"
                       ariaLabel={`${decision.label} use ${index + 1}`}
-                      {...(index > 0 && selected[0] === undefined
+                      {...(use.requiresEarlierUse
                         ? { disabledTitle: 'Choose the first summon first' }
                         : !decision.valueSupported && selected[index] !== undefined
                           ? { invalid: true, triggerTitle: unavailableTitle }
@@ -314,17 +314,12 @@ function EncounterCustomizationControl({
                               ]
                             : []),
                           ...prefixSelection.choices.map((choice) => {
-                            const alreadyUsed = selected.some(
-                              (selectedKey, selectedIndex) =>
-                                selectedIndex !== index && selectedKey === choice.key,
-                            );
+                            const held = !use.availableChoiceKeys.includes(choice.key);
                             return {
                               ...choice,
                               value: choice.key,
-                              disabled: alreadyUsed,
-                              ...(alreadyUsed
-                                ? { explanation: 'Already chosen for another use' }
-                                : {}),
+                              disabled: held,
+                              ...(held ? { explanation: 'Already chosen for another use' } : {}),
                             };
                           }),
                         ],

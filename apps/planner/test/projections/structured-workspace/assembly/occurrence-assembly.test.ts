@@ -57,6 +57,37 @@ describe('structured workspace composer assembly', () => {
     },
   );
 
+  it('publishes the engine per-use domains of an Eris ordered prefix', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Surface' },
+      vowKey: 'BossDifficultyShrineUpgrade',
+      rank: 2,
+    });
+    const boss = project.route.biomes
+      .find((biome) => biome.biomeKey === 'O')!
+      .topology!.occurrences.find((occurrence) => occurrence.gameName === 'O_Boss02')!;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        oBiome,
+        { kind: 'occurrence', occurrenceId: boss.occurrenceId },
+        'Encounter',
+      ),
+      decisionKey: 'earlySummons',
+      value: { kind: 'orderedPrefix', choiceKeys: ['swab'] },
+    });
+    const { assembly } = assemble(project, 'Surface', 'O', boss.occurrenceId);
+    const decision = assembly.node.room.encounterPhases[0]?.customization?.find(
+      (candidate) => candidate.key === 'earlySummons',
+    );
+    if (decision?.selection.kind !== 'orderedPrefix') throw new Error('Eris prefix is missing');
+    expect(decision.selection.uses).toEqual([
+      { availableChoiceKeys: ['harpy', 'swab', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+      { availableChoiceKeys: ['harpy', 'jellyfish', 'turtle'], requiresEarlierUse: false },
+    ]);
+  });
+
   it('does not need evaluation entry to preserve authored room-local controls', () => {
     const { assembly } = assemble(
       loadSurfaceNOPQProject(),
