@@ -157,12 +157,17 @@ export function RoomInventoryPanel({
                           kind: 'sellPurgingPoolTrait' as const,
                           slotKey: slot.key,
                         };
-                        const proposal = roomActions?.proposals.find(
-                          (candidate) =>
-                            candidate.reference.kind === reference.kind &&
-                            candidate.reference.slotKey === reference.slotKey &&
-                            candidate.kind === (slot.sale.sold ? 'remove' : 'insert'),
-                        );
+                        const proposals =
+                          roomActions?.proposals.filter(
+                            (candidate) =>
+                              candidate.reference.kind === reference.kind &&
+                              candidate.reference.slotKey === reference.slotKey &&
+                              candidate.kind === (slot.sale.sold ? 'remove' : 'insert'),
+                          ) ?? [];
+                        // A sale is inserted at its earliest legal position.
+                        const proposal =
+                          proposals.find((candidate) => candidate.structurallyAuthorable) ??
+                          proposals[0];
                         const saleRow = roomActions?.rows.find(
                           (row) =>
                             row.reference.kind === reference.kind &&

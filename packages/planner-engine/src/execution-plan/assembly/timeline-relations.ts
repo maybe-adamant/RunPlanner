@@ -39,11 +39,23 @@ export function assembleTimelineRelations(
         localTransactionOwners.has(dependency.owner) &&
         localTransactionOwners.has(dependency.afterOwner),
     );
+  const optionalOwners = new Set(
+    room.roomActionRoster.rows
+      .filter((row) => !row.stale && row.participation === 'optional')
+      .map((row) => semanticAddressKey(row.owner)),
+  );
   const obligations = transactions
     .filter((transaction) => transaction.kind !== 'acquisition')
     .map((transaction) => {
-      const checkpoint =
-        transaction.window.kind === 'postOutgoing'
+      // An optional action, or a refill realized by one, never gates the exit; it is
+      // owed only before leaving the room.
+      const actionOwner =
+        transaction.kind === 'travelDealRefill' && 'owner' in transaction.refill.source
+          ? transaction.refill.source.owner
+          : transaction.owner;
+      const checkpoint = optionalOwners.has(actionOwner)
+        ? 'roomExit'
+        : transaction.window.kind === 'postOutgoing'
           ? 'roomExit'
           : transaction.window.kind === 'encounterEnd'
             ? 'roomExit'

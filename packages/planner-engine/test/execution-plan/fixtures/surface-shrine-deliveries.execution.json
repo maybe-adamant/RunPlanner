@@ -6868,7 +6868,7 @@
               }
             ],
             "hermesShrineSourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22P%22%2C%22surface-p-preboss-shop%3Apostboss%22%2C%22initial%3AsecondRight%22%5D",
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -7420,5 +7420,5 @@
       }
     }
   ],
-  "planFingerprint": "79722711"
+  "planFingerprint": "7b27f69f"
 }

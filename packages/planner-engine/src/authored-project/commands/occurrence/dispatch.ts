@@ -320,6 +320,7 @@ export function applyOccurrenceCommand(
         domain: host.domain,
         order: host.occurrence.roomActions.order,
         requiredKeys: new Set([purchaseKey]),
+        participation: 'any',
       });
       if (!scheduled.some((reference) => roomActionKey(reference) === purchaseKey))
         failCommand(command, 'Shrine purchase has no active room action');

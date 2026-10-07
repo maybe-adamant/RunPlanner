@@ -108,7 +108,7 @@ function TestShrineDeliveryFixtures.testFourthBiomeFlushBindsAtPrebossEntryAndNo
     for _, id in ipairs(plan.selectedOccurrenceIds) do
         local resolved = bindings.resolve(assert(bindings.index(occurrence(plan, id))), deliveryContact(sourceKey))
         if id == "surface-q-preboss" then
-            lu.assertEquals(resolved.transaction.window, { kind = "postOutgoing" })
+            lu.assertEquals(resolved.transaction.window, { kind = "standard", phase = "afterCombat" })
             lu.assertEquals(resolved.transaction.reward.rewardType, "MaxManaDrop")
         else
             lu.assertNil(resolved, id)

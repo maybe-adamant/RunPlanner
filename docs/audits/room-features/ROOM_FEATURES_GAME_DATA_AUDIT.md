@@ -368,7 +368,7 @@ a delayed purchase is scheduled at source cleanup, counts qualifying later
 encounter-end effects, and materializes at its reached host. Side-room Shrines
 use the same source rule but do not consume a newly scheduled or older pending
 use. Entering the fourth entered biome's Preboss flushes pending deliveries into
-required post-outgoing pickups. Numeric prices and economy remain sim-neutral.
+required pickups that gate the exit. Numeric prices and economy remain sim-neutral.
 
 ## Stygian Wells
 

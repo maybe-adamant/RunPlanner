@@ -287,7 +287,10 @@ export function roomLifecycleWindowOrdinal(
           ),
       );
     case 'postOutgoing':
-      return afterPoint((point) => point.kind === 'outgoingGeneration');
+      // Without outgoing generation, exits unlock after the room's required work.
+      return structure.points.some((point) => point.kind === 'outgoingGeneration')
+        ? afterPoint((point) => point.kind === 'outgoingGeneration')
+        : beforePoint((point) => point.kind === 'cleanup');
   }
 }
 

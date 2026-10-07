@@ -349,7 +349,9 @@ describe('selected O validation', () => {
     expect(invalid.route.issue).toMatchObject({ owner, kind: 'invalid' });
     expect(invalid.route.issue?.reasons).toEqual(
       invalidRoom.roomActionRoster.issues.flatMap((issue) =>
-        roomActionKey(issue.reference) === roomActionKey(wheel2Choice) &&
+        (roomActionKey(issue.reference) === roomActionKey(wheel2Choice) ||
+          (issue.kind === 'window' &&
+            roomActionKey(issue.precedingAction) === roomActionKey(wheel2Choice))) &&
         (issue.kind === 'dependency' || issue.kind === 'window')
           ? [
               expect.objectContaining({

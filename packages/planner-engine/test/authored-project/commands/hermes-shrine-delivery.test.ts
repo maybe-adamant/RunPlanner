@@ -260,7 +260,7 @@ describe('Hermes Shrine delivery placement', () => {
       expect.objectContaining({
         kind: 'acquisition',
         hermesShrineSourceKey: placement.entry.entryKey,
-        window: { kind: 'postOutgoing' },
+        window: { kind: 'standard', phase: 'afterCombat' },
       }),
     );
     expect(() => encodeExecutionPlan(compileExecutionPlan({ product }))).not.toThrow();
@@ -785,9 +785,10 @@ function projectWithTwoSideRoomDeliveries() {
         secondLeft: Object.freeze({ delay: 2 }),
       }),
     }),
-    // A side room's purchase window precedes its combat actions.
+    // A side room's Shrine unlocks with its exits, after the room's own actions.
     roomActions: Object.freeze({
       order: Object.freeze([
+        ...sourceOccurrence.roomActions.order,
         ...(['initial:first', 'initial:secondLeft'] as const).map((generationKey) =>
           Object.freeze({
             kind: 'purchaseHermesShrineOffer' as const,
@@ -795,7 +796,6 @@ function projectWithTwoSideRoomDeliveries() {
             rushed: false,
           }),
         ),
-        ...sourceOccurrence.roomActions.order,
       ]),
     }),
   });
@@ -1791,7 +1791,7 @@ describe('Hermes Shrine purchase actions', () => {
           roomActionKey(entry.reference) === roomActionKey(purchase('travelDealRefill', false)),
       ),
     ).toMatchObject({
-      participation: 'required',
+      participation: 'optional',
       window: { kind: 'postOutgoing' },
       dependencies: [
         { kind: 'afterAction', action: purchase('initial:secondLeft', true), authoringOnly: true },
