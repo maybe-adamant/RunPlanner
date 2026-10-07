@@ -720,6 +720,13 @@ describe('trait offer editor entry and dialog', () => {
           false,
         ),
       );
+      if (effect === 'Natural Selection') {
+        // A saved result reopens as editable first-pass rows, not the read-only fallback.
+        const first = await screen.findByRole('button', { name: 'Natural Selection 1st core' });
+        expect(first).toHaveProperty('disabled', false);
+        expect(first.textContent).not.toContain('Choose');
+        expect(screen.getByLabelText('Natural Selection levels')).toBeTruthy();
+      }
       // Clearing the proc must not delete retained residual detail or the primary.
       await user.click(screen.getByRole('checkbox', { name: 'Concave Stone Activated' }));
       await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
