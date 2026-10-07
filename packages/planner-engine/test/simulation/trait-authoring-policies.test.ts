@@ -263,7 +263,7 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       openTimeTraitOfferContexts(
         new Map([
           [
-            semanticAddressKey(result),
+            semanticAddressKey(trait),
             Object.freeze([
               Object.freeze({ state: traitFrontierState(before), source: Object.freeze({}) }),
             ]),

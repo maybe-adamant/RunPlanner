@@ -28,7 +28,8 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateSteadyGrowthOutcomeCandidate } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
-import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNNaturalSelectionCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   createFGenerationProject,
   fGenerationBiome,
@@ -116,7 +117,7 @@ describe('run-impacting trait candidate contacts', () => {
       openTimeTraitOfferContexts(
         new Map([
           [
-            semanticAddressKey(result),
+            semanticAddressKey(trait),
             Object.freeze([
               {
                 state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),
@@ -158,6 +159,55 @@ describe('run-impacting trait candidate contacts', () => {
     expect(complete).toMatchObject({
       kind: 'naturalSelectionResult',
       result: { supported: true, complete: true, findings: [] },
+    });
+  });
+
+  it('re-edits a saved Natural Selection result after the route continues past it', () => {
+    const saved = loadSurfaceNNaturalSelectionCheckpoint();
+    const assembly = simulateProjectAssembly(catalog, saved);
+    expect(assembly.evaluation.findings).toEqual([]);
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, nOccurrenceId('miniBoss01')),
+      'source',
+    );
+    const state = saved.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === nOccurrenceId('miniBoss01'),
+      )?.state;
+    const value: AuthoredTraitOffer | undefined =
+      state !== undefined && 'reward' in state
+        ? (state.reward?.traitOffersByAcquisitionRole.source ?? undefined)
+        : undefined;
+    const option = value?.kind === 'traits' ? value.options[0] : undefined;
+    if (value === undefined || option?.naturalSelectionTargets === undefined)
+      throw new Error('saved Natural Selection result is missing');
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    const evaluate = (targets: readonly string[] | undefined) => {
+      const query: NaturalSelectionResultCandidateQuery = {
+        kind: 'naturalSelectionResult',
+        result: createNaturalSelectionResultAddress(trait, 'option1'),
+        value,
+        targets,
+      };
+      return session.evaluate(query);
+    };
+
+    const empty = evaluate(undefined);
+    expect(empty).toMatchObject({
+      kind: 'naturalSelectionResult',
+      result: { firstPassRows: [{ requiresEarlierRow: false }, { requiresEarlierRow: true }] },
+    });
+    expect(
+      empty.kind === 'naturalSelectionResult' ? empty.result.completedTargets : 'unavailable',
+    ).toBeUndefined();
+    expect(evaluate(option.naturalSelectionTargets)).toMatchObject({
+      kind: 'naturalSelectionResult',
+      result: {
+        supported: true,
+        complete: true,
+        completedTargets: option.naturalSelectionTargets,
+      },
     });
   });
 
@@ -466,7 +516,7 @@ describe('run-impacting trait candidate contacts', () => {
       openTimeTraitOfferContexts(
         new Map([
           [
-            semanticAddressKey(createNaturalSelectionResultAddress(trait, 'option1')),
+            semanticAddressKey(trait),
             Object.freeze([
               {
                 state: traitFrontierState(historyWithCoreTrait('ApolloWeaponBoon')),

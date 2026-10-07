@@ -2,7 +2,6 @@ import {
   semanticAddressKey,
   type LevelResolutionAddress,
   type TraitOfferAddress,
-  type NaturalSelectionResultAddress,
 } from '../../../authored-project/addresses';
 import { resolveTraitAcquisitionOrdinalEffect } from '../../../catalog-schema';
 import type {
@@ -216,9 +215,7 @@ export interface ChaosOfferDomain {
 }
 
 export interface TraitOfferCandidateArtifacts {
-  readonly at: (
-    address: TraitOfferAddress | NaturalSelectionResultAddress,
-  ) => TraitOfferCandidateCapability | undefined;
+  readonly at: (address: TraitOfferAddress) => TraitOfferCandidateCapability | undefined;
 }
 
 export interface LevelResolutionCandidateBranch {
@@ -342,7 +339,7 @@ export function createTraitOfferCandidateArtifacts(
 ): TraitOfferCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
-    at: (address: TraitOfferAddress | NaturalSelectionResultAddress) => {
+    at: (address: TraitOfferAddress) => {
       const branchContexts = privateContexts.get(semanticAddressKey(address));
       if (branchContexts === undefined) return undefined;
       const concaveStoneSecondaryContext = (
@@ -374,12 +371,11 @@ export function createTraitOfferCandidateArtifacts(
         );
         const effectiveOffer = callingCard.offer;
         if (effectiveOffer.kind !== 'traits') return undefined;
-        const traitAddress = address.kind === 'traitOffer' ? address : address.trait;
         const rarifiedState = Object.freeze({ ...context.state, keepsakes: callingCard.state });
         const primary = evaluateReachedTraitOffer(
           catalog,
-          traitAddress,
-          traitAddress.acquisitionRole,
+          address,
+          address.acquisitionRole,
           effectiveOffer,
           rarifiedState,
           traitOfferCandidateSource(catalog, context, effectiveOffer),
@@ -405,7 +401,7 @@ export function createTraitOfferCandidateArtifacts(
         const settledChildren = settleSelectedTraitChildren({
           catalog,
           traitHistory: applied.history,
-          traitAddress,
+          traitAddress: address,
           selectedOptionKey: effectiveOffer.selectedOptionKey,
           selected,
           selectedDisposition,
@@ -820,10 +816,8 @@ export function createTraitOfferCandidateArtifacts(
             branchContexts.flatMap((context) => {
               const evaluation = evaluateReachedTraitOffer(
                 catalog,
-                address.kind === 'traitOffer' ? address : address.trait,
-                address.kind === 'traitOffer'
-                  ? address.acquisitionRole
-                  : address.trait.acquisitionRole,
+                address,
+                address.acquisitionRole,
                 value,
                 context.state,
                 traitOfferCandidateSource(catalog, context, value),
