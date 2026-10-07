@@ -30,6 +30,45 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
   }
 }
 
+/** The trait picker control of one Boon Boon Boon row. */
+export function echoLastRunOptionControl(option: {
+  readonly giverKey: string;
+  readonly traitKey: string;
+  readonly rarity: string;
+}): WorkspaceFindingControl {
+  return `echoLastRunOption:${option.giverKey}:${option.traitKey}:${option.rarity}`;
+}
+
+const groupedOutcomeCodes = new Set<string>([
+  'allTogetherResultMissing',
+  'allTogetherResultUnavailable',
+  'naturalSelectionResultMissing',
+  'naturalSelectionResultUnavailable',
+]);
+
+/** Boon Boon Boon findings arrive at the Echo choice owner; each names its repairing row. */
+function echoLastRunControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
+  if (finding.code === 'echoLastRunBoonOptionUnavailable')
+    return typeof finding.evidence.detail === 'string'
+      ? (`echoLastRunOption:${finding.evidence.detail}` as const)
+      : undefined;
+  if (
+    finding.code === 'targetedAcquisitionTargetMissing' ||
+    finding.code === 'targetedAcquisitionTargetUnavailable'
+  )
+    return 'echoLastRunTarget';
+  // The nested evidence names no set or position, so the group's first row repairs it.
+  return groupedOutcomeCodes.has(finding.code) ? 'outcomeFirstRow' : undefined;
+}
+
+/** A grouped outcome finding marked at its own owner names the row that repairs it. */
+function ownerControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
+  if (finding.origin.kind === 'echoLastRunBoon') return echoLastRunControl(finding);
+  // Natural Selection evidence names no position, so its first first-pass row repairs it.
+  if (finding.origin.kind === 'naturalSelectionResult') return 'outcomeFirstRow';
+  return undefined;
+}
+
 /** A finding repaired by one addressless control of its own owner, chosen by its code. */
 function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
   if (finding.origin.kind === 'acquisitionRole' && finding.code === 'seaStarDuplicationUnavailable')
@@ -53,14 +92,13 @@ export function findingRepairTarget(
   if (destination === undefined) return undefined;
   const markAddress =
     destination.markByCode?.[finding.code] ?? destination.markAddress ?? destination.focusAddress;
+  const ownMark = semanticAddressKey(markAddress) === semanticAddressKey(finding.origin);
   return findingControlKey(
     markAddress,
-    codeControl(finding) ??
+    (ownMark ? ownerControl(finding) : undefined) ??
+      codeControl(finding) ??
       destination.markControl ??
-      (finding.origin.kind === 'roomAction' &&
-      semanticAddressKey(markAddress) === semanticAddressKey(finding.origin)
-        ? roomActionControl(finding)
-        : undefined),
+      (finding.origin.kind === 'roomAction' && ownMark ? roomActionControl(finding) : undefined),
   );
 }
 

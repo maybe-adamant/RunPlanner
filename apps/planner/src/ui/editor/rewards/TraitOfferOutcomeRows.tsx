@@ -9,7 +9,11 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import type {
+  FindingAnchorProps,
+  FindingMarkProps,
+  FindingTargetProps,
+} from '@planner/ui/feedback/useFindingTarget';
 import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 
 const noTargets: readonly string[] = Object.freeze([]);
@@ -33,10 +37,12 @@ export interface AllTogetherSetRow {
 }
 
 function AllTogetherSetRowPicker({
+  findingMark,
   onSelect,
   row,
   value,
 }: {
+  readonly findingMark?: FindingMarkProps;
   readonly onSelect: (value: string | null) => void;
   readonly row: AllTogetherSetRow;
   readonly value: string | null | undefined;
@@ -46,6 +52,7 @@ function AllTogetherSetRowPicker({
   return (
     <ContextualPicker
       {...(row.findingTarget === undefined ? {} : { findingTarget: row.findingTarget })}
+      {...(findingMark === undefined ? {} : { findingMark })}
       ariaLabel={`All Together ${label}`}
       id={row.controlId}
       label={label}
@@ -62,10 +69,13 @@ function AllTogetherSetRowPicker({
 /** One picker row per set; the draft takes the result once every set is chosen. */
 export function AllTogetherOutcomeRows({
   authored,
+  firstRowMark,
   onSelect,
   rows,
 }: {
   readonly authored: AuthoredAllTogetherResult | undefined;
+  /** Marks the first set for a finding of the whole group. */
+  readonly firstRowMark?: FindingMarkProps;
   readonly onSelect: (result: AuthoredAllTogetherResult) => void;
   readonly rows: readonly AllTogetherSetRow[];
 }) {
@@ -83,9 +93,10 @@ export function AllTogetherOutcomeRows({
     else setPartial({ base: authored, values: next });
   };
   return (
-    <div aria-label="All Together grants" className="trait-selected-outcome-detail" role="group">
-      {rows.map((row) => (
+    <div aria-label="All Together grants" className="trait-outcome-rows" role="group">
+      {rows.map((row, index) => (
         <AllTogetherSetRowPicker
+          {...(index === 0 && firstRowMark !== undefined ? { findingMark: firstRowMark } : {})}
           key={row.setKey}
           onSelect={(value) => choose(row.setKey, value)}
           row={row}
@@ -111,7 +122,8 @@ function ordinal(position: number): string {
 export function NaturalSelectionOutcomeRows({
   authored,
   controlId,
-  findingTarget,
+  findingAnchor,
+  firstRowMark,
   loadableFor,
   onClear,
   onSelect,
@@ -119,7 +131,9 @@ export function NaturalSelectionOutcomeRows({
 }: {
   readonly authored: readonly string[] | undefined;
   readonly controlId: string;
-  readonly findingTarget?: FindingTargetProps;
+  /** Navigation lands on the group; its findings mark the first row. */
+  readonly findingAnchor?: FindingAnchorProps;
+  readonly firstRowMark?: FindingMarkProps;
   readonly loadableFor: (targets: readonly string[]) => {
     readonly load: () => WorkspaceNaturalSelectionDomain | undefined;
   };
@@ -167,12 +181,12 @@ export function NaturalSelectionOutcomeRows({
   };
   return (
     <div
-      {...findingTarget}
+      {...findingAnchor}
       aria-label="Natural Selection targets"
-      className="trait-selected-outcome-detail"
+      className="trait-outcome-rows"
       id={controlId}
       role="group"
-      tabIndex={findingTarget === undefined ? undefined : -1}
+      tabIndex={findingAnchor === undefined ? undefined : -1}
     >
       {domain === undefined || domain.rows.length === 0 ? (
         <SelectedOutcomeRow label="Targets">
@@ -199,6 +213,7 @@ export function NaturalSelectionOutcomeRows({
         const target = picks[position];
         return (
           <ContextualPicker
+            {...(position === 0 && firstRowMark !== undefined ? { findingMark: firstRowMark } : {})}
             ariaLabel={`Natural Selection ${label} core`}
             id={id}
             key={position}

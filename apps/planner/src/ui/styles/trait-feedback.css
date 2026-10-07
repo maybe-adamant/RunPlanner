@@ -233,7 +233,7 @@
   font-size: 0.84rem;
 }
 
-.trait-selected-outcome-detail {
+.trait-outcome-rows {
   display: grid;
   gap: 0.55rem;
   min-width: 0;

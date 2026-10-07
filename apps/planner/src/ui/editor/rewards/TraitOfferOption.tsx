@@ -6,6 +6,7 @@ import type {
   ContextualPickerModel,
 } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import { traitRarityPresentation } from './traitRarityPresentation';
 
 const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
@@ -42,6 +43,7 @@ export function TraitOfferOption<TraitValue>({
   showPersephoneBonus = false,
   spellSlot,
   traitAriaLabel,
+  traitFindingMark,
   persephoneAriaLabel,
   traitLabel,
   traitKey,
@@ -76,6 +78,7 @@ export function TraitOfferOption<TraitValue>({
   readonly showPersephoneBonus?: boolean;
   readonly spellSlot?: { readonly bonus: number; readonly moonglow: string };
   readonly traitAriaLabel: string;
+  readonly traitFindingMark?: FindingMarkProps;
   readonly persephoneAriaLabel?: string;
   readonly traitLabel?: string;
   readonly traitKey?: string;
@@ -115,6 +118,7 @@ export function TraitOfferOption<TraitValue>({
         )}
       </legend>
       <ContextualPicker
+        {...(traitFindingMark === undefined ? {} : { findingMark: traitFindingMark })}
         ariaLabel={traitAriaLabel}
         id={`${controlId}-trait`}
         label="Trait"

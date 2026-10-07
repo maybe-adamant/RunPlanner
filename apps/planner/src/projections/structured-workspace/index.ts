@@ -9,7 +9,11 @@ export {
   moveRankedPrefixItem,
   reconcileRankedPrefix,
 } from './presentation/hub-ranking';
-export { findingControlKey, findingRepairTarget } from './navigation/finding-highlights';
+export {
+  echoLastRunOptionControl,
+  findingControlKey,
+  findingRepairTarget,
+} from './navigation/finding-highlights';
 export type {
   WorkspaceDefaultInspectorDestination,
   WorkspaceFindingControl,

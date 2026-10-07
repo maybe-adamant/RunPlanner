@@ -10,8 +10,11 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
+  createIncomingRewardAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
+  createStartingRewardAddress,
+  createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -24,6 +27,7 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 import {
   createStaleSurfaceHermesDeliveryPlacement,
@@ -49,9 +53,6 @@ afterEach(cleanup);
 
 /** Containers that carry their own mark; every other container is a navigation anchor. */
 const approvedContainers = [
-  // Dialog outcome sections, pending their own policy.
-  'trait-selected-outcome-detail',
-  'echo-last-run-choice',
   // A Hub requirement spread across the whole board or map has no single control.
   'hub-requirement-box',
 ] as const;
@@ -77,6 +78,89 @@ const goldenFNemesisPhase = createEncounterPhaseAddress(
 );
 const surfaceN = createBiomeAddress('Surface', 'N');
 
+/** An unresolved All Together or Natural Selection pick after the boons it requires. */
+function groupedOutcomeProject(effect: 'All Together' | 'Natural Selection'): ProjectDocument {
+  const [giverKey, prerequisites, options] =
+    effect === 'All Together'
+      ? ([
+          'Hera',
+          [
+            ['HeraWeaponBoon', 'HeraSpecialBoon', 'HeraCastBoon'],
+            ['BoonDecayBoon', 'HeraManaBoon', 'HeraSprintBoon'],
+            ['DamageSharePotencyBoon', 'HeraManaBoon', 'HeraSprintBoon'],
+          ],
+          ['HeraSpecialBoon', 'AllElementalBoon', 'HeraCastBoon'],
+        ] as const)
+      : ([
+          'Demeter',
+          [
+            ['PoseidonWeaponBoon', 'PoseidonSpecialBoon', 'PoseidonCastBoon'],
+            ['DemeterSpecialBoon', 'DemeterCastBoon', 'DemeterSprintBoon'],
+            ['PlantHealthBoon', 'DemeterCastBoon', 'DemeterSprintBoon'],
+          ],
+          ['DemeterCastBoon', 'GoodStuffBoon', 'DemeterManaBoon'],
+        ] as const);
+  const sites = [goldenFStartId, goldenFOccurrenceId(2, 1), goldenFOccurrenceId(4, 1)];
+  let project = createGoldenFGHIProject();
+  for (const [index, traits] of prerequisites.entries()) {
+    const giver = traits[0].startsWith('Poseidon') ? 'Poseidon' : giverKey;
+    const reward = createIncomingRewardAddress(goldenFBiome, sites[index]!);
+    const value = {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: `${giver}Upgrade` },
+    } as const;
+    project = applyProjectCommand(
+      project,
+      catalog,
+      index === 0
+        ? {
+            kind: 'ReplaceStartingReward',
+            reward: createStartingRewardAddress('Underworld'),
+            value,
+          }
+        : { kind: 'ReplaceIncomingReward', reward, value },
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: giver,
+        selectedOptionKey: 'option1',
+        options: [
+          {
+            traitKey: traits[0],
+            rarity: 'Common',
+            ...(traits[0] === 'BoonDecayBoon' ? { targetTraitKey: 'HeraWeaponBoon' } : {}),
+          },
+          { traitKey: traits[1], rarity: 'Common' },
+          { traitKey: traits[2], rarity: 'Common' },
+        ],
+      },
+    });
+  }
+  const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: `${giverKey}Upgrade` } },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(reward, 'source'),
+    value: {
+      kind: 'traits',
+      giverKey,
+      selectedOptionKey: 'option2',
+      options: [
+        { traitKey: options[0], rarity: 'Common' },
+        { traitKey: options[1], rarity: effect === 'All Together' ? 'Legendary' : 'Duo' },
+        { traitKey: options[2], rarity: 'Common' },
+      ],
+    },
+  });
+}
+
 const constructed: readonly (readonly [string, () => ProjectDocument])[] = [
   ['impossible Anomaly', artemisSourceAnomalyProject],
   ['Fields cage ordering issue', cageBeforeAthenaProject],
@@ -99,6 +183,8 @@ const constructed: readonly (readonly [string, () => ProjectDocument])[] = [
         },
       ),
   ],
+  ['unresolved All Together', () => groupedOutcomeProject('All Together')],
+  ['unresolved Natural Selection', () => groupedOutcomeProject('Natural Selection')],
   [
     'unpicked door',
     () =>

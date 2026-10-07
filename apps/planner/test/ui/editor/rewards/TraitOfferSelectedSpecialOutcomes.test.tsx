@@ -46,6 +46,12 @@ import {
 } from '@planner/ui/editor/rewards/TraitOfferOutcomeRows';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
+  FindingTargetScope,
+  useFindingAnchor,
+  useFindingMark,
+} from '@planner/ui/feedback/useFindingTarget';
+import { findingControlKey } from '@planner/projections/structured-workspace';
+import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -160,6 +166,55 @@ describe('per-row outcome pickers', () => {
     const retained = vi.fn();
     render(naturalRows(['B'], retained, vi.fn(), single));
     expect(retained).not.toHaveBeenCalled();
+  });
+
+  it('marks a Natural Selection finding on its first row, never the group', () => {
+    const application = createApplication();
+    const owner = createNaturalSelectionResultAddress(
+      createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1)),
+        'source',
+      ),
+      'option1',
+    );
+    const finding = {
+      code: 'naturalSelectionResultMissing' as const,
+      origin: owner,
+      evidence: {},
+      phase: 'rewardGeneration' as const,
+      severity: 'error' as const,
+    };
+    function Marked() {
+      const anchor = useFindingAnchor();
+      const mark = useFindingMark();
+      return (
+        <NaturalSelectionOutcomeRows
+          authored={undefined}
+          controlId="natural"
+          findingAnchor={anchor(owner)}
+          firstRowMark={mark(owner, 'outcomeFirstRow')}
+          loadableFor={(targets) => ({ load: () => firstPassDomain(targets) })}
+          onClear={() => undefined}
+          onSelect={() => undefined}
+          traitLabel={traitLabel}
+        />
+      );
+    }
+    render(
+      <Provider store={application.store}>
+        <FindingTargetScope
+          findings={new Map([[findingControlKey(owner, 'outcomeFirstRow'), [finding]]])}
+        >
+          <Marked />
+        </FindingTargetScope>
+      </Provider>,
+    );
+    expect(
+      [...document.querySelectorAll('[data-has-findings="true"]')].map((element) =>
+        element.getAttribute('aria-label'),
+      ),
+    ).toEqual(['Natural Selection 1st core']);
+    application.dispose();
   });
 
   it('labels authored targets from the projection when the domain publishes no rows', () => {
