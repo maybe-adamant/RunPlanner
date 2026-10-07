@@ -1,7 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
-import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 import type {
   ContextualPickerItem,
@@ -11,6 +11,8 @@ import type {
 
 interface ContextualPickerProps<T> {
   readonly findingTarget?: FindingTargetProps;
+  /** Findings of an owner this picker repairs without being its navigation target. */
+  readonly findingMark?: FindingMarkProps;
   readonly ariaLabel?: string;
   readonly cancelLabel?: string;
   readonly choiceLabel?: string;
@@ -198,6 +200,7 @@ export function ContextualPicker<T>({
   triggerTitle,
   invalid = false,
   hasIssues,
+  findingMark,
 }: ContextualPickerProps<T>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
@@ -252,7 +255,12 @@ export function ContextualPicker<T>({
                 ? {}
                 : { title: triggerTitle })}
             {...findingTarget}
-            aria-description={findingTarget?.['aria-description'] ?? selected?.explanation}
+            {...(findingMark === undefined || !findingMark['data-has-findings'] ? {} : findingMark)}
+            aria-description={
+              findingMark?.['aria-description'] ??
+              findingTarget?.['aria-description'] ??
+              selected?.explanation
+            }
             id={id}
             ref={(node) => {
               captureTrigger(node);

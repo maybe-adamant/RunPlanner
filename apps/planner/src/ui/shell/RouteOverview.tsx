@@ -27,7 +27,7 @@ import {
 import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
-import { useFindingTarget } from '../feedback/useFindingTarget';
+import { useFindingAnchor } from '../feedback/useFindingTarget';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
@@ -71,7 +71,7 @@ export function RouteOverview({
   readonly workspaceRoute: WorkspaceRoute;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
   const replacementRevision = useAppSelector(
     (state) => state.editorSession.workspaceReplacementRevision,
@@ -91,7 +91,7 @@ export function RouteOverview({
   return (
     <section
       className="route-overview"
-      {...findingTarget(workspaceRoute.marker.address)}
+      {...findingAnchor(workspaceRoute.marker.address)}
       tabIndex={-1}
     >
       <header className="panel-heading">

@@ -11,7 +11,7 @@ import {
   type WorkspaceLocalVisitDecision,
   type WorkspaceLocalVisitOrderInteraction,
 } from '@planner/projections/structured-workspace';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
   candidateWaitingTitle,
@@ -313,7 +313,7 @@ function VisitOrder({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit: WorkspaceLocalVisitDecision;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const executeIntent = useCommandIntent();
   const board = useRef<HTMLOListElement>(null);
   const pendingDrag = useRef<
@@ -445,7 +445,7 @@ function VisitOrder({
       ? undefined
       : orderActionState(hoveredProposal.interaction, hoveredCandidate);
   return (
-    <div {...findingTarget(localVisit.order)} className="ephyra-side-controls" tabIndex={-1}>
+    <div {...findingAnchor(localVisit.order)} className="ephyra-side-controls" tabIndex={-1}>
       <div className="ephyra-side-visit-section">
         <div className="ephyra-side-visit-section-heading">
           <h5>Visit order</h5>
@@ -542,7 +542,7 @@ export function LocalVisitWorkbench({
   readonly selectedSlotKey?: string;
   readonly title: string;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const lastFocusRequest = useRef<number | undefined>(undefined);
   const focusGeneration = (element: HTMLInputElement | null, slotKey: string) => {
     if (
@@ -557,7 +557,7 @@ export function LocalVisitWorkbench({
   };
   return (
     <section
-      {...findingTarget(localVisit.address)}
+      {...findingAnchor(localVisit.address)}
       aria-label="Side Rooms"
       className="ephyra-side-editor"
       tabIndex={-1}

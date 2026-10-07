@@ -4,6 +4,7 @@ import {
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 
 /** Fixed Shop inventory; Travel Deal is authored on the timeline under its purchase. */
@@ -15,6 +16,7 @@ export function ShopWorkbench({
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
   const executeIntent = useCommandIntent();
+  const findingTarget = useFindingTarget();
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory" className="shop-editor">
@@ -41,6 +43,7 @@ export function ShopWorkbench({
             </div>
             <label className="shop-family-participation">
               <input
+                {...findingTarget(offer.purchase.address)}
                 aria-label={`Purchased ${offer.label}`}
                 checked={offer.participation.purchased}
                 onChange={(event) =>

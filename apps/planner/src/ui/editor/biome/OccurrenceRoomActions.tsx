@@ -20,7 +20,7 @@ import {
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 export { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
@@ -137,7 +137,8 @@ export function RoomActionsWorkbench({
       };
 }) {
   const executeIntent = useCommandIntent();
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const board = useRef<HTMLOListElement | HTMLDivElement>(null);
   const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
@@ -501,6 +502,7 @@ export function RoomActionsWorkbench({
     const placementControl =
       placement === undefined ? (
         <RoomActionPlacementControl
+          findingMark={findingMark(row.address, row.rank === null ? 'place' : 'move')}
           onApply={apply}
           onBeginAdd={(button) => {
             placementTrigger.current = button;
@@ -513,7 +515,7 @@ export function RoomActionsWorkbench({
         />
       ) : (
         <button
-          {...('entry' in placement.command ? findingTarget(placement.command.entry) : {})}
+          {...findingMark(row.address, 'place')}
           aria-label={
             row.participation === 'required'
               ? placement.command.kind === 'PlaceHermesShrineDelivery'
@@ -555,7 +557,7 @@ export function RoomActionsWorkbench({
           data-in-order={row.rank === null ? 'false' : 'true'}
           data-placing={placingRow?.key === row.key || undefined}
           data-room-action-key={row.key}
-          {...findingTarget(row.address)}
+          {...findingAnchor(row.address)}
           tabIndex={-1}
           kind="action"
           handle={
@@ -613,7 +615,10 @@ export function RoomActionsWorkbench({
               {nemesisInteraction === undefined ? (
                 renderSupplement(supplement)
               ) : (
-                <NemesisInteractionEditor interaction={nemesisInteraction} />
+                <NemesisInteractionEditor
+                  findingMark={(control) => findingMark(row.address, control)}
+                  interaction={nemesisInteraction}
+                />
               )}
             </>
           }
@@ -621,6 +626,7 @@ export function RoomActionsWorkbench({
           removal={
             renderRowRemoval?.(row) ?? (
               <RoomActionRemovalControl
+                findingMark={findingMark(row.address, 'delete')}
                 onRemove={removeRow}
                 proposals={placement === undefined ? proposals : []}
                 row={row}
@@ -701,7 +707,7 @@ export function RoomActionsWorkbench({
         <section
           aria-label={actions === undefined ? undefined : 'Room Timeline'}
           className="room-actions-workbench"
-          {...(actions === undefined ? {} : findingTarget(actions.owner))}
+          {...(actions === undefined ? {} : findingAnchor(actions.owner))}
           tabIndex={-1}
         >
           <p aria-live="polite" className="visually-hidden">
@@ -883,7 +889,7 @@ export function RoomActionsWorkbench({
     <section
       aria-label="Room Timeline"
       className="room-actions-workbench"
-      {...findingTarget(actions.owner)}
+      {...findingAnchor(actions.owner)}
       tabIndex={-1}
     >
       <p aria-live="polite" className="visually-hidden">

@@ -1,6 +1,10 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react';
-import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
+import {
+  findingControlKey,
+  type StructuredWorkspaceProjection,
+  type WorkspaceFindingControl,
+} from '@planner/projections/structured-workspace';
 import {
   formatFindingExplanation,
   presentFinding,
@@ -122,5 +126,83 @@ export function useFindingTarget() {
         element.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       },
     };
+  };
+}
+
+export type FindingAnchorProps = Omit<FindingTargetProps, 'data-has-findings' | 'aria-description'>;
+
+/**
+ * Binds a navigation anchor: it is focused and locked like its owner, but its
+ * owner's findings mark the controls inside it, never the anchor.
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
+export function useFindingAnchor() {
+  const findingTarget = useFindingTarget();
+  return (
+    address: SemanticAddress,
+    options: {
+      readonly id?: string;
+      readonly readinessOwner?: SemanticAddress;
+      /** The element inside the anchor that navigation focuses, when one exists. */
+      readonly focusTarget?: (anchor: HTMLElement) => HTMLElement | null;
+    } = {},
+  ): FindingAnchorProps => {
+    const {
+      'data-has-findings': _hasFindings,
+      'aria-description': _description,
+      ...anchor
+    } = findingTarget(address, options.id, options.readinessOwner);
+    void _hasFindings;
+    void _description;
+    const focusTarget = options.focusTarget;
+    if (focusTarget === undefined) return anchor;
+    return {
+      ...anchor,
+      ref: (element) => {
+        if (element === null) return anchor.ref(null);
+        const inner = focusTarget(element);
+        anchor.ref(inner ?? element);
+      },
+    };
+  };
+}
+
+export interface FindingMarkProps {
+  readonly 'data-semantic-owner': string;
+  readonly 'data-has-findings': boolean;
+  readonly 'aria-description': string | undefined;
+}
+
+/** Marks a control with its owner's findings without making it a navigation target. */
+// eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
+export function useFindingMark() {
+  const { findings: findingsByTarget } = useContext(feedback);
+  return (address: SemanticAddress, control?: WorkspaceFindingControl): FindingMarkProps => {
+    const key = findingControlKey(address, control);
+    const findings = findingsByTarget.get(key) ?? [];
+    return {
+      'data-semantic-owner': key,
+      'data-has-findings': findings.length > 0,
+      'aria-description':
+        findings.length === 0
+          ? undefined
+          : findings.map((finding) => formatFindingExplanation(presentFinding(finding))).join(' '),
+    };
+  };
+}
+
+/** Combines the marks of several owners that one control repairs. */
+// eslint-disable-next-line react-refresh/only-export-components -- The scope and hook form one feedback boundary.
+export function combineFindingMarks(...marks: readonly FindingMarkProps[]): FindingMarkProps {
+  const marked = marks.filter((mark) => mark['data-has-findings']);
+  const primary = marked[0] ?? marks[0];
+  if (primary === undefined) throw new Error('combineFindingMarks requires a mark');
+  const descriptions = marked.flatMap((mark) =>
+    mark['aria-description'] === undefined ? [] : [mark['aria-description']],
+  );
+  return {
+    'data-semantic-owner': primary['data-semantic-owner'],
+    'data-has-findings': marked.length > 0,
+    'aria-description': descriptions.length === 0 ? undefined : descriptions.join(' '),
   };
 }

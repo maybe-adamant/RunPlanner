@@ -10,6 +10,7 @@ import {
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
 import { AnvilResultLauncher } from '../rewards/AnvilResultEditor';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
@@ -27,6 +28,7 @@ function PickupOutcomeControls({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
   const interaction = requireWorkspaceInteraction(
     interactions.acquisitionConversions,
     workspaceInteractionKey(conversion.address),
@@ -42,6 +44,7 @@ function PickupOutcomeControls({
       {timePiece || artificer ? (
         <div className="pickup-outcome-control">
           <ContextualPicker
+            findingMark={findingMark(conversion.address, 'pickupOutcome')}
             id={`${idPrefix}-pickup-outcome-${workspaceInteractionKey(conversion.address)}`}
             label="Outcome"
             ariaLabel={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}

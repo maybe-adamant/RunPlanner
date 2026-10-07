@@ -1,4 +1,8 @@
-import type { ExitSelectionAddress, TargetAddress } from '@run-planner/engine/authored-project';
+import type {
+  ExitSelectionAddress,
+  SemanticAddress,
+  TargetAddress,
+} from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -21,7 +25,11 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingMark,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
@@ -162,7 +170,8 @@ function TargetRow({
   readonly node: BatchNode;
   readonly target: WorkspacePhysicalTarget;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const dispatch = useAppDispatch();
   const selectionInteraction =
     node.targets.length === 1 && node.zagreusContract === undefined && node.chaos === undefined
@@ -190,7 +199,7 @@ function TargetRow({
       {...(node.targetInteraction !== 'replaceable' ||
       door.room.roomPicker === undefined ||
       door.room.anomaly !== undefined
-        ? findingTarget(target.marker.address)
+        ? findingAnchor(target.marker.address)
         : {})}
       tabIndex={-1}
     >
@@ -200,6 +209,7 @@ function TargetRow({
         <label className="picked-control">
           <span className="visually-hidden">{`Pick ${door.room.label} from Door ${target.index}`}</span>
           <input
+            {...(target.physicalState === 'unavailable' ? {} : findingMark(selection))}
             aria-label={`Pick ${door.room.label} from Door ${target.index}`}
             checked={selectionInteraction?.selectedExitKey === target.exitKey}
             disabled={target.physicalState === 'unavailable'}
@@ -289,7 +299,7 @@ function MissingTargetRow({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: WorkspaceMissingPhysicalTarget;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const interaction = interactions.rooms.get(target.marker.focusKey);
   const canEnterDecision = interaction?.kind === 'decisionEntryRoom';
   const canAuthorRoom = target.authoring.kind === 'ready' || canEnterDecision;
@@ -299,7 +309,7 @@ function MissingTargetRow({
       className="exit-row biome-target-row"
       data-available="true"
       data-missing="true"
-      {...(canAuthorRoom ? {} : findingTarget(target.marker.address))}
+      {...(canAuthorRoom ? {} : findingAnchor(target.marker.address))}
       tabIndex={-1}
     >
       <div className="exit-marker" aria-hidden="true" />
@@ -351,13 +361,16 @@ function MissingTargetRow({
 function ZagreusContractExit({
   control,
   interactions,
+  selection,
   selectionName,
 }: {
   readonly control: NonNullable<BatchNode['zagreusContract']>;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly selection: SemanticAddress;
   readonly selectionName: string;
 }) {
   const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
   const interaction = requireWorkspaceInteraction(
     interactions.zagreusContracts,
     workspaceInteractionKey(control.owner),
@@ -372,6 +385,7 @@ function ZagreusContractExit({
       <label className="picked-control">
         <span className="visually-hidden">Take Zagreus contract</span>
         <input
+          {...findingMark(selection)}
           aria-label="Take Zagreus contract"
           checked={control.selected}
           name={selectionName}
@@ -405,13 +419,16 @@ function ZagreusContractExit({
 function ChaosExit({
   control,
   interactions,
+  selection,
   selectionName,
 }: {
   readonly control: NonNullable<BatchNode['chaos']>;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly selection: SemanticAddress;
   readonly selectionName: string;
 }) {
   const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
   const interaction = requireWorkspaceInteraction(
     interactions.chaosExits,
     workspaceInteractionKey(control.owner),
@@ -426,6 +443,7 @@ function ChaosExit({
       <label className="picked-control">
         <span className="visually-hidden">Take Chaos gate</span>
         <input
+          {...findingMark(selection)}
           aria-label="Take Chaos gate"
           checked={control.selected}
           name={selectionName}
@@ -657,7 +675,7 @@ export function BatchWorkbench({
   readonly label: string;
   readonly node: BatchNode;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const takeover =
     node.kind === 'takeoverBatch'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
@@ -686,7 +704,7 @@ export function BatchWorkbench({
       className="decision-card biome-batch-workbench"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
-      {...(takeoverRepairNeeded ? {} : findingTarget(node.owner))}
+      {...(takeoverRepairNeeded ? {} : findingAnchor(node.owner))}
       tabIndex={-1}
     >
       <header className="decision-heading">
@@ -702,7 +720,11 @@ export function BatchWorkbench({
       <div
         aria-label={`${label} room offers`}
         className="exit-list"
-        {...findingTarget(exitSelectionAddress(node.selection))}
+        {...findingAnchor(exitSelectionAddress(node.selection), {
+          // Navigation lands on the first door that can still be picked.
+          focusTarget: (list) =>
+            list.querySelector<HTMLElement>('input[type="radio"]:not(:disabled)'),
+        })}
         tabIndex={-1}
         role={exitSelection === undefined ? 'group' : 'radiogroup'}
       >
@@ -718,6 +740,7 @@ export function BatchWorkbench({
           <ZagreusContractExit
             control={node.zagreusContract}
             interactions={interactions}
+            selection={exitSelectionAddress(node.selection)}
             selectionName={`selection-${node.key}`}
           />
         )}
@@ -725,6 +748,7 @@ export function BatchWorkbench({
           <ChaosExit
             control={node.chaos}
             interactions={interactions}
+            selection={exitSelectionAddress(node.selection)}
             selectionName={`selection-${node.key}`}
           />
         )}

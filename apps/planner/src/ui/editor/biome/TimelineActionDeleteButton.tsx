@@ -1,16 +1,22 @@
+import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
+
 export function TimelineActionDeleteButton({
   enabled,
   explanation,
+  findingMark,
   label,
   onRemove,
 }: {
   readonly enabled: boolean;
+  /** Findings of an action that should not exist. */
+  readonly findingMark?: FindingMarkProps;
   readonly explanation: string;
   readonly label: string;
   readonly onRemove: () => void;
 }) {
   return (
     <button
+      {...findingMark}
       aria-label={`Remove ${label} from timeline`}
       className={`${enabled ? 'danger-action' : 'quiet-action'} room-action-delete`}
       disabled={!enabled}

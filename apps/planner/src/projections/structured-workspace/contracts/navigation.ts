@@ -39,12 +39,20 @@ export type WorkspaceInspectorSubject =
       readonly nodeKey: string;
     };
 
+/** A control without a semantic address of its own, named within its mark owner. */
+export type WorkspaceFindingControl =
+  'delete' | 'move' | 'place' | 'nemesisTrait' | 'nemesisReward' | 'wheelChoice' | 'pickupOutcome';
+
 export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;
   readonly focusAddress: SemanticAddress;
   readonly focusKey: string;
   /** The control that carries the finding mark when it is nested inside the focus. */
   readonly markAddress?: SemanticAddress;
+  /** The addressless control within the mark owner that carries the mark. */
+  readonly markControl?: WorkspaceFindingControl;
+  /** Findings of one code repaired by an upstream owner rather than this one. */
+  readonly markByCode?: Readonly<Record<string, SemanticAddress>>;
   /** Present for trait owners that must open the transient shared dialog. */
   readonly traitDialogTarget?: TraitOfferAddress;
   /** Present for exact Pom owners that must open the transient Pom dialog. */

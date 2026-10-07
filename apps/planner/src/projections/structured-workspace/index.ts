@@ -9,8 +9,10 @@ export {
   moveRankedPrefixItem,
   reconcileRankedPrefix,
 } from './presentation/hub-ranking';
+export { findingControlKey } from './navigation/finding-highlights';
 export type {
   WorkspaceDefaultInspectorDestination,
+  WorkspaceFindingControl,
   WorkspaceHubTab,
   WorkspaceInspectorDestination,
   WorkspaceMarker,

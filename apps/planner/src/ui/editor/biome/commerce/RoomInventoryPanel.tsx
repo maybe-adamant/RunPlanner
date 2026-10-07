@@ -9,7 +9,11 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingMark,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -35,6 +39,8 @@ export function RoomInventoryPanel({
   readonly roomActions?: WorkspaceRoomActions;
 }) {
   const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const executeIntent = useCommandIntent();
   switch (feature.kind) {
     case 'stygianWell':
@@ -47,14 +53,7 @@ export function RoomInventoryPanel({
                 feature.presenceInteractionKey,
               );
         return (
-          <fieldset
-            {...(feature.inventoryAddress === undefined
-              ? {}
-              : findingTarget(feature.inventoryAddress))}
-            tabIndex={-1}
-            className="room-purging-pool"
-            key="stygian-well"
-          >
+          <fieldset className="room-purging-pool" key="stygian-well">
             <legend className="visually-hidden">Stygian Well configuration</legend>
             <div className="room-feature-interaction-header">
               <label className="room-feature-presence-row">
@@ -82,6 +81,9 @@ export function RoomInventoryPanel({
                     return (
                       <label className="room-feature-interact-toggle">
                         <input
+                          {...(feature.inventoryAddress === undefined
+                            ? {}
+                            : findingTarget(feature.inventoryAddress))}
                           aria-label="Interact with Stygian Well"
                           checked={feature.interacted}
                           onChange={(event) =>
@@ -161,6 +163,11 @@ export function RoomInventoryPanel({
                             candidate.reference.slotKey === reference.slotKey &&
                             candidate.kind === (slot.sale.sold ? 'remove' : 'insert'),
                         );
+                        const saleRow = roomActions?.rows.find(
+                          (row) =>
+                            row.reference.kind === reference.kind &&
+                            row.reference.slotKey === reference.slotKey,
+                        );
                         const actionInteraction =
                           roomActions === undefined
                             ? undefined
@@ -181,6 +188,7 @@ export function RoomInventoryPanel({
                               : {})}
                           >
                             <input
+                              {...(saleRow === undefined ? {} : findingMark(saleRow.address))}
                               aria-label={`Sold ${slot.label}`}
                               checked={slot.sale.sold}
                               disabled={disabled}
@@ -215,7 +223,7 @@ export function RoomInventoryPanel({
           <fieldset
             {...(feature.inventoryAddress === undefined
               ? {}
-              : findingTarget(feature.inventoryAddress))}
+              : findingAnchor(feature.inventoryAddress))}
             tabIndex={-1}
             className="room-purging-pool"
             key="hermes-shrine"

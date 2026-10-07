@@ -15,7 +15,7 @@ import {
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
@@ -140,7 +140,7 @@ export function TraitOfferDialog({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: TraitOfferAddress;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
@@ -235,13 +235,7 @@ export function TraitOfferDialog({
       ref={dialogRef}
     >
       {/* The feedback region lists the dialog's findings; its launcher carries the mark. */}
-      <div
-        className="trait-offer-dialog"
-        {...findingTarget(target)}
-        aria-description={undefined}
-        data-has-findings={false}
-        tabIndex={-1}
-      >
+      <div className="trait-offer-dialog" {...findingAnchor(target)} tabIndex={-1}>
         <header className="panel-heading">
           <div>
             <p className="eyebrow">Trait offer</p>

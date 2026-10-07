@@ -23,7 +23,11 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingTarget,
+  type FindingTargetProps,
+} from '@planner/ui/feedback/useFindingTarget';
 
 function launcherId(address: LevelResolutionAddress): string {
   return `pom-launcher-${encodeURIComponent(semanticAddressKey(address))}`;
@@ -500,7 +504,7 @@ export function PomResolutionDialog({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: LevelResolutionAddress;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -546,13 +550,7 @@ export function PomResolutionDialog({
       ref={dialogRef}
     >
       {/* The feedback region lists the dialog's findings; its launcher carries the mark. */}
-      <div
-        className="trait-offer-dialog"
-        {...findingTarget(target)}
-        aria-description={undefined}
-        data-has-findings={false}
-        tabIndex={-1}
-      >
+      <div className="trait-offer-dialog" {...findingAnchor(target)} tabIndex={-1}>
         <header className="panel-heading">
           <div>
             <p className="eyebrow">{eyebrow}</p>
