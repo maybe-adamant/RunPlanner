@@ -1003,6 +1003,16 @@ describe('OccurrenceEncounterWorkbench', () => {
         choiceKeys: ['jellyfish', 'swab'],
       });
     });
+    // Resetting the first use drops the later use and clears the decision.
+    await view.user.click(within(dialog).getByRole('button', { name: 'Early summons use 1' }));
+    await view.user.click(screen.getByRole('option', { name: 'Default' }));
+    await waitFor(() => {
+      const occurrence = view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'O')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+      expect(occurrence?.encounters.customizationByPhase?.Encounter?.earlySummons).toBeUndefined();
+    });
   });
 
   it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
