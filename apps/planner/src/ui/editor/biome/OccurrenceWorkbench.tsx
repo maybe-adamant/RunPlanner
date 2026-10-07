@@ -14,7 +14,7 @@ import {
   type WorkspaceRoomTab,
   type WorkspaceRunStateLauncher,
 } from '@planner/projections/structured-workspace';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
 import { AnomalyClearedControl } from './room-features/AnomalyControls';
@@ -68,7 +68,7 @@ export function OccurrenceWorkbench({
   renderOptionalRoomActionContent,
   runState,
 }: OccurrenceWorkbenchProps) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const executeIntent = useCommandIntent();
   const requestedTab = initialTab ?? 'overview';
   const roomIdentity = workspaceInteractionKey(room.address);
@@ -226,7 +226,7 @@ export function OccurrenceWorkbench({
   return (
     <article
       className="room-card biome-occurrence-workbench"
-      {...findingTarget(room.address)}
+      {...findingAnchor(room.address)}
       tabIndex={-1}
     >
       <header className="room-card-heading">

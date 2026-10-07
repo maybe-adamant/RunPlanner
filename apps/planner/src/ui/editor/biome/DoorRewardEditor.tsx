@@ -6,7 +6,7 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { useEffect } from 'react';
@@ -27,7 +27,7 @@ export function RewardSurfaceEditor({
   readonly rewards: readonly WorkspaceDoorReward[];
   readonly visibility: 'hidden' | 'visible';
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const editableRewards =
     visibility === 'hidden' ? rewards.filter((reward) => reward.control !== undefined) : rewards;
@@ -73,7 +73,7 @@ export function RewardSurfaceEditor({
         <section key={reward.key}>
           {reward.control === undefined ? (
             <div
-              {...findingTarget(reward.marker.address)}
+              {...findingAnchor(reward.marker.address)}
               aria-live={firstEditableReward === undefined && index === 0 ? 'polite' : undefined}
               className="field-control field-control-inline door-fixed-reward"
               id={

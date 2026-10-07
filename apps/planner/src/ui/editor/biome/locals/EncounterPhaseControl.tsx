@@ -7,7 +7,11 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { useFindingExplanations, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingExplanations,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -452,7 +456,7 @@ export function EncounterPhaseControl({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phase: WorkspaceEncounterPhase;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const customizationControl =
     phase.customization === undefined && phase.composition === undefined ? null : (
       <EncounterCustomizationControl interactions={interactions} phase={phase} />
@@ -468,7 +472,7 @@ export function EncounterPhaseControl({
       phase.customization === undefined &&
       phase.nemesisFeature === undefined
         ? {
-            ...findingTarget(phase.address, undefined, phase.address, isIdentityFinding),
+            ...findingAnchor(phase.address),
             tabIndex: -1,
           }
         : {})}

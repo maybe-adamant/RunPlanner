@@ -31,7 +31,11 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
 import type { WorkspaceOccurrenceWorkbenchNode, WorkspaceDoorReward } from '../contracts/structure';
-import type { WorkspaceMarker, WorkspaceRoomTab } from '../contracts/navigation';
+import type {
+  WorkspaceFindingControl,
+  WorkspaceMarker,
+  WorkspaceRoomTab,
+} from '../contracts/navigation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   CanonicalAuthoredRoom,
@@ -755,8 +759,15 @@ export function assembleWorkspaceOccurrence(
       (row) =>
         row.reference.kind === purchaseKind && row.reference.generationKey === 'travelDealRefill',
     );
+    // An unhosted refill purchase that should not exist is removed from its row.
     if (refillRow !== undefined)
-      input.markerDestinations.redirectTo(refill.marker, refillRow.marker, node.key);
+      input.markerDestinations.redirectTo(
+        refill.marker,
+        refillRow.marker,
+        node.key,
+        refillRow.marker,
+        'delete',
+      );
   }
   if (roomLocal.kind === 'fields') {
     // Cage rewards are authored on the source door, which routes them to Room Doors.
@@ -773,6 +784,13 @@ export function assembleWorkspaceOccurrence(
     );
   }
   for (const phase of encounterPhases) {
+    // A fixed phase's slot is activated by its room's choices: the Ship combat phase count.
+    if (!phase.customizable && phase.customization === undefined)
+      input.markerDestinations.markCodeAt(
+        phase.marker,
+        'encounterSlotActivationUnavailable',
+        roomSummary.marker,
+      );
     if (phase.customizable && phase.nemesisEvent !== undefined) {
       input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
     }
@@ -845,26 +863,30 @@ export function assembleWorkspaceOccurrence(
       ),
     );
     for (const row of roomActions.rows) {
-      const acquisitionMarkers = Object.freeze([
-        ...(row.placement !== undefined && 'entry' in row.placement.command
-          ? [input.markerDestinations.marker(row.placement.command.entry)]
-          : []),
-        ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
-        ...(row.placementAssessment?.kind === 'invalid' &&
+      const placementCommand = row.placement?.command;
+      const placementEntry =
+        placementCommand === undefined
+          ? undefined
+          : input.markerDestinations.marker(
+              'entry' in placementCommand
+                ? placementCommand.entry
+                : createAcquisitionEntryAddress(placementCommand.site, placementCommand.entryKey),
+            );
+      const invalidPlacementEntry =
+        row.placementAssessment?.kind === 'invalid' &&
         row.reference.kind === 'interactAcquisitionEntry'
-          ? [
-              input.markerDestinations.marker(
-                createAcquisitionEntryAddress(
-                  createAcquisitionSiteAddress(
-                    createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
-                    row.reference.siteKey,
-                  ),
-                  row.reference.entryKey,
+          ? input.markerDestinations.marker(
+              createAcquisitionEntryAddress(
+                createAcquisitionSiteAddress(
+                  createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+                  row.reference.siteKey,
                 ),
+                row.reference.entryKey,
               ),
-            ]
-          : []),
-        ...(roomLocal.kind === 'shop'
+            )
+          : undefined;
+      const supplementalPurchaseMarkers =
+        roomLocal.kind === 'shop'
           ? roomLocal.supplementalOffers.flatMap((offer) =>
               (offer.kind === 'echoDoubleShopInvalid' ||
                 offer.kind === 'travelDealRefill' ||
@@ -875,7 +897,12 @@ export function assembleWorkspaceOccurrence(
                 ? [offer.purchase.marker]
                 : [],
             )
-          : []),
+          : [];
+      const acquisitionMarkers = Object.freeze([
+        ...(placementEntry === undefined ? [] : [placementEntry]),
+        ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
+        ...(invalidPlacementEntry === undefined ? [] : [invalidPlacementEntry]),
+        ...supplementalPurchaseMarkers,
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
         ...(row.rewardPayload !== undefined &&
         !row.rewardPayload.showOffer &&
@@ -894,31 +921,52 @@ export function assembleWorkspaceOccurrence(
           conversion.anvilApplies === true ? [conversion.marker.focusKey] : [],
         ),
       );
-      // Trait and Pom findings mark the row's launcher; a restorable entry marks Restore.
-      const rowControlMarks = new Map<string, WorkspaceMarker>();
+      // Each finding marks the row control whose edit repairs it.
+      const rowControlMarks = new Map<
+        string,
+        { readonly mark: WorkspaceMarker; readonly control?: WorkspaceFindingControl }
+      >();
+      // Purchases that should not exist are removed; an unplaced pickup is placed.
+      for (const marker of supplementalPurchaseMarkers)
+        rowControlMarks.set(marker.focusKey, { mark: row.marker, control: 'delete' });
+      if (invalidPlacementEntry !== undefined)
+        rowControlMarks.set(invalidPlacementEntry.focusKey, {
+          mark: row.marker,
+          control: row.rank === null ? 'place' : 'delete',
+        });
+      if (placementEntry !== undefined)
+        rowControlMarks.set(placementEntry.focusKey, { mark: row.marker, control: 'place' });
+      if (row.stygianWellTwist !== undefined)
+        rowControlMarks.set(row.stygianWellTwist.marker.focusKey, {
+          mark: row.stygianWellTwist.marker,
+        });
+      for (const conversion of row.rewardPayload?.control.conversions ?? [])
+        rowControlMarks.set(conversion.marker.focusKey, {
+          mark: conversion.marker,
+          control: 'pickupOutcome',
+        });
       for (const trait of [
         ...(row.traitOffer === undefined ? [] : [row.traitOffer]),
         ...(row.rewardPayload?.inlineTraitOffers ?? []),
       ]) {
         for (const marker of traitOfferMarkers(trait))
-          rowControlMarks.set(marker.focusKey, trait.marker);
+          rowControlMarks.set(marker.focusKey, { mark: trait.marker });
       }
       for (const resolution of row.rewardPayload?.inlineLevelResolutions ?? [])
-        rowControlMarks.set(resolution.marker.focusKey, resolution.marker);
-      if (row.placement !== undefined && 'entry' in row.placement.command) {
-        const entry = input.markerDestinations.marker(row.placement.command.entry);
-        rowControlMarks.set(entry.focusKey, entry);
-      }
+        rowControlMarks.set(resolution.marker.focusKey, { mark: resolution.marker });
       for (const marker of acquisitionMarkers) {
-        if (anvilFocusKeys.has(marker.focusKey))
+        if (anvilFocusKeys.has(marker.focusKey)) {
           input.markerDestinations.redirect([marker], node.key);
-        else
-          input.markerDestinations.redirectToContext(
-            marker,
-            row.marker,
-            node.key,
-            rowControlMarks.get(marker.focusKey),
-          );
+          continue;
+        }
+        const mark = rowControlMarks.get(marker.focusKey);
+        input.markerDestinations.redirectToContext(
+          marker,
+          row.marker,
+          node.key,
+          mark?.mark,
+          mark?.control,
+        );
       }
       const tab =
         roomLocal.kind === 'ship'
@@ -979,7 +1027,14 @@ export function assembleWorkspaceOccurrence(
             entry.presentation === 'rewardWheelAnchor',
         )
       ) {
-        input.markerDestinations.redirectToContext(choice.marker, wheel.marker, node.key);
+        // Every pickable offer of the wheel repairs its choice.
+        input.markerDestinations.redirectToContext(
+          choice.marker,
+          wheel.marker,
+          node.key,
+          wheel.marker,
+          'wheelChoice',
+        );
         input.markerDestinations.setRoomTab([choice.marker], tab);
       }
     }

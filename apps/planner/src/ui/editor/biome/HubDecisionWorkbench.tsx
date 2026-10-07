@@ -10,7 +10,7 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
@@ -63,17 +63,15 @@ export function HubDecisionWorkbench({
   interactions,
   node,
 }: HubDecisionWorkbenchProps) {
-  const findingTarget = useFindingTarget();
-  const hubTarget = findingTarget(node.owner);
+  const findingAnchor = useFindingAnchor();
+  const hubTarget = findingAnchor(node.owner);
   const hubTargetProps = {
-    'aria-description': hubTarget['aria-description'],
-    'data-has-findings': hubTarget['data-has-findings'],
     'data-selected-finding': hubTarget['data-selected-finding'],
     'data-semantic-owner': hubTarget['data-semantic-owner'],
     id: hubTarget.id,
     ref: hubTarget.ref,
   };
-  const openSetTarget = findingTarget(node.openSet.address);
+  const openSetTarget = findingAnchor(node.openSet.address);
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const handoff =
@@ -184,7 +182,7 @@ export function HubDecisionWorkbench({
   const nextVisitTarget =
     activeTab !== 'timeline' || nextVisit === undefined
       ? undefined
-      : findingTarget(nextVisit.marker.address, undefined, node.owner);
+      : findingAnchor(nextVisit.marker.address, { readinessOwner: node.owner });
   const setActiveTab = (tab: WorkspaceHubTab): void =>
     setTabState({
       active: tab,
@@ -396,6 +394,7 @@ export function HubDecisionWorkbench({
                             interactions={interactions}
                             key={slot.hubSlotKey}
                             onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                            openSetOwner={node.openSet.address}
                             slot={slot}
                           />
                         ) : (
@@ -403,6 +402,7 @@ export function HubDecisionWorkbench({
                             interactions={interactions}
                             key={slot.hubSlotKey}
                             onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                            openSetOwner={node.openSet.address}
                             slot={slot}
                           />
                         ),

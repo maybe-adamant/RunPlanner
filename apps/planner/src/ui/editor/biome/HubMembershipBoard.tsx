@@ -12,7 +12,12 @@ import {
   type WorkspaceMarker,
 } from '@planner/projections/structured-workspace';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import type { SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  combineFindingMarks,
+  useFindingMark,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
   candidateWaitingTitle,
@@ -190,14 +195,22 @@ export function useHubSlotMembership({
 function HubSlotMembership({
   interactions,
   onMembershipTransition,
+  openSetOwner,
   slot,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
+  readonly openSetOwner?: SemanticAddress;
   readonly slot: WorkspaceHubSlot;
 }) {
   const [membershipInput, setMembershipInput] = useState<HubMembershipInput>('keyboard');
   const membership = useHubSlotMembership({ interactions, onMembershipTransition, slot });
+  const findingMark = useFindingMark();
+  // Every enabled toggle repairs an incomplete open set.
+  const openSetMark =
+    openSetOwner === undefined || membership.disabled
+      ? undefined
+      : combineFindingMarks(membership.target, findingMark(openSetOwner));
   return (
     <div className="hub-membership-action">
       <label
@@ -211,6 +224,7 @@ function HubSlotMembership({
       >
         <input
           {...membership.target}
+          {...openSetMark}
           aria-busy={membership.pending || undefined}
           aria-label={`${slot.label} open`}
           checked={slot.open}
@@ -242,16 +256,19 @@ function HubSlotMembership({
 export function HubSlotMembershipControl({
   interactions,
   onMembershipTransition,
+  openSetOwner,
   slot,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
+  readonly openSetOwner?: SemanticAddress;
   readonly slot: WorkspaceHubSlot;
 }) {
   return (
     <HubSlotMembership
       interactions={interactions}
       onMembershipTransition={onMembershipTransition}
+      {...(openSetOwner === undefined ? {} : { openSetOwner })}
       slot={slot}
     />
   );
@@ -260,10 +277,12 @@ export function HubSlotMembershipControl({
 export function ClosedHubRoomOption({
   interactions,
   onMembershipTransition,
+  openSetOwner,
   slot,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
+  readonly openSetOwner?: SemanticAddress;
   readonly slot: WorkspaceHubSlot;
 }) {
   return (
@@ -289,6 +308,7 @@ export function ClosedHubRoomOption({
         <HubSlotMembershipControl
           interactions={interactions}
           onMembershipTransition={onMembershipTransition}
+          {...(openSetOwner === undefined ? {} : { openSetOwner })}
           slot={slot}
         />
       </div>

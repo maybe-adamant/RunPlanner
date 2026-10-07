@@ -7,7 +7,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
   candidateSelectState,
@@ -27,7 +27,8 @@ export function RewardWheelWorkbench({
   readonly occurrence: OccurrenceAddress;
   readonly wheel: WorkspaceRewardWheelDescriptor;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const dispatch = useAppDispatch();
   const store = requireWorkspaceInteraction(
     interactions.rewardWheelStores,
@@ -60,7 +61,7 @@ export function RewardWheelWorkbench({
 
   return (
     <section
-      {...findingTarget(wheel.marker.address)}
+      {...findingAnchor(wheel.marker.address)}
       tabIndex={-1}
       aria-label={wheel.label}
       className="reward-wheel"
@@ -70,7 +71,6 @@ export function RewardWheelWorkbench({
       </div>
       <div className="reward-wheel-settings">
         <CandidatePicker
-          bindFindingTarget={false}
           id={`${idPrefix}-store`}
           interaction={store}
           label="Reward pool"
@@ -158,6 +158,7 @@ export function RewardWheelWorkbench({
                   <label className="picked-control">
                     <span className="visually-hidden">{`Pick ${offer.label} from ${wheel.label}`}</span>
                     <input
+                      {...(pickWaits ? {} : findingMark(wheel.marker.address, 'wheelChoice'))}
                       aria-label={`Pick ${offer.label} from ${wheel.label}`}
                       checked={picked}
                       disabled={pickWaits || undefined}

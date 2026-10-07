@@ -73,7 +73,11 @@ describe('Gold duplicate of an Anvil purchase', () => {
       expect.objectContaining({ code: 'timePieceConversionUnavailable', origin: duplicateAnvil }),
     );
     expect(workspace.focusByOwner.get(key)?.focusAddress).toMatchObject({ kind: 'roomAction' });
+    // The pickup outcome picker carries the finding; the waiting Anvil launcher does not.
     expect(workspace.findingsByRepairTarget.has(key)).toBe(false);
+    expect(workspace.findingsByRepairTarget.get(`${key}#pickupOutcome`)).toContainEqual(
+      expect.objectContaining({ code: 'timePieceConversionUnavailable' }),
+    );
     expect(workspace.interactions.acquisitionConversions.get(key)?.anvil).toMatchObject({
       contextReached: false,
       value: null,

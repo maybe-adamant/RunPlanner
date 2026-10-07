@@ -4,7 +4,8 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingTarget, type FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
+import type { WorkspaceFindingControl } from '@planner/projections/structured-workspace';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 const emptyPicker: ContextualPickerModel<string> = Object.freeze({ sections: Object.freeze([]) });
@@ -74,8 +75,11 @@ export function NemesisInteractionPhrase({
 
 /** Action-row detail for the already selected Nemesis family. */
 export function NemesisInteractionEditor({
+  findingMark,
   interaction,
 }: {
+  /** Marks the interaction-time choice that repairs the action row outcome. */
+  readonly findingMark?: (control: WorkspaceFindingControl) => FindingMarkProps;
   readonly interaction: WorkspaceNemesisEventInteraction;
 }) {
   const executeIntent = useCommandIntent();
@@ -99,6 +103,7 @@ export function NemesisInteractionEditor({
     <div className="nemesis-interaction-controls">
       {value.kind === 'traitTrade' ? (
         <ContextualPicker
+          {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisTrait') })}
           ariaLabel="Boon offered"
           id={`nemesis-trait-${interaction.key}`}
           label="Boon offered"
@@ -118,6 +123,7 @@ export function NemesisInteractionEditor({
       ) : null}
       {fixedResultLabel === undefined ? (
         <ContextualPicker
+          {...(findingMark === undefined ? {} : { findingMark: findingMark('nemesisReward') })}
           ariaLabel="Reward"
           id={`nemesis-reward-${interaction.key}`}
           label="Reward"

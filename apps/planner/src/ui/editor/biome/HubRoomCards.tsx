@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import {
   type WorkspaceHubSlot,
   type WorkspaceInteractionCatalog,
@@ -14,11 +14,13 @@ export function OpenHubRoomCard({
   focusedRewardOwnerKey,
   interactions,
   onMembershipTransition,
+  openSetOwner,
   slot,
 }: {
   readonly focusedRewardOwnerKey: string | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onMembershipTransition?: (transition: HubMembershipTransition) => void;
+  readonly openSetOwner?: SemanticAddress;
   readonly slot: WorkspaceHubSlot;
 }) {
   const card = useRef<HTMLElement>(null);
@@ -65,6 +67,7 @@ export function OpenHubRoomCard({
           <HubSlotMembershipControl
             interactions={interactions}
             onMembershipTransition={onMembershipTransition}
+            {...(openSetOwner === undefined ? {} : { openSetOwner })}
             slot={slot}
           />
         )}

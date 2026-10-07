@@ -2,7 +2,7 @@ import type {
   WorkspaceHubFountain,
   WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
 /** Read-only timing and the Hub-owned Phial target, hosted after the preceding room. */
@@ -13,12 +13,12 @@ export function HubFountainControls({
   readonly fountain: WorkspaceHubFountain;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   return (
     <section
       aria-label="Hub fountain"
       className="hub-fountain-controls"
-      {...(fountain.rarity === undefined ? findingTarget(fountain.outcomeMarker.address) : {})}
+      {...(fountain.rarity === undefined ? findingAnchor(fountain.outcomeMarker.address) : {})}
       tabIndex={-1}
     >
       <p>

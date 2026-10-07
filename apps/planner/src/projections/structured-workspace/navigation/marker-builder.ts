@@ -6,6 +6,7 @@ import {
 
 import { StructuredWorkspaceProjectionContractError, type WorkspaceAssessment } from '../contract';
 import type {
+  WorkspaceFindingControl,
   WorkspaceHubTab,
   WorkspaceInspectorDestination,
   WorkspaceMarker,
@@ -20,12 +21,16 @@ import type {
 export interface WorkspaceMarkerDestinationEmitter {
   marker(address: SemanticAddress, nodeKey?: string): WorkspaceMarker;
   redirect(markers: Iterable<WorkspaceMarker>, nodeKey: string): void;
-  /** `mark` names the nested control that carries the finding inside the focus. */
+  /**
+   * `mark` names the nested owner that carries the finding inside the focus;
+   * `markControl` names an addressless control within that owner.
+   */
   redirectTo(
     marker: WorkspaceMarker,
     focus: WorkspaceMarker,
     nodeKey: string,
     mark?: WorkspaceMarker,
+    markControl?: WorkspaceFindingControl,
   ): void;
   /** Route a nested finding to a visible containing control without opening its leaf dialog. */
   redirectToContext(
@@ -33,7 +38,10 @@ export interface WorkspaceMarkerDestinationEmitter {
     focus: WorkspaceMarker,
     nodeKey: string,
     mark?: WorkspaceMarker,
+    markControl?: WorkspaceFindingControl,
   ): void;
+  /** Marks one finding code of `marker` on an upstream owner, keeping its navigation. */
+  markCodeAt(marker: WorkspaceMarker, code: string, mark: WorkspaceMarker): void;
   setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void;
   setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
   setSideRoomDestination(markers: Iterable<WorkspaceMarker>, slotKey: string): void;
@@ -119,9 +127,15 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
       focus: WorkspaceMarker,
       nodeKey: string,
       mark?: WorkspaceMarker,
+      markControl?: WorkspaceFindingControl,
     ): void {
-      const { markAddress: _markAddress, ...existing } = requireRegistered(marker);
+      const {
+        markAddress: _markAddress,
+        markControl: _markControl,
+        ...existing
+      } = requireRegistered(marker);
       void _markAddress;
+      void _markControl;
       destinations.set(
         marker.focusKey,
         Object.freeze({
@@ -130,6 +144,7 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
           focusAddress: focus.address,
           focusKey: focus.focusKey,
           ...(mark === undefined ? {} : { markAddress: mark.address }),
+          ...(mark === undefined || markControl === undefined ? {} : { markControl }),
           nodeKey,
           ownerAddress: marker.address,
           region: 'structure',
@@ -142,16 +157,19 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
       focus: WorkspaceMarker,
       nodeKey: string,
       mark?: WorkspaceMarker,
+      markControl?: WorkspaceFindingControl,
     ): void {
       const existing = requireRegistered(marker);
       const {
         levelResolutionDialogTarget: _levelResolutionDialogTarget,
         markAddress: _markAddress,
+        markControl: _markControl,
         traitDialogTarget: _traitDialogTarget,
         ...context
       } = existing;
       void _levelResolutionDialogTarget;
       void _markAddress;
+      void _markControl;
       void _traitDialogTarget;
       destinations.set(
         marker.focusKey,
@@ -161,10 +179,21 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
           focusAddress: focus.address,
           focusKey: focus.focusKey,
           ...(mark === undefined ? {} : { markAddress: mark.address }),
+          ...(mark === undefined || markControl === undefined ? {} : { markControl }),
           nodeKey,
           ownerAddress: marker.address,
           region: 'structure',
           routeKey: input.routeKey,
+        }),
+      );
+    },
+    markCodeAt(marker: WorkspaceMarker, code: string, mark: WorkspaceMarker): void {
+      const destination = requireRegistered(marker);
+      destinations.set(
+        marker.focusKey,
+        Object.freeze({
+          ...destination,
+          markByCode: Object.freeze({ ...destination.markByCode, [code]: mark.address }),
         }),
       );
     },

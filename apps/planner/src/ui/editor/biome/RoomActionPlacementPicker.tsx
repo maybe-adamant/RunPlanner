@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 
 interface RoomActionPlacementChoice {
   readonly key: string;
@@ -9,12 +10,15 @@ interface RoomActionPlacementChoice {
 }
 
 export function RoomActionPlacementPicker({
+  findingMark,
   label,
   trigger,
   choices,
   disabledTitle,
   onApply,
 }: {
+  /** Findings repaired by moving this action. */
+  readonly findingMark?: FindingMarkProps;
   readonly label: string;
   readonly trigger: string;
   readonly choices: readonly RoomActionPlacementChoice[];
@@ -27,6 +31,7 @@ export function RoomActionPlacementPicker({
   return (
     <div className="room-action-placement-picker">
       <ContextualPicker
+        {...(findingMark === undefined ? {} : { findingMark })}
         id={id}
         label=""
         ariaLabel={label}

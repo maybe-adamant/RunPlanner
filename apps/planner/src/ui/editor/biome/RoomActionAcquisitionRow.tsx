@@ -3,7 +3,7 @@ import type {
   WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 
 /** Reward authoring on one action's pickup line: the offer picker when the row exposes it. */
 export function RoomActionAcquisitionRow({
@@ -15,7 +15,7 @@ export function RoomActionAcquisitionRow({
   readonly row: WorkspaceRoomActionRow;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
   const payload = row.rewardPayload;
   if (payload === undefined) return null;
   const showOffer = payload.showOffer && !hideOffer;
@@ -25,7 +25,7 @@ export function RoomActionAcquisitionRow({
       data-empty={!showOffer || undefined}
       {...(payload.control.owner.kind === 'acquisitionEntry' &&
       payload.control.offerEditVisibility === 'hidden'
-        ? findingTarget(payload.control.owner.address)
+        ? findingAnchor(payload.control.owner.address)
         : {})}
       tabIndex={-1}
     >

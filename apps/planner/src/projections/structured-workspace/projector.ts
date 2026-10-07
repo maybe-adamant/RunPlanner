@@ -677,6 +677,8 @@ export function createStructuredWorkspaceProjection(
                   semanticAddressKey(routeStartResult),
                   Object.freeze<WorkspaceInspectorDestination>({
                     ...routeDestination(routeAddress),
+                    // Navigation shows the Loadout; its own result picker carries the mark.
+                    markAddress: routeStartResult,
                     ownerAddress: routeStartResult,
                   }),
                 ],
