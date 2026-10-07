@@ -7,6 +7,7 @@ import {
 import { optionIndex } from '../../../authored-project/traits/state';
 import type { ProjectDocument } from '../../../authored-project/model';
 import type { TraitOfferCandidateArtifacts, TraitOfferCandidateCapability } from './capability';
+import type { NaturalSelectionTargetAssessment } from '../../traits';
 import type { ProjectEvaluation } from '../../evaluation/evaluation-products';
 import type {
   AllTogetherSetDomainEvaluation,
@@ -18,6 +19,7 @@ import type {
   EchoPomTargetDomainEvaluation,
   EchoPomTargetDomainQuery,
   EvaluatedDirectTraitOutcomeCandidate,
+  NaturalSelectionDraftShape,
   NaturalSelectionResultCandidateEvaluation,
   NaturalSelectionResultCandidateQuery,
   RansomAssessmentCandidateEvaluation,
@@ -150,6 +152,27 @@ export function evaluateEchoPomTargetDomain(
   });
 }
 
+/** Publishes the draft shape only where every branch agrees on it. */
+function naturalSelectionDraftShape(
+  assessments: readonly NaturalSelectionTargetAssessment[],
+): NaturalSelectionDraftShape {
+  const shape = (assessment: NaturalSelectionTargetAssessment): NaturalSelectionDraftShape =>
+    Object.freeze({
+      firstPassRows: assessment.firstPassRows,
+      ...(assessment.completedTargets === undefined
+        ? {}
+        : {
+            completedTargets: assessment.completedTargets,
+            levelCountsByTraitKey: assessment.levelCountsByTraitKey,
+          }),
+    });
+  const [first, ...rest] = assessments.map(shape);
+  return first !== undefined &&
+    rest.every((other) => JSON.stringify(other) === JSON.stringify(first))
+    ? first
+    : Object.freeze({ firstPassRows: Object.freeze([]) });
+}
+
 export function evaluateNaturalSelectionResultCandidate(
   _catalog: Catalog,
   _project: ProjectDocument,
@@ -195,6 +218,7 @@ export function evaluateNaturalSelectionResultCandidate(
       supported,
       complete,
       nextTargetTraitKeys,
+      ...naturalSelectionDraftShape(assessments),
       branchSupport,
       findings: Object.freeze(
         supported
@@ -417,6 +441,7 @@ export function evaluateEchoLastRunBoonDomain(
         slotCount: selectedDisposition.levelCount,
         complete: assessments.every((assessment) => assessment.complete),
         supported: assessments.every((assessment) => assessment.legal),
+        ...naturalSelectionDraftShape(assessments),
         nextTargetCandidates: outcomeCandidates(
           nextKeys,
           assessments.map((assessment) => assessment.nextTargetTraitKeys),

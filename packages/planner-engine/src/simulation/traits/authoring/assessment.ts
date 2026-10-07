@@ -38,12 +38,123 @@ export interface NaturalSelectionStep {
   readonly newLevel: number;
 }
 
+export interface NaturalSelectionFirstPassRow {
+  /** Eligible cores not placed by an earlier row; a row keeps its own. */
+  readonly availableTraitKeys: readonly string[];
+  /** A row opens only once every earlier row is placed. */
+  readonly requiresEarlierRow: boolean;
+  /** The one remaining core when this open row has no other choice. */
+  readonly forcedTraitKey?: string;
+}
+
 export interface NaturalSelectionTargetAssessment {
   readonly legal: boolean;
   /** A legal prefix is complete only at eight successes or a true empty next domain. */
   readonly complete: boolean;
   readonly steps: readonly NaturalSelectionStep[];
   readonly nextTargetTraitKeys: readonly string[];
+  /** The game's one shuffled order: one row per eligible core. */
+  readonly firstPassRows: readonly NaturalSelectionFirstPassRow[];
+  /** The complete allocation once the first-pass order is chosen, forced last core included. */
+  readonly completedTargets?: readonly string[];
+  /** Levels each core gains from the completed allocation. */
+  readonly levelCountsByTraitKey?: Readonly<Record<string, number>>;
+}
+
+function naturalSelectionEligibleKeys(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  slots: readonly TraitOrdinaryBoonSlot[],
+): readonly string[] {
+  return Object.values(before.equippedTraits)
+    .filter((trait) => {
+      const slot = catalog.traits.byKey[trait.traitKey]?.equipmentSlot;
+      return (
+        slot !== undefined &&
+        slot !== 'Spell' &&
+        slots.includes(slot) &&
+        isPomUpgradeTarget(catalog, trait)
+      );
+    })
+    .map((trait) => trait.traitKey);
+}
+
+/** The next effective core in the surviving cyclic order, advancing the cursor past it. */
+function nextRoundRobinTarget(
+  catalog: Catalog,
+  simulated: ReadonlyMap<string, EquippedTrait>,
+  order: readonly string[],
+  cursor: number,
+): { readonly target?: EquippedTrait; readonly cursor: number } {
+  let next = cursor;
+  for (let attempts = 0; attempts < order.length; attempts += 1) {
+    const candidate = simulated.get(order[next]!);
+    next = (next + 1) % order.length;
+    if (isPomUpgradeTarget(catalog, candidate)) return { target: candidate, cursor: next };
+  }
+  return { cursor: next };
+}
+
+/** Rows, forced last core and the game's completed allocation for the drafted first pass. */
+function naturalSelectionFirstPass(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  levelCount: number,
+  eligible: readonly string[],
+  targets: readonly string[] | undefined,
+): Pick<
+  NaturalSelectionTargetAssessment,
+  'firstPassRows' | 'completedTargets' | 'levelCountsByTraitKey'
+> {
+  const placed: string[] = [];
+  for (const traitKey of (targets ?? []).slice(0, eligible.length)) {
+    if (!eligible.includes(traitKey) || placed.includes(traitKey)) break;
+    placed.push(traitKey);
+  }
+  const firstPassRows = Object.freeze(
+    eligible.map((_, index) => {
+      const availableTraitKeys = Object.freeze(
+        eligible.filter((traitKey) => !placed.slice(0, index).includes(traitKey)),
+      );
+      const requiresEarlierRow = index > placed.length;
+      return Object.freeze({
+        availableTraitKeys,
+        requiresEarlierRow,
+        ...(!requiresEarlierRow && availableTraitKeys.length === 1
+          ? { forcedTraitKey: availableTraitKeys[0]! }
+          : {}),
+      });
+    }),
+  );
+  const order =
+    placed.length === eligible.length - 1
+      ? [...placed, firstPassRows[placed.length]!.forcedTraitKey!]
+      : placed;
+  if (eligible.length === 0 || order.length !== eligible.length)
+    return Object.freeze({ firstPassRows });
+  const simulated = new Map(
+    Object.values(before.equippedTraits).map((trait) => [trait.traitKey, trait]),
+  );
+  const completedTargets: string[] = [];
+  let cursor = 0;
+  while (completedTargets.length < levelCount) {
+    const next = nextRoundRobinTarget(catalog, simulated, order, cursor);
+    if (next.target?.level === undefined) break;
+    cursor = next.cursor;
+    simulated.set(
+      next.target.traitKey,
+      Object.freeze({ ...next.target, level: next.target.level + 1 }),
+    );
+    completedTargets.push(next.target.traitKey);
+  }
+  const levelCountsByTraitKey: Record<string, number> = {};
+  for (const traitKey of completedTargets)
+    levelCountsByTraitKey[traitKey] = (levelCountsByTraitKey[traitKey] ?? 0) + 1;
+  return Object.freeze({
+    firstPassRows,
+    completedTargets: Object.freeze(completedTargets),
+    levelCountsByTraitKey: Object.freeze(levelCountsByTraitKey),
+  });
 }
 
 /**
@@ -61,20 +172,28 @@ export function assessNaturalSelectionTargets(
   slots: readonly TraitOrdinaryBoonSlot[],
   targets: readonly string[] | undefined,
 ): NaturalSelectionTargetAssessment {
+  const eligible = naturalSelectionEligibleKeys(catalog, before, slots);
+  return Object.freeze({
+    ...assessNaturalSelectionAllocation(catalog, before, levelCount, eligible, targets),
+    ...(eligible.length > levelCount
+      ? { firstPassRows: Object.freeze([]) }
+      : naturalSelectionFirstPass(catalog, before, levelCount, eligible, targets)),
+  });
+}
+
+function assessNaturalSelectionAllocation(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  levelCount: number,
+  initiallyEligible: readonly string[],
+  targets: readonly string[] | undefined,
+): Omit<
+  NaturalSelectionTargetAssessment,
+  'firstPassRows' | 'completedTargets' | 'levelCountsByTraitKey'
+> {
   const simulated = new Map(
     Object.values(before.equippedTraits).map((trait) => [trait.traitKey, trait]),
   );
-  const initiallyEligible = [...simulated.values()]
-    .filter((trait) => {
-      const slot = catalog.traits.byKey[trait.traitKey]?.equipmentSlot;
-      return (
-        slot !== undefined &&
-        slot !== 'Spell' &&
-        slots.includes(slot) &&
-        isPomUpgradeTarget(catalog, trait)
-      );
-    })
-    .map((trait) => trait.traitKey);
   if (initiallyEligible.length === 0 || initiallyEligible.length > levelCount)
     return Object.freeze({
       legal: false,
@@ -139,16 +258,9 @@ export function assessNaturalSelectionTargets(
   let cursor = 0;
   const steps: NaturalSelectionStep[] = [];
   for (const targetTraitKey of targets) {
-    let target: EquippedTrait | undefined;
-    for (let attempts = 0; attempts < stableOrder.length; attempts += 1) {
-      const candidateKey = stableOrder[cursor]!;
-      cursor = (cursor + 1) % stableOrder.length;
-      const candidate = simulated.get(candidateKey);
-      if (isPomUpgradeTarget(catalog, candidate)) {
-        target = candidate;
-        break;
-      }
-    }
+    const next = nextRoundRobinTarget(catalog, simulated, stableOrder, cursor);
+    cursor = next.cursor;
+    const target = next.target;
     if (target?.traitKey !== targetTraitKey)
       return Object.freeze({
         legal: false,
