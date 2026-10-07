@@ -1,6 +1,7 @@
 import {
   optionIndex,
   semanticAddressKey,
+  type EchoLastRunBoonAddress,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
@@ -9,16 +10,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import type {
-  WorkspaceEchoLastRunBoonDomain,
-  WorkspaceEchoLastRunBoonCarrierDomain,
-  WorkspaceEchoLastRunBoonDraftRow,
-  WorkspaceTraitOfferInteraction,
+import {
+  echoLastRunOptionControl,
+  type WorkspaceEchoLastRunBoonDomain,
+  type WorkspaceEchoLastRunBoonCarrierDomain,
+  type WorkspaceEchoLastRunBoonDraftRow,
+  type WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferForm, TraitOfferShapeActions, type FeedbackEntry } from './TraitOfferForm';
 import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
 import { TraitOfferOption } from './TraitOfferOption';
@@ -59,20 +61,22 @@ function withNaturalTargets(row: DraftRow, targets: readonly string[]): DraftRow
 }
 
 function EchoLastRunBoonChoiceEditor({
+  address,
   controlId,
-  findingTarget,
   domain,
   value,
   onBack,
   onComplete,
 }: {
+  readonly address: EchoLastRunBoonAddress;
   readonly controlId: string;
-  readonly findingTarget: FindingTargetProps;
   readonly domain: WorkspaceEchoLastRunBoonDomain;
   readonly value?: AuthoredEchoLastRunBoonOffer;
   readonly onBack: () => void;
   readonly onComplete: (value: AuthoredEchoLastRunBoonOffer) => void;
 }) {
+  const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const [rows, setRows] = useState<readonly DraftRow[]>(() =>
     value === undefined
       ? Object.freeze([Object.freeze({})])
@@ -155,6 +159,7 @@ function EchoLastRunBoonChoiceEditor({
         <TraitAcquisitionTargetOutcome
           controlId={`${controlId}-target`}
           ariaLabel="Boon Boon Boon selected trait target"
+          findingMark={findingMark(address, 'echoLastRunTarget')}
           loadable={targetLoadable}
           {...(selectedRow.targetTraitKey === undefined
             ? {}
@@ -168,6 +173,7 @@ function EchoLastRunBoonChoiceEditor({
       {selectedKind === 'allTogether' && carrier?.kind === 'allTogether' ? (
         <AllTogetherOutcomeRows
           authored={selectedRow?.allTogetherResult}
+          firstRowMark={findingMark(address, 'outcomeFirstRow')}
           key={`${selectedIndex}:${selectedRow?.identity?.traitKey}`}
           rows={allTogetherSets}
           onSelect={(allTogetherResult) =>
@@ -182,6 +188,7 @@ function EchoLastRunBoonChoiceEditor({
           authored={selectedRow.naturalSelectionTargets}
           key={`${selectedIndex}:${selectedRow.identity?.traitKey}`}
           controlId={`${controlId}-natural-selection`}
+          firstRowMark={findingMark(address, 'outcomeFirstRow')}
           traitLabel={carrier.traitLabel}
           loadableFor={naturalLoadableFor}
           onClear={() => updateRow(selectedIndex, withNaturalTargets(selectedRow, []))}
@@ -218,7 +225,7 @@ function EchoLastRunBoonChoiceEditor({
 
   return (
     <section
-      {...findingTarget}
+      {...findingAnchor(address, { id: controlId })}
       tabIndex={-1}
       className="echo-last-run-choice trait-choice-region"
       aria-label="Boon Boon Boon choice"
@@ -256,6 +263,11 @@ function EchoLastRunBoonChoiceEditor({
               legend={`Option ${index + 1}`}
               loading={false}
               traitAriaLabel={`Boon Boon Boon outcome ${index + 1}`}
+              {...(complete === undefined
+                ? {}
+                : {
+                    traitFindingMark: findingMark(address, echoLastRunOptionControl(complete)),
+                  })}
               traitPicker={traitPicker}
               {...(row.identity === undefined ? {} : { traitLabel: domain.labelFor(row.identity) })}
               onSelectTrait={(identity) => {
@@ -324,7 +336,6 @@ export function LoadedEchoLastRunBoonChoice({
   readonly onBack: () => void;
   readonly onComplete: (value: AuthoredEchoLastRunBoonOffer) => void;
 }) {
-  const findingTarget = useFindingTarget();
   const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const optionKey = offer.selectedOptionKey;
   const option = offer.options[optionIndex(optionKey)];
@@ -382,7 +393,7 @@ export function LoadedEchoLastRunBoonChoice({
   }
   return (
     <EchoLastRunBoonChoiceEditor
-      findingTarget={findingTarget(child.child.address)}
+      address={child.child.address}
       controlId={semanticOwnerControlElementId(child.child.address)}
       domain={loaded.result}
       {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}

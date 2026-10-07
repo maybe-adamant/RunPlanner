@@ -15,7 +15,11 @@ import {
 } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingMark,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import { AllTogetherOutcomeRows, NaturalSelectionOutcomeRows } from './TraitOfferOutcomeRows';
 import {
@@ -166,6 +170,8 @@ export function TraitOfferSelectedSpecialOutcomes({
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const findingTarget = useFindingTarget();
+  const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const ransomAssessment = feedback.find((entry) => entry.kind === 'ransom')?.assessment;
   useReportedFeedback(
     onFeedback,
@@ -279,7 +285,8 @@ export function TraitOfferSelectedSpecialOutcomes({
         <NaturalSelectionOutcomeRows
           authored={binding.authored}
           controlId={binding.controlId}
-          findingTarget={findingTarget(binding.naturalSelection.child.address)}
+          findingAnchor={findingAnchor(binding.naturalSelection.child.address)}
+          firstRowMark={findingMark(binding.naturalSelection.child.address, 'outcomeFirstRow')}
           key={binding.key}
           loadableFor={binding.loadableFor}
           onClear={() => onUpdate(binding.clear())}

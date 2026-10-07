@@ -50,7 +50,13 @@ export type WorkspaceFindingControl =
   | 'pickupOutcome'
   | 'seaStar'
   | 'concaveStoneTarget'
-  | 'revertAnomaly';
+  | 'revertAnomaly'
+  /** The first row of a grouped trait outcome, which names the next edit. */
+  | 'outcomeFirstRow'
+  /** The selected Boon Boon Boon row's acquisition target. */
+  | 'echoLastRunTarget'
+  /** One Boon Boon Boon row's trait picker, named by its giver, trait and rarity. */
+  | `echoLastRunOption:${string}`;
 
 export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;

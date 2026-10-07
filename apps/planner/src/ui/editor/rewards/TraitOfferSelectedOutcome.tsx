@@ -16,7 +16,11 @@ import type {
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingTarget,
+  type FindingMarkProps,
+  type FindingTargetProps,
+} from '@planner/ui/feedback/useFindingTarget';
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
 import {
   ConcaveStoneOutcomeEditor,
@@ -37,6 +41,7 @@ const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
 
 export function TraitAcquisitionTargetOutcome({
   controlId,
+  findingMark,
   findingTarget,
   ariaLabel,
   loadable,
@@ -45,6 +50,7 @@ export function TraitAcquisitionTargetOutcome({
   traitLabel,
 }: {
   readonly controlId: string;
+  readonly findingMark?: FindingMarkProps;
   readonly findingTarget?: FindingTargetProps;
   readonly ariaLabel: string;
   readonly loadable: { readonly load: () => WorkspaceTraitAcquisitionTargetDomain | undefined };
@@ -62,6 +68,7 @@ export function TraitAcquisitionTargetOutcome({
   return (
     <ContextualPicker
       {...(findingTarget === undefined ? {} : { findingTarget })}
+      {...(findingMark === undefined ? {} : { findingMark })}
       ariaLabel={ariaLabel}
       id={controlId}
       label="Target"
