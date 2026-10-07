@@ -182,7 +182,16 @@ export function HubDecisionWorkbench({
   const nextVisitTarget =
     activeTab !== 'timeline' || nextVisit === undefined
       ? undefined
-      : findingAnchor(nextVisit.marker.address, { readinessOwner: node.owner });
+      : findingAnchor(nextVisit.marker.address, {
+          readinessOwner: node.owner,
+          // Navigation lands on the first room that can be visited next.
+          focusTarget: (anchor) =>
+            anchor
+              .closest('.hub-decision-workbench')
+              ?.querySelector<HTMLElement>(
+                '.hub-timeline-map-marker[data-has-findings="true"]:not(:disabled)',
+              ) ?? null,
+        });
   const setActiveTab = (tab: WorkspaceHubTab): void =>
     setTabState({
       active: tab,

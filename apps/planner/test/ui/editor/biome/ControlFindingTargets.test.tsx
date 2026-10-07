@@ -30,8 +30,13 @@ import {
 import {
   loadSurfaceNBuriedTreasureCheckpoint,
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
+  loadSurfaceNPartialHubCheckpoint,
   loadSurfaceNTenOpenInvalidCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  artemisSourceAnomalyProject,
+  cageBeforeAthenaProject,
+} from '@planner-test/support/finding-states';
 import { cleanup, render, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
@@ -174,4 +179,29 @@ it('rings every enabled Hub membership toggle of an incomplete open set', async 
     .filter((toggle) => !(toggle as HTMLInputElement).disabled);
   expect(toggles.length).toBeGreaterThan(0);
   expect(paintedFindings()).toEqual(toggles);
+});
+
+it('rings every room that can be visited next and focuses the first', async () => {
+  const view = renderWorkspace(loadSurfaceNPartialHubCheckpoint(), 'Surface', 'N');
+  await openFirstFinding(view);
+  const markers = paintedFindings();
+  expect(markers.length).toBeGreaterThan(1);
+  for (const marker of markers) {
+    expect(marker.classList.contains('hub-timeline-map-marker')).toBe(true);
+    expect(marker.getAttribute('aria-label')).toMatch(/: Unvisited\. Add visit\.$/);
+  }
+  await waitFor(() => expect(document.activeElement).toBe(markers[0]));
+});
+
+it('marks Restore on an Anomaly its source cannot produce', async () => {
+  const view = renderWorkspace(artemisSourceAnomalyProject(), 'Underworld', 'G');
+  const door = await openFirstFinding(view);
+  expect(paintedFindings()).toEqual([within(door).getByRole('button', { name: /^Restore / })]);
+});
+
+it('renders a Fields cage with an ordering issue as a movable row', async () => {
+  const view = renderWorkspace(cageBeforeAthenaProject(), 'Underworld', 'H');
+  const row = await openFirstFinding(view);
+  expect(row.tagName).toBe('LI');
+  expect(paintedFindings()).toEqual([within(row).getByRole('button', { name: /^Move / })]);
 });

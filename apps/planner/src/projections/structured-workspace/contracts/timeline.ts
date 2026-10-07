@@ -326,7 +326,8 @@ export interface WorkspaceFountainRarityInteraction {
 
 export interface WorkspaceFieldsCageLabel {
   readonly label: string;
-  readonly owner: RoomActionAddress;
+  /** The cage action the label stands for; absent while that action is its own row. */
+  readonly owner?: RoomActionAddress;
 }
 
 export interface WorkspaceFieldsCageOrderControl {

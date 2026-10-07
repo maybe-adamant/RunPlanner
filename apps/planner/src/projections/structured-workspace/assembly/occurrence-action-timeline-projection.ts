@@ -137,8 +137,13 @@ function projectRoomLifecycleTimeline(
             boundary.key,
             Object.freeze({
               label: choice.label,
-              owner:
-                selected.address as import('@run-planner/engine/authored-project').RoomActionAddress,
+              // A cage action with an ordering issue is its own row, which owns its navigation.
+              ...(rosterIssues.some((issue) => roomActionKey(issue.reference) === selected.key)
+                ? {}
+                : {
+                    owner:
+                      selected.address as import('@run-planner/engine/authored-project').RoomActionAddress,
+                  }),
               slotOrdinal: index + 1,
               phaseKey: boundary.phaseKey,
             }),
@@ -147,7 +152,9 @@ function projectRoomLifecycleTimeline(
       }),
   );
   const representedCagePhases = new Set(
-    [...cageLabelByBoundaryKey.values()].map((slot) => slot.phaseKey),
+    [...cageLabelByBoundaryKey.values()].flatMap((slot) =>
+      slot.owner === undefined ? [] : [slot.phaseKey],
+    ),
   );
   const encounterByPhase = new Map(
     encounterPhases.map((phase) => [phase.address.phaseKey, phase] as const),
@@ -234,7 +241,7 @@ function projectRoomLifecycleTimeline(
             : {
                 fieldsCage: Object.freeze({
                   label: fieldsCage.label,
-                  owner: fieldsCage.owner,
+                  ...(fieldsCage.owner === undefined ? {} : { owner: fieldsCage.owner }),
                 }),
               }),
           ...(supplement === undefined ? {} : { supplement }),

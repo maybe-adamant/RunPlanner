@@ -82,5 +82,12 @@ describe('Pickup outcome controls', () => {
     expect(seaStar?.checked).toBe(true);
     expect(seaStar?.disabled).toBe(false);
     expect(seaStar?.closest('label')?.hasAttribute('title')).toBe(false);
+    // Unticking Sea Star repairs the stale proc; the pickup outcome picker is not marked.
+    expect(seaStar?.dataset.hasFindings).toBe('true');
+    expect(
+      [...document.querySelectorAll<HTMLElement>('[data-has-findings="true"]')].filter(
+        (element) => element !== seaStar,
+      ),
+    ).toEqual([]);
   });
 });

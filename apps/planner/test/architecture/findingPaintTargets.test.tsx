@@ -33,6 +33,11 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
+import {
+  artemisSourceAnomalyProject,
+  cageBeforeAthenaProject,
+  staleSeaStarProject,
+} from '@planner-test/support/finding-states';
 
 afterEach(cleanup);
 
@@ -65,6 +70,9 @@ const goldenFNemesisPhase = createEncounterPhaseAddress(
 const surfaceN = createBiomeAddress('Surface', 'N');
 
 const constructed: readonly (readonly [string, () => ProjectDocument])[] = [
+  ['impossible Anomaly', artemisSourceAnomalyProject],
+  ['Fields cage ordering issue', cageBeforeAthenaProject],
+  ['stale Sea Star', staleSeaStarProject],
   ['stale Hermes delivery', () => createStaleSurfaceHermesDeliveryPlacement().project],
   [
     'Nemesis outcome',

@@ -76,6 +76,7 @@ function PickupOutcomeControls({
       {seaStar ? (
         <label className="timeline-checkbox">
           <input
+            {...findingMark(conversion.address, 'seaStar')}
             aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
             checked={interaction.seaStarProcced}
             onChange={(event) => executeIntent(interaction.seaStarIntentFor(event.target.checked))}

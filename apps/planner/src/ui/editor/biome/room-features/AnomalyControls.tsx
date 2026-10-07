@@ -3,6 +3,7 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 
 /**
  * The workspace has already established this is an authored Anomaly and has
@@ -62,11 +63,13 @@ export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSu
 
 export function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) {
   const dispatch = useAppDispatch();
+  const findingMark = useFindingMark();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
     <div className="anomaly-revert-action">
       <button
+        {...findingMark(room.address, 'revertAnomaly')}
         className="danger-action action-compact"
         data-command="RevertAnomaly"
         onClick={() =>
