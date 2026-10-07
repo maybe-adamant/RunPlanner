@@ -8,14 +8,21 @@ import { useState } from 'react';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
-import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import {
+  EditorDialog,
+  EditorDialogDraftActions,
+  EditorDialogFeedback,
+} from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import {
   circeResolutionDialogClosed,
   circeResolutionDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
-import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingFeedbackEntries,
+  type FindingTargetProps,
+} from '@planner/ui/feedback/useFindingTarget';
 import { circeUnavailableMessage } from './traitOfferOptions';
 
 export function TraitOfferCirceResolution({
@@ -78,7 +85,9 @@ export function TraitOfferCirceResolution({
   const labelFor = (key: string) =>
     picker?.sections.flatMap((section) => section.items).find((item) => item.value === key)
       ?.label ?? key;
-  const disabled = domain === undefined || circeUnavailableMessage(domain) !== undefined;
+  const unavailable = circeUnavailableMessage(domain);
+  const disabled = domain === undefined || unavailable !== undefined;
+  const findingEntries = useFindingFeedbackEntries(address);
   const complete = draft?.keys.length === domain?.requiredCount;
   const candidates =
     domain === undefined || draft === null
@@ -121,6 +130,16 @@ export function TraitOfferCirceResolution({
       {draft === null ? null : (
         <EditorDialog
           eyebrow="Circe"
+          feedback={
+            <EditorDialogFeedback
+              name="Circe feedback"
+              entries={
+                unavailable === undefined
+                  ? findingEntries
+                  : [['unavailable', unavailable], ...findingEntries]
+              }
+            />
+          }
           footer={
             <EditorDialogDraftActions
               onCancel={() => close()}

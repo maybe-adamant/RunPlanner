@@ -33,7 +33,6 @@ const picker = (input: { group: LevelResolutionCandidateGroup; current: string |
   projectLevelResolutionTargetPicker({
     ...input,
     traitLabel: (key) => `Trait ${key}`,
-    findingCopy: (code) => `copy:${code}`,
   });
 
 const items = (model: ReturnType<typeof picker>) =>
@@ -62,7 +61,7 @@ describe('Pom target picker projection', () => {
           value: 'Stale',
           disabled: false,
           status: 'Current · unavailable',
-          explanation: 'copy:targetUnavailable',
+          explanation: 'Pom target unavailable',
         },
       ],
     });

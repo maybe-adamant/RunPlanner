@@ -3,6 +3,7 @@ import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   type AssessmentIssue,
   type FindingCode,
+  type LevelResolutionFindingCode,
   type ProjectEvaluation,
   type ProjectRouteEvaluation,
   type SemanticFinding,
@@ -806,6 +807,24 @@ export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): F
     };
   }
   return findingCopy[code];
+}
+
+const levelResolutionCandidateCopy = {
+  missingTarget: findingCopy.missingPomTarget,
+  wrongOfferCount: findingCopy.pomWrongOfferCount,
+  duplicateTargets: findingCopy.pomWrongOfferCount,
+  selectedTargetNotOffered: findingCopy.pomSelectedTargetNotOffered,
+  targetUnavailable: findingCopy.pomTargetUnavailable,
+  kindMismatch: findingCopy.pomTargetUnavailable,
+} as const satisfies Readonly<Record<LevelResolutionFindingCode, FindingPresentation>>;
+
+/** Present a Pom draft's candidate finding with the shared Pom finding copy. */
+export function presentLevelResolutionCandidateFinding(code: string): FindingPresentation {
+  return (
+    (levelResolutionCandidateCopy as Readonly<Record<string, FindingPresentation>>)[code] ?? {
+      title: code,
+    }
+  );
 }
 
 export function semanticFindingKey(finding: SemanticFinding): string {

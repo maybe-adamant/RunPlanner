@@ -50,6 +50,7 @@ describe('Arcana activation editor', () => {
             inactiveArcanaKeys: ['ArcanaA'],
             rarity: 'Common',
             selectedPossible: true,
+            findings: [],
           },
         }) as unknown as CandidateProjectionEvaluation,
       owner,

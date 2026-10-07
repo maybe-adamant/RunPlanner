@@ -10,6 +10,10 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { projectLevelResolutionTargetPicker } from '@planner/projections/contextual/levelResolutionTargetPicker';
 import {
+  formatFindingExplanation,
+  presentLevelResolutionCandidateFinding,
+} from '@planner/projections/evaluationProjection';
+import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
@@ -50,25 +54,6 @@ function selectedTarget(value: AuthoredLevelResolution): string | null {
 
 function levelCountLabel(interaction: WorkspaceLevelResolutionInteraction): string {
   return interaction.levelCount === undefined ? '' : ` +${interaction.levelCount}`;
-}
-
-function findingMessage(code: string): string {
-  switch (code) {
-    case 'missingTarget':
-      return 'Choose a trait to receive this Pom.';
-    case 'wrongOfferCount':
-      return 'Record the complete target list available here.';
-    case 'duplicateTargets':
-      return 'Each Pom target must be different.';
-    case 'selectedTargetNotOffered':
-      return 'Choose one of this Pom’s recorded targets.';
-    case 'targetUnavailable':
-      return 'This trait cannot receive the Pom at this point in the route.';
-    case 'kindMismatch':
-      return 'This recorded Pom outcome does not match the reward.';
-    default:
-      return code;
-  }
 }
 
 function levelResolutionLoadable(
@@ -286,7 +271,6 @@ export function PomResolutionEditor({
       group: activeGroup,
       current,
       traitLabel: interaction.traitLabel,
-      findingCopy: findingMessage,
     });
   const updateChoiceSlot = (index: number, target: string): void => {
     const slots = Array.from({ length: count }, (_, slot) => choiceSlots[slot] ?? null);
@@ -401,15 +385,16 @@ export function PomResolutionEditor({
           selected={randomTarget}
         />
       )}
-      <EditorDialogFeedback name="Pom feedback">
-        {findings.length === 0 ? undefined : (
-          <ul className="trait-option-feedback">
-            {[...new Set(findings)].map((finding) => (
-              <li key={finding}>{findingMessage(finding)}</li>
-            ))}
-          </ul>
-        )}
-      </EditorDialogFeedback>
+      <EditorDialogFeedback
+        name="Pom feedback"
+        entries={[
+          ...new Set(
+            findings.map((finding) =>
+              formatFindingExplanation(presentLevelResolutionCandidateFinding(finding)),
+            ),
+          ),
+        ].map((message) => [message, message] as const)}
+      />
       <EditorDialogDraftActions
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => onCommit(draft)}

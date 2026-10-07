@@ -414,9 +414,12 @@ describe('Pom resolution editor', () => {
     });
 
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
-    expect(
-      await screen.findAllByText('This trait cannot receive the Pom at this point in the route.'),
-    ).toHaveLength(1);
+    // The region uses the shared Pom finding copy.
+    await waitFor(() =>
+      expect(screen.getByRole('status', { name: 'Pom feedback' }).textContent).toContain(
+        'Pom target unavailable',
+      ),
+    );
     await user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
     expect(screen.getByRole('option', { name: /Trait Stale/ })).not.toBeNull();
     await user.click(screen.getByRole('option', { name: 'Trait A' }));

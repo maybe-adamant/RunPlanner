@@ -24,7 +24,7 @@ import {
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingFeedbackEntries, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
@@ -61,12 +61,15 @@ function AnvilResultDialog({
   interaction,
   launcherId,
   onClose,
+  owner,
 }: {
   readonly interaction: AnvilInteraction;
   readonly launcherId: string;
   readonly onClose: () => void;
+  readonly owner: AcquisitionRoleAddress;
 }) {
   const executeIntent = useCommandIntent();
+  const findingEntries = useFindingFeedbackEntries(owner);
   return (
     <EditorDialog
       eyebrow="Anvil of Fates"
@@ -75,6 +78,7 @@ function AnvilResultDialog({
       title="Choose Hammer result"
     >
       <AnvilResultEditor
+        findingEntries={findingEntries}
         interaction={interaction}
         // A changed authored result replaces the draft; a changed context keeps it.
         key={draftValueIdentity(interaction.value)}
@@ -89,10 +93,13 @@ function AnvilResultDialog({
 }
 
 export function AnvilResultEditor({
+  findingEntries = [],
   interaction,
   onCancel,
   onCommit,
 }: {
+  /** The Anvil owner's findings, as its launcher marks them. */
+  readonly findingEntries?: readonly (readonly [key: string, message: string])[];
   readonly interaction: AnvilInteraction;
   /** Discards the draft; absent outside a dialog. */
   readonly onCancel?: () => void;
@@ -160,7 +167,7 @@ export function AnvilResultEditor({
             : { triggerLabel: interaction.traitLabel(draft.secondAddedTraitKey) })}
         />
       </div>
-      <EditorDialogFeedback name="Anvil feedback" />
+      <EditorDialogFeedback name="Anvil feedback" entries={findingEntries} />
       <EditorDialogDraftActions
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => {
@@ -213,7 +220,12 @@ export function AnvilResultLauncher({
         {label}
       </button>
       {open && interaction.contextReached ? (
-        <AnvilResultDialog interaction={interaction} launcherId={launcher.id} onClose={close} />
+        <AnvilResultDialog
+          interaction={interaction}
+          launcherId={launcher.id}
+          onClose={close}
+          owner={owner}
+        />
       ) : null}
     </>
   );

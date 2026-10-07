@@ -583,7 +583,7 @@ describe('Biome inspector controls', () => {
     ).toBe('true');
   });
 
-  it('keeps Judgment and Crystal Figurine independently authorable and undoable', () => {
+  it('keeps Judgment and Crystal Figurine independently authorable and undoable', async () => {
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceManualArcanaSelection',
       route: createRouteAddress('Surface'),
@@ -615,7 +615,12 @@ describe('Biome inspector controls', () => {
     // The board renders inside the fixed-height choice region the loader also fills.
     expect(judgmentPopup.querySelector('.trait-choice-region .arcana-board')).toBeTruthy();
     const arcanaFeedback = within(judgmentPopup).getByRole('status', { name: 'Arcana feedback' });
-    expect(arcanaFeedback.textContent).toContain('No current findings.');
+    // At rest the region lists the Judgment's own findings, as its launcher marks them.
+    const launcherDescription = within(inspector)
+      .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
+      .getAttribute('aria-description');
+    expect(launcherDescription).toBe('Choose Judgment cards: Choose inactive Arcana.');
+    expect(arcanaFeedback.textContent).toContain(launcherDescription);
     // The feedback region closes the dialog body, directly above its footer.
     expect(arcanaFeedback.nextElementSibling?.tagName).toBe('FOOTER');
     for (let index = 0; index < 5; index += 1) {
@@ -624,7 +629,13 @@ describe('Biome inspector controls', () => {
         .find((button) => !button.disabled);
       if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
       act(() => next.click());
+      // An edited draft shows its own assessment.
+      if (index === 0)
+        await waitFor(() =>
+          expect(arcanaFeedback.textContent).toContain('Wrong Judgment card count'),
+        );
     }
+    await waitFor(() => expect(arcanaFeedback.textContent).toContain('No current findings.'));
     const closeJudgment = within(judgmentPopup).getByRole('button', {
       name: 'Cancel',
     });

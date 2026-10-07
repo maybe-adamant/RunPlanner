@@ -1,4 +1,8 @@
 import type { LevelResolutionCandidateGroup } from '../candidates/candidateProjection';
+import {
+  formatFindingExplanation,
+  presentLevelResolutionCandidateFinding,
+} from '../evaluationProjection';
 import type { ContextualPickerItem, ContextualPickerModel } from './contextualPicker';
 
 /**
@@ -9,7 +13,6 @@ export function projectLevelResolutionTargetPicker(input: {
   readonly group: LevelResolutionCandidateGroup | undefined;
   readonly current: string | null;
   readonly traitLabel: (traitKey: string) => string;
-  readonly findingCopy: (code: string) => string;
 }): ContextualPickerModel<string> {
   const { group, current } = input;
   const eligible = group?.surface.eligibleTargetTraitKeys ?? [];
@@ -29,8 +32,10 @@ export function projectLevelResolutionTargetPicker(input: {
       ...(unavailableCurrent ? { status: 'Current · unavailable' } : {}),
       ...(unavailableCurrent
         ? {
-            explanation: input.findingCopy(
-              group?.evaluations[0]?.findings[0] ?? 'targetUnavailable',
+            explanation: formatFindingExplanation(
+              presentLevelResolutionCandidateFinding(
+                group?.evaluations[0]?.findings[0] ?? 'targetUnavailable',
+              ),
             ),
           }
         : {}),
