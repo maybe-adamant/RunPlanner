@@ -6,6 +6,10 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  formatFindingExplanation,
+  presentAnvilDraftFinding,
+} from '@planner/projections/evaluationProjection';
+import {
   anvilRemovedTraitLabel,
   type AnvilResultDraft,
 } from '@planner/projections/contextual/anvilResultPickers';
@@ -108,6 +112,21 @@ export function AnvilResultEditor({
   const [draft, setDraft] = useState(() => draftFor(interaction.value));
   const pickers = interaction.pickersFor(draft);
   const result = resultFor(draft);
+  // At rest the region matches the launcher; a complete edited draft shows its assessment.
+  const atRest = draftValueIdentity(result ?? null) === draftValueIdentity(interaction.value);
+  const feedbackEntries = atRest
+    ? findingEntries
+    : result === undefined
+      ? []
+      : interaction
+          .assess(result)
+          .findings.map(
+            (code) =>
+              [
+                code,
+                formatFindingExplanation(presentAnvilDraftFinding(code, interaction.traitLabel)),
+              ] as const,
+          );
   return (
     <>
       <div className="anvil-result-pickers">
@@ -167,7 +186,7 @@ export function AnvilResultEditor({
             : { triggerLabel: interaction.traitLabel(draft.secondAddedTraitKey) })}
         />
       </div>
-      <EditorDialogFeedback name="Anvil feedback" entries={findingEntries} />
+      <EditorDialogFeedback name="Anvil feedback" entries={feedbackEntries} />
       <EditorDialogDraftActions
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => {

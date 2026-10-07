@@ -33,10 +33,14 @@ import {
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
 function anvilInteraction(
-  input: Omit<AnvilInteraction, 'pickersFor' | 'traitLabel'> &
-    Partial<Pick<AnvilInteraction, 'traitLabel'>>,
+  input: Omit<AnvilInteraction, 'pickersFor' | 'traitLabel' | 'assess'> &
+    Partial<Pick<AnvilInteraction, 'traitLabel' | 'assess'>>,
 ): AnvilInteraction {
-  const domain = { ...input, traitLabel: input.traitLabel ?? ((traitKey: string) => traitKey) };
+  const domain = {
+    ...input,
+    assess: input.assess ?? (() => ({ legal: true, findings: [] })),
+    traitLabel: input.traitLabel ?? ((traitKey: string) => traitKey),
+  };
   return { ...domain, pickersFor: (draft) => projectAnvilResultPickers(domain, draft) };
 }
 
@@ -92,6 +96,50 @@ describe('Anvil result editor', () => {
       removedTraitKey: 'OldHammer',
       addedTraitKeys: ['FirstHammer', 'SecondHammer'],
     });
+  });
+
+  it('shows the authored findings at rest and an edited draft its own assessment', async () => {
+    const authored = {
+      kind: 'anvilOfFates' as const,
+      removedTraitKey: 'OldHammer',
+      addedTraitKeys: ['FirstHammer', 'SecondHammer'] as const,
+    };
+    const interaction = anvilInteraction({
+      contextReached: true,
+      value: authored,
+      removedTraitKeys: ['OldHammer'],
+      addedTraitKeysFor: (_removed, prior) =>
+        prior.length === 0 ? ['FirstHammer', 'SecondHammer'] : ['SecondHammer', 'ThirdHammer'],
+      assess: (result) => ({
+        legal: false,
+        findings: result.addedTraitKeys.includes('ThirdHammer')
+          ? ['additionUnavailable:ThirdHammer']
+          : [],
+      }),
+      traitLabel: (traitKey) => traitKey.replace('Hammer', ' Hammer'),
+      intentFor: () => {
+        throw new Error('the pure editor must not bind commands');
+      },
+    });
+    const user = userEvent.setup();
+    render(
+      <AnvilResultEditor
+        findingEntries={[['authored', 'Reward unavailable']]}
+        interaction={interaction}
+        onCommit={vi.fn()}
+      />,
+    );
+    const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
+    expect(feedback.textContent).toContain('Reward unavailable');
+    await user.click(screen.getByRole('button', { name: 'Added Hammer 2' }));
+    await user.click(screen.getByRole('option', { name: 'Third Hammer' }));
+    expect(feedback.textContent).not.toContain('Reward unavailable');
+    expect(feedback.textContent).toContain('Added Hammer unavailable: Third Hammer');
+    // Findings never lock the draft; Save waits only on completeness.
+    expect(screen.getByRole('button', { name: 'Save Anvil result' })).toHaveProperty(
+      'disabled',
+      false,
+    );
   });
 
   it('closes its open dialog and clears the session target when the context is lost', async () => {

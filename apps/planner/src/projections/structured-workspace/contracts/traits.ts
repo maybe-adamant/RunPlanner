@@ -60,6 +60,10 @@ export interface WorkspaceAcquisitionConversionInteraction {
       priorAddedTraitKeys: readonly string[],
     ) => readonly string[];
     readonly pickersFor: (draft: AnvilResultDraft) => AnvilResultPickers;
+    /** Settlement's assessment of a complete result at this frontier. */
+    readonly assess: NonNullable<
+      import('@run-planner/engine/simulation').AcquisitionConversionCandidateCapability['anvil']
+    >['assess'];
     readonly traitLabel: (traitKey: string) => string;
     readonly intentFor: (
       value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
