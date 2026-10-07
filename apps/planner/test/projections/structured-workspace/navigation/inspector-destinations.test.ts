@@ -883,7 +883,7 @@ describe('workspace inspector destinations', () => {
       );
     expect(presentFinding(finding)).toEqual({
       title: 'Travel Deal refill unavailable',
-      description: 'Check the triggering purchase and refill item, or remove this refill purchase.',
+      description: 'Check its triggering purchase, or remove this refill.',
     });
     const workspace = structuredWorkspace.project(assembled);
     const target = destination(workspace, finding.origin);

@@ -7,6 +7,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import {
   formatFindingExplanation,
+  formatFindingSentence,
   presentFinding,
   semanticFindingKey,
 } from '@planner/projections/evaluationProjection';
@@ -164,7 +165,7 @@ function useTargetBinder() {
       'aria-description':
         findings.length === 0
           ? undefined
-          : findings.map((finding) => formatFindingExplanation(presentFinding(finding))).join(' '),
+          : findings.map((finding) => formatFindingSentence(presentFinding(finding))).join(' '),
       ref: (element) => {
         if (element === null || !selectedAtTarget || handledRequest.current === request) return;
         handledRequest.current = request;
@@ -239,7 +240,7 @@ export function useFindingMark() {
       'aria-description':
         findings.length === 0
           ? undefined
-          : findings.map((finding) => formatFindingExplanation(presentFinding(finding))).join(' '),
+          : findings.map((finding) => formatFindingSentence(presentFinding(finding))).join(' '),
     };
   };
 }

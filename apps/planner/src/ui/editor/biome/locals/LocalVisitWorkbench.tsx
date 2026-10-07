@@ -1,9 +1,6 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
-import {
-  formatFindingExplanation,
-  presentFinding,
-} from '@planner/projections/evaluationProjection';
+import { formatFindingSentence, presentFinding } from '@planner/projections/evaluationProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -123,7 +120,7 @@ function orderActionState(
     candidate?.evaluation.kind === 'sideRoomEntryOrder' &&
     !candidate.evaluation.result.selectedPossible
       ? candidate.evaluation.result.findings
-          .map((finding) => formatFindingExplanation(presentFinding(finding)))
+          .map((finding) => formatFindingSentence(presentFinding(finding)))
           .join(' ')
       : undefined;
   return {

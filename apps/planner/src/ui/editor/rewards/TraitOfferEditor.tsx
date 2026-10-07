@@ -76,7 +76,7 @@ export function TraitOfferLauncher({
     status === 'unspecified'
       ? `${spellOffer ? 'spell' : 'trait'} is not selected`
       : status === 'invalid'
-        ? `${spellOffer ? 'spell' : 'trait'} configuration needs attention`
+        ? `${spellOffer ? 'spell' : 'trait'} offer needs attention`
         : `${spellOffer ? 'spell' : 'trait'} configuration has no findings`;
   return (
     <button

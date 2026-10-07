@@ -80,7 +80,8 @@ function derivedRewardSupplementalOffer(
           kind: 'echoDoubleShopPlaceholder' as const,
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
-          explanation: 'Settle the first paid non-Spell Shop purchase before editing Echo Gold.',
+          explanation:
+            'Settle the first paid non-Spell Shop purchase before editing Gold Gold Gold.',
         })
       : undefined;
   }

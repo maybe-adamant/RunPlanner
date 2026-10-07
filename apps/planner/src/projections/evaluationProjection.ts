@@ -74,6 +74,9 @@ export type BiomeStatusEvaluation =
       readonly requiredInput?: unknown;
     };
 
+const embryoBlessingMissing = Object.freeze({ title: 'Choose Embryo blessing' });
+const embryoBlessingUnavailable = Object.freeze({ title: 'Embryo blessing unavailable' });
+
 const findingCopy = {
   batchRewardStoreMissing: {
     title: 'Choose a reward pool',
@@ -86,20 +89,18 @@ const findingCopy = {
   },
   fieldsCageOutcomeUnavailable: {
     title: 'Fields door roll unavailable',
-    description: 'Choose an available Min or Max outcome.',
   },
   biomeTopologyMissing: {
     title: 'Create the opening room',
   },
   continuationMissing: {
-    title: 'Continue route',
+    title: 'Open the next room from the Hub',
   },
   hubOpenSetIncomplete: {
     title: 'Choose open Hub rooms',
-    description: 'Open nine or ten rooms.',
   },
   hubVisitOrderIncomplete: {
-    title: 'Plan six room visits and use the fountain',
+    title: 'Plan Hub visits and use the fountain',
   },
   hubOpenSlotUnavailable: {
     title: 'Hub rooms conflict',
@@ -114,14 +115,14 @@ const findingCopy = {
     title: 'No eligible room',
   },
   targetRoomUnavailable: {
-    title: 'Room unavailable',
+    title: 'Door cannot offer this room',
   },
   encounterUnavailable: {
     title: 'Encounter unavailable',
   },
   encounterCustomizationUnavailable: {
     title: 'Encounter customization unavailable',
-    description: 'Repair this encounter customization or reset customization.',
+    description: 'Fix it or reset the customization.',
   },
   encounterCustomizationRequired: {
     title: 'Customize this encounter',
@@ -233,7 +234,6 @@ const findingCopy = {
   },
   pomSelectedTargetNotOffered: {
     title: 'Pom target was not offered',
-    description: 'Choose from the recorded targets.',
   },
   pomTargetUnavailable: {
     title: 'Pom target unavailable',
@@ -265,18 +265,16 @@ const findingCopy = {
   },
   erisSpawnUnavailable: {
     title: 'Eris cannot spawn again',
-    description: 'Her curse is already on this run; clear “Eris has spawned”.',
+    description: 'Her curse is already on this run.',
   },
   keepsakeEquipResultMissing: {
-    title: 'Choose Jeweled Pom result',
-    description: 'Choose the granted Hades trait.',
+    title: 'Choose the Hades trait from Jeweled Pom',
   },
   keepsakeEquipResultUnavailable: {
     title: 'Jeweled Pom result unavailable',
   },
   circeResolutionMissing: {
-    title: "Choose Circe's outcome",
-    description: 'Choose the Arcana or Vow affected by this trait.',
+    title: "Choose the Arcana or Vow for Circe's trait",
   },
   circeResolutionWrongCardinality: {
     title: 'Wrong Circe target count',
@@ -311,8 +309,8 @@ const findingCopy = {
     title: 'Choose an offered trait',
   },
   allTogetherResultMissing: {
-    title: 'Complete All Together',
-    description: 'Choose a trait for each element set.',
+    title: 'Choose All Together traits',
+    description: 'One for each element set.',
   },
   allTogetherResultUnavailable: {
     title: 'All Together outcome unavailable',
@@ -323,7 +321,7 @@ const findingCopy = {
   },
   chaosRejectedBlockMissing: {
     title: "Choose Rejected's blocked option",
-    description: 'Choose a visible option other than your pick.',
+    description: 'It must be visible and not your pick.',
   },
   chaosRejectedBlockUnavailable: {
     title: 'Invalid Rejected block',
@@ -345,14 +343,14 @@ const findingCopy = {
     description: 'Requires an eligible free minor reward and a remaining use.',
   },
   seaStarDuplicationUnavailable: {
-    title: 'Sea Star duplication unavailable',
+    title: 'Sea Star cannot duplicate this pickup',
   },
   concaveStoneResultMissing: {
     title: 'Choose Concave Stone result',
   },
   concaveStoneResultUnavailable: {
     title: 'Concave Stone result unavailable',
-    description: 'Choose an eligible unpicked boon from the offer.',
+    description: 'It must be an unpicked boon from the offer.',
   },
   artificerReplacementUnavailable: {
     title: 'Artificer reward unavailable',
@@ -362,13 +360,12 @@ const findingCopy = {
     title: 'Fig Leaf skip unavailable',
   },
   gorgonConditionUnavailable: {
-    title: 'Gorgon cannot trigger',
-    description: 'Change the setup or clear this condition.',
+    title: 'Gorgon Amulet cannot trigger',
+    description: 'This encounter setup does not allow it.',
   },
   aetosAppearanceUnavailable: {
     title: 'Aetos appearance unavailable',
-    description:
-      'Choose a supported wave in an eligible encounter, or remove this appearance. Only one appearance may be planned in Olympus.',
+    description: 'Use a supported wave in an eligible encounter; Olympus allows one appearance.',
   },
   naturalSelectionResultMissing: {
     title: 'Choose Natural Selection targets',
@@ -384,12 +381,8 @@ const findingCopy = {
     title: 'Steady Growth target unavailable',
     description: 'Choose a trait that can gain rarity.',
   },
-  transcendentEmbryoOutcomeMissing: {
-    title: 'Choose Embryo blessing',
-  },
-  transcendentEmbryoOutcomeUnavailable: {
-    title: 'Embryo blessing unavailable',
-  },
+  transcendentEmbryoOutcomeMissing: embryoBlessingMissing,
+  transcendentEmbryoOutcomeUnavailable: embryoBlessingUnavailable,
   fountainRarityResultMissing: {
     title: 'Choose Aromatic Phial target',
     description: 'Choose a Common boon.',
@@ -413,20 +406,19 @@ const findingCopy = {
   },
   resourcePlacementUnavailable: {
     title: 'Resource success unavailable',
-    description: 'Move or remove the success to satisfy room, spacing, and placement limits.',
+    description: 'It must satisfy room, spacing, and placement limits.',
   },
   purgingPoolTraitMissing: {
-    title: 'Choose a Pool trait',
+    title: 'Choose a Pool of Purging trait',
   },
   purgingPoolTraitUnavailable: {
-    title: 'Pool trait unavailable',
+    title: 'Pool of Purging trait unavailable',
   },
   purgingPoolTraitDuplicate: {
-    title: 'Duplicate Pool trait',
+    title: 'Duplicate Pool of Purging trait',
   },
   purgingPoolUnavailable: {
-    title: 'Pool unavailable',
-    description: 'This route has no usable Pool; stop interacting with it.',
+    title: 'Pool of Purging unavailable on this route',
   },
   hermesShrinePlacementUnavailable: {
     title: 'Shrine placement unavailable',
@@ -437,7 +429,6 @@ const findingCopy = {
   },
   hermesShrineInventoryWrongGroup: {
     title: 'Wrong Shrine offer group',
-    description: 'Choose an offer allowed in this slot.',
   },
   hermesShrineInventoryDuplicate: {
     title: 'Duplicate Shrine offer',
@@ -447,38 +438,32 @@ const findingCopy = {
     title: 'Shrine offer unavailable',
   },
   hermesShrineDeliveryPlacementRequired: {
-    title: 'Restore delivery',
-    description: 'Restore this missing delivery on its timeline before choosing its outcome.',
+    title: 'Restore Shrine delivery',
   },
   echoGoldPickupPlacementRequired: {
-    title: 'Restore Echo Gold pickup',
-    description: 'Restore this missing pickup on its timeline before choosing its outcome.',
+    title: 'Restore Gold Gold Gold pickup',
   },
   roomActionOrderUnavailable: {
     title: 'Action out of order',
-    description: 'Move this action to an allowed timeline position.',
   },
   roomActionPlacementRequired: {
-    title: 'Place required action',
-    description: 'This required action has not been placed.',
+    title: 'Restore required action',
   },
   hermesShrineTravelDealRefillMissing: {
     title: 'Choose Travel Deal offer',
   },
   hermesShrineTravelDealRefillUnavailable: {
     title: 'Travel Deal offer unavailable',
-    description: 'Check the offer and the purchase that triggers it.',
+    description: 'Check the purchase that triggers it.',
   },
   stygianWellMissing: {
     title: 'Choose a Well offer',
   },
   stygianWellWrongGroup: {
     title: 'Wrong Well offer group',
-    description: 'Choose an item allowed in this slot.',
   },
   stygianWellDuplicate: {
     title: 'Duplicate Well item',
-    description: 'This item repeats an earlier Well item.',
   },
   stygianWellPlacementUnavailable: {
     title: 'Well placement unavailable',
@@ -486,7 +471,7 @@ const findingCopy = {
   },
   stygianWellTravelDealRefillUnavailable: {
     title: 'Well Travel Deal offer unavailable',
-    description: 'Check the offer and the first purchase that triggers it.',
+    description: 'Check the first purchase that triggers it.',
   },
   stygianWellTwistInvalid: {
     title: 'Fateful Twist result unavailable',
@@ -508,7 +493,6 @@ const findingCopy = {
   },
   persephoneLevelBonusUnavailable: {
     title: 'Persephone roll unavailable',
-    description: 'Choose a value within the allowed range.',
   },
   traitOfferGenerationUnavailable: {
     title: 'Trait choices cannot appear together',
@@ -577,7 +561,37 @@ export function isChaosGatePositionFinding(finding: SemanticFinding): boolean {
   );
 }
 
+function count(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
 export function presentFinding(finding: SemanticFinding): FindingPresentation {
+  if (finding.code === 'hubOpenSetIncomplete') {
+    const min = count(finding.evidence.minimumCount);
+    const max = count(finding.evidence.maximumCount);
+    if (min !== undefined && max !== undefined) {
+      return Object.freeze({
+        title: `Open ${min === max ? min : `${min}–${max}`} Hub rooms`,
+      });
+    }
+  }
+  if (finding.code === 'hubVisitOrderIncomplete') {
+    const required = count(finding.evidence.requiredCount);
+    const actual = count(finding.evidence.actualCount);
+    if (required !== undefined && actual !== undefined) {
+      return Object.freeze({
+        title:
+          actual >= required
+            ? 'Use the Hub fountain'
+            : finding.evidence.fountainUsed === true
+              ? `Plan ${required} Hub visits`
+              : `Plan ${required} Hub visits and use the fountain`,
+      });
+    }
+  }
+  if (finding.code === 'targetRoomUnavailable' && 'anomalyReplacement' in finding.evidence) {
+    return Object.freeze({ title: 'Anomaly cannot occur here' });
+  }
   if (
     finding.code === 'targetRoomUnavailable' &&
     Array.isArray(finding.evidence.exclusionReasons) &&
@@ -594,34 +608,28 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
   ) {
     return Object.freeze({
       title: 'Travel Deal refill unavailable',
-      description: 'Check the triggering purchase and refill item, or remove this refill purchase.',
+      description: 'Check its triggering purchase, or remove this refill.',
     });
   }
   if (finding.code === 'rewardSourceUnavailable') {
     if (finding.evidence.reason === 'staleHermesShrineDelivery') {
-      return Object.freeze({
-        title: 'Shrine delivery unavailable',
-        description: 'Remove this delivery from the timeline.',
-      });
+      return Object.freeze({ title: 'Shrine delivery is not due here' });
     }
     if (finding.evidence.reason === 'staleClockedTraitPickup') {
-      return Object.freeze({
-        title: 'Pickup unavailable',
-        description: 'Check this pickup’s source and room placement.',
-      });
+      return Object.freeze({ title: 'Supply Chain pickup cannot occur here' });
     }
   }
   if (finding.code === 'roomActionOrderUnavailable') {
+    if (finding.evidence.reason === 'dependency' && finding.evidence.checkpointUnavailable === true)
+      return Object.freeze({ title: 'Room phase for this action is gone' });
     return Object.freeze({
       title: 'Action out of order',
       description:
         finding.evidence.reason === 'dependency'
-          ? finding.evidence.checkpointUnavailable === true
-            ? 'Restore the room phase this action requires.'
-            : finding.evidence.dependencyKind === 'beforeCheckpoint'
-              ? 'Move this action before its required checkpoint.'
-              : 'Move this action after its prerequisite.'
-          : 'Move this action into its allowed room phase.',
+          ? finding.evidence.dependencyKind === 'beforeCheckpoint'
+            ? 'Move it before its required checkpoint.'
+            : 'Move it after its prerequisite.'
+          : 'Move it into its allowed room phase.',
     });
   }
   if (isChaosGatePositionFinding(finding)) {
@@ -645,16 +653,8 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
       }
     }
     if (finding.origin.resultKind === 'transcendentEmbryo') {
-      if (finding.code === 'keepsakeEquipResultMissing') {
-        return Object.freeze({
-          title: 'Choose Embryo blessing',
-        });
-      }
-      if (finding.code === 'keepsakeEquipResultUnavailable') {
-        return Object.freeze({
-          title: 'Embryo blessing unavailable',
-        });
-      }
+      if (finding.code === 'keepsakeEquipResultMissing') return embryoBlessingMissing;
+      if (finding.code === 'keepsakeEquipResultUnavailable') return embryoBlessingUnavailable;
     }
   }
   return findingCopy[finding.code];
@@ -664,11 +664,55 @@ export function formatFindingExplanation(copy: FindingPresentation): string {
   return copy.description === undefined ? copy.title : `${copy.title}: ${copy.description}`;
 }
 
+/** The explanation as one sentence, so several can be joined with spaces. */
+export function formatFindingSentence(copy: FindingPresentation): string {
+  const text = formatFindingExplanation(copy);
+  return text.endsWith('.') ? text : `${text}.`;
+}
+
 const dialogKindCopy = {
   traitOffer: 'Trait offer',
   encounterCustomization: 'Encounter customization',
   levelResolution: 'Pom resolution',
 } as const satisfies Readonly<Record<FindingDialogKind, string>>;
+
+/** Leading words that are ordinary language rather than game names. */
+const ordinaryLead =
+  /^(?:Choose|Customize|Wrong|Trait|One-time|Missing|Conflicting|Not|No|Target|Initial|Rarity|Heroic|Invalid|Encounter|Enemy|Offer|Duplicate|Boon(?! Boon Boon))\b/;
+
+/** An inner finding's title continuing its dialog's name, e.g. "Trait offer: wrong replacement rarity". */
+/** Dialog card titles for inner findings whose own title already names the dialog's action. */
+const dialogTitleByCode: {
+  readonly [Kind in FindingDialogKind]?: Partial<Record<FindingCode, string>>;
+} = {
+  encounterCustomization: {
+    encounterCustomizationRequired: 'Encounter customization required',
+    encounterCustomizationUnavailable: 'Encounter customization unavailable',
+  },
+};
+
+function dialogTitle(kind: FindingDialogKind, finding: SemanticFinding): string {
+  const mapped = dialogTitleByCode[kind]?.[finding.code];
+  if (mapped !== undefined) return mapped;
+  const title = presentFinding(finding).title;
+  const inner = ordinaryLead.test(title) ? `${title[0]!.toLowerCase()}${title.slice(1)}` : title;
+  return `${dialogKindCopy[kind]}: ${inner}`;
+}
+
+/** A same-code group's title with its count, where the title has a natural plural. */
+const countedTitles: Partial<Record<FindingCode, (count: number) => string>> = {
+  fieldsSpatialPointMissing: (n) => `Choose ${n} Fields positions`,
+  fieldsSpatialPointUnavailable: (n) => `${n} Fields positions unavailable`,
+  fieldsSpatialPointDuplicate: (n) => `${n} Fields positions already used`,
+  rewardMissing: (n) => `Choose ${n} rewards`,
+  targetMissing: (n) => `Choose ${n} rooms`,
+  traitOfferMissing: (n) => `Choose ${n} trait offers`,
+  roomActionOrderUnavailable: (n) => `${n} actions out of order`,
+  roomActionPlacementRequired: (n) => `Restore ${n} required actions`,
+  purgingPoolTraitMissing: (n) => `Choose ${n} Pool of Purging traits`,
+  hermesShrineInventoryMissing: (n) => `Choose ${n} Shrine offers`,
+  stygianWellMissing: (n) => `Choose ${n} Well offers`,
+};
 
 function dialogKindOf(owner: SemanticAddress): FindingDialogKind | undefined {
   switch (owner.kind) {
@@ -708,40 +752,46 @@ export function findingDialogOwner(
   return inner ? { kind, owner } : undefined;
 }
 
-/** The engine selects the repair region; presentation only adapts its explanation. */
-export function presentAssessmentIssue(issue: AssessmentIssue): RepairEntryPresentation {
+/**
+ * The engine selects the repair region; presentation only adapts its explanation.
+ * `repairTarget` names the control that repairs a reason, as the workspace marks it.
+ */
+export function presentAssessmentIssue(
+  issue: AssessmentIssue,
+  repairTarget: (finding: SemanticFinding) => string,
+): RepairEntryPresentation {
   const reason = issue.reasons[0];
   if (reason === undefined) {
     throw new Error(`Assessment issue ${issue.regionKey} has no reason`);
   }
-  const inner = issue.reasons
-    .map((candidate) => findingDialogOwner(issue, candidate))
-    .filter((dialog): dialog is FindingDialogOwner => dialog !== undefined);
-  const dialog = inner[0];
-  if (dialog !== undefined) {
-    const count = inner.length;
+  const inner = issue.reasons.flatMap((candidate) => {
+    const dialog = findingDialogOwner(issue, candidate);
+    return dialog === undefined ? [] : [{ dialog, finding: candidate }];
+  });
+  const first = inner[0];
+  if (first !== undefined) {
+    const more = inner.length - 1;
+    const description =
+      more === 0 ? presentFinding(first.finding).description : `+${more} more in its editor`;
     return Object.freeze({
-      title: `${dialogKindCopy[dialog.kind]} needs attention`,
-      description: `${count} ${count === 1 ? 'issue' : 'issues'} to repair in its editor.`,
-      dialog,
-      innerFindingCount: count,
+      title: dialogTitle(first.dialog.kind, first.finding),
+      ...(description === undefined ? {} : { description }),
+      dialog: first.dialog,
+      innerFindingCount: inner.length,
     });
   }
-  const first = presentFinding(reason);
-  const descriptions = [
-    ...new Set(
-      issue.reasons
-        .map((finding) => {
-          const copy = presentFinding(finding);
-          return copy.description ?? (copy.title === first.title ? undefined : copy.title);
-        })
-        .filter((description): description is string => description !== undefined),
-    ),
-  ];
-  return Object.freeze({
-    title: first.title,
-    ...(descriptions.length === 0 ? {} : { description: descriptions.join(' ') }),
-  });
+  const copy = presentFinding(reason);
+  const targets = new Set(issue.reasons.map(repairTarget));
+  if (targets.size === 1) return copy;
+  // One code repaired at several controls reads as a count where its title has a plural.
+  const counted = issue.reasons.every((finding) => finding.code === reason.code)
+    ? countedTitles[reason.code]
+    : undefined;
+  return Object.freeze(
+    counted === undefined
+      ? { title: copy.title, description: `+${targets.size - 1} more to repair here` }
+      : { title: counted(targets.size) },
+  );
 }
 
 /**

@@ -510,7 +510,7 @@ describe('BiomeWorkspace', () => {
       );
     if (finding === undefined) throw new Error('combined Hub action finding is missing');
     expect(finding.origin).toEqual(fountain);
-    expect(presentFinding(finding).title).toBe('Plan six room visits and use the fountain');
+    expect(presentFinding(finding).title).toBe('Use the Hub fountain');
 
     act(() =>
       view.application.store.dispatch(

@@ -183,7 +183,7 @@ function disabledCollapsedLauncher(
 ): readonly string[] {
   const issue = assembly.evaluation.issue;
   if (issue === undefined) return [];
-  const entry = presentAssessmentIssue(issue);
+  const entry = presentAssessmentIssue(issue, (reason) => semanticAddressKey(reason.origin));
   if (entry.dialog === undefined) return [];
   expect(semanticAddressKey(entry.dialog.owner)).toBe(semanticAddressKey(issue.owner));
   const key = semanticAddressKey(entry.dialog.owner);
