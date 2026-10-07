@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
-import { encodeProjectDocument } from '@run-planner/engine/authored-project';
+import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { checkpointManifest } from './manifest';
 import { loadCheckpoint } from './registry';
@@ -17,6 +17,20 @@ const storeFindingCodes = new Set([
   'baseRewardStoreUnavailable',
   'rewardBagEntryUnavailable',
 ]);
+
+// A frontier room with no authored doors reports its reward pool as the next edit; only an
+// authored decision carries a reward-store ledger.
+function authoredStoreFinding(project: ProjectDocument, origin: unknown): boolean {
+  const owner = origin as { kind?: string; biomeKey?: string; source?: unknown };
+  if (owner.kind !== 'batchRewardStore') return true;
+  const topology = project.route.biomes.find(
+    (biome) => biome.biomeKey === owner.biomeKey,
+  )?.topology;
+  const source = JSON.stringify(owner.source);
+  return (topology?.decisions ?? []).some(
+    (decision) => decision.kind === 'exit' && JSON.stringify(decision.source) === source,
+  );
+}
 
 describe('run-scoped reward-store checkpoint repair', () => {
   it('leaves every committed checkpoint at a settled reward-store ledger', () => {
@@ -33,8 +47,9 @@ describe('run-scoped reward-store checkpoint repair', () => {
       // The committed bytes already carry the repair, so re-applying the
       // command list is a fixed point — the audit trail's own regression guard.
       expect(encoded, `${entry.id} drifted from its repair plan`).toBe(readFileSync(file, 'utf8'));
-      const findings = simulateProject(catalog, repaired).findings.filter((finding) =>
-        storeFindingCodes.has(finding.code),
+      const findings = simulateProject(catalog, repaired).findings.filter(
+        (finding) =>
+          storeFindingCodes.has(finding.code) && authoredStoreFinding(repaired, finding.origin),
       );
       if (findings.length > 0)
         unsettled.push(`${entry.id}: ${findings.map((f) => f.code).join(',')}`);
