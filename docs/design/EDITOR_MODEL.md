@@ -212,6 +212,35 @@ Reopening unchanged controls reuses results; edits invalidate the relevant
 draft identity, and stale async results cannot replace newer state. Candidate
 work must not scale with the number of controls rendered.
 
+### Popup editors
+
+A popup editor keeps a local draft and saves once when it edits one atomic
+authored value whose intermediate states are not meaningful plans (trait
+offers and their nested outcomes, Pom, Anvil, Judgment, Crystal Figurine).
+Otherwise each control commits immediately (encounter customization, Loadout
+Arcana and Fear, Hub room popover, keepsake equip results). A nested editor
+saves into its parent draft; only the outer Save commits.
+
+Every popup editor uses one dialog shell: eyebrow and title; an always-mounted
+"Feedback" region; a sticky footer with Cancel and Save for drafts or Done for
+live editors; Escape as Cancel or Done. Initial focus lands on the exact repair
+control, else the first enabled control; focus returns to the launcher after
+close. A draft editor's open state lives in the editor session, its draft is
+replaced when the authored value changes and kept when only context changes, it
+closes when its owner leaves reached context, and history shortcuts are off
+while it is open. Its Feedback region reflects the draft through the engine's
+draft assessment and matches the launcher at rest. Reset is "Clear" for a
+draft-only reset and "Reset to unresolved" or "Reset to default" when it commits.
+
+The selected trait outcome renders as "Selected outcome · {trait}" with one
+labelled row per real choice and no repeated name or explanatory text. A
+secondary effect such as Concave Stone gets its own block after the pick, with
+its granted trait's follow-ups nested under its Grants row. A grouped outcome
+(All Together sets, Natural Selection first-pass order) holds partial picks in
+its rows and enters the draft only as a complete engine-published value, so a
+partial group never enables Save. Row choices, gating and resulting values come
+from the engine; React does not derive them.
+
 Ordinary offers, Echo Boon Boon Boon and Concave Stone reuse shared trait/payload
 editors through distinct typed bindings. They do not share eligibility policy
 by virtue of sharing a component. Their precise draft behavior and effective
