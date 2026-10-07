@@ -161,28 +161,6 @@
   white-space: nowrap;
 }
 
-.chaos-selected-details {
-  display: grid;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.chaos-blessing-row {
-  align-items: end;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  min-width: 0;
-}
-
-.chaos-blessing-row > .contextual-picker {
-  flex: 2 1 14rem;
-}
-
-.chaos-blessing-row > .field-control {
-  flex: 1 1 8rem;
-}
-
 .trait-offer-option {
   border: 1px solid var(--border, #ccd3df);
   border-radius: 0.45rem;
@@ -250,7 +228,6 @@
   margin: 0;
 }
 
-.trait-selected-outcome-name,
 .trait-outcome-draft {
   color: var(--muted, #98a2b3);
   font-size: 0.84rem;
@@ -262,29 +239,29 @@
   min-width: 0;
 }
 
-.trait-stone-outcome {
+.trait-outcome-row-control {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.trait-outcome-row-control > .contextual-picker {
+  flex: 1 1 14rem;
+}
+
+.trait-outcome-nested {
+  border-inline-start: 2px solid var(--border, #42434d);
   display: grid;
   gap: 0.65rem;
+  margin-inline-start: 0.5rem;
   min-width: 0;
-  margin: 0;
-  padding: 0.65rem;
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.45rem;
+  padding-inline-start: 0.75rem;
 }
 
-.trait-stone-activation,
-.trait-stone-outcome > .contextual-picker {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.trait-stone-target-outcome {
-  display: grid;
-  gap: 0.55rem;
-  min-width: 0;
-  padding-inline-start: 0.65rem;
+.trait-outcome-nested:empty {
+  display: none;
 }
 
 .hex-god-sent {
@@ -292,16 +269,6 @@
   white-space: nowrap;
 }
 
-.trait-dependent-choice-row,
-.echo-last-run-choice-header {
-  align-items: center;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-}
-
-.trait-dependent-choice-row h4,
-.trait-dependent-choice-row p,
 .echo-last-run-choice h3,
 .echo-last-run-choice p {
   margin: 0;
@@ -316,16 +283,6 @@
 /* Loading and loaded choices share one region height so the dialog resizes once. */
 .trait-choice-region {
   min-height: 18rem;
-}
-
-.echo-last-run-choice-header {
-  align-items: flex-start;
-}
-
-.echo-last-run-choice-header > div {
-  display: grid;
-  gap: 0.55rem;
-  min-width: 0;
 }
 
 .trait-outcome-summary-list,

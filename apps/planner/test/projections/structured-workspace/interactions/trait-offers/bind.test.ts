@@ -1132,6 +1132,23 @@ describe('trait-offers/bind', () => {
       latest.update(draft, ['StaffFastSpecialTrait', 'StaffDoubleAttackTrait']).options[0]
         ?.icarusHammerTargets,
     ).toEqual(['StaffFastSpecialTrait', 'StaffDoubleAttackTrait']);
+    const chosen = latest.update(draft, ['StaffDoubleAttackTrait']);
+    const rows = latest.forOffer(chosen).load()!;
+    const values = (index: number) =>
+      rows.hammers[index]!.sections.flatMap((section) => section.items.map((item) => item.value));
+    // A row never offers a Hammer another row holds.
+    expect(values(0)).toEqual(['StaffDoubleAttackTrait', 'StaffFastSpecialTrait']);
+    expect(rows.hammers[0]!.selected?.value).toBe('StaffDoubleAttackTrait');
+    expect(values(1)).toEqual(['StaffFastSpecialTrait']);
+    expect(rows.targetsFor(1, 'StaffFastSpecialTrait')).toEqual([
+      'StaffDoubleAttackTrait',
+      'StaffFastSpecialTrait',
+    ]);
+    const both = latest.update(draft, ['StaffDoubleAttackTrait', 'StaffFastSpecialTrait']);
+    // Choosing the second row's Hammer for the first keeps the targets distinct.
+    expect(latest.forOffer(both).load()!.targetsFor(0, 'StaffFastSpecialTrait')).toEqual([
+      'StaffFastSpecialTrait',
+    ]);
   });
 
   it('bounds the largest declared Hammer domain to one focused query batch', async () => {

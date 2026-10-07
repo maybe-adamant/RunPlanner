@@ -305,27 +305,52 @@ export function bindTraitOfferOptionDomain(input: {
                         child,
                       );
                       if (evaluated.kind !== 'latestModelTargetsDomain') return undefined;
+                      const targets =
+                        offer.options[optionIndex(child.optionKey)]?.icarusHammerTargets ?? [];
+                      const hammerCandidates = evaluated.result.candidates.map((candidate) =>
+                        Object.freeze({
+                          value: candidate.result.traitKey,
+                          support: candidate.result.supported
+                            ? ('possible' as const)
+                            : ('impossible' as const),
+                          branchSupport: candidate.result.branchSupport,
+                          selected: false,
+                        }),
+                      );
+                      // Authored targets are distinct, so a row omits the other rows' Hammers.
+                      const hammers = Array.from(
+                        { length: Math.max(evaluated.result.requiredCount, targets.length) },
+                        (_, index) =>
+                          projectDirectTraitOutcomePicker(
+                            withDirectTraitOutcomeSelection(
+                              withoutDirectTraitOutcomeValues(
+                                hammerCandidates,
+                                targets.filter((_, other) => other !== index),
+                              ),
+                              targets[index] === undefined ? [] : [targets[index]],
+                            ),
+                            (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                            (traitKey) => traitKey,
+                          ),
+                      );
                       return Object.freeze({
                         requiredCount: evaluated.result.requiredCount,
                         branchAgreement: evaluated.result.branchAgreement,
-                        picker: projectDirectTraitOutcomePicker(
-                          evaluated.result.candidates.map((candidate) =>
-                            Object.freeze({
-                              value: candidate.result.traitKey,
-                              support: candidate.result.supported
-                                ? ('possible' as const)
-                                : ('impossible' as const),
-                              branchSupport: candidate.result.branchSupport,
-                              selected:
-                                offer.options[
-                                  optionIndex(child.optionKey)
-                                ]?.icarusHammerTargets?.includes(candidate.result.traitKey) ??
-                                false,
-                            }),
-                          ),
-                          (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                          (traitKey) => traitKey,
-                        ),
+                        hammers: Object.freeze(hammers),
+                        targetsFor: (index: number, traitKey: string) => {
+                          if (index === 0) {
+                            const second = targets[1];
+                            return Object.freeze(
+                              second === undefined || second === traitKey
+                                ? [traitKey]
+                                : [traitKey, second],
+                            ) as readonly [string] | readonly [string, string];
+                          }
+                          const first = targets[0];
+                          return Object.freeze(
+                            first === undefined ? [traitKey] : [first, traitKey],
+                          ) as readonly [string] | readonly [string, string];
+                        },
                       });
                     },
                   }),

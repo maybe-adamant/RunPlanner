@@ -1,5 +1,5 @@
 import { optionIndex, type AuthoredTraitOfferTraits } from '@run-planner/engine/authored-project';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type {
@@ -23,6 +23,7 @@ import {
   TraitOfferSelectedSpecialOutcomes,
 } from './TraitOfferSelectedSpecialOutcomes';
 import { HexTreeEditor } from './HexTreeEditor';
+import { SelectedOutcomeBlock, SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import {
   ignoreOutcomeFeedback,
   useReportedFeedback,
@@ -70,6 +71,7 @@ export function TraitAcquisitionTargetOutcome({
       ariaLabel={ariaLabel}
       id={controlId}
       label="Target"
+      layout="inline"
       loading={domain.pending}
       model={domain.result?.targetPicker ?? emptyTargetPicker}
       onSelect={onSelect}
@@ -134,8 +136,6 @@ function LatestModelTargetsOutcome({
   >();
   const domain = controller.observe(loadable);
   const current = value.options[optionIndex(child.child.optionKey)]?.icarusHammerTargets ?? [];
-  const [draft, setDraft] = useState<readonly string[]>([]);
-  const [open, setOpen] = useState(false);
   useEffect(() => {
     controller.activate(loadable);
   }, [controller, loadable]);
@@ -147,43 +147,31 @@ function LatestModelTargetsOutcome({
       : undefined,
   );
   if (domain.result === undefined) return null;
-  const requiredCount = domain.result.requiredCount;
-  const picker = {
-    ...domain.result.picker,
-    sections: domain.result.picker.sections.map((section) => ({
-      ...section,
-      items: section.items.filter((item) => !draft.includes(item.value)),
-    })),
-  };
+  const result = domain.result;
   return (
     <>
-      <ContextualPicker
-        findingTarget={findingTarget}
-        ariaLabel="Latest Model target"
-        id={semanticOwnerControlElementId(child.child.address)}
-        label={requiredCount === 1 ? 'Target' : 'Targets'}
-        choiceLabel={`Hammer ${draft.length + 1} of ${requiredCount}`}
-        closeOnSelect={false}
-        disabled={!domain.result.branchAgreement || requiredCount === 0}
-        model={picker}
-        open={open}
-        onOpenChange={(nextOpen) => {
-          setDraft([]);
-          setOpen(nextOpen);
-        }}
-        onSelect={(target: string) => {
-          const next = Object.freeze([...draft, target]);
-          setDraft(next);
-          if (next.length === requiredCount) {
-            onUpdate(child.update(value, next as [string] | [string, string]));
-            setOpen(false);
+      {result.hammers.map((picker, index) => (
+        <ContextualPicker
+          key={index}
+          {...(index === 0 ? { findingTarget } : {})}
+          ariaLabel={`Latest Model Hammer ${index + 1}`}
+          id={`${semanticOwnerControlElementId(child.child.address)}${index === 0 ? '' : `-${index + 1}`}`}
+          label={`Hammer ${index + 1}`}
+          layout="inline"
+          disabled={!result.branchAgreement}
+          {...(index > 0 && current.length < index
+            ? { disabledTitle: `Choose Hammer ${index} first` }
+            : {})}
+          model={picker}
+          onSelect={(target: string) =>
+            onUpdate(child.update(value, result.targetsFor(index, target)))
           }
-        }}
-        placeholder="Choose a Rank I Hammer"
-        {...(current.length === 0
-          ? {}
-          : { triggerLabel: current.map(interaction.traitLabel).join(' · ') })}
-      />
+          placeholder="Choose a Rank I Hammer"
+          {...(current[index] === undefined
+            ? {}
+            : { triggerLabel: interaction.traitLabel(current[index]) })}
+        />
+      ))}
     </>
   );
 }
@@ -332,27 +320,18 @@ export function TraitOfferSelectedOutcome({
       : undefined,
   );
   const selectedTraitLabel = interaction.traitLabel(option.traitKey);
-  const isHexOutcome = hexTreeChild !== undefined;
   const feedback = interaction.feedbackFor(value);
-  const hasOutcome =
-    targetChildren.length > 0 ||
-    latestModelChild !== undefined ||
-    circeChild !== undefined ||
-    echoPomChild !== undefined ||
-    echoLastRunChild !== undefined ||
+  const pickHasOutcome =
+    primaryChildren.some((child) => child.child.kind !== 'concaveStone') ||
     feedback.length > 0 ||
-    loadable.children.some(
-      (child) => child.child.kind !== 'concaveStone' || child.child.value !== undefined,
-    ) ||
-    concaveStoneDomain.result !== undefined ||
     hexTreeDomain.result !== undefined;
-  if (!hasOutcome) return null;
-  return (
-    <section aria-label="Selected trait outcome" className="trait-selected-outcome">
-      <h3>{isHexOutcome ? `Customize Hex · ${selectedTraitLabel}` : 'Selected trait outcome'}</h3>
-      {isHexOutcome ? null : <p className="trait-selected-outcome-name">{selectedTraitLabel}</p>}
+  const stoneHasOutcome = concaveStoneDomain.result !== undefined || retainedStoneUnassessed;
+  if (!pickHasOutcome && !stoneHasOutcome) return null;
+  const pickBlock = (
+    <SelectedOutcomeBlock name="Selected trait outcome" traitLabel={selectedTraitLabel}>
       {hexTreeChild === undefined || hexTreeDomain.result === undefined ? null : (
         <HexTreeEditor
+          framed={false}
           domain={hexTreeDomain.result}
           address={hexTreeChild.child.address}
           transitionFor={(layoutKey) => hexTreeChild.transitionFor(value, layoutKey)}
@@ -399,6 +378,7 @@ export function TraitOfferSelectedOutcome({
           ariaLabel="Pom Pom Pom target"
           id={semanticOwnerControlElementId(echoPomChild.child.address)}
           label="Greatest-level target"
+          layout="inline"
           model={echoPomDomain.result.picker}
           onSelect={(echoPomTarget) => onUpdate(echoPomChild.update(value, echoPomTarget))}
           placeholder={
@@ -416,27 +396,22 @@ export function TraitOfferSelectedOutcome({
         />
       )}
       {echoLastRunChild === undefined ? null : (
-        <div className="trait-dependent-choice-row">
-          <div>
-            <h4>Boon Boon Boon choice</h4>
-            <p>
-              {option.echoLastRunBoon === undefined
-                ? 'Choose the boon Echo grants before room chronology continues.'
-                : (echoLastRunDomain.result?.summaryFor(option.echoLastRunBoon) ??
-                  (echoLastRunDomain.pending
-                    ? 'Evaluating Boon Boon Boon choice…'
-                    : 'Boon Boon Boon summary unavailable'))}
-            </p>
-          </div>
+        <SelectedOutcomeRow label="Boon Boon Boon">
           <button
             {...findingTarget(echoLastRunChild.child.address)}
-            className="quiet-action action-compact"
+            aria-label="Boon Boon Boon choice"
+            className="contextual-picker-trigger"
             onClick={onOpenEchoLastRunBoon}
             type="button"
           >
-            {option.echoLastRunBoon === undefined ? 'Choose' : 'Edit choice'}
+            <span>
+              {option.echoLastRunBoon === undefined
+                ? 'Choose a boon'
+                : (echoLastRunDomain.result?.summaryFor(option.echoLastRunBoon) ??
+                  (echoLastRunDomain.pending ? 'Evaluating…' : '—'))}
+            </span>
           </button>
-        </div>
+        </SelectedOutcomeRow>
       )}
       <TraitOfferSelectedSpecialOutcomes
         carrierChildren={primaryChildren}
@@ -446,6 +421,11 @@ export function TraitOfferSelectedOutcome({
         onFeedback={onFeedback}
         onUpdate={onUpdate}
       />
+    </SelectedOutcomeBlock>
+  );
+  return (
+    <>
+      {pickHasOutcome ? pickBlock : null}
       {concaveStoneChild === undefined || concaveStoneDomain.result === undefined ? null : (
         <ConcaveStoneOutcomeEditor
           domain={concaveStoneDomain.result}
@@ -455,7 +435,7 @@ export function TraitOfferSelectedOutcome({
           onSelect={(result) => onUpdate(concaveStoneChild.update(value, result))}
         >
           {stoneChildren.length === 0 ? null : (
-            <div className="trait-stone-target-outcome">
+            <>
               {targetChildren
                 .filter((child) => stoneChildren.includes(child))
                 .map((child) => (
@@ -476,13 +456,13 @@ export function TraitOfferSelectedOutcome({
                 onFeedback={onFeedback}
                 onUpdate={onUpdate}
               />
-            </div>
+            </>
           )}
         </ConcaveStoneOutcomeEditor>
       )}
       {!retainedStoneUnassessed ? null : (
-        <fieldset className="trait-selected-outcome-detail" aria-label="Concave Stone outcome">
-          <legend>Concave Stone</legend>
+        <section aria-label="Concave Stone outcome" className="trait-selected-outcome" role="group">
+          <h3>Concave Stone</h3>
           <button
             className="quiet-action action-compact"
             onClick={() => {
@@ -492,8 +472,8 @@ export function TraitOfferSelectedOutcome({
           >
             Clear retained Concave Stone result
           </button>
-        </fieldset>
+        </section>
       )}
-    </section>
+    </>
   );
 }

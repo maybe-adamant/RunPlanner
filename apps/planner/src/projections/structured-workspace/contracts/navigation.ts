@@ -49,6 +49,7 @@ export type WorkspaceFindingControl =
   | 'wheelChoice'
   | 'pickupOutcome'
   | 'seaStar'
+  | 'concaveStoneTarget'
   | 'revertAnomaly';
 
 export interface WorkspaceInspectorDestination {

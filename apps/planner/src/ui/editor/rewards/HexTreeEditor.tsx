@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { WorkspaceHexTreeDomain } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 
 function replaceAt(values: readonly string[], index: number, value: string): readonly string[] {
   return Object.freeze(values.map((current, position) => (position === index ? value : current)));
@@ -79,11 +80,14 @@ function HexTalentGroupPicker({
 
 export function HexTreeEditor({
   domain,
+  framed = true,
   address,
   transitionFor,
   onChange,
 }: {
   readonly domain: WorkspaceHexTreeDomain;
+  /** False renders bare rows for a containing selected-outcome block. */
+  readonly framed?: boolean;
   readonly address: SemanticAddress;
   readonly transitionFor: (
     layoutKey: import('@run-planner/engine/catalog-schema').HexLayoutKey,
@@ -92,9 +96,8 @@ export function HexTreeEditor({
 }) {
   const tree = domain.value;
   const layout = tree.layoutKey;
-  return (
-    <fieldset className="trait-circe-resolution">
-      <legend>Hex talent layout</legend>
+  const rows = (
+    <>
       <ContextualPicker
         ariaLabel="Hex talent layout"
         id={`${semanticOwnerControlElementId(address)}-layout`}
@@ -121,9 +124,23 @@ export function HexTreeEditor({
         pickerFor={domain.epicPickerFor}
         selectedKeys={tree.epicTalentKeys}
       />
-      <p className="hex-god-sent">
-        <strong>God Sent:</strong> {domain.godSent.olympianTalentLabel}
-      </p>
+      {framed ? (
+        <p className="hex-god-sent">
+          <strong>God Sent:</strong> {domain.godSent.olympianTalentLabel}
+        </p>
+      ) : (
+        <SelectedOutcomeRow label="God Sent">
+          <span className="hex-god-sent">{domain.godSent.olympianTalentLabel}</span>
+        </SelectedOutcomeRow>
+      )}
+    </>
+  );
+  return framed ? (
+    <fieldset className="trait-circe-resolution">
+      <legend>Hex talent layout</legend>
+      {rows}
     </fieldset>
+  ) : (
+    rows
   );
 }
