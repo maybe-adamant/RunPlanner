@@ -39,6 +39,7 @@ import {
   evaluateTraitOfferCandidate,
   evaluateTraitOfferFocusedOptionCandidate,
   type TraitOfferFocusedOptionCandidateQuery,
+  latestModelHammerRows,
 } from '../../src/simulation/candidates/trait-offer/query';
 import { traitFrontierState, openTimeTraitOfferContext } from '../support/simulation-state';
 
@@ -732,5 +733,56 @@ describe('focused trait offer candidates', () => {
       evidence: { kind: 'coverageNotReached', requiredOwner: unreachedTrait.owner },
     });
     expect(batched).toEqual(scalar);
+  });
+});
+
+describe('Latest Model Hammer rows', () => {
+  const hammers = ['StaffDoubleAttackTrait', 'StaffLongAttackTrait', 'StaffDashAttackTrait'];
+
+  it('gives one required Hammer the whole domain', () => {
+    const [row, ...rest] = latestModelHammerRows(hammers, 1, []);
+    expect(rest).toEqual([]);
+    expect(row).toMatchObject({ availableTargetTraitKeys: hammers, requiresEarlierRow: false });
+    expect(row?.valueByTraitKey.StaffLongAttackTrait).toEqual(['StaffLongAttackTrait']);
+  });
+
+  it('opens Hammer 2 only after Hammer 1', () => {
+    const [first, second] = latestModelHammerRows(hammers, 2, []);
+    expect(first?.requiresEarlierRow).toBe(false);
+    expect(second).toEqual({
+      availableTargetTraitKeys: hammers,
+      requiresEarlierRow: true,
+      valueByTraitKey: {},
+    });
+    const [, opened] = latestModelHammerRows(hammers, 2, ['StaffDoubleAttackTrait']);
+    expect(opened).toMatchObject({
+      availableTargetTraitKeys: ['StaffLongAttackTrait', 'StaffDashAttackTrait'],
+      requiresEarlierRow: false,
+    });
+    expect(opened?.valueByTraitKey.StaffDashAttackTrait).toEqual([
+      'StaffDoubleAttackTrait',
+      'StaffDashAttackTrait',
+    ]);
+  });
+
+  it('keeps two chosen Hammers distinct', () => {
+    const [first, second] = latestModelHammerRows(hammers, 2, [
+      'StaffDoubleAttackTrait',
+      'StaffLongAttackTrait',
+    ]);
+    expect(first?.availableTargetTraitKeys).toEqual([
+      'StaffDoubleAttackTrait',
+      'StaffDashAttackTrait',
+    ]);
+    expect(second?.availableTargetTraitKeys).toEqual([
+      'StaffLongAttackTrait',
+      'StaffDashAttackTrait',
+    ]);
+    expect(first?.valueByTraitKey.StaffDashAttackTrait).toEqual([
+      'StaffDashAttackTrait',
+      'StaffLongAttackTrait',
+    ]);
+    // Choosing Hammer 2's target at Hammer 1 drops the duplicate.
+    expect(first?.valueByTraitKey.StaffLongAttackTrait).toEqual(['StaffLongAttackTrait']);
   });
 });

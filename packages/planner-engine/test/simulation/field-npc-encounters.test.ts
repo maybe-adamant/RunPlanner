@@ -1951,6 +1951,12 @@ describe('field NPC encounter requirements', () => {
       result: {
         requiredCount: 1,
         branchAgreement: true,
+        rows: [
+          expect.objectContaining({
+            requiresEarlierRow: false,
+            availableTargetTraitKeys: expect.arrayContaining(['StaffDoubleAttackTrait']),
+          }),
+        ],
         candidates: expect.arrayContaining([
           expect.objectContaining({
             result: expect.objectContaining({
