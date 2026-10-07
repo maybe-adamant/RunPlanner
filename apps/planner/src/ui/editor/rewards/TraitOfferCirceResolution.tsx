@@ -1,29 +1,45 @@
-import type {
-  AuthoredCirceResolution,
-  AuthoredTraitOfferTraits,
+import {
+  semanticAddressKey,
+  type AuthoredCirceResolution,
+  type AuthoredTraitOfferTraits,
+  type CirceResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import { useState } from 'react';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
+import {
+  circeResolutionDialogClosed,
+  circeResolutionDialogOpened,
+} from '@planner/state/editorSessionSlice';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { circeUnavailableMessage } from './traitOfferOptions';
 
 export function TraitOfferCirceResolution({
+  address,
   controlId,
   findingTarget,
   domain,
   option,
   onSelect,
 }: {
+  readonly address: CirceResolutionAddress;
   readonly controlId: string;
   readonly findingTarget?: FindingTargetProps;
   readonly domain: WorkspaceCirceResolutionDomain | undefined;
   readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly onSelect: (resolution: AuthoredCirceResolution) => void;
 }) {
-  const [draft, setDraft] = useState<{
+  const dispatch = useAppDispatch();
+  const open = useAppSelector((state) => {
+    const target = state.editorSession.circeDialogTarget ?? null;
+    return target !== null && semanticAddressKey(target) === semanticAddressKey(address);
+  });
+  const [draftState, setDraftState] = useState<{
+    identity: string;
     title: string;
     kind: 'arcana' | 'fear';
     keys: readonly string[];
@@ -41,6 +57,23 @@ export function TraitOfferCirceResolution({
     : domain?.effect === 'activateArcana'
       ? 'Red Citrine Arcana'
       : 'Promoted Arcana';
+  // A changed outcome or effect replaces the local draft; a changed context keeps it.
+  const identity = draftValueIdentity([current ?? null, domain?.effect ?? null]);
+  const draft = !open
+    ? null
+    : draftState?.identity === identity
+      ? draftState
+      : {
+          identity,
+          title,
+          kind: fear ? ('fear' as const) : ('arcana' as const),
+          keys: currentKeys,
+        };
+  const setDraft = (next: NonNullable<typeof draft>): void => setDraftState(next);
+  const close = (): void => {
+    setDraftState(null);
+    dispatch(circeResolutionDialogClosed());
+  };
   const picker = fear ? domain?.vowPicker : domain?.arcanaPicker;
   const labelFor = (key: string) =>
     picker?.sections.flatMap((section) => section.items).find((item) => item.value === key)
@@ -80,7 +113,7 @@ export function TraitOfferCirceResolution({
           aria-haspopup="dialog"
           disabled={domain === undefined}
           title={domain === undefined ? 'Evaluating this Circe outcome…' : undefined}
-          onClick={() => setDraft({ title, kind: fear ? 'fear' : 'arcana', keys: currentKeys })}
+          onClick={() => dispatch(circeResolutionDialogOpened(address))}
         >
           {currentKeys.length === 0 ? title : currentKeys.map(labelFor).join(' · ')}
         </button>
@@ -90,7 +123,7 @@ export function TraitOfferCirceResolution({
           eyebrow="Circe"
           footer={
             <EditorDialogDraftActions
-              onCancel={() => setDraft(null)}
+              onCancel={() => close()}
               onSave={() => {
                 if (domain === undefined) return;
                 onSelect(
@@ -98,7 +131,7 @@ export function TraitOfferCirceResolution({
                     ? { kind: 'disableFear', vowKeys: draft.keys }
                     : { kind: domain.effect, arcanaKeys: draft.keys },
                 );
-                setDraft(null);
+                close();
               }}
               saveDisabled={disabled || !complete}
               secondary={
@@ -112,7 +145,7 @@ export function TraitOfferCirceResolution({
               }
             />
           }
-          model={{ kind: 'draft', onCancel: () => setDraft(null) }}
+          model={{ kind: 'draft', onCancel: () => close() }}
           returnFocusId={controlId}
           size="cards"
           title={draft.title}

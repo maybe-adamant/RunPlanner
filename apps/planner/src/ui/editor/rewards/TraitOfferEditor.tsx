@@ -15,11 +15,11 @@ import {
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
-import { traitOfferValueIdentity } from './traitOfferOptions';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -28,7 +28,7 @@ function launcherId(address: TraitOfferAddress): string {
 }
 
 function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string {
-  return `${interaction.giver.key}|${traitOfferValueIdentity(interaction.value)}`;
+  return `${interaction.giver.key}|${draftValueIdentity(interaction.value)}`;
 }
 
 export function TraitOfferLauncher({

@@ -1,5 +1,9 @@
 import { createSlice, type PayloadAction, type Reducer } from '@reduxjs/toolkit';
 import type {
+  AcquisitionRoleAddress,
+  CirceResolutionAddress,
+  FigurineArcanaAddress,
+  JudgmentArcanaAddress,
   SemanticAddress,
   TraitOfferAddress,
   LevelResolutionAddress,
@@ -30,8 +34,14 @@ export interface EditorSessionReconciliation {
   readonly clearSelectedFinding: boolean;
   readonly clearTraitDialogTarget?: boolean;
   readonly clearLevelResolutionDialogTarget?: boolean;
+  readonly clearAnvilDialogTarget?: boolean;
+  readonly clearArcanaActivationDialogTarget?: boolean;
+  readonly clearCirceDialogTarget?: boolean;
   readonly clearRunStateTarget?: boolean;
 }
+
+/** The Boss-seam Arcana draw a Judgment or Crystal Figurine dialog edits. */
+export type ArcanaActivationAddress = JudgmentArcanaAddress | FigurineArcanaAddress;
 
 /** A panel selection for the one route in the open project. */
 export type RoutePanel =
@@ -60,6 +70,12 @@ export interface EditorSessionState {
   readonly traitDialogTarget?: TraitOfferAddress | null;
   /** Exact transient Pom dialog target; never part of authored history. */
   readonly levelResolutionDialogTarget?: LevelResolutionAddress | null;
+  /** Exact transient Anvil result dialog target. */
+  readonly anvilDialogTarget?: AcquisitionRoleAddress | null;
+  /** Exact transient Judgment or Crystal Figurine dialog target. */
+  readonly arcanaActivationDialogTarget?: ArcanaActivationAddress | null;
+  /** The Circe outcome dialog nested in the open trait dialog; it never outlives that dialog. */
+  readonly circeDialogTarget?: CirceResolutionAddress | null;
   /** Exact derived checkpoint or generation owner whose read-only Run State sheet is open. */
   readonly runStateTarget?: RunStateOwner | null;
   /** Advances for every explicit semantic navigation, including repeat visits. */
@@ -102,6 +118,23 @@ function panelForOrigin(origin: SemanticAddress): RoutePanel {
   return biome === null ? routeOverviewPanel : Object.freeze({ kind: 'biome', biomeKey: biome });
 }
 
+/** Navigation away from the current editing surface closes every dialog. */
+function closeDialogs(state: {
+  traitDialogTarget?: TraitOfferAddress | null;
+  levelResolutionDialogTarget?: LevelResolutionAddress | null;
+  anvilDialogTarget?: AcquisitionRoleAddress | null;
+  arcanaActivationDialogTarget?: ArcanaActivationAddress | null;
+  circeDialogTarget?: CirceResolutionAddress | null;
+  runStateTarget?: RunStateOwner | null;
+}): void {
+  state.traitDialogTarget = null;
+  state.levelResolutionDialogTarget = null;
+  state.anvilDialogTarget = null;
+  state.arcanaActivationDialogTarget = null;
+  state.circeDialogTarget = null;
+  state.runStateTarget = null;
+}
+
 const editorSessionSlice = createSlice({
   name: 'editorSession',
   initialState: emptyState,
@@ -115,43 +148,35 @@ const editorSessionSlice = createSlice({
       state.activePanel = routeOverviewPanel;
       state.focusedSemanticOwner = null;
       state.selectedFinding = null;
-      state.traitDialogTarget = null;
-      state.levelResolutionDialogTarget = null;
-      state.runStateTarget = null;
+      closeDialogs(state);
     },
     settingsSelected(state) {
       state.activeSection = 'settings';
       state.focusedSemanticOwner = null;
       state.selectedFinding = null;
-      state.traitDialogTarget = null;
-      state.levelResolutionDialogTarget = null;
-      state.runStateTarget = null;
+      closeDialogs(state);
     },
     routePanelSelected(state, action: PayloadAction<RoutePanelSelection>) {
       state.activeSection = 'route';
       state.activePanel = action.payload.panel;
       state.focusedSemanticOwner = null;
       state.selectedFinding = null;
-      state.traitDialogTarget = null;
-      state.levelResolutionDialogTarget = null;
-      state.runStateTarget = null;
+      closeDialogs(state);
     },
     semanticOwnerFocused(state, action: PayloadAction<SemanticAddress>) {
       state.semanticNavigationRevision += 1;
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
-      state.traitDialogTarget = null;
-      state.levelResolutionDialogTarget = null;
-      state.runStateTarget = null;
+      closeDialogs(state);
     },
     semanticOwnerNavigated(state, action: PayloadAction<SemanticAddress>) {
       state.focusedSemanticOwner = action.payload;
       state.selectedFinding = null;
       state.semanticNavigationRevision += 1;
+      closeDialogs(state);
       state.traitDialogTarget = action.payload.kind === 'traitOffer' ? action.payload : null;
       state.levelResolutionDialogTarget =
         action.payload.kind === 'levelResolution' ? action.payload : null;
-      state.runStateTarget = null;
       const route = routeKey(action.payload);
       if (route === null) {
         return;
@@ -164,6 +189,7 @@ const editorSessionSlice = createSlice({
       const focusAddress = action.payload.focusAddress ?? action.payload.origin;
       state.focusedSemanticOwner = focusAddress;
       state.semanticNavigationRevision += 1;
+      closeDialogs(state);
       state.traitDialogTarget =
         action.payload.traitDialogTarget === undefined
           ? action.payload.origin.kind === 'traitOffer'
@@ -176,7 +202,6 @@ const editorSessionSlice = createSlice({
             ? action.payload.origin
             : null
           : action.payload.levelResolutionDialogTarget;
-      state.runStateTarget = null;
       const route = routeKey(action.payload.origin);
       if (route === null) {
         return;
@@ -197,10 +222,16 @@ const editorSessionSlice = createSlice({
       if (action.payload.clearLevelResolutionDialogTarget) {
         state.levelResolutionDialogTarget = null;
       }
+      if (action.payload.clearAnvilDialogTarget) state.anvilDialogTarget = null;
+      if (action.payload.clearArcanaActivationDialogTarget) {
+        state.arcanaActivationDialogTarget = null;
+      }
+      if (action.payload.clearCirceDialogTarget) state.circeDialogTarget = null;
       if (action.payload.clearRunStateTarget) state.runStateTarget = null;
     },
     traitOfferDialogOpened(state, action: PayloadAction<TraitOfferAddress>) {
       state.traitDialogTarget = action.payload;
+      state.circeDialogTarget = null;
       state.selectedFinding = null;
       // An explicit launcher visit always starts at the outer offer. Findings
       // retain their exact child owner through `findingSelected` instead.
@@ -208,6 +239,28 @@ const editorSessionSlice = createSlice({
     },
     traitOfferDialogClosed(state) {
       state.traitDialogTarget = null;
+      state.circeDialogTarget = null;
+    },
+    anvilResultDialogOpened(state, action: PayloadAction<AcquisitionRoleAddress>) {
+      state.anvilDialogTarget = action.payload;
+      state.selectedFinding = null;
+    },
+    anvilResultDialogClosed(state) {
+      state.anvilDialogTarget = null;
+    },
+    arcanaActivationDialogOpened(state, action: PayloadAction<ArcanaActivationAddress>) {
+      state.arcanaActivationDialogTarget = action.payload;
+      state.selectedFinding = null;
+    },
+    arcanaActivationDialogClosed(state) {
+      state.arcanaActivationDialogTarget = null;
+    },
+    circeResolutionDialogOpened(state, action: PayloadAction<CirceResolutionAddress>) {
+      // Circe edits the trait dialog's draft; closing or replacing that dialog closes it.
+      state.circeDialogTarget = action.payload;
+    },
+    circeResolutionDialogClosed(state) {
+      state.circeDialogTarget = null;
     },
     levelResolutionDialogOpened(state, action: PayloadAction<LevelResolutionAddress>) {
       state.levelResolutionDialogTarget = action.payload;
@@ -232,6 +285,12 @@ const editorSessionSlice = createSlice({
 });
 
 export const {
+  anvilResultDialogClosed,
+  anvilResultDialogOpened,
+  arcanaActivationDialogClosed,
+  arcanaActivationDialogOpened,
+  circeResolutionDialogClosed,
+  circeResolutionDialogOpened,
   draftEditorClosed,
   draftEditorOpened,
   editorSessionReconciled,
@@ -286,6 +345,9 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
         ...emptyState,
         traitDialogTarget: null,
         levelResolutionDialogTarget: null,
+        anvilDialogTarget: null,
+        arcanaActivationDialogTarget: null,
+        circeDialogTarget: null,
         runStateTarget: null,
         semanticNavigationRevision: state.semanticNavigationRevision,
         // Mounted draft dialogs unregister themselves when they unmount.

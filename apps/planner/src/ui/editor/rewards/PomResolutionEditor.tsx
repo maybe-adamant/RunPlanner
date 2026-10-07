@@ -3,7 +3,7 @@ import {
   type AuthoredLevelResolution,
   type LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
@@ -26,6 +26,7 @@ import {
   EditorDialogDraftActions,
   EditorDialogFeedback,
 } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
@@ -263,34 +264,18 @@ export function PomResolutionEditor({
       : Object.freeze({ kind: 'random' as const, targetTraitKey: randomTarget });
   const controller =
     useWorkspaceInteractionController<ReturnType<WorkspaceLevelResolutionInteraction['load']>>();
-  const [loadable, setLoadable] = useState(() =>
-    levelResolutionLoadable(interaction, interaction.value),
+  // The evaluated draft rebinds to a changed context; a changed authored value
+  // remounts this editor through its draft identity key.
+  const [evaluated, setEvaluated] = useState<AuthoredLevelResolution>(interaction.value);
+  const loadable = useMemo(
+    () => levelResolutionLoadable(interaction, evaluated),
+    [interaction, evaluated],
   );
   const loaded = controller.observe(loadable);
-  const [authoritativeInteraction, setAuthoritativeInteraction] = useState(interaction);
   useEffect(() => {
     controller.activate(loadable);
   }, [controller, loadable]);
-  if (authoritativeInteraction !== interaction) {
-    setAuthoritativeInteraction(interaction);
-    if (interaction.value.kind === 'choice') {
-      setChoiceSlots(interaction.value.offeredTraitKeys);
-      setSelectedChoice(interaction.value.selectedTraitKey);
-      setRandomTarget(null);
-    } else {
-      setChoiceSlots([]);
-      setSelectedChoice(null);
-      setRandomTarget(interaction.value.targetTraitKey);
-    }
-    setActiveGroupKey(null);
-    setAutoFilledGroupKey(null);
-    setLoadable(levelResolutionLoadable(interaction, interaction.value));
-  }
-  const evaluateDraft = (next: AuthoredLevelResolution): void => {
-    const nextLoadable = levelResolutionLoadable(interaction, next);
-    setLoadable(nextLoadable);
-    controller.activate(nextLoadable);
-  };
+  const evaluateDraft = (next: AuthoredLevelResolution): void => setEvaluated(next);
   const candidate = loaded.result;
   const groups = candidate?.groups ?? [];
   const activeGroup =
@@ -334,7 +319,7 @@ export function PomResolutionEditor({
     setAutoFilledGroupKey(activeGroup.key);
     setChoiceSlots(targets);
     setSelectedChoice(selected);
-    setLoadable(levelResolutionLoadable(interaction, next));
+    setEvaluated(next);
   }
   const selectGroup = (key: string): void => {
     const group = groups.find((candidate) => candidate.key === key);
@@ -532,6 +517,8 @@ export function PomResolutionDialog({
     >
       <PomResolutionEditor
         interaction={interaction}
+        // A changed authored resolution replaces the draft; a changed context keeps it.
+        key={draftValueIdentity(interaction.value)}
         onCancel={close}
         onCommit={(value) => {
           executeIntent(interaction.intentFor(value));

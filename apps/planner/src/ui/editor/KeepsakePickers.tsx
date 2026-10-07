@@ -1,10 +1,10 @@
 import type {
+  WorkspaceCommandIntent,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeSelectionInteraction,
 } from '@planner/projections/structured-workspace';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
   useWorkspaceInteraction,
   useWorkspaceInteractionController,
@@ -32,29 +32,23 @@ const emptyModel: ContextualPickerModel<string> = Object.freeze({
 });
 
 function commitEquipResult(
-  dispatch: ReturnType<typeof useAppDispatch>,
+  executeIntent: (intent: WorkspaceCommandIntent) => void,
   interaction: WorkspaceKeepsakeEquipResultInteraction,
   value: string,
 ): void {
   if (interaction.owner.resultKind === 'experimentalHammer') {
     const typed = interaction as ExperimentalHammerInteraction;
-    dispatch(
-      authoredProjectCommandDispatched(
-        typed.intentFor(
-          value === '__exhausted' ? { kind: 'exhausted' } : { kind: 'selected', traitKey: value },
-        ).command,
+    executeIntent(
+      typed.intentFor(
+        value === '__exhausted' ? { kind: 'exhausted' } : { kind: 'selected', traitKey: value },
       ),
     );
   } else if (interaction.owner.resultKind === 'jeweledPom') {
     const typed = interaction as JeweledPomInteraction;
-    dispatch(
-      authoredProjectCommandDispatched(
-        typed.intentFor({ ...(typed.value ?? {}), traitKey: value }).command,
-      ),
-    );
+    executeIntent(typed.intentFor({ ...(typed.value ?? {}), traitKey: value }));
   } else {
     const typed = interaction as TranscendentEmbryoInteraction;
-    dispatch(authoredProjectCommandDispatched(typed.intentFor(typed.outcomeFor(value)).command));
+    executeIntent(typed.intentFor(typed.outcomeFor(value)));
   }
 }
 
@@ -70,7 +64,7 @@ export function KeepsakeSelectionPicker({
   readonly label: string;
 }) {
   const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const projection = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker
@@ -85,7 +79,7 @@ export function KeepsakeSelectionPicker({
         if (open) projection.activate();
       }}
       onSelect={(keepsakeKey) => {
-        dispatch(authoredProjectCommandDispatched(interaction.replaceIntent(keepsakeKey).command));
+        executeIntent(interaction.replaceIntent(keepsakeKey));
       }}
       placeholder={interaction.selectedLabel}
       {...(interaction.selectedLabel === undefined
@@ -105,7 +99,7 @@ export function KeepsakeEquipResultPicker({
   readonly label?: string;
 }) {
   const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const [interaction, setInteraction] = useState(requestedInteraction);
   const controller =
     useWorkspaceInteractionController<
@@ -160,7 +154,7 @@ export function KeepsakeEquipResultPicker({
         onOpenChange={(open) => {
           if (open) controller.activate(interaction);
         }}
-        onSelect={(value) => commitEquipResult(dispatch, interaction, value)}
+        onSelect={(value) => commitEquipResult(executeIntent, interaction, value)}
         placeholder={placeholder}
         {...(interaction.selectedLabel === undefined
           ? {}
@@ -171,11 +165,7 @@ export function KeepsakeEquipResultPicker({
           onChange={(blessingValues) => {
             const typed = interaction as TranscendentEmbryoInteraction;
             if (typed.value === undefined) return;
-            dispatch(
-              authoredProjectCommandDispatched(
-                typed.intentFor({ ...typed.value, blessingValues }).command,
-              ),
-            );
+            executeIntent(typed.intentFor({ ...typed.value, blessingValues }));
           }}
           operands={domain.transcendentEmbryoSummary.operands}
           rarity={domain.transcendentEmbryoSummary.rarity}

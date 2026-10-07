@@ -1,7 +1,8 @@
 import { ArcanaActivationEditor } from './ArcanaActivationEditor';
 /* The inspector-node adapter deliberately exports these projected render products. */
 /* eslint-disable react-refresh/only-export-components */
-import { useState, type ReactNode } from 'react';
+import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import { useCallback, useEffect, type ReactNode } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -12,9 +13,14 @@ import {
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import {
+  arcanaActivationDialogClosed,
+  arcanaActivationDialogOpened,
+  semanticOwnerFocused,
+  type ArcanaActivationAddress,
+} from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch } from '@planner/state/store';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -113,6 +119,19 @@ function KeepsakeRackTimelineDeleteButton({
   );
 }
 
+/** The Redux-held open state of one Judgment or Crystal Figurine dialog. */
+function useArcanaActivationDialog(owner: ArcanaActivationAddress) {
+  const dispatch = useAppDispatch();
+  const ownerKey = semanticAddressKey(owner);
+  const open = useAppSelector((state) => {
+    const target = state.editorSession.arcanaActivationDialogTarget ?? null;
+    return target !== null && semanticAddressKey(target) === ownerKey;
+  });
+  const close = useCallback(() => dispatch(arcanaActivationDialogClosed()), [dispatch]);
+  const show = useCallback(() => dispatch(arcanaActivationDialogOpened(owner)), [dispatch, owner]);
+  return { close, open, show };
+}
+
 function JudgmentArcanaControl({
   interactions,
   judgment,
@@ -121,8 +140,12 @@ function JudgmentArcanaControl({
   readonly judgment: NonNullable<WorkspaceRoomSummary['judgment']>;
 }) {
   const findingTarget = useFindingTarget();
-  const [open, setOpen] = useState(false);
+  const { close, open, show } = useArcanaActivationDialog(judgment.address);
   const control = interactions.judgmentArcana.get(workspaceInteractionKey(judgment.address));
+  // The system closes a dialog whose owner is no longer projected.
+  useEffect(() => {
+    if (open && control === undefined) close();
+  }, [close, control, open]);
   if (control === undefined) return null;
   const launcher = findingTarget(control.owner);
   return (
@@ -134,19 +157,14 @@ function JudgmentArcanaControl({
             control={control}
             title="Judgment editor"
             requiredCount={judgment.requiredCount}
-            onClose={() => setOpen(false)}
+            onClose={close}
             returnFocusId={launcher.id}
           />
         ) : null
       }
       kind="effect"
       label={
-        <button
-          {...launcher}
-          className="room-timeline-effect"
-          onClick={() => setOpen(true)}
-          type="button"
-        >
+        <button {...launcher} className="room-timeline-effect" onClick={show} type="button">
           Judgment — choose {judgment.requiredCount} inactive Arcana cards
         </button>
       }
@@ -162,8 +180,12 @@ function FigurineArcanaControl({
   readonly figurine: NonNullable<WorkspaceRoomSummary['figurine']>;
 }) {
   const findingTarget = useFindingTarget();
-  const [open, setOpen] = useState(false);
+  const { close, open, show } = useArcanaActivationDialog(figurine.address);
   const control = interactions.figurineArcana.get(workspaceInteractionKey(figurine.address));
+  // The system closes a dialog whose owner is no longer projected.
+  useEffect(() => {
+    if (open && control === undefined) close();
+  }, [close, control, open]);
   if (control === undefined) return null;
   const launcher = findingTarget(control.owner);
   return (
@@ -175,19 +197,14 @@ function FigurineArcanaControl({
             title="Crystal Figurine editor"
             control={control}
             requiredCount={figurine.requiredCount}
-            onClose={() => setOpen(false)}
+            onClose={close}
             returnFocusId={launcher.id}
           />
         ) : null
       }
       kind="effect"
       label={
-        <button
-          {...launcher}
-          className="room-timeline-effect"
-          onClick={() => setOpen(true)}
-          type="button"
-        >
+        <button {...launcher} className="room-timeline-effect" onClick={show} type="button">
           Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards (
           {figurine.rarity})
         </button>

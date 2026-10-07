@@ -1,10 +1,14 @@
 import {
+  createAcquisitionRoleAddress,
   createBiomeAddress,
+  createCirceResolutionAddress,
+  createFigurineArcanaAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -55,6 +59,10 @@ function destinations(
 }
 
 function session(options: {
+  readonly anvilDialogTarget?: EditorSessionState['anvilDialogTarget'];
+  readonly arcanaActivationDialogTarget?: EditorSessionState['arcanaActivationDialogTarget'];
+  readonly circeDialogTarget?: EditorSessionState['circeDialogTarget'];
+  readonly traitDialogTarget?: EditorSessionState['traitDialogTarget'];
   readonly focusedSemanticOwner?: SemanticAddress | null;
   readonly levelResolutionDialogTarget?: EditorSessionState['levelResolutionDialogTarget'];
   readonly selectedFinding?: FindingSelection | null;
@@ -72,6 +80,18 @@ function session(options: {
       ? {}
       : { levelResolutionDialogTarget: options.levelResolutionDialogTarget }),
     ...(options.runStateTarget === undefined ? {} : { runStateTarget: options.runStateTarget }),
+    ...(options.anvilDialogTarget === undefined
+      ? {}
+      : { anvilDialogTarget: options.anvilDialogTarget }),
+    ...(options.arcanaActivationDialogTarget === undefined
+      ? {}
+      : { arcanaActivationDialogTarget: options.arcanaActivationDialogTarget }),
+    ...(options.circeDialogTarget === undefined
+      ? {}
+      : { circeDialogTarget: options.circeDialogTarget }),
+    ...(options.traitDialogTarget === undefined
+      ? {}
+      : { traitDialogTarget: options.traitDialogTarget }),
   };
 }
 
@@ -91,6 +111,63 @@ describe('editor-session reconciliation', () => {
       clearFocusedSemanticOwner: false,
       clearLevelResolutionDialogTarget: true,
       clearSelectedFinding: false,
+    });
+  });
+
+  it('clears Anvil and Arcana activation targets only when their exact owners disappear', () => {
+    const reward = createIncomingRewardAddress(owner, createOccurrenceId('draft-owner'));
+    const anvil = createAcquisitionRoleAddress(reward, 'self');
+    const figurine = createFigurineArcanaAddress(
+      createOccurrenceAddress(owner, createOccurrenceId('draft-owner:boss')),
+      'Encounter',
+    );
+    const open = session({ anvilDialogTarget: anvil, arcanaActivationDialogTarget: figurine });
+    expect(
+      deriveEditorSessionReconciliation({
+        issue: undefined,
+        focusByOwner: destinations(anvil, figurine),
+        session: open,
+      }),
+    ).toBeNull();
+    expect(
+      deriveEditorSessionReconciliation({
+        issue: undefined,
+        focusByOwner: destinations(),
+        session: open,
+      }),
+    ).toEqual({
+      clearAnvilDialogTarget: true,
+      clearArcanaActivationDialogTarget: true,
+      clearFocusedSemanticOwner: false,
+      clearSelectedFinding: false,
+    });
+  });
+
+  it('closes a nested Circe target with its trait dialog, not by its own destination', () => {
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(owner, createOccurrenceId('circe-owner')),
+      'source',
+    );
+    const circe = createCirceResolutionAddress(trait, 'option2');
+    // A draft-only Circe option has no published destination; its trait dialog does.
+    expect(
+      deriveEditorSessionReconciliation({
+        issue: undefined,
+        focusByOwner: destinations(trait),
+        session: session({ circeDialogTarget: circe, traitDialogTarget: trait }),
+      }),
+    ).toBeNull();
+    expect(
+      deriveEditorSessionReconciliation({
+        issue: undefined,
+        focusByOwner: destinations(),
+        session: session({ circeDialogTarget: circe, traitDialogTarget: trait }),
+      }),
+    ).toEqual({
+      clearCirceDialogTarget: true,
+      clearFocusedSemanticOwner: false,
+      clearSelectedFinding: false,
+      clearTraitDialogTarget: true,
     });
   });
 
