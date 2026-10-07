@@ -105,7 +105,6 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
             ...(address.kind === 'circeResolution' ? { traitDialogTarget: address.trait } : {}),
             ...(address.kind === 'echoPomTarget' ? { traitDialogTarget: address.trait } : {}),
             ...(address.kind === 'echoLastRunBoon' ? { traitDialogTarget: address.trait } : {}),
-            ...(address.kind === 'echoLastReward' ? { traitDialogTarget: address.trait } : {}),
             ...(address.kind === 'allTogetherSet' ? { traitDialogTarget: address.trait } : {}),
             ...(address.kind === 'naturalSelectionResult'
               ? { traitDialogTarget: address.trait }

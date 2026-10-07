@@ -12,7 +12,6 @@ import {
 } from '@planner/projections/rewards/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
-import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
@@ -297,7 +296,6 @@ export function TraitOfferEditorShell({
         }
         selectedOutcome={
           <TraitOfferSelectedOutcome
-            authoredDraft={draftValueIdentity(value) === draftValueIdentity(interaction.value)}
             interaction={interaction}
             onFeedback={reportOutcomeFeedback}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}

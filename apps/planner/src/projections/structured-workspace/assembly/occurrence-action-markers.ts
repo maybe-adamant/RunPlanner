@@ -4,13 +4,7 @@ import type { WorkspaceMarker } from '../contracts/navigation';
 
 /** Exact finding owners edited through one trait launcher. */
 export function traitOfferMarkers(trait: WorkspaceTraitOfferControl): readonly WorkspaceMarker[] {
-  return Object.freeze([
-    trait.marker,
-    ...trait.children.map((child) => child.marker),
-    ...trait.feedback.flatMap((feedback) =>
-      feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
-    ),
-  ]);
+  return Object.freeze([trait.marker, ...trait.children.map((child) => child.marker)]);
 }
 
 /**

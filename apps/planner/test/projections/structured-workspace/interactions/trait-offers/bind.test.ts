@@ -26,7 +26,6 @@ const {
   createAllTogetherSetAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
-  createEchoLastRewardAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createExitSelectionAddress,
@@ -948,54 +947,6 @@ describe('trait-offers/bind', () => {
     expect(domain?.effectiveRarityFor(child.options[0])).toBe('Rare');
     expect(domain?.effectiveLevelFor(child.options[0])).toBe(1);
     expect(traitCarrierChildDomain).toHaveBeenCalledTimes(1);
-  });
-
-  it('binds the exact Echo replay owner to existing acquisition candidate products', () => {
-    const bridgeId = createOccurrenceId('golden-h-bridge01');
-    let project = reachedEchoProject();
-    const trait = createTraitOfferAddress(
-      createEncounterPhaseAddress(
-        goldenHBiome,
-        { kind: 'occurrence', occurrenceId: bridgeId },
-        'Encounter',
-      ),
-      'selection',
-    );
-    const bridge = project
-      .route!.biomes.find((biome) => biome.biomeKey === 'H')!
-      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
-    const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
-    if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
-    const rewardOffer = Object.freeze({
-      ...authoredOffer,
-      options: Object.freeze([
-        Object.freeze({ traitKey: 'EchoLastReward' }),
-        authoredOffer.options[1],
-        authoredOffer.options[2],
-      ]) as AuthoredTraitOfferTraits['options'],
-      selectedOptionKey: 'option1' as const,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait,
-      value: rewardOffer,
-    });
-
-    const bound = bind(project, 'Underworld', 'H');
-    const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
-    const replay = interaction
-      ?.feedbackFor(interaction.value!)
-      .find((entry) => entry.kind === 'echoLastReward')?.control;
-    const replayOwner = createEchoLastRewardAddress(trait, 'option1');
-    expect(replay?.address).toEqual(replayOwner);
-    expect(replay?.acquisitionEntry).toMatchObject({
-      kind: 'acquisitionEntry',
-      site: { kind: 'acquisitionSite', pointKey: 'roomExit' },
-    });
-    expect(bound.assembly.preliminaryFocusDestinations.has(semanticAddressKey(replayOwner))).toBe(
-      true,
-    );
-    expect(interaction?.optionDomain(rewardOffer, 'option1')).not.toHaveProperty('echoLastReward');
   });
 
   it('binds one exact-address focused batch per unique option draft and reuses unchanged domains', async () => {

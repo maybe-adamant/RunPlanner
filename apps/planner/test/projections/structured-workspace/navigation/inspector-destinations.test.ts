@@ -3,7 +3,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
-  createEchoLastRewardAddress,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
@@ -182,7 +181,6 @@ function echoReplayProject(child?: {
 }): {
   readonly document: ProjectDocument;
   readonly entry: ReturnType<typeof createAcquisitionEntryAddress>;
-  readonly replay: ReturnType<typeof createEchoLastRewardAddress>;
   readonly trait: ReturnType<typeof createTraitOfferAddress>;
 } {
   const bridgeId = createOccurrenceId('golden-h-bridge01');
@@ -278,7 +276,6 @@ function echoReplayProject(child?: {
   return Object.freeze({
     document,
     entry,
-    replay: createEchoLastRewardAddress(trait, 'option1'),
     trait,
   });
 }

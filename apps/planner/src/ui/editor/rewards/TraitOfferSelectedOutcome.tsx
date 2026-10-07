@@ -13,8 +13,6 @@ import type {
   WorkspaceTraitCarrierChildInteraction,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
-import { traitOfferDialogClosed } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
@@ -191,15 +189,12 @@ function LatestModelTargetsOutcome({
 }
 
 export function TraitOfferSelectedOutcome({
-  authoredDraft,
   interaction,
   value,
   onFeedback = ignoreOutcomeFeedback,
   onOpenEchoLastRunBoon,
   onUpdate,
 }: {
-  /** Whether the draft still equals the authored offer, so leaving the dialog loses nothing. */
-  readonly authoredDraft: boolean;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
   readonly onFeedback?: OutcomeFeedbackReporter;
@@ -207,7 +202,6 @@ export function TraitOfferSelectedOutcome({
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const findingTarget = useFindingTarget();
-  const dispatch = useAppDispatch();
   const selectedIndex = optionIndex(value.selectedOptionKey);
   const option = value.options[selectedIndex];
   if (option === undefined) throw new Error(`Trait offer is missing ${value.selectedOptionKey}`);
@@ -444,32 +438,6 @@ export function TraitOfferSelectedOutcome({
           </button>
         </div>
       )}
-      {feedback
-        .filter((entry) => entry.kind === 'echoLastReward')
-        .map(({ control }) => (
-          <fieldset
-            key={semanticOwnerControlElementId(control.address)}
-            className="trait-circe-resolution"
-          >
-            <legend>Reward Reward Reward replay</legend>
-            <p>Spawns: {control.spawnLabel ?? 'Replay source unavailable'}</p>
-            <button
-              className="quiet-action"
-              disabled={!authoredDraft}
-              title={authoredDraft ? undefined : 'Save or cancel first.'}
-              onClick={() => {
-                const acquisitionEntry = control.acquisitionEntry;
-                dispatch(traitOfferDialogClosed());
-                window.setTimeout(() => {
-                  document.getElementById(semanticOwnerControlElementId(acquisitionEntry))?.focus();
-                }, 0);
-              }}
-              type="button"
-            >
-              Configure in Room Timeline
-            </button>
-          </fieldset>
-        ))}
       <TraitOfferSelectedSpecialOutcomes
         carrierChildren={primaryChildren}
         feedback={feedback}
