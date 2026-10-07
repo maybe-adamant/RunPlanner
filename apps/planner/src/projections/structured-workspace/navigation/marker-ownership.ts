@@ -108,13 +108,7 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(phase.nemesisEvent === undefined ? [] : [phase.nemesisEvent.marker]),
       ...(phase.traitOffer === undefined
         ? []
-        : [
-            phase.traitOffer.marker,
-            ...phase.traitOffer.children.map((child) => child.marker),
-            ...phase.traitOffer.feedback.flatMap((feedback) =>
-              feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
-            ),
-          ]),
+        : [phase.traitOffer.marker, ...phase.traitOffer.children.map((child) => child.marker)]),
       ...(phase.figLeaf === undefined ? [] : [phase.figLeaf.marker]),
       ...(phase.aetos === undefined ? [] : [phase.aetos.marker]),
       ...(phase.gorgonCondition === undefined ? [] : [phase.gorgonCondition.marker]),
@@ -125,9 +119,6 @@ export function workspaceOccurrenceOwnedMarkers(
       ...(control.traitOffers ?? []).flatMap((trait) => [
         trait.marker,
         ...trait.children.map((child) => child.marker),
-        ...trait.feedback.flatMap((feedback) =>
-          feedback.kind === 'echoLastReward' ? [feedback.control.marker] : [],
-        ),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),

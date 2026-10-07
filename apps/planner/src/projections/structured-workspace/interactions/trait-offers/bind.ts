@@ -1,6 +1,7 @@
 import type {
   WorkspaceRejectedBlockRule,
   WorkspaceTraitOfferControl,
+  WorkspaceTraitOfferFeedback,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace/contracts/traits';
 import type {
@@ -67,7 +68,7 @@ export function bindTraitOfferInteractions(input: {
           Object.freeze({ command: traitOfferCommandFor(control.address, value) }),
         key,
         feedbackFor: (value: AuthoredTraitOffer) => {
-          const feedback = [...control.feedback];
+          const feedback: WorkspaceTraitOfferFeedback[] = [];
           if (value.kind === 'traits') {
             const evaluated = candidates.ransomAssessment(control.address, value);
             if (evaluated.kind === 'ransomAssessment') {

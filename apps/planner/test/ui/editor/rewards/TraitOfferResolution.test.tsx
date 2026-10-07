@@ -10,12 +10,8 @@ import {
   unavailablePickerModel,
 } from '@planner-test/support/trait-offer-editor.test-support';
 import {
-  createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
   createEchoLastRunBoonAddress,
-  createEchoLastRewardAddress,
   createEchoPomTargetAddress,
-  createOccurrenceAddress,
   completeAuthoredEchoLastRunBoonDraft,
   updateAuthoredTraitCarrierChild,
   optionIndex,
@@ -31,7 +27,6 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import type {
   WorkspaceEchoLastRunBoonDraftRow,
@@ -39,11 +34,7 @@ import type {
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
-import {
-  createGoldenFGHIProject,
-  goldenFBiome,
-  goldenFStartId,
-} from '@run-planner/test-fixtures/underworld';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
 
@@ -702,112 +693,6 @@ describe('resolution outcomes', () => {
         selectedOptionKey: 'option1',
       },
     });
-    application.dispose();
-  });
-
-  it('shows the Echo generated-pickup summary without nesting payload in the trait', async () => {
-    const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
-    const base = [...workspace.interactions.traitOffers.values()].find(
-      (candidate) => candidate.giver.providerKind !== 'hammer',
-    );
-    if (base === undefined) throw new Error('trait offer interaction is missing');
-    const value: AuthoredTraitOfferTraits = Object.freeze({
-      kind: 'traits',
-      giverKey: 'Echo',
-      options: Object.freeze([
-        Object.freeze({ traitKey: 'EchoLastReward' }),
-        Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
-        Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
-      ]) as AuthoredTraitOfferTraits['options'],
-      selectedOptionKey: 'option1',
-      rarificationActions: Object.freeze([]),
-    });
-    const childAddress = createEchoLastRewardAddress(base.owner, 'option1');
-    const control = Object.freeze({
-      address: childAddress,
-      acquisitionEntry: createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(
-          createOccurrenceAddress(goldenFBiome, goldenFStartId),
-          'roomExit',
-        ),
-        'echoLastReward:Encounter:Story_Echo_01:option1',
-      ),
-      marker: Object.freeze({
-        address: childAddress,
-        assessment: 'assessed' as const,
-        findingCount: 1,
-        focusKey: 'test-echo-last-reward',
-      }),
-      optionKey: 'option1' as const,
-      spawnLabel: 'Gold',
-    });
-    const interaction = Object.freeze({
-      ...base,
-      value,
-      load: (draft: AuthoredTraitOffer = value) =>
-        Object.freeze([
-          Object.freeze({
-            value: draft,
-            evaluation: Object.freeze({
-              kind: 'traitOffer' as const,
-              result: Object.freeze({
-                assessments: Object.freeze([]),
-                branches: Object.freeze([]),
-                persephoneLevelBonusMaximums: Object.freeze([]),
-                effectiveLevels: Object.freeze([]),
-                findings: Object.freeze([]),
-                supported: true,
-              }),
-            }),
-          }),
-        ]),
-      feedbackFor: () => Object.freeze([{ kind: 'echoLastReward' as const, control }]),
-      optionDomain: () =>
-        Object.freeze({
-          children: Object.freeze([]),
-          load: () =>
-            Object.freeze({
-              candidates: Object.freeze([]),
-              preferredOptionFor: () => undefined,
-              rarityPickerFor: () => undefined,
-              traitPicker: Object.freeze({ sections: Object.freeze([]) }),
-            }),
-        }),
-    });
-    const interactions: WorkspaceInteractionCatalog = Object.freeze({
-      ...workspace.interactions,
-      traitOffers: new Map([[interaction.key, interaction]]),
-    });
-    const commit = vi.fn();
-    const user = userEvent.setup();
-    const rendered = render(
-      <Provider store={application.store}>
-        <TraitOfferEditor
-          address={interaction.owner}
-          interactions={interactions}
-          onCommit={commit}
-        />
-      </Provider>,
-    );
-
-    expect(screen.getByText('Spawns: Gold')).toBeDefined();
-    const configure = () => screen.getByRole('button', { name: 'Configure in Room Timeline' });
-    expect(configure()).toHaveProperty('disabled', false);
-    expect(configure().title).toBe('');
-    const selectedRadios = () => rendered.container.querySelectorAll('input[name$="-selected"]');
-    await user.click(selectedRadios()[1]!);
-    expect(configure()).toHaveProperty('disabled', true);
-    expect(configure().title).toBe('Save or cancel first.');
-    await user.click(selectedRadios()[0]!);
-    expect(configure()).toHaveProperty('disabled', false);
-    application.store.dispatch(traitOfferDialogOpened(interaction.owner));
-    await user.click(configure());
-    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-    const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
-    expect(saved.options[0]).toEqual({ traitKey: 'EchoLastReward' });
     application.dispose();
   });
 });

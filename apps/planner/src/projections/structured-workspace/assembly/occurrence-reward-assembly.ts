@@ -12,10 +12,7 @@ import type {
   WorkspaceTraitOfferStatus,
 } from '../contracts/traits';
 import {
-  createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
-  createAcquisitionSiteAddress,
-  createEchoLastRewardAddress,
   createAetosPhaseAddress,
   createFigLeafPhaseAddress,
   createGorgonPhaseAddress,
@@ -23,15 +20,12 @@ import {
   createLevelResolutionAddress,
   createLocalRewardAddress,
   createNemesisRandomEventAddress,
-  createOccurrenceAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
-  echoLastRewardPickupEntryKey,
   materializeGorgonAthenaOffer,
   nemesisGeneratedPickupSiteKey,
   semanticAddressKey,
-  traitOfferOption,
   discoverAuthoredTraitCarrierChildren,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
@@ -72,7 +66,6 @@ import type {
   CountedRewardCandidateOwner,
   RewardCandidateOwner,
 } from '@planner/projections/candidates/candidateProjection';
-import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
@@ -234,7 +227,6 @@ function traitOfferControls(
           marker,
           offer: null,
           children: Object.freeze([]),
-          feedback: Object.freeze([]),
           contextReached: input.isActiveTraitOffer(address),
           rewardOwner: owner.address,
           status: traitOfferStatus(marker, null),
@@ -256,7 +248,6 @@ function traitOfferControls(
         marker,
         offer,
         children: traitCarrierChildren(input.catalog, address, offer, input.markerDestinations),
-        feedback: Object.freeze([]),
         contextReached: input.isActiveTraitOffer(address),
         rewardOwner: owner.address,
         status: traitOfferStatus(marker, offer),
@@ -1137,7 +1128,6 @@ export function activeEncounterPhasesForOwner(
                     gorgonAthenaOffer!,
                     input.markerDestinations,
                   ),
-            feedback: Object.freeze([]),
             rarityEditable: false,
             contextReached: input.isActiveTraitOffer(gorgonTraitAddress),
             rewardOwner: gorgonPhaseAddress,
@@ -1164,68 +1154,11 @@ export function activeEncounterPhasesForOwner(
                 marker,
                 offer: null,
                 children: Object.freeze([]),
-                feedback: Object.freeze([]),
                 contextReached: input.isActiveTraitOffer(traitAddress),
                 rewardOwner: address,
                 status: traitOfferStatus(marker, null),
               });
             }
-            const selected =
-              authoredTraitOffer.kind === 'traits'
-                ? traitOfferOption(authoredTraitOffer, authoredTraitOffer.selectedOptionKey)
-                : undefined;
-            const selectedDisposition =
-              selected === undefined
-                ? undefined
-                : input.catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
-            const echoLastReward =
-              authoredTraitOffer.kind !== 'traits' ||
-              selectedDisposition?.kind !== 'echo' ||
-              selectedDisposition.effect !== 'lastReward'
-                ? undefined
-                : (() => {
-                    if (address.owner.kind !== 'occurrence')
-                      throw new StructuredWorkspaceProjectionContractError(
-                        `${semanticAddressKey(traitAddress)} Echo replay is not occurrence-owned`,
-                      );
-                    const replayAddress = createEchoLastRewardAddress(
-                      traitAddress,
-                      authoredTraitOffer.selectedOptionKey,
-                    );
-                    const site = createAcquisitionSiteAddress(
-                      createOccurrenceAddress(input.biome, address.owner.occurrenceId),
-                      'roomExit',
-                    );
-                    const acquisitionEntry = createAcquisitionEntryAddress(
-                      site,
-                      echoLastRewardPickupEntryKey(
-                        domain.slotKey,
-                        selectedDefinition!.key,
-                        authoredTraitOffer.selectedOptionKey,
-                      ),
-                    );
-                    const capability = input
-                      .derivedAcquisitionEntries?.(site)
-                      .find(
-                        (entry) =>
-                          entry.kind === 'echoLastReward' &&
-                          entry.address.entryKey === acquisitionEntry.entryKey,
-                      );
-                    return Object.freeze({
-                      address: replayAddress,
-                      acquisitionEntry,
-                      marker: input.markerDestinations.marker(replayAddress),
-                      optionKey: authoredTraitOffer.selectedOptionKey,
-                      ...(capability?.fixedReward === undefined
-                        ? {}
-                        : {
-                            spawnLabel: summarizeRewardOffer(
-                              input.catalog,
-                              capability.fixedReward.offer,
-                            ),
-                          }),
-                    });
-                  })();
             const marker = input.markerDestinations.marker(traitAddress);
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
@@ -1238,11 +1171,6 @@ export function activeEncounterPhasesForOwner(
                 traitAddress,
                 authoredTraitOffer,
                 input.markerDestinations,
-              ),
-              feedback: Object.freeze(
-                echoLastReward === undefined
-                  ? []
-                  : [{ kind: 'echoLastReward' as const, control: echoLastReward }],
               ),
               contextReached: input.isActiveTraitOffer(traitAddress),
               rewardOwner: address,

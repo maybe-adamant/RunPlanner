@@ -2,7 +2,6 @@ import type { SemanticAddress } from '@run-planner/engine/authored-project';
 import type { CandidateOptionProjection } from '@planner/projections/candidates/candidateProjection';
 import type { WorkspaceInteractionChoice } from '../contract';
 import type {
-  AcquisitionEntryAddress,
   AcquisitionRoleAddress,
   AuthoredAllTogetherResult,
   AuthoredChaosTraitOffer,
@@ -17,7 +16,6 @@ import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
-  EchoLastRewardAddress,
   LevelResolutionAddress,
   ProjectCommand,
   RouteAddress,
@@ -103,8 +101,6 @@ export interface WorkspaceTraitOfferControl {
   readonly rewardOwner: SemanticAddress;
   /** Structurally discovered selected-outcome children. */
   readonly children: readonly WorkspaceTraitCarrierChildControl[];
-  /** Evaluated-only consequences; they never add an authored completion burden. */
-  readonly feedback: readonly WorkspaceTraitOfferFeedback[];
 }
 
 /** One exact Time Piece choice, independent of whether this role has a trait child. */
@@ -124,17 +120,11 @@ export type WorkspaceTraitCarrierChildControl = AuthoredTraitCarrierChild & {
   readonly marker: WorkspaceMarker;
 };
 
-export interface WorkspaceEchoLastRewardControl {
-  readonly address: EchoLastRewardAddress;
-  readonly acquisitionEntry: AcquisitionEntryAddress;
-  readonly marker: WorkspaceMarker;
-  readonly optionKey: TraitOptionKey;
-  readonly spawnLabel?: string;
-}
-
-export type WorkspaceTraitOfferFeedback =
-  | { readonly kind: 'echoLastReward'; readonly control: WorkspaceEchoLastRewardControl }
-  | { readonly kind: 'ransom'; readonly assessment: WorkspaceRansomAssessment };
+/** Evaluated-only consequences; they never add an authored completion burden. */
+export type WorkspaceTraitOfferFeedback = {
+  readonly kind: 'ransom';
+  readonly assessment: WorkspaceRansomAssessment;
+};
 
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
