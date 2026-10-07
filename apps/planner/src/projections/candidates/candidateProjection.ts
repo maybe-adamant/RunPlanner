@@ -342,6 +342,8 @@ export interface LevelResolutionCandidateSurface {
   readonly levelCount: number;
   readonly requiredOfferCount?: number;
   readonly eligibleTargetTraitKeys: readonly string[];
+  /** An unresolved choice's engine starting draft. */
+  readonly startingResolution?: AuthoredLevelResolution;
 }
 
 export interface LevelResolutionCandidateGroup {
@@ -352,6 +354,8 @@ export interface LevelResolutionCandidateGroup {
     readonly branchIndex: number;
     readonly supported: boolean;
     readonly findings: readonly string[];
+    /** Eligible targets no offered slot holds. */
+    readonly availableTargetTraitKeys: readonly string[];
   }[];
 }
 

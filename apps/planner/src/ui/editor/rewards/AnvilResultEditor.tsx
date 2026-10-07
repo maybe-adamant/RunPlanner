@@ -5,7 +5,10 @@ import {
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useState } from 'react';
 
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import {
+  anvilRemovedTraitLabel,
+  type AnvilResultDraft,
+} from '@planner/projections/contextual/anvilResultPickers';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 import {
   anvilResultDialogClosed,
@@ -24,13 +27,8 @@ import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentatio
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
-type AnvilDraft = {
-  readonly removedTraitKey: string | null | undefined;
-  readonly firstAddedTraitKey: string | undefined;
-  readonly secondAddedTraitKey: string | undefined;
-};
 
-function draftFor(value: AuthoredAnvilResult | null): AnvilDraft {
+function draftFor(value: AuthoredAnvilResult | null): AnvilResultDraft {
   return value === null
     ? Object.freeze({
         removedTraitKey: undefined,
@@ -44,62 +42,7 @@ function draftFor(value: AuthoredAnvilResult | null): AnvilDraft {
       });
 }
 
-function pickerModel<T extends string | null>(
-  values: readonly T[],
-  selected: T | undefined,
-  labelFor: (value: T) => string,
-): ContextualPickerModel<T> {
-  const available = values.map((value) =>
-    Object.freeze({
-      disabled: false,
-      key: String(value),
-      label: labelFor(value),
-      selected: value === selected,
-      state: 'possible' as const,
-      value,
-    }),
-  );
-  const stale =
-    selected === undefined || values.includes(selected)
-      ? []
-      : [
-          Object.freeze({
-            disabled: true,
-            key: String(selected),
-            label: labelFor(selected),
-            selected: true,
-            state: 'impossible' as const,
-            status: 'Current · unavailable',
-            value: selected,
-          }),
-        ];
-  const selectedItem = [...stale, ...available].find((item) => item.selected);
-  return Object.freeze({
-    ...(selectedItem === undefined ? {} : { selected: selectedItem }),
-    sections: Object.freeze([
-      ...(stale.length === 0
-        ? []
-        : [
-            Object.freeze({
-              collapsible: false,
-              items: Object.freeze(stale),
-              key: 'selected-invalid',
-              kind: 'selectedInvalid' as const,
-              label: 'Current selection',
-            }),
-          ]),
-      Object.freeze({
-        collapsible: false,
-        items: Object.freeze(available),
-        key: 'eligible',
-        kind: 'category' as const,
-        label: 'Eligible Hammers',
-      }),
-    ]),
-  });
-}
-
-function resultFor(draft: AnvilDraft): AuthoredAnvilResult | undefined {
+function resultFor(draft: AnvilResultDraft): AuthoredAnvilResult | undefined {
   return draft.removedTraitKey === undefined ||
     draft.firstAddedTraitKey === undefined ||
     draft.secondAddedTraitKey === undefined
@@ -156,21 +99,7 @@ export function AnvilResultEditor({
   readonly onCommit: (result: AuthoredAnvilResult) => void;
 }) {
   const [draft, setDraft] = useState(() => draftFor(interaction.value));
-  const removalValues =
-    interaction.removableTraitKeys.length === 0
-      ? Object.freeze([null])
-      : interaction.removableTraitKeys;
-  const firstValues =
-    draft.removedTraitKey === undefined
-      ? Object.freeze([])
-      : interaction.addedTraitKeysFor(draft.removedTraitKey, []);
-  const secondValues =
-    draft.removedTraitKey === undefined
-      ? Object.freeze([])
-      : interaction.addedTraitKeysFor(
-          draft.removedTraitKey,
-          draft.firstAddedTraitKey === undefined ? [] : [draft.firstAddedTraitKey],
-        );
+  const pickers = interaction.pickersFor(draft);
   const result = resultFor(draft);
   return (
     <>
@@ -179,9 +108,7 @@ export function AnvilResultEditor({
           ariaLabel="Removed Hammer"
           id="anvil-removed-hammer"
           label="Removed Hammer"
-          model={pickerModel(removalValues, draft.removedTraitKey, (traitKey) =>
-            traitKey === null ? 'No removable Hammer' : interaction.traitLabel(traitKey),
-          )}
+          model={pickers.removed}
           onSelect={(removedTraitKey) =>
             setDraft(
               Object.freeze({
@@ -195,10 +122,7 @@ export function AnvilResultEditor({
           {...(draft.removedTraitKey === undefined
             ? {}
             : {
-                triggerLabel:
-                  draft.removedTraitKey === null
-                    ? 'No removable Hammer'
-                    : interaction.traitLabel(draft.removedTraitKey),
+                triggerLabel: anvilRemovedTraitLabel(draft.removedTraitKey, interaction.traitLabel),
               })}
         />
         <ContextualPicker
@@ -206,7 +130,7 @@ export function AnvilResultEditor({
           disabled={draft.removedTraitKey === undefined}
           id="anvil-added-hammer-1"
           label="Added Hammer 1"
-          model={pickerModel(firstValues, draft.firstAddedTraitKey, interaction.traitLabel)}
+          model={pickers.firstAdded}
           onSelect={(firstAddedTraitKey) =>
             setDraft(
               Object.freeze({
@@ -226,7 +150,7 @@ export function AnvilResultEditor({
           disabled={draft.firstAddedTraitKey === undefined}
           id="anvil-added-hammer-2"
           label="Added Hammer 2"
-          model={pickerModel(secondValues, draft.secondAddedTraitKey, interaction.traitLabel)}
+          model={pickers.secondAdded}
           onSelect={(secondAddedTraitKey) =>
             setDraft(Object.freeze({ ...draft, secondAddedTraitKey }))
           }

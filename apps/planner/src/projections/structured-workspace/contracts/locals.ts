@@ -535,6 +535,11 @@ export type WorkspaceEncounterCustomizationDecision =
         readonly kind: 'orderedPrefix';
         readonly choices: readonly { readonly key: string; readonly label: string }[];
         readonly maximumLength: 2;
+        /** One engine domain per use, in order. */
+        readonly uses: readonly {
+          readonly availableChoiceKeys: readonly string[];
+          readonly requiresEarlierUse: boolean;
+        }[];
       };
     })
   | (WorkspaceEncounterCustomizationDecisionBase & {

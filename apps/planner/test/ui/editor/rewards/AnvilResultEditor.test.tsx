@@ -14,6 +14,7 @@ import {
 import { Provider } from 'react-redux';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { projectAnvilResultPickers } from '@planner/projections/contextual/anvilResultPickers';
 import type { WorkspaceAcquisitionConversionInteraction } from '@planner/projections/structured-workspace';
 
 import {
@@ -23,15 +24,23 @@ import {
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
+function anvilInteraction(
+  input: Omit<AnvilInteraction, 'pickersFor' | 'traitLabel'> &
+    Partial<Pick<AnvilInteraction, 'traitLabel'>>,
+): AnvilInteraction {
+  const domain = { ...input, traitLabel: input.traitLabel ?? ((traitKey: string) => traitKey) };
+  return { ...domain, pickersFor: (draft) => projectAnvilResultPickers(domain, draft) };
+}
+
 afterEach(cleanup);
 
 describe('Anvil result editor', () => {
   it('authors one removal followed by two distinct additions in three contextual pickers', async () => {
     const onCommit = vi.fn();
-    const interaction: AnvilInteraction = {
+    const interaction = anvilInteraction({
       contextReached: true,
       value: null,
-      removableTraitKeys: ['OldHammer'],
+      removedTraitKeys: ['OldHammer'],
       addedTraitKeysFor: (removed, prior) =>
         removed !== 'OldHammer'
           ? []
@@ -47,7 +56,7 @@ describe('Anvil result editor', () => {
       intentFor: () => {
         throw new Error('the pure editor must not bind commands');
       },
-    };
+    });
     const user = userEvent.setup();
     render(<AnvilResultEditor interaction={interaction} onCommit={onCommit} />);
 
@@ -92,16 +101,16 @@ describe('Anvil result editor', () => {
       ),
       'self',
     );
-    const interaction = (contextReached: boolean): AnvilInteraction => ({
-      contextReached,
-      value: null,
-      removableTraitKeys: [],
-      addedTraitKeysFor: () => [],
-      traitLabel: (traitKey) => traitKey,
-      intentFor: () => {
-        throw new Error('closing must not bind commands');
-      },
-    });
+    const interaction = (contextReached: boolean): AnvilInteraction =>
+      anvilInteraction({
+        contextReached,
+        value: null,
+        removedTraitKeys: [],
+        addedTraitKeysFor: () => [],
+        intentFor: () => {
+          throw new Error('closing must not bind commands');
+        },
+      });
     const launcher = (contextReached: boolean) => (
       <Provider store={application.store}>
         <AnvilResultLauncher interaction={interaction(contextReached)} owner={owner} />

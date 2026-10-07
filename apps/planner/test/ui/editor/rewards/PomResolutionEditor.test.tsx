@@ -196,11 +196,20 @@ describe('Pom resolution editor', () => {
     findings: readonly string[] = [],
     requiredOfferCount?: number,
     emptyTargetAllowed = false,
+    engine: {
+      readonly available?: readonly string[];
+      readonly start?: AuthoredLevelResolution;
+    } = {},
   ): LevelResolutionCandidateGroup =>
     Object.freeze({
       branchIndices: Object.freeze([Number(key.replace(/\D/g, '')) || 0]),
       evaluations: Object.freeze([
-        Object.freeze({ branchIndex: 0, findings: Object.freeze(findings), supported }),
+        Object.freeze({
+          availableTargetTraitKeys: Object.freeze([...(engine.available ?? targets)]),
+          branchIndex: 0,
+          findings: Object.freeze(findings),
+          supported,
+        }),
       ]),
       key,
       surface: Object.freeze({
@@ -209,7 +218,14 @@ describe('Pom resolution editor', () => {
         levelCount: 1,
         ...(emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
         ...(requiredOfferCount === undefined ? {} : { requiredOfferCount }),
+        ...(engine.start === undefined ? {} : { startingResolution: engine.start }),
       }),
+    });
+  const choice = (offeredTraitKeys: readonly string[]): AuthoredLevelResolution =>
+    Object.freeze({
+      kind: 'choice',
+      offeredTraitKeys,
+      selectedTraitKey: offeredTraitKeys[0] ?? null,
     });
 
   function interaction(input: {
@@ -277,7 +293,7 @@ describe('Pom resolution editor', () => {
     application.dispose();
   });
 
-  it('authors a complete visible Pom offer while preventing duplicate targets', async () => {
+  it('seeds the engine starting draft and disables targets another slot holds', async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
     const editorInteraction = interaction({
@@ -291,7 +307,16 @@ describe('Pom resolution editor', () => {
           value.offeredTraitKeys.includes(value.selectedTraitKey);
         return Object.freeze({
           groups: Object.freeze([
-            group('branch-0', 'choice', ['A', 'B', 'C'], valid, valid ? [] : ['missingTarget'], 2),
+            group(
+              'branch-0',
+              'choice',
+              ['A', 'B', 'C'],
+              valid,
+              valid ? [] : ['missingTarget'],
+              2,
+              false,
+              { available: valid ? ['C'] : ['A', 'B', 'C'], start: choice(['A', 'B']) },
+            ),
           ]),
         });
       },
@@ -308,6 +333,9 @@ describe('Pom resolution editor', () => {
     expect(screen.getByRole('button', { name: 'Pom target 2' }).textContent).toContain('Trait B');
     await user.click(screen.getByRole('button', { name: 'Pom target 2' }));
     expect(screen.getByRole('option', { name: 'Trait A' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('option', { name: 'Trait C' }).getAttribute('aria-disabled')).not.toBe(
       'true',
     );
     await user.click(screen.getByRole('button', { name: 'Pom target 2' }));
@@ -350,8 +378,12 @@ describe('Pom resolution editor', () => {
       load: () =>
         Object.freeze({
           groups: Object.freeze([
-            group('branch-1', 'choice', ['A'], false, ['missingTarget'], 1),
-            group('branch-2', 'choice', ['B'], false, ['missingTarget'], 1),
+            group('branch-1', 'choice', ['A'], false, ['missingTarget'], 1, false, {
+              start: choice(['A']),
+            }),
+            group('branch-2', 'choice', ['B'], false, ['missingTarget'], 1, false, {
+              start: choice(['B']),
+            }),
           ]),
         }),
     });
@@ -360,6 +392,7 @@ describe('Pom resolution editor', () => {
     await screen.findByLabelText('Route state');
     await user.click(screen.getByRole('button', { name: 'Route state' }));
     await user.click(screen.getByRole('option', { name: 'Route state 2' }));
+    expect(screen.getByRole('button', { name: 'Pom target 1' }).textContent).toContain('Trait B');
     await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
     expect(screen.getByRole('option', { name: 'Trait B' })).not.toBeNull();
     expect(screen.queryByRole('option', { name: 'Trait A' })).toBeNull();

@@ -33,6 +33,10 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import type { LevelResolutionCandidateProjection } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import type {
+  AnvilResultDraft,
+  AnvilResultPickers,
+} from '@planner/projections/contextual/anvilResultPickers';
 import type { TraitOptionDomainProjection } from '@planner/projections/rewards/traitDomainProjection';
 import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceCommandIntent, WorkspacePayloadEditIntent } from '../contract';
@@ -49,11 +53,13 @@ export interface WorkspaceAcquisitionConversionInteraction {
     /** Whether the engine reached this role's Anvil frontier; only then can its editor open. */
     readonly contextReached: boolean;
     readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
-    readonly removableTraitKeys: readonly (string | null)[];
+    /** Exact removal domain; null removes nothing. */
+    readonly removedTraitKeys: readonly (string | null)[];
     readonly addedTraitKeysFor: (
       removedTraitKey: string | null,
       priorAddedTraitKeys: readonly string[],
     ) => readonly string[];
+    readonly pickersFor: (draft: AnvilResultDraft) => AnvilResultPickers;
     readonly traitLabel: (traitKey: string) => string;
     readonly intentFor: (
       value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,

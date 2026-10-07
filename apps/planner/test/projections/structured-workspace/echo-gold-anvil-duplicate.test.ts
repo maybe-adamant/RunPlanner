@@ -49,7 +49,7 @@ describe('Gold duplicate of an Anvil purchase', () => {
     );
     const anvil = workspace.interactions.acquisitionConversions.get(key)?.anvil;
     expect(anvil).toMatchObject({ contextReached: true, value: null });
-    expect(anvil?.removableTraitKeys.length).toBeGreaterThan(0);
+    expect(anvil?.removedTraitKeys.length).toBeGreaterThan(0);
     expect(anvil?.intentFor(echoGoldIDuplicateAnvilResult)).toEqual({
       command: {
         kind: 'ReplaceAnvilResult',

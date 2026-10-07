@@ -74,9 +74,18 @@ describe('acquisition-conversion-interactions', () => {
       const { interactions } = projectStructuredWorkspaceFixture(project()).workspace;
       const anvil = interactions.acquisitionConversions.get(semanticAddressKey(acquisition))?.anvil;
       expect(anvil).toMatchObject({ contextReached: true, value });
-      const removed = anvil?.removableTraitKeys[0];
+      const removed = anvil?.removedTraitKeys[0];
       if (removed === undefined) throw new Error('Anvil removal domain is empty');
       expect(anvil?.addedTraitKeysFor(removed, []).length).toBeGreaterThan(1);
+      const pickers = anvil?.pickersFor({
+        removedTraitKey: removed,
+        firstAddedTraitKey: undefined,
+        secondAddedTraitKey: undefined,
+      });
+      expect(pickers?.removed.selected?.value).toBe(removed);
+      expect(
+        pickers?.firstAdded.sections.flatMap((section) => section.items.map((item) => item.value)),
+      ).toEqual(anvil?.addedTraitKeysFor(removed, []));
       expect(
         anvil?.intentFor({
           kind: 'anvilOfFates',
