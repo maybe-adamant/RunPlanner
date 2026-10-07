@@ -693,6 +693,7 @@ describe('trait-offers/bind', () => {
             branchSupport: Object.freeze([false]),
             complete: false,
             findings: Object.freeze([]),
+            firstPassRows: Object.freeze([]),
             nextTargetTraitKeys: Object.freeze(['ApolloWeaponBoon']),
             supported: false,
           }),

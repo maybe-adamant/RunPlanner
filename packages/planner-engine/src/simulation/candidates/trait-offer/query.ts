@@ -159,8 +159,14 @@ export interface EvaluatedNaturalSelectionResultCandidate {
     readonly nextTargetTraitKeys: readonly string[];
     readonly branchSupport: readonly boolean[];
     readonly findings: readonly TraitOfferCandidateFinding[];
-  };
+  } & NaturalSelectionDraftShape;
 }
+
+/** First-pass rows and the completed allocation, published only where every branch agrees. */
+export type NaturalSelectionDraftShape = Pick<
+  import('../../traits').NaturalSelectionTargetAssessment,
+  'firstPassRows' | 'completedTargets' | 'levelCountsByTraitKey'
+>;
 export type NaturalSelectionResultCandidateEvaluation =
   CandidateContextUnavailable | EvaluatedNaturalSelectionResultCandidate;
 export interface EvaluatedEchoPomTargetDomain {
@@ -202,13 +208,13 @@ export interface EvaluatedEchoLastRunBoonDomain {
             readonly candidates: readonly EvaluatedDirectTraitOutcomeCandidate<string | null>[];
           }[];
         }
-      | {
+      | ({
           readonly kind: 'naturalSelection';
           readonly slotCount: number;
           readonly complete: boolean;
           readonly supported: boolean;
           readonly nextTargetCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
-        };
+        } & NaturalSelectionDraftShape);
   };
 }
 export type EchoLastRunBoonDomainEvaluation =

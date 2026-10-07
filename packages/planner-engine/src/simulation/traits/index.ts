@@ -19,6 +19,7 @@ export {
   traitCandidates,
 } from './authoring/assessment';
 export type {
+  NaturalSelectionFirstPassRow,
   NaturalSelectionStep,
   NaturalSelectionTargetAssessment,
   TraitFindingCode,

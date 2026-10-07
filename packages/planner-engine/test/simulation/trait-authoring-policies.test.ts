@@ -555,6 +555,113 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       nextTargetTraitKeys: ['HephaestusWeaponBoon'],
     });
   });
+  describe('Natural Selection first pass', () => {
+    const apollo = ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon'] as const;
+    const cores = (count: number) =>
+      historyFrom(
+        [...apollo, 'ApolloSprintBoon', 'ApolloManaBoon']
+          .slice(0, count)
+          .map((traitKey) => ({ giverKey: 'Apollo', traitKey, rarity: 'Common' as const })),
+      );
+    const assess = (before: ReturnType<typeof cores>, targets?: readonly string[]) =>
+      assessNaturalSelectionTargets(catalog, before, 8, naturalSelectionSlots, targets);
+    const acceptsCompletion = (before: ReturnType<typeof cores>, targets?: readonly string[]) => {
+      const completed = assess(before, targets).completedTargets;
+      expect(completed).toBeDefined();
+      expect(assess(before, completed)).toMatchObject({ legal: true, complete: true });
+      return completed;
+    };
+
+    it('splits two cores 4/4 once the forced last row completes the order', () => {
+      const before = cores(2);
+      const open = assess(before);
+      expect(open.firstPassRows).toEqual([
+        {
+          availableTraitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'],
+          requiresEarlierRow: false,
+        },
+        { availableTraitKeys: ['ApolloWeaponBoon', 'ApolloSpecialBoon'], requiresEarlierRow: true },
+      ]);
+      expect(open.completedTargets).toBeUndefined();
+      const placed = assess(before, ['ApolloSpecialBoon']);
+      expect(placed.firstPassRows[1]).toEqual({
+        availableTraitKeys: ['ApolloWeaponBoon'],
+        requiresEarlierRow: false,
+        forcedTraitKey: 'ApolloWeaponBoon',
+      });
+      expect(acceptsCompletion(before, ['ApolloSpecialBoon'])).toEqual([
+        'ApolloSpecialBoon',
+        'ApolloWeaponBoon',
+        'ApolloSpecialBoon',
+        'ApolloWeaponBoon',
+        'ApolloSpecialBoon',
+        'ApolloWeaponBoon',
+        'ApolloSpecialBoon',
+        'ApolloWeaponBoon',
+      ]);
+      expect(placed.levelCountsByTraitKey).toEqual({ ApolloSpecialBoon: 4, ApolloWeaponBoon: 4 });
+    });
+
+    it('splits three cores 3/3/2 by order', () => {
+      const before = cores(3);
+      acceptsCompletion(before, ['ApolloCastBoon', 'ApolloWeaponBoon']);
+      expect(assess(before, ['ApolloCastBoon', 'ApolloWeaponBoon']).levelCountsByTraitKey).toEqual({
+        ApolloCastBoon: 3,
+        ApolloWeaponBoon: 3,
+        ApolloSpecialBoon: 2,
+      });
+    });
+
+    it('splits five cores 2/2/2/1/1 by order', () => {
+      const before = cores(5);
+      const order = [
+        'ApolloManaBoon',
+        'ApolloCastBoon',
+        'ApolloWeaponBoon',
+        'ApolloSprintBoon',
+        'ApolloSpecialBoon',
+      ];
+      expect(assess(before, order.slice(0, 3)).completedTargets).toBeUndefined();
+      expect(assess(before, order.slice(0, 3)).firstPassRows[3]).toMatchObject({
+        availableTraitKeys: ['ApolloSpecialBoon', 'ApolloSprintBoon'],
+        requiresEarlierRow: false,
+      });
+      expect(acceptsCompletion(before, order)).toEqual([...order, ...order.slice(0, 3)]);
+      expect(assess(before, order).levelCountsByTraitKey).toEqual({
+        ApolloManaBoon: 2,
+        ApolloCastBoon: 2,
+        ApolloWeaponBoon: 2,
+        ApolloSprintBoon: 1,
+        ApolloSpecialBoon: 1,
+      });
+    });
+
+    it('routes later levels around a capped Hephaestus core', () => {
+      const before = foldTraitHistoryEvents(catalog, [
+        ...historyWith('Hephaestus', 'HephaestusWeaponBoon', 'Common').events,
+        levelMutation(2, 'HephaestusWeaponBoon', 1, 9),
+        ...historyFrom([
+          { giverKey: 'Apollo', traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        ]).events.map((event) => ({ ...event, sequence: 3 })),
+      ]);
+      expect(acceptsCompletion(before, ['HephaestusWeaponBoon'])).toEqual([
+        'HephaestusWeaponBoon',
+        ...Array.from({ length: 7 }, () => 'ApolloSpecialBoon'),
+      ]);
+    });
+
+    it('keeps an authored complete allocation equal to its completed targets', () => {
+      const before = cores(2);
+      const completed = assess(before, ['ApolloWeaponBoon']).completedTargets!;
+      expect(assess(before, completed).completedTargets).toEqual(completed);
+      expect(assess(before, completed.slice(0, 5))).toMatchObject({
+        legal: true,
+        complete: false,
+        completedTargets: completed,
+      });
+    });
+  });
+
   it('publishes only the next member of the retained Natural Selection round order', () => {
     const before = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
