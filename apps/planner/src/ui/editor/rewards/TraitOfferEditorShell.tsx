@@ -22,7 +22,7 @@ import {
   useOutcomeFeedback,
 } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
-import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
+import { selectedTraitOutcomeDraftComplete, traitOfferValueIdentity } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -38,14 +38,12 @@ export function TraitOfferEditorShell({
   initialValue,
   initialView,
   interaction,
-  onChildCommit,
   onCommit,
   onReset,
 }: {
   readonly initialValue: AuthoredTraitOffer;
   readonly initialView: 'outer' | 'echoLastRunBoon';
   readonly interaction: WorkspaceTraitOfferInteraction;
-  readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
@@ -155,9 +153,7 @@ export function TraitOfferEditorShell({
         onBack={() => setView('outer')}
         onComplete={(outcome) => {
           if (child === undefined) return;
-          const completed = child.update(value, outcome);
-          updateValue(completed);
-          onChildCommit?.(completed);
+          updateValue(child.update(value, outcome));
           setView('outer');
         }}
       />
@@ -302,6 +298,9 @@ export function TraitOfferEditorShell({
         }
         selectedOutcome={
           <TraitOfferSelectedOutcome
+            authoredDraft={
+              traitOfferValueIdentity(value) === traitOfferValueIdentity(interaction.value)
+            }
             interaction={interaction}
             onFeedback={reportOutcomeFeedback}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}

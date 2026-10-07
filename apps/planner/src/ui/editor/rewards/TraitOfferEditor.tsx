@@ -18,6 +18,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
+import { traitOfferValueIdentity } from './traitOfferOptions';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -26,7 +27,7 @@ function launcherId(address: TraitOfferAddress): string {
 }
 
 function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string {
-  return `${interaction.giver.key}|${JSON.stringify(interaction.value)}`;
+  return `${interaction.giver.key}|${traitOfferValueIdentity(interaction.value)}`;
 }
 
 export function TraitOfferLauncher({
@@ -99,14 +100,12 @@ export function TraitOfferEditor({
   address,
   initialView = 'outer',
   interactions,
-  onChildCommit,
   onCommit,
   onReset,
 }: {
   readonly address: TraitOfferAddress;
   readonly initialView?: 'outer' | 'echoLastRunBoon';
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
@@ -126,7 +125,6 @@ export function TraitOfferEditor({
       initialView={initialView}
       interaction={interaction}
       key={traitOfferRevision(interaction)}
-      {...(onChildCommit === undefined ? {} : { onChildCommit })}
       {...(onCommit === undefined ? {} : { onCommit })}
       {...(onReset === undefined ? {} : { onReset })}
     />
@@ -267,10 +265,6 @@ export function TraitOfferDialog({
           onCommit={(value) => {
             executeIntent(interaction.intentFor(value));
             close();
-          }}
-          onChildCommit={(value) => {
-            executeIntent(interaction.intentFor(value));
-            dispatch(traitOfferDialogOpened(target));
           }}
           {...(interaction.resetIntent === undefined
             ? {}

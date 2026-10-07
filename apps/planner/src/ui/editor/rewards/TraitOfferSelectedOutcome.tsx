@@ -191,12 +191,15 @@ function LatestModelTargetsOutcome({
 }
 
 export function TraitOfferSelectedOutcome({
+  authoredDraft,
   interaction,
   value,
   onFeedback = ignoreOutcomeFeedback,
   onOpenEchoLastRunBoon,
   onUpdate,
 }: {
+  /** Whether the draft still equals the authored offer, so leaving the dialog loses nothing. */
+  readonly authoredDraft: boolean;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
   readonly onFeedback?: OutcomeFeedbackReporter;
@@ -451,6 +454,8 @@ export function TraitOfferSelectedOutcome({
             <p>Spawns: {control.spawnLabel ?? 'Replay source unavailable'}</p>
             <button
               className="quiet-action"
+              disabled={!authoredDraft}
+              title={authoredDraft ? undefined : 'Save or cancel first.'}
               onClick={() => {
                 const acquisitionEntry = control.acquisitionEntry;
                 dispatch(traitOfferDialogClosed());
