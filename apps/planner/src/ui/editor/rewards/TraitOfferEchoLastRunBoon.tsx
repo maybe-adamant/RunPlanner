@@ -19,19 +19,11 @@ import { useAppSelector } from '@planner/state/store';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
-import {
-  TraitOfferForm,
-  TraitOfferShapeActions,
-  useOutcomeFeedback,
-  type FeedbackEntry,
-} from './TraitOfferForm';
+import { TraitOfferForm, TraitOfferShapeActions, type FeedbackEntry } from './TraitOfferForm';
 import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
 import { TraitOfferOption } from './TraitOfferOption';
 import { TraitAcquisitionTargetOutcome } from './TraitOfferSelectedOutcome';
-import {
-  AllTogetherOutcomeEditor,
-  NaturalSelectionOutcomeEditor,
-} from './TraitOfferSelectedSpecialOutcomes';
+import { AllTogetherOutcomeRows, NaturalSelectionOutcomeRows } from './TraitOfferOutcomeRows';
 
 type DraftRow = WorkspaceEchoLastRunBoonDraftRow;
 
@@ -129,14 +121,12 @@ function EchoLastRunBoonChoiceEditor({
             controlId: `${controlId}-all-together-${set.setKey}`,
             setKey: set.setKey,
             loadable: { load: () => ({ picker: set.picker }) },
-            ...(selectedRow?.allTogetherResult?.[set.setKey] === undefined
-              ? {}
-              : { value: selectedRow.allTogetherResult[set.setKey] }),
+            resultLabel: set.resultLabel,
           })),
-    [carrier, controlId, selectedRow],
+    [carrier, controlId],
   );
   const naturalLoadableFor = useCallback(
-    (targets: readonly string[], retainedTarget?: string) =>
+    (targets: readonly string[]) =>
       domain.naturalSelectionForDraft(
         Object.freeze(
           rows.map((row, index) =>
@@ -144,7 +134,6 @@ function EchoLastRunBoonChoiceEditor({
           ),
         ),
         selectedIndex,
-        retainedTarget,
       ),
     [domain, rows, selectedIndex],
   );
@@ -157,8 +146,6 @@ function EchoLastRunBoonChoiceEditor({
     setRows(draft.rows);
     setSelectedIndex(draft.selectedIndex);
   };
-  // The nested form is the visible dialog body, so it owns its own fixed feedback region.
-  const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
   const payload = (
     <>
       {selectedComplete === undefined ||
@@ -172,19 +159,17 @@ function EchoLastRunBoonChoiceEditor({
           {...(selectedRow.targetTraitKey === undefined
             ? {}
             : { targetTraitKey: selectedRow.targetTraitKey })}
-          traitLabel={(key) =>
-            pickerItems(domain.targetPickerFor(selectedComplete)).find((item) => item.value === key)
-              ?.label ?? key
-          }
+          traitLabel={domain.traitLabel}
           onSelect={(targetTraitKey) =>
             updateRow(selectedIndex, Object.freeze({ ...selectedRow, targetTraitKey }))
           }
         />
       )}
       {selectedKind === 'allTogether' && carrier?.kind === 'allTogether' ? (
-        <AllTogetherOutcomeEditor
+        <AllTogetherOutcomeRows
+          authored={selectedRow?.allTogetherResult}
           key={`${selectedIndex}:${selectedRow?.identity?.traitKey}`}
-          sets={allTogetherSets}
+          rows={allTogetherSets}
           onSelect={(allTogetherResult) =>
             updateRow(selectedIndex, Object.freeze({ ...selectedRow, allTogetherResult }))
           }
@@ -193,14 +178,13 @@ function EchoLastRunBoonChoiceEditor({
       {selectedKind === 'naturalSelection' &&
       carrier?.kind === 'naturalSelection' &&
       selectedRow !== undefined ? (
-        <NaturalSelectionOutcomeEditor
+        <NaturalSelectionOutcomeRows
+          authored={selectedRow.naturalSelectionTargets}
           key={`${selectedIndex}:${selectedRow.identity?.traitKey}`}
           controlId={`${controlId}-natural-selection`}
-          initial={selectedRow.naturalSelectionTargets ?? []}
-          slotCount={carrier.slotCount}
           traitLabel={carrier.traitLabel}
           loadableFor={naturalLoadableFor}
-          onFeedback={reportOutcomeFeedback}
+          onClear={() => updateRow(selectedIndex, withNaturalTargets(selectedRow, []))}
           onSelect={(targets) => updateRow(selectedIndex, withNaturalTargets(selectedRow, targets))}
         />
       ) : null}
@@ -228,10 +212,9 @@ function EchoLastRunBoonChoiceEditor({
     selectedKind === undefined || carrier !== undefined
       ? undefined
       : 'Complete the other Echo rows before editing this outcome. Existing targets are retained.';
+  // The nested form is the visible dialog body, so it owns its own fixed feedback region.
   const feedbackEntries: readonly FeedbackEntry[] =
-    carrierMessage === undefined
-      ? outcomeEntries
-      : [['carrier', carrierMessage], ...outcomeEntries];
+    carrierMessage === undefined ? [] : [['carrier', carrierMessage]];
 
   return (
     <section

@@ -285,7 +285,6 @@
   min-height: 18rem;
 }
 
-.trait-outcome-summary-list,
 .trait-outcome-actions {
   display: flex;
   flex-wrap: wrap;

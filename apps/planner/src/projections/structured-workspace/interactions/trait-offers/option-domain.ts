@@ -14,6 +14,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {} from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import {
+  allTogetherResultLabel,
   projectDirectTraitOutcomePicker,
   withDirectTraitOutcomeSelection,
   withoutDirectTraitOutcomeValues,
@@ -26,6 +27,7 @@ import type {
 } from '@planner/projections/structured-workspace/contracts/traits';
 import { bindEchoLastRunBoonInteraction } from './echo';
 import { bindHexTreeInteraction } from './hex';
+import { projectNaturalSelectionDomain } from './natural-selection';
 import { bindConcaveStoneInteraction } from './stone';
 
 /** Binds one ordinary offer's focused option cache and exact typed children. */
@@ -109,6 +111,8 @@ export function bindTraitOfferOptionDomain(input: {
       optionKey,
       value,
     });
+    const echoPomTargetLabel = (key: string | null) =>
+      key === null ? 'No eligible target' : (catalog.traits.byKey[key]?.label ?? key);
     const specialChildren: WorkspaceTraitCarrierChildInteraction[] = [
       ...(circeControl === undefined
         ? []
@@ -121,6 +125,8 @@ export function bindTraitOfferOptionDomain(input: {
                   child: circeControl,
                   value: resolution,
                 }),
+              keyLabel: (key: string) =>
+                catalog.arcanaCards.byKey[key]?.label ?? catalog.fearVows.byKey[key]?.label ?? key,
               forOffer: (offer: AuthoredTraitOfferTraits) =>
                 Object.freeze({
                   load: () => {
@@ -215,6 +221,7 @@ export function bindTraitOfferOptionDomain(input: {
                   child: echoPomControl,
                   value: targetTraitKey,
                 }),
+              targetLabel: echoPomTargetLabel,
               forOffer: (offer: AuthoredTraitOfferTraits) =>
                 Object.freeze({
                   load: () => {
@@ -227,10 +234,7 @@ export function bindTraitOfferOptionDomain(input: {
                     return Object.freeze({
                       picker: projectDirectTraitOutcomePicker(
                         evaluated.result.candidates,
-                        (key) =>
-                          key === null
-                            ? 'No eligible target'
-                            : (catalog.traits.byKey[key]?.label ?? key),
+                        echoPomTargetLabel,
                         (key) => key ?? '__none__',
                       ),
                       emptyNoOpAllowed: evaluated.result.emptyNoOpAllowed,
@@ -365,10 +369,7 @@ export function bindTraitOfferOptionDomain(input: {
                       return Object.freeze({
                         picker: projectDirectTraitOutcomePicker(
                           evaluated.result.candidates,
-                          (result) =>
-                            result === null
-                              ? 'No grant (set exhausted)'
-                              : (catalog.traits.byKey[result]?.label ?? result),
+                          (result) => allTogetherResultLabel(catalog, result),
                           (result) => result ?? '__none__',
                         ),
                       });
@@ -383,11 +384,12 @@ export function bindTraitOfferOptionDomain(input: {
                     child,
                     allTogetherResult,
                   }),
+                resultLabel: (result: string | null) => allTogetherResultLabel(catalog, result),
               });
             case 'naturalSelectionResult':
               return Object.freeze({
                 child,
-                forOffer: (offer: AuthoredTraitOfferTraits, retainedTargetKey?: string) =>
+                forOffer: (offer: AuthoredTraitOfferTraits) =>
                   Object.freeze({
                     load: () => {
                       const evaluated = candidates.traitCarrierChildDomain(
@@ -396,39 +398,12 @@ export function bindTraitOfferOptionDomain(input: {
                         child,
                       );
                       if (evaluated.kind !== 'naturalSelectionResult') return undefined;
-                      const currentTargets = [
-                        ...(offer.options[optionIndex(child.optionKey)]?.naturalSelectionTargets ??
-                          []),
-                        ...(retainedTargetKey === undefined ? [] : [retainedTargetKey]),
-                      ];
-                      const available = new Set(evaluated.result.nextTargetTraitKeys);
-                      return Object.freeze({
-                        complete: evaluated.result.complete,
-                        picker: projectDirectTraitOutcomePicker(
-                          Object.freeze(
-                            [
-                              ...new Set([
-                                ...evaluated.result.nextTargetTraitKeys,
-                                ...currentTargets,
-                              ]),
-                            ].map((traitKey) =>
-                              Object.freeze({
-                                value: traitKey,
-                                support: available.has(traitKey)
-                                  ? ('possible' as const)
-                                  : ('impossible' as const),
-                                branchSupport: evaluated.result.branchSupport,
-                                selected: traitKey === retainedTargetKey,
-                                ...(available.has(traitKey)
-                                  ? {}
-                                  : { reason: 'unavailable' as const }),
-                              }),
-                            ),
-                          ),
-                          (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                          (traitKey) => traitKey,
-                        ),
-                      });
+                      return projectNaturalSelectionDomain(
+                        catalog,
+                        evaluated.result.complete,
+                        evaluated.result,
+                        offer.options[optionIndex(child.optionKey)]?.naturalSelectionTargets ?? [],
+                      );
                     },
                   }),
                 update: (

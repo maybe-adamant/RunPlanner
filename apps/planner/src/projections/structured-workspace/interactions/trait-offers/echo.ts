@@ -20,7 +20,11 @@ import {
   previousEchoLastRunBoonDraft,
 } from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
-import { projectDirectTraitOutcomePicker } from '@planner/projections/contextual/directTraitOutcomeProjection';
+import {
+  allTogetherResultLabel,
+  projectDirectTraitOutcomePicker,
+} from '@planner/projections/contextual/directTraitOutcomeProjection';
+import { projectNaturalSelectionDomain } from './natural-selection';
 import type {
   WorkspaceEchoLastRunBoonDraftRow,
   WorkspaceEchoLastRunBoonInteraction,
@@ -86,7 +90,6 @@ export function bindEchoLastRunBoonInteraction(input: {
           const carrierForDraft = (
             rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
             selectedIndex: number,
-            retainedTargetKey?: string,
           ) =>
             Object.freeze({
               load: () => {
@@ -118,46 +121,25 @@ export function bindEchoLastRunBoonInteraction(input: {
                           setKey: set.setKey,
                           picker: projectDirectTraitOutcomePicker(
                             set.candidates,
-                            (traitKey) =>
-                              traitKey === null
-                                ? 'No grant (set exhausted)'
-                                : (catalog.traits.byKey[traitKey]?.label ?? traitKey),
+                            (traitKey) => allTogetherResultLabel(catalog, traitKey),
                             (traitKey) => traitKey ?? '__none__',
                           ),
+                          resultLabel: (result: string | null) =>
+                            allTogetherResultLabel(catalog, result),
                         }),
                       ),
                     ),
                   });
                 return Object.freeze({
+                  ...projectNaturalSelectionDomain(
+                    catalog,
+                    carrier.complete,
+                    carrier,
+                    rows[selectedIndex]?.naturalSelectionTargets ?? [],
+                  ),
                   kind: 'naturalSelection' as const,
                   slotCount: carrier.slotCount,
-                  complete: carrier.complete,
                   supported: carrier.supported,
-                  picker: projectDirectTraitOutcomePicker(
-                    retainedTargetKey === undefined
-                      ? carrier.nextTargetCandidates
-                      : [
-                          ...carrier.nextTargetCandidates.map((candidate) => ({
-                            ...candidate,
-                            selected: candidate.value === retainedTargetKey,
-                          })),
-                          ...(carrier.nextTargetCandidates.some(
-                            (candidate) => candidate.value === retainedTargetKey,
-                          )
-                            ? []
-                            : [
-                                {
-                                  value: retainedTargetKey,
-                                  support: 'impossible' as const,
-                                  branchSupport: Object.freeze([]),
-                                  selected: true,
-                                  reason: 'unavailable' as const,
-                                },
-                              ]),
-                        ],
-                    (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
-                    (traitKey) => traitKey,
-                  ),
                   traitLabel: (traitKey: string) =>
                     catalog.traits.byKey[traitKey]?.label ?? traitKey,
                 });
@@ -229,6 +211,7 @@ export function bindEchoLastRunBoonInteraction(input: {
                   candidate.option.rarity === option.rarity,
               )?.effectiveRarity,
             labelFor: identityLabel,
+            traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
             summaryFor: (child: AuthoredEchoLastRunBoonOffer) => {
               const selected = child.options[optionIndex(child.selectedOptionKey)];
               if (selected === undefined) return 'Choice required';
@@ -291,11 +274,10 @@ export function bindEchoLastRunBoonInteraction(input: {
             naturalSelectionForDraft: (
               rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
               selectedIndex: number,
-              retainedTargetKey?: string,
             ) =>
               Object.freeze({
                 load: () => {
-                  const carrier = carrierForDraft(rows, selectedIndex, retainedTargetKey).load();
+                  const carrier = carrierForDraft(rows, selectedIndex).load();
                   return carrier?.kind === 'naturalSelection' ? carrier : undefined;
                 },
               }),

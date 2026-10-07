@@ -2176,7 +2176,7 @@ describe('planner history interaction', () => {
     await view.user.click(traitLauncher);
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByRole('button', { name: /^Earth:/ })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'All Together Earth' })).toBeTruthy();
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
   });
 

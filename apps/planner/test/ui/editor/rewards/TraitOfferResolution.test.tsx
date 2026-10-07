@@ -107,6 +107,8 @@ describe('resolution outcomes', () => {
                           value: draft,
                         }),
                       }),
+                    targetLabel: (target: string | null) =>
+                      target === 'ApolloWeaponBoon' ? 'Nova Strike' : String(target),
                     forOffer: () =>
                       Object.freeze({
                         load: () =>
@@ -240,20 +242,40 @@ describe('resolution outcomes', () => {
                           load: () => {
                             const selectedRow = rows[selectedIndex];
                             if (selectedRow?.identity?.traitKey === 'GoodStuffBoon') {
-                              const targets = selectedRow.naturalSelectionTargets ?? [];
+                              const placed = (selectedRow.naturalSelectionTargets ?? []).length > 0;
                               return {
                                 kind: 'naturalSelection' as const,
                                 slotCount: 2,
-                                complete: targets.length === 2,
+                                complete: placed,
                                 supported: true,
-                                picker: pickerModel([
-                                  Object.freeze({
-                                    label: 'Nova Strike',
-                                    value: 'ApolloWeaponBoon',
-                                  }),
-                                ]),
+                                rows: [
+                                  {
+                                    picker: pickerModel([
+                                      { label: 'Nova Strike', value: 'ApolloWeaponBoon' },
+                                      { label: 'Heaven Strike', value: 'ZeusWeaponBoon' },
+                                    ]),
+                                    requiresEarlierRow: false,
+                                  },
+                                  placed
+                                    ? {
+                                        picker: pickerModel([]),
+                                        requiresEarlierRow: false,
+                                        forcedTraitKey: 'ZeusWeaponBoon',
+                                      }
+                                    : { picker: pickerModel([]), requiresEarlierRow: true },
+                                ],
+                                ...(placed
+                                  ? {
+                                      completedTargets: ['ApolloWeaponBoon', 'ZeusWeaponBoon'],
+                                      levelsLabel: 'Nova Strike ×1 · Heaven Strike ×1',
+                                    }
+                                  : {}),
                                 traitLabel: (traitKey: string) =>
-                                  traitKey === 'ApolloWeaponBoon' ? 'Nova Strike' : traitKey,
+                                  traitKey === 'ApolloWeaponBoon'
+                                    ? 'Nova Strike'
+                                    : traitKey === 'ZeusWeaponBoon'
+                                      ? 'Heaven Strike'
+                                      : traitKey,
                               };
                             }
                             const result = selectedRow?.allTogetherResult;
@@ -273,6 +295,8 @@ describe('resolution outcomes', () => {
                                 picker: pickerModel([
                                   Object.freeze({ label, value: `${setKey}Trait` }),
                                 ]),
+                                resultLabel: (result: string | null) =>
+                                  result === `${setKey}Trait` ? label : String(result),
                               })),
                             };
                           },
@@ -349,6 +373,7 @@ describe('resolution outcomes', () => {
                             });
                           },
                           effectiveLevelFor: () => 1,
+                          traitLabel: (traitKey: string) => traitKey,
                           effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) =>
                             option.rarity,
                           labelFor: (identity: {
@@ -539,9 +564,9 @@ describe('resolution outcomes', () => {
     await user.click(await screen.findByText('Hera · All Together'));
     const selectedAfterAppend = rendered.container.querySelectorAll('input[name$="-selected"]');
     await user.click(selectedAfterAppend[2]!);
-    await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
-    for (const grant of ['Earth Grant', 'Fire Grant', 'Air Grant', 'Water Grant']) {
-      await user.click(await screen.findByText(grant));
+    for (const set of ['Earth', 'Fire', 'Air', 'Water']) {
+      await user.click(screen.getByRole('button', { name: `All Together ${set}` }));
+      await user.click(await screen.findByRole('option', { name: `${set} Grant` }));
     }
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
     expect(screen.getByRole('button', { name: 'Boon Boon Boon choice' })).toBeDefined();
@@ -671,9 +696,16 @@ describe('resolution outcomes', () => {
       </Provider>,
     );
     await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
-    await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
+    expect(screen.getByRole('button', { name: 'Natural Selection 2nd core' }).title).toBe(
+      'Choose the 1st core first',
+    );
+    await user.click(screen.getByRole('button', { name: 'Natural Selection 1st core' }));
     await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
-    await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
+    // The forced last core completes the first pass, so the draft takes the whole allocation.
+    expect(screen.getByLabelText('Natural Selection 2nd core').textContent).toBe('Heaven Strike');
+    expect(screen.getByLabelText('Natural Selection levels').textContent).toBe(
+      'Nova Strike ×1 · Heaven Strike ×1',
+    );
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
     expect(commit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
@@ -687,7 +719,7 @@ describe('resolution outcomes', () => {
             giverKey: 'Demeter',
             traitKey: 'GoodStuffBoon',
             rarity: 'Duo',
-            naturalSelectionTargets: ['ApolloWeaponBoon', 'ApolloWeaponBoon'],
+            naturalSelectionTargets: ['ApolloWeaponBoon', 'ZeusWeaponBoon'],
           },
         ],
         selectedOptionKey: 'option1',

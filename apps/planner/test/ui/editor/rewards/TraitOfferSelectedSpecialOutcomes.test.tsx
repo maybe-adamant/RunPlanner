@@ -37,7 +37,10 @@ import type { WorkspaceInteractionCatalog } from '@planner/projections/structure
 import { TraitOfferDialog, TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { TraitOfferCirceResolution } from '@planner/ui/editor/rewards/TraitOfferCirceResolution';
 import { TraitOfferSelectedOutcome } from '@planner/ui/editor/rewards/TraitOfferSelectedOutcome';
-import { NaturalSelectionOutcomeEditor } from '@planner/ui/editor/rewards/TraitOfferSelectedSpecialOutcomes';
+import {
+  AllTogetherOutcomeRows,
+  NaturalSelectionOutcomeRows,
+} from '@planner/ui/editor/rewards/TraitOfferOutcomeRows';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
   createGoldenFGHIProject,
@@ -47,43 +50,135 @@ import {
 
 afterEach(cleanup);
 
-describe('Natural Selection editor feedback', () => {
-  it('reports repeated targets through the feedback reporter instead of inline text', () => {
-    const onFeedback = vi.fn();
-    render(
-      <NaturalSelectionOutcomeEditor
-        controlId="natural"
-        initial={['A', 'A', 'B']}
-        loadableFor={() => ({ load: () => ({ complete: true, picker: { sections: [] } }) })}
-        onFeedback={onFeedback}
-        onSelect={() => undefined}
-        slotCount={3}
-        traitLabel={(key) => key}
-      />,
-    );
-    expect(onFeedback).toHaveBeenCalledWith(
-      expect.stringContaining('naturalSelectionRepeats'),
-      'Repeated targets: A ×2',
-    );
-    expect(screen.queryByText(/Repeated targets/)).toBeNull();
+const circeKeyLabel = (key: string) =>
+  ({ ArcanaSorceress: 'The Sorceress', ArcanaTitan: 'The Titan', VowRivals: 'Vow of Rivals' })[
+    key
+  ] ?? key;
+
+// Three eligible cores; two placed cores force the third and complete the allocation.
+function firstPassDomain(targets: readonly string[]) {
+  const eligible = ['A', 'B', 'C'];
+  const placed: string[] = [];
+  for (const target of targets.slice(0, eligible.length)) {
+    if (!eligible.includes(target) || placed.includes(target)) break;
+    placed.push(target);
+  }
+  const rows = eligible.map((_, index) => {
+    const available = eligible.filter((key) => !placed.slice(0, index).includes(key));
+    const requiresEarlierRow = index > placed.length;
+    return {
+      picker: pickerModel(available.map((value) => ({ value, label: `Label ${value}` }))),
+      requiresEarlierRow,
+      ...(!requiresEarlierRow && available.length === 1 ? { forcedTraitKey: available[0]! } : {}),
+    };
+  });
+  const order =
+    placed.length >= 2 ? [...placed.slice(0, 2), rows[2]!.forcedTraitKey ?? placed[2]!] : undefined;
+  return {
+    complete: order !== undefined,
+    rows,
+    ...(order === undefined
+      ? {}
+      : { completedTargets: [...order, order[0]!, order[1]!], levelsLabel: 'levels' }),
+  };
+}
+
+describe('per-row outcome pickers', () => {
+  const traitLabel = (key: string) => `Label ${key}`;
+  const naturalRows = (
+    authored: readonly string[] | undefined,
+    onSelect = vi.fn(),
+    onClear = vi.fn(),
+    loadableFor: (targets: readonly string[]) => {
+      load: () => ReturnType<typeof firstPassDomain> | undefined;
+    } = (targets) => ({ load: () => firstPassDomain(targets) }),
+  ) => (
+    <NaturalSelectionOutcomeRows
+      authored={authored}
+      controlId="natural"
+      loadableFor={loadableFor}
+      onClear={onClear}
+      onSelect={onSelect}
+      traitLabel={traitLabel}
+    />
+  );
+  const core = (ordinal: string) =>
+    screen.getByRole('button', { name: `Natural Selection ${ordinal} core` });
+
+  it('holds first-pass picks locally until the engine completes the allocation', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    const onClear = vi.fn();
+    render(naturalRows(undefined, onSelect, onClear));
+    expect(core('2nd').title).toBe('Choose the 1st core first');
+    await user.click(core('1st'));
+    await user.click(screen.getByRole('option', { name: 'Label A' }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onClear).not.toHaveBeenCalled();
+    expect(core('1st').textContent).toContain('Label A');
+    expect(core('3rd').title).toBe('Choose the 2nd core first');
+    await user.click(core('2nd'));
+    await user.click(screen.getByRole('option', { name: 'Label B' }));
+    expect(onSelect).toHaveBeenCalledWith(['A', 'B', 'C', 'A', 'B']);
   });
 
-  it('holds the target control frame while its domain is unavailable', async () => {
+  it('shows an authored allocation as its first pass and clears the draft when a row reopens it', async () => {
     const user = userEvent.setup();
-    render(
-      <NaturalSelectionOutcomeEditor
-        controlId="natural"
-        initial={[]}
-        loadableFor={() => ({ load: () => undefined })}
-        onSelect={() => undefined}
-        slotCount={2}
-        traitLabel={(key) => key}
-      />,
+    const onSelect = vi.fn();
+    const onClear = vi.fn();
+    const { rerender } = render(naturalRows(['A', 'B', 'C', 'A', 'B'], onSelect, onClear));
+    expect(core('1st').textContent).toContain('Label A');
+    expect(core('2nd').textContent).toContain('Label B');
+    expect(screen.getByLabelText('Natural Selection 3rd core').textContent).toBe('Label C');
+    expect(screen.getByLabelText('Natural Selection levels').textContent).toBe('levels');
+    await user.click(core('1st'));
+    await user.click(screen.getByRole('option', { name: 'Label C' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
+    rerender(naturalRows(undefined, onSelect, onClear));
+    expect(core('1st').textContent).toContain('Label C');
+    expect(core('2nd').textContent).not.toContain('Label');
+  });
+
+  it('labels authored targets from the projection when the domain publishes no rows', () => {
+    render(naturalRows(['A', 'B'], vi.fn(), vi.fn(), () => ({ load: () => undefined })));
+    expect(screen.getByText('Label A · Label B')).toBeTruthy();
+  });
+
+  it('holds partial All Together rows and saves the complete result, then each row change', async () => {
+    const user = userEvent.setup();
+    const rows = (['earth', 'fire'] as const).map((setKey) => ({
+      controlId: setKey,
+      loadable: {
+        load: () => ({
+          picker: pickerModel([`${setKey}-grant`].map((value) => ({ value, label: value }))),
+        }),
+      },
+      resultLabel: (result: string | null) => `Label ${result}`,
+      setKey,
+    }));
+    const onSelect = vi.fn();
+    const view = (
+      authored?: import('@run-planner/engine/authored-project').AuthoredAllTogetherResult,
+    ) => <AllTogetherOutcomeRows authored={authored} onSelect={onSelect} rows={rows} />;
+    const { rerender } = render(view());
+    await user.click(screen.getByRole('button', { name: 'All Together Earth' }));
+    await user.click(screen.getByRole('option', { name: 'earth-grant' }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'All Together Earth' }).textContent).toContain(
+      'Label earth-grant',
     );
-    await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
-    const placeholder = screen.getByText('Targets unavailable.');
-    expect(placeholder.classList.contains('fixed-room-state')).toBe(true);
-    expect(placeholder.parentElement?.classList.contains('control-placeholder')).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'All Together Fire' }));
+    await user.click(screen.getByRole('option', { name: 'fire-grant' }));
+    expect(onSelect).toHaveBeenLastCalledWith({ earth: 'earth-grant', fire: 'fire-grant' });
+    const authored = {
+      earth: 'earth-grant',
+      fire: 'fire-grant',
+    } as unknown as import('@run-planner/engine/authored-project').AuthoredAllTogetherResult;
+    rerender(view(authored));
+    await user.click(screen.getByRole('button', { name: 'All Together Fire' }));
+    await user.click(screen.getByRole('option', { name: 'fire-grant' }));
+    expect(onSelect).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -203,6 +298,7 @@ describe('selected outcomes', () => {
     ) => (
       <Provider store={application.store}>
         <TraitOfferCirceResolution
+          keyLabel={circeKeyLabel}
           address={address}
           controlId="circe-lifecycle"
           domain={currentDomain}
@@ -281,6 +377,7 @@ describe('selected outcomes', () => {
     const { rerender } = render(
       <Provider store={application.store}>
         <TraitOfferCirceResolution
+          keyLabel={circeKeyLabel}
           address={circeAddress}
           controlId="circe-effect-switch"
           domain={activation}
@@ -295,6 +392,7 @@ describe('selected outcomes', () => {
     rerender(
       <Provider store={application.store}>
         <TraitOfferCirceResolution
+          keyLabel={circeKeyLabel}
           address={circeAddress}
           controlId="circe-effect-switch"
           domain={fear}
@@ -375,6 +473,10 @@ describe('selected outcomes', () => {
               }),
           });
         },
+        resultLabel: (result: string | null) =>
+          result === null
+            ? 'No grant'
+            : (application.catalog.traits.byKey[result]?.label ?? result),
         update: (
           draft: AuthoredTraitOfferTraits,
           result: import('@run-planner/engine/authored-project').AuthoredAllTogetherResult,
@@ -476,15 +578,22 @@ describe('selected outcomes', () => {
       </Provider>,
     );
     expect(allTogetherLoadableCount).toBe(4);
-    await user.click(screen.getByRole('button', { name: 'Choose all grants' }));
-    await user.click(await screen.findByText('Rallying Cry'));
+    const grant = async (set: string, label: string) => {
+      await user.click(screen.getByRole('button', { name: `All Together ${set}` }));
+      await user.click(await screen.findByRole('option', { name: label }));
+    };
+    // Each set is its own row; the draft takes the result once all four are chosen.
+    await grant('Earth', 'Rallying Cry');
+    expect(screen.getByRole('button', { name: 'All Together Earth' }).textContent).toContain(
+      'Rallying Cry',
+    );
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
       'disabled',
       true,
     );
-    await user.click(await screen.findByText('Slow Cooker'));
-    await user.click(await screen.findByText('Air Quality'));
-    await user.click(await screen.findByText('Water Fitness'));
+    await grant('Fire', 'Slow Cooker');
+    await grant('Air', 'Air Quality');
+    await grant('Water', 'Water Fitness');
     expect(rerenderCommit).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Apply complete outcome' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
@@ -504,7 +613,7 @@ describe('selected outcomes', () => {
     application.dispose();
   });
 
-  it('walks and saves all eight Natural Selection positions, then focuses the exact child', async () => {
+  it('walks the Natural Selection first pass, saves the completed allocation and focuses the exact child', async () => {
     const application = createApplication();
     const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
       kind: 'ReplaceStartingReward',
@@ -535,6 +644,7 @@ describe('selected outcomes', () => {
       rarificationActions: Object.freeze([]),
     });
     const result = createNaturalSelectionResultAddress(base.owner, 'option1');
+    const allocation = Array.from({ length: 8 }, (_, index) => targetKeys[index % 4]!);
     const seenPrefixes: string[][] = [];
     const natural = {
       child: Object.freeze({
@@ -555,12 +665,24 @@ describe('selected outcomes', () => {
         load: () => {
           const targets = [...(draft.options[0]?.naturalSelectionTargets ?? [])];
           seenPrefixes.push(targets);
-          const next = targetKeys;
+          // Three placed cores force the fourth and complete the eight-level allocation.
+          const placed = targets.slice(0, 3);
+          const rows = targetKeys.map((_, index) => {
+            const available = targetKeys.filter((key) => !placed.slice(0, index).includes(key));
+            const open = index <= placed.length;
+            return {
+              picker: pickerModel(
+                available.map((traitKey) => ({ label: traitKey, value: traitKey })),
+              ),
+              requiresEarlierRow: !open,
+              ...(open && available.length === 1 ? { forcedTraitKey: available[0]! } : {}),
+            };
+          });
+          const complete = placed.length === 3;
           return Object.freeze({
-            complete: targets.length >= 8,
-            nextTargetTraitKeys: Object.freeze(next),
-            picker: pickerModel(next.map((traitKey) => ({ label: traitKey, value: traitKey }))),
-            supported: true,
+            complete,
+            rows,
+            ...(complete ? { completedTargets: allocation, levelsLabel: 'allocation' } : {}),
           });
         },
       }),
@@ -644,18 +766,24 @@ describe('selected outcomes', () => {
       'disabled',
       true,
     );
-    await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
-    const authoredTargets = Array.from({ length: 8 }, (_, index) => targetKeys[index % 4]!);
-    for (const targetKey of authoredTargets) {
-      await user.click(screen.getByRole('option', { name: targetKey }));
+    for (const [position, ordinal] of ['1st', '2nd', '3rd'].entries()) {
+      await user.click(screen.getByRole('button', { name: `Natural Selection ${ordinal} core` }));
+      await user.click(screen.getByRole('option', { name: targetKeys[position]! }));
+      // A partial first pass leaves the draft without targets, so Save stays disabled.
+      if (position < 2)
+        expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
+          'disabled',
+          true,
+        );
     }
-    expect(screen.getAllByRole('button', { name: /Position \d+:/ })).toHaveLength(8);
+    expect(screen.getByLabelText('Natural Selection 4th core').textContent).toBe(targetKeys[3]);
+    expect(screen.getByLabelText('Natural Selection levels').textContent).toBe('allocation');
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
       'disabled',
       false,
     );
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-    expect(seenPrefixes).toContainEqual(authoredTargets.slice(0, 7));
+    expect(seenPrefixes).toContainEqual(targetKeys.slice(0, 3));
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyDepth + 1,
     );
@@ -664,7 +792,7 @@ describe('selected outcomes', () => {
     application.dispose();
   });
 
-  it('keeps an engine-backed early-exhausted Natural Selection result compact and saveable', async () => {
+  it('saves an engine-completed Natural Selection allocation shorter than its levels', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -701,11 +829,27 @@ describe('selected outcomes', () => {
       }),
       forOffer: (draft: AuthoredTraitOfferTraits) => ({
         load: () => {
-          const targets = draft.options[0]?.naturalSelectionTargets ?? [];
-          const next = targets.length >= 2 ? [] : ['ApolloWeaponBoon'];
+          const placed = (draft.options[0]?.naturalSelectionTargets ?? []).length > 0;
           return Object.freeze({
-            complete: targets.length >= 2,
-            picker: pickerModel(next.map((traitKey) => ({ label: traitKey, value: traitKey }))),
+            complete: placed,
+            rows: [
+              {
+                picker: pickerModel(
+                  ['ApolloWeaponBoon', 'ZeusWeaponBoon'].map((value) => ({ label: value, value })),
+                ),
+                requiresEarlierRow: false,
+              },
+              placed
+                ? {
+                    picker: pickerModel([{ label: 'ZeusWeaponBoon', value: 'ZeusWeaponBoon' }]),
+                    requiresEarlierRow: false,
+                    forcedTraitKey: 'ZeusWeaponBoon',
+                  }
+                : { picker: pickerModel([]), requiresEarlierRow: true },
+            ],
+            ...(placed
+              ? { completedTargets: ['ApolloWeaponBoon', 'ZeusWeaponBoon', 'ApolloWeaponBoon'] }
+              : {}),
           });
         },
       }),
@@ -783,20 +927,17 @@ describe('selected outcomes', () => {
         />
       </Provider>,
     );
-    await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
+    await user.click(screen.getByRole('button', { name: 'Natural Selection 1st core' }));
     await user.click(screen.getByRole('option', { name: 'ApolloWeaponBoon' }));
-    await user.click(screen.getByRole('option', { name: 'ApolloWeaponBoon' }));
-    expect(screen.getAllByRole('button', { name: /Position \d+:/ })).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: /Position 3:/ })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(commit).toHaveBeenCalledTimes(1);
     expect(
       (commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits).options[0]?.naturalSelectionTargets,
-    ).toEqual(['ApolloWeaponBoon', 'ApolloWeaponBoon']);
+    ).toEqual(['ApolloWeaponBoon', 'ZeusWeaponBoon', 'ApolloWeaponBoon']);
     application.dispose();
   });
 
-  it('reopens a retained-invalid Natural position, preserves it as disabled, and saves one replacement offer', async () => {
+  it('shows a retained-invalid Natural target as unavailable and saves the replacement allocation', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -882,15 +1023,21 @@ describe('selected outcomes', () => {
         slotCount: 8,
         authoredComplete: false,
       }),
-      forOffer: (draft: AuthoredTraitOfferTraits, retainedTargetKey?: string) => ({
+      forOffer: (draft: AuthoredTraitOfferTraits) => ({
         load: () => {
-          const targets = draft.options[0]?.naturalSelectionTargets ?? [];
+          const target = draft.options[0]?.naturalSelectionTargets?.[0];
           return Object.freeze({
-            complete: targets.length > 0,
-            picker:
-              targets.length === 0 && retainedTargetKey === retained
-                ? invalidRetainedPicker
-                : pickerModel([{ label: 'Poseidon Attack', value: replacement }]),
+            complete: target === replacement,
+            rows: [
+              {
+                picker:
+                  target === retained
+                    ? invalidRetainedPicker
+                    : pickerModel([{ label: 'Poseidon Attack', value: replacement }]),
+                requiresEarlierRow: false,
+              },
+            ],
+            ...(target === replacement ? { completedTargets: [replacement] } : {}),
           });
         },
       }),
@@ -968,10 +1115,9 @@ describe('selected outcomes', () => {
         <TraitOfferEditor address={base.owner} interactions={interactions} onCommit={commit} />
       </Provider>,
     );
-    await user.click(screen.getByRole('button', { name: 'Position 1: Apollo Attack' }));
-    expect(
-      screen.getByRole('button', { name: 'Position 1: Apollo Attack (retained)' }),
-    ).toBeTruthy();
+    const position1 = screen.getByRole('button', { name: 'Natural Selection 1st core' });
+    expect(position1.textContent).toContain('Apollo Attack');
+    await user.click(position1);
     expect(
       screen.getByRole('option', { name: 'Apollo Attack' }).getAttribute('aria-disabled'),
     ).toBe('true');
@@ -1222,6 +1368,7 @@ describe('selected outcomes', () => {
                             ...offer.options.slice(1),
                           ]) as AuthoredTraitOfferTraits['options'],
                         }),
+                      keyLabel: circeKeyLabel,
                       forOffer: () => Object.freeze({ load: () => domain }),
                     }),
                   ]),
@@ -1478,6 +1625,7 @@ describe('selected outcomes', () => {
                             ...offer.options.slice(1),
                           ]) as AuthoredTraitOfferTraits['options'],
                         }),
+                      keyLabel: circeKeyLabel,
                       forOffer: () => Object.freeze({ load: () => domain }),
                     }),
                   ]),

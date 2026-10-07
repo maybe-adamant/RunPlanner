@@ -35,12 +35,6 @@ const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
-function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string | undefined {
-  return model.sections
-    .flatMap((section) => section.items)
-    .find((item) => Object.is(item.value, value))?.label;
-}
-
 export function TraitAcquisitionTargetOutcome({
   controlId,
   findingTarget,
@@ -367,6 +361,7 @@ export function TraitOfferSelectedOutcome({
           findingTarget={findingTarget(circeChild.child.address)}
           controlId={semanticOwnerControlElementId(circeChild.child.address)}
           domain={circeDomain.result}
+          keyLabel={circeChild.keyLabel}
           option={option}
           onSelect={(resolution) => onUpdate(circeChild.update(value, resolution))}
         />
@@ -386,11 +381,7 @@ export function TraitOfferSelectedOutcome({
               : 'Choose a greatest-level trait'
           }
           {...('echoPomTarget' in option && option.echoPomTarget !== undefined
-            ? {
-                triggerLabel:
-                  pickerValueLabel(echoPomDomain.result.picker, option.echoPomTarget) ??
-                  String(option.echoPomTarget),
-              }
+            ? { triggerLabel: echoPomChild.targetLabel(option.echoPomTarget) }
             : {})}
         />
       )}
