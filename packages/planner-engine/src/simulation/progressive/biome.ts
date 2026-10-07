@@ -128,8 +128,10 @@ function lifecycleBlockFindings(
         : semanticAddressKey(candidate.owner) === semanticAddressKey(blockedAt),
     );
     if (row === undefined || row.stale) continue;
+    // A window crossing blocks at whichever of its two actions execution reaches first.
     const reasons = room.roomActionRoster.issues.flatMap((issue): SemanticFinding[] =>
-      roomActionKey(issue.reference) === row.key &&
+      (roomActionKey(issue.reference) === row.key ||
+        (issue.kind === 'window' && roomActionKey(issue.precedingAction) === row.key)) &&
       (issue.kind === 'dependency' || issue.kind === 'window')
         ? [
             Object.freeze({

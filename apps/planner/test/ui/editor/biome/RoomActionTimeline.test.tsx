@@ -1062,9 +1062,9 @@ describe('OccurrenceRoomActions', () => {
           ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
           .order,
       ).toEqual([
+        { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-        { kind: 'useFountain' },
       ]),
     );
 
@@ -1084,26 +1084,26 @@ describe('OccurrenceRoomActions', () => {
         ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
     await waitFor(() =>
       expect(poolActionOrder()).toEqual([
+        { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-        { kind: 'useFountain' },
       ]),
     );
 
     view.application.store.dispatch(authoredProjectUndoRequested());
     await waitFor(() =>
       expect(poolActionOrder()).toEqual([
+        { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-        { kind: 'useFountain' },
       ]),
     );
     view.application.store.dispatch(authoredProjectRedoRequested());
     await waitFor(() =>
       expect(poolActionOrder()).toEqual([
+        { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-        { kind: 'useFountain' },
       ]),
     );
 

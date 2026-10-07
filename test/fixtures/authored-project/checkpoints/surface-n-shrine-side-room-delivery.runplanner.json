@@ -275,14 +275,14 @@
               "roomActions": {
                 "order": [
                   {
-                    "kind": "purchaseHermesShrineOffer",
-                    "generationKey": "initial:secondLeft",
-                    "rushed": false
-                  },
-                  {
                     "kind": "interactIncomingReward",
                     "producerPoint": "roomRewardPickup",
                     "acquisitionRole": "self"
+                  },
+                  {
+                    "kind": "purchaseHermesShrineOffer",
+                    "generationKey": "initial:secondLeft",
+                    "rushed": false
                   }
                 ]
               },

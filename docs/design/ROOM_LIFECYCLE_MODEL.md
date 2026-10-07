@@ -1142,7 +1142,7 @@ inventory. A delayed
 purchase is scheduled at source cleanup without consuming a delay use and
 derives a later required pickup at the reached encounter-end host. At the
 Preboss of the fourth entered biome, entry expires every still-pending delivery
-into a required phase-less post-outgoing pickup; it does not decrement the
+into a required phase-less pickup that gates the exit; it does not decrement the
 ordinary encounter clock or acquire a reward. A shorter itinerary never flushes:
 its pending delivery keeps counting down into the Boss encounter, and one still
 pending when the planned route ends stays pending; the purchase is valid, and

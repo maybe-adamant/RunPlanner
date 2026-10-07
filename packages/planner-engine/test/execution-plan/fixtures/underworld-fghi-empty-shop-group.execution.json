@@ -5951,7 +5951,7 @@
                 }
               }
             ],
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -6067,5 +6067,5 @@
       }
     }
   ],
-  "planFingerprint": "dd879697"
+  "planFingerprint": "abbbb569"
 }

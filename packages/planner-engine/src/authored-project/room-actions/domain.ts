@@ -171,6 +171,19 @@ function contribution(
   });
 }
 
+/**
+ * A World Shop's items are usable from room entry and never wait for the exit
+ * unlock. Where the room opens no outgoing doors (Preboss) they span the room;
+ * elsewhere purchases follow outgoing generation.
+ */
+function shopPurchaseWindow(catalog: Catalog, lifecycleProfileKey: string): RoomActionWindow {
+  return catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey]?.operations.some(
+    (operation) => operation.kind === 'generateOutgoingBatch',
+  ) === false
+    ? frozen({ kind: 'standard', phase: 'afterCombat' })
+    : frozen({ kind: 'postOutgoing' });
+}
+
 function producerWindow(
   catalog: Catalog,
   lifecycleProfileKey: string,
@@ -313,7 +326,7 @@ function baseContribution(
         biome,
         occurrence,
         reference,
-        'required',
+        'optional',
         frozen({ kind: 'postOutgoing' }),
         hermesShrinePurchaseDependencies(occurrence, reference, undefined),
       );
@@ -436,7 +449,7 @@ function baseContribution(
         occurrence,
         reference,
         'optional',
-        frozen({ kind: 'postOutgoing' }),
+        shopPurchaseWindow(catalog, lifecycleProfileKey),
         [],
         owner,
       );
@@ -538,11 +551,14 @@ function baseContribution(
         hermesDelivery.biomeKey === biome.biomeKey &&
         hermesDelivery.sourceOccurrenceId === occurrence.occurrenceId;
       // A countdown delivery spawns as a required object; a rushed item is
-      // ordinary loot the player may leave behind.
+      // ordinary loot the player may leave behind. World Shop purchases never gate the exit.
       const required =
         (hermesDelivery !== undefined && !sameRoomShrineDelivery) ||
-        (producer?.pickups.some((pickup) => pickup.key === reference.entryKey && pickup.required) ??
-          false);
+        (occurrence.state.kind !== 'shop' &&
+          (producer?.pickups.some(
+            (pickup) => pickup.key === reference.entryKey && pickup.required,
+          ) ??
+            false));
       const site = acquisitionSiteFromStorageKey(
         createOccurrenceAddress(biome, occurrence.occurrenceId),
         reference.siteKey,
@@ -562,13 +578,16 @@ function baseContribution(
             ? sameRoomShrineDelivery
               ? frozen({ kind: 'postOutgoing' })
               : reference.encounterPhaseKey === undefined && finalPrebossHost
-                ? frozen({ kind: 'postOutgoing' })
+                ? // A flushed delivery is a required object that gates the exit.
+                  frozen({ kind: 'standard', phase: 'afterCombat' })
                 : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
             : producer?.placement === 'roomExit' ||
                 (producer?.source.kind === 'traitOffer' &&
                   producer.source.owner.kind === 'shopOffer') ||
                 reference.siteKey === 'roomExit'
-              ? frozen({ kind: 'postOutgoing' })
+              ? occurrence.state.kind === 'shop'
+                ? shopPurchaseWindow(catalog, lifecycleProfileKey)
+                : frozen({ kind: 'postOutgoing' })
               : frozen({ kind: 'standard', phase: 'afterCombat' }),
         [
           ...travelDealDependencies(occurrence, reference),

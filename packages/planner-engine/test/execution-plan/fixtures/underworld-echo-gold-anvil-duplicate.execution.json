@@ -5765,7 +5765,7 @@
               "removedTraitKey": "StaffDoubleAttackTrait",
               "addedTraitKeys": ["StaffDashAttackTrait", "StaffTripleShotTrait"]
             },
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           },
           {
             "kind": "transformation",
@@ -5775,7 +5775,7 @@
               "removedTraitKey": "StaffDashAttackTrait",
               "addedTraitKeys": ["StaffJumpSpecialTrait", "StaffExAoETrait"]
             },
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [],
@@ -5959,5 +5959,5 @@
       }
     }
   ],
-  "planFingerprint": "0fa3e718"
+  "planFingerprint": "1bbd0b44"
 }

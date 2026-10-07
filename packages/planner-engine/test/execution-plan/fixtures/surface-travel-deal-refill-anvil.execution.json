@@ -6106,7 +6106,7 @@
                 }
               }
             ],
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           },
           {
             "kind": "transformation",
@@ -6116,7 +6116,7 @@
               "removedTraitKey": "StaffDoubleAttackTrait",
               "addedTraitKeys": ["StaffLongAttackTrait", "StaffJumpSpecialTrait"]
             },
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           },
           {
             "kind": "travelDealRefill",
@@ -6134,7 +6134,7 @@
                 "reward": { "rewardType": "ChaosWeaponUpgrade", "producerLifecycleKey": "Shop" }
               }
             },
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [
@@ -6672,5 +6672,5 @@
       }
     }
   ],
-  "planFingerprint": "d86ab6f0"
+  "planFingerprint": "572300da"
 }

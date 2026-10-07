@@ -6158,7 +6158,7 @@
                 }
               }
             ],
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           },
           {
             "kind": "acquisition",
@@ -6204,7 +6204,7 @@
                 }
               }
             ],
-            "window": { "kind": "postOutgoing" }
+            "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
         "dependencies": [
@@ -6737,5 +6737,5 @@
       }
     }
   ],
-  "planFingerprint": "4c5d8b5d"
+  "planFingerprint": "abd83c45"
 }

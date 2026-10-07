@@ -107,7 +107,7 @@ describe('surface-shrine-deliveries execution fixture', () => {
         host: qOccurrenceIds.preboss,
         sourceKey: flushKey,
         rewardType: 'MaxManaDrop',
-        window: { kind: 'postOutgoing' },
+        window: { kind: 'standard', phase: 'afterCombat' },
       },
     ]);
   });
