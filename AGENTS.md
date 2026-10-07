@@ -195,12 +195,27 @@ each delegated gate it must:
   expected deletions, starting files or symbols, and governing document sections;
 - omit full parent history by default and permit only one write-capable agent in
   the shared worktree, while allowing distinct bounded read-only investigations;
-- reuse an executor for remediation or adjacent coherent work, but replace it
-  when ownership, design, or context changes materially;
-- use a fresh independent reviewer after implementation stabilizes and perform
-  one bounded remediation pass rather than an open-ended review loop; and
+- delegate to a standing executor for the task's lane and retire it when its
+  ownership, design, or context changes materially, after about ten tasks, once
+  its current context passes about half the window, or after its first
+  compaction (both read from its transcript); within a multi-gate plan, retire
+  only at a gate boundary, and only when the next gate would approach the window
+  or the agent has been compacted, handing off through the plan document; when a
+  large lane agent has gone cold and the task is small, prefer a fresh agent
+  with a tight packet;
+- review stabilized work with the lane's standing reviewer, never an agent that
+  executed the change; use a fresh independent reviewer for schema changes,
+  execution-protocol changes, foundational model corrections, and plan
+  closure; perform one bounded remediation pass rather than an open-ended
+  review loop; and
 - own broad phase-closure checks and the final bird's-eye review of contract
   fidelity, ownership, superseded paths, tests, growth, and documentation.
+
+Keep a session roster of standing agents by lane, each with its task count and
+approximate size: executors for the engine, the planner application and UI,
+catalog declarations and game-source research, and the execution plan with its
+fixtures and game module; reviewers for engine/execution and planner/UI. The
+roster is session state, not a repository file.
 
 The main session decides whether a reported contract conflict requires a plan
 amendment, narrower scope, or user input. Delegation does not replace its own
