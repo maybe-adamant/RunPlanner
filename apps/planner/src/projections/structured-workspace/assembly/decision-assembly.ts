@@ -1198,6 +1198,19 @@ function assembleBatchDecision(
             targetInteraction: 'replaceable' as const,
           });
   redirectDecisionFocus(input.markerDestinations, batch);
+  // An impossible Anomaly is repaired by restoring its remembered room; navigation stays on the door.
+  if (batch.source.kind !== 'hubDecision') {
+    for (const target of batch.targets) {
+      if (batch.kind !== 'takeoverBatch' && target.door.room.anomaly !== undefined)
+        input.markerDestinations.redirectToContext(
+          target.marker,
+          target.marker,
+          batch.key,
+          target.door.room.marker,
+          'revertAnomaly',
+        );
+    }
+  }
   if (sourceDecisionRemoval !== undefined) {
     const workbench = projectedTargets[0]?.node;
     if (workbench === undefined) {

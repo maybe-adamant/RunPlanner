@@ -30,6 +30,16 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
   }
 }
 
+/** A finding repaired by one addressless control of its own owner, chosen by its code. */
+function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
+  if (finding.origin.kind === 'acquisitionRole' && finding.code === 'seaStarDuplicationUnavailable')
+    return 'seaStar';
+  // The next visit is chosen by appending any unvisited room.
+  if (finding.origin.kind === 'hubVisit' && finding.code === 'hubVisitOrderIncomplete')
+    return 'visitChoice';
+  return undefined;
+}
+
 /** Feedback consumes the completed navigation destination, never origin ancestry. */
 export function indexFindingsByRepairTarget(
   findings: readonly SemanticFinding[],
@@ -43,7 +53,8 @@ export function indexFindingsByRepairTarget(
       destination.markByCode?.[finding.code] ?? destination.markAddress ?? destination.focusAddress;
     const key = findingControlKey(
       markAddress,
-      destination.markControl ??
+      codeControl(finding) ??
+        destination.markControl ??
         (finding.origin.kind === 'roomAction' &&
         semanticAddressKey(markAddress) === semanticAddressKey(finding.origin)
           ? roomActionControl(finding)

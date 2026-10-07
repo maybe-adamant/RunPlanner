@@ -4,7 +4,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 
 export function HubCompletionHandoff({
@@ -15,7 +15,6 @@ export function HubCompletionHandoff({
   readonly node: WorkspaceHubDecisionNode;
 }) {
   const findingTarget = useFindingTarget();
-  const findingAnchor = useFindingAnchor();
   const executeIntent = useCommandIntent();
   const dispatch = useAppDispatch();
   const exit = node.completedExit;
@@ -32,8 +31,6 @@ export function HubCompletionHandoff({
       </header>
       <div className="exit-list">
         <article
-          {...(exit.kind === 'locked' ? findingAnchor(exit.marker.address) : {})}
-          tabIndex={exit.kind === 'locked' ? -1 : undefined}
           aria-label={`${node.completedExit.targetLabel} room offer`}
           className="exit-row hub-exit-door"
           data-available={exit.kind !== 'locked'}

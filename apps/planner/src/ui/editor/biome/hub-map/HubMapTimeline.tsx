@@ -8,7 +8,7 @@ import {
 } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
-import type { HubAction } from '@run-planner/engine/authored-project';
+import type { HubAction, SemanticAddress } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -27,7 +27,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   HubMapQualityLegend,
   hubMapAnnotations,
@@ -147,6 +147,7 @@ function TimelineMapMarker({
   atCapacity,
   complete,
   locked,
+  nextVisitOwner,
   onAppend,
   readinessOwner,
   slot,
@@ -154,6 +155,8 @@ function TimelineMapMarker({
   visitPosition,
   waiting,
 }: {
+  /** The next visit, chosen by appending any unvisited room. */
+  readonly nextVisitOwner: SemanticAddress | undefined;
   readonly waiting: boolean;
   readonly actionPosition: number | undefined;
   readonly annotation: HubMapAnnotation;
@@ -167,6 +170,7 @@ function TimelineMapMarker({
   readonly visitPosition: number;
 }) {
   const findingTarget = useFindingTarget();
+  const findingMark = useFindingMark();
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const marker = useRef<HTMLButtonElement>(null);
@@ -213,6 +217,10 @@ function TimelineMapMarker({
           data-room-map-overlay-control
           data-visited={isVisited}
           {...(markerTarget ?? {})}
+          // Every room that can be appended next repairs the next missing visit.
+          {...(nextVisitOwner === undefined || !canAppend || locked || waiting
+            ? {}
+            : findingMark(nextVisitOwner, 'visitChoice'))}
           ref={(element) => {
             marker.current = element;
             markerTarget?.ref(element);
@@ -396,6 +404,7 @@ export function HubMapTimeline({
                   complete={complete}
                   key={annotation.hubSlotKey}
                   locked={locked}
+                  nextVisitOwner={node.visits[visitOrder.length]?.marker.address}
                   onAppend={appendVisit}
                   waiting={waiting}
                   readinessOwner={node.owner}

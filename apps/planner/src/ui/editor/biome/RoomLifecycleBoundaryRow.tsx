@@ -42,7 +42,12 @@ export function LifecycleBoundaryRow({
         <>
           <strong>{label}</strong>
           {fieldsCage === undefined ? null : (
-            <span className="fields-cage-label" {...findingAnchor(fieldsCage.owner)} tabIndex={-1}>
+            <span
+              className="fields-cage-label"
+              {...(fieldsCage.owner === undefined
+                ? {}
+                : { ...findingAnchor(fieldsCage.owner), tabIndex: -1 })}
+            >
               {fieldsCage.label}
             </span>
           )}

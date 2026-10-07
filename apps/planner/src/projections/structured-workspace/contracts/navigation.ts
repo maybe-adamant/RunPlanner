@@ -41,7 +41,16 @@ export type WorkspaceInspectorSubject =
 
 /** A control without a semantic address of its own, named within its mark owner. */
 export type WorkspaceFindingControl =
-  'delete' | 'move' | 'place' | 'nemesisTrait' | 'nemesisReward' | 'wheelChoice' | 'pickupOutcome';
+  | 'delete'
+  | 'move'
+  | 'place'
+  | 'nemesisTrait'
+  | 'nemesisReward'
+  | 'wheelChoice'
+  | 'pickupOutcome'
+  | 'seaStar'
+  | 'revertAnomaly'
+  | 'visitChoice';
 
 export interface WorkspaceInspectorDestination {
   readonly biomeKey?: string;

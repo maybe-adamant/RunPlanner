@@ -469,7 +469,13 @@ describe('BiomeWorkspace', () => {
       semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 3)),
     );
     expect(count.getAttribute('data-selected-finding')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(count));
+    // Navigation lands on the first room that can be visited next.
+    const nextRooms = () =>
+      [...document.querySelectorAll<HTMLElement>('.hub-timeline-map-marker')].filter(
+        (marker) => marker.dataset.hasFindings === 'true',
+      );
+    expect(nextRooms().length).toBeGreaterThan(1);
+    await waitFor(() => expect(document.activeElement).toBe(nextRooms()[0]));
     await view.user.click(screen.getByRole('button', { name: 'Combat 01: Unvisited. Add visit.' }));
     await waitFor(() => expect(screen.getByText('3 of 6 planned')).toBeTruthy());
 
@@ -486,7 +492,7 @@ describe('BiomeWorkspace', () => {
     expect(nextCount.getAttribute('data-semantic-owner')).toBe(
       semanticAddressKey(createHubVisitAddress(nBiome, 'hub', 4)),
     );
-    await waitFor(() => expect(document.activeElement).toBe(nextCount));
+    await waitFor(() => expect(document.activeElement).toBe(nextRooms()[0]));
   });
 
   it('routes the combined Hub action finding to the Timeline fountain and repairs it there', async () => {
