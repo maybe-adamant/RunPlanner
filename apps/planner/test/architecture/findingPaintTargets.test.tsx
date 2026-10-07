@@ -50,7 +50,6 @@ afterEach(cleanup);
 /** Containers that carry their own mark; every other container is a navigation anchor. */
 const approvedContainers = [
   // Dialog outcome sections, pending their own policy.
-  'trait-stone-outcome',
   'trait-selected-outcome-detail',
   'echo-last-run-choice',
   // A Hub requirement spread across the whole board or map has no single control.

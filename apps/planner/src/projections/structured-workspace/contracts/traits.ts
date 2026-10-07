@@ -201,7 +201,13 @@ export interface WorkspaceNaturalSelectionDomain {
 export interface WorkspaceLatestModelTargetsDomain {
   readonly requiredCount: number;
   readonly branchAgreement: boolean;
-  readonly picker: ContextualPickerModel<string>;
+  /** One picker per required Hammer; a row never offers another row's target. */
+  readonly hammers: readonly ContextualPickerModel<string>[];
+  /** The complete distinct target list after choosing this Hammer at this row. */
+  readonly targetsFor: (
+    index: number,
+    traitKey: string,
+  ) => readonly [string] | readonly [string, string];
 }
 
 export type WorkspaceTraitCarrierChildInteraction =

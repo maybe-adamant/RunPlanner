@@ -25,6 +25,7 @@ import {
   useOutcomeFeedback,
   type FeedbackEntry,
 } from './TraitOfferForm';
+import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
 import { TraitOfferOption } from './TraitOfferOption';
 import { TraitAcquisitionTargetOutcome } from './TraitOfferSelectedOutcome';
 import {
@@ -158,7 +159,7 @@ function EchoLastRunBoonChoiceEditor({
   };
   // The nested form is the visible dialog body, so it owns its own fixed feedback region.
   const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
-  const selectedPayload = (
+  const payload = (
     <>
       {selectedComplete === undefined ||
       selectedRow?.identity === undefined ||
@@ -205,6 +206,24 @@ function EchoLastRunBoonChoiceEditor({
       ) : null}
     </>
   );
+  const payloadPresent =
+    (selectedComplete !== undefined &&
+      selectedRow?.identity !== undefined &&
+      domain.targetRequiredFor(selectedRow.identity) &&
+      targetLoadable !== undefined) ||
+    (selectedKind === 'allTogether' && carrier?.kind === 'allTogether') ||
+    (selectedKind === 'naturalSelection' &&
+      carrier?.kind === 'naturalSelection' &&
+      selectedRow !== undefined);
+  const selectedPayload =
+    !payloadPresent || selectedRow?.identity === undefined ? undefined : (
+      <SelectedOutcomeBlock
+        name="Selected trait outcome"
+        traitLabel={domain.labelFor(selectedRow.identity)}
+      >
+        {payload}
+      </SelectedOutcomeBlock>
+    );
   const carrierMessage =
     selectedKind === undefined || carrier !== undefined
       ? undefined
@@ -221,16 +240,7 @@ function EchoLastRunBoonChoiceEditor({
       className="echo-last-run-choice trait-choice-region"
       aria-label="Boon Boon Boon choice"
     >
-      <header className="echo-last-run-choice-header">
-        <div>
-          <p className="eyebrow">Echo offer &gt; Boon Boon Boon choice</p>
-          <h3>Boon Boon Boon choice</h3>
-          <p>Choose one to three previous-run outcomes, then select the one Echo grants.</p>
-        </div>
-        <button className="quiet-action action-compact" onClick={onBack} type="button">
-          Back to Echo offer
-        </button>
-      </header>
+      <h3>Boon Boon Boon choice</h3>
       <TraitOfferForm
         options={rows.map((row, index) => {
           const traitPicker = domain.traitPickerFor(

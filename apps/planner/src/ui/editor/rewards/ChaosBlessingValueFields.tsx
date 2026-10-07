@@ -6,11 +6,14 @@ type ChaosBlessingRarity = Exclude<TraitRarity, 'Duo'>;
 
 /** The single numeric editor for a declared Chaos blessing result. */
 export function ChaosBlessingValueFields({
+  inline = false,
   operands,
   rarity,
   values,
   onChange,
 }: {
+  /** Label beside the slider, as a selected-outcome row. */
+  readonly inline?: boolean;
   readonly operands: readonly ChaosNumericOperand[];
   readonly rarity: ChaosBlessingRarity;
   readonly values: Readonly<Record<string, number>>;
@@ -20,7 +23,12 @@ export function ChaosBlessingValueFields({
     const effective = effectiveChaosOperand(operand, rarity);
     const current = values[operand.key] ?? effective.authoringDefault;
     return (
-      <label className="field-control" key={operand.key}>
+      <label
+        className={
+          inline ? 'field-control field-control-inline trait-outcome-row' : 'field-control'
+        }
+        key={operand.key}
+      >
         <span>{effective.label}</span>
         <ChaosValueSlider
           ariaLabel={effective.label}

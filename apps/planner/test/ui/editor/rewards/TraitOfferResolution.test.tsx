@@ -503,18 +503,18 @@ describe('resolution outcomes', () => {
       </Provider>,
     );
 
-    expect(
-      screen.getByText('Choose the boon Echo grants before room chronology continues.'),
-    ).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Boon Boon Boon choice' }).textContent).toBe(
+      'Choose a boon',
+    );
     expect(screen.queryByRole('region', { name: 'Boon Boon Boon choice' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Choose' }));
-    expect(screen.getByText('Echo offer > Boon Boon Boon choice')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
+    expect(screen.getByRole('heading', { name: 'Boon Boon Boon choice' })).toBeDefined();
     expect(rendered.container.querySelectorAll('input[name$="-selected"]')).toHaveLength(1);
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
     await user.click(await screen.findByText('Aphrodite · Heart Breaker'));
-    await user.click(screen.getByRole('button', { name: 'Back to Echo offer' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(commit).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Choose' }));
+    await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     expect(screen.getByLabelText('Boon Boon Boon outcome 1').textContent).toContain(
       'Choose a trait',
     );
@@ -544,13 +544,13 @@ describe('resolution outcomes', () => {
       await user.click(await screen.findByText(grant));
     }
     await user.click(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' }));
-    expect(screen.getByRole('button', { name: 'Edit choice' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Boon Boon Boon choice' })).toBeDefined();
     // The nested Save writes into the offer draft; only the offer's Save commits.
     expect(commit).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Edit choice' }));
+    await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     await user.click(screen.getByLabelText('Boon Boon Boon outcome 1'));
     await user.click(await screen.findByText('Demeter · Natural Selection'));
-    await user.click(screen.getByRole('button', { name: 'Back to Echo offer' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(commit).toHaveBeenCalledTimes(1);
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
@@ -627,7 +627,7 @@ describe('resolution outcomes', () => {
     expect(echoDomainLoads).toHaveBeenCalledTimes(loadsBeforeOuterSummary + 1);
     retainedRendered.rerender(retainedInvalidEditor());
     expect(echoDomainLoads).toHaveBeenCalledTimes(loadsBeforeOuterSummary + 1);
-    await user.click(screen.getByRole('button', { name: 'Edit choice' }));
+    await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     expect(screen.getByLabelText('Boon Boon Boon outcome 1 rarity').textContent).toContain('Rare');
     expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
       'disabled',
@@ -670,7 +670,7 @@ describe('resolution outcomes', () => {
         />
       </Provider>,
     );
-    await user.click(screen.getByRole('button', { name: 'Edit choice' }));
+    await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     await user.click(screen.getByRole('button', { name: 'Choose all targets' }));
     await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));
     await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));

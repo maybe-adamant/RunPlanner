@@ -88,7 +88,7 @@ describe('Natural Selection editor feedback', () => {
 });
 
 describe('selected outcomes', () => {
-  it('stages two Latest Model targets and can replace a completed selection', async () => {
+  it('renders Latest Model as one bound picker row per Hammer', async () => {
     const user = userEvent.setup();
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
@@ -112,15 +112,16 @@ describe('selected outcomes', () => {
       .optionDomain(value, 'option1')
       .children.find((entry) => entry.child.kind === 'latestModelTargets');
     if (child?.child.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
+    const label = (key: string) => application.catalog.traits.byKey[key]!.label;
     const domain = {
       requiredCount: 2,
       branchAgreement: true,
-      picker: pickerModel(
-        [first, second].map((key) => ({
-          value: key,
-          label: application.catalog.traits.byKey[key]!.label,
-        })),
-      ),
+      hammers: [
+        pickerModel([{ value: first, label: label(first) }]),
+        pickerModel([{ value: second, label: label(second) }]),
+      ],
+      targetsFor: (index: number, traitKey: string) =>
+        (index === 0 ? [traitKey] : [first, traitKey]) as [string] | [string, string],
     };
     const interaction = {
       ...base,
@@ -144,28 +145,17 @@ describe('selected outcomes', () => {
       </Provider>
     );
     const { rerender } = render(view(value));
-    await user.click(await screen.findByLabelText('Latest Model target'));
-    await user.click(
-      screen.getByRole('option', { name: application.catalog.traits.byKey[first]!.label }),
-    );
-    expect(onUpdate).not.toHaveBeenCalled();
-    expect(
-      screen.queryByRole('option', { name: application.catalog.traits.byKey[first]!.label }),
-    ).toBeNull();
-    await user.click(
-      screen.getByRole('option', { name: application.catalog.traits.byKey[second]!.label }),
-    );
+    const hammer2 = await screen.findByRole('button', { name: 'Latest Model Hammer 2' });
+    expect(hammer2).toHaveProperty('disabled', true);
+    expect(hammer2.title).toBe('Choose Hammer 1 first');
+    await user.click(screen.getByRole('button', { name: 'Latest Model Hammer 1' }));
+    await user.click(screen.getByRole('option', { name: label(first) }));
     const saved = onUpdate.mock.calls.at(-1)![0] as AuthoredTraitOfferTraits;
-    expect(saved.options[0]?.icarusHammerTargets).toEqual([first, second]);
+    expect(saved.options[0]?.icarusHammerTargets).toEqual([first]);
     rerender(view(saved));
-    await user.click(await screen.findByLabelText('Latest Model target'));
-    await user.click(
-      screen.getByRole('option', { name: application.catalog.traits.byKey[second]!.label }),
-    );
-    await user.click(
-      screen.getByRole('option', { name: application.catalog.traits.byKey[first]!.label }),
-    );
-    expect(onUpdate.mock.calls.at(-1)![0].options[0].icarusHammerTargets).toEqual([second, first]);
+    await user.click(screen.getByRole('button', { name: 'Latest Model Hammer 2' }));
+    await user.click(screen.getByRole('option', { name: label(second) }));
+    expect(onUpdate.mock.calls.at(-1)![0].options[0].icarusHammerTargets).toEqual([first, second]);
   });
 
   it('keeps a Circe draft across a context change, follows its outcome, and closes with the trait dialog', async () => {
@@ -1054,17 +1044,14 @@ describe('selected outcomes', () => {
         />
       </Provider>,
     );
-    expect(screen.getByRole('group', { name: 'Ransom preview' }).textContent).toContain(
-      'Removes 1 opposing traits and grants +4 levels to Zeus Attack',
+    expect(screen.getByRole('group', { name: 'Ransom preview' }).textContent).toBe(
+      'EffectRemoves Hera Attack · +4 levels to Zeus Attack',
     );
-    expect(screen.getByText('Removed: Hera Attack')).toBeTruthy();
     const selectedRadios = screen.getAllByRole('radio');
     await user.click(selectedRadios[1]!);
     await waitFor(() => expect(screen.queryByRole('group', { name: 'Ransom preview' })).toBeNull());
     await user.click(selectedRadios[0]!);
-    expect(
-      await screen.findByText('Removes 1 opposing traits and grants +4 levels to Zeus Attack'),
-    ).toBeTruthy();
+    expect(await screen.findByText('Removes Hera Attack · +4 levels to Zeus Attack')).toBeTruthy();
     application.dispose();
   });
 
@@ -1526,7 +1513,9 @@ describe('selected outcomes', () => {
       }
       // Unavailability is dialog feedback, not text inside the Circe control group.
       const feedback = screen.getByRole('status', { name: 'Offer feedback' });
-      const circeGroup = screen.getByRole('button', { name: controlLabel }).closest('fieldset');
+      const circeGroup = screen
+        .getByRole('button', { name: controlLabel })
+        .closest<HTMLElement>('.trait-outcome-row');
       expect(circeGroup?.hidden).toBe(false);
       if (!outerAvailable) {
         const message = screen.getByText('This Circe trait has no available outcome here.');
@@ -1569,7 +1558,12 @@ describe('selected outcomes', () => {
       .optionDomain(value, 'option1')
       .children.find((entry) => entry.child.kind === 'latestModelTargets');
     if (child?.child.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
-    const domain = { requiredCount: 2, branchAgreement: false, picker: pickerModel([]) };
+    const domain = {
+      requiredCount: 2,
+      branchAgreement: false,
+      hammers: [pickerModel([]), pickerModel([])],
+      targetsFor: () => ['x'] as [string],
+    };
     const interaction = {
       ...base,
       value,
@@ -1612,7 +1606,7 @@ describe('selected outcomes', () => {
         />
       </Provider>,
     );
-    const picker = await screen.findByLabelText('Latest Model target');
+    const picker = await screen.findByLabelText('Latest Model Hammer 1');
     expect((picker as HTMLButtonElement).disabled).toBe(true);
     const message = screen.getByText('No target count is supported across every route branch.');
     const feedback = screen.getByRole('status', { name: 'Offer feedback' });

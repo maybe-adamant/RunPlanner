@@ -20,8 +20,13 @@ import {
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingMark,
+  useFindingTarget,
+  type FindingTargetProps,
+} from '@planner/ui/feedback/useFindingTarget';
 import { CompoundOutcomeEditor } from './CompoundOutcomeEditor';
+import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import {
   ignoreOutcomeFeedback,
   useReportedFeedback,
@@ -52,7 +57,7 @@ export function ConcaveStoneOutcomeEditor({
   readonly onSelect: (result: AuthoredConcaveStoneResult | null) => void;
   readonly children: ReactNode;
 }) {
-  const findingTarget = useFindingTarget();
+  const findingMark = useFindingMark();
   const authoredResult = offer.concaveStoneResult;
   const authoredOptionKey = authoredResult?.kind === 'proc' ? authoredResult.optionKey : undefined;
   const authoredOption =
@@ -120,22 +125,31 @@ export function ConcaveStoneOutcomeEditor({
     onSelect({ kind: 'noProc' });
   };
   return (
-    <fieldset
-      {...findingTarget(interaction.child.address)}
-      tabIndex={-1}
-      className="trait-stone-outcome"
-      aria-label="Concave Stone outcome"
-    >
-      <legend>Concave Stone · Chance: {domain.procSupport}%</legend>
-      <label className="trait-stone-activation">
+    <section className="trait-selected-outcome" role="group" aria-label="Concave Stone outcome">
+      <h3>Concave Stone · {domain.procSupport}%</h3>
+      <SelectedOutcomeRow label="Activated">
         <input
+          aria-label="Concave Stone Activated"
           checked={procced || domain.required}
           disabled={domain.required}
           onChange={(event) => onToggle(event.target.checked)}
           type="checkbox"
-        />{' '}
-        Concave Stone Activated
-      </label>
+        />
+      </SelectedOutcomeRow>
+      <ContextualPicker
+        ariaLabel="Concave Stone target"
+        findingMark={findingMark(interaction.child.address, 'concaveStoneTarget')}
+        id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
+        label="Grants"
+        layout="inline"
+        {...(procced || domain.required
+          ? {}
+          : { disabledTitle: 'Activate the Concave Stone first' })}
+        model={picker}
+        onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
+        placeholder="Choose an unpicked boon"
+        {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
+      />
       {authoredResult === undefined || domain.resultSupport !== 'impossible' ? null : (
         <button
           className="quiet-action action-compact"
@@ -146,20 +160,10 @@ export function ConcaveStoneOutcomeEditor({
         </button>
       )}
       {!procced && !domain.required ? null : (
-        <>
-          <ContextualPicker
-            ariaLabel="Concave Stone target"
-            id={`${semanticOwnerControlElementId(interaction.child.address)}-picker`}
-            label="Target"
-            model={picker}
-            onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
-            placeholder="Choose an unpicked boon"
-            {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
-          />
-          {children}
-        </>
+        // The granted trait's own follow-ups belong under its Grants row.
+        <div className="trait-outcome-nested">{children}</div>
       )}
-    </fieldset>
+    </section>
   );
 }
 
@@ -274,7 +278,7 @@ export function AllTogetherOutcomeEditor({
     <CompoundOutcomeEditor
       activeIndex={activeIndex}
       complete={complete}
-      legend="Elemental grants"
+      legend="Grants"
       onBegin={begin}
       rows={sets.map((set) => {
         const key = set.setKey;
@@ -396,7 +400,7 @@ export function NaturalSelectionOutcomeEditor({
       {...(findingTarget === undefined ? {} : { findingTarget })}
       activeIndex={activeIndex}
       complete={complete}
-      legend="Natural Selection targets"
+      legend="Targets"
       onBegin={begin}
       rows={rows}
       startLabel="Choose all targets"
@@ -567,30 +571,24 @@ export function TraitOfferSelectedSpecialOutcomes({
         />
       ))}
       {ransomAssessment === undefined ? null : (
-        <fieldset className="trait-selected-outcome-detail" aria-label="Ransom preview">
-          <legend>Ransom preview</legend>
-          {!ransomAssessment.branchAgreement ? (
-            <p>
+        <div role="group" aria-label="Ransom preview">
+          <SelectedOutcomeRow label="Effect">
+            {!ransomAssessment.branchAgreement ? (
               <span aria-label="Not applicable">—</span>
-            </p>
-          ) : (
-            <>
-              <p>
-                Removes {ransomAssessment.removedCount} opposing traits and grants +
-                {ransomAssessment.levelBonus} levels to{' '}
+            ) : (
+              <span>
+                Removes{' '}
+                {ransomAssessment.removedTraitKeys.length === 0
+                  ? `${ransomAssessment.removedCount} opposing traits`
+                  : ransomAssessment.removedTraitKeys.map(interaction.traitLabel).join(', ')}{' '}
+                · +{ransomAssessment.levelBonus} levels to{' '}
                 {ransomAssessment.buffedTraitKeys.length === 0
                   ? 'no retained traits'
                   : ransomAssessment.buffedTraitKeys.map(interaction.traitLabel).join(', ')}
-              </p>
-              {ransomAssessment.removedTraitKeys.length === 0 ? null : (
-                <p className="trait-selected-outcome-detail">
-                  Removed:{' '}
-                  {ransomAssessment.removedTraitKeys.map(interaction.traitLabel).join(', ')}
-                </p>
-              )}
-            </>
-          )}
-        </fieldset>
+              </span>
+            )}
+          </SelectedOutcomeRow>
+        </div>
       )}
     </>
   );

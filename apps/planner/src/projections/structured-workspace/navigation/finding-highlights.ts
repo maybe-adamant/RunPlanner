@@ -34,6 +34,13 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
 function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
   if (finding.origin.kind === 'acquisitionRole' && finding.code === 'seaStarDuplicationUnavailable')
     return 'seaStar';
+  // Stone findings arise only for a chosen proc or a required Stone, whose checkbox is fixed.
+  if (
+    finding.origin.kind === 'traitOffer' &&
+    (finding.code === 'concaveStoneResultMissing' ||
+      finding.code === 'concaveStoneResultUnavailable')
+  )
+    return 'concaveStoneTarget';
   return undefined;
 }
 

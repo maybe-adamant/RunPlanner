@@ -173,10 +173,14 @@ describe('trait offer editor entry and dialog', () => {
       const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone Activated' });
       expect(checkbox).toHaveProperty('checked', false);
       expect(
-        screen.getByRole('group', { name: 'Concave Stone outcome' }).querySelector('legend')
-          ?.textContent,
-      ).toBe('Concave Stone · Chance: 75%');
-      expect(screen.queryByRole('button', { name: 'Concave Stone target' })).toBeNull();
+        within(screen.getByRole('group', { name: 'Concave Stone outcome' })).getByRole('heading')
+          .textContent,
+      ).toBe('Concave Stone · 75%');
+      // The target waits, disabled with a hover hint, until the Stone activates.
+      expect(screen.getByRole('button', { name: 'Concave Stone target' })).toHaveProperty(
+        'title',
+        'Activate the Concave Stone first',
+      );
       if (kind === 'proc') await user.click(checkbox);
       // Opening and editing the Stone child must not publish a partial command.
       expect(application.store.getState().projectWorkspace).toBe(before.projectWorkspace);
@@ -249,7 +253,10 @@ describe('trait offer editor entry and dialog', () => {
     );
     const stone = await screen.findByRole('group', { name: 'Concave Stone outcome' });
     const stoneTarget = within(stone).getByRole('button', { name: 'Concave Stone target' });
+    // The Stone-granted boon's follow-ups belong to the Stone block, not the pick's.
     const childTarget = within(stone).getByRole('button', { name: 'option2 acquisition target' });
+    // The primary pick has no follow-up, so only the Stone block shows.
+    expect(screen.queryByRole('region', { name: 'Selected trait outcome' })).toBeNull();
     expect(
       stoneTarget.compareDocumentPosition(childTarget) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0);
@@ -323,7 +330,7 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferDialog interactions={workspace.interactions} target={trait} />
       </Provider>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+    await user.click(await screen.findByRole('button', { name: 'Boon Boon Boon choice' }));
     const targetName = 'Boon Boon Boon selected trait target';
     expect(screen.getByRole('button', { name: targetName })).toBeTruthy();
     const nestedFeedback = within(
@@ -394,7 +401,7 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferDialog interactions={reopened.interactions} target={trait} />
       </Provider>,
     );
-    await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+    await user.click(await screen.findByRole('button', { name: 'Boon Boon Boon choice' }));
     expect(screen.getByRole('button', { name: targetName }).textContent).toBe(repairedLabel);
     expect(screen.getByRole('button', { name: 'Boon Boon Boon outcome 2' })).toBeTruthy();
     application.dispose();
@@ -444,7 +451,7 @@ describe('trait offer editor entry and dialog', () => {
           <TraitOfferDialog interactions={workspace.interactions} target={trait} />
         </Provider>,
       );
-      await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+      await user.click(await screen.findByRole('button', { name: 'Boon Boon Boon choice' }));
       expect(screen.getByRole('button', { name: 'Save Boon Boon Boon choice' })).toHaveProperty(
         'disabled',
         true,
@@ -518,10 +525,10 @@ describe('trait offer editor entry and dialog', () => {
           <TraitOfferDialog interactions={reopened.interactions} target={trait} />
         </Provider>,
       );
-      await user.click(await screen.findByRole('button', { name: 'Edit choice' }));
+      await user.click(await screen.findByRole('button', { name: 'Boon Boon Boon choice' }));
       expect(
         await screen.findByRole('group', {
-          name: effect === 'All Together' ? 'Elemental grants' : 'Natural Selection targets',
+          name: effect === 'All Together' ? 'Grants' : 'Targets',
         }),
       ).toBeTruthy();
       const nestedOwner = screen.getByRole('region', { name: 'Boon Boon Boon choice' });
@@ -914,7 +921,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.getByText('+2 Path of Stars')).toBeTruthy();
     expect(
       screen.getByRole('heading', {
-        name: `Customize Hex · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
+        name: `Selected outcome · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
       }),
     ).toBeTruthy();
     expect(screen.queryByText('Selected trait outcome')).toBeNull();
@@ -923,7 +930,8 @@ describe('trait offer editor entry and dialog', () => {
         'Choose the Rare and Epic identities present in this layout. The linked God Sent talent is derived by chronology.',
       ),
     ).toBeNull();
-    const godSent = screen.getByText('God Sent:', { selector: 'strong' }).closest('.hex-god-sent');
+    const godSent = document.querySelector('.trait-selected-outcome .hex-god-sent');
+    expect(godSent?.textContent).toBeTruthy();
     expect(godSent?.textContent).not.toContain(' + ');
     expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
     expect(screen.queryByText(/^Rarity:/)).toBeNull();

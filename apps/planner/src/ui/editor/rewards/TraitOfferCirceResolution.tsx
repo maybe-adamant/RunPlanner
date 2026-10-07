@@ -23,6 +23,7 @@ import {
   useFindingFeedbackEntries,
   type FindingTargetProps,
 } from '@planner/ui/feedback/useFindingTarget';
+import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import { circeUnavailableMessage } from './traitOfferOptions';
 
 export function TraitOfferCirceResolution({
@@ -101,17 +102,7 @@ export function TraitOfferCirceResolution({
     : (domain?.arcanaCards.map((card) => ({ value: card.key, label: card.label })) ?? []);
   return (
     <>
-      <fieldset className="trait-circe-resolution">
-        <legend>
-          {fear
-            ? 'Vows to suppress'
-            : domain?.effect === 'activateArcana'
-              ? 'Red Citrine Arcana'
-              : 'Lapis Arcana'}{' '}
-          (
-          {domain === undefined ? <span aria-label="Not applicable">—</span> : domain.requiredCount}
-          )
-        </legend>
+      <SelectedOutcomeRow label={fear ? 'Suppressed Vows' : 'Arcana'}>
         <button
           {...findingTarget}
           id={controlId}
@@ -124,9 +115,15 @@ export function TraitOfferCirceResolution({
           title={domain === undefined ? 'Evaluating this Circe outcome…' : undefined}
           onClick={() => dispatch(circeResolutionDialogOpened(address))}
         >
-          {currentKeys.length === 0 ? title : currentKeys.map(labelFor).join(' · ')}
+          <span>
+            {currentKeys.length > 0
+              ? currentKeys.map(labelFor).join(' · ')
+              : domain === undefined || domain.requiredCount === 0
+                ? '—'
+                : `Choose ${domain.requiredCount}`}
+          </span>
         </button>
-      </fieldset>
+      </SelectedOutcomeRow>
       {draft === null ? null : (
         <EditorDialog
           eyebrow="Circe"

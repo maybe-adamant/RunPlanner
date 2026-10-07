@@ -1652,6 +1652,17 @@ describe('planner history interaction', () => {
     ).toContainEqual(
       expect.objectContaining({ code: 'concaveStoneResultUnavailable', origin: target }),
     );
+    // The Grants picker that repairs it carries the mark, not the Stone block.
+    expect(
+      screen
+        .getByRole('button', { name: 'Concave Stone target' })
+        .getAttribute('data-has-findings'),
+    ).toBe('true');
+    expect(
+      screen
+        .getByRole('group', { name: 'Concave Stone outcome' })
+        .hasAttribute('data-has-findings'),
+    ).toBe(false);
 
     await view.user.click(
       screen.getByRole('button', { name: 'Clear unavailable Concave Stone result' }),
@@ -1710,7 +1721,7 @@ describe('planner history interaction', () => {
     const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone Activated' });
     expect(checkbox).toHaveProperty('checked', true);
     expect(checkbox).toHaveProperty('disabled', true);
-    expect(screen.getByText('Concave Stone · Chance: 100%')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Concave Stone · 100%' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Concave Stone target' })).toBeTruthy();
   });
 
