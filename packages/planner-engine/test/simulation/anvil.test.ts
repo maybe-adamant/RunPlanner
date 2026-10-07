@@ -235,6 +235,93 @@ describe('Anvil of Fates acquisition settlement', () => {
     ).toEqual([]);
   });
 
+  it('rejects a draft any divergent branch rejects', () => {
+    const capability = anvilCapabilityFor(
+      branchWithoutHammers(),
+      branchWithHammerFrontier('StaffDoubleAttackTrait'),
+    );
+    expect(
+      capability?.assess({
+        kind: 'anvilOfFates',
+        removedTraitKey: 'StaffDoubleAttackTrait',
+        addedTraitKeys: ['StaffLongAttackTrait', 'StaffJumpSpecialTrait'],
+      }),
+    ).toMatchObject({
+      legal: false,
+      findings: expect.arrayContaining(['removedHammerUnavailable']),
+    });
+  });
+
+  it('assesses a draft result exactly as settlement would', () => {
+    const branch = branchWithHammerFrontier('StaffDoubleAttackTrait');
+    const capability = anvilCapabilityFor(branch);
+    const result = (removedTraitKey: string | null, added: readonly [string, string]) =>
+      Object.freeze({
+        kind: 'anvilOfFates' as const,
+        removedTraitKey,
+        addedTraitKeys: added,
+      });
+    const settledFindings = (value: ReturnType<typeof result>) => {
+      const biome = createBiomeAddress('Surface', 'Q');
+      const occurrence = createOccurrenceAddress(biome, createOccurrenceId('anvil-candidates'));
+      const site = createAcquisitionSiteAddress(occurrence, 'shopPurchase');
+      const entry = createAcquisitionEntryAddress(site, 'anvil');
+      const offer = Object.freeze({ rewardType: 'ChaosWeaponUpgrade' as const });
+      const findings = new Map();
+      const settled = applyProducerRoleHistory(
+        catalog,
+        [branch],
+        Object.freeze({
+          origin: createShopOfferAddress(biome, occurrence.occurrenceId, 'PremiumProgress'),
+          offer,
+          producerLifecycleKey: 'Q_WorldShop',
+          instanceProvenance: 'paid' as const,
+          presentsMaterializedScreen: true,
+          traitContext: {},
+          dispositionByAcquisitionRole: Object.freeze({ self: Object.freeze({ kind: 'normal' }) }),
+          anvilResultsByAcquisitionRole: Object.freeze({ self: value }),
+        }),
+        Object.freeze({
+          ...resolveAcquisitionRole(catalog.rewards, offer, 'self', 'purchase'),
+          historySequence: 2,
+        }),
+        (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
+        undefined,
+        undefined,
+        Object.freeze({ site, entry }),
+      );
+      mergeRewardFindingEmissions(findings, settled.findingEmissions);
+      return [...findings.values()].flatMap(
+        (value: { finding: { code: string; evidence: { findings?: readonly string[] } } }) =>
+          value.finding.code === 'rewardAcquisitionUnavailable'
+            ? (value.finding.evidence.findings ?? [])
+            : [],
+      );
+    };
+
+    const legal = result('StaffDoubleAttackTrait', [
+      'StaffLongAttackTrait',
+      'StaffJumpSpecialTrait',
+    ]);
+    expect(capability?.assess(legal)).toEqual({ legal: true, findings: [] });
+    expect(settledFindings(legal)).toEqual([]);
+
+    const illegal = result('StaffLongAttackTrait', [
+      'StaffDoubleAttackTrait',
+      'StaffDoubleAttackTrait',
+    ]);
+    const assessment = capability?.assess(illegal);
+    expect(assessment).toMatchObject({ legal: false });
+    expect(assessment?.findings).toEqual(
+      expect.arrayContaining([
+        'removedHammerUnavailable',
+        'additionsMustBeDistinct',
+        'additionUnavailable:StaffDoubleAttackTrait',
+      ]),
+    );
+    expect(settledFindings(illegal)).toEqual(assessment?.findings);
+  });
+
   it('rebuilds its candidate domains from an earlier Hammer frontier edit', () => {
     const before = anvilCapabilityFor(branchWithHammerFrontier('StaffDoubleAttackTrait'));
     const after = anvilCapabilityFor(branchWithHammerFrontier('StaffLongAttackTrait'));

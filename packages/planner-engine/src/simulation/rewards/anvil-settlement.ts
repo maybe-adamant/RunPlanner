@@ -23,6 +23,8 @@ export interface AnvilCandidateCapability {
     removedTraitKey: string | null,
     priorAddedTraitKeys: readonly string[],
   ) => readonly string[];
+  /** Settlement's assessment of a result at this frontier; legal only where every branch accepts it. */
+  readonly assess: (result: AuthoredAnvilResult) => AnvilResultAssessment;
 }
 
 interface AnvilAcquisitionFrontier {
@@ -267,9 +269,29 @@ export function createAnvilCandidateCapability(
         ),
       ),
     );
+  const assess = (result: AuthoredAnvilResult): AnvilResultAssessment => {
+    const assessments = frontiers.map(({ state, source, temporaryHammerTraitKeys }) =>
+      assessAnvilResult(catalog, state, result, source, temporaryHammerTraitKeys),
+    );
+    const [first] = assessments;
+    const agreed = assessments.every(
+      (assessment) =>
+        assessment.findings.length === first?.findings.length &&
+        assessment.findings.every((finding, index) => finding === first.findings[index]),
+    );
+    return Object.freeze({
+      legal: assessments.every((assessment) => assessment.legal),
+      // Agreeing branches keep settlement's exact list; divergent ones publish each code once.
+      findings:
+        agreed && first !== undefined
+          ? first.findings
+          : Object.freeze([...new Set(assessments.flatMap((assessment) => assessment.findings))]),
+    });
+  };
   return Object.freeze({
     removedTraitKeys,
     addedTraitKeysFor,
+    assess,
   });
 }
 
