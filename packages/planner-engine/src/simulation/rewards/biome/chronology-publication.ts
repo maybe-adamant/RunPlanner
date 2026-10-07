@@ -62,6 +62,13 @@ export function publishChronology(
   }
   for (const [childKey, checkpoint] of accumulation.traitChildSettlements) {
     if (checkpoint.candidateContexts.length === 0) continue;
+    if (checkpoint.address.kind === 'naturalSelectionResult') {
+      // Its context is the offer's own pre-acquisition contact, published once under the offer.
+      const key = semanticAddressKey(checkpoint.address.trait);
+      if (!traitCandidateContexts.has(key))
+        traitCandidateContexts.set(key, Object.freeze([...checkpoint.candidateContexts]));
+      continue;
+    }
     const key =
       checkpoint.address.kind === 'traitAcquisitionTarget' ||
       checkpoint.address.kind === 'allTogetherSet'

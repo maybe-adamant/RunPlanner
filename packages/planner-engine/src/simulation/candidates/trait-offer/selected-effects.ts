@@ -180,7 +180,7 @@ export function evaluateNaturalSelectionResultCandidate(
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
   query: NaturalSelectionResultCandidateQuery,
 ): NaturalSelectionResultCandidateEvaluation {
-  const capability = candidateArtifacts?.at(query.result);
+  const capability = candidateArtifacts?.at(query.result.trait);
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.result.trait);
   const selected =
     query.value.kind === 'traits'
