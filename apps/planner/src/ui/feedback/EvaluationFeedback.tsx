@@ -10,9 +10,10 @@ import {
   presentBlockedView,
   type StatusPresentation,
 } from '@planner/projections/evaluationProjection';
-import type {
-  WorkspaceInspectorDestination,
-  WorkspaceRoute,
+import {
+  findingRepairTarget,
+  type WorkspaceInspectorDestination,
+  type WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
 import { findingSelected } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
@@ -114,7 +115,14 @@ export function ProjectFindings({
     issue === undefined
       ? undefined
       : () => dispatch(findingSelected(nextRepairSelection(issue, focusByOwner)));
-  const copy = issue === undefined ? undefined : presentAssessmentIssue(issue);
+  const copy =
+    issue === undefined
+      ? undefined
+      : presentAssessmentIssue(
+          issue,
+          (finding) =>
+            findingRepairTarget(finding, focusByOwner) ?? semanticAddressKey(finding.origin),
+        );
 
   return (
     <section className="project-findings" aria-labelledby="project-findings-title">

@@ -18,6 +18,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectAddress,
+  createRoomFeatureAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -106,7 +107,13 @@ describe('evaluation presentation', () => {
         ...finding('targetRoomUnavailable'),
         evidence: { exclusionReasons: ['eligibilityRequirement'] },
       }),
-    ).toEqual({ title: 'Room unavailable' });
+    ).toEqual({ title: 'Door cannot offer this room' });
+    expect(
+      presentFinding({
+        ...finding('targetRoomUnavailable'),
+        evidence: { anomalyReplacement: { kind: 'sourceUnavailable' } },
+      }),
+    ).toEqual({ title: 'Anomaly cannot occur here' });
   });
 
   it('gives Travel Deal repair guidance without assuming its triggering purchase is absent', () => {
@@ -117,7 +124,7 @@ describe('evaluation presentation', () => {
       }),
     ).toEqual({
       title: 'Travel Deal refill unavailable',
-      description: 'Check the triggering purchase and refill item, or remove this refill purchase.',
+      description: 'Check its triggering purchase, or remove this refill.',
     });
     expect(presentFinding(finding('shopPurchaseUnavailable'))).toEqual({
       title: 'Purchase order unavailable',
@@ -141,7 +148,7 @@ describe('evaluation presentation', () => {
     });
     expect(isChaosGatePositionFinding(finding('targetRoomUnavailable', gate))).toBe(false);
     expect(presentFinding(finding('targetRoomUnavailable', gate))).toEqual({
-      title: 'Room unavailable',
+      title: 'Door cannot offer this room',
     });
   });
   it('provides explicit player copy for semantic findings', () => {
@@ -158,7 +165,7 @@ describe('evaluation presentation', () => {
 
   it('keeps concise repair titles and only details that add constraints', () => {
     expect(presentFinding(finding('continuationMissing'))).toEqual({
-      title: 'Continue route',
+      title: 'Open the next room from the Hub',
     });
     expect(presentFinding(finding('wrongHammerLoadout'))).toEqual({
       title: 'Hammer incompatible with loadout',
@@ -166,9 +173,23 @@ describe('evaluation presentation', () => {
     expect(presentFinding(finding('shopPurchaseUnavailable'))).toEqual({
       title: 'Purchase order unavailable',
     });
-    expect(presentFinding(finding('hubVisitOrderIncomplete'))).toEqual({
-      title: 'Plan six room visits and use the fountain',
-    });
+  });
+
+  it('states Hub requirements from their evidence', () => {
+    const visits = (actualCount: number, fountainUsed: boolean) =>
+      presentFinding({
+        ...finding('hubVisitOrderIncomplete'),
+        evidence: { actualCount, requiredCount: 6, fountainUsed },
+      }).title;
+    expect(visits(3, false)).toBe('Plan 6 Hub visits and use the fountain');
+    expect(visits(3, true)).toBe('Plan 6 Hub visits');
+    expect(visits(6, false)).toBe('Use the Hub fountain');
+    expect(
+      presentFinding({
+        ...finding('hubOpenSetIncomplete'),
+        evidence: { actualCount: 4, minimumCount: 9, maximumCount: 10 },
+      }),
+    ).toEqual({ title: 'Open 9–10 Hub rooms' });
   });
 
   it('presents each closed keepsake equip-result family truthfully', () => {
@@ -178,8 +199,7 @@ describe('evaluation presentation', () => {
     const transcendentEmbryo = createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo');
 
     expect(presentFinding(finding('keepsakeEquipResultMissing', jeweledPom))).toEqual({
-      title: 'Choose Jeweled Pom result',
-      description: 'Choose the granted Hades trait.',
+      title: 'Choose the Hades trait from Jeweled Pom',
     });
     expect(presentFinding(finding('keepsakeEquipResultUnavailable', jeweledPom))).toEqual({
       title: 'Jeweled Pom result unavailable',
@@ -429,44 +449,42 @@ describe('evaluation presentation', () => {
 
 describe('timeline finding guidance', () => {
   const origin = createProjectAddress();
-  const finding = (reason: string, dependencyKind?: string): SemanticFinding => ({
+  const finding = (
+    reason: string,
+    dependencyKind?: string,
+    checkpointUnavailable?: boolean,
+  ): SemanticFinding => ({
     code: 'roomActionOrderUnavailable',
     severity: 'error',
     phase: 'encounterResolution',
     origin,
-    evidence: { reason, ...(dependencyKind === undefined ? {} : { dependencyKind }) },
+    evidence: {
+      reason,
+      ...(dependencyKind === undefined ? {} : { dependencyKind }),
+      ...(checkpointUnavailable === undefined ? {} : { checkpointUnavailable }),
+    },
   });
 
-  it('groups distinct order reasons without duplicate guidance or internal keys', () => {
-    const dependency = finding('dependency', 'afterCheckpoint');
-    const issue = {
-      owner: origin,
-      regionKey: 'test',
-      kind: 'invalid',
-      reasons: [dependency, dependency, finding('window')],
-    } as const satisfies AssessmentIssue;
-    expect(presentAssessmentIssue(issue)).toEqual({
+  it('names the order repair from its dependency evidence', () => {
+    expect(presentFinding(finding('dependency', 'afterCheckpoint'))).toEqual({
       title: 'Action out of order',
-      description:
-        'Move this action after its prerequisite. Move this action into its allowed room phase.',
+      description: 'Move it after its prerequisite.',
     });
     expect(presentFinding(finding('dependency', 'beforeCheckpoint')).description).toBe(
-      'Move this action before its required checkpoint.',
+      'Move it before its required checkpoint.',
     );
+    expect(presentFinding(finding('window')).description).toBe(
+      'Move it into its allowed room phase.',
+    );
+    expect(presentFinding(finding('dependency', 'afterCheckpoint', true))).toEqual({
+      title: 'Room phase for this action is gone',
+    });
   });
 
   it.each([
-    [
-      'staleHermesShrineDelivery',
-      'Shrine delivery unavailable',
-      'Remove this delivery from the timeline.',
-    ],
-    [
-      'staleClockedTraitPickup',
-      'Pickup unavailable',
-      'Check this pickup’s source and room placement.',
-    ],
-  ])('explains %s from its source evidence', (reason, title, description) => {
+    ['staleHermesShrineDelivery', 'Shrine delivery is not due here'],
+    ['staleClockedTraitPickup', 'Supply Chain pickup cannot occur here'],
+  ])('titles %s from its source evidence', (reason, title) => {
     expect(
       presentFinding({
         code: 'rewardSourceUnavailable',
@@ -475,7 +493,7 @@ describe('timeline finding guidance', () => {
         origin,
         evidence: { reason },
       }),
-    ).toEqual({ title, description });
+    ).toEqual({ title });
   });
 });
 
@@ -493,6 +511,7 @@ describe('outer finding collapse', () => {
   ): SemanticFinding => ({ code, severity: 'error', phase: 'rewardGeneration', origin, evidence });
   const issueOf = (owner: SemanticAddress, reasons: readonly SemanticFinding[]) =>
     ({ kind: 'invalid', owner, regionKey: 'collapse', reasons }) as const satisfies AssessmentIssue;
+  const byOrigin = (finding: SemanticFinding) => semanticAddressKey(finding.origin);
 
   it('folds trait option and outcome owners into one trait offer entry with their count', () => {
     const entry = presentAssessmentIssue(
@@ -502,10 +521,11 @@ describe('outer finding collapse', () => {
         traitFinding('echoPomTargetMissing', createEchoPomTargetAddress(offer, 'option1')),
         traitFinding('circeResolutionMissing', createCirceResolutionAddress(offer, 'option2')),
       ]),
+      byOrigin,
     );
     expect(entry).toEqual({
-      title: 'Trait offer needs attention',
-      description: '4 issues to repair in its editor.',
+      title: 'Trait offer: trait already equipped',
+      description: '+3 more in its editor',
       dialog: { kind: 'traitOffer', owner: offer },
       innerFindingCount: 4,
     });
@@ -517,11 +537,9 @@ describe('outer finding collapse', () => {
         traitFinding('traitOfferMissing', offer),
         traitFinding('traitOfferGenerationUnavailable', offer),
       ]),
+      byOrigin,
     );
-    expect(entry).toEqual({
-      title: 'Choose a trait offer',
-      description: 'Trait choices cannot appear together',
-    });
+    expect(entry).toEqual({ title: 'Choose a trait offer' });
     expect(entry.dialog).toBeUndefined();
   });
 
@@ -534,27 +552,108 @@ describe('outer finding collapse', () => {
           }),
           traitFinding('encounterIntroductionRequired', phase, { decisionKey: 'infiniteRoster' }),
         ]),
+        byOrigin,
       ),
     ).toEqual({
-      title: 'Encounter customization needs attention',
-      description: '2 issues to repair in its editor.',
+      title: 'Encounter customization unavailable',
+      description: '+1 more in its editor',
       dialog: { kind: 'encounterCustomization', owner: phase },
       innerFindingCount: 2,
     });
     expect(
-      presentAssessmentIssue(issueOf(phase, [traitFinding('encounterUnavailable', phase)])),
+      presentAssessmentIssue(
+        issueOf(phase, [
+          traitFinding('encounterCustomizationRequired', phase, { decisionKey: 'composition' }),
+        ]),
+        byOrigin,
+      ),
+    ).toEqual({
+      title: 'Encounter customization required',
+      description: 'Fresh File plans require customized encounters.',
+      dialog: { kind: 'encounterCustomization', owner: phase },
+      innerFindingCount: 1,
+    });
+    expect(
+      presentAssessmentIssue(
+        issueOf(phase, [traitFinding('encounterUnavailable', phase)]),
+        byOrigin,
+      ),
     ).toEqual({ title: 'Encounter unavailable' });
   });
 
   it('folds Pom targets under their level resolution', () => {
     const resolution = createLevelResolutionAddress(phase, 'selection');
     expect(
-      presentAssessmentIssue(issueOf(resolution, [traitFinding('missingPomTarget', resolution)])),
+      presentAssessmentIssue(
+        issueOf(resolution, [traitFinding('missingPomTarget', resolution)]),
+        byOrigin,
+      ),
     ).toEqual({
-      title: 'Pom resolution needs attention',
-      description: '1 issue to repair in its editor.',
+      title: 'Pom resolution: choose a Pom target',
       dialog: { kind: 'levelResolution', owner: resolution },
       innerFindingCount: 1,
     });
+  });
+});
+
+describe('grouped repair cards', () => {
+  const room = createOccurrenceAddress(biome, createOccurrenceId('grouped-room'));
+  const well = createRoomFeatureAddress(room, { kind: 'stygianWellPresence' });
+  const pool = createRoomFeatureAddress(room, { kind: 'purgingPoolInventory' });
+  const reason = (code: FindingCode, origin: SemanticAddress): SemanticFinding => ({
+    code,
+    severity: 'error',
+    phase: 'rewardGeneration',
+    origin,
+    evidence: {},
+  });
+  const issueOf = (reasons: readonly SemanticFinding[]) =>
+    ({
+      kind: 'invalid',
+      owner: well,
+      regionKey: 'grouped',
+      reasons,
+    }) as const satisfies AssessmentIssue;
+  const byOrigin = (finding: SemanticFinding) => semanticAddressKey(finding.origin);
+
+  it('keeps the first description when every reason shares its repair target', () => {
+    expect(
+      presentAssessmentIssue(
+        issueOf([
+          reason('stygianWellPlacementUnavailable', well),
+          reason('stygianWellDuplicate', well),
+        ]),
+        () => 'one control',
+      ),
+    ).toEqual({
+      title: 'Well placement unavailable',
+      description: 'Check room eligibility and spacing between Wells.',
+    });
+  });
+
+  it('counts other repair targets instead of appending their copy', () => {
+    expect(
+      presentAssessmentIssue(
+        issueOf([
+          reason('stygianWellPlacementUnavailable', well),
+          reason('purgingPoolUnavailable', pool),
+        ]),
+        byOrigin,
+      ),
+    ).toEqual({ title: 'Well placement unavailable', description: '+1 more to repair here' });
+  });
+
+  it('counts one code repaired at several controls in its title', () => {
+    expect(
+      presentAssessmentIssue(
+        issueOf(
+          ['a', 'b', 'c'].map((key) => ({
+            ...reason('fieldsSpatialPointMissing', well),
+            evidence: { key },
+          })),
+        ),
+        (finding) => String(finding.evidence.key),
+      ),
+    ).toEqual({ title: 'Choose 3 Fields positions' });
   });
 });

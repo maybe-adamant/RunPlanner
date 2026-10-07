@@ -14,6 +14,7 @@ import {
   type CandidateOptionProjection,
   type CandidateProjectionEvaluation,
 } from '../candidates/candidateProjection';
+import { formatFindingSentence, presentFinding } from '../evaluationProjection';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -226,6 +227,14 @@ function siblingExplanation(
       };
 }
 
+/** The finding's own presented copy, when the candidate context adds nothing to it. */
+function presented(
+  kind: CandidateExplanation['kind'],
+  finding: SemanticFinding,
+): CandidateExplanation {
+  return { kind, message: formatFindingSentence(presentFinding(finding)) };
+}
+
 function findingExplanation(catalog: Catalog, finding: SemanticFinding): CandidateExplanation {
   const sibling = siblingExplanation(catalog, finding);
   if (sibling !== undefined) return sibling;
@@ -235,15 +244,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'unsupportedSparseTraitOffer':
       return { kind: 'trait', message: 'This provider needs three choices.' };
     case 'encounterCustomizationUnavailable':
-      return {
-        kind: 'generic',
-        message: 'Repair this encounter customization or reset customization.',
-      };
     case 'encounterCustomizationRequired':
-      return {
-        kind: 'generic',
-        message: 'Fresh File plans require customized encounters.',
-      };
+      return { kind: 'generic', message: presentFinding(finding).description! };
     case 'encounterIntroductionRequired': {
       const introductionKey = String(finding.evidence.introductionEncounterKey);
       const introduction =
@@ -288,23 +290,21 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         message: 'Restore this missing Gold Gold Gold pickup on the Timeline.',
       };
     case 'roomActionOrderUnavailable':
-      return { kind: 'generic', message: 'Move this action to an allowed timeline position.' };
     case 'roomActionPlacementRequired':
-      return { kind: 'generic', message: 'Place this required action on the Timeline.' };
+      return presented('generic', finding);
     case 'hermesShrineInventoryMissing':
     case 'hermesShrineInventoryWrongGroup':
     case 'hermesShrineInventoryDuplicate':
     case 'hermesShrineInventoryRequirement':
     case 'hermesShrineTravelDealRefillMissing':
     case 'hermesShrineTravelDealRefillUnavailable':
-      return { kind: 'store', message: 'Repair this Hermes Shrine inventory choice.' };
     case 'stygianWellMissing':
     case 'stygianWellWrongGroup':
     case 'stygianWellDuplicate':
     case 'stygianWellPlacementUnavailable':
     case 'stygianWellTravelDealRefillUnavailable':
     case 'stygianWellTwistInvalid':
-      return { kind: 'store', message: 'Repair this Stygian Well inventory choice.' };
+      return presented('store', finding);
     case 'ixionChaosMissing':
     case 'ixionChaosUnavailable':
       return { kind: 'generic', message: 'Repair this Ixion-generated Chaos exit.' };
@@ -370,7 +370,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'nemesisOutcomeUnavailable':
       return { kind: 'encounter', message: 'Choose a Nemesis result legal at this interaction.' };
     case 'echoLastRunBoonMissing':
-      return { kind: 'trait', message: 'Author one to three previous-run boon outcomes.' };
+      return { kind: 'trait', message: 'Choose one to three boons from the previous run.' };
     case 'echoLastRunBoonOptionUnavailable':
       return { kind: 'trait', message: 'Choose a currently eligible previous-run boon outcome.' };
     case 'allTogetherResultMissing':
@@ -387,17 +387,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'judgmentOutcomeMissing':
     case 'judgmentOutcomeWrongCardinality':
     case 'judgmentOutcomeTargetUnavailable':
-      return {
-        kind: 'generic',
-        message: 'Repair the Judgment activation at this Boss completion.',
-      };
     case 'figurineOutcomeMissing':
     case 'figurineOutcomeWrongCardinality':
     case 'figurineOutcomeTargetUnavailable':
-      return {
-        kind: 'generic',
-        message: 'Repair the Crystal Figurine activation after Judgment at this Boss completion.',
-      };
+      return presented('generic', finding);
     case 'keepsakeUnavailable':
       return {
         kind: 'generic',
@@ -439,9 +432,9 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'circeResolutionWrongCardinality':
     case 'circeResolutionTargetUnavailable':
     case 'circeOptionUnavailable':
-      return { kind: 'generic', message: 'Repair the selected Circe outcome.' };
+      return presented('generic', finding);
     case 'traitOfferSelectionUnavailable':
-      return { kind: 'trait', message: 'Repair this exhausted trait offer.' };
+      return presented('trait', finding);
     case 'encounterUnavailable':
       return {
         kind: 'encounter',
@@ -458,7 +451,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         message: 'Fig Leaf cannot skip another combat in this biome or has no uses left.',
       };
     case 'gorgonConditionUnavailable':
-      return { kind: 'encounter', message: 'Gorgon cannot trigger in this encounter.' };
+      return { kind: 'encounter', message: 'Gorgon Amulet cannot trigger in this encounter.' };
     case 'aetosAppearanceUnavailable':
       return { kind: 'encounter', message: 'Repair or remove this Aetos appearance in Events.' };
     case 'fieldsCageOutcomeUnavailable':

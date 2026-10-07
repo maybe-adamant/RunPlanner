@@ -37,6 +37,26 @@ function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefi
   return undefined;
 }
 
+/** The feedback key of the control that repairs a finding, from its navigation destination. */
+export function findingRepairTarget(
+  finding: SemanticFinding,
+  destinations: ReadonlyMap<string, WorkspaceInspectorDestination>,
+): string | undefined {
+  const destination = destinations.get(semanticAddressKey(finding.origin));
+  if (destination === undefined) return undefined;
+  const markAddress =
+    destination.markByCode?.[finding.code] ?? destination.markAddress ?? destination.focusAddress;
+  return findingControlKey(
+    markAddress,
+    codeControl(finding) ??
+      destination.markControl ??
+      (finding.origin.kind === 'roomAction' &&
+      semanticAddressKey(markAddress) === semanticAddressKey(finding.origin)
+        ? roomActionControl(finding)
+        : undefined),
+  );
+}
+
 /** Feedback consumes the completed navigation destination, never origin ancestry. */
 export function indexFindingsByRepairTarget(
   findings: readonly SemanticFinding[],
@@ -44,19 +64,8 @@ export function indexFindingsByRepairTarget(
 ): ReadonlyMap<string, readonly SemanticFinding[]> {
   const result = new Map<string, SemanticFinding[]>();
   for (const finding of findings) {
-    const destination = destinations.get(semanticAddressKey(finding.origin));
-    if (destination === undefined) continue;
-    const markAddress =
-      destination.markByCode?.[finding.code] ?? destination.markAddress ?? destination.focusAddress;
-    const key = findingControlKey(
-      markAddress,
-      codeControl(finding) ??
-        destination.markControl ??
-        (finding.origin.kind === 'roomAction' &&
-        semanticAddressKey(markAddress) === semanticAddressKey(finding.origin)
-          ? roomActionControl(finding)
-          : undefined),
-    );
+    const key = findingRepairTarget(finding, destinations);
+    if (key === undefined) continue;
     const group = result.get(key) ?? [];
     group.push(finding);
     result.set(key, group);

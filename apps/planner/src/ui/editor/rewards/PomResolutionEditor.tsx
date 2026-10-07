@@ -205,7 +205,7 @@ export function PomResolutionLauncher({
     control.status === 'unspecified'
       ? 'Pom target is not selected'
       : control.status === 'invalid'
-        ? 'Pom configuration needs attention'
+        ? 'Pom resolution needs attention'
         : 'Pom configuration has no findings';
   return (
     <button

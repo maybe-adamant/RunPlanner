@@ -156,9 +156,8 @@ it('shows one grouped issue and selects its Timeline launcher without opening it
 
   const repair = screen.getByRole('button', { name: /choose a trait offer/i });
   expect(screen.getAllByRole('button')).toHaveLength(1);
-  expect(repair.querySelector('.finding-description')?.textContent).toBe(
-    'Trait choices cannot appear together',
-  );
+  // Both reasons share the launcher, which carries only the first title.
+  expect(repair.querySelector('.finding-description')).toBeNull();
 
   fireEvent.click(repair);
 
@@ -194,12 +193,9 @@ it('collapses inner trait reasons into one attention entry that selects the laun
   );
 
   const panel = within(container);
-  const repair = panel.getByRole('button', { name: /trait offer needs attention/i });
+  const repair = panel.getByRole('button', { name: /trait offer: choose echo pom target/i });
   expect(panel.getAllByRole('button')).toHaveLength(1);
-  expect(panel.queryByText('Choose Echo Pom target')).toBeNull();
-  expect(repair.querySelector('.finding-description')?.textContent).toBe(
-    '2 issues to repair in its editor.',
-  );
+  expect(repair.querySelector('.finding-description')?.textContent).toBe('+1 more in its editor');
 
   fireEvent.click(repair);
 
