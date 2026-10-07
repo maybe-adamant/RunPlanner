@@ -317,40 +317,26 @@ export function bindTraitOfferOptionDomain(input: {
                           selected: false,
                         }),
                       );
-                      // Authored targets are distinct, so a row omits the other rows' Hammers.
-                      const hammers = Array.from(
-                        { length: Math.max(evaluated.result.requiredCount, targets.length) },
-                        (_, index) =>
-                          projectDirectTraitOutcomePicker(
+                      const hammers = evaluated.result.rows.map((row, index) =>
+                        Object.freeze({
+                          picker: projectDirectTraitOutcomePicker(
                             withDirectTraitOutcomeSelection(
-                              withoutDirectTraitOutcomeValues(
-                                hammerCandidates,
-                                targets.filter((_, other) => other !== index),
+                              hammerCandidates.filter((candidate) =>
+                                row.availableTargetTraitKeys.includes(candidate.value),
                               ),
                               targets[index] === undefined ? [] : [targets[index]],
                             ),
                             (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
                             (traitKey) => traitKey,
                           ),
+                          requiresEarlierRow: row.requiresEarlierRow,
+                          valueByTraitKey: row.valueByTraitKey,
+                        }),
                       );
                       return Object.freeze({
                         requiredCount: evaluated.result.requiredCount,
                         branchAgreement: evaluated.result.branchAgreement,
                         hammers: Object.freeze(hammers),
-                        targetsFor: (index: number, traitKey: string) => {
-                          if (index === 0) {
-                            const second = targets[1];
-                            return Object.freeze(
-                              second === undefined || second === traitKey
-                                ? [traitKey]
-                                : [traitKey, second],
-                            ) as readonly [string] | readonly [string, string];
-                          }
-                          const first = targets[0];
-                          return Object.freeze(
-                            first === undefined ? [traitKey] : [first, traitKey],
-                          ) as readonly [string] | readonly [string, string];
-                        },
                       });
                     },
                   }),

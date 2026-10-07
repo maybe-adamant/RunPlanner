@@ -113,16 +113,22 @@ describe('selected outcomes', () => {
       .children.find((entry) => entry.child.kind === 'latestModelTargets');
     if (child?.child.kind !== 'latestModelTargets') throw new Error('Latest Model child missing');
     const label = (key: string) => application.catalog.traits.byKey[key]!.label;
-    const domain = {
+    const domainFor = (offer: AuthoredTraitOfferTraits) => ({
       requiredCount: 2,
       branchAgreement: true,
       hammers: [
-        pickerModel([{ value: first, label: label(first) }]),
-        pickerModel([{ value: second, label: label(second) }]),
+        {
+          picker: pickerModel([{ value: first, label: label(first) }]),
+          requiresEarlierRow: false,
+          valueByTraitKey: { [first]: [first] as [string] },
+        },
+        {
+          picker: pickerModel([{ value: second, label: label(second) }]),
+          requiresEarlierRow: offer.options[0]?.icarusHammerTargets === undefined,
+          valueByTraitKey: { [second]: [first, second] as [string, string] },
+        },
       ],
-      targetsFor: (index: number, traitKey: string) =>
-        (index === 0 ? [traitKey] : [first, traitKey]) as [string] | [string, string],
-    };
+    });
     const interaction = {
       ...base,
       optionDomain: (
@@ -130,7 +136,12 @@ describe('selected outcomes', () => {
         key: Parameters<typeof base.optionDomain>[1],
       ) => ({
         ...base.optionDomain(offer, key),
-        children: [{ ...child, forOffer: () => ({ load: () => domain }) }],
+        children: [
+          {
+            ...child,
+            forOffer: (offer: AuthoredTraitOfferTraits) => ({ load: () => domainFor(offer) }),
+          },
+        ],
       }),
     } as typeof base;
     const onUpdate = vi.fn();
@@ -1561,8 +1572,11 @@ describe('selected outcomes', () => {
     const domain = {
       requiredCount: 2,
       branchAgreement: false,
-      hammers: [pickerModel([]), pickerModel([])],
-      targetsFor: () => ['x'] as [string],
+      hammers: [pickerModel([]), pickerModel([])].map((picker) => ({
+        picker,
+        requiresEarlierRow: false,
+        valueByTraitKey: {},
+      })),
     };
     const interaction = {
       ...base,

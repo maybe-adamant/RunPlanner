@@ -198,16 +198,18 @@ export interface WorkspaceNaturalSelectionDomain {
   readonly picker: ContextualPickerModel<string>;
 }
 
+export interface WorkspaceLatestModelHammerRow {
+  /** Never offers a Hammer another row holds. */
+  readonly picker: ContextualPickerModel<string>;
+  readonly requiresEarlierRow: boolean;
+  /** The complete target list after choosing each Hammer at this row. */
+  readonly valueByTraitKey: Readonly<Record<string, readonly [string] | readonly [string, string]>>;
+}
+
 export interface WorkspaceLatestModelTargetsDomain {
   readonly requiredCount: number;
   readonly branchAgreement: boolean;
-  /** One picker per required Hammer; a row never offers another row's target. */
-  readonly hammers: readonly ContextualPickerModel<string>[];
-  /** The complete distinct target list after choosing this Hammer at this row. */
-  readonly targetsFor: (
-    index: number,
-    traitKey: string,
-  ) => readonly [string] | readonly [string, string];
+  readonly hammers: readonly WorkspaceLatestModelHammerRow[];
 }
 
 export type WorkspaceTraitCarrierChildInteraction =
