@@ -617,6 +617,10 @@ export interface StructuredWorkspaceProjection {
     readonly import('@run-planner/engine/simulation').SemanticFinding[]
   >;
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
+  /** Marks inside an open trait dialog: each finding on its own owner's control. */
+  readonly traitDialogFindings: (
+    trait: import('@run-planner/engine/authored-project').TraitOfferAddress,
+  ) => ReadonlyMap<string, readonly import('@run-planner/engine/simulation').SemanticFinding[]>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly marker: WorkspaceMarker;
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;

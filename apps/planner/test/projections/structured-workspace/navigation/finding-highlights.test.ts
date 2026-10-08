@@ -20,6 +20,7 @@ import {
   findingControlKey,
   findingRepairTarget,
   indexFindingsByRepairTarget,
+  indexTraitDialogFindings,
 } from '@planner/projections/structured-workspace/navigation/finding-highlights';
 
 it('groups exact, redirected child, and per-slot findings by the same completed destination used for navigation', () => {
@@ -191,5 +192,43 @@ it('marks grouped trait outcome and Boon Boon Boon findings on the row control t
   ]);
   expect(findingRepairTarget(finding('naturalSelectionResultMissing', natural), launcher)).toBe(
     semanticAddressKey(trait),
+  );
+});
+
+it('marks each trait dialog finding on its own owner control, excluding other offers', () => {
+  const biome = createBiomeAddress('Underworld', 'F');
+  const offer = (id: string) =>
+    createTraitOfferAddress(createIncomingRewardAddress(biome, createOccurrenceId(id)), 'source');
+  const trait = offer('dialog-room');
+  const echo = createEchoLastRunBoonAddress(trait, 'option1');
+  const natural = createNaturalSelectionResultAddress(trait, 'option1');
+  const finding = (
+    code: string,
+    origin: SemanticAddress,
+    evidence: SemanticFinding['evidence'] = {},
+  ): SemanticFinding =>
+    ({ code, origin, evidence, phase: 'rewardGeneration', severity: 'error' }) as SemanticFinding;
+  const unavailable = finding('echoLastRunBoonOptionUnavailable', echo, {
+    detail: 'Zeus:ZeusWeaponBoon:Common',
+  });
+  const incomplete = finding('naturalSelectionResultMissing', natural);
+  const elsewhere = finding('traitOfferMissing', offer('other-room'));
+  expect(indexTraitDialogFindings([unavailable, incomplete, elsewhere], trait)).toEqual(
+    new Map([
+      [
+        findingControlKey(
+          echo,
+          echoLastRunOptionControl({
+            giverKey: 'Zeus',
+            traitKey: 'ZeusWeaponBoon',
+            rarity: 'Common',
+          }),
+        ),
+        [unavailable],
+      ],
+      // The nested choice view's launcher also carries its row's finding.
+      [findingControlKey(echo), [unavailable]],
+      [findingControlKey(natural, 'outcomeFirstRow'), [incomplete]],
+    ]),
   );
 });

@@ -22,6 +22,8 @@ interface TargetFeedback {
   readonly issueSelected: boolean;
   readonly focusKey: string | undefined;
   readonly revision: number;
+  /** Set inside an open dialog whose findings map holds only that dialog's findings. */
+  readonly dialog?: true;
 }
 const emptyFindings: StructuredWorkspaceProjection['findingsByRepairTarget'] = new Map();
 const feedback = createContext<TargetFeedback>({
@@ -62,6 +64,19 @@ export function FindingTargetScope({
   return <feedback.Provider value={value}>{children}</feedback.Provider>;
 }
 
+/** An open dialog's own marks: its controls read these findings instead of the outer ones. */
+export function DialogFindingScope({
+  children,
+  findings,
+}: {
+  readonly children: ReactNode;
+  readonly findings: StructuredWorkspaceProjection['findingsByRepairTarget'];
+}) {
+  const outer = useContext(feedback);
+  const value = useMemo(() => ({ ...outer, findings, dialog: true as const }), [outer, findings]);
+  return <feedback.Provider value={value}>{children}</feedback.Provider>;
+}
+
 export interface FindingTargetProps {
   readonly 'aria-disabled': true | undefined;
   readonly 'data-authoring-locked': true | undefined;
@@ -98,6 +113,25 @@ export function useFindingFeedbackEntries(
     (finding) =>
       [semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding))] as const,
   );
+}
+
+/**
+ * An open dialog's findings as feedback entries, once each; `owner` narrows them to one
+ * nested owner. Undefined outside a dialog scope.
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
+export function useDialogFindingEntries(
+  owner?: SemanticAddress,
+): readonly (readonly [key: string, message: string])[] | undefined {
+  const { dialog, findings } = useContext(feedback);
+  if (dialog !== true) return undefined;
+  const ownerKey = owner === undefined ? undefined : semanticAddressKey(owner);
+  const entries = new Map<string, string>();
+  for (const group of findings.values())
+    for (const finding of group)
+      if (ownerKey === undefined || semanticAddressKey(finding.origin) === ownerKey)
+        entries.set(semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding)));
+  return [...entries];
 }
 
 type FocusTarget = (anchor: HTMLElement) => HTMLElement | null;

@@ -16,6 +16,7 @@ import {
   transitionAuthoredHexTreeLayout,
   semanticAddressKey,
   type SemanticAddress,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -49,7 +50,10 @@ import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assem
 import { requireWorkspaceRoom } from './assembly/catalog-room';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
-import { indexFindingsByRepairTarget } from './navigation/finding-highlights';
+import {
+  indexFindingsByRepairTarget,
+  indexTraitDialogFindings,
+} from './navigation/finding-highlights';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
 import { bindRunModifiers } from './interactions/run-modifiers';
 import { bindWorkspaceInteractions } from './interactions/interaction-binding';
@@ -777,6 +781,8 @@ export function createStructuredWorkspaceProjection(
           evaluation.issue?.reasons ?? Object.freeze([]),
           focusByOwner,
         ),
+        traitDialogFindings: (trait: TraitOfferAddress) =>
+          indexTraitDialogFindings(evaluation.issue?.reasons ?? Object.freeze([]), trait),
         interactions,
         marker: Object.freeze({
           address: projectAddress,

@@ -1,4 +1,8 @@
-import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type SemanticAddress,
+  type TraitOfferAddress,
+} from '@run-planner/engine/authored-project';
 import type { SemanticFinding } from '@run-planner/engine/simulation';
 import type {
   WorkspaceFindingControl,
@@ -100,6 +104,40 @@ export function findingRepairTarget(
       destination.markControl ??
       (finding.origin.kind === 'roomAction' && ownMark ? roomActionControl(finding) : undefined),
   );
+}
+
+/** The trait offer whose dialog edits a finding's origin: the offer itself or its child. */
+function editingTraitOffer(origin: SemanticAddress): TraitOfferAddress | undefined {
+  if (origin.kind === 'traitOffer') return origin;
+  return 'trait' in origin && origin.trait.kind === 'traitOffer' ? origin.trait : undefined;
+}
+
+/**
+ * Inside an open trait dialog each finding marks its own owner's control, whatever
+ * outer control its navigation destination marks; a nested view's launcher also
+ * carries the marks of the rows inside it.
+ */
+export function indexTraitDialogFindings(
+  findings: readonly SemanticFinding[],
+  trait: TraitOfferAddress,
+): ReadonlyMap<string, readonly SemanticFinding[]> {
+  const traitKey = semanticAddressKey(trait);
+  const result = new Map<string, SemanticFinding[]>();
+  for (const finding of findings) {
+    const offer = editingTraitOffer(finding.origin);
+    if (offer === undefined || semanticAddressKey(offer) !== traitKey) continue;
+    const control = ownerControl(finding) ?? codeControl(finding);
+    const keys = [findingControlKey(finding.origin, control)];
+    // The nested Boon Boon Boon view opens from its own launcher, which carries its row marks.
+    if (finding.origin.kind === 'echoLastRunBoon' && control !== undefined)
+      keys.push(findingControlKey(finding.origin));
+    for (const key of keys) {
+      const group = result.get(key) ?? [];
+      group.push(finding);
+      result.set(key, group);
+    }
+  }
+  return new Map([...result].map(([key, group]) => [key, Object.freeze(group)]));
 }
 
 /** Feedback consumes the completed navigation destination, never origin ancestry. */

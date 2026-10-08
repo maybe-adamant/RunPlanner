@@ -3,7 +3,8 @@ import {
   type AuthoredTraitOffer,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect } from 'react';
+import type { SemanticFinding } from '@run-planner/engine/simulation';
+import { useCallback, useEffect, type ReactNode } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -17,7 +18,11 @@ import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  DialogFindingScope,
+  useFindingAnchor,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { LauncherButton } from './LauncherButton';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
@@ -93,9 +98,12 @@ export function TraitOfferEditor({
 }
 
 export function TraitOfferDialog({
+  findings,
   interactions,
   target,
 }: {
+  /** The dialog's own marks, keyed by each finding's owner control. */
+  readonly findings?: ReadonlyMap<string, readonly SemanticFinding[]>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly target: TraitOfferAddress;
 }) {
@@ -137,25 +145,41 @@ export function TraitOfferDialog({
       returnFocusId={launcherId(target)}
       title={interaction.giver.label}
     >
-      <TraitOfferEditor
-        address={target}
-        initialView={exactChild?.kind === 'echoLastRunBoon' ? 'echoLastRunBoon' : 'outer'}
-        interactions={interactions}
-        key={`${semanticAddressKey(target)}:${traitOfferRevision(interaction)}`}
-        onCancel={close}
-        onCommit={(value) => {
-          executeIntent(interaction.intentFor(value));
-          close();
-        }}
-        {...(interaction.resetIntent === undefined
-          ? {}
-          : {
-              onReset: () => {
-                executeIntent(interaction.resetIntent!);
-                close();
-              },
-            })}
-      />
+      <DialogFindings findings={findings}>
+        <TraitOfferEditor
+          address={target}
+          initialView={exactChild?.kind === 'echoLastRunBoon' ? 'echoLastRunBoon' : 'outer'}
+          interactions={interactions}
+          key={`${semanticAddressKey(target)}:${traitOfferRevision(interaction)}`}
+          onCancel={close}
+          onCommit={(value) => {
+            executeIntent(interaction.intentFor(value));
+            close();
+          }}
+          {...(interaction.resetIntent === undefined
+            ? {}
+            : {
+                onReset: () => {
+                  executeIntent(interaction.resetIntent!);
+                  close();
+                },
+              })}
+        />
+      </DialogFindings>
     </EditorDialog>
+  );
+}
+
+function DialogFindings({
+  children,
+  findings,
+}: {
+  readonly children: ReactNode;
+  readonly findings: ReadonlyMap<string, readonly SemanticFinding[]> | undefined;
+}) {
+  return findings === undefined ? (
+    children
+  ) : (
+    <DialogFindingScope findings={findings}>{children}</DialogFindingScope>
   );
 }
