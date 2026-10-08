@@ -100,7 +100,7 @@ async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void
   const about = await screen.findByLabelText('About Run Planner');
   const summary = about.querySelector('.about-product-summary');
   expect(summary).not.toBeNull();
-  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema92Catalog/);
+  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema93Catalog/);
 }
 
 function profileReference(fileName: string): ProfileFileReference {
@@ -2601,6 +2601,30 @@ describe('route loadout interaction', () => {
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(selector.textContent).not.toContain('Time Piece');
+  });
+
+  it('replaces the required starting familiar from the catalog list and undoes it', async () => {
+    const { application, user } = renderPlannerForInteraction();
+    const familiarKey = () =>
+      application.store.getState().projectWorkspace.history!.present.route?.loadout.familiarKey;
+    const selector = screen.getByRole('button', { name: 'Starting familiar' });
+    expect(familiarKey()).toBe('FrogFamiliar');
+    expect(selector.textContent).toContain('Frinos');
+
+    await user.click(selector);
+    const familiars = screen.getByRole('listbox');
+    expect(
+      within(familiars)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(catalog.familiars.values.map((familiar) => expect.stringContaining(familiar.label)));
+    expect(within(familiars).queryByText('None')).toBeNull();
+    await user.click(within(familiars).getByText('Hecuba'));
+
+    expect(familiarKey()).toBe('HoundFamiliar');
+    expect(selector.textContent).toContain('Hecuba');
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(familiarKey()).toBe('FrogFamiliar');
   });
 
   it('authors the Jeweled Pom result at route start', async () => {

@@ -54,6 +54,18 @@ export interface RawTraitDeclaration {
       Record<Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>, number>
     >;
   };
+  /** Source `GrantRandomMaxHealth` bounds: each base value scaled by its rarity multiplier. */
+  readonly acquisitionMaxHealthRoll?: {
+    readonly minimum: RawRarityScaledValue;
+    readonly maximum: RawRarityScaledValue;
+  };
+}
+
+export interface RawRarityScaledValue {
+  readonly baseValue: number;
+  readonly rarityMultipliers: Readonly<
+    Record<Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>, number>
+  >;
 }
 
 export interface RawWeaponDeclaration {

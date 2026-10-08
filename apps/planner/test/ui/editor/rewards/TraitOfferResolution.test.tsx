@@ -377,6 +377,7 @@ describe('resolution outcomes', () => {
                           traitLabel: (traitKey: string) => traitKey,
                           effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) =>
                             option.rarity,
+                          maxHealthRollFor: () => undefined,
                           labelFor: (identity: {
                             readonly giverKey: string;
                             readonly traitKey: string;

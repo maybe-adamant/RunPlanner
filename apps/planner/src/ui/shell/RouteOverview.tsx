@@ -28,6 +28,7 @@ import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
 import { useFindingAnchor } from '../feedback/useFindingTarget';
+import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
@@ -187,6 +188,8 @@ function MatureRouteLoadout({
   const weapon = weaponKey === null ? undefined : catalog.weapons.byKey[weaponKey];
   if (weapon === undefined || aspectKey === null)
     throw new Error(`Missing weapon ${String(weaponKey)}`);
+  const familiarKey = authoredRoute.loadout.familiarKey;
+  if (familiarKey === null) throw new Error('Missing familiar');
   const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
   const arcanaCards = catalog.arcanaCards.values;
   const fearVows = fearVowGridOrder.flatMap((key) => {
@@ -312,6 +315,20 @@ function MatureRouteLoadout({
               />
             )}
           </div>
+          <RouteFamiliarPicker
+            catalog={catalog}
+            familiarKey={familiarKey}
+            id={`${workspaceRoute.routeKey}-familiar`}
+            onSelect={(nextFamiliarKey) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceFamiliar',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  familiarKey: nextFamiliarKey,
+                }),
+              )
+            }
+          />
         </div>
         {workspaceRoute.aspectHexTree === undefined ? null : (
           <HexTreeEditor

@@ -139,7 +139,7 @@
   min-width: 0;
 }
 
-.chaos-value-slider {
+.value-slider {
   align-items: center;
   display: grid;
   gap: 0.6rem;
@@ -147,14 +147,14 @@
   min-width: 0;
 }
 
-.chaos-value-slider > input[type='range'] {
+.value-slider > input[type='range'] {
   accent-color: var(--selection-accent);
   margin: 0;
   min-width: 0;
   width: 100%;
 }
 
-.chaos-value-slider > output {
+.value-slider > output {
   font-variant-numeric: tabular-nums;
   min-width: 2.5rem;
   text-align: right;

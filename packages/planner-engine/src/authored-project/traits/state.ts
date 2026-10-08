@@ -6,6 +6,7 @@ import {
   createUnresolvedAnvilResults,
 } from '../acquisition/reward-state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
+import { traitMaxHealthRollProblem } from './max-health-roll';
 import type { LevelResolutionEffectSource } from '../../reward-kernel/level-effects';
 
 export interface AuthoredTraitCarrierOutcome {
@@ -17,6 +18,8 @@ export interface AuthoredTraitCarrierOutcome {
   readonly allTogetherResult?: AuthoredAllTogetherResult;
   /** Natural Selection's complete ordered successful-increment outcome. */
   readonly naturalSelectionTargets?: OneToEight<string>;
+  /** Worry Free's max-health roll as an offset above the acquired rarity's minimum; absent is 0. */
+  readonly maxHealthRoll?: number;
 }
 
 export interface AuthoredTraitOption extends AuthoredTraitCarrierOutcome {
@@ -299,6 +302,10 @@ export function normalizeAuthoredEchoLastRunBoon(
       option.allTogetherResult === undefined
         ? undefined
         : normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult);
+    if (option.maxHealthRoll !== undefined) {
+      const problem = traitMaxHealthRollProblem(catalog, option.traitKey, option.maxHealthRoll);
+      if (problem !== undefined) throw new Error(`${option.traitKey} max-health roll ${problem}`);
+    }
     return Object.freeze({
       giverKey: option.giverKey,
       traitKey: option.traitKey,
@@ -308,6 +315,9 @@ export function normalizeAuthoredEchoLastRunBoon(
         ? {}
         : { naturalSelectionTargets: option.naturalSelectionTargets }),
       ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
+      ...(option.maxHealthRoll === undefined || option.maxHealthRoll === 0
+        ? {}
+        : { maxHealthRoll: option.maxHealthRoll }),
     });
   });
   return Object.freeze({

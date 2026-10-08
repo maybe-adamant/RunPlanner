@@ -165,6 +165,7 @@ function decodeRoutePlan(
       'manualArcanaKeys',
       'fearRanks',
       'startingKeepsakeKey',
+      'familiarKey',
       'keepsakeEquipResults',
       ...(loadout.aspectHexTree === undefined ? [] : ['aspectHexTree']),
       ...('runModifiers' in loadout ? ['runModifiers'] : []),
@@ -206,6 +207,11 @@ function decodeRoutePlan(
     : expectString(loadout.startingKeepsakeKey, `${path}.loadout.startingKeepsakeKey`);
   if (startingKeepsakeKey !== null && catalog.keepsakes.byKey[startingKeepsakeKey] === undefined)
     fail(`${path}.loadout.startingKeepsakeKey`, `unknown keepsake ${startingKeepsakeKey}`);
+  const familiarKey = freshProfile
+    ? fixedAbsent('familiarKey')
+    : expectString(loadout.familiarKey, `${path}.loadout.familiarKey`);
+  if (familiarKey !== null && catalog.familiars.byKey[familiarKey] === undefined)
+    fail(`${path}.loadout.familiarKey`, `unknown familiar ${familiarKey}`);
   if (freshProfile && loadout.keepsakeEquipResults !== undefined)
     fail(`${path}.loadout.keepsakeEquipResults`, 'is not supported by a fresh profile');
   if (weaponKey !== null && aspectKey !== null) {
@@ -352,6 +358,7 @@ function decodeRoutePlan(
       manualArcanaKeys: Object.freeze(canonicalManualArcanaKeys),
       fearRanks: Object.freeze(fearRanks),
       startingKeepsakeKey,
+      familiarKey,
       ...(runModifiers === undefined ? {} : { runModifiers }),
       ...(loadout.keepsakeEquipResults === undefined
         ? {}

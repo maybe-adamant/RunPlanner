@@ -47,6 +47,7 @@ function commandContractAddress(
   switch (command.kind) {
     case 'ConfigureRoutePrefix':
     case 'ReplaceRouteLoadout':
+    case 'ReplaceFamiliar':
     case 'ReplaceAspectHexTree':
     case 'ReplaceRunModifiers':
     case 'ReplaceManualArcanaSelection':

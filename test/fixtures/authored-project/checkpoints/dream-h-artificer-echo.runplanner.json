@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 92,
+  "schemaVersion": 93,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -48,7 +48,8 @@
         "LimitGraspShrineUpgrade": 0,
         "EnemyEliteShrineUpgrade": 0
       },
-      "startingKeepsakeKey": "UnpickedBoonKeepsake"
+      "startingKeepsakeKey": "UnpickedBoonKeepsake",
+      "familiarKey": "FrogFamiliar"
     },
     "biomes": [
       {

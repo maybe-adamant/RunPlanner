@@ -211,6 +211,7 @@ describe('RouteOverview', () => {
     expect(markup).not.toContain('aria-label="Edit Arcana"');
     expect(markup).not.toContain('aria-label="Edit Fear"');
     expect(markup).not.toContain('>Starting reward</label>');
+    expect(markup).not.toContain('FreshFile-familiar');
     expect(
       [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
     ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);

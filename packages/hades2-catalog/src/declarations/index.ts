@@ -19,6 +19,7 @@ import { rewardKernelDeclarations } from './rewards/declarations';
 import { routes } from './routes';
 import { traitCatalogInput } from './traits/index';
 import { arcanaCards, fearVows } from './arcana-fear';
+import { defaultFamiliarKey, familiars } from './familiars';
 import { keepsakes } from './keepsakes';
 import type { RawCatalogInput } from './input';
 import type { RawRoomDeclaration } from './rooms/types';
@@ -52,6 +53,8 @@ export const declarations = {
   arcanaCards,
   fearVows,
   keepsakes,
+  familiars,
+  defaultFamiliarKey,
   rewardKernel: rewardKernelDeclarations,
   encounterEnvelopes,
   encounterDefinitions,
@@ -74,6 +77,7 @@ export type {
   RawEncounterSlotBinding,
 } from './encounters/types';
 export type { RawExitTypeDeclaration } from './exits-types';
+export type { RawFamiliarDeclaration } from './familiars-types';
 export type { RawKeepsakeDeclaration } from './keepsakes-types';
 export type { RawBiomeLayoutDeclaration, RawProgressionDeclaration } from './layouts/types';
 export type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';

@@ -208,6 +208,19 @@ export type KeepsakeRankProfile<
   readonly Heroic: Heroic;
 }>;
 
+/** A familiar the profile equips at run start. */
+export interface FamiliarDeclaration {
+  readonly key: string;
+  readonly label: string;
+  /** A mature save owns every familiar-shop upgrade of its first trait; each adds one stack. */
+  readonly matureStatUpgradeCount: number;
+  /** The flat maximum its first trait adds per stack, when that trait changes one. */
+  readonly maxStatPerStack?: {
+    readonly stat: 'maxHealth' | 'maxMana';
+    readonly amount: number;
+  };
+}
+
 /** A rank-III ordinary keepsake. Effects are deliberately introduced by their owning gates. */
 export interface KeepsakeDeclaration {
   readonly key: string;
@@ -1310,6 +1323,9 @@ export interface Catalog {
   readonly fearVows: CatalogCollection<FearVowDeclaration>;
   readonly keepsakes: CatalogCollection<KeepsakeDeclaration>;
   readonly defaultStartingKeepsakeKey: string;
+  readonly familiars: CatalogCollection<FamiliarDeclaration>;
+  /** The familiar a new mature-save route starts with. */
+  readonly defaultFamiliarKey: string;
   readonly rewards: RewardKernelCatalog;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;

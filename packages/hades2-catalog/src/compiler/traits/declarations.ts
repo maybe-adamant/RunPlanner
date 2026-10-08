@@ -62,6 +62,52 @@ function normalizeResourceRewardBonus(
   return Object.freeze(Object.fromEntries(resources.map((resource) => [resource, byRarity])));
 }
 
+/** Scales each roll bound by its rarity multiplier; every bound must land on an integer. */
+function normalizeAcquisitionMaxHealthRoll(
+  raw: NonNullable<RawTraitDeclaration['acquisitionMaxHealthRoll']>,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): NonNullable<TraitDeclaration['acquisitionMaxHealthRoll']> {
+  requireObject(raw, path);
+  if (Object.keys(raw).length !== 2) fail(path, 'requires only minimum and maximum');
+  const rarities = IN_RUN_RARITIES.filter((rarity) => equippedRarities.includes(rarity));
+  if (rarities.length !== IN_RUN_RARITIES.length || equippedRarities.length !== rarities.length)
+    fail(path, 'requires a trait equipped at exactly Common, Rare, Epic and Heroic');
+  const scaled = (bound: 'minimum' | 'maximum', rarity: (typeof IN_RUN_RARITIES)[number]) => {
+    const value = requireObject(raw[bound], `${path}.${bound}`);
+    const multipliers = requireObject(
+      value.rarityMultipliers,
+      `${path}.${bound}.rarityMultipliers`,
+    );
+    if (Object.keys(multipliers).length !== rarities.length)
+      fail(`${path}.${bound}.rarityMultipliers`, 'must scale exactly the equipped rarities');
+    const base = requirePositiveInteger(value.baseValue as number, `${path}.${bound}.baseValue`);
+    const multiplier = multipliers[rarity];
+    if (typeof multiplier !== 'number' || !(multiplier > 0))
+      fail(`${path}.${bound}.rarityMultipliers.${rarity}`, 'must be a positive multiplier');
+    const product = base * multiplier;
+    const rounded = Math.round(product);
+    if (Math.abs(product - rounded) > 1e-9)
+      fail(`${path}.${bound}.rarityMultipliers.${rarity}`, 'must scale to an integer');
+    return rounded;
+  };
+  const ranges = rarities.map((rarity) => {
+    const minimum = scaled('minimum', rarity);
+    const maximum = scaled('maximum', rarity);
+    if (minimum > maximum) fail(`${path}.${rarity}`, 'minimum must not exceed maximum');
+    return { rarity, minimum, width: maximum - minimum };
+  });
+  const width = ranges[0]!.width;
+  if (ranges.some((range) => range.width !== width))
+    fail(path, 'every rarity must span the same roll width');
+  return Object.freeze({
+    minimumByRarity: Object.freeze(
+      Object.fromEntries(ranges.map((range) => [range.rarity, range.minimum])),
+    ) as NonNullable<TraitDeclaration['acquisitionMaxHealthRoll']>['minimumByRarity'],
+    width,
+  });
+}
+
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const EQUIPMENT_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana', 'Spell'] as const;
@@ -589,6 +635,15 @@ export function normalizeTraits(
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
       ...(resourceRewardBonus === undefined ? {} : { resourceRewardBonus }),
       ...(roomsPerUpgradeGrowth === undefined ? {} : { roomsPerUpgradeGrowth }),
+      ...(trait.acquisitionMaxHealthRoll === undefined
+        ? {}
+        : {
+            acquisitionMaxHealthRoll: normalizeAcquisitionMaxHealthRoll(
+              trait.acquisitionMaxHealthRoll,
+              equippedRarities,
+              `${path}.acquisitionMaxHealthRoll`,
+            ),
+          }),
       selectedDisposition,
     });
   });

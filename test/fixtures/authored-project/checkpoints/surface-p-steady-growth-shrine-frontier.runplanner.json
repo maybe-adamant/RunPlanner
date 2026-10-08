@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 92,
+  "schemaVersion": 93,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -71,6 +71,7 @@
         "EnemyEliteShrineUpgrade": 0
       },
       "startingKeepsakeKey": "HadesAndPersephoneKeepsake",
+      "familiarKey": "FrogFamiliar",
       "keepsakeEquipResults": {
         "jeweledPom": {
           "traitKey": "HadesDashSweepBoon"

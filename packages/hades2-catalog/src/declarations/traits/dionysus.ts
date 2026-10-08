@@ -35,6 +35,17 @@ export const dionysusTraits = [
     label: 'Worry Free',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
+    // TraitData_Dionysus.lua: MinHealth uses RarityLevels, MaxHealth its CustomRarityMultiplier.
+    acquisitionMaxHealthRoll: {
+      minimum: {
+        baseValue: 50,
+        rarityMultipliers: { Common: 1, Rare: 1.4, Epic: 1.8, Heroic: 2.2 },
+      },
+      maximum: {
+        baseValue: 80,
+        rarityMultipliers: { Common: 1, Rare: 1.25, Epic: 1.5, Heroic: 1.75 },
+      },
+    },
   },
   {
     ...variableDionysusTrait,

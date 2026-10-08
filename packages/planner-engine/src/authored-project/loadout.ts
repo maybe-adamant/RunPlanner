@@ -128,6 +128,7 @@ export type MatureRouteLoadout = RouteLoadout & {
   readonly weaponKey: string;
   readonly aspectKey: string;
   readonly startingKeepsakeKey: string;
+  readonly familiarKey: string;
 };
 
 export function createDefaultRouteLoadout(catalog: Catalog): MatureRouteLoadout {
@@ -144,6 +145,7 @@ export function createDefaultRouteLoadout(catalog: Catalog): MatureRouteLoadout 
     manualArcanaKeys: Object.freeze([]),
     fearRanks: zeroFearRanks(catalog),
     startingKeepsakeKey: catalog.defaultStartingKeepsakeKey,
+    familiarKey: catalog.defaultFamiliarKey,
   });
 }
 
@@ -158,6 +160,7 @@ export function createInitialRouteLoadout(catalog: Catalog, routeKey: string): R
     manualArcanaKeys: Object.freeze([]),
     fearRanks: zeroFearRanks(catalog),
     startingKeepsakeKey: null,
+    familiarKey: null,
   });
 }
 

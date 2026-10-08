@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 92,
+  "schemaVersion": 93,
   "projectId": "surface-4",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -47,6 +47,7 @@
         "EnemyEliteShrineUpgrade": 0
       },
       "startingKeepsakeKey": "ManaOverTimeRefundKeepsake",
+      "familiarKey": "FrogFamiliar",
       "aspectHexTree": {
         "layoutKey": "Lung",
         "rareTalentKeys": [

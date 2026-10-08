@@ -42,7 +42,7 @@ function withLoadout(project: ProjectDocument, loadout: Record<string, unknown>)
 }
 
 describe('Fresh File project profile', () => {
-  it('creates the fixed F-G-H-I route with no equipment, keepsake, Arcana, Fear or starting reward', () => {
+  it('creates the fixed F-G-H-I route with no equipment, keepsake, familiar, Arcana, Fear or starting reward', () => {
     const project = freshProject(0);
     expect(project.route.routeKey).toBe('FreshFile');
     expect(project.route.itineraryBiomeKeys).toEqual(['F', 'G', 'H', 'I']);
@@ -53,6 +53,7 @@ describe('Fresh File project profile', () => {
       manualArcanaKeys: [],
       fearRanks: Object.fromEntries(catalog.fearVows.values.map((vow) => [vow.key, 0])),
       startingKeepsakeKey: null,
+      familiarKey: null,
     });
     expect(project.route.biomes).toEqual([]);
   });
@@ -89,6 +90,7 @@ describe('Fresh File project profile', () => {
       }),
     ],
     ['keepsakeEquipResults', () => ({ keepsakeEquipResults: {} })],
+    ['familiarKey', () => ({ familiarKey: 'FrogFamiliar' })],
   ] as const)('rejects a fresh-profile %s that is not the fixed value', (field, loadout) => {
     const project = freshProject();
     expect(() => decodeProjectDocument(withLoadout(project, loadout(project)), catalog)).toThrow(
@@ -101,7 +103,7 @@ describe('Fresh File project profile', () => {
       projectId: 'mature',
       routeKey: 'Underworld',
     });
-    for (const field of ['weaponKey', 'aspectKey', 'startingKeepsakeKey']) {
+    for (const field of ['weaponKey', 'aspectKey', 'startingKeepsakeKey', 'familiarKey']) {
       expect(() => decodeProjectDocument(withLoadout(mature, { [field]: null }), catalog)).toThrow(
         ProjectDocumentContractError,
       );
@@ -124,6 +126,7 @@ describe('Fresh File project profile', () => {
       },
       { kind: 'ReplaceManualArcanaSelection', route, arcanaKeys: ['ChanneledCast'] },
       { kind: 'ReplaceFearVowRank', route, vowKey: 'EnemyHealthShrineUpgrade', rank: 1 },
+      { kind: 'ReplaceFamiliar', route, familiarKey: 'HoundFamiliar' },
       {
         kind: 'ReplaceStartingReward',
         reward: createStartingRewardAddress('FreshFile'),

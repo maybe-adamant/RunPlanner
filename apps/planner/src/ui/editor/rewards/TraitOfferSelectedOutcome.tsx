@@ -1,4 +1,5 @@
 import { optionIndex, type AuthoredTraitOfferTraits } from '@run-planner/engine/authored-project';
+import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo } from 'react';
 
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
@@ -26,6 +27,7 @@ import {
   ConcaveStoneOutcomeEditor,
   TraitOfferSelectedSpecialOutcomes,
 } from './TraitOfferSelectedSpecialOutcomes';
+import { MaxHealthRollRow } from './MaxHealthRollRow';
 import { HexTreeEditor } from './HexTreeEditor';
 import { SelectedOutcomeBlock, SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import {
@@ -33,7 +35,7 @@ import {
   useReportedFeedback,
   type OutcomeFeedbackReporter,
 } from './TraitOfferForm';
-import { circeUnavailableMessage } from './traitOfferOptions';
+import { circeUnavailableMessage, replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
@@ -177,12 +179,15 @@ function LatestModelTargetsOutcome({
 }
 
 export function TraitOfferSelectedOutcome({
+  acquiredRarity,
   interaction,
   value,
   onFeedback = ignoreOutcomeFeedback,
   onOpenEchoLastRunBoon,
   onUpdate,
 }: {
+  /** The selected row's effective rarity when every route branch agrees. */
+  readonly acquiredRarity?: TraitRarity;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
   readonly onFeedback?: OutcomeFeedbackReporter;
@@ -321,7 +326,9 @@ export function TraitOfferSelectedOutcome({
   );
   const selectedTraitLabel = interaction.traitLabel(option.traitKey);
   const feedback = interaction.feedbackFor(value);
+  const maxHealthRoll = interaction.maxHealthRoll(value, value.selectedOptionKey, acquiredRarity);
   const pickHasOutcome =
+    maxHealthRoll !== undefined ||
     primaryChildren.some((child) => child.child.kind !== 'concaveStone') ||
     feedback.length > 0 ||
     hexTreeDomain.result !== undefined;
@@ -329,6 +336,15 @@ export function TraitOfferSelectedOutcome({
   if (!pickHasOutcome && !stoneHasOutcome) return null;
   const pickBlock = (
     <SelectedOutcomeBlock name="Selected trait outcome" traitLabel={selectedTraitLabel}>
+      {maxHealthRoll === undefined ? null : (
+        <MaxHealthRollRow
+          ariaLabel={`${selectedTraitLabel} max health roll`}
+          onChange={(maxHealthRoll) =>
+            onUpdate(replaceTraitOfferOption(value, selectedIndex, { ...option, maxHealthRoll }))
+          }
+          roll={maxHealthRoll}
+        />
+      )}
       {hexTreeChild === undefined || hexTreeDomain.result === undefined ? null : (
         <HexTreeEditor
           framed={false}

@@ -521,6 +521,14 @@ export interface TraitDeclaration {
     /** Dream menus grant the entered-biome rarity; ordinary routes reach only the first. */
     readonly maxManaByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
   };
+  /**
+   * Source `GrantRandomMaxHealth`: an integer max-health roll from the acquired
+   * rarity's minimum through that minimum plus `width`, equal at every rarity.
+   */
+  readonly acquisitionMaxHealthRoll?: {
+    readonly minimumByRarity: Readonly<Record<InRunTraitRarity, number>>;
+    readonly width: number;
+  };
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */

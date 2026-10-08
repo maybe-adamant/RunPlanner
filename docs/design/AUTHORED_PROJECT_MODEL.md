@@ -196,10 +196,10 @@ start commands and start candidates share that resolved start pool.
 
 ### Route Loadout
 
-Each route persists its weapon/aspect choice, starting keepsake, an unordered
+Each route persists its weapon/aspect choice, starting keepsake, familiar, an unordered
 canonical selection of manually active Arcana cards, and one declaration-bounded
-rank for every Fear Vow. A mature-save route requires the weapon, aspect and
-keepsake keys. A Fresh File route stores all three as `null`, no manual Arcana,
+rank for every Fear Vow. A mature-save route requires the weapon, aspect,
+keepsake and familiar keys. A Fresh File route stores all four as `null`, no manual Arcana,
 every Vow at rank 0, no starting reward and no keepsake equip result; the codec
 rejects any other value and native-equipment loadout commands fail, because none of these
 is a choice on a brand-new profile. The engine resolves the run's actual
@@ -219,6 +219,14 @@ record means every modifier is native. The released modifiers are the optional
 percentages `enemyGoldDropChance` and `encounterGoldRange`. These execution
 options are editable in Fresh File without making its fixed equipment
 editable. They do not change simulation, candidates, or encounter eligibility.
+
+A mature route's loadout requires one catalog `familiarKey`; new routes start
+with the catalog's default familiar, Frinos. A Fresh File route stores `null`,
+like its other native-equipment selections. Familiar-shop upgrades are not
+authored: a mature save owns every stat upgrade, at the catalog-declared rank,
+as keepsakes are fixed at rank III. `ReplaceFamiliar` replaces the identity as
+one route-owned history edit, preserves identity for a no-op, and fails on
+Fresh File.
 
 `ReplaceRunModifiers` replaces the complete settings as one route-owned history
 edit, normalizes its value through the same tolerant decode, preserves identity
@@ -885,6 +893,13 @@ Only explicit malformed or out-of-range values receive the focused repair findin
 option-owned frozen outcome and remains intact through sibling edits, Calling
 Card rerarity, and Concave Stone residual selection.
 
+A Worry Free option, including an Echo Boon Boon Boon row, may retain one
+optional `maxHealthRoll`: an integer offset above the acquired rarity's minimum
+roll, from 0 through the catalog's roll width. Omission is offset 0, and the
+codec and commands store 0 as an omission. The offset is independent of
+rarity, so offered-rarity edits and Calling Card rarification keep it, and the
+engine realizes it as the acquired rarity's minimum plus the offset.
+
 Steady Growth persists only reached random targets: ordinary occurrences,
 including Boss occurrences, use a sparse `steadyGrowthTargetByPhase`
 map. A missing target is unresolved only at a
@@ -1223,6 +1238,10 @@ Schema 92 moves the Anvil result from the Shop slot onto the reward; the
 91 → 92 migration moves each Shop slot's and Travel Deal refill's
 `anvilResult` onto its reward's `self` role and gives every other reward
 carrying an Anvil, such as a Gold Gold Gold duplicate, a `null` result.
+Schema 93 adds the loadout `familiarKey` and the optional Worry Free
+`maxHealthRoll`; the 92 → 93 migration equips Frinos on every mature route and
+`null` on Fresh File, and leaves every Worry Free roll omitted, which is its
+rarity minimum.
 
 ## Undo and Redo
 

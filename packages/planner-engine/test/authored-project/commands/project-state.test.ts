@@ -699,6 +699,57 @@ describe('authored-project project-state commands', () => {
     ).toThrow('supported only by Aspect of Selene');
   });
 
+  it('starts a mature route with the catalog familiar and replaces it as one route edit', () => {
+    const route = createRouteAddress('Underworld');
+    const project = fProject();
+    expect(project.route.loadout.familiarKey).toBe(catalog.defaultFamiliarKey);
+    expect(catalog.defaultFamiliarKey).toBe('FrogFamiliar');
+    const history = createProjectHistory(project);
+    const hecuba = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceFamiliar',
+      route,
+      familiarKey: 'HoundFamiliar',
+    });
+    expect(hecuba.present.route.loadout.familiarKey).toBe('HoundFamiliar');
+    expect(hecuba.past).toHaveLength(1);
+    expect(
+      applyProjectHistoryCommand(hecuba, catalog, {
+        kind: 'ReplaceFamiliar',
+        route,
+        familiarKey: 'HoundFamiliar',
+      }),
+    ).toBe(hecuba);
+    expect(undoProjectHistory(hecuba).present).toBe(history.present);
+    expect(redoProjectHistory(undoProjectHistory(hecuba)).present).toBe(hecuba.present);
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(hecuba.present)), catalog),
+    ).toEqual(hecuba.present);
+  });
+
+  it('requires one known familiar on a mature route', () => {
+    const route = createRouteAddress('Underworld');
+    const project = fProject();
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceFamiliar',
+        route,
+        familiarKey: 'Cerberus',
+      }),
+    ).toThrow(ProjectCommandContractError);
+    for (const familiarKey of ['Cerberus', null, 3]) {
+      const raw = JSON.parse(encodeProjectDocument(project)) as {
+        route: { loadout: Record<string, unknown> };
+      };
+      raw.route.loadout.familiarKey = familiarKey;
+      expect(() => decodeProjectDocument(raw, catalog)).toThrow('loadout.familiarKey');
+    }
+    const raw = JSON.parse(encodeProjectDocument(project)) as {
+      route: { loadout: Record<string, unknown> };
+    };
+    delete raw.route.loadout.familiarKey;
+    expect(() => decodeProjectDocument(raw, catalog)).toThrow(ProjectDocumentContractError);
+  });
+
   it('derives automatic Arcana and cumulative Fear from the complete route loadout', () => {
     const route = createRouteAddress('Underworld');
     let project = fProject();

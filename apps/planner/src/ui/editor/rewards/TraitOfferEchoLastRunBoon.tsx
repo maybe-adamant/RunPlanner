@@ -27,6 +27,7 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { TraitOfferForm, TraitOfferShapeActions, type FeedbackEntry } from './TraitOfferForm';
+import { MaxHealthRollRow } from './MaxHealthRollRow';
 import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
 import { TraitOfferOption } from './TraitOfferOption';
 import { TraitAcquisitionTargetOutcome } from './TraitOfferSelectedOutcome';
@@ -157,8 +158,19 @@ function EchoLastRunBoonChoiceEditor({
     setRows(draft.rows);
     setSelectedIndex(draft.selectedIndex);
   };
+  const maxHealthRoll =
+    selectedComplete === undefined ? undefined : domain.maxHealthRollFor(selectedComplete);
   const payload = (
     <>
+      {maxHealthRoll === undefined || selectedRow === undefined ? null : (
+        <MaxHealthRollRow
+          ariaLabel="Boon Boon Boon max health roll"
+          onChange={(maxHealthRoll) =>
+            updateRow(selectedIndex, Object.freeze({ ...selectedRow, maxHealthRoll }))
+          }
+          roll={maxHealthRoll}
+        />
+      )}
       {selectedComplete === undefined ||
       selectedRow?.identity === undefined ||
       !domain.targetRequiredFor(selectedRow.identity) ||
@@ -205,6 +217,7 @@ function EchoLastRunBoonChoiceEditor({
     </>
   );
   const payloadPresent =
+    maxHealthRoll !== undefined ||
     (selectedComplete !== undefined &&
       selectedRow?.identity !== undefined &&
       domain.targetRequiredFor(selectedRow.identity) &&
