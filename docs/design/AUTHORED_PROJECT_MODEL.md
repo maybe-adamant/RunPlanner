@@ -793,7 +793,8 @@ not represented as a synthetic normal target.
 
 `AddChaos` attaches one declared `chaos` sibling to an eligible source
 occurrence; `ReplaceChaosMap` changes only that sibling's concrete map within
-the host layout's declared domain, and `RemoveChaos` deletes only the sibling
+the host layout's declared domain, trimming the Chaos room's outgoing
+continuation to the new map's doors by the reanchoring rule, and `RemoveChaos` deletes only the sibling
 and its descendants. A generated gate carries the exact Ixion purchase origin;
 an omitted origin is an authored gate. Contextual spacing and source
 requirements do not make the persisted gate undecodable: evaluation reports

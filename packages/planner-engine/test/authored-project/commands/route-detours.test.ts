@@ -599,6 +599,107 @@ describe('authored-project route detour commands', () => {
     ).not.toContain(chaos);
   });
 
+  it('trims the Chaos continuation to a narrower map, keeping the picked door', () => {
+    const opening = createOccurrenceId('chaos-narrow-opening');
+    const chaos = createOccurrenceId('chaos-narrow-detour');
+    const peer = createOccurrenceId('chaos-narrow-peer');
+    const picked = createOccurrenceId('chaos-narrow-picked');
+    const chaosSource = { kind: 'occurrence' as const, occurrenceId: chaos };
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddChaos',
+      additional: createAdditionalExitAddress(fBiome, opening, 'chaos'),
+      occurrenceId: chaos,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, { kind: 'occurrence', occurrenceId: opening }),
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, chaosSource),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, chaosSource),
+      storeKey: 'RunProgress',
+    });
+    for (const [exitKey, occurrenceId, gameName] of [
+      ['exit1', peer, 'F_Combat02'],
+      ['exit2', picked, 'F_Combat03'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(fBiome, chaosSource, exitKey),
+        occurrenceId,
+        gameName,
+      });
+    }
+    const narrow = (exitKey: 'exit1' | 'exit2' | undefined) =>
+      biomeTopology(
+        applyProjectCommand(
+          exitKey === undefined
+            ? project
+            : applyProjectCommand(project, catalog, {
+                kind: 'SetExitSelection',
+                selection: createExitSelectionAddress(fBiome, chaosSource),
+                value: { kind: 'normal', exitKey },
+              }),
+          catalog,
+          {
+            kind: 'ReplaceChaosMap',
+            occurrence: createOccurrenceAddress(fBiome, chaos),
+            gameName: 'Chaos_03',
+          },
+        ),
+        'Underworld',
+        'F',
+      );
+    const chaosOutgoing = (topology: ReturnType<typeof narrow>) =>
+      topology.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === chaos,
+      );
+
+    // Chaos_01 declares two doors; Chaos_03 declares one.
+    const pickedSecond = narrow('exit2');
+    expect(chaosOutgoing(pickedSecond)).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: picked }] },
+      selection: { kind: 'derived' },
+    });
+    expect(pickedSecond.occurrences.map((occurrence) => occurrence.occurrenceId)).not.toContain(
+      peer,
+    );
+    const pickedFirst = narrow('exit1');
+    expect(chaosOutgoing(pickedFirst)).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: peer }] },
+      selection: { kind: 'derived' },
+    });
+    expect(pickedFirst.occurrences.map((occurrence) => occurrence.occurrenceId)).not.toContain(
+      picked,
+    );
+    // Without a pick, every door the narrower map lacks is pruned.
+    expect(chaosOutgoing(biomeTopology(project, 'Underworld', 'F'))).toMatchObject({
+      selection: { kind: 'unresolved' },
+    });
+    const unresolved = narrow(undefined);
+    expect(chaosOutgoing(unresolved)).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: peer }] },
+      selection: { kind: 'derived' },
+    });
+    expect(unresolved.occurrences.map((occurrence) => occurrence.occurrenceId)).not.toContain(
+      picked,
+    );
+  });
+
   it('reanchors one preserved continuation between a normal target and Chaos', () => {
     const opening = createOccurrenceId('chaos-reanchor-opening');
     const chaos = createOccurrenceId('chaos-reanchor-detour');
