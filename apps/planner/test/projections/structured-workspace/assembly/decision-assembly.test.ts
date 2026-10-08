@@ -523,6 +523,51 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.targets[0]?.room.roomLocal.kind).toBe('ship');
   });
 
+  it('names a Shop door by its catalog reward type instead of an empty surface', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
+    const decision = source.exitDecisions.find(
+      (candidate): candidate is WorkspaceAuthoredBatchDecision =>
+        candidate.normal.kind === 'batch' &&
+        candidate.normal.targets.some((target) => {
+          const occurrence = source.occurrence(target.occurrenceId);
+          return (
+            occurrence !== undefined &&
+            catalog.rooms.byKey[occurrence.gameName]?.incomingReward.kind === 'shop'
+          );
+        }),
+    );
+    if (decision === undefined) throw new Error('F has no authored door to a Shop');
+    const evaluated = source.evaluatedBatch(
+      createExitDecisionAddress(source.biome, decision.source),
+    );
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      persistence: 'authored',
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision,
+      ...(evaluated === undefined ? {} : { evaluated }),
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    const shopTarget = assembly.batch.targets.find(
+      (target) => target.room.roomLocal.kind === 'shop',
+    );
+    if (shopTarget === undefined) throw new Error('Shop target was not assembled');
+    expect(shopTarget.door.offerRewardSurface.rewards).toEqual([
+      expect.objectContaining({
+        key: 'incoming',
+        offer: null,
+        summary: catalog.rewards.rewardTypes.byKey.Shop?.label,
+      }),
+    ]);
+    expect(shopTarget.door.offerRewardSurface.rewards[0]?.control).toBeUndefined();
+    expect(shopTarget.door.offerRewardSurface.rewards[0]?.marker.address).toEqual(
+      createIncomingRewardAddress(source.biome, shopTarget.room.occurrenceId),
+    );
+  });
+
   it('labels O outgoing store controls without adding a Ship selector', () => {
     const source = biomeSource(loadSurfaceNOPQProject(), 'Surface', 'O');
     const cases = [

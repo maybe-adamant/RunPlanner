@@ -94,16 +94,13 @@ function OccurrenceOutgoing({
                     <p className="card-kicker">Door 1</p>
                     <h4>{destination.label}</h4>
                   </div>
-                  <div className="owner-markers">
-                    <span className="neutral-status">Fixed</span>
-                    {destination.kind === 'room' && destination.gameName !== undefined ? (
-                      <RoomMapLauncher
-                        gameName={destination.gameName}
-                        hostId={outgoing.marker.focusKey}
-                        title={destination.label}
-                      />
-                    ) : null}
-                  </div>
+                  {destination.kind === 'room' && destination.gameName !== undefined ? (
+                    <RoomMapLauncher
+                      gameName={destination.gameName}
+                      hostId={outgoing.marker.focusKey}
+                      title={destination.label}
+                    />
+                  ) : null}
                 </div>
                 {bossDoorRewardStore === undefined ? null : (
                   <div className="door-reward-slot">

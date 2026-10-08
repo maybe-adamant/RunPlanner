@@ -29,9 +29,7 @@ export function RewardSurfaceEditor({
 }) {
   const findingAnchor = useFindingAnchor();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
-  const editableRewards =
-    visibility === 'hidden' ? rewards.filter((reward) => reward.control !== undefined) : rewards;
-  const firstEditableReward = editableRewards.find((reward) => reward.control !== undefined);
+  const firstEditableReward = rewards.find((reward) => reward.control !== undefined);
   useEffect(() => {
     if (
       focusOwner === undefined ||
@@ -49,27 +47,25 @@ export function RewardSurfaceEditor({
     target?.focus({ preventScroll: true });
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [firstEditableReward, focusOwner, focusedOwner, idPrefix]);
-  if (editableRewards.length === 0) {
+  if (rewards.length === 0) {
     return (
       <div aria-label={ariaLabel} className="door-reward-list">
         <div
           aria-live="polite"
-          className="field-control field-control-inline door-fixed-reward control-placeholder"
+          className="field-control field-control-inline door-fixed-reward"
           id={`${idPrefix}-status`}
           tabIndex={-1}
         >
           <span>Reward</span>
-          <span className="fixed-room-state">
-            {visibility === 'hidden' ? 'Hidden on this door' : 'No reward'}
-          </span>
+          <span className="fixed-room-state">No reward</span>
         </div>
       </div>
     );
   }
-  const showRewardLabels = editableRewards.length > 1;
+  const showRewardLabels = rewards.length > 1;
   return (
     <div aria-label={ariaLabel} className="door-reward-list">
-      {editableRewards.map((reward, index) => (
+      {rewards.map((reward, index) => (
         <section key={reward.key}>
           {reward.control === undefined ? (
             <div

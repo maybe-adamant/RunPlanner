@@ -12,10 +12,10 @@ import { RewardSurfaceEditor } from '@planner/ui/editor/biome/DoorRewardEditor';
 
 afterEach(cleanup);
 
-it('keeps a hidden reward distinct from no reward and preserves its focus destination', () => {
+it('shows an empty surface as a settled No reward and preserves its focus destination', () => {
   const application = createApplication();
   const owner = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
-  const surface = (visibility: 'hidden' | 'visible') => (
+  render(
     <Provider store={application.store}>
       <RewardSurfaceEditor
         ariaLabel="Door rewards"
@@ -23,17 +23,13 @@ it('keeps a hidden reward distinct from no reward and preserves its focus destin
         idPrefix="test-door"
         interactions={{} as WorkspaceInteractionCatalog}
         rewards={[]}
-        visibility={visibility}
+        visibility="visible"
       />
-    </Provider>
+    </Provider>,
   );
-  const view = render(surface('visible'));
-  expect(screen.getByText('No reward')).toBeTruthy();
-  view.rerender(surface('hidden'));
-  const hidden = screen.getByText('Hidden on this door');
-  const row = hidden.closest('.control-placeholder');
+  const row = screen.getByText('No reward').closest<HTMLElement>('.door-fixed-reward');
   expect(row).not.toBeNull();
-  expect(screen.queryByText('No reward')).toBeNull();
+  expect(row?.classList.contains('control-placeholder')).toBe(false);
   act(() => application.store.dispatch(semanticOwnerFocused(owner)));
   expect(document.activeElement).toBe(row);
   application.dispose();
