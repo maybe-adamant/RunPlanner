@@ -89,6 +89,8 @@ import {
   shipWheel2,
 } from '@planner-test/support/occurrence-workbench';
 
+import { getAllByHint, getByHint, hintOf, queryByHint } from '@planner-test/support/hints';
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -780,7 +782,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(finding.origin).toEqual(phase);
     expect(selector.textContent).toContain('1 (unavailable)');
     expect(selector.getAttribute('aria-invalid')).toBe('true');
-    expect(selector.getAttribute('title')).toBe('Retained position is unavailable here.');
+    expect(hintOf(selector)).toBe('Retained position is unavailable here.');
     await view.user.click(selector);
     expect(
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
@@ -2114,15 +2116,15 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Timeline');
     const ship = screen.getByLabelText('Ship combat structure');
-    const trigger = within(ship).getByTitle('Vow of Forfeit');
+    const trigger = getByHint(ship, 'Vow of Forfeit');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     expect(trigger.textContent).toMatch(/Apollo.*\(Red Onion\)/);
     expect(within(ship).queryByText(/^Forfeit →/)).toBeNull();
-    expect(within(ship).getAllByTitle('Vow of Forfeit')).toHaveLength(1);
+    expect(getAllByHint(ship, 'Vow of Forfeit')).toHaveLength(1);
 
     openRoomTab('Combat 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(actions).queryByTitle('Vow of Forfeit')).toBeNull();
+    expect(queryByHint(actions, 'Vow of Forfeit')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     expect(actions.textContent).toContain('Red Onion');
     expect(actions.textContent).not.toContain('(Red Onion)');

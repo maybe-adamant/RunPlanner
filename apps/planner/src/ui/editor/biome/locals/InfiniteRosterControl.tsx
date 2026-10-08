@@ -65,7 +65,7 @@ export function InfiniteRosterControl({
         placeholder="Default"
         triggerLabel={typeKeys === undefined ? 'Default' : typeKeys.map(labelFor).join(' · ')}
         {...(needsRepair
-          ? { invalid: true, triggerTitle: 'Retained roster is unavailable here.' }
+          ? { invalid: true, triggerHint: 'Retained roster is unavailable here.' }
           : {})}
       />
       <button

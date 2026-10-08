@@ -74,7 +74,7 @@ export function FountainRarityEffectRow({
         ariaLabel="Phial Target"
         {...(control.pending === undefined
           ? {}
-          : { disabledTitle: pendingPhialTitles[control.pending] })}
+          : { disabledHint: pendingPhialTitles[control.pending] })}
         id={semanticOwnerControlElementId(control.address)}
         interaction={interaction}
         label="Phial Target"

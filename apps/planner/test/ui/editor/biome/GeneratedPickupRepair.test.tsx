@@ -19,6 +19,7 @@ import {
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 import { occurrenceById } from '@planner-test/support/occurrence-workbench';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -44,7 +45,7 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
   expect(button.closest('[inert]')).toBeNull();
   const moveSlot = within(button.closest('li')!).getByRole('button', { name: /^Move / });
   expect(moveSlot).toHaveProperty('disabled', true);
-  expect(moveSlot.getAttribute('title')).toBe('No other position is available.');
+  expect(hintOf(moveSlot)).toBe('No other position is available.');
   expect(button.classList.contains('danger-action')).toBe(true);
   expect(
     screen.queryByText('This delivery is no longer available. Remove it from the timeline.'),

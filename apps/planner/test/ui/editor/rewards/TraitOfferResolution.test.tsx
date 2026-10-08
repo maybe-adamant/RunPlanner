@@ -35,6 +35,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -696,7 +697,7 @@ describe('resolution outcomes', () => {
       </Provider>,
     );
     await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
-    expect(screen.getByRole('button', { name: 'Natural Selection 2nd core' }).title).toBe(
+    expect(hintOf(screen.getByRole('button', { name: 'Natural Selection 2nd core' }))).toBe(
       'Choose the 1st core first',
     );
     await user.click(screen.getByRole('button', { name: 'Natural Selection 1st core' }));

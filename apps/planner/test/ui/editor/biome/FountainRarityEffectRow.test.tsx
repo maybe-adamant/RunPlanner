@@ -26,6 +26,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { FountainRarityEffectRow } from '@planner/ui/editor/biome/FountainRarityEffectRow';
 import { createCompleteFGProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(() => {
   cleanup();
@@ -154,7 +155,7 @@ describe('FountainRarityEffectRow', () => {
     );
     const picker = await screen.findByLabelText('Phial Target');
     expect(picker).toHaveProperty('disabled', true);
-    expect(picker.getAttribute('title')).toBe('Waits on an earlier choice');
+    expect(hintOf(picker)).toBe('Waits on an earlier choice');
     expect(screen.queryByRole('button', { name: 'Clear Phial target' })).toBeNull();
     application.dispose();
   });
@@ -200,7 +201,7 @@ describe('FountainRarityEffectRow', () => {
     );
     const picker = await screen.findByLabelText('Phial Target');
     expect(picker).toHaveProperty('disabled', true);
-    expect(picker.getAttribute('title')).toBe('No Phial-eligible boon to target here.');
+    expect(hintOf(picker)).toBe('No Phial-eligible boon to target here.');
     application.dispose();
   });
 

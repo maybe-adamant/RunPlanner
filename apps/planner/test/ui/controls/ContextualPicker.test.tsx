@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -137,7 +138,7 @@ describe('ContextualPicker', () => {
     },
   );
 
-  it('marks a retained unavailable value invalid with its hover title and nothing else', () => {
+  it('marks a retained unavailable value invalid with its hover hint and nothing else', () => {
     render(
       <ContextualPicker
         id="invalid-picker"
@@ -146,12 +147,12 @@ describe('ContextualPicker', () => {
         model={model}
         onSelect={() => undefined}
         placeholder="Select a room"
-        triggerTitle="Retained choice is unavailable here."
+        triggerHint="Retained choice is unavailable here."
       />,
     );
     const trigger = screen.getByLabelText('Room');
     expect(trigger.getAttribute('aria-invalid')).toBe('true');
-    expect(trigger.getAttribute('title')).toBe('Retained choice is unavailable here.');
+    expect(hintOf(trigger)).toBe('Retained choice is unavailable here.');
     expect(trigger).toHaveProperty('disabled', false);
     expect(trigger.parentElement!.textContent).toBe(`Room${model.selected!.label}▾`);
   });

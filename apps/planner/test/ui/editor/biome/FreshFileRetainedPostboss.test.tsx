@@ -19,6 +19,7 @@ import {
   freshFileFPostbossId,
   withRetainedFreshFilePostboss,
 } from '@run-planner/test-fixtures/fresh-file';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -52,7 +53,7 @@ describe('Fresh File retained Postboss controls', () => {
     expect(within(timeline).queryByText(/no Keepsake Rack on this route/)).toBeNull();
     const keepsakePicker = within(timeline).getByRole('button', { name: 'Choose Keepsake' });
     expect(keepsakePicker).toHaveProperty('disabled', true);
-    expect(keepsakePicker.getAttribute('title')).toBe('No Keepsake Rack on this route.');
+    expect(hintOf(keepsakePicker)).toBe('No Keepsake Rack on this route.');
     fireEvent.click(
       within(timeline).getByRole('button', {
         name: 'Remove Change Keepsake from timeline',

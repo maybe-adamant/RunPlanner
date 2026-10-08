@@ -37,6 +37,7 @@ import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { ActionIcon } from '../controls/ActionIcon';
+import { HintLayer } from '../controls/HintLayer';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
 import { useAppScale } from './useAppScale';
@@ -311,6 +312,7 @@ export function App({
             target={levelResolutionDialogTarget}
           />
         )}
+        <HintLayer />
       </main>
     </FindingTargetScope>
   );

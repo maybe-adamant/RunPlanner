@@ -41,7 +41,7 @@ export function CandidatePicker<T extends number | string>({
       label={label}
       layout="inline"
       {...(interaction.contextReached === false
-        ? { disabledTitle: 'Waits on an earlier choice' }
+        ? { disabledHint: 'Waits on an earlier choice' }
         : {})}
       loading={projection.pending}
       model={model}

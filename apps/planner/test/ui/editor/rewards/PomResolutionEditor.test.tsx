@@ -36,6 +36,7 @@ import {
   PomResolutionEditor,
   PomResolutionLauncher,
 } from '@planner/ui/editor/rewards/PomResolutionEditor';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -287,7 +288,7 @@ describe('Pom resolution editor', () => {
     );
     const launcher = screen.getByRole('button', { name: /Edit Pom/ }) as HTMLButtonElement;
     expect(launcher.disabled).toBe(true);
-    expect(launcher.title).toBe('Waits on an earlier choice');
+    expect(hintOf(launcher)).toBe('Waits on an earlier choice');
     expect(screen.queryByRole('dialog')).toBeNull();
     application.dispose();
   });
@@ -366,7 +367,7 @@ describe('Pom resolution editor', () => {
     );
     const routeState = screen.getByRole('button', { name: 'Route state' });
     expect(routeState).toHaveProperty('disabled', true);
-    expect(routeState.getAttribute('title')).toBe('One route state applies to this Pom.');
+    expect(hintOf(routeState)).toBe('One route state applies to this Pom.');
     expect(routeState.textContent).toContain('Route state 1');
   });
 

@@ -61,7 +61,7 @@ function levelResolutionLoadable(
 export function RandomTraitTargetPicker({
   findingTarget,
   disabled = false,
-  disabledTitle,
+  disabledHint,
   placeholder = 'Choose a trait',
   ariaLabel,
   id,
@@ -76,7 +76,7 @@ export function RandomTraitTargetPicker({
 }: {
   readonly ariaLabel: string;
   readonly disabled?: boolean;
-  readonly disabledTitle?: string;
+  readonly disabledHint?: string;
   readonly placeholder?: string;
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
@@ -101,7 +101,7 @@ export function RandomTraitTargetPicker({
       {...(onOpenChange === undefined ? {} : { onOpenChange })}
       {...(open === undefined ? {} : { open })}
       disabled={disabled}
-      {...(disabledTitle === undefined ? {} : { disabledTitle })}
+      {...(disabledHint === undefined ? {} : { disabledHint })}
       placeholder={placeholder}
       {...(selected === null ? {} : { triggerLabel: interaction.traitLabel(selected) })}
     />
@@ -273,7 +273,7 @@ export function PomResolutionEditor({
         placeholder={groups.length === 0 ? 'Evaluating route state…' : 'Choose a route state'}
         {...(groups.length <= 1
           ? {
-              disabledTitle:
+              disabledHint:
                 groups.length === 0
                   ? 'Evaluating route state…'
                   : 'One route state applies to this Pom.',

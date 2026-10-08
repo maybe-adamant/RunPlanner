@@ -64,7 +64,7 @@ export function RoomActionPlacementControl({
         ...proposal,
         label: roomActionDestinationLabel(rows, proposal.toIndex ?? 0, row),
       }))}
-      disabledTitle="No other position is available."
+      disabledHint="No other position is available."
       onApply={onApply}
     />
   );
