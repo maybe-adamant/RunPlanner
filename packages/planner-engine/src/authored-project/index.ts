@@ -435,6 +435,7 @@ export { chaosGateSpawnPointIndices } from './chaos-gate-position';
 
 export {
   RUN_MODIFIER_DECLARATIONS,
+  RUN_MODIFIER_PERCENTAGE,
   NATIVE_RUN_MODIFIERS,
   runModifierDeclaration,
   isRunModifierValue,
@@ -444,7 +445,7 @@ export {
   encodeRunModifiers,
   type RunModifierDeclaration,
   type BooleanRunModifierDeclaration,
-  type NumberRunModifierDeclaration,
+  type OptionalPercentageRunModifierDeclaration,
   type RunModifierKey,
   type RunModifiers,
   type RunModifiersRecord,

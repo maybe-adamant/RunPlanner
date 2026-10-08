@@ -157,9 +157,12 @@ same equipped-trait snapshot; the workspace does not count lifecycle events or
 predict a future automatic target.
 
 The Loadout modifiers section renders from the engine's run modifier
-declarations: a toggle or slider by declared kind, with the label, description
-and numeric domain taken from the declaration; `internal` declarations appear
-only when the application composition marks a development build.
+declarations: a toggle for a boolean kind, and for an optional percentage a
+checkbox plus a 0–100% slider that is disabled while unchecked, with the label
+and description taken from the declaration. The slider keeps its last value in
+UI state only, so re-enabling restores it; with none, enabling starts at 100%.
+`internal` declarations appear only when the application composition marks a
+development build.
 
 Run State remains available through the covered lifecycle checkpoint that
 precedes or contains the first blocking value and unavailable afterward. The

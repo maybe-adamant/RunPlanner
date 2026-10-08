@@ -128,7 +128,7 @@ const goldContextChange = (routeKey: string) =>
   authoredProjectCommandDispatched({
     kind: 'ReplaceRunModifiers',
     route: createRouteAddress(routeKey),
-    value: { enemyGoldDropChanceMultiplier: 2 },
+    value: { enemyGoldDropChance: 50 },
   });
 
 const selectedRadioIndex = (dialog: HTMLElement, suffix: string): number =>

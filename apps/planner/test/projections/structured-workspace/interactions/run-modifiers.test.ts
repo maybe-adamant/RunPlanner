@@ -5,40 +5,52 @@ import {
   createProjectDocument,
   createRouteAddress,
   runModifierDeclaration,
-  type NumberRunModifierDeclaration,
+  type OptionalPercentageRunModifierDeclaration,
   type RunModifierDeclaration,
 } from '@run-planner/engine/authored-project';
 import { createApplication } from '@planner/composition/createApplication';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { visibleRunModifierDeclarations } from '@planner/projections/structured-workspace/interactions/run-modifiers';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
+
+const keys = ['enemyGoldDropChance', 'encounterGoldRange'];
 
 it('projects engine defaults and complete intents bound to the current route and siblings', () => {
   const application = createOpenTestApplication('FreshFile');
   const control = () =>
     application.selectStructuredWorkspace(application.store.getState())!.route.runModifiers;
   expect(control().value).toBe(NATIVE_RUN_MODIFIERS);
-  expect(control().declarations.map((declaration) => declaration.key)).toEqual([
-    'enemyGoldDropChanceMultiplier',
-  ]);
-  const gold = runModifierDeclaration('enemyGoldDropChanceMultiplier');
-  if (gold.kind !== 'number') throw new Error('gold multiplier is a number declaration');
-  const result = control().draftIntent(gold, '1.25');
-  expect(result.kind).toBe('valid');
+  expect(control().declarations.map((declaration) => declaration.key)).toEqual(keys);
+  const chance = runModifierDeclaration('enemyGoldDropChance');
+  const range = runModifierDeclaration('encounterGoldRange');
+  if (chance.kind !== 'optionalPercentage' || range.kind !== 'optionalPercentage')
+    throw new Error('gold modifiers are optional percentages');
+  const result = control().draftIntent(chance, '35');
   if (result.kind !== 'valid') throw new Error('Valid draft rejected');
-  expect(result.intent.command).toEqual({
-    kind: 'ReplaceRunModifiers',
+  const command = {
+    kind: 'ReplaceRunModifiers' as const,
     route: createRouteAddress('FreshFile'),
-    value: { ...NATIVE_RUN_MODIFIERS, enemyGoldDropChanceMultiplier: 1.25 },
+    value: { enemyGoldDropChance: 35 },
+  };
+  expect(result.intent.command).toEqual(command);
+  application.store.dispatch(authoredProjectCommandDispatched(command));
+  const both = control().draftIntent(range, '0');
+  if (both.kind !== 'valid') throw new Error('Valid draft rejected');
+  expect(both.intent.command).toEqual({
+    ...command,
+    value: { enemyGoldDropChance: 35, encounterGoldRange: 0 },
   });
-  for (const draft of ['', 'x', '0.5', '5.5']) {
-    expect(control().draftIntent(gold, draft)).toEqual({
+  expect(control().clearValue(chance).command).toEqual({ ...command, value: {} });
+  for (const draft of ['', 'x', '-1', '100.5']) {
+    expect(control().draftIntent(chance, draft)).toEqual({
       kind: 'invalid',
-      message: 'Enter a value between 1 and 5.',
+      message: 'Enter a value between 0 and 100.',
     });
   }
-  const foreign: NumberRunModifierDeclaration = { ...gold, key: 'notDeclared' };
+  const foreign: OptionalPercentageRunModifierDeclaration = { ...chance, key: 'notDeclared' };
   expect(() => control().draftIntent(foreign, '2')).toThrow('undeclared run modifier');
+  expect(() => control().clearValue(foreign)).toThrow('undeclared run modifier');
 });
 
 it('authors only released declarations outside a development build', () => {
@@ -59,9 +71,9 @@ it('authors only released declarations outside a development build', () => {
   const table = [...RUN_MODIFIER_DECLARATIONS, internal];
   expect(
     visibleRunModifierDeclarations(table, false).map((declaration) => declaration.key),
-  ).toEqual(['enemyGoldDropChanceMultiplier']);
+  ).toEqual(keys);
   expect(visibleRunModifierDeclarations(table, true).map((declaration) => declaration.key)).toEqual(
-    ['enemyGoldDropChanceMultiplier', 'hypotheticalInternalToggle'],
+    [...keys, 'hypotheticalInternalToggle'],
   );
   // The composition root accepts the gate explicitly; the shipped table has no internal entry.
   for (const devBuild of [false, true]) {
@@ -79,6 +91,6 @@ it('authors only released declarations outside a development build', () => {
       application
         .selectStructuredWorkspace(application.store.getState())!
         .route.runModifiers.declarations.map((declaration) => declaration.key),
-    ).toEqual(['enemyGoldDropChanceMultiplier']);
+    ).toEqual(keys);
   }
 });

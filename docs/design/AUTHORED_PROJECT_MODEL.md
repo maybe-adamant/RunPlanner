@@ -53,7 +53,7 @@ The loadout `runModifiers` record is the one tolerant exception to exact
 decoding. Its owner is the engine's run-modifier declaration table
 (`authored-project/run-modifiers.ts`): decoding drops keys the table does not
 declare, clamps a finite number outside its declared domain to the nearest
-bound, and replaces any other malformed known value with its declared default,
+bound, and replaces any other malformed known value with its native value,
 so modifiers can be added, trialled and retired without a schema bump. Every
 other authored record stays exact.
 Changing a catalog-version requirement to reject existing saves is subject to
@@ -210,21 +210,22 @@ automatic-activation rules, Vow maxima, and Fear increments. The authored model
 owns only the player's starting selections; derived automatic cards and the
 configured Fear total are not persisted independently.
 
-Loadout optionally owns a `runModifiers` record whose keys, kinds, defaults,
-numeric domains and display `unit` come from the run-modifier declaration
-table. The persisted
-record carries only values that differ from their declared default; absence
-means every modifier is native. The one released modifier is
-`enemyGoldDropChanceMultiplier`, a finite number from 1 to 5 with fractions
-supported. These execution options are editable in Fresh File without making
-its fixed equipment editable. They do not change simulation, candidates, or
-encounter eligibility.
+Loadout optionally owns a `runModifiers` record whose keys, kinds, defaults
+and display domains come from the run-modifier declaration table. A boolean
+modifier is persisted only when it differs from its default. An optional
+percentage modifier is absent while off (native) and present as an enabled
+value from 0 to 100 while on; a malformed value decodes as off. Absence of the
+record means every modifier is native. The released modifiers are the optional
+percentages `enemyGoldDropChance` and `encounterGoldRange`. These execution
+options are editable in Fresh File without making its fixed equipment
+editable. They do not change simulation, candidates, or encounter eligibility.
 
 `ReplaceRunModifiers` replaces the complete settings as one route-owned history
 edit, normalizes its value through the same tolerant decode, preserves identity
 for no-ops, and removes the record when every value is native. Execution
-assembly publishes the complete declared record only when some value is
-non-native, separately from starting equipment.
+assembly publishes the complete declared record, omitting optional modifiers
+that are off, only when some value is non-native, separately from starting
+equipment.
 
 Loadout also owns the nullable starting reward offer. A mature route reports a
 missing offer once any biome is configured; a Fresh File entry binds no

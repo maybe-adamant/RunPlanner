@@ -48,7 +48,7 @@
       }
     }
   },
-  "runModifiers": { "enemyGoldDropChanceMultiplier": 2.5 },
+  "runModifiers": { "enemyGoldDropChance": 40, "encounterGoldRange": 25 },
   "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake" },
   "extent": { "kind": "configuredPrefix", "biomeKeys": ["F"], "terminalBiomeKey": "F" },
   "selectedOccurrenceIds": [
@@ -2329,5 +2329,5 @@
       }
     }
   ],
-  "planFingerprint": "a6544415"
+  "planFingerprint": "1d9f7f3c"
 }

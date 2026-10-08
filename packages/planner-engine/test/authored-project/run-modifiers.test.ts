@@ -10,8 +10,10 @@ import {
   encodeProjectDocument,
   encodeRunModifiers,
   isNativeRunModifiers,
+  isRunModifierValue,
   NATIVE_RUN_MODIFIERS,
   RUN_MODIFIER_DECLARATIONS,
+  RUN_MODIFIER_PERCENTAGE,
   routeRunModifiers,
   projectCommandAddress,
   ProjectCommandContractError,
@@ -20,7 +22,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 const route = createRouteAddress('Underworld');
-const settings: RunModifiers = { enemyGoldDropChanceMultiplier: 1.25 };
+const settings: RunModifiers = { enemyGoldDropChance: 40 };
 const project = () =>
   createProjectDocument(catalog, {
     projectId: 'modifiers',
@@ -36,77 +38,84 @@ const withLoadoutModifiers = (value: unknown, document = project()) => ({
 
 const malformedValues: readonly unknown[] = [NaN, Infinity, -Infinity, '2', null, true];
 const clampedValues: readonly (readonly [number, number])[] = [
-  [0.5, 1],
-  [0.99, 1],
-  [5.01, 5],
-  [8, 5],
+  [-5, 0],
+  [-0.01, 0],
+  [100.5, 100],
+  [250, 100],
 ];
 
 describe('run modifier declarations', () => {
-  it('declare unique keys with valid numeric domains that contain their defaults', () => {
+  it('declare the gold percentages as released optional modifiers that are off natively', () => {
     const keys = RUN_MODIFIER_DECLARATIONS.map((declaration) => declaration.key);
     expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toEqual(['enemyGoldDropChance', 'encounterGoldRange']);
     for (const declaration of RUN_MODIFIER_DECLARATIONS) {
-      expect(['released', 'internal']).toContain(declaration.stage);
+      expect(declaration.kind).toBe('optionalPercentage');
+      expect(declaration.stage).toBe('released');
       expect(declaration.label).not.toBe('');
-      if (declaration.kind === 'number') {
-        expect(declaration.min).toBeLessThan(declaration.max);
-        expect(declaration.step).toBeGreaterThan(0);
-        expect(declaration.default).toBeGreaterThanOrEqual(declaration.min);
-        expect(declaration.default).toBeLessThanOrEqual(declaration.max);
-      } else {
-        expect(typeof declaration.default).toBe('boolean');
-      }
+      expect(declaration.description).not.toBe('');
+      expect(isRunModifierValue(declaration, 0)).toBe(true);
+      expect(isRunModifierValue(declaration, 100)).toBe(true);
+      expect(isRunModifierValue(declaration, 101)).toBe(false);
+      expect(isRunModifierValue(declaration, undefined)).toBe(false);
     }
+    expect(RUN_MODIFIER_PERCENTAGE).toEqual({ min: 0, max: 100, step: 1, unit: '%' });
     expect(Object.isFrozen(RUN_MODIFIER_DECLARATIONS)).toBe(true);
-    expect(NATIVE_RUN_MODIFIERS).toEqual({ enemyGoldDropChanceMultiplier: 1 });
+    expect(NATIVE_RUN_MODIFIERS).toEqual({});
     expect(isNativeRunModifiers(NATIVE_RUN_MODIFIERS)).toBe(true);
     expect(isNativeRunModifiers(settings)).toBe(false);
+    expect(isNativeRunModifiers({ encounterGoldRange: 0 })).toBe(false);
   });
 
-  it('drops unknown keys, heals malformed known values, and omits all-default encodings', () => {
+  it('drops unknown keys, treats malformed values as off, clamps, and encodes only enabled values', () => {
     expect(decodeRunModifiers({ ...settings, unknown: true }, 'runModifiers')).toEqual(settings);
     expect(decodeRunModifiers({}, 'runModifiers')).toEqual(NATIVE_RUN_MODIFIERS);
-    for (const enemyGoldDropChanceMultiplier of malformedValues)
-      expect(decodeRunModifiers({ enemyGoldDropChanceMultiplier }, 'runModifiers')).toEqual(
+    for (const enemyGoldDropChance of malformedValues)
+      expect(decodeRunModifiers({ enemyGoldDropChance }, 'runModifiers')).toEqual(
         NATIVE_RUN_MODIFIERS,
       );
     for (const [stored, clamped] of clampedValues)
-      expect(decodeRunModifiers({ enemyGoldDropChanceMultiplier: stored }, 'runModifiers')).toEqual(
-        { enemyGoldDropChanceMultiplier: clamped },
-      );
+      expect(decodeRunModifiers({ encounterGoldRange: stored }, 'runModifiers')).toEqual({
+        encounterGoldRange: clamped,
+      });
     expect(encodeRunModifiers(NATIVE_RUN_MODIFIERS)).toBeUndefined();
     expect(encodeRunModifiers(settings)).toEqual(settings);
+    expect(encodeRunModifiers({ enemyGoldDropChance: 0, encounterGoldRange: 100 })).toEqual({
+      enemyGoldDropChance: 0,
+      encounterGoldRange: 100,
+    });
     for (const value of [null, [], 'modifiers', 2])
       expect(() => decodeRunModifiers(value, 'runModifiers')).toThrow(ProjectDocumentContractError);
   });
 
-  it('decodes a document carrying the retired guarantee keys to the gold-only shape', () => {
+  it('drops the retired multiplier and guarantee keys on load', () => {
     const decoded = decodeProjectDocument(
       withLoadoutModifiers({
         guaranteeEligibleCrits: true,
-        guaranteeEligibleDoubleDamage: true,
         enemyGoldDropChanceMultiplier: 2.5,
+        encounterGoldRange: 60,
       }),
       catalog,
     );
-    expect(decoded.route.loadout.runModifiers).toEqual({ enemyGoldDropChanceMultiplier: 2.5 });
-    expect(encodeProjectDocument(decoded)).not.toContain('guaranteeEligible');
+    expect(decoded.route.loadout.runModifiers).toEqual({ encounterGoldRange: 60 });
+    const encoded = encodeProjectDocument(decoded);
+    expect(encoded).not.toContain('guaranteeEligible');
+    expect(encoded).not.toContain('enemyGoldDropChanceMultiplier');
     const native = decodeProjectDocument(
-      withLoadoutModifiers({ guaranteeEligibleCrits: true, enemyGoldDropChanceMultiplier: 'x' }),
+      withLoadoutModifiers({ enemyGoldDropChanceMultiplier: 2.5, enemyGoldDropChance: 'x' }),
       catalog,
     );
     expect(native.route.loadout).not.toHaveProperty('runModifiers');
     expect(routeRunModifiers(native.route.loadout)).toBe(NATIVE_RUN_MODIFIERS);
     for (const [stored, clamped] of [
-      [8, 5],
-      [0.5, 1],
+      [250, 100],
+      [-5, 0],
     ]) {
       const saved = decodeProjectDocument(
-        withLoadoutModifiers({ enemyGoldDropChanceMultiplier: stored }),
+        withLoadoutModifiers({ enemyGoldDropChance: stored }),
         catalog,
       );
-      expect(routeRunModifiers(saved.route.loadout).enemyGoldDropChanceMultiplier).toBe(clamped);
+      expect(routeRunModifiers(saved.route.loadout).enemyGoldDropChance).toBe(clamped);
     }
   });
 });
@@ -123,7 +132,7 @@ describe('authored run modifiers', () => {
     expect(replace(NATIVE_RUN_MODIFIERS, original)).toBe(original);
   });
 
-  it('replaces complete settings, retains fractional values, and resets with omission', () => {
+  it('replaces complete settings and turns modifiers off by omission', () => {
     const original = project();
     const changed = replace(settings, original);
     expect(changed.route.loadout.runModifiers).toEqual(settings);
@@ -158,16 +167,15 @@ describe('authored run modifiers', () => {
     'normalizes a malformed command value instead of rejecting: %j',
     (value) => {
       const changed = replace({ ...settings }, project());
-      const normalized = replace({ enemyGoldDropChanceMultiplier: value } as RunModifiers, changed);
+      const normalized = replace({ enemyGoldDropChance: value } as RunModifiers, changed);
       expect(normalized.route.loadout).not.toHaveProperty('runModifiers');
       expect(routeRunModifiers(normalized.route.loadout)).toEqual(NATIVE_RUN_MODIFIERS);
       const unknown = replace({ ...settings, unknown: true } as RunModifiers, project());
       expect(unknown.route.loadout.runModifiers).toEqual(settings);
       for (const [stored, clamped] of clampedValues)
         expect(
-          routeRunModifiers(
-            replace({ enemyGoldDropChanceMultiplier: stored }, project()).route.loadout,
-          ).enemyGoldDropChanceMultiplier,
+          routeRunModifiers(replace({ enemyGoldDropChance: stored }, project()).route.loadout)
+            .enemyGoldDropChance,
         ).toBe(clamped);
     },
   );
