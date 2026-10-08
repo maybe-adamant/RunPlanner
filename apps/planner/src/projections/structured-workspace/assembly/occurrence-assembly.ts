@@ -111,8 +111,27 @@ function offerRewardRewards(
       ? ({ kind: 'incomingReward' } as const)
       : room.offerRewardBinding;
   switch (binding.kind) {
-    case 'none':
-      return Object.freeze([]);
+    case 'none': {
+      // A Shop door carries no reward offer; it names the Shop itself.
+      if (room.incomingReward.kind !== 'shop') return Object.freeze([]);
+      const shop = input.catalog.rewards.rewardTypes.byKey[room.incomingReward.rewardType];
+      if (shop === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${room.gameName} declares unknown shop reward type ${room.incomingReward.rewardType}`,
+        );
+      }
+      return Object.freeze([
+        Object.freeze({
+          key: 'incoming',
+          label: 'Door reward',
+          marker: input.markerDestinations.marker(
+            createIncomingRewardAddress(input.biome, input.occurrence.occurrenceId),
+          ),
+          offer: null,
+          summary: shop.label,
+        }),
+      ]);
+    }
     case 'incomingReward': {
       if (roomLocal.kind === 'none') return Object.freeze([]);
       // A Clockwork Goal door shows the goal itself; its counted reward stays dormant.

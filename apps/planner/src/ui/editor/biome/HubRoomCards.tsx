@@ -71,7 +71,7 @@ export function OpenHubRoomCard({
       </div>
       {rewards === undefined || rewards.length === 0 || slot.door === undefined ? (
         <div className="hub-main-reward hub-overview-reward-slot">
-          <div className="field-control field-control-inline control-placeholder">
+          <div className="field-control field-control-inline door-fixed-reward">
             <span>Reward</span>
             <span className="fixed-room-state">No reward</span>
           </div>
