@@ -54,6 +54,8 @@
 .application-fault-card {
   width: min(680px, 100%);
   display: grid;
+  /* Long unbroken error text must not widen the card's track. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   padding: 28px;
   border: 1px solid #513a32;
@@ -77,6 +79,7 @@
   max-height: 180px;
   overflow: auto;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 * {
