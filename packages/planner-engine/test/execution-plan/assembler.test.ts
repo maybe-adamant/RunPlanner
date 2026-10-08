@@ -1357,10 +1357,7 @@ describe('engine-owned F/G execution semantic product', () => {
                 selectedDisposition: {
                   kind: 'echo' as const,
                   effect: 'roomDecay' as const,
-                  startFraction: {
-                    ordinary: 0.05,
-                    dreamByAcquisitionOrdinal: [0.05, 0.05, 0.05, 0.05] as const,
-                  },
+                  startFractionByAcquisitionOrdinal: [0.05, 0.05, 0.05, 0.05] as const,
                   decay: 0.05,
                 },
               }

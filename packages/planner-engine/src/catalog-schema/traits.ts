@@ -226,7 +226,7 @@ export type TraitSelectedDisposition =
        */
       readonly kind: 'echo';
       readonly effect: 'roomDecay';
-      readonly startFraction: TraitRoomDecayStartFraction;
+      readonly startFractionByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
       readonly decay: number;
     }
   | {
@@ -278,21 +278,13 @@ export interface TraitPickupDeclaration {
 /** The only acquisition-ordinal matrix supported for the audited NPC effects. */
 export type TraitAcquisitionOrdinalValues = readonly [number, number, number, number];
 
-/**
- * Echo scales its choices at a fixed Epic row; Dream Dive replaces the row by
- * the entered-biome count.
- */
-export interface TraitRoomDecayStartFraction {
-  readonly ordinary: number;
-  readonly dreamByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
-}
-
 /** Complete selected-disposition facts resolved once at an exact acquisition ordinal. */
 export interface ResolvedTraitAcquisitionOrdinalEffect {
   readonly pickups: readonly TraitPickupDeclaration[];
   readonly levelCount?: number;
   readonly clockInterval?: number;
   readonly circeSelectionCount?: number;
+  readonly roomDecayStartFraction?: number;
 }
 
 function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): number {
@@ -310,6 +302,11 @@ export function resolveTraitAcquisitionOrdinalEffect(
     return Object.freeze({
       pickups: Object.freeze([]),
       circeSelectionCount: ordinalValue(disposition.selectionCountByAcquisitionOrdinal, ordinal),
+    });
+  if (disposition.kind === 'echo' && disposition.effect === 'roomDecay')
+    return Object.freeze({
+      pickups: Object.freeze([]),
+      roomDecayStartFraction: ordinalValue(disposition.startFractionByAcquisitionOrdinal, ordinal),
     });
   if (disposition.kind === 'upgradeOccupiedBoonSlot')
     return Object.freeze({

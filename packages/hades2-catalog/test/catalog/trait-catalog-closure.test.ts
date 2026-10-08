@@ -256,7 +256,7 @@ describe('trait catalog closure', () => {
         disposition: {
           kind: 'echo',
           effect: 'roomDecay',
-          startFraction: { ordinary: 0.6, dreamByAcquisitionOrdinal: [0.6, 0.6, 0.6, 0.8] },
+          startFractionByAcquisitionOrdinal: [0.6, 0.6, 0.6, 0.8],
           decay: 0.05,
         },
       },

@@ -40,12 +40,12 @@ export const echoTraits = [
     label: 'Fight Fight Fight',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
-    // StartFraction 0.6 times the Echo scaling row's multiplier (Heroic 0.8/0.6),
-    // rounded to hundredths.
+    // StartFraction 0.6 scaled by the rarity row of the acquisition position
+    // (Heroic 0.8/0.6), rounded to hundredths.
     selectedDisposition: {
       kind: 'echo',
       effect: 'roomDecay',
-      startFraction: { ordinary: 0.6, dreamByAcquisitionOrdinal: [0.6, 0.6, 0.6, 0.8] },
+      startFractionByAcquisitionOrdinal: [0.6, 0.6, 0.6, 0.8],
       decay: 0.05,
     },
   },
