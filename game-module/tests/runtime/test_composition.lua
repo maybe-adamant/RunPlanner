@@ -881,7 +881,7 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
     local victim = { ObjectId = 2, DamageType = 'Enemy', AddToEnemyTeam = true, MoneyDropOnDeath = { Chance = 0.2 } }
     local state = runtimeSession.create()
     local plan = { kind = 'ready', occurrences = {}, selectedOccurrenceIds = {}, occurrencesById = {},
-        runModifiers = { enemyGoldDropChanceMultiplier = 4 } }
+        runModifiers = { enemyGoldDropChance = 80 } }
     local preview = plan
     local module, _, callbacks = capture()
     local restore = nativeGame.install({ CurrentRun = admitted, CurrentHubRoom = false, SessionMapState = {},
@@ -915,7 +915,7 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
     local bound = assert(loadfile('src/mods/runtime/composition.lua'))().bind('/tmp/run-planner-modifiers-test')
     bound.attach(module)
     lu.assertIs(state.admittedNativeRun, admitted)
-    preview = { runModifiers = { enemyGoldDropChanceMultiplier = 1 } }
+    preview = { runModifiers = {} }
     lu.assertIs(bound.sessionInspection().plan, plan)
     state.state, state.reason = 'inactive', 'configured-prefix-complete'
     local args = { AttackerTable = admitted.Hero }
