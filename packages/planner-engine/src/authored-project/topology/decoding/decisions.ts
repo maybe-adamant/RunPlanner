@@ -15,6 +15,7 @@ import type {
   OccurrenceId,
 } from '../../model';
 import {
+  physicalExitKey,
   declaredPhysicalExitsForSourceRoom,
   normalDecisionProgressionForLayout,
   possibleGeneratedNormalExitKeys,
@@ -215,10 +216,10 @@ function validateTakeoverBatch(
   );
   if (takeover === undefined) return;
   const normalExitSequence = declarationExitKeys.every(
-    (exitKey, index) => exitKey === `exit${index + 1}`,
+    (exitKey, index) => exitKey === physicalExitKey(index + 1),
   );
   const ownsOrderedExitSequence = normalExitSequence
-    ? targets.every((target, index) => target.exitKey === `exit${index + 1}`)
+    ? targets.every((target, index) => target.exitKey === physicalExitKey(index + 1))
     : targets.length === declarationExitKeys.length &&
       targets.every((target, index) => target.exitKey === declarationExitKeys[index]);
   if (!ownsOrderedExitSequence) {

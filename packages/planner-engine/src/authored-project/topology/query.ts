@@ -227,7 +227,12 @@ export function automaticHostContinuationExitForDetourRoom(
   ) {
     return undefined;
   }
-  return physicalExit('normal', 'exit1', exit);
+  return physicalExit('normal', physicalExitKey(1), exit);
+}
+
+/** The stable key of a declared physical door, by its one-based declared index. */
+export function physicalExitKey(index: number): string {
+  return `exit${index}`;
 }
 
 /**
@@ -254,7 +259,7 @@ export function declaredPhysicalExitsForSourceRoom(
     if (!isHostRouteDetourRoom(sourceRoom)) return undefined;
     if (sourceRoom.mode.kind === 'authored' && sourceRoom.mode.templateKey === 'Chaos') {
       return Object.freeze(
-        sourceRoom.exits.map((exit) => physicalExit('normal', `exit${exit.index}`, exit)),
+        sourceRoom.exits.map((exit) => physicalExit('normal', physicalExitKey(exit.index), exit)),
       );
     }
     const continuation = automaticHostContinuationExitForDetourRoom(sourceRoom);
@@ -270,7 +275,7 @@ export function declaredPhysicalExitsForSourceRoom(
     return Object.freeze([physicalExit('normal', layout.progression.entry.exitKey, sourceExit)]);
   }
   return Object.freeze(
-    sourceRoom.exits.map((exit) => physicalExit('normal', `exit${exit.index}`, exit)),
+    sourceRoom.exits.map((exit) => physicalExit('normal', physicalExitKey(exit.index), exit)),
   );
 }
 
@@ -325,7 +330,7 @@ export function possibleGeneratedNormalExitKeys(
     ...new Set(
       Object.values(catalog.rooms.byKey)
         .filter((room) => room.roomSetKey === layout.biomeKey && room.mode.kind === 'authored')
-        .flatMap((room) => room.exits.map((exit) => `exit${exit.index}`)),
+        .flatMap((room) => room.exits.map((exit) => physicalExitKey(exit.index))),
     ),
   ]);
 }

@@ -8,6 +8,7 @@ import {
   type ExitDecisionAddress,
 } from '../../authored-project/addresses';
 import {
+  physicalExitKey,
   declaredPhysicalExitsForSourceRoom,
   normalDecisionProgressionForLayout,
 } from '../../authored-project/topology/query';
@@ -343,7 +344,7 @@ function ownerNormalExits(ownerDeclaration: RoomDeclaration): readonly Canonical
       .map((exit) =>
         Object.freeze({
           kind: 'available' as const,
-          exitKey: `exit${exit.index}`,
+          exitKey: physicalExitKey(exit.index),
           index: exit.index,
           type: exit.type,
           compatibilityPolicyKey: exit.compatibilityPolicyKey,

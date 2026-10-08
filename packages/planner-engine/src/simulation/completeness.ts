@@ -27,6 +27,7 @@ import type {
 } from '../authored-project/model';
 import { createInitialExitDecision } from '../authored-project/batchState';
 import {
+  physicalExitKey,
   additionalExitsForDecision,
   bossDoorRewardStoreLinkForSource,
   declaredPhysicalExitsForSourceRoom,
@@ -270,7 +271,7 @@ function terminalTakeoverDoor(
   if (first === undefined) {
     throw new CompletenessContractError(`${room.gameName} has no door for its Hub takeover`);
   }
-  return createTargetAddress(biome, sourceAddress(source), `exit${first.index}`);
+  return createTargetAddress(biome, sourceAddress(source), physicalExitKey(first.index));
 }
 
 /** Six room visits plus the fountain use, addressed to the next missing action. */
