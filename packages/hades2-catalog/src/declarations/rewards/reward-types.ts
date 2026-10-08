@@ -59,7 +59,7 @@ export const rewardTypes = [
   directReward('StoreRewardRandomStack', 'Pom Slice', 'consumable'),
   directReward('LastStandDrop', 'Death Defiance', 'consumable'),
   directReward('ChaosWeaponUpgrade', 'Anvil of Fates', 'consumable'),
-  directReward('InfernalContractBoon', 'Infernal Contract', 'loot'),
+  directReward('InfernalContractBoon', 'Champion of Elysium', 'loot'),
   {
     gameName: 'TrialUpgrade',
     label: 'Chaos Blessing',

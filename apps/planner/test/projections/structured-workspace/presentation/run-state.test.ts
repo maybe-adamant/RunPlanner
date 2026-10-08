@@ -405,7 +405,7 @@ describe('Run State presentation', () => {
           traitKey: 'ElementalDamageBoon',
         },
         {
-          label: 'Infernal Contract',
+          label: 'Champion of Elysium',
           traitKey: 'InfernalContractBoon',
         },
         {

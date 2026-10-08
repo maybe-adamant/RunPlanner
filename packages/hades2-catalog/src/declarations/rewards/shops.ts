@@ -275,7 +275,7 @@ export const shops = [
       },
     ],
     slots: [
-      { key: 'infernalContractReward', label: 'Infernal Contract reward', groupKey: 'Reward' },
+      { key: 'infernalContractReward', label: 'Champion of Elysium reward', groupKey: 'Reward' },
     ],
   },
   // RoomShop is the game's Stygian Well profile, kept separate because its
