@@ -110,17 +110,28 @@ Native scripts: `1GameData/Scripts`.
 ## Gates
 
 1. **Fight Fight Fight.** Decay and removal in trait history; Diminishing Dodge
-   disposable in the module. Tests: engine trait-history witness at the 13th
-   and 16th departures, module conformance witness. `test:equivalence` changes.
-2. **Well model.** Catalog grants, engine substate with the rooms clock,
+   disposable in the module. Done: `45c84c91e`, `bef3a0576`; equivalence
+   unchanged because no corpus route selects the trait.
+2. **Native departures.** Ephyra restored-room departures (a parent room after
+   a side room, every Hub departure after the first, and the Hub handoff) run
+   native `LeaveRoom` but have no `roomExited`. Add one departure contact for
+   every native `LeaveRoom`, separate from `roomExited` so room closure does
+   not repeat, and advance every room-departure clock there: the Chaos
+   `locations` clock and Fight Fight Fight decay, then the Well rooms clock.
+   Capture each Hub departure's inventory before its departure. Tests: a
+   departure-count matrix across Hub visits, side rooms and the handoff;
+   Fight Fight Fight decay through Ephyra. `test:equivalence` changes only if
+   a corpus route carries a room-clocked effect through Ephyra.
+3. **Well model.** Catalog grants, engine substate with the rooms clock,
    Centaur Soul and Kiss of Styx identities, legality-subset conformance
    projection, Run State section, Well docs. Tests: catalog grant
    normalization; engine clock matrix (encounter, rooms, boss, Seal pairing and
-   HydraLite rooms→boss, repeat instances, Twist not extended,
+   HydraLite rooms→boss on the gate 2 departure contact, repeat instances,
+   Twist not extended,
    `ignoreEncounterUses`, room clock on revisits); a witness that a ticking
    neutral buff selects no Well conformance fact. `test:equivalence`: the
    simulation digest changes; the encoded plan digests must not.
-3. **Bell and Fang.** Keepsake values, Run State display, keepsake audit.
+4. **Bell and Fang.** Keepsake values, Run State display, keepsake audit.
 
 Each gate is one commit with its primary tests and closes with
 `npm run check`; the plan closes with deleting this document.
