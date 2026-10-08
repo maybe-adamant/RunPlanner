@@ -492,7 +492,7 @@ export function settleProjectEdit(options: {
       const fault = consume(`delivery:${semanticAddressKey(address)}`, address);
       if (fault !== undefined) return Object.freeze({ assembly, fault });
       if (incompatible || resetInherited)
-        project = discardDisplacedHermesShrineDelivery(project, address.entryKey);
+        project = discardDisplacedHermesShrineDelivery(catalog, project, address.entryKey);
       project = applyProjectCommand(project, catalog, {
         kind: 'PlaceHermesShrineDelivery',
         entry: address,

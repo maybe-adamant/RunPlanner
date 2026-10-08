@@ -681,6 +681,75 @@ describe('timed-effect edit settlement', () => {
     }).project;
     expect(orders(restored)).toHaveLength(1);
   });
+  it('discards a reset retained delivery with its generated pickup site', () => {
+    let project = loadSurfaceNOPQProject();
+    const o = createBiomeAddress('Surface', 'O');
+    const source = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat07'));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'ShopHermesUpgrade'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey,
+        value: { rewardType },
+      });
+    const purchase = (delay: 2 | 6 | null): ProjectCommand => ({
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      purchase: delay === null ? null : { delay },
+    });
+    project = settle(project, purchase(6)).project;
+    const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
+    const lateHostId = 'surface-o-preboss:boss';
+    const trait = createTraitOfferAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(o, createOccurrenceId(lateHostId)),
+          'hermesShrineDelivery',
+        ),
+        key,
+      ),
+      'hermes',
+    );
+    const quickBuck = supportedTraitOffer(project, trait, 'Hermes', 'MoneyMultiplierBoon');
+    if (quickBuck === undefined) throw new Error('expected a Quick Buck Hermes offer');
+    project = settle(project, { kind: 'ReplaceTraitOffer', trait, value: quickBuck }).project;
+    project = settle(project, purchase(null)).project;
+    const retainedHost = occurrence(project, lateHostId);
+    expect(retainedHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key]).toBeDefined();
+    expect(
+      Object.keys(retainedHost.acquisitionSites ?? {}).some((site) =>
+        site.startsWith('traitGenerated:'),
+      ),
+    ).toBe(true);
+
+    const settled = settle(project, purchase(2)).project;
+    const earlyHost = occurrence(settled, 'surface-o-combat01');
+    expect(earlyHost.roomActions.order).toContainEqual(
+      expect.objectContaining({ siteKey: 'hermesShrineDelivery', entryKey: key }),
+    );
+    expect(earlyHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key]).toEqual({
+      offer: { rewardType: 'ShopHermesUpgrade' },
+      traitOffersByAcquisitionRole: { hermes: null },
+      dispositionByAcquisitionRole: { hermes: { kind: 'normal' } },
+    });
+    const formerHost = occurrence(settled, lateHostId);
+    expect(formerHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key]).toBeUndefined();
+    expect(
+      Object.keys(formerHost.acquisitionSites ?? {}).some((site) =>
+        site.startsWith('traitGenerated:'),
+      ),
+    ).toBe(false);
+  });
   it('automatically restores legacy missing deliveries only during an edit', () => {
     const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
     const before = evaluate(project);
