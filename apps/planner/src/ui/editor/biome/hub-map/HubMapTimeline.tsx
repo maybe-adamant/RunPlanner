@@ -227,10 +227,11 @@ function TimelineMapMarker({
           {...pointer}
           style={position}
           {...hintProps(
-            appendWaits ? candidateWaitingHint : `Reward: ${reward.summary}`,
+            appendWaits ? candidateWaitingHint : slot.label,
             [`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
               .filter(Boolean)
               .join(' '),
+            markerLabel,
           )}
           type="button"
         >
@@ -306,7 +307,11 @@ function TimelineFountainMarker({
           {...pointer}
           style={position}
           {...hintProps(
-            appendWaits ? candidateWaitingHint : 'Hub fountain',
+            appendWaits
+              ? candidateWaitingHint
+              : canAppend && !locked
+                ? 'Add the fountain to the visit order.'
+                : undefined,
             undefined,
             fountainLabel,
           )}

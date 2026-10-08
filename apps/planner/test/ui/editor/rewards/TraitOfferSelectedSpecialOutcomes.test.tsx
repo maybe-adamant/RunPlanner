@@ -129,13 +129,13 @@ describe('per-row outcome pickers', () => {
     const onSelect = vi.fn();
     const onClear = vi.fn();
     render(naturalRows(undefined, onSelect, onClear));
-    expect(hintOf(core('2nd'))).toBe('Choose the 1st core first');
+    expect(hintOf(core('2nd'))).toBe('Choose the 1st core first.');
     await user.click(core('1st'));
     await user.click(screen.getByRole('option', { name: 'Label A' }));
     expect(onSelect).not.toHaveBeenCalled();
     expect(onClear).not.toHaveBeenCalled();
     expect(core('1st').textContent).toContain('Label A');
-    expect(hintOf(core('3rd'))).toBe('Choose the 2nd core first');
+    expect(hintOf(core('3rd'))).toBe('Choose the 2nd core first.');
     await user.click(core('2nd'));
     await user.click(screen.getByRole('option', { name: 'Label B' }));
     expect(onSelect).toHaveBeenCalledWith(['A', 'B', 'C', 'A', 'B']);
@@ -421,7 +421,7 @@ describe('selected outcomes', () => {
     const { rerender } = render(view(value));
     const hammer2 = await screen.findByRole('button', { name: 'Latest Model Hammer 2' });
     expect(hammer2).toHaveProperty('disabled', true);
-    expect(hintOf(hammer2)).toBe('Choose Hammer 1 first');
+    expect(hintOf(hammer2)).toBe('Choose Hammer 1 first.');
     await user.click(screen.getByRole('button', { name: 'Latest Model Hammer 1' }));
     await user.click(screen.getByRole('option', { name: label(first) }));
     const saved = onUpdate.mock.calls.at(-1)![0] as AuthoredTraitOfferTraits;

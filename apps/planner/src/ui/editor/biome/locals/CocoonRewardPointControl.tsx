@@ -90,9 +90,7 @@ export function CocoonRewardPointControl({
           layout="inline"
           id={id}
           placeholder="Any"
-          {...(!decision.valueSupported && decision.value !== undefined
-            ? { invalid: true, triggerHint: 'Retained position is unavailable here.' }
-            : {})}
+          {...(!decision.valueSupported && decision.value !== undefined ? { invalid: true } : {})}
           model={declaredChoicesPicker(
             [
               { key: 'any', value: null, label: 'Any' },

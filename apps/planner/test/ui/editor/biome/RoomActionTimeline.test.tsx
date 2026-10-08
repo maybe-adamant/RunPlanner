@@ -1235,7 +1235,7 @@ describe('OccurrenceRoomActions', () => {
       true,
     );
     expect(within(row).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
-    expect(queryByHint(actions, 'Vow of Forfeit')).toBeNull();
+    expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
   });
 
   it('authors an Artificer replacement through its exact Room Action acquisition site', () => {

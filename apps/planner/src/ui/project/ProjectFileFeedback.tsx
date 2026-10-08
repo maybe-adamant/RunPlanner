@@ -5,7 +5,6 @@ import type {
   ProjectOperation,
   ProjectOperationResult,
 } from '@planner/workspace/projectOperations';
-import { hintProps } from '@planner/ui/controls/hint';
 
 const statusLabels: Record<ProfileStatus, string> = {
   Clean: 'Saved',
@@ -60,12 +59,7 @@ export function ProjectFileFeedback({
   return (
     <div className="project-profile-feedback">
       {result?.status === 'success' ? (
-        <p
-          className="project-operation-result"
-          data-status="success"
-          role="status"
-          {...hintProps(result.message)}
-        >
+        <p className="project-operation-result" data-status="success" role="status">
           {successLabels[result.operation]}
         </p>
       ) : null}

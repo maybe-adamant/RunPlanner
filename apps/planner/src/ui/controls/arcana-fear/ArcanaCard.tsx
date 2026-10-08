@@ -45,7 +45,7 @@ export function ArcanaCard({
       className="arcana-card-control"
       aria-label={button['aria-label'] ?? label}
       {...hintProps(
-        hint ?? rankDescription,
+        hint ?? (rankText === undefined ? undefined : rankDescription),
         button['aria-description'] ??
           `${rankDescription}${selectionOrder === undefined ? '' : `; pick ${selectionOrder}`}`,
       )}

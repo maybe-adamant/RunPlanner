@@ -4,7 +4,6 @@ import type {
   WorkspaceEncounterPhase,
 } from '@planner/projections/structured-workspace';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { hintProps } from '@planner/ui/controls/hint';
 
 type Decision = Extract<
   NonNullable<WorkspaceEncounterPhase['customization']>[number],
@@ -69,7 +68,6 @@ export function CocoonCountControl({
           aria-invalid={unavailable || undefined}
           aria-valuetext={shownText}
           id={id}
-          {...hintProps(unavailable ? `Retained count ${count} is unavailable here.` : undefined)}
           max={maximum - minimum + 1}
           min={0}
           onBlur={commit}

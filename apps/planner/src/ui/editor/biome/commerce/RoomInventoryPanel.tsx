@@ -191,7 +191,7 @@ export function RoomInventoryPanel({
                             className="shop-family-participation"
                             {...hintProps(
                               disabled && slot.traitKey === null
-                                ? 'Choose a trait to sell'
+                                ? 'Choose a trait to sell.'
                                 : undefined,
                             )}
                           >

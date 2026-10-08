@@ -138,11 +138,11 @@ describe('RouteOverview', () => {
     const markup = routeOverviewMarkup(application);
     expect(markup).toContain('>Starting reward</label>');
     expect(markup).toMatch(
-      /<button[^>]*class="contextual-picker-trigger"[^>]*data-hint="Vow of Forfeit"/,
+      /<button[^>]*class="contextual-picker-trigger"[^>]*data-hint="Converted by the Vow of Forfeit\."/,
     );
     expect(markup).toMatch(/Apollo[^<]*\(Red Onion\)<\/span>/);
     expect(markup).not.toContain('Forfeit →');
-    expect(markup.match(/data-hint="Vow of Forfeit"/g)).toHaveLength(1);
+    expect(markup.match(/data-hint="Converted by the Vow of Forfeit\."/g)).toHaveLength(1);
   });
 
   it('owns only the independent starting reward in Route Loadout', () => {
@@ -175,24 +175,18 @@ describe('RouteOverview', () => {
 
     const markup = routeOverviewMarkup(application);
     expect(markup).toContain('Loadout');
-    expect([...markup.matchAll(/data-hint="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
-      'Summit',
-      'Erebus',
-      'Ephyra',
-      'Fields',
-    ]);
+    expect(
+      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
+    ).toEqual(['Summit', 'Erebus', 'Ephyra', 'Fields']);
     expect(markup).toContain('Through Summit');
   });
 
   it('shows the ordinary route order in the same Loadout summary', () => {
     const markup = routeOverviewMarkup(createOpenTestApplication('Underworld'));
     expect(markup).toContain('Loadout');
-    expect([...markup.matchAll(/data-hint="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
-      'Erebus',
-      'Oceanus',
-      'Fields',
-      'Tartarus',
-    ]);
+    expect(
+      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
+    ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
   });
 
   it('presents the Fresh File loadout as fixed facts without selection controls', () => {
@@ -217,11 +211,8 @@ describe('RouteOverview', () => {
     expect(markup).not.toContain('aria-label="Edit Arcana"');
     expect(markup).not.toContain('aria-label="Edit Fear"');
     expect(markup).not.toContain('>Starting reward</label>');
-    expect([...markup.matchAll(/data-hint="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
-      'Erebus',
-      'Oceanus',
-      'Fields',
-      'Tartarus',
-    ]);
+    expect(
+      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
+    ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
   });
 });

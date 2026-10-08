@@ -144,7 +144,9 @@ export function ChaosSpawnWorkbench({
           role="radiogroup"
           tabIndex={-1}
           {...hintProps(
-            position.invalid ? `Position ${position.value} unavailable` : undefined,
+            position.invalid
+              ? `Position ${position.value} isn’t available in this room.`
+              : undefined,
             positionTarget['aria-description'],
           )}
         >

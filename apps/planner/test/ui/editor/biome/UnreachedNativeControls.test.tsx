@@ -25,7 +25,7 @@ import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
-const waitingTitle = 'Waits on an earlier choice';
+const waitingTitle = 'Waits on an earlier choice.';
 
 /** An impossible encounter early in the biome leaves later settings unevaluated. */
 function withInvalidEncounter(

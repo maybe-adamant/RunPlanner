@@ -107,7 +107,7 @@ function KeepsakeRackTimelineDeleteButton({
   return (
     <TimelineActionDeleteButton
       enabled
-      explanation={`Remove ${label} from the timeline`}
+      explanation={`Remove ${label} from the timeline.`}
       label={label}
       onRemove={() => {
         const intent = interaction.removeIntent?.();

@@ -288,7 +288,7 @@ describe('Pom resolution editor', () => {
     );
     const launcher = screen.getByRole('button', { name: /Edit Pom/ }) as HTMLButtonElement;
     expect(launcher.disabled).toBe(true);
-    expect(hintOf(launcher)).toBe('Waits on an earlier choice');
+    expect(hintOf(launcher)).toBe('Waits on an earlier choice.');
     expect(screen.queryByRole('dialog')).toBeNull();
     application.dispose();
   });

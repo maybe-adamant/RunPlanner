@@ -155,7 +155,7 @@ describe('FountainRarityEffectRow', () => {
     );
     const picker = await screen.findByLabelText('Phial Target');
     expect(picker).toHaveProperty('disabled', true);
-    expect(hintOf(picker)).toBe('Waits on an earlier choice');
+    expect(hintOf(picker)).toBe('Waits on an earlier choice.');
     expect(screen.queryByRole('button', { name: 'Clear Phial target' })).toBeNull();
     application.dispose();
   });

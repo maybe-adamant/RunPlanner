@@ -223,7 +223,7 @@ export function NaturalSelectionOutcomeRows({
             onSelect={(traitKey: string) => choose(position, traitKey)}
             placeholder="Choose an eligible core trait"
             {...(row.requiresEarlierRow
-              ? { disabledHint: `Choose the ${ordinal(position)} core first` }
+              ? { disabledHint: `Choose the ${ordinal(position)} core first.` }
               : {})}
             {...(target === undefined || row.requiresEarlierRow
               ? {}

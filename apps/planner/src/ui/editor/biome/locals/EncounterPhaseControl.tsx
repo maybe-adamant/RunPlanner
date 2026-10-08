@@ -94,7 +94,6 @@ function EncounterCustomizationControl({
   const retainedLabel = (decision: NonNullable<typeof phase.customization>[number], key: string) =>
     decision.retainedChoiceLabels?.find((choice) => choice.key === key)?.label ??
     'Unavailable choice';
-  const unavailableTitle = 'Retained choice is unavailable here.';
   // Retained decision values the current context cannot produce; the composition's own
   // issues are listed by its control, so it is named only when no composition exists.
   const assessment =
@@ -113,7 +112,7 @@ function EncounterCustomizationControl({
         ? [
             [
               decision.key,
-              `${decision.label}: ${unavailableTitle} Choose another value or reset it.`,
+              `${decision.label}: The chosen value can't occur in this room. Choose another or reset it.`,
             ] as const,
           ]
         : [],
@@ -226,7 +225,7 @@ function EncounterCustomizationControl({
                       ariaLabel={decision.label}
                       placeholder="Default"
                       {...(!decision.valueSupported && value !== undefined
-                        ? { invalid: true, triggerHint: unavailableTitle }
+                        ? { invalid: true }
                         : {})}
                       model={declaredChoicesPicker(
                         [
@@ -282,9 +281,9 @@ function EncounterCustomizationControl({
                       layout="inline"
                       ariaLabel={`${decision.label} use ${index + 1}`}
                       {...(use.requiresEarlierUse
-                        ? { disabledHint: 'Choose the first summon first' }
+                        ? { disabledHint: 'Choose Use 1 first.' }
                         : !decision.valueSupported && selected[index] !== undefined
-                          ? { invalid: true, triggerHint: unavailableTitle }
+                          ? { invalid: true }
                           : {})}
                       placeholder="Default"
                       model={declaredChoicesPicker(

@@ -855,16 +855,16 @@ export function projectGameSendButton(
       return inactive(
         'sent',
         `✓ Sent · Slot ${activity.slot}`,
-        `Sent to slot ${activity.slot} at ${localTime(activity.atMs)}; ${stillInactive(activationFailure, status) ? 'not made active' : 'now active'}`,
+        `Sent to slot ${activity.slot} at ${localTime(activity.atMs)}; ${stillInactive(activationFailure, status) ? 'not made active' : 'now active'}.`,
       );
     case 'failed':
-      return inactive('failed', '! Not sent', 'Details are in the Game panel');
+      return inactive('failed', '! Not sent', 'Details are in the Game panel.');
     case 'idle':
       break;
   }
-  if (project === null) return inactive('noProject', 'Send to game', 'Open a plan first');
+  if (project === null) return inactive('noProject', 'Send to game', 'Open a plan first.');
   if (status === null || !isReady(status)) {
-    return inactive('notReady', 'Send to game', 'Set up the game in the Game panel');
+    return inactive('notReady', 'Send to game', 'Set up the game in the Game panel.');
   }
   if (!project.eligible) {
     return inactive('notSendable', 'Send to game', describeNotPublishable('notEligible'));
@@ -879,7 +879,7 @@ export function projectGameSendButton(
       state: 'chooseSlot',
       label: 'Send to game…',
       action: { kind: 'openPlans' },
-      description: 'Choose a slot in the Game panel',
+      description: 'Choose a slot in the Game panel.',
     };
   }
   return {
@@ -887,9 +887,7 @@ export function projectGameSendButton(
     label: `Send · Slot ${lastSentSlot}`,
     action: { kind: 'send', slot: lastSentSlot },
     description:
-      saveState === 'clean'
-        ? `Send this plan to slot ${lastSentSlot}`
-        : `Saves your changes, then sends to slot ${lastSentSlot}`,
+      saveState === 'clean' ? null : `Saves your changes, then sends to slot ${lastSentSlot}.`,
   };
 }
 

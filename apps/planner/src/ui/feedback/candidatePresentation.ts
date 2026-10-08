@@ -13,7 +13,7 @@ export function candidateSelectState(
 }
 
 /** Hint of a control whose candidate context is unreached. */
-export const candidateWaitingHint = 'Waits on an earlier choice';
+export const candidateWaitingHint = 'Waits on an earlier choice.';
 
 /** Whether this evaluated candidate's context is unreached. */
 export function candidateWaits(

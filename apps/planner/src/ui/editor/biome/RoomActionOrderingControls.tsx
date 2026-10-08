@@ -104,7 +104,7 @@ export function RoomActionRemovalControl({
   const explanation = removalEnabled
     ? removable?.kind === 'unplace'
       ? 'Remove this delivery and its reward details while keeping the source purchase.'
-      : `Remove ${row.label} from the timeline`
+      : `Remove ${row.label} from the timeline.`
     : row.rank === null
       ? 'This action is not currently in the timeline.'
       : row.shopParticipation !== undefined
@@ -113,7 +113,7 @@ export function RoomActionRemovalControl({
           ? 'This action is edited in Room Overview.'
           : row.participation === 'required'
             ? 'Required actions cannot be removed.'
-            : 'This action cannot be removed from its current state.';
+            : removable?.explanations.join(' ') || undefined;
   return (
     <TimelineActionDeleteButton
       {...(findingMark === undefined ? {} : { findingMark })}

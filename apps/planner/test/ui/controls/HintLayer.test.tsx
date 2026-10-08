@@ -22,7 +22,7 @@ function renderHinted() {
         className="quiet-action"
         disabled
         type="button"
-        {...hintProps('Waits on an earlier choice')}
+        {...hintProps('Waits on an earlier choice.')}
       >
         Choose boon
       </button>
@@ -71,7 +71,7 @@ describe('HintLayer', () => {
     fireEvent.pointerOver(view.disabled);
     expect(view.tooltip()).toBeNull();
     elapse(500);
-    expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice');
+    expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice.');
 
     fireEvent.pointerOut(view.disabled, { relatedTarget: view.plain });
     expect(view.tooltip()).toBeNull();
@@ -118,7 +118,7 @@ describe('HintLayer', () => {
     fireEvent.pointerUp(view.plain);
     fireEvent.pointerOver(view.disabled);
     elapse(500);
-    expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice');
+    expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice.');
   });
 
   it('places a hover hint beside the pointer and a focus hint beside its control', () => {

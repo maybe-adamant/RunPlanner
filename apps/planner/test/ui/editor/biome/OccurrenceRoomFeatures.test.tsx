@@ -87,7 +87,7 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Timeline');
     const waiting = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
     expect(waiting.disabled).toBe(true);
-    expect(hintOf(waiting)).toBe('Waits on an earlier choice');
+    expect(hintOf(waiting)).toBe('Waits on an earlier choice.');
   });
 
   it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {

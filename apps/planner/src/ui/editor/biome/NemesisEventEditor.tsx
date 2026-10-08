@@ -7,6 +7,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { useFindingTarget, type FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import type { WorkspaceFindingControl } from '@planner/projections/structured-workspace';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 const emptyPicker: ContextualPickerModel<string> = Object.freeze({ sections: Object.freeze([]) });
 const interactionPhrases: Record<AuthoredNemesisRandomEventOutcome['kind'], string> = {
@@ -97,7 +98,7 @@ export function NemesisInteractionEditor({
     executeIntent(interaction.detailIntentFor({ ...next, reward }));
   const fixedResultLabel = interaction.fixedResultLabel;
   const picker = candidates.result?.rewardPicker ?? emptyPicker;
-  const waiting = interaction.contextReached ? {} : { disabledHint: 'Waits on an earlier choice' };
+  const waiting = interaction.contextReached ? {} : { disabledHint: candidateWaitingHint };
   const traitPicker = candidates.result?.traitPicker ?? emptyPicker;
   return (
     <div className="nemesis-interaction-controls">

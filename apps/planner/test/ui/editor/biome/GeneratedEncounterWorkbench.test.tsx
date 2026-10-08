@@ -580,7 +580,7 @@ describe('generated encounter customization workflows', () => {
     expect(interaction?.generatedAssessment).toBeUndefined();
     const button = customizeTrigger(project);
     expect(button.disabled).toBe(true);
-    expect(hintOf(button)).toBe('Waits on an earlier choice');
+    expect(hintOf(button)).toBe('Waits on an earlier choice.');
   });
   it('repairs required Fields passive composition from Overview without opening its dialog automatically', async () => {
     const owner = createEncounterPhaseAddress(
@@ -704,7 +704,7 @@ describe('generated encounter customization workflows', () => {
     });
     const button = customizeTrigger(project, owner);
     expect(button.disabled).toBe(true);
-    expect(hintOf(button)).toBe('Waits on an earlier choice');
+    expect(hintOf(button)).toBe('Waits on an earlier choice.');
   });
   it('selects a shared enemy from the assessed picker and withholds a context-less phase', async () => {
     const view = await open(
@@ -740,7 +740,7 @@ describe('generated encounter customization workflows', () => {
     );
     const withheld = customizeTrigger(unassessed);
     expect(withheld.disabled).toBe(true);
-    expect(hintOf(withheld)).toBe('Waits on an earlier choice');
+    expect(hintOf(withheld)).toBe('Waits on an earlier choice.');
   });
   it('shows engine allocation findings for the affected wave', async () => {
     const view = await open(

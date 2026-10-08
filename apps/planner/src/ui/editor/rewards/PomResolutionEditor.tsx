@@ -271,14 +271,11 @@ export function PomResolutionEditor({
       <ContextualPicker
         label="Route state"
         placeholder={groups.length === 0 ? 'Evaluating route state…' : 'Choose a route state'}
-        {...(groups.length <= 1
-          ? {
-              disabledHint:
-                groups.length === 0
-                  ? 'Evaluating route state…'
-                  : 'One route state applies to this Pom.',
-            }
-          : {})}
+        {...(groups.length === 0
+          ? { disabled: true }
+          : groups.length === 1
+            ? { disabledHint: 'One route state applies to this Pom.' }
+            : {})}
         model={declaredChoicesPicker(
           groups.map((group, index) => ({
             key: group.key,

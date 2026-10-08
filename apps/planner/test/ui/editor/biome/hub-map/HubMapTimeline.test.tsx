@@ -144,7 +144,7 @@ describe('HubMapTimeline', () => {
 
     const healthRoom = screen.getByRole('button', { name: 'Combat 01: Unvisited. Add visit.' });
     expect(healthRoom.getAttribute('aria-description')).toBe('Reward: Big Max Health');
-    expect(hintOf(healthRoom)).toBe('Reward: Big Max Health');
+    expect(hintOf(healthRoom)).toBe('Combat 01');
     const healthIcon = healthRoom.querySelector('img');
     expect(decodeURIComponent(healthIcon?.getAttribute('src') ?? '')).toContain('Max Health.webp');
     expect(healthIcon?.draggable).toBe(false);
@@ -172,7 +172,7 @@ describe('HubMapTimeline', () => {
 
     expect(visited.getAttribute('aria-disabled')).toBeNull();
     expect(visited.getAttribute('aria-description')).toBe('Reward: Hermes');
-    expect(hintOf(visited)).toBe('Reward: Hermes');
+    expect(hintOf(visited)).toBe('Combat 05');
     const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
     await view.user.click(visited);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
@@ -196,7 +196,7 @@ describe('HubMapTimeline', () => {
     });
     expect(unvisited.getAttribute('aria-disabled')).toBe('true');
     expect(unvisited.getAttribute('aria-description')).toBe('Reward: Big Max Health');
-    expect(hintOf(unvisited)).toBe('Reward: Big Max Health');
+    expect(hintOf(unvisited)).toBe('Combat 01');
     await view.user.click(unvisited);
     await view.user.keyboard(' ');
     expect(screen.queryByRole('dialog')).toBeNull();

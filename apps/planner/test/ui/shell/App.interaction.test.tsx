@@ -735,7 +735,7 @@ describe('planner history interaction', () => {
     const button = await screen.findByRole('button', { name: 'Send to game…' });
     const className = button.className;
     expect(button).toBe(sendButton());
-    expect(hintOf(button)).toBe('Choose a slot in the Game panel');
+    expect(hintOf(button)).toBe('Choose a slot in the Game panel.');
 
     await user.click(button);
     const panel = await screen.findByRole('dialog', { name: 'Game' });
@@ -747,8 +747,8 @@ describe('planner history interaction', () => {
     await user.click(within(panel).getByRole('button', { name: 'Close' }));
 
     expect(await screen.findByRole('button', { name: 'Send · Slot 3' })).toBe(button);
-    expect(hintOf(button)).toBe('Send this plan to slot 3');
-    expect(descriptionOf(button)).toBe('Send this plan to slot 3');
+    expect(hintOf(button)).toBeNull();
+    expect(descriptionOf(button)).toBeNull();
     const status = sendStatus();
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     try {
@@ -766,7 +766,7 @@ describe('planner history interaction', () => {
         hour: '2-digit',
         minute: '2-digit',
       });
-      expect(hintOf(button)).toBe(`Sent to slot 3 at ${sentTime}; now active`);
+      expect(hintOf(button)).toBe(`Sent to slot 3 at ${sentTime}; now active.`);
       expect(status.textContent).toBe('Sent to slot 3.');
       await act(async () => {
         fireEvent.click(button);
@@ -800,7 +800,7 @@ describe('planner history interaction', () => {
     const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
     await user.click(button);
     await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 4'));
-    expect(hintOf(button)).toMatch(/; not made active$/);
+    expect(hintOf(button)).toMatch(/; not made active\.$/);
     expect(sendStatus().textContent).toBe('Sent to slot 4; not made active.');
     expect(screen.queryByRole('button', { name: 'Game — last send failed' })).toBeNull();
   });
@@ -819,7 +819,7 @@ describe('planner history interaction', () => {
     const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
     await user.click(button);
     await waitFor(() => expect(button.textContent).toBe('! Not sent'));
-    expect(hintOf(button)).toBe('Details are in the Game panel');
+    expect(hintOf(button)).toBe('Details are in the Game panel.');
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(sendStatus().getAttribute('role')).toBe('status');
     expect(sendStatus().textContent).toBe('Not sent: could not write plan slot.');
@@ -858,7 +858,7 @@ describe('planner history interaction', () => {
       application: createApplication({ gameModuleHost: game.host }),
       startWithProject: false,
     });
-    await reasonOf('Send to game', 'Open a plan first');
+    await reasonOf('Send to game', 'Open a plan first.');
     cleanup();
 
     const notReady = createFakeGameModuleHost(
@@ -872,7 +872,7 @@ describe('planner history interaction', () => {
     first.store.dispatch(gamePlanSent({ slot: 2 }));
     renderPlannerForInteraction({ application: first });
     expect(await screen.findByRole('button', { name: 'Game — needs setup' })).toBeTruthy();
-    await reasonOf('Send to game', 'Set up the game in the Game panel');
+    await reasonOf('Send to game', 'Set up the game in the Game panel.');
     cleanup();
 
     const unsendable = createApplication({ gameModuleHost: game.host });
@@ -943,7 +943,7 @@ describe('planner history interaction', () => {
     );
     renderPlannerForInteraction({ application });
     const button = await screen.findByRole('button', { name: 'Send · Slot 5' });
-    expect(hintOf(button)).toBe('Saves your changes, then sends to slot 5');
+    expect(hintOf(button)).toBe('Saves your changes, then sends to slot 5.');
     let publish: (() => void) | undefined;
     game.host.publish.mockImplementationOnce(
       (slotNumber, json) =>

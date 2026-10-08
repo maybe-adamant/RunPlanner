@@ -17,7 +17,6 @@ describe('launcher presentation', () => {
   it('values trait, Hex and Chaos launchers by their chosen outcome', () => {
     expect(traitOfferLauncherPresentation(catalog, giver('Apollo'), null)).toEqual({
       label: 'Edit Trait · Choose trait',
-      detail: 'Apollo: no trait chosen',
     });
     expect(
       traitOfferLauncherPresentation(catalog, giver('Apollo'), {
@@ -60,7 +59,7 @@ describe('launcher presentation', () => {
     const blessing = catalog.chaos.blessings.byKey.ChaosWeaponBlessing!.label;
     expect(chaos).toEqual({
       label: `Edit Chaos · ${curse} → ${blessing}`,
-      detail: `Chaos: ${curse} → ${blessing} · Common`,
+      detail: `${curse} → ${blessing} · Common`,
     });
   });
 
@@ -68,11 +67,10 @@ describe('launcher presentation', () => {
     const random = (targetTraitKey: string | null) => ({ kind: 'random', targetTraitKey }) as const;
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, false)).toEqual({
       label: 'Edit Pom · Choose target +1',
-      detail: 'Pom: no target chosen',
     });
     expect(
       levelResolutionLauncherPresentation(catalog, random('ApolloWeaponBoon'), 2, false),
-    ).toEqual({ label: 'Edit Pom · Nova Strike +2', detail: 'Pom: Nova Strike gains 2 levels' });
+    ).toEqual({ label: 'Edit Pom · Nova Strike +2', detail: 'Nova Strike gains 2 levels' });
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, true).label).toBe(
       'Edit Pom · No eligible traits',
     );
@@ -81,7 +79,6 @@ describe('launcher presentation', () => {
   it('keeps the Anvil launcher unvalued and summarizes its result', () => {
     expect(anvilResultLauncherPresentation(catalog, null)).toEqual({
       label: 'Edit Anvil',
-      detail: 'Anvil: no result chosen',
     });
     expect(
       anvilResultLauncherPresentation(catalog, {
@@ -89,6 +86,6 @@ describe('launcher presentation', () => {
         removedTraitKey: null,
         addedTraitKeys: ['ApolloWeaponBoon'],
       } as never),
-    ).toEqual({ label: 'Edit Anvil', detail: 'Anvil: No removal · adds Nova Strike' });
+    ).toEqual({ label: 'Edit Anvil', detail: 'No removal · adds Nova Strike' });
   });
 });
