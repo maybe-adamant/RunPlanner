@@ -685,9 +685,10 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
     case 'openingSelectionMissing':
       return 'Choose an exit for every planned room before sending this plan.';
     case 'notEligible':
+      return RESOLVE_FINDINGS;
     case 'executionCoverageMissing':
     case null:
-      return RESOLVE_FINDINGS;
+      return 'The game module can’t run this plan yet.';
   }
 }
 

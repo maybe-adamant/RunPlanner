@@ -464,10 +464,8 @@ describe('Game panel projection', () => {
         ?.unavailableReason;
     expect(reasonFor('unsupportedRoute')).toBe('The game module can’t run this route yet.');
     expect(reasonFor('openingMissing')).toBe('Plan the opening room before sending this plan.');
-    expect(reasonFor('executionCoverageMissing')).toBe(
-      'Resolve this plan’s findings before sending it.',
-    );
-    expect(reasonFor(null)).toBe('Resolve this plan’s findings before sending it.');
+    expect(reasonFor('executionCoverageMissing')).toBe('The game module can’t run this plan yet.');
+    expect(reasonFor(null)).toBe('The game module can’t run this plan yet.');
     expect(
       projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, now)?.unavailableReason,
     ).toBe('Open a project to send it to the game.');

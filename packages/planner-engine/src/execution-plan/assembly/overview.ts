@@ -368,7 +368,8 @@ function executionShop(
 function executionRewardWheels(
   room: CanonicalAuthoredRoom,
 ): ExecutionOverview['rewardWheels'] | undefined {
-  if (room.rewardWheels === undefined) return undefined;
+  // Wheels are spun only in an entered room; an unselected door target publishes none.
+  if (room.rewardWheels === undefined || !room.entered) return undefined;
   const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
   return Object.freeze(
     room.rewardWheels.map((wheel) => {

@@ -32,8 +32,11 @@ function validateRewardWheelProduct(
   const combatPhases = occurrence.overview.encounterPhases.filter(
     (phase) => phase.slotKey !== 'Intro' && phase.kind === 'combat',
   );
+  // Whether a Ship room publishes its wheels at all depends on route selection.
   if (
-    (occurrence.kind === 'ShipEncounter' && wheels.length !== combatPhases.length) ||
+    (occurrence.kind === 'ShipEncounter' &&
+      wheels.length !== 0 &&
+      wheels.length !== combatPhases.length) ||
     (occurrence.kind !== 'ShipEncounter' && wheels.length > 0)
   )
     fail(`${label}.overview.rewardWheels must match the Ship encounter phases`);

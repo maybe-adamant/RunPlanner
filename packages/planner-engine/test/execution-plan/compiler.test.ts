@@ -81,7 +81,11 @@ import surfaceNOFixture from './fixtures/surface-no.execution.json';
 import freshFileFGHIFixture from './fixtures/fresh-file-fghi.execution.json';
 import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
-import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
+import {
+  dreamMixedPrefixProject,
+  dreamOSkippedShipOccurrenceIds,
+  dreamOSkippedShipProject,
+} from '@run-planner/test-fixtures/dream';
 import { executionTimelineTransactions } from '../../src/execution-plan/assembly/timeline-transactions';
 import { orderedExecutionRooms } from '../../src/execution-plan/assembly/route';
 import {
@@ -2332,6 +2336,81 @@ describe('execution-plan compiler and codec', () => {
         (obligation) => !removedOwners.has(obligation.owner),
       );
     });
+  });
+
+  it('publishes reward wheels only on a selected Ship room', () => {
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, dreamOSkippedShipProject()),
+        catalog,
+      }),
+    });
+    const skippedId = dreamOSkippedShipOccurrenceIds.skippedShip;
+    const skipped = plan.occurrences.find((occurrence) => occurrence.id === skippedId);
+    expect(plan.selectedOccurrenceIds).not.toContain(skippedId);
+    expect(skipped?.kind).toBe('ShipEncounter');
+    expect(skipped?.overview.rewardWheels).toBeUndefined();
+
+    type MutableWire = Record<string, unknown> & {
+      occurrences: Array<{
+        id: string;
+        overview: { rewardWheels?: unknown[] };
+        roomGuide: Array<{ transactionOwner?: string }>;
+        timeline: {
+          transactions: Array<{ owner: string; kind: string; sourceOwner?: string }>;
+          dependencies: Array<{ owner: string; afterOwner: string }>;
+          obligations: Array<{ owner: string }>;
+        };
+      }>;
+    };
+    const wire = (): MutableWire => JSON.parse(encodeExecutionPlan(plan)) as MutableWire;
+    const selectedShip = (document: MutableWire) => {
+      const ship = document.occurrences.find(
+        (occurrence) => occurrence.overview.rewardWheels !== undefined,
+      );
+      if (ship === undefined) throw new Error('fixture lacks a selected Ship room');
+      return ship;
+    };
+
+    const unselectedWithWheels = wire();
+    unselectedWithWheels.occurrences.find(
+      (occurrence) => occurrence.id === skippedId,
+    )!.overview.rewardWheels = selectedShip(unselectedWithWheels).overview.rewardWheels!.slice(
+      0,
+      1,
+    );
+    refreshWireFingerprint(unselectedWithWheels);
+    expect(() => decodeExecutionPlan(unselectedWithWheels)).toThrow(ExecutionPlanCodecError);
+
+    const selectedWithoutWheels = wire();
+    const ship = selectedShip(selectedWithoutWheels);
+    const wheelOwners = new Set(
+      ship.timeline.transactions
+        .filter(
+          (transaction) =>
+            transaction.kind === 'chooseRewardWheel' ||
+            transaction.owner.startsWith('["rewardWheelOffer"') ||
+            transaction.sourceOwner?.startsWith('["rewardWheelOffer"'),
+        )
+        .map((transaction) => transaction.owner),
+    );
+    delete ship.overview.rewardWheels;
+    ship.timeline.transactions = ship.timeline.transactions.filter(
+      (transaction) => !wheelOwners.has(transaction.owner),
+    );
+    ship.timeline.dependencies = ship.timeline.dependencies.filter(
+      (dependency) => !wheelOwners.has(dependency.owner) && !wheelOwners.has(dependency.afterOwner),
+    );
+    ship.timeline.obligations = ship.timeline.obligations.filter(
+      (obligation) => !wheelOwners.has(obligation.owner),
+    );
+    ship.roomGuide = ship.roomGuide.filter(
+      (row) => row.transactionOwner === undefined || !wheelOwners.has(row.transactionOwner),
+    );
+    refreshWireFingerprint(selectedWithoutWheels);
+    expect(() => decodeExecutionPlan(selectedWithoutWheels)).toThrow(
+      /rewardWheels must match the Ship encounter phases/,
+    );
   });
 
   it('rejects an unselected Postboss recovery boundary', () => {

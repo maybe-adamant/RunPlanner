@@ -308,6 +308,9 @@ completion can hide its
 associated row, while informational rows remain visible. Guide rows neither
 add transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
+Reward wheels follow the same selection boundary: a selected Ship occurrence
+publishes one wheel per active combat phase, and an unselected Ship door target,
+which is never entered, publishes none.
 
 Feature presence and feature interaction remain distinct facts on the wire.
 A native room field locked by `BlockedByRequirements`, such as the H Postboss
