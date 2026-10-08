@@ -243,6 +243,7 @@ function switchTargetToAnomaly(
           located,
           withReplacement,
           outgoing,
+          'prune',
           command,
         );
   return updateTopology(document, located, reconciled);

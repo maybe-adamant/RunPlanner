@@ -1600,6 +1600,190 @@ describe('authored-project commands and topology', () => {
     expect(enteredOccurrenceIds).not.toContain(priorId);
   });
 
+  describe('re-anchoring onto a source without the selected door', () => {
+    const gTopology = (project: ReturnType<typeof gProject>) => {
+      const topology = project.route.biomes.find((biome) => biome.biomeKey === 'G')?.topology;
+      if (topology === null || topology === undefined) throw new Error('missing G topology');
+      return topology;
+    };
+    const outgoing = (project: ReturnType<typeof gProject>, occurrenceId: string) =>
+      gTopology(project).decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === occurrenceId,
+      );
+    const hasOccurrence = (project: ReturnType<typeof gProject>, occurrenceId: string) =>
+      gTopology(project).occurrences.some((occurrence) => occurrence.occurrenceId === occurrenceId);
+    const select = (
+      project: ReturnType<typeof gProject>,
+      occurrenceId: string,
+      value:
+        { kind: 'normal'; exitKey: string } | { kind: 'additional'; additionalExitKey: 'chaos' },
+    ) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetExitSelection',
+        selection: createExitSelectionAddress(gBiome, {
+          kind: 'occurrence',
+          occurrenceId: createOccurrenceId(occurrenceId),
+        }),
+        value,
+      });
+    const addTarget = (
+      project: ReturnType<typeof gProject>,
+      sourceId: string,
+      exitKey: string,
+      occurrenceId: string,
+      gameName: string,
+    ) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(
+          gBiome,
+          { kind: 'occurrence', occurrenceId: createOccurrenceId(sourceId) },
+          exitKey,
+        ),
+        occurrenceId: createOccurrenceId(occurrenceId),
+        gameName,
+      });
+
+    it('moves a selected door the narrower room lacks onto its free door and prunes the sibling there', () => {
+      // golden-g-b2-e1 offers G_Story01 (one door) at exit1 and G_Combat03 (three doors) at exit2.
+      let project = select(loadUnderworldFGHICheckpoint(), 'golden-g-b2-e1', {
+        kind: 'normal',
+        exitKey: 'exit2',
+      });
+      project = addTarget(project, 'golden-g-b3-e2', 'exit3', 'narrow-door3', 'G_Combat13');
+      project = select(project, 'golden-g-b3-e2', { kind: 'normal', exitKey: 'exit3' });
+      const doorThreeOutgoing = outgoing(project, 'narrow-door3');
+
+      const narrowed = select(project, 'golden-g-b2-e1', { kind: 'normal', exitKey: 'exit1' });
+
+      expect(outgoing(narrowed, 'golden-g-b3-e1')).toMatchObject({
+        normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'narrow-door3' }] },
+        selection: { kind: 'derived' },
+      });
+      expect(outgoing(narrowed, 'narrow-door3')).toEqual(doorThreeOutgoing);
+      expect(hasOccurrence(narrowed, 'golden-g-b4-e1')).toBe(false);
+      expect(outgoing(narrowed, 'golden-g-b3-e2')).toBeUndefined();
+    });
+
+    function chaosFiveProject(selectedDoor: 'exit1' | 'exit3', doors: 'all' | 'twoAndThree') {
+      // golden-g-b4-e1 offers G_Shop01 and G_Combat12, both with two doors.
+      let project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+        kind: 'AddChaos',
+        additional: createAdditionalExitAddress(
+          gBiome,
+          createOccurrenceId('golden-g-b4-e1'),
+          'chaos',
+        ),
+        occurrenceId: createOccurrenceId('wide-chaos'),
+      });
+      project = select(project, 'golden-g-b4-e1', {
+        kind: 'additional',
+        additionalExitKey: 'chaos',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceChaosMap',
+        occurrence: createOccurrenceAddress(gBiome, createOccurrenceId('wide-chaos')),
+        gameName: 'Chaos_05',
+      });
+      if (doors === 'twoAndThree') {
+        const chaosSource = {
+          kind: 'occurrence' as const,
+          occurrenceId: createOccurrenceId('wide-chaos'),
+        };
+        project = applyProjectCommand(project, catalog, {
+          kind: 'RemoveExitDecision',
+          decision: createExitDecisionAddress(gBiome, chaosSource),
+        });
+        project = applyProjectCommand(project, catalog, {
+          kind: 'CreateBatch',
+          decision: createExitDecisionAddress(gBiome, chaosSource),
+        });
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceBatchRewardStore',
+          rewardStore: createBatchRewardStoreAddress(gBiome, chaosSource),
+          storeKey: 'RunProgress',
+        });
+        project = addTarget(project, 'wide-chaos', 'exit2', 'wide-door2', 'G_Combat12');
+      }
+      project = addTarget(project, 'wide-chaos', 'exit3', 'wide-door3', 'G_Combat13');
+      return select(project, 'wide-chaos', { kind: 'normal', exitKey: selectedDoor });
+    }
+
+    it('keeps a Chaos continuation picked at a third door by pruning the highest unselected sibling', () => {
+      const project = chaosFiveProject('exit3', 'all');
+      const continuation = outgoing(project, 'wide-door3');
+
+      const onDoor = select(project, 'golden-g-b4-e1', { kind: 'normal', exitKey: 'exit1' });
+
+      expect(outgoing(onDoor, 'golden-g-b5-e1')).toMatchObject({
+        normal: {
+          targets: [
+            { exitKey: 'exit1', occurrenceId: 'golden-g-b6-e1' },
+            { exitKey: 'exit2', occurrenceId: 'wide-door3' },
+          ],
+        },
+        selection: { kind: 'normal', exitKey: 'exit2' },
+      });
+      expect(outgoing(onDoor, 'wide-door3')).toEqual(continuation);
+      expect(hasOccurrence(onDoor, 'golden-g-b6-e2')).toBe(false);
+      expect(hasOccurrence(onDoor, 'golden-g-preboss-shop')).toBe(true);
+    });
+
+    it('moves a selected door onto the lowest free declared door without pruning a sibling', () => {
+      const project = chaosFiveProject('exit3', 'twoAndThree');
+
+      const onDoor = select(project, 'golden-g-b4-e1', { kind: 'normal', exitKey: 'exit2' });
+
+      expect(outgoing(onDoor, 'golden-g-b5-e2')).toMatchObject({
+        normal: {
+          targets: [
+            { exitKey: 'exit1', occurrenceId: 'wide-door3' },
+            { exitKey: 'exit2', occurrenceId: 'wide-door2' },
+          ],
+        },
+        selection: { kind: 'normal', exitKey: 'exit1' },
+      });
+    });
+
+    it('prunes a selected takeover Preboss door the narrower room lacks instead of moving it', () => {
+      // golden-g-b7-e1 owns the takeover batch; golden-g-b7-e2 becomes a one-door room.
+      let project = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(gBiome, createOccurrenceId('golden-g-b7-e2')),
+        gameName: 'G_Story01',
+      });
+      project = select(project, 'golden-g-b7-e1', { kind: 'normal', exitKey: 'exit2' });
+
+      const narrowed = select(project, 'golden-g-b6-e1', { kind: 'normal', exitKey: 'exit2' });
+
+      expect(outgoing(narrowed, 'golden-g-b7-e2')).toMatchObject({
+        normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'golden-g-preboss-shop' }] },
+        selection: { kind: 'derived' },
+      });
+      expect(hasOccurrence(narrowed, 'golden-g-preboss-free-2')).toBe(false);
+    });
+
+    it('prunes an unselected door the narrower room lacks', () => {
+      const project = chaosFiveProject('exit1', 'all');
+
+      const onDoor = select(project, 'golden-g-b4-e1', { kind: 'normal', exitKey: 'exit1' });
+
+      expect(outgoing(onDoor, 'golden-g-b5-e1')).toMatchObject({
+        normal: {
+          targets: [
+            { exitKey: 'exit1', occurrenceId: 'golden-g-b6-e1' },
+            { exitKey: 'exit2', occurrenceId: 'golden-g-b6-e2' },
+          ],
+        },
+        selection: { kind: 'normal', exitKey: 'exit1' },
+      });
+      expect(hasOccurrence(onDoor, 'wide-door3')).toBe(false);
+    });
+  });
+
   it('retains overflow targets until explicit ordinary exit-capacity repair', () => {
     let project = applyProjectCommand(fProject(), catalog, {
       kind: 'CreateStart',
@@ -1647,6 +1831,7 @@ describe('authored-project commands and topology', () => {
         gameName: 'F_Combat01',
       });
     }
+    const withTargets = project;
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('capacity-source')),
@@ -1672,6 +1857,36 @@ describe('authored-project commands and topology', () => {
           decision.source.occurrenceId === 'capacity-source',
       ),
     ).toMatchObject({ normal: { targets: [{ exitKey: 'exit1' }] } });
+
+    // The explicit repair removes an unavailable selected door rather than moving it.
+    let selected = applyProjectCommand(withTargets, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, sourceDecision.source),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    selected = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('capacity-source')),
+      gameName: 'F_Combat01',
+    });
+    selected = applyProjectCommand(selected, catalog, {
+      kind: 'ReconcileBatchExitCapacity',
+      decision: sourceDecision,
+    });
+    expect(
+      fTopology(selected).decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === 'capacity-source',
+      ),
+    ).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'capacity-exit1' }] },
+      selection: { kind: 'derived' },
+    });
+    expect(
+      fTopology(selected).occurrences.map((occurrence) => occurrence.occurrenceId),
+    ).not.toContain('capacity-exit2');
   });
 
   it('retains takeover targets by declaration exit key rather than caller-supplied ID order', () => {

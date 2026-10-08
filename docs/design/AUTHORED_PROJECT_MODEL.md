@@ -423,8 +423,13 @@ likewise reanchors only to a declaration-supported Hub source, preserving its
 board, visits, main/side occurrences and completed handoff.
 
 An incompatible continuation is removed, not a reason to reject the selection.
-Reanchoring may prune unavailable physical keys, but cannot invent identities
-to fill a wider atomic takeover. Selecting Preboss establishes its fixed
+Reanchoring prunes unselected targets at doors the new source does not declare.
+A selected ordinary target at such a door keeps its identity and subtree: it
+moves to the lowest declared door no kept sibling occupies, after pruning the
+unselected sibling at the highest declared door when every door is occupied.
+It is removed only when the new source declares no door. Takeover batches are
+pruned by door, never re-keyed, and reanchoring cannot invent identities to
+fill a wider atomic takeover. Selecting Preboss establishes its fixed
 completion chain instead of attaching an ordinary or Hub continuation. The
 same reachable Preboss keeps its authored Boss/Postboss state; a different
 Preboss receives declaration-owned completion defaults.

@@ -335,7 +335,8 @@ export function possibleGeneratedNormalExitKeys(
   ]);
 }
 
-function batchTakesOverNormalDoors(
+/** True when a takeover Preboss owns this batch's doors. */
+export function batchTakesOverNormalDoors(
   catalog: Catalog,
   topology: BiomeTopology,
   decision: ExitDecision,

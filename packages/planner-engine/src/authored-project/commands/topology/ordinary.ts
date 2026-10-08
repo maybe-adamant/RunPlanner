@@ -19,6 +19,7 @@ import type {
 } from '../../model';
 import {
   additionalExitsForDecision,
+  batchTakesOverNormalDoors,
   exitDecisionForSource,
   hubTerminalTakeoverForSource,
   isHostRouteDetourRoom,
@@ -457,16 +458,7 @@ function hasCompleteTakeoverShapeForSource(
   decision: ExitDecision,
   command: Extract<TopologyCommand, { readonly kind: 'SetExitSelection' }>,
 ): boolean {
-  const isTakeover = decision.normal.targets.some((target) => {
-    const occurrence = topology.occurrences.find(
-      (candidate) => candidate.occurrenceId === target.occurrenceId,
-    );
-    return (
-      occurrence !== undefined &&
-      catalog.rooms.byKey[occurrence.gameName]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors'
-    );
-  });
-  if (!isTakeover) return true;
+  if (!batchTakesOverNormalDoors(catalog, topology, decision)) return true;
   const exitKeys = exitKeysForSource(
     catalog,
     located,
@@ -672,6 +664,7 @@ function rebaseSelectedContinuationDecision(
     located,
     withReanchoredDecision,
     reanchored,
+    'rekey',
     command,
   );
 }
@@ -825,15 +818,7 @@ export function replaceFieldsCageOutcome(
   if (decision?.normal.kind !== 'batch') {
     failCommand(command, 'normal-door batch does not exist');
   }
-  if (
-    decision.normal.targets.some(
-      (target) =>
-        catalog.rooms.byKey[
-          topology.occurrences.find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
-            ?.gameName ?? ''
-        ]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
-    )
-  ) {
+  if (batchTakesOverNormalDoors(catalog, topology, decision)) {
     failCommand(command, 'takeover batches do not own Fields cage state');
   }
   if (decision.normal.batchState?.cageOutcome === command.cageOutcome) return document;
@@ -906,20 +891,12 @@ export function reconcileBatchExitCapacity(
   const topology = requireTopology(located.plan, command);
   const decision = exitDecisionForSource(topology, command.decision.source);
   if (decision?.normal.kind !== 'batch') failCommand(command, 'normal-door batch does not exist');
-  if (
-    decision.normal.targets.some(
-      (target) =>
-        catalog.rooms.byKey[
-          topology.occurrences.find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
-            ?.gameName ?? ''
-        ]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
-    )
-  ) {
+  if (batchTakesOverNormalDoors(catalog, topology, decision)) {
     failCommand(command, 'takeover batches repair atomically through ReconcileTakeoverBatch');
   }
   return updateTopology(
     document,
     located,
-    reconcileExitDecisionToDeclaredCapacity(catalog, located, topology, decision, command),
+    reconcileExitDecisionToDeclaredCapacity(catalog, located, topology, decision, 'prune', command),
   );
 }
