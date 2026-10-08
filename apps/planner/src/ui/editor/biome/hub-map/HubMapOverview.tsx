@@ -26,6 +26,7 @@ import { DoorRewardEditor } from '../DoorRewardEditor';
 import { useHubSlotMembership } from '../HubMembershipBoard';
 import { HubMapFountainContent, HubMapMarkerContent } from './HubMapMarkerContent';
 import { hubMapReward } from './hubMapReward';
+import { hintProps } from '@planner/ui/controls/hint';
 
 interface HubMapOverviewProps {
   readonly hubIdentity: string;
@@ -97,6 +98,9 @@ function HubMapMarker({
     onClose();
   };
 
+  const markerLabel = open
+    ? `${slot.label}: Opened. Edit reward or close room.`
+    : `${slot.label}: Closed. Open room.`;
   return (
     <Popover.Root
       open={selected}
@@ -105,12 +109,7 @@ function HubMapMarker({
       <Popover.Anchor asChild>
         <button
           aria-busy={membership.pending || undefined}
-          aria-description={open ? `Reward: ${reward.summary}` : undefined}
-          aria-label={
-            open
-              ? `${slot.label}: Opened. Edit reward or close room.`
-              : `${slot.label}: Closed. Open room.`
-          }
+          aria-label={markerLabel}
           className="hub-map-marker"
           data-category={annotation.category}
           data-hub-slot-key={slot.hubSlotKey}
@@ -136,7 +135,11 @@ function HubMapMarker({
           }}
           ref={marker}
           style={hubMapPosition({ x, y })}
-          title={open ? `${slot.label}: ${reward.summary}` : `${slot.label}: Closed`}
+          {...hintProps(
+            open ? `Reward: ${reward.summary}` : `${slot.label}: Closed`,
+            open ? `Reward: ${reward.summary}` : undefined,
+            markerLabel,
+          )}
           type="button"
         >
           <HubMapMarkerContent label={annotation.mapLabel} open={open} reward={reward} />
@@ -191,7 +194,7 @@ function HubMapMarker({
               <button
                 className="danger-action action-compact"
                 disabled
-                title="This room cannot be closed now."
+                {...hintProps('This room cannot be closed now.')}
                 type="button"
               >
                 Close room
@@ -243,7 +246,7 @@ function HubMapMarkerLayer({
         data-hub-fountain
         role="img"
         style={hubMapPosition(hubMapFountainAnnotation)}
-        title="Hub fountain"
+        {...hintProps('Hub fountain', undefined, 'Hub fountain')}
       >
         <HubMapFountainContent />
       </span>

@@ -37,6 +37,7 @@ import { ExternalPageLink } from '../controls/ExternalPageLink';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
 import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 import { BugReportDialog } from './BugReportDialog';
+import { hintProps } from '@planner/ui/controls/hint';
 
 function ConfirmationDialog({
   children,
@@ -204,7 +205,7 @@ function LocationSection({
       >
         <div className="game-panel-location-line">
           <h3 id="game-location-title">Game location</h3>
-          <span title={location.path ?? undefined}>
+          <span {...hintProps(location.path ?? undefined)}>
             {location.name} ({location.kindLabel})
           </span>
           <span className="visually-hidden" id="game-location-path">
@@ -522,15 +523,11 @@ function PlansSection({
                       ) : (
                         <>
                           <time
-                            aria-describedby={`game-plan-sent-${row.slot}`}
                             dateTime={row.columns.sent.iso}
-                            title={row.columns.sent.exact}
+                            {...hintProps(row.columns.sent.exact)}
                           >
                             {row.columns.sent.ago}
                           </time>
-                          <span hidden id={`game-plan-sent-${row.slot}`}>
-                            {row.columns.sent.exact}
-                          </span>
                         </>
                       )}
                     </td>

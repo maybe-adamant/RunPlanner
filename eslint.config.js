@@ -81,6 +81,17 @@ const plannerDeepRelativeImportSyntaxRestrictions = [
       'Planner modules may climb one local level; cross-root imports use @planner or @planner-test.',
   },
 ];
+const plannerHoverTitleSyntaxRestrictions = [
+  {
+    selector: "JSXOpeningElement[name.name=/^[a-z]/] > JSXAttribute[name.name='title']",
+    message: 'Hover text uses hintProps from @planner/ui/controls/hint, not a native title.',
+  },
+  {
+    selector:
+      "JSXOpeningElement[name.name=/^[a-z]/] > JSXSpreadAttribute Property[key.name='title']",
+    message: 'Hover text uses hintProps from @planner/ui/controls/hint, not a native title.',
+  },
+];
 const uiRestrictedImportOptions = {
   paths: [
     {
@@ -193,6 +204,7 @@ export default tseslint.config(
         'error',
         ...testSupportSyntaxRestrictions,
         ...plannerDeepRelativeImportSyntaxRestrictions,
+        ...plannerHoverTitleSyntaxRestrictions,
       ],
     },
   },

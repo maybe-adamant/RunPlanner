@@ -8,15 +8,16 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
-import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
+import { hintProps } from '@planner/ui/controls/hint';
 
 const pendingPhialTitles = {
-  unreached: candidateWaitingTitle,
+  unreached: candidateWaitingHint,
   noTargetRequired: 'No Phial-eligible boon to target here.',
 } as const satisfies Record<NonNullable<WorkspaceFountainRarityControl['pending']>, string>;
 
@@ -90,11 +91,11 @@ export function FountainRarityEffectRow({
           className="quiet-action effect-repair-action"
           disabled={domain?.selectedPossible !== false}
           data-inactive={domain?.selectedPossible !== false || undefined}
-          title={
+          {...hintProps(
             domain?.selectedPossible === false
               ? undefined
-              : 'Nothing to clear; the recorded choice is still possible.'
-          }
+              : 'Nothing to clear; the recorded choice is still possible.',
+          )}
           onClick={() => executeIntent(interaction.intentFor(null))}
           type="button"
         >

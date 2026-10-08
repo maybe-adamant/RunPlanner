@@ -86,7 +86,7 @@ import {
   workspaceBiome,
 } from '@planner-test/support/biome-workbench';
 
-import { getByHint, getAllByHint } from '@planner-test/support/hints';
+import { getAllByHint, getByHint, hintOf } from '@planner-test/support/hints';
 
 afterEach(() => {
   cleanup();
@@ -481,7 +481,7 @@ describe('DecisionWorkbench', () => {
     ).toContain('Chaos gate position unavailable');
     const position = screen.getByRole('radiogroup', { name: 'Position' });
     expect(within(position).queryByText('Position 4 unavailable')).toBeNull();
-    expect(position.getAttribute('title')).toBe('Position 4 unavailable');
+    expect(hintOf(position)).toBe('Position 4 unavailable');
     expect(within(position).queryByRole('radio', { name: '4' })).toBeNull();
     expect(position.getAttribute('aria-invalid')).toBe('true');
     await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
@@ -715,7 +715,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
     const uncommittedRemoval = screen.getByRole('button', { name: 'Remove these doors' });
     expect(uncommittedRemoval).toHaveProperty('disabled', true);
-    expect(uncommittedRemoval.getAttribute('title')).toBe('Nothing authored to remove yet.');
+    expect(hintOf(uncommittedRemoval)).toBe('Nothing authored to remove yet.');
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
@@ -887,7 +887,7 @@ describe('DecisionWorkbench', () => {
     // The sibling door is still missing, so the continuation slot stays disabled.
     const waitingContinuation = screen.getByRole('button', { name: 'Open next room' });
     expect(waitingContinuation).toHaveProperty('disabled', true);
-    expect(waitingContinuation.getAttribute('title')).toBe('Fill the remaining doors to continue.');
+    expect(hintOf(waitingContinuation)).toBe('Fill the remaining doors to continue.');
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>

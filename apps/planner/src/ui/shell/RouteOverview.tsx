@@ -32,6 +32,7 @@ import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
+import { hintProps } from '@planner/ui/controls/hint';
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -105,7 +106,7 @@ export function RouteOverview({
         <span>Plan up to</span>
         <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
           {navigation.biomePanels.map((biome, index) => (
-            <label key={biome.biomeKey} title={`Through ${biome.label}`}>
+            <label key={biome.biomeKey} {...hintProps(`Through ${biome.label}`)}>
               <input
                 type="radio"
                 name={`${workspaceRoute.routeKey}-configured-prefix`}
@@ -381,7 +382,7 @@ function MatureRouteLoadout({
                           }),
                         );
                       }}
-                      title={
+                      hint={
                         exceedsGrasp
                           ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}`
                           : automatic
@@ -440,7 +441,7 @@ function MatureRouteLoadout({
                       aria-label={`${vow.label}, rank ${rank} of ${maximum}`}
                       aria-disabled={!canAdvance}
                       data-active={rank > 0 || undefined}
-                      title={
+                      hint={
                         canAdvance
                           ? undefined
                           : 'This rank would exceed your available Arcana Grasp. Lower Arcana Grasp first.'
@@ -517,7 +518,7 @@ function BooleanRunModifierToggle({
   const dispatch = useAppDispatch();
   const values: Readonly<Record<string, boolean | number>> = control.value;
   return (
-    <label className="route-run-modifier-toggle" title={declaration.description}>
+    <label className="route-run-modifier-toggle" {...hintProps(declaration.description)}>
       <span>{declaration.label}</span>
       <input
         type="checkbox"
@@ -580,7 +581,7 @@ export function NumberRunModifierSlider({
   };
   const error = currentDraft?.error;
   return (
-    <div className="route-run-modifier-number" title={error ?? declaration.description}>
+    <div className="route-run-modifier-number" {...hintProps(error ?? declaration.description)}>
       <label htmlFor={id}>{declaration.label}</label>
       <div className="route-run-modifier-multiplier">
         <input

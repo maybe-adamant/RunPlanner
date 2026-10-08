@@ -387,7 +387,7 @@ An Anvil of Fates result launcher sits on the Timeline row of the reward that
 carries the Anvil, wherever it settles: a Shop slot's purchase row, the Gold
 Gold Gold duplicate's pickup row, or the refill's own purchase row, never the
 Travel Deal line. It stays mounted on every Anvil-bearing role and is disabled
-with a waiting hover title until the engine reaches that role's Anvil frontier,
+with a waiting hint until the engine reaches that role's Anvil frontier,
 which it does only under a `normal` disposition. While the result applies, its
 findings route to the launcher; otherwise they route to the row.
 
@@ -907,7 +907,7 @@ Anvil, encounter composition and customization, Arcana activation). The region
 keeps a minimum height and an empty state; draft feedback (branch disagreement,
 an unassessable retained outcome, once-per-run enemy warnings, a carrier not yet
 complete) is reported there by reporter key and never between controls.
-Controls inside carry only an invalid marker and a hover title; entries navigate
+Controls inside carry only an invalid marker and a hint; entries navigate
 to the control they correct. A loading choice region holds its loaded height so
 the dialog resizes once.
 
@@ -921,7 +921,7 @@ Every Room Timeline row (action, lifecycle boundary, checkpoint, automatic
 effect, insertion point, Travel Deal line) renders the same cells in one
 list-owned column template: handle, ordinal, label, editors, and the placement
 and delete action slots; an empty cell stays mounted. Action rows keep both
-slots, disabled with a hover title when no proposal applies, and the Door Exit
+slots, disabled with a hint when no proposal applies, and the Door Exit
 continuation names on hover whether a door is still unselected or the batch is
 unfinished. Rows or sections created by an authored decision are expected
 changes. In the Room Timeline action column the

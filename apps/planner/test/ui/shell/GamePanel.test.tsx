@@ -21,6 +21,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
 import { profileSaveSucceeded } from '@planner/state/profileSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { hintOf } from '@planner-test/support/hints';
 
 const unset = (): GameModuleStatus =>
   gameModuleStatus({
@@ -127,7 +128,7 @@ describe('Game panel', () => {
     const game = createFakeGameModuleHost();
     const { dialog, user } = await openGame(game.host);
     const line = within(dialog).getByText('h2-dev (r2modman profile)');
-    expect(line.getAttribute('title')).toBe('/profiles/h2-dev');
+    expect(hintOf(line)).toBe('/profiles/h2-dev');
     const details = dialog.querySelector('details');
     expect(details?.open).toBe(false);
     const remove = within(dialog).getByRole('button', { name: 'Remove game module' });
@@ -468,9 +469,8 @@ describe('Game panel', () => {
       dateStyle: 'medium',
       timeStyle: 'short',
     });
-    expect(sent.getAttribute('title')).toBe(exact);
-    const description = document.getElementById(sent.getAttribute('aria-describedby') ?? '');
-    expect(description?.textContent).toBe(exact);
+    expect(hintOf(sent)).toBe(exact);
+    expect(sent.getAttribute('aria-description')).toBe(exact);
     await user.click(within(table).getByRole('button', { name: 'Send here (slot 2)' }));
     expect(game.published.map((publication) => publication.slotNumber)).toEqual([2]);
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });

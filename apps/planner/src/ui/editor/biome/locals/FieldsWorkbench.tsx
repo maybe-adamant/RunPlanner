@@ -13,11 +13,12 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
   candidateMayBeAuthored,
-  candidateWaitingTitle,
+  candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { RoomMapReferencePane } from '@planner/ui/room-maps/RoomMapReferencePane';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function FieldsWorkbench({
   interactions,
@@ -129,11 +130,11 @@ function FieldsSpatialRow({
                     !interaction.contextReached ||
                     (option !== undefined && !candidateMayBeAuthored(option))
                   }
-                  title={
+                  {...hintProps(
                     !interaction.contextReached || candidateWaits(option)
-                      ? candidateWaitingTitle
-                      : undefined
-                  }
+                      ? candidateWaitingHint
+                      : undefined,
+                  )}
                   name={id}
                   onChange={() => {
                     const assessed = candidates

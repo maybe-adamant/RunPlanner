@@ -11,7 +11,7 @@ import {
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
-  candidateWaitingTitle,
+  candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -26,6 +26,7 @@ import {
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { DoorRewardEditor } from '../DoorRewardEditor';
+import { hintProps } from '@planner/ui/controls/hint';
 
 type LocalSlot = WorkspaceLocalVisitDecision['slots'][number];
 type GeneratedLocalSlot = Extract<LocalSlot, { readonly generation: 'generated' }>;
@@ -63,11 +64,10 @@ function GenerationControl({
       inert={target.inert}
       role="group"
     >
-      <label title={interaction.disabledReason}>
+      <label {...hintProps(interaction.disabledReason)}>
         <input
           {...target}
           aria-busy={candidates.pending || undefined}
-          aria-description={description === '' ? undefined : description}
           aria-label={`${slot.label} generation`}
           checked={slot.generation === 'generated'}
           data-candidate-support={candidateSupport(candidate)}
@@ -83,7 +83,10 @@ function GenerationControl({
           onFocus={candidates.activate}
           onPointerDown={candidates.activate}
           ref={controlRef}
-          title={interaction.disabledReason ?? (waiting ? candidateWaitingTitle : undefined)}
+          {...hintProps(
+            interaction.disabledReason ?? (waiting ? candidateWaitingHint : undefined),
+            description === '' ? undefined : description,
+          )}
           type="checkbox"
         />
         <span>Generated</span>
@@ -153,7 +156,6 @@ function VisitControl({
       <label>
         <input
           aria-busy={candidates.pending || undefined}
-          aria-description={state.rejection}
           aria-label={`${slot.label} visit`}
           checked={slot.entered}
           data-candidate-support={candidateSupport(candidate)}
@@ -166,11 +168,12 @@ function VisitControl({
           }}
           onFocus={candidates.activate}
           onPointerDown={candidates.activate}
-          title={
+          {...hintProps(
             unavailable
               ? 'Generate this door before adding it to the visit order.'
-              : (state.rejection ?? (state.waiting ? candidateWaitingTitle : undefined))
-          }
+              : (state.rejection ?? (state.waiting ? candidateWaitingHint : undefined)),
+            state.rejection,
+          )}
           type="checkbox"
         />
         <span>Visited</span>
@@ -214,10 +217,10 @@ function VisitArrowControls({
               if (candidateMayBeAuthored(assessed))
                 executeIntent(interaction.intentFor(option.proposedOccurrenceIds));
             }}
-            title={
+            {...hintProps(
               state.rejection ??
-              (option !== undefined && state.waiting ? candidateWaitingTitle : undefined)
-            }
+                (option !== undefined && state.waiting ? candidateWaitingHint : undefined),
+            )}
             type="button"
           >
             {offset < 0 ? '↑' : '↓'}
@@ -241,15 +244,16 @@ function SideRoomMarker({
       : slot.entered
         ? `Visited ${slot.enteredOrdinal}`
         : 'Generated, not visited';
+  const label = `${slot.label}: ${state}`;
   return (
     <div
-      aria-label={`${slot.label}: ${state}`}
+      aria-label={label}
       className="ephyra-side-map-marker"
       data-generation={slot.generation}
       data-side-room-slot={slot.key}
       data-visited={slot.entered || undefined}
       style={ephyraSideRoomMapPosition(annotation)}
-      title={`${slot.label}: ${state}`}
+      {...hintProps(label, undefined, label)}
     >
       <span aria-hidden="true" className="ephyra-side-map-visit-badge">
         {slot.enteredOrdinal === null
@@ -361,7 +365,7 @@ function VisitOrder({
     const state = orderActionState(interaction, selected);
     if (!candidateMayBeAuthored(selected)) {
       setDragFeedback(
-        state.rejection ?? (state.waiting ? candidateWaitingTitle : 'Move unavailable.'),
+        state.rejection ?? (state.waiting ? candidateWaitingHint : 'Move unavailable.'),
       );
       return;
     }
@@ -500,7 +504,7 @@ function VisitOrder({
                 {hoveredCandidate === undefined
                   ? 'Checking move…'
                   : hoveredState.disabled
-                    ? `Unavailable: ${hoveredState.rejection ?? (hoveredState.waiting ? candidateWaitingTitle : 'Move unavailable.')}`
+                    ? `Unavailable: ${hoveredState.rejection ?? (hoveredState.waiting ? candidateWaitingHint : 'Move unavailable.')}`
                     : 'Drop here'}
               </span>
             )}

@@ -29,6 +29,8 @@ import { CocoonCountControl } from './CocoonCountControl';
 import { CocoonRewardPointControl } from './CocoonRewardPointControl';
 import { InfiniteRosterControl } from './InfiniteRosterControl';
 import { isCompositionFinding, isIdentityFinding } from './encounterPhaseFindings';
+import { hintProps } from '@planner/ui/controls/hint';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -132,7 +134,10 @@ function EncounterCustomizationControl({
           undefined
         }
         onClick={() => setManualOpen(true)}
-        title={contextUnreached ? 'Waits on an earlier choice' : undefined}
+        {...hintProps(
+          contextUnreached ? candidateWaitingHint : undefined,
+          'aria-description' in triggerTarget ? triggerTarget['aria-description'] : undefined,
+        )}
         type="button"
       >
         {editable ? 'Customize encounter' : 'Inspect encounter'}
@@ -536,7 +541,7 @@ export function EncounterPhaseEvents({
             <select
               aria-label="Aetos wave"
               disabled={!aetosInteraction.contextReached || undefined}
-              title={aetosInteraction.contextReached ? undefined : 'Waits on an earlier choice'}
+              {...hintProps(aetosInteraction.contextReached ? undefined : candidateWaitingHint)}
               value={aetosInteraction.selectedWave}
               onChange={(event) =>
                 executeIntent(aetosInteraction.intentFor(Number(event.target.value)))

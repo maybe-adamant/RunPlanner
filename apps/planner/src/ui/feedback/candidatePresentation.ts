@@ -12,8 +12,8 @@ export function candidateSelectState(
   return { 'data-candidate-support': candidateSupport(option) };
 }
 
-/** Hover hint of a native control whose candidate context is unreached. */
-export const candidateWaitingTitle = 'Waits on an earlier choice';
+/** Hint of a control whose candidate context is unreached. */
+export const candidateWaitingHint = 'Waits on an earlier choice';
 
 /** Whether this evaluated candidate's context is unreached. */
 export function candidateWaits(

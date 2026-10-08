@@ -55,7 +55,6 @@ function PickerSection<T>({
         return (
           <Command.Item
             aria-label={item.ariaLabel}
-            title={item.ariaLabel}
             data-candidate-state={item.state}
             data-selected-value={item.selected}
             disabled={item.disabled}

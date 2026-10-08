@@ -179,7 +179,7 @@ dispatch. The gold slider offers 1×–5× in 0.1× steps, with 1× labeled Vani
 Slider adjustments remain local until pointer release, navigation-key release,
 blur or Enter, producing one history edit per gesture. Stored values outside
 the declared domain clamp to the nearest bound on decode. Explanatory text
-appears on each option’s hover, with accessible descriptions on its control.
+is each option’s hint, with accessible descriptions on its control.
 Sibling and unrelated
 edits retain that draft, and committing it uses the current authored siblings.
 An authored multiplier change refreshes it; accepted document replacement clears

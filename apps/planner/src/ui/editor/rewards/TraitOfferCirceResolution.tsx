@@ -25,6 +25,7 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import { circeUnavailableMessage } from './traitOfferOptions';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function TraitOfferCirceResolution({
   address,
@@ -111,7 +112,10 @@ export function TraitOfferCirceResolution({
           aria-invalid={picker?.selected?.disabled || undefined}
           aria-haspopup="dialog"
           disabled={domain === undefined}
-          title={domain === undefined ? 'Evaluating this Circe outcome…' : undefined}
+          {...hintProps(
+            domain === undefined ? 'Evaluating this Circe outcome…' : undefined,
+            findingTarget?.['aria-description'],
+          )}
           onClick={() => dispatch(circeResolutionDialogOpened(address))}
         >
           <span>
@@ -188,7 +192,7 @@ export function TraitOfferCirceResolution({
                       disabled:
                         disabled ||
                         (!selected && (complete || candidate === undefined || candidate.disabled)),
-                      title: candidate?.explanation,
+                      hint: candidate?.explanation,
                       onClick: () =>
                         setDraft({
                           ...draft,

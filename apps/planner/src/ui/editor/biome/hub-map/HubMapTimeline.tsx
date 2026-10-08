@@ -21,7 +21,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import {
   candidateMayBeAuthored,
-  candidateWaitingTitle,
+  candidateWaitingHint,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -39,6 +39,7 @@ import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { HubMapFountainContent, HubMapMarkerContent } from './HubMapMarkerContent';
 import { hubMapReward } from './hubMapReward';
+import { hintProps } from '@planner/ui/controls/hint';
 
 interface HubMapTimelineProps {
   readonly hubIdentity: string;
@@ -219,16 +220,18 @@ function TimelineMapMarker({
             marker.current = element;
             markerTarget?.ref(element);
           }}
-          aria-description={[`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
-            .filter(Boolean)
-            .join(' ')}
           aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
           data-authoring-locked={markerDisabled || undefined}
           disabled={markerDisabled || appendWaits}
           inert={markerDisabled}
           {...pointer}
           style={position}
-          title={appendWaits ? candidateWaitingTitle : `${slot.label}: ${reward.summary}`}
+          {...hintProps(
+            appendWaits ? candidateWaitingHint : `Reward: ${reward.summary}`,
+            [`Reward: ${reward.summary}`, markerTarget?.['aria-description']]
+              .filter(Boolean)
+              .join(' '),
+          )}
           type="button"
         >
           <HubMapMarkerContent label={annotation.mapLabel} open reward={reward} />
@@ -266,6 +269,10 @@ function TimelineFountainMarker({
   const appendWaits = canAppend && waiting && !locked;
   const markerDisabled = canAppend && locked;
   const position = hubMapPosition(hubMapFountainAnnotation);
+  const fountainLabel =
+    fountain.actionPosition === undefined
+      ? 'Hub fountain: Unused. Use fountain.'
+      : `Hub fountain: Step ${fountain.actionPosition}.`;
   const pointer = useDragSuppressedActivation(() => {
     if (appendActions !== undefined && !locked && !waiting) onAppend(appendActions);
     else if (canOpen) setOpen(true);
@@ -288,11 +295,7 @@ function TimelineFountainMarker({
         <button
           ref={marker}
           aria-disabled={(!canAppend && !canOpen) || (canAppend && locked) || undefined}
-          aria-label={
-            fountain.actionPosition === undefined
-              ? 'Hub fountain: Unused. Use fountain.'
-              : `Hub fountain: Step ${fountain.actionPosition}.`
-          }
+          aria-label={fountainLabel}
           className="hub-map-fountain-marker hub-timeline-fountain-marker"
           data-authoring-locked={markerDisabled || undefined}
           data-hub-fountain
@@ -302,7 +305,11 @@ function TimelineFountainMarker({
           inert={markerDisabled}
           {...pointer}
           style={position}
-          title={appendWaits ? candidateWaitingTitle : 'Hub fountain'}
+          {...hintProps(
+            appendWaits ? candidateWaitingHint : 'Hub fountain',
+            undefined,
+            fountainLabel,
+          )}
           type="button"
         >
           <HubMapFountainContent />

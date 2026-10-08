@@ -22,6 +22,7 @@ import { TraitOfferForm, TraitOfferShapeActions, useOutcomeFeedback } from './Tr
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
+import { hintProps } from '@planner/ui/controls/hint';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
 function traitOfferLoadable(
@@ -237,11 +238,11 @@ export function TraitOfferEditorShell({
               <fieldset
                 aria-label="Rejected blocked row"
                 className="trait-offer-rejected-block"
-                title={
+                {...hintProps(
                   rejectedBlockInactive
                     ? 'Rejected does not block a row in this offer.'
-                    : 'Rejected blocks one offered row.'
-                }
+                    : 'Rejected blocks one offered row.',
+                )}
               >
                 <legend>Rejected blocked row</legend>
                 {rejectedBlock.canClear ? (

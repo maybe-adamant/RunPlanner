@@ -10,6 +10,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function ChaosMapWorkbench({
   control,
@@ -95,6 +96,7 @@ export function ChaosSpawnWorkbench({
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   const position = feature.action === 'remove' ? feature.position : undefined;
+  const positionTarget = findingTarget(owner);
   return (
     <div className="room-feature-presence-row room-resource-row chaos-feature-row">
       <label className="room-resource-selection chaos-gate-presence">
@@ -135,13 +137,16 @@ export function ChaosSpawnWorkbench({
       </label>
       {position === undefined ? null : (
         <div
-          {...findingTarget(owner)}
+          {...positionTarget}
           aria-label="Position"
           aria-invalid={position.invalid || undefined}
           className="chaos-position-control"
           role="radiogroup"
           tabIndex={-1}
-          {...(position.invalid ? { title: `Position ${position.value} unavailable` } : {})}
+          {...hintProps(
+            position.invalid ? `Position ${position.value} unavailable` : undefined,
+            positionTarget['aria-description'],
+          )}
         >
           <span>Position</span>
           {[null, ...position.choices].map((value) => (

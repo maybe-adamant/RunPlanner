@@ -22,6 +22,7 @@ import { RoomActionsWorkbench, type TimelineBoundaryContent } from './Occurrence
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
+import { hintProps } from '@planner/ui/controls/hint';
 
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
@@ -262,11 +263,13 @@ export function OccurrenceWorkbench({
                 <li data-action-accent="optional">Optional</li>
                 <li
                   data-action-accent="phase"
-                  title="Required in this timeline section, not necessarily as the next action."
+                  {...hintProps(
+                    'Required in this timeline section, not necessarily as the next action.',
+                  )}
                 >
                   Required now
                 </li>
-                <li data-action-accent="room" title="Required before leaving the room.">
+                <li data-action-accent="room" {...hintProps('Required before leaving the room.')}>
                   Before leaving
                 </li>
                 <li data-action-accent="automatic">Automatic</li>

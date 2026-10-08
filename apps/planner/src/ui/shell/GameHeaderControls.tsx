@@ -15,6 +15,7 @@ import {
 } from '@planner/projections/gamePanel';
 import { selectProfileStatus, useAppSelector, type RootState } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
+import { hintProps } from '@planner/ui/controls/hint';
 
 const EMPTY_SNAPSHOT: GameStatusSnapshot = Object.freeze({ status: null, error: null, readAt: 0 });
 const NO_SNAPSHOT = () => EMPTY_SNAPSHOT;
@@ -123,7 +124,7 @@ export function GameHeaderControls({
   return (
     <>
       <button
-        aria-describedby={button.description === null ? undefined : 'game-send-description'}
+        {...hintProps(button.description ?? undefined)}
         aria-disabled={button.action === null || undefined}
         className="secondary-action action-compact game-send-button"
         data-state={button.state}
@@ -133,14 +134,10 @@ export function GameHeaderControls({
           if (action.kind === 'openPlans') onOpenPlans();
           else void send(action.slot);
         }}
-        title={button.description ?? undefined}
         type="button"
       >
         {button.label}
       </button>
-      <span hidden id="game-send-description">
-        {button.description}
-      </span>
       <span className="visually-hidden game-send-status" role="status">
         {typeof announcement === 'string'
           ? announcement

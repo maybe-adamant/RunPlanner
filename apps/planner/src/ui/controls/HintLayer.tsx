@@ -3,6 +3,9 @@ import { useEffect, useRef } from 'react';
 const showDelayMs = 450;
 const anchorGap = 8;
 const viewportMargin = 8;
+// Native tooltips sit below-right of the cursor, clear of the pointer glyph.
+const pointerOffsetX = 12;
+const pointerOffsetY = 16;
 
 function hintAnchor(target: EventTarget | null): HTMLElement | undefined {
   return target instanceof Element
@@ -10,7 +13,10 @@ function hintAnchor(target: EventTarget | null): HTMLElement | undefined {
     : undefined;
 }
 
-/** The one hint surface; it shows the `data-hint` of the hovered or keyboard-focused control. */
+/**
+ * The one hint surface; it shows the `data-hint` of the hovered or keyboard-focused control,
+ * beside the pointer for a hover and beside the control for keyboard focus.
+ */
 export function HintLayer() {
   const layer = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLSpanElement>(null);
@@ -20,6 +26,9 @@ export function HintLayer() {
     const content = text.current;
     if (element === null || content === null) return;
     let anchor: HTMLElement | undefined;
+    // Screen position of the pointer; the layer itself is laid out in screen pixels.
+    let pointer: { readonly x: number; readonly y: number } | undefined;
+    let fromPointer = false;
     let visible = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     // A pressed pointer means a click, drag or pan is under way; no hint appears until release.
@@ -42,6 +51,23 @@ export function HintLayer() {
       element.dataset.side = top === below ? 'bottom' : 'top';
     };
 
+    const placeAtPointer = (x: number, y: number): void => {
+      const card = element.getBoundingClientRect();
+      const right = x + pointerOffsetX;
+      const below = y + pointerOffsetY;
+      const left =
+        right + card.width <= window.innerWidth - viewportMargin
+          ? right
+          : Math.max(viewportMargin, x - pointerOffsetX - card.width);
+      const top =
+        below + card.height <= window.innerHeight - viewportMargin
+          ? below
+          : Math.max(viewportMargin, y - anchorGap - card.height);
+      element.style.top = `${Math.round(top)}px`;
+      element.style.left = `${Math.round(left)}px`;
+      element.dataset.side = top === below ? 'bottom' : 'top';
+    };
+
     const show = (target: HTMLElement): void => {
       const hint = target.dataset.hint;
       if (hint === undefined || hint === '' || !target.isConnected) return;
@@ -52,7 +78,8 @@ export function HintLayer() {
         if (element.matches(':popover-open')) element.hidePopover();
         element.showPopover();
       }
-      place(target);
+      if (fromPointer && pointer !== undefined) placeAtPointer(pointer.x, pointer.y);
+      else place(target);
       visible = true;
     };
 
@@ -68,8 +95,9 @@ export function HintLayer() {
       element.hidden = true;
     };
 
-    const schedule = (target: HTMLElement): void => {
+    const schedule = (target: HTMLElement, byPointer: boolean): void => {
       if (pressed || target === anchor) return;
+      fromPointer = byPointer;
       if (timer !== undefined) clearTimeout(timer);
       anchor = target;
       if (visible) {
@@ -82,10 +110,14 @@ export function HintLayer() {
       }, showDelayMs);
     };
 
+    const trackPointer = (event: PointerEvent): void => {
+      pointer = { x: event.clientX, y: event.clientY };
+    };
     const pointerOver = (event: PointerEvent): void => {
+      trackPointer(event);
       if (event.buttons > 0) return;
       const target = hintAnchor(event.target);
-      if (target !== undefined) schedule(target);
+      if (target !== undefined) schedule(target, true);
     };
     const pointerOut = (event: PointerEvent): void => {
       if (anchor === undefined) return;
@@ -96,7 +128,7 @@ export function HintLayer() {
     const focusIn = (event: FocusEvent): void => {
       const target = hintAnchor(event.target);
       if (target === undefined) hide();
-      else schedule(target);
+      else schedule(target, false);
     };
     const focusOut = (event: FocusEvent): void => {
       if (anchor !== undefined && anchor.contains(event.target as Node)) hide();
@@ -118,6 +150,7 @@ export function HintLayer() {
 
     const capture = { capture: true } as const;
     document.addEventListener('pointerover', pointerOver, capture);
+    document.addEventListener('pointermove', trackPointer, { capture: true, passive: true });
     document.addEventListener('pointerout', pointerOut, capture);
     document.addEventListener('focusin', focusIn, capture);
     document.addEventListener('focusout', focusOut, capture);
@@ -130,6 +163,7 @@ export function HintLayer() {
     return () => {
       hide();
       document.removeEventListener('pointerover', pointerOver, capture);
+      document.removeEventListener('pointermove', trackPointer, capture);
       document.removeEventListener('pointerout', pointerOut, capture);
       document.removeEventListener('focusin', focusIn, capture);
       document.removeEventListener('focusout', focusOut, capture);

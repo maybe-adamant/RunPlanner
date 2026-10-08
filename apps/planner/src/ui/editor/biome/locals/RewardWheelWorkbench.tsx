@@ -11,12 +11,13 @@ import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindin
 import {
   candidateMayBeAuthored,
   candidateSelectState,
-  candidateWaitingTitle,
+  candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function RewardWheelWorkbench({
   interactions,
@@ -106,13 +107,13 @@ export function RewardWheelWorkbench({
                     name={`${idPrefix}-count`}
                     checked={count.selected === choice.value}
                     disabled={waiting || unavailable}
-                    title={
+                    {...hintProps(
                       waiting
-                        ? candidateWaitingTitle
+                        ? candidateWaitingHint
                         : unavailable
                           ? 'This offer count is unavailable.'
-                          : undefined
-                    }
+                          : undefined,
+                    )}
                     onFocus={countCandidates.activate}
                     onPointerDown={countCandidates.activate}
                     onChange={() => {
@@ -166,7 +167,7 @@ export function RewardWheelWorkbench({
                       onChange={() => replacePick(offerIndex)}
                       onFocus={pickCandidates.activate}
                       onPointerDown={pickCandidates.activate}
-                      title={pickWaits ? candidateWaitingTitle : undefined}
+                      {...hintProps(pickWaits ? candidateWaitingHint : undefined)}
                       type="radio"
                     />
                   </label>

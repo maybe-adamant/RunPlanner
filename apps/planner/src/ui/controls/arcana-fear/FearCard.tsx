@@ -1,14 +1,17 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { fearArtwork } from './fearArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function FearCard({
   vowKey,
   label,
   rank,
   maximum,
+  hint,
   ...button
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   readonly vowKey: string;
+  readonly hint?: string | undefined;
   readonly label: string;
   readonly rank?: number;
   readonly maximum?: number;
@@ -16,6 +19,7 @@ export function FearCard({
   return (
     <button
       {...button}
+      {...hintProps(hint, button['aria-description'], button['aria-label'])}
       type="button"
       className="fear-rank-control"
       data-fear-vow-key={vowKey}

@@ -6,6 +6,7 @@ import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { roomActionDestinationLabel } from './room-action-placement';
+import { hintProps } from '@planner/ui/controls/hint';
 
 /** Placement slot for one already-projected action; it stays mounted and disabled without a proposal. */
 export function RoomActionPlacementControl({
@@ -35,7 +36,10 @@ export function RoomActionPlacementControl({
         className="secondary-action action-compact"
         disabled={restoreDisabled}
         onClick={() => insertions[0] === undefined || onApply(insertions[0].key)}
-        {...(restoreDisabled ? { title: 'No position to restore this action.' } : {})}
+        {...hintProps(
+          restoreDisabled ? 'No position to restore this action.' : undefined,
+          findingMark?.['aria-description'],
+        )}
         type="button"
       >
         Restore
@@ -49,7 +53,10 @@ export function RoomActionPlacementControl({
         className="secondary-action action-compact"
         disabled={insertions.length === 0}
         onClick={(event) => onBeginAdd(event.currentTarget)}
-        {...(insertions.length === 0 ? { title: 'No position to add this action.' } : {})}
+        {...hintProps(
+          insertions.length === 0 ? 'No position to add this action.' : undefined,
+          findingMark?.['aria-description'],
+        )}
         type="button"
       >
         Add…

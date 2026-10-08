@@ -8,6 +8,7 @@ import {
 } from 'react';
 
 import type { RoomMapAsset } from './roomMapAssets';
+import { hintProps } from '@planner/ui/controls/hint';
 
 const minimumZoom = 50;
 const maximumZoom = 200;
@@ -198,7 +199,7 @@ export function RoomMapViewport({
           aria-label="Map controls"
           aria-expanded={controlsExpanded}
           className="quiet-action action-compact"
-          title={controlsExpanded ? 'Hide map controls' : 'Show map controls'}
+          {...hintProps(controlsExpanded ? 'Hide map controls' : 'Show map controls')}
           onClick={() => setControlsExpanded((expanded) => !expanded)}
           type="button"
         >

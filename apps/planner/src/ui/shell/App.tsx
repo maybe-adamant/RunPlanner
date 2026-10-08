@@ -45,6 +45,7 @@ import { ReleaseUpdateCheck, ReleaseUpdateNotice } from './ReleaseUpdates';
 import { GameHeaderControls } from './GameHeaderControls';
 import { GamePanel } from './GamePanel';
 import { BugReportDialog } from './BugReportDialog';
+import { hintProps } from '@planner/ui/controls/hint';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
@@ -138,7 +139,11 @@ export function App({
           <div className="app-header-actions" data-entry={showEntry || undefined}>
             <ProjectFileControls
               beforeFileMenu={
-                <output aria-label="App scale" className="app-scale-value" title="App scale">
+                <output
+                  aria-label="App scale"
+                  className="app-scale-value"
+                  {...hintProps('App scale', undefined, 'App scale')}
+                >
                   <ActionIcon name="zoom" />
                   {scalePercent}%
                 </output>
@@ -182,9 +187,9 @@ export function App({
                       <div>
                         <dt>Build</dt>
                         <dd
-                          {...(buildIdentity.commit === undefined
-                            ? {}
-                            : { title: buildIdentity.commit })}
+                          {...hintProps(
+                            buildIdentity.commit === undefined ? undefined : buildIdentity.commit,
+                          )}
                         >
                           {buildIdentity.build}
                         </dd>

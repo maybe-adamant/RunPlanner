@@ -17,6 +17,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { findingSelected } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function StatusBadge({ status }: { readonly status: StatusPresentation }) {
   return (
@@ -47,7 +48,7 @@ export function NavigationStatusMarker({ status }: { readonly status: StatusPres
       aria-hidden="true"
       className="navigation-status-marker"
       data-tone={status.tone}
-      title={status.label}
+      {...hintProps(status.label)}
     >
       {navigationStatusSymbol(status.tone)}
     </span>
@@ -56,7 +57,11 @@ export function NavigationStatusMarker({ status }: { readonly status: StatusPres
 
 export function FindingCount({ count, label }: { readonly count: number; readonly label: string }) {
   return count === 0 ? null : (
-    <span aria-label={`${count} ${label}`} className="findings-count" title={`${count} ${label}`}>
+    <span
+      aria-label={`${count} ${label}`}
+      className="findings-count"
+      {...hintProps(`${count} ${label}`, undefined, `${count} ${label}`)}
+    >
       {count}
     </span>
   );

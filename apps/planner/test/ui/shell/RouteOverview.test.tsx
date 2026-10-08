@@ -175,7 +175,7 @@ describe('RouteOverview', () => {
 
     const markup = routeOverviewMarkup(application);
     expect(markup).toContain('Loadout');
-    expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
+    expect([...markup.matchAll(/data-hint="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
       'Summit',
       'Erebus',
       'Ephyra',
@@ -187,7 +187,7 @@ describe('RouteOverview', () => {
   it('shows the ordinary route order in the same Loadout summary', () => {
     const markup = routeOverviewMarkup(createOpenTestApplication('Underworld'));
     expect(markup).toContain('Loadout');
-    expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
+    expect([...markup.matchAll(/data-hint="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
       'Erebus',
       'Oceanus',
       'Fields',
@@ -217,7 +217,7 @@ describe('RouteOverview', () => {
     expect(markup).not.toContain('aria-label="Edit Arcana"');
     expect(markup).not.toContain('aria-label="Edit Fear"');
     expect(markup).not.toContain('>Starting reward</label>');
-    expect([...markup.matchAll(/title="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
+    expect([...markup.matchAll(/data-hint="Through ([^"]+)"/g)].map((match) => match[1])).toEqual([
       'Erebus',
       'Oceanus',
       'Fields',

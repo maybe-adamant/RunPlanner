@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -26,7 +27,7 @@ describe('Arcana rank presentation', () => {
     expect(card.getAttribute('data-active')).toBe('true');
     expect(card.getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByText(numeral)).toBeTruthy();
-    expect(card.title).toContain(`Current: ${rarity}`);
+    expect(hintOf(card)).toContain(`Current: ${rarity}`);
   });
 
   it('separates a selected grant preview from the current rank and restores it on deselection', () => {
@@ -79,6 +80,6 @@ describe('Arcana rank presentation', () => {
       />,
     );
     expect(screen.getByText('—')).toBeTruthy();
-    expect(screen.getByRole('button').title).toContain('Rank varies');
+    expect(hintOf(screen.getByRole('button'))).toContain('Rank varies');
   });
 });

@@ -14,6 +14,7 @@ import {
   StygianWellPurchasedControl,
   StygianWellSlotEditor,
 } from './RoomInventoryPanel';
+import { hintProps } from '@planner/ui/controls/hint';
 
 /** Rush on one Shrine purchase action. */
 export function HermesShrineRushControl({
@@ -149,7 +150,9 @@ function travelDealLineCells(
               aria-label="Purchased Travel Deal"
               checked={offer.purchase.purchased}
               disabled={proposal === undefined}
-              {...(proposal === undefined ? { title: 'No position to purchase the refill.' } : {})}
+              {...hintProps(
+                proposal === undefined ? 'No position to purchase the refill.' : undefined,
+              )}
               onChange={() => (proposal === undefined ? undefined : onApply(proposal.key))}
               type="checkbox"
             />

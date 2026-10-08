@@ -12,6 +12,7 @@ import {
 } from '@planner/state/store';
 import { projectHistoryShortcut } from './projectHistoryShortcuts';
 import { ActionIcon } from '../controls/ActionIcon';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function ProjectHistoryControls({ hasProject = true }: { readonly hasProject?: boolean }) {
   const canUndo = useAppSelector(selectCanUndoProject);
@@ -44,7 +45,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
         className="quiet-action action-compact"
         disabled={!canUndo}
         onClick={() => dispatch(authoredProjectUndoRequested())}
-        title="Undo project edit (Ctrl/Cmd+Z)"
+        {...hintProps('Undo project edit (Ctrl/Cmd+Z)')}
         type="button"
       >
         <ActionIcon name="undo" />
@@ -55,7 +56,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
         className="quiet-action action-compact"
         disabled={!canRedo}
         onClick={() => dispatch(authoredProjectRedoRequested())}
-        title="Redo project edit (Ctrl/Cmd+Shift+Z or Ctrl+Y)"
+        {...hintProps('Redo project edit (Ctrl/Cmd+Shift+Z or Ctrl+Y)')}
         type="button"
       >
         <ActionIcon name="redo" />

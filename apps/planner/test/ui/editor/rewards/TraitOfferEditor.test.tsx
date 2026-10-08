@@ -1508,7 +1508,7 @@ describe('trait offer editor entry and dialog', () => {
     );
 
     const group = await screen.findByRole('group', { name: 'Rejected blocked row' });
-    expect(group.getAttribute('title')).toBe('Rejected does not block a row in this offer.');
+    expect(hintOf(group)).toBe('Rejected does not block a row in this offer.');
     expect(screen.getByRole('radio', { name: 'No blocked row' })).toHaveProperty('checked', true);
     for (const radio of within(group).getAllByRole('radio'))
       expect(radio).toHaveProperty('disabled', true);

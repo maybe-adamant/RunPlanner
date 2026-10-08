@@ -254,7 +254,7 @@ restarting, clears it.
 
 The header always shows one send button beside the Game button, with a fixed
 minimum width so no state shifts the header, and explains every state in its
-title and accessible description:
+hint:
 
 | State                                  | Label                         | Clicking                                     |
 | -------------------------------------- | ----------------------------- | -------------------------------------------- |
