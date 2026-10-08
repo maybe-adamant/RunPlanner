@@ -21,6 +21,8 @@ local function configured(settings)
     native.load(root, 'CombatLogic.lua', { 'Kill' }, e)
     native.load(root, 'RoomLogic.lua', { 'CheckMoneyDrop' }, e)
     native.load(root, 'EffectLogic.lua', { 'CharmApply', 'CharmClear' }, e)
+    native.load(root, 'RunLogic.lua', { 'GenerateEncounter' }, e)
+    native.load(root, 'UtilityLogic.lua', { 'OverwriteTableKeys' }, e)
     local state = session.create()
     state.state, state.reason = 'synchronized', 'ready'
     state.plan, state.admittedNativeRun = { runModifiers = settings }, e.CurrentRun
@@ -34,7 +36,7 @@ local function configured(settings)
     return e, state, restore
 end
 
-local gold = { enemyGoldDropChanceMultiplier = 5 }
+local gold = { enemyGoldDropChance = 100 }
 local function checkGold(changes, expectedStore, expectedDrops)
     local e, _, restore = configured(gold)
     local v = { ObjectId = 2, Name = 'Enemy', DamageType = 'Enemy', AddToEnemyTeam = true,
@@ -66,3 +68,33 @@ checkGold(function(_, v) v.DamageType = 'Neutral' end, 2, {})
 checkGold(function(_, v) v.AddToEnemyTeam = nil end, 2, {})
 checkGold(function(_, v) v.MoneyDropOnDeath.IgnoreRoomMoneyStore = true end, 2, {})
 print('Native gold BlockMoney, exhaustion, parcel overshoot, hostility snapshot and declaration preservation passed')
+
+-- The base-difficulty roll follows the budget roll; it ends the probe there.
+local function checkBudget(settings, encounter, expectedDraw, expectedStore)
+    local e, _, restore = configured(settings)
+    local draws = {}
+    e.DebugPrint = function() end
+    e.CurrentRun.RunDepthCache = 4
+    e.RandomInt = function(minimum, maximum)
+        draws[#draws + 1] = { minimum, maximum }
+        if #draws == 2 then error('probe-generate-terminal', 0) end
+        return maximum
+    end
+    local bounds = { encounter.MoneyDropCapMin, encounter.MoneyDropCapMax }
+    local ok, err = pcall(e.GenerateEncounter, e.CurrentRun, {}, encounter)
+    assert(not ok and err == 'probe-generate-terminal', tostring(err))
+    lu.assertEquals(draws[1], expectedDraw)
+    lu.assertEquals(#draws, 2)
+    lu.assertEquals(encounter.MoneyDropStore, expectedStore)
+    lu.assertEquals({ encounter.MoneyDropCapMin, encounter.MoneyDropCapMax }, bounds)
+    restore()
+end
+local function biomeF()
+    return { MoneyDropCapMin = 10, MoneyDropCapMax = 15, MoneyDropCapDepthRamp = 0.5,
+        BaseDifficulty = 1, BaseDifficultyMin = 1, BaseDifficultyMax = 2 }
+end
+checkBudget({}, biomeF(), { 10, 15 }, 17)
+checkBudget({ encounterGoldRange = 0 }, biomeF(), { 10, 10 }, 12)
+checkBudget({ encounterGoldRange = 25 }, biomeF(), { 11, 11 }, 13)
+checkBudget({ encounterGoldRange = 100 }, biomeF(), { 15, 15 }, 17)
+print('Native budget single draw, depth ramp and bound restoration passed')

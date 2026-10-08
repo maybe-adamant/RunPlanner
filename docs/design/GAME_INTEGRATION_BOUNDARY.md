@@ -364,10 +364,15 @@ ordinary room steering remains passive. Rejection, mismatch, executor fault,
 death, Crossroads presence, and a different native run prevent their application.
 Activation and temporary scopes are process-local, never native-save-backed.
 
-Enemy gold changes only the positive chance input for capped hostile-enemy
-death drops; native amounts, `BlockMoney`, and encounter-store accounting remain
-authoritative. Reaction, breakable and uncapped drops are outside this setting.
-Gold-urn generation is unchanged.
+Enemy gold drop chance replaces only the positive chance input for capped
+hostile-enemy death drops with the chosen percentage; native amounts,
+`BlockMoney`, and encounter-store accounting remain authoritative. Reaction,
+breakable and uncapped drops are outside this setting. Encounter gold range
+narrows the native budget bounds to one value for the duration of each
+`GenerateEncounter` call with numeric bounds, so native still makes its one
+budget draw and applies its depth ramp and money multiplier; it composes with
+the planner-owned base-difficulty narrowing in either wrap order and also
+applies to native generations. Gold-urn generation is unchanged.
 The [run-modifier source audit](../audits/loadout-and-progression/RUN_MODIFIERS_GAME_DATA_AUDIT.md)
 owns exact native contacts and exclusions.
 

@@ -83,11 +83,18 @@ local function runModifiers(value)
     local label = "execution plan.runModifiers"
     local record, errorMessage = p.obj(value, label)
     if not record then return nil, errorMessage end
-    local multiplier = record.enemyGoldDropChanceMultiplier
-    if multiplier ~= nil and not p.num(multiplier, label .. ".enemyGoldDropChanceMultiplier", 1) then
-        return p.fail(label .. " contains invalid values")
+    -- Each percentage is absent while native, otherwise enabled within 0..100.
+    local result = {}
+    for _, key in ipairs({ "enemyGoldDropChance", "encounterGoldRange" }) do
+        local percent = record[key]
+        if percent ~= nil then
+            if not p.num(percent, label .. "." .. key, 0) or percent > 100 then
+                return p.fail(label .. " contains invalid values")
+            end
+            result[key] = percent
+        end
     end
-    return { enemyGoldDropChanceMultiplier = multiplier == nil and 1 or multiplier }
+    return result
 end
 
 local function fingerprintBody(plan, decodedOccurrences)

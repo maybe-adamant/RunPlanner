@@ -255,13 +255,13 @@ function TestProtocol.testRunModifiersProducerFixtureAndFingerprint()
     local value = decode("run-modifiers")
     local plan, errorMessage = protocol.decode(value)
     lu.assertNil(errorMessage)
-    lu.assertEquals(plan.runModifiers, { enemyGoldDropChanceMultiplier = 1 })
+    lu.assertEquals(plan.runModifiers, { enemyGoldDropChance = 40, encounterGoldRange = 25 })
     lu.assertNil(plan.startingLoadout.runModifiers)
     local native = decode("f-opening")
     lu.assertNotNil(protocol.decode(native))
     lu.assertNil(native.runModifiers)
     value = decode("run-modifiers")
-    value.runModifiers.enemyGoldDropChanceMultiplier = 2.75
+    value.runModifiers.encounterGoldRange = 26
     local rejected, reason = protocol.decode(value)
     lu.assertNil(rejected)
     lu.assertStrContains(reason, "fingerprint")
@@ -269,12 +269,15 @@ end
 
 function TestProtocol.testRunModifiersValidateKnownKeysStrictly()
     for _, mutate in ipairs({
-        function(row) row.enemyGoldDropChanceMultiplier = "2" end,
-        function(row) row.enemyGoldDropChanceMultiplier = true end,
-        function(row) row.enemyGoldDropChanceMultiplier = 0.99 end,
-        function(row) row.enemyGoldDropChanceMultiplier = 0 / 0 end,
-        function(row) row.enemyGoldDropChanceMultiplier = math.huge end,
-        function(row) row.enemyGoldDropChanceMultiplier = -math.huge end,
+        function(row) row.enemyGoldDropChance = "40" end,
+        function(row) row.enemyGoldDropChance = true end,
+        function(row) row.enemyGoldDropChance = -0.5 end,
+        function(row) row.enemyGoldDropChance = 100.5 end,
+        function(row) row.encounterGoldRange = 0 / 0 end,
+        function(row) row.encounterGoldRange = math.huge end,
+        function(row) row.encounterGoldRange = -math.huge end,
+        function(row) row.encounterGoldRange = 101 end,
+        function(row) row.encounterGoldRange = json.null end,
     }) do
         local value = decode("run-modifiers")
         mutate(value.runModifiers)
@@ -583,20 +586,26 @@ end
 
 function TestProtocol.testRunModifiersIgnoreUnknownKeysAndDefaultAbsentKnownKeys()
     local plan = minimalPlan({})
-    plan.runModifiers = tagged({ enemyGoldDropChanceMultiplier = 2.5, guaranteeEligibleCrits = true,
-        experimentalModifier = { nested = "value" } }, "runModifiers", false)
+    plan.runModifiers = tagged({ enemyGoldDropChance = 0, encounterGoldRange = 12.5,
+        guaranteeEligibleCrits = true, experimentalModifier = { nested = "value" } }, "runModifiers", false)
     local _, staleReason = protocol.decode(plan)
     lu.assertStrContains(staleReason, "fingerprint")
     refreshFingerprint(plan)
     local decoded, errorMessage = protocol.decode(plan)
     lu.assertNil(errorMessage)
-    lu.assertEquals(decoded.runModifiers, { enemyGoldDropChanceMultiplier = 2.5 })
+    lu.assertEquals(decoded.runModifiers, { enemyGoldDropChance = 0, encounterGoldRange = 12.5 })
     local absent = minimalPlan({})
     absent.runModifiers = tagged({ guaranteeEligibleDoubleDamage = false }, "runModifiers", false)
     refreshFingerprint(absent)
     decoded, errorMessage = protocol.decode(absent)
     lu.assertNil(errorMessage)
-    lu.assertEquals(decoded.runModifiers, { enemyGoldDropChanceMultiplier = 1 })
+    lu.assertEquals(decoded.runModifiers, {})
+    local edge = minimalPlan({})
+    edge.runModifiers = tagged({ enemyGoldDropChance = 100, encounterGoldRange = 0 }, "runModifiers", false)
+    refreshFingerprint(edge)
+    decoded, errorMessage = protocol.decode(edge)
+    lu.assertNil(errorMessage)
+    lu.assertEquals(decoded.runModifiers, { enemyGoldDropChance = 100, encounterGoldRange = 0 })
 end
 
 function TestProtocol.testFreshFileOmitsAbsentLoadoutKeys()
