@@ -488,7 +488,9 @@ Fight Fight Fight's acquisition (`EchoIncreaseStats`, `EventLogic.lua:1739-1765`
 sets `StatMultiplier` to the processed `StartFraction` and sets `BlockDecay`.
 `StartFraction` is `0.6` times the scaling row's multiplier, rounded to
 hundredths: `0.6` for Common through Epic and `0.8` for Heroic, which only a
-fourth-biome Dream Dive Echo reaches. `LeaveRoom` clears the block on the first
+fourth-biome Dream Dive Echo reaches. Ordinary runs force Epic and Echo is
+always their third biome, so the planner declares the fraction by acquisition
+ordinal like other NPC position effects. `LeaveRoom` clears the block on the first
 departure, subtracts `Decay = 0.05` on each later one and removes the trait
 once the value is no longer positive (`RoomLogic.lua:4245-4261`). In doubles
 the 13th later departure removes a `0.6` fraction and the 16th a `0.8` one.

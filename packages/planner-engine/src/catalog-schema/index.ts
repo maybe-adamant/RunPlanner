@@ -50,7 +50,6 @@ export type {
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
   TraitAcquisitionOrdinalValues,
-  TraitRoomDecayStartFraction,
   ResolvedTraitAcquisitionOrdinalEffect,
   DirectTraitSetDeclaration,
   DirectTraitSetKey,

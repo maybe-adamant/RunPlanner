@@ -2,7 +2,6 @@ import {
   resolveTraitAcquisitionOrdinalEffect,
   type Catalog,
   type TraitRarity,
-  type TraitRoomDecayStartFraction,
 } from '../../catalog-schema';
 import type {
   EchoLastRunBoonAddress,
@@ -739,19 +738,6 @@ function denialBannedChaosCurseKeys(
   return Object.freeze(distinct.slice(0, denial.effect.count));
 }
 
-function resolveRoomDecayStartFraction(
-  catalog: Catalog,
-  startFraction: TraitRoomDecayStartFraction,
-  routePosition: { readonly routeKey: string; readonly ordinal: number },
-): number {
-  if (catalog.routes.byKey[routePosition.routeKey]?.dreamItinerary === undefined)
-    return startFraction.ordinary;
-  const fraction = startFraction.dreamByAcquisitionOrdinal[routePosition.ordinal - 1];
-  if (fraction === undefined)
-    throw new Error(`unsupported Dream acquisition ordinal ${routePosition.ordinal}`);
-  return fraction;
-}
-
 export function recordReachedTraitOffer(
   catalog: Catalog,
   evaluation: ReachedTraitOfferEvaluation,
@@ -798,20 +784,14 @@ export function recordReachedTraitOffer(
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
   const requiresAcquisitionOrdinal =
     selectedDisposition?.kind === 'upgradeOccupiedBoonSlot' ||
+    (selectedDisposition?.kind === 'echo' && selectedDisposition.effect === 'roomDecay') ||
     (selectedDisposition?.kind === 'producePickups' && selectedDisposition.clock !== undefined);
   const acquisitionOrdinal = evaluation.state.reached.routePosition.ordinal;
   const ordinalEffect =
     requiresAcquisitionOrdinal && selectedDisposition !== undefined
       ? resolveTraitAcquisitionOrdinalEffect(selectedDisposition, acquisitionOrdinal)
       : undefined;
-  const roomDecayStartFraction =
-    selectedDisposition?.kind === 'echo' && selectedDisposition.effect === 'roomDecay'
-      ? resolveRoomDecayStartFraction(
-          catalog,
-          selectedDisposition.startFraction,
-          evaluation.state.reached.routePosition,
-        )
-      : undefined;
+  const roomDecayStartFraction = ordinalEffect?.roomDecayStartFraction;
   if (
     selectedDisposition?.kind !== 'equip' &&
     selectedDisposition?.kind !== 'upgradeOccupiedBoonSlot' &&

@@ -235,7 +235,7 @@ describe('trait dispositions and requirements compiler owner', () => {
     }
   });
 
-  it('rejects an Echo room decay without four positive Dream start fractions', () => {
+  it('rejects an Echo room decay without four positive acquisition-ordinal start fractions', () => {
     const malformed = {
       ...declarations,
       traitCatalog: {
@@ -247,7 +247,7 @@ describe('trait dispositions and requirements compiler owner', () => {
                 selectedDisposition: {
                   kind: 'echo',
                   effect: 'roomDecay',
-                  startFraction: { ordinary: 0.6, dreamByAcquisitionOrdinal: [0.6, 0.6, 0.6] },
+                  startFractionByAcquisitionOrdinal: [0.6, 0.6, 0.6],
                   decay: 0.05,
                 },
               } as unknown as RawTraitDeclaration)
@@ -255,7 +255,7 @@ describe('trait dispositions and requirements compiler owner', () => {
         ),
       },
     };
-    expect(() => createCatalog(malformed)).toThrow(/four positive Dream ordinal fractions/);
+    expect(() => createCatalog(malformed)).toThrow(/four positive acquisition-ordinal fractions/);
   });
 
   it('rejects an unknown Echo disposition effect at the raw declaration boundary', () => {
