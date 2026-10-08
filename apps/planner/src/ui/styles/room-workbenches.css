@@ -288,7 +288,7 @@
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #e2b971;
+  accent-color: var(--selection-accent);
 }
 
 .fields-layout-position:has(input:disabled) {
@@ -615,7 +615,7 @@
 
 .encounter-composition-warning {
   margin: 0;
-  color: #e2b971;
+  color: var(--attention);
   font-size: 0.88rem;
 }
 
@@ -656,7 +656,7 @@
 .biome-field-radios input,
 .chaos-position-control input {
   margin: 0;
-  accent-color: #e2b971;
+  accent-color: var(--selection-accent);
 }
 
 .encounter-wave-picker {
@@ -717,7 +717,7 @@
 }
 
 .encounter-wave-picker[data-has-issues='true'] .contextual-picker-trigger {
-  box-shadow: inset 0 0 0 2px #da7373;
+  box-shadow: inset 0 0 0 2px var(--finding);
 }
 
 .encounter-composition-help {
@@ -1220,7 +1220,7 @@
   display: grid;
   min-block-size: 32px;
   place-items: center;
-  color: #e2b971;
+  color: var(--attention);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
@@ -1652,7 +1652,7 @@
   max-width: min(24rem, calc(100 * var(--app-vw) - 28px));
   gap: 6px;
   padding: 10px 12px;
-  border: 1px solid #e2b971;
+  border: 1px solid var(--selection-accent);
   border-radius: 8px;
   color: #f3ede4;
   background: #23232a;
@@ -1670,7 +1670,7 @@
 }
 
 .room-action-drag-header > span {
-  color: #e2b971;
+  color: var(--selection-accent);
   flex: 0 0 auto;
 }
 
@@ -1716,10 +1716,10 @@
 }
 
 .timeline-row[data-drop-position='available']::after {
-  border-color: #e2b971;
+  border-color: var(--selection-accent);
   border-style: solid;
   border-width: 2px;
-  box-shadow: 0 0 0 3px rgb(226 185 113 / 12%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--selection-accent) 12%, transparent);
 }
 
 .timeline-row[data-drop-position='unavailable']::after {
@@ -2065,7 +2065,7 @@
 }
 
 .hub-membership-control:focus-within {
-  border-color: #e2b971;
+  border-color: var(--selection-accent);
 }
 
 .hub-requirement-box {
@@ -2109,7 +2109,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid #e2b971;
+  border: 1px solid var(--selection-accent);
   border-radius: 8px;
   color: #f3ede4;
   background: #23232a;
@@ -2119,7 +2119,7 @@
 }
 
 .hub-roster-drag-preview > :first-child {
-  color: #e2b971;
+  color: var(--selection-accent);
   font-size: 1rem;
 }
 

@@ -138,8 +138,8 @@
 }
 
 .route-npc-index-entry:hover:not(:disabled) {
-  border-color: rgb(226 185 113 / 52%);
-  background: rgb(226 185 113 / 6%);
+  border-color: color-mix(in srgb, var(--selection-accent) 52%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 6%, transparent);
 }
 
 .route-npc-index-location {
@@ -232,11 +232,11 @@ select {
 }
 
 .contextual-picker-trigger[data-candidate-state='forced'] {
-  border-color: rgb(226 185 113 / 55%);
+  border-color: color-mix(in srgb, var(--attention) 55%, transparent);
 }
 
 .contextual-picker-trigger[data-candidate-state='impossible'] {
-  border-color: rgb(218 115 115 / 62%);
+  border-color: color-mix(in srgb, var(--finding) 62%, transparent);
   color: #f0b0b0;
 }
 
@@ -334,8 +334,8 @@ select {
 }
 
 .contextual-picker-popover [cmdk-input]:focus {
-  border-color: #e2b971;
-  box-shadow: 0 0 0 1px #e2b971;
+  border-color: var(--selection-accent);
+  box-shadow: 0 0 0 1px var(--selection-accent);
 }
 
 .contextual-picker-popover [cmdk-list] {
@@ -391,7 +391,7 @@ select {
 }
 
 .contextual-picker-item-indicator {
-  color: #e2b971;
+  color: var(--selection-accent);
   font-size: 0.76rem;
   font-weight: 800;
   text-align: center;
@@ -556,7 +556,7 @@ select {
 }
 
 .room-workbench-tab[aria-selected='true'] {
-  border-bottom-color: #e2b971;
+  border-bottom-color: var(--selection-accent);
 }
 
 .room-workbench-panel {
@@ -750,9 +750,9 @@ select {
 }
 
 .exit-row[data-picked='true'] {
-  border-color: rgb(226 185 113 / 44%);
-  background: rgb(226 185 113 / 5%);
-  box-shadow: inset 3px 0 0 rgb(226 185 113 / 70%);
+  border-color: color-mix(in srgb, var(--selection-accent) 44%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 5%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--selection-accent) 70%, transparent);
 }
 
 .exit-row[data-focused='true'] {
@@ -780,11 +780,11 @@ select {
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #e2b971;
+  accent-color: var(--selection-accent);
 }
 
 .exit-row[data-picked='true'] .picked-control {
-  background: rgb(226 185 113 / 6%);
+  background: color-mix(in srgb, var(--selection-accent) 6%, transparent);
 }
 
 .exit-content {
@@ -946,7 +946,7 @@ select {
 .door-information-note {
   grid-column: 1 / -1;
   margin: 0;
-  color: #e2b971;
+  color: var(--attention);
   font-size: 0.78rem;
   line-height: 1.4;
 }

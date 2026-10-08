@@ -385,8 +385,8 @@
 }
 
 .biome-rail-node:hover {
-  border-color: rgb(226 185 113 / 55%);
-  background: rgb(226 185 113 / 7%);
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 7%, transparent);
 }
 
 .biome-rail-node[data-assessment='unassessed'] {
@@ -399,12 +399,12 @@
 }
 
 .biome-rail-node[data-findings='true']:not([data-selected='true']) {
-  border-color: rgb(218 115 115 / 55%);
+  border-color: color-mix(in srgb, var(--finding) 55%, transparent);
 }
 
 .biome-rail-node[data-selected='true'] {
-  border-color: rgb(226 185 113 / 55%);
-  background: rgb(226 185 113 / 7%);
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 7%, transparent);
 }
 
 .biome-frontier-stop .biome-rail-node {
@@ -560,12 +560,12 @@
 
 .biome-completion-node:hover,
 .biome-completion-node[aria-pressed='true'] {
-  border-color: rgb(226 185 113 / 55%);
-  background: rgb(226 185 113 / 7%);
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 7%, transparent);
 }
 
 .biome-completion-node[data-findings='true'] {
-  border-color: rgb(218 115 115 / 55%);
+  border-color: color-mix(in srgb, var(--finding) 55%, transparent);
 }
 
 .biome-completion-node > span {

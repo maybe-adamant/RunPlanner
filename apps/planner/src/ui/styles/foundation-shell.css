@@ -12,6 +12,10 @@
   --text: #ede8df;
   /* Gold of chosen values: selected radios and checkboxes, focus and selected offer cards. */
   --selection-accent: #e2b971;
+  /* The same gold marking incomplete or unassessed state that asks for attention. */
+  --attention: #e2b971;
+  /* Red of finding marks and invalid states. */
+  --finding: #da7373;
 
   color: var(--text);
   background: #111216;
@@ -120,7 +124,7 @@ option[data-candidate-support='impossible'] {
 
 button:focus-visible,
 select:focus-visible {
-  outline: 2px solid #e2b971;
+  outline: 2px solid var(--selection-accent);
   outline-offset: 3px;
 }
 
@@ -139,8 +143,8 @@ input[type='checkbox'] {
 }
 
 input[type='checkbox']:checked {
-  border-color: #e2b971;
-  background-color: #e2b971;
+  border-color: var(--selection-accent);
+  background-color: var(--selection-accent);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3.5 8 3 3 6-6' fill='none' stroke='%231c1d23' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-position: center;
   background-repeat: no-repeat;
@@ -148,11 +152,11 @@ input[type='checkbox']:checked {
 }
 
 input[type='checkbox']:hover:not(:disabled) {
-  border-color: #e2b971;
+  border-color: var(--selection-accent);
 }
 
 input[type='checkbox']:focus-visible {
-  outline: 2px solid #e2b971;
+  outline: 2px solid var(--selection-accent);
   outline-offset: 3px;
 }
 
@@ -277,13 +281,13 @@ input[type='checkbox']:checked:disabled {
 }
 
 .status-badge[data-tone='incomplete'] {
-  border-color: rgb(226 185 113 / 42%);
-  color: #e2b971;
-  background: rgb(226 185 113 / 9%);
+  border-color: color-mix(in srgb, var(--attention) 42%, transparent);
+  color: var(--attention);
+  background: color-mix(in srgb, var(--attention) 9%, transparent);
 }
 
 .status-badge[data-tone='invalid'] {
-  border-color: rgb(218 115 115 / 42%);
+  border-color: color-mix(in srgb, var(--finding) 42%, transparent);
   color: #e7a1a1;
   background: rgb(150 53 53 / 12%);
 }
@@ -360,9 +364,9 @@ input[type='checkbox']:checked:disabled {
 }
 
 .primary-action {
-  border-color: rgb(226 185 113 / 55%);
+  border-color: color-mix(in srgb, var(--selection-accent) 55%, transparent);
   color: #17130d;
-  background: #e2b971;
+  background: var(--selection-accent);
   font-weight: 700;
 }
 
@@ -407,15 +411,15 @@ input[type='checkbox']:checked:disabled {
 }
 
 .trait-offer-launcher[data-trait-status='unspecified'] {
-  border-color: rgb(226 185 113 / 55%);
-  color: #e2b971;
-  background: rgb(226 185 113 / 13%);
+  border-color: color-mix(in srgb, var(--attention) 55%, transparent);
+  color: var(--attention);
+  background: color-mix(in srgb, var(--attention) 13%, transparent);
 }
 
 .trait-offer-launcher[data-trait-status='unspecified']:hover:not(:disabled) {
-  border-color: #e2b971;
+  border-color: var(--attention);
   color: #f3d59e;
-  background: rgb(226 185 113 / 22%);
+  background: color-mix(in srgb, var(--attention) 22%, transparent);
 }
 
 .trait-offer-launcher[data-trait-status='valid'] {
@@ -431,7 +435,7 @@ input[type='checkbox']:checked:disabled {
 }
 
 .trait-offer-launcher[data-trait-status='invalid'] {
-  border-color: rgb(218 115 115 / 60%);
+  border-color: color-mix(in srgb, var(--finding) 60%, transparent);
   color: #efaaaa;
   background: rgb(150 53 53 / 18%);
 }
@@ -456,7 +460,7 @@ input[type='checkbox']:checked:disabled {
   padding: 3px 0;
   border: 0;
   border-radius: 4px;
-  color: #e2b971;
+  color: var(--selection-accent);
   background: transparent;
   font-weight: 600;
   text-align: left;
