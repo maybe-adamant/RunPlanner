@@ -619,6 +619,13 @@ describe('structured workspace biome presentation', () => {
     if (rail === undefined) throw new Error('I Clockwork Goal decision rail entry is missing');
 
     expect(goalTarget.room.roomLocal.control.offer).toBeNull();
+    // The door names the goal instead of an editable reward.
+    expect(
+      goalTarget.door.offerRewardSurface.rewards.map(({ control, summary }) => ({
+        control,
+        summary,
+      })),
+    ).toEqual([{ control: undefined, summary: 'Clockwork Goal' }]);
     expect(goalDecision.missingTargets).toEqual([]);
     expect(rail.selectedTarget).toEqual({ roomLabel: goalTarget.room.label });
   });

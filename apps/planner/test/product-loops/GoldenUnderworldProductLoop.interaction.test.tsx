@@ -532,17 +532,16 @@ describe('underworld product loop', () => {
     );
 
     const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
-    await view.user.click(within(gate).getByRole('button', { name: 'Map' }));
+    await view.user.click(within(gate).getByRole('button', { name: 'Room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
-    expect(within(gate).getByLabelText('Map').textContent).toContain('Chaos 06');
+    expect(within(gate).getByLabelText('Room').textContent).toContain('Chaos 06');
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(within(gate).getByLabelText('Map').textContent).toContain('Chaos 01');
-    await view.user.click(within(gate).getByRole('button', { name: 'Map' }));
+    expect(within(gate).getByLabelText('Room').textContent).toContain('Chaos 01');
+    await view.user.click(within(gate).getByRole('button', { name: 'Room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
     await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const enteredChaos = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(enteredChaos).queryByLabelText('Map')).toBeNull();
     expect(within(enteredChaos).queryByLabelText('Room')).toBeNull();
     expect(within(enteredChaos).queryByLabelText('Reward')).toBeNull();
     expect(within(enteredChaos).queryByText(/Incoming door reward|Trial Upgrade/)).toBeNull();
@@ -946,11 +945,11 @@ describe('underworld product loop', () => {
       application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),
     );
 
-    expect((screen.getByLabelText('Take Zagreus contract') as HTMLInputElement).checked).toBe(
+    expect((screen.getByLabelText('Take Infernal Contract') as HTMLInputElement).checked).toBe(
       false,
     );
-    const contractCard = screen.getByRole('article', { name: 'Zagreus contract exit' });
-    await view.user.click(within(contractCard).getByLabelText('Take Zagreus contract'));
+    const contractCard = screen.getByRole('article', { name: 'Infernal Contract exit' });
+    await view.user.click(within(contractCard).getByLabelText('Take Infernal Contract'));
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const contractWorkbench = screen.getByRole('complementary', { name: 'Details' });
     expect(
@@ -960,9 +959,9 @@ describe('underworld product loop', () => {
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),
     );
-    await view.user.click(screen.getByLabelText('Take Zagreus contract'));
+    await view.user.click(screen.getByLabelText('Take Infernal Contract'));
     expect(
-      screen.getByRole('article', { name: 'Zagreus contract exit' }).getAttribute('data-picked'),
+      screen.getByRole('article', { name: 'Infernal Contract exit' }).getAttribute('data-picked'),
     ).toBe('true');
     const oceanusRail = screen
       .getByRole('region', { name: 'Oceanus route structure' })

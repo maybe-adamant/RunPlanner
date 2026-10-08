@@ -29,11 +29,14 @@ import {
   useFindingAnchor,
   useFindingMark,
   useFindingTarget,
+  type FindingAnchorProps,
 } from '@planner/ui/feedback/useFindingTarget';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import type { ReactNode } from 'react';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
-import { ChaosMapWorkbench } from './room-features/AdditionalExitControls';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
@@ -92,14 +95,83 @@ function TargetRoomSelector({
   );
 }
 
-function roomStatus(target: WorkspacePhysicalTarget): string {
-  if (target.door.room.entered) return 'Door taken';
-  if (target.selected) return 'Room selected';
-  if (target.physicalState === 'unavailable') return 'Unavailable saved room';
-  if (target.retained) return 'Saved room';
-  if (target.clockworkReward === 'goal') return 'Clockwork Goal';
-  if (target.clockworkReward === 'nonGoal') return 'Clockwork NonGoal';
-  return 'Offered room';
+/** One door offer card: selection slot, identity heading, then room and reward rows. */
+function ExitCard({
+  anchor,
+  ariaLabel,
+  children,
+  className,
+  kicker,
+  map,
+  selection,
+  state,
+  title,
+}: {
+  readonly anchor?: FindingAnchorProps;
+  readonly ariaLabel: string;
+  readonly children: ReactNode;
+  /** Distinguishes physical door targets from additional exits. */
+  readonly className?: string;
+  readonly kicker: string;
+  readonly map?: { readonly gameName: string; readonly hostId: string; readonly title: string };
+  /** The selection radio; absent when the card is not individually selectable. */
+  readonly selection?: ReactNode;
+  readonly state: {
+    readonly available: boolean;
+    readonly missing?: boolean;
+    readonly picked?: boolean;
+    readonly retained?: boolean;
+  };
+  readonly title: string;
+}) {
+  return (
+    <article
+      aria-label={ariaLabel}
+      className={className === undefined ? 'exit-row' : `exit-row ${className}`}
+      data-available={state.available}
+      {...(state.missing === undefined ? {} : { 'data-missing': state.missing })}
+      {...(state.picked === undefined ? {} : { 'data-picked': state.picked })}
+      {...(state.retained === undefined ? {} : { 'data-retained': state.retained })}
+      {...anchor}
+      tabIndex={-1}
+    >
+      {selection ?? <div className="exit-marker" aria-hidden="true" />}
+      <div className="exit-content">
+        <div className="exit-heading">
+          <div>
+            <p className="card-kicker">{kicker}</p>
+            <h4>{title}</h4>
+          </div>
+          {map === undefined ? null : (
+            <RoomMapLauncher gameName={map.gameName} hostId={map.hostId} title={map.title} />
+          )}
+        </div>
+        {children}
+      </div>
+    </article>
+  );
+}
+
+/** A declaration-fixed value shown in a control row's place. */
+function FixedFieldRow({
+  className,
+  label,
+  value,
+}: {
+  readonly className?: string;
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div className={`field-control field-control-inline${className ? ` ${className}` : ''}`}>
+      <span>{label}</span>
+      <span className="fixed-room-state">{value}</span>
+    </div>
+  );
+}
+
+function doorKicker(index: number, exitTypeLabel: string | undefined): string {
+  return exitTypeLabel === undefined ? `Door ${index}` : `Door ${index} · ${exitTypeLabel}`;
 }
 
 function ExactRepairAction({
@@ -188,106 +260,93 @@ function TargetRow({
     (candidate) =>
       candidate.anomalyTakeover !== undefined || candidate.door.room.anomaly !== undefined,
   );
+  const authorsRoom =
+    node.targetInteraction === 'replaceable' &&
+    door.room.roomPicker !== undefined &&
+    door.room.anomaly === undefined;
   return (
-    <article
-      aria-label={`${door.room.label} room offer`}
-      className="exit-row biome-target-row"
-      data-available={target.physicalState === 'available'}
-      data-picked={target.selected}
-      data-retained={target.retained}
-      {...(node.targetInteraction !== 'replaceable' ||
-      door.room.roomPicker === undefined ||
-      door.room.anomaly !== undefined
-        ? findingAnchor(target.marker.address)
-        : {})}
-      tabIndex={-1}
+    <ExitCard
+      {...(authorsRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
+      ariaLabel={`${door.room.label} room offer`}
+      className="biome-target-row"
+      kicker={doorKicker(target.index, target.exitTypeLabel)}
+      map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
+      {...(selectionChoice === undefined
+        ? {}
+        : {
+            selection: (
+              <label className="picked-control">
+                <span className="visually-hidden">{`Pick ${door.room.label} from Door ${target.index}`}</span>
+                <input
+                  {...(target.physicalState === 'unavailable'
+                    ? hintProps('This saved room is no longer offered here.')
+                    : findingMark(selection))}
+                  aria-label={`Pick ${door.room.label} from Door ${target.index}`}
+                  checked={selectionInteraction?.selectedExitKey === target.exitKey}
+                  disabled={target.physicalState === 'unavailable'}
+                  name={`selection-${node.key}`}
+                  onChange={() =>
+                    dispatch(
+                      authoredProjectCommandDispatched({
+                        kind: 'SetExitSelection',
+                        selection,
+                        value: { kind: 'normal', exitKey: target.exitKey },
+                      }),
+                    )
+                  }
+                  type="radio"
+                />
+              </label>
+            ),
+          })}
+      state={{
+        available: target.physicalState === 'available',
+        picked: target.selected,
+        retained: target.retained,
+      }}
+      title={door.room.label}
     >
-      {selectionChoice === undefined ? (
-        <div className="exit-marker" aria-hidden="true" />
-      ) : (
-        <label className="picked-control">
-          <span className="visually-hidden">{`Pick ${door.room.label} from Door ${target.index}`}</span>
-          <input
-            {...(target.physicalState === 'unavailable' ? {} : findingMark(selection))}
-            aria-label={`Pick ${door.room.label} from Door ${target.index}`}
-            checked={selectionInteraction?.selectedExitKey === target.exitKey}
-            disabled={target.physicalState === 'unavailable'}
-            name={`selection-${node.key}`}
-            onChange={() =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'SetExitSelection',
-                  selection,
-                  value: { kind: 'normal', exitKey: target.exitKey },
-                }),
-              )
-            }
-            type="radio"
-          />
-        </label>
-      )}
-      <div className="exit-content">
-        <div className="exit-heading">
-          <div>
-            <p className="card-kicker">
-              Door {target.index}
-              {target.exitTypeLabel && ` · ${target.exitTypeLabel}`}
-            </p>
-            <h4>{door.room.label}</h4>
-          </div>
-          <div className="owner-markers">
-            <span className="neutral-status">{roomStatus(target)}</span>
-            <RoomMapLauncher
-              gameName={door.room.gameName}
-              hostId={target.marker.focusKey}
-              title={door.room.label}
-            />
-          </div>
-        </div>
-        {node.targetInteraction !== 'replaceable' ||
-        door.room.roomPicker === undefined ||
-        door.room.anomaly !== undefined ? null : (
-          <TargetRoomSelector
-            ariaLabel={`Door ${target.index} room`}
-            idPrefix={`target-${target.marker.focusKey}`}
-            interactionKey={workspaceInteractionKey(door.room.roomPicker.address)}
-            interactions={interactions}
-            label="Room"
-          />
-        )}
-        <AnomalyRoomControl room={door.room} />
-        <div className="door-reward-slot">
-          <DoorRewardEditor
-            door={door}
-            focusOwner={target.marker.address}
-            idPrefix={`door-${target.marker.focusKey}`}
-            interactions={interactions}
-          />
-        </div>
-        {reservesAnomalyAction ? (
-          <div className="anomaly-door-action-slot">
-            {!target.selected || target.anomalyTakeover === undefined ? null : (
-              <button
-                className="quiet-action action-compact"
-                data-command="SwitchTargetToAnomaly"
-                onClick={() =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'SwitchTargetToAnomaly',
-                      target: targetAddress(target.marker),
-                    }),
-                  )
-                }
-                type="button"
-              >
-                {target.anomalyTakeover.label}
-              </button>
-            )}
-            <RevertAnomalyAction room={door.room} />
-          </div>
-        ) : null}
+      {authorsRoom && door.room.roomPicker !== undefined ? (
+        <TargetRoomSelector
+          ariaLabel={`Door ${target.index} room`}
+          idPrefix={`target-${target.marker.focusKey}`}
+          interactionKey={workspaceInteractionKey(door.room.roomPicker.address)}
+          interactions={interactions}
+          label="Room"
+        />
+      ) : null}
+      <AnomalyRoomControl room={door.room} />
+      <div className="door-reward-slot">
+        <DoorRewardEditor
+          door={door}
+          focusOwner={target.marker.address}
+          idPrefix={`door-${target.marker.focusKey}`}
+          interactions={interactions}
+        />
       </div>
-    </article>
+      {reservesAnomalyAction ? (
+        <div className="anomaly-door-action-slot">
+          {!target.selected || target.anomalyTakeover === undefined ? null : (
+            <button
+              className="quiet-action action-compact"
+              data-command="SwitchTargetToAnomaly"
+              onClick={() =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'SwitchTargetToAnomaly',
+                    target: targetAddress(target.marker),
+                  }),
+                )
+              }
+              type="button"
+            >
+              {target.anomalyTakeover.label}
+            </button>
+          )}
+          <RevertAnomalyAction room={door.room} />
+        </div>
+      ) : null}
+    </ExitCard>
   );
 }
 
@@ -303,163 +362,112 @@ function MissingTargetRow({
   const canEnterDecision = interaction?.kind === 'decisionEntryRoom';
   const canAuthorRoom = target.authoring.kind === 'ready' || canEnterDecision;
   return (
-    <article
-      aria-label={`Door ${target.index} unspecified room offer`}
-      className="exit-row biome-target-row"
-      data-available="true"
-      data-missing="true"
-      {...(canAuthorRoom ? {} : findingAnchor(target.marker.address))}
-      tabIndex={-1}
+    <ExitCard
+      {...(canAuthorRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
+      ariaLabel={`Door ${target.index} unspecified room offer`}
+      className="biome-target-row"
+      kicker={doorKicker(target.index, target.exitTypeLabel)}
+      state={{ available: true, missing: true }}
+      title="Choose room"
     >
-      <div className="exit-marker" aria-hidden="true" />
-      <div className="exit-content">
-        <div className="exit-heading">
-          <div>
-            <p className="card-kicker">
-              Door {target.index}
-              {target.exitTypeLabel && ` · ${target.exitTypeLabel}`}
-            </p>
-            <h4>Choose room</h4>
-          </div>
-          <div className="owner-markers">
-            <span className="neutral-status">Unspecified</span>
-          </div>
+      {canAuthorRoom ? (
+        <TargetRoomSelector
+          ariaLabel={`Door ${target.index} room`}
+          idPrefix={`target-${target.marker.focusKey}`}
+          interactionKey={target.marker.focusKey}
+          interactions={interactions}
+          label="Room"
+        />
+      ) : target.authoring.kind === 'awaitingPriorExit' ? (
+        <div
+          aria-live="polite"
+          className="field-control field-control-inline pending-room-status control-placeholder"
+        >
+          <span>Room</span>
+          <span className="fixed-room-state">Select the earlier door's room first</span>
         </div>
-        {canAuthorRoom ? (
-          <TargetRoomSelector
-            ariaLabel={`Door ${target.index} room`}
-            idPrefix={`target-${target.marker.focusKey}`}
-            interactionKey={target.marker.focusKey}
-            interactions={interactions}
-            label="Room"
-          />
-        ) : target.authoring.kind === 'awaitingPriorExit' ? (
-          <div
-            aria-live="polite"
-            className="field-control field-control-inline pending-room-status control-placeholder"
-          >
-            <span>Room</span>
-            <span className="fixed-room-state">Select the earlier door's room first</span>
-          </div>
-        ) : null}
-        {canAuthorRoom ? (
-          <div
-            aria-live="polite"
-            className="field-control field-control-inline pending-reward-status door-reward-slot control-placeholder"
-          >
-            <span>Reward</span>
-            <span className="fixed-room-state">Choose room to show reward</span>
-          </div>
-        ) : null}
-      </div>
-    </article>
+      ) : null}
+      {canAuthorRoom ? (
+        <div
+          aria-live="polite"
+          className="field-control field-control-inline pending-reward-status door-reward-slot control-placeholder"
+        >
+          <span>Reward</span>
+          <span className="fixed-room-state">Choose room to show reward</span>
+        </div>
+      ) : null}
+    </ExitCard>
   );
 }
 
-/** The authored additional exit card owns only selection and room navigation. */
-function ZagreusContractExit({
+/**
+ * An authored additional exit beside the normal doors. Presence lives on the
+ * source room; the card owns selection, the destination room, and its fixed reward.
+ */
+function AdditionalExitCard({
   control,
   interactions,
   selection,
   selectionName,
 }: {
-  readonly control: NonNullable<BatchNode['zagreusContract']>;
+  readonly control: NonNullable<BatchNode['chaos'] | BatchNode['zagreusContract']>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly selection: SemanticAddress;
   readonly selectionName: string;
 }) {
   const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
-  const interaction = requireWorkspaceInteraction(
-    interactions.zagreusContracts,
-    workspaceInteractionKey(control.owner),
-  );
+  const key = workspaceInteractionKey(control.owner);
+  const chaos =
+    'kind' in control ? requireWorkspaceInteraction(interactions.chaosExits, key) : undefined;
+  const selectIntent =
+    chaos?.selectIntent ??
+    requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
+  const room = control.door.room;
   return (
-    <article
-      aria-label="Zagreus contract exit"
-      className="exit-row zagreus-contract-exit"
-      data-available="true"
-      data-picked={control.selected}
-    >
-      <label className="picked-control">
-        <span className="visually-hidden">Take Zagreus contract</span>
-        <input
-          {...findingMark(selection)}
-          aria-label="Take Zagreus contract"
-          checked={control.selected}
-          name={selectionName}
-          onChange={() => executeIntent(interaction.selectIntent)}
-          type="radio"
-        />
-      </label>
-      <div className="exit-content">
-        <div className="exit-heading">
-          <div>
-            <p className="card-kicker">Additional exit</p>
-            <h4>Zagreus contract</h4>
-          </div>
-        </div>
-        <div className="additional-exit-room-reference">
-          <p className="fixed-room-state additional-exit-room-state">
-            Room: {control.door.room.label}
-          </p>
-          <RoomMapLauncher
-            gameName={control.door.room.gameName}
-            hostId={workspaceInteractionKey(control.owner)}
-            title={control.door.room.label}
+    <ExitCard
+      ariaLabel={`${control.exitTypeLabel} exit`}
+      kicker={control.exitTypeLabel}
+      map={{ gameName: room.gameName, hostId: key, title: room.label }}
+      selection={
+        <label className="picked-control">
+          <span className="visually-hidden">{`Take ${control.exitTypeLabel}`}</span>
+          <input
+            {...findingMark(selection)}
+            aria-label={`Take ${control.exitTypeLabel}`}
+            checked={control.selected}
+            name={selectionName}
+            onChange={() => executeIntent(selectIntent)}
+            type="radio"
           />
-        </div>
-      </div>
-    </article>
-  );
-}
-
-/** Chaos keeps its door selection, navigation, and map identity together. */
-function ChaosExit({
-  control,
-  interactions,
-  selection,
-  selectionName,
-}: {
-  readonly control: NonNullable<BatchNode['chaos']>;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly selection: SemanticAddress;
-  readonly selectionName: string;
-}) {
-  const executeIntent = useCommandIntent();
-  const findingMark = useFindingMark();
-  const interaction = requireWorkspaceInteraction(
-    interactions.chaosExits,
-    workspaceInteractionKey(control.owner),
-  );
-  return (
-    <article
-      aria-label="Chaos gate exit"
-      className="exit-row zagreus-contract-exit"
-      data-available="true"
-      data-picked={control.selected}
+        </label>
+      }
+      state={{ available: true, picked: control.selected }}
+      title={room.label}
     >
-      <label className="picked-control">
-        <span className="visually-hidden">Take Chaos gate</span>
-        <input
-          {...findingMark(selection)}
-          aria-label="Take Chaos gate"
-          checked={control.selected}
-          name={selectionName}
-          onChange={() => executeIntent(interaction.selectIntent)}
-          type="radio"
+      {'kind' in control && chaos !== undefined ? (
+        <ContextualPicker
+          id={`chaos-room-${room.occurrenceId}`}
+          label="Room"
+          layout="inline"
+          model={declaredChoicesPicker(
+            control.mapChoices.map((choice) => ({ ...choice, key: choice.value })),
+            room.gameName,
+          )}
+          onSelect={(gameName) => executeIntent(chaos.mapIntent(gameName))}
+          placeholder="Choose a room"
         />
-      </label>
-      <div className="exit-content">
-        <div className="exit-heading">
-          <div>
-            <p className="card-kicker">Additional exit</p>
-            <h4>Chaos gate</h4>
-          </div>
-        </div>
-        <ChaosMapWorkbench control={control} interactions={interactions} />
+      ) : (
+        <FixedFieldRow className="door-fixed-room" label="Room" value={room.label} />
+      )}
+      <div className="door-reward-slot">
+        <FixedFieldRow
+          className="door-fixed-reward"
+          label="Reward"
+          value={control.fixedRewardLabel}
+        />
       </div>
-    </article>
+    </ExitCard>
   );
 }
 
@@ -735,21 +743,16 @@ export function BatchWorkbench({
           : node.missingTargets.map((target) => (
               <MissingTargetRow interactions={interactions} key={target.exitKey} target={target} />
             ))}
-        {node.zagreusContract === undefined ? null : (
-          <ZagreusContractExit
-            control={node.zagreusContract}
-            interactions={interactions}
-            selection={exitSelectionAddress(node.selection)}
-            selectionName={`selection-${node.key}`}
-          />
-        )}
-        {node.chaos === undefined ? null : (
-          <ChaosExit
-            control={node.chaos}
-            interactions={interactions}
-            selection={exitSelectionAddress(node.selection)}
-            selectionName={`selection-${node.key}`}
-          />
+        {[node.zagreusContract, node.chaos].map((control) =>
+          control === undefined ? null : (
+            <AdditionalExitCard
+              control={control}
+              interactions={interactions}
+              key={workspaceInteractionKey(control.owner)}
+              selection={exitSelectionAddress(node.selection)}
+              selectionName={`selection-${node.key}`}
+            />
+          ),
         )}
       </div>
       {takeover === undefined ? null : (

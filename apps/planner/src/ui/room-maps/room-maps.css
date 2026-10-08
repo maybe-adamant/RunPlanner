@@ -557,24 +557,3 @@
   height: min(30rem, calc(52 * var(--app-vh)));
   min-height: 14rem;
 }
-
-/* Additional exits keep their existing choice/name control beside map viewing. */
-.additional-exit-map-control,
-.additional-exit-room-reference {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.additional-exit-map-control > .field-control-inline {
-  width: auto;
-  max-width: 100%;
-  flex: 0 1 auto;
-  grid-template-columns: max-content minmax(0, 10rem);
-}
-
-.additional-exit-room-reference > .additional-exit-room-state {
-  margin: 0;
-}

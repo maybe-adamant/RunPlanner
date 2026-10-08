@@ -101,6 +101,26 @@ function additionalRewardPreview(
   return declaration.physicalExit.behavior.rewardPreview;
 }
 
+const additionalExitTypeLabels = Object.freeze({
+  chaos: 'Chaos gate',
+  zagreusContract: 'Infernal Contract',
+} as const satisfies Record<'chaos' | 'zagreusContract', string>);
+
+/** An additional exit's destination room declares its one fixed reward. */
+function additionalExitFixedRewardLabel(catalog: Catalog, roomGameName: string): string {
+  const room = requireWorkspaceRoom(catalog, roomGameName);
+  const rewardType =
+    room.incomingReward.kind === 'fixed'
+      ? catalog.rewards.rewardTypes.byKey[room.incomingReward.rewardType]
+      : undefined;
+  if (rewardType === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${roomGameName} is an additional exit destination without a fixed reward`,
+    );
+  }
+  return rewardType.label;
+}
+
 type WorkspaceMissingTargetSetupPrerequisite = Extract<
   WorkspaceMissingTargetAuthoring,
   { readonly kind: 'awaitingBatchRewardStore' | 'awaitingFieldsCageOutcome' }
@@ -1120,6 +1140,11 @@ function assembleBatchDecision(
               zagreusContract.contractRoom,
               zagreusContract.rewardPreview,
             ),
+            exitTypeLabel: additionalExitTypeLabels.zagreusContract,
+            fixedRewardLabel: additionalExitFixedRewardLabel(
+              input.catalog,
+              zagreusContract.contractRoom.gameName,
+            ),
             marker: zagreusContract.marker,
             owner: zagreusContract.owner,
             selected: zagreusContract.selected,
@@ -1130,6 +1155,11 @@ function assembleBatchDecision(
       : {
           chaos: Object.freeze({
             door: projectWorkspaceDoorContract(chaos.chaosRoom, chaos.rewardPreview),
+            exitTypeLabel: additionalExitTypeLabels[chaos.kind],
+            fixedRewardLabel: additionalExitFixedRewardLabel(
+              input.catalog,
+              chaos.chaosRoom.gameName,
+            ),
             forced: chaos.forced,
             kind: chaos.kind,
             mapChoices: chaos.mapChoices,
