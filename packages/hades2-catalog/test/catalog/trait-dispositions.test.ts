@@ -235,6 +235,29 @@ describe('trait dispositions and requirements compiler owner', () => {
     }
   });
 
+  it('rejects an Echo room decay without four positive Dream start fractions', () => {
+    const malformed = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'DiminishingHealthAndManaBoon'
+            ? ({
+                ...trait,
+                selectedDisposition: {
+                  kind: 'echo',
+                  effect: 'roomDecay',
+                  startFraction: { ordinary: 0.6, dreamByAcquisitionOrdinal: [0.6, 0.6, 0.6] },
+                  decay: 0.05,
+                },
+              } as unknown as RawTraitDeclaration)
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(malformed)).toThrow(/four positive Dream ordinal fractions/);
+  });
+
   it('rejects an unknown Echo disposition effect at the raw declaration boundary', () => {
     const malformed = {
       ...declarations,

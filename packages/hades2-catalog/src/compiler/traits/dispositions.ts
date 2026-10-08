@@ -83,6 +83,8 @@ export function normalizeSelectedDisposition(
     readonly buffGiverKey?: unknown;
     readonly levelsPerRemovedIdentity?: unknown;
     readonly intervalsByRarity?: unknown;
+    readonly startFraction?: unknown;
+    readonly decay?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
   if (kind === 'upgradeOccupiedBoonSlot') {
@@ -262,9 +264,49 @@ export function normalizeSelectedDisposition(
         'lastReward',
         'doubleShop',
         'repeatKeepsake',
+        'roomDecay',
       ] as const,
       `${path}.effect`,
     );
+    if (effect === 'roomDecay') {
+      if (Object.keys(value).length !== 4)
+        fail(path, 'Echo roomDecay requires kind, effect, startFraction, and decay');
+      const start = requireObject(value.startFraction, `${path}.startFraction`) as {
+        readonly ordinary?: unknown;
+        readonly dreamByAcquisitionOrdinal?: unknown;
+      };
+      const dream = requireArray(
+        start.dreamByAcquisitionOrdinal,
+        `${path}.startFraction.dreamByAcquisitionOrdinal`,
+      );
+      const positive = (entry: unknown) =>
+        typeof entry === 'number' && Number.isFinite(entry) && entry > 0;
+      if (
+        Object.keys(start).length !== 2 ||
+        !positive(start.ordinary) ||
+        dream.length !== 4 ||
+        !dream.every(positive)
+      )
+        fail(
+          `${path}.startFraction`,
+          'must declare a positive ordinary fraction and four positive Dream ordinal fractions',
+        );
+      if (!positive(value.decay)) fail(`${path}.decay`, 'must be a positive number');
+      return Object.freeze({
+        kind,
+        effect,
+        startFraction: Object.freeze({
+          ordinary: start.ordinary as number,
+          dreamByAcquisitionOrdinal: Object.freeze([...dream]) as unknown as readonly [
+            number,
+            number,
+            number,
+            number,
+          ],
+        }),
+        decay: value.decay as number,
+      });
+    }
     if (effect === 'doubleShop') {
       if (Object.keys(value).length !== 3)
         fail(path, 'Echo doubleShop requires kind, effect, and excludedRewardTypes');

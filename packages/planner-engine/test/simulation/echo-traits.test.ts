@@ -41,6 +41,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   evaluateEchoLastRunBoonDomain,
@@ -56,6 +57,7 @@ import {
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
+  advanceRoomDecay,
   assessTraitOption,
   attachTraitHistory,
   createTraitHistoryState,
@@ -2958,4 +2960,78 @@ describe('Echo Gate C Reward Reward Reward', () => {
       expect(acquisitions[0]!.historySequence).toBeLessThan(outgoing!.sequence);
     }
   });
+});
+
+describe('Fight Fight Fight room decay', () => {
+  const fightKey = 'DiminishingHealthAndManaBoon';
+  const departureOwner = createOccurrenceAddress(goldenHBiome, bridgeId);
+
+  function acquireFight(routeKey: string, itineraryBiomeKeys: readonly string[]) {
+    const base = baseBranch();
+    const routePosition = resolveRoutePosition(catalog, { routeKey, itineraryBiomeKeys }, 'H');
+    const branch = Object.freeze({
+      ...base,
+      state: Object.freeze({
+        ...base.state,
+        reached: Object.freeze({ ...base.state.reached, routePosition }),
+      }),
+    });
+    return settleEncounterTraitOffer(
+      catalog,
+      branch,
+      echoOwner.owner,
+      echoOffer('option1', [
+        echoTraitOption(fightKey),
+        echoTraitOption('DiminishingDodgeBoon'),
+        echoTraitOption('EchoDoubleLevelBoon'),
+      ]),
+      10,
+      'encounterCompleted',
+    ).branch.state.traitHistory;
+  }
+
+  function depart(history: ReturnType<typeof acquireFight>, count: number) {
+    let next = history;
+    for (let index = 0; index < count; index += 1)
+      next = advanceRoomDecay(
+        catalog,
+        next,
+        departureOwner,
+        Math.max(...next.events.map((event) => event.sequence)) + 1,
+      );
+    return next;
+  }
+
+  // Native doubles: 0.6 reaches 1.4e-17 after twelve decays and 0.8 reaches
+  // 0.0499...9 after fifteen, so removal falls one decay later.
+  it.each([
+    ['ordinary Echo', 'Underworld', ['F', 'G', 'H', 'I'], 0.6, 13],
+    ['Dream third biome', 'Dream', ['F', 'G', 'H', 'N'], 0.6, 13],
+    ['Dream fourth biome', 'Dream', ['F', 'G', 'N', 'H'], 0.8, 16],
+  ] as const)(
+    'removes the %s acquisition on its exact later departure',
+    (_label, routeKey, itinerary, startFraction, removalDeparture) => {
+      const acquired = acquireFight(routeKey, itinerary);
+      expect(acquired.equippedTraits[fightKey]?.roomDecay).toEqual({
+        fraction: startFraction,
+        blocked: true,
+      });
+      const unblocked = depart(acquired, 1);
+      expect(unblocked.equippedTraits[fightKey]?.roomDecay).toEqual({
+        fraction: startFraction,
+        blocked: false,
+      });
+      const lastHeld = depart(unblocked, removalDeparture - 1);
+      expect(lastHeld.equippedTraits[fightKey]?.roomDecay?.fraction).toBeGreaterThan(0);
+      const removed = depart(lastHeld, 1);
+      expect(removed.equippedTraits[fightKey]).toBeUndefined();
+      expect(removed.events.at(-1)).toMatchObject({
+        kind: 'traitRemoval',
+        acquisitionRole: 'roomDecay',
+        traitKey: fightKey,
+      });
+      expect(removed.previouslyPickedTraitKeys).toContain(fightKey);
+      expect(depart(removed, 1)).toBe(removed);
+    },
+  );
 });

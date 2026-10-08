@@ -33,6 +33,8 @@ export interface TraitOfferEvent {
   readonly selectedEffectiveLevel?: number;
   /** Exact acquired interval for a declaration-clocked ordinal effect. */
   readonly pickupProducerInterval?: number;
+  /** Acquisition-time fraction of a room-decaying Echo bonus. */
+  readonly roomDecayStartFraction?: number;
 }
 
 /** A frozen Concave Stone pickup, distinct from the original generated offer. */
@@ -53,6 +55,7 @@ export interface ConcaveStoneSecondaryEvent {
   /** Derived selected-row level from the frozen offer frontier. */
   readonly selectedEffectiveLevel?: number;
   readonly pickupProducerInterval?: number;
+  readonly roomDecayStartFraction?: number;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */
@@ -83,6 +86,20 @@ export interface SteadyGrowthProgressEvent {
   readonly oldProgress: number;
   readonly newProgress: number;
   readonly requiredInterval: number;
+}
+/** One room departure for a still-positive room-decaying trait instance. */
+export interface RoomDecayProgressEvent {
+  readonly kind: 'roomDecayProgress';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'roomDecay';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'roomExited';
+  readonly traitKey: string;
+  readonly acquisitionIdentity: string;
+  readonly oldFraction: number;
+  readonly newFraction: number;
+  /** The first departure after acquisition clears the block without decaying. */
+  readonly clearsBlock: boolean;
 }
 export interface PickupProducerProgressEvent {
   readonly kind: 'pickupProducerProgress';
@@ -261,6 +278,7 @@ export type TraitHistoryEvent =
   | TraitLevelMutationEvent
   | SteadyGrowthProgressEvent
   | PickupProducerProgressEvent
+  | RoomDecayProgressEvent
   | TraitRarityMutationEvent
   | TraitRarityBlockEvent
   | TraitElementContributionEvent

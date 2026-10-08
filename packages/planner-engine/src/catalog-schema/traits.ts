@@ -220,6 +220,16 @@ export type TraitSelectedDisposition =
       readonly effect: 'numericNoOp' | 'survive' | 'doubleLevel' | 'lastRunBoon' | 'lastReward';
     }
   | {
+      /**
+       * Fight Fight Fight's acquired fraction loses `decay` at each room departure
+       * after the first; the trait is removed once it is no longer positive.
+       */
+      readonly kind: 'echo';
+      readonly effect: 'roomDecay';
+      readonly startFraction: TraitRoomDecayStartFraction;
+      readonly decay: number;
+    }
+  | {
       /** Gift Gift Gift snapshots the current eligible keepsake into this equipped identity. */
       readonly kind: 'echo';
       readonly effect: 'repeatKeepsake';
@@ -267,6 +277,15 @@ export interface TraitPickupDeclaration {
 
 /** The only acquisition-ordinal matrix supported for the audited NPC effects. */
 export type TraitAcquisitionOrdinalValues = readonly [number, number, number, number];
+
+/**
+ * Echo scales its choices at a fixed Epic row; Dream Dive replaces the row by
+ * the entered-biome count.
+ */
+export interface TraitRoomDecayStartFraction {
+  readonly ordinary: number;
+  readonly dreamByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
+}
 
 /** Complete selected-disposition facts resolved once at an exact acquisition ordinal. */
 export interface ResolvedTraitAcquisitionOrdinalEffect {

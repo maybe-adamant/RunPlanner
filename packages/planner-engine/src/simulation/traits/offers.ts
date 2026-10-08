@@ -2,6 +2,7 @@ import {
   resolveTraitAcquisitionOrdinalEffect,
   type Catalog,
   type TraitRarity,
+  type TraitRoomDecayStartFraction,
 } from '../../catalog-schema';
 import type {
   EchoLastRunBoonAddress,
@@ -738,6 +739,19 @@ function denialBannedChaosCurseKeys(
   return Object.freeze(distinct.slice(0, denial.effect.count));
 }
 
+function resolveRoomDecayStartFraction(
+  catalog: Catalog,
+  startFraction: TraitRoomDecayStartFraction,
+  routePosition: { readonly routeKey: string; readonly ordinal: number },
+): number {
+  if (catalog.routes.byKey[routePosition.routeKey]?.dreamItinerary === undefined)
+    return startFraction.ordinary;
+  const fraction = startFraction.dreamByAcquisitionOrdinal[routePosition.ordinal - 1];
+  if (fraction === undefined)
+    throw new Error(`unsupported Dream acquisition ordinal ${routePosition.ordinal}`);
+  return fraction;
+}
+
 export function recordReachedTraitOffer(
   catalog: Catalog,
   evaluation: ReachedTraitOfferEvaluation,
@@ -790,6 +804,14 @@ export function recordReachedTraitOffer(
     requiresAcquisitionOrdinal && selectedDisposition !== undefined
       ? resolveTraitAcquisitionOrdinalEffect(selectedDisposition, acquisitionOrdinal)
       : undefined;
+  const roomDecayStartFraction =
+    selectedDisposition?.kind === 'echo' && selectedDisposition.effect === 'roomDecay'
+      ? resolveRoomDecayStartFraction(
+          catalog,
+          selectedDisposition.startFraction,
+          evaluation.state.reached.routePosition,
+        )
+      : undefined;
   if (
     selectedDisposition?.kind !== 'equip' &&
     selectedDisposition?.kind !== 'upgradeOccupiedBoonSlot' &&
@@ -840,6 +862,7 @@ export function recordReachedTraitOffer(
     ...(ordinalEffect?.clockInterval === undefined
       ? {}
       : { pickupProducerInterval: ordinalEffect.clockInterval }),
+    ...(roomDecayStartFraction === undefined ? {} : { roomDecayStartFraction }),
   }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =

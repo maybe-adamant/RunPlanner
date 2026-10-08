@@ -5,12 +5,12 @@ local p = type(import) == "function" and import("mods/protocol/primitives.lua")
     or require("mods.protocol.primitives")
 local nativeBindings = type(import) == "function" and import("mods/native_bindings.lua")
     or require("mods.native_bindings")
-local disposableArmorTraits = nativeBindings.conformance.disposableArmorTraits
+local disposableTraits = nativeBindings.conformance.disposableTraits
 
 local conformance = {}
 
 local function inventoryTrait(row)
-    if disposableArmorTraits[row.traitKey] then return nil end
+    if disposableTraits[row.traitKey] then return nil end
     local projected = { traitKey = row.traitKey }
     if row.rarity ~= nil then projected.rarity = row.rarity end
     if row.level ~= nil then projected.level = row.level end
@@ -43,7 +43,7 @@ local function traitInventoryExpected(frames)
     local absent = {}
     for _, row in ipairs(entry.traits.equipped or {}) do
         if type(row) == "table" and modeled[row.traitKey] and not observed[row.traitKey]
-            and not disposableArmorTraits[row.traitKey] then
+            and not disposableTraits[row.traitKey] then
             absent[#absent + 1] = row.traitKey
         end
     end

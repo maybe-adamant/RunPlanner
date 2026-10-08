@@ -413,8 +413,9 @@ the same supported planner consequence: these traits expose no authored,
 persisted, counted, mutable, or displayed boon rarity. The planner therefore
 normalizes Arachne, Icarus, Medea, Narcissus, Circe, Hades, and Echo through the
 explicit `none` rarity domain. The nine ordinary Olympians, Hermes, Athena,
-Artemis, and Dionysus retain real player-facing rarity. Dream Dive and the
-NPCs' scaled combat numbers remain outside scope.
+Artemis, and Dionysus retain real player-facing rarity. The NPCs' scaled combat
+numbers remain outside scope; Fight Fight Fight's scaled start fraction is
+declared because it sets when the trait is removed.
 
 #### Arachne
 
@@ -469,7 +470,8 @@ hero trait state, including the four source-hidden effect-backed keys. Its
 entries then mix one-shot effects, temporary lifecycle state, and additional
 acquired traits, so the selected key alone is not a sufficient acquisition
 model. The planner retains and shows all eight outer identities truthfully in
-Run State but omits the source's non-boon scaling tier.
+Run State; the non-boon scaling tier is modeled only where it sets Fight Fight
+Fight's lifetime.
 
 | Choice                         | Label                   | Eligibility                                                                          | Exact source effect and baseline disposition                                                                                                                                                                                                                                                                                                                   |
 | ------------------------------ | ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -477,10 +479,24 @@ Run State but omits the source's non-boon scaling tier.
 | `EchoLastRunBoon`              | Boon Boon Boon          | eligible prior-run trait payload and no previous Shrine encounter                    | the game filters the prior run's exact trait/rarity cache against current eligibility, occupied slots, equipped traits, giver participation, and explicit exclusions, then offers up to three cross-provider traits and directly equips the selected one                                                                                                       |
 | `EchoDeathDefianceRefill`      | Survive Survive Survive | missing Death Defiance                                                               | retain the exact trait identity while the [volatile eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md) owns volatile native eligibility; restoration count and healing remain outside the planner                                                                                                                    |
 | `EchoDoubleLevelBoon`          | Pom Pom Pom             | no offer-time requirement                                                            | among Pom-eligible equipped traits at the greatest current level, choose one random tied target and add that same level, thereby doubling it; with no eligible target the game performs no mutation                                                                                                                                                            |
-| `DiminishingDodgeBoon`         | Evade Evade Evade       | none                                                                                 | persistent equipped Echo trait; retain identity while numeric dodge and per-dodge decay remain outside the planner                                                                                                                                                                                                                                             |
-| `DiminishingHealthAndManaBoon` | Fight Fight Fight       | none                                                                                 | persistent equipped Echo trait; retain identity while numeric Life/Magick and room decay remain outside the planner                                                                                                                                                                                                                                            |
+| `DiminishingDodgeBoon`         | Evade Evade Evade       | none                                                                                 | persistent equipped Echo trait removed during play by its per-dodge decay (`PowersLogic.lua:4793-4803`); retain the acquisition, while execution conformance treats the identity as disposable                                                                                                                                                                 |
+| `DiminishingHealthAndManaBoon` | Fight Fight Fight       | none                                                                                 | equipped Echo trait removed by room decay, described below; numeric Life/Magick remains outside the planner                                                                                                                                                                                                                                                    |
 | `EchoDoubleShop`               | Gold Gold Gold          | none                                                                                 | equip one one-use Echo trait. The next purchased World Shop item other than `SpellDrop` sees that equipped trait, recreates the item for free, and consumes the trait's use. Loot recreations open a fresh trait offer; consumables use the Shop-duplicate creation path, which does not opt `GiftDrop` into its run-progress level effect                     |
 | `EchoRepeatKeepsakeBoon`       | Gift Gift Gift          | current keepsake is not one of the four source exclusions plus collapsed progression | capture the exact current keepsake at acquisition and replay its supported rank-I effect at biome start. Gorgon Amulet and Jeweled Pom are excluded among the six modeled effects; Fig Leaf and Experimental Hammer replay once, while Calling Card and Time Piece add uses every biome. Other eligible keepsakes remain effect-neutral until their own slice. |
+
+Fight Fight Fight's acquisition (`EchoIncreaseStats`, `EventLogic.lua:1739-1765`)
+sets `StatMultiplier` to the processed `StartFraction` and sets `BlockDecay`.
+`StartFraction` is `0.6` times the scaling row's multiplier, rounded to
+hundredths: `0.6` for Common through Epic and `0.8` for Heroic, which only a
+fourth-biome Dream Dive Echo reaches. `LeaveRoom` clears the block on the first
+departure, subtracts `Decay = 0.05` on each later one and removes the trait
+once the value is no longer positive (`RoomLogic.lua:4245-4261`). In doubles
+the 13th later departure removes a `0.6` fraction and the 16th a `0.8` one.
+The planner applies each departure at `roomExited`. Bounded discrepancy: Ephyra
+departures from a restored room (Hub departures after the first, a parent
+room's departures after a side room, and the Hub handoff) call `LeaveRoom` but
+have no `roomExited`, so they do not decay until a shared departure contact
+exists.
 
 `CurrentRun.LastReward` is not simply the latest reward-history event. Loot
 inherits `LastRewardEligible = true`; consumables/resources declare or inherit

@@ -33,6 +33,7 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
       return true;
     case 'steadyGrowthProgress':
     case 'pickupProducerProgress':
+    case 'roomDecayProgress':
     case 'echoKeepsakeReplay':
     case 'rarityBlock':
       return false;
@@ -382,6 +383,20 @@ export function foldTraitHistoryEvents(
           });
         continue;
       }
+      if (event.kind === 'roomDecayProgress') {
+        const target = equipped[event.traitKey];
+        if (
+          target?.acquisitionIdentity === event.acquisitionIdentity &&
+          target.roomDecay?.fraction === event.oldFraction &&
+          target.roomDecay.blocked === event.clearsBlock &&
+          event.newFraction > 0
+        )
+          equipped[event.traitKey] = Object.freeze({
+            ...target,
+            roomDecay: Object.freeze({ fraction: event.newFraction, blocked: false }),
+          });
+        continue;
+      }
       if (event.kind === 'rarityMutation') {
         const target = equipped[event.targetTraitKey];
         const directFountainPromotion =
@@ -536,6 +551,11 @@ export function foldTraitHistoryEvents(
         ...(event.pickupProducerInterval === undefined
           ? {}
           : { pickupProducerInterval: event.pickupProducerInterval }),
+        ...(event.roomDecayStartFraction === undefined
+          ? {}
+          : {
+              roomDecay: Object.freeze({ fraction: event.roomDecayStartFraction, blocked: true }),
+            }),
         ...(event.echoRepeatedKeepsakeKey === undefined
           ? {}
           : {
