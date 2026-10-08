@@ -47,6 +47,8 @@ const CAN_DUPLICATE = new Set<string>([
   'ElementalBoost',
   'StoreRewardRandomStack',
   'LastStandDrop',
+  'LastStandShopItem',
+  'EmptyMaxHealthShopItem',
   'GiftDrop',
   'MetaCurrencyDrop',
   'MetaCurrencyBigDrop',
@@ -347,6 +349,9 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
   },
+  // Stygian Well consumables, acquired under their own names when purchased.
+  { gameName: 'LastStandShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  { gameName: 'EmptyMaxHealthShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
     gameName: 'ChaosWeaponUpgrade',
     kind: 'consumable',

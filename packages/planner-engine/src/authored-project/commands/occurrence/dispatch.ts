@@ -797,12 +797,10 @@ export function applyOccurrenceCommand(
           !(well.purchasedGenerationKeys ?? []).includes(command.generationKey))
       )
         failCommand(command, 'Twist result requires a purchased RandomStoreItem generation');
-      const twistResultItemKeys = new Set(
-        catalog.rewards.shops.byKey.RoomShop?.groups.values
-          .flatMap((group) => group.options.values)
-          .find((option) => option.key === 'RandomStoreItem')?.stygianWell?.nestedResultItemKeys ??
-          [],
-      );
+      const twistGrant = catalog.rewards.shops.byKey.RoomShop?.groups.values
+        .flatMap((group) => group.options.values)
+        .find((option) => option.key === 'RandomStoreItem')?.stygianWell?.grant;
+      const twistResultItemKeys = new Set(twistGrant?.kind === 'twist' ? twistGrant.pool : []);
       if (command.itemKey !== null && !twistResultItemKeys.has(command.itemKey))
         failCommand(command, 'item is not in the closed Twist result pool');
       const childKey = command.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slotKey!;

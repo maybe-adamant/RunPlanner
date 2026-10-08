@@ -170,12 +170,14 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         'EarthBoost',
         'ElementalBoost',
         'EmptyMaxHealthDrop',
+        'EmptyMaxHealthShopItem',
         'EmptyMaxHealthSmallDrop',
         'FireBoost',
         'GiftDrop',
         'HealBigDrop',
         'HealDrop',
         'LastStandDrop',
+        'LastStandShopItem',
         'MaxHealthDrop',
         'MaxHealthDropBig',
         'MaxHealthDropSmall',
@@ -626,8 +628,18 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         ],
       },
     ]);
+    const wellConsumables = new Set(
+      rewardKernelCatalog.shops.byKey.RoomShop!.groups.values.flatMap((group) =>
+        group.options.values.flatMap((option) =>
+          option.stygianWell?.grant.kind === 'consumable'
+            ? [option.stygianWell.grant.acquisitionGameName]
+            : [],
+        ),
+      ),
+    );
     for (const acquisition of rewardKernelCatalog.acquisitions.values) {
-      if (acquisition.gameName === 'BlindBoxLoot') {
+      // Well consumables are acquired at purchase, not through a reward type.
+      if (acquisition.gameName === 'BlindBoxLoot' || wellConsumables.has(acquisition.gameName)) {
         continue;
       }
       expect(
@@ -724,6 +736,8 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'ElementalBoost',
       'StoreRewardRandomStack',
       'LastStandDrop',
+      'LastStandShopItem',
+      'EmptyMaxHealthShopItem',
       'ChaosWeaponUpgrade',
       'BlindBoxLoot',
     ]);
@@ -742,7 +756,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(58);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(60);
   });
 
   it('rejects incomplete source contracts at catalog construction', () => {

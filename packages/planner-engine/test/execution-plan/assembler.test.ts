@@ -1965,6 +1965,59 @@ describe('engine-owned F/G execution semantic product', () => {
     ).not.toContainEqual(expect.objectContaining({ afterOwner: yarn?.owner }));
   });
 
+  it('keeps a ticking neutral Well buff out of conformance and diagnostics', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const withCharityBottle = (purchased: boolean) => {
+      let project = applyProjectCommand(loadUnderworldIxionChaosCheckpoint(), catalog, {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: well,
+        slotKey: 'healing',
+        itemKey: 'TemporaryHealExpirationTrait',
+      });
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: well,
+        generationKey: 'initial:healing',
+        purchased,
+      });
+      return authorLegalTraitOffers(project);
+    };
+    const bought = withCharityBottle(true);
+    const charityUses = (biomeKey: string) => {
+      const biome = simulateProjectAssembly(catalog, bought).evaluation.route.biomes.find(
+        (candidate) => candidate.biomeKey === biomeKey,
+      );
+      if (biome?.authoring !== 'complete') throw new Error(`expected complete ${biomeKey}`);
+      return biome.rewards.branches.map(
+        (branch) =>
+          branch.state.stygianWell.timedInstances.find(
+            (instance) => instance.traitKey === 'TemporaryHealExpirationTrait',
+          )?.remainingUses ?? 0,
+      );
+    };
+    expect(charityUses('F').every((uses) => uses === 4)).toBe(true);
+    expect(charityUses('G').every((uses) => uses < 4)).toBe(true);
+    const observed = (project: ReturnType<typeof withCharityBottle>) =>
+      productFor(project).occurrences.map((occurrence) => ({
+        id: occurrence.id,
+        conformance: occurrence.roomExitConformance,
+        diagnostics: occurrence.diagnostics,
+      }));
+    expect(observed(bought)).toEqual(observed(withCharityBottle(false)));
+    expect(
+      productFor(bought)
+        .occurrences.flatMap((occurrence) => occurrence.timeline.transactions)
+        .filter(
+          (transaction) =>
+            transaction.kind === 'itemEffect' &&
+            transaction.itemKey === 'TemporaryHealExpirationTrait',
+        ),
+    ).toEqual([expect.objectContaining({ effect: 'neutral', extended: false })]);
+  });
+
   it('uses the resolved Fateful Twist effect in the source-room Well conformance', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,

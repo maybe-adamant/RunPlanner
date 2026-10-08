@@ -111,6 +111,8 @@ export interface WorkspaceRunStatePresentation {
     }[];
     readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   };
+  /** Absent until the run holds or has bought a Well item. */
+  readonly stygianWell?: WorkspaceRunStateStygianWell;
   readonly traits: {
     readonly properUpbringingActive?: true;
     readonly coreSlots: readonly WorkspaceRunStateCoreTraitSlot[];
@@ -118,6 +120,17 @@ export interface WorkspaceRunStatePresentation {
     readonly banned: readonly WorkspaceRunStateSource[];
     readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
   };
+}
+
+export interface WorkspaceRunStateStygianWell {
+  readonly timedBuffs: readonly {
+    readonly key: string;
+    readonly label: string;
+    /** Already-formatted remaining uses on the instance's own clock. */
+    readonly remainingLabel: string;
+  }[];
+  readonly charges: readonly { readonly label: string; readonly count: number }[];
+  readonly purchases: readonly { readonly label: string; readonly count: number }[];
 }
 
 export interface WorkspaceRunStateSource {

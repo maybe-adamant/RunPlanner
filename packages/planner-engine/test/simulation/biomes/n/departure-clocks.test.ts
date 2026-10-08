@@ -1,5 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createBiomeAddress, semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,6 +18,7 @@ import { initializeRewardBranches } from '../../../../src/simulation/rewards/bra
 import { hubDepartureTraitInventory } from '../../../../src/simulation/rewards/run-state-conformance';
 import { replaceSimulationTraitHistory } from '../../../../src/simulation/state/transitions';
 import { foldTraitHistoryEvents } from '../../../../src/simulation/traits';
+import type { StygianWellRunState } from '../../../../src/simulation/commerce/stygian-well';
 
 const fightKey = 'DiminishingHealthAndManaBoon';
 const enshroudedKey = 'ChaosHiddenRoomRewardCurse';
@@ -37,7 +43,7 @@ function observeNChronology(): ChronologyArguments {
  * Replays the N walk from a start holding Fight Fight Fight and a room-clocked curse.
  * The seed is a walk-level clock injection; neither is authorable before the N Hub.
  */
-function walkWithDepartureClocks(fightFraction: number) {
+function walkWithDepartureClocks(fightFraction: number, stygianWell?: StygianWellRunState) {
   const [, snapshot, history, routePosition, routeLoadout, , placements, findings] =
     observeNChronology();
   const [start] = initializeRewardBranches(
@@ -109,9 +115,10 @@ function walkWithDepartureClocks(fightFraction: number) {
   expect(traitHistory.activeChaosCurses).toMatchObject([
     { curseKey: enshroudedKey, remaining: curse.duration.maximum },
   ]);
+  const traited = replaceSimulationTraitHistory(start!.state, traitHistory);
   const seeded = Object.freeze({
     ...start!,
-    state: replaceSimulationTraitHistory(start!.state, traitHistory),
+    state: stygianWell === undefined ? traited : Object.freeze({ ...traited, stygianWell }),
   });
   const result = rewardChronology.evaluateBiomeRewardChronology(
     catalog,
@@ -185,4 +192,105 @@ describe('N room-departure clocks', () => {
       hubDepartureTraitInventory(second!.departure).map((trait) => trait.traitKey),
     ).not.toContain(fightKey);
   });
+
+  it('spends room-clocked Well uses at every native departure, Hub revisits included', () => {
+    const { result, departures, restored } = walkWithDepartureClocks(
+      0.8,
+      wellHolding([
+        wellInstance('TemporaryDoorHealTrait', 'rooms', 3),
+        wellInstance('TemporaryDoorHealTrait', 'bosses', 2),
+      ]),
+    );
+    // The third native departure is the first Hub departure, a restored one.
+    expect(restored.has(departures[2]!.sequence)).toBe(true);
+    expectUsesAtSnapshots(result, 'rooms', 3, departures);
+    expect(result.simulation.branches[0]!.state.stygianWell.timedInstances).toEqual([
+      // Only the N Boss defeat spends a boss use.
+      wellInstance('TemporaryDoorHealTrait', 'bosses', 1),
+    ]);
+  });
+
+  it('skips encounter-clocked Well uses where the room ignores encounter uses', () => {
+    const occurrences =
+      loadSurfaceNProject().route.biomes.find((biome) => biome.biomeKey === 'N')?.topology
+        ?.occurrences ?? [];
+    const ignores = (occurrenceId: string) =>
+      catalog.rooms.byKey[
+        occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)!.gameName
+      ]?.ignoreEncounterUses === true;
+    const encounterEnds = observeNChronology()[2].events.filter(
+      (event) => event.kind === 'encounterEndEffectsApplied',
+    );
+    const counted = encounterEnds.filter(
+      (event) => event.origin.kind !== 'occurrence' || !ignores(event.origin.occurrenceId),
+    );
+    // A side-room encounter ends while the five-use buff is still held.
+    expect(
+      encounterEnds.some(
+        (event) => !counted.includes(event) && event.sequence < counted[4]!.sequence,
+      ),
+    ).toBe(true);
+    const { result } = walkWithDepartureClocks(
+      0.8,
+      wellHolding([wellInstance('TemporaryImprovedCastTrait', 'encounters', 5)]),
+    );
+    expectUsesAtSnapshots(result, 'encounters', 5, counted);
+    expect(result.simulation.branches[0]!.state.stygianWell.timedInstances).toEqual([]);
+  });
 });
+
+function wellInstance(
+  itemKey: string,
+  clock: 'encounters' | 'rooms' | 'bosses',
+  remainingUses: number,
+) {
+  return Object.freeze({
+    itemKey,
+    traitKey: itemKey,
+    clock,
+    remainingUses,
+    source: Object.freeze({
+      occurrence: createOccurrenceAddress(seedOwner, createOccurrenceId('well')),
+      generationKey: 'initial:healing' as const,
+    }),
+  });
+}
+
+function wellHolding(
+  timedInstances: readonly ReturnType<typeof wellInstance>[],
+): StygianWellRunState {
+  return {
+    sparkUses: 0,
+    yarnUses: 0,
+    hymnUses: 0,
+    extendedUses: 0,
+    timedInstances,
+    directPurchases: {},
+  };
+}
+
+/**
+ * Each captured Run State holds the initial uses less the clock contacts it has
+ * passed; a Hub departure capture precedes its own departure.
+ */
+function expectUsesAtSnapshots(
+  result: ReturnType<typeof walkWithDepartureClocks>['result'],
+  clock: 'encounters' | 'rooms',
+  initialUses: number,
+  contacts: readonly { readonly sequence: number }[],
+) {
+  const captures = [
+    ...result.simulation.runStateSnapshots.map((snapshot) => ({ snapshot, passes: 1 })),
+    ...result.simulation.hubDepartures.map((entry) => ({ snapshot: entry.departure, passes: 0 })),
+  ];
+  expect(captures.length).toBeGreaterThan(contacts.length);
+  for (const { snapshot, passes } of captures) {
+    const remaining =
+      initialUses -
+      contacts.filter((contact) => contact.sequence < snapshot.historySequence + passes).length;
+    expect(
+      snapshot.stygianWell.timedInstances.filter((instance) => instance.clock === clock),
+      `${snapshot.historySequence}`,
+    ).toEqual(remaining > 0 ? [expect.objectContaining({ remainingUses: remaining })] : []);
+  }
+}

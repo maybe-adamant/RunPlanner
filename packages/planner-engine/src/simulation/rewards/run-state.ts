@@ -29,6 +29,10 @@ import {
 import type { TraitHistoryState } from '../traits/history/model';
 import type { SimulationState } from '../state/model';
 import { artificerStatus, attestEffectiveHordesRank } from '../arcana-fear';
+import {
+  projectStygianWellLegality,
+  type StygianWellLegalityState,
+} from '../commerce/stygian-well';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -134,8 +138,10 @@ export interface RunStateSnapshot {
   readonly rewardPriorities: SimulationState['rewardPriorities'];
   /** Cross-room Shrine orders, including their exact maturity clocks and due hosts. */
   readonly pendingHermesShrineDeliveries: SimulationState['pendingHermesShrineDeliveries'];
-  /** Consequential Well effects retained after the purchase room closes. */
+  /** Well holdings retained after the purchase room closes. */
   readonly stygianWell: SimulationState['stygianWell'];
+  /** The Well legality subset observed by room-exit conformance and execution diagnostics. */
+  readonly stygianWellLegality: StygianWellLegalityState;
   readonly hexProgress: SimulationState['hexProgress'];
   /** Game-facing Hex identity, resolved while the normalized catalog is available. */
   readonly hexObserver: {
@@ -219,6 +225,7 @@ interface RunStateDerivationCache {
       readonly rewardPriorities: SimulationState['rewardPriorities'];
       readonly pendingHermesShrineDeliveries: SimulationState['pendingHermesShrineDeliveries'];
       readonly stygianWell: SimulationState['stygianWell'];
+      readonly stygianWellLegality: StygianWellLegalityState;
       readonly hexProgress: SimulationState['hexProgress'];
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
       readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
@@ -701,6 +708,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         rewardPriorities: state.rewardPriorities,
         pendingHermesShrineDeliveries: state.pendingHermesShrineDeliveries,
         stygianWell: state.stygianWell,
+        stygianWellLegality: projectStygianWellLegality(context.catalog, state.stygianWell),
         hexProgress: state.hexProgress,
         forfeitStatus: forfeitStatus(state.arcanaFear),
         resourceGains: state.rewardHistory.resourceGains,
@@ -785,6 +793,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     rewardPriorities: first.rewardPriorities,
     pendingHermesShrineDeliveries: first.pendingHermesShrineDeliveries,
     stygianWell: first.stygianWell,
+    stygianWellLegality: first.stygianWellLegality,
     hexProgress: first.hexProgress,
     hexObserver: Object.freeze({
       ...(first.hexProgress.spellTraitKey === undefined

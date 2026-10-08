@@ -16,6 +16,7 @@ import {
   applyStygianWellPurchase,
   assessStygianWellPurchase,
   extendedWellItemKeys,
+  stygianWellGrant,
   type StygianWellCandidateContext,
 } from '../../../commerce/stygian-well';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
@@ -300,32 +301,32 @@ export function applyWellPurchaseTransition(inputs: {
     branches: Object.freeze(
       inputs.branches.map((branch, index) => {
         const assessment = candidateContexts[index]?.purchase;
-        const direct = applyStygianWellPurchase(catalog, branch.state.stygianWell, itemKey, true);
-        const directOption = catalog.rewards.shops.byKey.RoomShop?.groups.values
-          .flatMap((group) => group.options.values)
-          .find((option) => option.key === itemKey);
-        const nestedOption =
-          twistResultKey === undefined || twistResultKey === null
-            ? undefined
-            : catalog.rewards.shops.byKey.RoomShop?.groups.values
-                .flatMap((group) => group.options.values)
-                .find((option) => option.key === twistResultKey);
-        let history = branch.state.rewardHistory;
-        if (directOption?.stygianWell?.effect === 'lastStand')
-          history = applyConcreteAcquisition(catalog.rewards, history, {
-            kind: 'consumable',
-            gameName: 'LastStandDrop',
-          });
+        const source = Object.freeze({
+          occurrence: authoredRoom.origin,
+          generationKey: event.generationKey,
+        });
+        const direct = applyStygianWellPurchase(
+          catalog,
+          branch.state.stygianWell,
+          itemKey,
+          source,
+          true,
+        );
         const nestedResultIsValid =
           assessment?.twistCandidateItemKeys !== undefined &&
           twistResultKey !== undefined &&
           twistResultKey !== null &&
           assessment.twistCandidateItemKeys.includes(twistResultKey);
-        if (nestedResultIsValid && nestedOption?.stygianWell?.effect === 'lastStand')
-          history = applyConcreteAcquisition(catalog.rewards, history, {
-            kind: 'consumable',
-            gameName: 'LastStandDrop',
-          });
+        let history = branch.state.rewardHistory;
+        for (const grant of [
+          stygianWellGrant(catalog, itemKey),
+          nestedResultIsValid ? stygianWellGrant(catalog, twistResultKey) : undefined,
+        ])
+          if (grant?.kind === 'consumable')
+            history = applyConcreteAcquisition(catalog.rewards, history, {
+              kind: 'consumable',
+              gameName: grant.acquisitionGameName,
+            });
         return Object.freeze({
           ...branch,
           state: Object.freeze({
@@ -334,7 +335,7 @@ export function applyWellPurchaseTransition(inputs: {
             stygianWell:
               !nestedResultIsValid || twistResultKey === undefined || twistResultKey === null
                 ? direct
-                : applyStygianWellPurchase(catalog, direct, twistResultKey, false),
+                : applyStygianWellPurchase(catalog, direct, twistResultKey, source, false),
           }),
         });
       }),

@@ -23,7 +23,7 @@ export function createRewardKernelCatalog(input: RawRewardKernelInput): RewardKe
   const rewardTypes = normalizeRewardTypes(input.rewardTypes, payloadDomains, acquisitions);
   const resourceKeys = grantedResourceKeys(acquisitions);
   const stores = normalizeStores(input.stores, rewardTypes, resourceKeys);
-  const shops = normalizeShops(input.shops, rewardTypes, resourceKeys);
+  const shops = normalizeShops(input.shops, rewardTypes, resourceKeys, acquisitions);
   const producerLifecycles = normalizeProducerLifecycles(
     input.producerLifecycles,
     rewardTypes,

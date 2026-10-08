@@ -14,8 +14,8 @@ export {
   assessStygianWellPlacement,
   priorThreeRoomShopPresence,
   applyStygianWellPurchase,
-  advanceStygianWellEncounterUses,
-  advanceStygianWellBossUses,
+  advanceStygianWellClock,
+  projectStygianWellLegality,
   extendedWellItemKeys,
   twistResultItemKeys,
   type StygianWellAssessment,
@@ -23,6 +23,8 @@ export {
   type StygianWellCandidateContext,
   type StygianWellPurchaseAssessment,
   type StygianWellRunState,
+  type StygianWellLegalityState,
+  type StygianWellTimedInstance,
 } from './commerce/stygian-well';
 export {
   assessResourcePlacement,

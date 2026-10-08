@@ -179,22 +179,46 @@ export interface ShopOptionEntry {
   /** Exact generated Shop item override, retained only by the generation witness. */
   readonly boonRarityOverride?: import('../catalog-schema/traits').BoonRarityOverride;
   readonly stygianWell?: {
-    readonly effect:
-      | 'neutral'
-      | 'spark'
-      | 'yarn'
-      | 'hymn'
-      | 'discount'
-      | 'emptySlot'
-      | 'extended'
-      | 'twist'
-      | 'lastStand';
+    readonly grant: StygianWellGrant;
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
-    readonly nestedResultItemKeys?: readonly string[];
     readonly excludedRouteKeys?: readonly string[];
-    readonly extendedDirectPurchaseItemKeys?: readonly string[];
   };
 }
+
+/** Native use counter of a Well trait: `UsesAsEncounters`, `UsesAsRooms` or `UsesAsBosses`. */
+export type StygianWellClock = 'encounters' | 'rooms' | 'bosses';
+
+/**
+ * What one Well item grants. `publishedEffect` names the Well item effect the
+ * purchase publishes; a grant without one publishes as neutral.
+ */
+export type StygianWellGrant =
+  | {
+      readonly kind: 'timedTrait';
+      readonly traitKey: string;
+      readonly initialUses: number;
+      readonly clock: StygianWellClock;
+      readonly publishedEffect?: 'discount' | 'emptySlot';
+    }
+  | { readonly kind: 'charge'; readonly charge: 'spark' | 'yarn' | 'hymn' }
+  | {
+      readonly kind: 'charge';
+      readonly charge: 'extended';
+      /** Native `ValidPermanentItemsLookup`. */
+      readonly eligibleItemKeys: readonly string[];
+      /** Boss uses granted to the converted purchase. */
+      readonly bossExtension: number;
+    }
+  | {
+      readonly kind: 'consumable';
+      readonly acquisitionGameName: string;
+      readonly publishedEffect?: 'lastStand';
+    }
+  /** A holding spent by play; only the purchase ledger records it. */
+  | { readonly kind: 'ledger' }
+  /** Applied at purchase with nothing retained. */
+  | { readonly kind: 'immediate' }
+  | { readonly kind: 'twist'; readonly pool: readonly string[] };
 
 export interface ShopGroupDeclaration {
   readonly key: string;

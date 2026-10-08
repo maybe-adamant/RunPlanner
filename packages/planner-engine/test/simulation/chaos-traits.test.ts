@@ -7,6 +7,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
@@ -1217,6 +1218,11 @@ describe('Chaos paired-trait history', () => {
             catalog,
             branch.state.stygianWell,
             'LimitedSwapTraitDrop',
+            {
+              occurrence: createOccurrenceAddress(owner, createOccurrenceId('well')),
+              generationKey: 'initial:secondLeft',
+            },
+            true,
           ),
         }),
       });

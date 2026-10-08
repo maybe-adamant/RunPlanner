@@ -178,11 +178,7 @@ function assembleRunStateDiagnostic(
             }),
           ),
       ),
-      stygianWell: Object.freeze({
-        ...snapshot.stygianWell,
-        discountUses: Object.freeze([...snapshot.stygianWell.discountUses]),
-        emptySlotUses: Object.freeze([...snapshot.stygianWell.emptySlotUses]),
-      }),
+      stygianWell: snapshot.stygianWellLegality,
     }),
   });
 }

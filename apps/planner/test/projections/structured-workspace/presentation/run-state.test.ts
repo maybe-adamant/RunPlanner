@@ -184,6 +184,14 @@ describe('Run State presentation', () => {
         sparkUses: 0,
         yarnUses: 0,
         hymnUses: 0,
+        extendedUses: 0,
+        timedInstances: [],
+        directPurchases: {},
+      },
+      stygianWellLegality: {
+        sparkUses: 0,
+        yarnUses: 0,
+        hymnUses: 0,
         discountUses: [],
         emptySlotUses: [],
         extendedUses: 0,
@@ -447,6 +455,69 @@ describe('Run State presentation', () => {
         keepsakes: { ...snapshot.keepsakes, phial: { status: 'consumed' } },
       }).keepsakes.phialStatus,
     ).toBe('consumed');
+    expect(presentRunState(catalog, snapshot).stygianWell).toBeUndefined();
+    const source = {
+      occurrence: createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('well'),
+      ),
+      generationKey: 'initial:healing',
+    } as const;
+    expect(
+      presentRunState(catalog, {
+        ...snapshot,
+        stygianWell: {
+          ...snapshot.stygianWell,
+          yarnUses: 1,
+          extendedUses: 1,
+          timedInstances: [
+            {
+              itemKey: 'TemporaryDoorHealTrait',
+              traitKey: 'TemporaryDoorHealTrait',
+              clock: 'bosses',
+              remainingUses: 2,
+              source,
+            },
+            {
+              itemKey: 'TemporaryMoveSpeedTrait',
+              traitKey: 'TemporaryMoveSpeedTrait',
+              clock: 'encounters',
+              remainingUses: 1,
+              source: { ...source, generationKey: 'initial:secondLeft' },
+            },
+          ],
+          directPurchases: {
+            ExtendedShopTrait: 2,
+            TemporaryDoorHealTrait: 1,
+            TemporaryMoveSpeedTrait: 1,
+            TemporaryBoonRarityTrait: 1,
+          },
+        },
+      }).stygianWell,
+    ).toEqual({
+      timedBuffs: [
+        {
+          key: '0:well:initial:healing',
+          label: 'HydraLite',
+          remainingLabel: '2 Boss encounters remaining',
+        },
+        {
+          key: '1:well:initial:secondLeft',
+          label: 'Ignited Ichor',
+          remainingLabel: '1 encounter remaining',
+        },
+      ],
+      charges: [
+        { label: 'Yarn of Ariadne', count: 1 },
+        { label: 'Archaic Seal', count: 1 },
+      ],
+      purchases: [
+        { label: 'Archaic Seal', count: 2 },
+        { label: 'HydraLite', count: 1 },
+        { label: 'Ignited Ichor', count: 1 },
+        { label: 'Yarn of Ariadne', count: 1 },
+      ],
+    });
   });
 
   it('presents a G replacement as effective in H when the F rack was skipped', () => {

@@ -14,6 +14,7 @@ import {
   talentLegal,
 } from './requirements';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
+import type { StygianWellGrant } from '@run-planner/engine/reward-kernel';
 import { notFreshFileRoute } from '../routes';
 
 import type { RawRewardKernelInput, RawShopOptionEntryDeclaration } from './types';
@@ -207,6 +208,7 @@ const lateResourceOptions = [
   dreamOption({ key: 'ElementalBoost', rewardType: 'ElementalBoost' }),
 ];
 
+// TraitData_Store ExtendedShopTrait.ValidPermanentItemsLookup.
 const extendedWellItemKeys = [
   'TemporaryDoorHealTrait',
   'TemporaryImprovedSecondaryTrait',
@@ -217,6 +219,7 @@ const extendedWellItemKeys = [
   'TemporaryDiscountTrait',
   'TemporaryEmptySlotDamageTrait',
 ] as const;
+// ConsumableData RandomStoreItem Traits and Consumables.
 const twistWellItemKeys = [
   'TemporaryImprovedSecondaryTrait',
   'TemporaryImprovedCastTrait',
@@ -235,26 +238,35 @@ const twistWellItemKeys = [
   'MemPointsCommonRange',
   'SeedMysteryRange',
 ] as const;
+type WellExtra = Omit<RawShopOptionEntryDeclaration, 'key' | 'rewardType' | 'stygianWell'> & {
+  readonly stygianWell?: Omit<NonNullable<RawShopOptionEntryDeclaration['stygianWell']>, 'grant'>;
+};
 function wellOption(
   key: string,
   label: string,
   rewardType: string,
-  effect: NonNullable<RawShopOptionEntryDeclaration['stygianWell']>['effect'] = 'neutral',
-  extra: Omit<RawShopOptionEntryDeclaration, 'key' | 'rewardType' | 'stygianWell'> & {
-    readonly stygianWell?: Omit<
-      NonNullable<RawShopOptionEntryDeclaration['stygianWell']>,
-      'effect'
-    >;
-  } = {},
+  grant: StygianWellGrant,
+  extra: WellExtra = {},
 ) {
-  return option({
-    key,
-    label,
-    rewardType,
-    ...extra,
-    stygianWell: { effect, ...extra.stygianWell },
-  });
+  return option({ key, label, rewardType, ...extra, stygianWell: { grant, ...extra.stygianWell } });
 }
+/** TraitData_Store `RemainingUses` with its `UsesAs*` clock; the trait key is the item key. */
+function timedTrait(
+  traitKey: string,
+  initialUses: number,
+  clock: 'encounters' | 'rooms',
+  publishedEffect?: 'discount' | 'emptySlot',
+): StygianWellGrant {
+  return {
+    kind: 'timedTrait',
+    traitKey,
+    initialUses,
+    clock,
+    ...(publishedEffect === undefined ? {} : { publishedEffect }),
+  };
+}
+const ledger: StygianWellGrant = { kind: 'ledger' };
+const immediate: StygianWellGrant = { kind: 'immediate' };
 
 export const shops = [
   // EventLogic.SpawnZagContractRewards generates this free pedestal on room entry.
@@ -279,9 +291,8 @@ export const shops = [
     ],
   },
   // RoomShop is the game's Stygian Well profile, kept separate because its
-  // options are immediate paid effects, not World-Shop reward acquisition. The option key is the game
-  // identity consumed by the Well simulation; neutral effects deliberately
-  // share a neutral reward representation for the current planner scope.
+  // options are immediate paid effects, not World-Shop reward acquisition. The
+  // option key is the game identity; each option declares what it grants.
   {
     key: 'RoomShop',
     groups: [
@@ -289,55 +300,116 @@ export const shops = [
         key: 'Healing',
         offerCount: 1,
         options: [
-          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', 'neutral'),
-          wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop'),
-          wellOption('HealDropRange', 'Life Essence', 'RoomRewardHealDrop'),
-          wellOption('EmptyMaxHealthShopItem', 'Centaur Soul', 'MaxHealthDrop'),
-          wellOption('FirstHitHealTrait', 'Breath of Eros', 'RoomRewardHealDrop'),
-          wellOption('TemporaryDoorHealTrait', 'HydraLite', 'RoomRewardHealDrop'),
-          wellOption('TemporaryHealExpirationTrait', 'Charity Bottle', 'RoomRewardHealDrop'),
-          wellOption('LastStandShopItem', 'Kiss of Styx', 'LastStandDrop', 'lastStand'),
+          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', ledger),
+          wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop', immediate),
+          wellOption('HealDropRange', 'Life Essence', 'RoomRewardHealDrop', immediate),
+          wellOption('EmptyMaxHealthShopItem', 'Centaur Soul', 'MaxHealthDrop', {
+            kind: 'consumable',
+            acquisitionGameName: 'EmptyMaxHealthShopItem',
+          }),
+          wellOption('FirstHitHealTrait', 'Breath of Eros', 'RoomRewardHealDrop', ledger),
+          wellOption(
+            'TemporaryDoorHealTrait',
+            'HydraLite',
+            'RoomRewardHealDrop',
+            timedTrait('TemporaryDoorHealTrait', 3, 'rooms'),
+          ),
+          wellOption(
+            'TemporaryHealExpirationTrait',
+            'Charity Bottle',
+            'RoomRewardHealDrop',
+            timedTrait('TemporaryHealExpirationTrait', 4, 'encounters'),
+          ),
+          wellOption('LastStandShopItem', 'Kiss of Styx', 'LastStandDrop', {
+            kind: 'consumable',
+            acquisitionGameName: 'LastStandShopItem',
+            publishedEffect: 'lastStand',
+          }),
         ],
       },
       {
         key: 'Other',
         offerCount: 2,
         options: [
-          wellOption('TemporaryImprovedSecondaryTrait', 'Chimaera Jerky', 'RoomMoneyDrop'),
-          wellOption('TemporaryImprovedCastTrait', 'Braid of Atlas', 'RoomMoneyDrop'),
-          wellOption('TemporaryMoveSpeedTrait', 'Ignited Ichor', 'RoomMoneyDrop'),
-          wellOption('TemporaryBoonRarityTrait', 'Yarn of Ariadne', 'RandomLoot', 'yarn'),
-          wellOption('TemporaryImprovedExTrait', "Witch's Mark", 'RoomMoneyDrop'),
-          wellOption('TemporaryImprovedDefenseTrait', 'Python Scales', 'RoomMoneyDrop'),
-          wellOption('TemporaryDiscountTrait', 'Ferry Voucher', 'RoomMoneyDrop', 'discount', {
-            stygianWell: { offerRequirements: ['inactive'] },
+          wellOption(
+            'TemporaryImprovedSecondaryTrait',
+            'Chimaera Jerky',
+            'RoomMoneyDrop',
+            timedTrait('TemporaryImprovedSecondaryTrait', 5, 'encounters'),
+          ),
+          wellOption(
+            'TemporaryImprovedCastTrait',
+            'Braid of Atlas',
+            'RoomMoneyDrop',
+            timedTrait('TemporaryImprovedCastTrait', 5, 'encounters'),
+          ),
+          wellOption(
+            'TemporaryMoveSpeedTrait',
+            'Ignited Ichor',
+            'RoomMoneyDrop',
+            timedTrait('TemporaryMoveSpeedTrait', 8, 'encounters'),
+          ),
+          wellOption('TemporaryBoonRarityTrait', 'Yarn of Ariadne', 'RandomLoot', {
+            kind: 'charge',
+            charge: 'yarn',
           }),
-          wellOption('TemporaryForcedSecretDoorTrait', 'Spark of Ixion', 'RoomMoneyDrop', 'spark', {
-            stygianWell: { excludedRouteKeys: ['Dream'] },
-          }),
+          wellOption(
+            'TemporaryImprovedExTrait',
+            "Witch's Mark",
+            'RoomMoneyDrop',
+            timedTrait('TemporaryImprovedExTrait', 6, 'encounters'),
+          ),
+          wellOption(
+            'TemporaryImprovedDefenseTrait',
+            'Python Scales',
+            'RoomMoneyDrop',
+            timedTrait('TemporaryImprovedDefenseTrait', 5, 'encounters'),
+          ),
+          wellOption(
+            'TemporaryDiscountTrait',
+            'Ferry Voucher',
+            'RoomMoneyDrop',
+            timedTrait('TemporaryDiscountTrait', 6, 'encounters', 'discount'),
+            { stygianWell: { offerRequirements: ['inactive'] } },
+          ),
+          wellOption(
+            'TemporaryForcedSecretDoorTrait',
+            'Spark of Ixion',
+            'RoomMoneyDrop',
+            { kind: 'charge', charge: 'spark' },
+            { stygianWell: { excludedRouteKeys: ['Dream'] } },
+          ),
           wellOption(
             'TemporaryEmptySlotDamageTrait',
             'Danaid Dagger',
             'RoomMoneyDrop',
-            'emptySlot',
-            {
-              stygianWell: { offerRequirements: ['inactive', 'emptyAttackOrSpecial'] },
-            },
+            timedTrait('TemporaryEmptySlotDamageTrait', 6, 'encounters', 'emptySlot'),
+            { stygianWell: { offerRequirements: ['inactive', 'emptyAttackOrSpecial'] } },
           ),
-          wellOption('ExtendedShopTrait', 'Archaic Seal', 'RoomMoneyDrop', 'extended', {
-            stygianWell: { extendedDirectPurchaseItemKeys: extendedWellItemKeys },
+          wellOption('ExtendedShopTrait', 'Archaic Seal', 'RoomMoneyDrop', {
+            kind: 'charge',
+            charge: 'extended',
+            eligibleItemKeys: extendedWellItemKeys,
+            bossExtension: 2,
           }),
-          wellOption('MetaCurrencyRange', 'Exhumed Remains', 'MetaCurrencyDrop'),
-          wellOption('MetaCardPointsCommonRange', 'Dust Parcel', 'MetaCardPointsCommonDrop'),
-          wellOption('MemPointsCommonRange', 'Faint Flicker', 'RoomMoneyDrop'),
-          wellOption('SeedMysteryRange', "Gaia's Gift", 'RoomMoneyDrop'),
-          wellOption('RandomStoreItem', 'Fateful Twist', 'RoomMoneyDrop', 'twist', {
-            stygianWell: {
-              nestedResultItemKeys: twistWellItemKeys,
-            },
+          wellOption('MetaCurrencyRange', 'Exhumed Remains', 'MetaCurrencyDrop', immediate),
+          wellOption(
+            'MetaCardPointsCommonRange',
+            'Dust Parcel',
+            'MetaCardPointsCommonDrop',
+            immediate,
+          ),
+          wellOption('MemPointsCommonRange', 'Faint Flicker', 'RoomMoneyDrop', immediate),
+          wellOption('SeedMysteryRange', "Gaia's Gift", 'RoomMoneyDrop', immediate),
+          wellOption('RandomStoreItem', 'Fateful Twist', 'RoomMoneyDrop', {
+            kind: 'twist',
+            pool: twistWellItemKeys,
           }),
-          wellOption('LimitedManaRegenDrop', 'Mist Veil', 'MaxManaDrop'),
-          wellOption('LimitedSwapTraitDrop', 'Sacrificial Hymn', 'RoomMoneyDrop', 'hymn'),
+          wellOption('LimitedManaRegenDrop', 'Mist Veil', 'MaxManaDrop', ledger),
+          wellOption('LimitedSwapTraitDrop', 'Sacrificial Hymn', 'RoomMoneyDrop', {
+            kind: 'charge',
+            charge: 'hymn',
+          }),
         ],
       },
     ],
