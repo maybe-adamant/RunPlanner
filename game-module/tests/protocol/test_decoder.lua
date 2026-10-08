@@ -1166,6 +1166,68 @@ function TestProtocol.testShipWheelRequiresOneCompletePickedCohortAndMatchingLif
     lu.assertNil(protocol.decode(plan))
 end
 
+function TestProtocol.testOnlySelectedShipRoomsPublishRewardWheels()
+    local skippedId = "dream-o-skipped-ship"
+    local function skipped(plan)
+        for _, occurrence in ipairs(plan.occurrences) do
+            if occurrence.id == skippedId then return occurrence end
+        end
+        error("fixture lacks " .. skippedId)
+    end
+
+    local plan = decode("dream-o-skipped-ship")
+    local decoded, errorMessage = protocol.decode(plan)
+    lu.assertNotNil(decoded, errorMessage)
+    for _, id in ipairs(decoded.selectedOccurrenceIds) do lu.assertNotEquals(id, skippedId) end
+    lu.assertEquals(skipped(decoded).kind, "ShipEncounter")
+    lu.assertNil(skipped(decoded).overview.rewardWheels)
+
+    plan = decode("dream-o-skipped-ship")
+    local selectedWheels
+    for _, occurrence in ipairs(plan.occurrences) do
+        if occurrence.overview.rewardWheels ~= nil then selectedWheels = occurrence.overview.rewardWheels end
+    end
+    skipped(plan).overview.rewardWheels = assert(selectedWheels)
+    refreshFingerprint(plan)
+    local value, err = protocol.decode(plan)
+    lu.assertNil(value)
+    lu.assertStrContains(err, "rewardWheels")
+
+    plan = decode("dream-o-skipped-ship")
+    local ship
+    for _, occurrence in ipairs(plan.occurrences) do
+        if occurrence.overview.rewardWheels ~= nil then ship = occurrence end
+    end
+    assert(ship)
+    local function isWheelOwner(owner)
+        return owner ~= nil and (owner:find('^%["rewardWheel"') ~= nil or owner:find('^%["rewardWheelOffer"') ~= nil)
+    end
+    local function keep(rows, field, predicate)
+        local kept = {}
+        for _, row in ipairs(rows) do
+            if predicate(row) then kept[#kept + 1] = row end
+        end
+        return tagged(kept, field, true)
+    end
+    ship.overview.rewardWheels = nil
+    ship.timeline.transactions = keep(ship.timeline.transactions, "transactions", function(row)
+        return not isWheelOwner(row.owner)
+    end)
+    ship.timeline.dependencies = keep(ship.timeline.dependencies, "dependencies", function(row)
+        return not isWheelOwner(row.owner) and not isWheelOwner(row.afterOwner)
+    end)
+    ship.timeline.obligations = keep(ship.timeline.obligations, "obligations", function(row)
+        return not isWheelOwner(row.owner)
+    end)
+    ship.roomGuide = keep(ship.roomGuide, "roomGuide", function(row)
+        return not isWheelOwner(row.transactionOwner)
+    end)
+    refreshFingerprint(plan)
+    value, err = protocol.decode(plan)
+    lu.assertNil(value)
+    lu.assertStrContains(err, "rewardWheels must match the Ship encounter phases")
+end
+
 function TestProtocol.testProtocolAcceptsClosedOrdinaryPrefixesAndBoundedDreamExtents()
     local plan = minimalPlan({})
     plan.extent = tagged({ kind = "configuredPrefix", biomeKeys = { "F", "G", "H", "I" }, terminalBiomeKey = "I" }, "extent", false)

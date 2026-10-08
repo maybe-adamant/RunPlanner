@@ -113,6 +113,17 @@ export function validateExecutionGraph(
       occurrence.overview.fields === undefined
     )
       invalid(`${occurrence.id}.overview.fields is required for a selected Fields encounter`);
+    // Only a selected Ship room is entered, so only it spins its wheels.
+    if (
+      occurrence.kind === 'ShipEncounter' &&
+      (occurrence.overview.rewardWheels?.length ?? 0) !==
+        (selected.has(occurrence.id)
+          ? occurrence.overview.encounterPhases.filter(
+              (phase) => phase.slotKey !== 'Intro' && phase.kind === 'combat',
+            ).length
+          : 0)
+    )
+      invalid(`${occurrence.id}.overview.rewardWheels must match the Ship encounter phases`);
     if (occurrence.resumeBoundary === undefined) continue;
     if (occurrence.resumeBoundary !== 'postbossEntry')
       invalid(`${occurrence.id} has an unsupported resume boundary`);

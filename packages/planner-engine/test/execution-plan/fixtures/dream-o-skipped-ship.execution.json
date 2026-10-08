@@ -1,0 +1,1370 @@
+{
+  "format": "run-planner-execution",
+  "catalogVersion": "0.55.0-anvil-of-fates",
+  "projectId": "dream-o-skipped-ship",
+  "routeKey": "Dream",
+  "startingLoadout": {
+    "weaponKey": "WeaponStaffSwing",
+    "aspectKey": "BaseStaffAspect",
+    "arcana": [],
+    "fear": {
+      "configuredRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      },
+      "effectiveRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      }
+    }
+  },
+  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake" },
+  "extent": { "kind": "configuredPrefix", "biomeKeys": ["O"], "terminalBiomeKey": "O" },
+  "selectedOccurrenceIds": [
+    "O:start",
+    "dream-o-first-ship",
+    "dream-o-second-ship",
+    "dream-o-miniboss",
+    "dream-o-shop",
+    "dream-o-contract",
+    "dream-o-return-ship",
+    "dream-o-preboss",
+    "dream-o-preboss:boss"
+  ],
+  "resources": {
+    "occurrences": [
+      {
+        "occurrenceId": "O:start",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-first-ship",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-second-ship",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-miniboss",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-shop",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-contract",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-return-ship",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-preboss",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-o-preboss:boss",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      }
+    ]
+  },
+  "occurrences": [
+    {
+      "id": "O:start",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"O:start\"]",
+      "biomeKey": "O",
+      "gameName": "O_Intro",
+      "kind": "EmptyEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ApolloUpgrade"
+        },
+        "unmodeledEncounterKeys": ["Empty"],
+        "encounterPhases": [],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"O:start\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"Dream\",\"O\",\"O:start\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "ApolloUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"O\\\",\\\"O:start\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"O:start\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Apollo",
+                  "options": [
+                    { "key": "ApolloWeaponBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"O:start\\\"]\",\"source\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"O:start\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "dream-o-first-ship", "biomeKey": "O", "gameName": "O_Combat04" },
+            "zagreusContractPresent": false
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 0,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"O:start\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 1,
+              "routeEncounterDepth": 1,
+              "roomHistoryOrdinal": 0
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "godPool": {
+              "acquiredSourceKeys": [],
+              "effectiveSourceKeys": [
+                "AphroditeUpgrade",
+                "ApolloUpgrade",
+                "AresUpgrade",
+                "DemeterUpgrade",
+                "HephaestusUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "PoseidonUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [],
+              "slots": [
+                { "slot": "Melee" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 0, "Fire": 0, "Water": 0 },
+              "godRarityCounts": {},
+              "upgradableCount": 0,
+              "bannedTraitKeys": []
+            },
+            "arcana": { "active": [] },
+            "vows": {
+              "configuredRanks": {
+                "HealingReductionShrineUpgrade": 0,
+                "ShopPricesShrineUpgrade": 0,
+                "EnemyHealthShrineUpgrade": 0,
+                "EnemyDamageShrineUpgrade": 0,
+                "EnemySpeedShrineUpgrade": 0,
+                "EnemyShieldShrineUpgrade": 0,
+                "EnemyCountShrineUpgrade": 0,
+                "EnemyRespawnShrineUpgrade": 0,
+                "NextBiomeEnemyShrineUpgrade": 0,
+                "BiomeSpeedShrineUpgrade": 0,
+                "MinibossCountShrineUpgrade": 0,
+                "BossDifficultyShrineUpgrade": 0,
+                "BoonSkipShrineUpgrade": 0,
+                "BoonManaReserveShrineUpgrade": 0,
+                "BanUnpickedBoonsShrineUpgrade": 0,
+                "LimitGraspShrineUpgrade": 0,
+                "EnemyEliteShrineUpgrade": 0
+              },
+              "effectiveRanks": {
+                "HealingReductionShrineUpgrade": 0,
+                "ShopPricesShrineUpgrade": 0,
+                "EnemyHealthShrineUpgrade": 0,
+                "EnemyDamageShrineUpgrade": 0,
+                "EnemySpeedShrineUpgrade": 0,
+                "EnemyShieldShrineUpgrade": 0,
+                "EnemyCountShrineUpgrade": 0,
+                "EnemyRespawnShrineUpgrade": 0,
+                "NextBiomeEnemyShrineUpgrade": 0,
+                "BiomeSpeedShrineUpgrade": 0,
+                "MinibossCountShrineUpgrade": 0,
+                "BossDifficultyShrineUpgrade": 0,
+                "BoonSkipShrineUpgrade": 0,
+                "BoonManaReserveShrineUpgrade": 0,
+                "BanUnpickedBoonsShrineUpgrade": 0,
+                "LimitGraspShrineUpgrade": 0,
+                "EnemyEliteShrineUpgrade": 0
+              },
+              "disabledKeys": []
+            },
+            "forfeit": "inactive",
+            "chaos": { "active": [], "matured": [] },
+            "keepsakes": {
+              "currentKey": "ManaOverTimeRefundKeepsake",
+              "usedKeys": ["ManaOverTimeRefundKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown"
+            },
+            "rewardPriorities": [],
+            "hexProgress": {
+              "talentKeys": [],
+              "closed": false,
+              "bankedPathPoints": 0,
+              "investedPathPoints": 0
+            },
+            "artificer": null,
+            "retainedEffects": {
+              "echoShopDuplicateStatus": null,
+              "keepsakes": {
+                "olympianSources": [],
+                "jeweledPom": null,
+                "experimentalHammers": [],
+                "callingCard": null,
+                "timePiece": null,
+                "figLeaf": null,
+                "phial": null,
+                "figurine": null,
+                "stone": null,
+                "transcendentEmbryo": null,
+                "gorgon": null
+              },
+              "steadyGrowth": [],
+              "hermesShrineDeliveries": [],
+              "stygianWell": {
+                "sparkUses": 0,
+                "yarnUses": 0,
+                "hymnUses": 0,
+                "discountUses": [],
+                "emptySlotUses": [],
+                "extendedUses": 0
+              }
+            }
+          }
+        },
+        "beforeRoomExit": {
+          "frame": 1,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"O:start\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 2,
+              "biomeEncounterDepth": 1,
+              "routeEncounterDepth": 1,
+              "roomHistoryOrdinal": 1
+            },
+            "godPool": {
+              "acquiredSourceKeys": ["ApolloUpgrade"],
+              "effectiveSourceKeys": [
+                "AphroditeUpgrade",
+                "ApolloUpgrade",
+                "AresUpgrade",
+                "DemeterUpgrade",
+                "HephaestusUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "PoseidonUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [{ "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 }],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 1 },
+              "upgradableCount": 1,
+              "bannedTraitKeys": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-first-ship",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-first-ship\"]",
+      "biomeKey": "O",
+      "gameName": "O_Combat04",
+      "kind": "ShipEncounter",
+      "overview": {
+        "encounterPhases": [
+          { "slotKey": "Intro", "encounterKey": "GeneratedO_Intro01", "kind": "combat" },
+          { "slotKey": "Combat1", "encounterKey": "GeneratedO", "kind": "combat" }
+        ],
+        "rewardWheels": [
+          {
+            "wheelKey": "wheel1",
+            "phaseKey": "Combat1",
+            "phaseOwner": "[\"encounterPhase\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-first-ship\"},\"Combat1\"]",
+            "offerCount": 1,
+            "storeKey": "MetaProgress",
+            "offers": [
+              {
+                "offerKey": "offer1",
+                "reward": {
+                  "rewardType": "MetaCurrencyDrop",
+                  "producerLifecycleKey": "RoomReward",
+                  "resolvedStoreKey": "MetaProgress"
+                }
+              }
+            ],
+            "pickedOfferKey": "offer1"
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "chooseRewardWheel",
+            "owner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\"]",
+            "window": { "kind": "shipPreCombat", "wheelKey": "wheel1" },
+            "wheelKey": "wheel1",
+            "pickedOfferKey": "offer1"
+          },
+          {
+            "kind": "acquisition",
+            "owner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\",\"offer1\"]",
+            "sourceOwner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\",\"offer1\"]",
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "resource",
+                "gameName": "MetaCurrencyDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"rewardWheel\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-first-ship\\\",\\\"wheel1\\\"]\",\"wheel1\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"rewardWheel\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"dream-o-first-ship\\\\\\\",\\\\\\\"wheel1\\\\\\\"]\\\",\\\"wheel1\\\"]\",\"picked\"]"
+                }
+              }
+            ],
+            "window": { "kind": "shipPostCombat", "wheelKey": "wheel1" }
+          }
+        ],
+        "dependencies": [
+          {
+            "owner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\",\"offer1\"]",
+            "afterOwner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\"]"
+          }
+        ],
+        "obligations": [
+          {
+            "owner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\"]",
+            "checkpoint": "exitUsable"
+          }
+        ]
+      },
+      "roomGuide": [
+        {
+          "key": "[\"chooseRewardWheel\",\"wheel1\"]",
+          "description": { "kind": "chooseRewardWheel", "wheelKey": "wheel1" },
+          "transactionOwner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\"]"
+        },
+        {
+          "key": "[\"interactWheelReward\",\"wheel1\"]",
+          "description": {
+            "kind": "interactWheelReward",
+            "wheelKey": "wheel1",
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          "transactionOwner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-first-ship\",\"wheel1\",\"offer1\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-first-ship\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "dream-o-second-ship", "biomeKey": "O", "gameName": "O_Combat07" },
+            "zagreusContractPresent": false
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "beforeRoomExit": {
+          "frame": 2,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-first-ship\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 3,
+              "biomeEncounterDepth": 2,
+              "routeEncounterDepth": 2,
+              "roomHistoryOrdinal": 2
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-second-ship",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-second-ship\"]",
+      "biomeKey": "O",
+      "gameName": "O_Combat07",
+      "kind": "ShipEncounter",
+      "overview": {
+        "encounterPhases": [
+          { "slotKey": "Intro", "encounterKey": "GeneratedO_Intro01", "kind": "combat" },
+          { "slotKey": "Combat1", "encounterKey": "GeneratedO", "kind": "combat" }
+        ],
+        "rewardWheels": [
+          {
+            "wheelKey": "wheel1",
+            "phaseKey": "Combat1",
+            "phaseOwner": "[\"encounterPhase\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-second-ship\"},\"Combat1\"]",
+            "offerCount": 1,
+            "storeKey": "RunProgress",
+            "offers": [
+              {
+                "offerKey": "offer1",
+                "reward": {
+                  "rewardType": "MaxHealthDrop",
+                  "producerLifecycleKey": "RoomReward",
+                  "resolvedStoreKey": "RunProgress"
+                }
+              }
+            ],
+            "pickedOfferKey": "offer1"
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "chooseRewardWheel",
+            "owner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\"]",
+            "window": { "kind": "shipPreCombat", "wheelKey": "wheel1" },
+            "wheelKey": "wheel1",
+            "pickedOfferKey": "offer1"
+          },
+          {
+            "kind": "acquisition",
+            "owner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\",\"offer1\"]",
+            "sourceOwner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\",\"offer1\"]",
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "consumable",
+                "gameName": "MaxHealthDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"rewardWheel\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-second-ship\\\",\\\"wheel1\\\"]\",\"wheel1\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"rewardWheel\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"dream-o-second-ship\\\\\\\",\\\\\\\"wheel1\\\\\\\"]\\\",\\\"wheel1\\\"]\",\"picked\"]"
+                }
+              }
+            ],
+            "window": { "kind": "shipPostCombat", "wheelKey": "wheel1" }
+          }
+        ],
+        "dependencies": [
+          {
+            "owner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\",\"offer1\"]",
+            "afterOwner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\"]"
+          }
+        ],
+        "obligations": [
+          {
+            "owner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\"]",
+            "checkpoint": "exitUsable"
+          }
+        ]
+      },
+      "roomGuide": [
+        {
+          "key": "[\"chooseRewardWheel\",\"wheel1\"]",
+          "description": { "kind": "chooseRewardWheel", "wheelKey": "wheel1" },
+          "transactionOwner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\"]"
+        },
+        {
+          "key": "[\"interactWheelReward\",\"wheel1\"]",
+          "description": {
+            "kind": "interactWheelReward",
+            "wheelKey": "wheel1",
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          "transactionOwner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-second-ship\",\"wheel1\",\"offer1\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-second-ship\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "dream-o-miniboss", "biomeKey": "O", "gameName": "O_MiniBoss02" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "AresUpgrade"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "beforeRoomExit": {
+          "frame": 3,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-second-ship\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 4,
+              "biomeEncounterDepth": 3,
+              "routeEncounterDepth": 3,
+              "roomHistoryOrdinal": 3
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-miniboss",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-miniboss\"]",
+      "biomeKey": "O",
+      "gameName": "O_MiniBoss02",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "AresUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "MiniBossCaptain", "kind": "miniboss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-miniboss\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"Dream\",\"O\",\"dream-o-miniboss\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "AresUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "AresUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-miniboss\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"dream-o-miniboss\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Ares",
+                  "options": [
+                    {
+                      "key": "AresWeaponBoon",
+                      "rarity": "Rare",
+                      "effectiveLevel": 1,
+                      "replacement": {
+                        "slot": "Melee",
+                        "replacedTraitKey": "ApolloWeaponBoon",
+                        "oldRarity": "Common",
+                        "newTraitKey": "AresWeaponBoon",
+                        "requiredRarity": "Rare"
+                      }
+                    },
+                    { "key": "AresSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "AresCastBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "AresUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-miniboss\\\"]\",\"source\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-miniboss\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "dream-o-shop", "biomeKey": "O", "gameName": "O_Shop01" },
+            "zagreusContractPresent": true,
+            "reward": {
+              "rewardType": "Shop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 4,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-miniboss\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 5,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-miniboss\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 5,
+              "biomeEncounterDepth": 4,
+              "routeEncounterDepth": 4,
+              "roomHistoryOrdinal": 4
+            },
+            "godPool": {
+              "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade"],
+              "effectiveSourceKeys": [
+                "AphroditeUpgrade",
+                "ApolloUpgrade",
+                "AresUpgrade",
+                "DemeterUpgrade",
+                "HephaestusUpgrade",
+                "HeraUpgrade",
+                "HestiaUpgrade",
+                "PoseidonUpgrade",
+                "ZeusUpgrade"
+              ],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [{ "traitKey": "AresWeaponBoon", "rarity": "Rare", "level": 1 }],
+              "slots": [
+                { "slot": "Melee", "traitKey": "AresWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 1, "Air": 0, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Rare": 1 },
+              "upgradableCount": 1,
+              "bannedTraitKeys": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-shop",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-shop\"]",
+      "biomeKey": "O",
+      "gameName": "O_Shop01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Shop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
+        ],
+        "requiredObjects": [],
+        "shop": {
+          "profileKey": "WorldShop",
+          "offers": [
+            {
+              "offerKey": "Boon",
+              "profileSlotIndex": 0,
+              "optionKey": "RandomLoot",
+              "rewardType": "RandomLoot",
+              "source": "ApolloUpgrade"
+            },
+            {
+              "offerKey": "MajorNonBoon",
+              "profileSlotIndex": 1,
+              "optionKey": "MaxHealthDrop",
+              "rewardType": "MaxHealthDrop"
+            },
+            {
+              "offerKey": "Minor",
+              "profileSlotIndex": 2,
+              "optionKey": "MaxManaDrop",
+              "rewardType": "MaxManaDrop"
+            }
+          ]
+        },
+        "additional": [
+          {
+            "kind": "zagreusContract",
+            "owner": "[\"additionalExit\",\"Dream\",\"O\",\"dream-o-shop\",\"zagreusContract\"]",
+            "room": { "id": "dream-o-contract", "biomeKey": "O", "gameName": "C_Boss01" }
+          }
+        ]
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-shop\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "dream-o-skipped-ship", "biomeKey": "O", "gameName": "O_Combat02" },
+            "zagreusContractPresent": false
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 6,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-shop\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 7,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-shop\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 6,
+              "biomeEncounterDepth": 4,
+              "routeEncounterDepth": 4,
+              "roomHistoryOrdinal": 5
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-skipped-ship",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-skipped-ship\"]",
+      "biomeKey": "O",
+      "gameName": "O_Combat02",
+      "kind": "ShipEncounter",
+      "overview": {
+        "encounterPhases": [
+          { "slotKey": "Intro", "encounterKey": "GeneratedO_Intro01", "kind": "combat" },
+          { "slotKey": "Combat1", "encounterKey": "GeneratedO", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-skipped-ship\"]",
+        "kind": "terminal"
+      }
+    },
+    {
+      "id": "dream-o-contract",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-contract\"]",
+      "biomeKey": "O",
+      "gameName": "C_Boss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "InfernalContractBoon",
+          "producerLifecycleKey": "RoomReward"
+        },
+        "effectNeutralRequiredReward": true,
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "BossZagreus01", "kind": "boss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-contract\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"Dream\",\"O\",\"dream-o-contract\"]",
+            "reward": {
+              "rewardType": "InfernalContractBoon",
+              "producerLifecycleKey": "RoomReward"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "InfernalContractBoon",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-contract\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"dream-o-contract\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"collectRequiredReward\"]",
+          "description": { "kind": "collectRequiredReward" }
+        },
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": { "rewardType": "InfernalContractBoon", "producerLifecycleKey": "RoomReward" }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"O\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-contract\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-contract\"}]",
+        "kind": "fixed",
+        "target": { "id": "dream-o-return-ship", "biomeKey": "O", "gameName": "O_Combat01" },
+        "zagreusContractPresent": false
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 8,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-contract\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 9,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-contract\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 7,
+              "biomeEncounterDepth": 4,
+              "routeEncounterDepth": 4,
+              "roomHistoryOrdinal": 6
+            },
+            "traits": {
+              "equipped": [
+                { "traitKey": "AresWeaponBoon", "rarity": "Rare", "level": 1 },
+                { "traitKey": "InfernalContractBoon" }
+              ],
+              "slots": [
+                { "slot": "Melee", "traitKey": "AresWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 1, "Air": 0, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Rare": 1 },
+              "upgradableCount": 1,
+              "bannedTraitKeys": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-return-ship",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-return-ship\"]",
+      "biomeKey": "O",
+      "gameName": "O_Combat01",
+      "kind": "ShipEncounter",
+      "overview": {
+        "encounterPhases": [
+          { "slotKey": "Intro", "encounterKey": "GeneratedO_Intro01", "kind": "combat" },
+          { "slotKey": "Combat1", "encounterKey": "GeneratedO", "kind": "combat" }
+        ],
+        "rewardWheels": [
+          {
+            "wheelKey": "wheel1",
+            "phaseKey": "Combat1",
+            "phaseOwner": "[\"encounterPhase\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-return-ship\"},\"Combat1\"]",
+            "offerCount": 1,
+            "storeKey": "MetaProgress",
+            "offers": [
+              {
+                "offerKey": "offer1",
+                "reward": {
+                  "rewardType": "MetaCurrencyDrop",
+                  "producerLifecycleKey": "RoomReward",
+                  "resolvedStoreKey": "MetaProgress"
+                }
+              }
+            ],
+            "pickedOfferKey": "offer1"
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "chooseRewardWheel",
+            "owner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\"]",
+            "window": { "kind": "shipPreCombat", "wheelKey": "wheel1" },
+            "wheelKey": "wheel1",
+            "pickedOfferKey": "offer1"
+          },
+          {
+            "kind": "acquisition",
+            "owner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\",\"offer1\"]",
+            "sourceOwner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\",\"offer1\"]",
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "resource",
+                "gameName": "MetaCurrencyDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"O\",\"[\\\"rewardWheel\\\",\\\"Dream\\\",\\\"O\\\",\\\"dream-o-return-ship\\\",\\\"wheel1\\\"]\",\"wheel1\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"O\\\",\\\"[\\\\\\\"rewardWheel\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"dream-o-return-ship\\\\\\\",\\\\\\\"wheel1\\\\\\\"]\\\",\\\"wheel1\\\"]\",\"picked\"]"
+                }
+              }
+            ],
+            "window": { "kind": "shipPostCombat", "wheelKey": "wheel1" }
+          }
+        ],
+        "dependencies": [
+          {
+            "owner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\",\"offer1\"]",
+            "afterOwner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\"]"
+          }
+        ],
+        "obligations": [
+          {
+            "owner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\"]",
+            "checkpoint": "exitUsable"
+          }
+        ]
+      },
+      "roomGuide": [
+        {
+          "key": "[\"chooseRewardWheel\",\"wheel1\"]",
+          "description": { "kind": "chooseRewardWheel", "wheelKey": "wheel1" },
+          "transactionOwner": "[\"rewardWheel\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\"]"
+        },
+        {
+          "key": "[\"interactWheelReward\",\"wheel1\"]",
+          "description": {
+            "kind": "interactWheelReward",
+            "wheelKey": "wheel1",
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          "transactionOwner": "[\"rewardWheelOffer\",\"Dream\",\"O\",\"dream-o-return-ship\",\"wheel1\",\"offer1\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-o-return-ship\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "dream-o-preboss", "biomeKey": "O", "gameName": "O_PreBoss01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Shop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "beforeRoomExit": {
+          "frame": 10,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-return-ship\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 8,
+              "biomeEncounterDepth": 5,
+              "routeEncounterDepth": 5,
+              "roomHistoryOrdinal": 7
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 11 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-preboss",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-preboss\"]",
+      "biomeKey": "O",
+      "gameName": "O_PreBoss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Shop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
+        ],
+        "requiredObjects": [],
+        "shop": {
+          "profileKey": "WorldShop",
+          "offers": [
+            {
+              "offerKey": "Boon",
+              "profileSlotIndex": 0,
+              "optionKey": "RandomLoot",
+              "rewardType": "RandomLoot",
+              "source": "ApolloUpgrade"
+            },
+            {
+              "offerKey": "MajorNonBoon",
+              "profileSlotIndex": 1,
+              "optionKey": "MaxHealthDrop",
+              "rewardType": "MaxHealthDrop"
+            },
+            {
+              "offerKey": "Minor",
+              "profileSlotIndex": 2,
+              "optionKey": "MaxManaDrop",
+              "rewardType": "MaxManaDrop"
+            }
+          ],
+          "infernalContract": {
+            "sourceOwner": "[\"shopOffer\",\"Dream\",\"O\",\"dream-o-preboss\",\"infernalContractReward\"]",
+            "rewardType": "StackUpgrade"
+          }
+        }
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-preboss\"]",
+        "kind": "fixed",
+        "target": { "id": "dream-o-preboss:boss", "biomeKey": "O", "gameName": "O_Boss01" },
+        "zagreusContractPresent": false
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 11,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-preboss\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 12,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-preboss\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 8,
+              "biomeEncounterDepth": 5,
+              "routeEncounterDepth": 5,
+              "roomHistoryOrdinal": 8
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-o-preboss:boss",
+      "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-preboss:boss\"]",
+      "biomeKey": "O",
+      "gameName": "O_Boss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "effectNeutralRequiredReward": true,
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "BossEris01", "kind": "boss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [
+        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+      ],
+      "doors": {
+        "owner": "[\"occurrence\",\"Dream\",\"O\",\"dream-o-preboss:boss\"]",
+        "kind": "terminal"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 13,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-preboss:boss\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 14,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"O\",\"dream-o-preboss:boss\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 9,
+              "biomeEncounterDepth": 5,
+              "routeEncounterDepth": 5,
+              "roomHistoryOrdinal": 9
+            }
+          }
+        }
+      }
+    }
+  ],
+  "planFingerprint": "62f7683d"
+}

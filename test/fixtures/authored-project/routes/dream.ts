@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createOccurrenceAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -15,10 +16,13 @@ import {
   createHubSlotAddress,
   createLocalVisitSlotAddress,
   createProjectDocument,
+  createRewardWheelAddress,
+  createRewardWheelOfferAddress,
   createShopOfferAddress,
   createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -586,4 +590,149 @@ export function dreamSingleQShrineDeliveryProject(): ProjectDocument {
     delay: 8,
     rushed: false,
   });
+}
+
+const oBiome = createBiomeAddress('Dream', 'O');
+
+export const dreamOSkippedShipOccurrenceIds = Object.freeze({
+  shop: createOccurrenceId('dream-o-shop'),
+  skippedShip: createOccurrenceId('dream-o-skipped-ship'),
+  contract: createOccurrenceId('dream-o-contract'),
+});
+
+/**
+ * A complete one-biome Dream itinerary (`['O']`) whose Midshop takes the
+ * Zagreus Contract over its never-entered Ship combat door. The Ship-room
+ * intro window and the Shop and Preboss depth floors set its length.
+ */
+export function dreamOSkippedShipProject(): ProjectDocument {
+  let project = createProjectDocument(catalog, {
+    projectId: 'dream-o-skipped-ship',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: ['O'],
+    configuredBiomeCount: 1,
+  });
+  const apply = (command: Parameters<typeof applyProjectCommand>[2]) => {
+    project = applyProjectCommand(project, catalog, command);
+  };
+  const source = (occurrenceId: OccurrenceId) => ({ kind: 'occurrence' as const, occurrenceId });
+  const { shop, skippedShip, contract } = dreamOSkippedShipOccurrenceIds;
+  const start = project.route.biomes[0]!.topology!.startOccurrenceId;
+  const firstShip = createOccurrenceId('dream-o-first-ship');
+  const secondShip = createOccurrenceId('dream-o-second-ship');
+  const miniboss = createOccurrenceId('dream-o-miniboss');
+  const returnShip = createOccurrenceId('dream-o-return-ship');
+  const preboss = createOccurrenceId('dream-o-preboss');
+  apply({
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Dream'),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  // A Ship room's door reward comes from its wheel, so only other sources author a store.
+  for (const [from, storeKey, to, gameName] of [
+    [start, 'MetaProgress', firstShip, 'O_Combat04'],
+    [firstShip, null, secondShip, 'O_Combat07'],
+    [secondShip, null, miniboss, 'O_MiniBoss02'],
+    [miniboss, 'RunProgress', shop, 'O_Shop01'],
+    [shop, 'MetaProgress', skippedShip, 'O_Combat02'],
+  ] as const) {
+    const decision = createExitDecisionAddress(oBiome, source(from));
+    apply({ kind: 'CreateBatch', decision });
+    if (storeKey !== null)
+      apply({
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: createBatchRewardStoreAddress(oBiome, decision.source),
+        storeKey,
+      });
+    apply({
+      kind: 'CreateTarget',
+      target: createTargetAddress(oBiome, decision.source, 'exit1'),
+      occurrenceId: to,
+      gameName,
+    });
+  }
+  apply({
+    kind: 'AddZagreusContract',
+    additional: createAdditionalExitAddress(oBiome, shop, 'zagreusContract'),
+    occurrenceId: contract,
+  });
+  apply({
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(oBiome, source(shop)),
+    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+  });
+  apply({ kind: 'CreateBatch', decision: createExitDecisionAddress(oBiome, source(contract)) });
+  apply({
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(oBiome, source(contract)),
+    storeKey: 'MetaProgress',
+  });
+  apply({
+    kind: 'CreateTarget',
+    target: createTargetAddress(oBiome, source(contract), 'exit1'),
+    occurrenceId: returnShip,
+    gameName: 'O_Combat01',
+  });
+  apply({
+    kind: 'CreateTakeoverBatch',
+    decision: createExitDecisionAddress(oBiome, source(returnShip)),
+    gameName: 'O_PreBoss01',
+    targetOccurrenceIds: { exit1: preboss },
+  });
+  apply({
+    kind: 'ReplaceBossDoorRewardStore',
+    rewardStore: createBatchRewardStoreAddress(oBiome, source(preboss)),
+    storeKey: 'RunProgress',
+  });
+  for (const [occurrenceId, storeKey, rewardType] of [
+    [firstShip, 'MetaProgress', 'MetaCurrencyDrop'],
+    [secondShip, 'RunProgress', 'MaxHealthDrop'],
+    [returnShip, 'MetaProgress', 'MetaCurrencyDrop'],
+  ] as const) {
+    apply({
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, occurrenceId, 'wheel1'),
+      storeKey,
+    });
+    apply({
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, occurrenceId, 'wheel1', 'offer1'),
+      value: { rewardType },
+    });
+  }
+  apply({
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(oBiome, miniboss),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+  });
+  const boon = {
+    rewardType: 'RandomLoot',
+    payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+  };
+  for (const [occurrenceId, offers] of [
+    [
+      shop,
+      {
+        Boon: boon,
+        MajorNonBoon: { rewardType: 'MaxHealthDrop' },
+        Minor: { rewardType: 'MaxManaDrop' },
+      },
+    ],
+    [
+      preboss,
+      {
+        Boon: boon,
+        MajorNonBoon: { rewardType: 'MaxHealthDrop' },
+        Minor: { rewardType: 'MaxManaDrop' },
+        infernalContractReward: { rewardType: 'StackUpgrade' },
+      },
+    ],
+  ] as const)
+    for (const [offerKey, value] of Object.entries(offers))
+      apply({
+        kind: 'ReplaceShopOffer',
+        offer: createShopOfferAddress(oBiome, occurrenceId, offerKey),
+        value,
+      });
+  return authorLegalTraitOffers(project);
 }

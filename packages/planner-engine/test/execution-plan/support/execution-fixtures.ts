@@ -28,7 +28,10 @@ import {
   loadUnderworldIxionChaosCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
-import { dreamSingleQShrineDeliveryProject } from '@run-planner/test-fixtures/dream';
+import {
+  dreamOSkippedShipProject,
+  dreamSingleQShrineDeliveryProject,
+} from '@run-planner/test-fixtures/dream';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNPhialIntermediateFountainCheckpoint,
@@ -54,6 +57,7 @@ import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group-fixture';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
+import dreamOSkippedShipFixture from '../fixtures/dream-o-skipped-ship.execution.json';
 import dreamShrinePendingFixture from '../fixtures/dream-shrine-pending.execution.json';
 import fOpeningFixture from '../fixtures/f-opening.execution.json';
 import runModifiersFixture from '../fixtures/run-modifiers.execution.json';
@@ -237,6 +241,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'surface-travel-deal-refill-anvil',
     project: surfaceTravelDealRefillAnvilProject,
     wire: surfaceTravelDealRefillAnvilFixture,
+  },
+  {
+    name: 'dream-o-skipped-ship',
+    project: dreamOSkippedShipProject,
+    wire: dreamOSkippedShipFixture,
   },
 ]);
 

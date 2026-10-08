@@ -13,15 +13,18 @@ local conformance = type(import) == "function" and import("mods/protocol/conform
 
 local occurrences = {}
 
+local function shipCombatPhaseCount(row)
+    local count = 0
+    for _, phase in ipairs(row.overview.encounterPhases) do
+        if phase.slotKey ~= "Intro" and phase.kind == "combat" then count = count + 1 end
+    end
+    return count
+end
+
 local function validateRewardWheelProduct(row, label)
     local wheels = row.overview.rewardWheels or {}
-    local combatPhaseCount = 0
-    for _, phase in ipairs(row.overview.encounterPhases) do
-        if phase.slotKey ~= "Intro" and phase.kind == "combat" then
-            combatPhaseCount = combatPhaseCount + 1
-        end
-    end
-    if (row.kind == "ShipEncounter" and #wheels ~= combatPhaseCount)
+    -- Whether a Ship room publishes its wheels at all depends on route selection.
+    if (row.kind == "ShipEncounter" and #wheels ~= 0 and #wheels ~= shipCombatPhaseCount(row))
         or (row.kind ~= "ShipEncounter" and #wheels > 0) then
         return p.fail(label .. ".overview.rewardWheels must match the Ship encounter phases")
     end
@@ -544,6 +547,11 @@ function occurrences.decode(value, selected, label)
     for _, row in ipairs(result) do
         if selectedSeen[row.id] and row.kind == "FieldsEncounter" and row.overview.fields == nil then
             return p.fail(label .. "[" .. row.id .. "].overview.fields is required for a selected Fields encounter")
+        end
+        -- Only a selected Ship room is entered, so only it spins its wheels.
+        if row.kind == "ShipEncounter"
+            and #(row.overview.rewardWheels or {}) ~= (selectedSeen[row.id] and shipCombatPhaseCount(row) or 0) then
+            return p.fail(label .. "[" .. row.id .. "].overview.rewardWheels must match the Ship encounter phases")
         end
         if row.resumeBoundary ~= nil then
             if not selectedSeen[row.id] then
