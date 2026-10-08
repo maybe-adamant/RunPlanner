@@ -1490,7 +1490,7 @@ describe('planner history interaction', () => {
     const view = renderPlannerForInteraction({ application });
 
     const checkbox = await screen.findByRole('checkbox', {
-      name: 'Sea Star procced for Reward',
+      name: 'Double Up for Reward',
     });
     expect(checkbox).toHaveProperty('checked', false);
     const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
