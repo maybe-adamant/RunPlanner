@@ -600,12 +600,22 @@ select {
 }
 
 .door-fixed-reward > .fixed-room-state,
+.door-fixed-room > .fixed-room-state,
 .door-reward-list > .fixed-room-state,
 .pending-room-status > .fixed-room-state,
 .pending-reward-status > .fixed-room-state {
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+/* Door card fixed values take a control's height and text inset so rows line up across cards. */
+.door-fixed-reward > .fixed-room-state,
+.door-fixed-room > .fixed-room-state {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  padding: 6px 10px;
 }
 
 .start-room-fixed > .fixed-room-state {
@@ -660,6 +670,15 @@ select {
 .fixed-room-state {
   color: #aaa7af;
   font-size: 0.88rem;
+}
+
+/* A fixed value reads as a value, not as its row label. */
+.field-control > .fixed-room-state {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .topology-editor {
@@ -806,12 +825,6 @@ select {
   gap: 8px;
 }
 
-.additional-exit-room-state {
-  margin: 8px 0 0;
-  padding: 0;
-  border: 0;
-}
-
 .door-status-note {
   margin: 0;
   padding: 0;
@@ -825,6 +838,12 @@ select {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+/* The map action keeps one line beside the title. */
+.exit-heading > :last-child {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .exit-heading h4,

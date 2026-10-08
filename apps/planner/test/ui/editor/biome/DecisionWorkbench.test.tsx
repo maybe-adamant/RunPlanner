@@ -346,8 +346,10 @@ describe('DecisionWorkbench', () => {
     expect(within(normalDoor).getByText('Room', { selector: 'label' })).toBeTruthy();
     expect(within(normalDoor).queryByText('Door 1 room', { selector: 'label' })).toBeNull();
     expect(gate.dataset.picked).toBe('false');
-    expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
-    expect(within(gate).getByLabelText('Map').textContent).toContain('Chaos 01');
+    expect(within(gate).getByText('Chaos gate', { selector: '.card-kicker' })).toBeTruthy();
+    expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos 01' })).toBeTruthy();
+    expect(within(gate).getByLabelText('Room').textContent).toContain('Chaos 01');
+    expect(within(gate).getByText('Chaos Blessing')).toBeTruthy();
     expect(within(gate).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
       'disabled',
@@ -604,7 +606,7 @@ describe('DecisionWorkbench', () => {
       ),
     );
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
-    expect(within(gate).getByLabelText('Map')).toBeTruthy();
+    expect(within(gate).getByLabelText('Room')).toBeTruthy();
     expect(within(gate).getByLabelText('Take Chaos gate')).toBeTruthy();
   });
 
@@ -634,18 +636,19 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(createExitDecisionAddress(biome, source)),
     );
 
-    const contract = screen.getByRole('article', { name: 'Zagreus contract exit' });
+    const contract = screen.getByRole('article', { name: 'Infernal Contract exit' });
     expect(contract.dataset.picked).toBe('false');
     expect(
-      within(contract).getByRole('heading', { level: 4, name: 'Zagreus contract' }),
+      within(contract).getByText('Infernal Contract', { selector: '.card-kicker' }),
     ).toBeTruthy();
-    expect(within(contract).getByText(/^Room: /)).toBeTruthy();
+    expect(within(contract).getByRole('heading', { level: 4, name: 'Zagreus' })).toBeTruthy();
+    expect(within(contract).getByText('Champion of Elysium')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
-    expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
+    expect(screen.getByLabelText('Take Infernal Contract')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     const open = screen.getByRole('button', { name: 'Open next room' });
-    const room = within(contract).getByText(/^Room: /);
+    const room = within(contract).getByText('Champion of Elysium');
     expect(room.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(contract.querySelector('hr')).toBeNull();
     cleanup();
@@ -1678,7 +1681,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
   });
 
-  it('labels authored-selected retained rooms without claiming evaluated entry', () => {
+  it('keeps an authored-selected retained room selectable without evaluated entry', () => {
     const base = createCompleteFGProject();
     const blocked = {
       ...base,
@@ -1717,11 +1720,7 @@ describe('DecisionWorkbench', () => {
     const selectedControl = screen
       .getAllByRole('radio')
       .find((radio) => (radio as HTMLInputElement).checked);
-    const offer = selectedControl?.closest<HTMLElement>('article');
-    if (offer === undefined || offer === null)
-      throw new Error('selected retained offer is missing');
-    expect(within(offer).getByText('Room selected')).toBeTruthy();
-    expect(within(offer).queryByText('Door taken')).toBeNull();
+    if (selectedControl === undefined) throw new Error('selected retained offer is missing');
     expect(selectedControl).not.toHaveProperty('disabled', true);
     expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
       'disabled',

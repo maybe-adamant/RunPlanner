@@ -1,50 +1,12 @@
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
-  type WorkspaceChaosExitControl,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomFeature,
 } from '@planner/projections/structured-workspace';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
-
-export function ChaosMapWorkbench({
-  control,
-  interactions,
-}: {
-  readonly control: WorkspaceChaosExitControl;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const executeIntent = useCommandIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.chaosExits,
-    workspaceInteractionKey(control.owner),
-  );
-  return (
-    <div className="additional-exit-map-control">
-      <ContextualPicker
-        id={`chaos-map-${control.door.room.occurrenceId}`}
-        label="Map"
-        layout="inline"
-        model={declaredChoicesPicker(
-          control.mapChoices.map((choice) => ({ ...choice, key: choice.value })),
-          control.door.room.gameName,
-        )}
-        onSelect={(gameName) => executeIntent(interaction.mapIntent(gameName))}
-        placeholder="Choose a map"
-      />
-      <RoomMapLauncher
-        gameName={control.door.room.gameName}
-        hostId={workspaceInteractionKey(control.owner)}
-        title={control.door.room.label}
-      />
-    </div>
-  );
-}
 
 /** The selected Midshop owns only the available spawn affordance. */
 export function ZagreusSpawnWorkbench({

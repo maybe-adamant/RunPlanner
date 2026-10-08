@@ -186,8 +186,11 @@ function selectedContinuationDoor(node: BatchWithContinuations): WorkspaceDoorCo
 }
 
 /** Reward identity resolved on every offer this door presents; visibility is irrelevant. */
+// A reward without a control, such as a Clockwork Goal, has nothing left to choose.
 function doorRewardsResolved(door: WorkspaceDoorContract): boolean {
-  return door.offerRewardSurface.rewards.every((reward) => reward.offer !== null);
+  return door.offerRewardSurface.rewards.every(
+    (reward) => reward.offer !== null || reward.control === undefined,
+  );
 }
 
 /** The game opens exits only when every door is complete, so a continuation is

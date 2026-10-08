@@ -115,8 +115,23 @@ function offerRewardRewards(
       return Object.freeze([]);
     case 'incomingReward': {
       if (roomLocal.kind === 'none') return Object.freeze([]);
+      // A Clockwork Goal door shows the goal itself; its counted reward stays dormant.
       if (roomLocal.kind === 'incomingReward' && roomLocal.clockworkReward === 'goal') {
-        return Object.freeze([]);
+        const goal = input.catalog.rewards.rewardTypes.byKey.ClockworkGoal;
+        if (goal === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            'the catalog declares no ClockworkGoal reward type',
+          );
+        }
+        return Object.freeze([
+          Object.freeze({
+            key: 'incoming',
+            label: 'Door reward',
+            marker: roomLocal.control.marker,
+            offer: null,
+            summary: goal.label,
+          }),
+        ]);
       }
       if (roomLocal.kind === 'fixed') {
         return Object.freeze([
