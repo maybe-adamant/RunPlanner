@@ -37,7 +37,10 @@ import {
 } from './contract';
 import { replaceOccurrence } from './occurrence/mutation';
 import { reconcileNormalTargetEntryStates } from './selection-state';
-import { reconcileExitDecisionToDeclaredCapacity } from './topology-reconciliation';
+import {
+  exitKeysForTopologySource,
+  reconcileExitDecisionToDeclaredCapacity,
+} from './topology-reconciliation';
 import type { RouteDetourCommand } from './types';
 
 function replaceDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {
@@ -858,27 +861,44 @@ function replaceChaosMap(
   ) {
     failCommand(command, `${command.gameName} is not a declared Chaos map`);
   }
+  const remapped = replaceOccurrence(
+    topology,
+    Object.freeze({
+      ...occurrence,
+      gameName: room.gameName,
+      state: createDefaultRoomState(catalog, room, {
+        routeKey: located.routePosition.routeKey,
+        role: 'ordinary',
+        entryActive: false,
+        loadout: located.loadout,
+      }),
+      encounters: createDefaultRoomEncounterState(
+        catalog,
+        room,
+        `occurrences.${occurrence.occurrenceId}.encounters`,
+      ),
+    }),
+  );
+  // A narrower map trims the Chaos room's own continuation to its doors.
+  const chaosSource = { kind: 'occurrence' as const, occurrenceId: occurrence.occurrenceId };
+  const outgoing = exitDecisionForSource(remapped, chaosSource);
+  if (outgoing === undefined) return updateTopology(document, located, remapped);
+  const doors = new Set(
+    exitKeysForTopologySource(catalog, located, remapped, chaosSource, command),
+  );
   return updateTopology(
     document,
     located,
-    replaceOccurrence(
-      topology,
-      Object.freeze({
-        ...occurrence,
-        gameName: room.gameName,
-        state: createDefaultRoomState(catalog, room, {
-          routeKey: located.routePosition.routeKey,
-          role: 'ordinary',
-          entryActive: false,
-          loadout: located.loadout,
-        }),
-        encounters: createDefaultRoomEncounterState(
+    outgoing.normal.targets.every((target) => doors.has(target.exitKey))
+      ? remapped
+      : reconcileExitDecisionToDeclaredCapacity(
           catalog,
-          room,
-          `occurrences.${occurrence.occurrenceId}.encounters`,
+          located,
+          remapped,
+          outgoing,
+          'rekey',
+          command,
         ),
-      }),
-    ),
   );
 }
 
