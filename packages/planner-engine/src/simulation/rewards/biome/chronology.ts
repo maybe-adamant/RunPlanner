@@ -1,3 +1,4 @@
+import { physicalExitKey } from '../../../authored-project/topology/query';
 import type { Catalog } from '../../../catalog-schema';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
@@ -196,7 +197,7 @@ function blankFrontierTargetHistory(
       : Object.freeze(
           [...declaration.exits]
             .sort((left, right) => left.index - right.index)
-            .map((exit) => `exit${exit.index}`),
+            .map((exit) => physicalExitKey(exit.index)),
         );
   const nextExitKey = exitKeys[frontier.targets.length];
   const historySequence = history.events.at(-1)?.sequence;
