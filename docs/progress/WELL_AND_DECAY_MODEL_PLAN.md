@@ -112,7 +112,7 @@ Native scripts: `1GameData/Scripts`.
 1. **Fight Fight Fight.** Decay and removal in trait history; Diminishing Dodge
    disposable in the module. Done: `45c84c91e`, `bef3a0576`; equivalence
    unchanged because no corpus route selects the trait.
-2. **Native departures.** Ephyra restored-room departures (a parent room after
+2. **Native departures.** Done: `c4015e939`. Ephyra restored-room departures (a parent room after
    a side room, every Hub departure after the first, and the Hub handoff) run
    native `LeaveRoom` but have no `roomExited`. Add one departure contact for
    every native `LeaveRoom`, separate from `roomExited` so room closure does
@@ -122,7 +122,7 @@ Native scripts: `1GameData/Scripts`.
    departure-count matrix across Hub visits, side rooms and the handoff;
    Fight Fight Fight decay through Ephyra. `test:equivalence` changes only if
    a corpus route carries a room-clocked effect through Ephyra.
-3. **Well model.** Catalog grants, engine substate with the rooms clock,
+3. **Well model.** Done: `a4df834d9`. Catalog grants, engine substate with the rooms clock,
    Centaur Soul and Kiss of Styx identities, legality-subset conformance
    projection, Run State section, Well docs. Tests: catalog grant
    normalization; engine clock matrix (encounter, rooms, boss, Seal pairing and
@@ -131,7 +131,13 @@ Native scripts: `1GameData/Scripts`.
    `ignoreEncounterUses`, room clock on revisits); a witness that a ticking
    neutral buff selects no Well conformance fact. `test:equivalence`: the
    simulation digest changes; the encoded plan digests must not.
-4. **Bell and Fang.** Keepsake values, Run State display, keepsake audit.
+4. **Bell, Fang and growth procs.** Keepsake values for Discordant Bell and
+   Lion Fang; proc counts for The Centaur Arcana (`ChamberHealthMetaUpgrade`,
+   a room-entry cycle of 5 that grants max health and magick) and Medea's
+   Traces of Spirit (`ManaOverTimeCurse`, max magick per qualifying encounter
+   end), each advanced at its existing contact and owned by its authority
+   (keepsakes, Arcana/Fear, trait history). Run State display; keepsake,
+   Arcana and Medea audit dispositions. No conformance.
 
 Each gate is one commit with its primary tests and closes with
 `npm run check`; the plan closes with deleting this document.
@@ -150,6 +156,6 @@ Each gate is one commit with its primary tests and closes with
 - Simulating buff effects, heals, damage or armor.
 - Play-dependent state: Breath of Eros use, Mist Veil pool, armor left,
   Diminishing Dodge value.
-- Other over-time effects (White Antler, Knuckle Bones, Medea, Centaur Arcana,
-  Hades boss boon, Eris).
+- Other over-time effects (White Antler, Knuckle Bones, Hades boss boon,
+  Eris).
 - Any start-from-room feature.
