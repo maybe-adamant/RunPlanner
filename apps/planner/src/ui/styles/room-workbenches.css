@@ -1294,6 +1294,16 @@
   content: '';
 }
 
+/* A single card has nothing to connect, so it draws neither spine nor tick. */
+.room-action-list:has(> :only-child)::before,
+.room-action-list
+  > .timeline-row:only-child:not(
+    [data-timeline-row-kind='boundary'],
+    [data-timeline-row-kind='checkpoint']
+  )::before {
+  display: none;
+}
+
 .timeline-row {
   position: relative;
   z-index: 1;
@@ -1748,8 +1758,8 @@
   --timeline-stripe: #4b4c58;
   --timeline-spine: #4b4c58;
   --timeline-node: #8e8b97;
-  --timeline-band: rgb(255 255 255 / 4%);
-  --timeline-band-divider: rgb(255 255 255 / 6%);
+  --timeline-band: rgb(255 255 255 / 7%);
+  --timeline-band-divider: rgb(255 255 255 / 10%);
 }
 
 [data-action-accent='optional'] {
