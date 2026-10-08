@@ -410,40 +410,29 @@ input[type='checkbox']:checked:disabled {
   color: #fffaf2;
 }
 
-.trait-offer-launcher[data-trait-status='unspecified'] {
-  border-color: color-mix(in srgb, var(--attention) 55%, transparent);
-  color: var(--attention);
-  background: color-mix(in srgb, var(--attention) 13%, transparent);
+/* Dialog launchers carry quiet gold on the neutral fill; solid gold stays for primary actions. */
+.dialog-launcher {
+  border-color: color-mix(in srgb, var(--selection-accent) 35%, transparent);
+  color: var(--selection-accent);
 }
 
-.trait-offer-launcher[data-trait-status='unspecified']:hover:not(:disabled) {
-  border-color: var(--attention);
+.dialog-launcher:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--selection-accent) 65%, transparent);
   color: #f3d59e;
-  background: color-mix(in srgb, var(--attention) 22%, transparent);
 }
 
-.trait-offer-launcher[data-trait-status='valid'] {
-  border-color: rgb(104 186 137 / 55%);
-  color: #a5deb5;
-  background: rgb(60 130 84 / 16%);
+/* Trait-family launchers are one fixed-width line; findings mark them with the shared ring. */
+.trait-offer-launcher {
+  width: 16rem;
+  max-width: 100%;
+  justify-content: flex-start;
 }
 
-.trait-offer-launcher[data-trait-status='valid']:hover:not(:disabled) {
-  border-color: #6dbd88;
-  color: #d0f5d8;
-  background: rgb(60 130 84 / 28%);
-}
-
-.trait-offer-launcher[data-trait-status='invalid'] {
-  border-color: color-mix(in srgb, var(--finding) 60%, transparent);
-  color: #efaaaa;
-  background: rgb(150 53 53 / 18%);
-}
-
-.trait-offer-launcher[data-trait-status='invalid']:hover:not(:disabled) {
-  border-color: #ed8e8e;
-  color: #ffd0d0;
-  background: rgb(138 52 52 / 30%);
+.trait-offer-launcher > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .action-compact {

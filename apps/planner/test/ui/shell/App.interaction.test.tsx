@@ -1323,7 +1323,6 @@ describe('planner history interaction', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const roomActions = screen.getByRole('region', { name: 'Room Timeline' });
     const traitLauncher = within(roomActions).getByRole('button', { name: /Edit Trait/ });
-    expect(traitLauncher.getAttribute('data-trait-status')).toBe('valid');
     await view.user.click(traitLauncher);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Artemis');
@@ -1943,7 +1942,7 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('SpellDrop pickup action is missing');
-    await view.user.click(within(action).getByRole('button', { name: /Edit Spell/ }));
+    await view.user.click(within(action).getByRole('button', { name: /Edit Hex/ }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 

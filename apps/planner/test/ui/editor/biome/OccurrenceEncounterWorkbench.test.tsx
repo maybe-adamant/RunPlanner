@@ -1035,10 +1035,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(condition);
     await view.user.click(screen.getByText('Gorgon Amulet: Death Defiance'));
     await waitFor(() => {
-      const launcher = screen.getByRole('button', {
-        name: /Choose Trait; trait is not selected/,
-      });
-      expect(launcher.getAttribute('data-trait-status')).toBe('unspecified');
+      expect(screen.getByRole('button', { name: 'Edit Trait · Choose trait' })).toBeTruthy();
     });
     expect(
       view.application.store
@@ -1091,10 +1088,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
     // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
-    const launcher = screen.getByRole('button', {
-      name: /Edit Trait · Divine Dash; trait offer needs attention/,
-    });
-    expect(launcher.getAttribute('data-trait-status')).toBe('invalid');
+    expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
       expect(screen.queryByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' })).toBeNull();
@@ -1469,7 +1463,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       if (row === null) throw new Error('Narcissus Pom row is missing');
       return row;
     };
-    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom:/ })).toBeNull();
+    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom/ })).toBeNull();
     const insert = within(pickupRow()).getByRole('button', {
       name: 'Add Collect Pom Slice · Verdure Sampler',
     });
@@ -1480,7 +1474,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     if (position === undefined) throw new Error('Narcissus Pom has no insertion point');
     await view.user.click(position);
     await view.user.click(
-      within(pickupRow()).getByRole('button', { name: /^Edit Pom: Choose target/ }),
+      within(pickupRow()).getByRole('button', { name: /^Edit Pom · Choose target/ }),
     );
     await view.user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -1498,14 +1492,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: 'Remove Collect Pom Slice · Verdure Sampler from timeline',
       }),
     );
-    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom:/ })).toBeNull();
+    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom/ })).toBeNull();
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(authored);
-    expect(
-      within(pickupRow()).getByRole('button', {
-        name: /^Edit Pom:.*Pom configuration has no findings/,
-      }),
-    ).toBeTruthy();
+    expect(within(pickupRow()).getByRole('button', { name: /^Edit Pom · / })).toBeTruthy();
   });
 
   it('picks up and Time Piece-converts Psyche as one undoable Narcissus row edit', async () => {
@@ -2555,7 +2545,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Combat 1 Timeline');
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
-        name: /Choose Trait/,
+        name: 'Edit Trait · Choose trait',
       }),
     ).toBeTruthy();
     openRoomTab('Intro Timeline');
@@ -2867,7 +2857,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(line).queryByRole('button', { name: /^Edit Anvil/ })).toBeNull();
     const refill = screen.getByText('Buy Anvil of Fates · Travel Deal Offer').closest('li');
     if (refill === null) throw new Error('Travel Deal refill purchase row is missing');
-    expect(within(refill).getByRole('button', { name: /^Edit Anvil: / })).toHaveProperty(
+    expect(within(refill).getByRole('button', { name: 'Edit Anvil' })).toHaveProperty(
       'disabled',
       false,
     );

@@ -39,6 +39,7 @@ import {
   useFindingTarget,
   type FindingTargetProps,
 } from '@planner/ui/feedback/useFindingTarget';
+import { LauncherButton } from './LauncherButton';
 
 function launcherId(address: LevelResolutionAddress): string {
   return `pom-launcher-${encodeURIComponent(semanticAddressKey(address))}`;
@@ -46,14 +47,6 @@ function launcherId(address: LevelResolutionAddress): string {
 
 function pomDomKey(address: LevelResolutionAddress): string {
   return encodeURIComponent(semanticAddressKey(address));
-}
-
-function selectedTarget(value: AuthoredLevelResolution): string | null {
-  return value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
-}
-
-function levelCountLabel(interaction: WorkspaceLevelResolutionInteraction): string {
-  return interaction.levelCount === undefined ? '' : ` +${interaction.levelCount}`;
 }
 
 function levelResolutionLoadable(
@@ -128,35 +121,13 @@ export function PomResolutionLauncher({
     interactions.levelResolutions,
     workspaceInteractionKey(control.address),
   );
-  const target = selectedTarget(control.value);
-  const emptyNoOp = control.settledEmptyNoOp;
-  const label = `Edit Pom: ${
-    emptyNoOp
-      ? 'No eligible traits'
-      : target === null
-        ? 'Choose target'
-        : interaction.traitLabel(target)
-  }${emptyNoOp ? '' : levelCountLabel(interaction)}`;
-  const statusLabel =
-    control.status === 'unspecified'
-      ? 'Pom target is not selected'
-      : control.status === 'invalid'
-        ? 'Pom resolution needs attention'
-        : 'Pom configuration has no findings';
   return (
-    <button
-      {...findingTarget(control.address, launcherId(control.address))}
-      aria-label={`${label}; ${statusLabel}`}
-      className="trait-offer-launcher quiet-action action-compact"
-      data-trait-status={control.status}
-      disabled={!interaction.contextReached || undefined}
-      id={launcherId(control.address)}
+    <LauncherButton
+      contextReached={interaction.contextReached}
+      launcher={interaction.launcher}
       onClick={() => dispatch(levelResolutionDialogOpened(control.address))}
-      title={interaction.contextReached ? undefined : 'Waits on an earlier choice'}
-      type="button"
-    >
-      {label}
-    </button>
+      target={findingTarget(control.address, launcherId(control.address))}
+    />
   );
 }
 

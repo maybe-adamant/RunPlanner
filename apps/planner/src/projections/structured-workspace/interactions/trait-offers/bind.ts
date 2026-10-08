@@ -15,6 +15,7 @@ import { traitOfferCommandFor } from '../reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
 import { bindChaosOfferInteraction } from './chaos';
 import { bindTraitOfferOptionDomain } from './option-domain';
+import { traitOfferLauncherPresentation } from '../launcher-presentation';
 
 /** Binds the trait-offer aggregate; focused domain and typed child families stay separate. */
 export function bindTraitOfferInteractions(input: {
@@ -61,6 +62,7 @@ export function bindTraitOfferInteractions(input: {
       key,
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
+        launcher: traitOfferLauncherPresentation(catalog, control.giver, control.offer),
         choices: control.giver.providerKind === 'chaos' ? Object.freeze([]) : traitChoices,
         ...(chaosInteraction === undefined ? {} : { chaos: chaosInteraction }),
         giver: control.giver,

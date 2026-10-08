@@ -202,7 +202,7 @@ Completed in schema 50 by `5261efd` (engine/catalog) and `2b86e31`
 6. Spell Drop is absent from Echo's last-reward recreation domain while Talent
    Drop remains present.
 
-The editor presents the engine-owned active child as `Edit spell` through the
+The editor presents the engine-owned active child as `Edit Hex` through the
 existing trait-offer capability, semantic command, finding navigation, and
 Undo path. It does not own the pool or aspect rule, and opening the dialog does
 not query candidate evaluation.

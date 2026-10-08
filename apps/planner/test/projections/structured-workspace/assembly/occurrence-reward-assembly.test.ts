@@ -166,7 +166,7 @@ describe('structured workspace reward assembly', () => {
     expect(assembled.source.isActiveTraitOffer(address)).toBe(true);
     expect(
       assembled.assembly.rewardControls.flatMap((control) => control.traitOffers ?? []),
-    ).toContainEqual(expect.objectContaining({ address, offer: null, status: 'unspecified' }));
+    ).toContainEqual(expect.objectContaining({ address, offer: null }));
   });
 
   it('withholds a retained SpellDrop child under Selene through the route loadout', () => {
@@ -257,7 +257,6 @@ describe('structured workspace reward assembly', () => {
       (candidate) => candidate.address.phaseKey === 'Combat',
     );
     expect(consumed?.gorgonCondition).toMatchObject({ supported: true, selected: true });
-    expect(consumed?.gorgonAthena).toMatchObject({ status: 'valid' });
 
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
@@ -290,7 +289,6 @@ describe('structured workspace reward assembly', () => {
     expect(retained.gorgonAthena.offer.options.every((option) => option.rarity === 'Epic')).toBe(
       true,
     );
-    expect(retained.gorgonAthena.status).toBe('invalid');
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,

@@ -1164,10 +1164,7 @@ describe('OccurrenceRoomActions', () => {
     if (outcomeControl === null) throw new Error('Pickup outcome control is missing');
     expect(within(outcomeControl).getByText('Outcome')).toBeTruthy();
     expect(disposition.textContent).toContain('Pickup');
-    const pomLauncher = screen.getByRole('button', {
-      name: /Edit Pom: No eligible traits/,
-    });
-    expect(pomLauncher.getAttribute('data-trait-status')).toBe('valid');
+    const pomLauncher = screen.getByRole('button', { name: 'Edit Pom · No eligible traits' });
     const pickupRow = pomLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (pickupRow === null) throw new Error('Nectar pickup row is missing');
     const column = pickupRow.querySelector<HTMLElement>(':scope > [data-timeline-cell="editors"]');
@@ -1185,7 +1182,7 @@ describe('OccurrenceRoomActions', () => {
       if (sourceAction === null) throw new Error('Artificer source action is missing');
       expect(
         within(sourceAction).queryByRole('button', {
-          name: 'Edit Pom: No eligible traits',
+          name: 'Edit Pom · No eligible traits',
         }),
       ).toBeNull();
       const outcome = within(sourceAction).getByRole('button', { name: /^Pickup outcome for / });

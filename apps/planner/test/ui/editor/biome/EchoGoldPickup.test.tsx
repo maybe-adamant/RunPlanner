@@ -324,7 +324,7 @@ it('authors the Anvil result of a Gold duplicate at its timeline row and lands i
     occurrenceById(echoGoldIPrebossShopId),
   );
   openRoomTab('Room Timeline');
-  const launcher = goldRow().getByRole('button', { name: 'Edit Anvil: Choose result' });
+  const launcher = goldRow().getByRole('button', { name: 'Edit Anvil' });
   expect(launcher.getAttribute('data-has-findings')).toBe('true');
   expect((launcher as HTMLButtonElement).disabled).toBe(false);
 

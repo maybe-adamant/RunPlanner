@@ -111,8 +111,7 @@ describe('Pom resolution editor', () => {
         <PomResolutionLauncher control={projectedControl} interactions={workspace.interactions} />
       </Provider>,
     );
-    const launcher = screen.getByRole('button', { name: /Edit Pom: Choose target \+1/i });
-    expect(launcher.getAttribute('data-trait-status')).toBe('unspecified');
+    const launcher = screen.getByRole('button', { name: 'Edit Pom · Choose target +1' });
     await user.click(launcher);
     expect(application.store.getState().editorSession.levelResolutionDialogTarget).toEqual(
       control.owner,
@@ -134,7 +133,7 @@ describe('Pom resolution editor', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(application.store.getState().editorSession.levelResolutionDialogTarget).toBeNull();
     expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: /Edit Pom: Choose target \+1/i }),
+      screen.getByRole('button', { name: 'Edit Pom · Choose target +1' }),
     );
     application.dispose();
   });
@@ -237,6 +236,7 @@ describe('Pom resolution editor', () => {
   }): WorkspaceLevelResolutionInteraction {
     return Object.freeze({
       acquisitionRoleLabel: 'Selected',
+      launcher: { label: 'Edit Pom · Choose target +1', detail: 'Pom: no target chosen' },
       contextReached: input.contextReached ?? true,
       intentFor: () => {
         throw new Error('editor boundary test does not dispatch intents');
@@ -271,7 +271,6 @@ describe('Pom resolution editor', () => {
             settledEmptyNoOp: false,
             marker: undefined as never,
             rewardOwner: address.owner,
-            status: 'unspecified',
             value,
           }}
           interactions={interactions}

@@ -11,7 +11,11 @@ import {
 import {
   applyProjectCommand,
   createAllTogetherSetAddress,
+  createEchoLastRunBoonAddress,
+  createEncounterPhaseAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
+  createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createTraitOfferAddress,
@@ -50,11 +54,16 @@ import {
   useFindingAnchor,
   useFindingMark,
 } from '@planner/ui/feedback/useFindingTarget';
-import { findingControlKey } from '@planner/projections/structured-workspace';
+import {
+  echoLastRunOptionControl,
+  findingControlKey,
+} from '@planner/projections/structured-workspace';
+import { LoadedEchoLastRunBoonChoice } from '@planner/ui/editor/rewards/TraitOfferEchoLastRunBoon';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
@@ -214,6 +223,87 @@ describe('per-row outcome pickers', () => {
         element.getAttribute('aria-label'),
       ),
     ).toEqual(['Natural Selection 1st core']);
+    application.dispose();
+  });
+
+  it('marks an unavailable Boon Boon Boon outcome on its own row picker', async () => {
+    const application = createApplication();
+    const echoOwner = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-bridge01') },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const unavailable = { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' } as const;
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          {
+            traitKey: 'EchoLastRunBoon',
+            echoLastRunBoon: {
+              options: [
+                unavailable,
+                { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option2',
+            },
+          },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(echoOwner));
+    if (interaction?.value?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const child = createEchoLastRunBoonAddress(echoOwner, 'option1');
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'echoLastRunBoonOptionUnavailable' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(child),
+      );
+    if (finding === undefined) throw new Error('Boon Boon Boon finding is missing');
+    render(
+      <Provider store={application.store}>
+        <FindingTargetScope
+          findings={
+            new Map([[findingControlKey(child, echoLastRunOptionControl(unavailable)), [finding]]])
+          }
+        >
+          <LoadedEchoLastRunBoonChoice
+            interaction={interaction}
+            offer={interaction.value}
+            onBack={() => undefined}
+            onComplete={() => undefined}
+          />
+        </FindingTargetScope>
+      </Provider>,
+    );
+    await screen.findByRole('region', { name: 'Boon Boon Boon choice' });
+    expect(
+      [...document.querySelectorAll('[data-has-findings="true"]')].map((element) =>
+        element.getAttribute('aria-label'),
+      ),
+    ).toEqual(['Boon Boon Boon outcome 1']);
     application.dispose();
   });
 

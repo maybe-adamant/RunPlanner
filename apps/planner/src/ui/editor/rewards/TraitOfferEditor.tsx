@@ -19,9 +19,8 @@ import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { LauncherButton } from './LauncherButton';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
-
-const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
 function launcherId(address: TraitOfferAddress): string {
   return `trait-launcher-${semanticAddressKey(address)}`;
@@ -44,56 +43,13 @@ export function TraitOfferLauncher({
     interactions.traitOffers,
     workspaceInteractionKey(control.address),
   );
-  const selectedOptionIndex =
-    control.offer?.kind === 'traits' ? OPTION_KEYS.indexOf(control.offer.selectedOptionKey) : -1;
-  const selected =
-    control.offer?.kind === 'traits' ? control.offer.options[selectedOptionIndex] : undefined;
-  const traitLabel =
-    control.offer === null
-      ? control.giver.providerKind === 'chaos'
-        ? 'Choose Chaos outcome'
-        : 'Choose Trait'
-      : control.offer.kind === 'chaos'
-        ? (interaction.chaos?.blessingLabel(control.offer.blessingKey) ?? control.offer.blessingKey)
-        : control.offer.kind === 'fallbackGold'
-          ? 'Fallback Gold'
-          : selected === undefined
-            ? control.giver.providerKind === 'chaos'
-              ? 'Choose Chaos outcome'
-              : 'Choose Trait'
-            : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
-              selected.traitKey);
-  const status = control.status;
-  const spellOffer = interaction.giver.providerKind === 'spell';
-  const label = spellOffer
-    ? selected === undefined
-      ? 'Edit Spell - Choose Spell'
-      : `Edit Spell - ${traitLabel}`
-    : control.offer === null
-      ? traitLabel
-      : control.giver.providerKind === 'chaos'
-        ? `Edit Chaos outcome - ${traitLabel}`
-        : `Edit Trait · ${traitLabel}`;
-  const statusLabel =
-    status === 'unspecified'
-      ? `${spellOffer ? 'spell' : 'trait'} is not selected`
-      : status === 'invalid'
-        ? `${spellOffer ? 'spell' : 'trait'} offer needs attention`
-        : `${spellOffer ? 'spell' : 'trait'} configuration has no findings`;
   return (
-    <button
-      {...findingTarget(control.address, launcherId(control.address))}
-      aria-label={`${label}; ${statusLabel}`}
-      className="trait-offer-launcher quiet-action action-compact"
-      data-trait-status={status}
-      disabled={!interaction.contextReached || undefined}
-      id={launcherId(control.address)}
+    <LauncherButton
+      contextReached={interaction.contextReached}
+      launcher={interaction.launcher}
       onClick={() => dispatch(traitOfferDialogOpened(control.address))}
-      title={interaction.contextReached ? undefined : 'Waits on an earlier choice'}
-      type="button"
-    >
-      {label}
-    </button>
+      target={findingTarget(control.address, launcherId(control.address))}
+    />
   );
 }
 

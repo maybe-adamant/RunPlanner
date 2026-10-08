@@ -1850,15 +1850,6 @@
   background: none;
 }
 
-.timeline-cell-editors > .trait-offer-launcher {
-  width: max-content;
-  min-width: 0;
-  max-width: min(100%, 18rem);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .room-action-inline-reward {
   flex: 0 1 auto;
   width: max-content;

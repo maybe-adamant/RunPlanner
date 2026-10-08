@@ -27,8 +27,8 @@ import {
 } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingFeedbackEntries, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { LauncherButton } from './LauncherButton';
 
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
@@ -217,27 +217,15 @@ export function AnvilResultLauncher({
   useEffect(() => {
     if (open && !interaction.contextReached) close();
   }, [close, interaction.contextReached, open]);
-  const label =
-    interaction.value === null
-      ? 'Edit Anvil: Choose result'
-      : `Edit Anvil: ${
-          interaction.value.removedTraitKey === null
-            ? 'No removal'
-            : interaction.traitLabel(interaction.value.removedTraitKey)
-        } → ${interaction.value.addedTraitKeys.map(interaction.traitLabel).join(', ')}`;
   const launcher = findingTarget(owner);
   return (
     <>
-      <button
-        {...launcher}
-        className="trait-offer-launcher quiet-action action-compact"
-        disabled={!interaction.contextReached || undefined}
+      <LauncherButton
+        contextReached={interaction.contextReached}
+        launcher={interaction.launcher}
         onClick={() => dispatch(anvilResultDialogOpened(owner))}
-        title={interaction.contextReached ? undefined : candidateWaitingTitle}
-        type="button"
-      >
-        {label}
-      </button>
+        target={launcher}
+      />
       {open && interaction.contextReached ? (
         <AnvilResultDialog
           interaction={interaction}
