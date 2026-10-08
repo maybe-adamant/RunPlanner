@@ -29,7 +29,7 @@ afterEach(cleanup);
 
 function seaStarCheckboxes(): HTMLInputElement[] {
   return within(screen.getByRole('region', { name: 'Room Timeline' })).queryAllByRole('checkbox', {
-    name: /^Sea Star procced for /,
+    name: /^Double Up for /,
   }) as HTMLInputElement[];
 }
 

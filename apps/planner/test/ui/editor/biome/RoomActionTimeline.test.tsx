@@ -201,7 +201,7 @@ describe('OccurrenceRoomActions', () => {
       name: /^Pickup outcome for /,
     });
     // Without the Sea Star keepsake the engine supports no proc, so no checkbox renders.
-    expect(within(actions).queryByRole('checkbox', { name: /^Sea Star procced for / })).toBeNull();
+    expect(within(actions).queryByRole('checkbox', { name: /^Double Up for / })).toBeNull();
     await view.user.click(outcome);
     // Only engine-supported outcomes are listed.
     expect(
