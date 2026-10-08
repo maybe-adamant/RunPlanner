@@ -20,72 +20,17 @@ import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
-import { createBiomeAddress } from '../addresses';
 import { semanticAddressKey } from '../addresses';
-import { parseEchoLastRewardPickupEntryKey } from '../acquisition/pickup-producers';
-import { resolveRoutePosition } from '../route-context';
-import { resolveEntryDeclaration } from '../room-state/entry-resolution';
-import { routeStartIncomingReward } from '../room-state/starting-reward';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
-  reconcileSelectedPickupProducerState,
+  parseEchoLastRewardPickupEntryKey,
+  reconcileGeneratedPickupProducerState,
   retractInactiveClockedTraitPickupActions,
 } from '../acquisition/pickup-producers';
 import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 import { applyFieldsSpatialCommand } from './occurrence/fields-spatial';
 import { retractMissingHermesShrineDeliveryActions } from '../hermes-shrine-delivery';
-
-/**
- * Generated pickup sites are derived from their exact source acquisition. Run
- * the one occurrence-local reconciliation after every semantic command so a
- * source replacement cannot leave orphan sites or actions behind.
- */
-function reconcileGeneratedPickupProducerState(
-  previous: ProjectDocument,
-  document: ProjectDocument,
-  catalog: Catalog,
-): ProjectDocument {
-  const route = document.route;
-  const previousRoute = previous.route.routeKey === route.routeKey ? previous.route : undefined;
-  const biomes = route.biomes.map((plan) => {
-    if (plan.topology === null) return plan;
-    const previousPlan = previousRoute?.biomes.find(
-      (candidate) => candidate.biomeKey === plan.biomeKey,
-    );
-    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
-    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
-    let occurrencesChanged = false;
-    const occurrences = plan.topology.occurrences.map((occurrence) => {
-      const previousOccurrence = previousPlan?.topology?.occurrences.find(
-        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      );
-      if (previousOccurrence === occurrence) return occurrence;
-      const rawRoom = catalog.rooms.byKey[occurrence.gameName];
-      if (rawRoom === undefined) return occurrence;
-      const reconciled = reconcileSelectedPickupProducerState(
-        catalog,
-        biome,
-        occurrence,
-        resolveEntryDeclaration(rawRoom, routePosition),
-        routePosition.ordinal,
-        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
-      );
-      if (reconciled !== occurrence) occurrencesChanged = true;
-      return reconciled;
-    });
-    if (!occurrencesChanged) return plan;
-    return Object.freeze({
-      ...plan,
-      topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
-    });
-  });
-  if (!biomes.some((biome, index) => biome !== route.biomes[index])) return document;
-  return Object.freeze({
-    ...document,
-    route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
-  });
-}
 
 /** Topology owns occurrence lifetime. A route-owned resource singleton retains
  * through room replacement, but is removed atomically when its exact target is

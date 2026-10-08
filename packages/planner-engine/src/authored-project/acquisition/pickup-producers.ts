@@ -38,6 +38,7 @@ import { ERIS_GIFT_ENTRY_KEY, ERIS_GIFT_SITE_KEY } from './eris-gift';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
 import { resolveRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
+import { routeStartIncomingReward } from '../room-state/starting-reward';
 import { routeErisHost } from '../route-profile';
 import {
   createSelectedPickupEntries,
@@ -853,5 +854,57 @@ export function reconcileSelectedPickupProducerState(
     ...(nextActions.length === occurrence.roomActions.order.length
       ? {}
       : { roomActions: Object.freeze({ order: Object.freeze(nextActions) }) }),
+  });
+}
+
+/**
+ * Generated pickup sites are derived from their exact source acquisition. Run
+ * the one occurrence-local reconciliation on every occurrence changed since
+ * `previous` so a source replacement or removal cannot leave orphan sites or
+ * actions behind.
+ */
+export function reconcileGeneratedPickupProducerState(
+  previous: ProjectDocument,
+  document: ProjectDocument,
+  catalog: Catalog,
+): ProjectDocument {
+  const route = document.route;
+  const previousRoute = previous.route.routeKey === route.routeKey ? previous.route : undefined;
+  const biomes = route.biomes.map((plan) => {
+    if (plan.topology === null) return plan;
+    const previousPlan = previousRoute?.biomes.find(
+      (candidate) => candidate.biomeKey === plan.biomeKey,
+    );
+    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
+    let occurrencesChanged = false;
+    const occurrences = plan.topology.occurrences.map((occurrence) => {
+      const previousOccurrence = previousPlan?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      );
+      if (previousOccurrence === occurrence) return occurrence;
+      const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+      if (rawRoom === undefined) return occurrence;
+      const reconciled = reconcileSelectedPickupProducerState(
+        catalog,
+        biome,
+        occurrence,
+        resolveEntryDeclaration(rawRoom, routePosition),
+        routePosition.ordinal,
+        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
+      );
+      if (reconciled !== occurrence) occurrencesChanged = true;
+      return reconciled;
+    });
+    if (!occurrencesChanged) return plan;
+    return Object.freeze({
+      ...plan,
+      topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
+    });
+  });
+  if (!biomes.some((biome, index) => biome !== route.biomes[index])) return document;
+  return Object.freeze({
+    ...document,
+    route: Object.freeze({ ...route, biomes: Object.freeze(biomes) }),
   });
 }
