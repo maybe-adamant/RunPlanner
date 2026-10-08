@@ -13,6 +13,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { transcendentEmbryoBlessingValues } from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import { projectDirectTraitOutcomePicker } from '@planner/projections/contextual/directTraitOutcomeProjection';
+import { levelResolutionLauncherPresentation } from './launcher-presentation';
 import type {
   CandidateOptionProjection,
   KeepsakeEquipResultOptionProjection,
@@ -154,6 +155,12 @@ export function bindResolutionInteractions(input: {
       key,
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
+        launcher: levelResolutionLauncherPresentation(
+          catalog,
+          control.value,
+          control.levelCount,
+          control.settledEmptyNoOp,
+        ),
         intentFor: (value: AuthoredLevelResolution) =>
           Object.freeze({ command: levelResolutionCommandFor(control.address, value) }),
         key,

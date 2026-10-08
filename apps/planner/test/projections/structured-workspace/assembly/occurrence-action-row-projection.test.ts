@@ -1664,7 +1664,7 @@ describe('room Timeline block', () => {
       expect.objectContaining({
         address: createTraitOfferAddress(refill, 'source'),
         contextReached: true,
-        status: 'unspecified',
+        offer: null,
       }),
     );
   });

@@ -10,6 +10,7 @@ import {
 } from '@planner/projections/contextual/anvilResultPickers';
 
 import { workspaceInteractionKey } from '../contract';
+import { anvilResultLauncherPresentation } from './launcher-presentation';
 import type { WorkspaceAcquisitionConversionInteraction } from '../contracts/traits';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 
@@ -65,6 +66,7 @@ export function bindAcquisitionConversionInteractions(input: {
           : Object.freeze({
               ...anvilDomain,
               contextReached: anvilCapability !== undefined,
+              launcher: anvilResultLauncherPresentation(input.catalog, anvilResult),
               value: anvilResult,
               pickersFor: (draft: AnvilResultDraft) =>
                 projectAnvilResultPickers(anvilDomain, draft),

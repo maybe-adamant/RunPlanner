@@ -140,6 +140,7 @@ export type {
 } from './contract';
 export type {
   WorkspaceTraitOfferControl,
+  WorkspaceLauncherPresentation,
   WorkspaceAspectHexTreeControl,
   WorkspaceTraitCarrierChildControl,
   WorkspaceTraitCarrierChildInteraction,

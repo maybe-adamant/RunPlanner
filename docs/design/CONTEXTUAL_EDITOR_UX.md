@@ -179,6 +179,14 @@ pickers keep their own rule: an ordinary target or an uncommitted Hub stays
 authorable before evaluation, while a takeover or a persisted Hub envelope
 requires evaluated support.
 
+Trait, Hex, Chaos, Pom and Anvil dialog launchers share one neutral,
+fixed-width style. Their one-line label reads `{Verb} {kind} · {value}`: the
+chosen trait or Hex, the Pom target and its levels, or the Chaos curse and
+blessing; `Edit Anvil` names no value. A long label ends in an ellipsis, and the
+full summary is the launcher's hover title and accessible description. An unset
+launcher says so in its text; findings mark a launcher only with the shared
+finding ring. The application projection supplies both label and summary.
+
 ### Selected-Value Invariant
 
 A currently authored value is never hidden.
@@ -672,8 +680,8 @@ rank through hover and accessibility text, and branch-varying ranks are not coll
 read-only preview, not invented authored targets. A missing or stale selected
 child remains repairable and prevents saving the incomplete outcome.
 
-A normal Spell Drop uses the shared three-row rarityless editor as Edit Spell.
-The launcher names the selected spell. Position-owned Moonglow/Path bonuses
+A normal Spell Drop uses the shared three-row rarityless editor as Edit Hex.
+The launcher names the selected Hex. Position-owned Moonglow/Path bonuses
 remain per-row metadata, and the selected spell's Hex layout and Rare/Epic
 node groups are editable from the initial live draft. Saving and reopening is
 not a prerequisite. Aspect of Selene instead edits its fixed starting tree in

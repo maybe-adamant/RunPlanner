@@ -33,11 +33,12 @@ import {
 type AnvilInteraction = NonNullable<WorkspaceAcquisitionConversionInteraction['anvil']>;
 
 function anvilInteraction(
-  input: Omit<AnvilInteraction, 'pickersFor' | 'traitLabel' | 'assess'> &
-    Partial<Pick<AnvilInteraction, 'traitLabel' | 'assess'>>,
+  input: Omit<AnvilInteraction, 'pickersFor' | 'traitLabel' | 'assess' | 'launcher'> &
+    Partial<Pick<AnvilInteraction, 'traitLabel' | 'assess' | 'launcher'>>,
 ): AnvilInteraction {
   const domain = {
     ...input,
+    launcher: input.launcher ?? { label: 'Edit Anvil', detail: 'Anvil: no result chosen' },
     assess: input.assess ?? (() => ({ legal: true, findings: [] })),
     traitLabel: input.traitLabel ?? ((traitKey: string) => traitKey),
   };
@@ -174,7 +175,7 @@ describe('Anvil result editor', () => {
     );
     const user = userEvent.setup();
     const view = render(launcher(true));
-    await user.click(screen.getByRole('button', { name: 'Edit Anvil: Choose result' }));
+    await user.click(screen.getByRole('button', { name: 'Edit Anvil' }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(application.store.getState().editorSession.anvilDialogTarget).toEqual(owner);
     view.rerender(launcher(false));
@@ -211,9 +212,13 @@ describe('Anvil result editor', () => {
         </FindingTargetScope>
       </Provider>,
     );
-    const launcher = screen.getByRole('button', { name: 'Edit Anvil: Choose result' });
-    const marked = launcher.getAttribute('aria-description');
-    if (marked === null) throw new Error('the missing Anvil result marks no launcher finding');
+    const launcher = screen.getByRole('button', { name: 'Edit Anvil' });
+    // The description leads with the launcher summary, then the marked findings.
+    const summary = 'Anvil: no result chosen ';
+    const described = launcher.getAttribute('aria-description') ?? '';
+    expect(described.startsWith(summary)).toBe(true);
+    const marked = described.slice(summary.length);
+    if (marked === '') throw new Error('the missing Anvil result marks no launcher finding');
     await userEvent.setup().click(launcher);
     const feedback = screen.getByRole('status', { name: 'Anvil feedback' });
     expect(feedback.textContent).not.toContain('No current findings.');

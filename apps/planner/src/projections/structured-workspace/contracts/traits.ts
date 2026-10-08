@@ -50,6 +50,7 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly anvil?: {
     /** Whether the engine reached this role's Anvil frontier; only then can its editor open. */
     readonly contextReached: boolean;
+    readonly launcher: WorkspaceLauncherPresentation;
     readonly value: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
     /** Exact removal domain; null removes nothing. */
     readonly removedTraitKeys: readonly (string | null)[];
@@ -82,8 +83,11 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
 }
 
-/** One exact authored trait child beneath a reward owner. */
-export type WorkspaceTraitOfferStatus = 'unspecified' | 'invalid' | 'valid';
+/** A launcher's one-line label and the full summary behind its hover and description. */
+export interface WorkspaceLauncherPresentation {
+  readonly label: string;
+  readonly detail: string;
+}
 
 export interface WorkspaceTraitOfferControl {
   /** Player-facing acquisition role (for example, Chosen God or Spurned God). */
@@ -94,8 +98,6 @@ export interface WorkspaceTraitOfferControl {
   readonly offer: AuthoredTraitOffer | null;
   /** Whether the engine reached this offer's exact candidate context. */
   readonly contextReached: boolean;
-  /** Projection-owned compact state for the trait launcher presentation. */
-  readonly status: WorkspaceTraitOfferStatus;
   /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
   readonly rarityEditable?: boolean;
   readonly rewardOwner: SemanticAddress;
@@ -134,8 +136,6 @@ export interface WorkspaceLevelResolutionControl {
   readonly settledEmptyNoOp: boolean;
   readonly marker: WorkspaceMarker;
   readonly rewardOwner: SemanticAddress;
-  /** The same compact unspecified/invalid/valid presentation used by trait launchers. */
-  readonly status: WorkspaceTraitOfferStatus;
   readonly value: AuthoredLevelResolution;
 }
 
@@ -474,6 +474,7 @@ export interface WorkspaceEchoLastRunBoonInteraction {
 
 export interface WorkspaceTraitOfferInteraction {
   readonly acquisitionRoleLabel: string;
+  readonly launcher: WorkspaceLauncherPresentation;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   /** Dedicated Chaos envelope interaction; ordinary trait choices remain above. */
   readonly chaos?: WorkspaceChaosOfferInteraction;
@@ -594,6 +595,7 @@ export interface WorkspaceChaosOfferInteraction {
 
 export interface WorkspaceLevelResolutionInteraction {
   readonly acquisitionRoleLabel: string;
+  readonly launcher: WorkspaceLauncherPresentation;
   /** Whether the Pom's candidate context is reached; only then can its editor open. */
   readonly contextReached: boolean;
   readonly intentFor: (value: AuthoredLevelResolution) => WorkspacePayloadEditIntent<

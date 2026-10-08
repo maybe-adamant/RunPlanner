@@ -140,7 +140,7 @@ describe('trait offer editor entry and dialog', () => {
     };
     const frontier = launcher('fresh-0-0');
     expect(frontier.disabled).toBe(false);
-    expect(frontier.title).toBe('');
+    expect(frontier.title).toBe('Apollo: no trait chosen');
     const later = launcher('fresh-3-0');
     expect(later.disabled).toBe(true);
     expect(later.title).toBe('Waits on an earlier choice');
@@ -911,9 +911,9 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferLauncher control={initialControl} interactions={workspace.interactions} />
       </Provider>,
     );
-    const initialLauncher = screen.getByRole('button', { name: /Edit Spell/ });
+    const initialLauncher = screen.getByRole('button', { name: /Edit Hex/ });
     expect(initialLauncher.textContent).toBe(
-      `Edit Spell - ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
+      `Edit Hex · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
     );
     cleanup();
     events.length = 0;
@@ -1012,9 +1012,9 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferLauncher control={changedControl} interactions={changedWorkspace.interactions} />
       </Provider>,
     );
-    const changedLauncher = screen.getByRole('button', { name: /Edit Spell/ });
+    const changedLauncher = screen.getByRole('button', { name: /Edit Hex/ });
     expect(changedLauncher.textContent).toBe(
-      `Edit Spell - ${changedInteraction.traitLabel(changedSelected.traitKey)}`,
+      `Edit Hex · ${changedInteraction.traitLabel(changedSelected.traitKey)}`,
     );
     application.store.dispatch(authoredProjectUndoRequested());
     const restoredOccurrence = application.store
@@ -1154,16 +1154,11 @@ describe('trait offer editor entry and dialog', () => {
         </FindingTargetScope>
       </Provider>,
     );
-    expect(
-      screen
-        .getByRole('button', { name: /spell is not selected/ })
-        .getAttribute('data-trait-status'),
-    ).toBe('unspecified');
-    expect(
-      screen
-        .getByRole('button', { name: /spell is not selected/ })
-        .getAttribute('data-has-findings'),
-    ).toBe('true');
+    // The finding ring is the launcher's only state mark; its summary leads the description.
+    const launcher = screen.getByRole('button', { name: 'Edit Hex · Choose Hex' });
+    expect(launcher.getAttribute('data-has-findings')).toBe('true');
+    expect(launcher.title).toMatch(/: no Hex chosen$/);
+    expect(launcher.getAttribute('aria-description')).toMatch(/^.+: no Hex chosen \S/);
     cleanup();
 
     render(

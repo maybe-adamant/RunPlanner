@@ -9,7 +9,6 @@ import type {
   WorkspaceLevelResolutionControl,
   WorkspaceTraitCarrierChildControl,
   WorkspaceTraitOfferControl,
-  WorkspaceTraitOfferStatus,
 } from '../contracts/traits';
 import {
   createAcquisitionRoleAddress,
@@ -74,7 +73,6 @@ import type {
 } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
-import type { WorkspaceMarker } from '../contracts/navigation';
 
 type OccurrenceRewardCandidateOwner = Exclude<
   RewardCandidateOwner,
@@ -184,19 +182,6 @@ export function workspaceAcquisitionRoleLabel(acquisitionRole: string): string {
   }
 }
 
-function traitOfferStatus(
-  marker: WorkspaceMarker,
-  offer: AuthoredTraitOffer | null,
-  contextMarker = marker,
-  contextInvalid = false,
-): WorkspaceTraitOfferStatus {
-  return offer === null
-    ? 'unspecified'
-    : contextInvalid || marker.findingCount > 0 || contextMarker.findingCount > 0
-      ? 'invalid'
-      : 'valid';
-}
-
 function traitOfferControls(
   input: WorkspaceOccurrenceRewardAssemblyInput,
   owner: OccurrenceRewardCandidateOwner,
@@ -229,7 +214,6 @@ function traitOfferControls(
           children: Object.freeze([]),
           contextReached: input.isActiveTraitOffer(address),
           rewardOwner: owner.address,
-          status: traitOfferStatus(marker, null),
         }),
       );
       continue;
@@ -250,7 +234,6 @@ function traitOfferControls(
         children: traitCarrierChildren(input.catalog, address, offer, input.markerDestinations),
         contextReached: input.isActiveTraitOffer(address),
         rewardOwner: owner.address,
-        status: traitOfferStatus(marker, offer),
       }),
     );
   }
@@ -275,8 +258,6 @@ function levelResolutionControls(
         );
       }
       const marker = input.markerDestinations.marker(address);
-      const selectedTarget =
-        value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
       const settledEmptyNoOp =
         value.kind === 'random' &&
         value.targetTraitKey === null &&
@@ -294,12 +275,6 @@ function levelResolutionControls(
           settledEmptyNoOp,
           marker,
           rewardOwner: owner.address,
-          status:
-            selectedTarget === null && !settledEmptyNoOp
-              ? ('unspecified' as const)
-              : marker.findingCount > 0
-                ? ('invalid' as const)
-                : ('valid' as const),
           value,
         }),
       ];
@@ -1131,12 +1106,6 @@ export function activeEncounterPhasesForOwner(
             rarityEditable: false,
             contextReached: input.isActiveTraitOffer(gorgonTraitAddress),
             rewardOwner: gorgonPhaseAddress,
-            status: traitOfferStatus(
-              gorgonTraitMarker,
-              gorgonResult.athenaOffer === null ? null : gorgonAthenaOffer!,
-              gorgonPhaseMarker,
-              gorgonSupport?.supported === false,
-            ),
           })
         : undefined;
     const giver =
@@ -1156,7 +1125,6 @@ export function activeEncounterPhasesForOwner(
                 children: Object.freeze([]),
                 contextReached: input.isActiveTraitOffer(traitAddress),
                 rewardOwner: address,
-                status: traitOfferStatus(marker, null),
               });
             }
             const marker = input.markerDestinations.marker(traitAddress);
@@ -1174,7 +1142,6 @@ export function activeEncounterPhasesForOwner(
               ),
               contextReached: input.isActiveTraitOffer(traitAddress),
               rewardOwner: address,
-              status: traitOfferStatus(marker, authoredTraitOffer),
             });
           })()
         : undefined;
