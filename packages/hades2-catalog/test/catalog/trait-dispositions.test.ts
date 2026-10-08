@@ -124,6 +124,60 @@ describe('trait dispositions and requirements compiler owner', () => {
     ).toThrow('must declare four acquisition ordinals');
   });
 
+  it('declares the Worry Free acquisition max-health roll per rarity', () => {
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.acquisitionMaxHealthRoll !== undefined)
+        .map((trait) => [trait.key, trait.acquisitionMaxHealthRoll]),
+    ).toEqual([
+      [
+        'HiddenMaxHealthBoon',
+        { minimumByRarity: { Common: 50, Rare: 70, Epic: 90, Heroic: 110 }, width: 30 },
+      ],
+    ]);
+    const multipliers = { Common: 1, Rare: 1.4, Epic: 1.8, Heroic: 2.2 };
+    const withRoll = (key: string, roll: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === key
+              ? ({ ...trait, acquisitionMaxHealthRoll: roll } as RawTraitDeclaration)
+              : trait,
+          ),
+        },
+      });
+    const bound = (baseValue: number, rarityMultipliers: object = multipliers) => ({
+      baseValue,
+      rarityMultipliers,
+    });
+    expect(() =>
+      withRoll('HiddenMaxHealthBoon', { minimum: bound(50), maximum: bound(45) }),
+    ).toThrow('minimum must not exceed maximum');
+    expect(() =>
+      withRoll('HiddenMaxHealthBoon', {
+        minimum: bound(50),
+        maximum: bound(80),
+      }),
+    ).toThrow('every rarity must span the same roll width');
+    expect(() =>
+      withRoll('HiddenMaxHealthBoon', {
+        minimum: bound(50, { ...multipliers, Rare: 1.33 }),
+        maximum: bound(80),
+      }),
+    ).toThrow('must scale to an integer');
+    expect(() =>
+      withRoll('HiddenMaxHealthBoon', {
+        minimum: bound(50, { Common: 1, Rare: 1.4, Epic: 1.8 }),
+        maximum: bound(80),
+      }),
+    ).toThrow('must scale exactly the equipped rarities');
+    expect(() =>
+      withRoll('InfernalContractBoon', { minimum: bound(50), maximum: bound(80) }),
+    ).toThrow('acquisitionMaxHealthRoll');
+  });
+
   it('declares Infernal Contract as rarityless and Travel Deal as one exact ranked restock', () => {
     expect(traits.traits.byKey.InfernalContractBoon).toMatchObject({
       rarityDomain: { kind: 'none' },

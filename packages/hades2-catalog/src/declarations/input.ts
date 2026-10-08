@@ -10,6 +10,7 @@ import type {
   RawEncounterSetDeclaration,
 } from './encounters/types';
 import type { RawExitTypeDeclaration } from './exits-types';
+import type { RawFamiliarDeclaration } from './familiars-types';
 import type { RawKeepsakeDeclaration } from './keepsakes-types';
 import type { RawBiomeLayoutDeclaration } from './layouts/types';
 import type { RawRoomLifecycleProfileDeclaration } from './lifecycles/types';
@@ -25,6 +26,8 @@ export interface RawCatalogInput {
   readonly arcanaCards: readonly RawArcanaCardDeclaration[];
   readonly fearVows: readonly RawFearVowDeclaration[];
   readonly keepsakes: readonly RawKeepsakeDeclaration[];
+  readonly familiars: readonly RawFamiliarDeclaration[];
+  readonly defaultFamiliarKey: string;
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];

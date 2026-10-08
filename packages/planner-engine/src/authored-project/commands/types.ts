@@ -68,6 +68,11 @@ export type ProjectStateCommand =
       readonly keepsakeKey: string;
     }
   | {
+      readonly kind: 'ReplaceFamiliar';
+      readonly route: RouteAddress;
+      readonly familiarKey: string;
+    }
+  | {
       readonly kind: 'ReplaceRouteLoadout';
       readonly route: RouteAddress;
       readonly weaponKey: string;

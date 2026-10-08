@@ -269,6 +269,12 @@ export {
   transitionAuthoredHexTreeLayout,
 } from './traits/hex-tree';
 export {
+  resolveTraitMaxHealthRoll,
+  traitMaxHealthRollDomain,
+  traitMaxHealthRollWidth,
+  type TraitMaxHealthRollDomain,
+} from './traits/max-health-roll';
+export {
   echoLastRewardPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,

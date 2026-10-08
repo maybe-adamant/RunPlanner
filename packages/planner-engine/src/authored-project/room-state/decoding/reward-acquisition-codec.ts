@@ -37,6 +37,7 @@ import { normalizeAuthoredHexTree } from '../../traits/hex-tree';
 import { levelResolutionEffectFor } from '../../../reward-kernel/level-effects';
 import { decodeEchoLastRunBoon } from './echo-last-run-codec';
 import { decodeAllTogetherResult } from './all-together-codec';
+import { decodeMaxHealthRoll } from '../../traits/max-health-roll';
 
 export function decodePayload(
   value: unknown,
@@ -260,6 +261,7 @@ function decodeTraitOffers(
       const hasAllTogetherResult = 'allTogetherResult' in option;
       const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
       const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
+      const hasMaxHealthRoll = 'maxHealthRoll' in option;
       const hasIcarusHammerTargets = option.icarusHammerTargets !== undefined;
       expectExactKeys(
         option,
@@ -274,6 +276,7 @@ function decodeTraitOffers(
           ...('allTogetherResult' in option ? ['allTogetherResult'] : []),
           ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
           ...(hasPersephoneLevelBonus ? ['persephoneLevelBonus'] : []),
+          ...(hasMaxHealthRoll ? ['maxHealthRoll'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -543,6 +546,14 @@ function decodeTraitOffers(
         : undefined;
       if (persephoneLevelBonus !== undefined && persephoneLevelBonus > 8)
         failProjectDocument(`${rolePath}.options.${key}.persephoneLevelBonus`, 'must not exceed 8');
+      const maxHealthRoll = hasMaxHealthRoll
+        ? decodeMaxHealthRoll(
+            catalog,
+            traitKey,
+            option.maxHealthRoll,
+            `${rolePath}.options.${key}.maxHealthRoll`,
+          )
+        : undefined;
       options.push(
         Object.freeze({
           traitKey,
@@ -555,6 +566,7 @@ function decodeTraitOffers(
           ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
           ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
+          ...(maxHealthRoll === undefined ? {} : { maxHealthRoll }),
         }),
       );
     }

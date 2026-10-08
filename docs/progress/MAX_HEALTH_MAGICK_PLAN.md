@@ -74,19 +74,23 @@ Native scripts: `1GameData/Scripts`.
 
 ## Authored additions (schema 93)
 
-- Loadout familiar: identity (`Frinos`, `Hecuba`, or another familiar with no
-  stat effect, or none) and stat upgrade count 0–3. Fresh File has none.
-- Worry Free acquisition: rolled health within its rarity range, defaulting to
-  the minimum.
+- Loadout familiar identity, required on mature routes and `null` on Fresh
+  File. Familiars are assumed at the mature rank (3 upgrades, 4 stacks), like
+  keepsake rank III; the rank is not authored. The catalog declares Frinos as
+  the default.
+- Worry Free option roll (`maxHealthRoll`), including Echo Boon Boon Boon
+  rows, as an offset 0–30 above the acquired rarity's minimum; omitted means
+  offset 0.
 
-A v92 document decodes into v93 with no familiar and Worry Free at its minimum.
+A v92 document migrates to v93 with Frinos on mature routes, `null` on Fresh
+File, and Worry Free at its minimum.
 
 ## Ownership
 
 - **Catalog:** every amount and rank table above; familiar declarations;
   run-progress Ashes/Bones bonus; Worry Free roll ranges.
-- **Engine, authored model:** familiar loadout field and Worry Free roll with
-  codec, migration, defaults and commands.
+- **Engine, authored model:** required familiar loadout field and Worry Free
+  roll with codec, migration, defaults and commands.
 - **Engine, simulation:** a max-stats authority that folds flat sources,
   multipliers, conversion, Fight Fight Fight snapshots and the Antler window
   from existing state, published in Run State. Silver Wheel grants counted per

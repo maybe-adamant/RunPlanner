@@ -251,6 +251,7 @@ function completeEchoRows(
           ...(row.naturalSelectionTargets === undefined
             ? {}
             : { naturalSelectionTargets: row.naturalSelectionTargets }),
+          ...(row.maxHealthRoll === undefined ? {} : { maxHealthRoll: row.maxHealthRoll }),
         });
   if (rows.length === 1) {
     const first = optionFor(rows[0]!);

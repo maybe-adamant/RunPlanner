@@ -31,6 +31,7 @@ function routeForCommand(
     ProjectStateCommand,
     | { readonly kind: 'ReplaceStartingReward' }
     | { readonly kind: 'ReplaceRouteLoadout' }
+    | { readonly kind: 'ReplaceFamiliar' }
     | { readonly kind: 'ReplaceAspectHexTree' }
     | { readonly kind: 'ReplaceManualArcanaSelection' }
     | { readonly kind: 'ReplaceFearVowRank' }
@@ -300,6 +301,16 @@ export function applyProjectStateCommand(
             ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
           },
         },
+      };
+    }
+    case 'ReplaceFamiliar': {
+      const { route } = routeForCommand(document, catalog, command);
+      if (catalog.familiars.byKey[command.familiarKey] === undefined)
+        failCommand(command, `unknown familiar ${command.familiarKey}`);
+      if (route.loadout.familiarKey === command.familiarKey) return document;
+      return {
+        ...document,
+        route: { ...route, loadout: { ...route.loadout, familiarKey: command.familiarKey } },
       };
     }
     case 'ReplaceAspectHexTree': {

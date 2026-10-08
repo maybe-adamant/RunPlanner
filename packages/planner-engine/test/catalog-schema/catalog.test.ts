@@ -49,6 +49,8 @@ describe('summarizeCatalog', () => {
       fearVows: emptyCollection(),
       keepsakes: emptyCollection(),
       defaultStartingKeepsakeKey: 'FixtureKeepsake',
+      familiars: emptyCollection(),
+      defaultFamiliarKey: 'FixtureFamiliar',
       rewards: {
         payloadDomains: emptyCollection(),
         rewardTypes: emptyCollection(),

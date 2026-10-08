@@ -14,6 +14,7 @@ import { normalizeEncounterDefinitions } from './encounters/definitions';
 import { normalizeEncounterEnvelopes } from './encounters/envelopes';
 import { normalizeEncounterSets } from './encounters/sets';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
+import { normalizeDefaultFamiliarKey, normalizeFamiliars } from './familiars';
 import { validateHexBindings } from './traits/hexes';
 import {
   normalizeKeepsakes,
@@ -67,6 +68,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const arcanaCards = normalizeArcanaCards(input.arcanaCards, traitCatalog.traits);
   const fearVows = normalizeFearVows(input.fearVows);
   const keepsakes = normalizeKeepsakes(input.keepsakes);
+  const familiars = normalizeFamiliars(input.familiars);
+  const defaultFamiliarKey = normalizeDefaultFamiliarKey(input.defaultFamiliarKey, familiars);
   validateHexBindings({
     hexes: traitCatalog.hexes,
     traits: traitCatalog.traits,
@@ -144,6 +147,8 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     fearVows,
     keepsakes,
     defaultStartingKeepsakeKey: 'ManaOverTimeRefundKeepsake',
+    familiars,
+    defaultFamiliarKey,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

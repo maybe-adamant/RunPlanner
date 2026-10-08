@@ -740,7 +740,7 @@
   white-space: nowrap;
 }
 
-.transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) > .chaos-value-slider {
+.transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) > .value-slider {
   flex: 1 1 10rem;
   min-width: 0;
 }

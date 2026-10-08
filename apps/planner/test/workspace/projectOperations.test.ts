@@ -1469,7 +1469,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 93 }),
+      JSON.stringify({ ...current, schemaVersion: 94 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);
@@ -1500,14 +1500,14 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 92; retained encounter choices may need missing fields repaired.',
+        'Migrated the profile to schema 93; retained encounter choices may need missing fields repaired.',
     });
     legacy.schemaVersion = 87;
     profile.setLoadJson(JSON.stringify(legacy));
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 92.',
+      message: 'Migrated the profile to schema 93.',
     });
     const hubLegacy = JSON.parse(encodeProjectDocument(loadSurfaceNProject())) as {
       schemaVersion: number;
@@ -1527,7 +1527,7 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 92; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+        'Migrated the profile to schema 93; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
     });
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.
@@ -1540,7 +1540,7 @@ describe('project profile operations', () => {
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 92.',
+      message: 'Migrated the profile to schema 93.',
     });
   });
 

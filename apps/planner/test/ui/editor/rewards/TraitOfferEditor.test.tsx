@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { Provider } from 'react-redux';
@@ -55,9 +55,12 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { createFreshFileFProject, freshFileFBiome } from '@run-planner/test-fixtures/fresh-file';
 import {
+  loadSurfaceNOPProject,
   loadSurfaceNQueensRansomProject,
   nBiome,
   nOccurrenceIds,
+  pBiome,
+  pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfacePSteadyGrowthShrineFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
@@ -821,6 +824,63 @@ describe('trait offer editor entry and dialog', () => {
     expect(
       screen.getByRole('button', { name: 'option1 acquisition target' }).textContent,
     ).not.toContain('Choose an equipped trait');
+    application.dispose();
+  });
+
+  it('authors the selected Worry Free max-health roll within its rarity range and saves it', async () => {
+    const application = createApplication();
+    const occurrenceId = pOccurrenceId('P_Story01', 7, 1);
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(pBiome, { kind: 'occurrence', occurrenceId }, 'Encounter'),
+      'selection',
+    );
+    const baseline = loadSurfaceNOPProject();
+    application.store.dispatch(authoredProjectReplaced(baseline));
+    const before = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .interactions.traitOffers.get(semanticAddressKey(trait));
+    if (before?.value?.kind !== 'traits') throw new Error('Dionysus offer is missing');
+    application.store.dispatch(
+      authoredProjectReplaced(
+        applyProjectCommand(baseline, application.catalog, {
+          kind: 'ReplaceTraitOffer',
+          trait,
+          value: { ...before.value, selectedOptionKey: 'option2' },
+        }),
+      ),
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={trait} />
+      </Provider>,
+    );
+    const roll = screen.getByRole('slider', { name: 'Worry Free max health roll' });
+    expect([roll.getAttribute('min'), roll.getAttribute('max')]).toEqual(['0', '30']);
+    expect((roll as HTMLInputElement).value).toBe('0');
+    expect(roll.getAttribute('aria-valuetext')).toBe('50');
+    expect(screen.getByText('Max health roll 50–80')).toBeTruthy();
+    expect(roll.hasAttribute('title')).toBe(false);
+
+    fireEvent.change(roll, { target: { value: '22' } });
+    expect(screen.getByLabelText('Worry Free max health roll value').textContent).toBe('72');
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const interaction = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .interactions.traitOffers.get(semanticAddressKey(trait));
+    const saved = interaction?.value;
+    if (saved?.kind !== 'traits') throw new Error('Dionysus offer is missing');
+    expect(saved.options[1]).toEqual({
+      traitKey: 'HiddenMaxHealthBoon',
+      rarity: 'Common',
+      maxHealthRoll: 22,
+    });
+    // A rarified acquisition keeps the offset and realizes it at the acquired rarity.
+    const heroic = interaction!.maxHealthRoll(saved, 'option2', 'Heroic');
+    expect([heroic?.minimum, heroic?.maximum, heroic?.healthFor(heroic.offset)]).toEqual([
+      110, 140, 132,
+    ]);
     application.dispose();
   });
 

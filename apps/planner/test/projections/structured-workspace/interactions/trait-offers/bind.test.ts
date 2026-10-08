@@ -992,6 +992,17 @@ describe('trait-offers/bind', () => {
     expect(domain?.labelFor(child.options[0])).toBe('Flutter Strike');
     expect(domain?.effectiveRarityFor(child.options[0])).toBe('Rare');
     expect(domain?.effectiveLevelFor(child.options[0])).toBe(1);
+    expect(domain?.maxHealthRollFor(child.options[0])).toBeUndefined();
+    const worryFree = domain?.maxHealthRollFor({
+      giverKey: 'Dionysus',
+      traitKey: 'HiddenMaxHealthBoon',
+      rarity: 'Heroic',
+      maxHealthRoll: 9,
+    });
+    expect([worryFree?.minimum, worryFree?.maximum, worryFree?.offset, worryFree?.width]).toEqual([
+      110, 140, 9, 30,
+    ]);
+    expect(worryFree?.healthFor(9)).toBe(119);
     expect(traitCarrierChildDomain).toHaveBeenCalledTimes(1);
   });
 

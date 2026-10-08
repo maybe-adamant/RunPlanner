@@ -391,6 +391,13 @@ layout domains and aspect links, not live tree closure or delivery clocks.
 All such effects must be normalized before entering production; an identity
 alone does not justify an unsupported effect transition.
 
+Familiars are a loadout collection: each declares its label, the familiar-shop
+upgrade count a mature save owns for its first trait (all three), and, for
+Frinos and Hecuba, the flat max health or Magick that trait adds per stack. The
+catalog also declares the default familiar. Worry Free declares its acquisition
+max-health roll as a minimum per rarity, scaled from the source bounds, and one
+roll width the compiler requires every rarity to share.
+
 ## Requirement and Closure Obligations
 
 Requirements are typed expressions over run ledgers and, where a scope admits

@@ -6,7 +6,7 @@ import { declaredChoicesPicker } from '@planner/projections/contextual/contextua
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { ChaosBlessingValueFields } from './ChaosBlessingValueFields';
 import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
-import { ChaosValueSlider } from './ChaosValueSlider';
+import { ValueSlider } from './ValueSlider';
 import { reconcileChaosOperandValues } from './chaos-blessing-values';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -160,7 +160,7 @@ export function ChaosTraitOfferEditor({
                 />
                 <label className="field-control">
                   <span>{requirement?.unit}</span>
-                  <ChaosValueSlider
+                  <ValueSlider
                     ariaLabel={`${optionKey} requirement`}
                     maximum={requirement?.maximum ?? option.requirementCount}
                     minimum={requirement?.minimum ?? option.requirementCount}
@@ -223,7 +223,7 @@ export function ChaosTraitOfferEditor({
               key={operand.key}
             >
               <span>{operand.label}</span>
-              <ChaosValueSlider
+              <ValueSlider
                 ariaLabel={operand.label}
                 maximum={operand.maximum}
                 minimum={operand.minimum}

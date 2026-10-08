@@ -22,6 +22,7 @@ import {
 import { decodeEchoLastRunBoon } from './echo-last-run-codec';
 import { decodeAllTogetherResult } from './all-together-codec';
 import { encounterSetForBinding } from '../encounter-envelope';
+import { decodeMaxHealthRoll } from '../../traits/max-health-roll';
 
 export function decodeEncounterTraitOffer(
   value: unknown,
@@ -76,6 +77,7 @@ export function decodeEncounterTraitOffer(
     const hasAllTogetherResult = 'allTogetherResult' in option;
     const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
     const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
+    const hasMaxHealthRoll = 'maxHealthRoll' in option;
     expectExactKeys(
       option,
       [
@@ -89,6 +91,7 @@ export function decodeEncounterTraitOffer(
         ...(hasAllTogetherResult ? ['allTogetherResult'] : []),
         ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
         ...(hasPersephoneLevelBonus ? ['persephoneLevelBonus'] : []),
+        ...(hasMaxHealthRoll ? ['maxHealthRoll'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -350,6 +353,14 @@ export function decodeEncounterTraitOffer(
       : undefined;
     if (persephoneLevelBonus !== undefined && persephoneLevelBonus > 8)
       failProjectDocument(`${path}.options.${optionKey}.persephoneLevelBonus`, 'must not exceed 8');
+    const maxHealthRoll = hasMaxHealthRoll
+      ? decodeMaxHealthRoll(
+          catalog,
+          traitKey,
+          option.maxHealthRoll,
+          `${path}.options.${optionKey}.maxHealthRoll`,
+        )
+      : undefined;
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -362,6 +373,7 @@ export function decodeEncounterTraitOffer(
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
             ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
             ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
+            ...(maxHealthRoll === undefined ? {} : { maxHealthRoll }),
           }
         : {
             traitKey,
@@ -374,6 +386,7 @@ export function decodeEncounterTraitOffer(
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
             ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
             ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
+            ...(maxHealthRoll === undefined ? {} : { maxHealthRoll }),
           };
     options.push(Object.freeze(decodedOption));
   }

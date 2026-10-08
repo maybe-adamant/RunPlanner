@@ -30,6 +30,7 @@ import type {
   WorkspaceEchoLastRunBoonInteraction,
   WorkspaceTraitCarrierChildControl,
 } from '@planner/projections/structured-workspace/contracts/traits';
+import { projectMaxHealthRoll } from './max-health-roll';
 
 function echoRowsForEngine(
   rows: readonly WorkspaceEchoLastRunBoonDraftRow[],
@@ -210,6 +211,17 @@ export function bindEchoLastRunBoonInteraction(input: {
                   candidate.option.traitKey === option.traitKey &&
                   candidate.option.rarity === option.rarity,
               )?.effectiveRarity,
+            maxHealthRollFor: (option: AuthoredEchoLastRunBoonOffer['options'][number]) =>
+              projectMaxHealthRoll(
+                catalog,
+                option,
+                domainCandidates.find(
+                  (candidate) =>
+                    candidate.option.giverKey === option.giverKey &&
+                    candidate.option.traitKey === option.traitKey &&
+                    candidate.option.rarity === option.rarity,
+                )?.effectiveRarity ?? option.rarity,
+              ),
             labelFor: identityLabel,
             traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
             summaryFor: (child: AuthoredEchoLastRunBoonOffer) => {

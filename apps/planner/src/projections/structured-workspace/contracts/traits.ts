@@ -427,6 +427,10 @@ export interface WorkspaceEchoLastRunBoonDomain {
     | { readonly rows: readonly WorkspaceEchoLastRunBoonDraftRow[]; readonly selectedIndex: number }
     | undefined;
   readonly effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) => TraitRarity | undefined;
+  /** The selected row's max-health roll at its acquired rarity; undefined when none. */
+  readonly maxHealthRollFor: (
+    option: AuthoredEchoLastRunBoonOption,
+  ) => WorkspaceMaxHealthRoll | undefined;
   readonly effectiveLevelFor: (
     identity: WorkspaceEchoLastRunBoonTraitIdentity,
   ) => number | undefined;
@@ -499,6 +503,12 @@ export interface WorkspaceTraitOfferInteraction {
   ) => readonly CandidateOptionProjection<AuthoredTraitOffer>[];
   readonly owner: TraitOfferAddress;
   readonly showPersephoneBonus: boolean;
+  /** Worry Free's max-health roll on one option at its acquired rarity; undefined when none. */
+  readonly maxHealthRoll: (
+    value: AuthoredTraitOfferTraits,
+    optionKey: TraitOptionKey,
+    acquiredRarity: TraitRarity | undefined,
+  ) => WorkspaceMaxHealthRoll | undefined;
   readonly rarityEditable: boolean;
   /** Declaration-backed editability for the currently selected trait's rarity. */
   readonly rarityEditableFor: (traitKey: string) => boolean;
@@ -539,6 +549,16 @@ export interface WorkspaceTraitOfferInteraction {
   readonly removeTraitOfferDraft?: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOffer | undefined;
+}
+
+/** A max-health roll: the offset above the acquired rarity's minimum and its realized health. */
+export interface WorkspaceMaxHealthRoll {
+  readonly offset: number;
+  readonly width: number;
+  /** Realized max health at offset 0 and at `width`. */
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly healthFor: (offset: number) => number;
 }
 
 export interface WorkspaceRejectedBlockDomain {

@@ -6,6 +6,7 @@ import {
   type AuthoredEchoLastRunBoonOption,
   type TraitOptionKey,
 } from '../../traits/state';
+import { decodeMaxHealthRoll } from '../../traits/max-health-roll';
 import {
   expectArray,
   expectExactKeys,
@@ -37,12 +38,23 @@ export function decodeEchoLastRunBoon(
         ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
         ...(option.naturalSelectionTargets === undefined ? [] : ['naturalSelectionTargets']),
         ...(option.allTogetherResult === undefined ? [] : ['allTogetherResult']),
+        ...('maxHealthRoll' in option ? ['maxHealthRoll'] : []),
       ],
       optionPath,
     );
+    const traitKey = expectString(option.traitKey, `${optionPath}.traitKey`);
+    const maxHealthRoll =
+      'maxHealthRoll' in option
+        ? decodeMaxHealthRoll(
+            catalog,
+            traitKey,
+            option.maxHealthRoll,
+            `${optionPath}.maxHealthRoll`,
+          )
+        : undefined;
     return Object.freeze({
       giverKey: expectString(option.giverKey, `${optionPath}.giverKey`),
-      traitKey: expectString(option.traitKey, `${optionPath}.traitKey`),
+      traitKey,
       rarity: expectString(option.rarity, `${optionPath}.rarity`) as TraitRarity,
       ...(option.targetTraitKey === undefined
         ? {}
@@ -86,6 +98,7 @@ export function decodeEchoLastRunBoon(
               ),
             ) as NonNullable<AuthoredEchoLastRunBoonOption['allTogetherResult']>,
           }),
+      ...(maxHealthRoll === undefined ? {} : { maxHealthRoll }),
     }) satisfies AuthoredEchoLastRunBoonOption;
   });
   const selectedOptionKey = expectString(

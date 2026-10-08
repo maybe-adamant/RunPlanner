@@ -15,6 +15,7 @@ import {
   type AuthoredTraitOfferTraits,
 } from '../traits/state';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
+import { canonicalMaxHealthRoll, traitMaxHealthRollProblem } from '../traits/max-health-roll';
 import { reconcileSelectedPickupProducerState } from '../acquisition/pickup-producers';
 import { createBiomeAddress, type TraitOfferAddress } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
@@ -166,6 +167,11 @@ function validateOffer(
         command,
         `${option.traitKey} Persephone level bonus must be an integer from 0 to 8`,
       );
+    if (option.maxHealthRoll !== undefined) {
+      const problem = traitMaxHealthRollProblem(catalog, option.traitKey, option.maxHealthRoll);
+      if (problem !== undefined)
+        failCommand(command, `${option.traitKey} max-health roll ${problem}`);
+    }
     if (trait.rarityDomain.kind === 'none') {
       if (option.rarity !== undefined)
         failCommand(command, `rarityless option ${option.traitKey} has no rarity`);
@@ -304,54 +310,56 @@ function validateOffer(
     kind: 'traits',
     giverKey: value.giverKey,
     options: Object.freeze(
-      value.options.map((option) => {
-        const resolution = option.circeResolution;
-        const echoLastRunBoon =
-          'echoLastRunBoon' in option
-            ? normalizeAuthoredEchoLastRunBoon(catalog, option.echoLastRunBoon)
-            : undefined;
-        const allTogetherResult =
-          'allTogetherResult' in option
-            ? normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult)
-            : undefined;
-        if (resolution === undefined)
-          return Object.freeze({
-            ...option,
-            ...(option.icarusHammerTargets === undefined
-              ? {}
-              : {
-                  icarusHammerTargets: Object.freeze([
-                    ...option.icarusHammerTargets,
-                  ]) as typeof option.icarusHammerTargets,
-                }),
-            ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
-            ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
-          });
-        if (resolution.kind === 'disableFear')
+      value.options
+        .map((option) => {
+          const resolution = option.circeResolution;
+          const echoLastRunBoon =
+            'echoLastRunBoon' in option
+              ? normalizeAuthoredEchoLastRunBoon(catalog, option.echoLastRunBoon)
+              : undefined;
+          const allTogetherResult =
+            'allTogetherResult' in option
+              ? normalizeAllTogetherResult(catalog, option.traitKey, option.allTogetherResult)
+              : undefined;
+          if (resolution === undefined)
+            return Object.freeze({
+              ...option,
+              ...(option.icarusHammerTargets === undefined
+                ? {}
+                : {
+                    icarusHammerTargets: Object.freeze([
+                      ...option.icarusHammerTargets,
+                    ]) as typeof option.icarusHammerTargets,
+                  }),
+              ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
+              ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
+            });
+          if (resolution.kind === 'disableFear')
+            return Object.freeze({
+              ...option,
+              circeResolution: Object.freeze({
+                kind: resolution.kind,
+                vowKeys: Object.freeze(
+                  catalog.fearVows.values
+                    .filter((vow) => resolution.vowKeys.includes(vow.key))
+                    .map((vow) => vow.key),
+                ),
+              }),
+            });
           return Object.freeze({
             ...option,
             circeResolution: Object.freeze({
               kind: resolution.kind,
-              vowKeys: Object.freeze(
-                catalog.fearVows.values
-                  .filter((vow) => resolution.vowKeys.includes(vow.key))
-                  .map((vow) => vow.key),
+              // Persist exact Arcana sets in declaration order, matching decode.
+              arcanaKeys: Object.freeze(
+                catalog.arcanaCards.values
+                  .filter((card) => resolution.arcanaKeys.includes(card.key))
+                  .map((card) => card.key),
               ),
             }),
           });
-        return Object.freeze({
-          ...option,
-          circeResolution: Object.freeze({
-            kind: resolution.kind,
-            // Persist exact Arcana sets in declaration order, matching decode.
-            arcanaKeys: Object.freeze(
-              catalog.arcanaCards.values
-                .filter((card) => resolution.arcanaKeys.includes(card.key))
-                .map((card) => card.key),
-            ),
-          }),
-        });
-      }),
+        })
+        .map((option) => canonicalMaxHealthRoll(option)),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: value.selectedOptionKey,
     ...(canonicalHexTree === undefined ? {} : { hexTree: canonicalHexTree }),

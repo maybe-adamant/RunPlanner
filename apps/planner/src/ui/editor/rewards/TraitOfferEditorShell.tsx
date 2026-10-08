@@ -312,6 +312,10 @@ export function TraitOfferEditorShell({
         }
         selectedOutcome={
           <TraitOfferSelectedOutcome
+            {...(() => {
+              const acquiredRarity = effectiveRarity(value.selectedOptionKey);
+              return acquiredRarity === undefined ? {} : { acquiredRarity };
+            })()}
             interaction={interaction}
             onFeedback={reportOutcomeFeedback}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}

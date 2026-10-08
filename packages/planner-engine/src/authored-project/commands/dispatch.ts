@@ -130,6 +130,7 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceRouteLoadout':
+    case 'ReplaceFamiliar':
     case 'ReplaceStartingReward':
     case 'ReplaceAspectHexTree':
     case 'ReplaceRunModifiers':

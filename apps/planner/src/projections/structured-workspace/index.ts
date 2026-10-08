@@ -149,6 +149,7 @@ export type {
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoPomTargetDomain,
   WorkspaceEchoLastRunBoonDomain,
+  WorkspaceMaxHealthRoll,
   WorkspaceEchoLastRunBoonCarrierDomain,
   WorkspaceEchoLastRunBoonDraftRow,
   WorkspaceEchoLastRunBoonDraftSupport,

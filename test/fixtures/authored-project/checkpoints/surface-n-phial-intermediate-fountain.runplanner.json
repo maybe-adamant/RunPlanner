@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 92,
+  "schemaVersion": 93,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -46,7 +46,8 @@
         "LimitGraspShrineUpgrade": 0,
         "EnemyEliteShrineUpgrade": 0
       },
-      "startingKeepsakeKey": "FountainRarityKeepsake"
+      "startingKeepsakeKey": "FountainRarityKeepsake",
+      "familiarKey": "FrogFamiliar"
     },
     "biomes": [
       {

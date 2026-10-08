@@ -4,16 +4,19 @@ import type {
   WorkspaceTraitOfferFeedback,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace/contracts/traits';
-import type {
-  AuthoredTraitOffer,
-  AuthoredTraitOfferTraits,
+import {
+  optionIndex,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
+  type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 
 import { traitOfferCommandFor } from '../reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
 import { bindChaosOfferInteraction } from './chaos';
+import { projectMaxHealthRoll } from './max-health-roll';
 import { bindTraitOfferOptionDomain } from './option-domain';
 import { traitOfferLauncherPresentation } from '../launcher-presentation';
 
@@ -99,6 +102,16 @@ export function bindTraitOfferInteractions(input: {
         load,
         owner: control.address,
         showPersephoneBonus: input.showPersephoneBonus,
+        maxHealthRoll: (
+          value: AuthoredTraitOfferTraits,
+          optionKey: TraitOptionKey,
+          acquiredRarity: TraitRarity | undefined,
+        ) => {
+          const option = value.options[optionIndex(optionKey)];
+          return option === undefined
+            ? undefined
+            : projectMaxHealthRoll(catalog, option, acquiredRarity ?? option.rarity);
+        },
         rarityEditable: control.rarityEditable !== false,
         rarityEditableFor: (traitKey: string) => {
           const declaration = catalog.traits.byKey[traitKey];

@@ -1,5 +1,16 @@
 # Project schema boundary
 
+Schema 93 adds the loadout `familiarKey`, required on a mature save and `null`
+on Fresh File, and an optional Worry Free `maxHealthRoll` offset above the
+acquired rarity's minimum roll, whose absence is offset 0.
+
+```bash
+npm run schema:migrate-92-to-93 -- path/to/schema-92-project.runplanner.json
+```
+
+The migration equips Frinos (`FrogFamiliar`) on every mature route and `null`
+on Fresh File, after `startingKeepsakeKey`; nothing else changes.
+
 Schema 92 stores an Anvil of Fates result on the reward that carries the Anvil,
 in `anvilResultsByAcquisitionRole`, instead of on the World Shop slot.
 
