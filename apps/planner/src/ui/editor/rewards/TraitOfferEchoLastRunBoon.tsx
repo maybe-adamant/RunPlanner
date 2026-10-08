@@ -20,7 +20,12 @@ import {
 import { useAppSelector } from '@planner/state/store';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useDialogFindingEntries,
+  useFindingAnchor,
+  useFindingMark,
+} from '@planner/ui/feedback/useFindingTarget';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { TraitOfferForm, TraitOfferShapeActions, type FeedbackEntry } from './TraitOfferForm';
 import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
 import { TraitOfferOption } from './TraitOfferOption';
@@ -85,6 +90,8 @@ function EchoLastRunBoonChoiceEditor({
   const [selectedIndex, setSelectedIndex] = useState<number>(() =>
     value === undefined ? 0 : optionIndex(value.selectedOptionKey),
   );
+  const [initialDraft] = useState(() => ({ rows, selectedIndex }));
+  const routeEntries = useDialogFindingEntries(address);
   const selectedRow = rows[selectedIndex];
   const selectedComplete = useMemo(() => completeRow(selectedRow), [selectedRow]);
   const draftSupport = domain.draftSupportFor(rows, selectedIndex);
@@ -220,8 +227,14 @@ function EchoLastRunBoonChoiceEditor({
       ? undefined
       : 'Complete the other Echo rows before editing this outcome. Existing targets are retained.';
   // The nested form is the visible dialog body, so it owns its own fixed feedback region.
+  // At rest the region matches the choice launcher; an edited draft shows its own messages.
+  const atRest = draftValueIdentity({ rows, selectedIndex }) === draftValueIdentity(initialDraft);
   const feedbackEntries: readonly FeedbackEntry[] =
-    carrierMessage === undefined ? [] : [['carrier', carrierMessage]];
+    atRest && routeEntries !== undefined
+      ? routeEntries
+      : carrierMessage === undefined
+        ? []
+        : [['carrier', carrierMessage]];
 
   return (
     <section

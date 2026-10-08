@@ -12,6 +12,8 @@ import {
 } from '@planner/projections/rewards/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
+import { useDialogFindingEntries } from '@planner/ui/feedback/useFindingTarget';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
@@ -60,6 +62,7 @@ export function TraitOfferEditorShell({
   );
   // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
   const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
+  const routeEntries = useDialogFindingEntries();
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
@@ -76,9 +79,6 @@ export function TraitOfferEditorShell({
     (support === 'impossible'
       ? 'This offer is unavailable in the current route context.'
       : undefined);
-  const hasOptionFeedback = feedback.options.some(
-    (option) => option.reasons.length > 0 || option.replacement !== undefined,
-  );
   const rarifySupported = (optionKey: AuthoredTraitOfferTraits['selectedOptionKey']): boolean => {
     if (candidate?.evaluation.kind !== 'traitOffer') return false;
     const branches = candidate.evaluation.result.callingCard ?? [];
@@ -157,16 +157,31 @@ export function TraitOfferEditorShell({
       />
     );
   }
+  // At rest the region matches the launcher; an edited draft shows its own assessment.
+  const atRestEntries =
+    routeEntries !== undefined &&
+    draftValueIdentity(value) === draftValueIdentity(interaction.value)
+      ? routeEntries
+      : undefined;
+  // Replacement previews stay; at rest the route findings stand in for candidate reasons.
+  const optionFeedback =
+    atRestEntries === undefined
+      ? feedback.options
+      : feedback.options.map((option) => ({ ...option, reasons: [] }));
+  const hasOptionFeedback = optionFeedback.some(
+    (option) => option.reasons.length > 0 || option.replacement !== undefined,
+  );
   const feedbackSection = (
     <EditorDialogFeedback
       name="Offer feedback"
       entries={
-        offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries]
+        atRestEntries ??
+        (offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries])
       }
     >
       {!hasOptionFeedback
         ? undefined
-        : feedback.options.map((option, index) =>
+        : optionFeedback.map((option, index) =>
             option.reasons.length === 0 && option.replacement === undefined ? null : (
               <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
                 <strong>Option {index + 1}</strong>

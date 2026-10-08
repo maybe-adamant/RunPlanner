@@ -298,6 +298,7 @@ export function App({
 
         {showEntry || traitDialogTarget === null || workspace === undefined ? null : (
           <TraitOfferDialog
+            findings={workspace.traitDialogFindings(traitDialogTarget)}
             interactions={workspace.interactions}
             key={semanticAddressKey(traitDialogTarget)}
             target={traitDialogTarget}
