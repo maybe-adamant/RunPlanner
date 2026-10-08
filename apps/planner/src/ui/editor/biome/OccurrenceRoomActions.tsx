@@ -538,13 +538,11 @@ export function RoomActionsWorkbench({
           data-action-accent={actionAccent}
           data-blocking-product={row.blockingProduct}
           {...hintProps(
-            actionAccent === 'optional'
-              ? 'Optional action'
-              : actionAccent === 'phase'
-                ? 'Required in this timeline section, not necessarily as the next action.'
-                : actionAccent === 'room'
-                  ? 'Required before leaving the room.'
-                  : undefined,
+            actionAccent === 'phase'
+              ? 'Required in this timeline section, not necessarily as the next action.'
+              : actionAccent === 'room'
+                ? 'Required before leaving the room.'
+                : undefined,
           )}
           data-dragging={pointerDrag?.actionKey === row.key || undefined}
           data-drop-after={

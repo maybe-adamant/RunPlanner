@@ -759,7 +759,7 @@ export function BatchWorkbench({
         <ExactRepairAction intent={node.repairIntent} />
         <SelectedContinuationAction node={node} />
         <TopologyRemovalAction
-          disabledHint="Nothing authored to remove yet."
+          disabledHint="No doors chosen yet."
           interaction={removal}
           label="Remove these doors"
         />

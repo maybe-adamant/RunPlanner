@@ -38,7 +38,7 @@ function anvilInteraction(
 ): AnvilInteraction {
   const domain = {
     ...input,
-    launcher: input.launcher ?? { label: 'Edit Anvil', detail: 'Anvil: no result chosen' },
+    launcher: input.launcher ?? { label: 'Edit Anvil' },
     assess: input.assess ?? (() => ({ legal: true, findings: [] })),
     traitLabel: input.traitLabel ?? ((traitKey: string) => traitKey),
   };
@@ -213,11 +213,8 @@ describe('Anvil result editor', () => {
       </Provider>,
     );
     const launcher = screen.getByRole('button', { name: 'Edit Anvil' });
-    // The description leads with the launcher summary, then the marked findings.
-    const summary = 'Anvil: no result chosen ';
-    const described = launcher.getAttribute('aria-description') ?? '';
-    expect(described.startsWith(summary)).toBe(true);
-    const marked = described.slice(summary.length);
+    // With no result chosen, the description is only the marked findings.
+    const marked = launcher.getAttribute('aria-description') ?? '';
     if (marked === '') throw new Error('the missing Anvil result marks no launcher finding');
     await userEvent.setup().click(launcher);
     const feedback = screen.getByRole('status', { name: 'Anvil feedback' });

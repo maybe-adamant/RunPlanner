@@ -64,9 +64,7 @@ export function InfiniteRosterControl({
         open={draft !== undefined}
         placeholder="Default"
         triggerLabel={typeKeys === undefined ? 'Default' : typeKeys.map(labelFor).join(' · ')}
-        {...(needsRepair
-          ? { invalid: true, triggerHint: 'Retained roster is unavailable here.' }
-          : {})}
+        {...(needsRepair ? { invalid: true } : {})}
       />
       <button
         className="quiet-action"

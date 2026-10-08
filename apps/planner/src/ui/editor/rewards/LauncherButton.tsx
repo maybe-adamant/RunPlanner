@@ -23,7 +23,7 @@ export function LauncherButton({
         ? hintProps(launcher.detail, findings)
         : hintProps(
             candidateWaitingHint,
-            findings === undefined ? launcher.detail : `${launcher.detail} ${findings}`,
+            [launcher.detail, findings].filter((part) => part !== undefined).join(' ') || undefined,
           ))}
       className="dialog-launcher trait-offer-launcher quiet-action action-compact"
       disabled={!contextReached || undefined}

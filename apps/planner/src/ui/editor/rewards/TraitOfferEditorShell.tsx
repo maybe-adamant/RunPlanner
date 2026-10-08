@@ -240,8 +240,8 @@ export function TraitOfferEditorShell({
                 className="trait-offer-rejected-block"
                 {...hintProps(
                   rejectedBlockInactive
-                    ? 'Rejected does not block a row in this offer.'
-                    : 'Rejected blocks one offered row.',
+                    ? 'The Rejected curse doesn’t lock an option in this offer.'
+                    : 'The Rejected curse makes one offered option unselectable.',
                 )}
               >
                 <legend>Rejected blocked row</legend>

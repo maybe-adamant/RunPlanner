@@ -1,4 +1,5 @@
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
+import { formatFindingSentence, presentFinding } from '@planner/projections/evaluationProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -99,6 +100,12 @@ export function RewardWheelWorkbench({
               );
               const waiting = !count.contextReached || candidateWaits(candidate);
               const unavailable = candidate !== undefined && !candidateMayBeAuthored(candidate);
+              const reason =
+                candidate?.evaluation.kind === 'rewardWheelOfferCount'
+                  ? candidate.evaluation.result.findings
+                      .map((finding) => formatFindingSentence(presentFinding(finding)))
+                      .join(' ')
+                  : '';
               return (
                 <label key={choice.value}>
                   <input
@@ -111,7 +118,7 @@ export function RewardWheelWorkbench({
                       waiting
                         ? candidateWaitingHint
                         : unavailable
-                          ? 'This offer count is unavailable.'
+                          ? reason || 'This offer count is unavailable.'
                           : undefined,
                     )}
                     onFocus={countCandidates.activate}

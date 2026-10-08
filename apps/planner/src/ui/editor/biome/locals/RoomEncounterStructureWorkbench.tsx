@@ -39,18 +39,11 @@ export function RoomEncounterStructureWorkbench({
             interaction.owner,
             isIdentityFinding,
           );
-          const description = [target['aria-description'], interaction.disabledReason]
-            .filter((entry) => entry !== undefined)
-            .join(' ');
           return (
-            <label
-              className="room-feature-presence-row"
-              key={feature.interactionKey}
-              {...hintProps(interaction.disabledReason)}
-            >
+            <label className="room-feature-presence-row" key={feature.interactionKey}>
               <input
                 {...target}
-                aria-description={description === '' ? undefined : description}
+                {...hintProps(interaction.disabledReason, target['aria-description'])}
                 checked={feature.action === 'remove'}
                 disabled={interaction.disabledReason !== undefined}
                 onChange={() => executeIntent(interaction.intent)}

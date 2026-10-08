@@ -86,7 +86,7 @@ export interface WorkspaceAcquisitionConversionInteraction {
 /** A launcher's one-line label and the full summary behind its hover and description. */
 export interface WorkspaceLauncherPresentation {
   readonly label: string;
-  readonly detail: string;
+  readonly detail?: string;
 }
 
 export interface WorkspaceTraitOfferControl {

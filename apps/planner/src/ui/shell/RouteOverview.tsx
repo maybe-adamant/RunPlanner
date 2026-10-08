@@ -106,7 +106,7 @@ export function RouteOverview({
         <span>Plan up to</span>
         <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
           {navigation.biomePanels.map((biome, index) => (
-            <label key={biome.biomeKey} {...hintProps(`Through ${biome.label}`)}>
+            <label key={biome.biomeKey}>
               <input
                 type="radio"
                 name={`${workspaceRoute.routeKey}-configured-prefix`}
@@ -384,7 +384,7 @@ function MatureRouteLoadout({
                       }}
                       hint={
                         exceedsGrasp
-                          ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}`
+                          ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}.`
                           : automatic
                             ? 'Activates automatically when its conditions are met.'
                             : undefined
@@ -444,7 +444,7 @@ function MatureRouteLoadout({
                       hint={
                         canAdvance
                           ? undefined
-                          : 'This rank would exceed your available Arcana Grasp. Lower Arcana Grasp first.'
+                          : 'This rank would lower your starting Grasp below the cost of your chosen Arcana. Remove Arcana cards first.'
                       }
                       data-fear-vow-key={vow.key}
                       data-rival={vow.key === 'BossDifficultyShrineUpgrade' || undefined}

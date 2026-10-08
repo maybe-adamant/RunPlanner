@@ -8,8 +8,9 @@ import type { Catalog, TraitGiverDeclaration } from '@run-planner/engine/catalog
 
 import type { WorkspaceLauncherPresentation } from '../contracts/traits';
 
-function presentation(label: string, detail: string): WorkspaceLauncherPresentation {
-  return Object.freeze({ label, detail });
+/** The detail appears only when a chosen value exists to restate in full. */
+function presentation(label: string, detail?: string): WorkspaceLauncherPresentation {
+  return Object.freeze(detail === undefined ? { label } : { label, detail });
 }
 
 function traitLabel(catalog: Catalog, traitKey: string): string {
@@ -23,8 +24,7 @@ export function traitOfferLauncherPresentation(
   offer: AuthoredTraitOffer | null,
 ): WorkspaceLauncherPresentation {
   if (giver.providerKind === 'chaos') {
-    if (offer?.kind !== 'chaos')
-      return presentation('Edit Chaos · Choose outcome', 'Chaos: no outcome chosen');
+    if (offer?.kind !== 'chaos') return presentation('Edit Chaos · Choose outcome');
     const curseKey = offer.curseOptions[optionIndex(offer.selectedOptionKey)]?.curseKey;
     const curse =
       curseKey === undefined
@@ -33,19 +33,15 @@ export function traitOfferLauncherPresentation(
     const blessing = catalog.chaos.blessings.byKey[offer.blessingKey]?.label ?? offer.blessingKey;
     return presentation(
       `Edit Chaos · ${curse} → ${blessing}`,
-      `Chaos: ${curse} → ${blessing} · ${offer.rarity}`,
+      `${curse} → ${blessing} · ${offer.rarity}`,
     );
   }
   const kind = giver.providerKind === 'spell' ? 'Hex' : 'Trait';
-  if (offer?.kind === 'fallbackGold')
-    return presentation(`Edit ${kind} · Fallback Gold`, `${giver.label}: Fallback Gold`);
+  if (offer?.kind === 'fallbackGold') return presentation(`Edit ${kind} · Fallback Gold`);
   const selected =
     offer?.kind === 'traits' ? offer.options[optionIndex(offer.selectedOptionKey)] : undefined;
   if (selected === undefined)
-    return presentation(
-      `Edit ${kind} · Choose ${kind === 'Hex' ? 'Hex' : 'trait'}`,
-      `${giver.label}: no ${kind === 'Hex' ? 'Hex' : 'trait'} chosen`,
-    );
+    return presentation(`Edit ${kind} · Choose ${kind === 'Hex' ? 'Hex' : 'trait'}`);
   const label = traitLabel(catalog, selected.traitKey);
   return presentation(
     `Edit ${kind} · ${label}`,
@@ -60,16 +56,14 @@ export function levelResolutionLauncherPresentation(
   levelCount: number | undefined,
   settledEmptyNoOp: boolean,
 ): WorkspaceLauncherPresentation {
-  if (settledEmptyNoOp)
-    return presentation('Edit Pom · No eligible traits', 'Pom: no eligible traits');
+  if (settledEmptyNoOp) return presentation('Edit Pom · No eligible traits');
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const levels = levelCount === undefined ? '' : ` +${levelCount}`;
-  if (target === null)
-    return presentation(`Edit Pom · Choose target${levels}`, 'Pom: no target chosen');
+  if (target === null) return presentation(`Edit Pom · Choose target${levels}`);
   const label = traitLabel(catalog, target);
   return presentation(
     `Edit Pom · ${label}${levels}`,
-    `Pom: ${label}${
+    `${label}${
       levelCount === undefined ? '' : ` gains ${levelCount} level${levelCount === 1 ? '' : 's'}`
     }`,
   );
@@ -80,11 +74,11 @@ export function anvilResultLauncherPresentation(
   catalog: Catalog,
   value: AuthoredAnvilResult | null,
 ): WorkspaceLauncherPresentation {
-  if (value === null) return presentation('Edit Anvil', 'Anvil: no result chosen');
+  if (value === null) return presentation('Edit Anvil');
   const removed =
     value.removedTraitKey === null
       ? 'No removal'
       : `Removes ${traitLabel(catalog, value.removedTraitKey)}`;
   const added = value.addedTraitKeys.map((traitKey) => traitLabel(catalog, traitKey)).join(', ');
-  return presentation('Edit Anvil', `Anvil: ${removed} · adds ${added || 'nothing'}`);
+  return presentation('Edit Anvil', `${removed} · adds ${added || 'nothing'}`);
 }

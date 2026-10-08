@@ -135,11 +135,7 @@ function HubMapMarker({
           }}
           ref={marker}
           style={hubMapPosition({ x, y })}
-          {...hintProps(
-            open ? `Reward: ${reward.summary}` : `${slot.label}: Closed`,
-            open ? `Reward: ${reward.summary}` : undefined,
-            markerLabel,
-          )}
+          {...hintProps(slot.label, open ? `Reward: ${reward.summary}` : undefined, markerLabel)}
           type="button"
         >
           <HubMapMarkerContent label={annotation.mapLabel} open={open} reward={reward} />
@@ -194,7 +190,7 @@ function HubMapMarker({
               <button
                 className="danger-action action-compact"
                 disabled
-                {...hintProps('This room cannot be closed now.')}
+                {...hintProps('Remove this room from the visit order before closing it.')}
                 type="button"
               >
                 Close room
@@ -246,7 +242,6 @@ function HubMapMarkerLayer({
         data-hub-fountain
         role="img"
         style={hubMapPosition(hubMapFountainAnnotation)}
-        {...hintProps('Hub fountain', undefined, 'Hub fountain')}
       >
         <HubMapFountainContent />
       </span>

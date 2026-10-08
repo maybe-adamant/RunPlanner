@@ -936,7 +936,7 @@ export function EncounterCompositionControl({
             aria-label="Waves"
             {...hintProps(
               waveCountUnavailable
-                ? `Retained wave count ${value?.waveCount} is unavailable here.`
+                ? `${value?.waveCount} waves can’t occur in this room.`
                 : undefined,
             )}
           >
@@ -960,7 +960,7 @@ export function EncounterCompositionControl({
         {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
-            {...hintProps('Only used with multiple waves')}
+            {...hintProps('Only used with multiple waves.')}
           >
             <ContextualPicker
               ariaLabel="Shared Enemy"

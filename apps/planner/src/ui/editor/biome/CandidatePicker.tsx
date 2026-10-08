@@ -3,6 +3,7 @@ import type { WorkspacePickerCandidateInteraction } from '@planner/projections/s
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 const emptyModel: ContextualPickerModel<never> = Object.freeze({ sections: Object.freeze([]) });
 
@@ -40,9 +41,7 @@ export function CandidatePicker<T extends number | string>({
       id={id}
       label={label}
       layout="inline"
-      {...(interaction.contextReached === false
-        ? { disabledHint: 'Waits on an earlier choice' }
-        : {})}
+      {...(interaction.contextReached === false ? { disabledHint: candidateWaitingHint } : {})}
       loading={projection.pending}
       model={model}
       onOpenChange={(open) => {

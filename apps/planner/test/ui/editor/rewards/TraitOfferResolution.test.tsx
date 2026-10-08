@@ -698,7 +698,7 @@ describe('resolution outcomes', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Boon Boon Boon choice' }));
     expect(hintOf(screen.getByRole('button', { name: 'Natural Selection 2nd core' }))).toBe(
-      'Choose the 1st core first',
+      'Choose the 1st core first.',
     );
     await user.click(screen.getByRole('button', { name: 'Natural Selection 1st core' }));
     await user.click(await screen.findByRole('option', { name: 'Nova Strike' }));

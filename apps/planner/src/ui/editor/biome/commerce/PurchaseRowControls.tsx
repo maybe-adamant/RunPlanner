@@ -151,7 +151,9 @@ function travelDealLineCells(
               checked={offer.purchase.purchased}
               disabled={proposal === undefined}
               {...hintProps(
-                proposal === undefined ? 'No position to purchase the refill.' : undefined,
+                proposal === undefined
+                  ? 'This item can’t be bought at this point in the room.'
+                  : undefined,
               )}
               onChange={() => (proposal === undefined ? undefined : onApply(proposal.key))}
               type="checkbox"

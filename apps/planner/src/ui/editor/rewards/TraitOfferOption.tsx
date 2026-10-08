@@ -104,6 +104,8 @@ export function TraitOfferOption<TraitValue>({
             items: section.items.map(presentRarityItem),
           })),
         };
+  const fixedRarityPresentation =
+    fixedRarity === undefined ? undefined : traitRarityPresentation(traitKey, fixedRarity);
   return (
     <fieldset className="trait-offer-option trait-offer-ordinary-option">
       <legend>
@@ -144,14 +146,21 @@ export function TraitOfferOption<TraitValue>({
             ? {}
             : { triggerLabel: traitRarityPresentation(traitKey, rarityValue).label })}
         />
-      ) : fixedRarity === undefined ? null : (
+      ) : fixedRarityPresentation === undefined ? null : (
         <div
           aria-label={fixedRarityAriaLabel ?? `${legend} fixed rarity`}
           className="field-control trait-offer-fixed-rarity"
         >
           <span>Rarity</span>
-          <strong {...hintProps(traitRarityPresentation(traitKey, fixedRarity).accessibleLabel)}>
-            {traitRarityPresentation(traitKey, fixedRarity).label}
+          {/* Only the abbreviated Infusion label needs its full rarity on hover. */}
+          <strong
+            {...hintProps(
+              fixedRarityPresentation.accessibleLabel === fixedRarityPresentation.label
+                ? undefined
+                : fixedRarityPresentation.accessibleLabel,
+            )}
+          >
+            {fixedRarityPresentation.label}
           </strong>
         </div>
       )}

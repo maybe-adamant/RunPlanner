@@ -141,10 +141,10 @@ describe('trait offer editor entry and dialog', () => {
     };
     const frontier = launcher('fresh-0-0');
     expect(frontier.disabled).toBe(false);
-    expect(hintOf(frontier)).toBe('Apollo: no trait chosen');
+    expect(hintOf(frontier)).toBeNull();
     const later = launcher('fresh-3-0');
     expect(later.disabled).toBe(true);
-    expect(hintOf(later)).toBe('Waits on an earlier choice');
+    expect(hintOf(later)).toBe('Waits on an earlier choice.');
     render(
       <Provider store={application.store}>
         <TraitOfferDialog interactions={workspace.interactions} target={offer('fresh-3-0')} />
@@ -193,7 +193,7 @@ describe('trait offer editor entry and dialog', () => {
       ).toBe('Concave Stone · 75%');
       // The target waits, disabled with a hover hint, until the Stone activates.
       expect(hintOf(screen.getByRole('button', { name: 'Concave Stone target' }))).toBe(
-        'Activate the Concave Stone first',
+        'Activate the Concave Stone first.',
       );
       if (kind === 'proc') await user.click(checkbox);
       // Opening and editing the Stone child must not publish a partial command.
@@ -1154,11 +1154,11 @@ describe('trait offer editor entry and dialog', () => {
         </FindingTargetScope>
       </Provider>,
     );
-    // The finding ring is the launcher's only state mark; its summary leads the description.
+    // The finding ring is the launcher's only state mark; with no Hex chosen it has no summary.
     const launcher = screen.getByRole('button', { name: 'Edit Hex · Choose Hex' });
     expect(launcher.getAttribute('data-has-findings')).toBe('true');
-    expect(hintOf(launcher)).toMatch(/: no Hex chosen$/);
-    expect(launcher.getAttribute('aria-description')).toMatch(/^.+: no Hex chosen \S/);
+    expect(hintOf(launcher)).toBeNull();
+    expect(launcher.getAttribute('aria-description')).toMatch(/\S/);
     cleanup();
 
     render(
@@ -1508,7 +1508,7 @@ describe('trait offer editor entry and dialog', () => {
     );
 
     const group = await screen.findByRole('group', { name: 'Rejected blocked row' });
-    expect(hintOf(group)).toBe('Rejected does not block a row in this offer.');
+    expect(hintOf(group)).toBe('The Rejected curse doesn’t lock an option in this offer.');
     expect(screen.getByRole('radio', { name: 'No blocked row' })).toHaveProperty('checked', true);
     for (const radio of within(group).getAllByRole('radio'))
       expect(radio).toHaveProperty('disabled', true);

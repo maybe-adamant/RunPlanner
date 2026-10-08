@@ -120,7 +120,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const wave = screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement;
     expect(wave.value).toBe('2');
     expect(wave.disabled).toBe(true);
-    expect(hintOf(wave)).toBe('Waits on an earlier choice');
+    expect(hintOf(wave)).toBe('Waits on an earlier choice.');
     expect(within(wave).getByRole('option', { name: 'Wave 2' })).toBeDefined();
     expect(within(wave).queryByRole('option', { name: /unavailable/ })).toBeNull();
   });
@@ -643,7 +643,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       name: 'Customize encounter',
     }) as HTMLButtonElement;
     expect(trigger.disabled).toBe(true);
-    expect(hintOf(trigger)).toBe('Waits on an earlier choice');
+    expect(hintOf(trigger)).toBe('Waits on an earlier choice.');
   });
 
   it('stages an ordered Anomaly roster from engine candidates and resets it to Default', async () => {
@@ -724,7 +724,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Customize' });
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
     const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
+    expect(findingsRegion.textContent).toContain("The chosen value can't occur in this room.");
     // The one feedback region closes the dialog body, after every decision row.
     expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
       findingsRegion,
@@ -782,14 +782,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(finding.origin).toEqual(phase);
     expect(selector.textContent).toContain('1 (unavailable)');
     expect(selector.getAttribute('aria-invalid')).toBe('true');
-    expect(hintOf(selector)).toBe('Retained position is unavailable here.');
+    expect(hintOf(selector)).toBeNull();
     await view.user.click(selector);
     expect(
       screen.getByRole('option', { name: '1 (unavailable)' }).getAttribute('aria-disabled'),
     ).toBe('true');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
     const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
+    expect(findingsRegion.textContent).toContain("The chosen value can't occur in this room.");
     // The one feedback region closes the dialog body, after every decision row.
     expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
       findingsRegion,
@@ -813,7 +813,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     expect(
       within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-    ).not.toContain('Retained choice is unavailable here.');
+    ).not.toContain("The chosen value can't occur in this room.");
     expect(hintOf(selector)).toBeNull();
     await view.user.click(selector);
     expect(screen.queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
@@ -868,10 +868,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect((slider as HTMLInputElement).value).toBe('7');
     expect(within(dialog).getByText('20 (unavailable)')).toBeTruthy();
     expect(slider.getAttribute('aria-invalid')).toBe('true');
-    expect(hintOf(slider)).toBe('Retained count 20 is unavailable here.');
+    expect(hintOf(slider)).toBeNull();
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
     const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');
+    expect(findingsRegion.textContent).toContain("The chosen value can't occur in this room.");
     // The one feedback region closes the dialog body, after every decision row.
     expect(dialog.querySelector('.encounter-customization-fields')?.nextElementSibling).toBe(
       findingsRegion,
@@ -884,7 +884,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await waitFor(() =>
       expect(
         within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-      ).not.toContain('Retained choice is unavailable here.'),
+      ).not.toContain("The chosen value can't occur in this room."),
     );
     expect(slider.getAttribute('aria-invalid')).toBeNull();
   });
@@ -2116,15 +2116,15 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Timeline');
     const ship = screen.getByLabelText('Ship combat structure');
-    const trigger = getByHint(ship, 'Vow of Forfeit');
+    const trigger = getByHint(ship, 'Converted by the Vow of Forfeit.');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     expect(trigger.textContent).toMatch(/Apollo.*\(Red Onion\)/);
     expect(within(ship).queryByText(/^Forfeit →/)).toBeNull();
-    expect(getAllByHint(ship, 'Vow of Forfeit')).toHaveLength(1);
+    expect(getAllByHint(ship, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
 
     openRoomTab('Combat 1 Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(queryByHint(actions, 'Vow of Forfeit')).toBeNull();
+    expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
     expect(actions.textContent).toContain('Red Onion');
     expect(actions.textContent).not.toContain('(Red Onion)');

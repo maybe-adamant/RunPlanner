@@ -583,14 +583,14 @@ describe('Game panel projection', () => {
         'noProject',
         'Send to game',
         null,
-        'Open a plan first',
+        'Open a plan first.',
       ],
       [
         projectGameSendButton(null, mine, 2, 'clean', idle),
         'notReady',
         'Send to game',
         null,
-        'Set up the game in the Game panel',
+        'Set up the game in the Game panel.',
       ],
       [
         projectGameSendButton(
@@ -605,7 +605,7 @@ describe('Game panel projection', () => {
         'notReady',
         'Send to game',
         null,
-        'Set up the game in the Game panel',
+        'Set up the game in the Game panel.',
       ],
       [
         projectGameSendButton(ready, { projectId: 'my-plan', eligible: false }, 2, 'clean', idle),
@@ -619,42 +619,42 @@ describe('Game panel projection', () => {
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
-        'Choose a slot in the Game panel',
+        'Choose a slot in the Game panel.',
       ],
       [
         projectGameSendButton(ready, mine, 2, 'unsaved', idle),
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
-        'Choose a slot in the Game panel',
+        'Choose a slot in the Game panel.',
       ],
       [
         projectGameSendButton(inSlot2('another-project'), mine, 2, 'clean', idle),
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
-        'Choose a slot in the Game panel',
+        'Choose a slot in the Game panel.',
       ],
       [
         projectGameSendButton(inSlot2(null, 'unreadable'), mine, 2, 'clean', idle),
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
-        'Choose a slot in the Game panel',
+        'Choose a slot in the Game panel.',
       ],
       [
         projectGameSendButton(inSlot2('my-plan'), mine, 2, 'clean', idle),
         'ready',
         'Send · Slot 2',
         { kind: 'send', slot: 2 },
-        'Send this plan to slot 2',
+        null,
       ],
       [
         projectGameSendButton(ready, mine, 2, 'dirty', idle),
         'ready',
         'Send · Slot 2',
         { kind: 'send', slot: 2 },
-        'Saves your changes, then sends to slot 2',
+        'Saves your changes, then sends to slot 2.',
       ],
       [
         projectGameSendButton(ready, mine, 2, 'dirty', { kind: 'sending' }),
@@ -675,14 +675,14 @@ describe('Game panel projection', () => {
         'sent',
         '✓ Sent · Slot 2',
         null,
-        `Sent to slot 2 at ${new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}; now active`,
+        `Sent to slot 2 at ${new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}; now active.`,
       ],
       [
         projectGameSendButton(ready, mine, 2, 'clean', { kind: 'failed' }),
         'failed',
         '! Not sent',
         null,
-        'Details are in the Game panel',
+        'Details are in the Game panel.',
       ],
     ] as const;
     for (const [button, state, label, action, description] of cases) {
@@ -713,7 +713,7 @@ describe('Game panel projection', () => {
       { slot: 2, message: 'locked.', atMs: sentAt },
     );
     expect(notActive.label).toBe('✓ Sent · Slot 2');
-    expect(notActive.description).toMatch(/; not made active$/);
+    expect(notActive.description).toMatch(/; not made active\.$/);
     // Once the file names the slot, as after a later pick, the failure no longer stands.
     const nowActive = projectGameSendButton(
       gameModuleStatus({ inspection: { activeSlot: { state: 'present', slot: 2 } } }),
@@ -723,7 +723,7 @@ describe('Game panel projection', () => {
       { kind: 'sent', slot: 2, atMs: sentAt },
       { slot: 2, message: 'locked.', atMs: sentAt },
     );
-    expect(nowActive.description).toMatch(/; now active$/);
+    expect(nowActive.description).toMatch(/; now active\.$/);
   });
 
   it('selects the Active slot from the file and enables only slots that hold a plan', () => {

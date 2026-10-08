@@ -64,7 +64,7 @@ function GenerationControl({
       inert={target.inert}
       role="group"
     >
-      <label {...hintProps(interaction.disabledReason)}>
+      <label>
         <input
           {...target}
           aria-busy={candidates.pending || undefined}
@@ -219,7 +219,13 @@ function VisitArrowControls({
             }}
             {...hintProps(
               state.rejection ??
-                (option !== undefined && state.waiting ? candidateWaitingHint : undefined),
+                (option !== undefined && state.waiting
+                  ? candidateWaitingHint
+                  : option === undefined || state.disabled
+                    ? undefined
+                    : offset < 0
+                      ? 'Move this visit earlier.'
+                      : 'Move this visit later.'),
             )}
             type="button"
           >
@@ -253,7 +259,7 @@ function SideRoomMarker({
       data-side-room-slot={slot.key}
       data-visited={slot.entered || undefined}
       style={ephyraSideRoomMapPosition(annotation)}
-      {...hintProps(label, undefined, label)}
+      {...hintProps(slot.label, undefined, label)}
     >
       <span aria-hidden="true" className="ephyra-side-map-visit-badge">
         {slot.enteredOrdinal === null

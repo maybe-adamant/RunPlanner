@@ -58,7 +58,7 @@ export function LifecycleBoundaryRow({
               <button
                 className="timeline-banner-identity"
                 onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
-                {...hintProps('Edit in Room Overview')}
+                {...hintProps('Edit in Room Overview.')}
                 type="button"
               >
                 {identity.label}

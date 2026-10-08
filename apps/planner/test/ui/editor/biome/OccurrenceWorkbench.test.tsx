@@ -914,7 +914,7 @@ describe('OccurrenceWorkbench', () => {
     expect((checkbox as HTMLInputElement).disabled).toBe(true);
     expect(hintOf(checkbox)).toBe('Uncheck Visited first.');
     expect(checkbox.getAttribute('aria-description')).toBe('Uncheck Visited first.');
-    expect(hintOf(checkbox.closest('label'))).toBe('Uncheck Visited first.');
+    expect(hintOf(checkbox.closest('label'))).toBeNull();
     expect(screen.queryByRole('tooltip')).toBeNull();
     await view.user.hover(control);
     expect(screen.queryByRole('tooltip')).toBeNull();

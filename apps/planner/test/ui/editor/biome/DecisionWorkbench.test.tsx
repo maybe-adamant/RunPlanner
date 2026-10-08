@@ -480,8 +480,8 @@ describe('DecisionWorkbench', () => {
       screen.getByRole('radiogroup', { name: 'Position' }).getAttribute('aria-description'),
     ).toContain('Chaos gate position unavailable');
     const position = screen.getByRole('radiogroup', { name: 'Position' });
-    expect(within(position).queryByText('Position 4 unavailable')).toBeNull();
-    expect(hintOf(position)).toBe('Position 4 unavailable');
+    expect(within(position).queryByText('Position 4 isn’t available in this room.')).toBeNull();
+    expect(hintOf(position)).toBe('Position 4 isn’t available in this room.');
     expect(within(position).queryByRole('radio', { name: '4' })).toBeNull();
     expect(position.getAttribute('aria-invalid')).toBe('true');
     await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
@@ -715,7 +715,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
     const uncommittedRemoval = screen.getByRole('button', { name: 'Remove these doors' });
     expect(uncommittedRemoval).toHaveProperty('disabled', true);
-    expect(hintOf(uncommittedRemoval)).toBe('Nothing authored to remove yet.');
+    expect(hintOf(uncommittedRemoval)).toBe('No doors chosen yet.');
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
@@ -1274,14 +1274,14 @@ describe('DecisionWorkbench', () => {
       decisionContainingOccurrence(goldenFOccurrenceId(2, 1)),
     );
 
-    const trigger = getByHint(document.body, 'Vow of Forfeit');
+    const trigger = getByHint(document.body, 'Converted by the Vow of Forfeit.');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     const rewards = trigger.closest<HTMLElement>('[aria-label$=" door rewards"]');
     if (rewards === null) throw new Error('Forfeited door reward surface is missing');
     expect(within(rewards).getByRole('button', { name: 'Reward' })).toBe(trigger);
     expect(trigger.textContent).toMatch(/Zeus.*\(Red Onion\)/);
     expect(screen.queryByText(/^Forfeit →/)).toBeNull();
-    expect(getAllByHint(document.body, 'Vow of Forfeit')).toHaveLength(1);
+    expect(getAllByHint(document.body, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
   });
 
   it('marks the entry-fixed Vow of Forfeit on the forfeited Fields cage reward', () => {
@@ -1301,11 +1301,11 @@ describe('DecisionWorkbench', () => {
 
     const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
     const offers = within(combat09).getByLabelText('Combat 09 door rewards');
-    const trigger = getByHint(offers, 'Vow of Forfeit');
+    const trigger = getByHint(offers, 'Converted by the Vow of Forfeit.');
     expect(within(offers).getByRole('button', { name: 'Cage 1' })).toBe(trigger);
     expect(trigger.textContent).toMatch(/Hermes.*\(Red Onion\)/);
     expect(within(offers).queryByText(/^Forfeit →/)).toBeNull();
-    expect(getAllByHint(offers, 'Vow of Forfeit')).toHaveLength(1);
+    expect(getAllByHint(offers, 'Converted by the Vow of Forfeit.')).toHaveLength(1);
   });
 
   it('authors prepared Fields cage identities on their exact outgoing door cards', () => {

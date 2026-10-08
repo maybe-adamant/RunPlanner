@@ -11,7 +11,7 @@ export function TimelineActionDeleteButton({
   readonly enabled: boolean;
   /** Findings of an action that should not exist. */
   readonly findingMark?: FindingMarkProps;
-  readonly explanation: string;
+  readonly explanation: string | undefined;
   readonly label: string;
   readonly onRemove: () => void;
 }) {
