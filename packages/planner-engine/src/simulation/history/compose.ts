@@ -269,6 +269,14 @@ function appendRestore(
   });
 }
 
+function appendDeparture(writer: HistorySegmentWriter, room: CanonicalLifecycleRoom): void {
+  writer.append({ kind: 'roomDeparted', origin: room.origin });
+}
+
+/**
+ * The main room's first exit leads to its first side room or the Hub; every
+ * later door use leaves the restored main room.
+ */
 function appendVisit(
   writer: HistorySegmentWriter,
   catalog: Catalog,
@@ -284,11 +292,13 @@ function appendVisit(
     if (!local.entered || local.localVisit.generation !== 'generated') {
       fail(`Hub visit ${visit.visitIndex} enters an unavailable side room`);
     }
+    if (index > 0) appendDeparture(writer, visit.target.room);
     appendCanonicalRoomLifecycle(writer, catalog, local, fail);
     const restore = visit.parentRestores[index];
     if (restore === undefined) fail(`Hub visit ${visit.visitIndex} has no parent restore`);
     appendRestore(writer, restore, visit.target.room, 'parent');
   }
+  if (visit.enteredLocalRooms.length > 0) appendDeparture(writer, visit.target.room);
   appendRestore(writer, visit.hubRestore, hub, 'hub');
 }
 
@@ -300,6 +310,8 @@ function appendVisit(
  * the stable parent without inventing a second outgoing lifecycle. The
  * fountain use happens in the Hub itself: after entry or a completed visit's
  * return, and always before the next room entry or the Handoff generation.
+ * Each Hub departure follows that interval's fountain use and, for the
+ * Handoff, its generation.
  */
 function appendHubDecision(
   writer: HistorySegmentWriter,
@@ -321,6 +333,7 @@ function appendHubDecision(
         count: generationCount,
       });
     },
+    deferDeparture: true,
   });
   const appendFountainAfter = (visitCount: number): void => {
     if (decision.fountain?.precedingVisitCount !== visitCount) return;
@@ -332,6 +345,7 @@ function appendHubDecision(
   };
   appendFountainAfter(0);
   for (const visit of decision.visits) {
+    appendDeparture(writer, decision.room);
     appendVisit(writer, catalog, visit, decision.room);
     appendFountainAfter(visit.visitIndex);
   }
@@ -341,6 +355,7 @@ function appendHubDecision(
     startIndex: decision.board.targets.length,
     count: generationCount,
   });
+  appendDeparture(writer, decision.room);
   return selectedTarget(handoff).room;
 }
 
@@ -506,15 +521,11 @@ function appendCompletedDecision(
     if (current.kind !== 'authored') fail('Hub decision must follow an authored PreHub room');
     return appendHubDecision(writer, catalog, current, decision);
   }
-  if (decision.parent.origin.kind === 'hubRoom') {
-    if (current.kind !== 'hub') fail('completed-Hub batch must follow the Hub room');
-    appendBatchState(writer, decision);
-    appendGeneratedTargets(writer, current.origin, decision.targets);
-  } else {
-    requireParent(current, decision.parent.origin, 'normal-door batch');
-    if (current.kind !== 'authored') fail('normal-door batch source must be authored');
-    appendRoomWithBatch(writer, catalog, current, decision);
-  }
+  // The Handoff is composed with its Hub decision, which also appends the Hub departure.
+  if (decision.parent.origin.kind === 'hubRoom') fail('Hub Handoff detached from its Hub decision');
+  requireParent(current, decision.parent.origin, 'normal-door batch');
+  if (current.kind !== 'authored') fail('normal-door batch source must be authored');
+  appendRoomWithBatch(writer, catalog, current, decision);
   return selectedBatchContinuationRoom(decision);
 }
 
@@ -571,15 +582,12 @@ function composeBiomeHistoryResult(
           }
           continue;
         }
-        if (decision.parent.origin.kind === 'hubRoom') {
-          if (current.kind !== 'hub') fail('completed-Hub batch must follow the Hub room');
-          appendBatchState(writer, decision);
-          appendGeneratedTargets(writer, current.origin, decision.targets);
-        } else {
-          requireParent(current, decision.parent.origin, 'normal-door batch');
-          if (current.kind !== 'authored') fail('normal-door batch source must be authored');
-          appendRoomWithBatch(writer, catalog, current, decision);
-        }
+        // The Handoff is composed with its Hub decision, which also appends the Hub departure.
+        if (decision.parent.origin.kind === 'hubRoom')
+          fail('Hub Handoff detached from its Hub decision');
+        requireParent(current, decision.parent.origin, 'normal-door batch');
+        if (current.kind !== 'authored') fail('normal-door batch source must be authored');
+        appendRoomWithBatch(writer, catalog, current, decision);
         const selected = selectedBatchContinuation(decision);
         if (selected === undefined) {
           fail(`${semanticAddressKey(decision.origin)} has no selected continuation`);

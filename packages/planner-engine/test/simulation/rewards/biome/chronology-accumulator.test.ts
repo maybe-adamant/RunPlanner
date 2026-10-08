@@ -227,28 +227,18 @@ describe('chronology accumulator', () => {
     ]).toEqual([snapshot('a')]);
   });
 
-  it('counts Hub departures and lets a fountain use replace only an open interval', () => {
+  it('counts Hub departures in order', () => {
     const hub = createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub');
-    const departure = (label: string, replace: boolean): ChronologyEmission => ({
+    const departure = (label: string): ChronologyEmission => ({
       kind: 'hubDeparture',
       hub,
-      hubGameName: 'N_Hub',
       departure: snapshot(label),
-      replace,
     });
-    const empty = createChronologyAccumulator(new Map());
-    expect(() => empty.mergeEmissions([departure('fountain', true)])).toThrow(
-      'N_Hub fountain use has no Hub interval',
-    );
     const accumulator = createChronologyAccumulator(new Map());
-    accumulator.mergeEmissions([
-      departure('entry', false),
-      departure('visit', false),
-      departure('fountain', true),
-    ]);
+    accumulator.mergeEmissions([departure('first'), departure('second')]);
     expect(accumulator.finish().hubDepartures).toEqual([
-      { hub, precedingVisitCount: 0, departure: snapshot('entry') },
-      { hub, precedingVisitCount: 1, departure: snapshot('fountain') },
+      { hub, precedingVisitCount: 0, departure: snapshot('first') },
+      { hub, precedingVisitCount: 1, departure: snapshot('second') },
     ]);
   });
 });

@@ -205,7 +205,7 @@ interface RewardSimulationBase {
 export interface HubDepartureRunState {
   readonly hub: import('../../authored-project/addresses').HubDecisionAddress;
   readonly precedingVisitCount: number;
-  /** After Hub entry or the visit's return, and any fountain use in that interval. */
+  /** Immediately before the Hub departure, after any fountain use in that interval. */
   readonly departure: RunStateSnapshot;
 }
 

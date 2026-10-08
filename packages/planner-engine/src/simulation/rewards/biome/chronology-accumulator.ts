@@ -141,10 +141,7 @@ export type ChronologyEmission =
   | {
       readonly kind: 'hubDeparture';
       readonly hub: HubDecisionAddress;
-      readonly hubGameName: string;
       readonly departure: RunStateSnapshot;
-      /** A fountain use replaces the current interval's departure. */
-      readonly replace: boolean;
     }
   | {
       readonly kind: 'keepsakeSelectionCandidate';
@@ -648,17 +645,6 @@ export function createChronologyAccumulator(
     emission: Extract<ChronologyEmission, { readonly kind: 'hubDeparture' }>,
   ): void {
     const previous = hubDepartures.at(-1);
-    if (emission.replace) {
-      if (previous === undefined)
-        throw new BiomeRewardSimulationContractError(
-          `${emission.hubGameName} fountain use has no Hub interval`,
-        );
-      hubDepartures[hubDepartures.length - 1] = Object.freeze({
-        ...previous,
-        departure: emission.departure,
-      });
-      return;
-    }
     hubDepartures.push(
       Object.freeze({
         hub: emission.hub,

@@ -64,6 +64,7 @@ classifications. This document owns their normalized meaning:
 | Exit usable                     | roster `exitUsable` capability/checkpoint                         | **Exact capability anchoring Cleanup.** Profiles with a continuation retain this predicate without rendering another row. Required actions cannot follow it, and later optional actions do not mutate the frozen outgoing batch.                                    |
 | Room committed                  | `commitRoom`                                                      | **Exact.** Commit follows outgoing generation and supported remaining local work. It is distinct from the earlier moment when exits become usable.                                                                                                                  |
 | Room exited                     | `exitRoom`                                                        | **Grouped transfer.** The source fragment closes and hands the already-generated target to preparation and entry. The transfer does not choose or regenerate that target.                                                                                           |
+| Room departed                   | `roomDeparted` history event                                      | **Exact.** One per native `LeaveRoom`: after each non-Hub first `roomExited`, at each Hub departure after its fountain use, and at each restored main-room departure. Departure clocks advance here, not at `roomExited`.                                           |
 
 The editor boundary order describes semantic visibility, not a literal call
 stack. `cleanup` is the one player-facing final-room interval and is labeled
@@ -92,15 +93,14 @@ no reward seam only advance the branches to their sequence.
 | Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                   |
 | Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates. |
 | Room exited                                             | Room exit and its Run State capture.                                                                                                  |
+| Room departed                                           | The Chaos rooms clock and Fight Fight Fight decay; a Hub departure first captures its Run State.                                      |
 | Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                      |
 | Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                     |
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                         |
 | Well purchase (Room Action)                             | Stygian Well purchase and refill realization.                                                                                         |
 | Shrine deliveries scheduled (Room Action)               | Hermes Shrine delivery scheduling and the Travel Deal refill realization.                                                             |
 
-Hub departure is a post-step hook on the same table: a Hub exit or a visit's
-return records a departure, and a later fountain use in that interval replaces
-it. After the last event the walk captures the Hub frontier's Run State,
+After the last event the walk captures the Hub frontier's Run State,
 evaluates every boss-door store, then records the blank exit-decision
 frontier's target history. Boss-door stores are therefore evaluated after the
 history loop, and their findings publish last, although each store belongs to
@@ -253,9 +253,15 @@ its side-room excursions), or after the sixth return before the Preboss
 handoff generation. The next room's entry therefore observes its rarity and
 Phial effects. The use replays no Hub entry or board generation and advances no
 counter.
-The engine captures canonical Run State for every Hub departure, after any
-fountain use in that interval. These snapshots are execution conformance inputs,
-not additional Run State checkpoints, and exist even without a trait mutation.
+Every door use runs native `LeaveRoom`, so history records a `roomDeparted`
+for each first exit and for each departure from a restored room: the main room
+before each later side room and before the Hub return, and the Hub before each
+later visit and after the Handoff generation. The Hub's first departure also
+follows its fountain use rather than its `roomExited`.
+The engine captures canonical Run State at every Hub departure, after any
+fountain use in that interval and before its departure clocks. These snapshots
+are execution conformance inputs, not additional Run State checkpoints, and
+exist even without a trait mutation.
 
 ### Rule for adding or moving a boundary
 

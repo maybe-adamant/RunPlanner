@@ -745,6 +745,13 @@ function foldHistoryEventStream(
         views.exit = stateView(event.sequence, ledgers, viewsBySequence);
         break;
       }
+      case 'roomDeparted':
+        if (requireRoomViews(viewsByOrigin, event).exit === undefined) {
+          throw new HistoryFoldContractError(
+            `${semanticAddressKey(event.origin)} departs before its first exit`,
+          );
+        }
+        break;
       case 'roomRestored': {
         const gameName = roomName(namesByOrigin, event);
         ledgers.roomAppearances.push(

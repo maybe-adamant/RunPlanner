@@ -142,13 +142,12 @@ export function targetSlotHistory(
   ];
 }
 
-/** A Hub interval ends at its departure: Hub exit or a visit's return, then any fountain use. */
+/** The Run State at one Hub departure, before its LeaveRoom clocks. */
 export function hubDepartureEmissions(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   origin: HubRoomAddress,
   sequence: number,
-  replace: boolean,
 ): readonly ChronologyEmission[] {
   const room = context.rooms.get(semanticAddressKey(origin));
   const view = context.history.viewsBySequence[sequence];
@@ -159,5 +158,5 @@ export function hubDepartureEmissions(
   );
   const departure = runStateAt(context, state, hub, room, view)(state.branches);
   if (departure === undefined) return [];
-  return [{ kind: 'hubDeparture', hub, hubGameName: room.gameName, departure, replace }];
+  return [{ kind: 'hubDeparture', hub, departure }];
 }

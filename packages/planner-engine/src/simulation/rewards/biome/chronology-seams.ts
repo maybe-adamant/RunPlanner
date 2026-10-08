@@ -55,6 +55,7 @@ import { applyEncounterStartedTransition } from './lifecycle-transitions/encount
 import { applyErisInteractedTransition } from './lifecycle-transitions/eris-interacted';
 import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
+import { applyRoomDepartedTransition } from './lifecycle-transitions/room-departed';
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
@@ -128,6 +129,15 @@ const roomExited: ChronologySeamHandler<'roomExited'> = (context, state, event) 
       : { runStateCheckpoint: { ...exited.runStateCheckpoint, against: 'received' as const } }),
   };
 };
+
+/** Native LeaveRoom: a Hub departure captures its Run State before the clocks advance. */
+const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, event) => ({
+  ...(event.origin.kind === 'hubRoom'
+    ? { leadingEmissions: hubDepartureEmissions(context, state, event.origin, event.sequence) }
+    : {}),
+  state: withBranches(state, applyRoomDepartedTransition(context.catalog, event, state.branches)),
+  emissions: [],
+});
 
 /** A Hermes Shrine delivery that still needs a placement halts the walk here. */
 const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsApplied'> = (
@@ -969,38 +979,13 @@ const advanceOnly: ChronologySeamHandler<HistoryEvent['kind']> = (_context, stat
   emissions: [],
 });
 
-type PostStepHook<K extends HistoryEvent['kind']> = (
-  context: ChronologyWalkContext,
-  state: ChronologyWalkState,
-  event: SeamEvent<K>,
-) => readonly ChronologyEmission[];
-
-/**
- * A second dispatch after the seam: a Hub exit or a visit's return records a
- * departure, and a later fountain use replaces it.
- */
-function hubDeparture(
-  replace: boolean,
-): PostStepHook<'roomExited' | 'roomRestored' | 'fountainUsed'> {
-  return (context, state, event) =>
-    event.origin?.kind === 'hubRoom' &&
-    (event.kind !== 'roomRestored' || event.restoreKind === 'hub')
-      ? hubDepartureEmissions(context, state, event.origin, event.sequence, replace)
-      : [];
-}
-
-/** A seam's handler and its optional post-step hook for events of kind `K`. */
+/** A seam's handler for events of kind `K`. */
 interface ChronologySeam<K extends HistoryEvent['kind']> {
   step(
     context: ChronologyWalkContext,
     state: ChronologyWalkState,
     event: SeamEvent<K>,
   ): ChronologySeamStep;
-  afterStep?(
-    context: ChronologyWalkContext,
-    state: ChronologyWalkState,
-    event: SeamEvent<K>,
-  ): readonly ChronologyEmission[];
 }
 
 /** Every history event kind and the seam that applies it. */
@@ -1016,12 +1001,12 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     clockworkNonGoalRewardSpawned: { step: advanceOnly },
     targetGenerationCompleted: { step: targetGenerationCompleted },
     emptyOutgoingGenerationCompleted: { step: advanceOnly },
-    roomRestored: { step: advanceOnly, afterStep: hubDeparture(false) },
+    roomRestored: { step: advanceOnly },
     roomPrepared: { step: roomPrepared },
     offerPointMaterialized: { step: offerPointMaterialized },
     offerPointAcquired: { step: reachedOfferSettled },
     roomEntered: { step: roomEntered },
-    fountainUsed: { step: fountainUsed, afterStep: hubDeparture(true) },
+    fountainUsed: { step: fountainUsed },
     keepsakeRackUsed: { step: keepsakeRackUsed },
     erisInteracted: { step: erisInteracted },
     requiredObjectSpawned: { step: advanceOnly },
@@ -1042,7 +1027,8 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     roomCommitted: { step: advanceOnly },
     roomCountersAdvanced: { step: advanceOnly },
     enteredRewardStoreRecorded: { step: advanceOnly },
-    roomExited: { step: roomExited, afterStep: hubDeparture(false) },
+    roomExited: { step: roomExited },
+    roomDeparted: { step: roomDeparted },
   });
 
 /** Brings every branch to the reached history view at this sequence. */
@@ -1089,10 +1075,7 @@ export function applySeamStep(
   return step.state;
 }
 
-/**
- * Applies one history event: its seam, then (unless the seam halted the walk)
- * the post-step hook, and finally reaches the event's history view.
- */
+/** Applies one history event's seam, then reaches the event's history view. */
 export function walkHistoryEvent(
   context: ChronologyWalkContext,
   accumulator: ChronologyAccumulator,
@@ -1102,7 +1085,5 @@ export function walkHistoryEvent(
   // The table pairs each kind with its own handler; the union call is sound.
   const entry = chronologySeamTable[event.kind] as ChronologySeam<HistoryEvent['kind']>;
   const next = applySeamStep(context, accumulator, state, entry.step(context, state, event));
-  if (!next.halted && entry.afterStep !== undefined)
-    accumulator.mergeEmissions(entry.afterStep(context, next, event));
   return reachHistorySequence(context, next, event.sequence);
 }

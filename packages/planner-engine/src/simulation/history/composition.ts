@@ -115,6 +115,8 @@ export interface RoomLifecycleCompositionOptions {
    * exiting the room, which still depends on the unresolved door selection.
    */
   readonly continueThroughPostOutgoingActions?: boolean;
+  /** The persistent Hub departs after its fountain use; its caller appends each departure. */
+  readonly deferDeparture?: boolean;
 }
 
 interface BiomeHistoryEnvelopeOptions<
@@ -355,6 +357,8 @@ export function appendRoomLifecycle(
     }
     options.beforeEvent?.(writer, event);
     appendLifecycleEvent(writer, event, fail);
+    if (event.kind === 'roomExited' && options.deferDeparture !== true)
+      writer.append({ kind: 'roomDeparted', origin: room.origin });
     options.afterEvent?.(writer, event);
     if (event.kind === 'outgoingGenerationCheckpoint') {
       reachedOutgoing = true;

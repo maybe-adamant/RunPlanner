@@ -6925,7 +6925,7 @@
                   "remainingUses": 0,
                   "rushed": false,
                   "dueOccurrenceId": "surface-q-preboss",
-                  "dueSequence": 760
+                  "dueSequence": 815
                 }
               ],
               "stygianWell": {
@@ -7420,5 +7420,5 @@
       }
     }
   ],
-  "planFingerprint": "7b27f69f"
+  "planFingerprint": "077d900d"
 }

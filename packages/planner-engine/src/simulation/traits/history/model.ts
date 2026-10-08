@@ -93,7 +93,7 @@ export interface RoomDecayProgressEvent {
   readonly owner: SemanticAddress;
   readonly acquisitionRole: 'roomDecay';
   readonly sequence: number;
-  readonly acquisitionPoint: 'roomExited';
+  readonly acquisitionPoint: 'roomDeparted';
   readonly traitKey: string;
   readonly acquisitionIdentity: string;
   readonly oldFraction: number;

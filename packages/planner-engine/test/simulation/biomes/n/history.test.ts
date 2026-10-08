@@ -113,6 +113,56 @@ describe('N Hub lifecycle composition and history', () => {
     ).toHaveLength(1);
   });
 
+  it('departs once per native LeaveRoom, including restored main-room and Hub departures', () => {
+    const { hub, history } = fixture();
+    const key = semanticAddressKey;
+    const sideRoomCounts = hub.visits.map((visit) => visit.enteredLocalRooms.length);
+    expect(sideRoomCounts).toContain(0);
+    expect(Math.max(...sideRoomCounts)).toBeGreaterThanOrEqual(2);
+
+    // Every arrival after the biome's first room follows exactly one door use out of the previous room.
+    type Contact = { readonly kind: 'arrival' | 'departure'; readonly room: string };
+    const contacts = history.events.flatMap((event): Contact[] =>
+      event.kind === 'roomEntered' || event.kind === 'roomRestored'
+        ? [{ kind: 'arrival', room: key(event.origin) }]
+        : event.kind === 'roomDeparted'
+          ? [{ kind: 'departure', room: key(event.origin) }]
+          : [],
+    );
+    contacts.forEach((contact, index) => {
+      expect(contact.kind).toBe(index % 2 === 0 ? 'arrival' : 'departure');
+      if (contact.kind === 'departure') expect(contact.room).toBe(contacts[index - 1]!.room);
+    });
+    expect(contacts.at(-1)?.kind).toBe('departure');
+
+    // Hub → main, main → each side room and back, main → Hub; then Hub → Handoff.
+    const hubKey = key(hub.room.origin);
+    const expected = [
+      ...hub.visits.flatMap((visit) => {
+        const main = key(visit.target.room.origin);
+        return [
+          hubKey,
+          main,
+          ...visit.enteredLocalRooms.flatMap((side) => [key(side.origin), main]),
+        ];
+      }),
+      hubKey,
+    ];
+    const departures = contacts.filter((contact) => contact.kind === 'departure');
+    const firstHub = departures.findIndex((contact) => contact.room === hubKey);
+    expect(
+      departures.slice(firstHub, firstHub + expected.length).map((contact) => contact.room),
+    ).toEqual(expected);
+    expect(departures.filter((contact) => contact.room === hubKey)).toHaveLength(
+      hub.visits.length + 1,
+    );
+    const exits = history.events.filter((event) => event.kind === 'roomExited');
+    expect(new Set(exits.map((event) => key(event.origin))).size).toBe(exits.length);
+    expect(departures.length - exits.length).toBe(
+      hub.visits.length + sideRoomCounts.reduce((total, count) => total + count, 0),
+    );
+  });
+
   it('folds deterministic sequence numbers and the derived transition reset', () => {
     const { history } = fixture();
     expect(history.events.map((event) => event.sequence)).toEqual(

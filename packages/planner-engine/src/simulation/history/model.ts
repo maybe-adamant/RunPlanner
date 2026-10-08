@@ -148,6 +148,16 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly roomShopPresent?: boolean;
 }
 
+/**
+ * One native LeaveRoom: a room's first exit and every later departure from a
+ * restored parent or Hub. Room-departure clocks advance here; `roomExited`
+ * remains the once-per-room closure.
+ */
+export interface RoomDepartedHistoryEvent extends HistoryEventBase {
+  readonly kind: 'roomDeparted';
+  readonly origin: RoomHistoryOrigin;
+}
+
 /** The Hub-owned fountain use, settled in the restored Hub between room visits. */
 export interface HubFountainUsedHistoryEvent extends HistoryEventBase {
   readonly kind: 'fountainUsed';
@@ -166,6 +176,7 @@ export type HistoryEvent =
   | FieldsBatchOutcomeHistoryEvent
   | HubFountainUsedHistoryEvent
   | RoomCreatedHistoryEvent
+  | RoomDepartedHistoryEvent
   | RoomRestoredHistoryEvent
   | TargetGenerationCompletedHistoryEvent
   | RoomLifecycleEvent;
