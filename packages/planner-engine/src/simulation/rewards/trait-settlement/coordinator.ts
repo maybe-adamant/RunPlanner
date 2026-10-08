@@ -519,7 +519,8 @@ function evaluateAuthoredOffer(
         selectedForIdentityDisposition.clock !== undefined) ||
       (selectedForIdentityDisposition?.kind === 'echo' &&
         (selectedForIdentityDisposition.effect === 'doubleShop' ||
-          selectedForIdentityDisposition.effect === 'repeatKeepsake'))) &&
+          selectedForIdentityDisposition.effect === 'repeatKeepsake' ||
+          selectedForIdentityDisposition.effect === 'roomDecay'))) &&
     traitOfferIdentity !== undefined
       ? selectedForIdentityDisposition?.kind === 'producePickups' &&
         selectedForIdentityDisposition.clock !== undefined

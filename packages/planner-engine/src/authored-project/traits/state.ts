@@ -210,6 +210,8 @@ export interface EquippedTrait {
   readonly pickupProducerProgress?: number;
   /** Exact acquisition-time interval retained for an ordinal-scaled pickup producer. */
   readonly pickupProducerInterval?: number;
+  /** Remaining room-decay fraction; the first departure after acquisition only clears the block. */
+  readonly roomDecay?: { readonly fraction: number; readonly blocked: boolean };
 }
 
 /** Exact authored outcome for one declaration-owned Pom acquisition role. */

@@ -253,7 +253,12 @@ describe('trait catalog closure', () => {
       {
         key: 'DiminishingHealthAndManaBoon',
         rarityDomain: { kind: 'none' },
-        disposition: { kind: 'echo', effect: 'numericNoOp' },
+        disposition: {
+          kind: 'echo',
+          effect: 'roomDecay',
+          startFraction: { ordinary: 0.6, dreamByAcquisitionOrdinal: [0.6, 0.6, 0.6, 0.8] },
+          decay: 0.05,
+        },
       },
       {
         key: 'EchoLastRunBoon',

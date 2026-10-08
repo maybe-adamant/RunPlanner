@@ -2,6 +2,7 @@ import type { Catalog, TraitPickupDeclaration, TraitRarity } from '../../../cata
 import type { SemanticAddress } from '../../../authored-project/addresses';
 import type {
   PickupProducerProgressEvent,
+  RoomDecayProgressEvent,
   SteadyGrowthProgressEvent,
   TraitHistoryState,
   TraitLevelMutationEvent,
@@ -145,6 +146,57 @@ export function advanceChaosClock(
       acquisitionRole: 'chaosClock' as const,
     }),
   ]);
+}
+
+/** One room departure: clears a fresh block, else decays and removes at a non-positive fraction. */
+export function advanceRoomDecay(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+): TraitHistoryState {
+  const events: (RoomDecayProgressEvent | TraitRemovalEvent)[] = [];
+  for (const trait of Object.values(before.equippedTraits)) {
+    const disposition = catalog.traits.byKey[trait.traitKey]?.selectedDisposition;
+    if (
+      disposition?.kind !== 'echo' ||
+      disposition.effect !== 'roomDecay' ||
+      trait.roomDecay === undefined
+    )
+      continue;
+    if (trait.acquisitionIdentity === undefined)
+      throw new Error(`${trait.traitKey} is missing its room-decay acquisition identity`);
+    const { fraction, blocked } = trait.roomDecay;
+    const newFraction = blocked ? fraction : fraction - disposition.decay;
+    events.push(
+      newFraction > 0
+        ? Object.freeze({
+            kind: 'roomDecayProgress' as const,
+            owner,
+            acquisitionRole: 'roomDecay' as const,
+            sequence,
+            acquisitionPoint: 'roomExited' as const,
+            traitKey: trait.traitKey,
+            acquisitionIdentity: trait.acquisitionIdentity,
+            oldFraction: fraction,
+            newFraction,
+            clearsBlock: blocked,
+          })
+        : Object.freeze({
+            kind: 'traitRemoval' as const,
+            owner,
+            acquisitionRole: 'roomDecay',
+            sequence,
+            acquisitionPoint: 'roomExited',
+            traitKey: trait.traitKey,
+            acquisitionIdentity: trait.acquisitionIdentity,
+            match: 'acquisitionIdentity' as const,
+          }),
+    );
+  }
+  return events.length === 0
+    ? before
+    : foldTraitHistoryEvents(catalog, [...before.events, ...events]);
 }
 
 export interface ReachedSteadyGrowthThreshold {

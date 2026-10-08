@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { catalog } from '@run-planner/hades2-catalog';
+import { catalog, createCatalog } from '@run-planner/hades2-catalog';
+import { declarations } from '@run-planner/hades2-catalog/test-support';
 import {
   authorTestArtificerReplacement,
   createCompleteFGAnomalyProject,
@@ -1340,6 +1341,110 @@ describe('engine-owned F/G execution semantic product', () => {
       ],
       selected: 'option2',
     });
+  });
+
+  it('drops a decayed Fight Fight Fight from later room-exit trait inventories', () => {
+    // The fixture route has only twelve later departures after the bridge, one
+    // short of a 0.6 removal; a shortened declared fraction reaches removal.
+    const decayCatalog = createCatalog({
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'DiminishingHealthAndManaBoon'
+            ? {
+                ...trait,
+                selectedDisposition: {
+                  kind: 'echo' as const,
+                  effect: 'roomDecay' as const,
+                  startFraction: {
+                    ordinary: 0.05,
+                    dreamByAcquisitionOrdinal: [0.05, 0.05, 0.05, 0.05] as const,
+                  },
+                  decay: 0.05,
+                },
+              }
+            : trait,
+        ),
+      },
+    } as typeof declarations);
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    const forcedTargetId = createOccurrenceId('golden-h-combat05');
+    let project = authorLegalTraitOffers(loadUnderworldFGHICheckpoint());
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(authorLegalTraitOffers(project), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: bridgeId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenHBiome, forcedTargetId),
+      gameName: 'H_MiniBoss02',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenHBiome, forcedTargetId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    project = authorLegalTraitOffers(project);
+    const held = (id: string) =>
+      productFor(project)
+        .occurrences.find((candidate) => candidate.id === id)
+        ?.diagnostics?.beforeRoomExit?.traits.equipped.map((row) => row.traitKey);
+    expect(held('golden-i-preboss:boss')).toContain('DiminishingHealthAndManaBoon');
+    const product = assembleExecutionProduct({
+      assembly: simulateProjectAssembly(decayCatalog, project),
+      catalog: decayCatalog,
+    });
+    const room = (id: string) => {
+      const occurrence = product.occurrences.find((candidate) => candidate.id === id);
+      if (occurrence === undefined) throw new Error(`${id} is not on the execution route`);
+      return occurrence;
+    };
+    const equipped = (
+      id: string,
+      checkpoint: 'roomEntered' | 'beforeRoomExit',
+    ): readonly string[] =>
+      room(id).diagnostics?.[checkpoint]?.traits.equipped.map((row) => row.traitKey) ?? [];
+    expect(equipped('golden-h-bridge01', 'beforeRoomExit')).toContain(
+      'DiminishingHealthAndManaBoon',
+    );
+    // Native conformance reads the removal room before its LeaveRoom decay.
+    expect(room('golden-h-combat05').roomExitConformance?.facts).toContainEqual(
+      expect.objectContaining({ kind: 'traitInventory' }),
+    );
+    expect(equipped('golden-h-combat05', 'beforeRoomExit')).toContain(
+      'DiminishingHealthAndManaBoon',
+    );
+    for (const checkpoint of ['roomEntered', 'beforeRoomExit'] as const)
+      expect(equipped('golden-h-preboss-shop', checkpoint)).not.toContain(
+        'DiminishingHealthAndManaBoon',
+      );
   });
 
   it('keeps an unpicked Mystery Boon atomic to its active Narcissus provider action', () => {

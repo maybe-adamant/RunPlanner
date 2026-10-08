@@ -334,11 +334,11 @@ function TestConformanceReaders.testPostbossAdmissionIgnoresExtraTraitsAndDiagno
     lu.assertTrue(ok, errorValue)
 end
 
-function TestConformanceReaders.testDisposableNpcArmorDoesNotRequirePresenceOrAbsenceAtCheckpoints()
+function TestConformanceReaders.testDisposableNpcTraitsDoNotRequirePresenceOrAbsenceAtCheckpoints()
     for _, key in ipairs({
         "AgilityCostume", "ManaCostume", "VitalityCostume", "HighArmorCostume",
         "CastDamageCostume", "IncomeCostume", "SpellCostume", "EscalatingCostume",
-        "BreakInvincibleArmorBoon", "BreakExplosiveArmorBoon",
+        "BreakInvincibleArmorBoon", "BreakExplosiveArmorBoon", "DiminishingDodgeBoon",
     }) do
         local occurrence, startingLoadout, restore = admissionFixture()
         local entry = occurrence.diagnostics.roomEntered
@@ -355,8 +355,8 @@ function TestConformanceReaders.testDisposableNpcArmorDoesNotRequirePresenceOrAb
             lu.assertTrue(proof.prove(occurrence, read), key)
             lu.assertTrue(admission.verify(occurrence, startingLoadout), key)
         end
-        -- The native garment may survive even if the retained history no longer
-        -- names it. Neither side of inventory conformance owns armor depletion.
+        -- The native trait may survive even if the retained history no longer
+        -- names it. Neither side of inventory conformance owns its depletion.
         occurrence.diagnostics.beforeRoomExit.traits.equipped = { entry.traits.equipped[1] }
         occurrence.conformanceExpected = assert(protocolConformance.resolve(
             occurrence.roomExitConformance, occurrence.diagnostics, "roomExitConformance"))

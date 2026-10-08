@@ -40,7 +40,14 @@ export const echoTraits = [
     label: 'Fight Fight Fight',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
-    selectedDisposition: { kind: 'echo', effect: 'numericNoOp' },
+    // StartFraction 0.6 times the Echo scaling row's multiplier (Heroic 0.8/0.6),
+    // rounded to hundredths.
+    selectedDisposition: {
+      kind: 'echo',
+      effect: 'roomDecay',
+      startFraction: { ordinary: 0.6, dreamByAcquisitionOrdinal: [0.6, 0.6, 0.6, 0.8] },
+      decay: 0.05,
+    },
   },
   {
     ...raritylessEchoTrait,
