@@ -3,7 +3,7 @@ import type { RawTraitDeclaration } from './types';
 export const infernalContractTraits = [
   {
     key: 'InfernalContractBoon',
-    label: 'Infernal Contract',
+    label: 'Champion of Elysium',
     rarityDomain: 'none',
     linkedBoonRequirements: [],
     eligibilityRequirements: [],

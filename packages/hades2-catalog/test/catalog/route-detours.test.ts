@@ -244,7 +244,7 @@ describe('route detour catalog declarations', () => {
       countsEncounterDepth: false,
     });
     expect(catalog.rewards.rewardTypes.byKey.InfernalContractBoon).toMatchObject({
-      label: 'Infernal Contract',
+      label: 'Champion of Elysium',
     });
     expect(catalog.rewards.acquisitions.byKey.InfernalContractBoon).toMatchObject({
       kind: 'loot',
