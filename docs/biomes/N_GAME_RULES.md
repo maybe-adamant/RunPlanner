@@ -298,7 +298,7 @@ unrecorded or non-occurring room.
 | `RoomsPerUpgrade` traits                                             | No                     | `EndEncounterEffects` skips `CheckChamberTraits` when `SkipRoomsPerUpgrade` is set. This includes Steady Growth, Transcendent Embryo, Supply Chain, and other room-upgrade effects.                                   |
 | Keepsake rank experience                                             | Yes                    | `AdvanceKeepsake` is called outside both suppressor guards after the side-room encounter ends. This persistent rank progress is not part of the planner simulation.                                                   |
 | Keepsake decay/escalation fields guarded with room upgrades          | No                     | The damage decay and escalation loop is inside the `SkipRoomsPerUpgrade` guard.                                                                                                                                       |
-| `UsesAsRooms` traits                                                 | Yes                    | `LeaveRoom` reduces these independently of `IgnoreEncounterUses`; the hidden-room-reward Chaos curse and the room-use Well effect follow this path.                                                                   |
+| `UsesAsRooms` traits                                                 | Yes                    | `LeaveRoom` reduces these at every door use, restored parent and Hub departures included, regardless of `IgnoreEncounterUses`; the hidden-room-reward Chaos curse and room-use Well effect follow it.                 |
 | World `GamePhaseTick`                                                | No                     | First entry is suppressed by `SkipGamePhaseTick`; returning to the already-entered persistent parent is also not a first entry. Garden, cooking, and mailbox progression are outside the planner simulation.          |
 | Grouped Hex precharge/reset at the room boundary                     | No                     | `MaintainSpellCharge` prevents the grouped-room charge adjustment.                                                                                                                                                    |
 | Hub visit/pylon completion                                           | No                     | Side rooms are child occurrences. They neither consume one of the six authored main visits nor create another Soul Pylon. `HandlePylonObjective` only refreshes the existing objective display.                       |
@@ -328,7 +328,10 @@ world phases, or Hex charge into new planner state.
 The Hub visit list and each parent-local side-room entry list remain topology
 between distinct room occurrences. Every entered main or side occurrence owns
 its own local room chronology; restoration does not combine them into one
-Hub-wide action order or replay already-settled parent actions.
+Hub-wide action order or replay already-settled parent actions. Each later
+door use out of a restored parent or Hub is still a native `LeaveRoom`, and its
+`roomDeparted` contact advances room-departure clocks without repeating room
+exit.
 
 ### Canonical baseline and exclusions
 

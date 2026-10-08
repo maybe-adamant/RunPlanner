@@ -9,7 +9,7 @@ import {
 } from '../../../../authored-project/addresses';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import { advanceChaosClock, advanceRoomDecay, foldTraitHistoryEvents } from '../../../traits';
+import { foldTraitHistoryEvents } from '../../../traits';
 import { completePendingShopAcquisitionSite } from '../../shop/settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../branch-lifecycle';
@@ -116,24 +116,6 @@ export function applyRoomExitedTransition(
         return state === branch.state ? branch : Object.freeze({ ...branch, state });
       }),
     );
-  next = Object.freeze(
-    next.map((branch) => {
-      const before = branch.state.traitHistory;
-      // Native LeaveRoom advances room-use curses and room-decaying traits together.
-      const traitHistory = advanceRoomDecay(
-        catalog,
-        advanceChaosClock(catalog, before, event.sequence, 'locations'),
-        event.origin,
-        event.sequence,
-      );
-      return traitHistory === before
-        ? branch
-        : Object.freeze({
-            ...branch,
-            state: replaceSimulationTraitHistory(branch.state, traitHistory),
-          });
-    }),
-  );
   return Object.freeze({
     branches: advanceRewardBranches(next, event.sequence),
     ...(checkpoint === undefined ? {} : { runStateCheckpoint: checkpoint }),

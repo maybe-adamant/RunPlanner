@@ -494,11 +494,8 @@ ordinal like other NPC position effects. `LeaveRoom` clears the block on the fir
 departure, subtracts `Decay = 0.05` on each later one and removes the trait
 once the value is no longer positive (`RoomLogic.lua:4245-4261`). In doubles
 the 13th later departure removes a `0.6` fraction and the 16th a `0.8` one.
-The planner applies each departure at `roomExited`. Bounded discrepancy: Ephyra
-departures from a restored room (Hub departures after the first, a parent
-room's departures after a side room, and the Hub handoff) call `LeaveRoom` but
-have no `roomExited`, so they do not decay until a shared departure contact
-exists.
+The planner applies each departure at `roomDeparted`, including Ephyra
+departures from a restored parent or Hub.
 
 `CurrentRun.LastReward` is not simply the latest reward-history event. Loot
 inherits `LastRewardEligible = true`; consumables/resources declare or inherit

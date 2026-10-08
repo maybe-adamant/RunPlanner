@@ -480,6 +480,7 @@ describe('canonical I Clockwork materialization and history', () => {
       'roomCountersAdvanced',
       'enteredRewardStoreRecorded',
       'roomExited',
+      'roomDeparted',
     ]);
     expect(history.biomeCompletion.ledgers.counters).toMatchObject({
       biomeDepthCache: 12,
@@ -699,6 +700,7 @@ describe('canonical I Clockwork materialization and history', () => {
       'roomCountersAdvanced',
       'enteredRewardStoreRecorded',
       'roomExited',
+      'roomDeparted',
     ]);
   });
 });

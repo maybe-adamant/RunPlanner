@@ -46,6 +46,7 @@ export type {
   RoomAppearanceHistoryEntry,
   RoomCreatedHistoryEvent,
   RoomCreationSource,
+  RoomDepartedHistoryEvent,
   RoomRestoredHistoryEvent,
   RoomRestoreHistoryEntry,
   RoomHistoryViews,
