@@ -22,14 +22,16 @@ it('restores authored modifiers through history, saved reload and published exec
   await files.openSaved(application, loadSurfaceNProject(), 'modifiers.runplanner.json');
   const { user } = renderPlannerForInteraction({ application });
   await user.click(screen.getByRole('button', { name: 'Loadout' }));
-  const gold = () => screen.getByRole('slider', { name: 'Enemy gold chance' }) as HTMLInputElement;
-  fireEvent.change(gold(), { target: { value: '1.7' } });
+  const gold = () =>
+    screen.getByRole('slider', { name: 'Encounter gold range' }) as HTMLInputElement;
+  await user.click(screen.getByRole('checkbox', { name: 'Encounter gold range' }));
+  fireEvent.change(gold(), { target: { value: '35' } });
   fireEvent.keyDown(gold(), { key: 'Enter' });
   act(() => application.store.dispatch(authoredProjectUndoRequested()));
-  expect(gold().value).toBe('1');
+  expect(gold().value).toBe('100');
   act(() => application.store.dispatch(authoredProjectRedoRequested()));
-  expect(gold().value).toBe('1.7');
-  const expected = { enemyGoldDropChanceMultiplier: 1.7 };
+  expect(gold().value).toBe('35');
+  const expected = { encounterGoldRange: 35 };
   await act(async () => {
     expect((await application.projectOperations.saveProfile()).status).toBe('success');
   });
@@ -38,7 +40,7 @@ it('restores authored modifiers through history, saved reload and published exec
   await act(async () => {
     await files.openSaved(application, saved, 'modifiers.runplanner.json');
   });
-  expect(gold().value).toBe('1.7');
+  expect(gold().value).toBe('35');
   await act(async () => {
     expect((await application.projectOperations.publishGame(1)).status).toBe('success');
   });

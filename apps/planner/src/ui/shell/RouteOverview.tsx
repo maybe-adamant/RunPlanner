@@ -5,8 +5,9 @@ import {
   createKeepsakeEquipResultAddress,
   deriveRouteLoadout,
   routeInitialProfile,
+  RUN_MODIFIER_PERCENTAGE,
   type BooleanRunModifierDeclaration,
-  type NumberRunModifierDeclaration,
+  type OptionalPercentageRunModifierDeclaration,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -495,7 +496,7 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
               declaration={declaration}
             />
           ) : (
-            <NumberRunModifierSlider
+            <OptionalPercentageRunModifier
               key={declaration.key}
               control={control}
               declaration={declaration}
@@ -516,7 +517,7 @@ function BooleanRunModifierToggle({
   readonly declaration: BooleanRunModifierDeclaration;
 }) {
   const dispatch = useAppDispatch();
-  const values: Readonly<Record<string, boolean | number>> = control.value;
+  const values: Readonly<Record<string, boolean | number | undefined>> = control.value;
   return (
     <label className="route-run-modifier-toggle" {...hintProps(declaration.description)}>
       <span>{declaration.label}</span>
@@ -547,18 +548,25 @@ const SLIDER_COMMIT_KEYS = [
   'PageDown',
 ];
 
-export function NumberRunModifierSlider({
+/** Enabling with no earlier value in this session starts at the full percentage. */
+const PERCENTAGE_ENABLE_DEFAULT = RUN_MODIFIER_PERCENTAGE.max;
+
+export function OptionalPercentageRunModifier({
   control,
   declaration,
   id,
 }: {
   readonly control: WorkspaceRoute['runModifiers'];
-  readonly declaration: NumberRunModifierDeclaration;
+  readonly declaration: OptionalPercentageRunModifierDeclaration;
   readonly id: string;
 }) {
   const dispatch = useAppDispatch();
-  const values: Readonly<Record<string, boolean | number>> = control.value;
-  const authored = Number(values[declaration.key]);
+  const values: Readonly<Record<string, boolean | number | undefined>> = control.value;
+  const raw = values[declaration.key];
+  const authored = typeof raw === 'number' ? raw : undefined;
+  // The last enabled value is UI state only; turning the modifier off removes it from the plan.
+  const [remembered, setRemembered] = useState(authored);
+  if (authored !== undefined && authored !== remembered) setRemembered(authored);
   const [draft, setDraft] = useState<{
     readonly source: number;
     readonly text: string;
@@ -566,9 +574,11 @@ export function NumberRunModifierSlider({
   }>();
   // An authored replacement (including history restoration) supersedes its draft.
   if (draft !== undefined && draft.source !== authored) setDraft(undefined);
-  const currentDraft = draft?.source === authored ? draft : undefined;
-  const shown = currentDraft?.text ?? String(authored);
-  const vanilla = Number(shown) === declaration.default ? ' (Vanilla)' : '';
+  const currentDraft = authored !== undefined && draft?.source === authored ? draft : undefined;
+  const resting = authored ?? remembered ?? PERCENTAGE_ENABLE_DEFAULT;
+  const shown = currentDraft?.text ?? String(resting);
+  // An off modifier shows no value; the unchecked box already says it is native.
+  const valueText = authored === undefined ? undefined : `${shown}${RUN_MODIFIER_PERCENTAGE.unit}`;
   const commit = () => {
     if (currentDraft === undefined) return;
     const result = control.draftIntent(declaration, currentDraft.text);
@@ -579,22 +589,43 @@ export function NumberRunModifierSlider({
     setDraft(undefined);
     dispatch(authoredProjectCommandDispatched(result.intent.command));
   };
+  const toggle = (enabled: boolean) => {
+    setDraft(undefined);
+    if (!enabled) {
+      dispatch(authoredProjectCommandDispatched(control.clearValue(declaration).command));
+      return;
+    }
+    const result = control.draftIntent(declaration, String(resting));
+    if (result.kind === 'valid') dispatch(authoredProjectCommandDispatched(result.intent.command));
+  };
   const error = currentDraft?.error;
   return (
-    <div className="route-run-modifier-number" {...hintProps(error ?? declaration.description)}>
-      <label htmlFor={id}>{declaration.label}</label>
-      <div className="route-run-modifier-multiplier">
+    <div className="route-run-modifier-percentage" {...hintProps(error ?? declaration.description)}>
+      <label className="route-run-modifier-switch">
+        <input
+          type="checkbox"
+          aria-description={declaration.description}
+          checked={authored !== undefined}
+          onChange={(event) => toggle(event.target.checked)}
+        />
+        <span>{declaration.label}</span>
+      </label>
+      <div className="route-run-modifier-slider">
         <input
           id={id}
+          aria-label={declaration.label}
           aria-description={error ?? declaration.description}
           aria-invalid={error === undefined ? undefined : true}
           type="range"
-          min={declaration.min}
-          max={declaration.max}
-          step={declaration.step}
+          disabled={authored === undefined}
+          min={RUN_MODIFIER_PERCENTAGE.min}
+          max={RUN_MODIFIER_PERCENTAGE.max}
+          step={RUN_MODIFIER_PERCENTAGE.step}
           value={shown}
-          aria-valuetext={`${shown}${declaration.unit}${vanilla}`}
-          onChange={(event) => setDraft({ source: authored, text: event.target.value })}
+          aria-valuetext={valueText}
+          onChange={(event) => {
+            if (authored !== undefined) setDraft({ source: authored, text: event.target.value });
+          }}
           onPointerUp={commit}
           onKeyUp={(event) => {
             if (SLIDER_COMMIT_KEYS.includes(event.key)) commit();
@@ -610,11 +641,7 @@ export function NumberRunModifierSlider({
             }
           }}
         />
-        <output htmlFor={id}>
-          {shown}
-          {declaration.unit}
-          {vanilla}
-        </output>
+        <output htmlFor={id}>{valueText}</output>
       </div>
     </div>
   );

@@ -572,9 +572,13 @@ export interface WorkspaceRunModifiersControl {
     declaration: import('@run-planner/engine/authored-project').BooleanRunModifierDeclaration,
     value: boolean,
   ) => WorkspaceCommandIntent;
-  /** Complete replacement for a number modifier once its draft text is within the declared domain. */
+  /** Complete replacement turning an optional modifier off. */
+  readonly clearValue: (
+    declaration: import('@run-planner/engine/authored-project').OptionalPercentageRunModifierDeclaration,
+  ) => WorkspaceCommandIntent;
+  /** Complete replacement enabling an optional modifier once its draft text is within the percentage domain. */
   readonly draftIntent: (
-    declaration: import('@run-planner/engine/authored-project').NumberRunModifierDeclaration,
+    declaration: import('@run-planner/engine/authored-project').OptionalPercentageRunModifierDeclaration,
     draft: string,
   ) => WorkspaceRunModifierDraftResult;
 }

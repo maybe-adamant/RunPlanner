@@ -23,25 +23,22 @@ function compile(project: ProjectDocument) {
 }
 
 describe('execution run modifiers', () => {
-  it('publishes the complete declared record and verifies its fractional fingerprint', () => {
+  it('publishes the enabled modifiers and verifies their fingerprint', () => {
     const project = runModifiersProject();
     const plan = compile(project);
-    expect(plan.runModifiers).toEqual({ enemyGoldDropChanceMultiplier: 2.5 });
+    expect(plan.runModifiers).toEqual({ enemyGoldDropChance: 40, encounterGoldRange: 25 });
     expect(plan.startingLoadout).not.toHaveProperty('runModifiers');
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
     expect(decodeExecutionPlan(modifiersWire)).toEqual(plan);
-    expect(
-      compile({
-        ...project,
-        route: {
-          ...project.route,
-          loadout: {
-            ...project.route.loadout,
-            runModifiers: { enemyGoldDropChanceMultiplier: 2.75 },
-          },
-        },
-      }).planFingerprint,
-    ).not.toBe(plan.planFingerprint);
+    const chanceOnly = compile({
+      ...project,
+      route: {
+        ...project.route,
+        loadout: { ...project.route.loadout, runModifiers: { enemyGoldDropChance: 40 } },
+      },
+    });
+    expect(chanceOnly.runModifiers).toEqual({ enemyGoldDropChance: 40 });
+    expect(chanceOnly.planFingerprint).not.toBe(plan.planFingerprint);
   });
 
   it('omits native settings and preserves the old document and fingerprint', () => {
@@ -72,13 +69,14 @@ describe('execution run modifiers', () => {
   });
 
   it.each([
-    {},
     null,
-    { enemyGoldDropChanceMultiplier: Infinity },
-    { enemyGoldDropChanceMultiplier: 0.5 },
-    { enemyGoldDropChanceMultiplier: 5.5 },
-    { enemyGoldDropChanceMultiplier: '2' },
-    { enemyGoldDropChanceMultiplier: 1.5, guaranteeEligibleCrits: true },
+    { enemyGoldDropChance: Infinity },
+    { enemyGoldDropChance: -1 },
+    { encounterGoldRange: 100.5 },
+    { encounterGoldRange: '50' },
+    { encounterGoldRange: null },
+    { enemyGoldDropChanceMultiplier: 2 },
+    { enemyGoldDropChance: 50, guaranteeEligibleCrits: true },
   ])('rejects malformed wire settings before fingerprint verification: %j', (runModifiers) => {
     expect(() => decodeExecutionPlan({ ...nativeWire, runModifiers })).toThrow(
       ExecutionPlanCodecError,
@@ -92,7 +90,7 @@ describe('execution run modifiers', () => {
     expect(() =>
       decodeExecutionPlan({
         ...modifiersWire,
-        runModifiers: { ...modifiersWire.runModifiers, enemyGoldDropChanceMultiplier: 3 },
+        runModifiers: { ...modifiersWire.runModifiers, enemyGoldDropChance: 41 },
       }),
     ).toThrow(/planFingerprint/);
   });

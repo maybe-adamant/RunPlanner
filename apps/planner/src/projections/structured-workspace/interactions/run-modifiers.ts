@@ -1,10 +1,11 @@
 import {
   RUN_MODIFIER_DECLARATIONS,
+  RUN_MODIFIER_PERCENTAGE,
   createRouteAddress,
   isRunModifierValue,
   routeRunModifiers,
   type BooleanRunModifierDeclaration,
-  type NumberRunModifierDeclaration,
+  type OptionalPercentageRunModifierDeclaration,
   type ProjectDocument,
   type RunModifierDeclaration,
   type RunModifiers,
@@ -36,13 +37,18 @@ export function bindRunModifiers(
   devBuild: boolean,
 ): WorkspaceRunModifiersControl {
   const value = routeRunModifiers(route.loadout);
-  const intentFor = (declaration: RunModifierDeclaration, next: boolean | number) => ({
-    command: {
-      kind: 'ReplaceRunModifiers' as const,
-      route: createRouteAddress(route.routeKey),
-      value: { ...value, [declaration.key]: next } as RunModifiers,
-    },
-  });
+  const intentFor = (declaration: RunModifierDeclaration, next: boolean | number | undefined) => {
+    const replaced: Record<string, boolean | number> = { ...value };
+    if (next === undefined) delete replaced[declaration.key];
+    else replaced[declaration.key] = next;
+    return {
+      command: {
+        kind: 'ReplaceRunModifiers' as const,
+        route: createRouteAddress(route.routeKey),
+        value: replaced as RunModifiers,
+      },
+    };
+  };
   return Object.freeze({
     value,
     declarations: visibleRunModifierDeclarations(RUN_MODIFIER_DECLARATIONS, devBuild),
@@ -50,8 +56,12 @@ export function bindRunModifiers(
       assertDeclared(declaration);
       return intentFor(declaration, next);
     },
+    clearValue: (declaration: OptionalPercentageRunModifierDeclaration) => {
+      assertDeclared(declaration);
+      return intentFor(declaration, undefined);
+    },
     draftIntent: (
-      declaration: NumberRunModifierDeclaration,
+      declaration: OptionalPercentageRunModifierDeclaration,
       draft: string,
     ): WorkspaceRunModifierDraftResult => {
       assertDeclared(declaration);
@@ -59,7 +69,7 @@ export function bindRunModifiers(
       if (!isRunModifierValue(declaration, next))
         return {
           kind: 'invalid',
-          message: `Enter a value between ${declaration.min} and ${declaration.max}.`,
+          message: `Enter a value between ${RUN_MODIFIER_PERCENTAGE.min} and ${RUN_MODIFIER_PERCENTAGE.max}.`,
         };
       return { kind: 'valid', intent: intentFor(declaration, next) };
     },

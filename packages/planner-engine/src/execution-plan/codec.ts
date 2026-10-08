@@ -1,6 +1,7 @@
 import {
   RUN_MODIFIER_DECLARATIONS,
   isRunModifierValue,
+  type RunModifierDeclaration,
   type RunModifiers,
 } from '../authored-project/run-modifiers';
 import {
@@ -64,18 +65,20 @@ function displayNameValue(value: unknown): string {
   return value;
 }
 
-/** The complete declared record; the module ignores keys it does not implement. */
+/** The complete declared record; an optional modifier is present only while enabled. */
 function runModifiersRecord(value: unknown): RunModifiers {
   const label = 'execution plan.runModifiers';
   const record = object(value, label);
+  const declarations: readonly RunModifierDeclaration[] = RUN_MODIFIER_DECLARATIONS;
   exact(
     record,
-    RUN_MODIFIER_DECLARATIONS.map((declaration) => declaration.key),
-    [],
+    declarations.filter((d) => d.kind !== 'optionalPercentage').map((d) => d.key),
+    declarations.filter((d) => d.kind === 'optionalPercentage').map((d) => d.key),
     label,
   );
   const decoded: Record<string, boolean | number> = {};
-  for (const declaration of RUN_MODIFIER_DECLARATIONS) {
+  for (const declaration of declarations) {
+    if (!(declaration.key in record)) continue;
     const raw = record[declaration.key];
     if (!isRunModifierValue(declaration, raw))
       fail(`${label}.${declaration.key} is outside its declared domain`);

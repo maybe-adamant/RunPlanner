@@ -346,10 +346,11 @@ transaction or mismatch obligation.
 ### Run modifiers
 
 The optional top-level `runModifiers` execution product carries the complete
-declared run-modifier record authored in Loadout; today that is the enemy
-gold-drop chance multiplier. It is separate from `startingLoadout` and native
-equipment conformance. Native settings are omitted by the producer, preserving
-default document fingerprints. The planner decoder validates a present record
+declared run-modifier record authored in Loadout: today the optional
+`enemyGoldDropChance` and `encounterGoldRange` percentages, each present only
+while enabled. It is separate from `startingLoadout` and native equipment
+conformance. Native settings are omitted by the producer, preserving default
+document fingerprints. The planner decoder validates a present record
 against the declaration table; the module reads only the modifiers it
 implements, validates those values, and ignores unknown keys, which remain part
 of the fingerprinted contents. Fingerprint verification uses the record's
