@@ -164,7 +164,7 @@ export function deriveRoomExitConformanceDeltas(
     // previously compared bank/closure pair.
     add('pathOfStars', baseline.hexObserver, currentExit.hexObserver);
     add('forfeit', baseline.forfeitStatus, currentExit.forfeitStatus);
-    add('stygianWell', baseline.stygianWell, currentExit.stygianWell);
+    add('stygianWell', baseline.stygianWellLegality, currentExit.stygianWellLegality);
     if (facts.length > 0)
       result.set(
         occurrence.occurrenceId,

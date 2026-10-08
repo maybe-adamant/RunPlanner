@@ -2,9 +2,10 @@ import { semanticAddressKey, type OccurrenceAddress } from '../../authored-proje
 import { routeRoomShop } from '../../authored-project/route-profile';
 import type { StygianWellState } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import type { StygianWellClock, StygianWellGrant } from '../../reward-kernel';
 
 export const STYGIAN_WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'] as const;
-/** Closed planner payload for one declaration-owned Well effect. */
+/** Closed planner-modeled effect a Well offer publishes; derived from its declared grant. */
 export type StygianWellEffect =
   | 'neutral'
   | 'spark'
@@ -15,23 +16,67 @@ export type StygianWellEffect =
   | 'extended'
   | 'twist'
   | 'lastStand';
+type ExtendedCharge = Extract<StygianWellGrant, { readonly charge: 'extended' }>;
+
+function wellOptions(catalog: Catalog) {
+  return (
+    catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) => group.options.values) ??
+    []
+  );
+}
+
 function wellOption(catalog: Catalog, itemKey: string) {
-  return catalog.rewards.shops.byKey.RoomShop?.groups.values
-    .flatMap((group) => group.options.values)
-    .find((option) => option.key === itemKey);
+  return wellOptions(catalog).find((option) => option.key === itemKey);
+}
+
+export function stygianWellGrant(catalog: Catalog, itemKey: string): StygianWellGrant | undefined {
+  return wellOption(catalog, itemKey)?.stygianWell?.grant;
+}
+
+export function stygianWellOfferEffect(grant: StygianWellGrant): StygianWellEffect {
+  switch (grant.kind) {
+    case 'charge':
+      return grant.charge;
+    case 'twist':
+      return 'twist';
+    case 'timedTrait':
+    case 'consumable':
+      return grant.publishedEffect ?? 'neutral';
+    case 'ledger':
+    case 'immediate':
+      return 'neutral';
+  }
 }
 
 export function twistResultItemKeys(catalog: Catalog): readonly string[] {
-  return Object.freeze([
-    ...(wellOption(catalog, 'RandomStoreItem')?.stygianWell?.nestedResultItemKeys ?? []),
-  ]);
+  const grant = wellOptions(catalog).find((option) => option.stygianWell?.grant.kind === 'twist')
+    ?.stygianWell?.grant;
+  return Object.freeze([...(grant?.kind === 'twist' ? grant.pool : [])]);
+}
+
+function extendedCharge(catalog: Catalog): ExtendedCharge | undefined {
+  for (const option of wellOptions(catalog)) {
+    const grant = option.stygianWell?.grant;
+    if (grant?.kind === 'charge' && grant.charge === 'extended') return grant;
+  }
+  return undefined;
 }
 
 export function extendedWellItemKeys(catalog: Catalog): readonly string[] {
-  return Object.freeze([
-    ...(wellOption(catalog, 'ExtendedShopTrait')?.stygianWell?.extendedDirectPurchaseItemKeys ??
-      []),
-  ]);
+  return Object.freeze([...(extendedCharge(catalog)?.eligibleItemKeys ?? [])]);
+}
+
+/** Native `HasNone` self-gate: the item is withheld while its own trait is active. */
+function inactiveGateBlocked(
+  option: ReturnType<typeof wellOption>,
+  state: Pick<StygianWellRunState, 'timedInstances'> | undefined,
+): boolean {
+  const grant = option?.stygianWell?.grant;
+  return (
+    option?.stygianWell?.offerRequirements?.includes('inactive') === true &&
+    grant?.kind === 'timedTrait' &&
+    (state?.timedInstances.some((instance) => instance.traitKey === grant.traitKey) ?? false)
+  );
 }
 
 export interface StygianWellAssessment {
@@ -125,7 +170,7 @@ export function assessStygianWellPlacement(
 function wellCandidateItemKeys(
   catalog: Catalog,
   routeKey: string,
-  state: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'> | undefined,
+  state: Pick<StygianWellRunState, 'timedInstances'> | undefined,
   traitHistory: import('../traits').TraitHistoryState | undefined,
   slot: import('../../authored-project/model').StygianWellSlotKey,
 ): readonly string[] {
@@ -143,12 +188,7 @@ function wellCandidateItemKeys(
       .filter((option) => {
         if (option.stygianWell?.excludedRouteKeys?.includes(routeKey)) return false;
         const requirements = option.stygianWell?.offerRequirements ?? [];
-        if (requirements.includes('inactive')) {
-          if (option.stygianWell?.effect === 'discount' && (state?.discountUses.length ?? 0) > 0)
-            return false;
-          if (option.stygianWell?.effect === 'emptySlot' && (state?.emptySlotUses.length ?? 0) > 0)
-            return false;
-        }
+        if (inactiveGateBlocked(option, state)) return false;
         return !requirements.includes('emptyAttackOrSpecial') || hasEmptyPrimaryOrSecondary;
       })
       .map((option) => option.key),
@@ -162,7 +202,7 @@ export function assessStygianWell(
   room: RoomDeclaration | undefined,
   biomeDepthCache: number,
   well: StygianWellState,
-  state?: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
+  state?: Pick<StygianWellRunState, 'timedInstances'>,
   traitHistory?: import('../traits').TraitHistoryState,
   priorEnteredWellFlags: readonly boolean[] = Object.freeze([]),
 ): StygianWellAssessment {
@@ -224,12 +264,11 @@ export function assessStygianWellPurchase(
   routeKey: string,
   well: StygianWellState,
   generationKey: import('../../authored-project/model').StygianWellGenerationKey,
-  state: Pick<StygianWellRunState, 'discountUses' | 'emptySlotUses'>,
+  state: Pick<StygianWellRunState, 'timedInstances'>,
   traitHistory: import('../traits').TraitHistoryState | undefined,
   firstPurchaseGenerationKey:
     import('../../authored-project/model').StygianWellGenerationKey | undefined,
 ): StygianWellPurchaseAssessment {
-  const activeDiscount = state.discountUses.length > 0;
   const slot = generationKey.startsWith('initial:')
     ? (generationKey.slice(
         'initial:'.length,
@@ -274,10 +313,9 @@ export function assessStygianWellPurchase(
     itemKey !== 'RandomStoreItem'
       ? undefined
       : Object.freeze(
-          twistResultItemKeys(catalog).filter((key) => {
-            const option = wellOption(catalog, key);
-            return option?.stygianWell?.effect !== 'discount' || !activeDiscount;
-          }),
+          twistResultItemKeys(catalog).filter(
+            (key) => !inactiveGateBlocked(wellOption(catalog, key), state),
+          ),
         );
   if (twistCandidateItemKeys !== undefined) {
     const childKey = generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!;
@@ -295,8 +333,38 @@ export function assessStygianWellPurchase(
   });
 }
 
-/** Only modeled state; neutral items still have an immediate atomic action. */
+/** One active timed Well trait; repurchases are separate instances. */
+export interface StygianWellTimedInstance {
+  /** The Well item that granted it. */
+  readonly itemKey: string;
+  /** The native trait it adds. */
+  readonly traitKey: string;
+  readonly clock: StygianWellClock;
+  readonly remainingUses: number;
+  readonly source: {
+    readonly occurrence: OccurrenceAddress;
+    readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
+  };
+}
+
+/** Well holdings retained after the purchase room. */
 export interface StygianWellRunState {
+  readonly sparkUses: number;
+  readonly yarnUses: number;
+  readonly hymnUses: number;
+  /** Archaic Seal charges awaiting an eligible direct purchase. */
+  readonly extendedUses: number;
+  readonly timedInstances: readonly StygianWellTimedInstance[];
+  /** Native `WellShopPurchases`: direct purchases by item key; Twist results are not counted. */
+  readonly directPurchases: Readonly<Record<string, number>>;
+}
+
+/**
+ * The legality subset that room-exit conformance and execution diagnostics
+ * observe: charges and the self-gated timed traits that withhold later Well
+ * offers. Boss-clocked instances are negative remaining uses.
+ */
+export interface StygianWellLegalityState {
   readonly sparkUses: number;
   readonly yarnUses: number;
   readonly hymnUses: number;
@@ -305,59 +373,116 @@ export interface StygianWellRunState {
   readonly extendedUses: number;
 }
 
-/** Encounter durations are non-negative; Extended instances use negative Boss-use counters. */
-export function advanceStygianWellEncounterUses(state: StygianWellRunState): StygianWellRunState {
-  return {
-    ...state,
-    discountUses: state.discountUses
-      .map((use) => (use > 0 ? use - 1 : use))
-      .filter((use) => use !== 0),
-    emptySlotUses: state.emptySlotUses
-      .map((use) => (use > 0 ? use - 1 : use))
-      .filter((use) => use !== 0),
-  };
+export function projectStygianWellLegality(
+  catalog: Catalog,
+  state: StygianWellRunState,
+): StygianWellLegalityState {
+  const usesFor = (effect: 'discount' | 'emptySlot') =>
+    Object.freeze(
+      state.timedInstances
+        .filter((instance) => {
+          const option = wellOption(catalog, instance.itemKey);
+          const grant = option?.stygianWell?.grant;
+          return (
+            option?.stygianWell?.offerRequirements?.includes('inactive') === true &&
+            grant?.kind === 'timedTrait' &&
+            grant.publishedEffect === effect
+          );
+        })
+        .map((instance) =>
+          instance.clock === 'bosses' ? -instance.remainingUses : instance.remainingUses,
+        ),
+    );
+  return Object.freeze({
+    sparkUses: state.sparkUses,
+    yarnUses: state.yarnUses,
+    hymnUses: state.hymnUses,
+    discountUses: usesFor('discount'),
+    emptySlotUses: usesFor('emptySlot'),
+    extendedUses: state.extendedUses,
+  });
 }
 
-export function advanceStygianWellBossUses(state: StygianWellRunState): StygianWellRunState {
-  return {
+const CHARGE_FIELDS = Object.freeze({
+  spark: 'sparkUses',
+  yarn: 'yarnUses',
+  hymn: 'hymnUses',
+  extended: 'extendedUses',
+} as const);
+
+/** Spends one use of every instance on `clock` and removes expired instances. */
+export function advanceStygianWellClock(
+  state: StygianWellRunState,
+  clock: StygianWellClock,
+): StygianWellRunState {
+  if (!state.timedInstances.some((instance) => instance.clock === clock)) return state;
+  return Object.freeze({
     ...state,
-    discountUses: state.discountUses
-      .map((use) => (use < 0 ? use + 1 : use))
-      .filter((use) => use !== 0),
-    emptySlotUses: state.emptySlotUses
-      .map((use) => (use < 0 ? use + 1 : use))
-      .filter((use) => use !== 0),
-  };
+    timedInstances: Object.freeze(
+      state.timedInstances
+        .map((instance) =>
+          instance.clock === clock
+            ? Object.freeze({ ...instance, remainingUses: instance.remainingUses - 1 })
+            : instance,
+        )
+        .filter((instance) => instance.remainingUses > 0),
+    ),
+  });
 }
+
+/**
+ * Applies one Well item. A direct purchase is counted and may consume an
+ * Archaic Seal; a Twist result is neither counted nor extended. Every timed
+ * trait is a new instance.
+ */
 export function applyStygianWellPurchase(
   catalog: Catalog,
   state: StygianWellRunState,
   itemKey: string,
-  directPurchase = true,
+  source: StygianWellTimedInstance['source'],
+  directPurchase: boolean,
 ): StygianWellRunState {
-  const option = wellOption(catalog, itemKey);
-  const effect = option?.stygianWell?.effect ?? 'neutral';
+  const grant = stygianWellGrant(catalog, itemKey);
+  const seal = extendedCharge(catalog);
   const extended =
-    directPurchase && state.extendedUses > 0 && extendedWellItemKeys(catalog).includes(itemKey);
-  const duration = extended ? -2 : 6;
-  const base = {
+    directPurchase &&
+    state.extendedUses > 0 &&
+    seal !== undefined &&
+    seal.eligibleItemKeys.includes(itemKey);
+  const base: StygianWellRunState = Object.freeze({
     ...state,
-    extendedUses: extended ? Math.max(0, state.extendedUses - 1) : state.extendedUses,
-  };
-  switch (effect) {
-    case 'spark':
-      return { ...base, sparkUses: base.sparkUses + 1 };
-    case 'yarn':
-      return { ...base, yarnUses: base.yarnUses + 1 };
-    case 'hymn':
-      return { ...base, hymnUses: base.hymnUses + 1 };
-    case 'discount':
-      return { ...base, discountUses: [...base.discountUses, duration] };
-    case 'emptySlot':
-      return { ...base, emptySlotUses: [...base.emptySlotUses, duration] };
-    case 'extended':
-      return { ...state, extendedUses: state.extendedUses + 1 };
-    default:
+    extendedUses: extended ? state.extendedUses - 1 : state.extendedUses,
+    directPurchases: directPurchase
+      ? Object.freeze({
+          ...state.directPurchases,
+          [itemKey]: (state.directPurchases[itemKey] ?? 0) + 1,
+        })
+      : state.directPurchases,
+  });
+  if (grant === undefined) return base;
+  switch (grant.kind) {
+    case 'charge': {
+      const field = CHARGE_FIELDS[grant.charge];
+      return Object.freeze({ ...base, [field]: base[field] + 1 });
+    }
+    case 'timedTrait':
+      return Object.freeze({
+        ...base,
+        timedInstances: Object.freeze([
+          ...base.timedInstances,
+          Object.freeze({
+            itemKey,
+            traitKey: grant.traitKey,
+            clock: extended ? ('bosses' as const) : grant.clock,
+            remainingUses: extended ? seal!.bossExtension : grant.initialUses,
+            source,
+          }),
+        ]),
+      });
+    case 'consumable':
+    case 'ledger':
+    case 'immediate':
+    case 'twist':
       return base;
   }
 }

@@ -11,6 +11,7 @@ import type {
   SourceResolutionPoint,
   SourceSupportPolicyKey,
   ConcreteAcquisitionPickupEffect,
+  StygianWellGrant,
 } from '@run-planner/engine/reward-kernel';
 
 export type RawPayloadDomainDeclaration = PayloadDomainDeclaration;
@@ -117,22 +118,11 @@ export interface RawShopOptionEntryDeclaration {
     | { readonly kind: 'fixed'; readonly gameName: string }
     | { readonly kind: 'resolvedOfferSource' };
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
-  /** RoomShop-only exact identity/effect metadata. */
+  /** RoomShop-only item grant and offer gates. */
   readonly stygianWell?: {
-    readonly effect:
-      | 'neutral'
-      | 'spark'
-      | 'yarn'
-      | 'hymn'
-      | 'discount'
-      | 'emptySlot'
-      | 'extended'
-      | 'twist'
-      | 'lastStand';
+    readonly grant: StygianWellGrant;
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
     readonly excludedRouteKeys?: readonly string[];
-    readonly nestedResultItemKeys?: readonly string[];
-    readonly extendedDirectPurchaseItemKeys?: readonly string[];
   };
 }
 

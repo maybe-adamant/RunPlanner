@@ -98,4 +98,6 @@ export type {
   ShopPurchaseGateResult,
   SourceResolutionPoint,
   SourceSupportPolicyKey,
+  StygianWellClock,
+  StygianWellGrant,
 } from './model';

@@ -15,6 +15,7 @@ import type {
   WorkspaceRunStatePresentation,
   WorkspaceRunStateRewardStoreController,
   WorkspaceRunStateSource,
+  WorkspaceRunStateStygianWell,
 } from '../contracts/run-state';
 
 const coreTraitSlots = Object.freeze([
@@ -189,6 +190,58 @@ function rewardStoreControllerPresentation(
   });
 }
 
+const wellClockNouns = Object.freeze({
+  encounters: ['encounter', 'encounters'],
+  rooms: ['room', 'rooms'],
+  bosses: ['Boss encounter', 'Boss encounters'],
+} as const);
+
+/** Labels the engine's Well holdings; uses and clocks are read, never advanced. */
+function stygianWellPresentation(
+  catalog: Catalog,
+  well: RunStateSnapshot['stygianWell'],
+): WorkspaceRunStateStygianWell | undefined {
+  const options =
+    catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) => group.options.values) ??
+    [];
+  const label = (itemKey: string) =>
+    options.find((option) => option.key === itemKey)?.label ?? itemKey;
+  const chargeLabel = (charge: 'spark' | 'yarn' | 'hymn' | 'extended') =>
+    options.find((option) => {
+      const grant = option.stygianWell?.grant;
+      return grant?.kind === 'charge' && grant.charge === charge;
+    })?.label ?? charge;
+  const charges = (
+    [
+      ['spark', well.sparkUses],
+      ['yarn', well.yarnUses],
+      ['hymn', well.hymnUses],
+      ['extended', well.extendedUses],
+    ] as const
+  ).flatMap(([charge, count]) =>
+    count > 0 ? [Object.freeze({ label: chargeLabel(charge), count })] : [],
+  );
+  const purchases = Object.entries(well.directPurchases).map(([itemKey, count]) =>
+    Object.freeze({ label: label(itemKey), count }),
+  );
+  if (well.timedInstances.length === 0 && charges.length === 0 && purchases.length === 0)
+    return undefined;
+  return Object.freeze({
+    timedBuffs: Object.freeze(
+      well.timedInstances.map((instance, index) => {
+        const [singular, plural] = wellClockNouns[instance.clock];
+        return Object.freeze({
+          key: `${index}:${instance.source.occurrence.occurrenceId}:${instance.source.generationKey}`,
+          label: label(instance.itemKey),
+          remainingLabel: `${instance.remainingUses} ${instance.remainingUses === 1 ? singular : plural} remaining`,
+        });
+      }),
+    ),
+    charges: Object.freeze(charges),
+    purchases: Object.freeze(purchases),
+  });
+}
+
 /** Presentation joins only: the engine has already evaluated all bag conditions. */
 export function presentRunState(
   catalog: Catalog,
@@ -201,6 +254,7 @@ export function presentRunState(
   const equippedSpell = snapshot.traits.equippedSlots.Spell;
   const hexBase = hexBaseCapacity(catalog, snapshot.hexProgress);
   const hexEffective = hexEffectiveCapacity(catalog, snapshot.hexProgress);
+  const wellPresentation = stygianWellPresentation(catalog, snapshot.stygianWell);
   return Object.freeze({
     hexProgress: Object.freeze({
       ...(equippedSpell === undefined
@@ -421,6 +475,7 @@ export function presentRunState(
       ),
       forfeitStatus: snapshot.forfeitStatus,
     }),
+    ...(wellPresentation === undefined ? {} : { stygianWell: wellPresentation }),
     traits: Object.freeze({
       ...(snapshot.traits.echoShopDuplicateStatus === undefined
         ? {}

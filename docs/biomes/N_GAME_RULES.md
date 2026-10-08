@@ -310,20 +310,12 @@ active, while each clock follows the declaration-backed contact that owns it.
 In particular, an immediate Shrine rush can be acquired inside the side room,
 but an older pending Shrine delivery does not lose a use there.
 
-The source review exposed two current normalization/simulation discrepancies
-that must be corrected before N execution is considered complete:
-
-- `N_Sub10` through `N_Sub15` currently normalize
-  `advancesExperimentalHammerUses: true`; every N side room inherits
-  `IgnoreEncounterUses`, so all fifteen must be false.
-- Chaos and Stygian Well encounter-use advancement is currently applied at the
-  engine's general encounter-end transition without consulting the room's
-  encounter-use suppressor. N side rooms must not advance either clock.
-
-Existing engine handling already preserves the other modeled high-impact
-cases: pending Shrine deliveries and `RoomsPerUpgrade` effects do not advance
-in N side rooms. The audit deliberately does not turn persistent keepsake XP,
-world phases, or Hex charge into new planner state.
+Every N side room normalizes `ignoreEncounterUses`, `skipRoomsPerUpgrade` and
+`advancesExperimentalHammerUses: false`, so Chaos encounter curses,
+Experimental Hammer, encounter-clocked Well traits, pending Shrine deliveries
+and `RoomsPerUpgrade` effects do not advance in N side rooms. The audit
+deliberately does not turn persistent keepsake XP, world phases, or Hex charge
+into new planner state.
 
 The Hub visit list and each parent-local side-room entry list remain topology
 between distinct room occurrences. Every entered main or side occurrence owns

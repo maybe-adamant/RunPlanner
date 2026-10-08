@@ -93,7 +93,7 @@ no reward seam only advance the branches to their sequence.
 | Acquisition point reached                               | Acquisition settlement and Purging Pool sale nodes.                                                                                   |
 | Outgoing generation, room created, target generated     | Batch generation, the pre-outgoing Run State capture and target-slot history; the Hub board flushes once every Hub slot participates. |
 | Room exited                                             | Room exit and its Run State capture.                                                                                                  |
-| Room departed                                           | The Chaos rooms clock and Fight Fight Fight decay; a Hub departure first captures its Run State.                                      |
+| Room departed                                           | The Chaos rooms clock, Fight Fight Fight decay and room-clocked Well uses; a Hub departure first captures its Run State.              |
 | Fountain used (Room Action)                             | Fountain rarity and the Purging Pool assessment.                                                                                      |
 | Keepsake rack used (Room Action)                        | Rack equip and its equip results.                                                                                                     |
 | Eris interacted (Room Action)                           | Eris's curse.                                                                                                                         |

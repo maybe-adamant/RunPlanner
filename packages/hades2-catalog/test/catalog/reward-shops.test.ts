@@ -639,49 +639,70 @@ describe('reward compiler Shop normalizer', () => {
     ).toBeUndefined();
   });
 
-  it('rejects malformed Stygian Well metadata and cross-option references', () => {
+  it('rejects malformed Stygian Well grants and cross-option references', () => {
+    const grant = (key: string, value: unknown) =>
+      replaceShopOption('RoomShop', key, (option) => ({
+        ...option,
+        stygianWell: { ...(option.stygianWell as object), grant: value },
+      }));
+    const timed = {
+      kind: 'timedTrait',
+      traitKey: 'TemporaryImprovedCastTrait',
+      initialUses: 5,
+      clock: 'encounters',
+    };
+    const seal = {
+      kind: 'charge',
+      charge: 'extended',
+      eligibleItemKeys: ['TemporaryImprovedCastTrait'],
+      bossExtension: 2,
+    };
     const malformed: readonly RawRewardKernelInput[] = [
       replaceShopOption('WorldShop', 'RandomLoot', (option) => ({
         ...option,
-        stygianWell: { effect: 'neutral' },
+        stygianWell: { grant: { kind: 'immediate' } },
       })),
       replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => {
         const withoutMetadata = { ...option };
         delete withoutMetadata.stygianWell;
         return withoutMetadata;
       }),
-      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({
-        ...option,
-        stygianWell: { effect: 'unknownEffect' },
-      })),
+      grant('ArmorBoostStore', { kind: 'unknownGrant' }),
+      grant('TemporaryImprovedCastTrait', { ...timed, initialUses: 0 }),
+      grant('TemporaryImprovedCastTrait', { ...timed, clock: 'biomes' }),
+      grant('TemporaryImprovedCastTrait', { ...timed, publishedEffect: 'discount' }),
+      grant('TemporaryDiscountTrait', {
+        ...timed,
+        traitKey: 'TemporaryDiscountTrait',
+        clock: 'rooms',
+        publishedEffect: 'discount',
+      }),
+      grant('TemporaryDiscountTrait', { ...timed, traitKey: 'TemporaryDiscountTrait' }),
+      grant('TemporaryDiscountTrait', {
+        ...timed,
+        traitKey: 'TemporaryDiscountTrait',
+        publishedEffect: 'emptySlot',
+      }),
+      grant('TemporaryForcedSecretDoorTrait', {
+        kind: 'charge',
+        charge: 'spark',
+        bossExtension: 2,
+      }),
+      grant('LastStandShopItem', { kind: 'consumable', acquisitionGameName: 'UnknownConsumable' }),
+      grant('ArmorBoostStore', { kind: 'twist', pool: ['HealDropRange'] }),
+      grant('RandomStoreItem', { kind: 'twist', pool: [] }),
+      grant('RandomStoreItem', { kind: 'twist', pool: ['UnknownWellItem'] }),
+      grant('RandomStoreItem', { kind: 'twist', pool: ['ExtendedShopTrait'] }),
+      grant('ArmorBoostStore', seal),
+      grant('ExtendedShopTrait', { ...seal, bossExtension: 0 }),
+      grant('ExtendedShopTrait', { ...seal, eligibleItemKeys: ['UnknownWellItem'] }),
+      grant('ExtendedShopTrait', { ...seal, eligibleItemKeys: ['HealDropRange'] }),
+      grant('TemporaryDiscountTrait', { kind: 'ledger' }),
       replaceShopOption('RoomShop', 'TemporaryDiscountTrait', (option) => ({
         ...option,
-        stygianWell: { effect: 'discount', offerRequirements: ['unknownRequirement'] },
-      })),
-      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
-        ...option,
-        stygianWell: { effect: 'twist' },
-      })),
-      replaceShopOption('RoomShop', 'ExtendedShopTrait', (option) => ({
-        ...option,
-        stygianWell: { effect: 'extended' },
-      })),
-      replaceShopOption('RoomShop', 'ExtendedShopTrait', (option) => ({
-        ...option,
         stygianWell: {
-          effect: 'extended',
-          extendedDirectPurchaseItemKeys: ['UnknownWellItem'],
-        },
-      })),
-      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({
-        ...option,
-        stygianWell: { effect: 'neutral', nestedResultItemKeys: ['HealDropRange'] },
-      })),
-      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({
-        ...option,
-        stygianWell: {
-          effect: 'neutral',
-          extendedDirectPurchaseItemKeys: ['HealDropRange'],
+          ...(option.stygianWell as object),
+          offerRequirements: ['unknownRequirement'],
         },
       })),
     ];

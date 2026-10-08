@@ -687,7 +687,9 @@ still desynchronizes. Diagnostic logs retain double-precision numeric detail.
 
 Well conformance compares aggregate remaining uses across independent Yarn,
 Ixion, and Extended Shop trait instances, the single accumulated Hymn `Uses`
-counter, and individual timed-effect durations. This applies at room exit and
+counter, and the individual Discount and Empty Slot durations that gate later
+Well offers. Other timed Well traits, the purchase ledger and Well consumables
+are planner Run State only. This applies at room exit and
 Postboss admission: forced downstream offers and Chaos gates cannot independently
 prove that a temporary effect was consumed. These are checkpoint balances, not
 per-consumption provenance checks.

@@ -21,7 +21,7 @@ import { roomActionKey } from '../../../../authored-project/room-actions/key';
 import { materializeGorgonAthenaOffer } from '../../../../authored-project/traits/state';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
-import { advanceStygianWellBossUses } from '../../../commerce/stygian-well';
+import { advanceStygianWellClock } from '../../../commerce/stygian-well';
 import {
   activateTemporaryArcana,
   currentArcanaCards,
@@ -197,7 +197,7 @@ export function applyEncounterSettlementTransition(inputs: {
           ...branch,
           state: Object.freeze({
             ...branch.state,
-            stygianWell: advanceStygianWellBossUses(branch.state.stygianWell),
+            stygianWell: advanceStygianWellClock(branch.state.stygianWell, 'bosses'),
           }),
         }),
       ),

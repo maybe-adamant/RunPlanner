@@ -37,7 +37,7 @@ Native scripts: `1GameData/Scripts`.
 - **Well clocks**: encounter uses decrement at the main encounter's end unless
   the room sets `IgnoreEncounterUses` (`RoomLogic.lua:2965-2976`); boss uses at
   a non-`SkipBossTraits` Boss encounter (`RoomLogic.lua:2940-2946`); room uses
-  at every `LeaveRoom` (`RoomLogic.lua:4262`). Expired traits are removed.
+  at every `LeaveRoom` (`RoomLogic.lua:4264`). Expired traits are removed.
 - **Well items** (`StoreData.lua` RoomShop, `TraitData_Store.lua`,
   `StoreLogic.lua:1167-1226`, `ConsumableData.lua:944-1529`):
 

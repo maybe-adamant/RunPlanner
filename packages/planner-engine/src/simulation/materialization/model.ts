@@ -40,11 +40,9 @@ import type {
 } from '../../authored-project/traits/state';
 import type { TraitOfferSourceContext } from '../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import type { ShopOptionEntry } from '../../reward-kernel/model';
 import type { MaterializedEncounterPhase } from '../encounters/model';
 import type { StygianWellGenerationKey } from '../../authored-project/model';
-
-type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
+import type { StygianWellEffect } from '../commerce/stygian-well';
 
 export type BiomeMaterializationLoadout = Pick<
   RouteLoadout,

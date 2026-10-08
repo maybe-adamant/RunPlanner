@@ -11,7 +11,6 @@ import { seaStarDuplicateSourceIsActive } from '../../../authored-project/acquis
 import { assembleRoomActionDomain } from '../../../authored-project/room-actions/domain';
 import { scheduleRequiredRoomActions } from '../../../authored-project/room-actions/defaults';
 import { roomActionKey } from '../../../authored-project/room-actions/state';
-import type { ShopOptionEntry } from '../../../reward-kernel/model';
 import {
   alwaysActiveEncounterSlotKeys,
   resolveMaterializedEncounterPhase,
@@ -20,7 +19,12 @@ import {
 import { encounterResolutionContext } from '../../encounters/resolve';
 import { directEncounterDefinitionKeyForSlot } from '../../../authored-project/room-state/encounter-envelope';
 import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
-import { extendedWellItemKeys } from '../../commerce/stygian-well';
+import {
+  extendedWellItemKeys,
+  stygianWellGrant,
+  stygianWellOfferEffect,
+  type StygianWellEffect,
+} from '../../commerce/stygian-well';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../../room-actions';
 import type { CanonicalAuthoredRoom } from '../model';
 import {
@@ -31,8 +35,6 @@ import {
   type MaterializedRoomLeaf,
 } from './templates';
 import { resolveEntryRoom } from '../../../authored-project/room-state/entry-resolution';
-
-type StygianWellEffect = NonNullable<ShopOptionEntry['stygianWell']>['effect'];
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -193,10 +195,8 @@ export function materializeAuthoredRoom(
           ];
           for (const [generationKey, offerKey] of generations) {
             if (offerKey === undefined || offerKey === null) continue;
-            const option = context.catalog.rewards.shops.byKey.RoomShop?.groups.values
-              .flatMap((group) => group.options.values)
-              .find((candidate) => candidate.key === offerKey);
-            const effect = option?.stygianWell?.effect;
+            const grant = stygianWellGrant(context.catalog, offerKey);
+            const effect = grant === undefined ? undefined : stygianWellOfferEffect(grant);
             const twistResultKey =
               generationKey === 'travelDealRefill'
                 ? context.occurrence.stygianWell?.twistResultKeyBySlot?.travelDealRefill
@@ -204,12 +204,12 @@ export function materializeAuthoredRoom(
                     generationKey.slice('initial:'.length) as
                       'healing' | 'secondLeft' | 'secondRight'
                   ];
-            const twistResultEffect =
+            const twistResultGrant =
               effect === 'twist' && twistResultKey !== undefined && twistResultKey !== null
-                ? context.catalog.rewards.shops.byKey.RoomShop?.groups.values
-                    .flatMap((group) => group.options.values)
-                    .find((candidate) => candidate.key === twistResultKey)?.stygianWell?.effect
+                ? stygianWellGrant(context.catalog, twistResultKey)
                 : undefined;
+            const twistResultEffect =
+              twistResultGrant === undefined ? undefined : stygianWellOfferEffect(twistResultGrant);
             if (effect !== undefined) effects[generationKey] = twistResultEffect ?? effect;
           }
           return Object.freeze(effects);

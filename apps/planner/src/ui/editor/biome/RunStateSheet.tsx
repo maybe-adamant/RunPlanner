@@ -316,6 +316,42 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             </dl>
           </section>
         ) : null}
+        {activeTab === 'Overview' && state.stygianWell !== undefined ? (
+          <section className="run-state-section">
+            <h3>Stygian Well</h3>
+            <dl className="run-state-values">
+              {state.stygianWell.timedBuffs.length === 0 ? null : (
+                <StateRow label="Active buffs">
+                  <ul className="run-state-plain-list">
+                    {state.stygianWell.timedBuffs.map((buff) => (
+                      <li key={buff.key}>
+                        {buff.label}
+                        <span className="run-state-metadata">{buff.remainingLabel}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </StateRow>
+              )}
+              {state.stygianWell.charges.map((charge) => (
+                <StateRow key={charge.label} label={charge.label}>
+                  {charge.count} pending
+                </StateRow>
+              ))}
+              {state.stygianWell.purchases.length === 0 ? null : (
+                <StateRow label="Purchased">
+                  <ul className="run-state-plain-list">
+                    {state.stygianWell.purchases.map((purchase) => (
+                      <li key={purchase.label}>
+                        {purchase.label}
+                        <span className="run-state-metadata">×{purchase.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </StateRow>
+              )}
+            </dl>
+          </section>
+        ) : null}
         {activeTab === 'Hex' ? (
           <>
             <section className="run-state-section">

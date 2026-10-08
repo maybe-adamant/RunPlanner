@@ -33,21 +33,40 @@ import { stygianWellCandidateForProjectEvaluationAssembly } from '../../src/simu
 import {
   applyStygianWellPurchase,
   assessStygianWellPurchase,
-  advanceStygianWellBossUses,
-  advanceStygianWellEncounterUses,
+  advanceStygianWellClock,
   assessStygianWell,
   assessStygianWellPlacement,
   extendedWellItemKeys,
   twistResultItemKeys,
+  projectStygianWellLegality,
+  type StygianWellRunState,
 } from '../../src/simulation/commerce/stygian-well';
 
-const empty = () => ({
+const empty = (): StygianWellRunState => ({
   sparkUses: 0,
   yarnUses: 0,
   hymnUses: 0,
-  discountUses: [],
-  emptySlotUses: [],
   extendedUses: 0,
+  timedInstances: [],
+  directPurchases: {},
+});
+const purchaseSource = {
+  occurrence: createOccurrenceAddress(goldenFBiome, createOccurrenceId('well')),
+  generationKey: 'initial:secondLeft',
+} as const;
+const buy = (state: StygianWellRunState, itemKey: string, directPurchase = true) =>
+  applyStygianWellPurchase(catalog, state, itemKey, purchaseSource, directPurchase);
+const withDiscount = (remainingUses: number): StygianWellRunState => ({
+  ...empty(),
+  timedInstances: [
+    {
+      itemKey: 'TemporaryDiscountTrait',
+      traitKey: 'TemporaryDiscountTrait',
+      clock: 'encounters',
+      remainingUses,
+      source: purchaseSource,
+    },
+  ],
 });
 
 describe('Stygian Well consequential purchase state', () => {
@@ -61,7 +80,7 @@ describe('Stygian Well consequential purchase state', () => {
         secondRight: 'TemporaryBoonRarityTrait',
       },
     } as const;
-    let state = applyStygianWellPurchase(catalog, empty(), itemKey);
+    let state = buy(empty(), itemKey);
     for (const pending of [1, 2]) {
       expect(state.sparkUses).toBe(pending);
       const inventory = assessStygianWell(
@@ -85,7 +104,7 @@ describe('Stygian Well consequential purchase state', () => {
           'initial:secondLeft',
         ).issues,
       ).toEqual([]);
-      state = applyStygianWellPurchase(catalog, state, itemKey);
+      state = buy(state, itemKey);
       expect(state.sparkUses).toBe(pending + 1);
     }
   });
@@ -212,12 +231,13 @@ describe('Stygian Well consequential purchase state', () => {
   });
 
   it('applies paid effects without creating a pickup state', () => {
-    expect(
-      applyStygianWellPurchase(catalog, empty(), 'TemporaryForcedSecretDoorTrait').sparkUses,
-    ).toBe(1);
-    expect(applyStygianWellPurchase(catalog, empty(), 'TemporaryBoonRarityTrait').yarnUses).toBe(1);
-    expect(applyStygianWellPurchase(catalog, empty(), 'LimitedSwapTraitDrop').hymnUses).toBe(1);
-    expect(applyStygianWellPurchase(catalog, empty(), 'LastStandShopItem')).toEqual(empty());
+    expect(buy(empty(), 'TemporaryForcedSecretDoorTrait').sparkUses).toBe(1);
+    expect(buy(empty(), 'TemporaryBoonRarityTrait').yarnUses).toBe(1);
+    expect(buy(empty(), 'LimitedSwapTraitDrop').hymnUses).toBe(1);
+    expect(buy(empty(), 'LastStandShopItem')).toEqual({
+      ...empty(),
+      directPurchases: { LastStandShopItem: 1 },
+    });
   });
 
   it('reports and skips a retained Travel refill when its actual trigger is removed', () => {
@@ -767,7 +787,7 @@ describe('Stygian Well consequential purchase state', () => {
     if (f?.authoring !== 'complete') throw new Error('expected complete F Last Stand evaluation');
     expect(
       f.rewards.branches.every(
-        (branch) => branch.state.rewardHistory.consumableRecord.LastStandDrop === 1,
+        (branch) => branch.state.rewardHistory.consumableRecord.LastStandShopItem === 1,
       ),
     ).toBe(true);
   });
@@ -798,20 +818,18 @@ describe('Stygian Well consequential purchase state', () => {
     );
     expect(
       f.rewards.branches.every(
-        (branch) => branch.state.rewardHistory.consumableRecord.LastStandDrop === 1,
+        (branch) => branch.state.rewardHistory.consumableRecord.LastStandShopItem === 1,
       ),
     ).toBe(true);
   });
 
   it('keeps Extended Discount and Empty Slot on their two-Boss clock', () => {
-    const extended = applyStygianWellPurchase(
-      catalog,
-      { ...empty(), extendedUses: 1 },
-      'TemporaryDiscountTrait',
-    );
-    expect(extended.discountUses).toEqual([-2]);
-    expect(advanceStygianWellEncounterUses(extended).discountUses).toEqual([-2]);
-    expect(advanceStygianWellBossUses(extended).discountUses).toEqual([-1]);
+    const extended = buy({ ...empty(), extendedUses: 1 }, 'TemporaryDiscountTrait');
+    const legality = (state: StygianWellRunState) =>
+      projectStygianWellLegality(catalog, state).discountUses;
+    expect(legality(extended)).toEqual([-2]);
+    expect(legality(advanceStygianWellClock(extended, 'encounters'))).toEqual([-2]);
+    expect(legality(advanceStygianWellClock(extended, 'bosses'))).toEqual([-1]);
   });
 
   it('advances an Extended purchase on the existing Boss event chronology', () => {
@@ -848,20 +866,25 @@ describe('Stygian Well consequential purchase state', () => {
     const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('expected complete G Boss evaluation');
     expect(
-      g.rewards.branches.every((branch) => branch.state.stygianWell?.discountUses[0] === -1),
+      g.rewards.branches.every((branch) =>
+        branch.state.stygianWell.timedInstances.some(
+          (instance) =>
+            instance.traitKey === 'TemporaryDiscountTrait' &&
+            instance.clock === 'bosses' &&
+            instance.remainingUses === 1,
+        ),
+      ),
     ).toBe(true);
   });
 
   it('consumes Extended only for its exact direct-purchase whitelist', () => {
     const withExtended = { ...empty(), extendedUses: 1 };
     for (const itemKey of extendedWellItemKeys(catalog))
-      expect(applyStygianWellPurchase(catalog, withExtended, itemKey).extendedUses, itemKey).toBe(
-        0,
-      );
+      expect(buy(withExtended, itemKey).extendedUses, itemKey).toBe(0);
     for (const itemKey of catalog.rewards.shops.byKey
       .RoomShop!.groups.values.flatMap((group) => group.options.values.map((option) => option.key))
       .filter((itemKey) => !extendedWellItemKeys(catalog).includes(itemKey)))
-      expect(applyStygianWellPurchase(catalog, withExtended, itemKey).extendedUses, itemKey).toBe(
+      expect(buy(withExtended, itemKey).extendedUses, itemKey).toBe(
         itemKey === 'ExtendedShopTrait' ? 2 : 1,
       );
     expect(extendedWellItemKeys(catalog)).toContain('TemporaryEmptySlotDamageTrait');
@@ -906,7 +929,7 @@ describe('Stygian Well consequential purchase state', () => {
       'Underworld',
       well,
       'initial:secondLeft',
-      { ...empty(), discountUses: [3] },
+      withDiscount(3),
       travelHistory,
       'initial:secondLeft',
     );
@@ -1149,5 +1172,101 @@ describe('Stygian Well consequential purchase state', () => {
     );
     expect(dormant.issues).toEqual([]);
     expect(dormant.complete).toBe(true);
+  });
+});
+
+describe('Stygian Well timed holdings', () => {
+  const instances = (state: StygianWellRunState) =>
+    state.timedInstances.map(({ traitKey, clock, remainingUses }) => [
+      traitKey,
+      clock,
+      remainingUses,
+    ]);
+  const advance = (state: StygianWellRunState, clock: 'encounters' | 'rooms' | 'bosses', n = 1) =>
+    Array.from({ length: n }).reduce<StygianWellRunState>(
+      (current) => advanceStygianWellClock(current, clock),
+      state,
+    );
+
+  it('spends each instance only on its own clock and removes it when expired', () => {
+    const state = buy(buy(empty(), 'TemporaryImprovedSecondaryTrait'), 'TemporaryDoorHealTrait');
+    expect(instances(state)).toEqual([
+      ['TemporaryImprovedSecondaryTrait', 'encounters', 5],
+      ['TemporaryDoorHealTrait', 'rooms', 3],
+    ]);
+    expect(advance(state, 'bosses')).toBe(state);
+    expect(instances(advance(state, 'encounters', 4))).toEqual([
+      ['TemporaryImprovedSecondaryTrait', 'encounters', 1],
+      ['TemporaryDoorHealTrait', 'rooms', 3],
+    ]);
+    expect(instances(advance(advance(state, 'encounters', 5), 'rooms', 3))).toEqual([]);
+  });
+
+  it('converts the next eligible direct purchase to the Seal boss extension', () => {
+    const sealed = buy(empty(), 'ExtendedShopTrait');
+    const charity = buy(sealed, 'TemporaryHealExpirationTrait');
+    expect(charity.extendedUses).toBe(1);
+    const hydra = buy(charity, 'TemporaryDoorHealTrait');
+    expect(hydra.extendedUses).toBe(0);
+    expect(instances(hydra)).toEqual([
+      ['TemporaryHealExpirationTrait', 'encounters', 4],
+      ['TemporaryDoorHealTrait', 'bosses', 2],
+    ]);
+    expect(instances(advance(hydra, 'rooms', 5))).toEqual(instances(hydra));
+    expect(instances(advance(hydra, 'bosses', 2))).toEqual([
+      ['TemporaryHealExpirationTrait', 'encounters', 4],
+    ]);
+  });
+
+  it('keeps repurchases as separate instances and counts every direct purchase', () => {
+    const once = buy(empty(), 'TemporaryImprovedSecondaryTrait');
+    const twice = buy(advance(once, 'encounters', 2), 'TemporaryImprovedSecondaryTrait');
+    expect(instances(twice)).toEqual([
+      ['TemporaryImprovedSecondaryTrait', 'encounters', 3],
+      ['TemporaryImprovedSecondaryTrait', 'encounters', 5],
+    ]);
+    expect(twice.directPurchases).toEqual({ TemporaryImprovedSecondaryTrait: 2 });
+    const ledgerOnly = buy(buy(empty(), 'FirstHitHealTrait'), 'FirstHitHealTrait');
+    expect(ledgerOnly).toEqual({ ...empty(), directPurchases: { FirstHitHealTrait: 2 } });
+  });
+
+  it('never extends or counts a Twist result', () => {
+    const twisted = buy({ ...empty(), extendedUses: 1 }, 'RandomStoreItem');
+    const result = buy(twisted, 'TemporaryImprovedCastTrait', false);
+    expect(result.extendedUses).toBe(1);
+    expect(instances(result)).toEqual([['TemporaryImprovedCastTrait', 'encounters', 5]]);
+    expect(result.directPurchases).toEqual({ RandomStoreItem: 1 });
+  });
+
+  it('withholds a self-gated offer while an instance of its trait is active', () => {
+    const well = {
+      interacted: true,
+      offerKeyBySlot: { healing: null, secondLeft: null, secondRight: null },
+    } as const;
+    const domain = (state: StygianWellRunState) =>
+      assessStygianWell(catalog, 'Underworld', catalog.rooms.byKey.F_PostBoss01, 3, well, state)
+        .candidateItemKeysBySlot.secondLeft;
+    const held = buy(empty(), 'TemporaryEmptySlotDamageTrait');
+    expect(domain(empty())).toEqual(
+      expect.arrayContaining(['TemporaryDiscountTrait', 'TemporaryEmptySlotDamageTrait']),
+    );
+    expect(domain(held)).not.toContain('TemporaryEmptySlotDamageTrait');
+    expect(domain(held)).toContain('TemporaryDiscountTrait');
+    expect(domain(advance(held, 'encounters', 6))).toContain('TemporaryEmptySlotDamageTrait');
+  });
+
+  it('projects only the legality subset', () => {
+    const neutral = buy(buy(empty(), 'TemporaryMoveSpeedTrait'), 'EmptyMaxHealthShopItem');
+    expect(projectStygianWellLegality(catalog, neutral)).toEqual(
+      projectStygianWellLegality(catalog, empty()),
+    );
+    expect(projectStygianWellLegality(catalog, advance(neutral, 'encounters', 3))).toEqual(
+      projectStygianWellLegality(catalog, empty()),
+    );
+    const legal = buy(buy(empty(), 'TemporaryDiscountTrait'), 'TemporaryEmptySlotDamageTrait');
+    expect(projectStygianWellLegality(catalog, advance(legal, 'encounters'))).toMatchObject({
+      discountUses: [5],
+      emptySlotUses: [5],
+    });
   });
 });

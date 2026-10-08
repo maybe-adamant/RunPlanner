@@ -8,7 +8,7 @@ const range = (prefix: string, first: number, last: number) =>
   );
 
 describe('Stygian Well room facts', () => {
-  it('normalizes the complete item identities and consequential closed sets', () => {
+  it('normalizes the complete item identities, offer gates and Twist pool', () => {
     const profile = catalog.rewards.shops.byKey.RoomShop!;
     expect(profile.groups.byKey.Healing?.options.values.map((option) => option.key)).toEqual([
       'ArmorBoostStore',
@@ -81,34 +81,105 @@ describe('Stygian Well room facts', () => {
       'inactive',
       'emptyAttackOrSpecial',
     ]);
-    expect(option('ExtendedShopTrait').stygianWell?.extendedDirectPurchaseItemKeys).toEqual([
-      'TemporaryDoorHealTrait',
-      'TemporaryImprovedSecondaryTrait',
-      'TemporaryImprovedCastTrait',
-      'TemporaryMoveSpeedTrait',
-      'TemporaryImprovedExTrait',
-      'TemporaryImprovedDefenseTrait',
-      'TemporaryDiscountTrait',
-      'TemporaryEmptySlotDamageTrait',
-    ]);
-    expect(option('RandomStoreItem').stygianWell?.nestedResultItemKeys).toEqual([
-      'TemporaryImprovedSecondaryTrait',
-      'TemporaryImprovedCastTrait',
-      'TemporaryMoveSpeedTrait',
-      'TemporaryBoonRarityTrait',
-      'TemporaryImprovedExTrait',
-      'TemporaryImprovedDefenseTrait',
-      'TemporaryDiscountTrait',
-      'TemporaryHealExpirationTrait',
-      'TemporaryDoorHealTrait',
-      'LastStandShopItem',
-      'EmptyMaxHealthShopItem',
-      'HealDropRange',
-      'MetaCurrencyRange',
-      'MetaCardPointsCommonRange',
-      'MemPointsCommonRange',
-      'SeedMysteryRange',
-    ]);
+    expect(option('RandomStoreItem').stygianWell?.grant).toEqual({
+      kind: 'twist',
+      pool: [
+        'TemporaryImprovedSecondaryTrait',
+        'TemporaryImprovedCastTrait',
+        'TemporaryMoveSpeedTrait',
+        'TemporaryBoonRarityTrait',
+        'TemporaryImprovedExTrait',
+        'TemporaryImprovedDefenseTrait',
+        'TemporaryDiscountTrait',
+        'TemporaryHealExpirationTrait',
+        'TemporaryDoorHealTrait',
+        'LastStandShopItem',
+        'EmptyMaxHealthShopItem',
+        'HealDropRange',
+        'MetaCurrencyRange',
+        'MetaCardPointsCommonRange',
+        'MemPointsCommonRange',
+        'SeedMysteryRange',
+      ],
+    });
+  });
+
+  it('normalizes every Well item grant with its native uses and clock', () => {
+    const grants = Object.fromEntries(
+      catalog.rewards.shops.byKey
+        .RoomShop!.groups.values.flatMap((group) => group.options.values)
+        .filter((option) => option.key !== 'RandomStoreItem')
+        .map((option) => [option.key, option.stygianWell?.grant]),
+    );
+    const timed = (
+      traitKey: string,
+      initialUses: number,
+      clock: 'encounters' | 'rooms',
+      publishedEffect?: 'discount' | 'emptySlot',
+    ) => ({
+      kind: 'timedTrait',
+      traitKey,
+      initialUses,
+      clock,
+      ...(publishedEffect === undefined ? {} : { publishedEffect }),
+    });
+    expect(grants).toEqual({
+      ArmorBoostStore: { kind: 'ledger' },
+      DamageSelfDrop: { kind: 'immediate' },
+      HealDropRange: { kind: 'immediate' },
+      EmptyMaxHealthShopItem: {
+        kind: 'consumable',
+        acquisitionGameName: 'EmptyMaxHealthShopItem',
+      },
+      FirstHitHealTrait: { kind: 'ledger' },
+      TemporaryDoorHealTrait: timed('TemporaryDoorHealTrait', 3, 'rooms'),
+      TemporaryHealExpirationTrait: timed('TemporaryHealExpirationTrait', 4, 'encounters'),
+      LastStandShopItem: {
+        kind: 'consumable',
+        acquisitionGameName: 'LastStandShopItem',
+        publishedEffect: 'lastStand',
+      },
+      TemporaryImprovedSecondaryTrait: timed('TemporaryImprovedSecondaryTrait', 5, 'encounters'),
+      TemporaryImprovedCastTrait: timed('TemporaryImprovedCastTrait', 5, 'encounters'),
+      TemporaryMoveSpeedTrait: timed('TemporaryMoveSpeedTrait', 8, 'encounters'),
+      TemporaryBoonRarityTrait: { kind: 'charge', charge: 'yarn' },
+      TemporaryImprovedExTrait: timed('TemporaryImprovedExTrait', 6, 'encounters'),
+      TemporaryImprovedDefenseTrait: timed('TemporaryImprovedDefenseTrait', 5, 'encounters'),
+      TemporaryDiscountTrait: timed('TemporaryDiscountTrait', 6, 'encounters', 'discount'),
+      TemporaryForcedSecretDoorTrait: { kind: 'charge', charge: 'spark' },
+      TemporaryEmptySlotDamageTrait: timed(
+        'TemporaryEmptySlotDamageTrait',
+        6,
+        'encounters',
+        'emptySlot',
+      ),
+      ExtendedShopTrait: {
+        kind: 'charge',
+        charge: 'extended',
+        eligibleItemKeys: [
+          'TemporaryDoorHealTrait',
+          'TemporaryImprovedSecondaryTrait',
+          'TemporaryImprovedCastTrait',
+          'TemporaryMoveSpeedTrait',
+          'TemporaryImprovedExTrait',
+          'TemporaryImprovedDefenseTrait',
+          'TemporaryDiscountTrait',
+          'TemporaryEmptySlotDamageTrait',
+        ],
+        bossExtension: 2,
+      },
+      MetaCurrencyRange: { kind: 'immediate' },
+      MetaCardPointsCommonRange: { kind: 'immediate' },
+      MemPointsCommonRange: { kind: 'immediate' },
+      SeedMysteryRange: { kind: 'immediate' },
+      LimitedManaRegenDrop: { kind: 'ledger' },
+      LimitedSwapTraitDrop: { kind: 'charge', charge: 'hymn' },
+    });
+    for (const gameName of ['EmptyMaxHealthShopItem', 'LastStandShopItem'])
+      expect(catalog.rewards.acquisitions.byKey[gameName]).toMatchObject({
+        kind: 'consumable',
+        historyProjection: 'consumableAndUse',
+      });
   });
 
   it('normalizes the exact installed ordinary host matrix and forced Postboss anchors', () => {

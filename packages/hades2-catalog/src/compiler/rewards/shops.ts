@@ -1,10 +1,12 @@
 import type { CatalogCollection } from '@run-planner/engine/catalog-schema';
 import type {
+  ConcreteAcquisitionDeclaration,
   RewardTypeDeclaration,
   ShopGroupDeclaration,
   ShopOptionEntry,
   ShopProfileDeclaration,
   ShopSlotDeclaration,
+  StygianWellGrant,
 } from '@run-planner/engine/reward-kernel';
 
 import {
@@ -22,17 +24,6 @@ import type {
 import { normalizeAndValidateRequirement } from './requirements';
 import { normalizeAcquisitionLifecycle } from './lifecycles';
 
-const STYGIAN_WELL_EFFECTS = [
-  'neutral',
-  'spark',
-  'yarn',
-  'hymn',
-  'discount',
-  'emptySlot',
-  'extended',
-  'twist',
-  'lastStand',
-] as const;
 const STYGIAN_WELL_OFFER_REQUIREMENTS = ['inactive', 'emptyAttackOrSpecial'] as const;
 
 function requireClosedValue<const Values extends readonly string[]>(
@@ -44,6 +35,85 @@ function requireClosedValue<const Values extends readonly string[]>(
     fail(path, `must be one of ${values.join(', ')}`);
   }
   return value as Values[number];
+}
+
+function normalizeStygianWellGrant(raw: StygianWellGrant, path: string): StygianWellGrant {
+  const kind = requireClosedValue(
+    raw.kind,
+    ['timedTrait', 'charge', 'consumable', 'ledger', 'immediate', 'twist'] as const,
+    `${path}.kind`,
+  );
+  switch (raw.kind) {
+    case 'timedTrait':
+      return Object.freeze({
+        kind,
+        traitKey: requireNonEmpty(raw.traitKey, `${path}.traitKey`),
+        initialUses: requirePositiveInteger(raw.initialUses, `${path}.initialUses`),
+        clock: requireClosedValue(
+          raw.clock,
+          ['encounters', 'rooms', 'bosses'] as const,
+          `${path}.clock`,
+        ),
+        ...(raw.publishedEffect === undefined
+          ? {}
+          : {
+              publishedEffect: requireClosedValue(
+                raw.publishedEffect,
+                ['discount', 'emptySlot'] as const,
+                `${path}.publishedEffect`,
+              ),
+            }),
+      }) as StygianWellGrant;
+    case 'charge':
+      if (raw.charge === 'extended')
+        return Object.freeze({
+          kind: 'charge',
+          charge: 'extended',
+          eligibleItemKeys: freezeUniqueStrings(
+            requireArray(raw.eligibleItemKeys, `${path}.eligibleItemKeys`) as readonly string[],
+            `${path}.eligibleItemKeys`,
+          ),
+          bossExtension: requirePositiveInteger(raw.bossExtension, `${path}.bossExtension`),
+        });
+      if ('eligibleItemKeys' in raw || 'bossExtension' in raw)
+        fail(path, 'only the extended charge declares eligible items and a boss extension');
+      return Object.freeze({
+        kind: 'charge',
+        charge: requireClosedValue(
+          raw.charge,
+          ['spark', 'yarn', 'hymn'] as const,
+          `${path}.charge`,
+        ),
+      });
+    case 'consumable':
+      return Object.freeze({
+        kind: 'consumable',
+        acquisitionGameName: requireNonEmpty(
+          raw.acquisitionGameName,
+          `${path}.acquisitionGameName`,
+        ),
+        ...(raw.publishedEffect === undefined
+          ? {}
+          : {
+              publishedEffect: requireClosedValue(
+                raw.publishedEffect,
+                ['lastStand'] as const,
+                `${path}.publishedEffect`,
+              ),
+            }),
+      });
+    case 'twist':
+      return Object.freeze({
+        kind: 'twist',
+        pool: freezeUniqueStrings(
+          requireArray(raw.pool, `${path}.pool`) as readonly string[],
+          `${path}.pool`,
+        ),
+      });
+    case 'ledger':
+    case 'immediate':
+      return Object.freeze({ kind: raw.kind });
+  }
 }
 
 function normalizeShopOption(
@@ -101,11 +171,7 @@ function normalizeShopOption(
     raw.stygianWell === undefined
       ? undefined
       : Object.freeze({
-          effect: requireClosedValue(
-            raw.stygianWell.effect,
-            STYGIAN_WELL_EFFECTS,
-            `${path}.stygianWell.effect`,
-          ),
+          grant: normalizeStygianWellGrant(raw.stygianWell.grant, `${path}.stygianWell.grant`),
           ...(raw.stygianWell.offerRequirements === undefined
             ? {}
             : {
@@ -131,28 +197,6 @@ function normalizeShopOption(
                 excludedRouteKeys: freezeUniqueStrings(
                   raw.stygianWell.excludedRouteKeys,
                   `${path}.stygianWell.excludedRouteKeys`,
-                ),
-              }),
-          ...(raw.stygianWell.nestedResultItemKeys === undefined
-            ? {}
-            : {
-                nestedResultItemKeys: freezeUniqueStrings(
-                  requireArray(
-                    raw.stygianWell.nestedResultItemKeys,
-                    `${path}.stygianWell.nestedResultItemKeys`,
-                  ) as readonly string[],
-                  `${path}.stygianWell.nestedResultItemKeys`,
-                ),
-              }),
-          ...(raw.stygianWell.extendedDirectPurchaseItemKeys === undefined
-            ? {}
-            : {
-                extendedDirectPurchaseItemKeys: freezeUniqueStrings(
-                  requireArray(
-                    raw.stygianWell.extendedDirectPurchaseItemKeys,
-                    `${path}.stygianWell.extendedDirectPurchaseItemKeys`,
-                  ) as readonly string[],
-                  `${path}.stygianWell.extendedDirectPurchaseItemKeys`,
                 ),
               }),
         });
@@ -193,6 +237,7 @@ export function normalizeShops(
   raw: RawRewardKernelInput['shops'],
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
   resourceKeys: ReadonlySet<string>,
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
 ): CatalogCollection<ShopProfileDeclaration> {
   const echoDuplicateKeyPrefix = 'echoDoubleShop:';
   const reservedSupplementalKeys = new Set([
@@ -273,44 +318,137 @@ export function normalizeShops(
           fail(path, 'Stygian Well metadata is permitted only on RoomShop options');
       } else {
         if (options.some((option) => option.stygianWell === undefined))
-          fail(path, 'every RoomShop option must declare its Stygian Well identity and effect');
-        const optionKeys = options.map((option) => option.key);
-        if (new Set(optionKeys).size !== optionKeys.length)
-          fail(path, 'RoomShop option identities must be unique across groups');
-        const known = new Set(optionKeys);
-        const twist = options.find((option) => option.key === 'RandomStoreItem');
-        const extended = options.find((option) => option.key === 'ExtendedShopTrait');
-        for (const option of options) {
-          const metadata = option.stygianWell!;
-          if (option.key !== 'RandomStoreItem' && metadata.nestedResultItemKeys !== undefined)
-            fail(path, 'nested Well metadata is owned only by RandomStoreItem');
-          if (
-            option.key !== 'ExtendedShopTrait' &&
-            metadata.extendedDirectPurchaseItemKeys !== undefined
-          )
-            fail(path, 'extended Well metadata is owned only by ExtendedShopTrait');
-        }
-        if (twist?.stygianWell?.effect !== 'twist')
-          fail(path, 'RandomStoreItem must own the Twist effect');
-        if (extended?.stygianWell?.effect !== 'extended')
-          fail(path, 'ExtendedShopTrait must own the Extended effect');
-        const nestedResultItemKeys = twist.stygianWell.nestedResultItemKeys ?? [];
-        const extendedDirectPurchaseItemKeys =
-          extended.stygianWell.extendedDirectPurchaseItemKeys ?? [];
-        if (nestedResultItemKeys.length === 0)
-          fail(path, 'RandomStoreItem must declare a nonempty Twist result pool');
-        if (extendedDirectPurchaseItemKeys.length === 0)
-          fail(path, 'ExtendedShopTrait must declare a nonempty direct-purchase whitelist');
-        const twistPool = new Set(nestedResultItemKeys);
-        for (const itemKey of twistPool)
-          if (!known.has(itemKey)) fail(path, `Twist references unknown RoomShop item ${itemKey}`);
-        for (const itemKey of extendedDirectPurchaseItemKeys)
-          if (!known.has(itemKey))
-            fail(path, `Extended references unknown RoomShop item ${itemKey}`);
+          fail(path, 'every RoomShop option must declare its Stygian Well grant');
+        validateRoomShopGrants(options, acquisitions, path);
       }
       return Object.freeze({ key, groups, slots, slotCount: slots.values.length });
     }),
     'shops',
     (shop) => shop.key,
   );
+}
+
+/**
+ * Cross-option RoomShop grant rules: the Twist and Seal identities and their
+ * references, and one self-gated encounter-clock timed trait per legality field.
+ */
+type TwistGrant = Extract<StygianWellGrant, { kind: 'twist' }>;
+type SealGrant = Extract<StygianWellGrant, { charge: 'extended' }>;
+
+interface WellOption {
+  readonly key: string;
+  readonly grant: StygianWellGrant;
+  readonly selfGated: boolean;
+}
+
+const isTwistGrant = (grant: StygianWellGrant): grant is TwistGrant => grant.kind === 'twist';
+const isSealGrant = (grant: StygianWellGrant): grant is SealGrant =>
+  grant.kind === 'charge' && grant.charge === 'extended';
+
+/** The single option holding a grant of this kind, under its native key. */
+function requireSole<G extends StygianWellGrant>(
+  options: readonly WellOption[],
+  guard: (grant: StygianWellGrant) => grant is G,
+  key: string,
+  message: string,
+  path: string,
+): G {
+  const matches = options.filter((option) => guard(option.grant));
+  if (matches.length !== 1 || matches[0]!.key !== key) fail(path, message);
+  return matches[0]!.grant as G;
+}
+
+/** Twist yields only ordinary RoomShop items, never another Twist or the Seal. */
+function validateTwist(
+  twist: TwistGrant,
+  byKey: ReadonlyMap<string, StygianWellGrant>,
+  path: string,
+) {
+  if (twist.pool.length === 0) fail(path, 'RandomStoreItem must declare a nonempty Twist pool');
+  for (const itemKey of twist.pool) {
+    const grant = byKey.get(itemKey);
+    if (grant === undefined) fail(path, `Twist references unknown RoomShop item ${itemKey}`);
+    if (isTwistGrant(grant) || isSealGrant(grant)) fail(path, `Twist cannot yield ${itemKey}`);
+  }
+}
+
+/** The Seal extends only timed traits. */
+function validateSeal(seal: SealGrant, byKey: ReadonlyMap<string, StygianWellGrant>, path: string) {
+  if (seal.eligibleItemKeys.length === 0)
+    fail(path, 'ExtendedShopTrait must declare nonempty eligible items');
+  for (const itemKey of seal.eligibleItemKeys) {
+    const grant = byKey.get(itemKey);
+    if (grant === undefined) fail(path, `Extended references unknown RoomShop item ${itemKey}`);
+    if (grant.kind !== 'timedTrait') fail(path, `Extended item ${itemKey} must be a timed trait`);
+  }
+}
+
+/** A consumable grant names a consumable acquisition. */
+function validateConsumableReferences(
+  options: readonly WellOption[],
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
+  path: string,
+) {
+  for (const { key, grant } of options) {
+    if (grant.kind !== 'consumable') continue;
+    if (acquisitions.byKey[grant.acquisitionGameName]?.kind !== 'consumable')
+      fail(path, `${key} must reference a consumable acquisition`);
+  }
+}
+
+/**
+ * The inactive offer gate and a published timed effect come together, on an
+ * encounter-clock trait, with one source per legality field.
+ */
+function validateLegalityGates(options: readonly WellOption[], path: string) {
+  const sources = new Set<string>();
+  for (const { key, grant, selfGated } of options) {
+    if (!selfGated) {
+      if (grant.kind === 'timedTrait' && grant.publishedEffect !== undefined)
+        fail(path, `${key} published timed effect requires the inactive offer gate`);
+      continue;
+    }
+    if (
+      grant.kind !== 'timedTrait' ||
+      grant.clock !== 'encounters' ||
+      grant.publishedEffect === undefined
+    )
+      fail(path, `${key} inactive offer gate requires an encounter-clock published timed trait`);
+    const field = grant.publishedEffect;
+    if (sources.has(field)) fail(path, `Well legality field ${field} must have one source`);
+    sources.add(field);
+  }
+}
+
+function validateRoomShopGrants(
+  entries: readonly ShopOptionEntry[],
+  acquisitions: CatalogCollection<ConcreteAcquisitionDeclaration>,
+  path: string,
+): void {
+  const options: readonly WellOption[] = entries.map((entry) => ({
+    key: entry.key,
+    grant: entry.stygianWell!.grant,
+    selfGated: entry.stygianWell!.offerRequirements?.includes('inactive') === true,
+  }));
+  if (new Set(options.map((option) => option.key)).size !== options.length)
+    fail(path, 'RoomShop option identities must be unique across groups');
+  const byKey = new Map(options.map((option) => [option.key, option.grant]));
+  const twist = requireSole(
+    options,
+    isTwistGrant,
+    'RandomStoreItem',
+    'RandomStoreItem must own the only Twist grant',
+    path,
+  );
+  const seal = requireSole(
+    options,
+    isSealGrant,
+    'ExtendedShopTrait',
+    'ExtendedShopTrait must own the only extended charge',
+    path,
+  );
+  validateTwist(twist, byKey, path);
+  validateSeal(seal, byKey, path);
+  validateConsumableReferences(options, acquisitions, path);
+  validateLegalityGates(options, path);
 }

@@ -29,7 +29,7 @@ import {
   type ReachedSteadyGrowthThreshold,
   type ReachedPickupProducerMaturity,
 } from '../../../traits';
-import { advanceStygianWellEncounterUses } from '../../../commerce/stygian-well';
+import { advanceStygianWellClock } from '../../../commerce/stygian-well';
 import {
   advanceExperimentalHammers,
   assessTranscendentEmbryoTransformation,
@@ -456,7 +456,7 @@ export function applyEncounterEndEffectsTransition(
           stygianWell:
             declaration?.ignoreEncounterUses === true
               ? branch.state.stygianWell
-              : advanceStygianWellEncounterUses(branch.state.stygianWell),
+              : advanceStygianWellClock(branch.state.stygianWell, 'encounters'),
         }),
       }),
     ),
