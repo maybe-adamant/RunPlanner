@@ -49,7 +49,11 @@ import {
   assessExperimentalHammerEquipResult,
   consumeFigurine,
 } from '../../src/simulation/keepsakes/trait-effects';
-import { createKeepsakeState, type KeepsakeState } from '../../src/simulation/keepsakes/state';
+import {
+  applyKeepsakeReplacement,
+  createKeepsakeState,
+  type KeepsakeState,
+} from '../../src/simulation/keepsakes/state';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
@@ -441,6 +445,33 @@ describe('Echo Gift Gift Gift', () => {
     expect(later.state.hexProgress).toEqual(replayed.state.hexProgress);
     expect(later.state.rewardPriorities).toEqual(replayed.state.rewardPriorities);
     expect(later.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
+  });
+
+  it('replays a Common Lion Fang once no Fang is held, and not again while it remains', () => {
+    const fang = 'DecayingBoostKeepsake';
+    const replayCount = (branch: { readonly state: RewardBranchState['state'] }) =>
+      branch.state.traitHistory.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount;
+    const held = replayBiome([branchWithGift(fang)]).simulation.branches[0]!;
+    expect(replayCount(held)).toBe(0);
+    expect(held.state.keepsakes.lionFang).toMatchObject({ origin: 'ordinary' });
+
+    const arcanaFear = createArcanaFearState(catalog, route().value.loadout);
+    const swapped = applyKeepsakeReplacement(
+      catalog,
+      createKeepsakeState(catalog, fang, arcanaFear),
+      'GoldifyKeepsake',
+      arcanaFear,
+    );
+    expect(swapped.lionFang).toBeUndefined();
+    const replayed = replayBiome([branchWithGift(fang, 'GoldifyKeepsake', { keepsakes: swapped })])
+      .simulation.branches[0]!;
+    expect(replayCount(replayed)).toBe(1);
+    expect(replayed.state.keepsakes.lionFang).toMatchObject({ origin: 'echo' });
+    expect(replayed.state.keepsakes.lionFang!.multiplier).toBeLessThanOrEqual(1.3);
+
+    const later = replayBiome([replayed]).simulation.branches[0]!;
+    expect(replayCount(later)).toBe(1);
+    expect(later.state.keepsakes.lionFang?.origin).toBe('echo');
   });
 
   it('retains an eligible effect-neutral capture without inventing a replay mutation', () => {

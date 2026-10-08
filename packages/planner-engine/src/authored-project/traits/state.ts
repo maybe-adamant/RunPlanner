@@ -206,6 +206,12 @@ export interface EquippedTrait {
   readonly echoKeepsakeReplayCount?: number;
   /** Derived retained credit for this exact Steady Growth acquisition. */
   readonly steadyGrowthProgress?: number;
+  /** Derived `RoomsPerUpgrade` stat-growth credit, grants and acquisition-time amount. */
+  readonly roomsPerUpgradeGrowth?: {
+    readonly progress: number;
+    readonly grants: number;
+    readonly maxManaPerGrant: number;
+  };
   /** Derived retained credit for a declaration-clocked generated-pickup producer. */
   readonly pickupProducerProgress?: number;
   /** Exact acquisition-time interval retained for an ordinal-scaled pickup producer. */

@@ -74,6 +74,15 @@ export interface ArcanaState {
   readonly active: readonly ActiveArcanaState[];
   /** Exact successful source interactions; remaining capacity is always derived. */
   readonly artificerUses: readonly ArtificerUseEvidence[];
+  /** Room-entry stat cycles of active cards that declare one, by card key. */
+  readonly roomEntryGrowth?: Readonly<Record<string, ArcanaRoomEntryGrowth>>;
+}
+/** Rooms counted toward the next grant, and grants completed this run at their own rarity. */
+export interface ArcanaRoomEntryGrowth {
+  readonly progress: number;
+  readonly grants: number;
+  readonly maxHealthGranted: number;
+  readonly maxManaGranted: number;
 }
 export interface ArtificerUseEvidence {
   readonly owner: SemanticAddress;
@@ -406,6 +415,52 @@ export function createArcanaFearState(
   });
 }
 
+/**
+ * One native room start; restores do not count. While Arcana are removed
+ * (Barren) nothing counts, and the re-equipped card starts a fresh cycle.
+ */
+export function advanceArcanaRoomEntry(
+  catalog: Catalog,
+  state: ArcanaFearState,
+  arcanaRemoved: boolean,
+): ArcanaFearState {
+  const growing = state.arcana.active.filter(
+    (card) => catalog.arcanaCards.byKey[card.key]?.roomEntryStatGrowth !== undefined,
+  );
+  if (growing.length === 0) return state;
+  const roomEntryGrowth: Record<string, ArcanaRoomEntryGrowth> = {
+    ...state.arcana.roomEntryGrowth,
+  };
+  for (const card of growing) {
+    const growth = catalog.arcanaCards.byKey[card.key]!.roomEntryStatGrowth!;
+    const current = roomEntryGrowth[card.key] ?? {
+      progress: 0,
+      grants: 0,
+      maxHealthGranted: 0,
+      maxManaGranted: 0,
+    };
+    if (arcanaRemoved) {
+      roomEntryGrowth[card.key] = Object.freeze({ ...current, progress: 0 });
+      continue;
+    }
+    const granted = current.progress + 1 >= growth.interval;
+    roomEntryGrowth[card.key] = Object.freeze(
+      granted
+        ? {
+            progress: 0,
+            grants: current.grants + 1,
+            maxHealthGranted: current.maxHealthGranted + growth.maxHealthByRarity[card.rarity],
+            maxManaGranted: current.maxManaGranted + growth.maxManaByRarity[card.rarity],
+          }
+        : { ...current, progress: current.progress + 1 },
+    );
+  }
+  return Object.freeze({
+    ...state,
+    arcana: Object.freeze({ ...state.arcana, roomEntryGrowth: Object.freeze(roomEntryGrowth) }),
+  });
+}
+
 /** Starts the next biome without changing configured ranks or Circe suppression. */
 export function beginBiomeArcanaFearState(state: ArcanaFearState): ArcanaFearState {
   return state.fear.forfeitConsumed
@@ -531,12 +586,25 @@ export function promoteArcana(
   )
     return rejected(state, 'arcanaNotEpic');
   const canonicalKeys = canonicalArcanaSet(catalog, arcanaKeys);
+  // Promotion re-adds the card's trait, restarting its room-entry cycle.
+  const roomEntryGrowth =
+    state.arcana.roomEntryGrowth === undefined
+      ? undefined
+      : Object.freeze(
+          Object.fromEntries(
+            Object.entries(state.arcana.roomEntryGrowth).map(([key, growth]) => [
+              key,
+              canonicalKeys.includes(key) ? Object.freeze({ ...growth, progress: 0 }) : growth,
+            ]),
+          ),
+        );
   return Object.freeze({
     legal: true,
     state: Object.freeze({
       ...state,
       arcana: Object.freeze({
         ...state.arcana,
+        ...(roomEntryGrowth === undefined ? {} : { roomEntryGrowth }),
         active: Object.freeze(
           state.arcana.active.map((candidate) =>
             canonicalKeys.includes(candidate.key)

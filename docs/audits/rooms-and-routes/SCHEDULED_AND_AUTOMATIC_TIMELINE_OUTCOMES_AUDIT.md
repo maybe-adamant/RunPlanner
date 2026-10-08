@@ -127,7 +127,7 @@ modeled counter transitions, not scheduler rows:
 - Experimental Hammer expiry;
 - Chaos curse clocks and blessing maturation;
 - Stygian Well duration and consumption state;
-- Medea's sim-neutral Magick growth; and
+- Traces of Spirit's Magick grants, counted but not simulated; and
 - other declaration-owned encounter-use expiry.
 
 Other deferred state is consumed by a later concrete event rather than a

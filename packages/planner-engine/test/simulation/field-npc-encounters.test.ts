@@ -898,6 +898,37 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', chronologicalIndex: expect.any(Number) });
   });
 
+  it('counts Traces of Spirit grants at its acquisition-ordinal amount on the route', () => {
+    const project = loadSurfaceNStoryBoardProject();
+    const storyPhase = phase(nBiome, nOccurrenceId('story'));
+    const storyOffer = authoredOccurrence(project, 'N', nOccurrenceId('story')).encounters
+      .traitOffersByPhase?.Encounter?.Story_Medea_01;
+    const tracesOffer = {
+      ...storyOffer!,
+      options: [
+        { traitKey: 'ManaOverTimeCurse' },
+        { traitKey: 'MoneyOnDeathCurse' },
+        { traitKey: 'DeathDefianceRetaliateCurse' },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    const edited = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(storyPhase, 'selection'),
+      value: tracesOffer,
+    });
+    const { biome } = evaluatedSurfaceBiome(edited, 'N');
+    if (!('rewards' in biome)) throw new Error('N reward evaluation is missing');
+    const history = biome.rewards.branches[0]!.state.traitHistory;
+    const growth = history.equippedTraits.ManaOverTimeCurse?.roomsPerUpgradeGrowth;
+    // N is the first Surface biome, so Medea's menu grants the Common amount.
+    expect(growth).toMatchObject({ progress: 0, maxManaPerGrant: 5 });
+    expect(growth!.grants).toBeGreaterThan(0);
+    expect(growth!.grants).toBe(
+      history.events.filter((event) => event.kind === 'roomsPerUpgradeGrowthProgress').length,
+    );
+  });
+
   it('keeps Last Gasp authorable and acquires a rarityless Hades Story trait', () => {
     const history = createTraitHistoryState();
     expect(

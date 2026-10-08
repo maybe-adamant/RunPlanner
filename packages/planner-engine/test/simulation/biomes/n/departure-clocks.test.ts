@@ -11,7 +11,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
 import { normalizeAuthoredChaosTraitOffer } from '../../../../src/authored-project/traits/state';
-import { createArcanaFearState } from '../../../../src/simulation/arcana-fear';
+import {
+  activateTemporaryArcana,
+  createArcanaFearState,
+} from '../../../../src/simulation/arcana-fear';
 import type { HistoryEvent } from '../../../../src/simulation/history';
 import * as rewardChronology from '../../../../src/simulation/rewards/biome/chronology';
 import { initializeRewardBranches } from '../../../../src/simulation/rewards/branch-lifecycle';
@@ -43,12 +46,26 @@ function observeNChronology(): ChronologyArguments {
  * Replays the N walk from a start holding Fight Fight Fight and a room-clocked curse.
  * The seed is a walk-level clock injection; neither is authorable before the N Hub.
  */
-function walkWithDepartureClocks(fightFraction: number, stygianWell?: StygianWellRunState) {
+function walkWithDepartureClocks(
+  fightFraction: number,
+  stygianWell?: StygianWellRunState,
+  arcanaKeys: readonly string[] = [],
+  curseKey = enshroudedKey,
+) {
   const [, snapshot, history, routePosition, routeLoadout, , placements, findings] =
     observeNChronology();
+  const seededArcana = createArcanaFearState(catalog, routeLoadout);
+  const activated =
+    arcanaKeys.length === 0
+      ? undefined
+      : activateTemporaryArcana(catalog, seededArcana, arcanaKeys, {
+          owner: seedOwner,
+          sequence: 0,
+        });
+  if (activated !== undefined && !activated.legal) throw new Error('seed Arcana must activate');
   const [start] = initializeRewardBranches(
     undefined,
-    createArcanaFearState(catalog, routeLoadout),
+    activated?.state ?? seededArcana,
     catalog,
     routeLoadout.startingKeepsakeKey,
     routeLoadout.keepsakeEquipResults,
@@ -56,7 +73,7 @@ function walkWithDepartureClocks(fightFraction: number, stygianWell?: StygianWel
     routeLoadout,
     { routePosition, historyView: history.biomeStart },
   );
-  const curse = catalog.chaos.curses.byKey[enshroudedKey]!;
+  const curse = catalog.chaos.curses.byKey[curseKey]!;
   const blessingKey = 'ChaosElementalBlessing';
   const traitHistory = foldTraitHistoryEvents(catalog, [
     ...start!.state.traitHistory.events,
@@ -86,17 +103,18 @@ function walkWithDepartureClocks(fightFraction: number, stygianWell?: StygianWel
       offer: normalizeAuthoredChaosTraitOffer(catalog, {
         kind: 'chaos',
         giverKey: 'Chaos',
-        curseOptions: [enshroudedKey, 'ChaosCommonCurse', 'ChaosTimeCurse'].map((curseKey) => ({
-          curseKey,
+        curseOptions: [curseKey, 'ChaosCommonCurse', 'ChaosTimeCurse'].map((key) => ({
+          curseKey: key,
           requirementCount:
-            curseKey === enshroudedKey
+            key === curseKey
               ? curse.duration.maximum
-              : catalog.chaos.curses.byKey[curseKey]!.duration.minimum,
+              : catalog.chaos.curses.byKey[key]!.duration.minimum,
         })) as never,
         selectedOptionKey: 'option1',
         selectedCurseValues: Object.freeze({}),
         blessingKey,
-        rarity: 'Common',
+        // Barren pairs only with a Heroic blessing.
+        rarity: curse.semanticTag === 'Barren' ? 'Heroic' : 'Common',
         blessingValues: Object.freeze(
           Object.fromEntries(
             catalog.chaos.blessings.byKey[blessingKey]!.operands.map((operand) => [
@@ -113,7 +131,7 @@ function walkWithDepartureClocks(fightFraction: number, stygianWell?: StygianWel
     blocked: true,
   });
   expect(traitHistory.activeChaosCurses).toMatchObject([
-    { curseKey: enshroudedKey, remaining: curse.duration.maximum },
+    { curseKey, remaining: curse.duration.maximum },
   ]);
   const traited = replaceSimulationTraitHistory(start!.state, traitHistory);
   const seeded = Object.freeze({
@@ -143,7 +161,7 @@ function walkWithDepartureClocks(fightFraction: number, stygianWell?: StygianWel
       )
       .map((event) => event.sequence),
   );
-  return { result, departures, restored, curse };
+  return { result, departures, restored, curse, history };
 }
 
 describe('N room-departure clocks', () => {
@@ -169,6 +187,39 @@ describe('N room-departure clocks', () => {
     );
     expect(decay.some((event) => restored.has(event.sequence))).toBe(true);
     expect(clocks.some((event) => restored.has(event.sequence))).toBe(true);
+  });
+
+  it('counts The Centaur at every room start but never at a Hub or parent restore', () => {
+    const { result, history } = walkWithDepartureClocks(0.8, undefined, ['MaxHealthPerRoom']);
+    const starts = history.events.filter((event) => event.kind === 'roomEntered').length;
+    const restores = history.events.filter((event) => event.kind === 'roomRestored').length;
+    expect(restores).toBeGreaterThan(0);
+    expect(starts).toBeGreaterThan(5);
+    expect(
+      result.simulation.branches[0]!.state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom,
+    ).toMatchObject({ progress: starts % 5, grants: Math.floor(starts / 5) });
+  });
+
+  it('counts no Centaur room starts while a real Barren curse holds the Arcana', () => {
+    const { result, history, curse } = walkWithDepartureClocks(
+      0.8,
+      undefined,
+      ['MaxHealthPerRoom'],
+      'ChaosMetaUpgradeCurse',
+    );
+    expect(curse.semanticTag).toBe('Barren');
+    const state = result.simulation.branches[0]!.state;
+    const expiry = state.traitHistory.events.filter(
+      (event) => event.kind === 'chaosClock' && event.clock === 'encounters',
+    )[curse.duration.maximum - 1]!.sequence;
+    expect(state.traitHistory.activeChaosCurses).toEqual([]);
+    const starts = history.events.filter((event) => event.kind === 'roomEntered');
+    const after = starts.filter((event) => event.sequence > expiry).length;
+    expect(after).toBeLessThan(starts.length);
+    expect(state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom).toMatchObject({
+      progress: after % 5,
+      grants: Math.floor(after / 5),
+    });
   });
 
   it('captures each Hub departure before its LeaveRoom decay', () => {

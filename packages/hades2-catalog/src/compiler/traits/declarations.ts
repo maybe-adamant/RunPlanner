@@ -498,6 +498,44 @@ export function normalizeTraits(
             equippedRarities,
             `${path}.resourceRewardBonus`,
           );
+    const roomsPerUpgradeGrowth =
+      trait.roomsPerUpgradeGrowth === undefined
+        ? undefined
+        : Object.freeze({
+            interval: requirePositiveInteger(
+              trait.roomsPerUpgradeGrowth.interval,
+              `${path}.roomsPerUpgradeGrowth.interval`,
+            ),
+            maxManaByAcquisitionOrdinal: Object.freeze(
+              requireArray(
+                trait.roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal,
+                `${path}.roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal`,
+              ).map((amount, index) =>
+                requirePositiveInteger(
+                  amount as number,
+                  `${path}.roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal[${index}]`,
+                ),
+              ),
+            ) as unknown as readonly [number, number, number, number],
+          });
+    if (
+      roomsPerUpgradeGrowth !== undefined &&
+      roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal.length !== 4
+    )
+      fail(
+        `${path}.roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal`,
+        'must declare four acquisition ordinals',
+      );
+    if (
+      roomsPerUpgradeGrowth !== undefined &&
+      Object.keys(trait.roomsPerUpgradeGrowth ?? {}).length !== 2
+    )
+      fail(
+        `${path}.roomsPerUpgradeGrowth`,
+        'requires only interval and maxManaByAcquisitionOrdinal',
+      );
+    if (roomsPerUpgradeGrowth !== undefined && trait.rarityDomain !== 'none')
+      fail(`${path}.roomsPerUpgradeGrowth`, 'is declared only for rarityless traits');
     return Object.freeze({
       key: requireNonEmpty(trait.key, `${path}.key`),
       label: requireNonEmpty(trait.label, `${path}.label`),
@@ -550,6 +588,7 @@ export function normalizeTraits(
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
       ...(resourceRewardBonus === undefined ? {} : { resourceRewardBonus }),
+      ...(roomsPerUpgradeGrowth === undefined ? {} : { roomsPerUpgradeGrowth }),
       selectedDisposition,
     });
   });

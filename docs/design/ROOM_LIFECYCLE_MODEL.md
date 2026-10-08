@@ -85,7 +85,7 @@ no reward seam only advance the branches to their sequence.
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                          |
 | Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts.                                                                     |
-| Room entered                                            | Room entry, Shrine and Well assessments, the room-entry Run State capture; halts when a Shrine delivery needs placement.              |
+| Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.   |
 | Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                  |
 | Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                 |
 | Encounter ended                                         | End effects; halts when a Shrine delivery needs placement.                                                                            |

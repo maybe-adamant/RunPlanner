@@ -23,14 +23,15 @@ rediscover the game path.
 
 The detailed matrix covers all 33 selectable keepsakes: the six modeled
 effects, the four trait/fountain/Arcana effects, the ten reward-steering
-effects, and the 13 effects that are strictly sim-neutral under the planner's
-current health/Magick/gold/armor/damage/time boundary.
+effects, and 13 health/Magick/gold/armor/damage/time effects that affect no
+planner legality. Eleven of those are sim-neutral; Discordant Bell and Lion
+Fang track their values for Run State only.
 
-Those 13 rows now record the real source replay even though the implemented
-planner transition remains an explicit no-op. They still participate in
-ordinary equip/retain/replace history, removed-key and no-return legality,
-Fated/Unfated state, and Run State identity. Discordant Bell remains in the
-matrix because the game explicitly excludes it from Gift Gift Gift.
+Those 13 rows record the real source replay. The planner replay is an explicit
+no-op except for Lion Fang, whose Common value it tracks. They still
+participate in ordinary equip/retain/replace history, removed-key and no-return
+legality, Fated/Unfated state, and Run State identity. Discordant Bell remains
+in the matrix because the game explicitly excludes it from Gift Gift Gift.
 
 The planner always treats an ordinary player-selected keepsake as rank III.
 Gift Gift Gift's forced rank-I replay is a distinct, source-created effect; it
@@ -314,8 +315,8 @@ biome-start contacts needed to own that chronology.
 
 The implementation surface is accurately described by two axes: an exact
 biome-start transition and a replay schedule. Fig Leaf, Experimental Hammer,
-Transcendent Embryo, Concave Stone, and Moon Beam have one successful Common
-replay while their Echo-created source remains. Calling Card and Time Piece
+Transcendent Embryo, Concave Stone, Moon Beam, and Lion Fang have one successful
+Common replay while their Echo-created source remains. Calling Card and Time Piece
 add their Common use counts every biome. Crystal Figurine and the Olympian
 keepsakes are reconsidered every biome but replay only after their prior
 unslotted source has been consumed and removed. Gorgon Amulet, Jeweled Pom,

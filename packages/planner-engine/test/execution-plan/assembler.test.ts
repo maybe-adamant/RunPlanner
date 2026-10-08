@@ -35,7 +35,9 @@ import { loadSurfaceShrineTravelDealCheckpoint } from '@run-planner/test-fixture
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPQProject,
+  loadSurfaceNStoryBoardProject,
   nBiome,
+  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   qBiome,
@@ -2016,6 +2018,125 @@ describe('engine-owned F/G execution semantic product', () => {
             transaction.itemKey === 'TemporaryHealExpirationTrait',
         ),
     ).toEqual([expect.objectContaining({ effect: 'neutral', extended: false })]);
+  });
+
+  it('keeps Bell, Fang, Centaur and Traces of Spirit values out of conformance and diagnostics', () => {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'EscalatingKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      arcanaKeys: ['ChanneledCast', 'LowManaDamageBonus', 'CastCount', 'LastStand', 'StartingGold'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop:postboss')),
+      ),
+      keepsakeKey: 'DecayingBoostKeepsake',
+    });
+    project = authorLegalTraitOffers(project);
+    const valueless = createCatalog({
+      ...declarations,
+      keepsakes: declarations.keepsakes.map((keepsake) => {
+        if (keepsake.key !== 'EscalatingKeepsake' && keepsake.key !== 'DecayingBoostKeepsake')
+          return keepsake;
+        const { effect: _effect, ...rest } = keepsake;
+        void _effect;
+        return keepsake.echoGift.availability === 'eligible'
+          ? {
+              ...rest,
+              echoGift: {
+                availability: 'eligible' as const,
+                effect: { kind: 'modeledNeutral' as const, schedule: 'noModeledEffect' as const },
+              },
+            }
+          : rest;
+      }),
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) => {
+          if (trait.key !== 'ManaOverTimeCurse') return trait;
+          const { roomsPerUpgradeGrowth: _growth, ...rest } = trait;
+          void _growth;
+          return rest;
+        }),
+      },
+      arcanaCards: declarations.arcanaCards.map((card) => {
+        if (card.key !== 'MaxHealthPerRoom') return card;
+        const { roomEntryStatGrowth: _growth, ...rest } = card;
+        void _growth;
+        return rest;
+      }),
+    });
+    const assembly = simulateProjectAssembly(catalog, project);
+    const g = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'G');
+    if (g?.authoring !== 'complete') throw new Error('expected complete G');
+    const state = g.rewards.branches[0]!.state;
+    expect(state.keepsakes.discordantBell!.multiplier).toBeGreaterThan(1);
+    expect(state.keepsakes.lionFang!.multiplier).toBeLessThan(1.5);
+    expect(state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom?.grants).toBeGreaterThan(0);
+    const observed = (product: ReturnType<typeof productFor>) =>
+      product.occurrences.map((occurrence) => ({
+        id: occurrence.id,
+        conformance: occurrence.roomExitConformance,
+        diagnostics: occurrence.diagnostics,
+      }));
+    const unchanged = (candidate: typeof project) =>
+      expect(
+        observed(
+          assembleExecutionProduct({
+            assembly: simulateProjectAssembly(catalog, candidate),
+            catalog,
+          }),
+        ),
+      ).toEqual(
+        observed(
+          assembleExecutionProduct({
+            assembly: simulateProjectAssembly(valueless, candidate),
+            catalog: valueless,
+          }),
+        ),
+      );
+    unchanged(project);
+
+    const story = loadSurfaceNStoryBoardProject();
+    const storyId = nOccurrenceId('story');
+    const storyPhase = createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: storyId },
+      'Encounter',
+    );
+    const medeaOffer = story.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === storyId)?.encounters
+      .traitOffersByPhase?.Encounter?.Story_Medea_01;
+    if (medeaOffer === undefined || medeaOffer === null) throw new Error('missing Medea offer');
+    const traces = applyProjectCommand(story, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(storyPhase, 'selection'),
+      value: {
+        ...medeaOffer,
+        options: [
+          { traitKey: 'ManaOverTimeCurse' },
+          { traitKey: 'MoneyOnDeathCurse' },
+          { traitKey: 'DeathDefianceRetaliateCurse' },
+        ],
+        selectedOptionKey: 'option1',
+      } as typeof medeaOffer,
+    });
+    const n = simulateProjectAssembly(catalog, traces).evaluation.route.biomes.find(
+      (biome) => biome.biomeKey === 'N',
+    );
+    if (n?.authoring !== 'complete') throw new Error('expected complete N');
+    expect(
+      n.rewards.branches[0]!.state.traitHistory.equippedTraits.ManaOverTimeCurse
+        ?.roomsPerUpgradeGrowth?.grants,
+    ).toBeGreaterThan(0);
+    unchanged(traces);
   });
 
   it('uses the resolved Fateful Twist effect in the source-room Well conformance', () => {

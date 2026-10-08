@@ -496,7 +496,7 @@ export {
   hasEffectiveInRunUpgrade,
   isLevelBearingTrait,
   assessRansom,
-  advanceSteadyGrowthProgress,
+  advanceRoomsPerUpgradeProgress,
   advancePickupProducerProgress,
   assessNaturalSelectionTargets,
   targetedAcquisitionTargetKeys,

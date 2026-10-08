@@ -44,6 +44,8 @@ const keepsakeEffectExecution = {
   transcendentEmbryo: 'covered actuator',
   olympianRewardPressure: 'native-authoritative/pass-through',
   moonBeam: 'native-authoritative/pass-through',
+  discordantBell: 'intentionally out of execution scope',
+  lionFang: 'intentionally out of execution scope',
 } as const satisfies Readonly<
   Record<NonNullable<KeepsakeDeclaration['effect']>['kind'], ExecutionDisposition>
 >;
@@ -73,6 +75,53 @@ describe('trait dispositions and requirements compiler owner', () => {
         ),
       ].sort(),
     );
+  });
+
+  it('declares RoomsPerUpgrade max-Magick growth only on Traces of Spirit', () => {
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.roomsPerUpgradeGrowth !== undefined)
+        .map((trait) => [trait.key, trait.roomsPerUpgradeGrowth]),
+    ).toEqual([
+      ['ManaOverTimeCurse', { interval: 1, maxManaByAcquisitionOrdinal: [5, 7, 10, 20] }],
+    ]);
+    const growth = catalog.traits.byKey.ManaOverTimeCurse!.roomsPerUpgradeGrowth;
+    expect(
+      [1, 2, 3, 4].map(
+        (ordinal) =>
+          resolveTraitAcquisitionOrdinalEffect({ kind: 'equip' }, ordinal, growth)
+            .roomsPerUpgradeMaxMana,
+      ),
+    ).toEqual([5, 7, 10, 20]);
+    const amounts = [5, 7, 10, 20];
+    const withGrowth = (key: string, growth: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === key
+              ? ({ ...trait, roomsPerUpgradeGrowth: growth } as RawTraitDeclaration)
+              : trait,
+          ),
+        },
+      });
+    expect(() =>
+      withGrowth('ZeusWeaponBoon', { interval: 1, maxManaByAcquisitionOrdinal: amounts }),
+    ).toThrow('is declared only for rarityless traits');
+    expect(() =>
+      withGrowth('ManaOverTimeCurse', { interval: 0, maxManaByAcquisitionOrdinal: amounts }),
+    ).toThrow('roomsPerUpgradeGrowth.interval');
+    expect(() =>
+      withGrowth('ManaOverTimeCurse', {
+        interval: 1,
+        maxManaByAcquisitionOrdinal: amounts,
+        maxHealthPerProc: 1,
+      }),
+    ).toThrow('requires only interval and maxManaByAcquisitionOrdinal');
+    expect(() =>
+      withGrowth('ManaOverTimeCurse', { interval: 1, maxManaByAcquisitionOrdinal: [5, 7, 10] }),
+    ).toThrow('must declare four acquisition ordinals');
   });
 
   it('declares Infernal Contract as rarityless and Travel Deal as one exact ranked restock', () => {

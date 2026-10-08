@@ -285,6 +285,7 @@ export interface ResolvedTraitAcquisitionOrdinalEffect {
   readonly clockInterval?: number;
   readonly circeSelectionCount?: number;
   readonly roomDecayStartFraction?: number;
+  readonly roomsPerUpgradeMaxMana?: number;
 }
 
 function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): number {
@@ -295,6 +296,23 @@ function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): n
 
 /** Resolves only the declaration-backed NPC values which vary by acquisition position. */
 export function resolveTraitAcquisitionOrdinalEffect(
+  disposition: TraitSelectedDisposition,
+  ordinal: number,
+  roomsPerUpgradeGrowth?: TraitDeclaration['roomsPerUpgradeGrowth'],
+): ResolvedTraitAcquisitionOrdinalEffect {
+  const resolved = resolveDispositionOrdinalEffect(disposition, ordinal);
+  return roomsPerUpgradeGrowth === undefined
+    ? resolved
+    : Object.freeze({
+        ...resolved,
+        roomsPerUpgradeMaxMana: ordinalValue(
+          roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal,
+          ordinal,
+        ),
+      });
+}
+
+function resolveDispositionOrdinalEffect(
   disposition: TraitSelectedDisposition,
   ordinal: number,
 ): ResolvedTraitAcquisitionOrdinalEffect {
@@ -497,6 +515,12 @@ export interface TraitDeclaration {
   readonly resourceRewardBonus?: Readonly<
     Record<string, Readonly<Record<InRunTraitRarity, number>>>
   >;
+  /** Source `RoomsPerUpgrade` max Magick growth at every `interval` qualifying encounter ends. */
+  readonly roomsPerUpgradeGrowth?: {
+    readonly interval: number;
+    /** Dream menus grant the entered-biome rarity; ordinary routes reach only the first. */
+    readonly maxManaByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
+  };
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */

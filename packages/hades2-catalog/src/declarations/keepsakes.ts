@@ -78,6 +78,12 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     rank: 'Epic',
     fatedDisposition: 'neutral',
     echoGift: { availability: 'excluded' },
+    // GrowthPerRoom 0.005 x rarity 1/1.5/2/3, rounded to three places.
+    effect: {
+      kind: 'discordantBell',
+      initialMultiplier: 1,
+      growthPerEncounterByRank: { Common: 0.005, Rare: 0.008, Epic: 0.01, Heroic: 0.015 },
+    },
   },
   {
     key: 'TimedBuffKeepsake',
@@ -341,7 +347,14 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     fatedDisposition: 'neutral',
     echoGift: {
       availability: 'eligible',
-      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+      effect: { kind: 'lionFang', schedule: 'oneShotAfterUnequipped' },
+    },
+    // Multiplier source 2 scaled by rarity 0.3/0.4/0.5/0.7, then -0.05 per encounter down to 1.
+    effect: {
+      kind: 'lionFang',
+      initialMultiplierByRank: { Common: 1.3, Rare: 1.4, Epic: 1.5, Heroic: 1.7 },
+      decayPerEncounter: 0.05,
+      expiredMultiplier: 1,
     },
   },
   {

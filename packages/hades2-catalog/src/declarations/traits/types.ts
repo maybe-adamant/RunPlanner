@@ -42,6 +42,7 @@ export interface RawTraitDeclaration {
     NonNullable<TraitDeclaration['hammerCompatibility']>,
     'supportsRankII'
   >;
+  readonly roomsPerUpgradeGrowth?: TraitDeclaration['roomsPerUpgradeGrowth'];
   /**
    * Source `RoomRewardBonus` with `SourceIsMultiplier`: each rarity scales the
    * base's excess over one by that rarity's `RarityLevels` multiplier.

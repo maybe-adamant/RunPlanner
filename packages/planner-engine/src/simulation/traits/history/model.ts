@@ -35,6 +35,8 @@ export interface TraitOfferEvent {
   readonly pickupProducerInterval?: number;
   /** Acquisition-time fraction of a room-decaying Echo bonus. */
   readonly roomDecayStartFraction?: number;
+  /** Acquisition-time max Magick per `RoomsPerUpgrade` grant. */
+  readonly roomsPerUpgradeMaxMana?: number;
 }
 
 /** A frozen Concave Stone pickup, distinct from the original generated offer. */
@@ -56,6 +58,8 @@ export interface ConcaveStoneSecondaryEvent {
   readonly selectedEffectiveLevel?: number;
   readonly pickupProducerInterval?: number;
   readonly roomDecayStartFraction?: number;
+  /** Acquisition-time max Magick per `RoomsPerUpgrade` grant. */
+  readonly roomsPerUpgradeMaxMana?: number;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */
@@ -86,6 +90,22 @@ export interface SteadyGrowthProgressEvent {
   readonly oldProgress: number;
   readonly newProgress: number;
   readonly requiredInterval: number;
+}
+/** One qualifying encounter end for a declared `RoomsPerUpgrade` max-stat growth trait. */
+export interface RoomsPerUpgradeGrowthProgressEvent {
+  readonly kind: 'roomsPerUpgradeGrowthProgress';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'roomsPerUpgradeGrowth';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'encounterEndEffectsApplied';
+  readonly traitKey: string;
+  /** Absent for a Story acquisition, which records no instance identity. */
+  readonly acquisitionIdentity?: string;
+  readonly oldProgress: number;
+  readonly newProgress: number;
+  readonly requiredInterval: number;
+  /** The interval completed here and granted its stats. */
+  readonly granted: boolean;
 }
 /** One room departure for a still-positive room-decaying trait instance. */
 export interface RoomDecayProgressEvent {
@@ -277,6 +297,7 @@ export type TraitHistoryEvent =
   | ConcaveStoneSecondaryEvent
   | TraitLevelMutationEvent
   | SteadyGrowthProgressEvent
+  | RoomsPerUpgradeGrowthProgressEvent
   | PickupProducerProgressEvent
   | RoomDecayProgressEvent
   | TraitRarityMutationEvent

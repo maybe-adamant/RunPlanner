@@ -17,6 +17,7 @@ import {
   assessTranscendentEmbryoBlessing,
 } from '../../../keepsakes/trait-effects';
 import { applyEchoFigLeafReplay } from '../../../keepsakes/encounter-effects';
+import { applyEchoLionFangReplay } from '../../../keepsakes/state';
 import {
   applyEchoCallingCardReplay,
   applyEchoTimePieceReplay,
@@ -368,6 +369,21 @@ export function applyEchoKeepsakeReplayTransition(
         });
         replayed = true;
       }
+    } else if (replayEffect.kind === 'lionFang') {
+      branches = Object.freeze(
+        branches.map((branch) => {
+          const keepsakes = applyEchoLionFangReplay(
+            catalog,
+            branch.state.keepsakes,
+            giftState.capturedKeepsakeKey,
+          );
+          return keepsakes === branch.state.keepsakes
+            ? branch
+            : recordReplay(
+                Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) }),
+              );
+        }),
+      );
     } else if (replayEffect.kind === 'callingCard') {
       const charges = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
       if (charges?.kind !== 'callingCard')

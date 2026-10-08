@@ -25,6 +25,40 @@ describe('Arcana and Fear catalog', () => {
     });
   });
 
+  it("declares only The Centaur's room-entry stat cycle", () => {
+    expect(catalog.arcanaCards.byKey.MaxHealthPerRoom?.roomEntryStatGrowth).toEqual({
+      interval: 5,
+      maxHealthByRarity: { Common: 3, Rare: 4, Epic: 5, Heroic: 6 },
+      maxManaByRarity: { Common: 3, Rare: 4, Epic: 5, Heroic: 6 },
+    });
+    expect(
+      catalog.arcanaCards.values
+        .filter((card) => card.roomEntryStatGrowth !== undefined)
+        .map((card) => card.key),
+    ).toEqual(['MaxHealthPerRoom']);
+    const centaur = declarations.arcanaCards.find((card) => card.key === 'MaxHealthPerRoom')!;
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) =>
+          card.key === 'HealthRegen'
+            ? { ...card, roomEntryStatGrowth: centaur.roomEntryStatGrowth! }
+            : card,
+        ),
+      }),
+    ).toThrow('only The Centaur may declare room-entry growth');
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) =>
+          card.key === 'MaxHealthPerRoom'
+            ? { ...card, roomEntryStatGrowth: { ...centaur.roomEntryStatGrowth!, interval: 0 } }
+            : card,
+        ),
+      }),
+    ).toThrow('roomEntryStatGrowth.interval');
+  });
+
   it('normalizes the complete rank-III board and ranked Vow inventory', () => {
     const arcanaMatrix = catalog.arcanaCards.values.map(
       (card) =>

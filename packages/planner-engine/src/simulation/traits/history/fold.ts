@@ -32,6 +32,7 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
     case 'chaosClock':
       return true;
     case 'steadyGrowthProgress':
+    case 'roomsPerUpgradeGrowthProgress':
     case 'pickupProducerProgress':
     case 'roomDecayProgress':
     case 'echoKeepsakeReplay':
@@ -369,6 +370,27 @@ export function foldTraitHistoryEvents(
           });
         continue;
       }
+      if (event.kind === 'roomsPerUpgradeGrowthProgress') {
+        const target = equipped[event.traitKey];
+        const current = target?.roomsPerUpgradeGrowth;
+        if (
+          current !== undefined &&
+          target !== undefined &&
+          target.acquisitionIdentity === event.acquisitionIdentity &&
+          current.progress === event.oldProgress &&
+          event.newProgress >= 0 &&
+          event.newProgress < event.requiredInterval
+        )
+          equipped[event.traitKey] = Object.freeze({
+            ...target,
+            roomsPerUpgradeGrowth: Object.freeze({
+              ...current,
+              progress: event.newProgress,
+              grants: current.grants + (event.granted ? 1 : 0),
+            }),
+          });
+        continue;
+      }
       if (event.kind === 'pickupProducerProgress') {
         const target = equipped[event.traitKey];
         if (
@@ -555,6 +577,15 @@ export function foldTraitHistoryEvents(
           ? {}
           : {
               roomDecay: Object.freeze({ fraction: event.roomDecayStartFraction, blocked: true }),
+            }),
+        ...(event.roomsPerUpgradeMaxMana === undefined
+          ? {}
+          : {
+              roomsPerUpgradeGrowth: Object.freeze({
+                progress: 0,
+                grants: 0,
+                maxManaPerGrant: event.roomsPerUpgradeMaxMana,
+              }),
             }),
         ...(event.echoRepeatedKeepsakeKey === undefined
           ? {}

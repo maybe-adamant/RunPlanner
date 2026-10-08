@@ -782,14 +782,20 @@ export function recordReachedTraitOffer(
   // A selected pickup-producing trait is an ordinary equipped trait; its
   // generated pickups are a later acquisition-site effect.
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
+  const roomsPerUpgradeGrowth = catalog.traits.byKey[selectedTraitKey]?.roomsPerUpgradeGrowth;
   const requiresAcquisitionOrdinal =
+    roomsPerUpgradeGrowth !== undefined ||
     selectedDisposition?.kind === 'upgradeOccupiedBoonSlot' ||
     (selectedDisposition?.kind === 'echo' && selectedDisposition.effect === 'roomDecay') ||
     (selectedDisposition?.kind === 'producePickups' && selectedDisposition.clock !== undefined);
   const acquisitionOrdinal = evaluation.state.reached.routePosition.ordinal;
   const ordinalEffect =
     requiresAcquisitionOrdinal && selectedDisposition !== undefined
-      ? resolveTraitAcquisitionOrdinalEffect(selectedDisposition, acquisitionOrdinal)
+      ? resolveTraitAcquisitionOrdinalEffect(
+          selectedDisposition,
+          acquisitionOrdinal,
+          roomsPerUpgradeGrowth,
+        )
       : undefined;
   const roomDecayStartFraction = ordinalEffect?.roomDecayStartFraction;
   if (
@@ -843,6 +849,9 @@ export function recordReachedTraitOffer(
       ? {}
       : { pickupProducerInterval: ordinalEffect.clockInterval }),
     ...(roomDecayStartFraction === undefined ? {} : { roomDecayStartFraction }),
+    ...(ordinalEffect?.roomsPerUpgradeMaxMana === undefined
+      ? {}
+      : { roomsPerUpgradeMaxMana: ordinalEffect.roomsPerUpgradeMaxMana }),
   }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =

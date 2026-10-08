@@ -51,15 +51,23 @@ export const arcanaCards = [
   card('MagicCrit', 'Night', 'MagicCritMetaUpgrade', 2, 5, 2),
   card('SprintShield', 'The Swift Runner', 'SprintShieldMetaUpgrade', 3, 1, 1),
   card('LastStand', 'Death', 'LastStandSlowTimeMetaUpgrade', 3, 2, 4),
-  card(
-    'MaxHealthPerRoom',
-    'The Centaur',
-    'ChamberHealthMetaUpgrade',
-    3,
-    3,
-    0,
-    automatic({ kind: 'manualCostsOneThroughFive' }),
-  ),
+  {
+    ...card(
+      'MaxHealthPerRoom',
+      'The Centaur',
+      'ChamberHealthMetaUpgrade',
+      3,
+      3,
+      0,
+      automatic({ kind: 'manualCostsOneThroughFive' }),
+    ),
+    // RoomStatGrowth: Amount 5, MaxHealth and MaxMana base 3 x rarity 1, 4/3, 5/3, 2.
+    roomEntryStatGrowth: {
+      interval: 5,
+      maxHealthByRarity: { Common: 3, Rare: 4, Epic: 5, Heroic: 6 },
+      maxManaByRarity: { Common: 3, Rare: 4, Epic: 5, Heroic: 6 },
+    },
+  },
   card('StatusVulnerability', 'Origination', 'EffectVulnerabilityMetaUpgrade', 3, 4, 5),
   card('ChanneledBlock', 'The Lovers', 'BossShieldMetaUpgrade', 3, 5, 3),
   card(

@@ -16,7 +16,11 @@ import {
   initializeTestRewardBranches,
   initializeTestRewardBranchesForRoute as initializeRewardBranches,
 } from '../support/arcana-fear';
-import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulation/arcana-fear';
+import {
+  advanceArcanaRoomEntry,
+  circeResolutionDomain,
+  judgmentRequiredCount,
+} from '../../src/simulation/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
@@ -345,5 +349,72 @@ describe('progressive Arcana and Fear state', () => {
       outerAvailable: true,
     });
     expect(judgmentRequiredCount(catalog, state)).toBe(5);
+  });
+});
+
+describe('The Centaur room-entry cycle', () => {
+  const owner = createBiomeAddress('Underworld', 'F');
+  const withCentaur = () => {
+    const activated = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      ['MaxHealthPerRoom'],
+      { owner, sequence: 1 },
+    );
+    if (!activated.legal) throw new Error('The Centaur must activate');
+    return activated.state;
+  };
+  const enter = (state: ReturnType<typeof withCentaur>, count: number, removed = false) => {
+    let next = state;
+    for (let index = 0; index < count; index += 1)
+      next = advanceArcanaRoomEntry(catalog, next, removed);
+    return next;
+  };
+
+  it('grants at every fifth room start and restarts the cycle', () => {
+    const progress = [1, 2, 3, 4, 5, 6].map(
+      (count) => enter(withCentaur(), count).arcana.roomEntryGrowth?.MaxHealthPerRoom,
+    );
+    const counted = (progress: number, grants: number) => ({
+      progress,
+      grants,
+      maxHealthGranted: grants * 5,
+      maxManaGranted: grants * 5,
+    });
+    expect(progress).toEqual([
+      counted(1, 0),
+      counted(2, 0),
+      counted(3, 0),
+      counted(4, 0),
+      counted(0, 1),
+      counted(1, 1),
+    ]);
+    const none = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    expect(advanceArcanaRoomEntry(catalog, none, false)).toBe(none);
+  });
+
+  it('restarts on Lapis promotion and while Barren removes the Arcana, keeping grants', () => {
+    const epicGrant = { grants: 1, maxHealthGranted: 5, maxManaGranted: 5 };
+    const counted = enter(withCentaur(), 8);
+    expect(counted.arcana.roomEntryGrowth?.MaxHealthPerRoom).toEqual({ progress: 3, ...epicGrant });
+    const promoted = promoteArcana(catalog, counted, ['MaxHealthPerRoom'], { owner, sequence: 2 });
+    expect(promoted.legal).toBe(true);
+    expect(promoted.state.arcana.roomEntryGrowth?.MaxHealthPerRoom).toEqual({
+      progress: 0,
+      ...epicGrant,
+    });
+    // Later grants use the promoted Heroic amount; earlier grants keep theirs.
+    expect(enter(promoted.state, 5).arcana.roomEntryGrowth?.MaxHealthPerRoom).toEqual({
+      progress: 0,
+      grants: 2,
+      maxHealthGranted: 11,
+      maxManaGranted: 11,
+    });
+    const removed = enter(counted, 2, true);
+    expect(removed.arcana.roomEntryGrowth?.MaxHealthPerRoom).toEqual({ progress: 0, ...epicGrant });
+    expect(enter(removed, 1).arcana.roomEntryGrowth?.MaxHealthPerRoom).toEqual({
+      progress: 1,
+      ...epicGrant,
+    });
   });
 });

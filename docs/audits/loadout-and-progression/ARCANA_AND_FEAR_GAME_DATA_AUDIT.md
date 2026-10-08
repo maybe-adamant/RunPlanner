@@ -230,6 +230,33 @@ Because Judgment's card count is a rarity-scaled trait value, upgrading an
 active Epic Judgment trait to Heroic changes its postboss activation count
 from five to six.
 
+## The Centaur's Room-Entry Cycle
+
+`ChamberHealthMetaUpgrade` declares `SetupFunction` `RoomStatGrowth` with
+`RequiredContext = "EnterRoom"`, `Amount = 5` and base `MaxHealth`/`MaxMana` 3
+scaled by rarity 1, 4/3, 5/3 and 2 (`TraitData_MetaUpgrade.lua:615-679`).
+`StartRoom` applies the `EnterRoom` setup (`RoomLogic.lua:1200-1201`);
+`RestoreUnlockRoomExits` applies only `StartRoom`, so an Ephyra Hub or parent
+restore does not count (`RoomLogic.lua:1491`). `RoomStatGrowth` increments
+`CurrentRoom` and, on reaching 5, resets it and grants 3/4/5/6 max health and
+max Magick through hidden `RoomRewardMaxHealthTrait` and
+`RoomRewardMaxManaTrait` (`MetaUpgradeLogic.lua:642-672`; `RoomLogic.lua:2722-2770`).
+
+Lapis promotion removes and re-adds the trait (`EventLogic.lua:1363-1397`), and
+Barren's `RemoveArcana` removes every Arcana trait until its expiry re-equips
+them (`PowersLogic.lua:4836-4838`; `TraitLogic.lua:1321-1327`); either way the
+re-added trait starts a new cycle. Barren's re-equip uses the permanent card
+level, so it also drops a Lapis promotion and a temporary card's rarity
+override; the planner does not model that rarity loss.
+
+The planner counts the cycle, its grants and the max health and Magick each
+grant added at the card's rarity then, in Arcana state at every `roomEntered`,
+never at `roomRestored`. Promotion restarts the cycle, and a room
+start while Barren is active counts nothing and restarts it. The catalog
+declares the interval and the per-rarity amounts; the board adjacency
+`CustomMultiplier` that can scale the amounts is not modeled. The values appear
+in Run State only and are neither conformance facts nor execution diagnostics.
+
 ## Fear Loadout
 
 Fear is represented as a rank per Vow. Rank zero is inactive. Each reached

@@ -8,6 +8,16 @@ import { cloneCatalogInput } from './support/catalog-input';
 
 const supportedEffects = [
   {
+    key: 'EscalatingKeepsake',
+    profileKey: 'growthPerEncounterByRank',
+    legacyField: 'growthPerRoom',
+    effect: {
+      kind: 'discordantBell',
+      initialMultiplier: 1,
+      growthPerEncounterByRank: { Common: 0.005, Rare: 0.008, Epic: 0.01, Heroic: 0.015 },
+    },
+  },
+  {
     key: 'AthenaEncounterKeepsake',
     profileKey: 'rarityLevelByRank',
     legacyField: 'rarity',
@@ -48,6 +58,17 @@ const supportedEffects = [
       kind: 'concaveStone',
       uses: 1,
       procSupportByRank: { Common: 25, Rare: 50, Epic: 75, Heroic: 100 },
+    },
+  },
+  {
+    key: 'DecayingBoostKeepsake',
+    profileKey: 'initialMultiplierByRank',
+    legacyField: 'decayRate',
+    effect: {
+      kind: 'lionFang',
+      initialMultiplierByRank: { Common: 1.3, Rare: 1.4, Epic: 1.5, Heroic: 1.7 },
+      decayPerEncounter: 0.05,
+      expiredMultiplier: 1,
     },
   },
   {
@@ -162,7 +183,7 @@ const ordinaryKeepsakeFacts = [
   ['ArmorGainKeepsake', 'Silken Sash', 'neutral', 'modeledNeutral', 'noModeledEffect'],
   ['FountainRarityKeepsake', 'Aromatic Phial', 'neutral', 'excluded', undefined],
   ['UnpickedBoonKeepsake', 'Concave Stone', 'neutral', 'concaveStone', 'oneShot'],
-  ['DecayingBoostKeepsake', 'Lion Fang', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['DecayingBoostKeepsake', 'Lion Fang', 'neutral', 'lionFang', 'oneShotAfterUnequipped'],
   [
     'DamagedDamageBoostKeepsake',
     'Blackened Fleece',
@@ -241,6 +262,10 @@ describe('keepsake normalization', () => {
     expect(normalized.byKey.GoldifyKeepsake?.echoGift).toEqual({
       availability: 'eligible',
       effect: { kind: 'timePiece', schedule: 'everyBiome' },
+    });
+    expect(normalized.byKey.DecayingBoostKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'lionFang', schedule: 'oneShotAfterUnequipped' },
     });
     expect(normalized.byKey.ManaOverTimeRefundKeepsake?.echoGift).toEqual({
       availability: 'eligible',
@@ -399,6 +424,14 @@ describe('keepsake normalization', () => {
     }
   });
 
+  it('rejects a Lion Fang start that is already spent', () => {
+    const spent = replaceSupportedEffect('DecayingBoostKeepsake', (effect) => ({
+      ...effect,
+      initialMultiplierByRank: { Common: 1, Rare: 1.4, Epic: 1.5, Heroic: 1.7 },
+    }));
+    expect(() => normalizeKeepsakes(spent)).toThrow('must exceed the expired multiplier');
+  });
+
   it('accepts alternate valid source values without maintaining a second source table', () => {
     const modified = replaceSupportedEffect('GoldifyKeepsake', (effect) => ({
       ...effect,
@@ -448,7 +481,9 @@ describe('keepsake normalization', () => {
           ? 'must be one of'
           : row.key === 'UnpickedBoonKeepsake'
             ? 'must be a non-negative integer'
-            : 'must be a positive integer',
+            : row.key === 'EscalatingKeepsake' || row.key === 'DecayingBoostKeepsake'
+              ? 'must be a positive number'
+              : 'must be a positive integer',
       );
     }
   });
