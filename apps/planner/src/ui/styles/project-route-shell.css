@@ -97,7 +97,7 @@
 .route-choice-action {
   margin-top: auto;
   padding-top: 18px;
-  color: #e2b971;
+  color: var(--selection-accent);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -130,7 +130,7 @@
   padding: 6px;
   border: 1px solid #41424c;
   border-radius: 10px;
-  color: #ede8df;
+  color: var(--text);
   background: #202128;
   box-shadow: 0 16px 44px rgb(0 0 0 / 38%);
 }
@@ -215,7 +215,7 @@
   padding: 1rem;
   border: 1px solid var(--border, #ccd3df);
   border-radius: 0.65rem;
-  color: #ede8df;
+  color: var(--text);
   background: var(--surface, #fff);
   box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 30%);
 }
@@ -408,7 +408,7 @@
   padding: 8px;
   border: 1px solid #41424c;
   border-radius: 6px;
-  color: #ede8df;
+  color: var(--text);
   background: #17181e;
   font: inherit;
   resize: vertical;
@@ -443,7 +443,7 @@
   width: 100%;
   gap: 2px;
   padding: 8px 10px;
-  border: 1px solid rgb(218 115 115 / 34%);
+  border: 1px solid color-mix(in srgb, var(--finding) 34%, transparent);
   border-left-width: 3px;
   border-radius: 8px;
   color: inherit;
@@ -451,7 +451,7 @@
   text-align: left;
   cursor: pointer;
   box-shadow:
-    0 0 0 1px rgb(218 115 115 / 8%),
+    0 0 0 1px color-mix(in srgb, var(--finding) 8%, transparent),
     0 12px 28px rgb(0 0 0 / 24%);
 }
 
@@ -462,8 +462,8 @@
 }
 
 .assessment-issue-button[data-feedback-context='unassessed'] {
-  border-color: rgb(226 185 113 / 30%);
-  background: rgb(226 185 113 / 6%);
+  border-color: color-mix(in srgb, var(--attention) 30%, transparent);
+  background: color-mix(in srgb, var(--attention) 6%, transparent);
 }
 
 .assessment-issue-button:disabled {
@@ -482,8 +482,8 @@
 }
 
 .assessment-issue-button[data-feedback-context='unassessed']:hover {
-  border-color: rgb(226 185 113 / 45%);
-  background: rgb(226 185 113 / 10%);
+  border-color: color-mix(in srgb, var(--attention) 45%, transparent);
+  background: color-mix(in srgb, var(--attention) 10%, transparent);
 }
 
 .finding-title {
@@ -689,7 +689,7 @@
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #e2b971;
+  accent-color: var(--selection-accent);
 }
 
 .route-keepsake-controls {
@@ -735,7 +735,7 @@
 
 .route-loadout-summary {
   margin: 0;
-  color: #ede8df;
+  color: var(--text);
   font-weight: 700;
 }
 
@@ -1134,7 +1134,7 @@
   width: 100%;
   min-width: 0;
   margin: 0;
-  accent-color: #e2b971;
+  accent-color: var(--selection-accent);
 }
 
 .route-run-modifier-multiplier output {

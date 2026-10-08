@@ -12,14 +12,14 @@
     .hub-requirement-box
   )[data-semantic-owner][data-has-findings='true'],
 .encounter-composition-edit[data-has-findings='true'] {
-  box-shadow: inset 0 0 0 2px #da7373;
+  box-shadow: inset 0 0 0 2px var(--finding);
   scroll-margin-block: calc(35 * var(--app-vh));
 }
 
 /* Summary issues mark the control that repairs them. */
 .encounter-summary-controls
   :is(input, [role='radiogroup'], .contextual-picker-trigger)[data-has-issues='true'] {
-  outline: 2px solid #da7373;
+  outline: 2px solid var(--finding);
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -27,7 +27,7 @@
 /* Keep checkbox and radio findings outside the control so the checked mark stays legible. */
 input:is([type='checkbox'], [type='radio'])[data-semantic-owner][data-has-findings='true'] {
   box-shadow: none;
-  outline: 2px solid #da7373;
+  outline: 2px solid var(--finding);
   outline-offset: 2px;
 }
 
@@ -36,8 +36,8 @@ input:is(
     [type='checkbox'],
     [type='radio']
   )[data-semantic-owner][data-has-findings='true']:focus-visible {
-  box-shadow: 0 0 0 2px #da7373;
-  outline-color: #e2b971;
+  box-shadow: 0 0 0 2px var(--finding);
+  outline-color: var(--selection-accent);
   outline-offset: 4px;
 }
 

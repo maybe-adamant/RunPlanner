@@ -148,7 +148,7 @@
 }
 
 .chaos-value-slider > input[type='range'] {
-  accent-color: var(--accent, #d7a84c);
+  accent-color: var(--selection-accent);
   margin: 0;
   min-width: 0;
   width: 100%;
@@ -345,7 +345,7 @@
 
 .trait-option-replacement,
 .editor-dialog-feedback .feedback-text {
-  color: #e2b971;
+  color: var(--attention);
   font-size: 0.82rem;
 }
 
@@ -413,13 +413,13 @@
 }
 
 .navigation-status-marker[data-tone='incomplete'] {
-  border-color: rgb(226 185 113 / 55%);
-  color: #e2b971;
-  background: rgb(226 185 113 / 13%);
+  border-color: color-mix(in srgb, var(--attention) 55%, transparent);
+  color: var(--attention);
+  background: color-mix(in srgb, var(--attention) 13%, transparent);
 }
 
 .navigation-status-marker[data-tone='invalid'] {
-  border-color: rgb(218 115 115 / 55%);
+  border-color: color-mix(in srgb, var(--finding) 55%, transparent);
   color: #e7a1a1;
   background: rgb(150 53 53 / 16%);
 }
