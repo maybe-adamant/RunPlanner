@@ -32,7 +32,8 @@ function victorySummary.rows(snapshot)
     local rows = {}
     local occurrence = plannedThrough(snapshot)
     if occurrence ~= nil then
-        rows[#rows + 1] = { text = "Planned through " .. names.room(occurrence.gameName) }
+        rows[#rows + 1] = { text = "Planned" }
+        rows[#rows + 1] = { text = names.room(occurrence.gameName) }
     end
     return rows
 end

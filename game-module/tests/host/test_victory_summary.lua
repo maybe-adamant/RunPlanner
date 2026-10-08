@@ -20,14 +20,14 @@ function TestVictorySummary.testRowsNameTheLastExitedOccurrenceOnly()
     lu.assertEquals(victorySummary.rows(nil), {})
     lu.assertEquals(victorySummary.rows({ state = "synchronized" }), {})
     lu.assertEquals(victorySummary.rows({ lastExited = { gameName = "F_Combat11" } }),
-        { { text = "Planned through Erebus · Combat 11" } })
+        { { text = "Planned" }, { text = "Erebus · Combat 11" } })
     local preboss = { gameName = "I_PreBoss01" }
     lu.assertEquals(victorySummary.rows({ state = "synchronized",
         current = { gameName = "I_Boss01" }, lastExited = preboss }),
-        { { text = "Planned through Tartarus · Boss" } })
+        { { text = "Planned" }, { text = "Tartarus · Boss" } })
     lu.assertEquals(victorySummary.rows({ state = "desynchronized",
         current = { gameName = "I_Boss01" }, lastExited = preboss }),
-        { { text = "Planned through Tartarus · Preboss" } })
+        { { text = "Planned" }, { text = "Tartarus · Preboss" } })
 end
 
 function TestVictorySummary.testDeclaresOneVictoryStackTableAndRefreshesOnRunClear()
@@ -57,7 +57,7 @@ function TestVictorySummary.testDeclaresOneVictoryStackTableAndRefreshesOnRunCle
 
     opened(nil, nil, overlay, { path = "OnScreenOpened", args = { { Name = "RunClear" } } })
     lu.assertEquals(sets, { { name = "victory-summary",
-        rows = { { text = "Planned through Erebus · Combat 11" } } } })
+        rows = { { text = "Planned" }, { text = "Erebus · Combat 11" } } } })
     lu.assertEquals(refreshes, { "victory-summary" })
 
     failInspection = true
