@@ -701,6 +701,89 @@ describe('authored-project route detour commands', () => {
     ).toBe(true);
   });
 
+  it('keeps a Chaos continuation picked at a door its normal sibling lacks', () => {
+    const opening = createOccurrenceId('chaos-width-opening');
+    const chaos = createOccurrenceId('chaos-width-detour');
+    const normalTarget = createOccurrenceId('chaos-width-normal');
+    const peer = createOccurrenceId('chaos-width-peer');
+    const picked = createOccurrenceId('chaos-width-picked');
+    const source = { kind: 'occurrence' as const, occurrenceId: opening };
+    const chaosSource = { kind: 'occurrence' as const, occurrenceId: chaos };
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddChaos',
+      additional: createAdditionalExitAddress(fBiome, opening, 'chaos'),
+      occurrenceId: chaos,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, source),
+      storeKey: 'RunProgress',
+    });
+    // F_Combat01 declares one door; the default Chaos map declares two.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, source, 'exit1'),
+      occurrenceId: normalTarget,
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, source),
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(fBiome, chaosSource),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, chaosSource),
+      storeKey: 'RunProgress',
+    });
+    for (const [exitKey, occurrenceId, gameName] of [
+      ['exit1', peer, 'F_Combat02'],
+      ['exit2', picked, 'F_Combat03'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'CreateTarget',
+        target: createTargetAddress(fBiome, chaosSource, exitKey),
+        occurrenceId,
+        gameName,
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, chaosSource),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+
+    const onNormal = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(fBiome, source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+
+    const topology = biomeTopology(onNormal, 'Underworld', 'F');
+    expect(
+      topology.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === normalTarget,
+      ),
+    ).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: picked }] },
+      selection: { kind: 'derived' },
+    });
+    expect(topology.occurrences.map((occurrence) => occurrence.occurrenceId)).not.toContain(peer);
+  });
+
   it('initializes a selected Chaos return after G reaches its ordinary batch bound', () => {
     const sourceId = goldenGOccurrenceId(7, 1);
     const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
