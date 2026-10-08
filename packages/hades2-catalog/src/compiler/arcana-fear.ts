@@ -123,6 +123,19 @@ export function normalizeArcanaCards(
     } else if (artificerCapacityByRarity !== undefined) {
       fail(`${path}.artificerCapacityByRarity`, 'only Artificer may declare conversion capacity');
     }
+    const roomEntryStatGrowth = card.roomEntryStatGrowth;
+    if (roomEntryStatGrowth !== undefined) {
+      if (card.key !== 'MaxHealthPerRoom')
+        fail(`${path}.roomEntryStatGrowth`, 'only The Centaur may declare room-entry growth');
+      requirePositiveInteger(roomEntryStatGrowth.interval, `${path}.roomEntryStatGrowth.interval`);
+      for (const stat of ['maxHealthByRarity', 'maxManaByRarity'] as const) {
+        const profile = roomEntryStatGrowth[stat];
+        if (Object.keys(profile).length !== 4)
+          fail(`${path}.roomEntryStatGrowth.${stat}`, 'must declare all four rarities');
+        for (const rarity of ['Common', 'Rare', 'Epic', 'Heroic'] as const)
+          requirePositiveInteger(profile[rarity], `${path}.roomEntryStatGrowth.${stat}.${rarity}`);
+      }
+    }
     if (traits.byKey[card.traitKey] === undefined) {
       fail(`${path}.traitKey`, `unknown trait ${card.traitKey}`);
     }
@@ -168,8 +181,13 @@ export function normalizeArcanaCards(
             kind: 'automatic' as const,
             rule: Object.freeze({ ...card.activation.rule }),
           });
-    const { boonRarityContributions: _rawBoonRarityContributions, ...normalizedCard } = card;
+    const {
+      boonRarityContributions: _rawBoonRarityContributions,
+      roomEntryStatGrowth: _rawRoomEntryStatGrowth,
+      ...normalizedCard
+    } = card;
     void _rawBoonRarityContributions;
+    void _rawRoomEntryStatGrowth;
     return Object.freeze({
       ...normalizedCard,
       fatedIncompatible: card.fatedIncompatible === true,
@@ -181,6 +199,15 @@ export function normalizeArcanaCards(
       ...(artificerCapacityByRarity === undefined
         ? {}
         : { artificerCapacityByRarity: Object.freeze({ ...artificerCapacityByRarity }) }),
+      ...(roomEntryStatGrowth === undefined
+        ? {}
+        : {
+            roomEntryStatGrowth: Object.freeze({
+              interval: roomEntryStatGrowth.interval,
+              maxHealthByRarity: Object.freeze({ ...roomEntryStatGrowth.maxHealthByRarity }),
+              maxManaByRarity: Object.freeze({ ...roomEntryStatGrowth.maxManaByRarity }),
+            }),
+          }),
       ...(boonRarityContributions === undefined
         ? {}
         : {

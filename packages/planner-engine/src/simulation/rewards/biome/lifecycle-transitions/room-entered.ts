@@ -37,7 +37,8 @@ import {
   consumeOlympianProviderForReachedOffer,
   reachedOfferForOrigin,
 } from '../../offer-generation';
-import { consumeRoomRewardForfeit } from '../../../arcana-fear';
+import { advanceArcanaRoomEntry, consumeRoomRewardForfeit } from '../../../arcana-fear';
+import { hasActiveChaosSemanticTag } from '../../../traits';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
@@ -97,10 +98,21 @@ export function applyRoomEntryEffects(
 ): RoomEntryEffects {
   // Entering a room initializes its map: the transition that offered the way
   // here stops being a fact before this room can generate anything of its own.
+  // Room start also runs Arcana EnterRoom setup, counting The Centaur's cycle.
   let next: readonly RewardBranchState[] = Object.freeze(
-    advanceRewardBranches(branches, event.sequence).map((branch) =>
-      Object.freeze({ ...branch, state: clearOfferedRewardTypes(branch.state) }),
-    ),
+    advanceRewardBranches(branches, event.sequence).map((branch) => {
+      const cleared = clearOfferedRewardTypes(branch.state);
+      const arcanaFear = advanceArcanaRoomEntry(
+        catalog,
+        cleared.arcanaFear,
+        hasActiveChaosSemanticTag(cleared.traitHistory, 'Barren'),
+      );
+      return Object.freeze({
+        ...branch,
+        state:
+          arcanaFear === cleared.arcanaFear ? cleared : Object.freeze({ ...cleared, arcanaFear }),
+      });
+    }),
   );
   const findings: LifecycleFinding[] = [];
   // Shrine inventory consults the completed hub board through each branch's own

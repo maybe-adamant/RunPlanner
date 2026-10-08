@@ -489,6 +489,9 @@ The exact `ExtendedShopTrait.ValidPermanentItemsLookup` whitelist is
 `TemporaryDiscountTrait`, and `TemporaryEmptySlotDamageTrait`. A direct Well
 purchase of one of these can receive the two-boss-use lifetime and consumes an
 Extended use; `TemporaryHealExpirationTrait` (Charity Bottle) is not eligible.
+A Fateful Twist result is never extended: `AwardRandomStoreItem` adds its trait
+directly (`StoreLogic.lua:1366-1386`), outside the purchase rows that Extended
+marks permanent (`StoreLogic.lua:886-895`).
 Repeated Spark and Yarn instances stack as one-use state; Sacrificial Hymn adds
 one replacement use. `CurrentRun.WellShopPurchases` counts every direct
 purchase by identity (`StoreLogic.lua:1167-1170`).

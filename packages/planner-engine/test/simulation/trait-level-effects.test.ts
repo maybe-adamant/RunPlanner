@@ -1219,6 +1219,82 @@ describe('Supply Chain lifecycle', () => {
         ?.pickupProducerProgress,
     ).toBe(0);
   });
+
+  it('counts Traces of Spirit grants on the shared RoomsPerUpgrade clock', () => {
+    const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const base = initializeTestRewardBranches()[0]!;
+    const history = foldTraitHistoryEvents(catalog, [
+      ...base.state.traitHistory.events,
+      Object.freeze({
+        kind: 'traitOffer' as const,
+        owner: occurrence,
+        acquisitionRole: 'selection',
+        sequence: 0,
+        giverKey: 'Medea',
+        options: Object.freeze([
+          { traitKey: 'ManaOverTimeCurse' },
+          { traitKey: 'MoneyOnDeathCurse' },
+          { traitKey: 'SpawnDamageCurse' },
+        ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'encounterCompleted',
+        acquisitionIdentity: 'medea:traces',
+        // A Dream third-biome menu grants the Epic amount.
+        roomsPerUpgradeMaxMana: 10,
+      }),
+    ]);
+    let branches: readonly RewardBranchState[] = [
+      Object.freeze({
+        ...base,
+        state: Object.freeze({
+          ...base.state,
+          traitHistory: history,
+          rewardHistory: attachTraitHistory(base.state.rewardHistory, history),
+        }),
+      }),
+    ];
+    const end = (gameName: string, sequence: number) =>
+      applyEncounterEndEffectsTransition(
+        catalog,
+        Object.freeze({
+          kind: 'encounterEndEffectsApplied',
+          origin: occurrence,
+          phaseKey: 'Encounter',
+          execution: 'normal',
+          figLeafSkipOwner: false,
+          operationIndex: sequence,
+          sequence,
+        }),
+        {
+          kind: 'authored',
+          origin: occurrence,
+          occurrenceId: occurrence.occurrenceId,
+          gameName,
+          encounters: {},
+          encounterPhases: [{ slotKey: 'Encounter' }],
+        } as unknown as CanonicalAuthoredRoom,
+        branches,
+      ).branches;
+    const growth = () =>
+      branches[0]?.state.traitHistory.equippedTraits.ManaOverTimeCurse?.roomsPerUpgradeGrowth;
+    expect(growth()).toEqual({ progress: 0, grants: 0, maxManaPerGrant: 10 });
+    branches = end('RoomOpening01', 1);
+    branches = end('RoomOpening01', 2);
+    expect(growth()).toEqual({ progress: 0, grants: 2, maxManaPerGrant: 10 });
+    branches = end('N_Sub01', 3);
+    expect(growth()).toEqual({ progress: 0, grants: 2, maxManaPerGrant: 10 });
+    branches = end('RoomOpening01', 4);
+    expect(growth()).toEqual({ progress: 0, grants: 3, maxManaPerGrant: 10 });
+    expect(
+      branches[0]!.state.traitHistory.events.filter(
+        (event) => event.kind === 'roomsPerUpgradeGrowthProgress',
+      ),
+    ).toEqual([
+      expect.objectContaining({ sequence: 1, granted: true, requiredInterval: 1 }),
+      expect.objectContaining({ sequence: 2, granted: true }),
+      expect.objectContaining({ sequence: 4, granted: true }),
+    ]);
+  });
 });
 
 describe('targeted selected-trait child chronology', () => {

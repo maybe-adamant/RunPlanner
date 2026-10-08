@@ -118,7 +118,19 @@ function traitPresentation(
   steadyGrowth: RunStateSnapshot['traits']['steadyGrowth'],
 ) {
   const trait = catalog.traits.byKey[equipped.traitKey];
+  const growth = trait?.roomsPerUpgradeGrowth;
+  const counted = equipped.roomsPerUpgradeGrowth;
   return Object.freeze({
+    ...(growth === undefined || counted === undefined
+      ? {}
+      : {
+          roomsPerUpgradeGrowth: Object.freeze({
+            progress: counted.progress,
+            interval: growth.interval,
+            grants: counted.grants,
+            maxManaGranted: counted.grants * counted.maxManaPerGrant,
+          }),
+        }),
     label: trait?.label ?? equipped.traitKey,
     ...(equipped.rarity === undefined ? {} : { rarity: equipped.rarity }),
     ...(equipped.level === undefined ? {} : { level: equipped.level }),
@@ -418,16 +430,43 @@ export function presentRunState(
             stoneOrigin: snapshot.keepsakes.stone.origin,
             stoneRank: snapshot.keepsakes.stone.rank,
           }),
+      ...(snapshot.keepsakes.discordantBell === undefined
+        ? {}
+        : {
+            discordantBellBonusLabel: `+${((snapshot.keepsakes.discordantBell.multiplier - 1) * 100).toFixed(1)}%`,
+          }),
+      ...(snapshot.keepsakes.lionFang === undefined
+        ? {}
+        : {
+            lionFang: Object.freeze({
+              bonusLabel: `+${Math.round((snapshot.keepsakes.lionFang.multiplier - 1) * 100)}%`,
+              expired: snapshot.keepsakes.lionFang.expired,
+              origin: snapshot.keepsakes.lionFang.origin,
+            }),
+          }),
     }),
     arcana: Object.freeze(
-      snapshot.arcanaFear.arcana.active.map((card) =>
-        Object.freeze({
+      snapshot.arcanaFear.arcana.active.map((card) => {
+        const growth = catalog.arcanaCards.byKey[card.key]?.roomEntryStatGrowth;
+        const counted = snapshot.arcanaFear.arcana.roomEntryGrowth?.[card.key];
+        return Object.freeze({
           key: card.key,
           label: catalog.arcanaCards.byKey[card.key]?.label ?? card.key,
           origin: card.origin,
           rarity: card.rarity,
-        }),
-      ),
+          ...(growth === undefined
+            ? {}
+            : {
+                roomEntryGrowth: Object.freeze({
+                  progress: counted?.progress ?? 0,
+                  interval: growth.interval,
+                  grants: counted?.grants ?? 0,
+                  maxHealthGranted: counted?.maxHealthGranted ?? 0,
+                  maxManaGranted: counted?.maxManaGranted ?? 0,
+                }),
+              }),
+        });
+      }),
     ),
     ...(artificer === undefined ? {} : { artificer }),
     bags: Object.freeze(

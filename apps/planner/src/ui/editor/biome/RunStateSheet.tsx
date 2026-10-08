@@ -97,6 +97,12 @@ function TraitSummary({ trait }: { readonly trait: WorkspaceRunStateTrait }) {
             Steady Growth {trait.steadyGrowthProgress ?? 0}/{trait.steadyGrowthInterval}
           </span>
         )}
+        {trait.roomsPerUpgradeGrowth === undefined ? null : (
+          <span>
+            {trait.roomsPerUpgradeGrowth.grants} grants (+
+            {trait.roomsPerUpgradeGrowth.maxManaGranted} Magick)
+          </span>
+        )}
       </span>
     </div>
   );
@@ -305,6 +311,23 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
               {state.keepsakes.phialStatus === undefined ? null : (
                 <StateRow label="Aromatic Phial">{state.keepsakes.phialStatus}</StateRow>
               )}
+              {state.keepsakes.discordantBellBonusLabel === undefined ? null : (
+                <StateRow label="Discordant Bell">
+                  {state.keepsakes.discordantBellBonusLabel}
+                  <span className="run-state-metadata">Damage dealt and taken</span>
+                </StateRow>
+              )}
+              {state.keepsakes.lionFang === undefined ? null : (
+                <StateRow label="Lion Fang">
+                  {state.keepsakes.lionFang.expired
+                    ? 'Expired'
+                    : state.keepsakes.lionFang.bonusLabel}
+                  <span className="run-state-metadata">
+                    Damage dealt
+                    {state.keepsakes.lionFang.origin === 'echo' ? ' · from Gift Gift Gift' : null}
+                  </span>
+                </StateRow>
+              )}
               {state.keepsakes.stoneStatus === undefined ? null : (
                 <StateRow label="Concave Stone">
                   {state.keepsakes.stoneStatus}
@@ -393,7 +416,17 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
               {state.arcana.length === 0 ? null : (
                 <ul className="run-state-plain-list" aria-label="Active Arcana">
                   {state.arcana.map((card) => (
-                    <li key={card.key}>{card.label}</li>
+                    <li key={card.key}>
+                      {card.label}
+                      {card.roomEntryGrowth === undefined ? null : (
+                        <span className="run-state-metadata">
+                          {card.roomEntryGrowth.progress}/{card.roomEntryGrowth.interval} rooms ·{' '}
+                          {card.roomEntryGrowth.grants} grants (+
+                          {card.roomEntryGrowth.maxHealthGranted} health, +
+                          {card.roomEntryGrowth.maxManaGranted} Magick)
+                        </span>
+                      )}
+                    </li>
                   ))}
                 </ul>
               )}

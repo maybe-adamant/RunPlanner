@@ -166,6 +166,12 @@ export interface ArcanaCardDeclaration {
   readonly boonRarityContributions?: Readonly<
     Record<'Common' | 'Rare' | 'Epic' | 'Heroic', import('./traits').BoonRarityContribution>
   >;
+  /** The Centaur's room-entry cycle: every `interval` entered rooms grants max health and Magick. */
+  readonly roomEntryStatGrowth?: {
+    readonly interval: number;
+    readonly maxHealthByRarity: Readonly<Record<InRunTraitRarity, number>>;
+    readonly maxManaByRarity: Readonly<Record<InRunTraitRarity, number>>;
+  };
 }
 
 export interface FearVowDeclaration {
@@ -223,6 +229,7 @@ export interface KeepsakeDeclaration {
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'moonBeam'; readonly schedule: 'oneShotAfterUnequipped' }
+          | { readonly kind: 'lionFang'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
       };
   /** Closed, source-backed rank data consumed by supported effect transitions. */
@@ -317,6 +324,19 @@ export interface KeepsakeDeclaration {
         readonly kind: 'moonBeam';
         readonly pathPointsByRank: KeepsakeRankProfile<number, number, number, number>;
         readonly priorityRewardTypes: readonly [string, string, string];
+      }
+    | {
+        /** Damage dealt and taken multiplier, growing at each qualifying encounter end. */
+        readonly kind: 'discordantBell';
+        readonly initialMultiplier: number;
+        readonly growthPerEncounterByRank: KeepsakeRankProfile<number, number, number, number>;
+      }
+    | {
+        /** Damage multiplier set on equip, decaying at each qualifying encounter end until spent. */
+        readonly kind: 'lionFang';
+        readonly initialMultiplierByRank: KeepsakeRankProfile<number, number, number, number>;
+        readonly decayPerEncounter: number;
+        readonly expiredMultiplier: number;
       };
 }
 

@@ -54,7 +54,7 @@ import {
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
-  advanceSteadyGrowthProgress,
+  advanceRoomsPerUpgradeProgress,
   settleSteadyGrowthThreshold,
   traitOfferContextIdentity,
 } from '../../src/simulation/traits';
@@ -752,7 +752,7 @@ describe('invalidation products', () => {
     );
     for (let promotion = 0; promotion < 3; promotion += 1) {
       const history = branch.state.traitHistory;
-      const advanced = advanceSteadyGrowthProgress(catalog, history, room, 1);
+      const advanced = advanceRoomsPerUpgradeProgress(catalog, history, room, 1);
       const threshold = advanced.thresholds[0];
       if (threshold === undefined) throw new Error('interval did not fire');
       const settled = settleSteadyGrowthThreshold(

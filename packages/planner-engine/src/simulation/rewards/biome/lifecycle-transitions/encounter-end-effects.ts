@@ -23,13 +23,14 @@ import { ownerRegion } from '../../../finding-regions';
 import {
   advanceChaosClock,
   advancePickupProducerProgress,
-  advanceSteadyGrowthProgress,
+  advanceRoomsPerUpgradeProgress,
   foldTraitHistoryEvents,
   settleSteadyGrowthThreshold,
   type ReachedSteadyGrowthThreshold,
   type ReachedPickupProducerMaturity,
 } from '../../../traits';
 import { advanceStygianWellClock } from '../../../commerce/stygian-well';
+import { advanceKeepsakeEncounterValues } from '../../../keepsakes/state';
 import {
   advanceExperimentalHammers,
   assessTranscendentEmbryoTransformation,
@@ -202,7 +203,7 @@ function advanceSteadyGrowthAt(
   }[] = [];
   for (const branch of branches) {
     const before = branch.state.traitHistory;
-    const advanced = advanceSteadyGrowthProgress(catalog, before, owner, sequence);
+    const advanced = advanceRoomsPerUpgradeProgress(catalog, before, owner, sequence);
     let traitHistory = advanced.history;
     let blockedAtThreshold = false;
     for (const threshold of advanced.thresholds) {
@@ -557,6 +558,16 @@ export function applyEncounterEndEffectsTransition(
   }
   const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
     event.origin.kind === 'occurrence' ? event.origin : undefined;
+  // Fang decay and Bell growth share the RoomsPerUpgrade gate, before the chamber pass.
+  if (steadyOwner !== undefined && declaration?.skipRoomsPerUpgrade !== true)
+    next = Object.freeze(
+      next.map((branch) => {
+        const keepsakes = advanceKeepsakeEncounterValues(catalog, branch.state.keepsakes);
+        return keepsakes === branch.state.keepsakes
+          ? branch
+          : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
+      }),
+    );
   const steadyGrowthTarget =
     room?.kind === 'authored'
       ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]

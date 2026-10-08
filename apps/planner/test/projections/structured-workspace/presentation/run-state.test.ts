@@ -518,6 +518,81 @@ describe('Run State presentation', () => {
         { label: 'Yarn of Ariadne', count: 1 },
       ],
     });
+    const growing = presentRunState(catalog, {
+      ...snapshot,
+      arcanaFear: {
+        ...snapshot.arcanaFear,
+        arcana: {
+          ...snapshot.arcanaFear.arcana,
+          active: [{ key: 'MaxHealthPerRoom', origin: 'automatic', rarity: 'Epic' }],
+          roomEntryGrowth: {
+            MaxHealthPerRoom: { progress: 3, grants: 2, maxHealthGranted: 11, maxManaGranted: 11 },
+          },
+        },
+      },
+      keepsakes: {
+        ...snapshot.keepsakes,
+        discordantBell: { rank: 'Epic', multiplier: 1.0299999999999998 },
+        lionFang: { origin: 'ordinary', multiplier: 1.2499999999999998, expired: false },
+      },
+      traits: {
+        ...snapshot.traits,
+        equippedTraits: {
+          ManaOverTimeCurse: {
+            giverKey: 'Medea',
+            providerKind: 'npc',
+            sourceRole: 'selection',
+            traitKey: 'ManaOverTimeCurse',
+            roomsPerUpgradeGrowth: { progress: 0, grants: 4, maxManaPerGrant: 5 },
+          },
+        },
+      },
+    });
+    expect(growing.keepsakes).toMatchObject({
+      discordantBellBonusLabel: '+3.0%',
+      lionFang: { bonusLabel: '+25%', expired: false, origin: 'ordinary' },
+    });
+    expect(growing.arcana).toEqual([
+      expect.objectContaining({
+        label: 'The Centaur',
+        roomEntryGrowth: {
+          progress: 3,
+          interval: 5,
+          grants: 2,
+          maxHealthGranted: 11,
+          maxManaGranted: 11,
+        },
+      }),
+    ]);
+    const fangGift = (echoKeepsakeReplayCount: number) =>
+      presentRunState(catalog, {
+        ...snapshot,
+        traits: {
+          ...snapshot.traits,
+          equippedTraits: {
+            EchoRepeatKeepsakeBoon: {
+              giverKey: 'Echo',
+              providerKind: 'npc',
+              sourceRole: 'selection',
+              traitKey: 'EchoRepeatKeepsakeBoon',
+              echoRepeatedKeepsakeKey: 'DecayingBoostKeepsake',
+              echoKeepsakeReplayCount,
+            },
+          },
+        },
+      }).keepsakes.echoGift;
+    expect(fangGift(0)).toEqual({
+      capturedKeepsakeLabel: 'Lion Fang',
+      replayCount: 0,
+      status: 'pending',
+    });
+    expect(fangGift(1)).toMatchObject({ replayCount: 1, status: 'oneShotApplied' });
+    expect(growing.traits.other).toEqual([
+      expect.objectContaining({
+        label: 'Traces of Spirit',
+        roomsPerUpgradeGrowth: { progress: 0, interval: 1, grants: 4, maxManaGranted: 20 },
+      }),
+    ]);
   });
 
   it('presents a G replacement as effective in H when the F rack was skipped', () => {

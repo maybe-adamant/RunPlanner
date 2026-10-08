@@ -88,3 +88,15 @@ retire this file when none remain.
       the Travel Deal refill with a planned result. Buy the first item, then
       the refill Anvil. The Anvil removes and adds exactly its planned traits
       without a conformance mismatch.
+- [ ] Stygian Well: plan and buy Kiss of Styx, and in a later run Centaur
+      Soul. Each purchase executes and the room exits without a conformance
+      mismatch; Centaur Soul raises max health by 25 without healing.
+
+## Trait inventory conformance
+
+- [ ] Fight Fight Fight: take it from Echo in the third biome and continue
+      without dying. It is removed at the 13th room departure after the first,
+      and no room exit reports a trait-inventory mismatch before or after.
+- [ ] Evade Evade Evade: take it from Echo and dodge until its bonus is spent
+      and the trait is gone. The next room exit tolerates its absence without a
+      trait-inventory mismatch.

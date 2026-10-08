@@ -31,6 +31,8 @@ export const medeaTraits = [
     ...raritylessNpcTrait,
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
+    // MaxMana 5 x rarity 1, 7/5, 10/5, 20/5; Dream menus use the entered-biome rarity.
+    roomsPerUpgradeGrowth: { interval: 1, maxManaByAcquisitionOrdinal: [5, 7, 10, 20] },
   },
   {
     key: 'SpawnDamageCurse',

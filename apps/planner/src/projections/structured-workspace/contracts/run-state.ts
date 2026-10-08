@@ -77,12 +77,20 @@ export interface WorkspaceRunStatePresentation {
     readonly stoneStatus?: 'pending' | 'consumed';
     readonly stoneOrigin?: 'ordinary' | 'echo';
     readonly stoneRank?: import('@run-planner/engine/catalog-schema').KeepsakeRank;
+    /** Already-formatted accumulated bonus to damage dealt and taken. */
+    readonly discordantBellBonusLabel?: string;
+    readonly lionFang?: {
+      readonly bonusLabel: string;
+      readonly expired: boolean;
+      readonly origin: 'ordinary' | 'echo';
+    };
   };
   readonly arcana: readonly {
     readonly key: string;
     readonly label: string;
     readonly origin: ArcanaActivationOrigin;
     readonly rarity: TraitRarity;
+    readonly roomEntryGrowth?: WorkspaceRunStateGrowth & { readonly maxHealthGranted: number };
   }[];
   readonly artificer?: {
     readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
@@ -153,6 +161,15 @@ export interface WorkspaceRunStateTrait {
   readonly traitKey: string;
   readonly steadyGrowthProgress?: number;
   readonly steadyGrowthInterval?: number;
+  readonly roomsPerUpgradeGrowth?: WorkspaceRunStateGrowth;
+}
+
+/** A max-stat growth cycle: progress toward the next grant, grants and their total. */
+export interface WorkspaceRunStateGrowth {
+  readonly progress: number;
+  readonly interval: number;
+  readonly grants: number;
+  readonly maxManaGranted: number;
 }
 
 export interface WorkspaceRunStateCoreTraitSlot {

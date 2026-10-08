@@ -64,6 +64,14 @@ export interface KeepsakeState {
     readonly markedBlessingValues: Readonly<Record<string, number>>;
     readonly markedBlessingAcquisitionIdentity: string;
   };
+  /** Discordant Bell's accumulated multiplier; the permanent source stays after a swap. */
+  readonly discordantBell?: { readonly rank: KeepsakeRank; readonly multiplier: number };
+  /** Lion Fang's current multiplier while held; an expired Fang stays at its floor. */
+  readonly lionFang?: {
+    readonly origin: 'ordinary' | 'echo';
+    readonly multiplier: number;
+    readonly expired: boolean;
+  };
 }
 
 export interface OlympianProviderSource {
@@ -124,6 +132,8 @@ export function keepsakeRankForEquip(
       // The source declaration deliberately has no Heroic row.
       return 'Epic';
     case 'moonBeam':
+    case 'discordantBell':
+    case 'lionFang':
       return 'Heroic';
     default: {
       const exhaustive: never = effect;
@@ -240,11 +250,86 @@ export function advanceCurrentKeepsake(
       });
     case 'moonBeam':
       return state;
+    case 'discordantBell':
+      // The accumulated multiplier is kept; only later growth uses the advanced rank.
+      return state.discordantBell === undefined
+        ? state
+        : Object.freeze({
+            ...state,
+            discordantBell: Object.freeze({ ...state.discordantBell, rank: advancedRank }),
+          });
+    case 'lionFang':
+      // Advancing resets the bonus to the new rank's start, even after expiry.
+      return state.lionFang?.origin !== 'ordinary'
+        ? state
+        : Object.freeze({
+            ...state,
+            lionFang: Object.freeze({
+              origin: 'ordinary' as const,
+              multiplier: effect.initialMultiplierByRank[advancedRank],
+              expired: false,
+            }),
+          });
     default: {
       const exhaustive: never = effect;
       return exhaustive;
     }
   }
+}
+
+/** Bell growth and Fang decay at one qualifying encounter end. */
+export function advanceKeepsakeEncounterValues(
+  catalog: Catalog,
+  state: KeepsakeState,
+): KeepsakeState {
+  const fang = state.lionFang;
+  const fangEffect = fang === undefined ? undefined : keepsakeEffectByKind(catalog, 'lionFang');
+  const bell = state.discordantBell;
+  const bellEffect =
+    bell === undefined ? undefined : keepsakeEffectByKind(catalog, 'discordantBell');
+  if ((fang === undefined || fang.expired) && bell === undefined) return state;
+  let lionFang = fang;
+  if (fang !== undefined && !fang.expired) {
+    if (fangEffect === undefined) throw new Error('Lion Fang state has no declared effect');
+    const multiplier = fang.multiplier - fangEffect.decayPerEncounter;
+    lionFang = Object.freeze(
+      multiplier <= fangEffect.expiredMultiplier
+        ? { ...fang, multiplier: fangEffect.expiredMultiplier, expired: true }
+        : { ...fang, multiplier },
+    );
+  }
+  let discordantBell = bell;
+  if (bell !== undefined) {
+    if (bellEffect === undefined) throw new Error('Discordant Bell state has no declared effect');
+    discordantBell = Object.freeze({
+      ...bell,
+      multiplier: bell.multiplier + bellEffect.growthPerEncounterByRank[bell.rank],
+    });
+  }
+  return Object.freeze({
+    ...state,
+    ...(lionFang === undefined ? {} : { lionFang }),
+    ...(discordantBell === undefined ? {} : { discordantBell }),
+  });
+}
+
+/** Echo re-equips a Common Lion Fang at biome start only while no Fang is held. */
+export function applyEchoLionFangReplay(
+  catalog: Catalog,
+  state: KeepsakeState,
+  capturedKeepsakeKey: string,
+): KeepsakeState {
+  const effect = catalog.keepsakes.byKey[capturedKeepsakeKey]?.effect;
+  if (effect?.kind !== 'lionFang') throw new Error('Echo Lion Fang replay has no rank data');
+  if (state.lionFang !== undefined) return state;
+  return Object.freeze({
+    ...state,
+    lionFang: Object.freeze({
+      origin: 'echo' as const,
+      multiplier: effect.initialMultiplierByRank.Common,
+      expired: false,
+    }),
+  });
 }
 
 export function gorgonRarityLevelForRank(
@@ -438,6 +523,23 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'discordantBell' && keepsake !== undefined
+      ? {
+          discordantBell: Object.freeze({
+            rank: keepsake.rank,
+            multiplier: effect.initialMultiplier,
+          }),
+        }
+      : {}),
+    ...(effect?.kind === 'lionFang' && keepsake !== undefined
+      ? {
+          lionFang: Object.freeze({
+            origin: 'ordinary' as const,
+            multiplier: effect.initialMultiplierByRank[keepsake.rank],
+            expired: false,
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeReplacement(
@@ -487,16 +589,26 @@ export function applyKeepsakeReplacement(
           return withoutTranscendentEmbryo;
         })()
       : stateWithoutTrackedSources;
-  const withoutOrdinaryOlympian = stateWithoutSources.olympianSources.some(
+  const leavingEffect =
+    state.currentKey === null ? undefined : catalog.keepsakes.byKey[state.currentKey]?.effect;
+  const stateWithoutFang =
+    leavingEffect?.kind === 'lionFang' && stateWithoutSources.lionFang?.origin === 'ordinary'
+      ? (() => {
+          const { lionFang: _lionFang, ...withoutFang } = stateWithoutSources;
+          void _lionFang;
+          return withoutFang;
+        })()
+      : stateWithoutSources;
+  const withoutOrdinaryOlympian = stateWithoutFang.olympianSources.some(
     (source) => source.origin === 'ordinary',
   )
     ? Object.freeze({
-        ...stateWithoutSources,
+        ...stateWithoutFang,
         olympianSources: Object.freeze(
-          stateWithoutSources.olympianSources.filter((source) => source.origin !== 'ordinary'),
+          stateWithoutFang.olympianSources.filter((source) => source.origin !== 'ordinary'),
         ),
       })
-    : stateWithoutSources;
+    : stateWithoutFang;
   return Object.freeze({
     ...withoutOrdinaryOlympian,
     currentKey: keepsakeKey,
@@ -556,6 +668,23 @@ export function applyKeepsakeReplacement(
             origin: 'ordinary' as const,
             status: 'pending' as const,
             rank,
+          }),
+        }
+      : {}),
+    ...(selected.effect?.kind === 'discordantBell' && state.discordantBell === undefined
+      ? {
+          discordantBell: Object.freeze({
+            rank,
+            multiplier: selected.effect.initialMultiplier,
+          }),
+        }
+      : {}),
+    ...(selected.effect?.kind === 'lionFang' && state.lionFang === undefined
+      ? {
+          lionFang: Object.freeze({
+            origin: 'ordinary' as const,
+            multiplier: selected.effect.initialMultiplierByRank[rank],
+            expired: false,
           }),
         }
       : {}),

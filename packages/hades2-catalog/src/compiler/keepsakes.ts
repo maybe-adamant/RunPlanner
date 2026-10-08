@@ -22,6 +22,7 @@ const giftSchedulesByKind = {
   timePiece: 'everyBiome',
   olympianRewardPressure: 'everyBiome',
   moonBeam: 'oneShotAfterUnequipped',
+  lionFang: 'oneShotAfterUnequipped',
   modeledNeutral: 'noModeledEffect',
 } as const;
 const inRunTraitRarities = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
@@ -85,6 +86,24 @@ function normalizeNumericRankProfile(
   return Object.freeze(
     Object.fromEntries(
       keepsakeRanks.map((rank) => [rank, requirePositiveInteger(value[rank], `${path}.${rank}`)]),
+    ),
+  ) as Readonly<Record<(typeof keepsakeRanks)[number], number>>;
+}
+
+function requirePositiveNumber(value: unknown, path: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0)
+    fail(path, 'must be a positive number');
+  return value;
+}
+
+function normalizePositiveRankProfile(
+  value: unknown,
+  path: string,
+): Readonly<Record<(typeof keepsakeRanks)[number], number>> {
+  requireExactObjectKeys(value, path, keepsakeRanks);
+  return Object.freeze(
+    Object.fromEntries(
+      keepsakeRanks.map((rank) => [rank, requirePositiveNumber(value[rank], `${path}.${rank}`)]),
     ),
   ) as Readonly<Record<(typeof keepsakeRanks)[number], number>>;
 }
@@ -399,6 +418,47 @@ function normalizeEffect(
           `${path}.pathPointsByRank`,
         ),
         priorityRewardTypes: Object.freeze(priorityRewardTypes),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'discordantBell': {
+      requireExactObjectKeys(raw, path, ['kind', 'initialMultiplier', 'growthPerEncounterByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        initialMultiplier: requirePositiveNumber(
+          raw.initialMultiplier,
+          `${path}.initialMultiplier`,
+        ),
+        growthPerEncounterByRank: normalizePositiveRankProfile(
+          raw.growthPerEncounterByRank,
+          `${path}.growthPerEncounterByRank`,
+        ),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'lionFang': {
+      requireExactObjectKeys(raw, path, [
+        'kind',
+        'initialMultiplierByRank',
+        'decayPerEncounter',
+        'expiredMultiplier',
+      ]);
+      const initialMultiplierByRank = normalizePositiveRankProfile(
+        raw.initialMultiplierByRank,
+        `${path}.initialMultiplierByRank`,
+      );
+      const expiredMultiplier = requirePositiveNumber(
+        raw.expiredMultiplier,
+        `${path}.expiredMultiplier`,
+      );
+      if (keepsakeRanks.some((rank) => initialMultiplierByRank[rank] <= expiredMultiplier))
+        fail(`${path}.initialMultiplierByRank`, 'must exceed the expired multiplier');
+      return Object.freeze({
+        kind: raw.kind,
+        initialMultiplierByRank,
+        decayPerEncounter: requirePositiveNumber(
+          raw.decayPerEncounter,
+          `${path}.decayPerEncounter`,
+        ),
+        expiredMultiplier,
       }) as KeepsakeDeclaration['effect'];
     }
     default:

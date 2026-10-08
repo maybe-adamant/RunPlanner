@@ -482,7 +482,7 @@ Fight's lifetime.
 | `DiminishingDodgeBoon`         | Evade Evade Evade       | none                                                                                 | persistent equipped Echo trait removed during play by its per-dodge decay (`PowersLogic.lua:4793-4803`); retain the acquisition, while execution conformance treats the identity as disposable                                                                                                                                                                 |
 | `DiminishingHealthAndManaBoon` | Fight Fight Fight       | none                                                                                 | equipped Echo trait removed by room decay, described below; numeric Life/Magick remains outside the planner                                                                                                                                                                                                                                                    |
 | `EchoDoubleShop`               | Gold Gold Gold          | none                                                                                 | equip one one-use Echo trait. The next purchased World Shop item other than `SpellDrop` sees that equipped trait, recreates the item for free, and consumes the trait's use. Loot recreations open a fresh trait offer; consumables use the Shop-duplicate creation path, which does not opt `GiftDrop` into its run-progress level effect                     |
-| `EchoRepeatKeepsakeBoon`       | Gift Gift Gift          | current keepsake is not one of the four source exclusions plus collapsed progression | capture the exact current keepsake at acquisition and replay its supported rank-I effect at biome start. Gorgon Amulet and Jeweled Pom are excluded among the six modeled effects; Fig Leaf and Experimental Hammer replay once, while Calling Card and Time Piece add uses every biome. Other eligible keepsakes remain effect-neutral until their own slice. |
+| `EchoRepeatKeepsakeBoon`       | Gift Gift Gift          | current keepsake is not one of the four source exclusions plus collapsed progression | capture the exact current keepsake at acquisition and replay its rank-I effect at later biome start. Gorgon Amulet, Jeweled Pom, Discordant Bell and Aromatic Phial are source-excluded; the [Echo Gift Gift Gift audit](../loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md) owns each other keepsake's replay schedule and planner disposition. |
 
 Fight Fight Fight's acquisition (`EchoIncreaseStats`, `EventLogic.lua:1739-1765`)
 sets `StatMultiplier` to the processed `StartFraction` and sets `BlockDecay`.
@@ -618,6 +618,18 @@ retained as effect-neutral chronological facts.
 `HealingOnDeathCurse`, `MoneyOnDeathCurse`, `ManaOverTimeCurse`,
 `SpawnDamageCurse`, `ArmorPenaltyCurse`, `SlowProjectileCurse`,
 `DeathDefianceRetaliateCurse`, `NewStatusDamage`.
+
+Traces of Spirit (`ManaOverTimeCurse`) declares `RoomsPerUpgrade` with
+`Amount = 1` and base `MaxMana` 5 scaled by rarity 1, 7/5, 10/5 and 20/5
+(`TraitData_Medea.lua:158-201`). Medea's menu offers Common, except that a Dream
+run sets every option to the entered-biome rarity (`NPCData.lua:5052-5056`;
+`EventLogic.lua:1096-1100`), so a grant adds 5, 7, 10 or 20 max Magick by
+acquisition ordinal. `CheckChamberTraits` advances it with Steady Growth at each
+main-encounter end unless the room sets `SkipRoomsPerUpgrade`
+(`RoomLogic.lua:3001-3003`; `TraitLogic.lua:2881-2928`). The planner declares
+the amount by acquisition ordinal and counts grants on that shared
+`RoomsPerUpgrade` pass for Run State; the Magick itself is not simulated, and
+the count is neither a conformance fact nor an execution diagnostic.
 
 #### Circe
 

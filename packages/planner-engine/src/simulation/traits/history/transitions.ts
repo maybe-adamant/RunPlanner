@@ -4,6 +4,7 @@ import type {
   PickupProducerProgressEvent,
   RoomDecayProgressEvent,
   SteadyGrowthProgressEvent,
+  RoomsPerUpgradeGrowthProgressEvent,
   TraitHistoryState,
   TraitLevelMutationEvent,
   TraitRarityBlockEvent,
@@ -321,8 +322,11 @@ export function settleFountainRarityMutation(
   });
 }
 
-/** Folds one already-emitted qualifying encounter-end-effects checkpoint. */
-export function advanceSteadyGrowthProgress(
+/**
+ * Folds the native `RoomsPerUpgrade` pass at one qualifying encounter end:
+ * Steady Growth thresholds and declared max-stat growth share this clock.
+ */
+export function advanceRoomsPerUpgradeProgress(
   catalog: Catalog,
   before: TraitHistoryState,
   owner: SemanticAddress,
@@ -331,9 +335,31 @@ export function advanceSteadyGrowthProgress(
   readonly history: TraitHistoryState;
   readonly thresholds: readonly ReachedSteadyGrowthThreshold[];
 } {
-  const events: SteadyGrowthProgressEvent[] = [];
+  const events: (SteadyGrowthProgressEvent | RoomsPerUpgradeGrowthProgressEvent)[] = [];
   const thresholds: ReachedSteadyGrowthThreshold[] = [];
   for (const trait of Object.values(before.equippedTraits)) {
+    const growth = catalog.traits.byKey[trait.traitKey]?.roomsPerUpgradeGrowth;
+    if (growth !== undefined && trait.roomsPerUpgradeGrowth !== undefined) {
+      const oldProgress = trait.roomsPerUpgradeGrowth.progress;
+      const granted = oldProgress + 1 >= growth.interval;
+      events.push(
+        Object.freeze({
+          kind: 'roomsPerUpgradeGrowthProgress',
+          owner,
+          acquisitionRole: 'roomsPerUpgradeGrowth',
+          sequence,
+          acquisitionPoint: 'encounterEndEffectsApplied',
+          traitKey: trait.traitKey,
+          ...(trait.acquisitionIdentity === undefined
+            ? {}
+            : { acquisitionIdentity: trait.acquisitionIdentity }),
+          oldProgress,
+          newProgress: granted ? 0 : oldProgress + 1,
+          requiredInterval: growth.interval,
+          granted,
+        }),
+      );
+    }
     const disposition = catalog.traits.byKey[trait.traitKey]?.selectedDisposition;
     if (
       disposition?.kind !== 'steadyGrowth' ||

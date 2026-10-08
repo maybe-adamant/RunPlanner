@@ -23,6 +23,7 @@ export interface RawKeepsakeDeclaration {
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'moonBeam'; readonly schedule: 'oneShotAfterUnequipped' }
+          | { readonly kind: 'lionFang'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
       };
   readonly effect?:
@@ -114,5 +115,16 @@ export interface RawKeepsakeDeclaration {
         readonly kind: 'moonBeam';
         readonly pathPointsByRank: KeepsakeRankProfile<number, number, number, number>;
         readonly priorityRewardTypes: readonly [string, string, string];
+      }
+    | {
+        readonly kind: 'discordantBell';
+        readonly initialMultiplier: number;
+        readonly growthPerEncounterByRank: KeepsakeRankProfile<number, number, number, number>;
+      }
+    | {
+        readonly kind: 'lionFang';
+        readonly initialMultiplierByRank: KeepsakeRankProfile<number, number, number, number>;
+        readonly decayPerEncounter: number;
+        readonly expiredMultiplier: number;
       };
 }
