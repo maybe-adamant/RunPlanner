@@ -1,4 +1,5 @@
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function TimelineActionDeleteButton({
   enabled,
@@ -21,7 +22,7 @@ export function TimelineActionDeleteButton({
       className={`${enabled ? 'danger-action' : 'quiet-action'} room-action-delete`}
       disabled={!enabled}
       onClick={onRemove}
-      title={explanation}
+      {...hintProps(explanation, findingMark?.['aria-description'])}
       type="button"
     >
       <svg aria-hidden="true" viewBox="0 0 16 16">

@@ -173,17 +173,19 @@ could not reach that owner. An authoring launcher whose context is unreached is
 disabled and carries no explanation beyond "Waits on an earlier choice"; the
 frontier finding owns the explanation. An unevaluated candidate is not
 authorable in a native select, radio or checkbox: an unreached setting is
-disabled on render with that hover hint while its retained value stays
+disabled on render with that hint while its retained value stays
 visible, and its candidates still load only on interaction. Decision-entry
 pickers keep their own rule: an ordinary target or an uncommitted Hub stays
 authorable before evaluation, while a takeover or a persisted Hub envelope
-requires evaluated support.
+requires evaluated support. Every hint renders through the one hint layer from
+the control's `data-hint`, beside the pointer on hover and beside the control on
+keyboard focus, and the same text leads the control's accessible description.
 
 Trait, Hex, Chaos, Pom and Anvil dialog launchers share one neutral,
 fixed-width style. Their one-line label reads `{Verb} {kind} · {value}`: the
 chosen trait or Hex, the Pom target and its levels, or the Chaos curse and
 blessing; `Edit Anvil` names no value. A long label ends in an ellipsis, and the
-full summary is the launcher's hover title and accessible description. An unset
+full summary is the launcher's hint. An unset
 launcher says so in its text; findings mark a launcher only with the shared
 finding ring. The application projection supplies both label and summary.
 

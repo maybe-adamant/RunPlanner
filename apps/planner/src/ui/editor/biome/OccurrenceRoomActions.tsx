@@ -35,6 +35,7 @@ import { RoomActionPlacementControl, RoomActionRemovalControl } from './RoomActi
 import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { HermesShrineRushControl, TravelDealLine } from './commerce/PurchaseRowControls';
+import { hintProps } from '@planner/ui/controls/hint';
 /** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
 export interface TimelineBoundaryContent {
   readonly editors?: ReactNode;
@@ -143,7 +144,6 @@ export function RoomActionsWorkbench({
   const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
-  const dragging = pointerDrag !== undefined;
   const [announcement, setAnnouncement] = useState('');
   const [placementRequest, setPlacementRequest] = useState<{ owner: string; actionKey: string }>();
   const placementTrigger = useRef<HTMLButtonElement | null>(null);
@@ -385,9 +385,11 @@ export function RoomActionsWorkbench({
           <button
             aria-label={`Add ${placingRow.label} here: ${roomActionDestinationLabel(actions?.rows ?? [], toIndex)}`}
             aria-disabled={!proposal.structurallyAuthorable}
-            aria-description={proposal.explanations.join(' ') || undefined}
+            {...hintProps(
+              proposal.structurallyAuthorable ? undefined : proposal.explanations.join(' '),
+              proposal.explanations.join(' ') || undefined,
+            )}
             className="contextual-picker-trigger room-action-insertion-button"
-            title={proposal.structurallyAuthorable ? undefined : proposal.explanations.join(' ')}
             onClick={() => {
               if (!proposal.structurallyAuthorable) return;
               pendingPlacementFocus.current = { owner: placementOwner, actionKey: placingRow.key };
@@ -535,18 +537,15 @@ export function RoomActionsWorkbench({
         <TimelineRow
           data-action-accent={actionAccent}
           data-blocking-product={row.blockingProduct}
-          // A row title would follow the pointer as a native tooltip during a drag.
-          title={
-            dragging
-              ? undefined
-              : actionAccent === 'optional'
-                ? 'Optional action'
-                : actionAccent === 'phase'
-                  ? 'Required in this timeline section, not necessarily as the next action.'
-                  : actionAccent === 'room'
-                    ? 'Required before leaving the room.'
-                    : undefined
-          }
+          {...hintProps(
+            actionAccent === 'optional'
+              ? 'Optional action'
+              : actionAccent === 'phase'
+                ? 'Required in this timeline section, not necessarily as the next action.'
+                : actionAccent === 'room'
+                  ? 'Required before leaving the room.'
+                  : undefined,
+          )}
           data-dragging={pointerDrag?.actionKey === row.key || undefined}
           data-drop-after={
             row.rank === null ? undefined : dropState({ kind: 'afterSlot', slotKey: row.key })

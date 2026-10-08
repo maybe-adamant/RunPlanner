@@ -120,7 +120,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const wave = screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement;
     expect(wave.value).toBe('2');
     expect(wave.disabled).toBe(true);
-    expect(wave.title).toBe('Waits on an earlier choice');
+    expect(hintOf(wave)).toBe('Waits on an earlier choice');
     expect(within(wave).getByRole('option', { name: 'Wave 2' })).toBeDefined();
     expect(within(wave).queryByRole('option', { name: /unavailable/ })).toBeNull();
   });
@@ -643,7 +643,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       name: 'Customize encounter',
     }) as HTMLButtonElement;
     expect(trigger.disabled).toBe(true);
-    expect(trigger.title).toBe('Waits on an earlier choice');
+    expect(hintOf(trigger)).toBe('Waits on an earlier choice');
   });
 
   it('stages an ordered Anomaly roster from engine candidates and resets it to Default', async () => {
@@ -814,7 +814,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       within(dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
     ).not.toContain('Retained choice is unavailable here.');
-    expect(selector.getAttribute('title')).toBeNull();
+    expect(hintOf(selector)).toBeNull();
     await view.user.click(selector);
     expect(screen.queryByRole('option', { name: '1 (unavailable)' })).toBeNull();
     await view.user.keyboard('{Escape}');
@@ -868,7 +868,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect((slider as HTMLInputElement).value).toBe('7');
     expect(within(dialog).getByText('20 (unavailable)')).toBeTruthy();
     expect(slider.getAttribute('aria-invalid')).toBe('true');
-    expect(slider.getAttribute('title')).toBe('Retained count 20 is unavailable here.');
+    expect(hintOf(slider)).toBe('Retained count 20 is unavailable here.');
     expect(within(dialog).queryByText('Needs repair')).toBeNull();
     const findingsRegion = within(dialog).getByRole('status', { name: 'Encounter feedback' });
     expect(findingsRegion.textContent).toContain('Retained choice is unavailable here.');

@@ -15,6 +15,7 @@ import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorks
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { TranscendentEmbryoOutcomeFields } from '../rewards/TranscendentEmbryoOutcomeFields';
 import { TimelineRow } from './TimelineRow';
+import { hintProps } from '@planner/ui/controls/hint';
 
 /** React owner for the automatic Transcendent Embryo transformation row. */
 export function TranscendentEmbryoEffectRow({
@@ -115,11 +116,11 @@ export function TranscendentEmbryoEffectRow({
             className="quiet-action action-compact effect-repair-action"
             disabled={domain?.selectedPossible !== false}
             data-inactive={domain?.selectedPossible !== false || undefined}
-            title={
+            {...hintProps(
               domain?.selectedPossible === false
                 ? undefined
-                : 'Nothing to clear; the recorded choice is still possible.'
-            }
+                : 'Nothing to clear; the recorded choice is still possible.',
+            )}
             onClick={() => executeIntent(interaction.intentFor(null))}
             type="button"
           >

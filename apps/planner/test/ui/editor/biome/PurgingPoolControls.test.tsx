@@ -24,6 +24,7 @@ import {
   occurrenceById,
   openRoomTab,
 } from '@planner-test/support/occurrence-workbench';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -79,7 +80,7 @@ it('keeps Sold mounted: disabled on an empty unsold slot, removable on a stale s
   const emptySold = within(pool).getByRole('checkbox', { name: 'Sold Offer 2' });
   expect(emptySold).toHaveProperty('disabled', true);
   expect(emptySold).toHaveProperty('checked', false);
-  expect(emptySold.closest('label')?.getAttribute('title')).toBe('Choose a trait to sell');
+  expect(hintOf(emptySold.closest('label'))).toBe('Choose a trait to sell');
 
   const staleSold = within(pool).getByRole('checkbox', { name: 'Sold Offer 1' });
   expect(staleSold).toHaveProperty('disabled', false);

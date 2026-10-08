@@ -16,7 +16,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import {
   candidateMayBeAuthored,
-  candidateWaitingTitle,
+  candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { HubCompletionHandoff } from './HubCompletionHandoff';
@@ -30,6 +30,7 @@ import { OpenHubRoomCard } from './HubRoomCards';
 import { HubMapOverview } from './hub-map/HubMapOverview';
 import { HubMapTimeline } from './hub-map/HubMapTimeline';
 import { RunStateLauncher } from './RunStateSheet';
+import { hintProps } from '@planner/ui/controls/hint';
 
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
@@ -275,11 +276,11 @@ export function HubDecisionWorkbench({
       }}
       onFocus={() => resetCandidates.activate()}
       onPointerDown={() => resetCandidates.activate()}
-      title={
+      {...hintProps(
         !actionOrderInteraction.contextReached || candidateWaits(resetCandidates.result?.[0])
-          ? candidateWaitingTitle
-          : undefined
-      }
+          ? candidateWaitingHint
+          : undefined,
+      )}
       type="button"
     >
       Reset visits

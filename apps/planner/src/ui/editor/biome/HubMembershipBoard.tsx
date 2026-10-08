@@ -15,12 +15,13 @@ import { candidateSupport } from '@planner/projections/candidates/candidateProje
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
-  candidateWaitingTitle,
+  candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export type HubMembershipInput = 'keyboard' | 'pointer';
 export type HubMembershipSourceRegion = 'closed' | 'open';
@@ -215,7 +216,10 @@ function HubSlotMembership({
           aria-label={`${slot.label} open`}
           checked={slot.open}
           disabled={membership.disabled}
-          title={membership.waiting ? candidateWaitingTitle : undefined}
+          {...hintProps(
+            membership.waiting ? candidateWaitingHint : undefined,
+            membership.target['aria-description'],
+          )}
           onBlur={() => {
             if (!slot.open) membership.cancelAttempt();
           }}

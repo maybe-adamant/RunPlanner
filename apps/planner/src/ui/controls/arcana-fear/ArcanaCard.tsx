@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { arcanaArtwork } from './arcanaArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function ArcanaCard({
   cardKey,
@@ -7,9 +8,12 @@ export function ArcanaCard({
   rarity,
   resultRarity,
   selectionOrder,
+  hint,
   ...button
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   readonly cardKey: string;
+  /** Replaces the rank summary as the card's hint. */
+  readonly hint?: string | undefined;
   readonly label: string;
   readonly rarity?: string | null | undefined;
   readonly resultRarity?: string | null | undefined;
@@ -40,11 +44,11 @@ export function ArcanaCard({
       type="button"
       className="arcana-card-control"
       aria-label={button['aria-label'] ?? label}
-      aria-description={
+      {...hintProps(
+        hint ?? rankDescription,
         button['aria-description'] ??
-        `${rankDescription}${selectionOrder === undefined ? '' : `; pick ${selectionOrder}`}`
-      }
-      title={button.title ?? rankDescription}
+          `${rankDescription}${selectionOrder === undefined ? '' : `; pick ${selectionOrder}`}`,
+      )}
       data-rarity={displayedRarity ?? undefined}
       data-active={displayedRarity != null || selected || undefined}
     >

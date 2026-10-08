@@ -8,6 +8,7 @@ import type {
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import { traitRarityPresentation } from './traitRarityPresentation';
+import { hintProps } from '@planner/ui/controls/hint';
 
 const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
   sections: Object.freeze([]),
@@ -149,7 +150,7 @@ export function TraitOfferOption<TraitValue>({
           className="field-control trait-offer-fixed-rarity"
         >
           <span>Rarity</span>
-          <strong title={traitRarityPresentation(traitKey, fixedRarity).accessibleLabel}>
+          <strong {...hintProps(traitRarityPresentation(traitKey, fixedRarity).accessibleLabel)}>
             {traitRarityPresentation(traitKey, fixedRarity).label}
           </strong>
         </div>

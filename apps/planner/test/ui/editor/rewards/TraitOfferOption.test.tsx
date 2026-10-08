@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 
 import { TraitOfferOption } from '@planner/ui/editor/rewards/TraitOfferOption';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -60,7 +61,7 @@ describe('trait rarity presentation', () => {
         effectiveRarity="Common"
       />,
     );
-    expect(screen.getByText('Infusion (C)').getAttribute('title')).toBe('Infusion (Common)');
+    expect(hintOf(screen.getByText('Infusion (C)'))).toBe('Infusion (Common)');
     expect(
       within(screen.getByLabelText('Effective trait values')).getByText('Infusion'),
     ).toBeTruthy();

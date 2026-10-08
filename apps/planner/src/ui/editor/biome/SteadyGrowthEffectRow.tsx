@@ -14,6 +14,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { TimelineRow } from './TimelineRow';
+import { hintProps } from '@planner/ui/controls/hint';
 
 /** React owner for the automatic Steady Growth timeline effect. */
 export function SteadyGrowthEffectRow({
@@ -87,11 +88,11 @@ export function SteadyGrowthEffectRow({
             className="quiet-action action-compact effect-repair-action"
             disabled={domain?.selectedPossible !== false}
             data-inactive={domain?.selectedPossible !== false || undefined}
-            title={
+            {...hintProps(
               domain?.selectedPossible === false
                 ? undefined
-                : 'Nothing to clear; the recorded choice is still possible.'
-            }
+                : 'Nothing to clear; the recorded choice is still possible.',
+            )}
             onClick={() => executeIntent(interaction.intentFor(null))}
             type="button"
           >

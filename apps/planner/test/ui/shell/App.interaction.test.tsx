@@ -88,6 +88,7 @@ import {
   pOccurrenceId,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { getByHint, hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -724,8 +725,7 @@ describe('planner history interaction', () => {
     (() => {
       throw new Error('the send status region is missing');
     })();
-  const descriptionOf = (element: HTMLElement) =>
-    document.getElementById(element.getAttribute('aria-describedby') ?? '')?.textContent ?? null;
+  const descriptionOf = (element: HTMLElement) => element.getAttribute('aria-description');
 
   it('keeps one header send button through a panel send, a re-send and its timed result', async () => {
     const game = createFakeGameModuleHost();
@@ -735,7 +735,7 @@ describe('planner history interaction', () => {
     const button = await screen.findByRole('button', { name: 'Send to game…' });
     const className = button.className;
     expect(button).toBe(sendButton());
-    expect(button.getAttribute('title')).toBe('Choose a slot in the Game panel');
+    expect(hintOf(button)).toBe('Choose a slot in the Game panel');
 
     await user.click(button);
     const panel = await screen.findByRole('dialog', { name: 'Game' });
@@ -747,7 +747,7 @@ describe('planner history interaction', () => {
     await user.click(within(panel).getByRole('button', { name: 'Close' }));
 
     expect(await screen.findByRole('button', { name: 'Send · Slot 3' })).toBe(button);
-    expect(button.getAttribute('title')).toBe('Send this plan to slot 3');
+    expect(hintOf(button)).toBe('Send this plan to slot 3');
     expect(descriptionOf(button)).toBe('Send this plan to slot 3');
     const status = sendStatus();
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
@@ -766,7 +766,7 @@ describe('planner history interaction', () => {
         hour: '2-digit',
         minute: '2-digit',
       });
-      expect(button.getAttribute('title')).toBe(`Sent to slot 3 at ${sentTime}; now active`);
+      expect(hintOf(button)).toBe(`Sent to slot 3 at ${sentTime}; now active`);
       expect(status.textContent).toBe('Sent to slot 3.');
       await act(async () => {
         fireEvent.click(button);
@@ -800,7 +800,7 @@ describe('planner history interaction', () => {
     const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
     await user.click(button);
     await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 4'));
-    expect(button.getAttribute('title')).toMatch(/; not made active$/);
+    expect(hintOf(button)).toMatch(/; not made active$/);
     expect(sendStatus().textContent).toBe('Sent to slot 4; not made active.');
     expect(screen.queryByRole('button', { name: 'Game — last send failed' })).toBeNull();
   });
@@ -819,7 +819,7 @@ describe('planner history interaction', () => {
     const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
     await user.click(button);
     await waitFor(() => expect(button.textContent).toBe('! Not sent'));
-    expect(button.getAttribute('title')).toBe('Details are in the Game panel');
+    expect(hintOf(button)).toBe('Details are in the Game panel');
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(sendStatus().getAttribute('role')).toBe('status');
     expect(sendStatus().textContent).toBe('Not sent: could not write plan slot.');
@@ -843,7 +843,7 @@ describe('planner history interaction', () => {
   it('keeps disabled send states focusable with their reason', async () => {
     const reasonOf = async (name: string, reason: string) => {
       const button = await screen.findByRole('button', { name });
-      await waitFor(() => expect(button.getAttribute('title')).toBe(reason));
+      await waitFor(() => expect(hintOf(button)).toBe(reason));
       expect(button.getAttribute('aria-disabled')).toBe('true');
       expect((button as HTMLButtonElement).disabled).toBe(false);
       expect(descriptionOf(button)).toBe(reason);
@@ -943,7 +943,7 @@ describe('planner history interaction', () => {
     );
     renderPlannerForInteraction({ application });
     const button = await screen.findByRole('button', { name: 'Send · Slot 5' });
-    expect(button.getAttribute('title')).toBe('Saves your changes, then sends to slot 5');
+    expect(hintOf(button)).toBe('Saves your changes, then sends to slot 5');
     let publish: (() => void) | undefined;
     game.host.publish.mockImplementationOnce(
       (slotNumber, json) =>
@@ -2433,7 +2433,7 @@ describe('planner history interaction', () => {
       }),
     );
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
-    expect(within(oceanus).getByTitle('Blocked')).toBeTruthy();
+    expect(getByHint(oceanus, 'Blocked')).toBeTruthy();
     expect(
       document
         .getElementById(oceanus.getAttribute('aria-describedby') ?? '')

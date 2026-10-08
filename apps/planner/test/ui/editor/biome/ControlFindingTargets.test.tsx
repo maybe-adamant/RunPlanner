@@ -43,6 +43,7 @@ import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { ProjectFindings } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -86,7 +87,8 @@ it.each([
     expect(launcher.dataset.hasFindings).toBe('true');
     expect(launcher.getAttribute('aria-description')).not.toBeNull();
     expect(row.hasAttribute('data-has-findings')).toBe(false);
-    expect(row.getAttribute('aria-description')).toBeNull();
+    // A row's description is only its own hint; findings describe the launcher.
+    expect(row.getAttribute('aria-description')).toBe(hintOf(row));
     await waitFor(() => expect(document.activeElement).toBe(launcher));
   },
 );

@@ -103,7 +103,7 @@ describe('native settings whose candidate context is unreached, on first render'
       ),
     );
     expect(waiting.disabled).toBe(true);
-    expect(waiting.title).toBe(waitingTitle);
+    expect(hintOf(waiting)).toBe(waitingTitle);
     expect(waiting.checked).toBe(checked);
   });
 
@@ -134,7 +134,7 @@ describe('native settings whose candidate context is unreached, on first render'
     );
     const waitingRadios = () => [...waiting.querySelectorAll('input')] as HTMLInputElement[];
     expect(waitingRadios().every((radio) => radio.disabled)).toBe(true);
-    expect(waitingRadios().every((radio) => radio.title === waitingTitle)).toBe(true);
+    expect(waitingRadios().every((radio) => hintOf(radio) === waitingTitle)).toBe(true);
     expect(waitingRadios().findIndex((radio) => radio.checked)).toBe(chosen);
   });
 

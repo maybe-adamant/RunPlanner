@@ -15,6 +15,7 @@ import type { FeedbackEntry } from '@planner/ui/editor/rewards/TraitOfferForm';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { NavigationStatusMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import { hintProps } from '@planner/ui/controls/hint';
 
 type GeneratedEdits = NonNullable<WorkspaceEncounterCustomizationInteraction['generatedEdits']>;
 
@@ -552,7 +553,7 @@ export function EncounterCompositionControl({
             </span>
             <span
               className="encounter-budget-result"
-              title="Resulting cost after rounding and minimum counts."
+              {...hintProps('Resulting cost after rounding and minimum counts.')}
             >
               → {finalCost}
             </span>
@@ -567,7 +568,7 @@ export function EncounterCompositionControl({
           />
           <span
             className="encounter-budget-result encounter-generated-context"
-            title="Resulting cost after rounding and minimum counts."
+            {...hintProps('Resulting cost after rounding and minimum counts.')}
           >
             → {finalCost}
           </span>
@@ -610,7 +611,7 @@ export function EncounterCompositionControl({
                 <tr>
                   <th
                     scope="col"
-                    title="Wave budget / total encounter budget."
+                    {...hintProps('Wave budget / total encounter budget.')}
                     aria-label={`Wave budget ${waveBudget(wave.waveIndex)} / encounter budget ${encounterBudget}`}
                   >
                     Budget
@@ -623,11 +624,11 @@ export function EncounterCompositionControl({
                     <th
                       scope="col"
                       key={`${index}-${key}`}
-                      title={
+                      {...hintProps(
                         cost(key) === undefined
                           ? undefined
-                          : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`
-                      }
+                          : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`,
+                      )}
                     >
                       {label(key)}
                       {cost(key) === undefined ? null : (
@@ -659,7 +660,9 @@ export function EncounterCompositionControl({
                           count
                         ) : (
                           <span
-                            title={`${count} ${count === 1 ? 'group' : 'groups'} · ${count * size} individual enemies.`}
+                            {...hintProps(
+                              `${count} ${count === 1 ? 'group' : 'groups'} · ${count * size} individual enemies.`,
+                            )}
                           >
                             {count} ({count * size})
                           </span>
@@ -682,7 +685,7 @@ export function EncounterCompositionControl({
                           <td key={`${index}-${key}`}>
                             <div
                               className="encounter-menace-replacement"
-                              title={cell.replacementLabel}
+                              {...hintProps(cell.replacementLabel)}
                             >
                               {cell.picker === undefined ? (
                                 <span>{cell.replacementLabel}</span>
@@ -931,11 +934,11 @@ export function EncounterCompositionControl({
             className="encounter-wave-count"
             role="radiogroup"
             aria-label="Waves"
-            title={
+            {...hintProps(
               waveCountUnavailable
                 ? `Retained wave count ${value?.waveCount} is unavailable here.`
-                : undefined
-            }
+                : undefined,
+            )}
           >
             {Array.from(
               { length: composition.waveCount.max - composition.waveCount.min + 1 },
@@ -957,7 +960,7 @@ export function EncounterCompositionControl({
         {composition.sharedEnemy ? (
           <div
             className="encounter-customization-row encounter-shared-enemy"
-            title="Only used with multiple waves"
+            {...hintProps('Only used with multiple waves')}
           >
             <ContextualPicker
               ariaLabel="Shared Enemy"

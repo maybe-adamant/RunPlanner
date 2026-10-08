@@ -7,6 +7,7 @@ import {
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { isIdentityFinding } from './encounterPhaseFindings';
+import { hintProps } from '@planner/ui/controls/hint';
 
 export function RoomEncounterStructureWorkbench({
   children,
@@ -45,7 +46,7 @@ export function RoomEncounterStructureWorkbench({
             <label
               className="room-feature-presence-row"
               key={feature.interactionKey}
-              title={interaction.disabledReason}
+              {...hintProps(interaction.disabledReason)}
             >
               <input
                 {...target}

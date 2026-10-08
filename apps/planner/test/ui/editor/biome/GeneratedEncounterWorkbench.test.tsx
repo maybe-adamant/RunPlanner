@@ -45,6 +45,7 @@ import {
   authoredProjectCommandDispatched,
 } from '@planner/state/projectWorkspaceSlice';
 import { simulateProject } from '@run-planner/engine/simulation';
+import { getAllByHint, getByHint, hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 const phase = createEncounterPhaseAddress(
@@ -153,14 +154,12 @@ describe('generated encounter customization workflows', () => {
       owner,
     );
     const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' });
-    expect(within(table).getByTitle('2 groups · 10 individual enemies.').textContent).toBe(
-      '2 (10)',
+    expect(getByHint(table, '2 groups · 10 individual enemies.').textContent).toBe('2 (10)');
+    expect(getByHint(table, 'Cost: 16 per group of 5 enemies.')).toBeTruthy();
+    expect(getByHint(table, 'Wave budget / total encounter budget.')).toBeTruthy();
+    expect(getAllByHint(table, 'Resulting cost after rounding and minimum counts.')).toHaveLength(
+      2,
     );
-    expect(within(table).getByTitle('Cost: 16 per group of 5 enemies.')).toBeTruthy();
-    expect(within(table).getByTitle('Wave budget / total encounter budget.')).toBeTruthy();
-    expect(
-      within(table).getAllByTitle('Resulting cost after rounding and minimum counts.'),
-    ).toHaveLength(2);
   });
   it('removes excess enemies without creating blank allocation keys', async () => {
     const view = await open(
@@ -581,7 +580,7 @@ describe('generated encounter customization workflows', () => {
     expect(interaction?.generatedAssessment).toBeUndefined();
     const button = customizeTrigger(project);
     expect(button.disabled).toBe(true);
-    expect(button.title).toBe('Waits on an earlier choice');
+    expect(hintOf(button)).toBe('Waits on an earlier choice');
   });
   it('repairs required Fields passive composition from Overview without opening its dialog automatically', async () => {
     const owner = createEncounterPhaseAddress(
@@ -705,7 +704,7 @@ describe('generated encounter customization workflows', () => {
     });
     const button = customizeTrigger(project, owner);
     expect(button.disabled).toBe(true);
-    expect(button.title).toBe('Waits on an earlier choice');
+    expect(hintOf(button)).toBe('Waits on an earlier choice');
   });
   it('selects a shared enemy from the assessed picker and withholds a context-less phase', async () => {
     const view = await open(
@@ -741,7 +740,7 @@ describe('generated encounter customization workflows', () => {
     );
     const withheld = customizeTrigger(unassessed);
     expect(withheld.disabled).toBe(true);
-    expect(withheld.title).toBe('Waits on an earlier choice');
+    expect(hintOf(withheld)).toBe('Waits on an earlier choice');
   });
   it('shows engine allocation findings for the affected wave', async () => {
     const view = await open(

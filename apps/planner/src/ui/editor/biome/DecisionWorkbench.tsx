@@ -39,6 +39,7 @@ import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
+import { hintProps } from '@planner/ui/controls/hint';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
@@ -113,7 +114,7 @@ function ExactRepairAction({
       {...(intent === undefined ? {} : { 'data-command': intent.command.kind })}
       disabled={intent === undefined}
       onClick={() => intent === undefined || executeIntent(intent)}
-      {...(intent === undefined ? { title: 'No unavailable doors to remove.' } : {})}
+      {...hintProps(intent === undefined ? 'No unavailable doors to remove.' : undefined)}
       type="button"
     >
       Remove unavailable doors
@@ -128,14 +129,14 @@ function ExactRepairAction({
 export function TopologyRemovalAction({
   accessibleLabel,
   compact = false,
-  disabledTitle,
+  disabledHint,
   interaction,
   label,
 }: {
   readonly accessibleLabel?: string;
   readonly compact?: boolean;
-  /** Hover text for the mounted slot while no removal applies. */
-  readonly disabledTitle?: string;
+  /** Hint of the mounted slot while no removal applies. */
+  readonly disabledHint?: string;
   readonly interaction: WorkspaceTopologyRemovalInteraction | undefined;
   readonly label: string;
 }) {
@@ -150,9 +151,7 @@ export function TopologyRemovalAction({
         className={`danger-action${compact ? ' action-compact' : ''}`}
         disabled={interaction === undefined}
         onClick={() => interaction === undefined || executeIntent(interaction.intent)}
-        {...(interaction === undefined && disabledTitle !== undefined
-          ? { title: disabledTitle }
-          : {})}
+        {...hintProps(interaction === undefined ? disabledHint : undefined)}
         type="button"
       >
         {label}
@@ -494,7 +493,7 @@ function TakeoverRepairAction({
         className="secondary-action"
         disabled={!repairNeeded}
         onClick={() => executeIntent(interaction.intent())}
-        {...(repairNeeded ? {} : { title: 'No missing or unavailable Preboss doors to fix.' })}
+        {...hintProps(repairNeeded ? undefined : 'No missing or unavailable Preboss doors to fix.')}
         type="button"
       >
         Fix Preboss doors
@@ -525,7 +524,7 @@ function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
     node.targets.some((target) => target.selected) ||
     node.zagreusContract?.selected === true ||
     node.chaos?.selected === true;
-  const disabledTitle = doorSelected
+  const disabledHint = doorSelected
     ? 'Fill the remaining doors to continue.'
     : 'Select a door to continue.';
   return (
@@ -537,7 +536,7 @@ function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
           dispatch(semanticOwnerFocused(continuation.marker.address));
         }
       }}
-      {...(continuation === undefined ? { title: disabledTitle } : {})}
+      {...hintProps(continuation === undefined ? disabledHint : undefined)}
       type="button"
     >
       Open next room
@@ -760,7 +759,7 @@ export function BatchWorkbench({
         <ExactRepairAction intent={node.repairIntent} />
         <SelectedContinuationAction node={node} />
         <TopologyRemovalAction
-          disabledTitle="Nothing authored to remove yet."
+          disabledHint="Nothing authored to remove yet."
           interaction={removal}
           label="Remove these doors"
         />

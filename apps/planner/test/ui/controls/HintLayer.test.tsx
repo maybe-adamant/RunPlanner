@@ -121,6 +121,25 @@ describe('HintLayer', () => {
     expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice');
   });
 
+  it('places a hover hint beside the pointer and a focus hint beside its control', () => {
+    const view = renderHinted();
+    const layer = () => document.querySelector<HTMLElement>('.hint-layer')!;
+    fireEvent.pointerOver(view.launcher, { clientX: 100, clientY: 200 });
+    fireEvent.pointerMove(view.launcher, { clientX: 140, clientY: 210 });
+    elapse(500);
+    expect([layer().style.left, layer().style.top]).toEqual(['152px', '226px']);
+    fireEvent.pointerMove(view.launcher, { clientX: 300, clientY: 300 });
+    expect([layer().style.left, layer().style.top]).toEqual(['152px', '226px']);
+    fireEvent.pointerOut(view.launcher, { relatedTarget: view.plain });
+
+    vi.spyOn(view.launcher, 'getBoundingClientRect').mockReturnValue(
+      DOMRect.fromRect({ x: 400, y: 50, width: 200, height: 30 }),
+    );
+    act(() => view.launcher.focus());
+    elapse(500);
+    expect([layer().style.left, layer().style.top]).toEqual(['500px', '88px']);
+  });
+
   it('hides on scroll', () => {
     const view = renderHinted();
     fireEvent.pointerOver(view.launcher);

@@ -1,6 +1,6 @@
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
 import { hintProps } from '@planner/ui/controls/hint';
-import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
 /** One neutral dialog launcher: a one-line label, its full summary on hover and as description. */
@@ -22,7 +22,7 @@ export function LauncherButton({
       {...(contextReached
         ? hintProps(launcher.detail, findings)
         : hintProps(
-            candidateWaitingTitle,
+            candidateWaitingHint,
             findings === undefined ? launcher.detail : `${launcher.detail} ${findings}`,
           ))}
       className="dialog-launcher trait-offer-launcher quiet-action action-compact"

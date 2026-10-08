@@ -56,6 +56,7 @@ import {
   occurrenceById,
   openRoomTab,
 } from '@planner-test/support/occurrence-workbench';
+import { hintOf } from '@planner-test/support/hints';
 
 let immutableRepresentativeNOPQProject: ProjectDocument;
 
@@ -815,7 +816,7 @@ describe('OccurrenceWorkbench', () => {
     fireEvent.pointerDown(remove);
     await waitFor(() => expect(remove.disabled).toBe(true));
     expect(remove.getAttribute('aria-description')).toContain('Reward unavailable from pool');
-    expect(remove.title).toContain('Reward unavailable from pool');
+    expect(hintOf(remove)).toContain('Reward unavailable from pool');
     expect(screen.queryByText(/Reward unavailable from pool/)).toBeNull();
     const visited = screen.getByRole('list', { name: 'Visited side rooms' });
     const rows = [...visited.querySelectorAll('li')];
@@ -911,9 +912,9 @@ describe('OccurrenceWorkbench', () => {
     const control = screen.getByRole('group', { name: 'Side Room 02 generation control' });
     const before = view.application.store.getState().projectWorkspace.history!.present;
     expect((checkbox as HTMLInputElement).disabled).toBe(true);
-    expect(checkbox.getAttribute('title')).toBe('Uncheck Visited first.');
+    expect(hintOf(checkbox)).toBe('Uncheck Visited first.');
     expect(checkbox.getAttribute('aria-description')).toBe('Uncheck Visited first.');
-    expect(checkbox.closest('label')?.getAttribute('title')).toBe('Uncheck Visited first.');
+    expect(hintOf(checkbox.closest('label'))).toBe('Uncheck Visited first.');
     expect(screen.queryByRole('tooltip')).toBeNull();
     await view.user.hover(control);
     expect(screen.queryByRole('tooltip')).toBeNull();
@@ -923,7 +924,7 @@ describe('OccurrenceWorkbench', () => {
     const repairedCheckbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
     const repairedControl = screen.getByRole('group', { name: 'Side Room 02 generation control' });
     expect((repairedCheckbox as HTMLInputElement).disabled).toBe(false);
-    expect(repairedCheckbox.getAttribute('title')).toBeNull();
+    expect(hintOf(repairedCheckbox)).toBeNull();
     expect(repairedCheckbox.getAttribute('aria-description')).toBeNull();
     expect(repairedControl.getAttribute('tabindex')).toBeNull();
     expect(repairedControl.getAttribute('aria-describedby')).toBeNull();

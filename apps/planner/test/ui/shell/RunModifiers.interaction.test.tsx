@@ -20,6 +20,7 @@ import {
   createOpenTestApplication,
   renderPlannerForInteraction,
 } from '@planner-test/fixtures/renderPlanner';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 const gold = () => screen.getByRole('slider', { name: 'Enemy gold chance' }) as HTMLInputElement;
@@ -54,9 +55,7 @@ describe('Run modifier authoring', () => {
     );
     const declaration = runModifierDeclaration('enemyGoldDropChanceMultiplier');
     expect(gold().getAttribute('aria-description')).toBe(declaration.description);
-    expect(gold().closest('.route-run-modifier-number')?.getAttribute('title')).toBe(
-      declaration.description,
-    );
+    expect(hintOf(gold().closest('.route-run-modifier-number'))).toBe(declaration.description);
     expect(screen.getByText('1× (Vanilla)')).toBeTruthy();
   });
 
@@ -106,9 +105,7 @@ describe('Run modifier authoring', () => {
     fireEvent.blur(gold());
     expect(gold().getAttribute('aria-invalid')).toBe('true');
     expect(gold().getAttribute('aria-description')).toBe('Enter a value from 1 to 5.');
-    expect(gold().closest('.route-run-modifier-number')?.getAttribute('title')).toBe(
-      'Enter a value from 1 to 5.',
-    );
+    expect(hintOf(gold().closest('.route-run-modifier-number'))).toBe('Enter a value from 1 to 5.');
     // The rejection adds no page text: only the label and the output remain.
     expect(document.body.textContent).toBe('Enemy gold chance2×');
     expect(screen.queryByRole('alert')).toBeNull();
