@@ -168,7 +168,7 @@ export function RewardValueEditor({
         open={active !== undefined}
         placeholder={summary}
         triggerLabel={triggerLabel}
-        {...(realizedLabel === undefined ? {} : { triggerTitle: 'Vow of Forfeit' })}
+        {...(realizedLabel === undefined ? {} : { triggerHint: 'Vow of Forfeit' })}
       />
     </div>
   );

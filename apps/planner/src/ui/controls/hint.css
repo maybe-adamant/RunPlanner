@@ -1,0 +1,38 @@
+/* The layer positions in screen pixels like Radix wrappers; only the card scales with the app. */
+.hint-layer {
+  position: fixed;
+  inset: auto;
+  top: 0;
+  left: 0;
+  z-index: 200;
+  width: max-content;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  color: inherit;
+  background: transparent;
+  pointer-events: none;
+  zoom: calc(1 / var(--app-scale, 1));
+}
+
+.hint-layer[hidden] {
+  display: none;
+}
+
+.hint-card {
+  display: block;
+  zoom: var(--app-scale, 1);
+  max-width: min(24rem, calc(100 * var(--app-vw) - 28px));
+  padding: 8px 10px;
+  border: 1px solid var(--selection-accent);
+  border-radius: 8px;
+  color: #f3ede4;
+  background: #23232a;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

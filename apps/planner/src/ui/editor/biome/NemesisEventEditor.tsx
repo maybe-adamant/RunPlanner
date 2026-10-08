@@ -97,7 +97,7 @@ export function NemesisInteractionEditor({
     executeIntent(interaction.detailIntentFor({ ...next, reward }));
   const fixedResultLabel = interaction.fixedResultLabel;
   const picker = candidates.result?.rewardPicker ?? emptyPicker;
-  const waiting = interaction.contextReached ? {} : { disabledTitle: 'Waits on an earlier choice' };
+  const waiting = interaction.contextReached ? {} : { disabledHint: 'Waits on an earlier choice' };
   const traitPicker = candidates.result?.traitPicker ?? emptyPicker;
   return (
     <div className="nemesis-interaction-controls">

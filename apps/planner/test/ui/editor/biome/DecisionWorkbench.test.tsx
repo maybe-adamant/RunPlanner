@@ -86,6 +86,8 @@ import {
   workspaceBiome,
 } from '@planner-test/support/biome-workbench';
 
+import { getByHint, getAllByHint } from '@planner-test/support/hints';
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -1272,14 +1274,14 @@ describe('DecisionWorkbench', () => {
       decisionContainingOccurrence(goldenFOccurrenceId(2, 1)),
     );
 
-    const trigger = screen.getByTitle('Vow of Forfeit');
+    const trigger = getByHint(document.body, 'Vow of Forfeit');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     const rewards = trigger.closest<HTMLElement>('[aria-label$=" door rewards"]');
     if (rewards === null) throw new Error('Forfeited door reward surface is missing');
     expect(within(rewards).getByRole('button', { name: 'Reward' })).toBe(trigger);
     expect(trigger.textContent).toMatch(/Zeus.*\(Red Onion\)/);
     expect(screen.queryByText(/^Forfeit →/)).toBeNull();
-    expect(screen.getAllByTitle('Vow of Forfeit')).toHaveLength(1);
+    expect(getAllByHint(document.body, 'Vow of Forfeit')).toHaveLength(1);
   });
 
   it('marks the entry-fixed Vow of Forfeit on the forfeited Fields cage reward', () => {
@@ -1299,11 +1301,11 @@ describe('DecisionWorkbench', () => {
 
     const combat09 = screen.getByRole('article', { name: 'Combat 09 room offer' });
     const offers = within(combat09).getByLabelText('Combat 09 door rewards');
-    const trigger = within(offers).getByTitle('Vow of Forfeit');
+    const trigger = getByHint(offers, 'Vow of Forfeit');
     expect(within(offers).getByRole('button', { name: 'Cage 1' })).toBe(trigger);
     expect(trigger.textContent).toMatch(/Hermes.*\(Red Onion\)/);
     expect(within(offers).queryByText(/^Forfeit →/)).toBeNull();
-    expect(within(offers).getAllByTitle('Vow of Forfeit')).toHaveLength(1);
+    expect(getAllByHint(offers, 'Vow of Forfeit')).toHaveLength(1);
   });
 
   it('authors prepared Fields cage identities on their exact outgoing door cards', () => {

@@ -37,7 +37,7 @@ export function FieldsCageOrderControl({
         closeOnSelect={false}
         disabled={interaction.fieldsCageOrderIntentFor === undefined}
         {...(control.unavailableReason !== undefined
-          ? { disabledTitle: control.unavailableReason }
+          ? { disabledHint: control.unavailableReason }
           : {})}
         id={id}
         label="Combat Order"

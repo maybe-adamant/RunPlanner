@@ -64,6 +64,7 @@ import {
   createReachableNaturalChaosProject,
   reachedEchoProject,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -140,10 +141,10 @@ describe('trait offer editor entry and dialog', () => {
     };
     const frontier = launcher('fresh-0-0');
     expect(frontier.disabled).toBe(false);
-    expect(frontier.title).toBe('Apollo: no trait chosen');
+    expect(hintOf(frontier)).toBe('Apollo: no trait chosen');
     const later = launcher('fresh-3-0');
     expect(later.disabled).toBe(true);
-    expect(later.title).toBe('Waits on an earlier choice');
+    expect(hintOf(later)).toBe('Waits on an earlier choice');
     render(
       <Provider store={application.store}>
         <TraitOfferDialog interactions={workspace.interactions} target={offer('fresh-3-0')} />
@@ -191,8 +192,7 @@ describe('trait offer editor entry and dialog', () => {
           .textContent,
       ).toBe('Concave Stone · 75%');
       // The target waits, disabled with a hover hint, until the Stone activates.
-      expect(screen.getByRole('button', { name: 'Concave Stone target' })).toHaveProperty(
-        'title',
+      expect(hintOf(screen.getByRole('button', { name: 'Concave Stone target' }))).toBe(
         'Activate the Concave Stone first',
       );
       if (kind === 'proc') await user.click(checkbox);
@@ -1157,7 +1157,7 @@ describe('trait offer editor entry and dialog', () => {
     // The finding ring is the launcher's only state mark; its summary leads the description.
     const launcher = screen.getByRole('button', { name: 'Edit Hex · Choose Hex' });
     expect(launcher.getAttribute('data-has-findings')).toBe('true');
-    expect(launcher.title).toMatch(/: no Hex chosen$/);
+    expect(hintOf(launcher)).toMatch(/: no Hex chosen$/);
     expect(launcher.getAttribute('aria-description')).toMatch(/^.+: no Hex chosen \S/);
     cleanup();
 

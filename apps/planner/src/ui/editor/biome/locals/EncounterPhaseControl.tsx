@@ -221,7 +221,7 @@ function EncounterCustomizationControl({
                       ariaLabel={decision.label}
                       placeholder="Default"
                       {...(!decision.valueSupported && value !== undefined
-                        ? { invalid: true, triggerTitle: unavailableTitle }
+                        ? { invalid: true, triggerHint: unavailableTitle }
                         : {})}
                       model={declaredChoicesPicker(
                         [
@@ -277,9 +277,9 @@ function EncounterCustomizationControl({
                       layout="inline"
                       ariaLabel={`${decision.label} use ${index + 1}`}
                       {...(use.requiresEarlierUse
-                        ? { disabledTitle: 'Choose the first summon first' }
+                        ? { disabledHint: 'Choose the first summon first' }
                         : !decision.valueSupported && selected[index] !== undefined
-                          ? { invalid: true, triggerTitle: unavailableTitle }
+                          ? { invalid: true, triggerHint: unavailableTitle }
                           : {})}
                       placeholder="Default"
                       model={declaredChoicesPicker(

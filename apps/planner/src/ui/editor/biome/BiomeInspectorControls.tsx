@@ -38,18 +38,18 @@ const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze(
 });
 
 function PostbossKeepsakeControl({
-  disabledTitle,
+  disabledHint,
   hideLabel = false,
   interaction,
 }: {
-  readonly disabledTitle?: string;
+  readonly disabledHint?: string;
   readonly hideLabel?: boolean;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
 }) {
   return (
     <div className="room-keepsake-control" data-label-hidden={hideLabel || undefined}>
       <KeepsakeSelectionPicker
-        {...(disabledTitle === undefined ? {} : { disabledTitle })}
+        {...(disabledHint === undefined ? {} : { disabledHint })}
         id={`postboss-keepsake-${interaction.key}`}
         interaction={interaction}
         label="Choose Keepsake"
@@ -80,7 +80,7 @@ function KeepsakeRackTimelineContent({
       <PostbossKeepsakeControl
         {...(interaction.unavailableReason === undefined
           ? {}
-          : { disabledTitle: 'No Keepsake Rack on this route.' })}
+          : { disabledHint: 'No Keepsake Rack on this route.' })}
         hideLabel
         interaction={interaction}
       />

@@ -21,6 +21,7 @@ import {
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -73,7 +74,7 @@ describe('native settings whose candidate context is unreached, on first render'
       ),
     );
     expect(waiting.disabled).toBe(true);
-    expect(waiting.title).toBe(waitingTitle);
+    expect(hintOf(waiting)).toBe(waitingTitle);
     expect(waiting.value).toBe(value);
   });
 

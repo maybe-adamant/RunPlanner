@@ -131,7 +131,7 @@ export function ConcaveStoneOutcomeEditor({
         layout="inline"
         {...(procced || domain.required
           ? {}
-          : { disabledTitle: 'Activate the Concave Stone first' })}
+          : { disabledHint: 'Activate the Concave Stone first' })}
         model={picker}
         onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
         placeholder="Choose an unpicked boon"

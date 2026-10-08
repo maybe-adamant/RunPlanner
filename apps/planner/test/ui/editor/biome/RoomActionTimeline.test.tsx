@@ -75,6 +75,8 @@ import {
   threeCageFieldsProject,
 } from '@planner-test/support/occurrence-workbench';
 
+import { hintOf, queryByHint } from '@planner-test/support/hints';
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -867,7 +869,7 @@ describe('OccurrenceRoomActions', () => {
       name: 'Combat Order',
     }) as HTMLButtonElement;
     expect(cageOrder.disabled).toBe(true);
-    expect(cageOrder.title).toBe('Restore missing cage actions before changing their order.');
+    expect(hintOf(cageOrder)).toBe('Restore missing cage actions before changing their order.');
     expect(cageOrder.textContent).toMatch(/^Cage \d \(.+\) \/ Cage \d \(.+\)/);
   });
 
@@ -1234,7 +1236,7 @@ describe('OccurrenceRoomActions', () => {
       true,
     );
     expect(within(row).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
-    expect(within(actions).queryByTitle('Vow of Forfeit')).toBeNull();
+    expect(queryByHint(actions, 'Vow of Forfeit')).toBeNull();
   });
 
   it('authors an Artificer replacement through its exact Room Action acquisition site', () => {

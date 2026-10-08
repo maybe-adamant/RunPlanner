@@ -47,6 +47,7 @@ import {
   renderOccurrenceWorkbench,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(() => {
   cleanup();
@@ -86,7 +87,7 @@ describe('OccurrenceRoomFeatures', () => {
     openRoomTab('Room Timeline');
     const waiting = screen.getByRole('button', { name: 'Reward' }) as HTMLButtonElement;
     expect(waiting.disabled).toBe(true);
-    expect(waiting.title).toBe('Waits on an earlier choice');
+    expect(hintOf(waiting)).toBe('Waits on an earlier choice');
   });
 
   it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {

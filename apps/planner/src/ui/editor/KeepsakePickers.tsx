@@ -53,12 +53,12 @@ function commitEquipResult(
 }
 
 export function KeepsakeSelectionPicker({
-  disabledTitle,
+  disabledHint,
   id,
   interaction,
   label,
 }: {
-  readonly disabledTitle?: string;
+  readonly disabledHint?: string;
   readonly id: string;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
   readonly label: string;
@@ -68,7 +68,7 @@ export function KeepsakeSelectionPicker({
   const projection = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker
-      {...(disabledTitle === undefined ? {} : { disabledTitle })}
+      {...(disabledHint === undefined ? {} : { disabledHint })}
       findingTarget={findingTarget(interaction.owner, id)}
       id={id}
       label={label}

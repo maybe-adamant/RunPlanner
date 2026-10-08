@@ -1,0 +1,132 @@
+// @vitest-environment jsdom
+
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { hintProps } from '@planner/ui/controls/hint';
+import { HintLayer } from '@planner/ui/controls/HintLayer';
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+function renderHinted() {
+  render(
+    <>
+      <button
+        className="quiet-action"
+        disabled
+        type="button"
+        {...hintProps('Waits on an earlier choice')}
+      >
+        Choose boon
+      </button>
+      <button className="quiet-action" type="button" {...hintProps('Full summary', 'Finding')}>
+        Edit Hex
+      </button>
+      <button className="quiet-action" type="button">
+        Plain
+      </button>
+      <HintLayer />
+    </>,
+  );
+  return {
+    disabled: screen.getByRole('button', { name: 'Choose boon' }),
+    launcher: screen.getByRole('button', { name: 'Edit Hex' }),
+    plain: screen.getByRole('button', { name: 'Plain' }),
+    // The test DOM has no popover top layer; the layer's hidden attribute carries visibility.
+    tooltip: () => document.querySelector('[role="tooltip"]:not([hidden])'),
+  };
+}
+
+function elapse(ms: number): void {
+  act(() => {
+    vi.advanceTimersByTime(ms);
+  });
+}
+
+describe('hintProps', () => {
+  it('leads the accessible description with the hint and omits empty hints', () => {
+    expect(hintProps('Full summary', 'Finding')).toEqual({
+      'data-hint': 'Full summary',
+      'aria-description': 'Full summary Finding',
+    });
+    expect(hintProps('Same', 'Same')).toEqual({
+      'data-hint': 'Same',
+      'aria-description': 'Same',
+    });
+    expect(hintProps(undefined, 'Finding')).toEqual({ 'aria-description': 'Finding' });
+    expect(hintProps(undefined)).toEqual({});
+  });
+});
+
+describe('HintLayer', () => {
+  it('shows a hovered hint after a delay, including over a disabled control, and hides on leave', () => {
+    const view = renderHinted();
+    fireEvent.pointerOver(view.disabled);
+    expect(view.tooltip()).toBeNull();
+    elapse(500);
+    expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice');
+
+    fireEvent.pointerOut(view.disabled, { relatedTarget: view.plain });
+    expect(view.tooltip()).toBeNull();
+  });
+
+  it('switches directly between hints while one is visible', () => {
+    const view = renderHinted();
+    fireEvent.pointerOver(view.disabled);
+    elapse(500);
+    fireEvent.pointerOut(view.disabled, { relatedTarget: view.launcher });
+    fireEvent.pointerOver(view.launcher);
+    expect(view.tooltip()?.textContent).toBe('Full summary');
+  });
+
+  it('shows on keyboard focus and hides on Escape and blur', () => {
+    const view = renderHinted();
+    act(() => view.launcher.focus());
+    elapse(500);
+    expect(view.tooltip()?.textContent).toBe('Full summary');
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(view.tooltip()).toBeNull();
+
+    act(() => view.plain.focus());
+    act(() => view.launcher.focus());
+    elapse(500);
+    expect(view.tooltip()).not.toBeNull();
+    act(() => view.plain.focus());
+    expect(view.tooltip()).toBeNull();
+  });
+
+  it('shows nothing while a pointer is pressed, as during a drag', () => {
+    const view = renderHinted();
+    fireEvent.pointerOver(view.launcher);
+    elapse(200);
+    fireEvent.pointerDown(view.plain);
+    elapse(500);
+    expect(view.tooltip()).toBeNull();
+
+    fireEvent.pointerOver(view.disabled, { buttons: 1 });
+    act(() => view.launcher.focus());
+    elapse(500);
+    expect(view.tooltip()).toBeNull();
+
+    fireEvent.pointerUp(view.plain);
+    fireEvent.pointerOver(view.disabled);
+    elapse(500);
+    expect(view.tooltip()?.textContent).toBe('Waits on an earlier choice');
+  });
+
+  it('hides on scroll', () => {
+    const view = renderHinted();
+    fireEvent.pointerOver(view.launcher);
+    elapse(500);
+    expect(view.tooltip()).not.toBeNull();
+    fireEvent.scroll(window);
+    expect(view.tooltip()).toBeNull();
+  });
+});

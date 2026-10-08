@@ -2,6 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { hintProps } from './hint';
 
 import type {
   ContextualPickerItem,
@@ -18,8 +19,8 @@ interface ContextualPickerProps<T> {
   readonly choiceLabel?: string;
   readonly closeOnSelect?: boolean;
   readonly disabled?: boolean;
-  /** Disables the picker with this title while still showing its current value. */
-  readonly disabledTitle?: string;
+  /** Disables the picker with this hint while still showing its current value. */
+  readonly disabledHint?: string;
   readonly id: string;
   readonly label: string;
   readonly layout?: 'inline' | 'stacked';
@@ -32,7 +33,7 @@ interface ContextualPickerProps<T> {
   readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
   /** Hover explanation for the current value of an enabled trigger. */
-  readonly triggerTitle?: string;
+  readonly triggerHint?: string;
   /** Marks a retained value the current context cannot produce. */
   readonly invalid?: boolean;
   /** Marks a local customization issue this picker repairs. */
@@ -185,7 +186,7 @@ export function ContextualPicker<T>({
   choiceLabel,
   closeOnSelect = true,
   disabled = false,
-  disabledTitle,
+  disabledHint,
   id,
   label,
   layout = 'stacked',
@@ -197,7 +198,7 @@ export function ContextualPicker<T>({
   placeholder,
   side = 'bottom',
   triggerLabel,
-  triggerTitle,
+  triggerHint,
   invalid = false,
   hasIssues,
   findingMark,
@@ -212,7 +213,7 @@ export function ContextualPicker<T>({
   const selected = model.selected;
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
-  const interactionDisabled = disabled || disabledTitle !== undefined || authoringLocked;
+  const interactionDisabled = disabled || disabledHint !== undefined || authoringLocked;
 
   function updateOpen(nextOpen: boolean): void {
     if (nextOpen && interactionDisabled) return;
@@ -249,18 +250,14 @@ export function ContextualPicker<T>({
             data-candidate-state={selected?.state ?? 'unspecified'}
             data-has-issues={hasIssues || undefined}
             disabled={interactionDisabled}
-            {...(disabledTitle !== undefined
-              ? { title: disabledTitle }
-              : triggerTitle === undefined
-                ? {}
-                : { title: triggerTitle })}
             {...findingTarget}
             {...(findingMark === undefined || !findingMark['data-has-findings'] ? {} : findingMark)}
-            aria-description={
+            {...hintProps(
+              disabledHint ?? triggerHint,
               findingMark?.['aria-description'] ??
-              findingTarget?.['aria-description'] ??
-              selected?.explanation
-            }
+                findingTarget?.['aria-description'] ??
+                selected?.explanation,
+            )}
             id={id}
             ref={(node) => {
               captureTrigger(node);

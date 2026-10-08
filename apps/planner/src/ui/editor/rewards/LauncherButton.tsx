@@ -1,4 +1,5 @@
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
+import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingTitle } from '@planner/ui/feedback/candidatePresentation';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 
@@ -18,11 +19,15 @@ export function LauncherButton({
   return (
     <button
       {...target}
-      aria-description={findings === undefined ? launcher.detail : `${launcher.detail} ${findings}`}
+      {...(contextReached
+        ? hintProps(launcher.detail, findings)
+        : hintProps(
+            candidateWaitingTitle,
+            findings === undefined ? launcher.detail : `${launcher.detail} ${findings}`,
+          ))}
       className="dialog-launcher trait-offer-launcher quiet-action action-compact"
       disabled={!contextReached || undefined}
       onClick={onClick}
-      title={contextReached ? launcher.detail : candidateWaitingTitle}
       type="button"
     >
       <span>{launcher.label}</span>

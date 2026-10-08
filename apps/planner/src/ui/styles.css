@@ -2,6 +2,7 @@
 @import './styles/project-route-shell.css';
 @import './controls/arcana-fear/arcana-fear.css';
 @import './controls/editor-dialog.css';
+@import './controls/hint.css';
 @import './styles/trait-feedback.css';
 @import './styles/biome-layout.css';
 @import './styles/editor-structure.css';
