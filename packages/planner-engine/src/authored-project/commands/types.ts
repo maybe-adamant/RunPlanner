@@ -650,6 +650,13 @@ export type AnvilResultCommand = {
   readonly value: import('../model').AuthoredAnvilResult | null;
 };
 
+/** The nodes one reached Path of Stars screen invests, on the role that opens it. */
+export type HexActivationCommand = {
+  readonly kind: 'ReplaceHexActivation';
+  readonly acquisition: AcquisitionRoleAddress;
+  readonly value: import('../model').AuthoredHexActivation;
+};
+
 /** One first Echo outcome edit, atomically replacing a missing or stale replay payload. */
 export type EditEchoReplayCommand = {
   readonly kind: 'EditEchoReplay';
@@ -700,6 +707,7 @@ export type ProjectCommand =
   | AcquisitionDispositionCommand
   | SeaStarResultCommand
   | AnvilResultCommand
+  | HexActivationCommand
   | EditEchoReplayCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<

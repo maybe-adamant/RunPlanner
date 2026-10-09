@@ -233,6 +233,9 @@ export function generateIncomingReward(
         ...(state.levelResolutionsByAcquisitionRole === undefined
           ? {}
           : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
+        ...(state.hexActivationsByAcquisitionRole === undefined
+          ? {}
+          : { hexActivationsByAcquisitionRole: state.hexActivationsByAcquisitionRole }),
         dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
         traitContext: Object.freeze({
           blockGiftBoons: context.declaration.blockGiftBoons,

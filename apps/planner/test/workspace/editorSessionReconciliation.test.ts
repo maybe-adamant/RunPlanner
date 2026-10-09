@@ -60,6 +60,7 @@ function destinations(
 
 function session(options: {
   readonly anvilDialogTarget?: EditorSessionState['anvilDialogTarget'];
+  readonly hexActivationDialogTarget?: EditorSessionState['hexActivationDialogTarget'];
   readonly arcanaActivationDialogTarget?: EditorSessionState['arcanaActivationDialogTarget'];
   readonly circeDialogTarget?: EditorSessionState['circeDialogTarget'];
   readonly traitDialogTarget?: EditorSessionState['traitDialogTarget'];
@@ -83,6 +84,9 @@ function session(options: {
     ...(options.anvilDialogTarget === undefined
       ? {}
       : { anvilDialogTarget: options.anvilDialogTarget }),
+    ...(options.hexActivationDialogTarget === undefined
+      ? {}
+      : { hexActivationDialogTarget: options.hexActivationDialogTarget }),
     ...(options.arcanaActivationDialogTarget === undefined
       ? {}
       : { arcanaActivationDialogTarget: options.arcanaActivationDialogTarget }),
@@ -114,18 +118,26 @@ describe('editor-session reconciliation', () => {
     });
   });
 
-  it('clears Anvil and Arcana activation targets only when their exact owners disappear', () => {
+  it('clears Anvil, Path of Stars and Arcana activation targets only when their exact owners disappear', () => {
     const reward = createIncomingRewardAddress(owner, createOccurrenceId('draft-owner'));
     const anvil = createAcquisitionRoleAddress(reward, 'self');
+    const path = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(owner, createOccurrenceId('path-owner')),
+      'self',
+    );
     const figurine = createFigurineArcanaAddress(
       createOccurrenceAddress(owner, createOccurrenceId('draft-owner:boss')),
       'Encounter',
     );
-    const open = session({ anvilDialogTarget: anvil, arcanaActivationDialogTarget: figurine });
+    const open = session({
+      anvilDialogTarget: anvil,
+      hexActivationDialogTarget: path,
+      arcanaActivationDialogTarget: figurine,
+    });
     expect(
       deriveEditorSessionReconciliation({
         issue: undefined,
-        focusByOwner: destinations(anvil, figurine),
+        focusByOwner: destinations(anvil, path, figurine),
         session: open,
       }),
     ).toBeNull();
@@ -137,6 +149,7 @@ describe('editor-session reconciliation', () => {
       }),
     ).toEqual({
       clearAnvilDialogTarget: true,
+      clearHexActivationDialogTarget: true,
       clearArcanaActivationDialogTarget: true,
       clearFocusedSemanticOwner: false,
       clearSelectedFinding: false,

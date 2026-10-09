@@ -415,7 +415,8 @@
               "talentKeys": [],
               "closed": false,
               "bankedPathPoints": 0,
-              "investedPathPoints": 0
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
             },
             "artificer": null,
             "retainedEffects": {
@@ -2181,7 +2182,8 @@
               "talentKeys": ["LaserApolloTalent", "OlympianSpellCountTalent"],
               "closed": false,
               "bankedPathPoints": 0,
-              "investedPathPoints": 0
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
             }
           }
         }
@@ -2522,5 +2524,5 @@
       }
     }
   ],
-  "planFingerprint": "c04521e8"
+  "planFingerprint": "124c6e14"
 }

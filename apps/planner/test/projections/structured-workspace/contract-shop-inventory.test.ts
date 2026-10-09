@@ -3,6 +3,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createExitSelectionAddress,
@@ -269,13 +270,22 @@ it.each([
       offer: inventory,
       purchased: true,
     });
+    // The reached Path screen spends its points on the Lung tree's opening nodes.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHexActivation',
+      acquisition: createAcquisitionRoleAddress(inventory, 'self'),
+      value: { selectedNodeKeys: ['1:2', '1:4', '2:2', '2:4', '3:1'].slice(0, points) },
+    });
     const acquired = projectStructuredWorkspaceFixture(project);
     expect(acquired.evaluation.route.findings).toEqual([]);
     const biome = acquired.evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'G');
     if (biome === undefined || !('rewards' in biome)) throw new Error('G was not evaluated');
-    expect(biome.rewards.branches.map((branch) => branch.state.hexProgress)).toEqual([
-      expect.objectContaining({ bankedPathPoints: 0, investedPathPoints: points }),
-    ]);
+    expect(
+      biome.rewards.branches.map((branch) => [
+        branch.state.hexProgress.bankedPathPoints,
+        branch.state.hexProgress.investedNodeKeys.length,
+      ]),
+    ).toEqual([[0, points]]);
     const product = assembleExecutionProduct({ assembly: acquired.assembly, catalog });
     const room = product.occurrences.find((room) => room.id === preboss)!;
     expect(room.diagnostics?.beforeRoomExit?.hexProgress).toEqual({

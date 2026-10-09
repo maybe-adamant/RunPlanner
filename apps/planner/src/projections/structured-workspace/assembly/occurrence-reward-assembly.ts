@@ -304,6 +304,7 @@ function conversionControls(
         );
       }
       const anvilResult = reward.anvilResultsByAcquisitionRole?.[role.key];
+      const hexActivation = reward.hexActivationsByAcquisitionRole?.[role.key];
       return Object.freeze({
         acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role.key),
         address,
@@ -316,6 +317,7 @@ function conversionControls(
               anvilResult,
               anvilApplies: input.acquisitionConversionCandidate?.(address)?.anvil !== undefined,
             }),
+        ...(hexActivation === undefined ? {} : { hexActivation }),
       });
     }),
   );

@@ -34,6 +34,7 @@ import {
   type StygianWellLegalityState,
 } from '../commerce/stygian-well';
 import { deriveMaxStats, type MaxStats } from '../max-stats';
+import { hexOlympianTalentInvested } from '../hex-progress';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -153,6 +154,8 @@ export interface RunStateSnapshot {
     readonly closed: boolean;
     readonly bankedPathPoints: number;
     readonly investedPathPoints: number;
+    /** Task Force's prerequisite: the God Sent Olympian talent is invested. */
+    readonly olympianTalentInvested: boolean;
   };
   /** Normalized Artificer counters, derived where the catalog is available. */
   readonly artificer?: {
@@ -821,7 +824,8 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
       ]),
       closed: first.hexProgress.talentDropsClosed === true,
       bankedPathPoints: first.hexProgress.bankedPathPoints,
-      investedPathPoints: first.hexProgress.investedPathPoints,
+      investedPathPoints: first.hexProgress.investedNodeKeys.length,
+      olympianTalentInvested: hexOlympianTalentInvested(context.catalog, first.hexProgress),
     }),
     ...(currentArtificerStatus === undefined
       ? {}

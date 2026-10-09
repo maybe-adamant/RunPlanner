@@ -80,7 +80,8 @@ import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
 import { applyRoomEnteredTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/room-entered';
 import { reachSimulationHistory } from '../../src/simulation/state/transitions';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
-import { installHexTree, settlePathScreen } from '../../src/simulation/hex-progress';
+import { installHexTree } from '../../src/simulation/hex-progress';
+import { settleShallowestPathScreen } from './support/hex-progress-checkpoints';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import {
   createTestArcanaFearState,
@@ -1789,11 +1790,9 @@ describe('Hermes Shrine pickup settlement', () => {
       'SpellPolymorphTrait',
       createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait', 'Lung'),
     );
-    for (let index = 0; index < 6; index += 1) closed = settlePathScreen(catalog, closed, 3);
-    expect(closed.state.hexProgress).toMatchObject({
-      investedPathPoints: 18,
-      talentDropsClosed: true,
-    });
+    for (let index = 0; index < 6; index += 1) closed = settleShallowestPathScreen(closed, 3);
+    expect(closed.state.hexProgress.investedNodeKeys).toHaveLength(18);
+    expect(closed.state.hexProgress.talentDropsClosed).toBe(true);
 
     const delivery = settleOwnedAcquisitionSite(
       catalog,
@@ -1809,15 +1808,16 @@ describe('Hermes Shrine pickup settlement', () => {
           producerLifecycleKey: 'HermesShrineDelivery',
           instanceProvenance: 'free',
           presentsMaterializedScreen: false,
+          hexActivationsByAcquisitionRole: { self: { selectedNodeKeys: [] } },
         },
       },
       (state) => rewardFacts(state.rewardHistory),
     );
     expect(delivery.branches[0]?.state.hexProgress).toMatchObject({
-      investedPathPoints: 18,
       bankedPathPoints: 2,
       talentDropsClosed: true,
     });
+    expect(delivery.branches[0]?.state.hexProgress.investedNodeKeys).toHaveLength(18);
   });
 
   it('settles a rushed forced P Postboss Shrine pickup at the configured route tail', () => {

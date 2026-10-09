@@ -36,6 +36,7 @@ import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-fi
 import {
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
+  loadSurfaceSeleneHexPathCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNProject,
@@ -74,6 +75,7 @@ import surfaceNOFixture from '../fixtures/surface-no.execution.json';
 import surfaceNOPFixture from '../fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from '../fixtures/surface-nopq.execution.json';
 import surfaceQShopCorrelationFixture from '../fixtures/surface-q-shop-correlation.execution.json';
+import surfaceSeleneHexPathFixture from '../fixtures/surface-selene-hex-path.execution.json';
 import surfaceScheduledLifecycleFixture from '../fixtures/surface-scheduled-lifecycle.execution.json';
 import surfaceShrineDeliveriesFixture from '../fixtures/surface-shrine-deliveries.execution.json';
 import surfaceShrineRushedUnrankedFixture from '../fixtures/surface-shrine-rushed-unranked.execution.json';
@@ -246,6 +248,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'dream-o-skipped-ship',
     project: dreamOSkippedShipProject,
     wire: dreamOSkippedShipFixture,
+  },
+  {
+    name: 'surface-selene-hex-path',
+    project: loadSurfaceSeleneHexPathCheckpoint,
+    wire: surfaceSeleneHexPathFixture,
   },
 ]);
 

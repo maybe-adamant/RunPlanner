@@ -134,7 +134,7 @@ describe('Time Piece conversions', () => {
     );
     expect(result.branches[0]?.state.hexProgress).toEqual({
       bankedPathPoints: 0,
-      investedPathPoints: 0,
+      investedNodeKeys: [],
     });
     expect(result.branches[0]?.state.rewardHistory.useRecord.SpellDrop).toBeUndefined();
   });

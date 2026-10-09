@@ -378,7 +378,7 @@ export function presentRunState(
             ? 'Ineligible — tree full'
             : 'Eligible',
       bankedPathPoints: snapshot.hexProgress.bankedPathPoints,
-      investedPathPoints: snapshot.hexProgress.investedPathPoints,
+      investedPathPoints: snapshot.hexProgress.investedNodeKeys.length,
     }),
     keepsakes: Object.freeze({
       currentLabel:

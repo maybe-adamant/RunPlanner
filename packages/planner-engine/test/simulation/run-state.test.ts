@@ -451,7 +451,7 @@ describe('decision run-state snapshots', () => {
                 ...base.state,
                 hexProgress: Object.freeze({
                   bankedPathPoints,
-                  investedPathPoints: 0,
+                  investedNodeKeys: [],
                   ...(talentDropsClosed ? { talentDropsClosed: true as const } : {}),
                 }),
               }),
@@ -476,8 +476,8 @@ describe('decision run-state snapshots', () => {
         derivationCache: sharedCache,
         factsContextToken: token,
       });
-    expect(snapshot(2)?.hexProgress).toEqual({ bankedPathPoints: 2, investedPathPoints: 0 });
-    expect(snapshot(5)?.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+    expect(snapshot(2)?.hexProgress).toEqual({ bankedPathPoints: 2, investedNodeKeys: [] });
+    expect(snapshot(5)?.hexProgress).toEqual({ bankedPathPoints: 5, investedNodeKeys: [] });
     const pathEligibility = (closed: boolean) =>
       snapshot(5, closed)
         ?.bags.flatMap((bag) => bag.entries)

@@ -18,7 +18,7 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
   arcanaFearWithActive,
   traitFrontierState,
-  withSettledSpellDrop,
+  withInvestedHexOlympianTalent,
   openTimeTraitOfferContext,
 } from '../support/simulation-state';
 
@@ -170,7 +170,7 @@ describe('trait offer context deduplication', () => {
     // substate must survive a serialization round trip unchanged, so an
     // unfaithful member added to the identity fails here instead of silently
     // merging or splitting candidate contexts.
-    const state = withSettledSpellDrop(
+    const state = withInvestedHexOlympianTalent(
       traitFrontierState(undefined, {
         startingKeepsakeKey: 'LowHealthCritKeepsake',
         arcanaFear: arcanaFearWithActive(['ChanceRerollArcana']),

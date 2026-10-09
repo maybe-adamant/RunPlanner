@@ -1,5 +1,15 @@
 # Project schema boundary
 
+Schema 95 adds `hexActivationsByAcquisitionRole` to a reward: the nodes each
+reached Path of Stars screen invests.
+
+```bash
+npm run schema:migrate-94-to-95 -- path/to/schema-94-project.runplanner.json
+```
+
+The migration changes only the version and leaves every screen unresolved; each
+reached screen then reports its missing selection until its nodes are chosen.
+
 Schema 94 stores each Hex tree (a Spell Drop offer's `hexTree` and the Aspect of
 Selene `loadout.aspectHexTree`) as `{ layoutKey, nodes }`, the talent on every
 non-Olympian node, instead of Rare and Epic identity sets.

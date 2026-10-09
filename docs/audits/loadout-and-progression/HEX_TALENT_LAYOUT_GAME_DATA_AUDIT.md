@@ -396,16 +396,14 @@ equipped. Exact acquisition timing depends on the investment path, so neither
 generated pair presence nor aggregate invested points proves that predicate at
 the relevant Athena offer.
 
-The Planner enforces a necessary modeled prefix: at least one concrete
-`SpellDrop` acquisition must have settled in the current run. An ordinary Spell Drop both installs the base Hex
-and satisfies this prefix. Aspect of Selene's built-in Sky Fall does not
-qualify by itself; the Aspect's later concrete Spell Drop does. This still does
-not prove acquisition of the required Olympian node. The authored Task Force
-selection expresses that deeper intent and remains the exact result sent to
-execution. Live native ineligibility follows the
+The Planner models the predicate exactly: Task Force is eligible once the
+God Sent Olympian node is among the invested nodes the authored Path screens
+select, so the pair must have been inserted and that node invested before the
+Athena offer. A settled Spell Drop or Aspect of Selene's built-in Sky Fall does
+not qualify by itself. Live native ineligibility follows the
 [Volatile Offer Eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md).
-No generated Path talent needs to enter the simulated equipped-trait ledger
-merely to support Task Force.
+No Path talent needs to enter the simulated equipped-trait ledger to support
+Task Force.
 
 ## Full-tree closure, inspection, and committed delivery
 
@@ -455,13 +453,15 @@ Olympian-pair fact adds exactly two capacity. The prior-`TalentDrop` layout
 requirement is a profile predicate and stays out of catalog data under the
 fully progressed baseline.
 
-Each node's Hex talent is an authored execution fact. The Planner
-does not simulate their individual acquisition, equip them into trait history,
-or derive its Olympian-node eligibility from them. Task Force requires an
-earlier concrete Spell Drop to have settled and treats the authored deeper
-node requirement as player intent. If native eligibility rejects that exact
-result, execution reports a mismatch rather than substituting another trait.
-Aspect of Selene's starting Sky Fall alone does not satisfy that prefix.
+Each node's Hex talent is an authored execution fact, and each writable Path
+screen authors the nodes it invests. Settlement accumulates the invested nodes
+across screens, derives the invested point count and each talent's level
+(its invested node count) from them, and does not equip them into trait
+history. Task Force requires the invested God Sent Olympian node. The module
+marks planned nodes on the native screen but does not enforce them; conformance
+checks only the invested point count and the invested Olympian fact. If native
+eligibility rejects an authored result, execution reports a mismatch rather
+than substituting another trait.
 
 Talent Drop eligibility uses a latched closed state:
 

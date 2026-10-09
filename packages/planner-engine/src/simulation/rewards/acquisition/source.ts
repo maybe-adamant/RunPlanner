@@ -32,6 +32,8 @@ export interface AcquisitionSource {
   readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
   readonly anvilResultsByAcquisitionRole?:
     import('../../../authored-project/model').AnvilResultsByAcquisitionRole | undefined;
+  readonly hexActivationsByAcquisitionRole?:
+    import('../../../authored-project/model').HexActivationsByAcquisitionRole | undefined;
   readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
   /** Exact source-produced payload stored at the occurrence acquisition site. */
   readonly artificerReplacementByAcquisitionRole?: Readonly<

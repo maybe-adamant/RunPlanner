@@ -4,8 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   availableHexNodes,
-  completeHexActivation,
-  hexActivationPinDomain,
+  createHexActivationCandidateCapability,
   validateHexActivation,
   type HexActivationContext,
 } from '../../src/simulation/hex-activation';
@@ -14,9 +13,18 @@ function context(
   layoutKey: HexLayoutKey,
   investedNodeKeys: readonly string[] = [],
   godSentAdded = false,
+  count = 1,
 ): HexActivationContext {
   const layout = catalog.hexes.byKey.SpellPolymorphTrait!.layouts.byKey[layoutKey]!;
-  return { layout, godSentAdded, investedNodeKeys };
+  const tree = { layoutKey, nodes: {} };
+  return {
+    spellTraitKey: 'SpellPolymorphTrait',
+    tree,
+    layout,
+    godSentAdded,
+    investedNodeKeys,
+    count,
+  };
 }
 
 describe('Hex node availability', () => {
@@ -33,8 +41,8 @@ describe('Hex node availability', () => {
   it('opens a bidirectional Nacelle node from an invested next-depth neighbour', () => {
     const invested = context('Nacelle', ['1:2', '2:2', '3:3']);
     expect(availableHexNodes(invested, [])).toContain('2:4');
-    expect(validateHexActivation(invested, ['2:4'], 1)).toEqual([]);
-    expect(validateHexActivation(context('Nacelle'), ['2:4'], 1)).toEqual([
+    expect(validateHexActivation({ ...invested, count: 1 }, ['2:4'])).toEqual([]);
+    expect(validateHexActivation({ ...context('Nacelle'), count: 1 }, ['2:4'])).toEqual([
       { kind: 'unreachable', nodeKey: '2:4' },
     ]);
   });
@@ -43,26 +51,36 @@ describe('Hex node availability', () => {
     const invested = ['1:2', '2:2', '3:2', '4:3'];
     expect(availableHexNodes(context('Lung', invested), [])).not.toContain('5:3');
     expect(availableHexNodes(context('Lung', invested, true), [])).toContain('5:3');
-    expect(validateHexActivation(context('Lung', invested), ['5:3'], 1)).toEqual([
+    expect(validateHexActivation({ ...context('Lung', invested), count: 1 }, ['5:3'])).toEqual([
       { kind: 'absentNode', nodeKey: '5:3' },
     ]);
-    expect(validateHexActivation(context('Lung', invested, true), ['5:3', '6:1'], 2)).toEqual([]);
+    expect(
+      validateHexActivation({ ...context('Lung', invested, true), count: 2 }, ['5:3', '6:1']),
+    ).toEqual([]);
   });
 });
 
 describe('Hex activation legality', () => {
   it('accepts reachable selections in any order', () => {
-    expect(validateHexActivation(context('Lung'), ['3:1', '2:2', '1:2'], 3)).toEqual([]);
-    expect(validateHexActivation(context('Nacelle'), ['3:3', '2:4', '2:2', '1:2'], 4)).toEqual([]);
+    expect(validateHexActivation({ ...context('Lung'), count: 3 }, ['3:1', '2:2', '1:2'])).toEqual(
+      [],
+    );
+    expect(
+      validateHexActivation({ ...context('Nacelle'), count: 4 }, ['3:3', '2:4', '2:2', '1:2']),
+    ).toEqual([]);
   });
 
-  it('reports count, reach, invested and duplicate violations', () => {
+  it('reports count, reach and invested violations', () => {
     expect(
-      validateHexActivation(context('Lung', ['1:2']), ['1:2', '3:5', '1:4', '1:4', '9:9'], 3),
+      validateHexActivation({ ...context('Lung', ['1:2']), count: 3 }, [
+        '1:2',
+        '3:5',
+        '1:4',
+        '9:9',
+      ]),
     ).toEqual([
-      { kind: 'selectionCount', expected: 3, actual: 5 },
+      { kind: 'selectionCount', expected: 3, actual: 4 },
       { kind: 'alreadyInvested', nodeKey: '1:2' },
-      { kind: 'duplicateSelection', nodeKey: '1:4' },
       { kind: 'unknownNode', nodeKey: '9:9' },
       { kind: 'unreachable', nodeKey: '3:5' },
     ]);
@@ -73,130 +91,28 @@ describe('Hex activation legality', () => {
   });
 });
 
-describe('Hex activation completion', () => {
-  it('fills breadth-first by depth then slot', () => {
-    expect(completeHexActivation(context('Lung'), [], 3)).toEqual({
-      ok: true,
-      selection: ['1:2', '1:4', '2:2'],
-    });
-    expect(completeHexActivation(context('Lung', ['1:2', '1:4', '2:2']), [], 2)).toEqual({
-      ok: true,
-      selection: ['2:4', '3:1'],
-    });
-  });
-
-  it('adds the fewest connectors a deep pin needs', () => {
-    expect(completeHexActivation(context('Lung'), ['6:3'], 6)).toEqual({
-      ok: true,
-      selection: ['1:2', '2:2', '3:2', '4:3', '5:2', '6:3'],
-    });
-    expect(completeHexActivation(context('Lung'), ['6:3'], 7)).toEqual({
-      ok: true,
-      selection: ['1:2', '1:4', '2:2', '3:2', '4:3', '5:2', '6:3'],
-    });
-    expect(completeHexActivation(context('Lung'), ['6:3'], 5)).toEqual({
-      ok: false,
-      violations: [{ kind: 'pinsExceedSelections', count: 5 }],
-    });
-  });
-
-  it('shares connectors across pins through bidirectional links', () => {
-    expect(completeHexActivation(context('Nacelle'), ['3:3', '3:6'], 4)).toEqual({
-      ok: true,
-      selection: ['1:4', '2:4', '3:3', '3:6'],
-    });
-  });
-
-  it('keeps pins and reports pins it cannot keep', () => {
-    const result = completeHexActivation(context('Lung', ['1:2']), ['3:2'], 3);
-    expect(result).toEqual({ ok: true, selection: ['1:4', '2:2', '3:2'] });
-    expect(completeHexActivation(context('Lung', ['1:2']), ['1:2', '5:3'], 3)).toEqual({
-      ok: false,
-      violations: [
-        { kind: 'alreadyInvested', nodeKey: '1:2' },
-        { kind: 'absentNode', nodeKey: '5:3' },
-      ],
-    });
-  });
-
-  it('connects deep pins across branches within the budget', () => {
-    expect(completeHexActivation(context('Pyramid'), ['6:3', '5:1', '5:5'], 12)).toEqual({
-      ok: true,
-      selection: [
-        '1:1',
-        '1:4',
-        '2:1',
-        '2:4',
-        '3:2',
-        '3:4',
-        '4:2',
-        '4:4',
-        '5:1',
-        '5:3',
-        '5:5',
-        '6:3',
-      ],
-    });
-    const mazePins = ['7:2', '7:4', '5:1'];
-    expect(completeHexActivation(context('Maze'), mazePins, 15)).toEqual({
-      ok: true,
-      selection: [
-        '1:3',
-        '2:2',
-        '2:4',
-        '3:2',
-        '3:4',
-        '4:1',
-        '4:2',
-        '4:4',
-        '5:1',
-        '5:2',
-        '5:4',
-        '6:2',
-        '6:4',
-        '7:2',
-        '7:4',
-      ],
-    });
-    expect(completeHexActivation(context('Maze'), mazePins, 14)).toEqual({
-      ok: false,
-      violations: [{ kind: 'pinsExceedSelections', count: 14 }],
-    });
-    const nacellePins = ['6:2', '6:4', '4:3'];
-    expect(completeHexActivation(context('Nacelle'), nacellePins, 13)).toEqual({
-      ok: true,
-      selection: [
-        '1:2',
-        '2:2',
-        '2:4',
-        '3:0',
-        '3:3',
-        '3:5',
-        '4:2',
-        '4:3',
-        '4:4',
-        '5:2',
-        '5:4',
-        '6:2',
-        '6:4',
-      ],
-    });
-    expect(completeHexActivation(context('Nacelle'), nacellePins, 12)).toEqual({
-      ok: false,
-      violations: [{ kind: 'pinsExceedSelections', count: 12 }],
-    });
-  });
-
-  it('offers each node that fits the budget on its own', () => {
-    expect(hexActivationPinDomain(context('Lung'), [], 1)).toEqual(['1:2', '1:4']);
-    expect(hexActivationPinDomain(context('Lung'), [], 2)).toEqual(['1:2', '1:4', '2:2', '2:4']);
-    expect(hexActivationPinDomain(context('Lung', ['1:2', '2:2']), ['3:1'], 1)).toEqual([
-      '1:4',
-      '3:2',
-      '3:3',
+describe('Hex activation candidate capability', () => {
+  it('draws the board from the first branch and reports every branch a selection does not fit', () => {
+    const capability = createHexActivationCandidateCapability([
+      context('Lung', [], false, 2),
+      context('Lung', ['1:2'], false, 2),
+    ])!;
+    expect(capability).toMatchObject({ count: 2, investedNodeKeys: [] });
+    expect(capability.availableNodeKeys(['1:2'])).toEqual(['1:4', '2:2']);
+    expect(capability.assess(['1:2', '1:4'])).toEqual([
+      { kind: 'alreadyInvested', nodeKey: '1:2' },
     ]);
-    expect(hexActivationPinDomain(context('Nacelle', ['1:2', '2:2', '3:3']), [], 1)).toContain(
-      '2:4',
-    );
+    expect(createHexActivationCandidateCapability([])).toBeUndefined();
+  });
+
+  it('offers no additions once the selection spends the screen, keeping it removable', () => {
+    const capability = createHexActivationCandidateCapability([context('Lung', [], false, 2)])!;
+    expect(capability.availableNodeKeys(['1:2'])).toEqual(['1:4', '2:2']);
+    expect(capability.availableNodeKeys(['1:2', '2:2'])).toEqual([]);
+    // A saved selection over a shrunken budget is kept and reported, never trimmed.
+    expect(capability.availableNodeKeys(['1:2', '2:2', '1:4'])).toEqual([]);
+    expect(capability.assess(['1:2', '2:2', '1:4'])).toEqual([
+      { kind: 'selectionCount', expected: 2, actual: 3 },
+    ]);
   });
 });

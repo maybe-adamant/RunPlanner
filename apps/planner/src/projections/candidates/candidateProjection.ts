@@ -330,6 +330,10 @@ export interface CandidateProjectionSession {
         import('@run-planner/engine/simulation').AcquisitionConversionCandidateCapability['anvil']
       >
     | undefined;
+  /** Exact Path screen domain at a reached Path of Stars role. */
+  readonly hexActivation: (
+    owner: AcquisitionRoleAddress,
+  ) => import('@run-planner/engine/simulation').HexActivationCandidateCapability | undefined;
 }
 
 export interface LevelResolutionCandidateProjection {
@@ -389,6 +393,7 @@ export function createCandidateSessionFactory(
       project: assembly.project,
       evaluation: assembly.evaluation,
       anvilResult: core.anvilResult,
+      hexActivation: core.hexActivation,
       contextReached: core.contextReached,
       fieldsSpatialPoint: (spatial: FieldsSpatialAddress, pointId: number | null) =>
         Object.freeze({

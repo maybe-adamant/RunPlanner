@@ -99,7 +99,7 @@ export const athenaTraits = [
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],
-    eligibilityRequirements: [{ kind: 'settledSpellDrop' }],
+    eligibilityRequirements: [{ kind: 'investedHexOlympianTalent' }],
     elementContributions: { Fire: 1 },
     usesBoonRarity: true,
     blockStacking: false,

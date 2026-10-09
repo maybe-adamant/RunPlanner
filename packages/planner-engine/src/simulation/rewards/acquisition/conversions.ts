@@ -329,6 +329,12 @@ export function generateArtificerReplacement(
                   levelResolutionsByAcquisitionRole:
                     artificerReplacement.levelResolutionsByAcquisitionRole,
                 }),
+            ...(artificerReplacement.hexActivationsByAcquisitionRole === undefined
+              ? {}
+              : {
+                  hexActivationsByAcquisitionRole:
+                    artificerReplacement.hexActivationsByAcquisitionRole,
+                }),
             dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
             // A generated replacement stands on the screen its source presented.
             presentsMaterializedScreen: incoming.presentsMaterializedScreen,

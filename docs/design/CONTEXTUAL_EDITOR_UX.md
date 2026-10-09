@@ -181,11 +181,12 @@ requires evaluated support. Every hint renders through the one hint layer from
 the control's `data-hint`, beside the pointer on hover and beside the control on
 keyboard focus, and the same text leads the control's accessible description.
 
-Trait, Hex, Chaos, Pom and Anvil dialog launchers share one neutral,
-fixed-width style. Their one-line label reads `{Verb} {kind} · {value}`: the
-chosen trait or Hex, the Pom target and its levels, or the Chaos curse and
-blessing; `Edit Anvil` names no value. A long label ends in an ellipsis, and the
-full summary is the launcher's hint. An unset
+Trait, Hex, Chaos, Pom, Anvil and Path of Stars dialog launchers share one
+neutral, fixed-width style. Their one-line label reads `{Verb} {kind} · {value}`:
+the chosen trait or Hex, the Pom target and its levels, or the Chaos curse and
+blessing; `Edit Anvil` and `Edit Path of Stars` name no value, and the Path
+summary lists the screen's talents, a repeat counted ("Omen ×2"). A long label
+ends in an ellipsis, and the full summary is the launcher's hint. An unset
 launcher says so in its text; findings mark a launcher only with the shared
 finding ring. The application projection supplies both label and summary.
 
@@ -715,6 +716,22 @@ nodes. Saving and reopening is not a prerequisite. Both tree dialogs carry a
 header "?" explaining how common nodes are dealt. Aspect of Selene instead
 edits its Sky Fall tree in a loadout draft dialog whose launcher carries the
 tree's finding; a later Path acquisition does not expose a false replacement spell editor.
+
+Each Path of Stars reward, and the Spell Drop that Aspect of Selene routes to
+the tree, carries an Edit Path of Stars launcher beside its acquisition's other
+editors once its screen is reached; a screen whose context is later lost keeps
+its launcher, disabled with the waiting hint. The launcher opens a draft
+dialog that Save commits as one edit. It draws the plain tree on the same grid
+as the tree board, with no deck table and no column colours: nodes invested on earlier screens are filled, this screen's nodes are
+highlighted and removable, and nodes the engine says can be added are
+clickable; the rest are muted, and God Sent appears only once inserted. A fixed
+"N of M points" counter heads the board. Nothing is preselected: a reached
+screen without a choice opens at "0 of M points", and its required-choice
+finding marks the launcher. The screen's points are a budget like
+a trait offer's slots: once spent, no further node can be added, while removal
+always stays possible. Removing a node a selected dependant needs is allowed;
+the draft feedback then names the cut-off nodes and a wrong count, the cut-off
+nodes carry the finding mark, and a saved conflict marks the launcher.
 
 Automatic Steady Growth and Embryo outcomes use their fixed timeline points
 and bound target controls, not draggable author-created effects. Immediate

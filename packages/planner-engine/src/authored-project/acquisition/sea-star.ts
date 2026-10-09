@@ -51,8 +51,11 @@ export function createSeaStarDuplicateRewardState(
       { kind: 'producerLifecycle', key: 'RoomReward' },
       routeKey,
     );
+  // The duplicate opens its own Path screen, chosen by its author.
+  const { hexActivationsByAcquisitionRole: _screens, ...retained } = source;
+  void _screens;
   return Object.freeze({
-    ...source,
+    ...retained,
     ...(source.levelResolutionsByAcquisitionRole === undefined
       ? {}
       : {

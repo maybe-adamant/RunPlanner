@@ -69,6 +69,8 @@ export interface WorkspaceAcquisitionConversionInteraction {
       value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
     ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' }>>;
   };
+  /** Exact reward-owned Path screen editor, present for a Path screen role reached or authored. */
+  readonly hexActivation?: WorkspaceHexActivationInteraction;
   readonly intentFor: (
     value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
   ) => WorkspacePayloadEditIntent<
@@ -117,6 +119,8 @@ export interface WorkspaceAcquisitionConversionControl {
   readonly anvilResult?: import('@run-planner/engine/authored-project').AuthoredAnvilResult | null;
   /** Whether the engine applies that Anvil result at this reached role (a normal pickup). */
   readonly anvilApplies?: boolean;
+  /** The reward's Path screen selection, present once authored. */
+  readonly hexActivation?: import('@run-planner/engine/authored-project').AuthoredHexActivation;
 }
 
 export type WorkspaceTraitCarrierChildControl = AuthoredTraitCarrierChild & {
@@ -155,8 +159,8 @@ export interface WorkspaceHexNodeEditor {
   readonly relatedNodeKeys: Readonly<Record<string, readonly string[]>>;
 }
 
-/** One node of the Hex tree board, placed on the native talent grid. */
-export interface WorkspaceHexTreeNode {
+/** One Hex board node placed on the native talent grid. */
+export interface WorkspaceHexBoardNode {
   readonly nodeKey: string;
   readonly kind: HexNodeKind;
   /** Grid column and row in node-spacing units: depth and slot plus the declared offsets. */
@@ -167,6 +171,10 @@ export interface WorkspaceHexTreeNode {
   readonly talentLabel: string;
   /** Unique accessible name: kind, talent and depth, such as "Common Omen, depth 3". */
   readonly name: string;
+}
+
+/** One node of the Hex tree board. */
+export interface WorkspaceHexTreeNode extends WorkspaceHexBoardNode {
   /** Absent for the God Sent nodes. */
   readonly editor?: WorkspaceHexNodeEditor;
   /** A tree-wide conflict names this node. */
@@ -697,4 +705,38 @@ export interface WorkspaceLevelResolutionInteraction {
   readonly owner: LevelResolutionAddress;
   readonly traitLabel: (traitKey: string) => string;
   readonly value: AuthoredLevelResolution;
+}
+
+/** One node of a Path screen board and what clicking it does. */
+export interface WorkspaceHexActivationNode extends WorkspaceHexBoardNode {
+  /** Invested on an earlier screen, chosen on this one, choosable now, or neither. */
+  readonly state: 'invested' | 'selected' | 'available' | 'unavailable';
+  /** The selection after clicking; absent where clicking does nothing. */
+  readonly toggled?: readonly string[];
+  /** A violation of this screen names this node. */
+  readonly conflict: boolean;
+  readonly hint?: string;
+}
+
+/** The plain Hex tree for one Path screen selection. */
+export interface WorkspaceHexActivationBoard {
+  readonly treeLabel: string;
+  readonly nodes: readonly WorkspaceHexActivationNode[];
+  /** Such as "2 of 3 points". */
+  readonly pointsLabel: string;
+  /** The selection's violations as feedback entries. */
+  readonly issues: readonly (readonly [key: string, message: string])[];
+}
+
+export interface WorkspaceHexActivationInteraction {
+  /** Whether the engine reached this Path screen; only then can its board open. */
+  readonly contextReached: boolean;
+  readonly launcher: WorkspaceLauncherPresentation;
+  /** The saved selection; undefined until one is authored. */
+  readonly selectedNodeKeys: readonly string[] | undefined;
+  /** Undefined until the screen is reached. */
+  readonly boardFor: (selection: readonly string[]) => WorkspaceHexActivationBoard | undefined;
+  readonly intentFor: (
+    selectedNodeKeys: readonly string[],
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceHexActivation' }>>;
 }

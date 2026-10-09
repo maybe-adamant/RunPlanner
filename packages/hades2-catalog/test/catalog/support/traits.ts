@@ -197,7 +197,9 @@ export const expectedPositiveRequirementOwners = [
   'FocusSpecialDamageTrait',
 ] as const;
 
-export const expectedSettledSpellDropRequirementOwners = ['OlympianSpellCountBoon'] as const;
+export const expectedInvestedHexOlympianTalentRequirementOwners = [
+  'OlympianSpellCountBoon',
+] as const;
 
 export const expectedOrdinarySlots = Object.fromEntries(
   [
@@ -892,7 +894,7 @@ export const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","ApolloWeaponBoon","DemeterWeaponBoon","HephaestusWeaponBoon","HeraWeaponBoon","HestiaWeaponBoon","PoseidonWeaponBoon","ZeusWeaponBoon","AresWeaponBoon"]}]',
   SorceryCritBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
-  OlympianSpellCountBoon: '[{"kind":"settledSpellDrop"}]',
+  OlympianSpellCountBoon: '[{"kind":"investedHexOlympianTalent"}]',
   ElementalRallyBoon:
     '[{"kind":"routeKeyNot","routeKey":"FreshFile"},{"kind":"elementCount","element":"Fire","minimum":2}]',
   DoubleExManaBoon:

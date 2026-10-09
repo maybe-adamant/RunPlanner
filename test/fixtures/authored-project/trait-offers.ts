@@ -163,13 +163,31 @@ export function supportedTraitOffer(
  * Test fixtures use the engine's candidate authority to author legal defaults
  * for every reached trait offer. This keeps unrelated route/workspace fixtures
  * valid while exercising the same three-option command and legality contract
- * as an editor user.
+ * as an editor user. Path of Stars screens are the author's choice, so a
+ * fixture reaching one names its nodes in `pathSelections`, keyed by role.
  */
-export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocument {
+export function authorLegalTraitOffers(
+  project: ProjectDocument,
+  pathSelections: Readonly<Record<string, readonly string[]>> = {},
+): ProjectDocument {
   let current = project;
   for (let pass = 0; pass < 96; pass += 1) {
     const assembly = preparedCandidateProjectFor(current).assembly;
     const evaluation = assembly.evaluation;
+    const screen = evaluation.findings.find((finding) => finding.code === 'hexActivationMissing');
+    if (screen !== undefined && screen.origin.kind === 'acquisitionRole') {
+      const selectedNodeKeys = pathSelections[semanticAddressKey(screen.origin)];
+      if (selectedNodeKeys === undefined)
+        throw new Error(
+          `fixture reaches ${semanticAddressKey(screen.origin)} without a Path selection`,
+        );
+      current = applyProjectCommand(current, catalog, {
+        kind: 'ReplaceHexActivation',
+        acquisition: screen.origin,
+        value: { selectedNodeKeys },
+      });
+      continue;
+    }
     const session = createPreparedProjectCandidateSession(catalog, assembly);
     const missing = evaluation.route.findings.find(
       (finding) => finding.code === 'traitOfferMissing' && finding.origin.kind === 'traitOffer',

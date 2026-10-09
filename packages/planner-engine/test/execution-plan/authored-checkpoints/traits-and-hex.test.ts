@@ -40,17 +40,20 @@ it('exports the installed ordinary Hex and reached P Path allocation, then reloa
       nodes: { '4:1': 'DamageBuffTalent', '4:5': 'ShieldTalent', '6:3': 'ClearCastTalent' },
     },
     bankedPathPoints: 0,
-    investedPathPoints: 3,
+    investedNodeKeys: ['1:2', '1:4', '2:2'],
     talentDropsClosed: false,
   });
-  expect(
-    compileEligibleProject(saved)
-      .occurrences.find((room) => room.id === occurrenceId)
-      ?.timeline.transactions.find(
-        (transaction) =>
-          transaction.kind === 'acquisition' && transaction.reward.rewardType === 'TalentDrop',
-      ),
-  ).toBeDefined();
+  const path = compileEligibleProject(saved)
+    .occurrences.find((room) => room.id === occurrenceId)
+    ?.timeline.transactions.find(
+      (transaction) =>
+        transaction.kind === 'acquisition' && transaction.reward.rewardType === 'TalentDrop',
+    );
+  expect(path?.kind === 'acquisition' ? path.roles[0]?.plannedHexNodeKeys : undefined).toEqual([
+    '1:2',
+    '1:4',
+    '2:2',
+  ]);
   const reward = createIncomingRewardAddress(pBiome, occurrenceId);
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
     kind: 'ReplaceIncomingReward',
@@ -89,7 +92,7 @@ it('exports Aspect of Selene Hex Path grants and reloads its tree edit', () => {
       },
     },
     bankedPathPoints: 0,
-    investedPathPoints: 6,
+    investedNodeKeys: ['1:2', '1:4', '2:2', '2:4', '3:1', '3:2'],
   });
   expect(compileEligibleProject(saved).startingLoadout).toMatchObject({
     weaponKey: 'WeaponSuit',
@@ -106,15 +109,11 @@ it('exports Aspect of Selene Hex Path grants and reloads its tree edit', () => {
   });
   const reloaded = reloadProject(edited.present);
   expect(reloaded).toEqual(edited.present);
+  // The Lung selection is kept; on the Maze it names the nodes that no longer fit.
   const editedAssembly = simulateProjectAssembly(catalog, reloaded);
-  expect(editedAssembly.evaluation.findings).toEqual([]);
-  const editedP = editedAssembly.evaluation.route.biomes.find((biome) => biome.biomeKey === 'P');
-  if (editedP === undefined || !('rewards' in editedP))
-    throw new Error('edited Selene Hex P evaluation is missing');
-  expect(editedP.rewards.branches[0]?.state.hexProgress).toMatchObject({
-    tree: { layoutKey: 'Maze' },
-    investedPathPoints: 6,
-  });
+  expect(
+    editedAssembly.evaluation.findings.map((finding) => [finding.code, finding.origin.kind]),
+  ).toEqual([['hexActivationUnavailable', 'acquisitionRole']]);
   expect(undoProjectHistory(edited).present).toBe(saved);
 });
 

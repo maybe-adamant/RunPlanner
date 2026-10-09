@@ -590,7 +590,15 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
   exact(
     record,
     ['role', 'disposition', 'lifecyclePoint', 'kind', 'gameName'],
-    ['producer', 'settlement', 'traitOffer', 'levelResolution', 'replacement', 'seaStarResult'],
+    [
+      'producer',
+      'settlement',
+      'traitOffer',
+      'levelResolution',
+      'replacement',
+      'seaStarResult',
+      'plannedHexNodeKeys',
+    ],
     label,
   );
   if (!['normal', 'artificer'].includes(record.disposition as string))
@@ -679,6 +687,13 @@ export function acquisitionRole(value: unknown, label: string): ExecutionAcquisi
     ...(record.levelResolution === undefined
       ? {}
       : { levelResolution: levelResolution(record.levelResolution, `${label}.levelResolution`) }),
+    ...(record.plannedHexNodeKeys === undefined
+      ? {}
+      : {
+          plannedHexNodeKeys: Object.freeze(
+            stringArray(record.plannedHexNodeKeys, `${label}.plannedHexNodeKeys`),
+          ),
+        }),
   });
 }
 

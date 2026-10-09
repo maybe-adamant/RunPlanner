@@ -253,11 +253,12 @@ finite, graph-free Hex layout model:
 - apply Moon Beam ordinary, Cherished, and Gift grants to the same account; and
 - keep reward-priority selection in the separate exact-name priority product.
 
-This audit does **not** require authored graph nodes. A future implementation
-must name its projected counts truthfully—at minimum distinguishing awarded or
-banked points from invested nodes. Exact remaining capacity may be derived from
-the layout and Olympian extension audited separately, while individual node
-reachability and talent effects remain outside this point-ledger authority.
+Projected counts are named truthfully, distinguishing awarded or banked points
+from invested nodes. Each writable Path screen authors the nodes it invests;
+the engine checks the screen's count and each node's reachability from the
+nodes already invested, and derives remaining capacity from the layout and
+Olympian extension audited separately. A talent's level is its invested node
+count. Talent effects remain outside this point-ledger authority.
 
 ## Current planner coverage
 
@@ -282,7 +283,7 @@ P-to-Q Gift frontiers choose `TalentBigDrop`. Cherished only banks its
 Epic-to-Heroic two-point delta.
 
 Run State projects the equipped spell, layout, base/effective capacity, God
-Sent state, open/closed state, and both point counts. The scope remains below
-graph-node reachability and effects: the authored tree places a talent on
-every node of its layout but does not model investment order or individual
-talent acquisition.
+Sent state, open/closed state, and both point counts. The authored tree places
+a talent on every node of its layout, and each writable screen authors its
+invested nodes; the engine checks their count and reachability, so invested
+node counts give each talent's level. Talent effects remain unmodelled.

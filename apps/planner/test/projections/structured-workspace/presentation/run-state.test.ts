@@ -201,7 +201,7 @@ describe('Run State presentation', () => {
         godSentAdded: true,
         talentDropsClosed: false,
         bankedPathPoints: 2,
-        investedPathPoints: 5,
+        investedNodeKeys: ['1:3', '2:2', '2:3', '2:4', '3:2'],
       },
       hexObserver: {
         spellTraitKey: 'SpellMoonBeamTrait',
@@ -210,6 +210,7 @@ describe('Run State presentation', () => {
         closed: false,
         bankedPathPoints: 2,
         investedPathPoints: 5,
+        olympianTalentInvested: false,
       },
       forfeitStatus: 'consumed',
       resourceGains: {},
@@ -317,7 +318,7 @@ describe('Run State presentation', () => {
     const withoutHex = presentRunState(catalog, {
       ...snapshot,
       traits: { ...snapshot.traits, equippedSlots: {}, equippedTraits: {} },
-      hexProgress: { bankedPathPoints: 5, investedPathPoints: 0 },
+      hexProgress: { bankedPathPoints: 5, investedNodeKeys: [] },
     }).hexProgress;
     expect(withoutHex).toMatchObject({
       godSentLabel: 'No Hex',
@@ -332,7 +333,10 @@ describe('Run State presentation', () => {
             ...snapshot.hexProgress,
             godSentAdded,
             talentDropsClosed,
-            investedPathPoints: talentDropsClosed ? (godSentAdded ? 24 : 22) : 5,
+            investedNodeKeys: Array.from(
+              { length: talentDropsClosed ? (godSentAdded ? 24 : 22) : 5 },
+              (_, index) => `node${index}`,
+            ),
           },
         }).hexProgress;
         expect(projected.godSentLabel).toBe(godSentAdded ? 'Added' : 'Not added');

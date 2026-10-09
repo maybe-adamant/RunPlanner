@@ -47,6 +47,7 @@ import {
   presentBiomeStatus,
   presentFinding,
   presentAnvilDraftFinding,
+  presentHexActivationDraftIssues,
   presentLevelResolutionCandidateFinding,
   presentAssessmentIssue,
   presentProjectStatus,
@@ -490,6 +491,51 @@ describe('Anvil draft finding copy', () => {
       expect(copy.title, code).not.toBe(code);
       if (code.includes(':')) expect(copy.description, code).toBe('label SomeHammer');
     }
+  });
+});
+
+describe('Path of Stars screen finding copy', () => {
+  const origin = createProjectAddress();
+  const unavailable = (violations: readonly Record<string, unknown>[]): SemanticFinding =>
+    ({
+      code: 'hexActivationUnavailable',
+      origin,
+      evidence: { count: 3, nodeKeys: [], violations },
+      phase: 'rewardGeneration',
+      severity: 'error',
+    }) as SemanticFinding;
+
+  it('titles the most specific violation and adds a wrong count as its description', () => {
+    expect(
+      presentFinding(unavailable([{ kind: 'selectionCount', expected: 3, actual: 2 }])),
+    ).toEqual({ title: 'Choose 3 Path of Stars nodes' });
+    expect(
+      presentFinding(
+        unavailable([
+          { kind: 'selectionCount', expected: 3, actual: 2 },
+          { kind: 'unreachable', nodeKey: '4:1' },
+        ]),
+      ),
+    ).toEqual({ title: 'Path of Stars node out of reach', description: '2 of 3 points chosen.' });
+    expect(presentFinding(unavailable([{ kind: 'absentNode', nodeKey: '5:3' }])).title).toBe(
+      'God Sent is not on the tree yet',
+    );
+  });
+
+  it('lists a draft violation per kind, naming its talents', () => {
+    expect(
+      presentHexActivationDraftIssues(
+        [
+          { kind: 'unreachable', nodeKey: '4:1' },
+          { kind: 'unreachable', nodeKey: '4:2' },
+          { kind: 'selectionCount', expected: 3, actual: 4 },
+        ],
+        (nodeKey) => ({ '4:1': 'Omen', '4:2': 'Sting' })[nodeKey] ?? nodeKey,
+      ),
+    ).toEqual([
+      ['unreachable', 'Path of Stars nodes out of reach: Omen, Sting'],
+      ['selectionCount', 'Choose 3 Path of Stars nodes'],
+    ]);
   });
 });
 

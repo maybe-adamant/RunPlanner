@@ -1,5 +1,6 @@
 import { catalog as productionCatalog } from '@run-planner/hades2-catalog';
 import type { Catalog } from '../../src/catalog-schema';
+import { createDefaultAuthoredHexTree } from '../../src/authored-project/traits/hex-tree';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { createArcanaFearState, type ArcanaFearState } from '../../src/simulation/arcana-fear';
@@ -120,13 +121,19 @@ export function traitFrontierState(
   });
 }
 
-/** The same frontier with at least one settled Spell Drop in reward history. */
-export function withSettledSpellDrop(state: SimulationState): SimulationState {
+/** A Lung Polymorph tree with God Sent inserted and its Olympian talent invested. */
+export function withInvestedHexOlympianTalent(state: SimulationState): SimulationState {
+  const layout = productionCatalog.hexes.byKey.SpellPolymorphTrait!.layouts.byKey.Lung!;
   return Object.freeze({
     ...state,
-    rewardHistory: Object.freeze({
-      ...state.rewardHistory,
-      useRecord: Object.freeze({ ...state.rewardHistory.useRecord, SpellDrop: 1 }),
+    hexProgress: Object.freeze({
+      ...state.hexProgress,
+      spellTraitKey: 'SpellPolymorphTrait',
+      tree: createDefaultAuthoredHexTree(productionCatalog, 'SpellPolymorphTrait', 'Lung'),
+      godSentAdded: true,
+      investedNodeKeys: Object.freeze(
+        layout.nodes.values.filter((node) => node.kind === 'olympianSpell').map((node) => node.key),
+      ),
     }),
   });
 }

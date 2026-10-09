@@ -31,9 +31,15 @@ import {
 import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-effects';
 import { failCommand, type LocatedBiome } from '../contract';
 import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
-import type { AnvilResultCommand, TraitOfferCommand, LevelResolutionCommand } from '../types';
+import type {
+  AnvilResultCommand,
+  HexActivationCommand,
+  TraitOfferCommand,
+  LevelResolutionCommand,
+} from '../types';
 
-type RewardCommand = TraitOfferCommand | LevelResolutionCommand | AnvilResultCommand;
+type RewardCommand =
+  TraitOfferCommand | LevelResolutionCommand | AnvilResultCommand | HexActivationCommand;
 
 export interface LocatedReward {
   readonly reward: AuthoredRewardState;

@@ -1,5 +1,6 @@
 import type { AuthoredHexTreeConfiguration } from '../authored-project/traits/state';
 import type { Catalog } from '../catalog-schema';
+import type { HexActivationContext } from './hex-activation';
 import type { RewardBranchState } from './rewards/branch-primitives';
 
 export interface HexProgressState {
@@ -11,7 +12,8 @@ export interface HexProgressState {
   /** Source-compatible closure latch for future ordinary Talent Drop generation. */
   readonly talentDropsClosed?: boolean;
   readonly bankedPathPoints: number;
-  readonly investedPathPoints: number;
+  /** Invested nodes in investment order; the invested point count is its length. */
+  readonly investedNodeKeys: readonly string[];
 }
 
 /** Lifecycle composition may only consume a closure fact after every surviving branch agrees. */
@@ -109,33 +111,68 @@ export function bankPathPoints(branch: RewardBranchState, points: number): Rewar
   });
 }
 
-/** Settles one concrete Path screen against the installed finite Hex tree. */
+/** The tree state a writable Path screen granting `points` selects against. */
+export function pathScreenContext(
+  catalog: Catalog,
+  progress: HexProgressState,
+  points: 1 | 3 | 5,
+): HexActivationContext {
+  const capacity = hexEffectiveCapacity(catalog, progress);
+  const layout =
+    progress.spellTraitKey === undefined || progress.tree === undefined
+      ? undefined
+      : catalog.hexes.byKey[progress.spellTraitKey]?.layouts.byKey[progress.tree.layoutKey];
+  if (capacity === undefined || layout === undefined)
+    throw new Error('Path screen settlement requires an installed Hex tree');
+  // The source adds grant - 1 to the raw bank before the implicit first
+  // selection; a full tree therefore retains the raw bonus.
+  const remaining = Math.max(0, capacity - progress.investedNodeKeys.length);
+  return Object.freeze({
+    spellTraitKey: progress.spellTraitKey!,
+    tree: progress.tree!,
+    layout,
+    godSentAdded: progress.godSentAdded === true,
+    investedNodeKeys: progress.investedNodeKeys,
+    count: Math.min(remaining, progress.bankedPathPoints + points),
+  });
+}
+
+/** Invests one screen's already-validated selection; no point is refunded. */
 export function settlePathScreen(
   catalog: Catalog,
   branch: RewardBranchState,
   points: 1 | 3 | 5,
+  selectedNodeKeys: readonly string[],
 ): RewardBranchState {
-  const capacity = hexEffectiveCapacity(catalog, branch.state.hexProgress);
-  if (capacity === undefined) {
-    throw new Error('Path screen settlement requires an installed Hex tree');
-  }
-  // The source adds grant - 1 to the raw bank before the implicit first
-  // selection is attempted.  A full tree therefore retains the raw bonus.
-  const rawBank = branch.state.hexProgress.bankedPathPoints + points - 1;
-  const remaining = Math.max(0, capacity - branch.state.hexProgress.investedPathPoints);
-  const selections = Math.min(remaining, rawBank + 1);
-  const spentFromBank = Math.max(0, selections - 1);
-  const investedPathPoints = branch.state.hexProgress.investedPathPoints + selections;
+  const progress = branch.state.hexProgress;
+  const context = pathScreenContext(catalog, progress, points);
+  if (selectedNodeKeys.length !== context.count)
+    throw new Error('Path screen selection does not spend the screen');
+  const rawBank = progress.bankedPathPoints + points - 1;
+  const investedNodeKeys = Object.freeze([...progress.investedNodeKeys, ...selectedNodeKeys]);
+  const capacity = hexEffectiveCapacity(catalog, progress)!;
   return Object.freeze({
     ...branch,
     state: Object.freeze({
       ...branch.state,
       hexProgress: Object.freeze({
-        ...branch.state.hexProgress,
-        bankedPathPoints: rawBank - spentFromBank,
-        investedPathPoints,
-        ...(investedPathPoints >= capacity ? { talentDropsClosed: true } : {}),
+        ...progress,
+        bankedPathPoints: rawBank - Math.max(0, context.count - 1),
+        investedNodeKeys,
+        ...(investedNodeKeys.length >= capacity ? { talentDropsClosed: true } : {}),
       }),
     }),
   });
+}
+
+/** Whether the God Sent Olympian talent is invested: Task Force's prerequisite. */
+export function hexOlympianTalentInvested(catalog: Catalog, progress: HexProgressState): boolean {
+  if (progress.godSentAdded !== true || progress.spellTraitKey === undefined) return false;
+  const layout =
+    progress.tree === undefined
+      ? undefined
+      : catalog.hexes.byKey[progress.spellTraitKey]?.layouts.byKey[progress.tree.layoutKey];
+  return progress.investedNodeKeys.some(
+    (key) => layout?.nodes.byKey[key]?.kind === 'olympianSpell',
+  );
 }

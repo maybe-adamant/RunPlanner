@@ -425,7 +425,7 @@ describe('Echo Gift Gift Gift', () => {
   it('defers Moon Beam Gift while ordinary Moon Beam remains equipped, then replays once at Common', () => {
     const ordinary = branchWithGift('SpellTalentKeepsake');
     const deferred = replayBiome([ordinary]).simulation.branches[0]!;
-    expect(deferred.state.hexProgress).toEqual({ bankedPathPoints: 0, investedPathPoints: 0 });
+    expect(deferred.state.hexProgress).toEqual({ bankedPathPoints: 0, investedNodeKeys: [] });
     expect(deferred.state.rewardPriorities).toEqual([]);
     expect(deferred.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
       0,
@@ -435,7 +435,7 @@ describe('Echo Gift Gift Gift', () => {
       keepsakes: retainedKeepsakeState('SpellTalentKeepsake', 'GoldifyKeepsake'),
     });
     const replayed = replayBiome([unequipped]).simulation.branches[0]!;
-    expect(replayed.state.hexProgress).toEqual({ bankedPathPoints: 3, investedPathPoints: 0 });
+    expect(replayed.state.hexProgress).toEqual({ bankedPathPoints: 3, investedNodeKeys: [] });
     expect(replayed.state.rewardPriorities).toEqual(['SpellDrop']);
     expect(replayed.state.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
       1,

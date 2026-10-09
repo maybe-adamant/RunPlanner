@@ -492,6 +492,12 @@ const findingCopy = {
   nemesisOutcomeUnavailable: {
     title: 'Nemesis event result unavailable',
   },
+  hexActivationMissing: {
+    title: 'Choose the Path of Stars nodes',
+  },
+  hexActivationUnavailable: {
+    title: 'Path of Stars nodes do not fit this screen',
+  },
   hexTalentTreeUnavailable: {
     title: 'Hex nodes conflict across the tree',
     description:
@@ -644,6 +650,12 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
       description: 'Choose Any or a numbered position on the source room map.',
     });
   }
+  if (finding.code === 'hexActivationUnavailable' && Array.isArray(finding.evidence.violations))
+    return presentHexActivationFinding(
+      finding.evidence.violations as readonly HexActivationViolationEvidence[],
+    );
+  if (finding.code === 'hexActivationMissing' && typeof finding.evidence.count === 'number')
+    return Object.freeze({ title: hexActivationCountTitle(finding.evidence.count) });
   if (finding.origin.kind === 'keepsakeEquipResult') {
     if (finding.origin.resultKind === 'experimentalHammer') {
       if (finding.code === 'keepsakeEquipResultMissing') {
@@ -849,6 +861,94 @@ export function presentAnvilDraftFinding(
   const copy = (anvilDraftCopy as Readonly<Record<string, FindingPresentation>>)[kind ?? ''];
   if (copy === undefined) return { title: code };
   return traitKey === undefined ? copy : { ...copy, description: traitLabel(traitKey) };
+}
+
+/** One Path screen violation as finding evidence carries it. */
+export interface HexActivationViolationEvidence {
+  readonly kind: string;
+  readonly nodeKey?: string;
+  readonly expected?: number;
+  readonly actual?: number;
+}
+
+function hexActivationCountTitle(count: number): string {
+  return `Choose ${count} Path of Stars ${count === 1 ? 'node' : 'nodes'}`;
+}
+
+/** Violation kinds from the most to the least specific repair. */
+const hexActivationViolationOrder = [
+  'unknownNode',
+  'absentNode',
+  'alreadyInvested',
+  'unreachable',
+  'selectionCount',
+] as const;
+
+function hexActivationViolationTitle(
+  kind: string,
+  violations: readonly HexActivationViolationEvidence[],
+): string {
+  const plural = violations.length > 1;
+  switch (kind) {
+    case 'selectionCount':
+      return hexActivationCountTitle(violations[0]?.expected ?? 0);
+    case 'unknownNode':
+      return plural
+        ? 'Path of Stars nodes not in this layout'
+        : 'Path of Stars node not in this layout';
+    case 'absentNode':
+      return 'God Sent is not on the tree yet';
+    case 'alreadyInvested':
+      return plural
+        ? 'Path of Stars nodes already invested'
+        : 'Path of Stars node already invested';
+    default:
+      return plural ? 'Path of Stars nodes out of reach' : 'Path of Stars node out of reach';
+  }
+}
+
+function groupHexActivationViolations(
+  violations: readonly HexActivationViolationEvidence[],
+): readonly (readonly [kind: string, violations: readonly HexActivationViolationEvidence[]])[] {
+  return hexActivationViolationOrder.flatMap((kind) => {
+    const group = violations.filter((violation) => violation.kind === kind);
+    return group.length === 0 ? [] : [[kind, group] as const];
+  });
+}
+
+/** A Path screen finding: its most specific violation, and a wrong count when it is not that. */
+function presentHexActivationFinding(
+  violations: readonly HexActivationViolationEvidence[],
+): FindingPresentation {
+  const groups = groupHexActivationViolations(violations);
+  const [kind, group] = groups[0] ?? ['unreachable', []];
+  const count =
+    kind === 'selectionCount' ? undefined : violations.find((v) => v.kind === 'selectionCount');
+  return Object.freeze({
+    title: hexActivationViolationTitle(kind, group),
+    ...(count === undefined
+      ? {}
+      : { description: `${count.actual} of ${count.expected} points chosen.` }),
+  });
+}
+
+/** A Path screen draft's violations, one entry per kind naming its talents. */
+export function presentHexActivationDraftIssues(
+  violations: readonly HexActivationViolationEvidence[],
+  talentLabel: (nodeKey: string) => string,
+): readonly (readonly [key: string, message: string])[] {
+  return groupHexActivationViolations(violations).map(([kind, group]) => {
+    const talents = [
+      ...new Set(group.flatMap((v) => (v.nodeKey === undefined ? [] : [talentLabel(v.nodeKey)]))),
+    ];
+    return [
+      kind,
+      formatFindingExplanation({
+        title: hexActivationViolationTitle(kind, group),
+        ...(talents.length === 0 ? {} : { description: talents.join(', ') }),
+      }),
+    ] as const;
+  });
 }
 
 export function semanticFindingKey(finding: SemanticFinding): string {

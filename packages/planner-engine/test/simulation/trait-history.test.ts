@@ -271,7 +271,12 @@ describe('Selene Spell equipment chronology', () => {
         'Underworld',
         loadout,
       ),
-      { ...source, presentsMaterializedScreen: true, traitContext: {} },
+      {
+        ...source,
+        presentsMaterializedScreen: true,
+        traitContext: {},
+        hexActivationsByAcquisitionRole: { self: { selectedNodeKeys: ['1:2', '1:4', '2:2'] } },
+      },
       1,
       (state) => factsWithHistory(baseFacts(), state.rewardHistory, new Set()),
       new Map(),
@@ -280,7 +285,10 @@ describe('Selene Spell equipment chronology', () => {
     expect(settled.state.rewardHistory.useRecord.SpellDrop).toBe(1);
     expect(settled.state.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
     expect(settled.traitEvaluations).toEqual([]);
-    expect(settled.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
+    expect(settled.state.hexProgress).toMatchObject({
+      bankedPathPoints: 0,
+      investedNodeKeys: ['1:2', '1:4', '2:2'],
+    });
   });
 });
 

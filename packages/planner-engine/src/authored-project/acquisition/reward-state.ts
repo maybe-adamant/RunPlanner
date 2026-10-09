@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
-import { pickupEffectForOffer } from '../../reward-kernel/history';
+import { pickupEffectForOffer, resolveAcquisitionRole } from '../../reward-kernel/history';
 
 /**
  * Every authored reward owns an explicit disposition for every declared
@@ -32,6 +32,35 @@ export function rewardSourceResolvesAtAcquisition(
   return (
     catalog.rewards.rewardTypes.byKey[offer.rewardType]?.sourceResolution?.kind ===
     'acquisitionRole'
+  );
+}
+
+/**
+ * Roles whose concrete acquisition can open a writable Path screen: a Path of
+ * Stars grant, or a Spell Drop that Aspect of Selene routes to the talent tree.
+ */
+export function hexActivationRoles(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): readonly string[] {
+  if (rewardSourceResolvesAtAcquisition(catalog, offer)) return Object.freeze([]);
+  const declaration = catalog.rewards.rewardTypes.byKey[offer.rewardType];
+  if (declaration === undefined) throw new Error(`unknown reward type ${offer.rewardType}`);
+  return Object.freeze(
+    declaration.acquisitionRoles.values
+      .filter((role) => {
+        const gameName = resolveAcquisitionRole(
+          catalog.rewards,
+          offer,
+          role.key,
+          'roomRewardPickup',
+        ).acquisition.gameName;
+        return (
+          gameName === 'SpellDrop' ||
+          catalog.rewards.acquisitions.byKey[gameName]?.pathPointGrant !== undefined
+        );
+      })
+      .map((role) => role.key),
   );
 }
 

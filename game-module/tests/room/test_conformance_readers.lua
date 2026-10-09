@@ -47,6 +47,7 @@ local function admissionFixture()
         rewardPriorities = {},
         hexProgress = {
             talentKeys = {}, closed = false, bankedPathPoints = 0, investedPathPoints = 0,
+            olympianTalentInvested = false,
         },
         forfeit = "inactive",
     }
@@ -464,7 +465,7 @@ function TestConformanceReaders.testReachableReadersProjectNativeState()
     })
     lu.assertEquals(readers.read("pathOfStars", run), {
         spellTraitKey = nil, layoutKey = nil, talentKeys = {}, closed = false,
-        bankedPathPoints = 0, investedPathPoints = 0,
+        bankedPathPoints = 0, investedPathPoints = 0, olympianTalentInvested = false,
     })
     lu.assertEquals(readers.read("forfeit", run), "inactive")
     lu.assertEquals(readers.read("stygianWell", run), {
@@ -575,8 +576,12 @@ function TestConformanceReaders.testPathReaderProjectsOnlyTheGodSentPairInPublis
     }
     lu.assertEquals(readers.read("pathOfStars", run, nil, expected), {
         spellTraitKey = "SpellPolymorphTrait", layoutKey = "Nacelle", talentKeys = expected.talentKeys,
-        closed = false, bankedPathPoints = 2, investedPathPoints = 4,
+        closed = false, bankedPathPoints = 2, investedPathPoints = 4, olympianTalentInvested = false,
     })
+    -- Task Force's prerequisite is the invested Olympian talent, not the inserted pair.
+    talents[4][5].Invested = true
+    lu.assertTrue(readers.read("pathOfStars", run, nil, expected).olympianTalentInvested)
+    talents[4][5].Invested = nil
     -- Realised Rare and Epic talents are not conformance facts; a missing pair is.
     talents[4][5], talents[5][3] = nil, nil
     lu.assertEquals(readers.read("pathOfStars", run, nil, expected).talentKeys, {})

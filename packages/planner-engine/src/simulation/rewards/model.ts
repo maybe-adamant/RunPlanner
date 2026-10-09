@@ -127,6 +127,8 @@ export type RewardEvent =
       };
       /** Exact Sea Star branch at this source, when the native chance is live. */
       readonly seaStarResult?: { readonly kind: 'proc' | 'noProc' };
+      /** The nodes this acquisition's writable Path screen invested. */
+      readonly investedHexNodeKeys?: readonly string[];
     })
   | (RewardEventBase & {
       /** Source was destroyed and a separate RunProgress replacement was generated. */

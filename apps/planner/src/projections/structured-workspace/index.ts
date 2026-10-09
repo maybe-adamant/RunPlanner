@@ -170,6 +170,10 @@ export type {
   WorkspaceHexDeckTable,
   WorkspaceHexTreeDomain,
   WorkspaceHexTreeNode,
+  WorkspaceHexBoardNode,
+  WorkspaceHexActivationBoard,
+  WorkspaceHexActivationInteraction,
+  WorkspaceHexActivationNode,
 } from './contracts/traits';
 export type {
   RankedPrefix,

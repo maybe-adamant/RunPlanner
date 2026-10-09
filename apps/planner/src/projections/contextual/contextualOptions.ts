@@ -378,6 +378,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'allTogetherResultUnavailable':
       return { kind: 'trait', message: 'Repair the direct trait outcomes for All Together.' };
     case 'hexTalentTreeUnavailable':
+    case 'hexActivationMissing':
+    case 'hexActivationUnavailable':
       return presented('trait', finding);
     case 'persephoneLevelBonusUnavailable':
       return { kind: 'trait', message: 'Choose an available Persephone roll.' };

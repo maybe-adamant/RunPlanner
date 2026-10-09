@@ -55,7 +55,7 @@ import {
 } from '../../src/simulation';
 import {
   traitFrontierState,
-  withSettledSpellDrop,
+  withInvestedHexOlympianTalent,
   openTimeTraitOfferContexts,
 } from '../support/simulation-state';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
@@ -1004,7 +1004,7 @@ describe('reached trait offer chronology', () => {
       assessTraitOption(
         catalog,
         'OlympianSpellCountBoon',
-        withSettledSpellDrop(traitFrontierState(ordinarySpellHistory)),
+        withInvestedHexOlympianTalent(traitFrontierState(ordinarySpellHistory)),
         {},
       ).legal,
     ).toBe(true);

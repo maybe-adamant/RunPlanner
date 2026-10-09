@@ -32,6 +32,9 @@ export interface CandidateProjectionCore {
   readonly anvilResult: (
     owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
   ) => NonNullable<AcquisitionConversionCandidateCapability['anvil']> | undefined;
+  readonly hexActivation: (
+    owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
+  ) => AcquisitionConversionCandidateCapability['hexActivation'];
   readonly fieldsSpatialPoint: (
     spatial: import('@run-planner/engine/authored-project').FieldsSpatialAddress,
     pointId: number | null,
@@ -194,6 +197,11 @@ export function createCandidateProjectionCore(
         anvilResult: (
           owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
         ) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, owner)?.anvil,
+        hexActivation: (
+          owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
+        ) =>
+          acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, owner)
+            ?.hexActivation,
         fieldsSpatialPoint: (
           spatial: import('@run-planner/engine/authored-project').FieldsSpatialAddress,
           pointId: number | null,

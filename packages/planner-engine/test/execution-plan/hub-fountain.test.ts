@@ -37,6 +37,7 @@ import { migrateProjectDocument as migrateProject90To91 } from '../../../../sche
 import { migrateProjectDocument as migrateProject91To92 } from '../../../../schema/migrate-project-91-to-92.js';
 import { migrateProjectDocument as migrateProject92To93 } from '../../../../schema/migrate-project-92-to-93.js';
 import { migrateProjectDocument as migrateProject93To94 } from '../../../../schema/migrate-project-93-to-94.js';
+import { migrateProjectDocument as migrateProject94To95 } from '../../../../schema/migrate-project-94-to-95.js';
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
 const fountain = createHubFountainAddress(nBiome, 'hub');
@@ -65,11 +66,13 @@ function migratedPhialProject(): ProjectDocument {
     }
   return parseProjectDocument(
     JSON.stringify(
-      migrateProject93To94(
-        migrateProject92To93(
-          migrateProject91To92(
-            migrateProject90To91(
-              migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
+      migrateProject94To95(
+        migrateProject93To94(
+          migrateProject92To93(
+            migrateProject91To92(
+              migrateProject90To91(
+                migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
+              ),
             ),
           ),
         ),

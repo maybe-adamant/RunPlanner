@@ -7,10 +7,18 @@ const viewportMargin = 8;
 const pointerOffsetX = 12;
 const pointerOffsetY = 16;
 
+/** Whether an open modal dialog hides this control from the pointer and keyboard. */
+function coveredByModal(control: HTMLElement): boolean {
+  const modal = [...document.querySelectorAll('dialog[aria-modal="true"][open]')].at(-1);
+  return modal !== undefined && !modal.contains(control);
+}
+
 function hintAnchor(target: EventTarget | null): HTMLElement | undefined {
-  return target instanceof Element
-    ? (target.closest<HTMLElement>('[data-hint]') ?? undefined)
-    : undefined;
+  const anchor =
+    target instanceof Element
+      ? (target.closest<HTMLElement>('[data-hint]') ?? undefined)
+      : undefined;
+  return anchor === undefined || coveredByModal(anchor) ? undefined : anchor;
 }
 
 /**
@@ -70,7 +78,9 @@ export function HintLayer() {
 
     const show = (target: HTMLElement): void => {
       const hint = target.dataset.hint;
-      if (hint === undefined || hint === '' || !target.isConnected) return;
+      // A hint scheduled before a dialog opened stays hidden behind it.
+      if (hint === undefined || hint === '' || !target.isConnected || coveredByModal(target))
+        return;
       content.textContent = hint;
       element.hidden = false;
       if (typeof element.showPopover === 'function') {

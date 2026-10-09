@@ -35,6 +35,7 @@ export interface EditorSessionReconciliation {
   readonly clearTraitDialogTarget?: boolean;
   readonly clearLevelResolutionDialogTarget?: boolean;
   readonly clearAnvilDialogTarget?: boolean;
+  readonly clearHexActivationDialogTarget?: boolean;
   readonly clearArcanaActivationDialogTarget?: boolean;
   readonly clearCirceDialogTarget?: boolean;
   readonly clearRunStateTarget?: boolean;
@@ -72,6 +73,8 @@ export interface EditorSessionState {
   readonly levelResolutionDialogTarget?: LevelResolutionAddress | null;
   /** Exact transient Anvil result dialog target. */
   readonly anvilDialogTarget?: AcquisitionRoleAddress | null;
+  /** Exact transient Path of Stars screen dialog target. */
+  readonly hexActivationDialogTarget?: AcquisitionRoleAddress | null;
   /** Exact transient Judgment or Crystal Figurine dialog target. */
   readonly arcanaActivationDialogTarget?: ArcanaActivationAddress | null;
   /** The Circe outcome dialog nested in the open trait dialog; it never outlives that dialog. */
@@ -123,6 +126,7 @@ function closeDialogs(state: {
   traitDialogTarget?: TraitOfferAddress | null;
   levelResolutionDialogTarget?: LevelResolutionAddress | null;
   anvilDialogTarget?: AcquisitionRoleAddress | null;
+  hexActivationDialogTarget?: AcquisitionRoleAddress | null;
   arcanaActivationDialogTarget?: ArcanaActivationAddress | null;
   circeDialogTarget?: CirceResolutionAddress | null;
   runStateTarget?: RunStateOwner | null;
@@ -130,6 +134,7 @@ function closeDialogs(state: {
   state.traitDialogTarget = null;
   state.levelResolutionDialogTarget = null;
   state.anvilDialogTarget = null;
+  state.hexActivationDialogTarget = null;
   state.arcanaActivationDialogTarget = null;
   state.circeDialogTarget = null;
   state.runStateTarget = null;
@@ -223,6 +228,7 @@ const editorSessionSlice = createSlice({
         state.levelResolutionDialogTarget = null;
       }
       if (action.payload.clearAnvilDialogTarget) state.anvilDialogTarget = null;
+      if (action.payload.clearHexActivationDialogTarget) state.hexActivationDialogTarget = null;
       if (action.payload.clearArcanaActivationDialogTarget) {
         state.arcanaActivationDialogTarget = null;
       }
@@ -247,6 +253,13 @@ const editorSessionSlice = createSlice({
     },
     anvilResultDialogClosed(state) {
       state.anvilDialogTarget = null;
+    },
+    hexActivationDialogOpened(state, action: PayloadAction<AcquisitionRoleAddress>) {
+      state.hexActivationDialogTarget = action.payload;
+      state.selectedFinding = null;
+    },
+    hexActivationDialogClosed(state) {
+      state.hexActivationDialogTarget = null;
     },
     arcanaActivationDialogOpened(state, action: PayloadAction<ArcanaActivationAddress>) {
       state.arcanaActivationDialogTarget = action.payload;
@@ -294,6 +307,8 @@ export const {
   draftEditorClosed,
   draftEditorOpened,
   editorSessionReconciled,
+  hexActivationDialogClosed,
+  hexActivationDialogOpened,
   findingSelected,
   routePanelSelected,
   routeSelected,
@@ -346,6 +361,7 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
         traitDialogTarget: null,
         levelResolutionDialogTarget: null,
         anvilDialogTarget: null,
+        hexActivationDialogTarget: null,
         arcanaActivationDialogTarget: null,
         circeDialogTarget: null,
         runStateTarget: null,

@@ -27,7 +27,12 @@ import {
 } from '../../../reward-kernel';
 import { consumeRoomRewardForfeit } from '../../arcana-fear';
 import type { FindingChronology, FindingRegionEntry } from '../../finding-regions';
-import { bankPathPoints, settlePathScreen } from '../../hex-progress';
+import { bankPathPoints } from '../../hex-progress';
+import type { HexActivationContext } from '../../hex-activation';
+import {
+  hexActivationFindingEvidence,
+  settleAuthoredPathScreen,
+} from '../trait-settlement/hex-settlement';
 import {
   consumeOlympianProviderMaterialized,
   consumeTimePieceCharge,
@@ -202,6 +207,8 @@ export function applyProducerRoleHistory(
   const traitOfferCandidateContacts: ReachedTraitOfferCandidateContact[] = [];
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
+  let unresolvedHexActivation = false;
+  const hexActivationContexts: HexActivationContext[] = [];
   const seaStarSourceKey = semanticAddressKey(
     createAcquisitionRoleAddress(incoming.origin, resolution.role),
   );
@@ -560,8 +567,34 @@ export function applyProducerRoleHistory(
       isAspectSpellDropDormant(catalog, materializedBranch.state.equipment.aspectKey)
         ? (3 as const)
         : undefined);
-    if (pathPointGrant !== undefined)
-      acquisitionBranch = settlePathScreen(catalog, acquisitionBranch, pathPointGrant);
+    let investedHexNodeKeys: readonly string[] | undefined;
+    if (pathPointGrant !== undefined) {
+      const screen = settleAuthoredPathScreen(
+        catalog,
+        acquisitionBranch,
+        pathPointGrant,
+        incoming.hexActivationsByAcquisitionRole?.[resolution.role],
+      );
+      hexActivationContexts.push(screen.context);
+      if (screen.kind !== 'settled') {
+        unresolvedHexActivation = true;
+        addRewardFinding(
+          findingEmissions,
+          rewardFinding(
+            screen.kind === 'missing' ? 'hexActivationMissing' : 'hexActivationUnavailable',
+            createAcquisitionRoleAddress(incoming.origin, resolution.role),
+            screen.kind === 'missing'
+              ? { count: screen.context.count }
+              : hexActivationFindingEvidence(screen.context, screen.violations),
+          ),
+          atomicRegion,
+          findingChronology ?? historyChronology(resolution.historySequence),
+        );
+        continue;
+      }
+      acquisitionBranch = screen.branch;
+      investedHexNodeKeys = screen.selectedNodeKeys;
+    }
     if (fixedTraitKey !== undefined) {
       acquisitionTraitHistory = recordFixedAcquisitionTraitGrant(
         catalog,
@@ -648,6 +681,7 @@ export function applyProducerRoleHistory(
       acquisition,
       settlement,
       ...(seaStarResult === undefined ? {} : { seaStarResult }),
+      ...(investedHexNodeKeys === undefined ? {} : { investedHexNodeKeys }),
     });
     if (traitSettlement.blockedChild !== undefined) {
       unresolvedTraitOffer = true;
@@ -691,7 +725,12 @@ export function applyProducerRoleHistory(
       );
     }
   }
-  if (next.length === 0 && !unresolvedArtificerReplacement && !unresolvedTraitOffer) {
+  if (
+    next.length === 0 &&
+    !unresolvedArtificerReplacement &&
+    !unresolvedTraitOffer &&
+    !unresolvedHexActivation
+  ) {
     addRewardFinding(
       findingEmissions,
       rewardFinding('rewardAcquisitionUnavailable', incoming.origin, {
@@ -722,6 +761,9 @@ export function applyProducerRoleHistory(
       ...(traitOfferCandidateContacts.length === 0
         ? {}
         : { traitOfferCandidateContacts: Object.freeze(traitOfferCandidateContacts) }),
+      ...(hexActivationContexts.length === 0
+        ? {}
+        : { hexActivationContexts: Object.freeze(hexActivationContexts) }),
       ...(artificerReplacementOptions === undefined ? {} : { artificerReplacementOptions }),
       ...(artificerReplacementRewardTypes.length === 0
         ? {}

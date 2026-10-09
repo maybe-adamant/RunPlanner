@@ -178,10 +178,10 @@ export function checkRequirement(
       return requirement.requirements
         .map((child) => checkRequirement(catalog, child, trait, state, source))
         .find(Boolean);
-    case 'settledSpellDrop':
-      return (state.rewardHistory.useRecord.SpellDrop ?? 0) > 0
+    case 'investedHexOlympianTalent':
+      return hexOlympianTalentInvested(catalog, state.hexProgress)
         ? undefined
-        : { code: 'missingPrerequisite', detail: 'settledSpellDrop' };
+        : { code: 'missingPrerequisite', detail: 'investedHexOlympianTalent' };
     case 'anyActiveArcana':
       return state.arcanaFear.arcana.active.some((card) =>
         requirement.traitKeys.includes(catalog.arcanaCards.byKey[card.key]?.traitKey ?? ''),
@@ -403,6 +403,7 @@ export function latestModelTargetDomain(
   });
 }
 
+import { hexOlympianTalentInvested } from '../hex-progress';
 import type { Catalog, TraitDeclaration, TraitRequirementExpression } from '../../catalog-schema';
 import type { LevelResolutionAddress } from '../../authored-project/addresses';
 import type { AuthoredLevelResolution } from '../../authored-project/traits/state';

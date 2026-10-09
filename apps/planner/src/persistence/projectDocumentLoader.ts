@@ -12,6 +12,7 @@ import { migrateProjectDocument as migrate90To91 } from './project-90-to-91.js';
 import { migrateProjectDocument as migrate91To92 } from './project-91-to-92.js';
 import { migrateProjectDocument as migrate92To93 } from './project-92-to-93.js';
 import { migrateProjectDocument as migrate93To94 } from './project-93-to-94.js';
+import { migrateProjectDocument as migrate94To95 } from './project-94-to-95.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -78,6 +79,11 @@ const productionTransitions: readonly ProjectDocumentTransition[] = Object.freez
     source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 93 }),
     target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 94 }),
     migrate: migrate93To94,
+  }),
+  Object.freeze({
+    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 94 }),
+    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 95 }),
+    migrate: migrate94To95,
   }),
 ]);
 const noMigrations: readonly ProjectMigrationProvenance[] = Object.freeze([]);

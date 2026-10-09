@@ -224,6 +224,9 @@ export function settleOwnedAcquisitionSite(
       : {
           levelResolutionsByAcquisitionRole: source.levelResolutionsByAcquisitionRole,
         }),
+    ...(source.hexActivationsByAcquisitionRole === undefined
+      ? {}
+      : { hexActivationsByAcquisitionRole: source.hexActivationsByAcquisitionRole }),
     dispositionByAcquisitionRole: source.dispositionByAcquisitionRole ?? Object.freeze({}),
   });
   let current: readonly RewardBranchState[] = branches;
@@ -415,6 +418,9 @@ export function settleAcquisitionResolvedReward(
           : {
               levelResolutionsByAcquisitionRole: request.reward.levelResolutionsByAcquisitionRole,
             }),
+        ...(request.reward.hexActivationsByAcquisitionRole === undefined
+          ? {}
+          : { hexActivationsByAcquisitionRole: request.reward.hexActivationsByAcquisitionRole }),
         dispositionByAcquisitionRole: request.reward.dispositionByAcquisitionRole,
         presentsMaterializedScreen: request.presentsMaterializedScreen,
         ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
@@ -544,6 +550,9 @@ export function settleArtificerReplacementAcquisition(
           : {
               levelResolutionsByAcquisitionRole: replacement.levelResolutionsByAcquisitionRole,
             }),
+        ...(replacement.hexActivationsByAcquisitionRole === undefined
+          ? {}
+          : { hexActivationsByAcquisitionRole: replacement.hexActivationsByAcquisitionRole }),
         dispositionByAcquisitionRole: replacement.dispositionByAcquisitionRole,
         presentsMaterializedScreen: request.presentsMaterializedScreen,
         ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
@@ -732,6 +741,9 @@ export function settlePickupAcquisitionSite(
             ...(reward.levelResolutionsByAcquisitionRole === undefined
               ? {}
               : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
+            ...(reward.hexActivationsByAcquisitionRole === undefined
+              ? {}
+              : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
             presentsMaterializedScreen: request.presentsMaterializedScreen,
             ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
             ...(candidateTimelineOwner === undefined
@@ -870,6 +882,9 @@ export function settlePickupAcquisitionSite(
           ...(reward.levelResolutionsByAcquisitionRole === undefined
             ? {}
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
+          ...(reward.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
           presentsMaterializedScreen: request.presentsMaterializedScreen,
           ...(request.traitContext === undefined ? {} : { traitContext: request.traitContext }),
           ...(entryTimelineOwner === undefined ? {} : { timelineOwner: entryTimelineOwner }),

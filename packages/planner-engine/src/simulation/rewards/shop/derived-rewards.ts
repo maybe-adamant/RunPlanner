@@ -228,6 +228,11 @@ export function materializeShopGold(input: {
                     levelResolutionsByAcquisitionRole:
                       authoredEntry.levelResolutionsByAcquisitionRole,
                   }),
+              ...(authoredEntry.hexActivationsByAcquisitionRole === undefined
+                ? {}
+                : {
+                    hexActivationsByAcquisitionRole: authoredEntry.hexActivationsByAcquisitionRole,
+                  }),
             }),
           ]),
   });

@@ -77,6 +77,11 @@ function ownerControl(finding: SemanticFinding): WorkspaceFindingControl | undef
 function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefined {
   if (finding.origin.kind === 'acquisitionRole' && finding.code === 'seaStarDuplicationUnavailable')
     return 'seaStar';
+  if (
+    finding.origin.kind === 'acquisitionRole' &&
+    (finding.code === 'hexActivationMissing' || finding.code === 'hexActivationUnavailable')
+  )
+    return 'hexActivation';
   // Stone findings arise only for a chosen proc or a required Stone, whose checkbox is fixed.
   if (
     finding.origin.kind === 'traitOffer' &&
