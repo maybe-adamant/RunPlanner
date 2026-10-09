@@ -2,6 +2,9 @@ import type { CatalogCollection } from '../normalized/collection';
 
 export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell' | 'chaos';
 
+/** The two hero maxima `ValidateMaxHealth` and `GetExpectedMaxMana` recompute. */
+export type MaxStatKey = 'maxHealth' | 'maxMana';
+
 /** Closed numeric operand metadata for the paired Chaos result.  This is
  * deliberately declaration data, rather than a reusable modifier language. */
 export interface ChaosNumericOperand {
@@ -52,6 +55,13 @@ export interface ChaosCurseDeclaration {
   readonly operands: readonly ChaosNumericOperand[];
   readonly semanticTag?: ChaosSemanticTag;
   readonly offerRequirements?: readonly ChaosOfferRequirement[];
+  readonly maxStatOperand?: ChaosMaxStatOperand;
+}
+
+/** The named operand's authored value is a flat addition to one maximum while held. */
+export interface ChaosMaxStatOperand {
+  readonly operandKey: string;
+  readonly stat: MaxStatKey;
 }
 
 export interface ChaosBlessingDeclaration {
@@ -64,6 +74,7 @@ export interface ChaosBlessingDeclaration {
    * fixed/derived rather than authored rolls. */
   readonly derivedOutcome?: ChaosDerivedOutcome;
   readonly offerRequirements?: readonly ChaosOfferRequirement[];
+  readonly maxStatOperand?: ChaosMaxStatOperand;
 }
 
 export type ChaosDerivedOutcome =
@@ -130,6 +141,29 @@ export type TraitRarityDomain =
     };
 
 export type TraitElement = 'Aether' | 'Earth' | 'Air' | 'Fire' | 'Water';
+
+/** One number for a rarityless trait, else one per equipped rarity. */
+export type TraitMaxStatValue = number | Readonly<Record<InRunTraitRarity, number>>;
+
+/** Source max-stat properties of an equipped trait beyond flat `PropertyChanges`. */
+export type TraitMaxStatEffect =
+  | {
+      /** `MaxHealthMultiplier`/`MaxManaMultiplier`: each adds its excess over one. */
+      readonly kind: 'multiplier';
+      readonly maxHealth?: TraitMaxStatValue;
+      readonly maxMana?: TraitMaxStatValue;
+    }
+  /** `MaxManaToMaxHealthConversion`: this fraction of `ceil(max Magick)` as flat health. */
+  | { readonly kind: 'manaToHealthConversion'; readonly fraction: TraitMaxStatValue }
+  /** `MultipliedByElement`: a flat amount per current count of one element. */
+  | {
+      readonly kind: 'perElement';
+      readonly element: TraitElement;
+      readonly stat: MaxStatKey;
+      readonly amount: number;
+    }
+  /** `CircePetMultiplier`: multiplies the equipped familiar's stacks. */
+  | { readonly kind: 'familiarStackMultiplier'; readonly multiplier: number };
 
 /**
  * One declaration-owned, scalable god-trait rarity floor.  This intentionally
@@ -467,6 +501,13 @@ export interface AspectDeclaration {
     readonly upgradedMaximumBonus: number;
     readonly upgradeTraitKey: string;
   };
+  /** Flat maximum at the planner's rank V, and at rank VI once the upgrade trait was picked. */
+  readonly maxStatBonus?: {
+    readonly stat: MaxStatKey;
+    readonly amount: number;
+    readonly upgradedAmount: number;
+    readonly upgradeTraitKey: string;
+  };
 }
 
 export interface HammerCompatibility {
@@ -529,6 +570,7 @@ export interface TraitDeclaration {
     readonly minimumByRarity: Readonly<Record<InRunTraitRarity, number>>;
     readonly width: number;
   };
+  readonly maxStatEffect?: TraitMaxStatEffect;
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */

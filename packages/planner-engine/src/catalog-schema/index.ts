@@ -29,6 +29,7 @@ export type {
   ChaosCurseDeclaration,
   ChaosBlessingDeclaration,
   ChaosDerivedOutcome,
+  ChaosMaxStatOperand,
   ChaosNumericOperand,
   ChaosOfferRequirement,
   ChaosClockKind,
@@ -44,6 +45,9 @@ export type {
   TraitProviderKind,
   TraitRarity,
   InRunTraitRarity,
+  MaxStatKey,
+  TraitMaxStatEffect,
+  TraitMaxStatValue,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
   ProperUpbringingEffect,
@@ -69,6 +73,7 @@ import type {
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
   InRunTraitRarity,
+  MaxStatKey,
   WeaponDeclaration,
 } from './traits';
 
@@ -172,6 +177,11 @@ export interface ArcanaCardDeclaration {
     readonly maxHealthByRarity: Readonly<Record<InRunTraitRarity, number>>;
     readonly maxManaByRarity: Readonly<Record<InRunTraitRarity, number>>;
   };
+  /** Flat `PropertyChanges` maxima while the card is active, by its rarity. */
+  readonly maxStatBonus?: {
+    readonly maxHealthByRarity: Readonly<Record<InRunTraitRarity, number>>;
+    readonly maxManaByRarity: Readonly<Record<InRunTraitRarity, number>>;
+  };
 }
 
 export interface FearVowDeclaration {
@@ -216,7 +226,7 @@ export interface FamiliarDeclaration {
   readonly matureStatUpgradeCount: number;
   /** The flat maximum its first trait adds per stack, when that trait changes one. */
   readonly maxStatPerStack?: {
-    readonly stat: 'maxHealth' | 'maxMana';
+    readonly stat: MaxStatKey;
     readonly amount: number;
   };
 }
@@ -243,6 +253,8 @@ export interface KeepsakeDeclaration {
           | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'moonBeam'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'lionFang'; readonly schedule: 'oneShotAfterUnequipped' }
+          | { readonly kind: 'maxManaGrant'; readonly schedule: 'oneShotAfterUnequipped' }
+          | { readonly kind: 'maxHealthCap'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
       };
   /** Closed, source-backed rank data consumed by supported effect transitions. */
@@ -350,6 +362,16 @@ export interface KeepsakeDeclaration {
         readonly initialMultiplierByRank: KeepsakeRankProfile<number, number, number, number>;
         readonly decayPerEncounter: number;
         readonly expiredMultiplier: number;
+      }
+    | {
+        /** Each equip sets one permanent source-marked max-Magick bonus to its rank's amount. */
+        readonly kind: 'maxManaGrant';
+        readonly maxManaByRank: KeepsakeRankProfile<number, number, number, number>;
+      }
+    | {
+        /** Fixes max health while active; the first Boss cleared while active expires it. */
+        readonly kind: 'maxHealthCap';
+        readonly maxHealth: number;
       };
 }
 
@@ -1326,6 +1348,8 @@ export interface Catalog {
   readonly familiars: CatalogCollection<FamiliarDeclaration>;
   /** The familiar a new mature-save route starts with. */
   readonly defaultFamiliarKey: string;
+  /** `HeroData` base maxima before any trait. */
+  readonly heroMaxStats: Readonly<Record<MaxStatKey, number>>;
   readonly rewards: RewardKernelCatalog;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;

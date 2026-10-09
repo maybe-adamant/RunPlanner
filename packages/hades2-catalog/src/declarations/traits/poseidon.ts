@@ -237,6 +237,7 @@ export const poseidonTraits = [
   {
     key: 'ElementalHealthBoon',
     label: 'Water Fitness',
+    maxStatEffect: { kind: 'perElement', element: 'Water', stat: 'maxHealth', amount: 15 },
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
     linkedBoonRequirements: [],

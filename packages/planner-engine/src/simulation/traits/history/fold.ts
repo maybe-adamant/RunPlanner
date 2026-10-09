@@ -1,10 +1,12 @@
 import type { Catalog, TraitElement, TraitRarity } from '../../../catalog-schema';
 import { semanticAddressKey } from '../../../authored-project/addresses';
 import { optionIndex, type EquippedTrait } from '../../../authored-project/traits/state';
+import { resolveTraitMaxHealthRoll } from '../../../authored-project/traits/max-health-roll';
 import type { RewardHistoryState } from '../../../reward-kernel/model';
 import type {
   ChaosBlessingInstance,
   ChaosCurseInstance,
+  MaxStatAmounts,
   TraitHistoryEvent,
   TraitHistoryState,
 } from './model';
@@ -244,6 +246,11 @@ export function foldTraitHistoryEvents(
     Water: 0,
   };
   let activeSources: ReadonlySet<string> = new Set();
+  const maxStatGrants: Record<string, MaxStatAmounts> = {};
+  const grantMaxStat = (traitKey: string, stat: keyof MaxStatAmounts, amount: number) => {
+    const current = maxStatGrants[traitKey] ?? { maxHealth: 0, maxMana: 0 };
+    maxStatGrants[traitKey] = Object.freeze({ ...current, [stat]: current[stat] + amount });
+  };
   let activeChaos: ChaosCurseInstance[] = [];
   const maturedChaos: ChaosBlessingInstance[] = [];
   // Stable ordering retains the producer/purchase chronology already encoded
@@ -380,7 +387,7 @@ export function foldTraitHistoryEvents(
           current.progress === event.oldProgress &&
           event.newProgress >= 0 &&
           event.newProgress < event.requiredInterval
-        )
+        ) {
           equipped[event.traitKey] = Object.freeze({
             ...target,
             roomsPerUpgradeGrowth: Object.freeze({
@@ -389,6 +396,8 @@ export function foldTraitHistoryEvents(
               grants: current.grants + (event.granted ? 1 : 0),
             }),
           });
+          if (event.granted) grantMaxStat(event.traitKey, 'maxMana', current.maxManaPerGrant);
+        }
         continue;
       }
       if (event.kind === 'pickupProducerProgress') {
@@ -415,7 +424,11 @@ export function foldTraitHistoryEvents(
         )
           equipped[event.traitKey] = Object.freeze({
             ...target,
-            roomDecay: Object.freeze({ fraction: event.newFraction, blocked: false }),
+            roomDecay: Object.freeze({
+              ...target.roomDecay,
+              fraction: event.newFraction,
+              blocked: false,
+            }),
           });
         continue;
       }
@@ -576,7 +589,13 @@ export function foldTraitHistoryEvents(
         ...(event.roomDecayStartFraction === undefined
           ? {}
           : {
-              roomDecay: Object.freeze({ fraction: event.roomDecayStartFraction, blocked: true }),
+              roomDecay: Object.freeze({
+                fraction: event.roomDecayStartFraction,
+                blocked: true,
+                ...(event.roomDecayStartMaxima === undefined
+                  ? {}
+                  : { startMaxima: event.roomDecayStartMaxima }),
+              }),
             }),
         ...(event.roomsPerUpgradeMaxMana === undefined
           ? {}
@@ -594,6 +613,15 @@ export function foldTraitHistoryEvents(
               echoKeepsakeReplayCount: 0,
             }),
       });
+      // GrantRandomMaxHealth runs once per loot acquisition at the acquired rarity.
+      const rolledMaxHealth = resolveTraitMaxHealthRoll(
+        catalog,
+        option.traitKey,
+        option.rarity,
+        option.maxHealthRoll,
+      );
+      if (rolledMaxHealth !== undefined)
+        grantMaxStat(option.traitKey, 'maxHealth', rolledMaxHealth);
       const targeted = event.targetedAcquisitionTransition;
       if (targeted !== undefined) {
         switch (targeted.kind) {
@@ -659,6 +687,9 @@ export function foldTraitHistoryEvents(
     ...(activeSources.size === 0 ? {} : { properUpbringingActive: true as const }),
     activeChaosCurses: Object.freeze(activeChaos),
     maturedChaosBlessings: Object.freeze(maturedChaos),
+    ...(Object.keys(maxStatGrants).length === 0
+      ? {}
+      : { maxStatGrants: Object.freeze(maxStatGrants) }),
   });
 }
 

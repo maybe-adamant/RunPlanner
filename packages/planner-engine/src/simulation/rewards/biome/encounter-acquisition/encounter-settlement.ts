@@ -34,7 +34,7 @@ import {
   assessGorgonChildSettlement,
   consumeGorgonAppearance,
 } from '../../../keepsakes/encounter-effects';
-import { refreshKeepsakeFatedStatus } from '../../../keepsakes/state';
+import { expireMaxHealthCapAtBoss, refreshKeepsakeFatedStatus } from '../../../keepsakes/state';
 import { consumeFigurine } from '../../../keepsakes/trait-effects';
 import {
   foldTraitHistoryEvents,
@@ -198,6 +198,7 @@ export function applyEncounterSettlementTransition(inputs: {
           state: Object.freeze({
             ...branch.state,
             stygianWell: advanceStygianWellClock(branch.state.stygianWell, 'bosses'),
+            keepsakes: expireMaxHealthCapAtBoss(branch.state.keepsakes),
           }),
         }),
       ),

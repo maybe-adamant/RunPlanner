@@ -467,10 +467,9 @@ The exact supported capability matrix is:
 | conditional `MetaCurrencyDrop` |     1 | yes      | yes              | yes        | no        |
 
 Like other run-progress `MetaCurrencyDrop` objects, the Buried Treasure Bones
-can add Max Magick when the corresponding external World Upgrade is active.
-This is not a Buried-specific producer effect. The Planner treats that numeric
-Magick amount as simulation-neutral, so the generated pickup reuses ordinary
-Bones history without adding a profile-progression input or Max-Magick ledger.
+add Max Magick on routes that own the World Upgrade; this is not a
+Buried-specific producer effect. See
+[Max health and max Magick](../loadout-and-progression/MAX_HEALTH_AND_MAGICK_GAME_DATA_AUDIT.md).
 
 Buried Treasure also multiplies later Money, Ashes, Psyche, and Bones amounts.
 Those numeric resource quantities are outside the current simulation, so this

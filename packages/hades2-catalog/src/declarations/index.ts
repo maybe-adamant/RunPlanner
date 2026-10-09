@@ -20,6 +20,7 @@ import { routes } from './routes';
 import { traitCatalogInput } from './traits/index';
 import { arcanaCards, fearVows } from './arcana-fear';
 import { defaultFamiliarKey, familiars } from './familiars';
+import { heroMaxStats } from './hero';
 import { keepsakes } from './keepsakes';
 import type { RawCatalogInput } from './input';
 import type { RawRoomDeclaration } from './rooms/types';
@@ -55,6 +56,7 @@ export const declarations = {
   keepsakes,
   familiars,
   defaultFamiliarKey,
+  heroMaxStats,
   rewardKernel: rewardKernelDeclarations,
   encounterEnvelopes,
   encounterDefinitions,

@@ -82,6 +82,7 @@ it('preserves route branch and candidate-context counts through state consolidat
           expect(state.equipment).toEqual({
             weaponKey: project.route.loadout.weaponKey,
             aspectKey: project.route.loadout.aspectKey,
+            familiarKey: project.route.loadout.familiarKey,
           });
           expect(state.reached.routePosition.biomeKey).toBe(biome.biomeKey);
           expect(state.reached.historyView).toBe(

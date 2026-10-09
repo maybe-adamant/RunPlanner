@@ -103,16 +103,19 @@ const curse = (
 });
 export const chaosCurses = [
   curse('ChaosNoMoneyCurse', "Pauper's", 'encounters', 3, 5),
-  curse(
-    'ChaosHealthCurse',
-    'Atrophic',
-    'encounters',
-    3,
-    5,
-    [operand('healthPenalty', 'Max Health', -29, -20, 1, true)],
-    undefined,
-    [{ kind: 'notKeepsake', keepsakeKey: 'LowHealthCritKeepsake' }],
-  ),
+  {
+    ...curse(
+      'ChaosHealthCurse',
+      'Atrophic',
+      'encounters',
+      3,
+      5,
+      [operand('healthPenalty', 'Max Health', -29, -20, 1, true)],
+      undefined,
+      [{ kind: 'notKeepsake', keepsakeKey: 'LowHealthCritKeepsake' }],
+    ),
+    maxStatOperand: { operandKey: 'healthPenalty', stat: 'maxHealth' },
+  },
   curse('ChaosDamageCurse', 'Excruciating', 'encounters', 3, 5, [
     operand('damageTaken', 'Damage taken', 0.2, 0.5, 0.01),
   ]),
@@ -225,22 +228,28 @@ export const chaosBlessings = [
       Heroic: [0.5, 1.25, 0.01],
     }),
   ]),
-  blessing('ChaosHealthBlessing', 'Soul', [
-    rarityOperand('health', 'Max Health', {
-      Common: [26, 35, 1, true],
-      Rare: [52, 70, 1, true],
-      Epic: [78, 105, 1, true],
-      Heroic: [104, 140, 1, true],
-    }),
-  ]),
-  blessing('ChaosManaBlessing', 'Mind', [
-    rarityOperand('magick', 'Max Magick', {
-      Common: [30, 40, 1, true],
-      Rare: [45, 60, 1, true],
-      Epic: [60, 80, 1, true],
-      Heroic: [75, 100, 1, true],
-    }),
-  ]),
+  {
+    ...blessing('ChaosHealthBlessing', 'Soul', [
+      rarityOperand('health', 'Max Health', {
+        Common: [26, 35, 1, true],
+        Rare: [52, 70, 1, true],
+        Epic: [78, 105, 1, true],
+        Heroic: [104, 140, 1, true],
+      }),
+    ]),
+    maxStatOperand: { operandKey: 'health', stat: 'maxHealth' },
+  },
+  {
+    ...blessing('ChaosManaBlessing', 'Mind', [
+      rarityOperand('magick', 'Max Magick', {
+        Common: [30, 40, 1, true],
+        Rare: [45, 60, 1, true],
+        Epic: [60, 80, 1, true],
+        Heroic: [75, 100, 1, true],
+      }),
+    ]),
+    maxStatOperand: { operandKey: 'magick', stat: 'maxMana' },
+  },
   blessing('ChaosManaOverTimeBlessing', 'Will', [
     rarityOperand('magickPerSecond', 'Magick restored', {
       Common: [4, 6, 1, true],

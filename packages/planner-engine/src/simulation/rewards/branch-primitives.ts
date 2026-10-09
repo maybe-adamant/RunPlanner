@@ -109,6 +109,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
         lifetimeGodUseRecord: orderedRecord(history.lifetimeGodUseRecord),
         lifetimeGodPickupRecord: orderedRecord(history.lifetimeGodPickupRecord),
         resourceGains: orderedRecord(history.resourceGains),
+        maxStatGains: history.maxStatGains,
         lastRewardRecreation: history.lastRewardRecreation,
         traitFacts: history.traitFacts,
         lastDevotionDepth: history.lastDevotionDepth,

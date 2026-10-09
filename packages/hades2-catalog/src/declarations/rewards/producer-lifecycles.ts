@@ -18,17 +18,22 @@ const nemesisEventRewardTypes = [
   'RoomRewardConsolationPrize',
 ] as const;
 
+/** A fresh profile owns none of the `RunProgress` world upgrades; a mature save owns all. */
+export const runProgressUnlockExcludedRouteKeys = ['FreshFile'] as const;
+
 // ConsumableData.lua GiftDrop.RunProgress: the random boon level needs
-// WorldUpgradeGiftDropRunProgress, which a fresh profile has not bought.
+// WorldUpgradeGiftDropRunProgress.
 const giftDropRunProgressLevel = {
   kind: 'randomTargetIfAvailable',
   levelCount: 1,
-  excludedRouteKeys: ['FreshFile'],
+  excludedRouteKeys: runProgressUnlockExcludedRouteKeys,
 } as const;
 
 export const producerLifecycles = [
   {
     key: 'RoomReward',
+    // RewardLogic.lua SpawnRoomReward passes RunProgressUpgradeEligible.
+    runProgressUpgradeEligible: true,
     rewardTypes: [
       'MaxHealthDrop',
       'MaxHealthDropBig',
@@ -132,6 +137,8 @@ export const producerLifecycles = [
   },
   {
     key: 'EchoLastReward',
+    // EventLogic.lua EchoLastReward.
+    runProgressUpgradeEligible: true,
     rewardTypes: [
       'AphroditeUpgrade',
       'ApolloUpgrade',
@@ -220,6 +227,7 @@ export const producerLifecycles = [
   {
     key: 'NarcissusPickup',
     // TraitData_Narcissus overrides its Ashes drop's `AddResources` to 10.
+    runProgressUpgradeEligible: true,
     resourceGrantOverrides: { MetaCardPointsCommonDrop: { MetaCardPointsCommon: 10 } },
     rewardTypes: [
       'StoreRewardRandomStack',
@@ -246,6 +254,8 @@ export const producerLifecycles = [
   },
   {
     key: 'GeneratedTraitPickup',
+    // GiveRandomConsumables forwards Buried Treasure's RunProgressUpgradeEligible.
+    runProgressUpgradeEligible: true,
     rewardTypes: [
       'RoomMoneyDrop',
       'RoomMoneySmallDrop',

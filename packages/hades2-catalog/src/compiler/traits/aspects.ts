@@ -30,15 +30,43 @@ export function normalizeAspects(
             aspect.traitOfferLevelBonus,
             `${path}.traitOfferLevelBonus`,
           );
+    const maxStatBonus =
+      aspect.maxStatBonus === undefined
+        ? undefined
+        : normalizeAspectMaxStatBonus(aspect.maxStatBonus, `${path}.maxStatBonus`);
     return Object.freeze({
       key: requireNonEmpty(aspect.key, `${path}.key`),
       label: requireNonEmpty(aspect.label, `${path}.label`),
       weaponKey,
       ...(startingTrait === undefined ? {} : { startingTrait }),
       ...(traitOfferLevelBonus === undefined ? {} : { traitOfferLevelBonus }),
+      ...(maxStatBonus === undefined ? {} : { maxStatBonus }),
     });
   });
   return createCollection(values, 'aspects', (aspect) => aspect.key);
+}
+
+function normalizeAspectMaxStatBonus(
+  raw: unknown,
+  path: string,
+): NonNullable<AspectDeclaration['maxStatBonus']> {
+  const value = requireObject(raw, path);
+  const keys = ['stat', 'amount', 'upgradedAmount', 'upgradeTraitKey'];
+  if (Object.keys(value).length !== keys.length || keys.some((key) => !Object.hasOwn(value, key)))
+    fail(path, 'must contain exactly stat, amount, upgradedAmount, and upgradeTraitKey');
+  if (value.stat !== 'maxHealth' && value.stat !== 'maxMana')
+    fail(`${path}.stat`, 'must be maxHealth or maxMana');
+  const amount = value.amount;
+  const upgradedAmount = value.upgradedAmount;
+  if (typeof amount !== 'number' || !(amount > 0)) fail(`${path}.amount`, 'must be positive');
+  if (typeof upgradedAmount !== 'number' || !(upgradedAmount > amount))
+    fail(`${path}.upgradedAmount`, 'must exceed amount');
+  return Object.freeze({
+    stat: value.stat,
+    amount,
+    upgradedAmount,
+    upgradeTraitKey: requireNonEmpty(value.upgradeTraitKey as string, `${path}.upgradeTraitKey`),
+  });
 }
 
 function normalizeAspectTraitOfferLevelBonus(

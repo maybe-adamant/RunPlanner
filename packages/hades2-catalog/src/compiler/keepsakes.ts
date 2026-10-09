@@ -23,6 +23,8 @@ const giftSchedulesByKind = {
   olympianRewardPressure: 'everyBiome',
   moonBeam: 'oneShotAfterUnequipped',
   lionFang: 'oneShotAfterUnequipped',
+  maxManaGrant: 'oneShotAfterUnequipped',
+  maxHealthCap: 'oneShotAfterUnequipped',
   modeledNeutral: 'noModeledEffect',
 } as const;
 const inRunTraitRarities = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
@@ -459,6 +461,20 @@ function normalizeEffect(
           `${path}.decayPerEncounter`,
         ),
         expiredMultiplier,
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'maxManaGrant': {
+      requireExactObjectKeys(raw, path, ['kind', 'maxManaByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        maxManaByRank: normalizeNumericRankProfile(raw.maxManaByRank, `${path}.maxManaByRank`),
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'maxHealthCap': {
+      requireExactObjectKeys(raw, path, ['kind', 'maxHealth']);
+      return Object.freeze({
+        kind: raw.kind,
+        maxHealth: requirePositiveInteger(raw.maxHealth, `${path}.maxHealth`),
       }) as KeepsakeDeclaration['effect'];
     }
     default:

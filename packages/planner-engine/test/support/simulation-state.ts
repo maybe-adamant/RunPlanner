@@ -54,7 +54,11 @@ export interface TraitFrontierOverrides {
   readonly itineraryBiomeKeys?: readonly string[];
   /** Reaches the nth itinerary biome, which owns that acquisition ordinal. */
   readonly acquisitionOrdinal?: number;
-  readonly loadout?: { readonly weaponKey: string | null; readonly aspectKey: string | null };
+  readonly loadout?: {
+    readonly weaponKey: string | null;
+    readonly aspectKey: string | null;
+    readonly familiarKey?: string | null;
+  };
   readonly startingKeepsakeKey?: string;
   readonly arcanaFear?: ArcanaFearState;
   readonly keepsakes?: KeepsakeState;
@@ -84,7 +88,10 @@ export function traitFrontierState(
   const biomeKey =
     overrides.biomeKey ?? itineraryBiomeKeys[(overrides.acquisitionOrdinal ?? 1) - 1]!;
   const defaults = createDefaultRouteLoadout(catalog);
-  const loadout = overrides.loadout ?? defaults;
+  const loadout =
+    overrides.loadout === undefined
+      ? defaults
+      : { ...overrides.loadout, familiarKey: overrides.loadout.familiarKey ?? null };
   const startingKeepsakeKey = overrides.startingKeepsakeKey ?? catalog.defaultStartingKeepsakeKey;
   const arcanaFear = overrides.arcanaFear ?? createArcanaFearState(catalog, defaults);
   const initial = createInitialSimulationState(

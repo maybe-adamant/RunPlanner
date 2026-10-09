@@ -215,6 +215,15 @@ export function validateRewardRouteRequirementReferences(
       }),
     ),
   );
+  rewards.acquisitions.values.forEach((acquisition) =>
+    acquisition.runProgressMaxStatGrant?.excludedRouteKeys.forEach((routeKey, index) => {
+      if (routes.byKey[routeKey] === undefined)
+        fail(
+          `acquisitions.${acquisition.gameName}.runProgressMaxStatGrant.excludedRouteKeys[${index}]`,
+          `unknown route ${routeKey}`,
+        );
+    }),
+  );
   rewards.shops.values.forEach((shop) =>
     shop.groups.values.forEach((group) =>
       group.options.values.forEach((option) => {

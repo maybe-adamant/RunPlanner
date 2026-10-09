@@ -1,6 +1,7 @@
 import type {
   TraitCatalog,
   TraitDeclaration,
+  TraitElement,
   TraitRequirementExpression,
   TraitRarity,
   ProperUpbringingEffect,
@@ -59,7 +60,27 @@ export interface RawTraitDeclaration {
     readonly minimum: RawRarityScaledValue;
     readonly maximum: RawRarityScaledValue;
   };
+  readonly maxStatEffect?: RawTraitMaxStatEffect;
 }
+
+/** A rarityless number, or a base scaled by `RarityLevels` (excess over one with `sourceIsMultiplier`). */
+export type RawMaxStatValue =
+  number | (RawRarityScaledValue & { readonly sourceIsMultiplier?: true });
+
+export type RawTraitMaxStatEffect =
+  | {
+      readonly kind: 'multiplier';
+      readonly maxHealth?: RawMaxStatValue;
+      readonly maxMana?: RawMaxStatValue;
+    }
+  | { readonly kind: 'manaToHealthConversion'; readonly fraction: RawMaxStatValue }
+  | {
+      readonly kind: 'perElement';
+      readonly element: TraitElement;
+      readonly stat: 'maxHealth' | 'maxMana';
+      readonly amount: number;
+    }
+  | { readonly kind: 'familiarStackMultiplier'; readonly multiplier: number };
 
 export interface RawRarityScaledValue {
   readonly baseValue: number;
@@ -85,6 +106,13 @@ export interface RawAspectDeclaration {
   readonly traitOfferLevelBonus?: {
     readonly maximumBonus: number;
     readonly upgradedMaximumBonus: number;
+    readonly upgradeTraitKey: string;
+  };
+  /** Flat maximum at rank V (Legendary) and rank VI (Perfect, after the upgrade trait). */
+  readonly maxStatBonus?: {
+    readonly stat: 'maxHealth' | 'maxMana';
+    readonly amount: number;
+    readonly upgradedAmount: number;
     readonly upgradeTraitKey: string;
   };
 }

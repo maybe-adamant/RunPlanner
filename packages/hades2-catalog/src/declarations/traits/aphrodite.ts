@@ -100,6 +100,20 @@ export const aphroditeTraits = [
   {
     key: 'HealthRewardBonusBoon',
     label: 'Spiritual Affirmation',
+    // MaxHealthMultiplier and MaxManaMultiplier 1.15, SourceIsMultiplier.
+    maxStatEffect: {
+      kind: 'multiplier',
+      maxHealth: {
+        baseValue: 1.15,
+        sourceIsMultiplier: true,
+        rarityMultipliers: { Common: 1, Rare: 20 / 15, Epic: 25 / 15, Heroic: 30 / 15 },
+      },
+      maxMana: {
+        baseValue: 1.15,
+        sourceIsMultiplier: true,
+        rarityMultipliers: { Common: 1, Rare: 20 / 15, Epic: 25 / 15, Heroic: 30 / 15 },
+      },
+    },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],

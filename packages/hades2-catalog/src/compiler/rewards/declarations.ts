@@ -3,6 +3,7 @@ import type {
   AcquisitionRoleDeclaration,
   AcquisitionRoleResolution,
   ConcreteAcquisitionDeclaration,
+  MaxStatGrant,
   PayloadDomainDeclaration,
   RewardTypeDeclaration,
   SourceResolutionPoint,
@@ -58,6 +59,17 @@ export function normalizeResourceAmounts(
       ]),
     ),
   );
+}
+
+const MAX_STATS = ['maxHealth', 'maxMana'] as const;
+
+function normalizeMaxStatGrant(raw: MaxStatGrant, path: string): MaxStatGrant {
+  const value = requireObject(raw, path);
+  if (Object.keys(value).length !== 2) fail(path, 'requires only stat and amount');
+  return Object.freeze({
+    stat: requireClosedValue(raw.stat, MAX_STATS, `${path}.stat`),
+    amount: requirePositiveInteger(raw.amount, `${path}.amount`),
+  });
 }
 
 function requireClosedValue<const Values extends readonly string[]>(
@@ -375,6 +387,32 @@ export function normalizeAcquisitions(
                 acquisition.resourceGrant,
                 `acquisitions[${index}].resourceGrant`,
               ),
+            }),
+        ...(acquisition.maxStatGrant === undefined
+          ? {}
+          : {
+              maxStatGrant: normalizeMaxStatGrant(
+                acquisition.maxStatGrant,
+                `acquisitions[${index}].maxStatGrant`,
+              ),
+            }),
+        ...(acquisition.runProgressMaxStatGrant === undefined
+          ? {}
+          : {
+              runProgressMaxStatGrant: (() => {
+                const path = `acquisitions[${index}].runProgressMaxStatGrant`;
+                const { excludedRouteKeys, ...grant } = acquisition.runProgressMaxStatGrant;
+                if (!Array.isArray(excludedRouteKeys))
+                  fail(`${path}.excludedRouteKeys`, 'must be an array');
+                return Object.freeze({
+                  ...normalizeMaxStatGrant(grant, path),
+                  excludedRouteKeys: Object.freeze(
+                    excludedRouteKeys.map((key, keyIndex) =>
+                      requireNonEmpty(key, `${path}.excludedRouteKeys[${keyIndex}]`),
+                    ),
+                  ),
+                });
+              })(),
             }),
         ...(acquisition.lootRequirement === undefined
           ? {}

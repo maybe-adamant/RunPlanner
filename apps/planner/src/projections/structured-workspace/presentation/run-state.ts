@@ -1,6 +1,11 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
-import type { DecisionRewardBagCount, RunStateSnapshot } from '@run-planner/engine/simulation';
+import type {
+  DecisionRewardBagCount,
+  MaxStatSource,
+  MaxStats,
+  RunStateSnapshot,
+} from '@run-planner/engine/simulation';
 import {
   artificerStatus,
   hexBaseCapacity,
@@ -12,6 +17,7 @@ import type {
   WorkspaceRunStateBagCondition,
   WorkspaceRunStateBagEntry,
   WorkspaceRunStateBagSection,
+  WorkspaceRunStateMaxStats,
   WorkspaceRunStatePresentation,
   WorkspaceRunStateRewardStoreController,
   WorkspaceRunStateSource,
@@ -254,6 +260,74 @@ function stygianWellPresentation(
   });
 }
 
+function maxStatSourceLabel(catalog: Catalog, source: MaxStatSource): string {
+  switch (source.kind) {
+    case 'base':
+      return 'Base';
+    case 'pickups':
+      return 'Pickups';
+    case 'aspect':
+      return catalog.aspects.byKey[source.key]?.label ?? source.key;
+    case 'familiar':
+      return catalog.familiars.byKey[source.key]?.label ?? source.key;
+    case 'arcana':
+      return catalog.arcanaCards.byKey[source.key]?.label ?? source.key;
+    case 'keepsake':
+      return catalog.keepsakes.byKey[source.key]?.label ?? source.key;
+    case 'trait':
+      return catalog.traits.byKey[source.key]?.label ?? source.key;
+    case 'chaos':
+      return (
+        catalog.chaos.blessings.byKey[source.key]?.label ??
+        catalog.chaos.curses.byKey[source.key]?.label ??
+        source.key
+      );
+  }
+}
+
+function signedAmount(value: number): string | undefined {
+  if (value === 0) return undefined;
+  const text = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return value > 0 ? `+${text}` : text;
+}
+
+function maxStatsPresentation(catalog: Catalog, stats: MaxStats): WorkspaceRunStateMaxStats {
+  const multiplier = (value: number) => (value === 1 ? undefined : `×${value.toFixed(2)}`);
+  const healthMultiplier = multiplier(stats.multipliers.maxHealth);
+  const magickMultiplier = multiplier(stats.multipliers.maxMana);
+  const converted = signedAmount(stats.convertedHealth);
+  return Object.freeze({
+    maxHealth: stats.maxHealth,
+    maxMagick: stats.maxMana,
+    ...(stats.maxHealthCap === undefined
+      ? {}
+      : {
+          maxHealthNote: `Fixed at ${stats.maxHealthCap.maxHealth} by ${
+            catalog.keepsakes.byKey[stats.maxHealthCap.keepsakeKey]?.label ??
+            stats.maxHealthCap.keepsakeKey
+          }`,
+        }),
+    sources: Object.freeze(
+      stats.flat.map((entry) => {
+        const maxHealth = signedAmount(entry.maxHealth);
+        const maxMagick = signedAmount(entry.maxMana);
+        return Object.freeze({
+          key:
+            entry.source.kind === 'base' || entry.source.kind === 'pickups'
+              ? entry.source.kind
+              : `${entry.source.kind}:${entry.source.key}`,
+          label: maxStatSourceLabel(catalog, entry.source),
+          ...(maxHealth === undefined ? {} : { maxHealth }),
+          ...(maxMagick === undefined ? {} : { maxMagick }),
+        });
+      }),
+    ),
+    ...(converted === undefined ? {} : { convertedHealth: converted }),
+    ...(healthMultiplier === undefined ? {} : { maxHealthMultiplier: healthMultiplier }),
+    ...(magickMultiplier === undefined ? {} : { maxMagickMultiplier: magickMultiplier }),
+  });
+}
+
 /** Presentation joins only: the engine has already evaluated all bag conditions. */
 export function presentRunState(
   catalog: Catalog,
@@ -268,6 +342,7 @@ export function presentRunState(
   const hexEffective = hexEffectiveCapacity(catalog, snapshot.hexProgress);
   const wellPresentation = stygianWellPresentation(catalog, snapshot.stygianWell);
   return Object.freeze({
+    maxStats: maxStatsPresentation(catalog, snapshot.maxStats),
     hexProgress: Object.freeze({
       ...(equippedSpell === undefined
         ? {}

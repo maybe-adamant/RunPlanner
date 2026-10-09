@@ -398,6 +398,13 @@ catalog also declares the default familiar. Worry Free declares its acquisition
 max-health roll as a minimum per rarity, scaled from the source bounds, and one
 roll width the compiler requires every rarity to share.
 
+Max health and Magick are declared with their owners: the hero base values,
+pickup grants and their run-progress overrides with eligible producers,
+aspect, Arcana and keepsake bonuses, trait multipliers, conversions and
+per-element amounts, and the Chaos operand each curse or blessing adds. The
+[max-stats audit](../audits/loadout-and-progression/MAX_HEALTH_AND_MAGICK_GAME_DATA_AUDIT.md)
+owns the amounts.
+
 ## Requirement and Closure Obligations
 
 Requirements are typed expressions over run ledgers and, where a scope admits

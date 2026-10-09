@@ -168,6 +168,13 @@ export const hephaestusTraits = [
   {
     key: 'ManaToHealthBoon',
     label: 'Uncanny Fortitude',
+    maxStatEffect: {
+      kind: 'manaToHealthConversion',
+      fraction: {
+        baseValue: 0.2,
+        rarityMultipliers: { Common: 1, Rare: 1.25, Epic: 1.5, Heroic: 1.75 },
+      },
+    },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],

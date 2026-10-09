@@ -144,6 +144,12 @@ export function validateAspectTraitOfferLevelBonuses(input: {
     if (input.traits.byKey[effect.upgradeTraitKey] === undefined)
       fail(`aspects.${aspect.key}.traitOfferLevelBonus.upgradeTraitKey`, 'unknown trait');
   }
+  for (const aspect of input.aspects.values)
+    if (
+      aspect.maxStatBonus !== undefined &&
+      input.traits.byKey[aspect.maxStatBonus.upgradeTraitKey] === undefined
+    )
+      fail(`aspects.${aspect.key}.maxStatBonus.upgradeTraitKey`, 'unknown trait');
 }
 
 export function validateWeaponAspectClosure(input: {

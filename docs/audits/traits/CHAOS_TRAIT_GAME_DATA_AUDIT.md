@@ -162,6 +162,9 @@ collapse Revelation's two runtime rolls into one value.
 
 ## Blessing inventory and planner consequences
 
+Soul, Mind and Atrophic values fold into the planner's maxima as described in
+[Max health and max Magick](../loadout-and-progression/MAX_HEALTH_AND_MAGICK_GAME_DATA_AUDIT.md).
+
 Processed ranges below are the final gameplay values after rarity scaling and
 normalization. `C/R/E/H` means Common, Rare, Epic, and Heroic.
 
@@ -170,8 +173,8 @@ normalization. `C/R/E/H` means Common, Rare, Epic, and Heroic.
 | `ChaosWeaponBlessing`       | Strike     | Attack multiplier                                                                                           | damage bonus C `20–50%`; R `30–75%`; E `40–100%`; H `50–125%`                                                                                                     | combat-only                  |
 | `ChaosSpecialBlessing`      | Flourish   | Special multiplier                                                                                          | damage bonus C `30–60%`; R `45–90%`; E `60–120%`; H `75–150%`                                                                                                     | combat-only                  |
 | `ChaosCastBlessing`         | Chasm      | Cast multiplier                                                                                             | damage bonus C `20–50%`; R `30–75%`; E `40–100%`; H `50–125%`                                                                                                     | combat-only                  |
-| `ChaosHealthBlessing`       | Soul       | Max Health added                                                                                            | integer C `26–35`; R `52–70`; E `78–105`; H `104–140`                                                                                                             | health not simulated         |
-| `ChaosManaBlessing`         | Mind       | Max Magick added                                                                                            | integer C `30–40`; R `45–60`; E `60–80`; H `75–100`                                                                                                               | magick not simulated         |
+| `ChaosHealthBlessing`       | Soul       | Max Health added                                                                                            | integer C `26–35`; R `52–70`; E `78–105`; H `104–140`                                                                                                             | max health modeled           |
+| `ChaosManaBlessing`         | Mind       | Max Magick added                                                                                            | integer C `30–40`; R `45–60`; E `60–80`; H `75–100`                                                                                                               | max Magick modeled           |
 | `ChaosManaOverTimeBlessing` | Will       | Magick restored per second                                                                                  | integer C `4–6`; R `8–12`; E `12–18`; H `16–24`                                                                                                                   | combat-only                  |
 | `ChaosExSpeedBlessing`      | Revelation | **Two independent rolls:** the reported all-weapon/Omega multiplier and a second weapon-property multiplier | both processed multiplier ranges are C `0.85–0.90`; R `0.78–0.85`; E `0.70–0.80`; H `0.63–0.75`, equivalent to `10–15%`, `15–22%`, `20–30%`, and `25–37%` faster  | combat-only                  |
 | `ChaosRarityBlessing`       | Favor      | Rare-chance bonus                                                                                           | C `40–50%`; R `54–67%`; E `67–84%`; H `80–100%`; fixed `+10%` Epic, Duo, and Legendary chances are not additional rolls                                           | may eliminate Common         |

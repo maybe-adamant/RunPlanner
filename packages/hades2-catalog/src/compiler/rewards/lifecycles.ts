@@ -212,11 +212,19 @@ export function normalizeProducerLifecycles(
         fail(`${path}.resourceBonusExempt`, 'must be true when declared');
       if (profile.duplicationExempt !== undefined && profile.duplicationExempt !== true)
         fail(`${path}.duplicationExempt`, 'must be true when declared');
+      if (
+        profile.runProgressUpgradeEligible !== undefined &&
+        profile.runProgressUpgradeEligible !== true
+      )
+        fail(`${path}.runProgressUpgradeEligible`, 'must be true when declared');
       return Object.freeze({
         key,
         rewardTypes: normalizedRewardTypes,
         ...(profile.resourceBonusExempt === true ? { resourceBonusExempt: true as const } : {}),
         ...(profile.duplicationExempt === true ? { duplicationExempt: true as const } : {}),
+        ...(profile.runProgressUpgradeEligible === true
+          ? { runProgressUpgradeEligible: true as const }
+          : {}),
         ...(profile.resourceGrantOverrides === undefined
           ? {}
           : {

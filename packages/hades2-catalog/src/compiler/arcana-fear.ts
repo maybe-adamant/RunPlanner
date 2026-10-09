@@ -6,6 +6,7 @@ import {
   requireBoolean,
   requireNonEmpty,
   requireNonNegativeInteger,
+  requireObject,
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
@@ -136,6 +137,18 @@ export function normalizeArcanaCards(
           requirePositiveInteger(profile[rarity], `${path}.roomEntryStatGrowth.${stat}.${rarity}`);
       }
     }
+    const maxStatBonus = card.maxStatBonus;
+    if (maxStatBonus !== undefined)
+      for (const stat of ['maxHealthByRarity', 'maxManaByRarity'] as const) {
+        const profile = requireObject(maxStatBonus[stat], `${path}.maxStatBonus.${stat}`);
+        if (Object.keys(profile).length !== 4)
+          fail(`${path}.maxStatBonus.${stat}`, 'must declare all four rarities');
+        for (const rarity of ['Common', 'Rare', 'Epic', 'Heroic'] as const)
+          requirePositiveInteger(
+            profile[rarity] as number,
+            `${path}.maxStatBonus.${stat}.${rarity}`,
+          );
+      }
     if (traits.byKey[card.traitKey] === undefined) {
       fail(`${path}.traitKey`, `unknown trait ${card.traitKey}`);
     }
@@ -184,10 +197,12 @@ export function normalizeArcanaCards(
     const {
       boonRarityContributions: _rawBoonRarityContributions,
       roomEntryStatGrowth: _rawRoomEntryStatGrowth,
+      maxStatBonus: _rawMaxStatBonus,
       ...normalizedCard
     } = card;
     void _rawBoonRarityContributions;
     void _rawRoomEntryStatGrowth;
+    void _rawMaxStatBonus;
     return Object.freeze({
       ...normalizedCard,
       fatedIncompatible: card.fatedIncompatible === true,
@@ -199,6 +214,14 @@ export function normalizeArcanaCards(
       ...(artificerCapacityByRarity === undefined
         ? {}
         : { artificerCapacityByRarity: Object.freeze({ ...artificerCapacityByRarity }) }),
+      ...(maxStatBonus === undefined
+        ? {}
+        : {
+            maxStatBonus: Object.freeze({
+              maxHealthByRarity: Object.freeze({ ...maxStatBonus.maxHealthByRarity }),
+              maxManaByRarity: Object.freeze({ ...maxStatBonus.maxManaByRarity }),
+            }),
+          }),
       ...(roomEntryStatGrowth === undefined
         ? {}
         : {

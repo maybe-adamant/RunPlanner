@@ -8,12 +8,14 @@ import type {
   RewardKernelFacts,
   ProducerLifecyclePointKey,
   ConcreteAcquisitionPickupEffect,
+  MaxStatGrant,
   ResourceAmounts,
   SaveFileGodHistory,
 } from './model';
 import { ordinarySourceGameNames } from './support';
 
 const EMPTY_RECORD = Object.freeze({}) as Readonly<Record<string, number>>;
+const NO_MAX_STAT_GAINS = Object.freeze({ maxHealth: 0, maxMana: 0 });
 
 function assertNever(value: never): never {
   throw new Error(`unknown reward projection ${String(value)}`);
@@ -51,6 +53,7 @@ export function createRewardHistoryState(
     lifetimeGodUseRecord: godRecord,
     lifetimeGodPickupRecord: godRecord,
     resourceGains: EMPTY_RECORD,
+    maxStatGains: NO_MAX_STAT_GAINS,
     traitFacts: Object.freeze({
       upgradableTraitCount: 0,
       elementCounts: EMPTY_RECORD,
@@ -115,6 +118,21 @@ export function creditResourceGains(
   const gains: Record<string, number> = { ...history.resourceGains };
   for (const key of keys) gains[key] = (gains[key] ?? 0) + amounts[key]!;
   return Object.freeze({ ...history, resourceGains: Object.freeze(gains) });
+}
+
+/** Credits one collected object's flat max-stat grant. */
+export function creditMaxStatGain(
+  history: RewardHistoryState,
+  grant: MaxStatGrant | undefined,
+): RewardHistoryState {
+  if (grant === undefined || grant.amount === 0) return history;
+  return Object.freeze({
+    ...history,
+    maxStatGains: Object.freeze({
+      ...history.maxStatGains,
+      [grant.stat]: history.maxStatGains[grant.stat] + grant.amount,
+    }),
+  });
 }
 
 /** Records one source-resolved direct loot interaction without fabricating a pickup. */

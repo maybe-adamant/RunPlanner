@@ -71,7 +71,7 @@ export function initializeRewardBranches(
   startingKeepsakeKey: string | null,
   startingKeepsakeEquipResults: AuthoredKeepsakeEquipResults | undefined,
   routeKey: string,
-  loadout: Pick<RouteLoadout, 'weaponKey' | 'aspectKey' | 'aspectHexTree'>,
+  loadout: Pick<RouteLoadout, 'weaponKey' | 'aspectKey' | 'aspectHexTree' | 'familiarKey'>,
   reached: {
     readonly routePosition: ResolvedRoutePosition;
     readonly historyView: HistoryStateView;

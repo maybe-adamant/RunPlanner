@@ -35,8 +35,15 @@ export interface TraitOfferEvent {
   readonly pickupProducerInterval?: number;
   /** Acquisition-time fraction of a room-decaying Echo bonus. */
   readonly roomDecayStartFraction?: number;
+  /** The final maxima just before a room-decaying acquisition. */
+  readonly roomDecayStartMaxima?: MaxStatAmounts;
   /** Acquisition-time max Magick per `RoomsPerUpgrade` grant. */
   readonly roomsPerUpgradeMaxMana?: number;
+}
+
+export interface MaxStatAmounts {
+  readonly maxHealth: number;
+  readonly maxMana: number;
 }
 
 /** A frozen Concave Stone pickup, distinct from the original generated offer. */
@@ -58,6 +65,7 @@ export interface ConcaveStoneSecondaryEvent {
   readonly selectedEffectiveLevel?: number;
   readonly pickupProducerInterval?: number;
   readonly roomDecayStartFraction?: number;
+  readonly roomDecayStartMaxima?: MaxStatAmounts;
   /** Acquisition-time max Magick per `RoomsPerUpgrade` grant. */
   readonly roomsPerUpgradeMaxMana?: number;
 }
@@ -372,4 +380,10 @@ export interface TraitHistoryState {
   readonly properUpbringingActive?: true;
   readonly activeChaosCurses: readonly ChaosCurseInstance[];
   readonly maturedChaosBlessings: readonly ChaosBlessingInstance[];
+  /**
+   * Permanent flat maxima granted by trait effects, by granting trait key:
+   * acquisition rolls and `RoomsPerUpgrade` grants survive the trait's removal.
+   * Absent until the first grant.
+   */
+  readonly maxStatGrants?: Readonly<Record<string, MaxStatAmounts>>;
 }

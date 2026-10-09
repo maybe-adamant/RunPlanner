@@ -27,6 +27,7 @@ export interface RawArcanaCardDeclaration {
   }>;
   readonly boonRarityContributions?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['boonRarityContributions'];
   readonly roomEntryStatGrowth?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['roomEntryStatGrowth'];
+  readonly maxStatBonus?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['maxStatBonus'];
 }
 export interface RawFearVowDeclaration {
   readonly key: string;

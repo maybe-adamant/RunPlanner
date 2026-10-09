@@ -57,7 +57,11 @@ describe('Fresh File route start', () => {
   it('starts with the aspectless Staff, no keepsake, no Arcana and a closed save history', () => {
     const project = freshProject();
     const state = routeStartState(project);
-    expect(state.equipment).toEqual({ weaponKey: 'WeaponStaffSwing', aspectKey: null });
+    expect(state.equipment).toEqual({
+      weaponKey: 'WeaponStaffSwing',
+      aspectKey: null,
+      familiarKey: null,
+    });
     expect(state.keepsakes.currentKey).toBeNull();
     expect(state.keepsakes.history).toEqual([]);
     expect(state.arcanaFear.arcana.active).toEqual([]);
@@ -75,6 +79,7 @@ describe('Fresh File route start', () => {
     expect(state.equipment).toEqual({
       weaponKey: mature.route.loadout.weaponKey,
       aspectKey: mature.route.loadout.aspectKey,
+      familiarKey: mature.route.loadout.familiarKey,
     });
     expect(state.keepsakes.currentKey).toBe(mature.route.loadout.startingKeepsakeKey);
     expect(state.rewardHistory).toEqual(createRewardHistoryState(catalog.rewards, 'mature'));

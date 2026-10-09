@@ -69,6 +69,8 @@ import {
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { deriveMaxStats } from '../../src/simulation/max-stats';
+import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
   traitFrontierState,
@@ -3012,14 +3014,17 @@ describe('Fight Fight Fight room decay', () => {
     'removes the %s acquisition on its exact later departure',
     (_label, routeKey, itinerary, startFraction, removalDeparture) => {
       const acquired = acquireFight(routeKey, itinerary);
+      const startMaxima = acquired.equippedTraits[fightKey]?.roomDecay?.startMaxima;
       expect(acquired.equippedTraits[fightKey]?.roomDecay).toEqual({
         fraction: startFraction,
         blocked: true,
+        startMaxima,
       });
       const unblocked = depart(acquired, 1);
       expect(unblocked.equippedTraits[fightKey]?.roomDecay).toEqual({
         fraction: startFraction,
         blocked: false,
+        startMaxima,
       });
       const lastHeld = depart(unblocked, removalDeparture - 1);
       expect(lastHeld.equippedTraits[fightKey]?.roomDecay?.fraction).toBeGreaterThan(0);
@@ -3034,4 +3039,20 @@ describe('Fight Fight Fight room decay', () => {
       expect(depart(removed, 1)).toBe(removed);
     },
   );
+
+  it('snapshots the final maxima before acquisition and decays that flat bonus', () => {
+    // Default loadout: Frinos +40 health; Staff rank V +40 and Silver Wheel +100 Magick.
+    const before = baseBranch().state;
+    expect(deriveMaxStats(catalog, before)).toMatchObject({ maxHealth: 70, maxMana: 190 });
+    const acquired = acquireFight('Underworld', ['F', 'G', 'H', 'I']);
+    expect(acquired.equippedTraits[fightKey]?.roomDecay?.startMaxima).toEqual({
+      maxHealth: 70,
+      maxMana: 190,
+    });
+    const at = (history: typeof acquired) =>
+      deriveMaxStats(catalog, replaceSimulationTraitHistory(before, history));
+    expect(at(acquired)).toMatchObject({ maxHealth: 112, maxMana: 304 });
+    // One unblocking departure, then two 0.05 decays.
+    expect(at(depart(acquired, 3))).toMatchObject({ maxHealth: 105, maxMana: 285 });
+  });
 });

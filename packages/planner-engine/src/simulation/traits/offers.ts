@@ -54,6 +54,7 @@ import type {
 } from './history/model';
 import type { RansomAssessment } from './history/transitions';
 import { traitOfferContextProjection } from '../state/pending-trait-offers';
+import { deriveMaxStats } from '../max-stats';
 
 function boonRarityProviderForGiver(
   giver: Catalog['traitGivers']['values'][number] | undefined,
@@ -798,6 +799,14 @@ export function recordReachedTraitOffer(
         )
       : undefined;
   const roomDecayStartFraction = ordinalEffect?.roomDecayStartFraction;
+  // EchoIncreaseStats snapshots the hero's current maxima on acquisition.
+  const roomDecayStartMaxima =
+    roomDecayStartFraction === undefined
+      ? undefined
+      : (() => {
+          const { maxHealth, maxMana } = deriveMaxStats(catalog, evaluation.state);
+          return Object.freeze({ maxHealth, maxMana });
+        })();
   if (
     selectedDisposition?.kind !== 'equip' &&
     selectedDisposition?.kind !== 'upgradeOccupiedBoonSlot' &&
@@ -849,6 +858,7 @@ export function recordReachedTraitOffer(
       ? {}
       : { pickupProducerInterval: ordinalEffect.clockInterval }),
     ...(roomDecayStartFraction === undefined ? {} : { roomDecayStartFraction }),
+    ...(roomDecayStartMaxima === undefined ? {} : { roomDecayStartMaxima }),
     ...(ordinalEffect?.roomsPerUpgradeMaxMana === undefined
       ? {}
       : { roomsPerUpgradeMaxMana: ordinalEffect.roomsPerUpgradeMaxMana }),

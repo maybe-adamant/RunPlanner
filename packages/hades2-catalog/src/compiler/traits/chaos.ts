@@ -1,6 +1,7 @@
 import type {
   ChaosBlessingDeclaration,
   ChaosCurseDeclaration,
+  ChaosMaxStatOperand,
   ChaosTraitCatalog,
   TraitElement,
 } from '@run-planner/engine/catalog-schema';
@@ -14,6 +15,21 @@ const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const CHAOS_CLOCKS = ['encounters', 'locations', 'godBoonScreens'] as const;
 const CHAOS_TAGS = ['Creation', 'Favor', 'Ordinary', 'Rejected', 'Barren'] as const;
 const CHAOS_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+
+function normalizeMaxStatOperand(
+  raw: unknown,
+  operands: readonly { readonly key: string }[],
+  path: string,
+): ChaosMaxStatOperand {
+  const value = requireObject(raw, path);
+  if (Object.keys(value).length !== 2) fail(path, 'requires only operandKey and stat');
+  if (!operands.some((operand) => operand.key === value.operandKey))
+    fail(`${path}.operandKey`, 'must name a declared operand');
+  return Object.freeze({
+    operandKey: value.operandKey as string,
+    stat: closedValue(value.stat, ['maxHealth', 'maxMana'] as const, `${path}.stat`),
+  });
+}
 
 function closedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -323,6 +339,7 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
             'operands',
             'semanticTag',
             'offerRequirements',
+            'maxStatOperand',
           ].includes(key),
       )
     )
@@ -365,6 +382,15 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
               `chaos.curses[${index}].offerRequirements`,
             ),
           }),
+      ...(value.maxStatOperand === undefined
+        ? {}
+        : {
+            maxStatOperand: normalizeMaxStatOperand(
+              value.maxStatOperand,
+              operands,
+              `chaos.curses[${index}].maxStatOperand`,
+            ),
+          }),
     });
   });
   const normalizedBlessings = blessings.map((raw, index) => {
@@ -380,6 +406,7 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
             'fixedRarity',
             'offerRequirements',
             'derivedOutcome',
+            'maxStatOperand',
           ].includes(key),
       )
     )
@@ -418,6 +445,15 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
             offerRequirements: normalizeChaosOfferRequirements(
               value.offerRequirements,
               `chaos.blessings[${index}].offerRequirements`,
+            ),
+          }),
+      ...(value.maxStatOperand === undefined
+        ? {}
+        : {
+            maxStatOperand: normalizeMaxStatOperand(
+              value.maxStatOperand,
+              operands,
+              `chaos.blessings[${index}].maxStatOperand`,
             ),
           }),
     });

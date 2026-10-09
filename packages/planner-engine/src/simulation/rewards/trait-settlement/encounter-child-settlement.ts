@@ -97,6 +97,9 @@ export function assessEchoBoonChild(
         ...(selectedChild.naturalSelectionTargets === undefined
           ? {}
           : { naturalSelectionTargets: selectedChild.naturalSelectionTargets }),
+        ...(selectedChild.maxHealthRoll === undefined
+          ? {}
+          : { maxHealthRoll: selectedChild.maxHealthRoll }),
       }),
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',

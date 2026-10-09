@@ -2,6 +2,7 @@ import { semanticAddressKey, type SemanticAddress } from '../../authored-project
 import type { Catalog, InRunTraitRarity } from '../../catalog-schema';
 import {
   resolveAcquisitionRole,
+  type MaxStatGrant,
   type ResolvedRewardOffer,
   type ResourceAmounts,
 } from '../../reward-kernel';
@@ -61,6 +62,29 @@ export function resolveProducedResourceAmounts(
       }),
     ),
   );
+}
+
+/**
+ * The flat maximum one produced object grants. A run-progress-eligible
+ * producer's object takes its `RunProgress` override where the route owns the
+ * unlock; a purchase is never run-progress eligible.
+ */
+export function resolveProducedMaxStatGrant(
+  catalog: Catalog,
+  acquisitionGameName: string,
+  producerLifecycleKey: string,
+  routeKey: string,
+): MaxStatGrant | undefined {
+  const acquisition = catalog.rewards.acquisitions.byKey[acquisitionGameName];
+  const runProgress = acquisition?.runProgressMaxStatGrant;
+  if (
+    runProgress !== undefined &&
+    catalog.rewards.producerLifecycles.byKey[producerLifecycleKey]?.runProgressUpgradeEligible ===
+      true &&
+    !runProgress.excludedRouteKeys.includes(routeKey)
+  )
+    return Object.freeze({ stat: runProgress.stat, amount: runProgress.amount });
+  return acquisition?.maxStatGrant;
 }
 
 /** One spawned object whose resource roles store their amount now. */

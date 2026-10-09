@@ -214,6 +214,21 @@ describe('Run State presentation', () => {
       },
       forfeitStatus: 'consumed',
       resourceGains: {},
+      maxStats: {
+        maxHealth: 92,
+        maxMana: 150,
+        flat: [
+          { source: { kind: 'base' }, maxHealth: 30, maxMana: 50 },
+          { source: { kind: 'aspect', key: 'AxeRecoveryAspect' }, maxHealth: 50.1, maxMana: 0 },
+          {
+            source: { kind: 'keepsake', key: 'ManaOverTimeRefundKeepsake' },
+            maxHealth: 0,
+            maxMana: 100,
+          },
+        ],
+        multipliers: { maxHealth: 1.15, maxMana: 1 },
+        convertedHealth: 0,
+      },
       rewardStoreController: {
         enteredStoreCount: 7,
         enteredMetaStoreCount: 2,
@@ -241,6 +256,26 @@ describe('Run State presentation', () => {
       ],
     } as const;
     const state = presentRunState(catalog, snapshot);
+    expect(state.maxStats).toEqual({
+      maxHealth: 92,
+      maxMagick: 150,
+      sources: [
+        { key: 'base', label: 'Base', maxHealth: '+30', maxMagick: '+50' },
+        { key: 'aspect:AxeRecoveryAspect', label: 'Aspect of Melinoë', maxHealth: '+50.1' },
+        { key: 'keepsake:ManaOverTimeRefundKeepsake', label: 'Silver Wheel', maxMagick: '+100' },
+      ],
+      maxHealthMultiplier: '×1.15',
+    });
+    expect(
+      presentRunState(catalog, {
+        ...snapshot,
+        maxStats: {
+          ...snapshot.maxStats,
+          maxHealth: 30,
+          maxHealthCap: { maxHealth: 30, keepsakeKey: 'LowHealthCritKeepsake' },
+        },
+      }).maxStats.maxHealthNote,
+    ).toBe('Fixed at 30 by White Antler');
     expect(state.rewardStoreController).toEqual({
       enteredLabel: '7 entered, 2 Minor Reward',
       ratioLabel: '0.286',

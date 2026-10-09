@@ -29,6 +29,7 @@ import { traitFrontierState, openTimeTraitOfferContext } from '../support/simula
 const persephoneLoadout = Object.freeze({
   weaponKey: 'WeaponLob',
   aspectKey: 'LobImpulseAspect',
+  familiarKey: null,
 });
 
 const owner = createIncomingRewardAddress(
