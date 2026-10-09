@@ -21,6 +21,9 @@ import {
   renderPlannerForInteraction,
 } from '@planner-test/fixtures/renderPlanner';
 import { hintOf } from '@planner-test/support/hints';
+import { createApplication } from '@planner/composition/createApplication';
+import { newProjectCreated } from '@planner/state/profileSessionSlice';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
 const slider = (name: string) => screen.getByRole('slider', { name }) as HTMLInputElement;
@@ -156,5 +159,88 @@ describe('Run modifier authoring', () => {
       aspectKey: null,
       startingKeepsakeKey: null,
     });
+  });
+});
+
+describe('Practice mode', () => {
+  function openGolden(startPoint?: unknown) {
+    const application = createApplication({ devBuild: true });
+    const golden = createGoldenFGHIProject();
+    application.store.dispatch(
+      newProjectCreated(
+        startPoint === undefined
+          ? golden
+          : {
+              ...golden,
+              route: {
+                ...golden.route,
+                loadout: { ...golden.route.loadout, runModifiers: { startPoint } },
+              } as typeof golden.route,
+            },
+      ),
+    );
+    const view = renderPlannerForInteraction({ application });
+    const project = () => view.application.store.getState().projectWorkspace.history!.present;
+    return { ...view, project, modifiers: () => routeRunModifiers(project().route.loadout) };
+  }
+  const practice = () => toggle('Practice mode');
+  const startAt = () => screen.getByRole('button', { name: /^Start at/ }) as HTMLButtonElement;
+  const gold = () => screen.getByRole('textbox', { name: 'Gold' }) as HTMLInputElement;
+
+  it('opens the picker from the checkbox, sets a start point, and clears it in one step', async () => {
+    const view = openGolden();
+    expect(practice().checked).toBe(false);
+    expect(startAt().disabled).toBe(true);
+    expect(gold().disabled).toBe(true);
+    await view.user.click(practice());
+    const unavailable = await screen.findByRole('button', { name: 'Erebus Opening' });
+    expect(unavailable.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(unavailable)).toBe('The run already starts here.');
+    await view.user.click(unavailable);
+    expect(view.modifiers()).toEqual({});
+    // Closing without a choice leaves Practice mode off and returns focus to its checkbox.
+    await view.user.keyboard('{Escape}');
+    expect(practice().checked).toBe(false);
+    expect(document.activeElement).toBe(practice());
+    expect(view.modifiers()).toEqual({});
+    // Clicking the checkbox while choosing cancels rather than reopening the picker.
+    await view.user.click(practice());
+    expect(await screen.findByRole('group', { name: 'Start points' })).toBeTruthy();
+    await view.user.click(practice());
+    expect(practice().checked).toBe(false);
+    expect(screen.queryByRole('group', { name: 'Start points' })).toBeNull();
+    expect(view.modifiers()).toEqual({});
+    await view.user.click(practice());
+    await view.user.click(await screen.findByRole('button', { name: 'Fields Preboss' }));
+    expect(view.modifiers()).toEqual({ startPoint: { biomeKey: 'H', point: 'preboss' } });
+    expect(practice().checked).toBe(true);
+    expect(startAt().textContent).toContain('Fields · Preboss');
+    expect(gold().placeholder).toBe('0');
+    // Unparsable text stays in the field as an invalid draft.
+    await view.user.type(gold(), 'abc{Enter}');
+    expect(gold().value).toBe('abc');
+    expect(gold().getAttribute('aria-invalid')).toBe('true');
+    expect(view.modifiers()).toEqual({ startPoint: { biomeKey: 'H', point: 'preboss' } });
+    await view.user.clear(gold());
+    await view.user.type(gold(), '250{Enter}');
+    expect(view.modifiers()).toEqual({
+      startPoint: { biomeKey: 'H', point: 'preboss', gold: 250 },
+    });
+    await view.user.click(practice());
+    expect(view.project().route.loadout.runModifiers).toBeUndefined();
+    expect(gold().value).toBe('');
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(view.modifiers()).toEqual({
+      startPoint: { biomeKey: 'H', point: 'preboss', gold: 250 },
+    });
+  });
+
+  it('keeps an ineligible saved start point checked with a quiet unavailable label', () => {
+    openGolden({ biomeKey: 'N', point: 'opening' });
+    expect(practice().checked).toBe(true);
+    expect(screen.getByRole('button', { name: 'Start at Ephyra · Opening (unavailable)' })).toBe(
+      startAt(),
+    );
+    expect(hintOf(startAt())).toBe('This biome is not on the route.');
   });
 });

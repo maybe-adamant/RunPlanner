@@ -563,7 +563,46 @@ export type WorkspaceRunModifierDraftResult =
   | { readonly kind: 'valid'; readonly intent: WorkspaceCommandIntent }
   | { readonly kind: 'invalid'; readonly message: string };
 
+export interface WorkspaceStartPointOption {
+  readonly biomeKey: string;
+  readonly point: import('@run-planner/engine/authored-project').RunStartPoint['point'];
+  readonly label: string;
+  readonly selected: boolean;
+  readonly available: boolean;
+  /** Present exactly when the start point is unavailable: its hover reason. */
+  readonly unavailableHint?: string;
+}
+
+export interface WorkspaceStartPointRow {
+  readonly biomeKey: string;
+  readonly label: string;
+  readonly options: readonly WorkspaceStartPointOption[];
+}
+
+export interface WorkspaceStartPointControl {
+  readonly declaration: import('@run-planner/engine/authored-project').StartPointRunModifierDeclaration;
+  readonly value: import('@run-planner/engine/authored-project').RunStartPoint | undefined;
+  /** The authored start point; empty when none is set. */
+  readonly valueLabel: string;
+  /** Present when the authored start point cannot start the run: its reason. */
+  readonly unavailableHint?: string;
+  /** The route's start-point domain, evaluated when the picker opens. */
+  readonly loadDomain: () => readonly WorkspaceStartPointRow[];
+  /** Complete replacement choosing a start point (keeping its gold) or none. */
+  readonly selectIntent: (
+    next:
+      | Pick<import('@run-planner/engine/authored-project').RunStartPoint, 'biomeKey' | 'point'>
+      | undefined,
+  ) => WorkspaceCommandIntent;
+  /** Complete replacement of the start point's added base gold; empty adds none. */
+  readonly goldDraftIntent: (draft: string) => WorkspaceRunModifierDraftResult;
+}
+
 export interface WorkspaceRunModifiersControl {
+  /** Present exactly when the start-point declaration is authored in this build. */
+  readonly startPoint?: WorkspaceStartPointControl;
+  /** Why the authored start point blocks publication; only where it is authored. */
+  readonly startPointBlock?: import('@run-planner/engine/execution-plan').StartPointPublicationBlock;
   readonly value: import('@run-planner/engine/authored-project').RunModifiers;
   /** Declarations authored in this build, in declaration order. */
   readonly declarations: readonly import('@run-planner/engine/authored-project').RunModifierDeclaration[];

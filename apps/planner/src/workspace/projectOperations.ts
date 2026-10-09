@@ -63,6 +63,7 @@ export type CurrentGamePlan =
       readonly kind: 'notPublishable';
       /** The compiler's reason, or null when compiling failed for another reason. */
       readonly code: ExecutionCompilerError['code'] | null;
+      readonly startPointReason?: ExecutionCompilerError['startPointReason'];
     }
   | {
       readonly kind: 'publishable';
@@ -100,6 +101,8 @@ interface CreateProjectOperationsOptions {
   readonly activeProfileFile?: ProfileFileReference;
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly catalog: Catalog;
+  /** Internal-stage run modifiers take part in publication only in a development build. */
+  readonly devBuild?: boolean;
   readonly profileFile: ProfileFileAdapter;
   readonly prepareProjectWorkspace: (project: ProjectDocument) => PreparedProjectWorkspace;
   readonly gamePlanPublisher?: GamePlanPublisher;
@@ -162,6 +165,7 @@ export function createProjectOperations(
 ): ProjectOperations {
   let activeProfileFile = options.activeProfileFile ?? null;
   const currentPlans = new WeakMap<object, CurrentGamePlan>();
+  const internalRunModifiers = options.devBuild ?? false;
   const currentProject = () => selectPresentProject(options.store.getState());
   const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
   // Explicit saves run one at a time, so each reads the identity its predecessor wrote.
@@ -230,7 +234,11 @@ export function createProjectOperations(
       const workspace = options.store.getState().projectWorkspace;
       if (workspace.kind !== 'openProject') throw new Error('No project is open');
       // Checked before saving, so an unsendable plan is never saved on the way.
-      assembleExecutionProduct({ assembly: workspace.assembly, catalog: options.catalog });
+      assembleExecutionProduct({
+        assembly: workspace.assembly,
+        catalog: options.catalog,
+        internalRunModifiers,
+      });
       // Sending needs a saved file with no unsaved changes; the file's name names the plan.
       let saved = false;
       const pendingSave = saveUnlessClean();
@@ -255,6 +263,7 @@ export function createProjectOperations(
           product: assembleExecutionProduct({
             assembly: savedWorkspace.assembly,
             catalog: options.catalog,
+            internalRunModifiers,
           }),
           ...(fileName === null ? {} : { displayName: planDisplayName(fileName) }),
         });
@@ -369,6 +378,7 @@ export function createProjectOperations(
           product: assembleExecutionProduct({
             assembly: workspace.assembly,
             catalog: options.catalog,
+            internalRunModifiers,
           }),
         });
         current = Object.freeze({
@@ -380,6 +390,9 @@ export function createProjectOperations(
         current = Object.freeze({
           kind: 'notPublishable',
           code: error instanceof ExecutionCompilerError ? error.code : null,
+          ...(error instanceof ExecutionCompilerError && error.startPointReason !== undefined
+            ? { startPointReason: error.startPointReason }
+            : {}),
         });
       }
       currentPlans.set(workspace.assembly, current);

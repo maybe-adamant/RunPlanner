@@ -35,7 +35,8 @@ existing plan?
 - Max health and Magick are derived by the game from the installed traits.
   Current health is set to max.
 - The game assigns Death Defiance from its sources; every charge starts unused.
-- Gold is set manually on the start point, defaulting to native starting gold.
+- Gold: the game still grants its native starting gold; the start point's
+  authored base gold (empty adds none) is added on top.
 - The plan drives the run after the start. The module installs a stub
   `RoomHistory` (one record per planned room, `Name` plus `NextRoomSet` where
   RoomData declares or inherits it: F_Opening01-03, N_Opening01 and the F, G,
@@ -177,9 +178,11 @@ SkipActivatedTraitUpdate, SkipSetup}` inside the module's `StartNewRun` wrap.
 
 ### Gold
 
-- `AddResource` credits lifetime totals, which gate incantations. Write
-  `GameState.Resources.Money` directly, as the game does
-  (`DeathLoopLogic.lua:136`), then call `UpdateMoneyUI`.
+- `StartNewRun` credits `CalculateStartingMoney`, the hero's total
+  `BonusMoney` (The Boatman, Gold Purse), before the start installs.
+- `AddResource` credits lifetime totals, which gate incantations. Add the
+  authored base gold to `GameState.Resources.Money` directly, as the game
+  writes it (`DeathLoopLogic.lua:136`), then call `UpdateMoneyUI`.
 
 ### Records
 

@@ -707,7 +707,7 @@ export function createStructuredWorkspaceProjection(
         ),
       ]);
       const route = Object.freeze({
-        runModifiers: bindRunModifiers(project.route, devBuild),
+        runModifiers: bindRunModifiers(catalog, project, evaluation, devBuild),
         ...(fixedLoadout ? {} : { startingReward }),
         startingArcana: Object.freeze(
           createArcanaFearState(catalog, project.route.loadout).arcana.active.map(

@@ -1,4 +1,4 @@
-import { isNativeRunModifiers, routeRunModifiers } from '../authored-project/run-modifiers';
+import { executionRunModifiers, routeRunModifiers } from '../authored-project/run-modifiers';
 import { assertExactProjectEvaluationAssembly } from '../simulation/evaluation/project-evaluation-assembly';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
 import {
@@ -7,6 +7,7 @@ import {
   type ExecutionSemanticProduct,
 } from './model';
 import { ExecutionCompilerError as CompilerError } from './assembler-errors';
+import { startPointPublicationBlock } from './start-point-publication';
 import { executionKeepsakeEquipResults } from './assembly/overview';
 import {
   completeExecutionBiomes,
@@ -34,6 +35,7 @@ import { deriveRoomExitConformanceDeltas } from '../simulation/rewards/run-state
 export function assembleExecutionProduct({
   assembly,
   catalog,
+  internalRunModifiers = false,
 }: import('./model').ExecutionAssemblerInput): ExecutionSemanticProduct {
   assertExactProjectEvaluationAssembly(assembly);
   const { evaluation } = assembly;
@@ -280,14 +282,26 @@ export function assembleExecutionProduct({
   const startingKeepsakeKey = assembly.project.route.loadout.startingKeepsakeKey;
   if (startingKeepsakeKey === null && startingEquipResults !== undefined)
     throw new CompilerError('executionCoverageMissing', 'keepsake equip results lack a keepsake');
+  const startPointBlock = internalRunModifiers
+    ? startPointPublicationBlock(catalog, assembly.project, evaluation)
+    : undefined;
+  if (startPointBlock?.code === 'startPointIneligible')
+    throw new CompilerError(
+      'startPointIneligible',
+      `start point is ${startPointBlock.reason.kind}`,
+      startPointBlock.reason,
+    );
+  if (startPointBlock?.code === 'startPointUnpublished')
+    throw new CompilerError('startPointUnpublished', 'start point is not published');
+  const publishedModifiers = executionRunModifiers(
+    routeRunModifiers(assembly.project.route.loadout),
+  );
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,
     projectId: evaluation.projectId,
     routeKey,
     startingLoadout,
-    ...(isNativeRunModifiers(routeRunModifiers(assembly.project.route.loadout))
-      ? {}
-      : { runModifiers: routeRunModifiers(assembly.project.route.loadout) }),
+    ...(publishedModifiers === undefined ? {} : { runModifiers: publishedModifiers }),
     startingKeepsake: Object.freeze(
       startingKeepsakeKey === null
         ? {}

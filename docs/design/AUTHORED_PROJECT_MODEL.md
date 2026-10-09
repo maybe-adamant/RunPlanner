@@ -216,9 +216,18 @@ modifier is persisted only when it differs from its default. An optional
 percentage modifier is absent while off (native) and present as an enabled
 value from 0 to 100 while on; a malformed value decodes as off. Absence of the
 record means every modifier is native. The released modifiers are the optional
-percentages `enemyGoldDropChance` and `encounterGoldRange`. These execution
-options are editable in Fresh File without making its fixed equipment
-editable. They do not change simulation, candidates, or encounter eligibility.
+percentages `enemyGoldDropChance` and `encounterGoldRange`. The internal
+`startPoint` modifier (Practice mode) is absent for a normal run and present as
+`{ biomeKey, point: 'opening' | 'preboss', gold? }`; a malformed shape decodes
+as absent, malformed gold as absent, and finite gold rounds and clamps to
+0–99 999. Gold is a base amount added to the game's own starting gold. A well-formed start point whose biome is off the itinerary
+is kept. Its eligibility is the engine's start-installation availability
+(`authoredStartPointEligibility`). Internal modifiers take part in
+publication only when assembly is told to include them (development builds);
+there, any set start point blocks publication, an ineligible one with its
+reason. These options are editable in Fresh File without making its fixed
+equipment editable. They do not change simulation, candidates, or encounter
+eligibility.
 
 A mature route's loadout requires one catalog `familiarKey`; new routes start
 with the catalog's default familiar, Frinos. A Fresh File route stores `null`,
@@ -231,9 +240,9 @@ Fresh File.
 `ReplaceRunModifiers` replaces the complete settings as one route-owned history
 edit, normalizes its value through the same tolerant decode, preserves identity
 for no-ops, and removes the record when every value is native. Execution
-assembly publishes the complete declared record, omitting optional modifiers
-that are off, only when some value is non-native, separately from starting
-equipment.
+assembly publishes the complete declared record except the start point,
+omitting optional modifiers that are off, only when some value is non-native,
+separately from starting equipment.
 
 Loadout also owns the nullable starting reward offer. A mature route reports a
 missing offer once any biome is configured; a Fresh File entry binds no

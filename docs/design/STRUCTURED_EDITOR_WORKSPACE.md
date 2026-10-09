@@ -161,6 +161,16 @@ declarations: a toggle for a boolean kind, and for an optional percentage a
 checkbox plus a 0–100% slider that is disabled while unchecked, with the label
 and description taken from the declaration. The slider keeps its last value in
 UI state only, so re-enabling restores it; with none, enabling starts at 100%.
+Practice mode is one row: a checkbox, a Start at picker and a Gold field, the
+latter two disabled while unchecked. Checking opens the picker over the
+engine's start-point domain (biome rows of Opening and Preboss; an unavailable
+option is disabled with its reason as hover hint), and only a choice sets the
+value; unchecking removes the start point and its gold in one edit. Gold is a
+base amount added to the game's own starting gold; empty adds none and shows a
+0 placeholder. Clicking the checkbox while the picker is open without a value
+cancels it and returns focus to the checkbox. An
+ineligible saved start point stays checked and its label carries a quiet
+"(unavailable)" with the reason as hover hint.
 `internal` declarations appear only when the application composition marks a
 development build.
 

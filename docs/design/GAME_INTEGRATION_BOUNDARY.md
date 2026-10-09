@@ -357,7 +357,11 @@ document fingerprints. The planner decoder validates a present record
 against the declaration table; the module reads only the modifiers it
 implements, validates those values, and ignores unknown keys, which remain part
 of the fingerprinted contents. Fingerprint verification uses the record's
-actual presence without inserting defaults.
+actual presence without inserting defaults. The authored Practice mode start
+point is not part of this record. Where internal modifiers take part in
+publication (development builds), any set start point blocks publication with
+`startPointUnpublished`, or `startPointIneligible` with the engine's reason;
+released builds ignore it.
 
 The module binds settings to the admitted plan and native `CurrentRun` identity.
 They become active only after starting-loadout verification or supported

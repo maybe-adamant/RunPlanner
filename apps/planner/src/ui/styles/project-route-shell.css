@@ -1103,12 +1103,13 @@
   display: grid;
   gap: 0.75rem;
   width: 100%;
-  max-width: 32rem;
+  max-width: 52rem;
   min-width: 0;
 }
 
 .route-run-modifier-toggle,
 .route-run-modifier-percentage {
+  max-width: 32rem;
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
   align-items: center;
@@ -1132,6 +1133,121 @@
 .route-run-modifier-switch input {
   flex: none;
   margin: 0;
+}
+
+.route-run-modifier-practice {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  min-height: 2.5rem;
+  min-width: 0;
+}
+
+.route-run-modifier-practice-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 19rem) auto 7rem;
+  justify-content: start;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.route-run-modifier-field-label {
+  color: #aaa7af;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.route-run-modifier-practice-fields > .contextual-picker-trigger {
+  min-width: 0;
+}
+
+.route-run-modifier-practice-fields > .contextual-picker-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-run-modifier-practice-fields > .contextual-picker-trigger:disabled,
+.route-run-modifier-gold:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.route-start-point-unavailable {
+  color: #8f8c96;
+}
+
+.route-run-modifier-gold {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #42434d;
+  border-radius: 8px;
+  color: #f2ede5;
+  background: #202128;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-run-modifier-gold:hover,
+.route-run-modifier-gold:focus-visible {
+  border-color: #65636f;
+}
+
+.route-run-modifier-gold[aria-invalid='true'] {
+  border-color: #c9785b;
+}
+
+.route-start-point-popover {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.route-start-point-option {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #3a3b45;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.route-start-point-option:hover:not([aria-disabled='true']) {
+  border-color: var(--selection-accent);
+}
+
+.route-start-point-option[aria-pressed='true'] {
+  border-color: var(--selection-accent);
+  background: color-mix(in srgb, var(--selection-accent) 18%, transparent);
+}
+
+.route-start-point-option[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.route-start-point-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.route-start-point-row {
+  display: grid;
+  grid-template-columns: 8rem 6rem 6rem;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.route-start-point-biome {
+  font-size: 0.85rem;
 }
 
 .route-run-modifier-slider {
@@ -1161,7 +1277,12 @@
 
 @container app-viewport (max-width: 700px) {
   .route-run-modifier-toggle,
-  .route-run-modifier-percentage {
+  .route-run-modifier-percentage,
+  .route-run-modifier-practice {
     grid-template-columns: minmax(8.5rem, 10rem) minmax(0, 1fr);
+  }
+
+  .route-run-modifier-practice-fields {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 }
