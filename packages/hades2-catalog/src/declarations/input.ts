@@ -28,6 +28,7 @@ export interface RawCatalogInput {
   readonly keepsakes: readonly RawKeepsakeDeclaration[];
   readonly familiars: readonly RawFamiliarDeclaration[];
   readonly defaultFamiliarKey: string;
+  readonly heroMaxStats: { readonly maxHealth: number; readonly maxMana: number };
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];

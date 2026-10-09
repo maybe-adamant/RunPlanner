@@ -72,6 +72,14 @@ export interface KeepsakeState {
     readonly multiplier: number;
     readonly expired: boolean;
   };
+  /** Max-Magick grants by keepsake, one per loot equip; they outlive the keepsake. */
+  readonly maxManaGrants?: Readonly<Record<string, readonly number[]>>;
+  /** White Antler's cap while held; absent once the ordinary keepsake is replaced. */
+  readonly maxHealthCap?: {
+    readonly keepsakeKey: string;
+    readonly origin: 'ordinary' | 'echo';
+    readonly status: 'active' | 'expired';
+  };
 }
 
 export interface OlympianProviderSource {
@@ -134,6 +142,8 @@ export function keepsakeRankForEquip(
     case 'moonBeam':
     case 'discordantBell':
     case 'lionFang':
+    case 'maxManaGrant':
+    case 'maxHealthCap':
       return 'Heroic';
     default: {
       const exhaustive: never = effect;
@@ -270,6 +280,25 @@ export function advanceCurrentKeepsake(
               expired: false,
             }),
           });
+    case 'maxManaGrant': {
+      // Raises the equipped copy's grant; earlier grants keep their amounts.
+      const grants = state.maxManaGrants?.[keepsake.key] ?? [];
+      return grants.length === 0
+        ? state
+        : Object.freeze({
+            ...state,
+            maxManaGrants: Object.freeze({
+              ...state.maxManaGrants,
+              [keepsake.key]: Object.freeze([
+                ...grants.slice(0, -1),
+                effect.maxManaByRank[advancedRank],
+              ]),
+            }),
+          });
+    }
+    case 'maxHealthCap':
+      // The reconstruction keeps the cap window and its expiry.
+      return state;
     default: {
       const exhaustive: never = effect;
       return exhaustive;
@@ -311,6 +340,53 @@ export function advanceKeepsakeEncounterValues(
     ...(lionFang === undefined ? {} : { lionFang }),
     ...(discordantBell === undefined ? {} : { discordantBell }),
   });
+}
+
+/** The first Boss cleared while White Antler's cap is active expires it. */
+export function expireMaxHealthCapAtBoss(state: KeepsakeState): KeepsakeState {
+  return state.maxHealthCap?.status !== 'active'
+    ? state
+    : Object.freeze({
+        ...state,
+        maxHealthCap: Object.freeze({ ...state.maxHealthCap, status: 'expired' as const }),
+      });
+}
+
+function withMaxManaGrant(
+  state: KeepsakeState,
+  keepsakeKey: string,
+  amount: number,
+): Pick<KeepsakeState, 'maxManaGrants'> {
+  return {
+    maxManaGrants: Object.freeze({
+      ...state.maxManaGrants,
+      [keepsakeKey]: Object.freeze([...(state.maxManaGrants?.[keepsakeKey] ?? []), amount]),
+    }),
+  };
+}
+
+/** Echo's Common copy adds its own max-Magick grant or opens a fresh cap window. */
+export function applyEchoMaxStatKeepsakeReplay(
+  catalog: Catalog,
+  state: KeepsakeState,
+  capturedKeepsakeKey: string,
+): KeepsakeState {
+  const effect = catalog.keepsakes.byKey[capturedKeepsakeKey]?.effect;
+  if (effect?.kind === 'maxManaGrant')
+    return Object.freeze({
+      ...state,
+      ...withMaxManaGrant(state, capturedKeepsakeKey, effect.maxManaByRank.Common),
+    });
+  if (effect?.kind === 'maxHealthCap')
+    return Object.freeze({
+      ...state,
+      maxHealthCap: Object.freeze({
+        keepsakeKey: capturedKeepsakeKey,
+        origin: 'echo' as const,
+        status: 'active' as const,
+      }),
+    });
+  throw new Error('Echo max-stat keepsake replay has no declared effect');
 }
 
 /** Echo re-equips a Common Lion Fang at biome start only while no Fang is held. */
@@ -540,6 +616,22 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'maxManaGrant' && keepsake !== undefined
+      ? {
+          maxManaGrants: Object.freeze({
+            [keepsake.key]: Object.freeze([effect.maxManaByRank[keepsake.rank]]),
+          }),
+        }
+      : {}),
+    ...(effect?.kind === 'maxHealthCap' && keepsake !== undefined
+      ? {
+          maxHealthCap: Object.freeze({
+            keepsakeKey: keepsake.key,
+            origin: 'ordinary' as const,
+            status: 'active' as const,
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeReplacement(
@@ -599,16 +691,24 @@ export function applyKeepsakeReplacement(
           return withoutFang;
         })()
       : stateWithoutSources;
-  const withoutOrdinaryOlympian = stateWithoutFang.olympianSources.some(
+  const stateWithoutCap =
+    leavingEffect?.kind === 'maxHealthCap' && stateWithoutFang.maxHealthCap?.origin === 'ordinary'
+      ? (() => {
+          const { maxHealthCap: _cap, ...withoutCap } = stateWithoutFang;
+          void _cap;
+          return withoutCap;
+        })()
+      : stateWithoutFang;
+  const withoutOrdinaryOlympian = stateWithoutCap.olympianSources.some(
     (source) => source.origin === 'ordinary',
   )
     ? Object.freeze({
-        ...stateWithoutFang,
+        ...stateWithoutCap,
         olympianSources: Object.freeze(
-          stateWithoutFang.olympianSources.filter((source) => source.origin !== 'ordinary'),
+          stateWithoutCap.olympianSources.filter((source) => source.origin !== 'ordinary'),
         ),
       })
-    : stateWithoutFang;
+    : stateWithoutCap;
   return Object.freeze({
     ...withoutOrdinaryOlympian,
     currentKey: keepsakeKey,
@@ -685,6 +785,18 @@ export function applyKeepsakeReplacement(
             origin: 'ordinary' as const,
             multiplier: selected.effect.initialMultiplierByRank[rank],
             expired: false,
+          }),
+        }
+      : {}),
+    ...(selected.effect?.kind === 'maxManaGrant'
+      ? withMaxManaGrant(state, selected.key, selected.effect.maxManaByRank[rank])
+      : {}),
+    ...(selected.effect?.kind === 'maxHealthCap'
+      ? {
+          maxHealthCap: Object.freeze({
+            keepsakeKey: selected.key,
+            origin: 'ordinary' as const,
+            status: 'active' as const,
           }),
         }
       : {}),

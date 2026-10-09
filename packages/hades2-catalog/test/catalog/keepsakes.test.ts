@@ -8,6 +8,15 @@ import { cloneCatalogInput } from './support/catalog-input';
 
 const supportedEffects = [
   {
+    key: 'ManaOverTimeRefundKeepsake',
+    profileKey: 'maxManaByRank',
+    legacyField: 'amount',
+    effect: {
+      kind: 'maxManaGrant',
+      maxManaByRank: { Common: 50, Rare: 75, Epic: 100, Heroic: 150 },
+    },
+  },
+  {
     key: 'EscalatingKeepsake',
     profileKey: 'growthPerEncounterByRank',
     legacyField: 'growthPerRoom',
@@ -134,7 +143,13 @@ const supportedEffects = [
 ] as const;
 
 const ordinaryKeepsakeFacts = [
-  ['ManaOverTimeRefundKeepsake', 'Silver Wheel', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  [
+    'ManaOverTimeRefundKeepsake',
+    'Silver Wheel',
+    'neutral',
+    'maxManaGrant',
+    'oneShotAfterUnequipped',
+  ],
   ['BossPreDamageKeepsake', 'Knuckle Bones', 'neutral', 'modeledNeutral', 'noModeledEffect'],
   ['ReincarnationKeepsake', 'Luckier Tooth', 'neutral', 'modeledNeutral', 'noModeledEffect'],
   ['DoorHealReserveKeepsake', 'Ghost Onion', 'neutral', 'modeledNeutral', 'noModeledEffect'],
@@ -143,7 +158,7 @@ const ordinaryKeepsakeFacts = [
   ['BlockDeathKeepsake', 'Engraved Pin', 'neutral', 'modeledNeutral', 'noModeledEffect'],
   ['EscalatingKeepsake', 'Discordant Bell', 'neutral', 'excluded', undefined],
   ['TimedBuffKeepsake', 'Metallic Droplet', 'neutral', 'modeledNeutral', 'noModeledEffect'],
-  ['LowHealthCritKeepsake', 'White Antler', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['LowHealthCritKeepsake', 'White Antler', 'neutral', 'maxHealthCap', 'oneShotAfterUnequipped'],
   ['SpellTalentKeepsake', 'Moon Beam', 'neutral', 'moonBeam', 'oneShotAfterUnequipped'],
   ['ForceZeusBoonKeepsake', 'Cloud Bangle', 'opposing', 'olympianRewardPressure', 'everyBiome'],
   ['ForceHeraBoonKeepsake', 'Iridescent Fan', 'opposing', 'olympianRewardPressure', 'everyBiome'],
@@ -269,7 +284,15 @@ describe('keepsake normalization', () => {
     });
     expect(normalized.byKey.ManaOverTimeRefundKeepsake?.echoGift).toEqual({
       availability: 'eligible',
-      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+      effect: { kind: 'maxManaGrant', schedule: 'oneShotAfterUnequipped' },
+    });
+    expect(normalized.byKey.LowHealthCritKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'maxHealthCap', schedule: 'oneShotAfterUnequipped' },
+    });
+    expect(normalized.byKey.LowHealthCritKeepsake?.effect).toEqual({
+      kind: 'maxHealthCap',
+      maxHealth: 30,
     });
 
     const malformed = keepsakes.map((keepsake) =>
@@ -352,7 +375,8 @@ describe('keepsake normalization', () => {
           (keepsake) =>
             keepsake.effect !== undefined &&
             keepsake.effect.kind !== 'olympianRewardPressure' &&
-            keepsake.effect.kind !== 'moonBeam',
+            keepsake.effect.kind !== 'moonBeam' &&
+            keepsake.effect.kind !== 'maxHealthCap',
         )
         .map((keepsake) => keepsake.key),
     ).toEqual(supportedEffects.map((row) => row.key));

@@ -628,8 +628,9 @@ acquisition ordinal. `CheckChamberTraits` advances it with Steady Growth at each
 main-encounter end unless the room sets `SkipRoomsPerUpgrade`
 (`RoomLogic.lua:3001-3003`; `TraitLogic.lua:2881-2928`). The planner declares
 the amount by acquisition ordinal and counts grants on that shared
-`RoomsPerUpgrade` pass for Run State; the Magick itself is not simulated, and
-the count is neither a conformance fact nor an execution diagnostic.
+`RoomsPerUpgrade` pass; the granted Magick enters the Run State
+[maxima](../loadout-and-progression/MAX_HEALTH_AND_MAGICK_GAME_DATA_AUDIT.md),
+and neither is a conformance fact nor an execution diagnostic.
 
 #### Circe
 

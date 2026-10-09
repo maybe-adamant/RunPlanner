@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { createRewardHistoryState } from '../../reward-kernel';
-import type { RouteWeaponAspectLoadout } from '../../authored-project/model';
+import type { RouteLoadout, RouteWeaponAspectLoadout } from '../../authored-project/model';
 import {
   resolveRouteEquipment,
   routeSaveFileGodHistory,
@@ -21,7 +21,7 @@ import { createEmptyRewardLookups, type SimulationState } from './model';
  */
 export function createInitialSimulationState(
   catalog: Catalog,
-  loadout: RouteWeaponAspectLoadout,
+  loadout: RouteWeaponAspectLoadout & Pick<RouteLoadout, 'familiarKey'>,
   startingKeepsakeKey: string | null,
   arcanaFear: ArcanaFearState,
   reached: {
@@ -31,7 +31,10 @@ export function createInitialSimulationState(
 ): SimulationState {
   const routeKey = reached.routePosition.routeKey;
   return Object.freeze({
-    equipment: resolveRouteEquipment(catalog, routeKey, loadout),
+    equipment: Object.freeze({
+      ...resolveRouteEquipment(catalog, routeKey, loadout),
+      familiarKey: loadout.familiarKey,
+    }),
     reached: Object.freeze(reached),
     bags: Object.freeze({}),
     rewardPriorities: Object.freeze([]),

@@ -17,7 +17,7 @@ import {
   assessTranscendentEmbryoBlessing,
 } from '../../../keepsakes/trait-effects';
 import { applyEchoFigLeafReplay } from '../../../keepsakes/encounter-effects';
-import { applyEchoLionFangReplay } from '../../../keepsakes/state';
+import { applyEchoLionFangReplay, applyEchoMaxStatKeepsakeReplay } from '../../../keepsakes/state';
 import {
   applyEchoCallingCardReplay,
   applyEchoTimePieceReplay,
@@ -234,6 +234,28 @@ export function applyEchoKeepsakeReplayTransition(
               'Common',
               precedingPostbossWasBigPath,
             ),
+          ),
+        ),
+      );
+    } else if (
+      (replayEffect.kind === 'maxManaGrant' || replayEffect.kind === 'maxHealthCap') &&
+      giftState.replayCount === 0 &&
+      branches[0]?.state.keepsakes.currentKey !== giftState.capturedKeepsakeKey
+    ) {
+      branches = Object.freeze(
+        branches.map((branch) =>
+          recordReplay(
+            Object.freeze({
+              ...branch,
+              state: Object.freeze({
+                ...branch.state,
+                keepsakes: applyEchoMaxStatKeepsakeReplay(
+                  catalog,
+                  branch.state.keepsakes,
+                  giftState.capturedKeepsakeKey,
+                ),
+              }),
+            }),
           ),
         ),
       );

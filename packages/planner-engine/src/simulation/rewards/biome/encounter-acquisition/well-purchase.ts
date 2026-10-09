@@ -11,7 +11,7 @@ import { roomActionKey } from '../../../../authored-project/room-actions/state';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { findingRegion, type FindingRegionEntry } from '../../../finding-regions';
-import { applyConcreteAcquisition } from '../../../../reward-kernel';
+import { applyConcreteAcquisition, creditMaxStatGain } from '../../../../reward-kernel';
 import {
   applyStygianWellPurchase,
   assessStygianWellPurchase,
@@ -323,10 +323,13 @@ export function applyWellPurchaseTransition(inputs: {
           nestedResultIsValid ? stygianWellGrant(catalog, twistResultKey) : undefined,
         ])
           if (grant?.kind === 'consumable')
-            history = applyConcreteAcquisition(catalog.rewards, history, {
-              kind: 'consumable',
-              gameName: grant.acquisitionGameName,
-            });
+            history = creditMaxStatGain(
+              applyConcreteAcquisition(catalog.rewards, history, {
+                kind: 'consumable',
+                gameName: grant.acquisitionGameName,
+              }),
+              catalog.rewards.acquisitions.byKey[grant.acquisitionGameName]?.maxStatGrant,
+            );
         return Object.freeze({
           ...branch,
           state: Object.freeze({

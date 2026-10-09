@@ -3,7 +3,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RawCatalogInput } from '../declarations';
 import { normalizeArcanaCards, normalizeFearVows } from './arcana-fear';
 import { normalizeBiomes } from './biomes';
-import { requireNonEmpty } from './common';
+import { requireNonEmpty, requirePositiveInteger } from './common';
 import {
   validateEncounterDefinitionClosure,
   validateEncounterRouteReferences,
@@ -70,6 +70,10 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const keepsakes = normalizeKeepsakes(input.keepsakes);
   const familiars = normalizeFamiliars(input.familiars);
   const defaultFamiliarKey = normalizeDefaultFamiliarKey(input.defaultFamiliarKey, familiars);
+  const heroMaxStats = Object.freeze({
+    maxHealth: requirePositiveInteger(input.heroMaxStats.maxHealth, 'heroMaxStats.maxHealth'),
+    maxMana: requirePositiveInteger(input.heroMaxStats.maxMana, 'heroMaxStats.maxMana'),
+  });
   validateHexBindings({
     hexes: traitCatalog.hexes,
     traits: traitCatalog.traits,
@@ -149,6 +153,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     defaultStartingKeepsakeKey: 'ManaOverTimeRefundKeepsake',
     familiars,
     defaultFamiliarKey,
+    heroMaxStats,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

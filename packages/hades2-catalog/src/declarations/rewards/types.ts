@@ -5,6 +5,7 @@ import type {
   AcquisitionLifecycleBinding,
   HistoryProjectionKey,
   LevelResolutionEffect,
+  MaxStatGrant,
   OfferProjectionKey,
   PayloadDomainDeclaration,
   ProducerLifecyclePointKey,
@@ -73,6 +74,12 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly lootRequirement?: RequirementExpression;
   /** Source ConsumableData `AddResources`. */
   readonly resourceGrant?: Readonly<Record<string, number>>;
+  /** Source ConsumableData `AddMaxHealth`/`AddMaxMana`. */
+  readonly maxStatGrant?: MaxStatGrant;
+  /** Source ConsumableData `RunProgress.PropertyChanges`, gated by its world upgrade. */
+  readonly runProgressMaxStatGrant?: MaxStatGrant & {
+    readonly excludedRouteKeys: readonly string[];
+  };
 }
 
 export interface RawAcquisitionRoleDeclaration {
@@ -160,6 +167,8 @@ export interface RawProducerLifecycleProfileDeclaration {
   readonly duplicationExempt?: true;
   /** Producer `AddResources` overrides by concrete acquisition. */
   readonly resourceGrantOverrides?: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  /** The producer passes `RunProgressUpgradeEligible` to `CreateConsumableItem`. */
+  readonly runProgressUpgradeEligible?: true;
 }
 
 export interface RawRewardKernelInput {

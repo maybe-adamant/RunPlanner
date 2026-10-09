@@ -5,11 +5,18 @@ import type {
   TargetedTraitAcquisition,
   TraitDeclaration,
   TraitElement,
+  TraitMaxStatEffect,
+  TraitMaxStatValue,
   TraitRarity,
   TraitRequirementExpression,
 } from '@run-planner/engine/catalog-schema';
 
-import type { RawTraitCatalogInput, RawTraitDeclaration } from '../../declarations/traits/types';
+import type {
+  RawMaxStatValue,
+  RawTraitCatalogInput,
+  RawTraitDeclaration,
+  RawTraitMaxStatEffect,
+} from '../../declarations/traits/types';
 import {
   createCollection,
   freezeUniqueStrings,
@@ -106,6 +113,112 @@ function normalizeAcquisitionMaxHealthRoll(
     ) as NonNullable<TraitDeclaration['acquisitionMaxHealthRoll']>['minimumByRarity'],
     width,
   });
+}
+
+function normalizeMaxStatValue(
+  raw: RawMaxStatValue,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): TraitMaxStatValue {
+  if (typeof raw === 'number') {
+    if (equippedRarities.length > 0) fail(path, 'a ranked trait must scale by rarity');
+    if (!Number.isFinite(raw) || !(raw > 0)) fail(path, 'must be a positive number');
+    return raw;
+  }
+  const value = requireObject(raw, path);
+  if (
+    Object.keys(value).some(
+      (key) => !['baseValue', 'rarityMultipliers', 'sourceIsMultiplier'].includes(key),
+    )
+  )
+    fail(path, 'has an unsupported key');
+  if (raw.sourceIsMultiplier !== undefined && raw.sourceIsMultiplier !== true)
+    fail(`${path}.sourceIsMultiplier`, 'must be true when declared');
+  if (typeof raw.baseValue !== 'number' || !(raw.baseValue > 0))
+    fail(`${path}.baseValue`, 'must be a positive number');
+  const scales = requireObject(raw.rarityMultipliers, `${path}.rarityMultipliers`);
+  const rarities = IN_RUN_RARITIES.filter((rarity) => equippedRarities.includes(rarity));
+  if (
+    rarities.length === 0 ||
+    rarities.length !== equippedRarities.length ||
+    Object.keys(scales).length !== rarities.length ||
+    rarities.some(
+      (rarity) => typeof scales[rarity] !== 'number' || !((scales[rarity] as number) > 0),
+    )
+  )
+    fail(`${path}.rarityMultipliers`, 'must scale exactly this trait equipped ranked rarities');
+  // ProcessValue rounds each ramped value to two decimals (TraitLogic.lua ProcessValue).
+  const scaled = (rarity: (typeof IN_RUN_RARITIES)[number]) => {
+    const multiplier = scales[rarity] as number;
+    const value =
+      raw.sourceIsMultiplier === true
+        ? 1 + (raw.baseValue - 1) * multiplier
+        : raw.baseValue * multiplier;
+    return Math.floor(value * 100 + 0.5) / 100;
+  };
+  return Object.freeze(
+    Object.fromEntries(rarities.map((rarity) => [rarity, scaled(rarity)])),
+  ) as Readonly<Record<(typeof IN_RUN_RARITIES)[number], number>>;
+}
+
+function normalizeMaxStatEffect(
+  raw: RawTraitMaxStatEffect,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): TraitMaxStatEffect {
+  requireObject(raw, path);
+  const exact = (keys: readonly string[]) => {
+    const extra = Object.keys(raw).find((key) => !keys.includes(key));
+    if (extra !== undefined) fail(`${path}.${extra}`, 'is not supported');
+  };
+  switch (raw.kind) {
+    case 'multiplier': {
+      exact(['kind', 'maxHealth', 'maxMana']);
+      if (raw.maxHealth === undefined && raw.maxMana === undefined)
+        fail(path, 'must multiply at least one maximum');
+      return Object.freeze({
+        kind: raw.kind,
+        ...(raw.maxHealth === undefined
+          ? {}
+          : {
+              maxHealth: normalizeMaxStatValue(
+                raw.maxHealth,
+                equippedRarities,
+                `${path}.maxHealth`,
+              ),
+            }),
+        ...(raw.maxMana === undefined
+          ? {}
+          : { maxMana: normalizeMaxStatValue(raw.maxMana, equippedRarities, `${path}.maxMana`) }),
+      });
+    }
+    case 'manaToHealthConversion':
+      exact(['kind', 'fraction']);
+      return Object.freeze({
+        kind: raw.kind,
+        fraction: normalizeMaxStatValue(raw.fraction, equippedRarities, `${path}.fraction`),
+      });
+    case 'perElement':
+      exact(['kind', 'element', 'stat', 'amount']);
+      if (!(ELEMENTS as readonly string[]).includes(raw.element))
+        fail(`${path}.element`, `must be one of ${ELEMENTS.join(', ')}`);
+      if (raw.stat !== 'maxHealth' && raw.stat !== 'maxMana')
+        fail(`${path}.stat`, 'must be maxHealth or maxMana');
+      return Object.freeze({
+        kind: raw.kind,
+        element: raw.element,
+        stat: raw.stat,
+        amount: requirePositiveInteger(raw.amount, `${path}.amount`),
+      });
+    case 'familiarStackMultiplier':
+      exact(['kind', 'multiplier']);
+      return Object.freeze({
+        kind: raw.kind,
+        multiplier: requirePositiveInteger(raw.multiplier, `${path}.multiplier`),
+      });
+    default:
+      fail(`${path}.kind`, `unknown max-stat effect ${String((raw as { kind?: unknown }).kind)}`);
+  }
 }
 
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
@@ -642,6 +755,15 @@ export function normalizeTraits(
               trait.acquisitionMaxHealthRoll,
               equippedRarities,
               `${path}.acquisitionMaxHealthRoll`,
+            ),
+          }),
+      ...(trait.maxStatEffect === undefined
+        ? {}
+        : {
+            maxStatEffect: normalizeMaxStatEffect(
+              trait.maxStatEffect,
+              equippedRarities,
+              `${path}.maxStatEffect`,
             ),
           }),
       selectedDisposition,

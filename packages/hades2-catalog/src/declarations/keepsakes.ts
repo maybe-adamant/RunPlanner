@@ -9,7 +9,13 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     fatedDisposition: 'neutral',
     echoGift: {
       availability: 'eligible',
-      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+      effect: { kind: 'maxManaGrant', schedule: 'oneShotAfterUnequipped' },
+    },
+    // KeepsakeAddMaxMana: Amount 50 x rarity 1, 1.5, 2, 3; each loot equip adds its own
+    // grant, and Cherished Heirloom raises the equipped one's.
+    effect: {
+      kind: 'maxManaGrant',
+      maxManaByRank: { Common: 50, Rare: 75, Epic: 100, Heroic: 150 },
     },
   },
   {
@@ -102,8 +108,10 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     fatedDisposition: 'neutral',
     echoGift: {
       availability: 'eligible',
-      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+      effect: { kind: 'maxHealthCap', schedule: 'oneShotAfterUnequipped' },
     },
+    // CapMaxHealth 30 at every rank, cleared by the first Boss end while active.
+    effect: { kind: 'maxHealthCap', maxHealth: 30 },
   },
   {
     key: 'SpellTalentKeepsake',

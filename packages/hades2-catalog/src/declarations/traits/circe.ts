@@ -23,6 +23,7 @@ export const circeTraits = [
     ...raritylessNpcTrait,
     key: 'CirceEnlargeTrait',
     label: 'Word of Greater Girth',
+    maxStatEffect: { kind: 'multiplier', maxHealth: 1.15 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -49,6 +50,8 @@ export const circeTraits = [
     ...raritylessNpcTrait,
     key: 'DoubleFamiliarTrait',
     label: 'Primal Psychic Connection',
+    // CircePetMultiplier at Circe's fixed Common rarity: BonusMultiplier 1 adds the current stacks.
+    maxStatEffect: { kind: 'familiarStackMultiplier', multiplier: 2 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

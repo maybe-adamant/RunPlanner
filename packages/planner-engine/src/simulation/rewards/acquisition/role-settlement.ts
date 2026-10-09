@@ -16,6 +16,7 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   applyConcreteAcquisition,
   consumeCountedOffer,
+  creditMaxStatGain,
   creditResourceGains,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
@@ -75,7 +76,11 @@ import {
   spawnPendingTraitOffers,
   traitOfferRoomOccurrence,
 } from '../../state/pending-trait-offers';
-import { collectPendingResourcePickup, spawnPickups } from '../../state/pending-resource-pickups';
+import {
+  collectPendingResourcePickup,
+  resolveProducedMaxStatGrant,
+  spawnPickups,
+} from '../../state/pending-resource-pickups';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
@@ -511,10 +516,17 @@ export function applyProducerRoleHistory(
       branch.state.rewardHistory,
       acquisition.acquisition,
     );
-    const history =
+    const history = creditMaxStatGain(
       collected.amounts === undefined
         ? acquiredHistory
-        : creditResourceGains(acquiredHistory, collected.amounts);
+        : creditResourceGains(acquiredHistory, collected.amounts),
+      resolveProducedMaxStatGrant(
+        catalog,
+        acquisition.acquisition.gameName,
+        incoming.producerLifecycleKey,
+        branch.state.reached.routePosition.routeKey,
+      ),
+    );
     let acquisitionTraitHistory = materializedBranch.state.traitHistory;
     if (pickupEffect?.kind === 'anvilOfFates' && authoredAnvilResult?.kind === 'anvilOfFates') {
       acquisitionTraitHistory = foldTraitHistoryEvents(

@@ -33,6 +33,7 @@ import {
   projectStygianWellLegality,
   type StygianWellLegalityState,
 } from '../commerce/stygian-well';
+import { deriveMaxStats, type MaxStats } from '../max-stats';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -160,6 +161,8 @@ export interface RunStateSnapshot {
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   /** Resources credited by acquisitions settled before this checkpoint, by resource key. */
   readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
+  /** Max health and max Magick at this checkpoint, with their flat sources. */
+  readonly maxStats: MaxStats;
   readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -229,6 +232,7 @@ interface RunStateDerivationCache {
       readonly hexProgress: SimulationState['hexProgress'];
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
       readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
+      readonly maxStats: MaxStats;
     }
   >;
   nextObjectId: number;
@@ -685,6 +689,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
             objectId(cache, state.pendingHermesShrineDeliveries),
             objectId(cache, state.stygianWell),
             objectId(cache, state.hexProgress),
+            objectId(cache, state.equipment),
           ].join(':');
     let derived =
       identityKey === undefined ? undefined : cache?.branchStateByIdentity.get(identityKey);
@@ -712,6 +717,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         hexProgress: state.hexProgress,
         forfeitStatus: forfeitStatus(state.arcanaFear),
         resourceGains: state.rewardHistory.resourceGains,
+        maxStats: deriveMaxStats(context.catalog, state),
       });
       if (identityKey !== undefined) {
         cache?.branchStateByIdentity.set(identityKey, derived);
@@ -828,6 +834,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         }),
     forfeitStatus: first.forfeitStatus,
     resourceGains: first.resourceGains,
+    maxStats: first.maxStats,
     rewardStoreController: Object.freeze({
       // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.
       ...enteredRewardStoreTally(firstState.reached.historyView),

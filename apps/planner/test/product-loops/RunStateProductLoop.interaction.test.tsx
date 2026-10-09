@@ -101,6 +101,12 @@ describe('Run State product loop', () => {
       name: 'State before the first action in Opening 01',
     });
     expect(within(sheet).getByRole('heading', { name: 'Gods in pool' })).toBeTruthy();
+    // Frinos +40 health; Staff rank V +40 and Silver Wheel +100 Magick.
+    expect(stateRowValue(sheet, 'Max health')).toBe('70');
+    expect(stateRowValue(sheet, 'Max Magick')).toBe('190');
+    expect(within(sheet).getByRole('list', { name: 'Maxima sources' }).textContent).toContain(
+      'Silver Wheel+100 Magick',
+    );
     await view.user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
     expect(within(sheet).getByRole('heading', { name: 'Counters' })).toBeTruthy();
     expect(within(sheet).getByRole('heading', { name: 'Reward Bags' })).toBeTruthy();

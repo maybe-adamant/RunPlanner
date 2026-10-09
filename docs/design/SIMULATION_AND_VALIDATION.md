@@ -567,8 +567,11 @@ individual/forced pin a `resolvedOffer` room carries. H banks only
 `RunProgress`, I only `TartarusRewards`, and N banks nothing.
 
 Snapshots include trait/element history, god-pool state, Arcana/Fear,
-keepsakes and their retained effects, and the resources gained by acquisitions
-settled before the checkpoint. Configured Fear and effective suppression
+keepsakes and their retained effects, the resources gained by acquisitions
+settled before the checkpoint, and max health and Magick with their flat
+sources. The maxima are derived from folded state only; their settlement-time
+inputs (pickup grants, permanent trait grants, the Fight Fight Fight base, the
+Silver Wheel grants and the White Antler window) are folded by their owners. Configured Fear and effective suppression
 remain distinct; spent effects are not restored by later suppression.
 Acquisition identities distinguish repeated temporary effects. Snapshots
 observe those engine products instead of reconstructing clocks, charges or

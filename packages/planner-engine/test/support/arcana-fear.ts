@@ -53,6 +53,7 @@ export function initializeTestRewardBranchesForRoute(
       : {
           weaponKey: predecessor.state.equipment.weaponKey,
           aspectKey: predecessor.state.equipment.aspectKey,
+          familiarKey: predecessor.state.equipment.familiarKey,
         });
   const resolvedArcanaFear =
     initialArcanaFear ??

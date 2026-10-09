@@ -710,8 +710,10 @@ terminal and may release a local dependent; it does not attest that steering or
 the resulting state matched. A missing or different player acquisition does
 not become an adapter-local semantic comparison: durable modeled results are
 checked only by the sparse named room-exit conformance facts selected by the
-planner. Simulation-neutral health, Magick, Gold, Armor, healing, and
-meta-progression results intentionally have no blocking completion proof.
+planner. Max health and Magick are modeled for Run State but not
+conformance-checked; other health, Magick, Gold, Armor, healing, and
+meta-progression results are simulation-neutral. None has a blocking
+completion proof.
 Arachne's eight dresses and Icarus's Protective/Volatile Coating remain in
 planner history but are excluded from trait presence and absence checks at
 both room exit and postboss admission: native armor depletion can remove them,

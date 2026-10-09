@@ -98,7 +98,24 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly lootRequirement?: RequirementExpression;
   /** Source `AddResources`: base quantities this pickup grants, by resource key. */
   readonly resourceGrant?: ResourceAmounts;
+  /** Source `AddMaxHealth`/`AddMaxMana`. */
+  readonly maxStatGrant?: MaxStatGrant;
+  /**
+   * Source `RunProgress.PropertyChanges`: replaces `maxStatGrant` when a
+   * run-progress-eligible producer spawns it on a route with the unlock.
+   */
+  readonly runProgressMaxStatGrant?: MaxStatGrant & {
+    readonly excludedRouteKeys: readonly string[];
+  };
 }
+
+/** One flat max-health or max-Magick amount. */
+export interface MaxStatGrant {
+  readonly stat: 'maxHealth' | 'maxMana';
+  readonly amount: number;
+}
+
+export type MaxStatTotals = Readonly<Record<MaxStatGrant['stat'], number>>;
 
 /** Whole resource quantities by source resource key (for example `MetaCardPointsCommon`). */
 export type ResourceAmounts = Readonly<Record<string, number>>;
@@ -254,6 +271,8 @@ export interface ProducerLifecycleProfileDeclaration {
   readonly duplicationExempt?: true;
   /** Producer-owned `AddResources` overrides, by concrete acquisition game name. */
   readonly resourceGrantOverrides?: Readonly<Record<string, ResourceAmounts>>;
+  /** Source `RunProgressUpgradeEligible`: its objects take their `RunProgress` overrides. */
+  readonly runProgressUpgradeEligible?: true;
 }
 
 export interface RewardKernelCatalog {
@@ -302,6 +321,8 @@ export interface RewardHistoryState {
    * `AddResource` also adds to `LifetimeResourcesGained`). Spending never reduces it.
    */
   readonly resourceGains: ResourceAmounts;
+  /** Flat maxima from collected pickups, including run-progress overrides; never debited. */
+  readonly maxStatGains: MaxStatTotals;
   /** Latest actually-settled source whose effective LastRewardEligible value is true. */
   readonly lastRewardRecreation?: ConcreteAcquisitionDeclaration['lastRewardRecreation'];
   /** Canonical fold of the equipped-trait ledger; never incremented by loot projection. */

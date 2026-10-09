@@ -127,7 +127,7 @@ modeled counter transitions, not scheduler rows:
 - Experimental Hammer expiry;
 - Chaos curse clocks and blessing maturation;
 - Stygian Well duration and consumption state;
-- Traces of Spirit's Magick grants, counted but not simulated; and
+- Traces of Spirit's Magick grants, folded into the Run State maxima; and
 - other declaration-owned encounter-use expiry.
 
 Other deferred state is consumed by a later concrete event rather than a

@@ -51,6 +51,7 @@ describe('summarizeCatalog', () => {
       defaultStartingKeepsakeKey: 'FixtureKeepsake',
       familiars: emptyCollection(),
       defaultFamiliarKey: 'FixtureFamiliar',
+      heroMaxStats: { maxHealth: 30, maxMana: 50 },
       rewards: {
         payloadDomains: emptyCollection(),
         rewardTypes: emptyCollection(),

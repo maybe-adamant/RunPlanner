@@ -45,7 +45,14 @@ export const arcanaCards = [
     automatic({ kind: 'adjacentActive' }),
   ),
   card('CastBuff', 'The Furies', 'InsideCastBuffMetaUpgrade', 2, 1, 2),
-  card('BonusHealth', 'Persistence', 'HealthManaBonusMetaUpgrade', 2, 2, 2),
+  {
+    ...card('BonusHealth', 'Persistence', 'HealthManaBonusMetaUpgrade', 2, 2, 2),
+    // PropertyChanges MaxHealth and MaxMana BaseValue 20 x rarity 1, 1.5, 2, 2.5.
+    maxStatBonus: {
+      maxHealthByRarity: { Common: 20, Rare: 30, Epic: 40, Heroic: 50 },
+      maxManaByRarity: { Common: 20, Rare: 30, Epic: 40, Heroic: 50 },
+    },
+  },
   card('BonusDodge', 'The Messenger', 'DodgeBonusMetaUpgrade', 2, 3, 1),
   card('ManaOverTime', 'The Unseen', 'ManaOverTimeMetaUpgrade', 2, 4, 5),
   card('MagicCrit', 'Night', 'MagicCritMetaUpgrade', 2, 5, 2),

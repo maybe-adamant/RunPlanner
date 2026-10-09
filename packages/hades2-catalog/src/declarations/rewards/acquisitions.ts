@@ -2,6 +2,12 @@ import type { RequirementExpression } from '@run-planner/engine/requirements';
 
 import type { RawConcreteAcquisitionDeclaration } from './types';
 import { notFreshFileRoute } from '../routes';
+import { runProgressUnlockExcludedRouteKeys } from './producer-lifecycles';
+
+/** Ashes (+5 health) and Bones (+5 Magick) `RunProgress` overrides behind their world upgrades. */
+function runProgressGrant(stat: 'maxHealth' | 'maxMana') {
+  return Object.freeze({ stat, amount: 5, excludedRouteKeys: runProgressUnlockExcludedRouteKeys });
+}
 
 function lastReward(rewardType: string) {
   return Object.freeze({
@@ -190,6 +196,7 @@ const rawAcquisitions = [
     gameName: 'MaxHealthDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxHealth', amount: 25 },
     goldConversionEligible: true,
     ...lastReward('MaxHealthDrop'),
   },
@@ -197,6 +204,7 @@ const rawAcquisitions = [
     gameName: 'MaxHealthDropBig',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxHealth', amount: 50 },
     goldConversionEligible: true,
     ...lastReward('MaxHealthDropBig'),
   },
@@ -204,24 +212,28 @@ const rawAcquisitions = [
     gameName: 'MaxHealthDropSmall',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxHealth', amount: 5 },
     goldConversionEligible: true,
   },
   {
     gameName: 'EmptyMaxHealthSmallDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxHealth', amount: 10 },
     goldConversionEligible: true,
   },
   {
     gameName: 'EmptyMaxHealthDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxHealth', amount: 25 },
     goldConversionEligible: true,
   },
   {
     gameName: 'MaxManaDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxMana', amount: 30 },
     goldConversionEligible: true,
     ...lastReward('MaxManaDrop'),
   },
@@ -229,6 +241,7 @@ const rawAcquisitions = [
     gameName: 'MaxManaDropBig',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxMana', amount: 60 },
     goldConversionEligible: true,
     ...lastReward('MaxManaDropBig'),
   },
@@ -236,6 +249,7 @@ const rawAcquisitions = [
     gameName: 'MaxManaDropSmall',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxMana', amount: 10 },
     goldConversionEligible: true,
   },
   { gameName: 'Currency', kind: 'consumable', historyProjection: 'consumableAndUse' },
@@ -351,7 +365,12 @@ const rawAcquisitions = [
   },
   // Stygian Well consumables, acquired under their own names when purchased.
   { gameName: 'LastStandShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },
-  { gameName: 'EmptyMaxHealthShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  {
+    gameName: 'EmptyMaxHealthShopItem',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    maxStatGrant: { stat: 'maxHealth', amount: 25 },
+  },
   {
     gameName: 'ChaosWeaponUpgrade',
     kind: 'consumable',
@@ -383,6 +402,7 @@ const rawAcquisitions = [
     gameName: 'MetaCurrencyDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
+    runProgressMaxStatGrant: runProgressGrant('maxMana'),
     goldConversionEligible: true,
     artificerConversionEligible: true,
     resourceGrant: { MetaCurrency: 50 },
@@ -392,6 +412,7 @@ const rawAcquisitions = [
     gameName: 'MetaCurrencyBigDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
+    runProgressMaxStatGrant: runProgressGrant('maxMana'),
     goldConversionEligible: true,
     artificerConversionEligible: true,
     resourceGrant: { MetaCurrency: 100 },
@@ -401,6 +422,7 @@ const rawAcquisitions = [
     gameName: 'MetaCardPointsCommonDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
+    runProgressMaxStatGrant: runProgressGrant('maxHealth'),
     goldConversionEligible: true,
     artificerConversionEligible: true,
     resourceGrant: { MetaCardPointsCommon: 5 },
@@ -410,6 +432,7 @@ const rawAcquisitions = [
     gameName: 'MetaCardPointsCommonBigDrop',
     kind: 'resource',
     historyProjection: 'consumableAndUse',
+    runProgressMaxStatGrant: runProgressGrant('maxHealth'),
     goldConversionEligible: true,
     artificerConversionEligible: true,
     resourceGrant: { MetaCardPointsCommon: 10 },

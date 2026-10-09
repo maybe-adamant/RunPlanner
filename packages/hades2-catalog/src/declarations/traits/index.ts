@@ -92,7 +92,18 @@ const weapons = [
   },
 ] as const;
 const aspects = [
-  { key: 'BaseStaffAspect', label: 'Aspect of Melinoë', weaponKey: 'WeaponStaffSwing' },
+  {
+    key: 'BaseStaffAspect',
+    label: 'Aspect of Melinoë',
+    weaponKey: 'WeaponStaffSwing',
+    // MaxMana BaseValue 10 x Legendary 4 / Perfect 5.
+    maxStatBonus: {
+      stat: 'maxMana',
+      amount: 40,
+      upgradedAmount: 50,
+      upgradeTraitKey: 'WeaponUpgradeBoon',
+    },
+  },
   { key: 'StaffClearCastAspect', label: 'Aspect of Circe', weaponKey: 'WeaponStaffSwing' },
   { key: 'StaffSelfHitAspect', label: 'Aspect of Momus', weaponKey: 'WeaponStaffSwing' },
   { key: 'StaffRaiseDeadAspect', label: 'Aspect of Anubis', weaponKey: 'WeaponStaffSwing' },
@@ -100,7 +111,18 @@ const aspects = [
   { key: 'DaggerHomingThrowAspect', label: 'Aspect of Pan', weaponKey: 'WeaponDagger' },
   { key: 'DaggerBlockAspect', label: 'Aspect of Artemis', weaponKey: 'WeaponDagger' },
   { key: 'DaggerTripleAspect', label: 'Aspect of the Morrigan', weaponKey: 'WeaponDagger' },
-  { key: 'AxeRecoveryAspect', label: 'Aspect of Melinoë', weaponKey: 'WeaponAxe' },
+  {
+    key: 'AxeRecoveryAspect',
+    label: 'Aspect of Melinoë',
+    weaponKey: 'WeaponAxe',
+    // MaxHealth BaseValue 30 x Legendary 1.67 / Perfect 2.00; the fraction is kept.
+    maxStatBonus: {
+      stat: 'maxHealth',
+      amount: 50.1,
+      upgradedAmount: 60,
+      upgradeTraitKey: 'WeaponUpgradeBoon',
+    },
+  },
   { key: 'AxeArmCastAspect', label: 'Aspect of Charon', weaponKey: 'WeaponAxe' },
   { key: 'AxePerfectCriticalAspect', label: 'Aspect of Thanatos', weaponKey: 'WeaponAxe' },
   { key: 'AxeRallyAspect', label: 'Aspect of Nergal', weaponKey: 'WeaponAxe' },

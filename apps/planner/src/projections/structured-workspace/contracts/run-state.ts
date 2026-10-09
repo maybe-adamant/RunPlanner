@@ -17,6 +17,7 @@ export type WorkspaceRunStateLauncher =
     };
 
 export interface WorkspaceRunStatePresentation {
+  readonly maxStats: WorkspaceRunStateMaxStats;
   readonly hexProgress: {
     readonly baseSpellLabel?: string;
     readonly layoutLabel?: string;
@@ -128,6 +129,22 @@ export interface WorkspaceRunStatePresentation {
     readonly banned: readonly WorkspaceRunStateSource[];
     readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
   };
+}
+
+/** Engine-derived maxima with already-formatted flat sources. */
+export interface WorkspaceRunStateMaxStats {
+  readonly maxHealth: number;
+  readonly maxMagick: number;
+  readonly maxHealthNote?: string;
+  readonly sources: readonly {
+    readonly key: string;
+    readonly label: string;
+    readonly maxHealth?: string;
+    readonly maxMagick?: string;
+  }[];
+  readonly convertedHealth?: string;
+  readonly maxHealthMultiplier?: string;
+  readonly maxMagickMultiplier?: string;
 }
 
 export interface WorkspaceRunStateStygianWell {

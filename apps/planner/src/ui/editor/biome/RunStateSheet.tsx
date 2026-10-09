@@ -215,129 +215,187 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
       </header>
       <div aria-labelledby={tabId(activeTab)} id={panelId} role="tabpanel" tabIndex={0}>
         {activeTab === 'Overview' ? (
-          <section className="run-state-section">
-            <h3>Keepsake</h3>
-            <p className="run-state-current-keepsake">{state.keepsakes.currentLabel}</p>
-            <dl className="run-state-values">
-              {state.keepsakes.chronology.map((entry) => (
-                <StateRow key={entry.biomeNumber} label={`${ordinal(entry.biomeNumber)} Biome`}>
-                  {entry.label}
-                </StateRow>
-              ))}
-              <StateRow label="Fated">{state.keepsakes.fatedStatus}</StateRow>
-              {state.keepsakes.jeweledPomStatus === 'inactive' ? null : (
-                <StateRow label="Jeweled Pom">{state.keepsakes.jeweledPomStatus}</StateRow>
-              )}
-              {state.keepsakes.callingCardRemainingCharges === undefined ? null : (
-                <StateRow label="Calling Card">
-                  {state.keepsakes.callingCardRemainingCharges} charges remaining
-                </StateRow>
-              )}
-              {state.keepsakes.pendingRewardPriorities.length === 0 ? null : (
-                <StateRow label="Reward priorities">
-                  {state.keepsakes.pendingRewardPriorities.join(', ')}
-                </StateRow>
-              )}
-              {state.keepsakes.olympianSources.map((source) => (
-                <StateRow
-                  key={`${source.origin}-${source.providerKey}`}
-                  label={source.providerLabel}
-                >
-                  <span>
-                    Force {source.forceRemaining} · Rarification {source.rarificationRemaining}
-                  </span>
-                  <span className="run-state-metadata">
-                    Source cap {source.maximumSourceRarityLevel} · {source.origin}
-                  </span>
-                </StateRow>
-              ))}
-              {state.keepsakes.timePieceRemainingCharges === undefined ? null : (
-                <StateRow label="Time Piece">
-                  {state.keepsakes.timePieceRemainingCharges} charges remaining
-                </StateRow>
-              )}
-              {state.keepsakes.echoGift === undefined ? null : (
-                <StateRow label="Gift Gift Gift">
-                  {state.keepsakes.echoGift.capturedKeepsakeLabel}
-                  <span className="run-state-metadata">
-                    {state.keepsakes.echoGift.status} · {state.keepsakes.echoGift.replayCount}{' '}
-                    replays
-                  </span>
-                </StateRow>
-              )}
-              {state.keepsakes.experimentalHammers.length === 0 ? null : (
-                <StateRow label="Experimental Hammers">
-                  <ul className="run-state-plain-list">
-                    {state.keepsakes.experimentalHammers.map((hammer) => (
-                      <li key={hammer.acquisitionIdentity}>
-                        {hammer.traitLabel}
-                        <span className="run-state-metadata">
-                          {hammer.status} · {hammer.remainingUses} encounters remaining
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </StateRow>
-              )}
-              {state.keepsakes.transcendentEmbryo === undefined ? null : (
-                <StateRow label="Transcendent Embryo">
-                  {state.keepsakes.transcendentEmbryo.markedBlessingLabel}
-                  <span className="run-state-metadata">
-                    {state.keepsakes.transcendentEmbryo.rarity} ·{' '}
-                    {state.keepsakes.transcendentEmbryo.progress}/
-                    {state.keepsakes.transcendentEmbryo.interval} encounter checkpoints ·{' '}
-                    {state.keepsakes.transcendentEmbryo.origin}
-                  </span>
-                </StateRow>
-              )}
-              {state.keepsakes.figLeafRemainingUses === undefined ? null : (
-                <StateRow label="Fig Leaf">
-                  {state.keepsakes.figLeafRemainingUses} uses remaining
-                  {state.keepsakes.figLeafActivatedThisBiome ? (
-                    <span className="run-state-metadata">Already used this biome</span>
-                  ) : null}
-                </StateRow>
-              )}
-              {state.keepsakes.gorgonStatus === undefined ? null : (
-                <StateRow label="Gorgon Amulet">
-                  {state.keepsakes.gorgonStatus}
-                  {state.keepsakes.gorgonRarityLevel === undefined ? null : (
-                    <span className="run-state-metadata">
-                      Source level {state.keepsakes.gorgonRarityLevel}
-                    </span>
+          <>
+            <section className="run-state-section">
+              <h3>Maxima</h3>
+              <dl className="run-state-values">
+                <StateRow label="Max health">
+                  {state.maxStats.maxHealth}
+                  {state.maxStats.maxHealthNote === undefined ? null : (
+                    <span className="run-state-metadata">{state.maxStats.maxHealthNote}</span>
                   )}
                 </StateRow>
-              )}
-              {state.keepsakes.phialStatus === undefined ? null : (
-                <StateRow label="Aromatic Phial">{state.keepsakes.phialStatus}</StateRow>
-              )}
-              {state.keepsakes.discordantBellBonusLabel === undefined ? null : (
-                <StateRow label="Discordant Bell">
-                  {state.keepsakes.discordantBellBonusLabel}
-                  <span className="run-state-metadata">Damage dealt and taken</span>
-                </StateRow>
-              )}
-              {state.keepsakes.lionFang === undefined ? null : (
-                <StateRow label="Lion Fang">
-                  {state.keepsakes.lionFang.expired
-                    ? 'Expired'
-                    : state.keepsakes.lionFang.bonusLabel}
-                  <span className="run-state-metadata">
-                    Damage dealt
-                    {state.keepsakes.lionFang.origin === 'echo' ? ' · from Gift Gift Gift' : null}
-                  </span>
-                </StateRow>
-              )}
-              {state.keepsakes.stoneStatus === undefined ? null : (
-                <StateRow label="Concave Stone">
-                  {state.keepsakes.stoneStatus}
-                  <span className="run-state-metadata">
-                    {state.keepsakes.stoneOrigin} · {state.keepsakes.stoneRank}
-                  </span>
-                </StateRow>
-              )}
-            </dl>
-          </section>
+                <StateRow label="Max Magick">{state.maxStats.maxMagick}</StateRow>
+              </dl>
+              <details className="run-state-max-stat-sources">
+                <summary>Sources</summary>
+                <ul aria-label="Maxima sources" className="run-state-plain-list">
+                  {state.maxStats.sources.map((source) => (
+                    <li key={source.key}>
+                      {source.label}
+                      <span className="run-state-metadata">
+                        {[
+                          source.maxHealth === undefined ? undefined : `${source.maxHealth} health`,
+                          source.maxMagick === undefined ? undefined : `${source.maxMagick} Magick`,
+                        ]
+                          .filter((part) => part !== undefined)
+                          .join(' · ')}
+                      </span>
+                    </li>
+                  ))}
+                  {state.maxStats.convertedHealth === undefined ? null : (
+                    <li>
+                      From Magick
+                      <span className="run-state-metadata">
+                        {state.maxStats.convertedHealth} health
+                      </span>
+                    </li>
+                  )}
+                  {state.maxStats.maxHealthMultiplier === undefined &&
+                  state.maxStats.maxMagickMultiplier === undefined ? null : (
+                    <li>
+                      Multipliers
+                      <span className="run-state-metadata">
+                        {[
+                          state.maxStats.maxHealthMultiplier === undefined
+                            ? undefined
+                            : `${state.maxStats.maxHealthMultiplier} health`,
+                          state.maxStats.maxMagickMultiplier === undefined
+                            ? undefined
+                            : `${state.maxStats.maxMagickMultiplier} Magick`,
+                        ]
+                          .filter((part) => part !== undefined)
+                          .join(' · ')}
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              </details>
+            </section>
+            <section className="run-state-section">
+              <h3>Keepsake</h3>
+              <p className="run-state-current-keepsake">{state.keepsakes.currentLabel}</p>
+              <dl className="run-state-values">
+                {state.keepsakes.chronology.map((entry) => (
+                  <StateRow key={entry.biomeNumber} label={`${ordinal(entry.biomeNumber)} Biome`}>
+                    {entry.label}
+                  </StateRow>
+                ))}
+                <StateRow label="Fated">{state.keepsakes.fatedStatus}</StateRow>
+                {state.keepsakes.jeweledPomStatus === 'inactive' ? null : (
+                  <StateRow label="Jeweled Pom">{state.keepsakes.jeweledPomStatus}</StateRow>
+                )}
+                {state.keepsakes.callingCardRemainingCharges === undefined ? null : (
+                  <StateRow label="Calling Card">
+                    {state.keepsakes.callingCardRemainingCharges} charges remaining
+                  </StateRow>
+                )}
+                {state.keepsakes.pendingRewardPriorities.length === 0 ? null : (
+                  <StateRow label="Reward priorities">
+                    {state.keepsakes.pendingRewardPriorities.join(', ')}
+                  </StateRow>
+                )}
+                {state.keepsakes.olympianSources.map((source) => (
+                  <StateRow
+                    key={`${source.origin}-${source.providerKey}`}
+                    label={source.providerLabel}
+                  >
+                    <span>
+                      Force {source.forceRemaining} · Rarification {source.rarificationRemaining}
+                    </span>
+                    <span className="run-state-metadata">
+                      Source cap {source.maximumSourceRarityLevel} · {source.origin}
+                    </span>
+                  </StateRow>
+                ))}
+                {state.keepsakes.timePieceRemainingCharges === undefined ? null : (
+                  <StateRow label="Time Piece">
+                    {state.keepsakes.timePieceRemainingCharges} charges remaining
+                  </StateRow>
+                )}
+                {state.keepsakes.echoGift === undefined ? null : (
+                  <StateRow label="Gift Gift Gift">
+                    {state.keepsakes.echoGift.capturedKeepsakeLabel}
+                    <span className="run-state-metadata">
+                      {state.keepsakes.echoGift.status} · {state.keepsakes.echoGift.replayCount}{' '}
+                      replays
+                    </span>
+                  </StateRow>
+                )}
+                {state.keepsakes.experimentalHammers.length === 0 ? null : (
+                  <StateRow label="Experimental Hammers">
+                    <ul className="run-state-plain-list">
+                      {state.keepsakes.experimentalHammers.map((hammer) => (
+                        <li key={hammer.acquisitionIdentity}>
+                          {hammer.traitLabel}
+                          <span className="run-state-metadata">
+                            {hammer.status} · {hammer.remainingUses} encounters remaining
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </StateRow>
+                )}
+                {state.keepsakes.transcendentEmbryo === undefined ? null : (
+                  <StateRow label="Transcendent Embryo">
+                    {state.keepsakes.transcendentEmbryo.markedBlessingLabel}
+                    <span className="run-state-metadata">
+                      {state.keepsakes.transcendentEmbryo.rarity} ·{' '}
+                      {state.keepsakes.transcendentEmbryo.progress}/
+                      {state.keepsakes.transcendentEmbryo.interval} encounter checkpoints ·{' '}
+                      {state.keepsakes.transcendentEmbryo.origin}
+                    </span>
+                  </StateRow>
+                )}
+                {state.keepsakes.figLeafRemainingUses === undefined ? null : (
+                  <StateRow label="Fig Leaf">
+                    {state.keepsakes.figLeafRemainingUses} uses remaining
+                    {state.keepsakes.figLeafActivatedThisBiome ? (
+                      <span className="run-state-metadata">Already used this biome</span>
+                    ) : null}
+                  </StateRow>
+                )}
+                {state.keepsakes.gorgonStatus === undefined ? null : (
+                  <StateRow label="Gorgon Amulet">
+                    {state.keepsakes.gorgonStatus}
+                    {state.keepsakes.gorgonRarityLevel === undefined ? null : (
+                      <span className="run-state-metadata">
+                        Source level {state.keepsakes.gorgonRarityLevel}
+                      </span>
+                    )}
+                  </StateRow>
+                )}
+                {state.keepsakes.phialStatus === undefined ? null : (
+                  <StateRow label="Aromatic Phial">{state.keepsakes.phialStatus}</StateRow>
+                )}
+                {state.keepsakes.discordantBellBonusLabel === undefined ? null : (
+                  <StateRow label="Discordant Bell">
+                    {state.keepsakes.discordantBellBonusLabel}
+                    <span className="run-state-metadata">Damage dealt and taken</span>
+                  </StateRow>
+                )}
+                {state.keepsakes.lionFang === undefined ? null : (
+                  <StateRow label="Lion Fang">
+                    {state.keepsakes.lionFang.expired
+                      ? 'Expired'
+                      : state.keepsakes.lionFang.bonusLabel}
+                    <span className="run-state-metadata">
+                      Damage dealt
+                      {state.keepsakes.lionFang.origin === 'echo' ? ' · from Gift Gift Gift' : null}
+                    </span>
+                  </StateRow>
+                )}
+                {state.keepsakes.stoneStatus === undefined ? null : (
+                  <StateRow label="Concave Stone">
+                    {state.keepsakes.stoneStatus}
+                    <span className="run-state-metadata">
+                      {state.keepsakes.stoneOrigin} · {state.keepsakes.stoneRank}
+                    </span>
+                  </StateRow>
+                )}
+              </dl>
+            </section>
+          </>
         ) : null}
         {activeTab === 'Overview' && state.stygianWell !== undefined ? (
           <section className="run-state-section">

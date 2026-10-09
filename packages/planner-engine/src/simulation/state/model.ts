@@ -26,6 +26,8 @@ export interface SimulationEquipmentState {
   readonly weaponKey: string;
   /** Null for a fresh profile's aspectless Staff. */
   readonly aspectKey: string | null;
+  /** The profile's equipped familiar; a fresh profile has none. */
+  readonly familiarKey: string | null;
 }
 
 export interface PendingShopTravelRefillState {

@@ -235,6 +235,8 @@ describe('resource gains at acquisition', () => {
     const [duplicate] = collectSeaStarDuplicate(withTraits(source!, traitsWith(seaStar)), ashes);
     expect(duplicate!.state.rewardHistory.resourceGains).toEqual({ MetaCardPointsCommon: 16 });
     expect(duplicate!.state.rewardHistory.consumableRecord.MetaCardPointsCommonDrop).toBe(2);
+    // The retained run-progress object repeats its max-health bonus.
+    expect(duplicate!.state.rewardHistory.maxStatGains).toEqual({ maxHealth: 10, maxMana: 0 });
     expect(duplicate!.state.pendingResourcePickups).toEqual({});
   });
 

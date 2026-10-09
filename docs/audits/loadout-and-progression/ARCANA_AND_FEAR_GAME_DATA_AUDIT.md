@@ -250,7 +250,8 @@ level, so it also drops a Lapis promotion and a temporary card's rarity
 override; the planner does not model that rarity loss.
 
 The planner counts the cycle, its grants and the max health and Magick each
-grant added at the card's rarity then, in Arcana state at every `roomEntered`,
+grant added at the card's rarity then (feeding its
+[maxima](MAX_HEALTH_AND_MAGICK_GAME_DATA_AUDIT.md)), in Arcana state at every `roomEntered`,
 never at `roomRestored`. Promotion restarts the cycle, and a room
 start while Barren is active counts nothing and restarts it. The catalog
 declares the interval and the per-rarity amounts; the board adjacency
