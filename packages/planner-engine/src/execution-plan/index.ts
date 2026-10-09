@@ -21,6 +21,7 @@ export {
   type ExecutionAllTogetherResult,
   type ExecutionCirceResolution,
   type ExecutionSemanticProduct,
+  type ExecutionStartState,
   type ExecutionRunStateCount,
   type ExecutionRunStateDiagnostic,
   type ExecutionAcquisitionRole,

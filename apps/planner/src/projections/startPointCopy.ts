@@ -39,10 +39,5 @@ export function describeStartPointUnavailable(reason: StartInstallationUnavailab
 
 /** Why the authored start point keeps the plan from being sent. */
 export function describeStartPointBlocked(block: StartPointPublicationBlock): string {
-  switch (block.code) {
-    case 'startPointIneligible':
-      return `The start point can’t start this run. ${describeStartPointUnavailable(block.reason)}`;
-    case 'startPointUnpublished':
-      return 'Practice mode can’t be sent to the game yet.';
-  }
+  return `The start point can’t start this run. ${describeStartPointUnavailable(block.reason)}`;
 }

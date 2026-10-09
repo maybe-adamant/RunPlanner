@@ -1,14 +1,15 @@
 import type { OccurrenceAddress } from '../../authored-project/addresses';
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, KeepsakeRank } from '../../catalog-schema';
 import { createRewardBagState } from '../../reward-kernel';
 import { artificerStatus } from '../arcana-fear';
 import { keepsakeRankForEquip } from '../keepsakes/state';
-import { deriveMaxStats, type MaxStatContribution } from '../max-stats';
+import { deriveMaxStatGrants, deriveMaxStats } from '../max-stats';
 import type { SimulationState } from '../state/model';
 import { aspectIsPerfect, familiarStackMultiplier } from '../traits/equipment-upgrades';
 import { hasActiveChaosSemanticTag } from '../traits/offers';
 import type {
   StartBiomeRecords,
+  StartHeldKeepsake,
   StartInstallation,
   StartInstallationFamily,
   StartInstallationResult,
@@ -132,15 +133,65 @@ function equipment(catalog: Catalog, state: SimulationState): StartInstallation[
   });
 }
 
+function keepsakeKeyWithEffect(catalog: Catalog, kind: string): string {
+  const key = catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === kind)?.key;
+  if (key === undefined) throw new Error(`no keepsake declares ${kind}`);
+  return key;
+}
+
+const KEEPSAKE_RANKS: readonly KeepsakeRank[] = ['Common', 'Rare', 'Epic', 'Heroic'];
+
+/**
+ * Native `UnequipKeepsake` keeps Permanent keepsakes held unslotted; Echo's
+ * biome-start replay equips a Common copy only while the keepsake is not held
+ * (`RoomLogic.lua:1218-1242`), and a spent unslotted Figurine is removed.
+ */
+function heldKeepsakes(catalog: Catalog, state: SimulationState): readonly StartHeldKeepsake[] {
+  const value = state.keepsakes;
+  const rows = new Map<string, StartHeldKeepsake>();
+  const hold = (key: string, rank: KeepsakeRank, slotted: boolean) => {
+    if (!rows.has(key)) rows.set(key, Object.freeze({ key, rank, slotted }));
+  };
+  if (value.currentKey !== null)
+    hold(
+      value.currentKey,
+      keepsakeRankForEquip(catalog, value.currentKey, state.traitHistory),
+      true,
+    );
+  if (value.discordantBell !== undefined)
+    hold(keepsakeKeyWithEffect(catalog, 'discordantBell'), value.discordantBell.rank, false);
+  if (value.jeweledPom !== undefined) {
+    const key = keepsakeKeyWithEffect(catalog, 'jeweledPom');
+    const effect = catalog.keepsakes.byKey[key]!.effect;
+    const levels = value.jeweledPom.levels;
+    const rank =
+      effect?.kind === 'jeweledPom'
+        ? KEEPSAKE_RANKS.find(
+            (entry) => effect.subsequentEligibleTraitLevelsByRank[entry] === levels,
+          )
+        : undefined;
+    if (rank === undefined) throw new Error(`Jeweled Pom has no rank for ${levels} levels`);
+    hold(key, rank, false);
+  }
+  for (const retained of value.retained ?? []) hold(retained.key, retained.rank, false);
+  const gift = state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon;
+  const captured = gift?.echoRepeatedKeepsakeKey;
+  if (captured !== undefined && (gift?.echoKeepsakeReplayCount ?? 0) > 0) {
+    const spentFigurine =
+      catalog.keepsakes.byKey[captured]?.effect?.kind === 'crystalFigurine' &&
+      !(value.figurine?.origin === 'echo' && value.figurine.status === 'pending');
+    if (!spentFigurine) hold(captured, 'Common', false);
+  }
+  return sorted([...rows.values()], (row) => row.key);
+}
+
 function keepsake(catalog: Catalog, state: SimulationState): StartInstallation['keepsake'] {
   const value = state.keepsakes;
   return Object.freeze({
     currentKey: value.currentKey,
     usedKeys: Object.freeze(value.history.map((entry) => entry.key)),
     removedKeys: value.removedKeys,
-    ...(value.currentKey === null
-      ? {}
-      : { rank: keepsakeRankForEquip(catalog, value.currentKey, state.traitHistory) }),
+    held: heldKeepsakes(catalog, state),
     fatedStatus: value.fatedStatus,
     olympianSources: sorted(
       value.olympianSources.map((source) =>
@@ -188,7 +239,6 @@ function keepsake(catalog: Catalog, state: SimulationState): StartInstallation['
         }),
     ...(value.discordantBell === undefined ? {} : { discordantBell: value.discordantBell }),
     ...(value.lionFang === undefined ? {} : { lionFang: value.lionFang }),
-    ...(value.maxManaGrants === undefined ? {} : { maxManaGrants: value.maxManaGrants }),
     ...(value.maxHealthCap === undefined ? {} : { maxHealthCap: value.maxHealthCap }),
   });
 }
@@ -265,19 +315,26 @@ function stygianWell(state: SimulationState): StartInstallation['stygianWell'] {
   });
 }
 
-/** Flat contributions base first, then by source, so equal sources agree across branches. */
+/**
+ * The maxima and the recorded grants the install adds as hidden traits. The
+ * slotted keepsake's own max-Magick grant is its latest one; its native equip
+ * re-creates it at the slotted rank.
+ */
 function maxStats(catalog: Catalog, state: SimulationState): StartInstallation['maxStats'] {
-  const derived = deriveMaxStats(catalog, state);
-  const rank = (source: MaxStatContribution['source']) =>
-    source.kind === 'base'
-      ? '0'
-      : source.kind === 'pickups'
-        ? '1'
-        : `2${source.kind}:${source.key}`;
-  return Object.freeze({
-    ...derived,
-    flat: sorted(derived.flat, (contribution) => rank(contribution.source)),
-  });
+  const { maxHealth, maxMana } = deriveMaxStats(catalog, state);
+  const grants = [...deriveMaxStatGrants(state)];
+  const slotted = state.keepsakes.currentKey;
+  const own = grants.findLastIndex(
+    (grant) => grant.source.kind === 'keepsake' && grant.source.key === slotted,
+  );
+  if (own >= 0) {
+    const effect = catalog.keepsakes.byKey[slotted!]?.effect;
+    const rank = keepsakeRankForEquip(catalog, slotted!, state.traitHistory);
+    if (effect?.kind !== 'maxManaGrant' || effect.maxManaByRank[rank] !== grants[own]!.maxMana)
+      throw new Error(`${slotted} grant is not its ${rank} equip amount`);
+    grants.splice(own, 1);
+  }
+  return Object.freeze({ maxHealth, maxMana, grants: sorted(grants) });
 }
 
 type StartFamilies = Pick<StartInstallation, StartInstallationFamily>;
@@ -355,11 +412,7 @@ const FAMILY_ORDER: readonly StartInstallationFamily[] = Object.freeze([
 ]);
 
 /** Reward stores exact across branches; a store no branch has drawn from stays native-fresh. */
-function rewardStores(
-  catalog: Catalog,
-  states: readonly SimulationState[],
-  kind: StartPoint['kind'],
-): StartRewardStores {
+function rewardStores(catalog: Catalog, states: readonly SimulationState[]): StartRewardStores {
   const routeKey = states[0]!.reached.routePosition.routeKey;
   const stores: StartRewardStores['stores'][number][] = [];
   const omittedStoreKeys: string[] = [];
@@ -373,7 +426,6 @@ function rewardStores(
     else omittedStoreKeys.push(store.key);
   }
   return Object.freeze({
-    writeAfterStartRoomCreation: kind === 'preboss',
     stores: Object.freeze(stores),
     omittedStoreKeys: Object.freeze(omittedStoreKeys),
   });
@@ -430,7 +482,7 @@ export function projectStartInstallation(
       }),
       roomHistory: inputs.roomHistory,
       ...first,
-      rewardStores: rewardStores(catalog, inputs.states, kind),
+      rewardStores: rewardStores(catalog, inputs.states),
     }),
   });
 }

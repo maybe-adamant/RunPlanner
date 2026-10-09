@@ -25,13 +25,16 @@ export interface SectionProduct {
 export type EquivalenceProducts = Readonly<Record<EquivalenceSection, SectionProduct>>;
 
 function planSection(
-  catalog: EquivalenceEntry['catalog'],
+  entry: EquivalenceEntry,
   assembly: ReturnType<typeof simulateProjectAssembly>,
 ): SectionProduct {
   try {
-    const encoded = encodeExecutionPlan(
-      compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) }),
-    );
+    const product = assembleExecutionProduct({
+      assembly,
+      catalog: entry.catalog,
+      ...(entry.internalRunModifiers === undefined ? {} : { internalRunModifiers: true }),
+    });
+    const encoded = encodeExecutionPlan(compileExecutionPlan({ product }));
     // The digest covers the exact wire bytes; the canonical tree only locates a change.
     return { digest: sha256(encoded), canonical: canonicalDigest(JSON.parse(encoded)) };
   } catch (error) {
@@ -45,7 +48,7 @@ export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProduct
   const assembly = simulateProjectAssembly(entry.catalog, project);
   // `simulateProject` publishes exactly this assembly's evaluation.
   const simulation = canonicalDigest(assembly.evaluation);
-  const plan = planSection(entry.catalog, assembly);
+  const plan = planSection(entry, assembly);
   const session = createPreparedProjectCandidateSession(entry.catalog, assembly);
   const candidates = canonicalDigest(probeCandidates(entry.catalog, project, session));
   return Object.freeze({

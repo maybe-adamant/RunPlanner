@@ -80,6 +80,11 @@ export interface KeepsakeState {
     readonly origin: 'ordinary' | 'echo';
     readonly status: 'active' | 'expired';
   };
+  /**
+   * Calling Card or Time Piece a rack swap left held but unslotted, at the rank
+   * it left with. Bell and Pom are always kept; their ledgers carry them.
+   */
+  readonly retained?: readonly { readonly key: string; readonly rank: KeepsakeRank }[];
 }
 
 export interface OlympianProviderSource {
@@ -634,6 +639,30 @@ export function createKeepsakeState(
       : {}),
   });
 }
+/**
+ * Native `UnequipKeepsake` keeps a Permanent keepsake held but unslotted, but
+ * removes a Calling Card or Time Piece that leaves with no uses
+ * (`KeepsakeLogic.lua:190-227`).
+ */
+function retainedAfterSwap(
+  catalog: Catalog,
+  state: KeepsakeState,
+  leavingRank: KeepsakeRank | undefined,
+): Pick<KeepsakeState, 'retained'> | undefined {
+  const leaving = state.currentKey === null ? undefined : catalog.keepsakes.byKey[state.currentKey];
+  const kind = leaving?.effect?.kind;
+  const kept =
+    (kind === 'callingCard' && (state.callingCard?.remainingCharges ?? 0) > 0) ||
+    (kind === 'timePiece' && (state.timePiece?.remainingCharges ?? 0) > 0);
+  if (leaving === undefined || !kept) return undefined;
+  return {
+    retained: Object.freeze([
+      ...(state.retained ?? []),
+      Object.freeze({ key: leaving.key, rank: leavingRank ?? leaving.rank }),
+    ]),
+  };
+}
+
 export function applyKeepsakeReplacement(
   catalog: Catalog,
   state: KeepsakeState,
@@ -641,6 +670,7 @@ export function applyKeepsakeReplacement(
   arcanaFear: ArcanaFearState,
   equippedRank?: KeepsakeRank,
   effectiveBiomeNumber = (state.history.at(-1)?.biomeNumber ?? 0) + 1,
+  leavingRank?: KeepsakeRank,
 ): KeepsakeState {
   const activeArcanaKeys = arcanaFear.arcana.active.map((card) => card.key);
   // Invalid authored values deliberately remain in the document for repair,
@@ -711,6 +741,7 @@ export function applyKeepsakeReplacement(
     : stateWithoutCap;
   return Object.freeze({
     ...withoutOrdinaryOlympian,
+    ...retainedAfterSwap(catalog, state, leavingRank),
     currentKey: keepsakeKey,
     history,
     removedKeys: Object.freeze(

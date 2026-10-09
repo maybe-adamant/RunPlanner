@@ -1027,6 +1027,228 @@ export type ExecutionOlympusAetos =
       readonly wave: number;
     };
 
+/** Native trait `Rarity` names. */
+export type ExecutionTraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
+export type ExecutionKeepsakeRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic';
+
+/** One stub native `RoomHistory` record. */
+export interface ExecutionStartRoomRecord {
+  readonly name: string;
+  /** RoomData declares or inherits `NextRoomSet`, where native biome depth counts from. */
+  readonly nextRoomSet?: true;
+}
+
+/**
+ * One trait the start installs through `GetProcessedTraitData` and
+ * `AddTraitToHero` without `FromLoot`, with the per-instance native fields its
+ * skipped acquire would otherwise have written.
+ */
+export interface ExecutionStartTrait {
+  readonly name: string;
+  readonly rarity?: ExecutionTraitRarity;
+  readonly stackNum?: number;
+  /** Native `BlockInRunRarify`, set when Personal Loan pays out. */
+  readonly blockInRunRarify?: true;
+  /** Native `UpgradedTraitName` (Bridal Glow). */
+  readonly upgradedTraitName?: string;
+  /** Native `SelectedTrait` (Icarus slot boost). */
+  readonly selectedTrait?: string;
+  /** Native `GrantedTrait` on Jeweled Pom's Hades boon. */
+  readonly grantedTrait?: true;
+  /** Native `RepeatedKeepsake` (Gift Gift Gift). */
+  readonly repeatedKeepsake?: string;
+  /** Native `CurrentRoom` of a `RoomsPerUpgrade` trait, including Steady Growth. */
+  readonly currentRoom?: number;
+  /** Native `RoomsPerUpgrade.Amount` fixed at acquisition. */
+  readonly roomsPerUpgradeAmount?: number;
+  /** Native `RoomsPerUpgrade.MaxMana` fixed at acquisition. */
+  readonly roomsPerUpgradeMaxMana?: number;
+  /** `EchoIncreaseStats` fields (Fight Fight Fight). */
+  readonly echoIncreaseStats?: {
+    readonly statMultiplier: number;
+    readonly blockDecay: boolean;
+    readonly startMaxHealth: number;
+    readonly startMaxMana: number;
+  };
+  /** `GiveDurationHammer`'s `RemainingUses`; the hammer also counts encounters and expires. */
+  readonly durationHammerUses?: number;
+}
+
+/** An active Chaos curse: the processed curse trait carrying its blessing in `OnExpire`. */
+export interface ExecutionStartChaosCurse {
+  readonly name: string;
+  readonly remainingUses: number;
+  readonly curseValues: Readonly<Record<string, number>>;
+  readonly blessing: {
+    readonly name: string;
+    readonly rarity: ExecutionTraitRarity;
+    readonly blessingValues: Readonly<Record<string, number>>;
+  };
+}
+
+export interface ExecutionStartChaosBlessing {
+  readonly name: string;
+  readonly rarity: ExecutionTraitRarity;
+  readonly blessingValues: Readonly<Record<string, number>>;
+  /** Native `FromChaosKeepsake` (Transcendent Embryo). */
+  readonly fromChaosKeepsake?: true;
+}
+
+/** One keepsake trait the hero holds, with its per-instance native fields. */
+export interface ExecutionStartKeepsakeTrait {
+  readonly name: string;
+  readonly rarity: ExecutionKeepsakeRarity;
+  /** In the keepsake slot, equipped natively; otherwise held unslotted. */
+  readonly slotted?: true;
+  readonly remainingUses?: number;
+  readonly uses?: number;
+  /** Native `RarityUpgradeData.Uses`. */
+  readonly rarityUpgradeUses?: number;
+  readonly boonConversionUses?: number;
+  readonly currentKeepsakeDamageBonus?: number;
+  readonly escalatingKeepsakeValue?: number;
+  readonly currentRoom?: number;
+}
+
+export interface ExecutionStartKeepsake {
+  /** Native `CurrentRun.KeepsakeCache`. */
+  readonly keepsakeCache: readonly string[];
+  /** Native `CurrentRun.BlockedKeepsakes`. */
+  readonly blockedKeepsakes: readonly string[];
+  /** Exactly the keepsake traits the hero holds; at most one is slotted. */
+  readonly traits: readonly ExecutionStartKeepsakeTrait[];
+  /** Fig Leaf's `PersistentDionysusSkipKeepsake` trait. */
+  readonly persistentDionysusSkip?: { readonly remainingUses: number };
+}
+
+export interface ExecutionStartArcanaCard {
+  readonly name: string;
+  readonly rarity: ExecutionKeepsakeRarity;
+  /** Listed in native `CurrentRun.TemporaryMetaUpgrades`. */
+  readonly temporary?: true;
+  /** Native `CurrentRoom` of a room-growth card (The Centaur). */
+  readonly currentRoom?: number;
+  /** Native `MetaConversionUses` (The Artificer). */
+  readonly metaConversionUses?: number;
+}
+
+/** What recorded one hidden max-stat grant: pickups, or the trait, Arcana or keepsake. */
+export type ExecutionMaxStatSource =
+  | { readonly kind: 'pickups' }
+  | { readonly kind: 'trait' | 'arcana' | 'keepsake'; readonly key: string };
+
+export interface ExecutionStartMaxStatGrant {
+  readonly source: ExecutionMaxStatSource;
+  readonly maxHealth: number;
+  readonly maxMana: number;
+}
+
+export interface ExecutionStartWell {
+  /** Timed Well traits with their native `RemainingUses` clocks. */
+  readonly timedTraits: readonly {
+    readonly name: string;
+    readonly clock: 'encounters' | 'rooms' | 'bosses';
+    readonly remainingUses: number;
+  }[];
+  readonly sparkUses: number;
+  readonly yarnUses: number;
+  readonly hymnUses: number;
+  readonly extendedUses: number;
+  /** Native `CurrentRun.WellShopPurchases`. */
+  readonly wellShopPurchases: Readonly<Record<string, number>>;
+}
+
+export interface ExecutionStartHex {
+  /** The held Spell, published here only; `traits` omits it. */
+  readonly spellTraitName: string;
+  readonly tree?: ExecutionHexTree;
+  /** Invested node keys (`depth:slot`) in investment order. */
+  readonly investedNodes: readonly string[];
+  /** Native `CurrentRun.NumTalentPoints`. */
+  readonly talentPoints: number;
+  /** Native `CurrentRun.AllSpellInvestedCache`. */
+  readonly allSpellInvested: boolean;
+}
+
+/** Biome-local state a Preboss start installs; an Opening's native Intro resets it. */
+export interface ExecutionStartBiome {
+  readonly biomeDepthCache: number;
+  readonly biomeEncounterDepth: number;
+  readonly biomeUseRecord: Readonly<Record<string, number>>;
+  /** Forfeit's skip is spent: native `BiomeBoonSkipCount` reaches its vow rank. */
+  readonly forfeitConsumed: boolean;
+  /** Native `ActivatedThisBiome` on `PersistentDionysusSkipKeepsake`. */
+  readonly dionysusSkipActivated: boolean;
+  /** I's `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`. */
+  readonly clockwork?: {
+    readonly remainingClockworkGoals: number;
+    readonly maxClockworkNonGoalRewards: number;
+  };
+}
+
+/**
+ * The planner's exact state at a mid-run start, in the native terms the game
+ * module installs into a fresh run. State the planner does not know starts as
+ * a fresh install leaves it.
+ */
+export interface ExecutionStartState {
+  readonly point: 'opening' | 'preboss';
+  readonly biomeKey: ExecutionBiomeKey;
+  /** The selected start occurrence; execution's route cursor starts at its index. */
+  readonly occurrenceId: string;
+  /** The native start `RoomName`. */
+  readonly roomName: string;
+  /** Added to `GameState.Resources.Money` on top of the game's own starting gold. */
+  readonly gold: number;
+  /** Native `BiomeVisitOrder`; `EnteredBiomes` is its length. */
+  readonly biomeVisitOrder: readonly string[];
+  readonly roomHistory: readonly ExecutionStartRoomRecord[];
+  /** Native `CurrentRun.EncounterDepth`. */
+  readonly encounterDepth: number;
+  readonly lastDevotionDepth?: number;
+  /** Present exactly for a Preboss start. */
+  readonly biome?: ExecutionStartBiome;
+  readonly aspectPerfect: boolean;
+  readonly familiar?: { readonly name: string; readonly stackMultiplier: number };
+  /** Held traits, less those native `StartNewRun` installs and the Spell (`hex`). */
+  readonly traits: readonly ExecutionStartTrait[];
+  readonly chaosCurses: readonly ExecutionStartChaosCurse[];
+  readonly chaosBlessings: readonly ExecutionStartChaosBlessing[];
+  readonly keepsake: ExecutionStartKeepsake;
+  readonly arcana: readonly ExecutionStartArcanaCard[];
+  /** A Barren curse holds the Arcana unequipped. */
+  readonly arcanaBarren: boolean;
+  /** Native `ShrineUpgradesDisabled`: vows Circe disabled. */
+  readonly disabledVows: readonly string[];
+  readonly maxStats: {
+    /** The expected maxima for the self-check. */
+    readonly maxHealth: number;
+    readonly maxMana: number;
+    /** Recorded amounts no installed trait re-creates, installed as hidden traits. */
+    readonly hiddenGrants: readonly ExecutionStartMaxStatGrant[];
+  };
+  readonly stygianWell: ExecutionStartWell;
+  /** Pending `StorePendingDeliveryItem` traits. */
+  readonly hermesDeliveries: readonly {
+    readonly rewardType: string;
+    readonly remainingUses: number;
+  }[];
+  readonly hex?: ExecutionStartHex;
+  /** Native `CurrentRun.RewardPriorities`. */
+  readonly rewardPriorities: readonly string[];
+  readonly useRecord: Readonly<Record<string, number>>;
+  readonly lootTypeHistory: Readonly<Record<string, number>>;
+  readonly consumableRecord: Readonly<Record<string, number>>;
+  /**
+   * Native `RewardStores` exact across every planned branch, as remaining
+   * counts aligned with `RewardStoreData[name]`; other stores stay native.
+   */
+  readonly rewardStores: readonly {
+    readonly name: string;
+    readonly remainingEntryCounts: readonly number[];
+  }[];
+}
+
 export interface ExecutionPlan {
   readonly format: typeof EXECUTION_PLAN_FORMAT;
   readonly catalogVersion: string;
@@ -1045,6 +1267,8 @@ export interface ExecutionPlan {
   readonly resources: ExecutionResourcePolicy;
   /** Required exactly when Olympus belongs to the configured extent. */
   readonly olympusAetos?: ExecutionOlympusAetos;
+  /** Present exactly when the run starts mid-run (Practice mode). */
+  readonly startState?: ExecutionStartState;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 
@@ -1060,6 +1284,7 @@ export interface ExecutionSemanticProduct {
   readonly selectedOccurrenceIds: readonly string[];
   readonly resources: ExecutionResourcePolicy;
   readonly olympusAetos?: ExecutionOlympusAetos;
+  readonly startState?: ExecutionStartState;
   readonly occurrences: readonly ExecutionOccurrence[];
 }
 
@@ -1085,8 +1310,7 @@ export interface ExecutionCompilerError extends Error {
     | 'openingMissing'
     | 'openingSelectionMissing'
     | 'executionCoverageMissing'
-    | 'startPointIneligible'
-    | 'startPointUnpublished';
+    | 'startPointIneligible';
   /** Why the authored start point cannot start the run; present exactly for `startPointIneligible`. */
   readonly startPointReason?: StartInstallationUnavailableReason;
 }

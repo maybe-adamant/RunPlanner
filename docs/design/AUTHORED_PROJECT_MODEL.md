@@ -224,8 +224,9 @@ as absent, malformed gold as absent, and finite gold rounds and clamps to
 is kept. Its eligibility is the engine's start-installation availability
 (`authoredStartPointEligibility`). Internal modifiers take part in
 publication only when assembly is told to include them (development builds);
-there, any set start point blocks publication, an ineligible one with its
-reason. These options are editable in Fresh File without making its fixed
+there, an ineligible start point blocks publication with its reason and an
+eligible one publishes the execution plan's
+[`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start). These options are editable in Fresh File without making its fixed
 equipment editable. They do not change simulation, candidates, or encounter
 eligibility.
 

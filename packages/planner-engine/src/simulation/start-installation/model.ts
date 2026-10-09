@@ -5,7 +5,7 @@ import type { ActiveArcanaState, ArcanaRoomEntryGrowth } from '../arcana-fear';
 import type { StygianWellRunState, StygianWellTimedInstance } from '../commerce/stygian-well';
 import type { HexProgressState } from '../hex-progress';
 import type { KeepsakeState, OlympianProviderSource } from '../keepsakes/state';
-import type { MaxStats } from '../max-stats';
+import type { MaxStatGrant } from '../max-stats';
 import type { ChaosBlessingInstance, ChaosCurseInstance } from '../traits/history/model';
 
 /** A mid-run start: a biome's Opening (Intro) or its Preboss. */
@@ -85,14 +85,27 @@ export interface StartInstallationChaos {
   readonly matured: readonly StartMaturedChaosBlessing[];
 }
 
+/** One keepsake trait the hero holds. */
+export interface StartHeldKeepsake {
+  readonly key: string;
+  /** Its trait rarity: the equip rank with Cherished Heirloom's bonus, or Common for Echo's copy. */
+  readonly rank: KeepsakeRank;
+  /** In the keepsake slot; otherwise a retained Permanent keepsake or Echo's copy. */
+  readonly slotted: boolean;
+}
+
 export interface StartInstallationKeepsake {
   readonly currentKey: string | null;
   /** Keepsakes equipped this run, in order (rack legality, Fated status). */
   readonly usedKeys: readonly string[];
   /** Keepsakes replaced at a rack, which cannot be equipped again this run. */
   readonly removedKeys: readonly string[];
-  /** The equip rank, including Cherished Heirloom's bonus; absent without a keepsake. */
-  readonly rank?: KeepsakeRank;
+  /**
+   * Every keepsake trait held: the slotted one, Permanent keepsakes a swap kept
+   * (Bell, Pom, and a Calling Card or Time Piece that left with uses), and
+   * Echo's Common copy once replayed. A spent Echo Figurine is gone.
+   */
+  readonly held: readonly StartHeldKeepsake[];
   readonly fatedStatus: KeepsakeState['fatedStatus'];
   readonly olympianSources: readonly Omit<OlympianProviderSource, 'acquisitionOrder'>[];
   readonly jeweledPom?: {
@@ -121,8 +134,6 @@ export interface StartInstallationKeepsake {
   };
   readonly discordantBell?: KeepsakeState['discordantBell'];
   readonly lionFang?: KeepsakeState['lionFang'];
-  /** Max-Magick grants by keepsake (Silver Wheel), which outlive the keepsake. */
-  readonly maxManaGrants?: KeepsakeState['maxManaGrants'];
   readonly maxHealthCap?: KeepsakeState['maxHealthCap'];
 }
 
@@ -200,16 +211,25 @@ export interface StartRewardStore {
   readonly remainingEntryCounts: readonly number[];
 }
 
+/**
+ * A Preboss's stores already include its own creation; an Opening's are its
+ * predecessor's, before the start room is created.
+ */
 export interface StartRewardStores {
-  /**
-   * The values already include the start room's own creation, so they are
-   * written after native room creation rather than repeated by it (Preboss).
-   */
-  readonly writeAfterStartRoomCreation: boolean;
   /** Stores exact across every branch; untouched stores stay native-fresh. */
   readonly stores: readonly StartRewardStore[];
   /** Stores that differ by branch, left for the game to build fresh. */
   readonly omittedStoreKeys: readonly string[];
+}
+
+export interface StartMaxStats {
+  readonly maxHealth: number;
+  readonly maxMana: number;
+  /**
+   * Recorded grants no installed trait re-creates. The slotted keepsake's own
+   * max-Magick grant is left out: its equip re-creates it.
+   */
+  readonly grants: readonly MaxStatGrant[];
 }
 
 /** One stub native `RoomHistory` record per planned room departure. */
@@ -249,8 +269,7 @@ export interface StartInstallation {
   readonly keepsake: StartInstallationKeepsake;
   readonly arcana: StartInstallationArcana;
   readonly fear: StartInstallationFear;
-  /** Per-source flat contributions; pickups are lumped and Silver Wheel stays its own source. */
-  readonly maxStats: MaxStats;
+  readonly maxStats: StartMaxStats;
   readonly stygianWell: StartStygianWell;
   readonly hermesDeliveries: readonly StartHermesDelivery[];
   readonly hex: StartInstallationHex;

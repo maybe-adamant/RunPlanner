@@ -458,12 +458,7 @@ describe('Game panel projection', () => {
     expect(blocked?.unavailableReason).toBe('Resolve this plan’s findings before sending it.');
     expect(blocked?.rows.every((row) => row.action === null && row.marker === null)).toBe(true);
     const reasonFor = (
-      code:
-        | 'unsupportedRoute'
-        | 'openingMissing'
-        | 'executionCoverageMissing'
-        | 'startPointUnpublished'
-        | null,
+      code: 'unsupportedRoute' | 'openingMissing' | 'executionCoverageMissing' | null,
     ) =>
       projectGamePlans(status, { kind: 'notPublishable', code }, 'clean', catalog, now)
         ?.unavailableReason;
@@ -471,7 +466,6 @@ describe('Game panel projection', () => {
     expect(reasonFor('openingMissing')).toBe('Plan the opening room before sending this plan.');
     expect(reasonFor('executionCoverageMissing')).toBe('The game module can’t run this plan yet.');
     expect(reasonFor(null)).toBe('The game module can’t run this plan yet.');
-    expect(reasonFor('startPointUnpublished')).toBe('Practice mode can’t be sent to the game yet.');
     expect(
       projectGamePlans(
         status,
@@ -648,19 +642,6 @@ describe('Game panel projection', () => {
         'Send to game',
         null,
         'The start point can’t start this run. This biome is not on the route.',
-      ],
-      [
-        projectGameSendButton(
-          ready,
-          { ...mine, startPointBlock: { code: 'startPointUnpublished' } },
-          2,
-          'clean',
-          idle,
-        ),
-        'notSendable',
-        'Send to game',
-        null,
-        'Practice mode can’t be sent to the game yet.',
       ],
       [
         projectGameSendButton(ready, mine, null, 'clean', idle),

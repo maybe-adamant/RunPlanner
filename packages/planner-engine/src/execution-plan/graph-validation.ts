@@ -1,9 +1,59 @@
-import type { ExecutionDoorTarget, ExecutionOccurrence, ExecutionResourcePolicy } from './model';
+import type {
+  ExecutionDoorTarget,
+  ExecutionOccurrence,
+  ExecutionResourcePolicy,
+  ExecutionStartState,
+} from './model';
 
 export interface ExecutionGraphDocument {
+  readonly extent: { readonly biomeKeys: readonly string[] };
   readonly selectedOccurrenceIds: readonly string[];
   readonly occurrences: readonly ExecutionOccurrence[];
   readonly resources: ExecutionResourcePolicy;
+  readonly startState?: ExecutionStartState;
+}
+
+/**
+ * A mid-run start names a selected occurrence of a configured biome: the
+ * biome's first selected room for an Opening, a later one for a Preboss. The
+ * route cursor starts at its index, so every earlier selected occurrence
+ * belongs to the biomes the start's visit order has already entered. That a
+ * Preboss start names the biome's Preboss room is assembly's guarantee, which
+ * the fingerprint carries; occurrences do not publish room kinds.
+ */
+function validateStartState(
+  graph: ExecutionGraphDocument,
+  start: ExecutionStartState,
+  occurrences: ReadonlyMap<string, ExecutionOccurrence>,
+  invalid: (detail: string) => never,
+): void {
+  const cursor = graph.selectedOccurrenceIds.indexOf(start.occurrenceId);
+  if (cursor < 0) invalid('startState.occurrenceId must be selected');
+  const target = occurrences.get(start.occurrenceId)!;
+  if (target.biomeKey !== start.biomeKey || target.gameName !== start.roomName)
+    invalid('startState contradicts its occurrence identity');
+  const biomeIndex = graph.extent.biomeKeys.indexOf(start.biomeKey);
+  const preboss = start.point === 'preboss';
+  if (biomeIndex < 0 || (!preboss && biomeIndex === 0))
+    invalid('startState.biomeKey must be a configured biome after the route start');
+  const visited = graph.extent.biomeKeys.slice(0, preboss ? biomeIndex + 1 : biomeIndex);
+  if (
+    start.biomeVisitOrder.length !== visited.length ||
+    start.biomeVisitOrder.some((biomeKey, index) => biomeKey !== visited[index])
+  )
+    invalid('startState.biomeVisitOrder must be the configured biomes entered before the start');
+  const firstOfBiome = graph.selectedOccurrenceIds.findIndex(
+    (id) => occurrences.get(id)?.biomeKey === start.biomeKey,
+  );
+  if (preboss ? cursor === firstOfBiome : cursor !== firstOfBiome)
+    invalid(`startState.occurrenceId is not the ${start.biomeKey} ${start.point}`);
+  if (preboss !== (start.biome !== undefined))
+    invalid('startState.biome is present exactly for a Preboss start');
+  if (
+    start.biome !== undefined &&
+    (start.biome.clockwork !== undefined) !== (start.biomeKey === 'I')
+  )
+    invalid('startState.biome.clockwork is present exactly for an I Preboss');
 }
 
 /**
@@ -285,4 +335,6 @@ export function validateExecutionGraph(
     visited.add(owner);
   };
   for (const owner of transactions.keys()) visit(owner);
+  if (graph.startState !== undefined)
+    validateStartState(graph, graph.startState, occurrences, invalid);
 }
