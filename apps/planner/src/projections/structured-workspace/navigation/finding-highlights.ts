@@ -109,6 +109,8 @@ export function findingRepairTarget(
 /** The trait offer whose dialog edits a finding's origin: the offer itself or its child. */
 function editingTraitOffer(origin: SemanticAddress): TraitOfferAddress | undefined {
   if (origin.kind === 'traitOffer') return origin;
+  if (origin.kind === 'hexTree')
+    return origin.owner.kind === 'traitOffer' ? origin.owner : undefined;
   return 'trait' in origin && origin.trait.kind === 'traitOffer' ? origin.trait : undefined;
 }
 

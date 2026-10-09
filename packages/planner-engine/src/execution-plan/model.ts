@@ -284,11 +284,13 @@ export type ExecutionConcaveStoneResult =
   | { readonly kind: 'noProc' }
   | { readonly kind: 'proc'; readonly optionKey: ExecutionTraitOptionKey };
 
+/** The realised talent on every non-Olympian node (`depth:slot`) of the native tree. */
+export type ExecutionHexTreeNodes = Readonly<Record<string, string>>;
+
 /** Frozen generated composition of the selected Spell's native talent tree. */
 export interface ExecutionHexTree {
   readonly layoutKey: string;
-  readonly rareTalentKeys: readonly string[];
-  readonly epicTalentKeys: readonly string[];
+  readonly nodes: ExecutionHexTreeNodes;
   readonly godSent?: {
     readonly olympianTalentKey: string;
     readonly lineageTalentKey: string;
@@ -466,8 +468,7 @@ export interface ExecutionStartingLoadout {
   readonly startingHex?: {
     readonly spellTraitKey: 'SpellMoonBeamTrait';
     readonly layoutKey: string;
-    readonly rareTalentKeys: readonly string[];
-    readonly epicTalentKeys: readonly string[];
+    readonly nodes: ExecutionHexTreeNodes;
     readonly godSent?: {
       readonly olympianTalentKey: string;
       readonly lineageTalentKey: string;

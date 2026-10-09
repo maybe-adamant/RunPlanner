@@ -1032,3 +1032,8 @@ select {
 .batch-pool-information > .effective-reward-store > strong {
   margin: 0;
 }
+
+/* A list without search holds focus itself; its highlighted item shows the position. */
+.contextual-picker-popover [cmdk-root]:focus {
+  outline: none;
+}

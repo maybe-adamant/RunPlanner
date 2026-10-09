@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 93,
+  "schemaVersion": 94,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -407,13 +407,24 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "TransformCastDamageTalent",
-                          "TransformLastStandRechargeTalent"
-                        ],
-                        "epicTalentKeys": [
-                          "TransformPrimaryTalent"
-                        ]
+                        "nodes": {
+                          "1:2": "TransformDurationTalent",
+                          "1:4": "TransformDamageTalent",
+                          "2:2": "TransformCooldownDodgeTalent",
+                          "2:4": "ChargeRegenTalent",
+                          "3:1": "TransformDurationTalent",
+                          "3:2": "TransformDamageTalent",
+                          "3:3": "TransformCooldownDodgeTalent",
+                          "3:4": "TransformDurationTalent",
+                          "3:5": "TransformDamageTalent",
+                          "3:6": "TransformCooldownDodgeTalent",
+                          "4:1": "TransformCastDamageTalent",
+                          "4:3": "TransformDurationTalent",
+                          "4:5": "TransformLastStandRechargeTalent",
+                          "5:2": "TransformDamageTalent",
+                          "5:4": "TransformCooldownDodgeTalent",
+                          "6:3": "TransformPrimaryTalent"
+                        }
                       }
                     }
                   },

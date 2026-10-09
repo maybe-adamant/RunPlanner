@@ -10,11 +10,12 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createStartingRewardAddress,
   createDefaultAuthoredHexTree,
+  createHexTreeAddress,
   routeInitialProfile,
   routeLoadoutEditDomain,
   routeRoomDeclaration,
-  transitionAuthoredHexTreeLayout,
   semanticAddressKey,
+  type AuthoredHexTreeConfiguration,
   type SemanticAddress,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -573,9 +574,7 @@ export function createStructuredWorkspaceProjection(
         findingCount: routeSource.evaluation?.issue === undefined ? 0 : 1,
         focusKey: semanticAddressKey(routeAddress),
       });
-      const routeDestination = (
-        ownerAddress: typeof routeAddress | typeof routeStartKeepsake | typeof routeStartingReward,
-      ) =>
+      const routeDestination = (ownerAddress: SemanticAddress) =>
         Object.freeze<WorkspaceInspectorDestination>({
           focusAddress: routeAddress,
           focusKey: routeMarker.focusKey,
@@ -638,31 +637,46 @@ export function createStructuredWorkspaceProjection(
       const aspectHexTree =
         activeAspect?.startingTrait?.traitKey === 'SpellMoonBeamTrait' && aspectHex !== undefined
           ? (() => {
+              const domainFor = (tree: AuthoredHexTreeConfiguration) =>
+                projectHexTreeDomain(catalog, 'SpellMoonBeamTrait', tree, routeAddress)!;
               const value =
                 authoredRoute.loadout.aspectHexTree ??
                 createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait');
-              const domain = projectHexTreeDomain(catalog, 'SpellMoonBeamTrait', value);
-              if (domain === undefined) return undefined;
+              const layout = aspectHex.layouts.byKey[value.layoutKey];
+              if (layout === undefined) return undefined;
               const control: WorkspaceAspectHexTreeControl = {
-                address: routeAddress,
-                declaration: aspectHex,
                 marker: routeMarker,
+                address: createHexTreeAddress(routeAddress),
+                layoutLabel: layout.label,
                 value,
-                domain,
-                transitionFor: (layoutKey) =>
-                  transitionAuthoredHexTreeLayout(catalog, 'SpellMoonBeamTrait', value, layoutKey),
-                intentFor: (nextValue) =>
+                load: () => domainFor(value),
+                forDraft: (tree) => Object.freeze({ load: () => domainFor(tree) }),
+                intentFor: (value) =>
                   Object.freeze({
                     command: Object.freeze({
                       kind: 'ReplaceAspectHexTree' as const,
                       route: routeAddress,
-                      value: nextValue,
+                      value,
                     }),
                   }),
               };
               return Object.freeze(control);
             })()
           : undefined;
+      // Navigation shows the Loadout; the tree's launcher carries the mark.
+      const aspectHexDestinations =
+        aspectHexTree === undefined
+          ? []
+          : [
+              [
+                semanticAddressKey(aspectHexTree.address),
+                Object.freeze<WorkspaceInspectorDestination>({
+                  ...routeDestination(routeAddress),
+                  markAddress: aspectHexTree.address,
+                  ownerAddress: aspectHexTree.address,
+                }),
+              ] as const,
+            ];
       appendUniqueFocusDestinations(focusByOwner, [
         [routeMarker.focusKey, routeDestination(routeAddress)],
         [
@@ -675,6 +689,7 @@ export function createStructuredWorkspaceProjection(
           }),
         ],
         [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],
+        ...aspectHexDestinations,
         ...routeStartResults.flatMap((routeStartResult) =>
           keepsakeEquipResultControls.has(semanticAddressKey(routeStartResult))
             ? ([

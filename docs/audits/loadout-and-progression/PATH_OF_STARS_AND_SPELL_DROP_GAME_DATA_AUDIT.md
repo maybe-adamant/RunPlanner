@@ -283,6 +283,6 @@ Epic-to-Heroic two-point delta.
 
 Run State projects the equipped spell, layout, base/effective capacity, God
 Sent state, open/closed state, and both point counts. The scope remains below
-graph-node reachability and effects: the authored tree freezes high-value
-identity sets but does not model graph positions, investment order, or
-individual talent acquisition.
+graph-node reachability and effects: the authored tree places a talent on
+every node of its layout but does not model investment order or individual
+talent acquisition.

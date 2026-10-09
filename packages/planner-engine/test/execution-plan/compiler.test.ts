@@ -21,7 +21,7 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
@@ -38,6 +38,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createLevelResolutionAddress,
+  createDefaultAuthoredHexTree,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRewardWheelOfferAddress,
@@ -106,6 +107,7 @@ import { migrateProjectDocument as migrateProject89To90 } from '../../../../sche
 import { migrateProjectDocument as migrateProject90To91 } from '../../../../schema/migrate-project-90-to-91.js';
 import { migrateProjectDocument as migrateProject91To92 } from '../../../../schema/migrate-project-91-to-92.js';
 import { migrateProjectDocument as migrateProject92To93 } from '../../../../schema/migrate-project-92-to-93.js';
+import { migrateProjectDocument as migrateProject93To94 } from '../../../../schema/migrate-project-93-to-94.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -1431,8 +1433,7 @@ describe('execution-plan compiler and codec', () => {
         startingHex: {
           spellTraitKey: 'SpellMoonBeamTrait',
           layoutKey: 'Lung',
-          rareTalentKeys: ['MoonBeamPrimaryTalent', 'MoonBeamPrimaryTalent'],
-          epicTalentKeys: [],
+          nodes: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait').nodes,
         },
       },
     };
@@ -1571,7 +1572,7 @@ describe('execution-plan compiler and codec', () => {
       giver: 'SpellDrop',
       options: [{ key: 'one' }, { key: 'two' }, { key: 'three' }],
       selected: 'option1',
-      hexTree: { layoutKey: 'Lung', rareTalentKeys: ['rare'], epicTalentKeys: ['epic'] },
+      hexTree: { layoutKey: 'Lung', nodes: { '4:1': 'rare', '6:3': 'epic' } },
     };
     expect(decodeExecutionTraitOffer(spell, 'spell')).toMatchObject({ giver: 'SpellDrop' });
     const missingTree = {
@@ -1587,6 +1588,22 @@ describe('execution-plan compiler and codec', () => {
     expect(() => decodeExecutionTraitOffer({ ...spell, giver: 'Zeus' }, 'spell')).toThrow(
       ExecutionPlanCodecError,
     );
+    for (const nodes of [{}, { '4-1': 'rare' }, { '0:1': 'rare' }, { '4:1': 7 }])
+      expect(() =>
+        decodeExecutionTraitOffer({ ...spell, hexTree: { layoutKey: 'Lung', nodes } }, 'spell'),
+      ).toThrow(ExecutionPlanCodecError);
+    expect(() =>
+      decodeExecutionTraitOffer(
+        {
+          ...spell,
+          hexTree: {
+            ...spell.hexTree,
+            godSent: { olympianTalentKey: 'epic', lineageTalentKey: 'lineage' },
+          },
+        },
+        'spell',
+      ),
+    ).toThrow(ExecutionPlanCodecError);
   });
 
   it('strictly decodes a selected-option Concave Stone disposition', () => {
@@ -2135,7 +2152,7 @@ describe('execution-plan compiler and codec', () => {
     const before = qSupplyChainSlices(project);
     expect(before.map((entry) => entry.pickupKey)).toEqual(['pom1', 'pom2']);
 
-    const legacy = JSON.parse(encodeProjectDocument(project)) as {
+    const legacy = legacyRareEpicHexTrees(JSON.parse(encodeProjectDocument(project))) as {
       schemaVersion: number;
       route: {
         loadout: { startingReward?: unknown };
@@ -2246,12 +2263,14 @@ describe('execution-plan compiler and codec', () => {
     );
     const loaded = parseProjectDocument(
       JSON.stringify(
-        migrateProject92To93(
-          migrateProject91To92(
-            migrateProject90To91(
-              migrateProject89To90(
-                migrateProject88To89(
-                  migrateProject87To88(migrateProject86To87(migrateProject85To86(migrated))),
+        migrateProject93To94(
+          migrateProject92To93(
+            migrateProject91To92(
+              migrateProject90To91(
+                migrateProject89To90(
+                  migrateProject88To89(
+                    migrateProject87To88(migrateProject86To87(migrateProject85To86(migrated))),
+                  ),
                 ),
               ),
             ),

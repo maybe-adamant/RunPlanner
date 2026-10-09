@@ -1,19 +1,45 @@
 -- One owner-agnostic native Hex-tree realization seam. Owners provide a
--- resolved tree; this module scopes only the native random construction.
+-- realised node map; native CreateTalentTree keeps every draw and the planned
+-- talents replace its results once it returns.
 local hexTree = {}
 
 local function diagnostic(scope, checkpoint, expected, observed)
     if scope and scope.diagnostic then scope.diagnostic(checkpoint, expected, observed) end
 end
-local function keys(values)
-    local result = {}
-    for _, key in ipairs(values or {}) do result[key] = true end
-    return result
+
+local function olympian(node)
+    return type(node.Pool) == "table" and (node.Pool.OlympianSpell ~= nil or node.Pool.OlympianCount ~= nil)
 end
-local function removeExpected(values, remaining)
-    for index, value in ipairs(values or {}) do
-        if remaining[value] then remaining[value] = nil; return table.remove(values, index) end
+
+-- Keystone nodes are Rare, Legendary nodes Epic and repeatable nodes Common.
+local function rarity(node)
+    if type(node.Pool) ~= "table" then return "Common" end
+    if node.Pool.Keystone ~= nil then return "Rare" end
+    if node.Pool.Legendary ~= nil then return "Epic" end
+    return "Common"
+end
+
+local function overwrite(scope, structure)
+    local planned = {}
+    for key, talent in pairs(scope.expected.nodes or {}) do planned[key] = talent end
+    for depth, column in ipairs(type(structure) == "table" and structure or {}) do
+        for slot, node in pairs(column) do
+            if type(node) == "table" and not olympian(node) then
+                local key = depth .. ":" .. tostring(slot)
+                local talent = planned[key]
+                if talent == nil then
+                    diagnostic(scope, "hex-tree-node", key, node.Name)
+                else
+                    node.Name, node.Rarity = talent, rarity(node)
+                    planned[key] = nil
+                end
+            end
+        end
     end
+    local missing = {}
+    for key in pairs(planned) do missing[#missing + 1] = key end
+    table.sort(missing)
+    for _, key in ipairs(missing) do diagnostic(scope, "hex-tree-node", key .. "=" .. planned[key], "missing") end
 end
 
 function hexTree.create()
@@ -21,10 +47,7 @@ function hexTree.create()
     local pending, active
 
     function tree.prepare(expected, traitKey, diagnosticCallback)
-        local scope = {
-            prior = pending, expected = expected, traitKey = traitKey, diagnostic = diagnosticCallback,
-            rare = keys(expected.rareTalentKeys), epic = keys(expected.epicTalentKeys),
-        }
+        local scope = { prior = pending, expected = expected, traitKey = traitKey, diagnostic = diagnosticCallback }
         pending = scope
         return scope
     end
@@ -53,8 +76,7 @@ function hexTree.create()
             local ok, result = pcall(base, spellData)
             active = prior
             if not ok then error(result, 0) end
-            for key in pairs(scope.rare) do diagnostic(scope, "hex-tree-rare", key, "missing") end
-            for key in pairs(scope.epic) do diagnostic(scope, "hex-tree-epic", key, "missing") end
+            overwrite(scope, result)
             return result
         end)
         module.hooks.wrap("GetRandomValue", "run-planner-hex-layout", function(_, _, base, values, ...)
@@ -63,13 +85,6 @@ function hexTree.create()
                     if type(value) == "table" and value.Name == active.expected.layoutKey then return value end
                 end
                 diagnostic(active, "hex-tree-layout", active.expected.layoutKey, "native-ineligible")
-            end
-            return base(values, ...)
-        end)
-        module.hooks.wrap("RemoveRandomValue", "run-planner-hex-special-talents", function(_, _, base, values, ...)
-            if active and type(values) == "table" then
-                local selected = removeExpected(values, active.rare) or removeExpected(values, active.epic)
-                if selected then return selected end
             end
             return base(values, ...)
         end)

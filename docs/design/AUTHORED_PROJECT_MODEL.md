@@ -841,6 +841,26 @@ offer model. Under Aspect of Selene, the loadout instead requires one complete
 no trait-offer child—nullable, dormant, and retained children are all
 unsupported—and settles the three-point Path screen.
 
+Both trees share one planner-owned shape, `{ layoutKey, nodes }`: the layout
+and the talent on every non-Olympian node, keyed `depth:slot` in layout order.
+Choosing the spell or Aspect generates the layout's default tree, so a reached
+offer always holds a complete tree. The codec checks each node on its own: every
+authored node of the layout is present and holds a talent of its local domain
+(its pool, drawable at its depth); the God Sent nodes are never authored.
+Tree-wide policy—no repeated Rare or Epic talent, and repeatables forming the
+refill-cycle draw sequence—is a finding naming its nodes, so a conflicting tree
+stays representable. The `hexTree` address names the tree under its Spell Drop offer or the route;
+a finding names its nodes in evidence. Edits are kind specific: a
+Rare or Epic node takes any talent of its pool; a Common node swaps with a node
+at its depth, trades with its refill deck's talent in another column, or, in
+the partial last deck, takes a talent that deck left undealt—each keeps a legal
+tree legal. Changing the layout regenerates its default tree; choosing the
+current layout keeps the tree. Nothing reflows and nothing is repaired
+automatically: a repeat names every node holding it, and a broken draw sequence names
+the nodes of the smallest changes that restore it. The Spell Drop tree edits in
+its offer's draft; the Aspect tree edits in its own draft, saved as one
+`ReplaceAspectHexTree` step.
+
 Trait outcome discovery and updates belong to the authored engine boundary.
 `trait-carrier-children.ts` derives typed semantic children from the complete
 offer or supported partial Echo draft, including missing required values.
@@ -1242,6 +1262,10 @@ Schema 93 adds the loadout `familiarKey` and the optional Worry Free
 `maxHealthRoll`; the 92 → 93 migration equips Frinos on every mature route and
 `null` on Fresh File, and leaves every Worry Free roll omitted, which is its
 rarity minimum.
+Schema 94 replaces each Hex tree's Rare and Epic identity sets with the
+complete `nodes` map; the 93 → 94 migration places the Rare picks in the
+layout's Keystone nodes and the Epic picks in its Legendary nodes, both in
+layout order, and gives every repeatable node the catalog's default fill.
 
 ## Undo and Redo
 

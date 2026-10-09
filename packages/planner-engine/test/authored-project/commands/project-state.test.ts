@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createDefaultAuthoredHexTree,
   applyProjectHistoryCommand,
   createProjectDocument,
   createProjectHistory,
@@ -652,7 +653,7 @@ describe('authored-project project-state commands', () => {
     ).toBe(withWeapon);
   });
 
-  it('installs, replaces, and undoes the complete Aspect of Selene Hex tree', () => {
+  it('replaces the planner-owned Aspect of Selene Hex tree as one history step', () => {
     const route = createRouteAddress('Underworld');
     const selene = applyProjectCommand(fProject(), catalog, {
       kind: 'ReplaceRouteLoadout',
@@ -660,29 +661,32 @@ describe('authored-project project-state commands', () => {
       weaponKey: 'WeaponSuit',
       aspectKey: 'SuitHexAspect',
     });
-    const initialTree = selene.route!.loadout.aspectHexTree;
-    expect(initialTree).toEqual({
-      layoutKey: 'Lung',
-      rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
-      epicTalentKeys: ['MoonBeamTargetTalent'],
-    });
+    const lung = createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait');
+    expect(selene.route!.loadout.aspectHexTree).toEqual(lung);
+    expect(Object.keys(lung.nodes)).toHaveLength(16);
+    const replace = (history: ReturnType<typeof createProjectHistory>, value: typeof lung) =>
+      applyProjectHistoryCommand(history, catalog, { kind: 'ReplaceAspectHexTree', route, value });
     const history = createProjectHistory(selene);
-    const changed = applyProjectHistoryCommand(history, catalog, {
-      kind: 'ReplaceAspectHexTree',
-      route,
-      value: {
-        layoutKey: 'Maze',
-        rareTalentKeys: [
-          'MoonBeamPrimaryTalent',
-          'MoonBeamConsecutiveDamageTalent',
-          'MoonBeamDefenseTalent',
-        ],
-        epicTalentKeys: ['MoonBeamTargetTalent', 'MoonBeamExBeamBonusTalent'],
-      },
+    // A saved tree-wide conflict is kept as authored.
+    const repeated = replace(history, {
+      ...lung,
+      nodes: { ...lung.nodes, '4:5': lung.nodes['4:1']! },
     });
-    expect(changed.present.route!.loadout.aspectHexTree?.layoutKey).toBe('Maze');
-    expect(undoProjectHistory(changed).present).toBe(history.present);
-    expect(redoProjectHistory(changed).present).toBe(changed.present);
+    expect(repeated.present.route!.loadout.aspectHexTree!.nodes['4:5']).toBe(lung.nodes['4:1']);
+    expect(replace(repeated, repeated.present.route!.loadout.aspectHexTree!)).toBe(repeated);
+    const maze = replace(
+      repeated,
+      createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Maze'),
+    );
+    expect(undoProjectHistory(maze).present).toBe(repeated.present);
+    expect(undoProjectHistory(repeated).present).toBe(history.present);
+    expect(redoProjectHistory(undoProjectHistory(maze)).present).toBe(maze.present);
+    expect(() =>
+      replace(history, {
+        ...lung,
+        nodes: { ...lung.nodes, '4:1': 'MoonBeamExBeamBonusTalent' },
+      }),
+    ).toThrow('cannot hold');
     const ordinary = applyProjectCommand(selene, catalog, {
       kind: 'ReplaceRouteLoadout',
       route,
@@ -694,7 +698,7 @@ describe('authored-project project-state commands', () => {
       applyProjectCommand(ordinary, catalog, {
         kind: 'ReplaceAspectHexTree',
         route,
-        value: initialTree!,
+        value: lung,
       }),
     ).toThrow('supported only by Aspect of Selene');
   });

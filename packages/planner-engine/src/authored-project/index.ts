@@ -143,6 +143,7 @@ export {
   createCirceResolutionAddress,
   createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
+  createHexTreeAddress,
   createNaturalSelectionResultAddress,
   createSteadyGrowthOutcomeAddress,
   createTranscendentEmbryoOutcomeAddress,
@@ -208,6 +209,7 @@ export {
   type CirceResolutionAddress,
   type TraitAcquisitionTargetAddress,
   type EchoPomTargetAddress,
+  type HexTreeAddress,
   type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
@@ -264,10 +266,21 @@ export {
   type PreparedEchoLastRunBoonDraft,
 } from './traits/carrier-children';
 export {
+  applyAuthoredHexTreeEdit,
+  assessAuthoredHexTree,
+  authoredHexCommonDecks,
+  authoredHexNodeEditOptions,
   createDefaultAuthoredHexTree,
   normalizeAuthoredHexTree,
-  transitionAuthoredHexTreeLayout,
+  type AuthoredHexNodeEditGroup,
+  type AuthoredHexNodeEditOption,
+  type AuthoredHexTreeEdit,
 } from './traits/hex-tree';
+export {
+  type HexCommonDecks,
+  type HexTalentTree,
+  type HexTalentTreeViolation,
+} from './traits/hex-talent-tree';
 export {
   resolveTraitMaxHealthRoll,
   traitMaxHealthRollDomain,

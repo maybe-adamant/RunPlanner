@@ -126,11 +126,7 @@ describe('selected trait outcome draft completeness', () => {
       domain({ children: Object.freeze([carrierBinding(false)]) }),
       offer(),
       offer(baseOption, {
-        hexTree: {
-          layoutKey: 'Maze',
-          rareTalentKeys: Object.freeze([]),
-          epicTalentKeys: Object.freeze([]),
-        },
+        hexTree: { layoutKey: 'Maze', nodes: Object.freeze({}) },
       }),
     ],
   ] as const)('requires the selected %s child', (_label, activeDomain, missing, complete) => {

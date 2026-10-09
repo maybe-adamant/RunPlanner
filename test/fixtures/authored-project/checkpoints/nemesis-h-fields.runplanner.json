@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 93,
+  "schemaVersion": 94,
   "projectId": "golden-fg",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -914,13 +914,24 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "MeteorVulnerabilityDecalTalent",
-                          "MeteorSlowDecalTalent"
-                        ],
-                        "epicTalentKeys": [
-                          "MeteorInvulnerableChargeTalent"
-                        ]
+                        "nodes": {
+                          "1:2": "CooldownDamageTalent",
+                          "1:4": "PreChargeTalent",
+                          "2:2": "MeteorSizeTalent",
+                          "2:4": "MeteorDamageTalent",
+                          "3:1": "CooldownDamageTalent",
+                          "3:2": "PreChargeTalent",
+                          "3:3": "MeteorSizeTalent",
+                          "3:4": "MeteorDamageTalent",
+                          "3:5": "CooldownDamageTalent",
+                          "3:6": "MeteorSizeTalent",
+                          "4:1": "MeteorVulnerabilityDecalTalent",
+                          "4:3": "MeteorDamageTalent",
+                          "4:5": "MeteorSlowDecalTalent",
+                          "5:2": "CooldownDamageTalent",
+                          "5:4": "MeteorSizeTalent",
+                          "6:3": "MeteorInvulnerableChargeTalent"
+                        }
                       }
                     }
                   },
@@ -2939,13 +2950,24 @@
                         "rarificationActions": [],
                         "hexTree": {
                           "layoutKey": "Lung",
-                          "rareTalentKeys": [
-                            "TransformCastDamageTalent",
-                            "TransformLastStandRechargeTalent"
-                          ],
-                          "epicTalentKeys": [
-                            "TransformPrimaryTalent"
-                          ]
+                          "nodes": {
+                            "1:2": "TransformDurationTalent",
+                            "1:4": "TransformDamageTalent",
+                            "2:2": "TransformCooldownDodgeTalent",
+                            "2:4": "ChargeRegenTalent",
+                            "3:1": "TransformDurationTalent",
+                            "3:2": "TransformDamageTalent",
+                            "3:3": "TransformCooldownDodgeTalent",
+                            "3:4": "TransformDurationTalent",
+                            "3:5": "TransformDamageTalent",
+                            "3:6": "TransformCooldownDodgeTalent",
+                            "4:1": "TransformCastDamageTalent",
+                            "4:3": "TransformDurationTalent",
+                            "4:5": "TransformLastStandRechargeTalent",
+                            "5:2": "TransformDamageTalent",
+                            "5:4": "TransformCooldownDodgeTalent",
+                            "6:3": "TransformPrimaryTalent"
+                          }
                         }
                       }
                     },

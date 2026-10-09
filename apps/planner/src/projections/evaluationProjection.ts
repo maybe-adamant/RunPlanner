@@ -492,6 +492,11 @@ const findingCopy = {
   nemesisOutcomeUnavailable: {
     title: 'Nemesis event result unavailable',
   },
+  hexTalentTreeUnavailable: {
+    title: 'Hex nodes conflict across the tree',
+    description:
+      'Edit the marked nodes: each Rare and Epic talent appears once, and Common talents follow the refill cycle.',
+  },
   persephoneLevelBonusUnavailable: {
     title: 'Persephone roll unavailable',
   },

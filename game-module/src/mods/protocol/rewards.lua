@@ -124,30 +124,7 @@ local function circeResolution(value, label)
 end
 
 local function hexTree(value, label)
-    local tree, treeError = p.exact(value, { "layoutKey", "rareTalentKeys", "epicTalentKeys" }, { "godSent" }, label)
-    if not tree then return nil, treeError end
-    if not p.str(tree.layoutKey, label .. ".layoutKey") then return p.fail(label .. " has invalid layout") end
-    local seen = {}
-    for _, key in ipairs({ "rareTalentKeys", "epicTalentKeys" }) do
-        local rows, rowsError = p.strings(tree[key], label .. "." .. key)
-        if not rows then return nil, rowsError end
-        for _, talent in ipairs(rows) do
-            if seen[talent] then return p.fail(label .. " has duplicate talent") end
-            seen[talent] = true
-        end
-    end
-    if tree.godSent ~= nil then
-        local duo, duoError = p.exact(tree.godSent,
-            { "olympianTalentKey", "lineageTalentKey" }, {}, label .. ".godSent")
-        if not duo then return nil, duoError end
-        if not p.str(duo.olympianTalentKey, label .. ".godSent.olympianTalentKey")
-            or not p.str(duo.lineageTalentKey, label .. ".godSent.lineageTalentKey")
-            or duo.olympianTalentKey == duo.lineageTalentKey
-            or seen[duo.olympianTalentKey] or seen[duo.lineageTalentKey] then
-            return p.fail(label .. " has invalid God Sent identities")
-        end
-    end
-    return tree
+    return p.hexTree(value, label, { "layoutKey", "nodes" })
 end
 
 local function echoLastRunBoon(value, label)

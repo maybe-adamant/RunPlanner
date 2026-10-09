@@ -33,7 +33,7 @@ import {
   type TraitOptionKey,
   normalizeAuthoredConcaveStoneResult,
 } from '../../traits/state';
-import { normalizeAuthoredHexTree } from '../../traits/hex-tree';
+import { decodeAuthoredHexTree } from '../../traits/hex-tree';
 import { levelResolutionEffectFor } from '../../../reward-kernel/level-effects';
 import { decodeEchoLastRunBoon } from './echo-last-run-codec';
 import { decodeAllTogetherResult } from './all-together-codec';
@@ -599,35 +599,12 @@ function decodeTraitOffers(
         failProjectDocument(`${rolePath}.selectedOptionKey`, 'must select a declared Spell Hex');
       if (!hasHexTree)
         failProjectDocument(`${rolePath}.hexTree`, 'is required for a resolved Spell Drop offer');
-      const rawTree = expectRecord(record.hexTree, `${rolePath}.hexTree`);
-      expectExactKeys(
-        rawTree,
-        ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'],
+      hexTree = decodeAuthoredHexTree(
+        record.hexTree,
+        catalog,
+        selectedOption!.traitKey,
         `${rolePath}.hexTree`,
       );
-      const rareTalentKeys = expectArray(
-        rawTree.rareTalentKeys,
-        `${rolePath}.hexTree.rareTalentKeys`,
-      ).map((entry, index) => expectString(entry, `${rolePath}.hexTree.rareTalentKeys[${index}]`));
-      const epicTalentKeys = expectArray(
-        rawTree.epicTalentKeys,
-        `${rolePath}.hexTree.epicTalentKeys`,
-      ).map((entry, index) => expectString(entry, `${rolePath}.hexTree.epicTalentKeys[${index}]`));
-      try {
-        hexTree = normalizeAuthoredHexTree(catalog, selectedOption!.traitKey, {
-          layoutKey: expectString(
-            rawTree.layoutKey,
-            `${rolePath}.hexTree.layoutKey`,
-          ) as import('../../../catalog-schema').HexLayoutKey,
-          rareTalentKeys,
-          epicTalentKeys,
-        });
-      } catch (error) {
-        failProjectDocument(
-          `${rolePath}.hexTree`,
-          error instanceof Error ? error.message : 'invalid Hex tree',
-        );
-      }
     } else if (hasHexTree) {
       failProjectDocument(`${rolePath}.hexTree`, 'is supported only for Spell Drop offers');
     }

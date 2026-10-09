@@ -776,7 +776,7 @@ function settleSelectedOffer(
       selectedChildren.traitHistory,
     ),
   });
-  settledBeforeChaos =
+  const hexSettlement =
     effectiveAuthored.kind === 'traits'
       ? settleSelectedHexTree(
           catalog,
@@ -785,8 +785,15 @@ function settleSelectedOffer(
           selectedForIdentity?.traitKey,
           evaluation,
           mode.kind === 'frozenConcaveStoneSecondary',
+          {
+            traitAddress,
+            lifecyclePoint,
+            sequence,
+            ...(findingChronology === undefined ? {} : { chronology: findingChronology }),
+          },
         )
-      : settledBeforeChaos;
+      : undefined;
+  settledBeforeChaos = hexSettlement?.branch ?? settledBeforeChaos;
   settledBeforeChaos = maybeAddGodSent(catalog, settledBeforeChaos);
   const settledAfterKeepsakeAdvance = settleMoonBeamPathPoints(
     catalog,
@@ -807,7 +814,9 @@ function settleSelectedOffer(
     traitAddress,
     childCandidateContext,
     blocked,
-    findingEmissions: selectedChildren.findings.map(regionEntryEmission),
+    findingEmissions: [...selectedChildren.findings, ...(hexSettlement?.findings ?? [])].map(
+      regionEntryEmission,
+    ),
   };
 }
 

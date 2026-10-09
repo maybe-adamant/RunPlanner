@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createDefaultAuthoredHexTree,
   createIncomingRewardAddress,
   createOccurrenceId,
   createExitSelectionAddress,
@@ -1000,9 +1001,10 @@ describe('trait offer editor entry and dialog', () => {
         'Choose the Rare and Epic identities present in this layout. The linked God Sent talent is derived by chronology.',
       ),
     ).toBeNull();
-    const godSent = document.querySelector('.trait-selected-outcome .hex-god-sent');
+    const godSent = document.querySelector(
+      '.trait-selected-outcome .hex-tree-node[data-kind="olympianSpell"]',
+    );
     expect(godSent?.textContent).toBeTruthy();
-    expect(godSent?.textContent).not.toContain(' + ');
     expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
     expect(screen.queryByText(/^Rarity:/)).toBeNull();
     // Spell offers keep the one fixed feedback region and mounted effective-value lists.
@@ -1022,20 +1024,26 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(option2);
     await user.click(screen.getByRole('button', { name: 'Hex talent layout' }));
     await user.click(screen.getByRole('option', { name: 'Maze' }));
-    await user.click(screen.getByRole('button', { name: 'Rare Hex nodes' }));
-    expect(screen.getByText('Rare node 1 of 3')).toBeTruthy();
+    const board = screen.getByRole('group', { name: 'Maze Hex tree' });
+    // The Spell Drop dialog explains common nodes like the Aspect dialog.
+    await user.click(screen.getByRole('button', { name: 'How common nodes work' }));
+    expect(await screen.findByRole('dialog', { name: 'How common nodes work' })).toBeTruthy();
+    await user.keyboard('{Escape}');
+    const transform = application.catalog.hexes.byKey['SpellTransformTrait']!;
+    const mazeRare = createDefaultAuthoredHexTree(
+      application.catalog,
+      'SpellTransformTrait',
+      'Maze',
+    ).nodes['4:3']!;
+    await user.click(
+      within(board).getByRole('button', {
+        name: `Rare ${transform.rareCandidates.byKey[mazeRare]!.label}, depth 4`,
+      }),
+    );
     await user.click(screen.getByRole('option', { name: 'Splendor' }));
-    expect(screen.getByText('Rare node 2 of 3')).toBeTruthy();
-    await user.click(screen.getByRole('option', { name: 'Contingency' }));
-    expect(screen.getByText('Rare node 3 of 3')).toBeTruthy();
-    await user.click(screen.getByRole('option', { name: 'Savagery' }));
-    expect(screen.queryByText('Rare node 3 of 3')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Epic Hex nodes' }));
-    expect(screen.getByText('Epic node 1 of 2')).toBeTruthy();
-    await user.click(screen.getByRole('option', { name: 'Resonance' }));
-    expect(screen.getByText('Epic node 2 of 2')).toBeTruthy();
-    await user.click(screen.getByRole('option', { name: 'Horror' }));
-    expect(screen.queryByText('Epic node 2 of 2')).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Rare Splendor, depth 4' })).toBeTruthy();
+    // The draft edit has not touched history.
+    expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(historyDepth);
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyDepth + 1,
@@ -1052,7 +1060,10 @@ describe('trait offer editor entry and dialog', () => {
       selectedOptionKey: 'option2',
       hexTree: {
         layoutKey: 'Maze',
-        rareTalentKeys: expect.arrayContaining(['TransformSpecialTalent']),
+        nodes: {
+          ...createDefaultAuthoredHexTree(application.catalog, 'SpellTransformTrait', 'Maze').nodes,
+          '4:3': 'TransformSpecialTalent',
+        },
       },
     });
     cleanup();
@@ -1228,10 +1239,7 @@ describe('trait offer editor entry and dialog', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Hex talent layout' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Rare Hex nodes' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Epic Hex nodes' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Rare Hex node 1' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Epic Hex node 1' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Lung Hex tree' })).toBeTruthy();
     application.dispose();
   });
 

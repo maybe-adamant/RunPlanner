@@ -223,8 +223,7 @@ export function executionTimelineTransactions(
               );
             return Object.freeze({
               layoutKey: selected.offer.hexTree.layoutKey,
-              rareTalentKeys: Object.freeze([...selected.offer.hexTree.rareTalentKeys]),
-              epicTalentKeys: Object.freeze([...selected.offer.hexTree.epicTalentKeys]),
+              nodes: progress.nodes,
               ...(progress.godSent === undefined
                 ? {}
                 : {

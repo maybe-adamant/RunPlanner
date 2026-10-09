@@ -71,6 +71,36 @@ function primitives.recordNumbers(value, label)
     end
     return record
 end
+-- A realised Hex tree: a nonempty `depth:slot` node map and an optional God Sent pair
+-- whose talents are not modeled nodes.
+function primitives.hexTree(value, label, required)
+    local tree, treeError = primitives.exact(value, required, { "godSent" }, label)
+    if not tree then return nil, treeError end
+    if not primitives.str(tree.layoutKey, label .. ".layoutKey") then return primitives.fail(label .. " has invalid layout") end
+    local nodes, nodesError = primitives.obj(tree.nodes, label .. ".nodes")
+    if not nodes then return nil, nodesError end
+    local talents, count = {}, 0
+    for key, talent in pairs(nodes) do
+        if type(key) ~= "string" or not key:match("^[1-9]%d*:%d+$")
+            or not primitives.str(talent, label .. ".nodes." .. tostring(key)) then
+            return primitives.fail(label .. " has invalid node " .. tostring(key))
+        end
+        talents[talent], count = true, count + 1
+    end
+    if count == 0 then return primitives.fail(label .. ".nodes must name at least one node") end
+    if tree.godSent ~= nil then
+        local duo, duoError = primitives.exact(tree.godSent,
+            { "olympianTalentKey", "lineageTalentKey" }, {}, label .. ".godSent")
+        if not duo then return nil, duoError end
+        if not primitives.str(duo.olympianTalentKey, label .. ".godSent.olympianTalentKey")
+            or not primitives.str(duo.lineageTalentKey, label .. ".godSent.lineageTalentKey")
+            or duo.olympianTalentKey == duo.lineageTalentKey
+            or talents[duo.olympianTalentKey] or talents[duo.lineageTalentKey] then
+            return primitives.fail(label .. " has invalid God Sent identities")
+        end
+    end
+    return tree
+end
 function primitives.roomRef(value, label)
     local record = primitives.exact(value, { "id", "biomeKey", "gameName" }, {}, label)
     if not record

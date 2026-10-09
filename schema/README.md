@@ -1,5 +1,17 @@
 # Project schema boundary
 
+Schema 94 stores each Hex tree (a Spell Drop offer's `hexTree` and the Aspect of
+Selene `loadout.aspectHexTree`) as `{ layoutKey, nodes }`, the talent on every
+non-Olympian node, instead of Rare and Epic identity sets.
+
+```bash
+npm run schema:migrate-93-to-94 -- path/to/schema-93-project.runplanner.json
+```
+
+The migration places the Rare picks in the layout's Keystone nodes and the Epic
+picks in its Legendary nodes, in layout order, and fills every repeatable node
+with the catalog's default draw; nothing else changes.
+
 Schema 93 adds the loadout `familiarKey`, required on a mature save and `null`
 on Fresh File, and an optional Worry Free `maxHealthRoll` offset above the
 acquired rarity's minimum roll, whose absence is offset 0.

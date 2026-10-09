@@ -306,7 +306,7 @@ function TestLoadoutSession.testFreshImportedLoadoutUsesTheProvidedSeleneTree()
     _G.SpellData = { MoonBeam = { TraitName = "SpellMoonBeamTrait", Talents = { Unique = { "RareExpected", "RareOther" }, Legendary = { "EpicExpected", "DuoExpected" } } } }
     _G.TraitData = { EpicExpected = {}, DuoExpected = { IsDuoBoon = true } }
     _G.CurrentRun = { Hero = { TraitDictionary = { SuitHexAspect = true, SpellMoonBeamTrait = true } } }
-    local hex = { spellTraitKey = "SpellMoonBeamTrait", layoutKey = "ExpectedLayout", rareTalentKeys = { "RareExpected" }, epicTalentKeys = { "EpicExpected" }, godSent = { olympianTalentKey = "DuoExpected", lineageTalentKey = "OlympianSpellCountTalent" } }
+    local hex = { spellTraitKey = "SpellMoonBeamTrait", layoutKey = "ExpectedLayout", nodes = { ["1:1"] = "RareExpected", ["1:2"] = "EpicExpected", ["1:5"] = "RepeatRare" }, godSent = { olympianTalentKey = "DuoExpected", lineageTalentKey = "OlympianSpellCountTalent" } }
     local state, callbacks = startState("ManaOverTimeRefundKeepsake", nil, hex), nil
     state.plan.startingLoadout.weaponKey, state.plan.startingLoadout.aspectKey = "WeaponSuit", "SuitHexAspect"
     local freshTree = assert(loadfile("src/mods/spells/hex_tree.lua"))().create()
@@ -317,13 +317,13 @@ function TestLoadoutSession.testFreshImportedLoadoutUsesTheProvidedSeleneTree()
             local tree = callbacks.CreateTalentTree(nil, {}, function()
                 local layout = callbacks.GetRandomValue(nil, {}, function(values) return values[1] end,
                     { { Name = "OtherLayout" }, { Name = "ExpectedLayout" } })
-                local rare = callbacks.RemoveRandomValue(nil, {}, function(values) return table.remove(values, 1) end,
-                    { "RareOther", "RareExpected" })
-                local epic = callbacks.RemoveRandomValue(nil, {}, function(values) return table.remove(values, 1) end,
-                    { "EpicExpected" })
-                local duo = callbacks.RemoveRandomValue(nil, {}, function(values) return table.remove(values, 1) end,
-                    { "DuoExpected" })
-                return { Name = layout.Name, { { Name = rare, Rarity = "Rare" }, { Name = epic, Rarity = "Epic" }, { Name = duo }, { Name = "OlympianSpellCountTalent" }, { Name = "RepeatRare", Rarity = "Rare" } } }
+                return { Name = layout.Name, {
+                    { Pool = { Keystone = 1 }, Name = "RareOther", Rarity = "Rare" },
+                    { Pool = { Legendary = 1 }, Name = "EpicExpected", Rarity = "Epic" },
+                    { Pool = { OlympianSpell = 1 }, Name = "DuoExpected" },
+                    { Pool = { OlympianCount = 1 }, Name = "OlympianSpellCountTalent" },
+                    { Name = "RepeatOther", Rarity = "Rare" },
+                } }
             end, _G.SpellData.MoonBeam)
             _G.CurrentRun.Hero.SlottedSpell = { Name = "MoonBeam", Talents = tree }
             return {}
@@ -343,18 +343,18 @@ function TestLoadoutSession.testAttachedSeleneLeavesNativeGodSentPairToLoadoutCo
     _G.SpellData = { MoonBeam = { TraitName = "SpellMoonBeamTrait", Talents = { Unique = { "RareExpected" }, Legendary = { "EpicExpected", "UnexpectedDuo" } } } }
     _G.TraitData = { EpicExpected = {}, UnexpectedDuo = { IsDuoBoon = true } }
     _G.CurrentRun = { Hero = { TraitDictionary = { SuitHexAspect = true, SpellMoonBeamTrait = true } } }
-    local hex = { spellTraitKey = "SpellMoonBeamTrait", layoutKey = "ExpectedLayout", rareTalentKeys = { "RareExpected" }, epicTalentKeys = { "EpicExpected" } }
+    local hex = { spellTraitKey = "SpellMoonBeamTrait", layoutKey = "ExpectedLayout", nodes = { ["1:1"] = "RareExpected", ["1:2"] = "EpicExpected" } }
     local state, callbacks = startState("ManaOverTimeRefundKeepsake", nil, hex), nil
     state.plan.startingLoadout.weaponKey, state.plan.startingLoadout.aspectKey = "WeaponSuit", "SuitHexAspect"
     callbacks = captureLoadoutHooks(state)
     local result = callbacks.StartNewRun(nil, {}, function()
         callbacks.CreateNewHero(nil, {}, function()
             local tree = callbacks.CreateTalentTree(nil, {}, function()
-                local rare = callbacks.RemoveRandomValue(nil, {}, function(values) return table.remove(values, 1) end,
-                    { "RareExpected" })
-                local epic = callbacks.RemoveRandomValue(nil, {}, function(values) return table.remove(values, 1) end,
-                    { "EpicExpected" })
-                return { Name = "ExpectedLayout", { { Name = rare }, { Name = epic }, { Name = "UnexpectedDuo" }, { Name = "OlympianSpellCountTalent" } } }
+                return { Name = "ExpectedLayout", {
+                    { Pool = { Keystone = 1 }, Name = "RareExpected" }, { Pool = { Legendary = 1 }, Name = "EpicExpected" },
+                    { Pool = { OlympianSpell = 1 }, Name = "UnexpectedDuo" },
+                    { Pool = { OlympianCount = 1 }, Name = "OlympianSpellCountTalent" },
+                } }
             end, _G.SpellData.MoonBeam)
             _G.CurrentRun.Hero.SlottedSpell = { Name = "MoonBeam", Talents = tree }
             return {}
@@ -393,14 +393,15 @@ function TestLoadoutSession.testReadsExactManualAndAutomaticArcanaOrigins()
     _G.GameState, _G.MetaUpgradeCardData, _G.TraitRarityData = priorGame, priorCards, priorRarity
 end
 
-function TestLoadoutSession.testSpecialTreeReaderIgnoresOrdinaryRareRepeatableNode()
+function TestLoadoutSession.testGodSentTreeReaderReadsOnlyTheOlympianNodes()
     local priorRun, priorSpell, priorTrait = _G.CurrentRun, _G.SpellData, _G.TraitData
     _G.CurrentRun = { Hero = { SlottedSpell = { Name = "MoonBeam", Talents = { Name = "Lung", {
-        { Name = "RareA", Rarity = "Rare" }, { Name = "EpicA", Rarity = "Epic" }, { Name = "RepeatRare", Rarity = "Rare" },
+        { Name = "RareA", Rarity = "Rare" }, { Name = "EpicA", Rarity = "Epic" }, { Name = "DuoA" },
+        { Name = "OlympianSpellCountTalent" },
     } } } } }
-    _G.SpellData = { MoonBeam = { Talents = { Unique = { "RareA" }, Legendary = { "EpicA" } } } }
-    _G.TraitData = { EpicA = {} }
-    lu.assertEquals(native.treeSpecialTalentKeys(), { rare = { "RareA" }, epic = { "EpicA" }, godSent = {} })
+    _G.SpellData = { MoonBeam = { Talents = { Unique = { "RareA" }, Legendary = { "EpicA", "DuoA" } } } }
+    _G.TraitData = { EpicA = {}, DuoA = { IsDuoBoon = true } }
+    lu.assertEquals(native.treeGodSentTalentKeys(), { "DuoA", "OlympianSpellCountTalent" })
     _G.CurrentRun, _G.SpellData, _G.TraitData = priorRun, priorSpell, priorTrait
 end
 
@@ -420,7 +421,7 @@ function TestLoadoutSession.testVerifiesExactLoadoutAndModeledSeleneTree()
     } } }
     _G.GetEquippedWeapon = function() return "WeaponStaffSwing" end
     _G.GetNumShrineUpgrades = function() return 1 end
-    local state, mismatch = { plan = expected({ spellTraitKey = "SpellMoonBeamTrait", layoutKey = "Lung", rareTalentKeys = { "RareA" }, epicTalentKeys = { "EpicA" } }) }, nil
+    local state, mismatch = { plan = expected({ spellTraitKey = "SpellMoonBeamTrait", layoutKey = "Lung", nodes = { ["1:1"] = "RareA", ["1:2"] = "EpicA" } }) }, nil
     local fail = function(_, checkpoint) mismatch = checkpoint; return nil end
     state.initialized, state.state = true, "starting"
     local post = session.verifyCompleted(state, fail)

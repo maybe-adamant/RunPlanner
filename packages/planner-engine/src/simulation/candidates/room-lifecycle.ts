@@ -187,6 +187,10 @@ function rewardWheelIdentityForAddress(address: SemanticAddress): RewardWheelIde
     case 'echoLastReward':
     case 'allTogetherSet':
       return rewardWheelIdentityForAddress(address.trait);
+    case 'hexTree':
+      return address.owner.kind === 'traitOffer'
+        ? rewardWheelIdentityForAddress(address.owner)
+        : undefined;
     default:
       return undefined;
   }

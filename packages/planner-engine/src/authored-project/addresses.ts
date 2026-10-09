@@ -372,6 +372,14 @@ export interface AllTogetherSetAddress extends BiomeOwnedAddress {
   readonly optionKey: 'option1' | 'option2' | 'option3';
   readonly setKey: import('../catalog-schema').DirectTraitSetKey;
 }
+/** A Hex tree owned by a Spell Drop offer or the Aspect of Selene loadout. */
+export interface HexTreeAddress {
+  readonly kind: 'hexTree';
+  readonly routeKey: string;
+  /** The Spell Drop's biome, or `routeStart` for the Aspect tree. */
+  readonly biomeKey: string;
+  readonly owner: TraitOfferAddress | RouteAddress;
+}
 export interface LevelResolutionAddress extends BiomeOwnedAddress {
   readonly kind: 'levelResolution';
   readonly owner: TraitOfferOwnerAddress;
@@ -433,6 +441,7 @@ export type SemanticAddress =
   | EchoLastRunBoonAddress
   | EchoLastRewardAddress
   | AllTogetherSetAddress
+  | HexTreeAddress
   | LevelResolutionAddress;
 
 export class SemanticAddressContractError extends Error {
@@ -998,6 +1007,14 @@ export function createTraitAcquisitionTargetAddress(
     optionKey,
   });
 }
+export function createHexTreeAddress(owner: HexTreeAddress['owner']): HexTreeAddress {
+  return Object.freeze({
+    kind: 'hexTree',
+    routeKey: owner.routeKey,
+    biomeKey: owner.kind === 'route' ? 'routeStart' : owner.biomeKey,
+    owner,
+  });
+}
 export function createEchoPomTargetAddress(
   trait: TraitOfferAddress,
   optionKey: EchoPomTargetAddress['optionKey'],
@@ -1220,6 +1237,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
         address.optionKey,
         address.setKey,
       ]);
+    case 'hexTree':
+      return JSON.stringify([...base, semanticAddressKey(address.owner)]);
     case 'levelResolution':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.acquisitionRole]);
   }

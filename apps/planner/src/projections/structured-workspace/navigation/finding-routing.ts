@@ -64,6 +64,8 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
       );
     case 'echoKeepsakeReplay':
       return true;
+    case 'hexTree':
+      return address.owner.kind === 'traitOffer';
     default:
       return false;
   }
@@ -191,6 +193,23 @@ export function registerWorkspaceFindingDestinations(
       focusByOwner.set(key, destination);
       assertFineGrainedFindingDestination(finding.origin, destination, route);
       continue;
+    }
+    if (
+      finding.origin.kind === 'hexTree' &&
+      finding.origin.owner.kind === 'traitOffer' &&
+      !focusByOwner.has(key)
+    ) {
+      // A Spell Drop tree is edited in its offer's dialog, reached like the offer.
+      const offer = focusByOwner.get(semanticAddressKey(finding.origin.owner));
+      if (offer !== undefined)
+        focusByOwner.set(
+          key,
+          Object.freeze({
+            ...offer,
+            ownerAddress: finding.origin,
+            traitDialogTarget: finding.origin.owner,
+          }),
+        );
     }
     const existing = focusByOwner.get(key);
     if (isFineGrainedFindingOwner(finding.origin)) {

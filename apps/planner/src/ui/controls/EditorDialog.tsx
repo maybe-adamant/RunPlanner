@@ -22,6 +22,7 @@ export function EditorDialog({
   eyebrow,
   feedback,
   footer,
+  headerAction,
   initialFocusId,
   model,
   returnFocusId,
@@ -36,12 +37,14 @@ export function EditorDialog({
   readonly feedback?: ReactNode;
   /** A draft footer when the dialog, not its content, owns the draft. */
   readonly footer?: ReactNode;
+  /** A control beside the title, such as a help reference. */
+  readonly headerAction?: ReactNode;
   /** The exact repair control a navigation targets. */
   readonly initialFocusId?: string;
   readonly model: EditorDialogModel;
   /** The launcher that regains focus after the dialog unmounts. */
   readonly returnFocusId?: string;
-  readonly size?: 'standard' | 'narrow' | 'cards';
+  readonly size?: 'standard' | 'narrow' | 'cards' | 'hexTree';
   readonly title: ReactNode;
 }) {
   const dispatch = useAppDispatch();
@@ -83,6 +86,7 @@ export function EditorDialog({
           <p className="eyebrow">{eyebrow}</p>
           <h2 id={titleId}>{title}</h2>
         </div>
+        {headerAction}
       </header>
       <div className="editor-dialog-body" ref={bodyRef}>
         {children}

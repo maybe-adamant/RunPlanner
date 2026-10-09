@@ -68,6 +68,10 @@ export function traitOfferRoomOccurrence(address: SemanticAddress): OccurrenceAd
     case 'echoLastRunBoon':
     case 'allTogetherSet':
       return traitOfferRoomOccurrence(address.trait);
+    case 'hexTree':
+      return address.owner.kind === 'traitOffer'
+        ? traitOfferRoomOccurrence(address.owner)
+        : undefined;
     case 'nemesisRandomEvent':
       return traitOfferRoomOccurrence(address.encounter);
     default:

@@ -52,34 +52,11 @@ function protocol.decode(value)
     if effectiveError then return nil, effectiveError end
     if record.startingHex ~= nil then
         if record.aspectKey ~= "SuitHexAspect" then return p.fail("execution plan.startingHex requires SuitHexAspect") end
-        local hex, hexError = p.exact(record.startingHex,
-            { "spellTraitKey", "layoutKey", "rareTalentKeys", "epicTalentKeys" }, { "godSent" },
-            "execution plan.startingLoadout.startingHex")
+        local hex, hexError = p.hexTree(record.startingHex, "execution plan.startingLoadout.startingHex",
+            { "spellTraitKey", "layoutKey", "nodes" })
         if not hex then return nil, hexError end
-        if hex.spellTraitKey ~= "SpellMoonBeamTrait" or not p.str(hex.layoutKey,
-                "execution plan.startingLoadout.startingHex.layoutKey") then
+        if hex.spellTraitKey ~= "SpellMoonBeamTrait" then
             return p.fail("execution plan has invalid starting Hex")
-        end
-        local rare, rareError = p.strings(hex.rareTalentKeys,
-            "execution plan.startingLoadout.startingHex.rareTalentKeys")
-        local epic, epicError = p.strings(hex.epicTalentKeys,
-            "execution plan.startingLoadout.startingHex.epicTalentKeys")
-        if rareError then return nil, rareError end
-        if epicError then return nil, epicError end
-        local seenNodes = {}
-        for _, key in ipairs(rare) do if seenNodes[key] then return p.fail("execution plan has duplicate starting Hex node") end; seenNodes[key] = true end
-        for _, key in ipairs(epic) do if seenNodes[key] then return p.fail("execution plan has duplicate starting Hex node") end; seenNodes[key] = true end
-        if hex.godSent ~= nil then
-            local godSent, godSentError = p.exact(hex.godSent,
-                { "olympianTalentKey", "lineageTalentKey" }, {},
-                "execution plan.startingLoadout.startingHex.godSent")
-            if not godSent then return nil, godSentError end
-            if not p.str(godSent.olympianTalentKey, "execution plan.startingLoadout.startingHex.godSent.olympianTalentKey")
-                or not p.str(godSent.lineageTalentKey, "execution plan.startingLoadout.startingHex.godSent.lineageTalentKey")
-                or godSent.olympianTalentKey == godSent.lineageTalentKey
-                or seenNodes[godSent.olympianTalentKey] or seenNodes[godSent.lineageTalentKey] then
-                return p.fail("execution plan has invalid starting Hex God Sent")
-            end
         end
     end
     return record

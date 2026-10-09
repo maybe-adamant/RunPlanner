@@ -36,10 +36,11 @@ export interface AuthoredTraitOption extends AuthoredTraitCarrierOutcome {
   readonly persephoneLevelBonus?: number;
 }
 
+/** A planner-owned Hex tree: its layout and the talent on every non-Olympian node. */
 export interface AuthoredHexTreeConfiguration {
   readonly layoutKey: import('../../catalog-schema').HexLayoutKey;
-  readonly rareTalentKeys: readonly string[];
-  readonly epicTalentKeys: readonly string[];
+  /** Node key (`depth:slot`) to talent key, in layout node order. */
+  readonly nodes: Readonly<Record<string, string>>;
 }
 
 /** Exact processed result of one Transcendent Embryo blessing acquisition. */
@@ -112,7 +113,7 @@ export interface AuthoredTraitOfferTraits {
   readonly giverKey: string;
   readonly options: OneToThree<AuthoredTraitOption>;
   readonly selectedOptionKey: TraitOptionKey;
-  /** Complete selected Hex layout and Rare/Epic identity composition. */
+  /** The selected Spell's complete Hex tree. */
   readonly hexTree?: AuthoredHexTreeConfiguration;
   /** Ordered explicit Calling Card row actions; base option rarity remains rolled/authored. */
   readonly rarificationActions?: readonly TraitOptionKey[];

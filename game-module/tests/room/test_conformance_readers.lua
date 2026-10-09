@@ -547,32 +547,8 @@ function TestConformanceReaders.testForfeitUsesTheNativeShrineRankAndBiomeCounte
     lu.assertEquals(readers.read("forfeit", run), "consumed")
 end
 
-function TestConformanceReaders.testPathReaderProjectsOnlyPublishedHighValueTalentsInCanonicalOrder()
-    local run = {
-        Hero = { SlottedSpell = {
-            Name = "Polymorph",
-            TraitName = "SpellPolymorphTrait",
-            Talents = { Name = "Lung", {
-                { Name = "CommonUnmodeledTalent", Rarity = "Common" },
-                { Name = "EpicExpected", Rarity = "Epic" },
-                { Name = "RareExpected", Rarity = "Rare" },
-            } },
-        } },
-        NumTalentPoints = 2,
-        InvestedTalentPoints = 4,
-        AllSpellInvestedCache = false,
-    }
-    lu.assertEquals(readers.read("pathOfStars", run, nil, {
-        talentKeys = { "RareExpected", "EpicExpected" },
-    }), {
-        spellTraitKey = "SpellPolymorphTrait", layoutKey = "Lung",
-        talentKeys = { "RareExpected", "EpicExpected" }, closed = false,
-        bankedPathPoints = 2, investedPathPoints = 4,
-    })
-end
-
-function TestConformanceReaders.testPathReaderVisitsSparseNativeTalentPositions()
-    local common = { Name = "UnmodeledCommonTalent", Rarity = "Common" }
+function TestConformanceReaders.testPathReaderProjectsOnlyTheGodSentPairInPublishedOrder()
+    local common = { Name = "RealisedCommonTalent", Rarity = "Common" }
     -- SpellData's Nacelle grid: depth is sequential, but node positions are not.
     local talents = {
         Name = "Nacelle", OffsetY = 15,
@@ -580,45 +556,30 @@ function TestConformanceReaders.testPathReaderVisitsSparseNativeTalentPositions(
         [2] = { [2] = common, [4] = common },
         [3] = {
             [0] = common, [1] = common,
-            [2] = { Name = "PolymorphBossDamageTalent", Rarity = "Rare" },
-            [3] = common,
-            [4] = { Name = "PolymorphDeathExplodeTalent", Rarity = "Rare" },
-            [5] = common, [6] = common,
+            [2] = { Pool = { Keystone = 1 }, Name = "PolymorphBossDamageTalent", Rarity = "Rare" },
+            [3] = common, [5] = common, [6] = common,
         },
         [4] = {
             [2] = common,
-            [3] = { Name = "PolymorphTauntTalent", Rarity = "Rare" },
-            [4] = common,
-            [5] = { Name = "PolymorphZeusTalent" },
+            [5] = { Pool = { OlympianSpell = 1 }, Name = "PolymorphZeusTalent" },
         },
         [5] = {
-            [2] = common,
-            [3] = { Name = "OlympianSpellCountTalent", Rarity = "Common" },
-            [4] = common,
+            [3] = { Pool = { OlympianCount = 1 }, Name = "OlympianSpellCountTalent", Rarity = "Common" },
         },
-        [6] = {
-            [2] = { Name = "PolymorphSandwichTalent", Rarity = "Epic" },
-            [4] = { Name = "PolymorphCurseTalent", Rarity = "Epic" },
-        },
+        [6] = { [2] = { Pool = { Legendary = 1 }, Name = "PolymorphSandwichTalent", Rarity = "Epic" } },
     }
-    local expected = { talentKeys = {
-        "PolymorphBossDamageTalent", "PolymorphDeathExplodeTalent", "PolymorphTauntTalent",
-        "PolymorphSandwichTalent", "PolymorphCurseTalent", "PolymorphZeusTalent", "OlympianSpellCountTalent",
-    } }
-    local run = { Hero = { SlottedSpell = {
-        TraitName = "SpellPolymorphTrait", Talents = talents,
-    } } }
+    local expected = { talentKeys = { "PolymorphZeusTalent", "OlympianSpellCountTalent" } }
+    local run = {
+        Hero = { SlottedSpell = { TraitName = "SpellPolymorphTrait", Talents = talents } },
+        NumTalentPoints = 2, InvestedTalentPoints = 4, AllSpellInvestedCache = false,
+    }
     lu.assertEquals(readers.read("pathOfStars", run, nil, expected), {
         spellTraitKey = "SpellPolymorphTrait", layoutKey = "Nacelle", talentKeys = expected.talentKeys,
-        closed = false, bankedPathPoints = 0, investedPathPoints = 0,
+        closed = false, bankedPathPoints = 2, investedPathPoints = 4,
     })
-
-    talents[6][4] = { Name = "PolymorphTeleportCastTalent", Rarity = "Epic" }
-    lu.assertEquals(readers.read("pathOfStars", run, nil, expected).talentKeys, {
-        "PolymorphBossDamageTalent", "PolymorphDeathExplodeTalent", "PolymorphTauntTalent",
-        "PolymorphSandwichTalent", "PolymorphZeusTalent", "OlympianSpellCountTalent",
-        "PolymorphTeleportCastTalent",
-    })
+    -- Realised Rare and Epic talents are not conformance facts; a missing pair is.
+    talents[4][5], talents[5][3] = nil, nil
+    lu.assertEquals(readers.read("pathOfStars", run, nil, expected).talentKeys, {})
 end
 
 function TestConformanceReaders.testStygianWellReaderAggregatesIndependentInstancesAndHymnUses()

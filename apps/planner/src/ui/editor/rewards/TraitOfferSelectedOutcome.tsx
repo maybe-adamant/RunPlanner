@@ -28,7 +28,7 @@ import {
   TraitOfferSelectedSpecialOutcomes,
 } from './TraitOfferSelectedSpecialOutcomes';
 import { MaxHealthRollRow } from './MaxHealthRollRow';
-import { HexTreeEditor } from './HexTreeEditor';
+import { HexTreeBoard } from './HexTreeBoard';
 import { SelectedOutcomeBlock, SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import {
   ignoreOutcomeFeedback,
@@ -317,6 +317,7 @@ export function TraitOfferSelectedOutcome({
     'circeResolution',
     circeChild === undefined ? undefined : circeUnavailableMessage(circeDomain.result),
   );
+  useReportedFeedback(onFeedback, 'hexTree', hexTreeDomain.result?.treeIssue);
   useReportedFeedback(
     onFeedback,
     'concaveStone',
@@ -346,12 +347,9 @@ export function TraitOfferSelectedOutcome({
         />
       )}
       {hexTreeChild === undefined || hexTreeDomain.result === undefined ? null : (
-        <HexTreeEditor
-          framed={false}
+        <HexTreeBoard
           domain={hexTreeDomain.result}
-          address={hexTreeChild.child.address}
-          transitionFor={(layoutKey) => hexTreeChild.transitionFor(value, layoutKey)}
-          onChange={(hexTree) => onUpdate(hexTreeChild.update(value, hexTree))}
+          onEdit={(edit) => onUpdate(hexTreeChild.update(value, hexTreeDomain.result!.edit(edit)))}
         />
       )}
       {targetChildren

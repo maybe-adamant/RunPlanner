@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { useCallback, useEffect, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement, type Ref } from 'react';
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { hintProps } from './hint';
 
@@ -40,6 +40,10 @@ interface ContextualPickerProps<T> {
   readonly hasIssues?: boolean;
 }
 
+function itemValue<T>(item: ContextualPickerItem<T>): string {
+  return `${item.label} ${item.key}`;
+}
+
 function PickerSection<T>({
   groupRef,
   onSelect,
@@ -61,7 +65,7 @@ function PickerSection<T>({
             key={item.key}
             keywords={[section.label, item.explanation ?? '']}
             onSelect={() => onSelect(item)}
-            value={`${item.label} ${item.key}`}
+            value={itemValue(item)}
           >
             <span className="contextual-picker-item-indicator" aria-hidden="true">
               {item.selected ? '✓' : item.state === 'forced' ? '!' : ''}
@@ -87,19 +91,41 @@ function PickerContent<T>({
   choicesLabel,
   loading,
   model,
+  onActiveChange,
   onCancel,
   onSelect,
+  searchable = true,
   stepLabel,
 }: {
   readonly cancelLabel?: string;
   readonly choicesLabel: string;
   readonly loading: boolean;
   readonly model: ContextualPickerModel<T>;
+  /** The item under the pointer or keyboard highlight. */
+  readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
   readonly onCancel: () => void;
   readonly onSelect: (item: ContextualPickerItem<T>) => void;
+  /** Without search, the list itself takes focus and the arrow keys. */
+  readonly searchable?: boolean;
   readonly stepLabel?: string;
 }) {
   const [query, setQuery] = useState('');
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!searchable) root.current?.focus({ preventScroll: true });
+    // Focuses once when the list opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const items = model.sections.flatMap((section) => section.items);
+  // The highlight is controlled only when its owner follows it; it starts on the first item.
+  const [activeValue, setActiveValue] = useState(() =>
+    items[0] === undefined ? '' : itemValue(items[0]),
+  );
+  useEffect(() => {
+    onActiveChange?.(items.find((item) => itemValue(item) === activeValue));
+    // Reports the initial highlight once; later moves report through cmdk.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [collapsibleOpen, setCollapsibleOpen] = useState(false);
   const collapsibleGroup = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -137,14 +163,30 @@ function PickerContent<T>({
           Evaluating {choicesLabel.toLowerCase()} choices…
         </p>
       ) : (
-        <Command label={`${choicesLabel} choices`} shouldFilter={true}>
-          <Command.Input
-            aria-label={`Search ${choicesLabel.toLowerCase()} choices`}
-            onValueChange={setQuery}
-            placeholder={`Search ${choicesLabel.toLowerCase()}...`}
-            ref={input}
-            value={query}
-          />
+        <Command
+          label={`${choicesLabel} choices`}
+          ref={root}
+          shouldFilter={searchable}
+          {...(searchable ? {} : { tabIndex: -1 })}
+          {...(onActiveChange === undefined
+            ? {}
+            : {
+                value: activeValue,
+                onValueChange: (value: string) => {
+                  setActiveValue(value);
+                  onActiveChange(items.find((item) => itemValue(item) === value.trim()));
+                },
+              })}
+        >
+          {searchable ? (
+            <Command.Input
+              aria-label={`Search ${choicesLabel.toLowerCase()} choices`}
+              onValueChange={setQuery}
+              placeholder={`Search ${choicesLabel.toLowerCase()}...`}
+              ref={input}
+              value={query}
+            />
+          ) : null}
           <Command.List ref={list}>
             {(query !== '' || collapsible === undefined) && (
               <Command.Empty>No matching choices.</Command.Empty>
@@ -293,5 +335,77 @@ export function ContextualPicker<T>({
         </Popover.Portal>
       </Popover.Root>
     </div>
+  );
+}
+
+/**
+ * The same picker opened from a trigger the caller renders, such as a node on a
+ * board; the popover opens to the trigger's right under a heading naming it,
+ * flipping or shifting within the caller's collision boundary.
+ */
+export function ContextualPickerPopover<T>({
+  children,
+  choiceLabel,
+  collisionBoundary,
+  heading,
+  model,
+  onActiveChange,
+  onOpenChange,
+  onSelect,
+  open,
+  searchable,
+}: {
+  /** The trigger element; it keeps its own name, marks and position. */
+  readonly children: ReactElement;
+  readonly choiceLabel: string;
+  /** The element the popover stays within, such as its editor; the viewport when absent. */
+  readonly collisionBoundary?: Element | null;
+  readonly heading: string;
+  readonly model: ContextualPickerModel<T>;
+  readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onSelect: (value: T) => void;
+  readonly open: boolean;
+  /** Whether the list offers a search box. */
+  readonly searchable: boolean;
+}) {
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const captureTrigger = useCallback((node: HTMLElement | null): void => {
+    const container = node?.closest<HTMLElement>('dialog') ?? null;
+    setPortalContainer((current) => (current === container ? current : container));
+  }, []);
+  return (
+    <Popover.Root open={open} onOpenChange={onOpenChange}>
+      <Popover.Trigger asChild ref={captureTrigger}>
+        {children}
+      </Popover.Trigger>
+      <Popover.Portal container={portalContainer ?? undefined}>
+        <Popover.Content
+          align="start"
+          aria-label={heading}
+          className="contextual-picker-popover"
+          {...(collisionBoundary == null ? {} : { collisionBoundary })}
+          collisionPadding={12}
+          side="right"
+          sideOffset={8}
+          sticky="always"
+        >
+          <p className="contextual-picker-step-label">{heading}</p>
+          <PickerContent
+            choicesLabel={choiceLabel}
+            loading={false}
+            model={model}
+            {...(onActiveChange === undefined ? {} : { onActiveChange })}
+            onCancel={() => onOpenChange(false)}
+            onSelect={(item) => {
+              if (item.disabled) return;
+              onSelect(item.value);
+              onOpenChange(false);
+            }}
+            searchable={searchable}
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

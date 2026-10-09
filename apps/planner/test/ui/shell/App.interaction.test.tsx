@@ -100,7 +100,7 @@ async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void
   const about = await screen.findByLabelText('About Run Planner');
   const summary = about.querySelector('.about-product-summary');
   expect(summary).not.toBeNull();
-  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema93Catalog/);
+  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema94Catalog/);
 }
 
 function profileReference(fileName: string): ProfileFileReference {
@@ -2491,7 +2491,9 @@ describe('route loadout interaction', () => {
     expect(screen.getByRole('button', { name: 'Starting weapon' }).textContent).toContain(
       selene.label,
     );
-    expect(screen.getByText('Hex talent layout')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }).textContent).toBe(
+      'Lung tree',
+    );
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(application.store.getState().projectWorkspace.history!.present).toEqual(before.present);
   });

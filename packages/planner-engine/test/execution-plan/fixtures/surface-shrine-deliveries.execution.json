@@ -2497,8 +2497,24 @@
                   "selected": "option1",
                   "hexTree": {
                     "layoutKey": "Lung",
-                    "rareTalentKeys": ["DamageBuffTalent", "ShieldTalent"],
-                    "epicTalentKeys": ["ClearCastTalent"]
+                    "nodes": {
+                      "1:2": "PotionManaRestoreTalent",
+                      "1:4": "PotionUsesTalent",
+                      "2:2": "HealAmountTalent",
+                      "2:4": "CurrencyUseTalent",
+                      "3:1": "PotionManaRestoreTalent",
+                      "3:2": "PotionUsesTalent",
+                      "3:3": "HealAmountTalent",
+                      "3:4": "CurrencyUseTalent",
+                      "3:5": "PotionManaRestoreTalent",
+                      "3:6": "PotionUsesTalent",
+                      "4:1": "DamageBuffTalent",
+                      "4:3": "HealAmountTalent",
+                      "4:5": "ShieldTalent",
+                      "5:2": "CurrencyUseTalent",
+                      "5:4": "PotionManaRestoreTalent",
+                      "6:3": "ClearCastTalent"
+                    }
                   }
                 }
               }
@@ -2585,7 +2601,7 @@
             "hexProgress": {
               "spellTraitKey": "SpellPotionTrait",
               "layoutKey": "Lung",
-              "talentKeys": ["DamageBuffTalent", "ShieldTalent", "ClearCastTalent"],
+              "talentKeys": [],
               "closed": false,
               "bankedPathPoints": 0,
               "investedPathPoints": 0
@@ -7420,5 +7436,5 @@
       }
     }
   ],
-  "planFingerprint": "077d900d"
+  "planFingerprint": "296f6787"
 }

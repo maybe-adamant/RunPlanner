@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createDefaultAuthoredHexTree,
   decodeProjectDocument,
   encodeProjectDocument,
   type OccurrenceId,
@@ -404,11 +405,10 @@ describe('project document codec', () => {
   it('rejects an Aspect Hex tree on a non-Selene route loadout', () => {
     const encoded = encodedFStart();
     const route = encoded.route as Record<string, unknown>;
-    (route.loadout as Record<string, unknown>).aspectHexTree = {
-      layoutKey: 'Lung',
-      rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
-      epicTalentKeys: ['MoonBeamTargetTalent'],
-    };
+    (route.loadout as Record<string, unknown>).aspectHexTree = createDefaultAuthoredHexTree(
+      catalog,
+      'SpellMoonBeamTrait',
+    );
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       'aspectHexTree: is supported only for Aspect of Selene',
     );

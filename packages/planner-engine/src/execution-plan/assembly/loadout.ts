@@ -37,8 +37,7 @@ export function executionStartingLoadout(
         'executionCoverageMissing',
         'Selene aspect lacks Sky Fall start evidence',
       );
-    const modeled = new Set([...hex.tree.rareTalentKeys, ...hex.tree.epicTalentKeys]);
-    const extension = openingSnapshot.hexObserver.talentKeys.filter((key) => !modeled.has(key));
+    const extension = openingSnapshot.hexObserver.talentKeys;
     if (hex.godSentAdded === true && (extension.length !== 2 || extension[0] === extension[1]))
       throw new CompilerError(
         'executionCoverageMissing',
@@ -52,8 +51,7 @@ export function executionStartingLoadout(
     startingHex = Object.freeze({
       spellTraitKey: 'SpellMoonBeamTrait',
       layoutKey: hex.tree.layoutKey,
-      rareTalentKeys: Object.freeze([...hex.tree.rareTalentKeys]),
-      epicTalentKeys: Object.freeze([...hex.tree.epicTalentKeys]),
+      nodes: hex.tree.nodes,
       ...(hex.godSentAdded === true
         ? {
             godSent: Object.freeze({

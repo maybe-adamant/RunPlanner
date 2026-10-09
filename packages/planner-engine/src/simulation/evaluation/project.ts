@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { deriveNpcShoppingExecutionPolicy } from '../encounters/npc-shopping';
 import {
   createBiomeAddress,
+  createRouteAddress,
   createKeepsakeEquipResultAddress,
   createStartingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -29,6 +30,8 @@ import { createInitialSimulationState } from '../state/construction';
 import { createRouteStartHistoryView } from '../history/fold';
 import type { SemanticFinding } from '../model';
 import { createAssessmentIssue, type AssessmentIssue } from '../assessment-issue';
+import { assessAuthoredHexTree } from '../../authored-project/traits/hex-tree';
+import { hexTreeFindings } from '../rewards/trait-settlement/hex-settlement';
 import { authoringRegion } from '../finding-regions';
 import { resolveAuthoringBoundary } from '../progressive/authoring-boundary';
 import {
@@ -140,6 +143,23 @@ function evaluateRouteAssembly(
       encounterBlockedKeepsakeKeys: Object.freeze([]),
     }),
   );
+  // Aspect of Selene's Sky Fall tree is installed before any route-start effect.
+  const aspectHexTree = route.loadout.aspectHexTree;
+  const aspectHexFindings =
+    aspectHexTree === undefined
+      ? []
+      : hexTreeFindings(
+          createRouteAddress(route.routeKey),
+          'SpellMoonBeamTrait',
+          assessAuthoredHexTree(catalog, 'SpellMoonBeamTrait', aspectHexTree),
+          'routeStart',
+        );
+  if (aspectHexFindings.length > 0) {
+    findings.push(...aspectHexFindings);
+    routeStartBlock = 'invalid';
+    const origin = aspectHexFindings[0]!.origin;
+    routeStartIssue = createAssessmentIssue(origin, authoringRegion(origin), findings);
+  }
   const routeStartKeepsake =
     route.loadout.startingKeepsakeKey === null
       ? undefined

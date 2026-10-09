@@ -11,21 +11,22 @@ import type {
   AuthoredEchoLastRunBoonOffer,
   AuthoredEchoLastRunBoonOption,
   AuthoredHexTreeConfiguration,
+  AuthoredHexTreeEdit,
   AuthoredLevelResolution,
   AuthoredTraitCarrierChild,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
   LevelResolutionAddress,
+  HexTreeAddress,
   ProjectCommand,
-  RouteAddress,
   TraitOfferAddress,
   TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type {
   ChaosNumericOperand,
-  HexDeclaration,
   HexLayoutKey,
+  HexNodeKind,
   TraitGiverDeclaration,
   TraitRarity,
 } from '@run-planner/engine/catalog-schema';
@@ -145,18 +146,78 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
 }
 
+/** One node's picker: its grouped edits and the nodes each relates to. */
+export interface WorkspaceHexNodeEditor {
+  readonly model: ContextualPickerModel<AuthoredHexTreeEdit>;
+  /** Kind and talent, such as "Common · Omen". */
+  readonly heading: string;
+  /** The nodes each picker item involves, by item key. */
+  readonly relatedNodeKeys: Readonly<Record<string, readonly string[]>>;
+}
+
+/** One node of the Hex tree board, placed on the native talent grid. */
+export interface WorkspaceHexTreeNode {
+  readonly nodeKey: string;
+  readonly kind: HexNodeKind;
+  /** Grid column and row in node-spacing units: depth and slot plus the declared offsets. */
+  readonly x: number;
+  readonly y: number;
+  /** Nodes at the next depth this node links to. */
+  readonly linkTo: readonly string[];
+  readonly talentLabel: string;
+  /** Unique accessible name: kind, talent and depth, such as "Common Omen, depth 3". */
+  readonly name: string;
+  /** Absent for the God Sent nodes. */
+  readonly editor?: WorkspaceHexNodeEditor;
+  /** A tree-wide conflict names this node. */
+  readonly conflict: boolean;
+  /** A Common node's column among the Common columns, from 0. */
+  readonly commonColumn?: number;
+}
+
+/** One talent in a Common deck's cell; it opens its node's picker. */
+export interface WorkspaceHexDeckTalent {
+  readonly key: string;
+  readonly label: string;
+  /** Deck, column and talent, such as "Deck 2, column 1: Omen". */
+  readonly name: string;
+  /** The board node holding it. */
+  readonly nodeKey: string;
+}
+
+export interface WorkspaceHexDeckRow {
+  readonly key: string;
+  /** Such as "Deck 1". */
+  readonly label: string;
+  /** One cell per table column. */
+  readonly cells: readonly (readonly WorkspaceHexDeckTalent[])[];
+}
+
+/** Which deck dealt each Common talent, one column per Common column. */
+export type WorkspaceHexDeckTable = {
+  readonly columns: readonly {
+    readonly key: string;
+    readonly label: string;
+    /** Matches the board nodes' `commonColumn`. */
+    readonly commonColumn: number;
+  }[];
+  /** Characters in the catalog's longest Common talent label; every chip takes that width. */
+  readonly chipLength: number;
+} & (
+  | { readonly rows: readonly WorkspaceHexDeckRow[]; readonly unreadable?: never }
+  | { readonly unreadable: string; readonly rows?: never }
+);
+
 export interface WorkspaceHexTreeDomain {
   readonly value: AuthoredHexTreeConfiguration;
+  readonly address: HexTreeAddress;
   readonly layoutPicker: ContextualPickerModel<HexLayoutKey>;
-  readonly rarePickerFor: (
-    selectedKeys: readonly string[],
-    selected?: string,
-  ) => ContextualPickerModel<string>;
-  readonly epicPickerFor: (
-    selectedKeys: readonly string[],
-    selected?: string,
-  ) => ContextualPickerModel<string>;
-  readonly godSent: HexDeclaration['godSent'];
+  readonly nodes: readonly WorkspaceHexTreeNode[];
+  readonly decks: WorkspaceHexDeckTable;
+  /** Why the nodes cannot form one tree together. */
+  readonly treeIssue?: string;
+  /** The engine's transition of this tree under one edit. */
+  readonly edit: (edit: AuthoredHexTreeEdit) => AuthoredHexTreeConfiguration;
 }
 
 export interface WorkspaceHexTreeInteraction {
@@ -167,10 +228,6 @@ export interface WorkspaceHexTreeInteraction {
   ) => AuthoredTraitOfferTraits;
   /** Complete declaration-owned default for the offer's currently selected spell. */
   readonly defaultFor: (offer: AuthoredTraitOfferTraits) => AuthoredHexTreeConfiguration;
-  readonly transitionFor: (
-    offer: AuthoredTraitOfferTraits,
-    layoutKey: HexLayoutKey,
-  ) => AuthoredHexTreeConfiguration;
   readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
     readonly load: () => WorkspaceHexTreeDomain | undefined;
   };
@@ -178,14 +235,18 @@ export interface WorkspaceHexTreeInteraction {
 
 /** Route-loadout-owned Hex controls for Aspect of Selene's fixed Sky Fall. */
 export interface WorkspaceAspectHexTreeControl {
-  readonly address: RouteAddress;
-  readonly declaration: HexDeclaration;
   readonly marker: WorkspaceMarker;
+  readonly address: HexTreeAddress;
+  readonly layoutLabel: string;
   readonly value: AuthoredHexTreeConfiguration;
-  readonly domain: WorkspaceHexTreeDomain;
-  readonly transitionFor: (layoutKey: HexLayoutKey) => AuthoredHexTreeConfiguration;
+  /** The saved tree's board, projected when its dialog opens. */
+  readonly load: () => WorkspaceHexTreeDomain;
+  /** The board of an edited draft of the tree. */
+  readonly forDraft: (tree: AuthoredHexTreeConfiguration) => {
+    readonly load: () => WorkspaceHexTreeDomain;
+  };
   readonly intentFor: (
-    value: AuthoredHexTreeConfiguration,
+    tree: AuthoredHexTreeConfiguration,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAspectHexTree' }>>;
 }
 
