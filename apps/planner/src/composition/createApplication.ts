@@ -86,6 +86,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   const traitDomain = createTraitDomainProjection(catalog, contextualPicker);
+  const devBuild = options.devBuild ?? import.meta.env.DEV;
   const structuredWorkspace = createStructuredWorkspaceProjection(
     catalog,
     {
@@ -95,7 +96,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       traitDomain,
     },
     options.allocateOccurrenceId ?? allocateOccurrenceId,
-    { devBuild: options.devBuild ?? import.meta.env.DEV },
+    { devBuild },
   );
   const prepareProjectWorkspace = (project: ProjectDocument): PreparedProjectWorkspace => {
     assertPublicProjectAdmission(catalog, project);
@@ -131,6 +132,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       ? {}
       : { autosaveRecovery: options.autosaveRecovery }),
     catalog,
+    devBuild,
     profileFile,
     prepareProjectWorkspace,
     ...(options.gameModuleHost === undefined ? {} : { gamePlanPublisher: options.gameModuleHost }),

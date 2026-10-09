@@ -8,6 +8,7 @@ import {
   decodeRunModifiers,
   encodeRunModifiers,
   routeRunModifiers,
+  sameRunModifierValue,
 } from '../run-modifiers';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
 import { resolveCompletionBoss } from '../completion-boss';
@@ -348,7 +349,11 @@ export function applyProjectStateCommand(
       const value = decodeRunModifiers(command.value, 'runModifiers');
       const route = document.route;
       const previous = routeRunModifiers(route.loadout);
-      if (RUN_MODIFIER_DECLARATIONS.every(({ key }) => previous[key] === value[key]))
+      if (
+        RUN_MODIFIER_DECLARATIONS.every(({ key }) =>
+          sameRunModifierValue(previous[key], value[key]),
+        )
+      )
         return document;
       const encoded = encodeRunModifiers(value);
       const loadout = { ...route.loadout };

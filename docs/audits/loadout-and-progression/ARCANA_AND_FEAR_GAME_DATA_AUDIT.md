@@ -258,6 +258,18 @@ declares the interval and the per-rarity amounts; the board adjacency
 `CustomMultiplier` that can scale the amounts is not modeled. The values appear
 in Run State only and are neither conformance facts nor execution diagnostics.
 
+## Native Starting Gold
+
+`StartingGoldMetaUpgrade` declares `BonusMoney` base 200 scaled by rarity 1,
+1.25, 1.5 and 1.75 (`TraitData_MetaUpgrade.lua:273-297`). `StartNewRun` credits
+`CalculateStartingMoney`, `GetTotalHeroTraitValue("BonusMoney")` summed over
+the hero's traits (`RunLogic.lua:41`, `RunLogic.lua:514`). The only other
+declarer is the Gold Purse keepsake, `BonusMoneyKeepsake`, base 100 scaled by
+rarity 1, 1.25, 1.5 and 2.0 (`TraitData_Keepsake.lua:683-711`), equipped
+earlier in `StartNewRun` (`RunLogic.lua:480`). Planner disposition: the game
+grants this gold; a Practice mode start point adds its authored base gold on
+top, so the catalog declares no starting-gold amounts.
+
 ## Fear Loadout
 
 Fear is represented as a rank per Vow. Rank zero is inactive. Each reached

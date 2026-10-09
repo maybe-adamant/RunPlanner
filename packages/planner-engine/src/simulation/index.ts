@@ -455,6 +455,13 @@ export {
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';
 export { startInstallationAt } from './start-installation/start-point';
+export {
+  authoredStartPointEligibility,
+  startPointDomain,
+  type AuthoredStartPointEligibility,
+  type StartPointAvailability,
+  type StartPointOption,
+} from './start-installation/eligibility';
 export type {
   StartBiomeRecords,
   StartHermesDelivery,

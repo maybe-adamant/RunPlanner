@@ -163,6 +163,9 @@ export function App({
                 onOpen={() => setGameOpen('panel')}
                 onOpenPlans={() => setGameOpen('plans')}
                 operations={projectOperations}
+                {...(activeWorkspaceRoute?.runModifiers.startPointBlock === undefined
+                  ? {}
+                  : { startPointBlock: activeWorkspaceRoute.runModifiers.startPointBlock })}
               />
               <Popover.Root>
                 <Popover.Trigger asChild>

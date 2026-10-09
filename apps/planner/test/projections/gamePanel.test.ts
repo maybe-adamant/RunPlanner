@@ -458,7 +458,12 @@ describe('Game panel projection', () => {
     expect(blocked?.unavailableReason).toBe('Resolve this plan’s findings before sending it.');
     expect(blocked?.rows.every((row) => row.action === null && row.marker === null)).toBe(true);
     const reasonFor = (
-      code: 'unsupportedRoute' | 'openingMissing' | 'executionCoverageMissing' | null,
+      code:
+        | 'unsupportedRoute'
+        | 'openingMissing'
+        | 'executionCoverageMissing'
+        | 'startPointUnpublished'
+        | null,
     ) =>
       projectGamePlans(status, { kind: 'notPublishable', code }, 'clean', catalog, now)
         ?.unavailableReason;
@@ -466,6 +471,22 @@ describe('Game panel projection', () => {
     expect(reasonFor('openingMissing')).toBe('Plan the opening room before sending this plan.');
     expect(reasonFor('executionCoverageMissing')).toBe('The game module can’t run this plan yet.');
     expect(reasonFor(null)).toBe('The game module can’t run this plan yet.');
+    expect(reasonFor('startPointUnpublished')).toBe('Practice mode can’t be sent to the game yet.');
+    expect(
+      projectGamePlans(
+        status,
+        {
+          kind: 'notPublishable',
+          code: 'startPointIneligible',
+          startPointReason: { kind: 'branchesDisagree', families: ['traits', 'maxStats'] },
+        },
+        'clean',
+        catalog,
+        now,
+      )?.unavailableReason,
+    ).toBe(
+      'The start point can’t start this run. The planned outcomes before this point differ in boons and traits, max Health or Magick.',
+    );
     expect(
       projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, now)?.unavailableReason,
     ).toBe('Open a project to send it to the game.');
@@ -611,6 +632,35 @@ describe('Game panel projection', () => {
         'Send to game',
         null,
         'Resolve this plan’s findings before sending it.',
+      ],
+      [
+        projectGameSendButton(
+          ready,
+          {
+            ...mine,
+            startPointBlock: { code: 'startPointIneligible', reason: { kind: 'notOnItinerary' } },
+          },
+          2,
+          'clean',
+          idle,
+        ),
+        'notSendable',
+        'Send to game',
+        null,
+        'The start point can’t start this run. This biome is not on the route.',
+      ],
+      [
+        projectGameSendButton(
+          ready,
+          { ...mine, startPointBlock: { code: 'startPointUnpublished' } },
+          2,
+          'clean',
+          idle,
+        ),
+        'notSendable',
+        'Send to game',
+        null,
+        'Practice mode can’t be sent to the game yet.',
       ],
       [
         projectGameSendButton(ready, mine, null, 'clean', idle),

@@ -36,8 +36,8 @@ from there as usual. The run is not recorded in the save's run history.
   - **Death Defiance:** assigned by the game from equipped sources; Athena and
     the Circe familiar multiplier add theirs explicitly. Every charge starts
     unused.
-  - **Gold:** a numeric field on the start point, defaulting to native starting
-    gold.
+  - **Gold:** a numeric base amount on the start point, added on top of the
+    gold the game itself grants at run start; empty adds none.
   - **Room history:** one stub `RoomHistory` record per planned room (`Name`,
     plus `NextRoomSet` where the room declares or inherits it: the F and N
     Openings and every Postboss but I's and Q's). Run-wide records the planner

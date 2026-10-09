@@ -30,6 +30,7 @@ import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
 import { useFindingAnchor, useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
+import { RunStartPointModifier } from './RunStartPointModifier';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 
@@ -518,7 +519,15 @@ function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: Works
       </header>
       <div className="route-run-modifier-controls">
         {control.declarations.map((declaration) =>
-          declaration.kind === 'boolean' ? (
+          declaration.kind === 'startPoint' ? (
+            control.startPoint === undefined ? null : (
+              <RunStartPointModifier
+                key={declaration.key}
+                control={control.startPoint}
+                id={`${prefix}-${declaration.key}`}
+              />
+            )
+          ) : declaration.kind === 'boolean' ? (
             <BooleanRunModifierToggle
               key={declaration.key}
               control={control}
@@ -546,7 +555,7 @@ function BooleanRunModifierToggle({
   readonly declaration: BooleanRunModifierDeclaration;
 }) {
   const dispatch = useAppDispatch();
-  const values: Readonly<Record<string, boolean | number | undefined>> = control.value;
+  const values: Readonly<Record<string, unknown>> = control.value;
   return (
     <label className="route-run-modifier-toggle" {...hintProps(declaration.description)}>
       <span>{declaration.label}</span>
@@ -590,7 +599,7 @@ export function OptionalPercentageRunModifier({
   readonly id: string;
 }) {
   const dispatch = useAppDispatch();
-  const values: Readonly<Record<string, boolean | number | undefined>> = control.value;
+  const values: Readonly<Record<string, unknown>> = control.value;
   const raw = values[declaration.key];
   const authored = typeof raw === 'number' ? raw : undefined;
   // The last enabled value is UI state only; turning the modifier off removes it from the plan.

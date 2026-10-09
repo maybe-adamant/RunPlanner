@@ -1,8 +1,10 @@
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ExecutionCompilerError } from '@run-planner/engine/execution-plan';
+import type { StartPointPublicationBlock } from '@run-planner/engine/execution-plan';
 import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
+import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameActiveSlotSetting,
@@ -668,7 +670,9 @@ function unavailableReason(current: CurrentGamePlan): string | null {
     case 'noProject':
       return 'Open a project to send it to the game.';
     case 'notPublishable':
-      return describeNotPublishable(current.code);
+      return current.code === 'startPointIneligible' && current.startPointReason !== undefined
+        ? describeStartPointBlocked({ code: current.code, reason: current.startPointReason })
+        : describeNotPublishable(current.code);
   }
 }
 
@@ -686,6 +690,10 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
       return 'Choose an exit for every planned room before sending this plan.';
     case 'notEligible':
       return RESOLVE_FINDINGS;
+    case 'startPointIneligible':
+      return 'The start point can’t start this run.';
+    case 'startPointUnpublished':
+      return describeStartPointBlocked({ code: 'startPointUnpublished' });
     case 'executionCoverageMissing':
     case null:
       return 'The game module can’t run this plan yet.';
@@ -820,6 +828,8 @@ export interface GameSendButton {
 export interface GameSendProject {
   readonly projectId: string;
   readonly eligible: boolean;
+  /** The engine's reason the authored start point blocks publication. */
+  readonly startPointBlock?: StartPointPublicationBlock;
 }
 
 function localTime(ms: number): string {
@@ -869,6 +879,13 @@ export function projectGameSendButton(
   }
   if (!project.eligible) {
     return inactive('notSendable', 'Send to game', describeNotPublishable('notEligible'));
+  }
+  if (project.startPointBlock !== undefined) {
+    return inactive(
+      'notSendable',
+      'Send to game',
+      describeStartPointBlocked(project.startPointBlock),
+    );
   }
   const slot = status.inspection?.planSlots.find((entry) => entry.slot === lastSentSlot);
   const ownSlot =

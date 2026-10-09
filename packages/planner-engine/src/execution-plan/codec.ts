@@ -1,8 +1,7 @@
 import {
-  RUN_MODIFIER_DECLARATIONS,
+  EXECUTION_RUN_MODIFIER_DECLARATIONS,
   isRunModifierValue,
-  type RunModifierDeclaration,
-  type RunModifiers,
+  type ExecutionRunModifiers,
 } from '../authored-project/run-modifiers';
 import {
   EXECUTION_CATALOG_VERSION,
@@ -66,10 +65,10 @@ function displayNameValue(value: unknown): string {
 }
 
 /** The complete declared record; an optional modifier is present only while enabled. */
-function runModifiersRecord(value: unknown): RunModifiers {
+function runModifiersRecord(value: unknown): ExecutionRunModifiers {
   const label = 'execution plan.runModifiers';
   const record = object(value, label);
-  const declarations: readonly RunModifierDeclaration[] = RUN_MODIFIER_DECLARATIONS;
+  const declarations = EXECUTION_RUN_MODIFIER_DECLARATIONS;
   exact(
     record,
     declarations.filter((d) => d.kind !== 'optionalPercentage').map((d) => d.key),
@@ -84,7 +83,7 @@ function runModifiersRecord(value: unknown): RunModifiers {
       fail(`${label}.${declaration.key} is outside its declared domain`);
     decoded[declaration.key] = raw as boolean | number;
   }
-  return Object.freeze(decoded) as RunModifiers;
+  return Object.freeze(decoded) as ExecutionRunModifiers;
 }
 
 export function decodeExecutionPlan(value: unknown): ExecutionPlan {

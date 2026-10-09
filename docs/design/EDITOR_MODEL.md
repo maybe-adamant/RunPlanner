@@ -175,8 +175,10 @@ React neither constructs engine queries nor recomputes legality.
 Loadout renders the released run-modifier declarations by declared kind,
 including in Fresh File: a toggle, or a checkbox with a 0–100% slider. An
 unchecked percentage modifier is native; its slider is disabled and shows no
-value. Application binding reads engine-owned defaults and validates a complete
-replacement through the engine before dispatch. Slider adjustments remain local until pointer release, navigation-key release,
+value. Development builds also render the internal Practice mode start point,
+whose picker domain is evaluated when it opens. Application binding reads
+engine-owned defaults and validates a complete replacement through the engine
+before dispatch. Slider adjustments remain local until pointer release, navigation-key release,
 blur or Enter, producing one history edit per gesture. Stored values outside
 the declared domain clamp to the nearest bound on decode. Explanatory text
 is each option’s hint, with accessible descriptions on its control.

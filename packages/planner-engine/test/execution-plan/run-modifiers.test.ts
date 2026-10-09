@@ -9,15 +9,18 @@ import {
   encodeExecutionPlan,
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
+import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
 import { runModifiersProject } from './support/execution-fixtures';
 import nativeWire from './fixtures/f-opening.execution.json';
 import modifiersWire from './fixtures/run-modifiers.execution.json';
 
-function compile(project: ProjectDocument) {
+function compile(project: ProjectDocument, internalRunModifiers?: boolean) {
   return compileExecutionPlan({
     product: assembleExecutionProduct({
       assembly: simulateProjectAssembly(catalog, project),
       catalog,
+      ...(internalRunModifiers === undefined ? {} : { internalRunModifiers }),
     }),
   });
 }
@@ -93,5 +96,41 @@ describe('execution run modifiers', () => {
         runModifiers: { ...modifiersWire.runModifiers, enemyGoldDropChance: 41 },
       }),
     ).toThrow(/planFingerprint/);
+  });
+
+  it('blocks every set start point only while internal modifiers take part', () => {
+    const base = createCompleteFGProject();
+    const withStart = (startPoint: unknown) =>
+      ({
+        ...base,
+        route: {
+          ...base.route,
+          loadout: { ...base.route.loadout, runModifiers: { startPoint } },
+        },
+      }) as ProjectDocument;
+    const failure = (project: ProjectDocument) => {
+      try {
+        compile(project, true);
+      } catch (caught) {
+        return caught;
+      }
+      throw new Error('expected the start point to block publication');
+    };
+    const eligible = withStart({ biomeKey: 'G', point: 'opening', gold: 50 });
+    const ineligible = withStart({ biomeKey: 'Q', point: 'preboss' });
+    expect(failure(eligible)).toBeInstanceOf(ExecutionCompilerError);
+    expect(failure(eligible)).toMatchObject({ code: 'startPointUnpublished' });
+    expect(failure(eligible)).not.toHaveProperty('startPointReason');
+    expect(failure(ineligible)).toMatchObject({
+      code: 'startPointIneligible',
+      startPointReason: { kind: 'notOnItinerary' },
+    });
+    // Ignored, neither start point reaches the plan.
+    const plan = compile(base, true);
+    for (const project of [eligible, ineligible]) {
+      const ignored = compile(project);
+      expect(ignored).not.toHaveProperty('runModifiers');
+      expect(ignored.planFingerprint).toBe(plan.planFingerprint);
+    }
   });
 });

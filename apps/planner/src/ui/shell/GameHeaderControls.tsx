@@ -44,8 +44,11 @@ export function GameHeaderControls({
   onOpen,
   onOpenPlans,
   operations,
+  startPointBlock,
 }: {
   readonly buttonRef: Ref<HTMLButtonElement>;
+  /** The engine's reason the authored start point blocks publication. */
+  readonly startPointBlock?: GameSendProject['startPointBlock'];
   readonly gameStatus?: GameStatusController;
   readonly onOpen: () => void;
   readonly onOpenPlans: () => void;
@@ -88,7 +91,10 @@ export function GameHeaderControls({
 
   const indicator =
     gameStatus === undefined ? null : projectGameIndicator(snapshot, lastSendFailed);
-  const project: GameSendProject | null = projectId === null ? null : { projectId, eligible };
+  const project: GameSendProject | null =
+    projectId === null
+      ? null
+      : { projectId, eligible, ...(startPointBlock === undefined ? {} : { startPointBlock }) };
   const button = projectGameSendButton(
     snapshot.status,
     project,

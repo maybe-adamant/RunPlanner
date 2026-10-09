@@ -1,6 +1,7 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation/evaluation-products';
 import type { Catalog } from '../catalog-schema';
-import type { RunModifiers } from '../authored-project/run-modifiers';
+import type { ExecutionRunModifiers } from '../authored-project/run-modifiers';
+import type { StartInstallationUnavailableReason } from '../simulation/start-installation/model';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
 import type { TraitElement, TraitRarity } from '../catalog-schema';
 import type {
@@ -1034,7 +1035,7 @@ export interface ExecutionPlan {
   /** Presentation-only plan name (the saved file's name); outside the fingerprint. */
   readonly displayName?: string;
   readonly routeKey: ExecutionRouteKey;
-  readonly runModifiers?: RunModifiers;
+  readonly runModifiers?: ExecutionRunModifiers;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionConfiguredExtent;
@@ -1052,7 +1053,7 @@ export interface ExecutionSemanticProduct {
   readonly catalogVersion: string;
   readonly projectId: string;
   readonly routeKey: ExecutionRouteKey;
-  readonly runModifiers?: RunModifiers;
+  readonly runModifiers?: ExecutionRunModifiers;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionPlan['extent'];
@@ -1066,6 +1067,8 @@ export interface ExecutionAssemblerInput {
   readonly assembly: ProjectEvaluationAssembly;
   /** Catalog-backed admission remains the owner of Dream itinerary legality. */
   readonly catalog: Catalog;
+  /** Whether internal-stage run modifiers take part in publication; absent, they are ignored. */
+  readonly internalRunModifiers?: boolean;
 }
 
 export interface ExecutionCompilerInput {
@@ -1081,5 +1084,9 @@ export interface ExecutionCompilerError extends Error {
     | 'unsupportedExtent'
     | 'openingMissing'
     | 'openingSelectionMissing'
-    | 'executionCoverageMissing';
+    | 'executionCoverageMissing'
+    | 'startPointIneligible'
+    | 'startPointUnpublished';
+  /** Why the authored start point cannot start the run; present exactly for `startPointIneligible`. */
+  readonly startPointReason?: StartInstallationUnavailableReason;
 }
