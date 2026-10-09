@@ -156,7 +156,6 @@ function withRarityAndSteadyGrowthCredit(
 function applyRarityMutation(
   catalog: Catalog,
   equippedTraits: Record<string, EquippedTrait>,
-  bridalTargetTraitKeyBySource: ReadonlyMap<string, string>,
   traitKey: string,
   rarity: TraitRarity,
   resetSteadyGrowthProgress = false,
@@ -170,7 +169,8 @@ function applyRarityMutation(
     resetSteadyGrowthProgress,
   );
 
-  const targetTraitKey = bridalTargetTraitKeyBySource.get(traitKey);
+  // CreditMissingStacks levels the boon named by the source's `UpgradedTraitName`.
+  const targetTraitKey = source.upgradedTraitKey;
   if (targetTraitKey === undefined || source.rarity === undefined) return;
   const addedLevels = bridalGlowAddedLevels(rarity) - bridalGlowAddedLevels(source.rarity);
   const target = equippedTraits[targetTraitKey];
@@ -190,7 +190,6 @@ function promoteActiveFloorTargets(
   catalog: Catalog,
   equippedTraits: Record<string, EquippedTrait>,
   activeSources: ReadonlySet<string>,
-  bridalTargetTraitKeyBySource: ReadonlyMap<string, string>,
 ): void {
   if (activeSources.size === 0) return;
   const effects = [...activeSources].flatMap((sourceKey) => {
@@ -216,17 +215,11 @@ function promoteActiveFloorTargets(
       )
     )
       continue;
-    applyRarityMutation(catalog, equippedTraits, bridalTargetTraitKeyBySource, traitKey, 'Rare');
+    applyRarityMutation(catalog, equippedTraits, traitKey, 'Rare');
   }
   // UpgradeAllCommon assigns its source rarity separately, even if it was Epic.
   for (const { sourceKey, effect } of effects) {
-    applyRarityMutation(
-      catalog,
-      equippedTraits,
-      bridalTargetTraitKeyBySource,
-      sourceKey,
-      effect.minimumRarity,
-    );
+    applyRarityMutation(catalog, equippedTraits, sourceKey, effect.minimumRarity);
   }
 }
 
@@ -237,7 +230,6 @@ export function foldTraitHistoryEvents(
   const equipped: Record<string, EquippedTrait> = {};
   const bannedTraitKeys = new Set<string>();
   const previouslyPickedTraitKeys = new Set<string>();
-  const bridalTargetTraitKeyBySource = new Map<string, string>();
   const pickupElements: Record<TraitElement, number> = {
     Aether: 0,
     Earth: 0,
@@ -360,6 +352,18 @@ export function foldTraitHistoryEvents(
           isLevelBearingTrait(catalog, event.targetTraitKey)
         ) {
           equipped[event.targetTraitKey] = Object.freeze({ ...target, level: event.newLevel });
+          // IcarusUpgradeBoon records the levelled slot boon on its own instance.
+          const source =
+            event.sourceTraitKey === undefined ? undefined : equipped[event.sourceTraitKey];
+          if (
+            source !== undefined &&
+            catalog.traits.byKey[source.traitKey]?.selectedDisposition.kind ===
+              'upgradeOccupiedBoonSlot'
+          )
+            equipped[source.traitKey] = Object.freeze({
+              ...source,
+              selectedSlotTraitKey: event.targetTraitKey,
+            });
         }
         continue;
       }
@@ -447,7 +451,6 @@ export function foldTraitHistoryEvents(
           applyRarityMutation(
             catalog,
             equipped,
-            bridalTargetTraitKeyBySource,
             event.targetTraitKey,
             event.newRarity,
             event.resetSteadyGrowthProgress === true,
@@ -475,7 +478,6 @@ export function foldTraitHistoryEvents(
           equipped[event.traitKey]?.acquisitionIdentity === event.acquisitionIdentity
         ) {
           delete equipped[event.traitKey];
-          bridalTargetTraitKeyBySource.delete(event.traitKey);
         }
         continue;
       }
@@ -567,9 +569,7 @@ export function foldTraitHistoryEvents(
           : equipped[event.replacementTransition.replacedTraitKey]?.level;
       if (event.replacementTransition !== undefined) {
         delete equipped[event.replacementTransition.replacedTraitKey];
-        bridalTargetTraitKeyBySource.delete(event.replacementTransition.replacedTraitKey);
       }
-      bridalTargetTraitKeyBySource.delete(option.traitKey);
       equipped[option.traitKey] = Object.freeze({
         traitKey: option.traitKey,
         giverKey: giver.key,
@@ -625,17 +625,16 @@ export function foldTraitHistoryEvents(
       const targeted = event.targetedAcquisitionTransition;
       if (targeted !== undefined) {
         switch (targeted.kind) {
-          case 'promoteGodTraitToHeroic':
-            if (equipped[targeted.targetTraitKey] === undefined) break;
-            bridalTargetTraitKeyBySource.set(targeted.sourceTraitKey, targeted.targetTraitKey);
-            applyRarityMutation(
-              catalog,
-              equipped,
-              bridalTargetTraitKeyBySource,
-              targeted.targetTraitKey,
-              targeted.newRarity,
-            );
+          case 'promoteGodTraitToHeroic': {
+            const source = equipped[targeted.sourceTraitKey];
+            if (equipped[targeted.targetTraitKey] === undefined || source === undefined) break;
+            equipped[targeted.sourceTraitKey] = Object.freeze({
+              ...source,
+              upgradedTraitKey: targeted.targetTraitKey,
+            });
+            applyRarityMutation(catalog, equipped, targeted.targetTraitKey, targeted.newRarity);
             break;
+          }
           case 'upgradeHammerToRank2':
             for (const targetTraitKey of targeted.targetTraitKeys) {
               const target = equipped[targetTraitKey];
@@ -668,12 +667,7 @@ export function foldTraitHistoryEvents(
     const newlyActive = new Set(
       [...nextActiveSources].filter((sourceKey) => !activeSources.has(sourceKey)),
     );
-    promoteActiveFloorTargets(
-      catalog,
-      equipped,
-      ordinaryExpired ? nextActiveSources : newlyActive,
-      bridalTargetTraitKeyBySource,
-    );
+    promoteActiveFloorTargets(catalog, equipped, ordinaryExpired ? nextActiveSources : newlyActive);
     activeSources = nextActiveSources;
   }
   const fromTraits = deriveFacts(catalog, equipped);
