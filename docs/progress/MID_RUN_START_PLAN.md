@@ -30,9 +30,11 @@ from there as usual. The run is not recorded in the save's run history.
     - spell charges (including bonus uses) and rerolls;
     - Personal Loan stored gold, Last Gasp eligibility and the last Challenge
       depth.
-  - **Max health and Magick:** one hidden native pickup trait per planner
-    source carries its flat amount; Silver Wheel stays its own source-tagged
-    trait. The game validates the maxima, and current health is set to max.
+  - **Max health and Magick:** grants no installed trait re-creates (pickups,
+    acquisition rolls, room-growth grants, Centaur, Silver Wheel grants other
+    than the slotted Wheel's own) install as untagged hidden native traits; the
+    game re-derives the rest, validates the maxima, and current health is set
+    to max.
   - **Death Defiance:** assigned by the game from equipped sources; Athena and
     the Circe familiar multiplier add theirs explicitly. Every charge starts
     unused.
@@ -107,8 +109,8 @@ from there as usual. The run is not recorded in the save's run history.
      per-start-point availability.
    - The Preboss capture already includes the start room's creation effects
      (encounter record, offer-time reward and bag effects). Native `CreateRoom`
-     repeats them, so the product marks which run-wide records the install
-     writes after creation.
+     repeats them, so a Preboss install writes run-wide records after
+     `CreateRoom`.
    - Intended equivalence baseline rewrite for the always-on Preboss capture.
    - `npm run test:performance:compare` must pass; the capture must not add
      measurable rebuild or edit cost.

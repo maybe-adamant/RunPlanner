@@ -55,7 +55,6 @@ describe('mid-run start installation', () => {
         useRecord: terminal!.rewardHistory.useRecord,
         lootTypeHistory: terminal!.rewardHistory.lootTypeHistory,
       },
-      rewardStores: { writeAfterStartRoomCreation: false },
     });
     expect(installation.startOccurrence).toBeUndefined();
     const counters = f.history.afterTransition.ledgers.counters;
@@ -100,7 +99,6 @@ describe('mid-run start installation', () => {
         biomeUseRecord: state!.rewardHistory.biomeUseRecord,
         lootBiomeRecord: state!.rewardHistory.lootBiomeRecord,
       },
-      rewardStores: { writeAfterStartRoomCreation: true },
     });
     expect(installation.roomHistory).toHaveLength(installation.counters.roomHistoryOrdinal);
     expect(installation.roomHistory.at(-1)?.gameName).not.toBe('G_PreBoss01');
@@ -292,6 +290,115 @@ describe('mid-run start installation', () => {
       // An Opening installs the native biome-start reset of each branch.
       expect(project([state!, other].map(beginBiomeSimulationState), 'opening').availability).toBe(
         'available',
+      );
+    });
+  });
+
+  describe('held keepsakes and max-stat grants', () => {
+    const startPoint: StartPoint = { biomeKey: 'G', kind: 'preboss' };
+    const base = golden.installed(startPoint);
+    const [state] = golden.biome('G').rewards.prebossStartState!.states;
+    const wheel = 'ManaOverTimeRefundKeepsake';
+    const installed = (
+      keepsakes: Partial<SimulationState['keepsakes']>,
+      echo?: { readonly captured: string; readonly replays: number },
+    ): StartInstallation => {
+      const traitHistory =
+        echo === undefined
+          ? state!.traitHistory
+          : Object.freeze({
+              ...state!.traitHistory,
+              equippedTraits: Object.freeze({
+                ...state!.traitHistory.equippedTraits,
+                EchoRepeatKeepsakeBoon: Object.freeze({
+                  traitKey: 'EchoRepeatKeepsakeBoon',
+                  giverKey: 'Echo',
+                  providerKind: 'npc',
+                  sourceRole: 'npc',
+                  echoRepeatedKeepsakeKey: echo.captured,
+                  echoKeepsakeReplayCount: echo.replays,
+                }),
+              }),
+            });
+      const result = projectStartInstallation(catalog, {
+        startPoint,
+        startRoomGameName: base.startRoomGameName,
+        states: [
+          Object.freeze({
+            ...state!,
+            traitHistory: traitHistory as SimulationState['traitHistory'],
+            keepsakes: Object.freeze({ ...state!.keepsakes, ...keepsakes }),
+          }),
+        ],
+        roomHistory: base.roomHistory,
+        visitedBiomeKeys: base.route.visitedBiomeKeys,
+      });
+      if (result.availability !== 'available') throw new Error(JSON.stringify(result.reason));
+      return result.installation;
+    };
+    const keepsakeGrants = (installation: StartInstallation) =>
+      installation.maxStats.grants.filter((grant) => grant.source.kind === 'keepsake');
+
+    it('holds the slotted keepsake, kept Permanent keepsakes and no replaced or spent ones', () => {
+      const installation = installed({
+        currentKey: 'BonusMoneyKeepsake',
+        discordantBell: { rank: 'Rare', multiplier: 1.2 },
+        jeweledPom: {
+          grantedTraitKey: 'HadesCastBoon',
+          active: false,
+          levels: 4,
+          acquisitionIdentity: 'pom',
+        },
+        retained: [{ key: 'RarifyKeepsake', rank: 'Epic' }],
+        callingCard: { remainingCharges: 3 },
+        // A Time Piece swapped with no uses and a replaced Gorgon are gone.
+        timePiece: { remainingCharges: 0 },
+        gorgon: { status: 'expired' },
+      });
+      expect(installation.keepsake.held).toEqual([
+        { key: 'BonusMoneyKeepsake', rank: 'Epic', slotted: true },
+        { key: 'EscalatingKeepsake', rank: 'Rare', slotted: false },
+        { key: 'HadesAndPersephoneKeepsake', rank: 'Heroic', slotted: false },
+        { key: 'RarifyKeepsake', rank: 'Epic', slotted: false },
+      ]);
+    });
+
+    it('holds Echo’s Common copy once replayed, but not a spent Figurine', () => {
+      expect(
+        installed({ currentKey: 'BonusMoneyKeepsake' }, { captured: wheel, replays: 1 }).keepsake
+          .held,
+      ).toContainEqual({ key: wheel, rank: 'Common', slotted: false });
+      const figurine = 'BossMetaUpgradeKeepsake';
+      const spent = installed(
+        {
+          currentKey: 'BonusMoneyKeepsake',
+          figurine: { origin: 'echo', status: 'consumed', rarity: 'Common' },
+        },
+        { captured: figurine, replays: 2 },
+      );
+      expect(spent.keepsake.held.map((row) => row.key)).toEqual(['BonusMoneyKeepsake']);
+    });
+
+    it('leaves the slotted Silver Wheel’s own grant to its equip and publishes earlier grants', () => {
+      const pickups = state!.rewardHistory.maxStatGains;
+      const slotted = installed({ currentKey: wheel, maxManaGrants: { [wheel]: [100] } });
+      expect(keepsakeGrants(slotted)).toEqual([]);
+      expect(slotted.maxStats.grants).toContainEqual({
+        source: { kind: 'pickups' },
+        maxHealth: pickups.maxHealth,
+        maxMana: pickups.maxMana,
+      });
+      const swapped = installed({
+        currentKey: 'BonusMoneyKeepsake',
+        maxManaGrants: { [wheel]: [100, 50] },
+      });
+      expect(
+        keepsakeGrants(swapped)
+          .map((grant) => grant.maxMana)
+          .sort((a, b) => a - b),
+      ).toEqual([50, 100]);
+      expect(() => installed({ currentKey: wheel, maxManaGrants: { [wheel]: [50] } })).toThrow(
+        /equip amount/,
       );
     });
   });

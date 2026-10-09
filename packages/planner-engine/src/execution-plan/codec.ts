@@ -27,6 +27,7 @@ import { startingLoadout } from './codec/loadout';
 import { resources } from './codec/resources';
 import { fingerprint } from './fingerprint';
 import { olympusAetos } from './codec/aetos';
+import { startState } from './codec/start-state';
 
 export { ExecutionPlanCodecError };
 
@@ -103,7 +104,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
       'resources',
       'occurrences',
     ],
-    ['displayName', 'olympusAetos', 'runModifiers'],
+    ['displayName', 'olympusAetos', 'runModifiers', 'startState'],
     'execution plan',
   );
   if (record.format !== EXECUTION_PLAN_FORMAT) fail('execution plan.format is unsupported');
@@ -201,6 +202,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     selectedOccurrenceIds,
     ...(aetos === undefined ? {} : { olympusAetos: aetos }),
     resources: resources(record.resources, 'execution plan.resources'),
+    ...(record.startState === undefined ? {} : { startState: startState(record.startState) }),
     occurrences,
   });
   validateExecutionReferences(plan);
@@ -216,6 +218,7 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     selectedOccurrenceIds: plan.selectedOccurrenceIds,
     resources: plan.resources,
     ...(plan.olympusAetos === undefined ? {} : { olympusAetos: plan.olympusAetos }),
+    ...(plan.startState === undefined ? {} : { startState: plan.startState }),
     occurrences: plan.occurrences,
   });
   if (fingerprint(body) !== plan.planFingerprint)

@@ -37,6 +37,38 @@ export interface MaxStats {
   readonly maxHealthCap?: { readonly maxHealth: number; readonly keepsakeKey: string };
 }
 
+/** A flat amount folded state records when granted; no held declaration re-derives it. */
+export interface MaxStatGrant {
+  readonly source:
+    | { readonly kind: 'pickups' }
+    | { readonly kind: 'trait' | 'arcana' | 'keepsake'; readonly key: string };
+  readonly maxHealth: number;
+  readonly maxMana: number;
+}
+
+/**
+ * The recorded grants among `deriveMaxStats`' flat terms: pickups, trait
+ * acquisition rolls and room-growth grants, Arcana room-entry growth, and each
+ * keepsake max-Magick grant in grant order. Aspect, familiar, Arcana card,
+ * per-element, decay and Chaos terms follow from what is held.
+ */
+export function deriveMaxStatGrants(state: SimulationState): readonly MaxStatGrant[] {
+  const grants: MaxStatGrant[] = [];
+  const add = (source: MaxStatGrant['source'], maxHealth: number, maxMana: number) => {
+    if (maxHealth !== 0 || maxMana !== 0)
+      grants.push(Object.freeze({ source: Object.freeze(source), maxHealth, maxMana }));
+  };
+  const { maxStatGains } = state.rewardHistory;
+  add({ kind: 'pickups' }, maxStatGains.maxHealth, maxStatGains.maxMana);
+  for (const [key, grant] of Object.entries(state.traitHistory.maxStatGrants ?? {}))
+    add({ kind: 'trait', key }, grant.maxHealth, grant.maxMana);
+  for (const [key, growth] of Object.entries(state.arcanaFear.arcana.roomEntryGrowth ?? {}))
+    add({ kind: 'arcana', key }, growth.maxHealthGranted, growth.maxManaGranted);
+  for (const [key, amounts] of Object.entries(state.keepsakes.maxManaGrants ?? {}))
+    for (const amount of amounts) add({ kind: 'keepsake', key }, 0, amount);
+  return Object.freeze(grants);
+}
+
 /** Lua `round`: `floor(x + 0.5)`. */
 function round(value: number): number {
   return Math.floor(value + 0.5);

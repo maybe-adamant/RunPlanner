@@ -11,6 +11,7 @@ import {
   createRouteAddress,
   createOccurrenceId,
   type ProjectDocument,
+  type RunStartPoint,
 } from '@run-planner/engine/authored-project';
 import {
   createCompleteFGAnomalyProject,
@@ -86,6 +87,9 @@ import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
 import underworldFGHIEmptyShopGroupFixture from '../fixtures/underworld-fghi-empty-shop-group.execution.json';
 import underworldGeneratedCompositionFixture from '../fixtures/underworld-generated-composition.execution.json';
 import underworldEchoGoldAnvilDuplicateFixture from '../fixtures/underworld-echo-gold-anvil-duplicate.execution.json';
+import surfaceStartQOpeningFixture from '../fixtures/surface-start-q-opening.execution.json';
+import underworldStartIPrebossFixture from '../fixtures/underworld-start-i-preboss.execution.json';
+import dreamStartNOpeningFixture from '../fixtures/dream-start-n-opening.execution.json';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
@@ -124,6 +128,20 @@ interface ExecutionFixture {
   readonly wire: unknown;
   /** A test-only catalog context; production declarations otherwise. */
   readonly catalog?: () => Catalog;
+  /** Internal run modifiers (the Practice mode start point) take part, as in development builds. */
+  readonly internalRunModifiers?: true;
+}
+
+/** The project starting mid-run at a Practice mode start point. */
+export function withStartPoint(
+  project: ProjectDocument,
+  startPoint: RunStartPoint,
+): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRunModifiers',
+    route: createRouteAddress(project.route.routeKey),
+    value: { ...project.route.loadout.runModifiers, startPoint },
+  });
 }
 
 export function runModifiersProject(): ProjectDocument {
@@ -254,6 +272,31 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: loadSurfaceSeleneHexPathCheckpoint,
     wire: surfaceSeleneHexPathFixture,
   },
+  {
+    name: 'surface-start-q-opening',
+    project: () =>
+      withStartPoint(surfaceShrineDeliveriesProject(), {
+        biomeKey: 'Q',
+        point: 'opening',
+        gold: 120,
+      }),
+    wire: surfaceStartQOpeningFixture,
+    internalRunModifiers: true,
+  },
+  {
+    name: 'underworld-start-i-preboss',
+    project: () =>
+      withStartPoint(loadUnderworldFGHICheckpoint(), { biomeKey: 'I', point: 'preboss' }),
+    wire: underworldStartIPrebossFixture,
+    internalRunModifiers: true,
+  },
+  {
+    name: 'dream-start-n-opening',
+    project: () =>
+      withStartPoint(loadDreamMixedHandoffCheckpoint(), { biomeKey: 'N', point: 'opening' }),
+    wire: dreamStartNOpeningFixture,
+    internalRunModifiers: true,
+  },
 ]);
 
 export function executionFixturePath(name: string): string {
@@ -274,7 +317,11 @@ export async function buildExecutionFixture(
   const fixtureCatalog = fixture.catalog?.() ?? catalog;
   const assembly = simulateProjectAssembly(fixtureCatalog, fixture.project());
   const plan = compileExecutionPlan({
-    product: assembleExecutionProduct({ assembly, catalog: fixtureCatalog }),
+    product: assembleExecutionProduct({
+      assembly,
+      catalog: fixtureCatalog,
+      ...(fixture.internalRunModifiers === undefined ? {} : { internalRunModifiers: true }),
+    }),
   });
   const filepath = executionFixturePath(fixture.name);
   const options = await resolveConfig(filepath);

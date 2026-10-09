@@ -12,11 +12,13 @@ Executor reads the active slot from `active-slot.json` (see
 [Shared configuration folder](#shared-configuration-folder)), reads only that
 plan slot at the next run admission, and freezes the decoded plan for the live
 session. Execution normally admits at
-run start; publication does not hot-swap a live session. One bounded recovery
-path may instead admit a freshly loaded game at the start of an explicitly
-marked Postboss occurrence when its native room, weapon/aspect, and published
-entry-conformance state match. No other mid-run attachment, edited-plan repair,
-or recovery after a mismatch is supported.
+run start; publication does not hot-swap a live session. Two bounded mid-run
+attachments exist. A plan with a [Practice mode start](#practice-mode-start)
+admits at the start of a fresh run that the module installs at a later biome's
+Opening or a Preboss. One recovery path may instead admit a freshly loaded game
+at the start of an explicitly marked Postboss occurrence when its native room,
+weapon/aspect, and published entry-conformance state match. No other mid-run
+attachment, edited-plan repair, or recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
 `slot-6.runplanner.json` under the Run Planner game module configuration directory. The
@@ -358,10 +360,8 @@ against the declaration table; the module reads only the modifiers it
 implements, validates those values, and ignores unknown keys, which remain part
 of the fingerprinted contents. Fingerprint verification uses the record's
 actual presence without inserting defaults. The authored Practice mode start
-point is not part of this record. Where internal modifiers take part in
-publication (development builds), any set start point blocks publication with
-`startPointUnpublished`, or `startPointIneligible` with the engine's reason;
-released builds ignore it.
+point is not part of this record; it publishes the separate `startState`
+described below.
 
 The module binds settings to the admitted plan and native `CurrentRun` identity.
 They become active only after starting-loadout verification or supported
@@ -388,6 +388,120 @@ error. Missing required native functions and escaping host errors fault executio
 recognized unsupported contacts pass through with bounded diagnostics. Modifier
 diagnostics may continue after prefix completion without enabling other adapters.
 There are no gold-total conformance obligations.
+
+### Practice mode start
+
+Where internal modifiers take part in publication (development builds), an
+authored start point either blocks publication with `startPointIneligible` and
+the engine's reason, or publishes the optional top-level `startState`. Released
+builds ignore the start point, and a plan without one omits the section, so
+ordinary fingerprints are unchanged.
+
+`startState` is the engine's start installation in the native terms the module
+writes, not a dump of planner state. Every fact comes from the engine's folded
+state; assembly translates it, selecting and renaming fields. It carries:
+
+- the start: `point` (`opening` or `preboss`), `biomeKey`, the selected start
+  `occurrenceId`, its native `roomName`, and the authored `gold` added to
+  `GameState.Resources.Money` on top of the game's own starting gold (0 when
+  absent);
+- route position: `biomeVisitOrder` (native `BiomeVisitOrder`, whose length is
+  `EnteredBiomes`; `IsDreamRun` follows from the route), one stub `RoomHistory`
+  record per departed room (`name`, `nextRoomSet` where RoomData declares or
+  inherits it, so native run and biome depth derive from it),
+  `encounterDepth` and `lastDevotionDepth`;
+- for a Preboss only, `biome`: `BiomeDepthCache`, `BiomeEncounterDepth`,
+  `BiomeUseRecord`, the Forfeit and Fig Leaf biome flags, and, exactly for I,
+  `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`. An Opening omits
+  it because the native Intro resets those records;
+- equipment results beyond `startingLoadout`: `aspectPerfect` (Premium
+  Service) and the familiar's stack multiplier;
+- `traits` to install without `FromLoot`, each with its native rarity
+  (`Legendary` for a Rank II Hammer), `stackNum` and only the per-instance
+  fields its skipped acquire would have written: `BlockInRunRarify`,
+  `UpgradedTraitName`, `SelectedTrait`, `GrantedTrait`, `RepeatedKeepsake`,
+  `CurrentRoom` and the acquisition-time `RoomsPerUpgrade` values, the
+  `EchoIncreaseStats` fields, and an Experimental Hammer's remaining uses.
+  Traits native `StartNewRun` installs from the loadout are omitted, and so is
+  the Spell, which `hex` carries;
+- active Chaos curses with their remaining uses and blessing (`OnExpire`), and
+  matured blessings with `FromChaosKeepsake`;
+- the keepsake: `KeepsakeCache`, `BlockedKeepsakes`, Fig Leaf's
+  `PersistentDionysusSkipKeepsake` uses, and `traits`, exactly the keepsake
+  traits the hero holds, each with its native rarity and counters
+  (`RarityUpgradeData.Uses`, `BoonConversionUses`, `Uses`, `RemainingUses`,
+  the Bell and Fang multipliers, the Embryo's `CurrentRoom`). At most one row
+  is `slotted`: the equipped keepsake, which the module equips natively with
+  `ForceRarity` and without `FromLoot`. The others are held unslotted: a
+  Permanent keepsake a swap kept (Discordant Bell, Jeweled Pom, and a Calling
+  Card or Time Piece that left with uses, `KeepsakeLogic.lua:190-227`), and
+  Echo's copy, which is Common (`RoomLogic.lua:1218-1242`). A replaced or
+  spent keepsake that native removed has no row. Echo copies of keepsakes the
+  planner treats as neutral are not tracked;
+- active Arcana at their current rarity, with `TemporaryMetaUpgrades`,
+  Centaur `CurrentRoom` and Artificer `MetaConversionUses`, whether Barren
+  holds them unequipped, and the vows Circe disabled
+  (`ShrineUpgradesDisabled`);
+- `maxStats`: the expected maxima for the self-check, and `hiddenGrants`, the
+  recorded amounts no installed trait re-creates, each tagged with its source:
+  lumped pickups, trait acquisition rolls and `RoomsPerUpgrade` grants (Traces
+  of Spirit), Centaur room growth, and each keepsake max-Magick grant. The
+  module installs each as a plain hidden `RoomRewardMaxHealthTrait` or
+  `RoomRewardMaxManaTrait` without a `Source`. Aspect, familiar, Arcana card,
+  per-element, Chaos and Fight Fight Fight terms are re-derived from the
+  installed traits. The expected maxima include every grant;
+- Well holdings and `WellShopPurchases`, pending Hermes deliveries, and the
+  Spell (`hex.spellTraitName`) with its realised tree, invested nodes, talent
+  points and closure. The module adds the Spell unless native `StartNewRun`
+  already installed it from the aspect;
+- `RewardPriorities`, `UseRecord`, `LootTypeHistory`, `ConsumableRecord`, and
+  the `RewardStores` exact across every planned branch, as counts aligned with
+  `RewardStoreData`.
+
+Every Silver Wheel max-Magick grant is a hidden grant except the slotted
+Wheel's own, which is created natively: the module equips the current keepsake
+without `FromLoot` at the planner's rank (`ForceRarity`), and `EquipKeepsake`'s
+Silver Wheel branch finds no `Source`-tagged `RoomRewardMaxManaTrait` and calls
+`KeepsakeAddMaxMana` at that rank (`KeepsakeLogic.lua:148-162`). The grant
+arrives on a thread, so the self-check reads the maxima after it lands. Hidden
+grants carry no `Source`, so that branch never rewrites them, even when a later
+Gift Gift Gift replay equips a Wheel; each grant stays independent. Without a
+slotted Wheel, every grant is hidden.
+
+Run-wide records are written at different points for the two start points.
+An Opening's are its predecessor's terminal values, before the start room
+exists: the module writes them before native `CreateRoom`, the stores after
+`InitializeRewardStores` (`RunLogic.lua:502-506`), so the Intro's own reward
+draw, priorities and encounter choice read and update them natively. A
+Preboss's captured state already includes its own creation, so the module
+writes `RewardStores`, `RewardPriorities`, `UseRecord`, `LootTypeHistory`,
+`ConsumableRecord`, `EncounterDepth` and `biome` after native `CreateRoom`
+returns and before `StartRoom`, replacing whatever creation wrote. Creation
+records the Preboss encounter but draws no store entry, since `ForcedFirstReward`
+returns first (`RewardLogic.lua:89-101`); depths advance only in
+`StartEncounter`.
+
+Unknown state is not published and starts as a fresh install leaves it:
+timers, armor, pools, spell charges, rerolls and Personal Loan gold.
+
+The decoders check that the start occurrence is selected and matches the
+point, its biome and room name: an Opening's occurrence is its biome's first
+selected room in a configured biome after the route start, and a Preboss's is
+a later one. That a Preboss start names the biome's Preboss room is
+assembly's guarantee, carried by the fingerprint, since occurrences do not
+publish room kinds. `biomeVisitOrder` must be the configured biomes entered
+before the start, `biome` is present exactly for a Preboss, and its Clockwork
+counters exactly for I. Execution's route cursor starts at the start
+occurrence's index in `selectedOccurrenceIds`; earlier occurrences are never
+realized.
+
+The module installs the start state inside its `StartNewRun` wrap and the
+start room's creation, then self-checks with the existing admission
+conformance families and the published maxima; a mismatch makes execution
+passive, and the run continues natively. Conformance stays legality-only: the
+installed values are inputs, not new room-exit facts. The run's lifecycle is
+native except that the module removes the run from `RunHistory`; clear-time and
+depth records still write.
 
 ### Content fingerprint
 

@@ -692,8 +692,6 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
       return RESOLVE_FINDINGS;
     case 'startPointIneligible':
       return 'The start point can’t start this run.';
-    case 'startPointUnpublished':
-      return describeStartPointBlocked({ code: 'startPointUnpublished' });
     case 'executionCoverageMissing':
     case null:
       return 'The game module can’t run this plan yet.';

@@ -167,6 +167,9 @@ export function applyKeepsakeRackUsedTransition(
           branch.state.arcanaFear,
           equippedRank,
           effectiveBiomeNumber,
+          before.currentKey === null
+            ? undefined
+            : keepsakeRankForEquip(catalog, before.currentKey, branch.state.traitHistory),
         );
     const replacementSucceeded =
       before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;

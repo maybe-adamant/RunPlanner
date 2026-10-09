@@ -5,26 +5,19 @@ import { authoredStartPointEligibility } from '../simulation/start-installation/
 import type { StartInstallationUnavailableReason } from '../simulation/start-installation/model';
 
 /** Why an authored start point keeps the plan from publishing. */
-export type StartPointPublicationBlock =
-  | {
-      readonly code: 'startPointIneligible';
-      readonly reason: StartInstallationUnavailableReason;
-    }
-  | { readonly code: 'startPointUnpublished' };
+export interface StartPointPublicationBlock {
+  readonly code: 'startPointIneligible';
+  readonly reason: StartInstallationUnavailableReason;
+}
 
-/** Every set start point blocks: an ineligible one by its reason, an eligible one as unpublished. */
+/** An ineligible start point blocks by its reason; an eligible one publishes its start state. */
 export function startPointPublicationBlock(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
 ): StartPointPublicationBlock | undefined {
   const eligibility = authoredStartPointEligibility(catalog, project, evaluation);
-  switch (eligibility.kind) {
-    case 'unset':
-      return undefined;
-    case 'ineligible':
-      return Object.freeze({ code: 'startPointIneligible', reason: eligibility.reason });
-    case 'eligible':
-      return Object.freeze({ code: 'startPointUnpublished' });
-  }
+  return eligibility.kind === 'ineligible'
+    ? Object.freeze({ code: 'startPointIneligible', reason: eligibility.reason })
+    : undefined;
 }

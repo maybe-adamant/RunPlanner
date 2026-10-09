@@ -171,7 +171,7 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
   expect(valueOf(startPoint().selectIntent(undefined))).toEqual({ enemyGoldDropChance: 40 });
 });
 
-it('blocks publication by a set start point only where Practice mode is authored', () => {
+it('blocks publication by an ineligible start point only where Practice mode is authored', () => {
   const golden = createGoldenFGHIProject();
   const withStart = (startPoint: RunStartPoint): ProjectDocument => ({
     ...golden,
@@ -187,9 +187,14 @@ it('blocks publication by a set start point only where Practice mode is authored
     valueLabel: 'Ephyra · Preboss',
     unavailableHint: 'This biome is not on the route.',
   });
-  const eligible = openGolden(true, withStart({ biomeKey: 'G', point: 'opening' })).control();
-  expect(eligible.startPointBlock).toEqual({ code: 'startPointUnpublished' });
+  const eligibleWorkspace = openGolden(true, withStart({ biomeKey: 'G', point: 'opening' }));
+  const eligible = eligibleWorkspace.control();
+  expect(eligible).not.toHaveProperty('startPointBlock');
   expect(eligible.startPoint).not.toHaveProperty('unavailableHint');
+  // An eligible start point publishes with its start state.
+  expect(eligibleWorkspace.application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
+    kind: 'publishable',
+  });
   // A released build neither shows nor publishes the internal start point.
   const released = openGolden(false, dangling);
   expect(released.control()).not.toHaveProperty('startPoint');

@@ -12,6 +12,8 @@ local resources = type(import) == "function" and import("mods/protocol/resources
     or require("mods.protocol.resources")
 local aetos = type(import) == "function" and import("mods/protocol/aetos.lua")
     or require("mods.protocol.aetos")
+local startState = type(import) == "function" and import("mods/protocol/start_state.lua")
+    or require("mods.protocol.start_state")
 
 local protocol = {
     FORMAT = "run-planner-execution",
@@ -110,6 +112,7 @@ local function fingerprintBody(plan, decodedOccurrences)
         selectedOccurrenceIds = plan.selectedOccurrenceIds,
         resources = plan.resources,
         olympusAetos = plan.olympusAetos,
+        startState = plan.startState,
         occurrences = decodedOccurrences,
     }
 end
@@ -155,7 +158,7 @@ function protocol.decode(value)
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
             "occurrences",
         },
-        { "displayName", "olympusAetos", "runModifiers" },
+        { "displayName", "olympusAetos", "runModifiers", "startState" },
         "execution plan"
     )
     if not plan then return nil, errorMessage end
@@ -225,6 +228,10 @@ function protocol.decode(value)
     if not resourcesValid then return nil, resourcesValidationError end
     local aetosValid, aetosError = aetos.validate(plan.olympusAetos, keys, selected, idsOrError)
     if not aetosValid then return nil, aetosError end
+    if plan.startState ~= nil then
+        local start, startError = startState.decode(plan.startState, plan, idsOrError)
+        if not start then return nil, startError end
+    end
     local derived = detachDerived(decoded)
     if p.fingerprint(fingerprintBody(plan, decoded)) ~= plan.planFingerprint then
         return p.fail("execution plan fingerprint does not match contents")

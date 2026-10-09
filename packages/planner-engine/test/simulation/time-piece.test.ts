@@ -273,4 +273,22 @@ describe('Time Piece conversions', () => {
     expect(unfated.fatedStatus).toBe('Unfated');
     expect(unfated.timePiece?.remainingCharges).toBe(0);
   });
+
+  it('keeps a swapped Time Piece held at its leaving rank only while it has uses', () => {
+    const arcana = createTestArcanaFearState();
+    const initial = createKeepsakeState(catalog, 'GoldifyKeepsake', arcana);
+    const swap = (state: typeof initial) =>
+      applyKeepsakeReplacement(
+        catalog,
+        state,
+        'ManaOverTimeRefundKeepsake',
+        arcana,
+        undefined,
+        undefined,
+        'Heroic',
+      );
+    expect(swap(initial).retained).toEqual([{ key: 'GoldifyKeepsake', rank: 'Heroic' }]);
+    const spent = { ...initial, timePiece: { remainingCharges: 0 } };
+    expect(swap(spent).retained).toBeUndefined();
+  });
 });

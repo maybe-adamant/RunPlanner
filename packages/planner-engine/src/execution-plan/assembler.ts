@@ -7,7 +7,8 @@ import {
   type ExecutionSemanticProduct,
 } from './model';
 import { ExecutionCompilerError as CompilerError } from './assembler-errors';
-import { startPointPublicationBlock } from './start-point-publication';
+import { authoredStartPointEligibility } from '../simulation/start-installation/eligibility';
+import { executionStartState } from './assembly/start-state';
 import { executionKeepsakeEquipResults } from './assembly/overview';
 import {
   completeExecutionBiomes,
@@ -282,17 +283,27 @@ export function assembleExecutionProduct({
   const startingKeepsakeKey = assembly.project.route.loadout.startingKeepsakeKey;
   if (startingKeepsakeKey === null && startingEquipResults !== undefined)
     throw new CompilerError('executionCoverageMissing', 'keepsake equip results lack a keepsake');
-  const startPointBlock = internalRunModifiers
-    ? startPointPublicationBlock(catalog, assembly.project, evaluation)
+  // Internal modifiers take part in publication only in development builds.
+  const startPoint = internalRunModifiers
+    ? authoredStartPointEligibility(catalog, assembly.project, evaluation)
     : undefined;
-  if (startPointBlock?.code === 'startPointIneligible')
+  if (startPoint?.kind === 'ineligible')
     throw new CompilerError(
       'startPointIneligible',
-      `start point is ${startPointBlock.reason.kind}`,
-      startPointBlock.reason,
+      `start point is ${startPoint.reason.kind}`,
+      startPoint.reason,
     );
-  if (startPointBlock?.code === 'startPointUnpublished')
-    throw new CompilerError('startPointUnpublished', 'start point is not published');
+  const startState =
+    startPoint?.kind === 'eligible'
+      ? executionStartState(
+          catalog,
+          startPoint.startPoint,
+          startPoint.installation,
+          selectedOccurrenceIds,
+          roomById,
+          startingLoadout,
+        )
+      : undefined;
   const publishedModifiers = executionRunModifiers(
     routeRunModifiers(assembly.project.route.loadout),
   );
@@ -334,6 +345,7 @@ export function assembleExecutionProduct({
         }),
       };
     })(),
+    ...(startState === undefined ? {} : { startState }),
     occurrences: Object.freeze(occurrences),
   });
   validateExecutionProduct(product);

@@ -54,6 +54,8 @@ export interface EquivalenceEntry {
   readonly name: string;
   readonly catalog: Catalog;
   readonly project: () => ProjectDocument;
+  /** Internal run modifiers take part in the plan, as for a start-point fixture. */
+  readonly internalRunModifiers?: true;
 }
 
 const entry = (
@@ -71,7 +73,10 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
   const fieldsIssueSteps = freshFileHFieldsIssueSteps();
   return Object.freeze([
     ...executionFixtures.map((fixture) =>
-      entry(`execution/${fixture.name}`, fixture.project, fixture.catalog?.() ?? catalog),
+      Object.freeze({
+        ...entry(`execution/${fixture.name}`, fixture.project, fixture.catalog?.() ?? catalog),
+        ...(fixture.internalRunModifiers === undefined ? {} : { internalRunModifiers: true }),
+      }),
     ),
     ...checkpointRegistry.map(({ entry: checkpoint, load }) =>
       entry(`checkpoint/${checkpoint.id}`, load),
