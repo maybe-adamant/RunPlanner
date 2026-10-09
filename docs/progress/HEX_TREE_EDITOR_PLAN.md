@@ -116,14 +116,20 @@ Native scripts: `1GameData/Scripts`.
    Drop and Aspect with generate, kind-specific node edits and layout change,
    settlement, execution node map, module realisation, tree board. Fixtures
    regenerated. Done: `fde58fdba`.
-3. **Activations.** Schema 95, approved by the owner: the complete
-   `selectedNodeKeys[]` on each writable Path of Stars screen (and the Aspect-routed Spell Drop screen), defaulted
-   by the activation fill when the screen is reached; migration 94 → 95 gives
-   each screen the default selection. Edits whose conflicts are findings
-   naming the nodes, settlement, Task Force, execution planned nodes, module
-   highlight and reader, and the activation board. The activation board shows
-   the plain tree: no deck table and no column colours, which belong only to
-   the tree-editing view.
+3. **Activations.** Schema 95, approved by the owner. Each Path of Stars
+   screen (and the Aspect-routed Spell Drop screen) owns its complete
+   `selectedNodeKeys[]` on the reward, per acquisition role like the Anvil
+   result. Edit settlement inserts the default selection when the screen is
+   reached (its count, invested set and God Sent presence are simulation
+   facts); across branches the first surviving branch decides the default and
+   a branch it does not fit reports a finding. Migration 94 → 95 writes every
+   screen unresolved; loading a migrated document runs that same settlement
+   once to fill reached screens. Edits whose conflicts are findings naming the
+   nodes, settlement, Task Force (a catalog requirement for an invested
+   Olympian talent), execution planned nodes, module highlight (an overlay
+   after native `UpdateTalentButtons`) and reader, and the activation board.
+   The activation board shows the plain tree: no deck table and no column
+   colours, which belong only to the tree-editing view.
 
 Each gate is one commit and closes with `npm run check`; the plan closes by
 deleting this document.
