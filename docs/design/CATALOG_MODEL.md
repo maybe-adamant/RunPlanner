@@ -387,7 +387,15 @@ Arcana and Fear are separate collections. Cards declare board location, Grasp,
 ordinary activation and supported rank/effect profiles; Vows declare bounded
 ranks and suppressibility. Live activation, bans, consumption and suppression
 are simulation state. Spell/Hex declarations similarly describe pools, slots,
-layout domains and aspect links, not live tree closure or delivery clocks.
+layout domains and aspect links, not live tree closure or delivery clocks. Each
+Hex layout declares its source node graph, keyed `depth:slot`, with node kind,
+links, bidirectionality and grid offset; the compiler derives backlinks and
+capacities and rejects unresolved links and nodes unreachable without the
+Olympian pair. Each Hex declares its Rare, Epic and repeatable pools, the
+repeatable talents with their source `MaxCount`. Tree and activation legality
+over them are engine policy; the
+[Hex layout audit](../audits/loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md)
+owns the facts.
 All such effects must be normalized before entering production; an identity
 alone does not justify an unsupported effect transition.
 

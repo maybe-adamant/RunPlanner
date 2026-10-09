@@ -142,18 +142,30 @@ export interface RawTraitOfferContextDeclaration {
   readonly authoredCondition?: 'circeRemovableFearVow';
 }
 
+/** One source `Structure[depth][slot]` entry; an omitted kind is a repeatable node. */
+export interface RawHexLayoutNodeDeclaration {
+  readonly slot: number;
+  readonly kind?: import('@run-planner/engine/catalog-schema').HexNodeKind;
+  readonly linkTo?: readonly number[];
+  readonly bidirectional?: true;
+  readonly gridOffsetX?: number;
+  readonly gridOffsetY?: number;
+}
+
+export interface RawHexLayoutDeclaration {
+  readonly key: import('@run-planner/engine/catalog-schema').HexLayoutKey;
+  readonly label: string;
+  /** Source `Structure`, depth 1 first, slots ascending. */
+  readonly structure: readonly (readonly RawHexLayoutNodeDeclaration[])[];
+}
+
 export interface RawHexDeclaration {
   readonly spellTraitKey: string;
   readonly label: string;
-  readonly layouts: readonly {
-    readonly key: import('@run-planner/engine/catalog-schema').HexLayoutKey;
-    readonly label: string;
-    readonly baseCapacity: number;
-    readonly rareCount: number;
-    readonly epicCount: number;
-  }[];
+  readonly layouts: readonly RawHexLayoutDeclaration[];
   readonly rareCandidates: readonly import('@run-planner/engine/catalog-schema').HexTalentCandidateDeclaration[];
   readonly epicCandidates: readonly import('@run-planner/engine/catalog-schema').HexTalentCandidateDeclaration[];
+  readonly repeatableCandidates: readonly import('@run-planner/engine/catalog-schema').HexRepeatableTalentDeclaration[];
   readonly godSent: import('@run-planner/engine/catalog-schema').HexGodSentDeclaration;
 }
 

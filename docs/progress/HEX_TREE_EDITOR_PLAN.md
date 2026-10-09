@@ -29,8 +29,9 @@ Native scripts: `1GameData/Scripts`.
 - **Node kinds** (`SpellLogic.lua:51-115`): Keystone (Rare, from the spell's
   Rare pool without repeats), Legendary (Epic, likewise), OlympianSpell (the
   duo), OlympianCount, and Repeatable (Common, from a 4-talent pool that
-  refills when empty, dropping talents at `MaxCount`). Repeatable counts per
-  talent follow from the cycle; their order is unobservable.
+  refills when empty, dropping talents at `MaxCount`). Depths are drawn in
+  order (`ipairs`, `SpellLogic.lua:52`); order within a depth is not
+  observable (`pairs`).
 - **God Sent** is inserted after the duo node once eligible; deterministic.
 - **Activation** (`TalentScreenLogic.lua`): every node costs 1 and is invested
   once; a repeatable talent's level is its invested node count. A node is
@@ -45,8 +46,15 @@ Native scripts: `1GameData/Scripts`.
 
 ## Decisions
 
-- Repeatable legality is the per-talent count vector of a valid cycle; order
-  is not authored or checked.
+- Node validity and tree policy are separate. A node is valid on its own when
+  its talent is in its kind's pool and, for a repeatable node, drawable at its
+  depth; that set is the node's talent domain. One tree-wide check owns the
+  rest: no repeated Rare or Epic talent, and every depth's repeatable talents
+  form its slice of the refill-cycle draw sequence (cycles may straddle
+  depths). Order within a depth is not authored or checked.
+- Activation splits the same way: per-node availability, and one per-screen
+  check that the selection count equals the points and the pins connect within
+  that budget.
 - Investments in game are highlighted, not enforced. Conformance stays
   legality-only: the existing Rare/Epic and point-count facts, plus the
   invested Olympian talent where Task Force depends on it.
@@ -86,7 +94,8 @@ Native scripts: `1GameData/Scripts`.
 ## Gates
 
 1. **Catalog graph.** Layout node graphs and per-spell pools; tree completion
-   and legality in the engine as pure functions with tests.
+   and legality in the engine as pure functions with tests. The activation
+   pure functions also land here and are wired in Gate 3.
 2. **Authored tree.** Schema 94 with migration, pinned tree on Spell Drop and
    Aspect, completion in settlement, execution node map, module realisation,
    tree board. Fixtures regenerated.

@@ -5,13 +5,13 @@
 Source audit completed on 2026-08-27 against installed Steam build `24556151`.
 This document is the primary evidence authority for:
 
-- the four generated Path of Stars layouts and their finite node capacities;
-- the number of Rare and Epic nodes in each layout;
-- the exact Rare and Epic candidate identities for every Hex;
-- the two-node Olympian extension and its god/keepsake eligibility;
-- the source's full-tree reward closure and late-extension cache behavior; and
-- the boundary for authoring a frozen high-value composition without modeling
-  the talent graph.
+- the four generated Path of Stars layouts: node graph, kinds, links and
+  finite capacities;
+- the exact Rare, Epic and repeatable candidate identities for every Hex, and
+  the repeatable refill cycle with its `MaxCount` limits;
+- node availability and investment on a writable talent screen;
+- the two-node Olympian extension and its god/keepsake eligibility; and
+- the source's full-tree reward closure and late-extension cache behavior.
 
 Base Hex identity and acquisition remain owned by the
 [Selene Spell audit](../traits/SELENE_SPELL_GAME_DATA_AUDIT.md). Point grants,
@@ -19,10 +19,7 @@ the mutable point bank, initial Spell Drop bonuses, Aspect of Selene routing,
 and Moon Beam contacts remain owned by the
 [Path of Stars and Spell Drop audit](PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md).
 
-This audit does not model common/repeatable talent identities, graph
-coordinates, links, prerequisites, investment order, or individual talent
-effects. It records which high-value identities the generated tree contains,
-not when those nodes become reachable or are invested.
+This audit does not model individual talent effects or talent rarity values.
 
 ## Sources
 
@@ -31,11 +28,11 @@ Primary evidence:
 - `SpellData.lua`: `TalentTreeStructures` and the nine Hex talent pools;
 - `SpellLogic.lua`: `CreateTalentTree`, `CheckAndAddOlympianDuo`, and
   `UpdateTalentPointInvestedCache`;
-- `TalentScreenLogic.lua`: writable versus read-only screens, investment, and
-  cache refresh;
+- `TalentScreenLogic.lua`: writable versus read-only screens, node
+  availability, investment, and cache refresh;
 - `TraitTrayLogic.lua`: the read-only inspection entry point;
-- `TraitData_Talent.lua`: talent identities, duo links, and the shared
-  `OlympianSpellCountTalent`;
+- `TraitData_Talent.lua`: talent identities, duo links, repeatable `MaxCount`,
+  and the shared `OlympianSpellCountTalent`;
 - `TraitData_Athena.lua`: the concrete Olympian-talent dependency;
 - `TraitData_Hera.lua` and `TraitLogic.lua`: All Together's direct grants,
   current `MetGods` reconstruction, and provider attribution;
@@ -59,12 +56,45 @@ the planner's established fully progressed profile baseline.
 The structures contain ordinary repeatable nodes plus fixed high-value pool
 positions. Counting the declarations gives:
 
-| Source layout | Base nodes without Olympian pair | Rare positions | Epic positions | Capacity with Olympian pair |
-| ------------- | -------------------------------: | -------------: | -------------: | --------------------------: |
-| `Lung`        |                               16 |              2 |              1 |                          18 |
-| `Pyramid`     |                               18 |              3 |              1 |                          20 |
-| `Maze`        |                               22 |              3 |              2 |                          24 |
-| `Nacelle`     |                               18 |              3 |              2 |                          20 |
+| Source layout | Base nodes without Olympian pair | Rare positions | Epic positions | Repeatable positions | Capacity with Olympian pair |
+| ------------- | -------------------------------: | -------------: | -------------: | -------------------: | --------------------------: |
+| `Lung`        |                               16 |              2 |              1 |                   13 |                          18 |
+| `Pyramid`     |                               18 |              3 |              1 |                   14 |                          20 |
+| `Maze`        |                               22 |              3 |              2 |                   17 |                          24 |
+| `Nacelle`     |                               18 |              3 |              2 |                   13 |                          20 |
+
+## Layout graphs
+
+Each `Structure[depth][slot]` entry is one node; the planner keys it
+`depth:slot`. Depths start at 1 and slots are sparse integers; Nacelle's
+depth 3 uses slot 0. A node's `Pool` names its kind: `Keystone` (Rare),
+`Legendary` (Epic), `OlympianSpell` (the duo), `OlympianCount` (Lineage), or
+no pool for a repeatable node. `GridOffsetX/Y` shift the node on the screen
+grid in node-spacing units; Nacelle's structure also carries a 15-pixel
+`OffsetY` for the whole tree.
+
+`LinkTo` lists slots at the next depth. Every installed link resolves to a
+declared node. `CreateTalentTree` derives each node's `LinkFrom` backlinks
+from those links after omitting an absent Olympian pair
+(`SpellLogic.lua:116-130`), and `CheckAndAddOlympianDuo` regenerates them on
+insertion. Only Nacelle's two depth-2 nodes are `Bidirectional`.
+
+Every node below depth 1 has a backlink, and every non-Olympian node has a
+non-Olympian backlink, so the tree is fully reachable from its depth-1 roots
+with or without the Olympian pair. The pair's positions:
+
+| Source layout | `OlympianSpell` | `OlympianCount` | `OlympianSpell` linked from |
+| ------------- | --------------- | --------------- | --------------------------- |
+| `Lung`        | `5:3`           | `6:1`           | `4:3`                       |
+| `Pyramid`     | `4:3`           | `5:2`           | `3:3`                       |
+| `Maze`        | `5:7`           | `6:3`           | `4:3`                       |
+| `Nacelle`     | `4:5`           | `5:3`           | `3:1`, `3:5`                |
+
+`OlympianCount` is linked only from `OlympianSpell`; no other node depends on
+the pair. The pair's draws do not touch the repeatable or high-value pools.
+
+Pyramid, Maze and Nacelle carry a `GameStateRequirements` of a prior profile
+`TalentDrop` use; Lung has none.
 
 The two Olympian positions are excluded together when their linked duo is not
 eligible. They are additional capacity; they do not replace Rare, Epic, or
@@ -83,16 +113,73 @@ must not be exposed as the node's runtime rarity.
 
 Every Hex pool is large enough to fill the maximum layout: at least three Rare
 candidates and at least two non-duo Epic candidates. The generated identities
-are distinct within each rarity pool. Because this planner slice does not map
-node coordinates or links, its truthful frozen outcome is an unordered set of
-the required Rare identities and an unordered set of the required Epic
-identities. Assigning those identities to hidden graph positions would add
-false precision.
+are distinct within each rarity pool, and each position removes a random
+remaining identity, so any arrangement of distinct pool identities over a
+layout's positions is a possible tree.
+
+`CreateTalentTree` visits depths in order with `ipairs` and the nodes of one
+depth with `pairs` (`SpellLogic.lua:52-53`). Draw order across depths is
+therefore fixed; order among the nodes of one depth is not observable.
 
 Player-facing names are not globally unique: `Ambition` is used by both
 `PolymorphBossDamageTalent` and `MoonBeamPrimaryTalent`, while `Contingency` is
 used by both last-stand recharge talents. Persisted identity must therefore use
 the game key rather than the display name.
+
+## Repeatable nodes and the refill cycle
+
+Repeatable nodes draw from the Hex's four-talent `Talents.Repeatable` list
+without replacement (`SpellLogic.lua:53-79`). When the list is empty it
+refills with every listed talent whose tree count is still below its
+`MaxCount`. The source also excludes a bounded talent never drawn, which
+cannot arise because the first cycle draws all four.
+`SpellTalentData` declares no `RarityChances`, so `GetTalentRarity` makes
+every repeatable node `Common`.
+
+Two shared talents declare `MaxCount` in `TraitData_Talent.lua`:
+`ChargeRegenTalent` (`Growth`) at 1 and `PreChargeTalent` (`Preparation`) at 2.
+Every other repeatable talent is unbounded.
+
+The refill lists are fixed by the counts after each full cycle, and the draws
+form one sequence of cycles, each a run of distinct talents from its list in
+random order; only the last cycle can stop early. Repeatable nodes take that
+sequence depth by depth, so each depth receives a fixed slice of it: a node can
+hold only talents of the cycles its depth's slice covers, and a tree is
+possible exactly when every depth's talents are its slice of some such
+sequence. A cycle can straddle two depths, which then share its talents.
+
+For example, Twilight Curse on Lung draws its first cycle, including its one
+`Growth`, at depths 1–2; depth 3 holds each unbounded talent twice; `4:3`,
+`5:2` and `5:4` hold the three unbounded talents once each. On Pyramid, depth 1
+draws the whole first cycle and one talent of the second.
+
+| Hex            | `Talents.Repeatable` (source order)                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Twilight Curse | Purpose `CooldownDamageTalent`, Growth, Humility `PolymorphDurationTalent`, Exposure `PolymorphDamageTalent`          |
+| Total Eclipse  | Purpose, Preparation, Vastness `MeteorSizeTalent`, Magnitude `MeteorDamageTalent`                                     |
+| Dark Side      | Focus `TransformDurationTalent`, Bloodthirst `TransformDamageTalent`, Tension `TransformCooldownDodgeTalent`, Growth  |
+| Wolf Howl      | Growth, Instinct `LeapDamageTalent`, Hunger `LeapArmorDamageTalent`, Urgency `LeapCooldownSpeedTalent`                |
+| Lunar Ray      | Purpose, Growth, Intensity `LaserDamageTalent`, Bearing `LaserDefenseTalent`                                          |
+| Night Bloom    | Purpose, Growth, Preparation, Devotion `SummonDamageTalent`                                                           |
+| Phase Shift    | Preparation, Growth, Patience `TimeSlowAmountTalent`, Steadfastness `CooldownDefenseTalent`                           |
+| Moon Water     | Purity `PotionManaRestoreTalent`, Abundance `PotionUsesTalent`, Vigor `HealAmountTalent`, Fortune `CurrencyUseTalent` |
+| Sky Fall       | Growth, Omen `MoonBeamVulnerabilityTalent`, Sting `MoonBeamDamageTalent`, Brilliance `MoonBeamCountTalent`            |
+
+## Activation on a writable screen
+
+`UpdateTalentButtons` (`TalentScreenLogic.lua:287-330`) makes a node available
+when it has no backlinks, when a backlink node is invested or queued on this
+screen, or, for a `Bidirectional` node, when a `LinkTo` neighbour is invested
+or queued. A Nacelle depth-2 node can therefore open from an invested depth-3
+node reached through the other branch.
+
+`OnTalentPressed` rejects an invested or queued node; every node costs one
+selection and is invested once, so a repeatable talent's level is the number
+of its invested nodes. `TryCloseTalentTree` queues each choice and closes the
+screen only after the bank is spent or the tree is full; queued nodes become
+invested together and cannot be refunded. Availability only grows as nodes
+are queued, so whether a screen's selection set is legal does not depend on
+its order. Absent Olympian nodes cannot be selected until inserted.
 
 ## Exact Hex candidate pools
 
@@ -305,13 +392,12 @@ was added rather than continuously derive it from current state.
 
 Athena's `OlympianSpellCountBoon` (`Task Force`) has one external eligibility
 contact: it requires at least one of the nine Olympian talent identities to be
-equipped. Exact acquisition timing depends on the omitted graph and investment
-path, so neither generated pair presence nor aggregate invested points proves
-that predicate at the relevant Athena offer.
+equipped. Exact acquisition timing depends on the investment path, so neither
+generated pair presence nor aggregate invested points proves that predicate at
+the relevant Athena offer.
 
-The Planner can still enforce a necessary modeled prefix without pretending to
-know the graph path: at least one concrete `SpellDrop` acquisition must have
-settled in the current run. An ordinary Spell Drop both installs the base Hex
+The Planner enforces a necessary modeled prefix: at least one concrete
+`SpellDrop` acquisition must have settled in the current run. An ordinary Spell Drop both installs the base Hex
 and satisfies this prefix. Aspect of Selene's built-in Sky Fall does not
 qualify by itself; the Aspect's later concrete Spell Drop does. This still does
 not prove acquisition of the required Olympian node. The authored Task Force
@@ -358,10 +444,12 @@ read-only inspection cannot spend them.
 
 ## Current planner coverage
 
-The planner freezes one layout and the exact Rare/Epic identity sets generated
-for the selected Hex while deliberately omitting graph coordinates and
-ordinary-node identities. The layout owns the required cardinalities and base
-capacity; the persistent Olympian-pair fact adds exactly two capacity.
+The catalog declares every layout's node graph and each Hex's Rare, Epic and
+repeatable pools with their `MaxCount` limits; capacities and Rare/Epic
+cardinalities are derived from the graph. The persisted tree still freezes one
+layout and the exact Rare/Epic identity sets; the persistent Olympian-pair fact adds exactly
+two capacity. The prior-`TalentDrop` layout requirement is a profile predicate
+and stays out of catalog data under the fully progressed baseline.
 
 Generated Hex talents remain execution-facing frozen identities. The Planner
 does not simulate their individual acquisition, equip them into trait history,
