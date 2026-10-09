@@ -125,6 +125,9 @@ export function publishChronology(
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     hubDepartures: accumulation.hubDepartures,
+    ...(accumulation.prebossStartState === undefined
+      ? {}
+      : { prebossStartState: accumulation.prebossStartState }),
     purgingPoolAssessments: Object.freeze([...walk.purgingPoolAssessments.values()]),
     hermesShrineAssessments: publishedHermesShrineAssessments,
     stygianWellAssessments: Object.freeze([...walk.stygianWellAssessments.values()]),

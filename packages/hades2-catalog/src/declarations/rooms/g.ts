@@ -1360,6 +1360,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_PostBoss01',
+    nextRoomSet: true,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
       'Exorcism',

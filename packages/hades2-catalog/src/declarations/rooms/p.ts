@@ -1038,6 +1038,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_PostBoss01',
+    nextRoomSet: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Postboss',
     hasKeepsakeRack: true,

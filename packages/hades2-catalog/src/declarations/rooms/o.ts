@@ -795,6 +795,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_PostBoss01',
+    nextRoomSet: true,
     resourcePointSupport: normalResourcePointSupport([]),
     label: 'Postboss',
     hasKeepsakeRack: true,

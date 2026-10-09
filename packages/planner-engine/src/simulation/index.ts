@@ -454,6 +454,30 @@ export {
 } from './evaluation/project-evaluation-assembly';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';
+export { startInstallationAt } from './start-installation/start-point';
+export type {
+  StartBiomeRecords,
+  StartHermesDelivery,
+  StartInstallation,
+  StartInstallationArcana,
+  StartInstallationChaos,
+  StartInstallationCounters,
+  StartInstallationEquipment,
+  StartInstallationFamily,
+  StartInstallationFear,
+  StartInstallationHex,
+  StartInstallationKeepsake,
+  StartInstallationResult,
+  StartInstallationRoute,
+  StartInstallationUnavailableReason,
+  StartInstalledTrait,
+  StartPoint,
+  StartRewardStore,
+  StartRewardStores,
+  StartRoomHistoryRecord,
+  StartRunRecords,
+  StartStygianWell,
+} from './start-installation/model';
 export type {
   ActiveRouteBiome,
   AuthoringHorizon,

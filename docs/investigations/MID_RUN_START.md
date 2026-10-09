@@ -37,9 +37,10 @@ existing plan?
 - The game assigns Death Defiance from its sources; every charge starts unused.
 - Gold is set manually on the start point, defaulting to native starting gold.
 - The plan drives the run after the start. The module installs a stub
-  `RoomHistory` (one record per planned room, `Name` plus `NextRoomSet` on
-  Openings and Postbosses) so native depth is exact, plus the run-wide records
-  the planner already holds exactly (use and loot records, consumables,
+  `RoomHistory` (one record per planned room, `Name` plus `NextRoomSet` where
+  RoomData declares or inherits it: F_Opening01-03, N_Opening01 and the F, G,
+  H, N, O, P and Dream Postbosses) so native depth is exact, plus the run-wide
+  records the planner already holds exactly (use and loot records, consumables,
   priorities, entered and reached biomes, encounter depth). Full per-room
   records (encounter recency caches, meta-reward ratio, shop and harvest flags,
   dialogue) are not fabricated; while synchronized the plan overrides them.

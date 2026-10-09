@@ -84,7 +84,7 @@ no reward seam only advance the branches to their sequence.
 | Walk seam                                               | Reward handling                                                                                                                       |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Biome start                                             | The Echo keepsake replay transition, before the first event.                                                                          |
-| Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts.                                                                     |
+| Room prepared                                           | Opens the room's reward lifecycle; Fields optional reward counts; a Preboss first captures its received start state.                  |
 | Room entered                                            | Room entry with The Centaur's cycle, Shrine and Well assessments, the room-entry Run State capture; halts for a delivery placement.   |
 | Encounter started                                       | Fig Leaf and Gorgon start; the Ship pre-encounter Run State capture.                                                                  |
 | Encounter completed, boss defeated, interaction reached | One settlement handler, shared by encounter completion and the cleanup-window encounter Room Actions.                                 |
@@ -442,6 +442,13 @@ for generation assessment, but only N's Hub-board and Hub-sourced Preboss
 generation exceptions retain public launchers. A literal pre-exit snapshot must
 not replace or relabel either exception. N parent and Hub restoration replay no
 lifecycle and therefore create no duplicate Run State checkpoint.
+
+Separately from these checkpoints, each Preboss occurrence captures the raw
+states its preparation receives as the source of a mid-run start installation:
+after its predecessor's departure clocks and before its own preparation and
+entry effects. Those states already include the room's creation (its incoming
+offer and bag effects). The capture is owned by the occurrence and is never a
+Run State.
 
 ## Core Model
 

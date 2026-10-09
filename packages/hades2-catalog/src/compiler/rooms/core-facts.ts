@@ -31,6 +31,7 @@ export type RoomIdentityFacts = Pick<
   | 'mode'
   | 'blockGiftBoons'
   | 'blocksGorgon'
+  | 'nextRoomSet'
   | 'advancesExperimentalHammerUses'
   | 'ignoreEncounterUses'
   | 'advancesHermesShrineDeliveryUses'
@@ -166,6 +167,9 @@ export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): R
   if (room.blocksGorgon !== undefined && typeof room.blocksGorgon !== 'boolean') {
     fail(`${path}.blocksGorgon`, 'must be a boolean when declared');
   }
+  if (room.nextRoomSet !== undefined && typeof room.nextRoomSet !== 'boolean') {
+    fail(`${path}.nextRoomSet`, 'must be a boolean when declared');
+  }
   if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
     fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
   }
@@ -201,6 +205,7 @@ export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): R
     mode: validateMode(room, path),
     blockGiftBoons: room.blockGiftBoons ?? false,
     blocksGorgon: room.blocksGorgon ?? false,
+    nextRoomSet: room.nextRoomSet ?? false,
     advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
     ignoreEncounterUses: room.ignoreEncounterUses ?? false,
     advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,

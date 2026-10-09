@@ -123,6 +123,7 @@ export function normalizeRoom(
       ? {}
       : { secretPointAnchorCount: features.secretPointAnchorCount }),
     blocksGorgon: identity.blocksGorgon,
+    nextRoomSet: identity.nextRoomSet,
     ...(features.boonRarityOverride === undefined
       ? {}
       : { boonRarityOverride: features.boonRarityOverride }),

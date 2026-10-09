@@ -51,9 +51,9 @@ function normalizeAspectMaxStatBonus(
   path: string,
 ): NonNullable<AspectDeclaration['maxStatBonus']> {
   const value = requireObject(raw, path);
-  const keys = ['stat', 'amount', 'upgradedAmount', 'upgradeTraitKey'];
+  const keys = ['stat', 'amount', 'upgradedAmount'];
   if (Object.keys(value).length !== keys.length || keys.some((key) => !Object.hasOwn(value, key)))
-    fail(path, 'must contain exactly stat, amount, upgradedAmount, and upgradeTraitKey');
+    fail(path, 'must contain exactly stat, amount, and upgradedAmount');
   if (value.stat !== 'maxHealth' && value.stat !== 'maxMana')
     fail(`${path}.stat`, 'must be maxHealth or maxMana');
   const amount = value.amount;
@@ -65,7 +65,6 @@ function normalizeAspectMaxStatBonus(
     stat: value.stat,
     amount,
     upgradedAmount,
-    upgradeTraitKey: requireNonEmpty(value.upgradeTraitKey as string, `${path}.upgradeTraitKey`),
   });
 }
 
@@ -76,12 +75,11 @@ function normalizeAspectTraitOfferLevelBonus(
   const value = requireObject(raw, path);
   const keys = Object.keys(value);
   if (
-    keys.length !== 3 ||
+    keys.length !== 2 ||
     !Object.hasOwn(value, 'maximumBonus') ||
-    !Object.hasOwn(value, 'upgradedMaximumBonus') ||
-    !Object.hasOwn(value, 'upgradeTraitKey')
+    !Object.hasOwn(value, 'upgradedMaximumBonus')
   )
-    fail(path, 'must contain exactly maximumBonus, upgradedMaximumBonus, and upgradeTraitKey');
+    fail(path, 'must contain exactly maximumBonus and upgradedMaximumBonus');
   const maximumBonus = requireNonNegativeInteger(
     value.maximumBonus as number,
     `${path}.maximumBonus`,
@@ -95,7 +93,6 @@ function normalizeAspectTraitOfferLevelBonus(
   return Object.freeze({
     maximumBonus,
     upgradedMaximumBonus,
-    upgradeTraitKey: requireNonEmpty(value.upgradeTraitKey as string, `${path}.upgradeTraitKey`),
   });
 }
 

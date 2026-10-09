@@ -136,20 +136,12 @@ export function validateAspectTraitOfferLevelBonuses(input: {
         `aspects.${aspect.key}.traitOfferLevelBonus`,
         'must use maximumBonus 5 and upgradedMaximumBonus 8',
       );
-    if (effect.upgradeTraitKey !== 'WeaponUpgradeBoon')
-      fail(
-        `aspects.${aspect.key}.traitOfferLevelBonus.upgradeTraitKey`,
-        'must reference WeaponUpgradeBoon',
-      );
-    if (input.traits.byKey[effect.upgradeTraitKey] === undefined)
-      fail(`aspects.${aspect.key}.traitOfferLevelBonus.upgradeTraitKey`, 'unknown trait');
   }
-  for (const aspect of input.aspects.values)
-    if (
-      aspect.maxStatBonus !== undefined &&
-      input.traits.byKey[aspect.maxStatBonus.upgradeTraitKey] === undefined
-    )
-      fail(`aspects.${aspect.key}.maxStatBonus.upgradeTraitKey`, 'unknown trait');
+  const perfectTraitKeys = input.traits.values
+    .filter((trait) => trait.raisesAspectToPerfect === true)
+    .map((trait) => trait.key);
+  if (perfectTraitKeys.length !== 1 || perfectTraitKeys[0] !== 'WeaponUpgradeBoon')
+    fail('traits.raisesAspectToPerfect', 'must be declared by WeaponUpgradeBoon alone');
 }
 
 export function validateWeaponAspectClosure(input: {

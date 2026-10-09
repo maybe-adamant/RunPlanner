@@ -35,6 +35,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     // ForcedRewardStore = "RunProgress" and no reward gate, so they do count;
     // the resolved key already records that.
     gameName: 'F_Opening01',
+    nextRoomSet: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -70,6 +71,8 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Opening02',
+    // Inherits NextRoomSet from F_Opening01.
+    nextRoomSet: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -103,6 +106,8 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Opening03',
+    // Inherits NextRoomSet from F_Opening01.
+    nextRoomSet: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -1506,6 +1511,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_PostBoss01',
+    nextRoomSet: true,
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',
     // The Postboss rack, Pool and Well each need their own incantation.

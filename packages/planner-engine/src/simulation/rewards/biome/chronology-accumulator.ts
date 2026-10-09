@@ -51,6 +51,7 @@ import type {
   HubDepartureRunState,
   NemesisRandomEventCandidateSupport,
   RewardStoreSupportEntry,
+  RoomStartStateCapture,
   TargetRewardHistoryCheckpoint,
 } from '../model';
 import { indexRewardProducerFrontier, type RewardProducerFrontier } from '../producer-frontiers';
@@ -143,6 +144,7 @@ export type ChronologyEmission =
       readonly hub: HubDecisionAddress;
       readonly departure: RunStateSnapshot;
     }
+  | { readonly kind: 'prebossStartState'; readonly capture: RoomStartStateCapture }
   | {
       readonly kind: 'keepsakeSelectionCandidate';
       readonly key: string;
@@ -241,6 +243,7 @@ export interface ChronologyAccumulation {
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly hubDepartures: readonly HubDepartureRunState[];
+  readonly prebossStartState: RoomStartStateCapture | undefined;
   readonly echoKeepsakeReplayOutcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
   readonly keepsakeSelectionContexts: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>;
   readonly keepsakeEquipResultContexts: ReadonlyMap<string, KeepsakeEquipResultCandidateCapability>;
@@ -391,6 +394,7 @@ export function createChronologyAccumulator(
   const targetHistoryByOrigin = new Map<string, TargetRewardHistoryCheckpoint>();
   const storeSupportEntries: RewardStoreSupportEntry[] = [];
   const hubDepartures: HubDepartureRunState[] = [];
+  let prebossStartState: RoomStartStateCapture | undefined;
   let echoKeepsakeReplayOutcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
   const keepsakeSelectionContexts = new Map<string, KeepsakeSelectionCandidateCapability>();
   const keepsakeEquipResultContexts = new Map<string, KeepsakeEquipResultCandidateCapability>();
@@ -758,6 +762,10 @@ export function createChronologyAccumulator(
       case 'hubDeparture':
         recordHubDeparture(emission);
         return;
+      case 'prebossStartState':
+        if (prebossStartState !== undefined) fail('a biome captures one Preboss start state');
+        prebossStartState = emission.capture;
+        return;
       case 'keepsakeSelectionCandidate':
         keepsakeSelectionContexts.set(emission.key, emission.candidate);
         return;
@@ -868,6 +876,7 @@ export function createChronologyAccumulator(
         targetHistory: Object.freeze([...targetHistoryByOrigin.values()]),
         storeSupport: Object.freeze(storeSupportEntries),
         hubDepartures: Object.freeze([...hubDepartures]),
+        prebossStartState,
         echoKeepsakeReplayOutcome,
         keepsakeSelectionContexts,
         keepsakeEquipResultContexts,

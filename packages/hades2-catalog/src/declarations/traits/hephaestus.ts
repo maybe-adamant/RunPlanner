@@ -230,6 +230,8 @@ export const hephaestusTraits = [
   {
     key: 'WeaponUpgradeBoon',
     label: 'Premium Service',
+    // TraitLogic.lua WeaponUpgradeBoon acquire: re-adds the aspect one rank up, to Perfect.
+    raisesAspectToPerfect: true,
     freshOfferRarities: ['Legendary'],
     equippedRarities: ['Legendary'],
     eligibilityRequirements: [],

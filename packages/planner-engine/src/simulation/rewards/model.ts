@@ -203,6 +203,18 @@ interface RewardSimulationBase {
   readonly findings: readonly SemanticFinding[];
 }
 
+/**
+ * The exact states a room's preparation received: after its predecessor's
+ * departure and before its own preparation and entry effects. They already
+ * include the room's own creation (its incoming offer and bag effects). Raw
+ * states, never a Run State checkpoint.
+ */
+export interface RoomStartStateCapture {
+  readonly owner: import('../../authored-project/addresses').OccurrenceAddress;
+  readonly gameName: string;
+  readonly states: readonly import('../state/model').SimulationState[];
+}
+
 /** Canonical Run State when the Hub is left after `precedingVisitCount` completed visits. */
 export interface HubDepartureRunState {
   readonly hub: import('../../authored-project/addresses').HubDecisionAddress;
@@ -238,6 +250,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly runStateAvailability: readonly RunStateAvailability[];
   /** Every reached Hub departure in order; execution-only, never a Run State launcher. */
   readonly hubDepartures: readonly HubDepartureRunState[];
+  /** The reached Preboss's start state, the mid-run start installation's source. */
+  readonly prebossStartState?: RoomStartStateCapture;
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;

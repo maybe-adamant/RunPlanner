@@ -6,6 +6,7 @@ import type {
   TraitRarity,
 } from '../catalog-schema';
 import type { SimulationState } from './state/model';
+import { aspectIsPerfect, familiarStackMultiplier } from './traits/equipment-upgrades';
 
 /** The declaration that owns one flat contribution. */
 export type MaxStatSource =
@@ -79,22 +80,18 @@ export function deriveMaxStats(catalog: Catalog, state: SimulationState): MaxSta
     equipment.aspectKey === null ? undefined : catalog.aspects.byKey[equipment.aspectKey];
   if (aspect?.maxStatBonus !== undefined) {
     const bonus = aspect.maxStatBonus;
-    const upgraded = traitHistory.previouslyPickedTraitKeys.includes(bonus.upgradeTraitKey);
     add(
       { kind: 'aspect', key: aspect.key },
       bonus.stat,
-      upgraded ? bonus.upgradedAmount : bonus.amount,
+      aspectIsPerfect(catalog, traitHistory) ? bonus.upgradedAmount : bonus.amount,
     );
   }
 
   const familiar =
     equipment.familiarKey === null ? undefined : catalog.familiars.byKey[equipment.familiarKey];
   if (familiar?.maxStatPerStack !== undefined) {
-    let stacks = familiar.matureStatUpgradeCount + 1;
-    for (const traitKey of traitHistory.previouslyPickedTraitKeys) {
-      const effect = catalog.traits.byKey[traitKey]?.maxStatEffect;
-      if (effect?.kind === 'familiarStackMultiplier') stacks *= effect.multiplier;
-    }
+    const stacks =
+      (familiar.matureStatUpgradeCount + 1) * familiarStackMultiplier(catalog, traitHistory);
     add(
       { kind: 'familiar', key: familiar.key },
       familiar.maxStatPerStack.stat,

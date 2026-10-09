@@ -83,6 +83,7 @@ export const nCompletionRooms = [
   },
   {
     gameName: 'N_PostBoss01',
+    nextRoomSet: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',
     hasKeepsakeRack: true,

@@ -529,18 +529,16 @@ export interface AspectDeclaration {
   readonly label: string;
   readonly weaponKey: string;
   readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
-  /** Bounds in the stable authored Persephone encoding, not native roll values. */
+  /** Bounds in the stable authored Persephone encoding, not native roll values; upgraded at Perfect. */
   readonly traitOfferLevelBonus?: {
     readonly maximumBonus: number;
     readonly upgradedMaximumBonus: number;
-    readonly upgradeTraitKey: string;
   };
-  /** Flat maximum at the planner's rank V, and at rank VI once the upgrade trait was picked. */
+  /** Flat maximum at the planner's rank V, and at rank VI (Perfect). */
   readonly maxStatBonus?: {
     readonly stat: MaxStatKey;
     readonly amount: number;
     readonly upgradedAmount: number;
-    readonly upgradeTraitKey: string;
   };
 }
 
@@ -605,6 +603,8 @@ export interface TraitDeclaration {
     readonly width: number;
   };
   readonly maxStatEffect?: TraitMaxStatEffect;
+  /** Acquiring it permanently re-adds the equipped aspect at Perfect (rank VI). */
+  readonly raisesAspectToPerfect?: true;
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */
