@@ -22,6 +22,7 @@ import {
   createTraitOfferAddress,
   roomActionKey,
   hermesShrineDeliveryEntryKey,
+  semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -831,6 +832,11 @@ export function surfaceTravelDealRefillAnvilProject(): ProjectDocument {
   return authorLegalTraitOffers(project);
 }
 
+/** The Path screen a reward's `self` role opens. */
+function pathScreen(biome: typeof nBiome, occurrenceId: OccurrenceId) {
+  return createAcquisitionRoleAddress(createIncomingRewardAddress(biome, occurrenceId), 'self');
+}
+
 /** A reached outdoor P combat with an Icarus-compatible incoming reward. */
 export function reachedPOutdoorIcarusFixture() {
   const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
@@ -852,6 +858,12 @@ export function reachedPOutdoorIcarusFixture() {
     reward: createIncomingRewardAddress(pBiome, occurrenceId),
     value: { rewardType: 'TalentDrop' },
   });
+  // The Path drop's screen is authored like any other choice.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHexActivation',
+    acquisition: pathScreen(pBiome, occurrenceId),
+    value: { selectedNodeKeys: ['1:2', '1:4', '2:2'] },
+  });
   return Object.freeze({
     project,
     occurrenceId,
@@ -866,14 +878,22 @@ export function surfaceOrdinaryHexPathProject(): ProjectDocument {
 
 /** Complete N/O/P/Q route with Aspect of Selene's installed Hex and reached Path grants. */
 export function surfaceSeleneHexPathProject(): ProjectDocument {
-  return authorLegalTraitOffers(
-    applyProjectCommand(surfaceOrdinaryHexPathProject(), catalog, {
-      kind: 'ReplaceRouteLoadout',
-      route: createRouteAddress('Surface'),
-      weaponKey: 'WeaponSuit',
-      aspectKey: 'SuitHexAspect',
-    }),
-  );
+  const fixture = reachedPOutdoorIcarusFixture();
+  let project = applyProjectCommand(fixture.project, catalog, {
+    kind: 'ReplaceRouteLoadout',
+    route: createRouteAddress('Surface'),
+    weaponKey: 'WeaponSuit',
+    aspectKey: 'SuitHexAspect',
+  });
+  // Selene's N Spell Drop opens the first screen; P continues from it.
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHexActivation',
+    acquisition: pathScreen(pBiome, fixture.occurrenceId),
+    value: { selectedNodeKeys: ['2:4', '3:1', '3:2'] },
+  });
+  return authorLegalTraitOffers(project, {
+    [semanticAddressKey(pathScreen(nBiome, nOccurrenceId('combat09')))]: ['1:2', '1:4', '2:2'],
+  });
 }
 
 export { authorLegalTraitOffers };

@@ -168,6 +168,9 @@ function materializedIncomingReward(
       offer: reward.offer,
       traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
       levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+      ...(reward.hexActivationsByAcquisitionRole === undefined
+        ? {}
+        : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
       dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
       traitContext: traitContextForOffer(context, reward.offer),
     }),
@@ -463,6 +466,9 @@ function materializeFieldsCombat(
             offer: reward.offer,
             traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
             levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+            ...(reward.hexActivationsByAcquisitionRole === undefined
+              ? {}
+              : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
             dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
             traitContext: traitContextForOffer(context, reward.offer),
           }),
@@ -477,6 +483,9 @@ function materializeFieldsCombat(
             offer: reward.offer,
             traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
             levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+            ...(reward.hexActivationsByAcquisitionRole === undefined
+              ? {}
+              : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
             dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
             traitContext: traitContextForOffer(context, reward.offer),
           }),
@@ -587,6 +596,9 @@ export function materializeShipCombatState(
               offer: reward.offer,
               traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
               levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+              ...(reward.hexActivationsByAcquisitionRole === undefined
+                ? {}
+                : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
               dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
               traitContext: Object.freeze({
                 blockGiftBoons: room.blockGiftBoons,
@@ -677,6 +689,11 @@ function materializeShopEntry(
           ...(travelState.reward.anvilResultsByAcquisitionRole === undefined
             ? {}
             : { anvilResultsByAcquisitionRole: travelState.reward.anvilResultsByAcquisitionRole }),
+          ...(travelState.reward.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : {
+                hexActivationsByAcquisitionRole: travelState.reward.hexActivationsByAcquisitionRole,
+              }),
           traitContext: traitContextForOffer(context, travelState.reward.offer),
         });
   const materializedContract =
@@ -700,6 +717,12 @@ function materializeShopEntry(
             ? {}
             : {
                 anvilResultsByAcquisitionRole: contractState.reward.anvilResultsByAcquisitionRole,
+              }),
+          ...(contractState.reward.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : {
+                hexActivationsByAcquisitionRole:
+                  contractState.reward.hexActivationsByAcquisitionRole,
               }),
           dispositionByAcquisitionRole: contractState.reward.dispositionByAcquisitionRole,
           traitContext: traitContextForOffer(context, contractState.reward.offer),
@@ -738,6 +761,12 @@ function materializeShopEntry(
                   ? {}
                   : {
                       anvilResultsByAcquisitionRole: authored.reward.anvilResultsByAcquisitionRole,
+                    }),
+                ...(authored.reward.hexActivationsByAcquisitionRole === undefined
+                  ? {}
+                  : {
+                      hexActivationsByAcquisitionRole:
+                        authored.reward.hexActivationsByAcquisitionRole,
                     }),
               }),
             ];

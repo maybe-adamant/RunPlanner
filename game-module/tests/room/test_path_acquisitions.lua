@@ -165,3 +165,38 @@ function TestPathAcquisitions.testAcceptedPathUseWithoutATalentScreenLeavesTheNo
     lu.assertEquals(#completed, 0)
     lu.assertEquals(mismatches, {})
 end
+
+function TestPathAcquisitions.testPlannedNodesAreMarkedOnlyWhileTheirScreenIsOpen()
+    local row = payload("TalentDrop")
+    row.detail.plannedHexNodeKeys = { "1:2", "2:2" }
+    local callbacks, item = capture(row)
+    local created, destroyed = {}, {}
+    local previousCreate, previousDestroy = _G.CreateScreenComponent, _G.Destroy
+    _G.CreateScreenComponent = function(args)
+        created[#created + 1] = args
+        return { Id = 100 + #created }
+    end
+    _G.Destroy = function(args) destroyed[#destroyed + 1] = args.Id end
+    local screen = { DefaultTalentScale = 0.5, Components = {
+        TalentObject1_2 = { Id = 1, Data = {} },
+        TalentObject1_4 = { Id = 2, Data = {} },
+        TalentObject2_2 = { Id = 3, Data = { Invested = true } },
+    } }
+    local function update() callbacks.UpdateTalentButtons(nil, {}, function() end, screen, false) end
+    local ok, failure = pcall(use, callbacks, item, function()
+        update()
+        lu.assertEquals(#created, 1)
+        lu.assertEquals(created[1].DestinationId, 1)
+        lu.assertEquals(created[1].Animation, "ActiveTrait")
+        screen.Components.TalentObject1_2.Data.QueuedInvested = true
+        update()
+        lu.assertEquals(destroyed, { 101 })
+        return "native-screen-return"
+    end)
+    _G.CreateScreenComponent, _G.Destroy = previousCreate, previousDestroy
+    lu.assertTrue(ok, failure)
+    screen.Components.TalentObject1_2.Data.QueuedInvested = nil
+    _G.CreateScreenComponent = function() error("no plan is open") end
+    update()
+    _G.CreateScreenComponent = previousCreate
+end

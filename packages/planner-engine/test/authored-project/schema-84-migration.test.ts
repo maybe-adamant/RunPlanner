@@ -12,6 +12,7 @@ import { migrateProjectDocument as migrate90To91 } from '../../../../schema/migr
 import { migrateProjectDocument as migrate91To92 } from '../../../../schema/migrate-project-91-to-92.js';
 import { migrateProjectDocument as migrate92To93 } from '../../../../schema/migrate-project-92-to-93.js';
 import { migrateProjectDocument as migrate93To94 } from '../../../../schema/migrate-project-93-to-94.js';
+import { migrateProjectDocument as migrate94To95 } from '../../../../schema/migrate-project-94-to-95.js';
 import baseline from '../../../../schema/fixtures/route-foundation.runplanner.json';
 
 describe('schema 84 migration fixtures', () => {
@@ -29,12 +30,14 @@ describe('schema 84 migration fixtures', () => {
           biomes: [{ ...baseline.route.biomes[0]!, biomeKey: itinerary[0] }],
         },
       };
-      const migrated = migrate93To94(
-        migrate92To93(
-          migrate91To92(
-            migrate90To91(
-              migrate89To90(
-                migrate88To89(migrate87To88(migrate86To87(migrate85To86(migrate84To85(source))))),
+      const migrated = migrate94To95(
+        migrate93To94(
+          migrate92To93(
+            migrate91To92(
+              migrate90To91(
+                migrate89To90(
+                  migrate88To89(migrate87To88(migrate86To87(migrate85To86(migrate84To85(source))))),
+                ),
               ),
             ),
           ),

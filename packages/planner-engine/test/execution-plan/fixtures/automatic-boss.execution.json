@@ -524,7 +524,8 @@
               "talentKeys": [],
               "closed": false,
               "bankedPathPoints": 0,
-              "investedPathPoints": 0
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
             },
             "artificer": null,
             "retainedEffects": {
@@ -4008,5 +4009,5 @@
       }
     }
   ],
-  "planFingerprint": "daa6badd"
+  "planFingerprint": "f6f4ea17"
 }

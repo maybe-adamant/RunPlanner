@@ -247,6 +247,9 @@ export function applyShopOfferPointMaterialization(
           producerLifecycleKey: shopEntry!.profileKey,
           traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole,
           levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole,
+          ...(offer.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : { hexActivationsByAcquisitionRole: offer.hexActivationsByAcquisitionRole }),
         }),
       );
       return Object.freeze({ ...branch, state: spawnPickups(catalog, branch.state, spawned) });

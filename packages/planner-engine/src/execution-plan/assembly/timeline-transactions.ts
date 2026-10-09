@@ -897,6 +897,9 @@ export function executionTimelineTransactions(
           ...(event.kind !== 'concreteAcquisition' || event.seaStarResult === undefined
             ? {}
             : { seaStarResult: event.seaStarResult }),
+          ...(event.kind !== 'concreteAcquisition' || event.investedHexNodeKeys === undefined
+            ? {}
+            : { plannedHexNodeKeys: event.investedHexNodeKeys }),
           ...(replacement === undefined ? {} : { replacement }),
           ...(event.settlement === undefined
             ? {}

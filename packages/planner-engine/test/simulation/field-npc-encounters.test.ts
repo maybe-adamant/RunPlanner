@@ -2269,7 +2269,7 @@ describe('field NPC encounter requirements', () => {
     expect(traitHistory?.elementCounts.Fire).toBeGreaterThan(0);
   });
 
-  it('publishes Task Force only after a concrete earlier Spell Drop at the reached Athena frontier', () => {
+  it('withholds Task Force at the reached Athena frontier until an Olympian talent is invested', () => {
     const occurrenceId = pOccurrenceId('P_Combat10', 6, 1);
     const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
     const athenaTrait = createTraitOfferAddress(athenaPhase, 'selection');
@@ -2296,7 +2296,7 @@ describe('field NPC encounter requirements', () => {
           rarificationActions: [],
         },
       }),
-    ).toMatchObject({ kind: 'traitOffer', result: { supported: true, findings: [] } });
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: false } });
   });
 
   it('marks only a valid fixed terminating Intro as a dormant Combat suffix', () => {

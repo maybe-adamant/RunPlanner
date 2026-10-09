@@ -20,7 +20,11 @@ import {
 } from '../support/arcana-fear';
 import {
   aspectSkyFallClosureCheckpoint,
+  shallowestPathActivation,
+  everyHexNode,
   normalOption3LungClosureCheckpoint,
+  pathPointView,
+  settleShallowestPathScreen,
 } from './support/hex-progress-checkpoints';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
@@ -30,7 +34,6 @@ import {
   hexEffectiveCapacity,
   installHexTree,
   maybeAddGodSent,
-  settlePathScreen,
 } from '../../src/simulation/hex-progress';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
 import {
@@ -45,36 +48,36 @@ import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 describe('finite Hex progress', () => {
   it('keeps the normal selected-option-3 Lung checkpoint within its finite capacity', () => {
     const checkpoint = normalOption3LungClosureCheckpoint();
-    expect(checkpoint.afterOption3Bank.state.hexProgress).toMatchObject({
+    expect(pathPointView(checkpoint.afterOption3Bank.state.hexProgress)).toMatchObject({
       spellTraitKey: 'SpellTimeSlowTrait',
       tree: { layoutKey: 'Lung' },
       bankedPathPoints: 2,
       investedPathPoints: 0,
     });
-    expect(checkpoint.closed.state.hexProgress).toMatchObject({
+    expect(pathPointView(checkpoint.closed.state.hexProgress)).toMatchObject({
       spellTraitKey: 'SpellTimeSlowTrait',
       bankedPathPoints: 0,
       investedPathPoints: 16,
       talentDropsClosed: true,
     });
-    expect(checkpoint.closed.state.hexProgress.investedPathPoints).toBeLessThanOrEqual(16);
+    expect(checkpoint.closed.state.hexProgress.investedNodeKeys.length).toBeLessThanOrEqual(16);
   });
 
   it('keeps the Aspect Sky Fall checkpoint concrete, closed, and capacity-clamped', () => {
     const checkpoint = aspectSkyFallClosureCheckpoint();
-    expect(checkpoint.afterSpellDrop.state.hexProgress).toMatchObject({
+    expect(pathPointView(checkpoint.afterSpellDrop.state.hexProgress)).toMatchObject({
       spellTraitKey: 'SpellMoonBeamTrait',
       tree: { layoutKey: 'Lung' },
       bankedPathPoints: 0,
       investedPathPoints: 3,
     });
-    expect(checkpoint.closed.state.hexProgress).toMatchObject({
+    expect(pathPointView(checkpoint.closed.state.hexProgress)).toMatchObject({
       spellTraitKey: 'SpellMoonBeamTrait',
       bankedPathPoints: 0,
       investedPathPoints: 16,
       talentDropsClosed: true,
     });
-    expect(checkpoint.closed.state.hexProgress.investedPathPoints).toBeLessThanOrEqual(16);
+    expect(checkpoint.closed.state.hexProgress.investedNodeKeys.length).toBeLessThanOrEqual(16);
   });
 
   const withTree = (
@@ -127,8 +130,11 @@ describe('finite Hex progress', () => {
       'ManaOverTimeRefundKeepsake',
     )[0]!;
     const banked = bankPathPoints(withTree(initial), 2);
-    const settled = settlePathScreen(catalog, banked, 3);
-    expect(settled.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 5 });
+    const settled = settleShallowestPathScreen(banked, 3);
+    expect(pathPointView(settled.state.hexProgress)).toMatchObject({
+      bankedPathPoints: 0,
+      investedPathPoints: 5,
+    });
     expect(publicRewardBranch(settled).state.hexProgress).toEqual({
       ...settled.state.hexProgress,
     });
@@ -141,7 +147,7 @@ describe('finite Hex progress', () => {
       catalog,
       'ManaOverTimeRefundKeepsake',
     )[0]!;
-    expect(() => settlePathScreen(catalog, initial, 3)).toThrow(/installed Hex tree/);
+    expect(() => settleShallowestPathScreen(initial, 3)).toThrow(/installed Hex tree/);
   });
 
   it.each([
@@ -160,8 +166,8 @@ describe('finite Hex progress', () => {
       layoutKey,
     );
     let branch = initial;
-    for (let index = 0; index < 8; index += 1) branch = settlePathScreen(catalog, branch, 3);
-    expect(branch.state.hexProgress.investedPathPoints).toBe(capacity);
+    for (let index = 0; index < 8; index += 1) branch = settleShallowestPathScreen(branch, 3);
+    expect(branch.state.hexProgress.investedNodeKeys.length).toBe(capacity);
     expect(branch.state.hexProgress.talentDropsClosed).toBe(true);
   });
 
@@ -180,12 +186,12 @@ describe('finite Hex progress', () => {
         ...initial.state,
         hexProgress: Object.freeze({
           ...initial.state.hexProgress,
-          investedPathPoints: 16,
+          investedNodeKeys: everyHexNode('SpellPolymorphTrait', 'Lung'),
           talentDropsClosed: true,
         }),
       }),
     });
-    expect(settlePathScreen(catalog, full, 3).state.hexProgress).toMatchObject({
+    expect(pathPointView(settleShallowestPathScreen(full, 3).state.hexProgress)).toMatchObject({
       investedPathPoints: 16,
       bankedPathPoints: 2,
       talentDropsClosed: true,
@@ -254,7 +260,7 @@ describe('finite Hex progress', () => {
         ...installed.state,
         hexProgress: Object.freeze({
           ...installed.state.hexProgress,
-          investedPathPoints: 18,
+          investedNodeKeys: everyHexNode('SpellPolymorphTrait', 'Lung', true),
           talentDropsClosed: true,
         }),
         keepsakes: Object.freeze({
@@ -264,7 +270,7 @@ describe('finite Hex progress', () => {
       }),
     });
     const reevaluated = maybeAddGodSent(catalog, closed);
-    expect(reevaluated.state.hexProgress).toMatchObject({
+    expect(pathPointView(reevaluated.state.hexProgress)).toMatchObject({
       godSentAdded: true,
       talentDropsClosed: true,
     });
@@ -286,7 +292,7 @@ describe('finite Hex progress', () => {
         ...installed.state,
         hexProgress: Object.freeze({
           ...installed.state.hexProgress,
-          investedPathPoints: 16,
+          investedNodeKeys: everyHexNode('SpellPolymorphTrait', 'Lung'),
           talentDropsClosed: true,
         }),
       }),
@@ -310,7 +316,10 @@ describe('finite Hex progress', () => {
         }),
       }),
     );
-    expect(late.state.hexProgress).toMatchObject({ godSentAdded: true, talentDropsClosed: true });
+    expect(pathPointView(late.state.hexProgress)).toMatchObject({
+      godSentAdded: true,
+      talentDropsClosed: true,
+    });
     expect(hexEffectiveCapacity(catalog, late.state.hexProgress)).toBe(18);
   });
 
@@ -383,7 +392,7 @@ describe('finite Hex progress', () => {
       catalog,
       'SpellTalentKeepsake',
     )[0]!;
-    expect(initial.state.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+    expect(initial.state.hexProgress).toEqual({ bankedPathPoints: 5, investedNodeKeys: [] });
     expect(initial.state.rewardPriorities).toEqual(['SpellDrop']);
 
     const afterSpell = Object.freeze({
@@ -439,13 +448,115 @@ describe('finite Hex progress', () => {
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
           presentsMaterializedScreen: false,
+          hexActivationsByAcquisitionRole: shallowestPathActivation(initial, grant),
         },
       },
       facts,
     );
-    expect(settlement.branches[0]?.state.hexProgress).toMatchObject({
+    expect(pathPointView(settlement.branches[0]!.state.hexProgress)).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: grant + 2,
+    });
+  });
+
+  it('reports a reached Path screen without a selection, or with one that does not fit', () => {
+    const initial = withTree(
+      initializeRewardBranches(
+        undefined,
+        createTestArcanaFearState(),
+        catalog,
+        'ManaOverTimeRefundKeepsake',
+      )[0]!,
+    );
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('hex-path-findings'),
+    );
+    const site = createAcquisitionSiteAddress(occurrence, 'roomRewardPickup');
+    const settle = (selectedNodeKeys?: readonly string[]) =>
+      settleOwnedAcquisitionSite(
+        catalog,
+        [initial],
+        {
+          siteOwner: occurrence,
+          pointKey: 'roomRewardPickup',
+          entryKey: 'self',
+          historySequence: 1,
+          source: {
+            origin: createAcquisitionEntryAddress(site, 'self'),
+            offer: { rewardType: 'TalentDrop' },
+            producerLifecycleKey: 'RoomReward',
+            instanceProvenance: 'free',
+            presentsMaterializedScreen: false,
+            ...(selectedNodeKeys === undefined
+              ? {}
+              : { hexActivationsByAcquisitionRole: { self: { selectedNodeKeys } } }),
+          },
+        },
+        facts,
+      );
+    const missing = settle();
+    expect(missing.branches).toEqual([]);
+    expect(missing.findingEmissions.map(({ finding }) => [finding.code, finding.evidence])).toEqual(
+      [['hexActivationMissing', { count: 3 }]],
+    );
+    const invalid = settle(['1:2', '3:1', '9:9']);
+    expect(invalid.branches).toEqual([]);
+    expect(invalid.findingEmissions.map(({ finding }) => finding.code)).toEqual([
+      'hexActivationUnavailable',
+    ]);
+    expect(invalid.findingEmissions[0]?.finding.evidence.nodeKeys).toEqual(['9:9', '3:1']);
+    expect(settle(['1:2', '1:4', '2:2']).branches).toHaveLength(1);
+  });
+
+  it('settles a Path screen on a full tree without a selection, since it has no choice', () => {
+    const initial = withTree(
+      initializeRewardBranches(
+        undefined,
+        createTestArcanaFearState(),
+        catalog,
+        'ManaOverTimeRefundKeepsake',
+      )[0]!,
+    );
+    const full = Object.freeze({
+      ...initial,
+      state: Object.freeze({
+        ...initial.state,
+        hexProgress: Object.freeze({
+          ...initial.state.hexProgress,
+          investedNodeKeys: everyHexNode('SpellPolymorphTrait', 'Lung'),
+          talentDropsClosed: true,
+        }),
+      }),
+    });
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('hex-path-full'),
+    );
+    const site = createAcquisitionSiteAddress(occurrence, 'roomRewardPickup');
+    const settlement = settleOwnedAcquisitionSite(
+      catalog,
+      [full],
+      {
+        siteOwner: occurrence,
+        pointKey: 'roomRewardPickup',
+        entryKey: 'self',
+        historySequence: 1,
+        source: {
+          origin: createAcquisitionEntryAddress(site, 'self'),
+          offer: { rewardType: 'TalentDrop' },
+          producerLifecycleKey: 'RoomReward',
+          instanceProvenance: 'free',
+          presentsMaterializedScreen: false,
+        },
+      },
+      facts,
+    );
+    expect(settlement.findingEmissions).toEqual([]);
+    expect(settlement.branches).toHaveLength(1);
+    expect(pathPointView(settlement.branches[0]!.state.hexProgress)).toMatchObject({
+      investedPathPoints: 16,
+      bankedPathPoints: 2,
     });
   });
 
@@ -562,7 +673,10 @@ describe('finite Hex progress', () => {
       'Underworld',
       loadout,
     )[0]!;
-    expect(initial.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 0 });
+    expect(pathPointView(initial.state.hexProgress)).toMatchObject({
+      bankedPathPoints: 0,
+      investedPathPoints: 0,
+    });
     expect(initial.state.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'Q'),
@@ -584,12 +698,16 @@ describe('finite Hex progress', () => {
           instanceProvenance: 'free',
           presentsMaterializedScreen: true,
           traitContext: {},
+          hexActivationsByAcquisitionRole: shallowestPathActivation(initial, 3),
         },
       },
       facts,
     ).branches[0]!;
     expect(settled.state.rewardHistory.useRecord.SpellDrop).toBe(1);
-    expect(settled.state.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
+    expect(pathPointView(settled.state.hexProgress)).toMatchObject({
+      bankedPathPoints: 0,
+      investedPathPoints: 3,
+    });
     expect(settled.state.traitHistory?.events.some((event) => event.kind === 'traitOffer')).toBe(
       false,
     );
@@ -608,11 +726,12 @@ describe('finite Hex progress', () => {
           producerLifecycleKey: 'RoomReward',
           instanceProvenance: 'free',
           presentsMaterializedScreen: false,
+          hexActivationsByAcquisitionRole: shallowestPathActivation(settled, 5),
         },
       },
       facts,
     ).branches[0]!;
-    expect(laterBig.state.hexProgress).toMatchObject({
+    expect(pathPointView(laterBig.state.hexProgress)).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: 8,
     });

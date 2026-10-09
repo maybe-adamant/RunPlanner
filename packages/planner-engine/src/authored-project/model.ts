@@ -8,7 +8,7 @@ import type {
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 94 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 95 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -40,6 +40,13 @@ export type LevelResolutionsByAcquisitionRole = Readonly<Record<string, Authored
 /** Exact Anvil of Fates result for each role whose concrete acquisition declares that pickup effect. */
 export type AnvilResultsByAcquisitionRole = Readonly<Record<string, AuthoredAnvilResult | null>>;
 
+/** The Hex nodes one writable Path of Stars screen invests, `depth:slot` keys. */
+export interface AuthoredHexActivation {
+  readonly selectedNodeKeys: readonly string[];
+}
+/** Present for a Path screen role once authored; absent before. */
+export type HexActivationsByAcquisitionRole = Readonly<Record<string, AuthoredHexActivation>>;
+
 export type AcquisitionDisposition =
   { readonly kind: 'normal' } | { readonly kind: 'timePiece' } | { readonly kind: 'artificer' };
 
@@ -48,6 +55,7 @@ export interface AuthoredRewardState {
   readonly traitOffersByAcquisitionRole: TraitOffersByAcquisitionRole;
   readonly levelResolutionsByAcquisitionRole?: LevelResolutionsByAcquisitionRole | undefined;
   readonly anvilResultsByAcquisitionRole?: AnvilResultsByAcquisitionRole | undefined;
+  readonly hexActivationsByAcquisitionRole?: HexActivationsByAcquisitionRole | undefined;
   /** Exact player disposition for every declared concrete acquisition role. */
   readonly dispositionByAcquisitionRole: Readonly<Record<string, AcquisitionDisposition>>;
 }

@@ -38,7 +38,7 @@ export function createInitialSimulationState(
     reached: Object.freeze(reached),
     bags: Object.freeze({}),
     rewardPriorities: Object.freeze([]),
-    hexProgress: Object.freeze({ bankedPathPoints: 0, investedPathPoints: 0 }),
+    hexProgress: Object.freeze({ bankedPathPoints: 0, investedNodeKeys: Object.freeze([]) }),
     rewardHistory: createRewardHistoryState(
       catalog.rewards,
       routeSaveFileGodHistory(catalog, routeKey),

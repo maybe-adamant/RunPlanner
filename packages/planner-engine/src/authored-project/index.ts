@@ -377,6 +377,8 @@ export {
   type AuthoredRoomState,
   type AuthoredRewardState,
   type AuthoredAnvilResult,
+  type AuthoredHexActivation,
+  type HexActivationsByAcquisitionRole,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
   type AuthoredEncounterCustomization,

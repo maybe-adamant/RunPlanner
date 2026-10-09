@@ -155,7 +155,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
   const hex = object(record.hexProgress, `${label}.hexProgress`);
   exact(
     hex,
-    ['talentKeys', 'closed', 'bankedPathPoints', 'investedPathPoints'],
+    ['talentKeys', 'closed', 'bankedPathPoints', 'investedPathPoints', 'olympianTalentInvested'],
     ['spellTraitKey', 'layoutKey'],
     `${label}.hexProgress`,
   );
@@ -547,6 +547,10 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       investedPathPoints: integer(
         hex.investedPathPoints,
         `${label}.hexProgress.investedPathPoints`,
+      ),
+      olympianTalentInvested: booleanValue(
+        hex.olympianTalentInvested,
+        `${label}.hexProgress.olympianTalentInvested`,
       ),
     }),
     artificer:

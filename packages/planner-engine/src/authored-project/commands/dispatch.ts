@@ -13,6 +13,7 @@ import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand } from './acquisition/acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition/acquisition-conversion';
 import { applyAnvilResultCommand } from './acquisition/anvil-result';
+import { applyHexActivationCommand } from './acquisition/hex-activation';
 import { applySeaStarResultCommand } from './acquisition/sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
 import { applyFigurineArcanaCommand } from './figurine-arcana';
@@ -281,6 +282,13 @@ function applyUnchecked(
       );
     case 'ReplaceAnvilResult':
       return applyAnvilResultCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceHexActivation':
+      return applyHexActivationCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

@@ -1,7 +1,7 @@
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
-import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 
 /** One neutral dialog launcher: a one-line label, its full summary on hover and as description. */
 export function LauncherButton({
@@ -13,7 +13,8 @@ export function LauncherButton({
   readonly contextReached: boolean;
   readonly launcher: WorkspaceLauncherPresentation;
   readonly onClick: () => void;
-  readonly target: FindingTargetProps;
+  /** A navigation target, or a mark within an anchor that navigation focuses. */
+  readonly target: FindingMarkProps & { readonly id: string };
 }) {
   const findings = target['aria-description'];
   return (

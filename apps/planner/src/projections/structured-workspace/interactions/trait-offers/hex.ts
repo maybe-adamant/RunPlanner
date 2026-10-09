@@ -1,4 +1,5 @@
 import type {
+  WorkspaceHexBoardNode,
   WorkspaceHexDeckTable,
   WorkspaceHexNodeEditor,
   WorkspaceHexTreeDomain,
@@ -223,6 +224,36 @@ function deckTable(
   });
 }
 
+/** The tree's present nodes on the native grid, named by the talents the tree places. */
+export function projectHexBoardNodes(
+  hex: HexDeclaration,
+  layout: HexLayoutDeclaration,
+  tree: AuthoredHexTreeConfiguration,
+  present: (node: HexLayoutNodeDeclaration) => boolean = () => true,
+): readonly WorkspaceHexBoardNode[] {
+  const talentOf = (node: HexLayoutNodeDeclaration) =>
+    talentLabel(
+      hex,
+      node.kind === 'olympianSpell'
+        ? hex.godSent.olympianTalentKey
+        : node.kind === 'olympianCount'
+          ? hex.godSent.lineageTalentKey
+          : tree.nodes[node.key]!,
+    );
+  const names = nodeNames(layout, talentOf);
+  return layout.nodes.values.filter(present).map((node) =>
+    Object.freeze({
+      nodeKey: node.key,
+      kind: node.kind,
+      name: names.get(node.key)!,
+      x: node.depth + node.gridOffsetX,
+      y: node.slot + node.gridOffsetY,
+      linkTo: Object.freeze(node.linkTo.map((slot) => `${node.depth + 1}:${slot}`)),
+      talentLabel: talentOf(node),
+    }),
+  );
+}
+
 /** Projects one authored Hex tree into its board: every node's talent, edits and conflict. */
 export function projectHexTreeDomain(
   catalog: Catalog,
@@ -235,27 +266,12 @@ export function projectHexTreeDomain(
   if (hex === undefined || layout === undefined) return undefined;
   const violations = assessAuthoredHexTree(catalog, spellTraitKey, tree);
   const conflicting = new Set(violations.flatMap((violation) => violation.nodeKeys));
-  const talentOf = (node: HexLayoutNodeDeclaration) =>
-    talentLabel(
-      hex,
-      node.kind === 'olympianSpell'
-        ? hex.godSent.olympianTalentKey
-        : node.kind === 'olympianCount'
-          ? hex.godSent.lineageTalentKey
-          : tree.nodes[node.key]!,
-    );
-  const names = nodeNames(layout, talentOf);
   const commonDecks = authoredHexCommonDecks(catalog, spellTraitKey, tree);
-  const nodes = layout.nodes.values.map((node): WorkspaceHexTreeNode => {
+  const nodes = projectHexBoardNodes(hex, layout, tree).map((board): WorkspaceHexTreeNode => {
+    const node = layout.nodes.byKey[board.nodeKey]!;
     const olympian = node.kind === 'olympianSpell' || node.kind === 'olympianCount';
     return Object.freeze({
-      nodeKey: node.key,
-      kind: node.kind,
-      name: names.get(node.key)!,
-      x: node.depth + node.gridOffsetX,
-      y: node.slot + node.gridOffsetY,
-      linkTo: Object.freeze(node.linkTo.map((slot) => `${node.depth + 1}:${slot}`)),
-      talentLabel: talentOf(node),
+      ...board,
       conflict: conflicting.has(node.key),
       ...(node.kind === 'repeatable'
         ? { commonColumn: commonDecks.depths.indexOf(node.depth) }
@@ -266,7 +282,7 @@ export function projectHexTreeDomain(
             editor: nodeEditor(
               hex,
               node,
-              talentOf(node),
+              board.talentLabel,
               authoredHexNodeEditOptions(catalog, spellTraitKey, tree, node.key),
             ),
           }),

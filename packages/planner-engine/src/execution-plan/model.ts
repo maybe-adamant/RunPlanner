@@ -120,6 +120,7 @@ export interface ExecutionRunStateDiagnostic {
     readonly closed: boolean;
     readonly bankedPathPoints: number;
     readonly investedPathPoints: number;
+    readonly olympianTalentInvested: boolean;
   };
   readonly artificer: { readonly usedCount: number; readonly remainingCount: number } | null;
   readonly retainedEffects: {
@@ -415,6 +416,8 @@ export interface ExecutionAcquisitionRole {
   readonly settlement?: { readonly site: string; readonly entry: string };
   readonly traitOffer?: ExecutionTraitOffer;
   readonly levelResolution?: ExecutionLevelResolution;
+  /** Nodes this role's writable Path screen plans to invest; highlighted, not enforced. */
+  readonly plannedHexNodeKeys?: readonly string[];
 }
 
 export type ExecutionExperimentalHammerEquipResult =

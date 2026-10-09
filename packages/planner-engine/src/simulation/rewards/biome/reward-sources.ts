@@ -10,6 +10,7 @@ function canonicalRewardState(reward: {
   readonly offer: AuthoredRewardState['offer'];
   readonly traitOffersByAcquisitionRole?: AuthoredRewardState['traitOffersByAcquisitionRole'];
   readonly levelResolutionsByAcquisitionRole?: AuthoredRewardState['levelResolutionsByAcquisitionRole'];
+  readonly hexActivationsByAcquisitionRole?: AuthoredRewardState['hexActivationsByAcquisitionRole'];
   readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
 }): AuthoredRewardState {
   return Object.freeze({
@@ -18,6 +19,9 @@ function canonicalRewardState(reward: {
     ...(reward.levelResolutionsByAcquisitionRole === undefined
       ? {}
       : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
+    ...(reward.hexActivationsByAcquisitionRole === undefined
+      ? {}
+      : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
     dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole ?? Object.freeze({}),
   });
 }

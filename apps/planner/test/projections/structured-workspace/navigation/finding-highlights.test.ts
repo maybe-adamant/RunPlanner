@@ -1,4 +1,5 @@
 import {
+  createAcquisitionRoleAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -230,5 +231,43 @@ it('marks each trait dialog finding on its own owner control, excluding other of
       [findingControlKey(echo), [unavailable]],
       [findingControlKey(natural, 'outcomeFirstRow'), [incomplete]],
     ]),
+  );
+});
+
+it('marks a Path of Stars screen finding on its launcher, apart from the row pickup controls', () => {
+  const biome = createBiomeAddress('Surface', 'P');
+  const id = createOccurrenceId('path-room');
+  const role = createAcquisitionRoleAddress(createIncomingRewardAddress(biome, id), 'self');
+  const action = createRoomActionAddress(biome, id, 'pickup');
+  const destinations = new Map<string, WorkspaceInspectorDestination>([
+    [
+      semanticAddressKey(role),
+      {
+        biomeKey: 'P',
+        routeKey: 'Surface',
+        ownerAddress: role,
+        focusAddress: action,
+        focusKey: semanticAddressKey(action),
+        markAddress: role,
+        markControl: 'pickupOutcome',
+        region: 'structure',
+        nodeKey: 'room',
+        inspectorSubject: { kind: 'node', nodeKey: 'room' },
+      },
+    ],
+  ]);
+  const finding = (code: SemanticFinding['code']): SemanticFinding => ({
+    code,
+    origin: role,
+    evidence: {},
+    phase: 'rewardGeneration',
+    severity: 'error',
+  });
+  for (const code of ['hexActivationMissing', 'hexActivationUnavailable'] as const)
+    expect(findingRepairTarget(finding(code), destinations)).toBe(
+      findingControlKey(role, 'hexActivation'),
+    );
+  expect(findingRepairTarget(finding('rewardAcquisitionUnavailable'), destinations)).toBe(
+    findingControlKey(role, 'pickupOutcome'),
   );
 });

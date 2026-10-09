@@ -8,9 +8,11 @@ import type {
 import type {
   AnvilResultsByAcquisitionRole,
   AuthoredAnvilResult,
+  AuthoredHexActivation,
   AuthoredRewardState,
+  HexActivationsByAcquisitionRole,
 } from '../../model';
-import { createUnresolvedAnvilResults } from '../../acquisition/reward-state';
+import { createUnresolvedAnvilResults, hexActivationRoles } from '../../acquisition/reward-state';
 import {
   expectArray,
   expectExactKeys,
@@ -691,6 +693,7 @@ export function decodeRewardState(
         'traitOffersByAcquisitionRole',
         'levelResolutionsByAcquisitionRole',
         'anvilResultsByAcquisitionRole',
+        'hexActivationsByAcquisitionRole',
         'dispositionByAcquisitionRole',
       ].includes(key)
     )
@@ -725,6 +728,15 @@ export function decodeRewardState(
     offer,
     `${path}.anvilResultsByAcquisitionRole`,
   );
+  const hexActivations =
+    raw.hexActivationsByAcquisitionRole === undefined
+      ? undefined
+      : decodeHexActivations(
+          raw.hexActivationsByAcquisitionRole,
+          catalog,
+          offer,
+          `${path}.hexActivationsByAcquisitionRole`,
+        );
   if (raw.dispositionByAcquisitionRole === undefined)
     failProjectDocument(`${path}.dispositionByAcquisitionRole`, 'is required');
   const dispositionByAcquisitionRole = decodeAcquisitionDispositions(
@@ -744,8 +756,51 @@ export function decodeRewardState(
     ),
     ...(levels === undefined ? {} : { levelResolutionsByAcquisitionRole: levels }),
     ...(anvilResults === undefined ? {} : { anvilResultsByAcquisitionRole: anvilResults }),
+    ...(hexActivations === undefined ? {} : { hexActivationsByAcquisitionRole: hexActivations }),
     dispositionByAcquisitionRole,
   });
+}
+
+/** Reached Path screens only; an unreached screen has no entry. */
+function decodeHexActivations(
+  value: unknown,
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  path: string,
+): HexActivationsByAcquisitionRole {
+  const raw = expectRecord(value, path);
+  const roles = hexActivationRoles(catalog, offer);
+  const keys = Object.keys(raw);
+  if (keys.length === 0) failProjectDocument(path, 'must name at least one Path screen');
+  for (const key of keys)
+    if (!roles.includes(key)) failProjectDocument(`${path}.${key}`, 'is not a Path screen role');
+  return Object.freeze(
+    Object.fromEntries(
+      keys.map((role) => [role, decodeHexActivation(raw[role], `${path}.${role}`)]),
+    ),
+  );
+}
+
+/**
+ * Strict Path screen selection shape, shared by the codec and its command. The
+ * selection is a set of `depth:slot` grid keys, kept in layout order.
+ */
+export function decodeHexActivation(value: unknown, path: string): AuthoredHexActivation {
+  const entry = expectRecord(value, path);
+  expectExactKeys(entry, ['selectedNodeKeys'], path);
+  const nodes = expectArray(entry.selectedNodeKeys, `${path}.selectedNodeKeys`).map(
+    (candidate, index) => {
+      const key = expectNonBlankString(candidate, `${path}.selectedNodeKeys[${index}]`);
+      const grid = /^(\d+):(\d+)$/.exec(key);
+      if (grid === null)
+        failProjectDocument(`${path}.selectedNodeKeys[${index}]`, 'must be a depth:slot node');
+      return { key, depth: Number(grid[1]), slot: Number(grid[2]) };
+    },
+  );
+  if (new Set(nodes.map((node) => node.key)).size !== nodes.length)
+    failProjectDocument(`${path}.selectedNodeKeys`, 'must contain distinct nodes');
+  nodes.sort((left, right) => left.depth - right.depth || left.slot - right.slot);
+  return Object.freeze({ selectedNodeKeys: Object.freeze(nodes.map((node) => node.key)) });
 }
 
 /** Present exactly for the role whose concrete acquisition declares the Anvil pickup effect. */

@@ -120,17 +120,19 @@ local function pathOfStars(run, expected)
     local expectedKeys = type(expected) == "table" and expected.talentKeys or nil
     local expectedSet = {}
     for _, key in ipairs(expectedKeys or {}) do expectedSet[key] = true end
+    -- Only the inserted God Sent pair is a conformance identity; it decides the
+    -- tree's capacity. Other node talents are realised from the plan, not checked.
     -- Native trees have sequential depths but sparse positions within each depth.
+    local olympianTalentInvested = false
     for _, column in ipairs(talents or {}) do
         for _, node in pairs(column) do
             local pool = type(node.Pool) == "table" and node.Pool or {}
             if type(node.Name) == "string" and (pool.OlympianSpell ~= nil or pool.OlympianCount ~= nil) then
                 nativeTalentKeys[node.Name] = true
             end
+            if pool.OlympianSpell ~= nil and node.Invested == true then olympianTalentInvested = true end
         end
     end
-    -- Only the inserted God Sent pair is a conformance identity; it decides the
-    -- tree's capacity. Other node talents are realised from the plan, not checked.
     local talentKeys, emitted = {}, {}
     for _, key in ipairs(expectedKeys or {}) do
         if nativeTalentKeys[key] then
@@ -153,6 +155,7 @@ local function pathOfStars(run, expected)
         closed = type(run) == "table" and run.AllSpellInvestedCache or false,
         bankedPathPoints = type(run) == "table" and (run.NumTalentPoints or 0) or 0,
         investedPathPoints = type(run) == "table" and (run.InvestedTalentPoints or 0) or 0,
+        olympianTalentInvested = olympianTalentInvested,
     }
 end
 

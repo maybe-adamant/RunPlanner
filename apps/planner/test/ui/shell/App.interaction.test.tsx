@@ -51,6 +51,7 @@ import {
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import {
+  findingSelected,
   routePanelSelected,
   semanticOwnerFocused,
   semanticOwnerNavigated,
@@ -88,6 +89,8 @@ import {
   pOccurrenceId,
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceSeleneHexPathCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { getByHint, hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
@@ -100,7 +103,7 @@ async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void
   const about = await screen.findByLabelText('About Run Planner');
   const summary = about.querySelector('.about-product-summary');
   expect(summary).not.toBeNull();
-  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema94Catalog/);
+  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema95Catalog/);
 }
 
 function profileReference(fileName: string): ProfileFileReference {
@@ -1463,6 +1466,57 @@ describe('planner history interaction', () => {
       biomeKey: 'N',
     });
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
+  });
+
+  it('navigates a Path of Stars finding to its Edit Path of Stars launcher', async () => {
+    const saved = loadSurfaceSeleneHexPathCheckpoint();
+    const screenOccurrence = saved.route.biomes
+      .find((biome) => biome.biomeKey === 'P')!
+      .topology!.occurrences.find(
+        (occurrence) =>
+          'reward' in occurrence.state &&
+          occurrence.state.reward?.hexActivationsByAcquisitionRole !== undefined,
+      )!;
+    const owner = createAcquisitionRoleAddress(
+      createIncomingRewardAddress(pBiome, screenOccurrence.occurrenceId),
+      'self',
+    );
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectReplaced(
+        applyProjectCommand(saved, catalog, {
+          kind: 'ReplaceHexActivation',
+          acquisition: owner,
+          value: { selectedNodeKeys: ['2:4'] },
+        }),
+      ),
+    );
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (entry) => entry.code === 'hexActivationUnavailable',
+      );
+    if (finding === undefined) throw new Error('the under-spent Path screen has no finding');
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())!
+      .focusByOwner.get(semanticAddressKey(finding.origin))!;
+    application.store.dispatch(
+      findingSelected({
+        key: semanticFindingKey(finding),
+        origin: finding.origin,
+        focusAddress: destination.focusAddress,
+        ...(destination.presentationPanel === undefined
+          ? {}
+          : { presentationPanel: { kind: destination.presentationPanel } }),
+      }),
+    );
+    renderPlannerForInteraction({ application });
+    await waitFor(() =>
+      expect(document.activeElement?.id).toBe(
+        `${semanticOwnerControlElementId(owner)}-hex-activation`,
+      ),
+    );
+    expect(document.activeElement?.textContent).toContain('Edit Path of Stars');
   });
 
   it('authors and undoes the exact Sea Star checkbox row in the room timeline', async () => {

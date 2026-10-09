@@ -165,6 +165,9 @@ export function applyRewardWheelOfferPointMaterialization(
       ...(state.levelResolutionsByAcquisitionRole === undefined
         ? {}
         : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
+      ...(state.hexActivationsByAcquisitionRole === undefined
+        ? {}
+        : { hexActivationsByAcquisitionRole: state.hexActivationsByAcquisitionRole }),
       dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
       traitContext: Object.freeze({
         blockGiftBoons: declaration.blockGiftBoons,

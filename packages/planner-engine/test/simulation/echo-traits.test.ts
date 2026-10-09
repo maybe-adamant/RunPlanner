@@ -74,7 +74,7 @@ import { replaceSimulationTraitHistory } from '../../src/simulation/state/transi
 import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import {
   traitFrontierState,
-  withSettledSpellDrop,
+  withInvestedHexOlympianTalent,
   openTimeTraitOfferContexts,
 } from '../support/simulation-state';
 
@@ -909,7 +909,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
             semanticAddressKey(echoOwner),
             [
               Object.freeze({
-                state: withSettledSpellDrop(traitFrontierState(history)),
+                state: withInvestedHexOlympianTalent(traitFrontierState(history)),
                 source: Object.freeze({ resolvedProviderKey: 'Echo' }),
               }),
             ],
@@ -1387,14 +1387,14 @@ describe('Echo Gate B Boon Boon Boon', () => {
       traitKey: string,
       history: ReturnType<typeof createTraitHistoryState>,
       context: Parameters<typeof echoLastRunBoonOutcomes>[2] & {
-        readonly settledSpellDrop?: boolean;
+        readonly investedHexOlympianTalent?: boolean;
       },
     ) => {
-      const { settledSpellDrop, ...source } = context;
+      const { investedHexOlympianTalent, ...source } = context;
       const state = traitFrontierState(history);
       const value = echoLastRunBoonOutcomes(
         catalog,
-        settledSpellDrop === true ? withSettledSpellDrop(state) : state,
+        investedHexOlympianTalent === true ? withInvestedHexOlympianTalent(state) : state,
         source,
       ).find((candidate) => candidate.option.traitKey === traitKey);
       expect(value).toBeDefined();
@@ -1413,7 +1413,8 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
     expect(outcome('OlympianSpellCountBoon', empty, {}).assessment.legal).toBe(false);
     expect(
-      outcome('OlympianSpellCountBoon', empty, { settledSpellDrop: true }).assessment.legal,
+      outcome('OlympianSpellCountBoon', empty, { investedHexOlympianTalent: true }).assessment
+        .legal,
     ).toBe(true);
 
     const fireHistory = historyFromTraits([
@@ -1924,7 +1925,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
   });
 
-  it('uses the settled Spell Drop prefix for the reached Echo child without treating a starting Hex as one', () => {
+  it('requires an invested Olympian talent for the reached Echo child, not a starting Hex', () => {
     const child = echoBoonChild(
       Object.freeze([{ giverKey: 'Athena', traitKey: 'OlympianSpellCountBoon', rarity: 'Common' }]),
     );
@@ -1952,19 +1953,13 @@ describe('Echo Gate B Boon Boon Boon', () => {
     );
 
     const branch = baseBranch(startingHex);
-    const withSettledSpellDrop = Object.freeze({
+    const invested = Object.freeze({
       ...branch,
-      state: Object.freeze({
-        ...branch.state,
-        rewardHistory: Object.freeze({
-          ...branch.state.rewardHistory,
-          useRecord: Object.freeze({ ...branch.state.rewardHistory.useRecord, SpellDrop: 1 }),
-        }),
-      }),
+      state: withInvestedHexOlympianTalent(branch.state),
     });
     const withSpellDrop = settleEncounterTraitOffer(
       catalog,
-      withSettledSpellDrop,
+      invested,
       echoOwner.owner,
       echoBoonOffer(child),
       10,
@@ -1979,9 +1974,9 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
     const selected = selectedTraitOfferProducts([withSpellDrop.branch], [], catalog);
     expect(
-      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.[0]?.state.rewardHistory
-        .useRecord.SpellDrop,
-    ).toBeGreaterThan(0);
+      selected.candidateContexts.get(semanticAddressKey(echoOwner))?.[0]?.state.hexProgress
+        .investedNodeKeys,
+    ).toEqual(invested.state.hexProgress.investedNodeKeys);
   });
 
   it('retains a valid selection with an invalid unselected row before any nested mutation', () => {

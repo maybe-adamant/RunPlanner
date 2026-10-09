@@ -730,7 +730,8 @@
               "talentKeys": [],
               "closed": false,
               "bankedPathPoints": 0,
-              "investedPathPoints": 0
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
             },
             "artificer": null,
             "retainedEffects": {
@@ -2604,7 +2605,8 @@
               "talentKeys": [],
               "closed": false,
               "bankedPathPoints": 0,
-              "investedPathPoints": 0
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -7436,5 +7438,5 @@
       }
     }
   ],
-  "planFingerprint": "296f6787"
+  "planFingerprint": "8800295d"
 }

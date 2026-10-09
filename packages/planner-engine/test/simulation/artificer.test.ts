@@ -504,7 +504,12 @@ describe('The Artificer', () => {
       {
         siteOwner,
         site,
-        entries: Object.freeze({ seaStarDuplicate: retained }),
+        entries: Object.freeze({
+          seaStarDuplicate: Object.freeze({
+            ...retained,
+            hexActivationsByAcquisitionRole: { self: { selectedNodeKeys: ['1:2', '1:4', '2:2'] } },
+          }),
+        }),
         order: Object.freeze(['seaStarDuplicate']),
         presentsMaterializedScreen: false,
         producerLifecycleKey: 'RoomReward',
@@ -517,7 +522,7 @@ describe('The Artificer', () => {
     expect(product.entries[0]?.participation).toBe('optional');
     expect(product.branches[0]?.state.hexProgress).toMatchObject({
       bankedPathPoints: 0,
-      investedPathPoints: 3,
+      investedNodeKeys: ['1:2', '1:4', '2:2'],
     });
   });
 

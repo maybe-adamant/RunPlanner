@@ -18,6 +18,11 @@ import {
 import type { AcquisitionSource } from './source';
 import type { DerivedAcquisitionEntryFrontier, FixedAcquisitionRealization } from './contracts';
 import { createAnvilCandidateCapability, type AnvilCandidateCapability } from '../anvil-settlement';
+import {
+  createHexActivationCandidateCapability,
+  type HexActivationCandidateCapability,
+  type HexActivationContext,
+} from '../../hex-activation';
 
 export interface DerivedAcquisitionEntryCandidateCapability {
   readonly kind: DerivedAcquisitionEntryFrontier['kind'];
@@ -134,6 +139,7 @@ export interface AcquisitionConversionCandidateCapability {
   readonly artificerReplacementRewardTypes?: readonly string[];
   readonly artificerReplacementOptions?: readonly AuthoredRewardState[];
   readonly anvil?: AnvilCandidateCapability;
+  readonly hexActivation?: HexActivationCandidateCapability;
 }
 export interface AcquisitionConversionCandidateArtifacts {
   readonly at: (
@@ -172,6 +178,7 @@ export function createAcquisitionConversionCandidateArtifacts(
         readonly rewardTypes: readonly string[];
       };
       readonly artificerReplacementOptions?: readonly import('../../../authored-project/model').AuthoredRewardState[];
+      readonly hexActivationContexts?: readonly HexActivationContext[];
     }[]
   >,
   fixedRealizations: ReadonlyMap<string, FixedAcquisitionRealization> = new Map(),
@@ -197,6 +204,9 @@ export function createAcquisitionConversionCandidateArtifacts(
       return fixed === undefined ? undefined : fixedCapability(fixed);
     }
     const anvil = createAnvilCandidateCapability(catalog, entries);
+    const hexActivation = createHexActivationCandidateCapability(
+      entries.flatMap((entry) => entry.hexActivationContexts ?? []),
+    );
     return Object.freeze({
       timePieceAssessments: Object.freeze(
         entries.flatMap((entry) =>
@@ -283,6 +293,7 @@ export function createAcquisitionConversionCandidateArtifacts(
           : {};
       })(),
       ...(anvil === undefined ? {} : { anvil }),
+      ...(hexActivation === undefined ? {} : { hexActivation }),
     });
   };
   return Object.freeze({

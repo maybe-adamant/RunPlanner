@@ -153,6 +153,8 @@ export interface AcquisitionRoleFrontier {
   readonly priorTraitMutations?: readonly PriorTraitMutation[];
   /** Exact pre-offer contacts reached while this acquisition role was settled. */
   readonly traitOfferCandidateContacts?: readonly ReachedTraitOfferCandidateContact[];
+  /** Each reaching branch's tree state at this role's writable Path screen. */
+  readonly hexActivationContexts?: readonly import('../../hex-activation').HexActivationContext[];
 }
 
 export interface PickupAcquisitionEntryFrontier {

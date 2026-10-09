@@ -148,4 +148,27 @@ describe('HintLayer', () => {
     fireEvent.scroll(window);
     expect(view.tooltip()).toBeNull();
   });
+
+  it('keeps a hint behind an open modal dialog hidden, including one scheduled before it opened', () => {
+    render(
+      <>
+        <button className="quiet-action" type="button" {...hintProps('Behind the dialog')}>
+          Row
+        </button>
+        <dialog aria-modal="true" open>
+          <button className="quiet-action" type="button" {...hintProps('Inside the dialog')}>
+            Node
+          </button>
+        </dialog>
+        <HintLayer />
+      </>,
+    );
+    const tooltip = () => document.querySelector('[role="tooltip"]:not([hidden])');
+    fireEvent.pointerOver(screen.getByRole('button', { name: 'Row', hidden: true }));
+    elapse(500);
+    expect(tooltip()).toBeNull();
+    fireEvent.pointerOver(screen.getByRole('button', { name: 'Node' }));
+    elapse(500);
+    expect(tooltip()?.textContent).toBe('Inside the dialog');
+  });
 });

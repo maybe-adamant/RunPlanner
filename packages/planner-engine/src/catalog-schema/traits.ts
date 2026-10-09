@@ -465,8 +465,8 @@ export type TraitRequirementExpression =
       readonly requirements: readonly TraitRequirementExpression[];
     }
   | {
-      /** A canonical reward-use prefix fact, not an authored predicate. */
-      readonly kind: 'settledSpellDrop';
+      /** The Hex God Sent Olympian talent is invested; a folded Hex fact. */
+      readonly kind: 'investedHexOlympianTalent';
     }
   | {
       readonly kind: 'anyEquippedTrait';

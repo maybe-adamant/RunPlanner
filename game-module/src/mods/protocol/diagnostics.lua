@@ -282,7 +282,7 @@ end
 local function validateHex(value, label)
     local record, errorMessage = p.exact(
         value,
-        { "talentKeys", "closed", "bankedPathPoints", "investedPathPoints" },
+        { "talentKeys", "closed", "bankedPathPoints", "investedPathPoints", "olympianTalentInvested" },
         { "spellTraitKey", "layoutKey" },
         label
     )
@@ -292,6 +292,7 @@ local function validateHex(value, label)
     if not p.bool(record.closed, label .. ".closed")
         or not p.int(record.bankedPathPoints, label .. ".bankedPathPoints", 0)
         or not p.int(record.investedPathPoints, label .. ".investedPathPoints", 0)
+        or not p.bool(record.olympianTalentInvested, label .. ".olympianTalentInvested")
         or (record.spellTraitKey ~= nil and not p.str(record.spellTraitKey, label .. ".spellTraitKey"))
         or (record.layoutKey ~= nil and not p.str(record.layoutKey, label .. ".layoutKey")) then
         return p.fail(label .. " has invalid Hex state")

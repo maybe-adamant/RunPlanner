@@ -148,6 +148,7 @@ function assembleRunStateDiagnostic(
       closed: snapshot.hexObserver.closed,
       bankedPathPoints: snapshot.hexObserver.bankedPathPoints,
       investedPathPoints: snapshot.hexObserver.investedPathPoints,
+      olympianTalentInvested: snapshot.hexObserver.olympianTalentInvested,
     }),
     artificer: snapshot.artificer === undefined ? null : Object.freeze({ ...snapshot.artificer }),
     retainedEffects: Object.freeze({

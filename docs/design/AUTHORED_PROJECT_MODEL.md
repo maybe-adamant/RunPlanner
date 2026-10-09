@@ -1267,6 +1267,23 @@ complete `nodes` map; the 93 → 94 migration places the Rare picks in the
 layout's Keystone nodes and the Epic picks in its Legendary nodes, both in
 layout order, and gives every repeatable node the catalog's default fill.
 
+Each writable Path of Stars screen—a Path reward's role, or a Spell Drop that
+Aspect of Selene routes to the tree—owns its invested nodes on the reward:
+`hexActivationsByAcquisitionRole[role] = { selectedNodeKeys }`, a set of
+`depth:slot` keys, like the Anvil result. The selection is the author's
+choice: nothing fills it, and a reached screen without one is the required
+input `hexActivationMissing`. The screen's count, invested set and God Sent
+presence are simulation facts. A selection is kept as authored; a wrong count,
+an absent, invested or unknown node, or a node no order can reach is a
+`hexActivationUnavailable` finding on the role with the nodes in evidence, and
+a branch the selection does not fit reports the same finding. The screen's
+candidate offers additions only while the selection is under its count; a
+saved selection over a count an upstream edit shrank is kept with its finding
+and can only shrink.
+
+Schema 95 adds that field. The 94 → 95 migration only bumps the version, so
+every screen is unresolved and each reached one asks for its nodes.
+
 ## Undo and Redo
 
 `ProjectHistory` holds frozen `past`, `present`, and `future` document

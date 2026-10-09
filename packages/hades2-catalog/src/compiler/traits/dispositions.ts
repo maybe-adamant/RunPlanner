@@ -452,8 +452,8 @@ export function normalizeRequirement(
           ),
         ),
       });
-    case 'settledSpellDrop':
-      return Object.freeze({ kind: 'settledSpellDrop' as const });
+    case 'investedHexOlympianTalent':
+      return Object.freeze({ kind: 'investedHexOlympianTalent' as const });
     case 'anyEquippedTrait':
     case 'anyActiveArcana':
     case 'notEquippedTrait': {

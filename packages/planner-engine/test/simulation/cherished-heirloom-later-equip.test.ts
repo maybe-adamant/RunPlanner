@@ -282,7 +282,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     const throughF = replayBiome(project, 'F', [cherishedBranch()]);
     const afterRack = throughF.branches[0]!;
     expect(afterRack.state.keepsakes.currentKey).toBe('SpellTalentKeepsake');
-    expect(afterRack.state.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
+    expect(afterRack.state.hexProgress).toEqual({ bankedPathPoints: 7, investedNodeKeys: [] });
     expect(afterRack.state.rewardPriorities).toEqual(['SpellDrop']);
   });
 

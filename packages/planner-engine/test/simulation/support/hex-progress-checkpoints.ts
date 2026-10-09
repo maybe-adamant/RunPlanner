@@ -6,14 +6,72 @@ import { createArcanaFearState } from '../../../src/simulation/arcana-fear';
 import {
   bankPathPoints,
   installHexTree,
+  pathScreenContext,
   settlePathScreen,
+  type HexProgressState,
 } from '../../../src/simulation/hex-progress';
+import {
+  availableHexNodes,
+  type HexActivationContext,
+} from '../../../src/simulation/hex-activation';
+import type { RewardBranchState } from '../../../src/simulation/rewards/branch-primitives';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranchesForRoute as initializeRewardBranches,
 } from '../../support/arcana-fear';
 
 type PathRewardType = 'MinorTalentDrop' | 'TalentBigDrop' | 'TalentDrop';
+
+/** A fixture selection spending the screen on its shallowest available nodes, in layout order. */
+function shallowestSelection(context: HexActivationContext): readonly string[] {
+  const selected: string[] = [];
+  while (selected.length < context.count) {
+    const next = availableHexNodes(context, selected)[0];
+    if (next === undefined) throw new Error(`fixture Path screen cannot spend ${context.count}`);
+    selected.push(next);
+  }
+  return selected;
+}
+
+/** Settles one Path screen with the fixture's shallowest selection. */
+export function settleShallowestPathScreen<Branch extends RewardBranchState>(
+  branch: Branch,
+  points: 1 | 3 | 5,
+): Branch {
+  return settlePathScreen(
+    catalog,
+    branch,
+    points,
+    shallowestSelection(pathScreenContext(catalog, branch.state.hexProgress, points)),
+  ) as Branch;
+}
+
+/** A Path source's authored activation: the shallowest selection on this branch. */
+export function shallowestPathActivation(branch: RewardBranchState, points: 1 | 3 | 5) {
+  return {
+    self: {
+      selectedNodeKeys: shallowestSelection(
+        pathScreenContext(catalog, branch.state.hexProgress, points),
+      ),
+    },
+  };
+}
+
+/** Every node of a layout, God Sent pair included only when requested. */
+export function everyHexNode(
+  spellTraitKey: string,
+  layoutKey: string,
+  godSentAdded = false,
+): readonly string[] {
+  return catalog.hexes.byKey[spellTraitKey]!.layouts.byKey[layoutKey]!.nodes.values.filter(
+    (node) => godSentAdded || (node.kind !== 'olympianSpell' && node.kind !== 'olympianCount'),
+  ).map((node) => node.key);
+}
+
+/** Hex progress with its invested point count, as Run State publishes it. */
+export function pathPointView(progress: HexProgressState) {
+  return { ...progress, investedPathPoints: progress.investedNodeKeys.length };
+}
 
 function settlePathReward(
   branch: ReturnType<typeof initializeRewardBranches>[number],
@@ -23,7 +81,7 @@ function settlePathReward(
   if (pathPointGrant === undefined) {
     throw new Error(`test fixture requires a declared Path point grant for ${rewardType}`);
   }
-  return settlePathScreen(catalog, branch, pathPointGrant);
+  return settleShallowestPathScreen(branch, pathPointGrant);
 }
 
 /** Canonical settlement-seam witness for a normal selected option-3 Lung Hex. */

@@ -8,8 +8,19 @@ import type { HexTalentTreeViolation } from '../../../authored-project/traits/he
 import { assessAuthoredHexTree } from '../../../authored-project/traits/hex-tree';
 import type { AuthoredTraitOfferTraits } from '../../../authored-project/traits/state';
 import { ownerRegion, type FindingChronology } from '../../finding-regions';
-import { bankPathPoints, installHexTree } from '../../hex-progress';
-import type { SemanticFinding } from '../../model';
+import {
+  bankPathPoints,
+  installHexTree,
+  pathScreenContext,
+  settlePathScreen,
+} from '../../hex-progress';
+import {
+  validateHexActivation,
+  type HexActivationContext,
+  type HexActivationViolation,
+} from '../../hex-activation';
+import type { AuthoredHexActivation } from '../../../authored-project/model';
+import type { FindingEvidence, SemanticFinding } from '../../model';
 import type { ReachedTraitOfferEvaluation } from '../../traits';
 import type { RewardBranchState } from '../branch-primitives';
 import type { TraitChildFindingEntry } from './selected-child-settlement';
@@ -132,4 +143,61 @@ export function settleMoonBeamPathPoints(
     catalog.keepsakes.byKey[currentKeepsakeKey]?.effect?.kind === 'moonBeam'
     ? bankPathPoints(branch, 2)
     : branch;
+}
+
+export type PathScreenSettlement =
+  | {
+      readonly kind: 'settled';
+      readonly branch: RewardBranchState;
+      readonly context: HexActivationContext;
+      readonly selectedNodeKeys: readonly string[];
+    }
+  | { readonly kind: 'missing'; readonly context: HexActivationContext }
+  | {
+      readonly kind: 'invalid';
+      readonly context: HexActivationContext;
+      readonly violations: readonly HexActivationViolation[];
+    };
+
+/**
+ * Invests one writable Path screen's authored selection when it fits this branch.
+ * A screen on a full tree has no choice, so it invests nothing without one.
+ */
+export function settleAuthoredPathScreen(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  points: 1 | 3 | 5,
+  activation: AuthoredHexActivation | undefined,
+): PathScreenSettlement {
+  const context = pathScreenContext(catalog, branch.state.hexProgress, points);
+  const selectedNodeKeys =
+    activation?.selectedNodeKeys ?? (context.count === 0 ? Object.freeze([]) : undefined);
+  if (selectedNodeKeys === undefined) return Object.freeze({ kind: 'missing', context });
+  const violations = validateHexActivation(context, selectedNodeKeys);
+  return violations.length > 0
+    ? Object.freeze({ kind: 'invalid', context, violations })
+    : Object.freeze({
+        kind: 'settled',
+        branch: settlePathScreen(catalog, branch, points, selectedNodeKeys),
+        context,
+        selectedNodeKeys,
+      });
+}
+
+/** Finding evidence naming the screen's conflicting nodes. */
+export function hexActivationFindingEvidence(
+  context: HexActivationContext,
+  violations: readonly HexActivationViolation[],
+): FindingEvidence {
+  return Object.freeze({
+    count: context.count,
+    nodeKeys: Object.freeze([
+      ...new Set(
+        violations.flatMap((violation) => ('nodeKey' in violation ? [violation.nodeKey] : [])),
+      ),
+    ]),
+    violations: Object.freeze(
+      violations.map((violation) => Object.freeze({ ...violation }) as FindingEvidence),
+    ),
+  });
 }

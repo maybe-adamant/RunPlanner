@@ -12,11 +12,8 @@ import { ContextualPicker, ContextualPickerPopover } from '@planner/ui/controls/
 import { hintProps } from '@planner/ui/controls/hint';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { HexBoard } from './HexBoard';
 
-/** Row spacing and the board's inset, in pixels; columns spread across the board's width. */
-const CELL_Y = 58;
-const INSET_X = 64;
-const INSET_Y = 34;
 /** Pickers with more options than this offer a search box. */
 const SEARCH_THRESHOLD = 8;
 
@@ -41,16 +38,6 @@ export function HexTreeBoard({
   // Pickers stay within the editor rather than overflowing its dialog.
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const idBase = semanticOwnerControlElementId(domain.address);
-  const minX = Math.min(...domain.nodes.map((node) => node.x));
-  const minY = Math.min(...domain.nodes.map((node) => node.y));
-  const spanX = Math.max(...domain.nodes.map((node) => node.x)) - minX || 1;
-  const height = (Math.max(...domain.nodes.map((node) => node.y)) - minY) * CELL_Y + INSET_Y * 2;
-  const fraction = (node: WorkspaceHexTreeNode) => (node.x - minX) / spanX;
-  const top = (node: WorkspaceHexTreeNode) => (node.y - minY) * CELL_Y + INSET_Y;
-  const position = (node: WorkspaceHexTreeNode) => ({
-    left: `calc(${INSET_X}px + (100% - ${INSET_X * 2}px) * ${fraction(node)})`,
-    top: top(node),
-  });
   const byKey = new Map(domain.nodes.map((node) => [node.nodeKey, node]));
   // The nodes the open node's active choice or the decks table involves.
   const openEditor = open === undefined ? undefined : byKey.get(open.nodeKey)?.editor;
@@ -101,79 +88,55 @@ export function HexTreeBoard({
         </button>
         <p className="hex-tree-note">Choosing a layout generates its default tree.</p>
       </div>
-      <div className="hex-tree-scroll">
-        <div
-          aria-label={`${domain.layoutPicker.selected?.label ?? domain.value.layoutKey} Hex tree`}
-          className="hex-tree-board"
-          role="group"
-          style={{ height }}
-          {...findingTarget(domain.address, `${idBase}-board`)}
-        >
-          <svg
-            aria-hidden="true"
-            className="hex-tree-links"
-            height={height}
-            style={{ left: INSET_X, width: `calc(100% - ${INSET_X * 2}px)` }}
-          >
-            {domain.nodes.flatMap((node) =>
-              node.linkTo.flatMap((target) => {
-                const next = byKey.get(target);
-                if (next === undefined) return [];
-                return [
-                  <line
-                    data-olympian={next.kind.startsWith('olympian') || undefined}
-                    key={`${node.nodeKey}-${target}`}
-                    x1={`${fraction(node) * 100}%`}
-                    x2={`${fraction(next) * 100}%`}
-                    y1={top(node)}
-                    y2={top(next)}
-                  />,
-                ];
-              }),
-            )}
-          </svg>
-          {domain.nodes.map((node) => {
-            const style = position(node);
-            const marks = {
-              'data-common-column': node.commonColumn,
-              'data-involved': involved.has(node.nodeKey) || undefined,
-            };
-            if (node.editor === undefined)
-              return (
-                <span
-                  aria-label={node.name}
-                  className="hex-tree-node"
-                  data-kind={node.kind}
-                  key={node.nodeKey}
-                  role="note"
-                  style={style}
-                  tabIndex={0}
-                  {...marks}
-                  {...hintProps(`${node.talentLabel} appears once God Sent is eligible.`)}
-                >
-                  {node.talentLabel}
-                </span>
-              );
-            return picker(
-              node,
-              'board',
-              <button
+      <HexBoard
+        boardProps={{
+          'aria-label': `${domain.layoutPicker.selected?.label ?? domain.value.layoutKey} Hex tree`,
+          ...findingTarget(domain.address, `${idBase}-board`),
+        }}
+        linkProps={(_node, next) => ({
+          'data-olympian': next.kind.startsWith('olympian') || undefined,
+        })}
+        nodes={domain.nodes}
+        renderNode={(node, style) => {
+          const marks = {
+            'data-common-column': node.commonColumn,
+            'data-involved': involved.has(node.nodeKey) || undefined,
+          };
+          if (node.editor === undefined)
+            return (
+              <span
                 aria-label={node.name}
                 className="hex-tree-node"
-                data-editing={open?.nodeKey === node.nodeKey || undefined}
-                data-has-findings={node.conflict}
                 data-kind={node.kind}
-                id={`${idBase}-${node.nodeKey}`}
+                key={node.nodeKey}
+                role="note"
                 style={style}
-                type="button"
+                tabIndex={0}
                 {...marks}
+                {...hintProps(`${node.talentLabel} appears once God Sent is eligible.`)}
               >
                 {node.talentLabel}
-              </button>,
+              </span>
             );
-          })}
-        </div>
-      </div>
+          return picker(
+            node,
+            'board',
+            <button
+              aria-label={node.name}
+              className="hex-tree-node"
+              data-editing={open?.nodeKey === node.nodeKey || undefined}
+              data-has-findings={node.conflict}
+              data-kind={node.kind}
+              id={`${idBase}-${node.nodeKey}`}
+              style={style}
+              type="button"
+              {...marks}
+            >
+              {node.talentLabel}
+            </button>,
+          );
+        }}
+      />
       <HexDeckTable
         decks={domain.decks}
         onHover={setHoveredNodeKey}

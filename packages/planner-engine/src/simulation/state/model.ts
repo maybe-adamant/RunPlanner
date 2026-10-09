@@ -79,6 +79,7 @@ export interface PendingTraitOfferContext {
   readonly equipment: SimulationEquipmentState;
   readonly stygianWell: StygianWellRunState;
   readonly rewardHistory: RewardHistoryState;
+  readonly hexProgress: HexProgressState;
 }
 
 /** A spawned, unopened loot: its options' build context, or stale when they were cleared. */

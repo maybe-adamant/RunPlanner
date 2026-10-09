@@ -78,6 +78,10 @@ export function deriveEditorSessionReconciliation(
   const clearAnvilDialogTarget =
     anvilDialogTarget !== null &&
     !hasExactDestination(focusByOwner, semanticAddressKey(anvilDialogTarget));
+  const hexActivationDialogTarget = session.hexActivationDialogTarget ?? null;
+  const clearHexActivationDialogTarget =
+    hexActivationDialogTarget !== null &&
+    !hasExactDestination(focusByOwner, semanticAddressKey(hexActivationDialogTarget));
   const arcanaActivationDialogTarget = session.arcanaActivationDialogTarget ?? null;
   const clearArcanaActivationDialogTarget =
     arcanaActivationDialogTarget !== null &&
@@ -101,6 +105,7 @@ export function deriveEditorSessionReconciliation(
     !clearTraitDialogTarget &&
     !clearLevelResolutionDialogTarget &&
     !clearAnvilDialogTarget &&
+    !clearHexActivationDialogTarget &&
     !clearArcanaActivationDialogTarget &&
     !clearCirceDialogTarget &&
     !clearRunStateTarget
@@ -113,6 +118,7 @@ export function deriveEditorSessionReconciliation(
     ...(traitDialogTarget === null ? {} : { clearTraitDialogTarget }),
     ...(levelResolutionDialogTarget === null ? {} : { clearLevelResolutionDialogTarget }),
     ...(anvilDialogTarget === null ? {} : { clearAnvilDialogTarget }),
+    ...(hexActivationDialogTarget === null ? {} : { clearHexActivationDialogTarget }),
     ...(arcanaActivationDialogTarget === null ? {} : { clearArcanaActivationDialogTarget }),
     ...(circeDialogTarget === null ? {} : { clearCirceDialogTarget }),
     ...(runStateTarget === null ? {} : { clearRunStateTarget }),
@@ -141,6 +147,7 @@ export function createEditorSessionReconciliationCoordinator(options: {
       (state.editorSession.traitDialogTarget ?? null) === null &&
       (state.editorSession.levelResolutionDialogTarget ?? null) === null &&
       (state.editorSession.anvilDialogTarget ?? null) === null &&
+      (state.editorSession.hexActivationDialogTarget ?? null) === null &&
       (state.editorSession.arcanaActivationDialogTarget ?? null) === null &&
       (state.editorSession.circeDialogTarget ?? null) === null &&
       (state.editorSession.runStateTarget ?? null) === null

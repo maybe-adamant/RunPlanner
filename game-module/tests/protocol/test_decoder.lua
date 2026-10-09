@@ -2160,3 +2160,23 @@ function TestProtocol.testHubDepartureConformanceDecodesOneTraitInventoryFrame()
         lu.assertStrContains(errorMessage, case[2])
     end
 end
+
+function TestProtocol.testPathScreenRolesCarryTheirPlannedNodesStrictly()
+    local plan = assert(protocol.decode(decode("surface-selene-hex-path")))
+    local planned = {}
+    for _, occurrence in ipairs(plan.occurrences) do
+        for _, transaction in ipairs(occurrence.timeline.transactions) do
+            for _, role in ipairs(transaction.roles or {}) do
+                if role.plannedHexNodeKeys then planned[#planned + 1] = role.plannedHexNodeKeys end
+            end
+        end
+    end
+    lu.assertEquals(planned, { { "1:2", "1:4", "2:2" }, { "2:4", "3:1", "3:2" } })
+    local role = assert(json.decode('{"role":"self","disposition":"normal","lifecyclePoint":"roomRewardPickup",'
+        .. '"kind":"consumable","gameName":"TalentDrop","plannedHexNodeKeys":["1:2"]}'))
+    lu.assertNotNil(rewards.acquisitionRole(role, "role"))
+    role.plannedHexNodeKeys = { 1 }
+    lu.assertNil(rewards.acquisitionRole(role, "role"))
+    role.plannedHexNodeKeys = "1:2"
+    lu.assertNil(rewards.acquisitionRole(role, "role"))
+end

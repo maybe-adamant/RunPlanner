@@ -125,7 +125,7 @@ describe('authored run modifiers', () => {
     const original = project();
     const bytes = encodeProjectDocument(original);
     const decoded = decodeProjectDocument(JSON.parse(bytes), catalog);
-    expect(decoded.schemaVersion).toBe(94);
+    expect(decoded.schemaVersion).toBe(95);
     expect(decoded.route.loadout).not.toHaveProperty('runModifiers');
     expect(routeRunModifiers(decoded.route.loadout)).toEqual(NATIVE_RUN_MODIFIERS);
     expect(encodeProjectDocument(decoded)).toBe(bytes);

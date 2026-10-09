@@ -13,6 +13,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
 import { AnvilResultLauncher } from '../rewards/AnvilResultEditor';
+import { HexActivationLauncher } from '../rewards/HexActivationEditor';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
@@ -89,7 +90,7 @@ function PickupOutcomeControls({
   );
 }
 
-/** Pickup outcome first, then what follows from it: trait, Pom, Anvil, Artificer output, Fountain. */
+/** Pickup outcome first, then what follows from it: trait, Pom, Anvil, Path of Stars, Artificer output, Fountain. */
 export function RoomActionInlineEditors({
   inlineRewardOffer = false,
   row,
@@ -106,15 +107,20 @@ export function RoomActionInlineEditors({
   const payload = row.rewardPayload;
   const levels = payload?.inlineLevelResolutions ?? [];
   const conversions = payload?.control.conversions ?? [];
-  const anvilInteractions = conversions.flatMap((control) => {
-    const interaction = requireWorkspaceInteraction(
+  const conversionInteractions = conversions.map((control) =>
+    requireWorkspaceInteraction(
       interactions.acquisitionConversions,
       workspaceInteractionKey(control.address),
-    );
-    return interaction.anvil === undefined
+    ),
+  );
+  const anvilInteractions = conversionInteractions.flatMap((interaction) =>
+    interaction.anvil === undefined ? [] : [{ anvil: interaction.anvil, owner: interaction.owner }],
+  );
+  const hexActivations = conversionInteractions.flatMap((interaction) =>
+    interaction.hexActivation === undefined
       ? []
-      : [{ anvil: interaction.anvil, owner: interaction.owner }];
-  });
+      : [{ hexActivation: interaction.hexActivation, owner: interaction.owner }],
+  );
   return (
     <>
       {!inlineRewardOffer || row.rewardPayload === undefined ? null : (
@@ -157,6 +163,13 @@ export function RoomActionInlineEditors({
       {anvilInteractions.map(({ anvil, owner }) => (
         <AnvilResultLauncher
           interaction={anvil}
+          key={workspaceInteractionKey(owner)}
+          owner={owner}
+        />
+      ))}
+      {hexActivations.map(({ hexActivation, owner }) => (
+        <HexActivationLauncher
+          interaction={hexActivation}
           key={workspaceInteractionKey(owner)}
           owner={owner}
         />

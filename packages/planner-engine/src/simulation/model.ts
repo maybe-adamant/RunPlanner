@@ -92,7 +92,9 @@ export type RewardGenerationFindingCode =
   | 'hermesShrineDeliveryPlacementRequired'
   | 'echoGoldPickupPlacementRequired'
   | 'hermesShrineTravelDealRefillMissing'
-  | 'hermesShrineTravelDealRefillUnavailable';
+  | 'hermesShrineTravelDealRefillUnavailable'
+  | 'hexActivationMissing'
+  | 'hexActivationUnavailable';
 
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'
@@ -178,6 +180,7 @@ export function isAcquisitionAuthorshipMissingFinding(finding: SemanticFinding):
     case 'rewardMissing':
     case 'traitOfferMissing':
     case 'allTogetherResultMissing':
+    case 'hexActivationMissing':
       return true;
     default:
       return false;
@@ -209,6 +212,7 @@ export function isRequiredMissingInputFinding(
     case 'chaosRejectedBlockMissing':
     case 'hermesShrineDeliveryPlacementRequired':
     case 'echoGoldPickupPlacementRequired':
+    case 'hexActivationMissing':
     case 'rewardMissing':
     case 'traitOfferMissing':
     case 'allTogetherResultMissing':

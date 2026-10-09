@@ -731,7 +731,10 @@ planner models it. The executor forces the layout, lets native
 over the native result with its kind's rarity (Keystone Rare, Legendary Epic,
 repeatable Common); the God Sent nodes stay native. A node the native tree lacks
 or does not publish is a diagnostic. Node identities are not conformance facts;
-`pathOfStars` keeps the God Sent pair, closure and the point counts.
+`pathOfStars` keeps the God Sent pair, closure, the point counts and whether
+the God Sent Olympian talent is invested, Task Force's prerequisite. Each Path
+screen role carries `plannedHexNodeKeys`; the executor marks those nodes on the
+native talent screen as guidance and never enforces them.
 
 The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate

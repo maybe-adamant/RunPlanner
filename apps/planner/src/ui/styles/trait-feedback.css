@@ -681,3 +681,35 @@ button.hex-tree-node[data-has-findings='true'] {
 .hex-tree-rules p {
   margin: 0;
 }
+
+/* Path of Stars screen: earlier investments filled, this screen's nodes highlighted. */
+.hex-activation-points {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  padding: 0.2rem 0.65rem;
+}
+
+.hex-tree-links line[data-taken] {
+  stroke: var(--selection-accent);
+  stroke-width: 3;
+}
+
+.hex-tree-node[data-state='invested'] {
+  background: color-mix(in srgb, var(--selection-accent) 30%, var(--surface));
+  color: var(--text);
+}
+
+.hex-tree-node[data-state='selected'] {
+  background: var(--selection-accent);
+  border-color: var(--text);
+  color: var(--surface);
+  font-weight: 600;
+}
+
+.hex-tree-node[data-state='unavailable'] {
+  border-color: color-mix(in srgb, var(--border) 60%, transparent);
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}

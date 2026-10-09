@@ -253,11 +253,11 @@ describe('Cherished Heirloom active keepsake advance', () => {
 
   it('adds only Moon Beam Epic-to-Heroic Path delta through the real Cherished acquisition fold', () => {
     const before = currentBranch('SpellTalentKeepsake');
-    expect(before.state.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+    expect(before.state.hexProgress).toEqual({ bankedPathPoints: 5, investedNodeKeys: [] });
     expect(before.state.rewardPriorities).toEqual(['SpellDrop']);
 
     const acquired = acquireCherished(before);
-    expect(acquired.state.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
+    expect(acquired.state.hexProgress).toEqual({ bankedPathPoints: 7, investedNodeKeys: [] });
     expect(acquired.state.rewardPriorities).toEqual(['SpellDrop']);
   });
 

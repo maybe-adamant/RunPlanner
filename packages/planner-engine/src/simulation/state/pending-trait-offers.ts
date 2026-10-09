@@ -92,6 +92,7 @@ function contextOf(state: SimulationState): PendingTraitOfferContext {
     equipment: state.equipment,
     stygianWell: state.stygianWell,
     rewardHistory: state.rewardHistory,
+    hexProgress: state.hexProgress,
   });
 }
 
@@ -252,7 +253,7 @@ export function traitOfferContextProjection(context: PendingTraitOfferContext): 
     context.arcanaFear,
     context.keepsakes,
     context.equipment,
-    context.rewardHistory.useRecord.SpellDrop ?? 0,
+    context.hexProgress,
     context.rewardHistory.lastRewardRecreation ?? null,
     context.stygianWell.yarnUses,
     context.stygianWell.hymnUses,

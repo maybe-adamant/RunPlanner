@@ -11,6 +11,7 @@ import {
 
 import { workspaceInteractionKey } from '../contract';
 import { anvilResultLauncherPresentation } from './launcher-presentation';
+import { bindHexActivationInteraction } from './hex-activation';
 import type { WorkspaceAcquisitionConversionInteraction } from '../contracts/traits';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 
@@ -85,6 +86,12 @@ export function bindAcquisitionConversionInteractions(input: {
                   focus: Object.freeze({ owner: conversion.address, timing: 'after' as const }),
                 }),
             });
+      const hexActivation = bindHexActivationInteraction({
+        catalog: input.catalog,
+        address: conversion.address,
+        capability: input.candidates.hexActivation(conversion.address),
+        value: conversion.hexActivation,
+      });
       const seaStarProcced =
         occurrence?.acquisitionSites?.[seaStarDuplicateSiteKey(conversion.address)]
           ?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY] !== undefined;
@@ -132,6 +139,7 @@ export function bindAcquisitionConversionInteractions(input: {
           owner: conversion.address,
           seaStarProcced,
           ...(anvil === undefined ? {} : { anvil }),
+          ...(hexActivation === undefined ? {} : { hexActivation }),
           value: conversion.value,
         }),
       );

@@ -413,6 +413,10 @@ export {
   type SimulationPhase,
 } from './model';
 export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition/artifacts';
+export {
+  type HexActivationCandidateCapability,
+  type HexActivationViolation,
+} from './hex-activation';
 export { type HermesShrineCandidateCapability } from './commerce/hermes-shrine';
 export { type StygianWellCandidateCapability } from './commerce/stygian-well';
 export {

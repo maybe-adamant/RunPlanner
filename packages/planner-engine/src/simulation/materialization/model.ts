@@ -62,6 +62,8 @@ export interface CanonicalResolvedIncomingReward {
   readonly traitOffersByAcquisitionRole?: Readonly<Record<string, AuthoredTraitOffer | null>>;
   readonly levelResolutionsByAcquisitionRole?:
     Readonly<Record<string, AuthoredLevelResolution>> | undefined;
+  readonly hexActivationsByAcquisitionRole?:
+    import('../../authored-project/model').HexActivationsByAcquisitionRole | undefined;
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly traitContext?: TraitOfferSourceContext;
   readonly resolvedStoreKey?: string;
@@ -84,6 +86,8 @@ export interface CanonicalShopOffer {
   readonly dispositionByAcquisitionRole?: import('../../authored-project/model').AuthoredRewardState['dispositionByAcquisitionRole'];
   readonly anvilResultsByAcquisitionRole?:
     import('../../authored-project/model').AnvilResultsByAcquisitionRole | undefined;
+  readonly hexActivationsByAcquisitionRole?:
+    import('../../authored-project/model').HexActivationsByAcquisitionRole | undefined;
   readonly traitContext?: TraitOfferSourceContext;
 }
 

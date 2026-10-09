@@ -358,18 +358,16 @@ export function decodeRoomOccurrence(input: {
           rawOccurrence.startingRewardAcquisition,
           `${rawOccurrence.path}.startingRewardAcquisition`,
         );
-        const hasTraitOffers = Object.hasOwn(rawAcquisition, 'traitOffersByAcquisitionRole');
-        const hasLevelResolutions = Object.hasOwn(
-          rawAcquisition,
+        // The reward codec decides which role payloads this starting reward requires.
+        const optionalPayloads = [
+          'traitOffersByAcquisitionRole',
           'levelResolutionsByAcquisitionRole',
-        );
+          'anvilResultsByAcquisitionRole',
+          'hexActivationsByAcquisitionRole',
+        ].filter((key) => Object.hasOwn(rawAcquisition, key));
         expectExactKeys(
           rawAcquisition,
-          [
-            ...(hasTraitOffers ? ['traitOffersByAcquisitionRole'] : []),
-            ...(hasLevelResolutions ? ['levelResolutionsByAcquisitionRole'] : []),
-            'dispositionByAcquisitionRole',
-          ],
+          [...optionalPayloads, 'dispositionByAcquisitionRole'],
           `${rawOccurrence.path}.startingRewardAcquisition`,
         );
         const reward = decodeRewardState(

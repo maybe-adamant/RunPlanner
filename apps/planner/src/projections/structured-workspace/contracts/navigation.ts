@@ -49,6 +49,8 @@ export type WorkspaceFindingControl =
   | 'wheelChoice'
   | 'pickupOutcome'
   | 'seaStar'
+  /** A Path of Stars screen's launcher. */
+  | 'hexActivation'
   | 'concaveStoneTarget'
   | 'revertAnomaly'
   /** The first row of a grouped trait outcome, which names the next edit. */

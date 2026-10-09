@@ -378,10 +378,17 @@ function rewards.acquisitionRole(value, label)
     local record, errorMessage = p.exact(
         value,
         { "role", "disposition", "lifecyclePoint", "kind", "gameName" },
-        { "producer", "replacement", "settlement", "traitOffer", "levelResolution", "seaStarResult" },
+        {
+            "producer", "replacement", "settlement", "traitOffer", "levelResolution", "seaStarResult",
+            "plannedHexNodeKeys",
+        },
         label
     )
     if not record then return nil, errorMessage end
+    if record.plannedHexNodeKeys ~= nil then
+        local _, plannedError = p.strings(record.plannedHexNodeKeys, label .. ".plannedHexNodeKeys")
+        if plannedError then return nil, plannedError end
+    end
     if not p.one(record.disposition, { normal = true, artificer = true }, label) then
         return p.fail(label .. " has invalid disposition")
     end

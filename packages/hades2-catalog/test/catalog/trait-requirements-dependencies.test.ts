@@ -10,7 +10,7 @@ import {
   expectedOrdinarySlots,
   expectedOfferRequirements,
   expectedPositiveRequirementOwners,
-  expectedSettledSpellDropRequirementOwners,
+  expectedInvestedHexOlympianTalentRequirementOwners,
 } from './support/traits';
 
 const traits = {
@@ -316,16 +316,18 @@ describe('trait requirements and dependencies', () => {
     expect(positiveOwners).toHaveLength(expectedPositiveRequirementOwners.length);
     expect(new Set(positiveOwners)).toEqual(new Set(expectedPositiveRequirementOwners));
 
-    const containsSettledSpellDropRequirement = (requirement: Requirement): boolean => {
-      if (requirement.kind === 'settledSpellDrop') return true;
+    const containsInvestedHexOlympianTalentRequirement = (requirement: Requirement): boolean => {
+      if (requirement.kind === 'investedHexOlympianTalent') return true;
       if (requirement.kind === 'all')
-        return requirement.requirements.some(containsSettledSpellDropRequirement);
+        return requirement.requirements.some(containsInvestedHexOlympianTalentRequirement);
       return false;
     };
-    const settledSpellDropOwners = traits.traits.values
-      .filter((trait) => allRequirements(trait).some(containsSettledSpellDropRequirement))
+    const investedHexOlympianTalentOwners = traits.traits.values
+      .filter((trait) => allRequirements(trait).some(containsInvestedHexOlympianTalentRequirement))
       .map((trait) => trait.key);
-    expect(settledSpellDropOwners).toEqual(expectedSettledSpellDropRequirementOwners);
+    expect(investedHexOlympianTalentOwners).toEqual(
+      expectedInvestedHexOlympianTalentRequirementOwners,
+    );
 
     const actualOfferRequirements = Object.fromEntries(
       traits.traits.values

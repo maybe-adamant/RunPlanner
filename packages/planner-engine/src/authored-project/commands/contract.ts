@@ -199,6 +199,7 @@ function commandContractAddress(
     case 'ReplaceAcquisitionDisposition':
     case 'ReplaceSeaStarResult':
     case 'ReplaceAnvilResult':
+    case 'ReplaceHexActivation':
       return command.acquisition;
   }
 }
