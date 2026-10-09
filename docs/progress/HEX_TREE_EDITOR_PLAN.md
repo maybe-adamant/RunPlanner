@@ -115,10 +115,9 @@ Native scripts: `1GameData/Scripts`.
 2. **Authored tree.** Schema 94 with migration, the planner-owned tree on Spell
    Drop and Aspect with generate, kind-specific node edits and layout change,
    settlement, execution node map, module realisation, tree board. Fixtures
-   regenerated.
-3. **Activations.** Needs schema 95, which requires fresh owner approval
-   before implementation: the complete `selectedNodeKeys[]` on each writable
-   Path of Stars screen (and the Aspect-routed Spell Drop screen), defaulted
+   regenerated. Done: `fde58fdba`.
+3. **Activations.** Schema 95, approved by the owner: the complete
+   `selectedNodeKeys[]` on each writable Path of Stars screen (and the Aspect-routed Spell Drop screen), defaulted
    by the activation fill when the screen is reached; migration 94 → 95 gives
    each screen the default selection. Edits whose conflicts are findings
    naming the nodes, settlement, Task Force, execution planned nodes, module
