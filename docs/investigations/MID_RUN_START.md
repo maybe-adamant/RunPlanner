@@ -1,7 +1,7 @@
 # Mid-run start
 
-Status: open. Owner decisions recorded below; the remaining open points must be
-settled before a plan is locked.
+Status: open. Owner decisions recorded below; the product shape remains before
+a plan is locked.
 
 ## Question
 
@@ -36,9 +36,25 @@ existing plan?
   Current health is set to max.
 - The game assigns Death Defiance from its sources; every charge starts unused.
 - Gold is set manually on the start point, defaulting to native starting gold.
-- A shortcut run writes no run record to the save on clear or death. Real play
-  during the run still counts normally.
-- Native pickup side effects are suppressed during the install.
+- The plan drives the run after the start. The module installs a stub
+  `RoomHistory` (one record per planned room, `Name` plus `NextRoomSet` on
+  Openings and Postbosses) so native depth is exact, plus the run-wide records
+  the planner already holds exactly (use and loot records, consumables,
+  priorities, entered and reached biomes, encounter depth). Full per-room
+  records (encounter recency caches, meta-reward ratio, shop and harvest flags,
+  dialogue) are not fabricated; while synchronized the plan overrides them.
+- After a mismatch, execution goes passive as today and the run continues as a
+  native practice run; recency checks may drift. That is accepted.
+- Install traits without `FromLoot`, and drop `FromLoot` on the start keepsake,
+  so acquire functions do not duplicate planner state. No other side-effect
+  suppression.
+- The game runs its lifecycle normally. The only record change is removing the
+  shortcut run from `RunHistory`.
+- Tight Deadline on a Preboss start grants the biome's full allowance.
+- Weather: whatever the path of least resistance gives; it is cosmetic.
+- Reward pools that differ by branch at the start point are left out; the game
+  builds fresh stores.
+- Unsuppressible in-play `GameState` writes and achievements are real play.
 - Delivery order is the Opening first, then the Preboss.
 
 ## Evidence
@@ -131,9 +147,8 @@ SkipActivatedTraitUpdate, SkipSetup}` inside the module's `StartNewRun` wrap.
   (`DeathLoopLogic.lua:36-240`).
 - The run is appended to `RunHistory` at the next run's `EndRun`
   (`RunLogic.lua:1848-1855`).
-- Suppression: wrap these functions, snapshot and restore the touched
-  `GameState` keys, no-op `SendProgressionEvents`, and remove the run from
-  `RunHistory`.
+- Chosen suppression: remove the shortcut run from `RunHistory` after `EndRun`.
+  Clear-time and depth records from `RecordRunStats` are still written.
 - Not suppressible: writes made during play (rooms entered, kills, dialogue,
   codex, `TraitsTaken` during play) and `CheckProgressAchievements` on every map
   load. Platform achievements can unlock irreversibly from real play.
@@ -212,17 +227,10 @@ SkipActivatedTraitUpdate, SkipSetup}` inside the module's `StartNewRun` wrap.
 
 ## Open points
 
-1. **Tight Deadline on a Preboss start:** grant the biome's full allowance, or
-   the planner value if it is ever modelled.
-2. **F/N weather on a Preboss start:** accept its absence.
-3. **The I Intro's native roll of `MaxClockworkNonGoalRewards`:** confirm the
-   module already steers it the way a normal run does.
-4. **Reward bags that differ by branch at X:** omit them so the game builds
-   fresh stores, or refuse the start point.
-5. **Unsuppressible achievements and in-play `GameState` writes:** accepted as
-   real play.
-6. **Records hooks:** confirm the snapshot-and-restore set; in the Crossroads,
-   `CurrentRun` is still the shortcut run, which some narrative requirements
-   read.
-7. **The start installation product:** its checkpoint, shape, fingerprint and
-   strict Lua decoding, plus the boundary-document amendment.
+1. Clockwork: the module does not write native `MaxClockworkNonGoalRewards` in
+   any run; the plan's door rewards are forced regardless. An I Opening start
+   therefore behaves like a normal run. A Preboss start writes
+   `RemainingClockworkGoals = 0` and the planner's maximum.
+2. The start installation product: its checkpoint (after the predecessor's
+   departure, before X's room-start effects), shape, fingerprint and strict Lua
+   decoding, plus the boundary-document amendment.
