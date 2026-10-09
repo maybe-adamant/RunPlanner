@@ -91,10 +91,52 @@ SkipActivatedTraitUpdate, SkipSetup}` inside the module's `StartNewRun` wrap.
   directly: Chaos and Hermes keepsake timers, `SetManaRegenUnique`, Personal Loan
   `StoredGold`, Echo `RepeatedKeepsake`, Fight Fight Fight start values, and the
   blood-drop display.
-- Every other `AcquireFunctionName` is either a one-time pickup effect or
-  produces state the planner already models (hammers, Poms, Echo, Circe,
-  keepsake upgrades, priorities, talent points). Skipping all of them is
-  correct.
+- Acquire functions are skipped, but several of them change another trait or
+  run field persistently. The module installs that result from planner state.
+  It does not run the acquire, which would compute from the player's profile
+  rather than the plan.
+  - Premium Service (`WeaponUpgradeBoon`, `TraitLogic.lua:2801-2818`) re-adds
+    the aspect one rank above the profile rank. Nothing re-derives it, and
+    removing the boon does not undo it. If Premium Service was ever acquired,
+    re-add the aspect at `Perfect`.
+  - Cherished Heirloom (`KeepsakeLevelBoon`, `KeepsakeLogic.lua:260-351`)
+    rebuilds the current keepsake one rank higher, with per-instance
+    adjustments: Calling Card uses, Time Piece conversions, Moon Beam talent
+    points, Lion Fang reset and the Silver Wheel amount. Later equips re-derive
+    the bonus from the held boon. Install with
+    `EquipKeepsake{ForceRarity = <planner rank>}`, then write the per-instance
+    fields, including Calling Card's nested `RarityUpgradeData.Uses`, which is
+    not a persistent key.
+  - Circe and Chaos Arcana and Fear results:
+    - Vows disabled by Circe: write `ShrineUpgradesDisabled` and call each vow's
+      disable hook. That also stops Tight Deadline.
+    - Temporary Arcana: write `TemporaryMetaUpgrades`.
+    - Lapis-raised Arcana: install at the raised rarity.
+    - Barren: unequip Arcana while active.
+    - The familiar stack multiplier.
+  - Hammer upgrades: install at Legendary. Hera's boost and Hera supercharge:
+    install the target rarity and level, and write `UpgradedTraitName`.
+    Extra boons and levels: install them. Icarus slot boosts: write
+    `SelectedTrait`.
+  - Experimental Hammer: also write `UsesAsEncounters` and `OnExpire`, or the
+    hammer never expires.
+  - Embryo blessing: write `FromChaosKeepsake`.
+  - Jeweled Pom's Hades boon: write `GrantedTrait` and
+    `DeathDefianceDamageBoonEligible`.
+  - Fig Leaf: install `PersistentDionysusSkipKeepsake` with its fields.
+  - Talent points and reward priorities: write them after `StartNewRun`, which
+    overwrites talent points.
+- Values the planner does not model are set fresh or full: spell charges
+  include `BonusSpellUses` (Moon Water Abundance), and `NumRerolls` is
+  recomputed from installed traits.
+- Shop prices are re-derived from held traits whenever a shop is generated
+  (`StoreLogic.lua:678-686`). The Travel Deal and discount acquires only
+  re-price shop items already spawned.
+- Silver Wheel's equip adds its max-Magick trait even without `FromLoot`. The
+  lumped max-Magick trait must exclude it, or carry it as a separately tagged
+  source.
+- Arcana Death Defiance and rerolls are computed inside `StartNewRun`, so either
+  install Arcana before those lines or add the temporary and Lapis deltas.
 - Chaos: an active boon is the processed curse trait carrying `RemainingUses`
   and `OnExpire.TraitData` (the blessing) (`UpgradeChoiceLogic.lua:350-379`). A
   matured blessing is a standalone trait.
