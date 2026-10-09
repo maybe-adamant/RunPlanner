@@ -668,6 +668,72 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(history.equippedTraits.ApolloWeaponBoon).toMatchObject({ rarity: 'Heroic', level: 5 });
   });
 
+  it('records the Bridal Glow target on the Bridal Glow instance through its rarity rebuilds', () => {
+    const initial = bridalHistory();
+    expect(initial.equippedTraits.BoonDecayBoon?.upgradedTraitKey).toBe('ApolloWeaponBoon');
+    expect(initial.equippedTraits.ApolloWeaponBoon?.upgradedTraitKey).toBeUndefined();
+    // The Bridal level mutation names a source but is not an Icarus slot selection.
+    expect(initial.equippedTraits.BoonDecayBoon?.selectedSlotTraitKey).toBeUndefined();
+
+    const rebuilt = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      bridalRarityMutation(initial.events.length + 1, 'Common', 'Rare'),
+    ]);
+    expect(rebuilt.equippedTraits.BoonDecayBoon).toMatchObject({
+      rarity: 'Rare',
+      upgradedTraitKey: 'ApolloWeaponBoon',
+    });
+
+    // `UpgradedTraitName` is a name; removing the target leaves it on the source.
+    const targetRemoved = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      {
+        kind: 'traitRemoval' as const,
+        owner,
+        acquisitionRole: 'purgingPoolSale',
+        sequence: initial.events.length + 1,
+        acquisitionPoint: 'purgingPoolSale',
+        traitKey: 'ApolloWeaponBoon',
+        match: 'currentTraitKey' as const,
+      },
+    ]);
+    expect(targetRemoved.equippedTraits.BoonDecayBoon?.upgradedTraitKey).toBe('ApolloWeaponBoon');
+
+    const sourceRemoved = foldTraitHistoryEvents(catalog, [
+      ...initial.events,
+      {
+        kind: 'traitRemoval' as const,
+        owner,
+        acquisitionRole: 'purgingPoolSale',
+        sequence: initial.events.length + 1,
+        acquisitionPoint: 'purgingPoolSale',
+        traitKey: 'BoonDecayBoon',
+        match: 'currentTraitKey' as const,
+      },
+    ]);
+    expect(sourceRemoved.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(
+      Object.values(sourceRemoved.equippedTraits).some(
+        (trait) => trait.upgradedTraitKey !== undefined,
+      ),
+    ).toBe(false);
+
+    const { targetedAcquisitionTransition, ...plainBridal } = bridalAcquisitionEvent(
+      initial.events.length + 2,
+    );
+    expect(targetedAcquisitionTransition).toBeDefined();
+    const reacquired = foldTraitHistoryEvents(catalog, [
+      ...sourceRemoved.events,
+      plainBridal,
+      bridalRarityMutation(initial.events.length + 3, 'Common', 'Heroic', 'fountainRarity'),
+    ]);
+    expect(reacquired.equippedTraits.BoonDecayBoon).toMatchObject({ rarity: 'Heroic' });
+    expect(reacquired.equippedTraits.BoonDecayBoon?.upgradedTraitKey).toBeUndefined();
+    expect(reacquired.equippedTraits.ApolloWeaponBoon?.level).toBe(
+      initial.equippedTraits.ApolloWeaponBoon?.level,
+    );
+  });
+
   it('does not credit rejected, repeated, missing, or replaced Bridal Glow targets', () => {
     const initial = bridalHistory();
     const rejected = foldTraitHistoryEvents(catalog, [

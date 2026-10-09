@@ -204,6 +204,10 @@ export interface EquippedTrait {
   readonly sourceRole: string;
   /** Exact acquisition event that installed this instance. */
   readonly acquisitionIdentity?: string;
+  /** Native `UpgradedTraitName`: the boon Bridal Glow promoted, kept through its own rebuilds. */
+  readonly upgradedTraitKey?: string;
+  /** Native `SelectedTrait` at acquisition: the slot boon an Icarus upgrade levelled; not persistent, so native rebuilds reset it. */
+  readonly selectedSlotTraitKey?: string;
   /** Immutable acquisition-time target owned only by Gift Gift Gift. */
   readonly echoRepeatedKeepsakeKey?: string;
   /** Count of declaration-owned biome-start replay attempts recorded in trait history. */

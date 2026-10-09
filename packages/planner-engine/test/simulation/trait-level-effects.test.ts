@@ -348,7 +348,11 @@ describe('Icarus occupied-slot level upgrades', () => {
       expect(reached.assessments[0]).toMatchObject({ legal: true, findings: [] });
       const recorded = recordReachedTraitOffer(catalog, reached, before.events.length + 1, 'test');
       expect(recorded.history.equippedTraits[target]).toMatchObject({ level: 2 + addedLevels });
-      expect(recorded.history.equippedTraits[source]).toMatchObject({ giverKey: 'Icarus' });
+      expect(recorded.history.equippedTraits[source]).toMatchObject({
+        giverKey: 'Icarus',
+        selectedSlotTraitKey: target,
+      });
+      expect(foldTraitHistoryEvents(catalog, recorded.history.events)).toEqual(recorded.history);
       expect(recorded.history.events.at(-1)).toMatchObject({
         kind: 'levelMutation',
         sourceTraitKey: source,
@@ -358,6 +362,75 @@ describe('Icarus occupied-slot level upgrades', () => {
       });
     },
   );
+
+  it('keeps the selected slot boon on the Icarus instance until that instance is removed', () => {
+    const before = atLevel('Apollo', 'ApolloWeaponBoon', 'Common', 2);
+    const offer: AuthoredTraitOffer = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Icarus',
+      options: Object.freeze([
+        { traitKey: 'FocusAttackDamageTrait' },
+        { traitKey: 'OmegaExplodeBoon' },
+        { traitKey: 'CastHazardBoon' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1',
+    });
+    const reached = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'icarus-slot-upgrade',
+      offer,
+      traitFrontierState(before, { acquisitionOrdinal: 1 }),
+      {},
+      before.events.length,
+    );
+    const { events } = recordReachedTraitOffer(
+      catalog,
+      reached,
+      before.events.length + 1,
+      'test',
+    ).history;
+    const removal = (sequence: number, traitKey: string) =>
+      ({
+        kind: 'traitRemoval',
+        owner,
+        acquisitionRole: 'purgingPoolSale',
+        sequence,
+        acquisitionPoint: 'purgingPoolSale',
+        traitKey,
+        match: 'currentTraitKey',
+      }) as const;
+    const mutation = events.at(-1);
+    if (mutation?.kind !== 'levelMutation') throw new Error('missing Icarus level mutation');
+    const withMutation = (changed: typeof mutation) =>
+      foldTraitHistoryEvents(catalog, [...events.slice(0, -1), changed]).equippedTraits
+        .FocusAttackDamageTrait;
+    expect(withMutation({ ...mutation, oldLevel: mutation.oldLevel + 1 })).toBeDefined();
+    expect(
+      withMutation({ ...mutation, oldLevel: mutation.oldLevel + 1 })?.selectedSlotTraitKey,
+    ).toBeUndefined();
+    expect(
+      withMutation({ ...mutation, targetTraitKey: 'ApolloSpecialBoon' })?.selectedSlotTraitKey,
+    ).toBeUndefined();
+    // Native `SelectedTrait` is a name; removing the levelled boon does not clear it.
+    const targetRemoved = foldTraitHistoryEvents(catalog, [
+      ...events,
+      removal(events.length + 1, 'ApolloWeaponBoon'),
+    ]);
+    expect(targetRemoved.equippedTraits.FocusAttackDamageTrait?.selectedSlotTraitKey).toBe(
+      'ApolloWeaponBoon',
+    );
+    const sourceRemoved = foldTraitHistoryEvents(catalog, [
+      ...events,
+      removal(events.length + 1, 'FocusAttackDamageTrait'),
+    ]);
+    expect(sourceRemoved.equippedTraits.FocusAttackDamageTrait).toBeUndefined();
+    expect(
+      Object.values(sourceRemoved.equippedTraits).some(
+        (trait) => trait.selectedSlotTraitKey !== undefined,
+      ),
+    ).toBe(false);
+  });
 
   it('withholds Ingenious Strike when the occupied Hephaestus Attack is cooldown-capped', () => {
     const capped = atLevel('Hephaestus', 'HephaestusWeaponBoon', 'Common', 10);

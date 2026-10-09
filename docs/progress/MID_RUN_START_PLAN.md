@@ -104,6 +104,10 @@ from there as usual. The run is not recorded in the save's run history.
 2. **Engine capture and projection.**
    - Preboss capture, Opening hand-off, the start-installation product and
      per-start-point availability.
+   - The Preboss capture already includes the start room's creation effects
+     (encounter record, offer-time reward and bag effects). Native `CreateRoom`
+     repeats them, so the product marks which run-wide records the install
+     writes after creation.
    - Intended equivalence baseline rewrite for the always-on Preboss capture.
    - `npm run test:performance:compare` must pass; the capture must not add
      measurable rebuild or edit cost.
