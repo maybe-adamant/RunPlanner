@@ -134,12 +134,8 @@ export function initializeRewardBranches(
     initialBranches.map((branch) =>
       Object.freeze({
         state: Object.freeze({
-          ...branch.state,
+          ...beginBiomeSimulationState(branch.state),
           reached: Object.freeze(reached),
-          rewardHistory: beginBiomeRewardHistory(branch.state.rewardHistory),
-          pendingShops: Object.freeze({}),
-          arcanaFear: beginBiomeArcanaFearState(branch.state.arcanaFear),
-          keepsakes: beginBiomeKeepsakeState(branch.state.keepsakes),
         }),
         events: Object.freeze([]),
         pendingShopContinuations: Object.freeze({}),
@@ -148,6 +144,17 @@ export function initializeRewardBranches(
       }),
     ),
   );
+}
+
+/** The native biome-start reset (`EndBiomeRecords`) of biome-local state; run-wide state carries on. */
+export function beginBiomeSimulationState(state: SimulationState): SimulationState {
+  return Object.freeze({
+    ...state,
+    rewardHistory: beginBiomeRewardHistory(state.rewardHistory),
+    pendingShops: Object.freeze({}),
+    arcanaFear: beginBiomeArcanaFearState(state.arcanaFear),
+    keepsakes: beginBiomeKeepsakeState(state.keepsakes),
+  });
 }
 
 export function publicRewardBranch(branch: RewardBranchState): RewardBranch {

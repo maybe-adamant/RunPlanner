@@ -125,6 +125,8 @@ export interface RawRoomDeclaration {
   readonly blockGiftBoons?: boolean;
   /** The game room flag that suppresses Gorgon Amulet in this room. */
   readonly blocksGorgon?: boolean;
+  /** Native RoomData `NextRoomSet`, declared or inherited; native biome depth counts from it. */
+  readonly nextRoomSet?: boolean;
   readonly hasKeepsakeRack?: boolean;
   readonly keepsakeRackExcludedRouteKeys?: readonly string[];
   readonly hasRequiredFountain?: boolean;

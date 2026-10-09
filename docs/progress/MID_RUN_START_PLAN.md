@@ -39,7 +39,8 @@ from there as usual. The run is not recorded in the save's run history.
   - **Gold:** a numeric field on the start point, defaulting to native starting
     gold.
   - **Room history:** one stub `RoomHistory` record per planned room (`Name`,
-    plus `NextRoomSet` on Openings and Postbosses). Run-wide records the planner
+    plus `NextRoomSet` where the room declares or inherits it: the F and N
+    Openings and every Postboss but I's and Q's). Run-wide records the planner
     holds exactly are installed; per-room recency records are not.
   - **After a mismatch:** execution goes passive and the run continues natively.
   - **Tight Deadline:** a Preboss start grants the biome's full allowance.

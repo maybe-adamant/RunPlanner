@@ -766,6 +766,11 @@ export function normalizeTraits(
               `${path}.maxStatEffect`,
             ),
           }),
+      ...(trait.raisesAspectToPerfect === undefined
+        ? {}
+        : (trait.raisesAspectToPerfect as unknown) === true
+          ? { raisesAspectToPerfect: true as const }
+          : fail(`${path}.raisesAspectToPerfect`, 'must be true when declared')),
       selectedDisposition,
     });
   });

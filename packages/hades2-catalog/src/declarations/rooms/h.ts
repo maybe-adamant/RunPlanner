@@ -1128,6 +1128,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_PostBoss01',
+    nextRoomSet: true,
     resourcePointSupport: hResourcePointSupport([]),
     label: 'Postboss',
     // The Postboss rack, Pool and Well each need their own incantation.

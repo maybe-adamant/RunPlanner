@@ -61,6 +61,8 @@ export interface RawTraitDeclaration {
     readonly maximum: RawRarityScaledValue;
   };
   readonly maxStatEffect?: RawTraitMaxStatEffect;
+  /** Source acquire (`WeaponUpgradeBoon`): re-adds the equipped aspect at Perfect. */
+  readonly raisesAspectToPerfect?: true;
 }
 
 /** A rarityless number, or a base scaled by `RarityLevels` (excess over one with `sourceIsMultiplier`). */
@@ -106,14 +108,12 @@ export interface RawAspectDeclaration {
   readonly traitOfferLevelBonus?: {
     readonly maximumBonus: number;
     readonly upgradedMaximumBonus: number;
-    readonly upgradeTraitKey: string;
   };
-  /** Flat maximum at rank V (Legendary) and rank VI (Perfect, after the upgrade trait). */
+  /** Flat maximum at rank V (Legendary) and rank VI (Perfect). */
   readonly maxStatBonus?: {
     readonly stat: 'maxHealth' | 'maxMana';
     readonly amount: number;
     readonly upgradedAmount: number;
-    readonly upgradeTraitKey: string;
   };
 }
 

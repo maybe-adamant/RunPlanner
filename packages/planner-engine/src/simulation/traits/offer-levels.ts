@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredTraitOption } from '../../authored-project/traits/state';
 import type { SimulationState } from '../state/model';
+import { aspectIsPerfect } from './equipment-upgrades';
 import { isLevelBearingTrait } from './history/upgrades';
 import type {
   TraitAssessment,
@@ -81,7 +82,7 @@ export function resolveTraitOfferOptionLevel(
         ? keepsakes.jeweledPom.levels
         : 0;
   if (aspectEffect !== undefined && source.stackBoostsSuppressed !== true) {
-    const maximum = before.previouslyPickedTraitKeys.includes(aspectEffect.upgradeTraitKey)
+    const maximum = aspectIsPerfect(catalog, before)
       ? aspectEffect.upgradedMaximumBonus
       : aspectEffect.maximumBonus;
     const bonus = option.persephoneLevelBonus ?? 0;

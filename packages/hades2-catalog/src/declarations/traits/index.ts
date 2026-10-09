@@ -101,7 +101,6 @@ const aspects = [
       stat: 'maxMana',
       amount: 40,
       upgradedAmount: 50,
-      upgradeTraitKey: 'WeaponUpgradeBoon',
     },
   },
   { key: 'StaffClearCastAspect', label: 'Aspect of Circe', weaponKey: 'WeaponStaffSwing' },
@@ -120,7 +119,6 @@ const aspects = [
       stat: 'maxHealth',
       amount: 50.1,
       upgradedAmount: 60,
-      upgradeTraitKey: 'WeaponUpgradeBoon',
     },
   },
   { key: 'AxeArmCastAspect', label: 'Aspect of Charon', weaponKey: 'WeaponAxe' },
@@ -139,7 +137,6 @@ const aspects = [
     traitOfferLevelBonus: {
       maximumBonus: 5,
       upgradedMaximumBonus: 8,
-      upgradeTraitKey: 'WeaponUpgradeBoon',
     },
   },
   { key: 'LobGunAspect', label: 'Aspect of Hel', weaponKey: 'WeaponLob' },

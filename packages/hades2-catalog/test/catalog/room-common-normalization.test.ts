@@ -29,6 +29,32 @@ describe('room common normalization', () => {
     expect(() => createCatalog(raw)).toThrow(CatalogContractError);
   });
 
+  it('declares native NextRoomSet on exactly the rooms that declare or inherit it', () => {
+    const rooms = createCatalog(declarations).rooms.values;
+    // RoomData F_Opening01 (F_Opening02/03 inherit it), N_Opening01 and each Postboss
+    // but I and Q's; Dream_PostBoss02/03 inherit Dream_PostBoss01's empty set.
+    expect(
+      rooms
+        .filter((room) => room.nextRoomSet)
+        .map((room) => room.gameName)
+        .sort(),
+    ).toEqual([
+      'Dream_PostBoss01',
+      'Dream_PostBoss02',
+      'Dream_PostBoss03',
+      'F_Opening01',
+      'F_Opening02',
+      'F_Opening03',
+      'F_PostBoss01',
+      'G_PostBoss01',
+      'H_PostBoss01',
+      'N_Opening01',
+      'N_PostBoss01',
+      'O_PostBoss01',
+      'P_PostBoss01',
+    ]);
+  });
+
   it('derives ordinary offer surfaces from each room incoming declaration', () => {
     const compiled = createCatalog(declarations);
     expect(compiled.rooms.byKey.F_Combat01?.offerRewardBinding).toEqual({

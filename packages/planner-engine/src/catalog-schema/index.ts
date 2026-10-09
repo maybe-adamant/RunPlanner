@@ -977,6 +977,8 @@ export interface RoomDeclaration {
   readonly blockGiftBoons: boolean;
   /** Source-declared room-owned blocker for Gorgon Amulet. */
   readonly blocksGorgon: boolean;
+  /** Native RoomData `NextRoomSet`, declared or inherited; native biome depth counts from it. */
+  readonly nextRoomSet: boolean;
   /** Exact physical Postboss rack presence, independent of route position. */
   readonly hasKeepsakeRack: boolean;
   /** Routes whose save profile lacks the rack. */

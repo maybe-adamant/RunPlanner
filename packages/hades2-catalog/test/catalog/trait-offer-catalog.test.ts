@@ -4,36 +4,22 @@ import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 
 describe('trait offer-catalog compiler owner', () => {
-  it('declares Persephone offer-level bounds and the Premium Service upgrade link', () => {
+  it('declares Persephone offer-level bounds and Premium Service as the Perfect aspect upgrade', () => {
     expect(catalog.aspects.byKey.LobImpulseAspect?.traitOfferLevelBonus).toEqual({
       maximumBonus: 5,
       upgradedMaximumBonus: 8,
-      upgradeTraitKey: 'WeaponUpgradeBoon',
     });
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.raisesAspectToPerfect === true)
+        .map((trait) => trait.key),
+    ).toEqual(['WeaponUpgradeBoon']);
   });
 
   it.each([
-    [
-      'negative maximum',
-      { maximumBonus: -1, upgradedMaximumBonus: 8, upgradeTraitKey: 'WeaponUpgradeBoon' },
-    ],
-    [
-      'widened maximum',
-      { maximumBonus: 5, upgradedMaximumBonus: 9, upgradeTraitKey: 'WeaponUpgradeBoon' },
-    ],
-    [
-      'missing upgrade trait',
-      { maximumBonus: 5, upgradedMaximumBonus: 8, upgradeTraitKey: 'MissingTrait' },
-    ],
-    [
-      'extra field',
-      {
-        maximumBonus: 5,
-        upgradedMaximumBonus: 8,
-        upgradeTraitKey: 'WeaponUpgradeBoon',
-        extra: true,
-      },
-    ],
+    ['negative maximum', { maximumBonus: -1, upgradedMaximumBonus: 8 }],
+    ['widened maximum', { maximumBonus: 5, upgradedMaximumBonus: 9 }],
+    ['extra field', { maximumBonus: 5, upgradedMaximumBonus: 8, extra: true }],
   ])('rejects %s Persephone declaration mutations', (_label, effect) => {
     const mutated = {
       ...declarations,
@@ -41,6 +27,22 @@ describe('trait offer-catalog compiler owner', () => {
         ...declarations.traitCatalog,
         aspects: declarations.traitCatalog.aspects.map((aspect) =>
           aspect.key === 'LobImpulseAspect' ? { ...aspect, traitOfferLevelBonus: effect } : aspect,
+        ),
+      },
+    };
+    expect(() => createCatalog(mutated as never)).toThrow();
+  });
+
+  it.each([
+    ['a second declarer', 'HephaestusWeaponBoon', true],
+    ['a non-true value', 'WeaponUpgradeBoon', false],
+  ])('rejects the Perfect aspect upgrade on %s', (_label, traitKey, value) => {
+    const mutated = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === traitKey ? { ...trait, raisesAspectToPerfect: value } : trait,
         ),
       },
     };

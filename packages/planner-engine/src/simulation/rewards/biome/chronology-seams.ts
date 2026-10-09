@@ -843,15 +843,44 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   };
 };
 
+/**
+ * A Preboss's received states, after its predecessor's departure and before
+ * its own preparation and entry, are the mid-run start state.
+ */
+function prebossStartState(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  room: CanonicalAuthoredRoom | undefined,
+): readonly ChronologyEmission[] {
+  if (
+    room === undefined ||
+    room.gameName !== context.routePosition.completion.prebossRoomGameName ||
+    state.branches.length === 0
+  )
+    return [];
+  return [
+    {
+      kind: 'prebossStartState',
+      capture: Object.freeze({
+        owner: room.origin,
+        gameName: room.gameName,
+        states: Object.freeze(state.branches.map((branch) => branch.state)),
+      }),
+    },
+  ];
+}
+
 const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, event) => {
+  const room = authoredRoom(context, event.origin);
   const transition = applyRoomPreparedTransition(
     context.catalog,
     context.snapshot,
     event,
-    authoredRoom(context, event.origin),
+    room,
     state.branches,
   );
   return {
+    leadingEmissions: prebossStartState(context, state, room),
     state: Object.freeze({
       ...state,
       branches: transition.branches,
