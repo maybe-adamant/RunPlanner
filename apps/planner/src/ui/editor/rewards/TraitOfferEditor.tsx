@@ -24,6 +24,7 @@ import {
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { HexTreeRulesHelp } from './HexTreeRulesHelp';
 import { LauncherButton } from './LauncherButton';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
@@ -138,6 +139,9 @@ export function TraitOfferDialog({
       // The feedback region lists the dialog's findings; its launcher carries the mark.
       anchorProps={{ ...findingAnchor(target), tabIndex: -1 }}
       eyebrow="Trait offer"
+      {...(interaction.giver.providerKind === 'spell'
+        ? { headerAction: <HexTreeRulesHelp />, size: 'hexTree' as const }
+        : {})}
       {...(exactChild === undefined
         ? {}
         : { initialFocusId: semanticOwnerControlElementId(exactChild) })}

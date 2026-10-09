@@ -321,8 +321,8 @@ export interface ReachedTraitOfferEvaluation {
   readonly settledHexTree?: {
     readonly spellTraitKey: string;
     readonly layoutKey: string;
-    readonly rareTalentKeys: readonly string[];
-    readonly epicTalentKeys: readonly string[];
+    /** Talent on every non-Olympian node. */
+    readonly nodes: Readonly<Record<string, string>>;
     readonly godSent?: {
       readonly olympianTalentKey: string;
       readonly lineageTalentKey: string;

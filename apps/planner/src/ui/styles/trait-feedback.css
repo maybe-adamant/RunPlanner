@@ -264,9 +264,219 @@
   display: none;
 }
 
-.hex-god-sent {
+/* Hex tree board: nodes sit on the native talent grid; links are drawn beneath them. */
+.hex-tree-editor {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.hex-tree-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.85rem;
+}
+
+.hex-tree-note {
+  color: var(--muted);
+  font-size: 0.8rem;
   margin: 0;
+}
+
+.hex-tree-scroll {
+  overflow-x: auto;
+}
+
+.hex-tree-board {
+  background: #15161b;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 44rem;
+  position: relative;
+  width: 100%;
+}
+
+.hex-tree-links {
+  overflow: visible;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+}
+
+.hex-tree-links line {
+  stroke: #5b5c68;
+  stroke-width: 2;
+}
+
+.hex-tree-links line[data-olympian] {
+  stroke-dasharray: 4 4;
+}
+
+.hex-tree-node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.74rem;
+  line-height: 1.15;
+  padding: 0.3rem 0.55rem;
+  position: absolute;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  width: 6.2rem;
+}
+
+button.hex-tree-node {
+  cursor: pointer;
+}
+
+.hex-tree-node[data-kind='keystone'] {
+  border-color: #6f8fd6;
+}
+
+.hex-tree-node[data-kind='legendary'] {
+  border-color: #b07ad8;
+}
+
+.hex-tree-node:is([data-kind='olympianSpell'], [data-kind='olympianCount']) {
+  border-style: dashed;
+}
+
+/* Common nodes and their table columns share one colour per Common column. */
+:is(.hex-tree-node, .hex-deck-table th)[data-common-column='0'] {
+  --hex-column: var(--hex-column-1);
+}
+
+:is(.hex-tree-node, .hex-deck-table th)[data-common-column='1'] {
+  --hex-column: var(--hex-column-2);
+}
+
+:is(.hex-tree-node, .hex-deck-table th)[data-common-column='2'] {
+  --hex-column: var(--hex-column-3);
+}
+
+:is(.hex-tree-node, .hex-deck-table th)[data-common-column='3'] {
+  --hex-column: var(--hex-column-4);
+}
+
+:is(.hex-tree-node, .hex-deck-table th)[data-common-column='4'] {
+  --hex-column: var(--hex-column-5);
+}
+
+:is(.hex-tree-node, .hex-deck-table th)[data-common-column='5'] {
+  --hex-column: var(--hex-column-6);
+}
+
+.hex-tree-node[data-common-column] {
+  background: color-mix(in srgb, var(--hex-column) 14%, var(--surface));
+  border-color: var(--hex-column);
+}
+
+/* A tree-wide conflict names the node; the tree's finding owns the address. */
+button.hex-tree-node[data-has-findings='true'] {
+  box-shadow: inset 0 0 0 2px var(--finding);
+}
+
+.hex-tree-node[data-involved] {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.hex-tree-node:focus-visible,
+.hex-tree-node[data-editing] {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 2px;
+}
+
+/* Common decks: which deck dealt each talent, one cell per column. */
+.hex-deck-scroll {
+  overflow-x: auto;
+}
+
+/*
+ * Chips share one width sized to the longest Common label, so a cell wraps by
+ * chip count alone; every column fits two chips side by side.
+ */
+.hex-deck-table {
+  /* A character width per label character covers the chip's padding and border too. */
+  --hex-chip-width: calc(var(--hex-chip-length) * 1ch);
+  --hex-deck-label-width: 3.75rem;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  min-width: calc(
+    var(--hex-deck-label-width) + var(--hex-column-count) * (2 * var(--hex-chip-width) + 0.85rem)
+  );
+  table-layout: fixed;
+  width: 100%;
+}
+
+.hex-deck-table caption {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding-bottom: 0.35rem;
+  text-align: start;
+}
+
+.hex-deck-table :is(th, td) {
+  border-top: 1px solid var(--border);
+  padding: 0.3rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.hex-deck-table thead :is(th, td) {
+  border-top: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hex-deck-table thead th[data-common-column] {
+  box-shadow: inset 0 -3px 0 var(--hex-column);
+}
+
+.hex-deck-table thead td,
+.hex-deck-table tbody th {
+  width: var(--hex-deck-label-width);
+}
+
+.hex-deck-table tbody th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hex-deck-cell {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.hex-deck-talent {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.15;
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  text-align: center;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  width: var(--hex-chip-width);
+}
+
+.hex-deck-talent:focus-visible,
+.hex-deck-talent[data-state='open'] {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 1px;
+}
+
+.hex-deck-table td.hex-deck-unreadable {
+  color: var(--muted);
 }
 
 .echo-last-run-choice h3,
@@ -435,4 +645,39 @@
   min-width: 19px;
   height: 19px;
   font-size: 0.68rem;
+}
+
+.hex-tree-help {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+  height: 1.8rem;
+  width: 1.8rem;
+}
+
+.hex-tree-rules {
+  background: #1b1c22;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  color: var(--text);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  max-width: min(26rem, calc(100 * var(--app-vw) - 24px));
+  padding: 0.6rem 0.9rem;
+  z-index: 50;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.hex-tree-rules h3 {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.hex-tree-rules p {
+  margin: 0;
 }

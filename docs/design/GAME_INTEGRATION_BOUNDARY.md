@@ -723,6 +723,16 @@ The executor trusts planner eligibility and does not preflight exact trait rows
 through `IsTraitEligible`, duo requirements, replacement constraints, or a
 second offer-legality policy before forcing them.
 
+A selected Spell Drop's `hexTree`, and Aspect of Selene's
+`startingLoadout.startingHex`, carry the layout and `nodes`: the authored talent
+on every non-Olympian node, keyed `depth:slot`, plus the God Sent pair when the
+planner models it. The executor forces the layout, lets native
+`CreateTalentTree` make every draw, then writes each published node's talent
+over the native result with its kind's rarity (Keystone Rare, Legendary Epic,
+repeatable Common); the God Sent nodes stay native. A node the native tree lacks
+or does not publish is a diagnostic. Node identities are not conformance facts;
+`pathOfStars` keeps the God Sent pair, closure and the point counts.
+
 The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate
 equip result. A run that starts without a keepsake or aspect, as on a fresh

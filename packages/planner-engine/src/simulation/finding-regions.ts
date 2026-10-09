@@ -75,6 +75,8 @@ export function assessmentRepairOwner(origin: SemanticAddress): SemanticAddress 
     case 'echoLastReward':
     case 'allTogetherSet':
       return assessmentRepairOwner(origin.trait);
+    case 'hexTree':
+      return origin.owner.kind === 'traitOffer' ? assessmentRepairOwner(origin.owner) : origin;
     default:
       return origin;
   }
@@ -115,6 +117,8 @@ export function authoringRegion(origin: SemanticAddress): string {
   ) {
     traitOwner = traitOwner.trait;
   }
+  if (traitOwner.kind === 'hexTree' && traitOwner.owner.kind === 'traitOffer')
+    traitOwner = traitOwner.owner;
   if (traitOwner.kind === 'traitOffer') {
     return `traitOffer:${semanticAddressKey(traitOwner)}`;
   }

@@ -24,10 +24,10 @@ import {
   KeepsakeEquipResultPicker,
   KeepsakeSelectionPicker,
 } from '@planner/ui/editor/KeepsakePickers';
-import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
+import { AspectHexTreeDialog } from '@planner/ui/editor/rewards/AspectHexTreeDialog';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
-import { useFindingAnchor } from '../feedback/useFindingTarget';
+import { useFindingAnchor, useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
@@ -180,6 +180,7 @@ function MatureRouteLoadout({
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
+  const findingTarget = useFindingTarget();
   const startingReward = workspaceRoute.startingReward;
   if (startingReward === undefined)
     throw new Error(`Missing starting reward control for ${workspaceRoute.routeKey}`);
@@ -241,7 +242,7 @@ function MatureRouteLoadout({
         { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
       >
     | undefined;
-  const [dialog, setDialog] = useState<'Arcana' | 'Fear'>();
+  const [dialog, setDialog] = useState<'Arcana' | 'Fear' | 'Hex'>();
   return (
     <>
       <div className="route-loadout-panel">
@@ -315,6 +316,24 @@ function MatureRouteLoadout({
               />
             )}
           </div>
+          {workspaceRoute.aspectHexTree === undefined ? null : (
+            <div className="field-control field-control-inline loadout-dialog-launcher">
+              <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
+              <button
+                {...findingTarget(
+                  workspaceRoute.aspectHexTree.address,
+                  `${workspaceRoute.routeKey}-aspect-hex`,
+                )}
+                className="contextual-picker-trigger"
+                type="button"
+                aria-label="Edit Sky Fall Hex tree"
+                aria-haspopup="dialog"
+                onClick={() => setDialog('Hex')}
+              >
+                {workspaceRoute.aspectHexTree.layoutLabel} tree
+              </button>
+            </div>
+          )}
           <RouteFamiliarPicker
             catalog={catalog}
             familiarKey={familiarKey}
@@ -330,20 +349,13 @@ function MatureRouteLoadout({
             }
           />
         </div>
-        {workspaceRoute.aspectHexTree === undefined ? null : (
-          <HexTreeEditor
-            address={workspaceRoute.aspectHexTree.address}
-            domain={workspaceRoute.aspectHexTree.domain}
-            onChange={(value) =>
-              dispatch(
-                authoredProjectCommandDispatched(
-                  workspaceRoute.aspectHexTree!.intentFor(value).command,
-                ),
-              )
-            }
-            transitionFor={workspaceRoute.aspectHexTree.transitionFor}
+        {dialog === 'Hex' && workspaceRoute.aspectHexTree !== undefined ? (
+          <AspectHexTreeDialog
+            control={workspaceRoute.aspectHexTree}
+            onClose={() => setDialog(undefined)}
+            returnFocusId={`${workspaceRoute.routeKey}-aspect-hex`}
           />
-        )}
+        ) : null}
         {dialog === 'Arcana' ? (
           <EditorDialog
             eyebrow="Loadout"

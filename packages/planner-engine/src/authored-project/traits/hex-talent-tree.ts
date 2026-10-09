@@ -23,9 +23,11 @@ export type HexTalentTreeViolation =
       readonly nodeKeys: readonly string[];
     }
   | {
-      /** No refill-cycle draw sequence yields these repeatable talents at this depth. */
+      /**
+       * No refill-cycle draw sequence yields the repeatable talents; names every
+       * node of the smallest node sets whose change restores one.
+       */
       readonly kind: 'repeatableSequence';
-      readonly depth: number;
       readonly nodeKeys: readonly string[];
     };
 
@@ -33,10 +35,6 @@ export interface HexTalentTreeFindings {
   readonly nodes: readonly HexTalentNodeViolation[];
   readonly tree: readonly HexTalentTreeViolation[];
 }
-
-export type HexTalentTreeCompletion =
-  | { readonly ok: true; readonly tree: HexTalentTree }
-  | ({ readonly ok: false } & HexTalentTreeFindings);
 
 /**
  * Source repeatable draw cycles: each refill list in declared order and how
@@ -221,7 +219,6 @@ function nodeViolations(
   hex: HexDeclaration,
   layout: HexLayoutDeclaration,
   assignment: Readonly<Record<string, string>>,
-  complete: boolean,
 ): HexTalentNodeViolation[] {
   const violations: HexTalentNodeViolation[] = [];
   for (const nodeKey of Object.keys(assignment).sort())
@@ -229,9 +226,8 @@ function nodeViolations(
       violations.push({ kind: 'unknownNode', nodeKey });
   for (const node of layout.nodes.values) {
     const talentKey = assignment[node.key];
-    if (talentKey === undefined) {
-      if (complete) violations.push({ kind: 'missingNode', nodeKey: node.key });
-    } else if (!hexNodeTalentPool(hex, node).includes(talentKey))
+    if (talentKey === undefined) violations.push({ kind: 'missingNode', nodeKey: node.key });
+    else if (!hexNodeTalentPool(hex, node).includes(talentKey))
       violations.push({ kind: 'talentNotInPool', nodeKey: node.key, talentKey });
     else if (!hexNodeTalentDomain(hex, layout.key, node.key).includes(talentKey))
       violations.push({ kind: 'talentNotAtDepth', nodeKey: node.key, talentKey });
@@ -290,6 +286,36 @@ function firstImpossibleDepth(
   return undefined;
 }
 
+/** Largest node set searched for the smallest change that restores the draw sequence. */
+const SEQUENCE_SEARCH_LIMIT = 4;
+
+/**
+ * Repeatable nodes of every smallest set whose release lets the remaining
+ * talents complete a draw sequence; beyond the limit, the first undrawable depth.
+ */
+function sequenceConflictNodes(
+  cycles: readonly HexRepeatableCycle[],
+  depths: readonly DepthGroup[],
+  assignment: Readonly<Record<string, string>>,
+): readonly string[] {
+  const candidates = depths.flatMap((group) =>
+    group.nodes.flatMap((node) => (assignment[node.key] === undefined ? [] : [node.key])),
+  );
+  for (let size = 1; size <= Math.min(SEQUENCE_SEARCH_LIMIT, candidates.length); size += 1) {
+    const involved = new Set<string>();
+    for (const released of combinations(candidates, size)) {
+      const kept = Object.fromEntries(
+        Object.entries(assignment).filter(([key]) => !released.includes(key)),
+      );
+      if (firstImpossibleDepth(cycles, depths, kept, false) === undefined)
+        for (const key of released) involved.add(key);
+    }
+    if (involved.size > 0) return candidates.filter((key) => involved.has(key));
+  }
+  const impossible = firstImpossibleDepth(cycles, depths, assignment, false);
+  return impossible?.nodes.map((node) => node.key) ?? [];
+}
+
 /** Node validity first; tree-wide policy only over a tree whose nodes are all valid. */
 export function validateHexTalentTree(
   hex: HexDeclaration,
@@ -297,20 +323,15 @@ export function validateHexTalentTree(
   tree: HexTalentTree,
 ): HexTalentTreeFindings {
   const layout = layoutFor(hex, layoutKey);
-  const nodes = nodeViolations(hex, layout, tree, true);
+  const nodes = nodeViolations(hex, layout, tree);
   const treeViolations = repeatedTalents(layout, tree);
   if (nodes.length === 0) {
-    const impossible = firstImpossibleDepth(
-      hexRepeatableCycles(hex, layoutKey),
-      repeatableDepths(layout),
-      tree,
-      true,
-    );
-    if (impossible !== undefined)
+    const cycles = hexRepeatableCycles(hex, layoutKey);
+    const depths = repeatableDepths(layout);
+    if (firstImpossibleDepth(cycles, depths, tree, true) !== undefined)
       treeViolations.push({
         kind: 'repeatableSequence',
-        depth: impossible.depth,
-        nodeKeys: Object.freeze(impossible.nodes.map((node) => node.key)),
+        nodeKeys: Object.freeze(sequenceConflictNodes(cycles, depths, tree)),
       });
   }
   return Object.freeze({
@@ -319,139 +340,120 @@ export function validateHexTalentTree(
   });
 }
 
-/** Fills unpinned unique nodes, keeping each node's default candidate when it is free. */
-function fillUnique(
-  nodes: readonly HexLayoutNodeDeclaration[],
-  candidates: readonly string[],
-  pins: Readonly<Record<string, string>>,
-  tree: Record<string, string>,
-): void {
-  const used = new Set(
-    nodes.flatMap((node) => (pins[node.key] === undefined ? [] : [pins[node.key]!])),
-  );
-  const deferred: HexLayoutNodeDeclaration[] = [];
-  nodes.forEach((node, index) => {
-    const pinned = pins[node.key];
-    if (pinned !== undefined) {
-      tree[node.key] = pinned;
-      return;
-    }
-    const preferred = candidates[index];
-    if (preferred !== undefined && !used.has(preferred)) {
-      tree[node.key] = preferred;
-      used.add(preferred);
-    } else deferred.push(node);
-  });
-  for (const node of deferred) {
-    const next = candidates.find((candidate) => !used.has(candidate))!;
-    tree[node.key] = next;
-    used.add(next);
-  }
+/** One deck's share of a column; `depth` is absent for the last deck's undealt talents. */
+interface HexCommonDeckSegment {
+  readonly depth?: number;
+  readonly nodeKeys: readonly string[];
+  readonly talentKeys: readonly string[];
 }
 
-/** Places one depth's drawn talents, keeping pins and each node's draw-order default. */
-function fillDepth(
-  group: DepthGroup,
-  drawn: readonly string[],
-  pins: Readonly<Record<string, string>>,
-  tree: Record<string, string>,
-): void {
-  const remaining = countValues(drawn);
-  for (const node of group.nodes) {
-    const pin = pins[node.key];
-    if (pin !== undefined) remaining.set(pin, remaining.get(pin)! - 1);
-  }
-  const deferred: HexLayoutNodeDeclaration[] = [];
-  group.nodes.forEach((node, index) => {
-    const pin = pins[node.key];
-    if (pin !== undefined) tree[node.key] = pin;
-    else if (remaining.get(drawn[index]!)! > 0) {
-      tree[node.key] = drawn[index]!;
-      remaining.set(drawn[index]!, remaining.get(drawn[index]!)! - 1);
-    } else deferred.push(node);
-  });
-  for (const node of deferred) {
-    const next = drawn.find((key) => remaining.get(key)! > 0)!;
-    tree[node.key] = next;
-    remaining.set(next, remaining.get(next)! - 1);
-  }
+/** One refill of the Common draw list and the columns its talents were dealt to. */
+interface HexCommonDeck {
+  readonly index: number;
+  readonly segments: readonly HexCommonDeckSegment[];
+}
+
+export interface HexCommonDecks {
+  /** Common columns in draw order. */
+  readonly depths: readonly number[];
+  /** Absent when no draw sequence deals the tree's Common talents. */
+  readonly decks?: readonly HexCommonDeck[];
 }
 
 /**
- * Completes a sparse pin map to one deterministic legal tree that keeps every
- * pin: unique nodes take declared candidates in node order; each depth takes
- * the first draw, in declared order, from which the remaining pins still fit.
+ * Splits the Common nodes into decks: each column takes the rest of the
+ * current deck, whole decks, then the head of the next. Within a column, each
+ * segment's talent takes the first unassigned node holding it, in declared
+ * node order, earlier decks first.
  */
-export function completeHexTalentTree(
+export function hexCommonDecks(
   hex: HexDeclaration,
   layoutKey: HexLayoutKey,
-  pinnedNodes: Readonly<Record<string, string>>,
-): HexTalentTreeCompletion {
-  const layout = layoutFor(hex, layoutKey);
-  const nodes = nodeViolations(hex, layout, pinnedNodes, false);
-  const treeViolations = repeatedTalents(layout, pinnedNodes);
+  tree: HexTalentTree,
+): HexCommonDecks {
   const cycles = hexRepeatableCycles(hex, layoutKey);
-  const depths = repeatableDepths(layout);
-  if (nodes.length === 0) {
-    const impossible = firstImpossibleDepth(cycles, depths, pinnedNodes, false);
-    if (impossible !== undefined)
-      treeViolations.push({
-        kind: 'repeatableSequence',
-        depth: impossible.depth,
-        nodeKeys: Object.freeze(
-          depths
-            .filter((group) => group.depth <= impossible.depth)
-            .flatMap((group) => group.nodes)
-            .filter((node) => pinnedNodes[node.key] !== undefined)
-            .map((node) => node.key),
-        ),
-      });
+  const depths = repeatableDepths(layoutFor(hex, layoutKey));
+  const shape = { depths: Object.freeze(depths.map((group) => group.depth)) };
+  const segments: HexCommonDeckSegment[][] = cycles.map(() => []);
+  let deck = 0;
+  let left = [...(cycles[0]?.talentKeys ?? [])];
+  for (const group of depths) {
+    const holders = new Map<string, string[]>();
+    for (const node of group.nodes) {
+      const talentKey = tree[node.key];
+      if (talentKey === undefined) return Object.freeze(shape);
+      holders.set(talentKey, [...(holders.get(talentKey) ?? []), node.key]);
+    }
+    let need = group.nodes.length;
+    while (need > 0) {
+      if (left.length === 0) {
+        deck += 1;
+        if (cycles[deck] === undefined) return Object.freeze(shape);
+        left = [...cycles[deck]!.talentKeys];
+      }
+      const taken =
+        need >= left.length ? left : left.filter((key) => (holders.get(key)?.length ?? 0) > 0);
+      const remaining = [...holders.values()].reduce((sum, keys) => sum + keys.length, 0);
+      if (need < left.length && (taken.length !== need || remaining !== need))
+        return Object.freeze(shape);
+      const nodeKeys: string[] = [];
+      for (const key of taken) {
+        const nodeKey = holders.get(key)?.shift();
+        if (nodeKey === undefined) return Object.freeze(shape);
+        nodeKeys.push(nodeKey);
+      }
+      segments[deck]!.push(
+        Object.freeze({
+          depth: group.depth,
+          nodeKeys: Object.freeze(nodeKeys),
+          talentKeys: Object.freeze([...taken]),
+        }),
+      );
+      need -= taken.length;
+      left = left.filter((key) => !taken.includes(key));
+    }
   }
-  if (nodes.length > 0 || treeViolations.length > 0)
-    return Object.freeze({
-      ok: false,
-      nodes: Object.freeze(nodes),
-      tree: Object.freeze(treeViolations),
-    });
-
-  const tree: Record<string, string> = {};
-  const ofKind = (kind: HexLayoutNodeDeclaration['kind']) =>
-    layout.nodes.values.filter((node) => node.kind === kind);
-  for (const kind of ['keystone', 'legendary'] as const) {
-    const kindNodes = ofKind(kind);
-    fillUnique(kindNodes, hexNodeTalentPool(hex, kindNodes[0]!), pinnedNodes, tree);
-  }
-  for (const node of [...ofKind('olympianSpell'), ...ofKind('olympianCount')])
-    tree[node.key] = hexNodeTalentPool(hex, node)[0]!;
-
-  const pinsAt = (group: DepthGroup) =>
-    group.nodes.flatMap((node) =>
-      pinnedNodes[node.key] === undefined ? [] : [pinnedNodes[node.key]!],
+  if (left.length > 0)
+    segments[deck]!.push(
+      Object.freeze({ nodeKeys: Object.freeze([]), talentKeys: Object.freeze(left) }),
     );
-  const completable = new Map<string, boolean>();
-  const canComplete = (index: number, state: DrawState): boolean => {
-    const group = depths[index];
-    if (group === undefined) return true;
-    const key = `${index}#${stateKey(state)}`;
-    const known = completable.get(key);
-    if (known !== undefined) return known;
-    const result = drawOptions(cycles, state, group.nodes.length).some(
-      (option) => containsAll(option.drawn, pinsAt(group)) && canComplete(index + 1, option.state),
-    );
-    completable.set(key, result);
-    return result;
-  };
-  let state = initialState(cycles);
-  depths.forEach((group, index) => {
-    const option = drawOptions(cycles, state, group.nodes.length).find(
-      (candidate) =>
-        containsAll(candidate.drawn, pinsAt(group)) && canComplete(index + 1, candidate.state),
-    )!;
-    fillDepth(group, option.drawn, pinnedNodes, tree);
-    state = option.state;
+  return Object.freeze({
+    ...shape,
+    decks: Object.freeze(
+      segments.map((deckSegments, index) =>
+        Object.freeze({ index, segments: Object.freeze(deckSegments) }),
+      ),
+    ),
   });
-  const ordered = Object.fromEntries(
-    layout.nodes.values.map((node) => [node.key, tree[node.key]!]),
+}
+
+/**
+ * The deterministic default tree: Rare and Epic nodes take declared candidates
+ * in node order, God Sent nodes their native talents, and each depth the first
+ * draw in declared order.
+ */
+export function defaultHexTalentTree(hex: HexDeclaration, layoutKey: HexLayoutKey): HexTalentTree {
+  const layout = layoutFor(hex, layoutKey);
+  const cycles = hexRepeatableCycles(hex, layoutKey);
+  const tree: Record<string, string> = {};
+  for (const kind of ['keystone', 'legendary'] as const)
+    layout.nodes.values
+      .filter((node) => node.kind === kind)
+      .forEach((node, index) => {
+        tree[node.key] = hexNodeTalentPool(hex, node)[index]!;
+      });
+  for (const node of layout.nodes.values)
+    if (node.kind === 'olympianSpell' || node.kind === 'olympianCount')
+      tree[node.key] = hexNodeTalentPool(hex, node)[0]!;
+  let state = initialState(cycles);
+  for (const group of repeatableDepths(layout)) {
+    const option = drawOptions(cycles, state, group.nodes.length)[0]!;
+    group.nodes.forEach((node, index) => {
+      tree[node.key] = option.drawn[index]!;
+    });
+    state = option.state;
+  }
+  return Object.freeze(
+    Object.fromEntries(layout.nodes.values.map((node) => [node.key, tree[node.key]!])),
   );
-  return Object.freeze({ ok: true, tree: Object.freeze(ordered) });
 }

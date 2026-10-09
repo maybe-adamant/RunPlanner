@@ -3,7 +3,7 @@ import type { Catalog } from '../catalog-schema';
 import type { RewardBranchState } from './rewards/branch-primitives';
 
 export interface HexProgressState {
-  /** Complete installed tree identity; absent before the first Hex exists. */
+  /** The authored tree as installed; absent before the first Hex exists. */
   readonly tree?: AuthoredHexTreeConfiguration;
   readonly spellTraitKey?: string;
   /** Persistent extension fact; it is never derived backwards after insertion. */
@@ -43,7 +43,7 @@ export function hexEffectiveCapacity(
     : baseCapacity + (progress.godSentAdded === true ? 2 : 0);
 }
 
-/** Installs one complete authored tree and evaluates its initial God Sent contact. */
+/** Installs one realised tree and evaluates its initial God Sent contact. */
 export function installHexTree(
   catalog: Catalog,
   branch: RewardBranchState,
@@ -59,7 +59,7 @@ export function installHexTree(
   }
   const installed = Object.freeze({
     ...current,
-    tree: Object.freeze({ ...tree }),
+    tree,
     spellTraitKey,
     godSentAdded: false,
     talentDropsClosed: false,

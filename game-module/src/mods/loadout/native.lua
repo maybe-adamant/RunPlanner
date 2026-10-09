@@ -77,21 +77,18 @@ function native.treeLayoutKey()
     return spell and spell.Talents and spell.Talents.Name or nil
 end
 
-function native.treeSpecialTalentKeys()
+function native.treeGodSentTalentKeys()
     local spell = _G.CurrentRun and _G.CurrentRun.Hero and _G.CurrentRun.Hero.SlottedSpell
     local data = spell and _G.SpellData and _G.SpellData[spell.Name] or {}
     local talents, traits = data.Talents or {}, _G.TraitData or {}
-    local rare, epic, godSent = {}, {}, {}
-    local unique, legendary = {}, {}
-    for _, key in pairs(talents.Unique or {}) do unique[key] = true end
+    local legendary, godSent = {}, {}
     for _, key in pairs(talents.Legendary or {}) do legendary[key] = true end
     for _, key in ipairs(native.treeTalentKeys()) do
-        if unique[key] then rare[#rare + 1] = key
-        elseif legendary[key] and traits[key] and traits[key].IsDuoBoon then godSent[#godSent + 1] = key
-        elseif legendary[key] then epic[#epic + 1] = key
-        elseif key == "OlympianSpellCountTalent" then godSent[#godSent + 1] = key end
+        if (legendary[key] and traits[key] and traits[key].IsDuoBoon) or key == "OlympianSpellCountTalent" then
+            godSent[#godSent + 1] = key
+        end
     end
-    return { rare = rare, epic = epic, godSent = godSent }
+    return godSent
 end
 
 return native

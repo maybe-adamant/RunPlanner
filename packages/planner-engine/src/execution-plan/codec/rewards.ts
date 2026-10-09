@@ -4,6 +4,7 @@ import type {
   ExecutionCirceResolution,
   ExecutionConcaveStoneResult,
   ExecutionHexTree,
+  ExecutionHexTreeNodes,
   ExecutionLevelResolution,
   ExecutionReward,
   ExecutionTraitOffer,
@@ -20,6 +21,42 @@ import {
   stringArray,
   stringValue,
 } from './primitives';
+
+/** A nonempty `depth:slot` to talent map of one realised Hex tree. */
+export function hexTreeNodes(value: unknown, label: string): ExecutionHexTreeNodes {
+  const record = object(value, label);
+  const entries = Object.entries(record);
+  if (entries.length === 0) fail(`${label} must name at least one node`);
+  return Object.freeze(
+    Object.fromEntries(
+      entries.map(([nodeKey, talentKey]) => {
+        if (!/^[1-9][0-9]*:[0-9]+$/.test(nodeKey)) fail(`${label} has invalid node ${nodeKey}`);
+        return [nodeKey, stringValue(talentKey, `${label}.${nodeKey}`)];
+      }),
+    ),
+  );
+}
+
+/** The inserted God Sent pair; neither talent is a modeled node. */
+export function hexGodSent(
+  value: unknown,
+  nodes: ExecutionHexTreeNodes,
+  label: string,
+): { readonly olympianTalentKey: string; readonly lineageTalentKey: string } | undefined {
+  if (value === undefined) return undefined;
+  const godSent = object(value, label);
+  exact(godSent, ['olympianTalentKey', 'lineageTalentKey'], [], label);
+  const olympianTalentKey = stringValue(godSent.olympianTalentKey, `${label}.olympianTalentKey`);
+  const lineageTalentKey = stringValue(godSent.lineageTalentKey, `${label}.lineageTalentKey`);
+  const modeled = new Set(Object.values(nodes));
+  if (
+    olympianTalentKey === lineageTalentKey ||
+    modeled.has(olympianTalentKey) ||
+    modeled.has(lineageTalentKey)
+  )
+    fail(`${label} has invalid talent identities`);
+  return Object.freeze({ olympianTalentKey, lineageTalentKey });
+}
 
 export function anvilResult(value: unknown, label: string): ExecutionAnvilResult {
   const record = object(value, label);
@@ -129,47 +166,13 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected', 'hexTree'], label);
   const hexTree = (value: unknown, treeLabel: string): ExecutionHexTree => {
     const tree = object(value, treeLabel);
-    exact(tree, ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'], ['godSent'], treeLabel);
-    const seen = new Set<string>();
-    const entries = (field: 'rareTalentKeys' | 'epicTalentKeys') =>
-      Object.freeze(
-        stringArray(tree[field], `${treeLabel}.${field}`).map((key) => {
-          if (seen.has(key)) fail(`${treeLabel}.${field} contains a duplicate talent`);
-          seen.add(key);
-          return key;
-        }),
-      );
-    const rareTalentKeys = entries('rareTalentKeys');
-    const epicTalentKeys = entries('epicTalentKeys');
-    const godSent =
-      tree.godSent === undefined ? undefined : object(tree.godSent, `${treeLabel}.godSent`);
-    if (godSent !== undefined) {
-      exact(godSent, ['olympianTalentKey', 'lineageTalentKey'], [], `${treeLabel}.godSent`);
-      const olympianTalentKey = stringValue(
-        godSent.olympianTalentKey,
-        `${treeLabel}.godSent.olympianTalentKey`,
-      );
-      const lineageTalentKey = stringValue(
-        godSent.lineageTalentKey,
-        `${treeLabel}.godSent.lineageTalentKey`,
-      );
-      if (
-        olympianTalentKey === lineageTalentKey ||
-        seen.has(olympianTalentKey) ||
-        seen.has(lineageTalentKey)
-      )
-        fail(`${treeLabel}.godSent has invalid talent identities`);
-      return Object.freeze({
-        layoutKey: stringValue(tree.layoutKey, `${treeLabel}.layoutKey`),
-        rareTalentKeys,
-        epicTalentKeys,
-        godSent: Object.freeze({ olympianTalentKey, lineageTalentKey }),
-      });
-    }
+    exact(tree, ['layoutKey', 'nodes'], ['godSent'], treeLabel);
+    const nodes = hexTreeNodes(tree.nodes, `${treeLabel}.nodes`);
+    const godSent = hexGodSent(tree.godSent, nodes, `${treeLabel}.godSent`);
     return Object.freeze({
       layoutKey: stringValue(tree.layoutKey, `${treeLabel}.layoutKey`),
-      rareTalentKeys,
-      epicTalentKeys,
+      nodes,
+      ...(godSent === undefined ? {} : { godSent }),
     });
   };
   const concaveStoneResult = (value: unknown, resultLabel: string): ExecutionConcaveStoneResult => {

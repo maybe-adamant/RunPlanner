@@ -106,8 +106,7 @@ describe('RouteOverview', () => {
         aspectKey: 'SuitHexAspect',
       }),
     );
-    expect(routeOverviewMarkup(application)).toContain('Hex talent layout');
-    expect(routeOverviewMarkup(application)).toContain('God Sent');
+    expect(routeOverviewMarkup(application)).toContain('Edit Sky Fall Hex tree');
 
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -117,7 +116,7 @@ describe('RouteOverview', () => {
         aspectKey: 'BaseSuitAspect',
       }),
     );
-    expect(routeOverviewMarkup(application)).not.toContain('Hex talent layout');
+    expect(routeOverviewMarkup(application)).not.toContain('Edit Sky Fall Hex tree');
   });
 
   it('marks a Vow of Forfeit realization on the starting reward control', () => {

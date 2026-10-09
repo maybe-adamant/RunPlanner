@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 93,
+  "schemaVersion": 94,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -567,13 +567,24 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "PolymorphBossDamageTalent",
-                          "PolymorphDeathExplodeTalent"
-                        ],
-                        "epicTalentKeys": [
-                          "PolymorphSandwichTalent"
-                        ]
+                        "nodes": {
+                          "1:2": "CooldownDamageTalent",
+                          "1:4": "ChargeRegenTalent",
+                          "2:2": "PolymorphDurationTalent",
+                          "2:4": "PolymorphDamageTalent",
+                          "3:1": "CooldownDamageTalent",
+                          "3:2": "PolymorphDurationTalent",
+                          "3:3": "PolymorphDamageTalent",
+                          "3:4": "CooldownDamageTalent",
+                          "3:5": "PolymorphDurationTalent",
+                          "3:6": "PolymorphDamageTalent",
+                          "4:1": "PolymorphBossDamageTalent",
+                          "4:3": "CooldownDamageTalent",
+                          "4:5": "PolymorphDeathExplodeTalent",
+                          "5:2": "PolymorphDurationTalent",
+                          "5:4": "PolymorphDamageTalent",
+                          "6:3": "PolymorphSandwichTalent"
+                        }
                       }
                     }
                   },

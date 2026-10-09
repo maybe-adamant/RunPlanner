@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 93,
+  "schemaVersion": 94,
   "projectId": "surface-3",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -407,13 +407,24 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "TimeSlowDestroyProjectilesTalent",
-                          "TimeSlowSpeedTalent"
-                        ],
-                        "epicTalentKeys": [
-                          "TimeSlowCritTalent"
-                        ]
+                        "nodes": {
+                          "1:2": "PreChargeTalent",
+                          "1:4": "ChargeRegenTalent",
+                          "2:2": "TimeSlowAmountTalent",
+                          "2:4": "CooldownDefenseTalent",
+                          "3:1": "PreChargeTalent",
+                          "3:2": "TimeSlowAmountTalent",
+                          "3:3": "CooldownDefenseTalent",
+                          "3:4": "TimeSlowAmountTalent",
+                          "3:5": "CooldownDefenseTalent",
+                          "3:6": "TimeSlowAmountTalent",
+                          "4:1": "TimeSlowDestroyProjectilesTalent",
+                          "4:3": "CooldownDefenseTalent",
+                          "4:5": "TimeSlowSpeedTalent",
+                          "5:2": "TimeSlowAmountTalent",
+                          "5:4": "CooldownDefenseTalent",
+                          "6:3": "TimeSlowCritTalent"
+                        }
                       }
                     }
                   },

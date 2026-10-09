@@ -16,6 +16,13 @@
   --attention: #e2b971;
   /* Red of finding marks and invalid states. */
   --finding: #da7373;
+  /* Hex tree Common columns, left to right. */
+  --hex-column-1: #e07a5f;
+  --hex-column-2: #6fbf73;
+  --hex-column-3: #d9a441;
+  --hex-column-4: #d46a9a;
+  --hex-column-5: #4cc3b5;
+  --hex-column-6: #b08a64;
 
   color: var(--text);
   background: #111216;

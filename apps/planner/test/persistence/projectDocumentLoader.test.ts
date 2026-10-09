@@ -20,7 +20,7 @@ import {
   goldenFOccurrenceId,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { hubVisitActions } from '@run-planner/test-fixtures/shared';
+import { hubVisitActions, legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNProject, nBiome, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 
@@ -38,7 +38,7 @@ const project = createProjectDocument(catalog, {
 });
 
 describe('project document loader', () => {
-  it('loads a current schema-93 document through the strict parser without migration provenance', () => {
+  it('loads a current schema-94 document through the strict parser without migration provenance', () => {
     const json = encodeProjectDocument(project);
 
     expect(loadProjectDocument(json, catalog)).toEqual({
@@ -49,7 +49,7 @@ describe('project document loader', () => {
 
   it('migrates a schema-87 Hub to fountain use before its retained visits', () => {
     const current = loadSurfaceNProject();
-    const legacy = JSON.parse(encodeProjectDocument(current)) as {
+    const legacy = legacyRareEpicHexTrees(JSON.parse(encodeProjectDocument(current))) as {
       schemaVersion: number;
       route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
     };
@@ -61,11 +61,11 @@ describe('project document loader', () => {
         delete decision.actions;
       }
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 93 }), catalog),
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 94 }), catalog),
     ).toThrow(/visitOrder/);
 
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
-    expect(loaded.migrationProvenance).toHaveLength(6);
+    expect(loaded.migrationProvenance).toHaveLength(7);
     expect(loaded.project).toEqual(
       applyProjectCommand(current, catalog, {
         kind: 'ReplaceHubActionOrder',
@@ -75,7 +75,7 @@ describe('project document loader', () => {
     );
   });
 
-  it('chains a schema-87 document without a Hub through 88, 89, 90, 91 and 92 to 93 by version only', () => {
+  it('chains a schema-87 document without a Hub through 88 to 94 by version only', () => {
     const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
     legacy.schemaVersion = 87;
 
@@ -117,6 +117,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 93,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 93,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 94,
+        },
       ],
       project,
     });
@@ -130,14 +136,33 @@ describe('project document loader', () => {
     const { familiarKey, ...loadout } = checkpoint.route.loadout;
     expect(familiarKey).toBe(catalog.defaultFamiliarKey);
     const legacy = JSON.stringify(
-      { ...checkpoint, schemaVersion: 92, route: { ...checkpoint.route, loadout } },
+      legacyRareEpicHexTrees({
+        ...checkpoint,
+        schemaVersion: 92,
+        route: { ...checkpoint.route, loadout },
+      }),
       null,
       2,
     );
     expect(legacy).toContain('"traitKey": "HiddenMaxHealthBoon"');
     const loaded = loadProjectDocument(legacy, catalog);
 
-    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([93]);
+    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([93, 94]);
+    expect(encodeProjectDocument(loaded.project)).toBe(current);
+  });
+
+  it('loads a schema-93 Rare/Epic Hex tree as a complete tree with the picks in layout order', () => {
+    const checkpoint = surfaceCheckpointArtifacts['surface-ordinary-hex-path'].raw;
+    const current = JSON.stringify(checkpoint, null, 2) + '\n';
+    const legacy = JSON.stringify(
+      legacyRareEpicHexTrees({ ...(checkpoint as object), schemaVersion: 93 }),
+    );
+    expect(legacy).toContain(
+      '"hexTree":{"layoutKey":"Lung","rareTalentKeys":["DamageBuffTalent","ShieldTalent"],"epicTalentKeys":["ClearCastTalent"]}',
+    );
+    const loaded = loadProjectDocument(legacy, catalog);
+
+    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([94]);
     expect(encodeProjectDocument(loaded.project)).toBe(current);
   });
 
@@ -148,7 +173,7 @@ describe('project document loader', () => {
     const first = loadProjectDocument(JSON.stringify(legacy), catalog);
     const second = loadProjectDocument(JSON.stringify(legacy), catalog).project;
     expect(first.migrationProvenance.map((step) => step.sourceSchemaVersion)).toEqual([
-      88, 89, 90, 91, 92,
+      88, 89, 90, 91, 92, 93,
     ]);
     expect(first.project.projectId).toMatch(/^run-plan-[0-9a-f-]{36}$/);
     expect(second.projectId).not.toBe(first.project.projectId);
@@ -171,10 +196,13 @@ describe('project document loader', () => {
     ['Underworld', () => createGoldenFGHIProject()],
     ['Surface', () => loadSurfaceNProject()],
   ])(
-    'migrates a mature schema-89 %s document to schema 93 without reinterpreting it',
+    'migrates a mature schema-89 %s document to schema 94 without reinterpreting it',
     (_route, current) => {
       const expected = current();
-      const legacy = { ...JSON.parse(encodeProjectDocument(expected)), schemaVersion: 89 };
+      const legacy = legacyRareEpicHexTrees({
+        ...JSON.parse(encodeProjectDocument(expected)),
+        schemaVersion: 89,
+      });
       const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
       expect(loaded.migrationProvenance).toEqual([
         {
@@ -201,11 +229,15 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 93,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 93,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 94,
+        },
       ]);
       expect(loaded.project).toEqual(expected);
-      expect(encodeProjectDocument(loaded.project)).toBe(
-        JSON.stringify({ ...legacy, schemaVersion: 93 }, null, 2) + '\n',
-      );
+      expect(encodeProjectDocument(loaded.project)).toBe(encodeProjectDocument(expected));
     },
   );
 
@@ -227,7 +259,7 @@ describe('project document loader', () => {
       decisionKey: 'generatedComposition',
       value,
     });
-    const legacy = {
+    const legacy = legacyRareEpicHexTrees({
       ...expected,
       schemaVersion: 86,
       route: {
@@ -262,9 +294,9 @@ describe('project document loader', () => {
                 },
         })),
       },
-    };
+    }) as Record<string, unknown>;
     expect(() =>
-      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 93 }), catalog),
+      parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 94 }), catalog),
     ).toThrow(/weights/);
     const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
 
@@ -312,6 +344,12 @@ describe('project document loader', () => {
           targetCatalogVersion: catalog.version,
           targetSchemaVersion: 93,
         },
+        {
+          sourceCatalogVersion: catalog.version,
+          sourceSchemaVersion: 93,
+          targetCatalogVersion: catalog.version,
+          targetSchemaVersion: 94,
+        },
       ],
       project: expected,
     });
@@ -326,8 +364,8 @@ describe('project document loader', () => {
     ],
     [
       'future schema',
-      JSON.stringify({ ...project, schemaVersion: 94 }),
-      /newer than supported schema 93/,
+      JSON.stringify({ ...project, schemaVersion: 95 }),
+      /newer than supported schema 94/,
     ],
     [
       'mismatched current catalog',
@@ -344,7 +382,7 @@ describe('project document loader', () => {
       catalogVersion: 'catalog-85-normalized',
       schemaVersion: 85,
     } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 93 } as const;
+    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 94 } as const;
     const oldDocument = { ...project, ...oldIdentity };
 
     const migrated = applyProjectDocumentTransitions({
@@ -383,7 +421,7 @@ describe('project document loader', () => {
         sourceCatalogVersion: 'catalog-85-normalized',
         sourceSchemaVersion: 85,
         targetCatalogVersion: catalog.version,
-        targetSchemaVersion: 93,
+        targetSchemaVersion: 94,
       },
     ]);
     expect(parseProjectDocument(JSON.stringify(migrated.document), catalog)).toEqual(project);
@@ -391,7 +429,7 @@ describe('project document loader', () => {
 
   it('rejects a transition that does not reach its declared target identity', () => {
     const oldIdentity = { catalogVersion: 'catalog-85', schemaVersion: 85 } as const;
-    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 93 } as const;
+    const currentIdentity = { catalogVersion: catalog.version, schemaVersion: 94 } as const;
 
     expect(() =>
       applyProjectDocumentTransitions({
@@ -426,7 +464,7 @@ describe('project document loader', () => {
       )}`;
     const loaded = loadProjectDocument(JSON.stringify(schema90ShrinePurchases), catalog);
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
-      91, 92, 93,
+      91, 92, 93, 94,
     ]);
     const occurrence = loaded.project.route.biomes
       .find((biome) => biome.biomeKey === 'N')
@@ -481,7 +519,9 @@ describe('project document loader', () => {
 
   it('migrates schema-91 Anvil results onto their reward roles and evaluates identically', () => {
     const loaded = loadProjectDocument(JSON.stringify(schema91AnvilResults), catalog);
-    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([92, 93]);
+    expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
+      92, 93, 94,
+    ]);
     const shop = loaded.project.route.biomes
       .find((biome) => biome.biomeKey === 'I')
       ?.topology?.occurrences.find(

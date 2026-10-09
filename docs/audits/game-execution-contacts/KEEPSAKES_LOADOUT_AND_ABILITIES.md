@@ -296,7 +296,7 @@ and [Enemy formation and Fear Vows](../rooms-and-routes/ENEMY_FORMATION_AND_FEAR
 
 The eight spell traits are Total Eclipse, Dark Side, Lunar Ray, Wolf Howl,
 Night Bloom, Phase Shift, Twilight Curse, and Moon Water. The planner owns the
-selected layout, Rare/Epic node identities, modeled God Sent availability,
+selected layout, the talent on every non-Olympian node, modeled God Sent availability,
 banked points, invested points, and closed-tree state. Eligible God Sent adds
 two nodes to the planner's accounting for Path availability; this simulation
 fact does not authorize executor steering of those nodes.
@@ -307,7 +307,8 @@ pickups, while complete live native probes remain pending. The product does not
 model individual Hex combat effects or player-selected node positions. The two
 bounded contacts are:
 
-1. realize Spell offers and the selected Hex's layout and Rare/Epic identities;
+1. realize Spell offers, the selected Hex's layout and its node talents, written
+   over the native tree after `CreateTalentTree` returns;
 2. retain native Path spending and node selection, with published state checked
    through the existing conformance boundary.
 

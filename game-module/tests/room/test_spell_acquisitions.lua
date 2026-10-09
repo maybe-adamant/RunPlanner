@@ -57,8 +57,10 @@ local function assertScreenInstallation(isShop)
         options = {
             { key = "SpellPolymorphTrait" }, { key = "SpellMeteorTrait" }, { key = "SpellSummonTrait" },
         },
-        hexTree = { layoutKey = "Nacelle", rareTalentKeys = { "PolymorphBossDamageTalent" },
-            epicTalentKeys = { "PolymorphSandwichTalent" } },
+        hexTree = { layoutKey = "Nacelle", nodes = {
+            ["1:2"] = "CooldownDamageTalent", ["3:2"] = "PolymorphBossDamageTalent",
+            ["6:2"] = "PolymorphSandwichTalent",
+        } },
     }
     local transaction = { kind = "acquisition", owner = "shop-spell", sourceOwner = "shop-spell",
         window = { kind = "postOutgoing" }, roles = { {
@@ -154,14 +156,23 @@ local function assertScreenInstallation(isShop)
                 installed = invoke("CreateTalentTree", function()
                     local layout = invoke("GetRandomValue", function(values) return values[1] end,
                         { { Name = "Maze" }, { Name = "Nacelle" } })
-                    return { layout = layout.Name,
-                        rare = removeRandom({ "PolymorphTauntTalent", "PolymorphBossDamageTalent" }),
-                        epic = removeRandom({ "PolymorphCurseTalent", "PolymorphSandwichTalent" }) }
+                    return { Name = layout.Name,
+                        { [2] = { Name = removeRandom({ "PolymorphDamageTalent", "CooldownDamageTalent" }) } },
+                        {},
+                        { [2] = { Pool = { Keystone = 1 },
+                            Name = removeRandom({ "PolymorphTauntTalent", "PolymorphBossDamageTalent" }) } },
+                        {}, {},
+                        { [2] = { Pool = { Legendary = 1 },
+                            Name = removeRandom({ "PolymorphCurseTalent", "PolymorphSandwichTalent" }) } } }
                 end, _G.SpellData[button.SpellName])
             end, screen, screen.Components[1])
         end, item, {})
-        lu.assertEquals(installed, { layout = "Nacelle", rare = "PolymorphBossDamageTalent",
-            epic = "PolymorphSandwichTalent" })
+        lu.assertEquals(installed.Name, "Nacelle")
+        lu.assertEquals(installed[1][2], { Name = "CooldownDamageTalent", Rarity = "Common" })
+        lu.assertEquals(installed[3][2],
+            { Pool = { Keystone = 1 }, Name = "PolymorphBossDamageTalent", Rarity = "Rare" })
+        lu.assertEquals(installed[6][2],
+            { Pool = { Legendary = 1 }, Name = "PolymorphSandwichTalent", Rarity = "Epic" })
         lu.assertEquals(completions, 1)
         lu.assertEquals(diagnostics, {})
         lu.assertEquals(invoke("GetEligibleSpells", function() return { "native" } end, {}),
@@ -187,7 +198,7 @@ function TestSpellAcquisitions.testCreatedHexTreesDoNotSharePendingScopes()
     second.attach({ hooks = { wrap = function(name, _, callback) secondCallbacks[name] = callback end } })
     local mismatches = {}
     local scope = first.prepare({
-        layoutKey = "FirstLayout", rareTalentKeys = {}, epicTalentKeys = {},
+        layoutKey = "FirstLayout", nodes = { ["1:1"] = "Talent" },
     }, "FirstTrait", function(checkpoint) mismatches[#mismatches + 1] = checkpoint end)
     lu.assertEquals(secondCallbacks.CreateTalentTree(nil, {}, function() return "native" end,
         { TraitName = "OtherTrait" }), "native")
@@ -196,73 +207,66 @@ function TestSpellAcquisitions.testCreatedHexTreesDoNotSharePendingScopes()
     lu.assertNotNil(firstCallbacks.CreateTalentTree)
 end
 
-function TestSpellAcquisitions.testNativeGodSentPresenceDoesNotSteerThePublishedPairOrSpecialTalents()
+-- Native tree construction with its own random removals; Olympian nodes carry their Pool.
+local function nativeTree(callbacks, draws, duo)
+    local function draw(values)
+        draws[#draws + 1] = values[1]
+        return table.remove(values, 1)
+    end
+    local layout = callbacks.GetRandomValue(nil, nil, function(values) return values[1] end,
+        { { Name = "NativeLayout" }, { Name = "ExpectedLayout" } })
+    return { Name = layout.Name,
+        { [1] = { Name = draw({ "RepOther", "RepExpected" }) }, [3] = { Name = draw({ "RepOther" }) } },
+        { [2] = { Pool = { Keystone = 1 }, Name = draw({ "RareOther", "RareExpected" }) },
+            [4] = duo and { Pool = { OlympianSpell = 1 }, Name = duo, Rarity = "Duo" } or nil },
+        { [3] = { Pool = { Legendary = 1 }, Name = draw({ "EpicOther" }) } } }
+end
+
+function TestSpellAcquisitions.testRealisationKeepsEveryNativeDrawThenOverwritesPlannedNodes()
     local callbacks = {}
     tree.attach({ hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } })
-    for _, nativeDuo in ipairs({ "NativeDuo", false }) do
-        local diagnostics = {}
+    lu.assertNil(callbacks.RemoveRandomValue)
+    for _, duo in ipairs({ "NativeDuo", false }) do
+        local diagnostics, draws = {}, {}
         local result = tree.realize({
-            layoutKey = "ExpectedLayout", rareTalentKeys = { "RareExpected" },
-            epicTalentKeys = { "EpicExpected" },
-            godSent = { olympianTalentKey = "PublishedDuo" },
+            layoutKey = "ExpectedLayout",
+            nodes = { ["1:1"] = "RepExpected", ["1:3"] = "RepExpected", ["2:2"] = "RareExpected",
+                ["3:3"] = "EpicExpected" },
+            godSent = { olympianTalentKey = "PublishedDuo", lineageTalentKey = "OlympianSpellCountTalent" },
         }, "SpellTrait", function(checkpoint) diagnostics[#diagnostics + 1] = checkpoint end, function()
-            return callbacks.CreateTalentTree(nil, nil, function()
-                local layout = callbacks.GetRandomValue(nil, nil, function(values) return values[1] end,
-                    { { Name = "NativeLayout" }, { Name = "ExpectedLayout" } })
-                local rare = callbacks.RemoveRandomValue(nil, nil, function(values) return table.remove(values, 1) end,
-                    { "RareOther", "RareExpected" })
-                local epic = callbacks.RemoveRandomValue(nil, nil, function(values) return table.remove(values, 1) end,
-                    { "EpicExpected" })
-                local duo
-                if nativeDuo then
-                    duo = callbacks.RemoveRandomValue(nil, nil, function(values) return table.remove(values, 1) end,
-                        { nativeDuo, "PublishedDuo" })
-                end
-                return { layout.Name, rare, epic, duo }
-            end, { TraitName = "SpellTrait" })
+            return callbacks.CreateTalentTree(nil, nil, function() return nativeTree(callbacks, draws, duo) end,
+                { TraitName = "SpellTrait" })
         end)
-        lu.assertEquals(result, { "ExpectedLayout", "RareExpected", "EpicExpected", nativeDuo or nil })
+        lu.assertEquals(draws, { "RepOther", "RepOther", "RareOther", "EpicOther" })
+        lu.assertEquals(result.Name, "ExpectedLayout")
+        lu.assertEquals(result[1], { { Name = "RepExpected", Rarity = "Common" }, nil,
+            { Name = "RepExpected", Rarity = "Common" } })
+        lu.assertEquals(result[2][2], { Pool = { Keystone = 1 }, Name = "RareExpected", Rarity = "Rare" })
+        lu.assertEquals(result[2][4], duo and { Pool = { OlympianSpell = 1 }, Name = duo, Rarity = "Duo" } or nil)
+        lu.assertEquals(result[3][3], { Pool = { Legendary = 1 }, Name = "EpicExpected", Rarity = "Epic" })
         lu.assertEquals(diagnostics, {})
     end
 end
 
-function TestSpellAcquisitions.testNativeGodSentEligibilityRemainsActiveWithoutAPublishedPair()
+function TestSpellAcquisitions.testRealisationDiagnosesNodesTheNativeTreeDoesNotMatch()
     local callbacks = {}
     tree.attach({ hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } })
-    local priorTalentData = _G.SpellTalentData
-    local requirements = {}
-    _G.SpellTalentData = { ServeDuoGameRequirements = requirements }
-    for _, nativeEligible in ipairs({ true, false }) do
-        local diagnostics = {}
-        local result = tree.realize({
-            layoutKey = "ExpectedLayout", rareTalentKeys = { "RareExpected" }, epicTalentKeys = { "EpicExpected" },
-        }, "SpellTrait", function(checkpoint) diagnostics[#diagnostics + 1] = checkpoint end, function()
-            return callbacks.CreateTalentTree(nil, nil, function()
-                local layout = callbacks.GetRandomValue(nil, nil, function(values) return values[1] end,
-                    { { Name = "NativeLayout" }, { Name = "ExpectedLayout" } })
-                local rare = callbacks.RemoveRandomValue(nil, nil, function(values) return table.remove(values, 1) end,
-                    { "RareOther", "RareExpected" })
-                local epic = callbacks.RemoveRandomValue(nil, nil, function(values) return table.remove(values, 1) end,
-                    { "EpicExpected" })
-                local nativeEligibility = function(_, receivedRequirements)
-                    lu.assertIs(receivedRequirements, requirements)
-                    return nativeEligible
-                end
-                local eligible = callbacks.IsGameStateEligible
-                    and callbacks.IsGameStateEligible(nil, nil, nativeEligibility, {}, requirements)
-                    or nativeEligibility({}, requirements)
-                local duo
-                if eligible then
-                    duo = callbacks.RemoveRandomValue(nil, nil, function(values) return table.remove(values, 1) end,
-                        { "NativeDuo" })
-                end
-                return { layout.Name, rare, epic, duo }
-            end, { TraitName = "SpellTrait" })
-        end)
-        lu.assertEquals(result, { "ExpectedLayout", "RareExpected", "EpicExpected", nativeEligible and "NativeDuo" or nil })
-        lu.assertEquals(diagnostics, {})
-    end
-    _G.SpellTalentData = priorTalentData
+    local diagnostics = {}
+    tree.realize({
+        layoutKey = "ExpectedLayout",
+        nodes = { ["1:1"] = "RepExpected", ["2:2"] = "RareExpected", ["9:1"] = "Unknown" },
+    }, "SpellTrait", function(checkpoint, expected, observed)
+        diagnostics[#diagnostics + 1] = { checkpoint, expected, observed }
+    end, function()
+        return callbacks.CreateTalentTree(nil, nil, function() return nativeTree(callbacks, {}, false) end,
+            { TraitName = "SpellTrait" })
+    end)
+    table.sort(diagnostics, function(left, right) return left[2] < right[2] end)
+    lu.assertEquals(diagnostics, {
+        { "hex-tree-node", "1:3", "RepOther" },
+        { "hex-tree-node", "3:3", "EpicOther" },
+        { "hex-tree-node", "9:1=Unknown", "missing" },
+    })
 end
 
 local function capture(state, payload, treeAdapter, spellAdapter, isBound)
@@ -319,7 +323,7 @@ function TestSpellAcquisitions.testUnboundSpellSteersTheTreeWithoutComparingTheL
         options = {
             { key = "SpellOneTrait" }, { key = "SpellTwoTrait" }, { key = "SpellThreeTrait" },
         },
-        hexTree = { layoutKey = "Lung", rareTalentKeys = {}, epicTalentKeys = {} },
+        hexTree = { layoutKey = "Lung", nodes = {} },
     }
     local detail = {
         disposition = "normal", lifecyclePoint = "roomRewardPickup", gameName = "SpellDrop", traitOffer = offer,
@@ -363,7 +367,7 @@ function TestSpellAcquisitions.testFreshImportedSpellAdapterUsesTheProvidedHexTr
             options = {
                 { key = "SpellOneTrait" }, { key = "SpellTwoTrait" }, { key = "SpellThreeTrait" },
             },
-            hexTree = { layoutKey = "Lung", rareTalentKeys = { "Rare" }, epicTalentKeys = { "Epic" } },
+            hexTree = { layoutKey = "Lung", nodes = { ["1:1"] = "Rare", ["1:2"] = "Epic" } },
         } } }
         local freshTree = assert(loadfile("src/mods/spells/hex_tree.lua"))().create()
         local freshSpell = assert(loadfile("src/mods/room/timeline/acquisitions/spell/hooks.lua"))()
@@ -387,11 +391,7 @@ function TestSpellAcquisitions.testFreshImportedSpellAdapterUsesTheProvidedHexTr
             callbacks.AcceptAndCloseSpellScreen(nil, nil, function(_, button)
                 installed, bonus = button.TraitName, button.BonusTalentPoints
                 return callbacks.CreateTalentTree(nil, nil, function()
-                    local rare = callbacks.RemoveRandomValue(nil, nil,
-                        function(values) return table.remove(values, 1) end, { "Rare" })
-                    local epic = callbacks.RemoveRandomValue(nil, nil,
-                        function(values) return table.remove(values, 1) end, { "Epic" })
-                    return { Name = "Lung", { { Name = rare }, { Name = epic } } }
+                    return { Name = "Lung", { { Name = "Native" }, { Name = "Native" } } }
                 end, { TraitName = button.TraitName })
             end, screen, screen.Components[selected])
         end, item, {}, nil)
@@ -416,7 +416,7 @@ function TestSpellAcquisitions.testSelectedSpellTreeConsumesItsScopeBetweenNativ
         options = {
             { key = "SpellOneTrait" }, { key = "SpellTwoTrait" }, { key = "SpellThreeTrait" },
         },
-        hexTree = { layoutKey = "ExpectedLayout", rareTalentKeys = {}, epicTalentKeys = {} },
+        hexTree = { layoutKey = "ExpectedLayout", nodes = {} },
     }
     local detail = {
         disposition = "normal", lifecyclePoint = "roomRewardPickup", gameName = "SpellDrop", traitOffer = offer,
@@ -480,7 +480,7 @@ function TestSpellAcquisitions.testSelectedSpellTreeErrorRetiresItsNativeConstru
     local offer = {
         kind = "traits", giver = "SpellDrop", selected = "option2",
         options = { { key = "SpellOneTrait" }, { key = "SpellTwoTrait" }, { key = "SpellThreeTrait" } },
-        hexTree = { layoutKey = "ExpectedLayout", rareTalentKeys = {}, epicTalentKeys = {} },
+        hexTree = { layoutKey = "ExpectedLayout", nodes = {} },
     }
     local detail = {
         disposition = "normal", lifecyclePoint = "roomRewardPickup", gameName = "SpellDrop", traitOffer = offer,
@@ -514,7 +514,7 @@ function TestSpellAcquisitions.testOpenReturnWithoutSelectionSilentlyClearsTheNo
     local payload = { detail = { traitOffer = {
         kind = "traits", giver = "SpellDrop", selected = "option1",
         options = { { key = "SpellOneTrait" }, { key = "SpellTwoTrait" }, { key = "SpellThreeTrait" } },
-        hexTree = { layoutKey = "Lung", rareTalentKeys = {}, epicTalentKeys = {} },
+        hexTree = { layoutKey = "Lung", nodes = {} },
     } } }
     local callbacks, completed, mismatches = capture({ state = "synchronized" }, payload)
     local item = { Name = "SpellDrop" }

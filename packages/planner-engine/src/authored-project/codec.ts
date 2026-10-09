@@ -2,7 +2,7 @@ import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
 import { decodeRunModifiers, encodeRunModifiers } from './run-modifiers';
-import { normalizeAuthoredHexTree } from './traits/hex-tree';
+import { decodeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
 import {
@@ -22,34 +22,6 @@ import {
 import { reconcileChaosTopology } from './chaos-gate-reconciliation';
 import { resolveRoutePosition } from './route-context';
 import { decodeResolvedRewardOffer } from './room-state/decoding/reward-acquisition-codec';
-
-function decodeHexTree(
-  value: unknown,
-  catalog: Catalog,
-  spellTraitKey: string,
-  path: string,
-): import('./traits/state').AuthoredHexTreeConfiguration {
-  const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'], path);
-  const rareTalentKeys = expectArray(raw.rareTalentKeys, `${path}.rareTalentKeys`).map(
-    (entry, index) => expectString(entry, `${path}.rareTalentKeys[${index}]`),
-  );
-  const epicTalentKeys = expectArray(raw.epicTalentKeys, `${path}.epicTalentKeys`).map(
-    (entry, index) => expectString(entry, `${path}.epicTalentKeys[${index}]`),
-  );
-  try {
-    return normalizeAuthoredHexTree(catalog, spellTraitKey, {
-      layoutKey: expectString(
-        raw.layoutKey,
-        `${path}.layoutKey`,
-      ) as import('../catalog-schema').HexLayoutKey,
-      rareTalentKeys,
-      epicTalentKeys,
-    });
-  } catch (error) {
-    fail(path, error instanceof Error ? error.message : 'invalid Hex tree');
-  }
-}
 
 export { ProjectDocumentContractError } from './validation';
 
@@ -280,7 +252,7 @@ function decodeRoutePlan(
   const hasAspectHexTree = 'aspectHexTree' in loadout;
   const aspectHexTree = isSeleneAspect
     ? hasAspectHexTree
-      ? decodeHexTree(
+      ? decodeAuthoredHexTree(
           loadout.aspectHexTree,
           catalog,
           'SpellMoonBeamTrait',

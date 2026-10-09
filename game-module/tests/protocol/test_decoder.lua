@@ -234,13 +234,20 @@ function TestProtocol.testConformanceResolverProjectsNamedFactsAndRejectsUnknown
 end
 
 function TestProtocol.testSpellOfferWireRequiresCompleteTreeAndThreeOptions()
-    local offer = assert(json.decode('{"kind":"traits","giver":"SpellDrop","selected":"option1","options":[{"key":"one"},{"key":"two"},{"key":"three"}],"hexTree":{"layoutKey":"Lung","rareTalentKeys":["rare"],"epicTalentKeys":["epic"]}}'))
+    local offer = assert(json.decode('{"kind":"traits","giver":"SpellDrop","selected":"option1","options":[{"key":"one"},{"key":"two"},{"key":"three"}],"hexTree":{"layoutKey":"Lung","nodes":{"4:1":"rare","6:3":"epic"}}}'))
     lu.assertNotNil(rewards.traitOffer(offer, "spell"))
     local missing = assert(json.decode('{"kind":"traits","giver":"SpellDrop","selected":"option1","options":[{"key":"one"},{"key":"two"},{"key":"three"}]}'))
     lu.assertNil(rewards.traitOffer(missing, "spell"))
-    local short = assert(json.decode('{"kind":"traits","giver":"SpellDrop","selected":"option1","options":[{"key":"one"}],"hexTree":{"layoutKey":"Lung","rareTalentKeys":["rare"],"epicTalentKeys":["epic"]}}'))
+    local short = assert(json.decode('{"kind":"traits","giver":"SpellDrop","selected":"option1","options":[{"key":"one"}],"hexTree":{"layoutKey":"Lung","nodes":{"4:1":"rare","6:3":"epic"}}}'))
     lu.assertNil(rewards.traitOffer(short, "spell"))
-    local foreign = assert(json.decode('{"kind":"traits","giver":"Zeus","selected":"option1","options":[{"key":"one"},{"key":"two"},{"key":"three"}],"hexTree":{"layoutKey":"Lung","rareTalentKeys":["rare"],"epicTalentKeys":["epic"]}}'))
+    for _, tree in ipairs({ '{"layoutKey":"Lung","nodes":{}}', '{"layoutKey":"Lung","nodes":{"4-1":"rare"}}',
+        '{"layoutKey":"Lung","nodes":{"4:1":"rare"},"rareTalentKeys":[]}',
+        '{"layoutKey":"Lung","nodes":{"4:1":"rare"},"godSent":{"olympianTalentKey":"rare","lineageTalentKey":"count"}}' }) do
+        local invalid = assert(json.decode('{"kind":"traits","giver":"SpellDrop","selected":"option1",'
+            .. '"options":[{"key":"one"},{"key":"two"},{"key":"three"}],"hexTree":' .. tree .. '}'))
+        lu.assertNil(rewards.traitOffer(invalid, "spell"), tree)
+    end
+    local foreign = assert(json.decode('{"kind":"traits","giver":"Zeus","selected":"option1","options":[{"key":"one"},{"key":"two"},{"key":"three"}],"hexTree":{"layoutKey":"Lung","nodes":{"4:1":"rare","6:3":"epic"}}}'))
     lu.assertNil(rewards.traitOffer(foreign, "spell"))
 end
 

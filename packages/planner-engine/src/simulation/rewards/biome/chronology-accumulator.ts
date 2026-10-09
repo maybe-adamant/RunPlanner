@@ -308,6 +308,13 @@ function traitMutationAcquisitionContact(
         owner: owner.trait.owner,
         acquisitionRole: owner.trait.acquisitionRole,
       });
+    case 'hexTree':
+      return owner.owner.kind === 'traitOffer'
+        ? Object.freeze({
+            owner: owner.owner.owner,
+            acquisitionRole: owner.owner.acquisitionRole,
+          })
+        : undefined;
     default:
       return undefined;
   }

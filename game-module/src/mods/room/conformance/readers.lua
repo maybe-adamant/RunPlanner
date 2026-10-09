@@ -123,17 +123,14 @@ local function pathOfStars(run, expected)
     -- Native trees have sequential depths but sparse positions within each depth.
     for _, column in ipairs(talents or {}) do
         for _, node in pairs(column) do
-            if type(node.Name) == "string"
-                and (expectedSet[node.Name] or node.Rarity == "Rare" or node.Rarity == "Epic"
-                    or node.Rarity == "Duo") then
+            local pool = type(node.Pool) == "table" and node.Pool or {}
+            if type(node.Name) == "string" and (pool.OlympianSpell ~= nil or pool.OlympianCount ~= nil) then
                 nativeTalentKeys[node.Name] = true
             end
         end
     end
-    -- The planner intentionally projects only frozen Rare/Epic/God Sent
-    -- identities. Reconstruct that canonical published order from native
-    -- presence, then retain unexpected high-value nodes as evidence instead
-    -- of leaking unmodeled common/repeatable talents into conformance.
+    -- Only the inserted God Sent pair is a conformance identity; it decides the
+    -- tree's capacity. Other node talents are realised from the plan, not checked.
     local talentKeys, emitted = {}, {}
     for _, key in ipairs(expectedKeys or {}) do
         if nativeTalentKeys[key] then

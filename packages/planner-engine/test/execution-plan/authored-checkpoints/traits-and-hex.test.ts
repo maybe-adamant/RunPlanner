@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectHistoryCommand,
+  createDefaultAuthoredHexTree,
   createEncounterPhaseAddress,
   semanticAddressKey,
   createGorgonPhaseAddress,
@@ -36,8 +37,7 @@ it('exports the installed ordinary Hex and reached P Path allocation, then reloa
     spellTraitKey: 'SpellPotionTrait',
     tree: {
       layoutKey: 'Lung',
-      rareTalentKeys: ['DamageBuffTalent', 'ShieldTalent'],
-      epicTalentKeys: ['ClearCastTalent'],
+      nodes: { '4:1': 'DamageBuffTalent', '4:5': 'ShieldTalent', '6:3': 'ClearCastTalent' },
     },
     bankedPathPoints: 0,
     investedPathPoints: 3,
@@ -82,8 +82,11 @@ it('exports Aspect of Selene Hex Path grants and reloads its tree edit', () => {
     spellTraitKey: 'SpellMoonBeamTrait',
     tree: {
       layoutKey: 'Lung',
-      rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
-      epicTalentKeys: ['MoonBeamTargetTalent'],
+      nodes: {
+        '4:1': 'MoonBeamConsecutiveDamageTalent',
+        '4:5': 'MoonBeamDefenseTalent',
+        '6:3': 'MoonBeamTargetTalent',
+      },
     },
     bankedPathPoints: 0,
     investedPathPoints: 6,
@@ -99,15 +102,7 @@ it('exports Aspect of Selene Hex Path grants and reloads its tree edit', () => {
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
     kind: 'ReplaceAspectHexTree',
     route: createRouteAddress('Surface'),
-    value: {
-      layoutKey: 'Maze',
-      rareTalentKeys: [
-        'MoonBeamPrimaryTalent',
-        'MoonBeamConsecutiveDamageTalent',
-        'MoonBeamDefenseTalent',
-      ],
-      epicTalentKeys: ['MoonBeamTargetTalent', 'MoonBeamExBeamBonusTalent'],
-    },
+    value: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Maze'),
   });
   const reloaded = reloadProject(edited.present);
   expect(reloaded).toEqual(edited.present);

@@ -62,17 +62,13 @@ function session.verifyCompleted(state, mismatch)
         if native.treeLayoutKey() ~= expected.startingHex.layoutKey then
             return mismatch(state, "starting-hex-layout", expected.startingHex.layoutKey, native.treeLayoutKey())
         end
-        local special = native.treeSpecialTalentKeys()
-        if not sameKeys(expected.startingHex.rareTalentKeys, special.rare)
-            or not sameKeys(expected.startingHex.epicTalentKeys, special.epic) then
-            return mismatch(state, "starting-hex-tree", expected.startingHex, special)
-        end
+        local godSent = native.treeGodSentTalentKeys()
         if expected.startingHex.godSent then
-            if not sameKeys({ expected.startingHex.godSent.olympianTalentKey, expected.startingHex.godSent.lineageTalentKey }, special.godSent) then
-                return mismatch(state, "starting-hex-god-sent", expected.startingHex.godSent, special.godSent)
+            if not sameKeys({ expected.startingHex.godSent.olympianTalentKey, expected.startingHex.godSent.lineageTalentKey }, godSent) then
+                return mismatch(state, "starting-hex-god-sent", expected.startingHex.godSent, godSent)
             end
-        elseif #special.godSent ~= 0 then
-            return mismatch(state, "starting-hex-god-sent", nil, special.godSent)
+        elseif #godSent ~= 0 then
+            return mismatch(state, "starting-hex-god-sent", nil, godSent)
         end
     end
     state.state, state.reason = "synchronized", "ready"

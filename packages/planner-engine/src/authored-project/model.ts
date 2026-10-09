@@ -8,7 +8,7 @@ import type {
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 93 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 94 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -75,7 +75,7 @@ export interface RouteLoadout extends RouteWeaponAspectLoadout {
   readonly familiarKey: string | null;
   /** Dormant unless the route-start selection equips a supported keepsake. */
   readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
-  /** Complete fixed Sky Fall Hex tree, present only for Aspect of Selene. */
+  /** Complete Sky Fall Hex tree, present only for Aspect of Selene. */
   readonly aspectHexTree?: AuthoredHexTreeConfiguration;
 }
 

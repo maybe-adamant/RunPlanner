@@ -6,6 +6,7 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   assembleRoomActionDomain,
+  createDefaultAuthoredHexTree,
   createProjectHistory,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -42,6 +43,7 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  const polymorphTree = createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait');
   function completePolymorphSpellOffer(): AuthoredTraitOfferTraits {
     return {
       kind: 'traits',
@@ -52,11 +54,7 @@ describe('authored-project incoming reward commands', () => {
         { traitKey: 'SpellTransformTrait' },
       ],
       selectedOptionKey: 'option1',
-      hexTree: {
-        layoutKey: 'Lung',
-        rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
-        epicTalentKeys: ['PolymorphSandwichTalent'],
-      },
+      hexTree: polymorphTree,
       rarificationActions: [],
     };
   }
@@ -93,11 +91,7 @@ describe('authored-project incoming reward commands', () => {
     expect(authoredSpell).toMatchObject({
       kind: 'traits',
       selectedOptionKey: 'option2',
-      hexTree: {
-        layoutKey: 'Lung',
-        rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'MeteorSlowDecalTalent'],
-        epicTalentKeys: ['MeteorInvulnerableChargeTalent'],
-      },
+      hexTree: createDefaultAuthoredHexTree(catalog, 'SpellMeteorTrait'),
     });
     const encoded = encodeProjectDocument(project);
     expect(decodeProjectDocument(JSON.parse(encoded), catalog)).toEqual(project);
@@ -128,11 +122,7 @@ describe('authored-project incoming reward commands', () => {
     expect(changedOffer).toMatchObject({
       kind: 'traits',
       selectedOptionKey: 'option1',
-      hexTree: {
-        layoutKey: 'Lung',
-        rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'MeteorSlowDecalTalent'],
-        epicTalentKeys: ['MeteorInvulnerableChargeTalent'],
-      },
+      hexTree: createDefaultAuthoredHexTree(catalog, 'SpellMeteorTrait'),
     });
     expect(undoProjectHistory(changed).present).toBe(initial.present);
   });
@@ -206,32 +196,40 @@ describe('authored-project incoming reward commands', () => {
     (offer: AuthoredTraitOfferTraits) => AuthoredTraitOfferTraits,
   ][] = [
     [
-      'a Rare identity from another Hex pool',
+      'a Rare talent from another Hex pool',
       (offer) => ({
         ...offer,
         hexTree: {
-          ...offer.hexTree!,
-          rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'PolymorphDeathExplodeTalent'],
+          layoutKey: 'Lung',
+          nodes: { ...polymorphTree.nodes, '4:1': 'MeteorVulnerabilityDecalTalent' },
         },
       }),
     ],
     [
-      'a duplicate node identity',
+      'a node the layout does not declare',
       (offer) => ({
         ...offer,
         hexTree: {
-          ...offer.hexTree!,
-          rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphBossDamageTalent'],
+          layoutKey: 'Lung',
+          nodes: { ...polymorphTree.nodes, '7:2': 'PolymorphCurseTalent' },
         },
       }),
     ],
     [
-      'the wrong Rare cardinality',
+      'a missing node',
+      (offer) => {
+        const { '4:1': _missing, ...nodes } = polymorphTree.nodes;
+        void _missing;
+        return { ...offer, hexTree: { layoutKey: 'Lung', nodes } };
+      },
+    ],
+    [
+      'a repeatable its depth cannot draw',
       (offer) => ({
         ...offer,
         hexTree: {
-          ...offer.hexTree!,
-          rareTalentKeys: ['PolymorphBossDamageTalent'],
+          layoutKey: 'Lung',
+          nodes: { ...polymorphTree.nodes, '5:2': 'ChargeRegenTalent' },
         },
       }),
     ],
@@ -276,8 +274,12 @@ describe('authored-project incoming reward commands', () => {
     ).toThrow();
   });
 
-  it('canonicalizes valid unordered selected Hex nodes to declaration order', () => {
+  it('keeps a tree-wide conflict representable and orders nodes by layout', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const conflicting = {
+      ...Object.fromEntries(Object.entries(polymorphTree.nodes).reverse()),
+      '4:5': polymorphTree.nodes['4:1']!,
+    };
     const project = applyProjectCommand(
       applyProjectCommand(createGoldenFGHProject(), catalog, {
         kind: 'ReplaceIncomingReward',
@@ -290,10 +292,7 @@ describe('authored-project incoming reward commands', () => {
         trait: createTraitOfferAddress(reward, 'self'),
         value: {
           ...completePolymorphSpellOffer(),
-          hexTree: {
-            ...completePolymorphSpellOffer().hexTree!,
-            rareTalentKeys: ['PolymorphDeathExplodeTalent', 'PolymorphBossDamageTalent'],
-          },
+          hexTree: { layoutKey: 'Lung', nodes: conflicting },
         },
       },
     );
@@ -301,12 +300,9 @@ describe('authored-project incoming reward commands', () => {
       .route!.biomes.flatMap((biome) => biome.topology?.occurrences ?? [])
       .find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
     const offer = occurrence?.state.kind === 'counted' ? occurrence.state.reward : undefined;
-    expect(offer?.traitOffersByAcquisitionRole.self).toMatchObject({
-      hexTree: {
-        rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
-        epicTalentKeys: ['PolymorphSandwichTalent'],
-      },
-    });
+    const tree = (offer?.traitOffersByAcquisitionRole.self as AuthoredTraitOfferTraits).hexTree!;
+    expect(tree.nodes['4:5']).toBe(polymorphTree.nodes['4:1']);
+    expect(Object.keys(tree.nodes)).toEqual(Object.keys(polymorphTree.nodes));
   });
 
   const apolloOffer = {

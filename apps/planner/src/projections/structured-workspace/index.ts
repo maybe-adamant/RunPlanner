@@ -167,8 +167,9 @@ export type {
   WorkspaceChaosOfferOptionDomain,
   WorkspaceLevelResolutionInteraction,
   WorkspaceTraitOptionDomainInteraction,
+  WorkspaceHexDeckTable,
   WorkspaceHexTreeDomain,
-  WorkspaceHexTreeInteraction,
+  WorkspaceHexTreeNode,
 } from './contracts/traits';
 export type {
   RankedPrefix,

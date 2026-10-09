@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 93,
+  "schemaVersion": 94,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -384,13 +384,24 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "LeapLaunchAoETalent",
-                          "LeapAoETalent"
-                        ],
-                        "epicTalentKeys": [
-                          "LeapShieldTalent"
-                        ]
+                        "nodes": {
+                          "1:2": "ChargeRegenTalent",
+                          "1:4": "LeapDamageTalent",
+                          "2:2": "LeapArmorDamageTalent",
+                          "2:4": "LeapCooldownSpeedTalent",
+                          "3:1": "LeapDamageTalent",
+                          "3:2": "LeapArmorDamageTalent",
+                          "3:3": "LeapCooldownSpeedTalent",
+                          "3:4": "LeapDamageTalent",
+                          "3:5": "LeapArmorDamageTalent",
+                          "3:6": "LeapCooldownSpeedTalent",
+                          "4:1": "LeapLaunchAoETalent",
+                          "4:3": "LeapDamageTalent",
+                          "4:5": "LeapAoETalent",
+                          "5:2": "LeapArmorDamageTalent",
+                          "5:4": "LeapCooldownSpeedTalent",
+                          "6:3": "LeapShieldTalent"
+                        }
                       }
                     }
                   },

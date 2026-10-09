@@ -684,11 +684,37 @@ child remains repairable and prevents saving the incomplete outcome.
 
 A normal Spell Drop uses the shared three-row rarityless editor as Edit Hex.
 The launcher names the selected Hex. Position-owned Moonglow/Path bonuses
-remain per-row metadata, and the selected spell's Hex layout and Rare/Epic
-node groups are editable from the initial live draft. Saving and reopening is
-not a prerequisite. Aspect of Selene instead edits its fixed starting tree in
-loadout; a later Path acquisition does not expose a false replacement spell
-editor.
+remain per-row metadata, and the selected spell's Hex tree board is editable
+from the initial live draft: a layout picker over the tree drawn across the
+dialog on the native talent grid, where each node shows its full talent name.
+Visible copy names nodes by their talent; accessible names add kind and depth
+("Common Omen, depth 3"). Each editable node is its own picker trigger,
+opening a popover anchored to the node and headed by kind and talent. A Rare
+or Epic node's picker lists its pool and marks a talent another node holds. A
+Common node's picker groups "Swap in this column" (the talents at its depth,
+each a swap with the node holding it), "Trade with another column" (its deck's
+talents in other columns, "Omen — column 2") and, in the partial last deck,
+"Swap for an unused talent"; every Common edit keeps a legal tree legal.
+Common nodes are coloured by Common column (a theme token per column). The
+Common decks table, always shown below the board, carries the same colours on
+its column headers and has one row per deck and one cell per Common column,
+listing the talents that deck dealt there as equal-width chips sized to the
+catalog's longest Common label, so a trade never rewraps a cell; every column
+fits two chips side by side, and both Hex tree dialogs are wide enough for six
+columns. Each chip is a
+second trigger for its node's picker. Pickers open to the right of their
+trigger and flip or shift within the dialog; search appears only for more than
+eight options. While a picker is open its board node is marked as being edited,
+and the highlighted option marks the other node it involves; hovering or
+focusing a chip marks its node. A tree no deck sequence deals shows one muted
+line in place of the table body. These relations are projected, not derived in
+React. God Sent nodes are fixed. Choosing a layout
+generates its default tree; Reset to default restores it. An edit is kept as
+made: a tree-wide conflict is reported in the dialog feedback and marks its
+nodes. Saving and reopening is not a prerequisite. Both tree dialogs carry a
+header "?" explaining how common nodes are dealt. Aspect of Selene instead
+edits its Sky Fall tree in a loadout draft dialog whose launcher carries the
+tree's finding; a later Path acquisition does not expose a false replacement spell editor.
 
 Automatic Steady Growth and Embryo outcomes use their fixed timeline points
 and bound target controls, not draggable author-created effects. Immediate

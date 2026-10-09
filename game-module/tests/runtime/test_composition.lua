@@ -577,7 +577,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
     local runtime = assert(loadfile("src/mods/runtime/composition.lua"))().bind("/tmp/run-planner-test")
     runtime.attach(module)
     local expected = {
-        layoutKey = "ExpectedLayout", rareTalentKeys = {}, epicTalentKeys = {},
+        layoutKey = "ExpectedLayout", nodes = {},
     }
     local mismatches = {}
     local function mismatch(checkpoint) mismatches[#mismatches + 1] = checkpoint end

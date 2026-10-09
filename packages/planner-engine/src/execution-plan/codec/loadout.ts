@@ -1,5 +1,6 @@
 import type { ExecutionStartingLoadout } from '../model';
-import { array, exact, fail, object, stringArray, stringValue } from './primitives';
+import { array, exact, fail, object, stringValue } from './primitives';
+import { hexGodSent, hexTreeNodes } from './rewards';
 
 function ranks(value: unknown, label: string): Readonly<Record<string, number>> {
   const record = object(value, label);
@@ -13,18 +14,6 @@ function ranks(value: unknown, label: string): Readonly<Record<string, number>> 
       }),
     ),
   );
-}
-
-function distinct(
-  keys: readonly string[],
-  label: string,
-  seen = new Set<string>(),
-): readonly string[] {
-  for (const key of keys) {
-    if (seen.has(key)) fail(`${label} contains duplicate key ${key}`);
-    seen.add(key);
-  }
-  return keys;
 }
 
 export function startingLoadout(value: unknown): ExecutionStartingLoadout {
@@ -76,64 +65,22 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
     const hex = object(record.startingHex, 'execution plan.startingLoadout.startingHex');
     exact(
       hex,
-      ['spellTraitKey', 'layoutKey', 'rareTalentKeys', 'epicTalentKeys'],
+      ['spellTraitKey', 'layoutKey', 'nodes'],
       ['godSent'],
       'execution plan.startingLoadout.startingHex',
     );
     if (hex.spellTraitKey !== 'SpellMoonBeamTrait')
       fail('execution plan.startingLoadout.startingHex.spellTraitKey is unsupported');
-    const seen = new Set<string>();
-    const rareTalentKeys = Object.freeze([
-      ...distinct(
-        stringArray(
-          hex.rareTalentKeys,
-          'execution plan.startingLoadout.startingHex.rareTalentKeys',
-        ),
-        'execution plan.startingLoadout.startingHex.rareTalentKeys',
-        seen,
-      ),
-    ]);
-    const epicTalentKeys = Object.freeze([
-      ...distinct(
-        stringArray(
-          hex.epicTalentKeys,
-          'execution plan.startingLoadout.startingHex.epicTalentKeys',
-        ),
-        'execution plan.startingLoadout.startingHex.epicTalentKeys',
-        seen,
-      ),
-    ]);
-    let godSent:
-      { readonly olympianTalentKey: string; readonly lineageTalentKey: string } | undefined;
-    if (hex.godSent !== undefined) {
-      const row = object(hex.godSent, 'execution plan.startingLoadout.startingHex.godSent');
-      exact(
-        row,
-        ['olympianTalentKey', 'lineageTalentKey'],
-        [],
-        'execution plan.startingLoadout.startingHex.godSent',
-      );
-      const olympianTalentKey = stringValue(
-        row.olympianTalentKey,
-        'execution plan.startingLoadout.startingHex.godSent.olympianTalentKey',
-      );
-      const lineageTalentKey = stringValue(
-        row.lineageTalentKey,
-        'execution plan.startingLoadout.startingHex.godSent.lineageTalentKey',
-      );
-      if (
-        olympianTalentKey === lineageTalentKey ||
-        seen.has(olympianTalentKey) ||
-        seen.has(lineageTalentKey)
-      )
-        fail('execution plan.startingLoadout.startingHex.godSent overlaps modeled nodes');
-      godSent = Object.freeze({ olympianTalentKey, lineageTalentKey });
-    }
+    const nodes = hexTreeNodes(hex.nodes, 'execution plan.startingLoadout.startingHex.nodes');
+    const godSent = hexGodSent(
+      hex.godSent,
+      nodes,
+      'execution plan.startingLoadout.startingHex.godSent',
+    );
     startingHex = Object.freeze({
       spellTraitKey: 'SpellMoonBeamTrait',
       layoutKey: stringValue(hex.layoutKey, 'execution plan.startingLoadout.startingHex.layoutKey'),
-      rareTalentKeys,
-      epicTalentKeys,
+      nodes,
       ...(godSent === undefined ? {} : { godSent }),
     });
   }

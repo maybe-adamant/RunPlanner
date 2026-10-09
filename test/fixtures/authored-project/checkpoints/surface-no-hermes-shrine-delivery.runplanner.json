@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 93,
+  "schemaVersion": 94,
   "projectId": "surface-2",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -407,13 +407,24 @@
                       "rarificationActions": [],
                       "hexTree": {
                         "layoutKey": "Lung",
-                        "rareTalentKeys": [
-                          "SummonSpeedTalent",
-                          "SummonTeleportTalent"
-                        ],
-                        "epicTalentKeys": [
-                          "SummonDamageSplitTalent"
-                        ]
+                        "nodes": {
+                          "1:2": "CooldownDamageTalent",
+                          "1:4": "ChargeRegenTalent",
+                          "2:2": "PreChargeTalent",
+                          "2:4": "SummonDamageTalent",
+                          "3:1": "CooldownDamageTalent",
+                          "3:2": "PreChargeTalent",
+                          "3:3": "SummonDamageTalent",
+                          "3:4": "CooldownDamageTalent",
+                          "3:5": "SummonDamageTalent",
+                          "3:6": "CooldownDamageTalent",
+                          "4:1": "SummonSpeedTalent",
+                          "4:3": "SummonDamageTalent",
+                          "4:5": "SummonTeleportTalent",
+                          "5:2": "CooldownDamageTalent",
+                          "5:4": "SummonDamageTalent",
+                          "6:3": "SummonDamageSplitTalent"
+                        }
                       }
                     }
                   },

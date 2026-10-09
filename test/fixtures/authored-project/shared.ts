@@ -23,3 +23,4 @@ export {
 } from './room-actions';
 export { hubVisitActions } from './hub-actions';
 export { catalogWithEmptyShopGroup } from './empty-shop-group';
+export { legacyRareEpicHexTrees } from './legacy-hex-trees';

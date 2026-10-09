@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 
+import { createDefaultAuthoredHexTree } from '../../../src/authored-project';
 import { decodeRewardState } from '../../../src/authored-project/room-state/decoding/reward-acquisition-codec';
 import { decodeRoomState } from '../../../src/authored-project/room-state/codec';
 import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
 import { mutable, room, roomStatePath as path } from '../support/room-state-codec';
 
+const polymorphLung = createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait').nodes;
+
 type MutableHexTree = {
   layoutKey: string;
-  rareTalentKeys: string[];
-  epicTalentKeys: string[];
+  nodes: Record<string, string>;
 };
 
 type MutableTraitOffer = {
@@ -112,8 +114,7 @@ describe('reward acquisition decoder', () => {
           rarificationActions: [],
           hexTree: {
             layoutKey: 'Lung',
-            rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
-            epicTalentKeys: ['PolymorphSandwichTalent'],
+            nodes: { ...polymorphLung },
           },
         },
       },
@@ -173,29 +174,40 @@ describe('reward acquisition decoder', () => {
   const invalidHexOfferMutations: readonly [string, (offer: MutableRewardWithHexOffer) => void][] =
     [
       [
-        'a Rare identity from another Hex pool',
+        'a Rare talent from another Hex pool',
         (offer) => {
-          offer.traitOffersByAcquisitionRole.self!.hexTree!.rareTalentKeys = [
-            'MeteorVulnerabilityDecalTalent',
-            'PolymorphDeathExplodeTalent',
-          ];
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.nodes['4:1'] =
+            'MeteorVulnerabilityDecalTalent';
         },
       ],
       [
-        'a duplicate node identity',
+        'a pool talent its depth cannot draw',
         (offer) => {
-          offer.traitOffersByAcquisitionRole.self!.hexTree!.rareTalentKeys = [
-            'PolymorphBossDamageTalent',
-            'PolymorphBossDamageTalent',
-          ];
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.nodes['3:1'] = 'ChargeRegenTalent';
         },
       ],
       [
-        'the wrong Rare cardinality',
+        'an Epic talent on a Keystone node',
         (offer) => {
-          offer.traitOffersByAcquisitionRole.self!.hexTree!.rareTalentKeys = [
-            'PolymorphBossDamageTalent',
-          ];
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.nodes['4:1'] = 'PolymorphCurseTalent';
+        },
+      ],
+      [
+        'a node the layout does not declare',
+        (offer) => {
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.nodes['7:2'] = 'PolymorphCurseTalent';
+        },
+      ],
+      [
+        'a missing node',
+        (offer) => {
+          delete offer.traitOffersByAcquisitionRole.self!.hexTree!.nodes['1:2'];
+        },
+      ],
+      [
+        'an authored Olympian node',
+        (offer) => {
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.nodes['5:3'] = 'PolymorphZeusTalent';
         },
       ],
       [
@@ -253,8 +265,7 @@ describe('reward acquisition decoder', () => {
           rarificationActions: [],
           hexTree: {
             layoutKey: 'Lung',
-            rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
-            epicTalentKeys: ['PolymorphSandwichTalent'],
+            nodes: { ...polymorphLung },
           },
         },
       },
@@ -274,7 +285,7 @@ describe('reward acquisition decoder', () => {
     ).toThrow(/hexTree|Hex/);
   });
 
-  it('canonicalizes valid unordered Hex node selections to declaration order', () => {
+  it('keeps tree-wide conflicts representable and orders nodes by layout', () => {
     const offer = {
       offer: { rewardType: 'SpellDrop' },
       dispositionByAcquisitionRole: { self: { kind: 'normal' } },
@@ -291,8 +302,10 @@ describe('reward acquisition decoder', () => {
           rarificationActions: [],
           hexTree: {
             layoutKey: 'Lung',
-            rareTalentKeys: ['PolymorphDeathExplodeTalent', 'PolymorphBossDamageTalent'],
-            epicTalentKeys: ['PolymorphSandwichTalent'],
+            nodes: {
+              ...Object.fromEntries(Object.entries(polymorphLung).reverse()),
+              '4:5': polymorphLung['4:1']!,
+            },
           },
         },
       },
@@ -307,12 +320,10 @@ describe('reward acquisition decoder', () => {
       },
       'Underworld',
     );
-    expect(decoded.traitOffersByAcquisitionRole.self).toMatchObject({
-      hexTree: {
-        rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
-        epicTalentKeys: ['PolymorphSandwichTalent'],
-      },
-    });
+    const tree = (decoded.traitOffersByAcquisitionRole.self as { hexTree?: MutableHexTree })
+      .hexTree;
+    expect(tree?.nodes).toEqual({ ...polymorphLung, '4:5': polymorphLung['4:1'] });
+    expect(Object.keys(tree?.nodes ?? {})).toEqual(Object.keys(polymorphLung));
   });
 
   it('owns the exact Boon acquisition and payload shape', () => {

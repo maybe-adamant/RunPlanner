@@ -2170,8 +2170,24 @@
                   "selected": "option1",
                   "hexTree": {
                     "layoutKey": "Lung",
-                    "rareTalentKeys": ["SummonSpeedTalent", "SummonTeleportTalent"],
-                    "epicTalentKeys": ["SummonDamageSplitTalent"]
+                    "nodes": {
+                      "1:2": "CooldownDamageTalent",
+                      "1:4": "ChargeRegenTalent",
+                      "2:2": "PreChargeTalent",
+                      "2:4": "SummonDamageTalent",
+                      "3:1": "CooldownDamageTalent",
+                      "3:2": "PreChargeTalent",
+                      "3:3": "SummonDamageTalent",
+                      "3:4": "CooldownDamageTalent",
+                      "3:5": "SummonDamageTalent",
+                      "3:6": "CooldownDamageTalent",
+                      "4:1": "SummonSpeedTalent",
+                      "4:3": "SummonDamageTalent",
+                      "4:5": "SummonTeleportTalent",
+                      "5:2": "CooldownDamageTalent",
+                      "5:4": "SummonDamageTalent",
+                      "6:3": "SummonDamageSplitTalent"
+                    }
                   }
                 }
               }
@@ -2258,11 +2274,7 @@
             "hexProgress": {
               "spellTraitKey": "SpellSummonTrait",
               "layoutKey": "Lung",
-              "talentKeys": [
-                "SummonSpeedTalent",
-                "SummonTeleportTalent",
-                "SummonDamageSplitTalent"
-              ],
+              "talentKeys": [],
               "closed": false,
               "bankedPathPoints": 0,
               "investedPathPoints": 0
@@ -3817,5 +3829,5 @@
       }
     }
   ],
-  "planFingerprint": "5a4b1181"
+  "planFingerprint": "b2aa8745"
 }

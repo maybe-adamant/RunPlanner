@@ -148,6 +148,7 @@ export interface RunStateSnapshot {
   readonly hexObserver: {
     readonly spellTraitKey?: string;
     readonly layoutKey?: string;
+    /** The inserted God Sent pair; other node talents are realised, not conformance facts. */
     readonly talentKeys: readonly string[];
     readonly closed: boolean;
     readonly bankedPathPoints: number;
@@ -809,8 +810,6 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         ? {}
         : { layoutKey: first.hexProgress.tree.layoutKey }),
       talentKeys: Object.freeze([
-        ...(first.hexProgress.tree?.rareTalentKeys ?? []),
-        ...(first.hexProgress.tree?.epicTalentKeys ?? []),
         ...(first.hexProgress.godSentAdded === true && first.hexProgress.spellTraitKey !== undefined
           ? (() => {
               const godSent = context.catalog.hexes.byKey[first.hexProgress.spellTraitKey]?.godSent;

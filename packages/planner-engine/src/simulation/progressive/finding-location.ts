@@ -43,6 +43,8 @@ function traitOfferAncestor(address: SemanticAddress): TraitOfferAddress | undef
     case 'echoLastReward':
     case 'allTogetherSet':
       return address.trait;
+    case 'hexTree':
+      return address.owner.kind === 'traitOffer' ? address.owner : undefined;
     default:
       return undefined;
   }

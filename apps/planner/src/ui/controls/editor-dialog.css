@@ -46,6 +46,11 @@
   width: min(100%, 68rem);
 }
 
+/* Fits six Common columns of two deck chips beside the deck labels. */
+.editor-dialog-hexTree {
+  width: min(100%, 88rem);
+}
+
 .editor-dialog-header {
   align-items: flex-start;
   border-bottom: 1px solid var(--border, #ccd3df);

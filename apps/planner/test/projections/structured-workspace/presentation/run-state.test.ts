@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createDefaultAuthoredHexTree,
   createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -198,7 +197,7 @@ describe('Run State presentation', () => {
       },
       hexProgress: {
         spellTraitKey: 'SpellMoonBeamTrait',
-        tree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Maze'),
+        tree: { layoutKey: 'Maze', nodes: {} },
         godSentAdded: true,
         talentDropsClosed: false,
         bankedPathPoints: 2,
