@@ -1,7 +1,11 @@
 import type {
   CatalogCollection,
   HexDeclaration,
+  HexLayoutDeclaration,
   HexLayoutKey,
+  HexLayoutNodeDeclaration,
+  HexNodeKind,
+  HexRepeatableTalentDeclaration,
   KeepsakeDeclaration,
   TraitDeclaration,
   TraitGiverDeclaration,
@@ -12,6 +16,7 @@ import {
   freezeUniqueStrings,
   requireArray,
   requireNonEmpty,
+  requireNonNegativeInteger,
   requireObject,
   requirePositiveInteger,
 } from '../common';
@@ -19,12 +24,134 @@ import { fail } from '../errors';
 import type { RawHexDeclaration, RawTraitCatalogInput } from '../../declarations/traits/types';
 
 const LAYOUT_KEYS: readonly HexLayoutKey[] = ['Lung', 'Pyramid', 'Maze', 'Nacelle'];
-const EXPECTED_LAYOUTS = Object.freeze({
-  Lung: Object.freeze({ baseCapacity: 16, rareCount: 2, epicCount: 1 }),
-  Pyramid: Object.freeze({ baseCapacity: 18, rareCount: 3, epicCount: 1 }),
-  Maze: Object.freeze({ baseCapacity: 22, rareCount: 3, epicCount: 2 }),
-  Nacelle: Object.freeze({ baseCapacity: 18, rareCount: 3, epicCount: 2 }),
-});
+const NODE_KINDS: readonly HexNodeKind[] = [
+  'repeatable',
+  'keystone',
+  'legendary',
+  'olympianSpell',
+  'olympianCount',
+];
+
+function isOlympian(kind: HexNodeKind): boolean {
+  return kind === 'olympianSpell' || kind === 'olympianCount';
+}
+
+function requireOffset(value: unknown, path: string): number {
+  if (value === undefined) return 0;
+  if (typeof value !== 'number' || !Number.isFinite(value)) fail(path, 'must be a finite number');
+  return value;
+}
+
+function normalizeLayout(value: unknown, path: string): HexLayoutDeclaration {
+  const layout = requireObject(value, path);
+  const key = layout.key;
+  if (typeof key !== 'string' || !(LAYOUT_KEYS as readonly string[]).includes(key))
+    fail(`${path}.key`, 'must be Lung, Pyramid, Maze, or Nacelle');
+  const label = requireNonEmpty(layout.label as string, `${path}.label`);
+  const depths = requireArray(layout.structure, `${path}.structure`).map((rawDepth, depthIndex) => {
+    const depthPath = `${path}.structure[${depthIndex}]`;
+    const entries = requireArray(rawDepth, depthPath);
+    if (entries.length === 0) fail(depthPath, 'must declare at least one node');
+    return entries.map((rawNode, nodeIndex) => {
+      const nodePath = `${depthPath}[${nodeIndex}]`;
+      const entry = requireObject(rawNode, nodePath);
+      const kind = (entry.kind ?? 'repeatable') as HexNodeKind;
+      if (!NODE_KINDS.includes(kind)) fail(`${nodePath}.kind`, 'is not a Hex node kind');
+      const linkTo = requireArray(entry.linkTo ?? [], `${nodePath}.linkTo`).map((slot, index) =>
+        requireNonNegativeInteger(slot as number, `${nodePath}.linkTo[${index}]`),
+      );
+      if (new Set(linkTo).size !== linkTo.length) fail(`${nodePath}.linkTo`, 'must be distinct');
+      if (entry.bidirectional !== undefined && entry.bidirectional !== true)
+        fail(`${nodePath}.bidirectional`, 'must be true when present');
+      if (entry.bidirectional === true && linkTo.length === 0)
+        fail(`${nodePath}.bidirectional`, 'requires links to the next depth');
+      return {
+        depth: depthIndex + 1,
+        slot: requireNonNegativeInteger(entry.slot as number, `${nodePath}.slot`),
+        kind,
+        linkTo,
+        bidirectional: entry.bidirectional === true,
+        gridOffsetX: requireOffset(entry.gridOffsetX, `${nodePath}.gridOffsetX`),
+        gridOffsetY: requireOffset(entry.gridOffsetY, `${nodePath}.gridOffsetY`),
+        path: nodePath,
+      };
+    });
+  });
+  if (depths.length === 0) fail(`${path}.structure`, 'must declare at least one depth');
+  for (const [depthIndex, nodes] of depths.entries()) {
+    nodes.forEach((node, index) => {
+      if (index > 0 && node.slot <= nodes[index - 1]!.slot)
+        fail(`${node.path}.slot`, 'slots must ascend within a depth');
+      const next = depths[depthIndex + 1];
+      for (const slot of node.linkTo)
+        if (next?.some((candidate) => candidate.slot === slot) !== true)
+          fail(`${node.path}.linkTo`, `references missing node ${depthIndex + 2}:${slot}`);
+    });
+  }
+  const linkFromOf = (depth: number, slot: number) =>
+    (depths[depth - 2] ?? []).filter((node) => node.linkTo.includes(slot));
+  const nodes = depths.flat().map((node): HexLayoutNodeDeclaration => {
+    const backlinks = linkFromOf(node.depth, node.slot);
+    if (node.depth > 1 && backlinks.length === 0)
+      fail(node.path, 'must be linked from the previous depth');
+    if (
+      node.depth > 1 &&
+      !isOlympian(node.kind) &&
+      backlinks.every((source) => isOlympian(source.kind))
+    )
+      fail(node.path, 'must be reachable without the God Sent pair');
+    return Object.freeze({
+      key: `${node.depth}:${node.slot}`,
+      depth: node.depth,
+      slot: node.slot,
+      kind: node.kind,
+      linkTo: Object.freeze([...node.linkTo]),
+      linkFrom: Object.freeze(backlinks.map((source) => source.slot)),
+      bidirectional: node.bidirectional,
+      gridOffsetX: node.gridOffsetX,
+      gridOffsetY: node.gridOffsetY,
+    });
+  });
+  const countOf = (kind: HexNodeKind) => nodes.filter((node) => node.kind === kind).length;
+  if (countOf('olympianSpell') !== 1 || countOf('olympianCount') !== 1)
+    fail(`${path}.structure`, 'must declare exactly one God Sent pair');
+  const rareCount = countOf('keystone');
+  const epicCount = countOf('legendary');
+  if (rareCount === 0 || epicCount === 0)
+    fail(`${path}.structure`, 'must declare Keystone and Legendary nodes');
+  return Object.freeze({
+    key: key as HexLayoutKey,
+    label,
+    nodes: createCollection(nodes, `${path}.nodes`, (node) => node.key),
+    baseCapacity: nodes.length - 2,
+    rareCount,
+    epicCount,
+  });
+}
+
+function normalizeRepeatables(
+  value: unknown,
+  path: string,
+): CatalogCollection<HexRepeatableTalentDeclaration> {
+  const talents = requireArray(value, path).map((raw, index) => {
+    const talent = requireObject(raw, `${path}[${index}]`);
+    return Object.freeze({
+      key: requireNonEmpty(talent.key as string, `${path}[${index}].key`),
+      label: requireNonEmpty(talent.label as string, `${path}[${index}].label`),
+      ...(talent.maxCount === undefined
+        ? {}
+        : {
+            maxCount: requirePositiveInteger(
+              talent.maxCount as number,
+              `${path}[${index}].maxCount`,
+            ),
+          }),
+    });
+  });
+  if (!talents.some((talent) => talent.maxCount === undefined))
+    fail(path, 'must include a talent without MaxCount so refills never run out');
+  return createCollection(talents, path, (talent) => talent.key);
+}
 
 export function normalizeHexes(
   raw: RawTraitCatalogInput['hexes'],
@@ -32,45 +159,12 @@ export function normalizeHexes(
   const declarations = requireArray(raw, 'hexes').map(
     (value, index) => requireObject(value, `hexes[${index}]`) as unknown as RawHexDeclaration,
   );
+  const repeatableByKey = new Map<string, HexRepeatableTalentDeclaration>();
   const values = declarations.map((hex, index) => {
     const path = `hexes[${index}]`;
-    const layouts = requireArray(hex.layouts, `${path}.layouts`).map((value, layoutIndex) => {
-      const layout = requireObject(value, `${path}.layouts[${layoutIndex}]`);
-      const key = layout.key;
-      if (typeof key !== 'string' || !(LAYOUT_KEYS as readonly string[]).includes(key))
-        fail(`${path}.layouts[${layoutIndex}].key`, 'must be Lung, Pyramid, Maze, or Nacelle');
-      const expected = EXPECTED_LAYOUTS[key as HexLayoutKey];
-      if (expected === undefined) fail(`${path}.layouts[${layoutIndex}].key`, 'unknown layout');
-      const label = requireNonEmpty(
-        layout.label as string,
-        `${path}.layouts[${layoutIndex}].label`,
-      );
-      const baseCapacity = requirePositiveInteger(
-        layout.baseCapacity as number,
-        `${path}.layouts[${layoutIndex}].baseCapacity`,
-      );
-      const rareCount = requirePositiveInteger(
-        layout.rareCount as number,
-        `${path}.layouts[${layoutIndex}].rareCount`,
-      );
-      const epicCount = requirePositiveInteger(
-        layout.epicCount as number,
-        `${path}.layouts[${layoutIndex}].epicCount`,
-      );
-      if (
-        baseCapacity !== expected.baseCapacity ||
-        rareCount !== expected.rareCount ||
-        epicCount !== expected.epicCount
-      )
-        fail(`${path}.layouts[${layoutIndex}]`, 'does not match the source layout contract');
-      return Object.freeze({
-        key: key as HexLayoutKey,
-        label,
-        baseCapacity,
-        rareCount,
-        epicCount,
-      });
-    });
+    const layouts = requireArray(hex.layouts, `${path}.layouts`).map((value, layoutIndex) =>
+      normalizeLayout(value, `${path}.layouts[${layoutIndex}]`),
+    );
     if (
       layouts.length !== LAYOUT_KEYS.length ||
       layouts.some((layout, layoutIndex) => layout.key !== LAYOUT_KEYS[layoutIndex])
@@ -99,8 +193,25 @@ export function normalizeHexes(
     };
     const rareCandidates = normalizeCandidates(hex.rareCandidates, `${path}.rareCandidates`);
     const epicCandidates = normalizeCandidates(hex.epicCandidates, `${path}.epicCandidates`);
-    if (rareCandidates.values.length < 3 || epicCandidates.values.length < 2)
-      fail(path, 'must provide at least three Rare and two Epic candidates');
+    for (const layout of layouts)
+      if (
+        rareCandidates.values.length < layout.rareCount ||
+        epicCandidates.values.length < layout.epicCount
+      )
+        fail(path, `must fill every Keystone and Legendary node of ${layout.key}`);
+    const repeatableCandidates = normalizeRepeatables(
+      hex.repeatableCandidates,
+      `${path}.repeatableCandidates`,
+    );
+    for (const talent of repeatableCandidates.values) {
+      const prior = repeatableByKey.get(talent.key);
+      if (
+        prior !== undefined &&
+        (prior.label !== talent.label || prior.maxCount !== talent.maxCount)
+      )
+        fail(`${path}.repeatableCandidates.${talent.key}`, 'must match its other declarations');
+      repeatableByKey.set(talent.key, talent);
+    }
     const godSent = requireObject(hex.godSent, `${path}.godSent`);
     if (godSent.capacityDelta !== 2) fail(`${path}.godSent.capacityDelta`, 'must be 2');
     return Object.freeze({
@@ -109,6 +220,7 @@ export function normalizeHexes(
       layouts: createCollection(layouts, `${path}.layouts`, (layout) => layout.key),
       rareCandidates,
       epicCandidates,
+      repeatableCandidates,
       godSent: Object.freeze({
         providerKey: requireNonEmpty(godSent.providerKey as string, `${path}.godSent.providerKey`),
         forceKeepsakeKey: requireNonEmpty(
@@ -213,11 +325,17 @@ export function validateHexBindings(input: {
         `traitCatalog.hexes.${hex.spellTraitKey}.godSent.olympianTalentKey`,
         `must be ${expectedBinding[2]}`,
       );
-    const nodeKeys = [
+    const talentKeys = [
       ...hex.rareCandidates.values.map((candidate) => candidate.key),
       ...hex.epicCandidates.values.map((candidate) => candidate.key),
+      ...hex.repeatableCandidates.values.map((candidate) => candidate.key),
+      hex.godSent.olympianTalentKey,
+      hex.godSent.lineageTalentKey,
     ];
-    if (new Set(nodeKeys).size !== nodeKeys.length)
-      fail(`traitCatalog.hexes.${hex.spellTraitKey}`, 'Rare and Epic node keys must be unique');
+    if (new Set(talentKeys).size !== talentKeys.length)
+      fail(
+        `traitCatalog.hexes.${hex.spellTraitKey}`,
+        'Hex talent keys must be unique across pools',
+      );
   }
 }

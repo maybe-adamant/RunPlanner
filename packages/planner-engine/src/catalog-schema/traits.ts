@@ -382,17 +382,49 @@ function resolveDispositionOrdinalEffect(
 
 export type HexLayoutKey = 'Lung' | 'Pyramid' | 'Maze' | 'Nacelle';
 
+/** Source pool of a tree node: Keystone is Rare, Legendary is Epic, Olympian nodes are God Sent. */
+export type HexNodeKind =
+  'repeatable' | 'keystone' | 'legendary' | 'olympianSpell' | 'olympianCount';
+
+/** One `Structure[depth][slot]` node, keyed `depth:slot`. */
+export interface HexLayoutNodeDeclaration {
+  readonly key: string;
+  readonly depth: number;
+  readonly slot: number;
+  readonly kind: HexNodeKind;
+  /** Slots at the next depth. */
+  readonly linkTo: readonly number[];
+  /** Slots at the previous depth linking here; derived from `linkTo`. */
+  readonly linkFrom: readonly number[];
+  /** Also available from an invested or queued `linkTo` node. */
+  readonly bidirectional: boolean;
+  readonly gridOffsetX: number;
+  readonly gridOffsetY: number;
+}
+
 export interface HexLayoutDeclaration {
   readonly key: HexLayoutKey;
   readonly label: string;
+  /** Ordered by depth, then slot. */
+  readonly nodes: CatalogCollection<HexLayoutNodeDeclaration>;
+  /** Derived: nodes other than the God Sent pair. */
   readonly baseCapacity: number;
+  /** Derived: keystone nodes. */
   readonly rareCount: number;
+  /** Derived: legendary nodes. */
   readonly epicCount: number;
 }
 
 export interface HexTalentCandidateDeclaration {
   readonly key: string;
   readonly label: string;
+}
+
+/** Common talent drawn by repeatable nodes; `MaxCount` caps its refills. */
+export interface HexRepeatableTalentDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly maxCount?: number;
 }
 
 export interface HexGodSentDeclaration {
@@ -412,6 +444,8 @@ export interface HexDeclaration {
   readonly layouts: CatalogCollection<HexLayoutDeclaration>;
   readonly rareCandidates: CatalogCollection<HexTalentCandidateDeclaration>;
   readonly epicCandidates: CatalogCollection<HexTalentCandidateDeclaration>;
+  /** Source `Talents.Repeatable` in draw-list order. */
+  readonly repeatableCandidates: CatalogCollection<HexRepeatableTalentDeclaration>;
   readonly godSent: HexGodSentDeclaration;
 }
 

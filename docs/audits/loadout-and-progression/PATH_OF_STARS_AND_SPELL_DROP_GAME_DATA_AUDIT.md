@@ -18,11 +18,10 @@ This document is the primary evidence authority for:
 
 Moon Beam reward priority remains owned by
 [the Olympian keepsake and Moon Beam reward-pressure audit](OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md).
-Finite layout capacities, generated Rare/Epic identities, Olympian extensions,
-and full-tree closure are owned by the
+Layout graphs and capacities, generated talent identities, node availability
+and investment, Olympian extensions, and full-tree closure are owned by the
 [Hex Talent Layout audit](HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md). This audit does
-not map talent prerequisites, graph positions, investment order, rerolls, or
-damage and Magick effects.
+not map rerolls or damage and Magick effects.
 
 ## Sources
 
