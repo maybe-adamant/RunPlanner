@@ -151,7 +151,7 @@ describe('App', () => {
     expect(finding.code).toBe('rewardMissing');
     expect(application.store.getState().editorSession.activeSection).toBe('route');
     expect(application.store.getState().editorSession.activePanel).toEqual({
-      kind: 'overview',
+      kind: 'loadout',
     });
     expect(application.store.getState().projectWorkspace.history!).toBe(historyBeforeNavigation);
     expect(markup).toContain('Starting reward');
@@ -205,7 +205,7 @@ describe('App', () => {
   it('keeps route navigation outside authored history', () => {
     const application = createOpenTestApplication();
     application.store.dispatch(
-      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'overview' } }),
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'loadout' } }),
     );
     expect(appMarkup(application)).toContain('Loadout');
 

@@ -451,11 +451,12 @@ loadout (`ActiveBounty`, `StoredGameState`).
 
 ### Practice mode start
 
-Where internal modifiers take part in publication (development builds), an
-authored start point either blocks publication with `startPointIneligible` and
-the engine's reason, or publishes the optional top-level `startState`. Released
-builds ignore the start point, and a plan without one omits the section, so
-ordinary fingerprints are unchanged.
+An authored start point either blocks publication with `startPointIneligible`
+and the engine's reason, or publishes the optional top-level `startState`. A
+plan without one omits the section, so ordinary fingerprints are unchanged.
+A Fresh File route may carry a start point too. Its practice run skips the
+earlier biomes' first-time story and introductions, so later story-gated
+content may diverge from the plan.
 
 `startState` is the engine's start installation in the native terms the module
 writes, not a dump of planner state. Every fact comes from the engine's folded

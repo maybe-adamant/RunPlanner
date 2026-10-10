@@ -29,13 +29,21 @@ import {
 import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import { RouteNpcIndex } from './RouteNpcIndex';
-import { RouteOverview } from './RouteOverview';
+import { RouteLoadoutPanel } from './RouteLoadoutPanel';
+import { RouteModifiersPanel } from './RouteModifiersPanel';
+import { RouteScopePanel } from './RouteScopePanel';
 import { RouteResourcesPanel } from './RouteResourcesPanel';
 import { RouteShrinesPanel } from './RouteShrinesPanel';
 import { RouteTraitsPanel } from './RouteTraitsPanel';
 import { RouteWellsPanel } from './RouteWellsPanel';
 
-const routeOverviewPanel = Object.freeze({ kind: 'overview' as const });
+const routeScopePanel = Object.freeze({ kind: 'route' as const });
+
+const fixedRoutePanels = Object.freeze([
+  Object.freeze({ kind: 'route' as const, label: 'Route' }),
+  Object.freeze({ kind: 'loadout' as const, label: 'Loadout' }),
+  Object.freeze({ kind: 'modifiers' as const, label: 'Modifiers' }),
+]);
 
 export function RouteWorkspace({
   catalog,
@@ -59,6 +67,10 @@ export function RouteWorkspace({
   const dispatch = useAppDispatch();
   const pendingNpcPhaseFocus = useRef<EncounterPhaseAddress | null>(null);
   const activePanel = useAppSelector((state) => state.editorSession.activePanel);
+  const replacementRevision = useAppSelector(
+    (state) => state.editorSession.workspaceReplacementRevision,
+  );
+  const replacementKey = `${project.projectId}:${replacementRevision}`;
   const settlementFault = useAppSelector((state) => state.projectWorkspace.settlementFault);
   const activeBiomeProjection =
     activePanel.kind !== 'biome'
@@ -96,6 +108,9 @@ export function RouteWorkspace({
   );
   const hasShrines = shrineRows.length > 0;
   const hasWells = wellRows.length > 0;
+  const hasModifiers = workspaceRoute.runModifiers.declarations.some(
+    (declaration) => declaration.kind !== 'startPoint',
+  );
   const hasRouteIndexes = hasNpcIndex || hasTraits || hasResources || hasShrines || hasWells;
   const activePanelAvailable = (() => {
     switch (activePanel.kind) {
@@ -109,15 +124,18 @@ export function RouteWorkspace({
         return hasShrines;
       case 'wells':
         return hasWells;
-      case 'overview':
+      case 'modifiers':
+        return hasModifiers;
+      case 'route':
+      case 'loadout':
       case 'biome':
         return true;
     }
   })();
-  const displayedPanel = activePanelAvailable ? activePanel : routeOverviewPanel;
+  const displayedPanel = activePanelAvailable ? activePanel : routeScopePanel;
   const contentLayout =
     displayedPanel.kind === 'biome' && activeBiomeProjection === undefined
-      ? 'overview'
+      ? 'route'
       : displayedPanel.kind;
 
   useEffect(() => {
@@ -125,7 +143,7 @@ export function RouteWorkspace({
     dispatch(
       routePanelSelected({
         routeKey: workspaceRoute.routeKey,
-        panel: { kind: 'overview' },
+        panel: { kind: 'route' },
       }),
     );
   }, [activePanelAvailable, dispatch, workspaceRoute.routeKey]);
@@ -171,22 +189,44 @@ export function RouteWorkspace({
       <div className="panel-navigation-column">
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           <p className="navigation-label">{navigation.label}</p>
-          <button
-            aria-current={displayedPanel.kind === 'overview' ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={displayedPanel.kind === 'overview'}
-            onClick={() =>
-              dispatch(
-                routePanelSelected({
-                  routeKey: workspaceRoute.routeKey,
-                  panel: { kind: 'overview' },
-                }),
-              )
-            }
-            type="button"
-          >
-            Loadout
-          </button>
+          {fixedRoutePanels.map((panel) =>
+            panel.kind === 'modifiers' && !hasModifiers ? null : (
+              <button
+                aria-current={displayedPanel.kind === panel.kind ? 'page' : undefined}
+                aria-label={panel.label}
+                className="panel-navigation-item"
+                data-active={displayedPanel.kind === panel.kind}
+                key={panel.kind}
+                onClick={() =>
+                  dispatch(
+                    routePanelSelected({
+                      routeKey: workspaceRoute.routeKey,
+                      panel: { kind: panel.kind },
+                    }),
+                  )
+                }
+                type="button"
+                {...(panel.kind === 'loadout'
+                  ? {
+                      'aria-describedby': `${workspaceRoute.routeKey}-loadout-navigation-feedback`,
+                    }
+                  : {})}
+              >
+                <span>{panel.label}</span>
+                {panel.kind === 'loadout' ? (
+                  <span
+                    aria-label={`${feedback.loadout.status.label}${feedback.loadout.findingCount === 0 ? '' : `, ${feedback.loadout.findingCount} findings`}`}
+                    className="navigation-feedback"
+                    id={`${workspaceRoute.routeKey}-loadout-navigation-feedback`}
+                  >
+                    <NavigationStatusMarker status={feedback.loadout.status} />
+                    <FindingCount count={feedback.loadout.findingCount} label="Loadout findings" />
+                  </span>
+                ) : null}
+              </button>
+            ),
+          )}
+          <div className="panel-navigation-separator" role="separator" />
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
             if (biomeFeedback === undefined) {
@@ -332,16 +372,23 @@ export function RouteWorkspace({
       <div className="editor-panel" aria-live="polite">
         {contentLayout === 'biome' ? null : repairBanner}
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
-          {displayedPanel.kind === 'overview' ? (
-            <RouteOverview
-              catalog={catalog}
+          {displayedPanel.kind === 'route' ? (
+            <RouteScopePanel
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
+              replacementKey={replacementKey}
+              workspaceRoute={workspaceRoute}
+            />
+          ) : displayedPanel.kind === 'loadout' ? (
+            <RouteLoadoutPanel
+              catalog={catalog}
               project={project}
               workspaceRoute={workspaceRoute}
               interactions={interactions}
             />
+          ) : displayedPanel.kind === 'modifiers' ? (
+            <RouteModifiersPanel key={replacementKey} workspaceRoute={workspaceRoute} />
           ) : displayedPanel.kind === 'npcIndex' ? (
             <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
           ) : displayedPanel.kind === 'traits' ? (
@@ -353,14 +400,12 @@ export function RouteWorkspace({
           ) : displayedPanel.kind === 'wells' ? (
             <RouteWellsPanel rows={wellRows} />
           ) : activeBiomeProjection === undefined ? (
-            <RouteOverview
-              catalog={catalog}
+            <RouteScopePanel
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
-              project={project}
+              replacementKey={replacementKey}
               workspaceRoute={workspaceRoute}
-              interactions={interactions}
             />
           ) : (
             <BiomeWorkspace

@@ -513,6 +513,10 @@ describe('About build identity', () => {
   });
 });
 
+/** Route-start choices live on the Loadout panel; the workspace opens on Route. */
+const openLoadout = (user: ReturnType<typeof renderPlannerForInteraction>['user']) =>
+  user.click(screen.getByRole('button', { name: 'Loadout' }));
+
 describe('planner history interaction', () => {
   it('places the same route repair in the biome rail or above non-biome content', async () => {
     const application = createApplication();
@@ -1089,6 +1093,7 @@ describe('planner history interaction', () => {
         name: 'Erebus',
       }),
     );
+    await openLoadout(user);
 
     const startingReward = () => screen.getByRole('button', { name: 'Starting reward' });
     await user.click(startingReward());
@@ -1141,6 +1146,21 @@ describe('planner history interaction', () => {
     expect(application.store.getState().projectWorkspace.history!.present).not.toEqual(replacement);
   });
 
+  it('opens the Loadout panel from a route-start finding on the Route panel', async () => {
+    const { user } = renderPlannerForInteraction();
+    await user.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: 'Erebus',
+      }),
+    );
+    const loadout = screen.getByRole('button', { name: 'Loadout' });
+    expect(loadout.getAttribute('aria-current')).toBeNull();
+    expect(within(loadout).getByLabelText('1 Loadout findings')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /Choose a reward/ }));
+    expect(loadout.getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('button', { name: 'Starting reward' })).toBeTruthy();
+  });
+
   it('keeps relocated opening controls locked behind incomplete loadout results', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.click(
@@ -1148,6 +1168,7 @@ describe('planner history interaction', () => {
         name: 'Erebus',
       }),
     );
+    await openLoadout(user);
     await user.click(screen.getByRole('button', { name: 'Starting reward' }));
     await user.click(within(await screen.findByRole('listbox')).getByText('Hammer'));
     await user.click(screen.getByRole('button', { name: 'Erebus' }));
@@ -1254,9 +1275,7 @@ describe('planner history interaction', () => {
       'Underworld',
     );
     expect(document.querySelector('.app-route-identity')?.textContent).toBe('Underworld');
-    expect(screen.getByRole('button', { name: 'Loadout' }).getAttribute('aria-current')).toBe(
-      'page',
-    );
+    expect(screen.getByRole('button', { name: 'Route' }).getAttribute('aria-current')).toBe('page');
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
         name: 'Tartarus',
@@ -1285,7 +1304,7 @@ describe('planner history interaction', () => {
     route.focus();
     await user.keyboard(' ');
     expect(application.store.getState().editorSession.activePanel).toEqual({
-      kind: 'overview',
+      kind: 'loadout',
     });
     expect(route.getAttribute('aria-current')).toBe('page');
   });
@@ -2515,6 +2534,7 @@ describe('planner history interaction', () => {
 describe('route loadout interaction', () => {
   it('selects weapon then aspect atomically, with cancellable staging and ordinary Undo', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await openLoadout(user);
     const before = application.store.getState().projectWorkspace.history!;
     const suit = application.catalog.weapons.byKey['WeaponSuit']!;
     const selene = application.catalog.aspects.byKey['SuitHexAspect']!;
@@ -2554,6 +2574,7 @@ describe('route loadout interaction', () => {
 
   it('opens and closes loadout dialogs without changing authorship, returning focus to their launchers', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await openLoadout(user);
     const history = application.store.getState().projectWorkspace.history;
     for (const title of ['Arcana', 'Fear']) {
       const launcher = screen.getByRole('button', { name: `Edit ${title}` });
@@ -2571,12 +2592,12 @@ describe('route loadout interaction', () => {
       expect(document.activeElement).toBe(launcher);
     }
     expect(screen.getByRole('button', { name: 'Starting weapon' })).toBeTruthy();
-    expect(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).toBeTruthy();
     expect(application.store.getState().projectWorkspace.history).toBe(history);
   });
 
   it('presents starting Grasp capacity and disables Arcana or Void choices that exceed it', async () => {
     const { user } = renderPlannerForInteraction();
+    await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     const weapon = screen.getByRole('button', { name: 'Starting weapon' });
     expect(startingKeepsake.closest('.route-keepsake-controls')).toBeTruthy();
@@ -2641,6 +2662,7 @@ describe('route loadout interaction', () => {
 
   it('authors one of the complete starting-keepsake inventory through route settings', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await openLoadout(user);
     const selector = screen.getByRole('button', { name: 'Starting keepsake' });
 
     await user.click(selector);
@@ -2661,6 +2683,7 @@ describe('route loadout interaction', () => {
 
   it('replaces the required starting familiar from the catalog list and undoes it', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await openLoadout(user);
     const familiarKey = () =>
       application.store.getState().projectWorkspace.history!.present.route?.loadout.familiarKey;
     const selector = screen.getByRole('button', { name: 'Starting familiar' });
@@ -2690,6 +2713,7 @@ describe('route loadout interaction', () => {
         name: 'Erebus',
       }),
     );
+    await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     await user.click(startingKeepsake);
     await user.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
@@ -2751,6 +2775,7 @@ describe('route loadout interaction', () => {
         name: 'Erebus',
       }),
     );
+    await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     await user.click(startingKeepsake);
     await user.click(within(screen.getByRole('listbox')).getByText('Experimental Hammer'));
@@ -2879,6 +2904,7 @@ describe('route loadout interaction', () => {
 
   it('authors Arcana and Fear through bounded controls with undo and redo', async () => {
     const { application, user } = renderPlannerForInteraction();
+    await openLoadout(user);
 
     await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
     expect(screen.getByRole('button', { name: 'The Moon (automatic)' })).toHaveProperty(

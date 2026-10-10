@@ -21,7 +21,7 @@ export interface FindingSelection {
   /** Stable finding owner that remains authoritative for workspace navigation. */
   readonly origin: SemanticAddress;
   /** A projected finding may select Loadout while retaining its structural semantic owner. */
-  readonly presentationPanel?: Extract<RoutePanel, { readonly kind: 'overview' }>;
+  readonly presentationPanel?: Extract<RoutePanel, { readonly kind: 'loadout' }>;
   /** Projection-resolved containing dialog for a fine-grained finding. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
   /** Projection-resolved containing Pom dialog for a fine-grained finding. */
@@ -46,7 +46,9 @@ export type ArcanaActivationAddress = JudgmentArcanaAddress | FigurineArcanaAddr
 
 /** A panel selection for the one route in the open project. */
 export type RoutePanel =
-  | { readonly kind: 'overview' }
+  | { readonly kind: 'route' }
+  | { readonly kind: 'loadout' }
+  | { readonly kind: 'modifiers' }
   | { readonly kind: 'npcIndex' }
   | { readonly kind: 'traits' }
   | { readonly kind: 'resources' }
@@ -87,12 +89,13 @@ export interface EditorSessionState {
   readonly openDraftEditors: number;
 }
 
-const routeOverviewPanel: RoutePanel = Object.freeze({ kind: 'overview' });
+const routeScopePanel: RoutePanel = Object.freeze({ kind: 'route' });
+const routeLoadoutPanel: RoutePanel = Object.freeze({ kind: 'loadout' });
 
 const emptyState: EditorSessionState = {
   workspaceReplacementRevision: 0,
   activeSection: 'route',
-  activePanel: routeOverviewPanel,
+  activePanel: routeScopePanel,
   focusedSemanticOwner: null,
   selectedFinding: null,
   semanticNavigationRevision: 0,
@@ -103,22 +106,15 @@ function routeKey(origin: SemanticAddress): string | null {
   return origin.kind === 'project' ? null : origin.routeKey;
 }
 
+/** Route-scoped and route-start owners have no biome; the Loadout panel hosts them. */
 function biomeKey(origin: SemanticAddress): string | null {
-  if (origin.kind === 'project' || origin.kind === 'route' || origin.kind === 'startingReward')
-    return null;
-  if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart') return null;
-  if (
-    origin.kind === 'keepsakeEquipResult' &&
-    origin.selection.kind === 'keepsakeSelection' &&
-    origin.selection.owner === 'routeStart'
-  )
-    return null;
+  if (!('biomeKey' in origin) || origin.biomeKey === 'routeStart') return null;
   return origin.biomeKey;
 }
 
 function panelForOrigin(origin: SemanticAddress): RoutePanel {
   const biome = biomeKey(origin);
-  return biome === null ? routeOverviewPanel : Object.freeze({ kind: 'biome', biomeKey: biome });
+  return biome === null ? routeLoadoutPanel : Object.freeze({ kind: 'biome', biomeKey: biome });
 }
 
 /** Navigation away from the current editing surface closes every dialog. */
@@ -150,7 +146,7 @@ const editorSessionSlice = createSlice({
       // route is the only route that can be rendered; this action merely
       // returns the shell to its route section.
       state.activeSection = 'route';
-      state.activePanel = routeOverviewPanel;
+      state.activePanel = routeScopePanel;
       state.focusedSemanticOwner = null;
       state.selectedFinding = null;
       closeDialogs(state);

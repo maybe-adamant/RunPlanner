@@ -15,12 +15,13 @@ import {
   authoredProjectRedoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
-import { OptionalPercentageRunModifier } from '@planner/ui/shell/RouteOverview';
+import { OptionalPercentageRunModifier } from '@planner/ui/shell/RouteModifiersPanel';
 import {
   createOpenTestApplication,
   renderPlannerForInteraction,
 } from '@planner-test/fixtures/renderPlanner';
 import { hintOf } from '@planner-test/support/hints';
+import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import { createApplication } from '@planner/composition/createApplication';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
@@ -32,18 +33,20 @@ const chance = () => slider('Enemy gold drop chance');
 const range = () => slider('Encounter gold range');
 
 function open(routeKey = 'Underworld') {
-  const view = renderPlannerForInteraction({ application: createOpenTestApplication(routeKey) });
+  const application = createOpenTestApplication(routeKey);
+  application.store.dispatch(routePanelSelected({ routeKey, panel: { kind: 'modifiers' } }));
+  const view = renderPlannerForInteraction({ application });
   const project = () => view.application.store.getState().projectWorkspace.history!.present;
   return { ...view, project, modifiers: () => routeRunModifiers(project().route.loadout) };
 }
 
 describe('Run modifier authoring', () => {
-  it('renders each released percentage as an unchecked checkbox and a disabled slider', () => {
+  it('renders each percentage as an unchecked checkbox and a disabled slider', () => {
     open();
     expect(screen.getByRole('heading', { name: 'Modifiers' })).toBeTruthy();
-    const released = RUN_MODIFIER_DECLARATIONS.filter((d) => d.stage === 'released');
-    expect(screen.getAllByRole('slider')).toHaveLength(released.length);
-    for (const declaration of released) {
+    const percentages = RUN_MODIFIER_DECLARATIONS.filter((d) => d.kind === 'optionalPercentage');
+    expect(screen.getAllByRole('slider')).toHaveLength(percentages.length);
+    for (const declaration of percentages) {
       expect(toggle(declaration.label).checked).toBe(false);
       const control = slider(declaration.label);
       expect(control.disabled).toBe(true);
@@ -87,7 +90,13 @@ describe('Run modifier authoring', () => {
     expect(chance().value).toBe('35');
     fireEvent.change(chance(), { target: { value: '20' } });
     const saved = view.project();
-    act(() => view.application.store.dispatch(authoredProjectReplaced(saved)));
+    act(() => {
+      view.application.store.dispatch(authoredProjectReplaced(saved));
+      // Replacement returns the workspace to Route.
+      view.application.store.dispatch(
+        routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'modifiers' } }),
+      );
+    });
     expect(chance().value).toBe('35');
     fireEvent.change(chance(), { target: { value: '0' } });
     fireEvent.keyUp(chance(), { key: 'ArrowLeft' });
@@ -146,10 +155,6 @@ describe('Run modifier authoring', () => {
 
   it('allows modifiers on Fresh File while preserving fixed native equipment', () => {
     const view = open('FreshFile');
-    expect(screen.getByLabelText('Fixed starting loadout').textContent).toContain(
-      "Witch's Staff, no Aspect",
-    );
-    expect(screen.queryByRole('button', { name: 'Edit Arcana' })).toBeNull();
     fireEvent.click(toggle('Encounter gold range'));
     fireEvent.change(range(), { target: { value: '15' } });
     fireEvent.blur(range());
@@ -164,7 +169,7 @@ describe('Run modifier authoring', () => {
 
 describe('Practice mode', () => {
   function openGolden(startPoint?: unknown) {
-    const application = createApplication({ devBuild: true });
+    const application = createApplication({ devBuild: false });
     const golden = createGoldenFGHIProject();
     application.store.dispatch(
       newProjectCreated(
@@ -195,7 +200,12 @@ describe('Practice mode', () => {
     await view.user.click(practice());
     const unavailable = await screen.findByRole('button', { name: 'Erebus Opening' });
     expect(unavailable.getAttribute('aria-disabled')).toBe('true');
-    expect(hintOf(unavailable)).toBe('The run already starts here.');
+    // Evident reasons carry no hover; neither do available options nor the row itself.
+    expect(hintOf(unavailable)).toBeNull();
+    expect(hintOf(screen.getByRole('button', { name: 'Fields Preboss' }))).toBeNull();
+    expect(practice().getAttribute('aria-description')).toBeNull();
+    expect(hintOf(practice().closest('.route-run-modifier-practice'))).toBeNull();
+    expect(hintOf(startAt())).toBeNull();
     await view.user.click(unavailable);
     expect(view.modifiers()).toEqual({});
     // Closing without a choice leaves Practice mode off and returns focus to its checkbox.
@@ -241,6 +251,7 @@ describe('Practice mode', () => {
     expect(screen.getByRole('button', { name: 'Start at Ephyra · Opening (unavailable)' })).toBe(
       startAt(),
     );
-    expect(hintOf(startAt())).toBe('This biome is not on the route.');
+    // The Game panel states the reason; the label stays quiet.
+    expect(hintOf(startAt())).toBeNull();
   });
 });

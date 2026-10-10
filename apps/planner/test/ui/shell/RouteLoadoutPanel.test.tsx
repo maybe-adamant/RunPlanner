@@ -12,90 +12,44 @@ import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
-import { projectFeedbackHierarchy } from '@planner/projections/evaluationProjection';
-import { projectRouteNavigation } from '@planner/projections/editorNavigation';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { RouteOverview } from '@planner/ui/shell/RouteOverview';
+import { RouteLoadoutPanel } from '@planner/ui/shell/RouteLoadoutPanel';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 
-function routeOverviewMarkup(application: ReturnType<typeof createApplication>): string {
+function routeProducts(application: ReturnType<typeof createApplication>) {
   const state = application.store.getState();
   const project =
     state.projectWorkspace.kind === 'openProject'
       ? state.projectWorkspace.history.present
       : undefined;
-  const navigation =
-    project === undefined ? undefined : projectRouteNavigation(application.catalog, project.route);
-  const workspace = application.selectStructuredWorkspace(state)!;
+  const workspace = application.selectStructuredWorkspace(state);
   if (
     project === undefined ||
-    navigation === undefined ||
     workspace === undefined ||
     state.projectWorkspace.kind !== 'openProject'
   )
-    throw new Error('Underworld route products are missing');
-  const workspaceRoute = workspace.route;
-  const feedback = projectFeedbackHierarchy(state.projectWorkspace.assembly.evaluation).route;
+    throw new Error('Route products are missing');
+  return { state: state.projectWorkspace, project, workspace };
+}
 
+function loadoutMarkup(application: ReturnType<typeof createApplication>): string {
+  const { project, workspace } = routeProducts(application);
   return renderToStaticMarkup(
     <Provider store={application.store}>
-      <RouteOverview
+      <RouteLoadoutPanel
         catalog={application.catalog}
-        feedback={feedback}
         interactions={workspace.interactions}
-        label={navigation.label}
-        navigation={navigation}
         project={project}
-        workspaceRoute={workspaceRoute}
+        workspaceRoute={workspace.route}
       />
     </Provider>,
   );
 }
 
-describe('RouteOverview', () => {
-  it('keeps a loaded zero-biome project unchanged while offering only positive counts', () => {
-    const application = createOpenTestApplication('Underworld');
-    const before = application.store.getState().projectWorkspace.history!.present;
-    const markup = routeOverviewMarkup(application);
-    expect(markup).toContain('Biomes to configure');
-    expect(markup).not.toContain('type="radio" name="Underworld-configured-prefix" checked=""');
-    expect(markup).not.toContain('value="0"');
-    expect(before.route.biomes).toHaveLength(0);
-    expect(application.store.getState().projectWorkspace.history!.present).toBe(before);
-  });
-
-  it('presents the configured route extent and included biomes', () => {
-    const application = createOpenTestApplication('Underworld');
-
-    for (const [configuredBiomeCount, extent] of [
-      [1, 'Through Erebus'],
-      [2, 'Through Oceanus'],
-      [3, 'Through Fields'],
-      [4, 'Through Tartarus'],
-    ] as const) {
-      application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ConfigureRoutePrefix',
-          configuredBiomeCount,
-          route: createRouteAddress('Underworld'),
-        }),
-      );
-      const markup = routeOverviewMarkup(application);
-      expect(markup).toContain(extent);
-      expect(markup).toContain('Plan up to');
-      expect(markup).toContain('Biomes to configure');
-      expect(markup).toContain(`checked="" value="${configuredBiomeCount}"`);
-      expect(markup.indexOf('Biomes to configure')).toBeLessThan(
-        markup.indexOf('aria-label="Edit Arcana"'),
-      );
-    }
-
-    expect(routeOverviewMarkup(application)).not.toContain('contiguous route prefix');
-  });
-
+describe('RouteLoadoutPanel', () => {
   it('presents Aspect of Selene Hex controls only for the active aspect', () => {
     const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
@@ -106,7 +60,7 @@ describe('RouteOverview', () => {
         aspectKey: 'SuitHexAspect',
       }),
     );
-    expect(routeOverviewMarkup(application)).toContain('Edit Sky Fall Hex tree');
+    expect(loadoutMarkup(application)).toContain('Edit Sky Fall Hex tree');
 
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -116,7 +70,7 @@ describe('RouteOverview', () => {
         aspectKey: 'BaseSuitAspect',
       }),
     );
-    expect(routeOverviewMarkup(application)).not.toContain('Edit Sky Fall Hex tree');
+    expect(loadoutMarkup(application)).not.toContain('Edit Sky Fall Hex tree');
   });
 
   it('marks a Vow of Forfeit realization on the starting reward control', () => {
@@ -134,7 +88,7 @@ describe('RouteOverview', () => {
     });
     project = authorLegalTraitOffers(project);
     application.store.dispatch(newProjectCreated(project));
-    const markup = routeOverviewMarkup(application);
+    const markup = loadoutMarkup(application);
     expect(markup).toContain('>Starting reward</label>');
     expect(markup).toMatch(
       /<button[^>]*class="contextual-picker-trigger"[^>]*data-hint="Converted by the Vow of Forfeit\."/,
@@ -144,7 +98,7 @@ describe('RouteOverview', () => {
     expect(markup.match(/data-hint="Converted by the Vow of Forfeit\."/g)).toHaveLength(1);
   });
 
-  it('owns only the independent starting reward in Route Loadout', () => {
+  it('owns only the independent starting reward in the Loadout panel', () => {
     const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -153,39 +107,10 @@ describe('RouteOverview', () => {
         route: createRouteAddress('Underworld'),
       }),
     );
-    const markup = routeOverviewMarkup(application);
+    const markup = loadoutMarkup(application);
     expect(markup).toContain('>Starting reward</label>');
     expect(markup).not.toContain('aria-label="Starting room"');
     expect(markup).not.toContain('aria-label="Start room configuration"');
-  });
-
-  it('shows the full immutable Dream itinerary in Loadout, not only its configured prefix', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      authoredProjectReplaced(
-        createProjectDocument(application.catalog, {
-          projectId: 'dream-overview',
-          routeKey: 'Dream',
-          itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
-          configuredBiomeCount: 1,
-        }),
-      ),
-    );
-
-    const markup = routeOverviewMarkup(application);
-    expect(markup).toContain('Loadout');
-    expect(
-      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
-    ).toEqual(['Summit', 'Erebus', 'Ephyra', 'Fields']);
-    expect(markup).toContain('Through Summit');
-  });
-
-  it('shows the ordinary route order in the same Loadout summary', () => {
-    const markup = routeOverviewMarkup(createOpenTestApplication('Underworld'));
-    expect(markup).toContain('Loadout');
-    expect(
-      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
-    ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
   });
 
   it('presents the Fresh File loadout as fixed facts without selection controls', () => {
@@ -200,7 +125,7 @@ describe('RouteOverview', () => {
       ),
     );
 
-    const markup = routeOverviewMarkup(application);
+    const markup = loadoutMarkup(application);
     expect(markup).toContain('Loadout');
     expect(markup).toContain('aria-label="Fixed starting loadout"');
     expect(markup).toContain('Witch&#x27;s Staff, no Aspect');
@@ -211,8 +136,5 @@ describe('RouteOverview', () => {
     expect(markup).not.toContain('aria-label="Edit Fear"');
     expect(markup).not.toContain('>Starting reward</label>');
     expect(markup).not.toContain('FreshFile-familiar');
-    expect(
-      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
-    ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
   });
 });

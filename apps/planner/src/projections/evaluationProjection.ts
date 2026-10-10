@@ -50,8 +50,15 @@ export interface BiomeFeedbackPresentation {
   readonly status: StatusPresentation;
 }
 
+/** The route-start owners the Loadout panel hosts. */
+export interface LoadoutFeedbackPresentation {
+  readonly findingCount: number;
+  readonly status: StatusPresentation;
+}
+
 export interface RouteFeedbackPresentation {
   readonly biomes: ReadonlyMap<string, BiomeFeedbackPresentation>;
+  readonly loadout: LoadoutFeedbackPresentation;
   readonly findingCount: number;
   readonly routeKey: string;
   readonly status: StatusPresentation;
@@ -544,6 +551,11 @@ const invalidBiomeStatus = Object.freeze({
   label: 'Complete · Invalid',
   tone: 'invalid',
 } as const satisfies StatusPresentation);
+const loadoutStatus = Object.freeze({
+  incomplete: Object.freeze({ label: 'Incomplete', tone: 'incomplete' }),
+  invalid: Object.freeze({ label: 'Invalid', tone: 'invalid' }),
+  valid: Object.freeze({ label: 'Valid', tone: 'valid' }),
+} as const satisfies Record<string, StatusPresentation>);
 const blockedBiomeStatus = Object.freeze({
   label: 'Blocked',
   tone: 'blocked',
@@ -981,6 +993,12 @@ export function presentBiomeStatus(
   return evaluation.validity === 'valid' ? validBiomeStatus : invalidBiomeStatus;
 }
 
+/** Route-scoped and route-start owners, which the Loadout panel hosts. */
+function isLoadoutOwner(owner: SemanticAddress | undefined): boolean {
+  if (owner === undefined || owner.kind === 'project') return false;
+  return !('biomeKey' in owner) || owner.biomeKey === 'routeStart';
+}
+
 function issueBelongsToBiome(
   issue: AssessmentIssue | undefined,
   routeKey: string,
@@ -1035,8 +1053,13 @@ export function projectFeedbackHierarchy(
       (biomeKey) => [biomeKey, biomeFeedback(route, biomeKey)] as const,
     ),
   );
+  const loadoutIssue = isLoadoutOwner(route.issue?.owner) ? route.issue : undefined;
   const routeFeedback = Object.freeze({
     biomes,
+    loadout: Object.freeze({
+      findingCount: loadoutIssue === undefined ? 0 : 1,
+      status: loadoutStatus[loadoutIssue?.kind ?? 'valid'],
+    }),
     findingCount: route.issue === undefined ? 0 : 1,
     routeKey: route.routeKey,
     status: presentRouteStatus(route),
@@ -1115,7 +1138,7 @@ export function findingDestinationLabel(
   route?: import('./structured-workspace').WorkspaceRoute,
 ): string {
   if (
-    destination?.presentationPanel === 'overview' ||
+    destination?.presentationPanel === 'loadout' ||
     !('biomeKey' in origin) ||
     origin.biomeKey === 'routeStart'
   ) {

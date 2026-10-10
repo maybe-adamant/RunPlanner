@@ -490,7 +490,7 @@ describe('workspace inspector destinations', () => {
     expect(destination(workspace, reward)).toMatchObject({
       focusAddress: reward,
       focusKey: semanticAddressKey(reward),
-      presentationPanel: 'overview',
+      presentationPanel: 'loadout',
     });
     expect(destination(workspace, opening.room.address)).toMatchObject({
       focusAddress: opening.room.address,

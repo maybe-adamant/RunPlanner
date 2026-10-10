@@ -1,4 +1,9 @@
-import { executionRunModifiers, routeRunModifiers } from '../authored-project/run-modifiers';
+import {
+  executionRunModifiers,
+  isRunModifierAuthored,
+  routeRunModifiers,
+  runModifierDeclaration,
+} from '../authored-project/run-modifiers';
 import { assertExactProjectEvaluationAssembly } from '../simulation/evaluation/project-evaluation-assembly';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
 import {
@@ -284,8 +289,10 @@ export function assembleExecutionProduct({
     startingKeepsakeKey === null ? undefined : catalog.keepsakes.byKey[startingKeepsakeKey]?.rank;
   if (startingKeepsakeKey !== null && startingKeepsakeRarity === undefined)
     throw new CompilerError('executionCoverageMissing', `unknown keepsake ${startingKeepsakeKey}`);
-  // Internal modifiers take part in publication only in development builds.
-  const startPoint = internalRunModifiers
+  const startPoint = isRunModifierAuthored(
+    runModifierDeclaration('startPoint'),
+    internalRunModifiers,
+  )
     ? authoredStartPointEligibility(catalog, assembly.project, evaluation)
     : undefined;
   if (startPoint?.kind === 'ineligible')

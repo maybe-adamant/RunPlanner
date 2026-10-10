@@ -18,18 +18,14 @@ import { visibleRunModifierDeclarations } from '@planner/projections/structured-
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
-const keys = ['enemyGoldDropChance', 'encounterGoldRange'];
+const keys = ['enemyGoldDropChance', 'encounterGoldRange', 'startPoint'];
 
 it('projects engine defaults and complete intents bound to the current route and siblings', () => {
   const application = createOpenTestApplication('FreshFile');
   const control = () =>
     application.selectStructuredWorkspace(application.store.getState())!.route.runModifiers;
   expect(control().value).toBe(NATIVE_RUN_MODIFIERS);
-  // The test composition is a development build, so internal Practice mode is authored too.
-  expect(control().declarations.map((declaration) => declaration.key)).toEqual([
-    ...keys,
-    'startPoint',
-  ]);
+  expect(control().declarations.map((declaration) => declaration.key)).toEqual(keys);
   const chance = runModifierDeclaration('enemyGoldDropChance');
   const range = runModifierDeclaration('encounterGoldRange');
   if (chance.kind !== 'optionalPercentage' || range.kind !== 'optionalPercentage')
@@ -77,9 +73,9 @@ it('authors only released declarations outside a development build', () => {
     visibleRunModifierDeclarations(table, false).map((declaration) => declaration.key),
   ).toEqual(keys);
   expect(visibleRunModifierDeclarations(table, true).map((declaration) => declaration.key)).toEqual(
-    [...keys, 'startPoint', 'hypotheticalInternalToggle'],
+    [...keys, 'hypotheticalInternalToggle'],
   );
-  // The composition root accepts the gate explicitly; Practice mode is internal.
+  // The composition root accepts the gate explicitly; every declared modifier is released.
   for (const devBuild of [false, true]) {
     const application = createApplication({ devBuild });
     application.store.dispatch(
@@ -95,7 +91,7 @@ it('authors only released declarations outside a development build', () => {
       application
         .selectStructuredWorkspace(application.store.getState())!
         .route.runModifiers.declarations.map((declaration) => declaration.key),
-    ).toEqual(devBuild ? [...keys, 'startPoint'] : keys);
+    ).toEqual(keys);
   }
 });
 
@@ -119,7 +115,7 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
   const startPoint = () => control().startPoint!;
   expect(control()).not.toHaveProperty('startPointBlock');
   expect(startPoint()).toMatchObject({ value: undefined, valueLabel: '' });
-  expect(startPoint()).not.toHaveProperty('unavailableHint');
+  expect(startPoint()).not.toHaveProperty('unavailable');
   const domain = startPoint().loadDomain();
   expect(startPoint().loadDomain()).toBe(domain);
   expect(domain.map((row) => row.label)).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
@@ -129,8 +125,8 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
       point: 'opening',
       label: 'Opening',
       selected: false,
+      // The route start is evidently unavailable, so it carries no hover.
       available: false,
-      unavailableHint: 'The run already starts here.',
     },
     { biomeKey: 'F', point: 'preboss', label: 'Preboss', selected: false, available: true },
   ]);
@@ -171,7 +167,7 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
   expect(valueOf(startPoint().selectIntent(undefined))).toEqual({ enemyGoldDropChance: 40 });
 });
 
-it('blocks publication by an ineligible start point only where Practice mode is authored', () => {
+it('blocks publication by an ineligible start point in every build', () => {
   const golden = createGoldenFGHIProject();
   const withStart = (startPoint: RunStartPoint): ProjectDocument => ({
     ...golden,
@@ -183,30 +179,22 @@ it('blocks publication by an ineligible start point only where Practice mode is 
     code: 'startPointIneligible',
     reason: { kind: 'notOnItinerary' },
   });
-  expect(dev.startPoint).toMatchObject({
-    valueLabel: 'Ephyra · Preboss',
-    unavailableHint: 'This biome is not on the route.',
-  });
+  // The Game panel states the reason; the control only marks it unavailable.
+  expect(dev.startPoint).toMatchObject({ valueLabel: 'Ephyra · Preboss', unavailable: true });
   const eligibleWorkspace = openGolden(true, withStart({ biomeKey: 'G', point: 'opening' }));
   const eligible = eligibleWorkspace.control();
   expect(eligible).not.toHaveProperty('startPointBlock');
-  expect(eligible.startPoint).not.toHaveProperty('unavailableHint');
+  expect(eligible.startPoint).not.toHaveProperty('unavailable');
   // An eligible start point publishes with its start state.
   expect(eligibleWorkspace.application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
     kind: 'publishable',
   });
-  // A released build neither shows nor publishes the internal start point.
+  // A released build shows and publishes the start point too.
   const released = openGolden(false, dangling);
-  expect(released.control()).not.toHaveProperty('startPoint');
-  expect(released.control()).not.toHaveProperty('startPointBlock');
-  expect(released.application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
-    kind: 'publishable',
+  expect(released.control().startPoint).toMatchObject({ valueLabel: 'Ephyra · Preboss' });
+  expect(released.application.projectOperations.inspectCurrentGamePlan()).toEqual({
+    kind: 'notPublishable',
+    code: 'startPointIneligible',
+    startPointReason: { kind: 'notOnItinerary' },
   });
-  expect(openGolden(true, dangling).application.projectOperations.inspectCurrentGamePlan()).toEqual(
-    {
-      kind: 'notPublishable',
-      code: 'startPointIneligible',
-      startPointReason: { kind: 'notOnItinerary' },
-    },
-  );
 });

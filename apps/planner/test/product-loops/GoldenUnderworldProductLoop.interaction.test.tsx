@@ -683,7 +683,7 @@ describe('underworld product loop', () => {
     const view = renderPlannerForInteraction({ application });
     const confirmation = vi.spyOn(globalThis, 'confirm');
 
-    await view.user.click(screen.getByRole('button', { name: 'Loadout' }));
+    await view.user.click(screen.getByRole('button', { name: 'Route' }));
     await view.user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
         name: 'Erebus',

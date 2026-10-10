@@ -461,6 +461,7 @@ export {
   EXECUTION_RUN_MODIFIER_DECLARATIONS,
   NATIVE_RUN_MODIFIERS,
   runModifierDeclaration,
+  isRunModifierAuthored,
   executionRunModifiers,
   sameRunModifierValue,
   isRunModifierValue,

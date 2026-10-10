@@ -569,7 +569,7 @@ export interface WorkspaceStartPointOption {
   readonly label: string;
   readonly selected: boolean;
   readonly available: boolean;
-  /** Present exactly when the start point is unavailable: its hover reason. */
+  /** Hover reason for an unavailable start point whose cause is not evident from the plan. */
   readonly unavailableHint?: string;
 }
 
@@ -584,8 +584,8 @@ export interface WorkspaceStartPointControl {
   readonly value: import('@run-planner/engine/authored-project').RunStartPoint | undefined;
   /** The authored start point; empty when none is set. */
   readonly valueLabel: string;
-  /** Present when the authored start point cannot start the run: its reason. */
-  readonly unavailableHint?: string;
+  /** The authored start point cannot start the run; the publish block states why. */
+  readonly unavailable?: true;
   /** The route's start-point domain, evaluated when the picker opens. */
   readonly loadDomain: () => readonly WorkspaceStartPointRow[];
   /** Complete replacement choosing a start point (keeping its gold) or none. */

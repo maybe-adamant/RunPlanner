@@ -64,12 +64,11 @@ export function RunStartPointModifier({
     dispatch(authoredProjectCommandDispatched(result.intent.command));
   };
   return (
-    <div className="route-run-modifier-practice" data-hint={declaration.description}>
+    <div className="route-run-modifier-practice">
       <label ref={switchRef} className="route-run-modifier-switch">
         <input
           ref={checkboxRef}
           type="checkbox"
-          aria-description={declaration.description}
           checked={checked}
           onChange={(event) => toggle(event.target.checked)}
         />
@@ -87,11 +86,10 @@ export function RunStartPointModifier({
               className="contextual-picker-trigger"
               aria-labelledby={`${id}-label ${id}-value`}
               disabled={!checked}
-              {...hintProps(control.unavailableHint)}
             >
               <span id={`${id}-value`}>
                 {control.valueLabel}
-                {control.unavailableHint === undefined ? null : (
+                {control.unavailable === undefined ? null : (
                   <>
                     {' '}
                     <span className="route-start-point-unavailable">(unavailable)</span>

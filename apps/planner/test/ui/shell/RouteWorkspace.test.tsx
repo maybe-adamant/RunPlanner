@@ -24,10 +24,17 @@ import {
 import { RouteWorkspace } from '@planner/ui/shell/RouteWorkspace';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
+import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
+
+const navigationOf = (markup: string) =>
+  markup.slice(markup.indexOf('<nav'), markup.indexOf('</nav>'));
+const separatorCount = (markup: string) =>
+  navigationOf(markup).split('class="panel-navigation-separator"').length - 1;
 
 function routeWorkspaceMarkup(
   application: ReturnType<typeof createApplication>,
   routeKey: 'Underworld' | 'Surface',
+  adaptRoute: (route: WorkspaceRoute) => WorkspaceRoute = (route) => route,
 ): string {
   const state = application.store.getState();
   const navigation = application.editorNavigation.routes.byKey[routeKey];
@@ -38,7 +45,7 @@ function routeWorkspaceMarkup(
     state.projectWorkspace.kind !== 'openProject'
   )
     throw new Error(`${routeKey} route products are missing`);
-  const workspaceRoute = workspace.route;
+  const workspaceRoute = adaptRoute(workspace.route);
   const feedback = projectFeedbackHierarchy(state.projectWorkspace.assembly.evaluation).route;
 
   return renderToStaticMarkup(
@@ -70,9 +77,75 @@ describe('RouteWorkspace', () => {
     expect(markup).not.toContain('>Resources</button>');
     expect(markup).not.toContain('>Shrines</button>');
     expect(markup).not.toContain('>Wells</button>');
-    expect(markup).not.toContain('class="panel-navigation-separator"');
-    expect(markup).toContain('data-editor-layout="overview"');
-    expect(markup).toContain('Loadout');
+    // Only the separator between the fixed panels and the biomes remains.
+    expect(separatorCount(markup)).toBe(1);
+    expect(markup).toContain('data-editor-layout="route"');
+    expect(markup).toContain('Plan up to');
+  });
+
+  it('opens on Route and orders Route, Loadout and Modifiers above the biomes', () => {
+    const application = createOpenTestApplication('Underworld');
+    const markup = routeWorkspaceMarkup(application, 'Underworld');
+    const navigation = navigationOf(markup);
+    const positions = ['Route', 'Loadout', 'Modifiers'].map((label) =>
+      navigation.indexOf(`aria-label="${label}"`),
+    );
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+    expect(navigation.indexOf('class="panel-navigation-separator"')).toBeGreaterThan(positions[2]!);
+    expect(navigation).toMatch(/aria-current="page"[^>]*aria-label="Route"/);
+    for (const [kind, text, absent] of [
+      ['loadout', 'Starting weapon', 'Plan up to'],
+      ['modifiers', 'Enemy gold drop chance', 'Starting weapon'],
+    ] as const) {
+      application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', panel: { kind } }));
+      const panel = routeWorkspaceMarkup(application, 'Underworld');
+      expect(panel).toContain(text);
+      expect(panel).not.toContain(absent);
+      expect(panel).not.toContain('Practice mode');
+    }
+  });
+
+  it('offers Modifiers only while a modifier other than Practice mode is declared', () => {
+    const application = createOpenTestApplication('Underworld');
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'modifiers' } }),
+    );
+    const markup = routeWorkspaceMarkup(application, 'Underworld', (route) => ({
+      ...route,
+      runModifiers: {
+        ...route.runModifiers,
+        declarations: route.runModifiers.declarations.filter(
+          (declaration) => declaration.kind === 'startPoint',
+        ),
+      },
+    }));
+    expect(navigationOf(markup)).not.toContain('aria-label="Modifiers"');
+    // A stale Modifiers selection presents Route.
+    expect(markup).toContain('data-editor-layout="route"');
+  });
+
+  it('marks the Loadout panel with its own findings like a biome panel', () => {
+    const application = createOpenTestApplication('Underworld');
+    expect(navigationOf(routeWorkspaceMarkup(application, 'Underworld'))).toMatch(
+      /aria-label="Loadout"[^>]*>.*?aria-label="Valid"/,
+    );
+    // Planning Erebus leaves the route-start reward missing, a Loadout finding.
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ConfigureRoutePrefix',
+        configuredBiomeCount: 1,
+        route: createRouteAddress('Underworld'),
+      }),
+    );
+    const navigation = navigationOf(routeWorkspaceMarkup(application, 'Underworld'));
+    expect(navigation).toMatch(
+      /aria-label="Loadout"[^>]*>.*?aria-label="Incomplete, 1 findings"[^>]*>.*?1 Loadout findings/,
+    );
+    for (const label of ['Route', 'Modifiers'])
+      expect(navigation).not.toMatch(
+        new RegExp(`aria-label="${label}"[^>]*><span>${label}</span><span[^>]*navigation-feedback`),
+      );
   });
 
   it('orders configured biomes before the non-empty route indexes', () => {
@@ -80,12 +153,12 @@ describe('RouteWorkspace', () => {
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
-    const navigationMarkup = markup.slice(markup.indexOf('<nav'), markup.indexOf('</nav>'));
-    const routePosition = navigationMarkup.indexOf('>Loadout</button>');
+    const navigationMarkup = navigationOf(markup);
+    const routePosition = navigationMarkup.indexOf('aria-label="Modifiers"');
     const biomePositions = ['Ephyra', 'Thessaly', 'Olympus', 'Summit'].map((label) =>
       navigationMarkup.indexOf(`>${label}</span>`),
     );
-    const separatorPosition = navigationMarkup.indexOf('class="panel-navigation-separator"');
+    const separatorPosition = navigationMarkup.lastIndexOf('class="panel-navigation-separator"');
     const indexPositions = ['NPCs', 'Traits', 'Resources', 'Shrines', 'Wells']
       .map((label) => navigationMarkup.indexOf(`>${label}</button>`))
       .filter((position) => position >= 0);
