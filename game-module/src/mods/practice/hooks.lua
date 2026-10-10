@@ -182,7 +182,7 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
             end
         end
         _G.GameState.CompletedRunsCache = #history
-        _G.PrevRun = history[#history]
+        game.PrevRun = history[#history]
         _G.StripRunHistoryForSave()
         return result
     end)

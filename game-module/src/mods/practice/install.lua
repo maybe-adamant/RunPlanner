@@ -435,8 +435,8 @@ function install.hero(start, context)
     local taken, silenced = {}, {}
     for key, value in pairs(_G.GameState.TraitsTaken or {}) do taken[key] = value end
     for _, name in ipairs(presentation) do
-        silenced[name] = _G[name]
-        _G[name] = function() end
+        silenced[name] = game[name]
+        game[name] = function() end
     end
     local ok, result = pcall(function()
         installArcana(start)
@@ -451,7 +451,7 @@ function install.hero(start, context)
         refillSpell(start)
         _G.UpdateHeroTraitDictionary()
     end)
-    for _, name in ipairs(presentation) do _G[name] = silenced[name] end
+    for _, name in ipairs(presentation) do game[name] = silenced[name] end
     if _G.GameState.TraitsTaken ~= nil then
         for key in pairs(_G.GameState.TraitsTaken) do
             if taken[key] == nil then _G.GameState.TraitsTaken[key] = nil end
@@ -510,10 +510,10 @@ end
 -- after a hub map; the name only feeds RequiredNextMaps and RequiredFalseNextMaps,
 -- which no store item declares.
 local function generateShop(room)
-    local prior = _G.roomData
-    _G.roomData = _G.RoomData[room.GenusName or room.Name]
+    local prior = game.roomData
+    game.roomData = game.RoomData[room.GenusName or room.Name]
     local ok, result = pcall(_G.RunShopGeneration, room)
-    _G.roomData = prior
+    game.roomData = prior
     if not ok then error(result, 0) end
 end
 
