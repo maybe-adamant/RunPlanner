@@ -286,6 +286,8 @@
 
 .hex-tree-scroll {
   overflow-x: auto;
+  /* The board's height is exact; only a narrow window scrolls it sideways. */
+  overflow-y: hidden;
 }
 
 .hex-tree-board {
