@@ -6,6 +6,8 @@
   "startingLoadout": {
     "weaponKey": "WeaponStaffSwing",
     "aspectKey": "BaseStaffAspect",
+    "aspectRarity": "Legendary",
+    "familiar": { "name": "FrogFamiliar", "traitStacks": 4 },
     "arcana": [],
     "fear": {
       "configuredRanks": {
@@ -48,7 +50,7 @@
       }
     }
   },
-  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake" },
+  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake", "rarity": "Epic" },
   "extent": { "kind": "configuredPrefix", "biomeKeys": ["O"], "terminalBiomeKey": "O" },
   "selectedOccurrenceIds": [
     "O:start",
@@ -1367,5 +1369,5 @@
       }
     }
   ],
-  "planFingerprint": "cc99fdc8"
+  "planFingerprint": "bf5a379f"
 }

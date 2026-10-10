@@ -105,13 +105,15 @@ describe('Fresh File route start', () => {
       expect(codes).not.toContain(code);
   });
 
-  it('publishes the aspectless Staff start with no keepsake', () => {
+  it('publishes the aspectless Staff start with no installable familiar, ranks or keepsake', () => {
     const product = assembleExecutionProduct({
       assembly: simulateProjectAssembly(catalog, createFreshFileRouteProject()),
       catalog,
     });
     expect(product.startingLoadout).toMatchObject({ weaponKey: 'WeaponStaffSwing', arcana: [] });
     expect(product.startingLoadout).not.toHaveProperty('aspectKey');
+    expect(product.startingLoadout).not.toHaveProperty('aspectRarity');
+    expect(product.startingLoadout).not.toHaveProperty('familiar');
     expect(product.startingKeepsake).toEqual({});
     expect(product.occurrences[0]!.diagnostics?.roomEntered?.keepsakes).not.toHaveProperty(
       'currentKey',

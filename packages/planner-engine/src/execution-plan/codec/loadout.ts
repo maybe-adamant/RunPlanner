@@ -1,6 +1,9 @@
-import type { ExecutionStartingLoadout } from '../model';
-import { array, exact, fail, object, stringValue } from './primitives';
+import type { ExecutionAspectRarity, ExecutionStartingLoadout } from '../model';
+import { array, exact, fail, object, oneOf, RARITY_UPGRADE_ORDER, stringValue } from './primitives';
 import { hexGodSent, hexTreeNodes } from './rewards';
+
+/** Native `TraitRarityData.WeaponRarityUpgradeOrder` below Perfect. */
+const ASPECT_RARITIES: readonly string[] = [...RARITY_UPGRADE_ORDER, 'Legendary'];
 
 function ranks(value: unknown, label: string): Readonly<Record<string, number>> {
   const record = object(value, label);
@@ -21,7 +24,7 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
   exact(
     record,
     ['weaponKey', 'arcana', 'fear'],
-    ['aspectKey', 'startingHex'],
+    ['aspectKey', 'aspectRarity', 'familiar', 'startingHex'],
     'execution plan.startingLoadout',
   );
   const weaponKey = stringValue(record.weaponKey, 'execution plan.startingLoadout.weaponKey');
@@ -29,6 +32,28 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
     record.aspectKey === undefined
       ? undefined
       : stringValue(record.aspectKey, 'execution plan.startingLoadout.aspectKey');
+  if ((aspectKey === undefined) !== (record.aspectRarity === undefined))
+    fail('execution plan.startingLoadout.aspectRarity must accompany aspectKey');
+  const aspectRarity =
+    record.aspectRarity === undefined
+      ? undefined
+      : oneOf<ExecutionAspectRarity>(
+          record.aspectRarity,
+          ASPECT_RARITIES,
+          'execution plan.startingLoadout.aspectRarity',
+        );
+  let familiar: ExecutionStartingLoadout['familiar'];
+  if (record.familiar !== undefined) {
+    const row = object(record.familiar, 'execution plan.startingLoadout.familiar');
+    exact(row, ['name', 'traitStacks'], [], 'execution plan.startingLoadout.familiar');
+    const traitStacks = row.traitStacks;
+    if (typeof traitStacks !== 'number' || !Number.isInteger(traitStacks) || traitStacks < 1)
+      fail('execution plan.startingLoadout.familiar.traitStacks must be a positive integer');
+    familiar = Object.freeze({
+      name: stringValue(row.name, 'execution plan.startingLoadout.familiar.name'),
+      traitStacks,
+    });
+  }
   if (aspectKey === 'SuitHexAspect' && record.startingHex === undefined)
     fail('execution plan.startingHex is required for SuitHexAspect');
   const seenArcana = new Set<string>();
@@ -47,7 +72,8 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
       seenArcana.add(key);
       if (
         (row.origin !== 'manual' && row.origin !== 'automatic') ||
-        !['Common', 'Rare', 'Epic', 'Heroic'].includes(String(row.rarity))
+        typeof row.rarity !== 'string' ||
+        !RARITY_UPGRADE_ORDER.includes(row.rarity)
       )
         fail(`execution plan.startingLoadout.arcana[${index}] is unsupported`);
       return Object.freeze({
@@ -86,7 +112,8 @@ export function startingLoadout(value: unknown): ExecutionStartingLoadout {
   }
   return Object.freeze({
     weaponKey,
-    ...(aspectKey === undefined ? {} : { aspectKey }),
+    ...(aspectKey === undefined ? {} : { aspectKey, aspectRarity: aspectRarity! }),
+    ...(familiar === undefined ? {} : { familiar }),
     arcana: Object.freeze(arcana),
     fear: Object.freeze({
       configuredRanks: ranks(

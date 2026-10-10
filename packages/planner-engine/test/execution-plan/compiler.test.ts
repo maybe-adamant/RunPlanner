@@ -812,10 +812,17 @@ describe('execution-plan compiler and codec', () => {
     const plan = decodeExecutionPlan(fresh);
     expect(plan.routeKey).toBe('FreshFile');
     expect(plan.startingLoadout).not.toHaveProperty('aspectKey');
+    expect(plan.startingLoadout).not.toHaveProperty('aspectRarity');
+    expect(plan.startingLoadout).not.toHaveProperty('familiar');
     expect(plan.startingKeepsake).toEqual({});
     const rejects = (patch: Record<string, unknown>, message: RegExp) =>
       expect(() => decodeExecutionPlan({ ...fresh, ...patch })).toThrow(message);
-    rejects({ startingKeepsake: { equipResults: {} } }, /equipResults requires keepsakeKey/);
+    rejects({ startingKeepsake: { equipResults: {} } }, /require keepsakeKey/);
+    rejects({ startingKeepsake: { rarity: 'Epic' } }, /require keepsakeKey/);
+    rejects(
+      { startingLoadout: { ...fresh.startingLoadout, aspectRarity: 'Legendary' } },
+      /aspectRarity must accompany aspectKey/,
+    );
     rejects({ startingKeepsake: { keepsakeKey: null } }, /startingKeepsake\.keepsakeKey/);
     rejects(
       { startingLoadout: { ...fresh.startingLoadout, aspectKey: null } },
@@ -1043,20 +1050,31 @@ describe('execution-plan compiler and codec', () => {
     }
   });
 
-  it('publishes a non-default selected weapon and aspect as a verification-only start contract', () => {
+  it('publishes the selected loadout with its mature install ranks', () => {
     const project = authorLegalTraitOffers(
-      applyProjectCommand(fOnlyProject(), catalog, {
-        kind: 'ReplaceRouteLoadout',
-        route: createRouteAddress('Underworld'),
-        weaponKey: 'WeaponDagger',
-        aspectKey: 'DaggerHomingThrowAspect',
-      }),
+      applyProjectCommand(
+        applyProjectCommand(fOnlyProject(), catalog, {
+          kind: 'ReplaceRouteLoadout',
+          route: createRouteAddress('Underworld'),
+          weaponKey: 'WeaponDagger',
+          aspectKey: 'DaggerHomingThrowAspect',
+        }),
+        catalog,
+        {
+          kind: 'ReplaceFamiliar',
+          route: createRouteAddress('Underworld'),
+          familiarKey: 'CatFamiliar',
+        },
+      ),
     );
     const { plan } = planFor(project);
     expect(plan.startingLoadout).toMatchObject({
       weaponKey: 'WeaponDagger',
       aspectKey: 'DaggerHomingThrowAspect',
+      aspectRarity: 'Legendary',
+      familiar: { name: 'CatFamiliar', traitStacks: 4 },
     });
+    expect(plan.startingKeepsake).toMatchObject({ rarity: 'Epic' });
     expect(plan.startingLoadout).not.toHaveProperty('startingHex');
   });
 
@@ -1413,6 +1431,42 @@ describe('execution-plan compiler and codec', () => {
       if (offer === undefined) throw new Error('Echo carrier offer is missing');
       expect(offer.options[0]?.echoLastRunBoon?.options[0]).toMatchObject(expected);
     }
+  });
+
+  it('rejects malformed install ranks before fingerprint validation', () => {
+    const loadout = fOpeningFixture.startingLoadout as Record<string, unknown>;
+    const rejects = (patch: Record<string, unknown>, message: RegExp) =>
+      expect(() => decodeExecutionPlan({ ...fOpeningFixture, ...patch })).toThrow(message);
+    const { aspectRarity: _rarity, ...withoutRarity } = loadout;
+    void _rarity;
+    rejects({ startingLoadout: withoutRarity }, /aspectRarity must accompany aspectKey/);
+    rejects({ startingLoadout: { ...loadout, aspectRarity: 'Perfect' } }, /aspectRarity/);
+    rejects({ startingLoadout: { ...loadout, aspectRarity: ['Legendary'] } }, /aspectRarity/);
+    rejects(
+      {
+        startingLoadout: {
+          ...loadout,
+          arcana: [{ key: 'CardDraw', origin: 'manual', rarity: ['Common'] }],
+        },
+      },
+      /arcana\[0\] is unsupported/,
+    );
+    rejects(
+      { startingKeepsake: { keepsakeKey: 'ManaOverTimeRefundKeepsake', rarity: ['Epic'] } },
+      /rarity is unsupported/,
+    );
+    for (const familiar of [
+      { name: 'FrogFamiliar' },
+      { name: 'FrogFamiliar', traitStacks: 0 },
+      { name: 'FrogFamiliar', traitStacks: 4, multiplier: 1 },
+      { name: '', traitStacks: 4 },
+    ])
+      rejects({ startingLoadout: { ...loadout, familiar } }, /startingLoadout\.familiar/);
+    rejects({ startingKeepsake: { keepsakeKey: 'ManaOverTimeRefundKeepsake' } }, /rarity/);
+    rejects(
+      { startingKeepsake: { keepsakeKey: 'ManaOverTimeRefundKeepsake', rarity: 'Legendary' } },
+      /rarity is unsupported/,
+    );
   });
 
   it('rejects ambiguous run-start Arcana and Hex identities before fingerprint validation', () => {
@@ -2438,47 +2492,19 @@ describe('execution-plan compiler and codec', () => {
     );
   });
 
-  it('rejects an unselected Postboss recovery boundary', () => {
+  it('rejects the retired Postboss resume boundary', () => {
     const wire = JSON.parse(JSON.stringify(fgFixture)) as {
+      selectedOccurrenceIds: string[];
       occurrences: Array<Record<string, unknown>>;
     };
-    const selected = new Set(
-      (fgFixture as { selectedOccurrenceIds: string[] }).selectedOccurrenceIds,
+    const postboss = wire.occurrences.find(
+      (occurrence) =>
+        occurrence.gameName === 'F_PostBoss01' &&
+        wire.selectedOccurrenceIds.includes(occurrence.id as string),
     );
-    const unselected = wire.occurrences.find(
-      (occurrence) => typeof occurrence.id === 'string' && !selected.has(occurrence.id),
-    );
-    if (unselected === undefined) throw new Error('fixture lacks an unselected occurrence');
-    unselected.resumeBoundary = 'postbossEntry';
-    expect(() => decodeExecutionPlan(wire)).toThrow(/resume boundary must be selected/);
-  });
-
-  it('rejects an unsupported Postboss recovery boundary value', () => {
-    const wire = JSON.parse(JSON.stringify(fgFixture)) as {
-      occurrences: Array<Record<string, unknown>>;
-    };
-    let marked: Record<string, unknown> | undefined;
-    for (const occurrence of wire.occurrences) {
-      if (occurrence.resumeBoundary === 'postbossEntry') marked = occurrence;
-    }
-    if (marked === undefined) throw new Error('fixture lacks a Postboss recovery boundary');
-    marked.resumeBoundary = 'postbossExit';
-    expect(() => decodeExecutionPlan(wire)).toThrow(/resumeBoundary is unsupported/);
-  });
-
-  it('rejects a Postboss recovery boundary without entry diagnostics', () => {
-    const wire = JSON.parse(JSON.stringify(fgFixture)) as {
-      occurrences: Array<Record<string, unknown>>;
-    };
-    let marked: Record<string, unknown> | undefined;
-    for (const occurrence of wire.occurrences) {
-      if (occurrence.resumeBoundary === 'postbossEntry') marked = occurrence;
-    }
-    if (marked === undefined) throw new Error('fixture lacks a Postboss recovery boundary');
-    marked.diagnostics = {};
-    expect(() => decodeExecutionPlan(wire)).toThrow(
-      /resume boundary requires roomEntered diagnostics/,
-    );
+    if (postboss === undefined) throw new Error('fixture lacks a selected Postboss');
+    postboss.resumeBoundary = 'postbossEntry';
+    expect(() => decodeExecutionPlan(wire)).toThrow(/resumeBoundary/);
   });
 
   it('publishes I Clockwork goals as ordinary rewards without changing I topology', () => {
@@ -2933,13 +2959,6 @@ describe('execution-plan compiler and codec', () => {
       product: Object.freeze({
         ...product,
         selectedOccurrenceIds: Object.freeze([opening.id, disconnected.id]),
-        occurrences: Object.freeze(
-          product.occurrences.map((occurrence) => {
-            const withoutResumeBoundary = { ...occurrence };
-            delete withoutResumeBoundary.resumeBoundary;
-            return Object.freeze(withoutResumeBoundary);
-          }),
-        ),
       }),
     });
     expect(() => decodeExecutionPlan(disconnectedPlan)).toThrow(/disconnected/);
@@ -3161,7 +3180,7 @@ describe('execution-plan compiler and codec', () => {
 
     const selected = new Set(product.selectedOccurrenceIds);
     const sourceForUnselected = product.occurrences.find((occurrence) => {
-      if (!selected.has(occurrence.id) || occurrence.resumeBoundary !== undefined) return false;
+      if (!selected.has(occurrence.id)) return false;
       const obligatedOwners = new Set(
         occurrence.timeline.obligations.map((obligation) => obligation.owner),
       );

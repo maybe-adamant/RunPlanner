@@ -452,7 +452,7 @@ function occurrences.decode(value, selected, label)
         local row, rowError = p.exact(
             valueRow,
             { "id", "owner", "biomeKey", "gameName", "kind", "overview", "timeline", "roomGuide", "doors" },
-            { "anomaly", "resumeBoundary", "roomExitConformance", "diagnostics", "suppressedNpcShopping" },
+            { "anomaly", "roomExitConformance", "diagnostics", "suppressedNpcShopping" },
             label .. "[" .. index .. "]"
         )
         if not row then return nil, rowError end
@@ -474,9 +474,6 @@ function occurrences.decode(value, selected, label)
             or not p.str(row.gameName, label .. ".gameName")
             or not p.str(row.kind, label .. ".kind") then
             return p.fail(label .. " has invalid occurrence identity")
-        end
-        if row.resumeBoundary ~= nil and row.resumeBoundary ~= "postbossEntry" then
-            return p.fail(label .. ".resumeBoundary is unsupported")
         end
         ids[row.id] = row
         local _, overviewError = overview.decode(row.overview, label .. ".overview")
@@ -552,14 +549,6 @@ function occurrences.decode(value, selected, label)
         if row.kind == "ShipEncounter"
             and #(row.overview.rewardWheels or {}) ~= (selectedSeen[row.id] and shipCombatPhaseCount(row) or 0) then
             return p.fail(label .. "[" .. row.id .. "].overview.rewardWheels must match the Ship encounter phases")
-        end
-        if row.resumeBoundary ~= nil then
-            if not selectedSeen[row.id] then
-                return p.fail(label .. "[" .. row.id .. "] resume boundary must be selected")
-            end
-            if row.diagnostics == nil or row.diagnostics.roomEntered == nil then
-                return p.fail(label .. "[" .. row.id .. "] resume boundary requires roomEntered diagnostics")
-            end
         end
     end
     local continuations = {}

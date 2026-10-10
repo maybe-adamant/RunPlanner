@@ -166,11 +166,11 @@ function TestLoadoutSession.testCompletedLoadoutCanSynchronizeBeforeNativeStarti
 end
 
 function TestLoadoutSession.testStrictProtocolRejectsDuplicateArcanaAndMissingSeleneHex()
-    local duplicate = json.decode('{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[{"key":"CardDraw","origin":"manual","rarity":"Common"},{"key":"CardDraw","origin":"manual","rarity":"Common"}],"fear":{"configuredRanks":{},"effectiveRanks":{}}}')
+    local duplicate = json.decode('{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","aspectRarity":"Legendary","arcana":[{"key":"CardDraw","origin":"manual","rarity":"Common"},{"key":"CardDraw","origin":"manual","rarity":"Common"}],"fear":{"configuredRanks":{},"effectiveRanks":{}}}')
     local value, errorMessage = loadoutProtocol.decode(duplicate)
     lu.assertNil(value)
     lu.assertStrContains(errorMessage, "Arcana")
-    value, errorMessage = loadoutProtocol.decode(json.decode('{"weaponKey":"WeaponSuit","aspectKey":"SuitHexAspect","arcana":[],"fear":{"configuredRanks":{},"effectiveRanks":{}}}'))
+    value, errorMessage = loadoutProtocol.decode(json.decode('{"weaponKey":"WeaponSuit","aspectKey":"SuitHexAspect","aspectRarity":"Legendary","arcana":[],"fear":{"configuredRanks":{},"effectiveRanks":{}}}'))
     lu.assertNil(value)
     lu.assertStrContains(errorMessage, "startingHex")
 end

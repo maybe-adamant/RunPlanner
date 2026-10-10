@@ -6,6 +6,8 @@
   "startingLoadout": {
     "weaponKey": "WeaponStaffSwing",
     "aspectKey": "BaseStaffAspect",
+    "aspectRarity": "Legendary",
+    "familiar": { "name": "FrogFamiliar", "traitStacks": 4 },
     "arcana": [],
     "fear": {
       "configuredRanks": {
@@ -48,7 +50,7 @@
       }
     }
   },
-  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake" },
+  "startingKeepsake": { "keepsakeKey": "ManaOverTimeRefundKeepsake", "rarity": "Epic" },
   "extent": { "kind": "configuredPrefix", "biomeKeys": ["N", "O", "P"], "terminalBiomeKey": "P" },
   "selectedOccurrenceIds": [
     "surface-n-opening",
@@ -2537,7 +2539,6 @@
       "biomeKey": "N",
       "gameName": "N_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
@@ -3748,7 +3749,6 @@
       "biomeKey": "O",
       "gameName": "O_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
@@ -5280,7 +5280,6 @@
       "biomeKey": "P",
       "gameName": "P_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
@@ -5709,5 +5708,5 @@
       }
     }
   ],
-  "planFingerprint": "67157067"
+  "planFingerprint": "bec92672"
 }

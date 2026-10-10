@@ -361,7 +361,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             -- Points, not an offered-door product. The next StartRoom remains
             -- the exact occurrence identity proof for both transitions.
             if state.plan.routeKey == "Dream"
-                and (occurrence.resumeBoundary == "postbossEntry"
+                and (occurrence.gameName:find("_PostBoss") ~= nil
                     or occurrence.gameName:find("_Boss") ~= nil) then return true end
             local offered = orderedDoors(_G.MapState and _G.MapState.OfferedExitDoors or {})
             local normal, additional = doors.partition(occurrence, offered)

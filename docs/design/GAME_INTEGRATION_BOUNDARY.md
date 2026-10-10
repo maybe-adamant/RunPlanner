@@ -12,13 +12,11 @@ Executor reads the active slot from `active-slot.json` (see
 [Shared configuration folder](#shared-configuration-folder)), reads only that
 plan slot at the next run admission, and freezes the decoded plan for the live
 session. Execution normally admits at
-run start; publication does not hot-swap a live session. Two bounded mid-run
-attachments exist. A plan with a [Practice mode start](#practice-mode-start)
+run start; publication does not hot-swap a live session. One bounded mid-run
+attachment exists: a plan with a [Practice mode start](#practice-mode-start)
 admits at the start of a fresh run that the module installs at a later biome's
-Opening or a Preboss. One recovery path may instead admit a freshly loaded game
-at the start of an explicitly marked Postboss occurrence when its native room,
-weapon/aspect, and published entry-conformance state match. No other mid-run
-attachment, edited-plan repair, or recovery after a mismatch is supported.
+Opening or a Preboss. No other mid-run attachment, edited-plan repair, or
+recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
 `slot-6.runplanner.json` under the Run Planner game module configuration directory. The
@@ -178,7 +176,7 @@ ModpackLib `.cfg`.
   file already shows slot 1, the in-game picker saves slot 1 only after another
   slot was picked; it shows a hint while no choice is saved.
 - Last writer wins. Neither side keeps a copy: the module reads the file at
-  new-run admission, loadout and Postboss resync, and the planner reads it
+  new-run admission and loadout resync, and the planner reads it
   with the slot facts. A change made during a run takes effect at the next
   admission.
 - Sending a plan also makes its slot active. The planner makes a slot active
@@ -364,8 +362,8 @@ point is not part of this record; it publishes the separate `startState`
 described below.
 
 The module binds settings to the admitted plan and native `CurrentRun` identity.
-They become active only after starting-loadout verification or supported
-Postboss entry admission. Changing the selected slot does not change them.
+They become active only after starting-loadout verification. Changing the
+selected slot does not change them.
 Only these run-wide modifiers continue after `configured-prefix-complete`;
 ordinary room steering remains passive. Rejection, mismatch, executor fault,
 death, Crossroads presence, and a different native run prevent their application.
@@ -857,21 +855,20 @@ construction callback to mirror an execution-plan row. This keeps lifecycle
 wiring available for realization without turning native implementation detail
 into a second game model.
 
-Numeric state comparisons allow only absolute floating-point roundoff of
-`1e-9`, shared by room-exit conformance, postboss admission, and starting Fear
-checks. They do not round published values or native steering operands. Types,
-keys, identities, booleans, and collection structure remain exact; non-finite
-values fail. A one-unit counter difference or a meaningful fractional difference
-still desynchronizes. Diagnostic logs retain double-precision numeric detail.
+Numeric state comparisons allow only absolute floating-point roundoff of `1e-9`,
+shared by room-exit conformance and starting Fear checks. They do not round
+published values or native steering operands. Types, keys, identities, booleans,
+and collection structure remain exact; non-finite values fail. A one-unit
+counter difference or a meaningful fractional difference still desynchronizes.
+Diagnostic logs retain double-precision numeric detail.
 
 Well conformance compares aggregate remaining uses across independent Yarn,
 Ixion, and Extended Shop trait instances, the single accumulated Hymn `Uses`
 counter, and the individual Discount and Empty Slot durations that gate later
 Well offers. Other timed Well traits, the purchase ledger and Well consumables
-are planner Run State only. This applies at room exit and
-Postboss admission: forced downstream offers and Chaos gates cannot independently
-prove that a temporary effect was consumed. These are checkpoint balances, not
-per-consumption provenance checks.
+are planner Run State only. This applies at room exit: forced downstream offers
+and Chaos gates cannot independently prove that a temporary effect was consumed.
+These are checkpoint balances, not per-consumption provenance checks.
 
 Rewards destroyed by Time Piece retain their generation and placement products,
 but publish no acquisition transaction. This applies equally to incoming rewards,
@@ -891,13 +888,13 @@ conformance-checked; other health, Magick, Gold, Armor, healing, and
 meta-progression results are simulation-neutral. None has a blocking
 completion proof.
 Arachne's eight dresses and Icarus's Protective/Volatile Coating remain in
-planner history but are excluded from trait presence and absence checks at
-both room exit and postboss admission: native armor depletion can remove them,
-and their survival is not a prerequisite for modeled outcomes. This is not a
-blanket exclusion of armor-related boons, keepsakes, or other NPC traits.
-The executor trusts planner eligibility and does not preflight exact trait rows
-through `IsTraitEligible`, duo requirements, replacement constraints, or a
-second offer-legality policy before forcing them.
+planner history but are excluded from trait presence and absence checks at room
+exit: native armor depletion can remove them, and their survival is not a
+prerequisite for modeled outcomes. This is not a blanket exclusion of
+armor-related boons, keepsakes, or other NPC traits. The executor trusts planner
+eligibility and does not preflight exact trait rows through `IsTraitEligible`,
+duo requirements, replacement constraints, or a second offer-legality policy
+before forcing them.
 
 A selected Spell Drop's `hexTree`, and Aspect of Selene's
 `startingLoadout.startingHex`, carry the layout and `nodes`: the authored talent
@@ -912,20 +909,31 @@ the God Sent Olympian talent is invested, Task Force's prerequisite. Each Path
 screen role carries `plannedHexNodeKeys`; the executor marks those nodes on the
 native talent screen as guidance and never enforces them.
 
+`startingLoadout` publishes, in native terms, the run-start configuration the
+module installs. The planner assumes a mature file, so it publishes ranks
+rather than reading the player's: the weapon; the Aspect with `aspectRarity`
+(rank V, native `Legendary` in `WeaponRarityUpgradeOrder`); the Arcana cards
+with their rarities; the configured Fear ranks; and the `familiar` with
+`traitStacks`, the native `GetFamiliarTraitStacks` of each of its upgraded
+traits when every FamiliarShopData level is owned. `startingKeepsake` carries
+the keepsake's native equip `rarity` (rank III, `Epic`). Arcana `origin` and the
+effective Fear ranks are status-panel presentation. A Fresh File route
+publishes its fixed aspectless Staff with no familiar or keepsake, and the
+module installs nothing for it.
+
 The route-start keepsake is a pre-room realization, not a room Timeline step.
-The wire carries its exact selected key and any already-authored immediate
-equip result. A run that starts without a keepsake or aspect, as on a fresh
-profile, omits `startingKeepsake.keepsakeKey` and `startingLoadout.aspectKey`
-(never JSON null), and its Run State diagnostics omit the current keepsake. An
-absent aspect requires no recorded aspect for the weapon, at run start and at
-Postboss admission; admission still proves every published family. Inside `StartNewRun`, the Executor admits and freezes the plan
-before native `CreateNewHero` construction, making the starting Hex available
-to aspect construction. The nested `EquipKeepsake` contact arms its immediate
-result and lets the matching native acquire callback consume it. Later rack
-changes use the same callback adapter
-from their ordinary Timeline trace. Only the opening presentation is delayed;
-Jeweled Pom, Experimental Hammer, and Transcendent Embryo acquire their result
-when the keepsake is equipped.
+The wire carries its exact selected key and any already-authored immediate equip
+result. A run that starts without a keepsake or aspect, as on a fresh profile,
+omits `startingKeepsake.keepsakeKey` and `startingLoadout.aspectKey` (never JSON
+null), and its Run State diagnostics omit the current keepsake. An absent aspect
+requires no recorded aspect for the weapon at run start. Inside `StartNewRun`,
+the Executor admits and freezes the plan before native `CreateNewHero`
+construction, making the starting Hex available to aspect construction. The
+nested `EquipKeepsake` contact arms its immediate result and lets the matching
+native acquire callback consume it. Later rack changes use the same callback
+adapter from their ordinary Timeline trace. Only the opening presentation is
+delayed; Jeweled Pom, Experimental Hammer, and Transcendent Embryo acquire their
+result when the keepsake is equipped.
 
 The opening is realized where native creates it. Normally that is
 `ChooseStartingRoom`. A brand-new game instead runs
@@ -1116,22 +1124,15 @@ configuration tree, rejects links and non-regular files, enforces the existing
 reads the active slot from `active-slot.json` (see
 [Shared configuration folder](#shared-configuration-folder)), displays the
 selected slot's bounded status, and loads and freezes that one slot only at the
-next new-run or eligible Postboss admission. Changing the active slot cannot
+next new-run admission. Changing the active slot cannot
 hot-swap a live session. The read-only inspector separates the selected slot's plan preview
 from the frozen session's loadout, room progress, admission, and failure
 information. It reports existing execution status without adding conformance
 checks or revalidating player state during rendering.
 
 Runtime execution state is process-local, never native-save-backed, and resets
-explicitly at new-run admission. Postboss recovery is a fresh admission, not
-restoration of serialized executor state. It is attempted once when a new game
-process attaches to an existing run at a selected occurrence marked
-`resumeBoundary: "postbossEntry"`. The executor
-adopts the already-restored native room, compares the existing bounded
-conformance families plus weapon/aspect identity, and constructs fresh route
-and room coordinators at that occurrence. A mismatch makes execution passive;
-the executor does not search another slot, retry at later rooms, replay loadout
-effects, or reconstruct earlier Timeline progress.
+explicitly at new-run admission. A freshly loaded game never re-attaches to an
+existing run.
 
 The Run Planner game module reads its own `buildId` from its installed
 `execution-compatibility.json` at load. Before decoding, the inbox requires
@@ -1147,8 +1148,8 @@ eligibility inference.
 ## Dream navigation
 
 Dream execution publishes the ordered configured prefix, not an independently
-editable runtime itinerary. Startup and Postboss recovery require the native
-run mode to match the plan. The native `Dream_Intro` prologue is outside the
+editable runtime itinerary. Startup requires the native run mode to match the
+plan. The native `Dream_Intro` prologue is outside the
 occurrence cursor; the first biome receives the published starting reward and
 later entries use their resolved rewardless declarations.
 

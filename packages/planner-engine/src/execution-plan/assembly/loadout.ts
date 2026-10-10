@@ -2,6 +2,10 @@ import type { ExecutionAssemblerInput, ExecutionStartingLoadout } from '../model
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import type { RunStateSnapshot } from '../../simulation/rewards/run-state';
 import { resolveRouteEquipment } from '../../authored-project/route-profile';
+import {
+  MATURE_ASPECT_RARITY,
+  matureFamiliarTraitStacks,
+} from '../../simulation/traits/equipment-upgrades';
 
 /** Assemble the one immutable run-start contract from the evaluated opening. */
 export function executionStartingLoadout(
@@ -25,6 +29,10 @@ export function executionStartingLoadout(
       'executionCoverageMissing',
       'route-start Arcana snapshot contains a temporary activation',
     );
+  const familiarKey = loadout.familiarKey;
+  const familiar = familiarKey === null ? undefined : catalog.familiars.byKey[familiarKey];
+  if (familiarKey !== null && familiar === undefined)
+    throw new CompilerError('executionCoverageMissing', `unknown familiar ${familiarKey}`);
   const hex = openingSnapshot.hexProgress;
   let startingHex: ExecutionStartingLoadout['startingHex'];
   if (aspectKey === 'SuitHexAspect') {
@@ -64,7 +72,15 @@ export function executionStartingLoadout(
   }
   return Object.freeze({
     weaponKey,
-    ...(aspectKey === null ? {} : { aspectKey }),
+    ...(aspectKey === null ? {} : { aspectKey, aspectRarity: MATURE_ASPECT_RARITY }),
+    ...(familiar === undefined
+      ? {}
+      : {
+          familiar: Object.freeze({
+            name: familiar.key,
+            traitStacks: matureFamiliarTraitStacks(familiar),
+          }),
+        }),
     arcana: Object.freeze(
       openingSnapshot.arcanaFear.arcana.active
         .filter(

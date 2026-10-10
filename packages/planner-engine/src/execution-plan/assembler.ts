@@ -223,9 +223,6 @@ export function assembleExecutionProduct({
       hubsBySource.get(executionRoomOwnerKey(room)),
       hubExitsBySource.get(executionRoomOwnerKey(room)),
       localSlotsByParent.get(room.occurrenceId),
-      room.roomKind === 'PostBoss' && selectedOccurrenceIdSet.has(room.occurrenceId)
-        ? 'postbossEntry'
-        : undefined,
       selectedOccurrenceIdSet.has(room.occurrenceId),
     );
     const policy = evaluation.route.npcShopping.occurrences.find(
@@ -283,6 +280,10 @@ export function assembleExecutionProduct({
   const startingKeepsakeKey = assembly.project.route.loadout.startingKeepsakeKey;
   if (startingKeepsakeKey === null && startingEquipResults !== undefined)
     throw new CompilerError('executionCoverageMissing', 'keepsake equip results lack a keepsake');
+  const startingKeepsakeRarity =
+    startingKeepsakeKey === null ? undefined : catalog.keepsakes.byKey[startingKeepsakeKey]?.rank;
+  if (startingKeepsakeKey !== null && startingKeepsakeRarity === undefined)
+    throw new CompilerError('executionCoverageMissing', `unknown keepsake ${startingKeepsakeKey}`);
   // Internal modifiers take part in publication only in development builds.
   const startPoint = internalRunModifiers
     ? authoredStartPointEligibility(catalog, assembly.project, evaluation)
@@ -319,6 +320,7 @@ export function assembleExecutionProduct({
         ? {}
         : {
             keepsakeKey: startingKeepsakeKey,
+            rarity: startingKeepsakeRarity!,
             ...(startingEquipResults === undefined ? {} : { equipResults: startingEquipResults }),
           },
     ),

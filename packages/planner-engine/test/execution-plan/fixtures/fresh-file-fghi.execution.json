@@ -2508,7 +2508,6 @@
       "biomeKey": "F",
       "gameName": "F_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
@@ -4113,7 +4112,6 @@
       "biomeKey": "G",
       "gameName": "G_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
@@ -5311,7 +5309,6 @@
       "biomeKey": "H",
       "gameName": "H_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
@@ -6118,5 +6115,5 @@
       }
     }
   ],
-  "planFingerprint": "69783c93"
+  "planFingerprint": "21643845"
 }

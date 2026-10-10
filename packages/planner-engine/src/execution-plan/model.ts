@@ -449,16 +449,28 @@ export type ExecutionVolatileKeepsakeEquipResults =
       readonly transcendentEmbryo: ExecutionTranscendentEmbryoEquipResult;
     };
 
-/** A run without a starting keepsake omits the key and any equip result. */
+/** A run without a starting keepsake omits the key, its rarity and any equip result. */
 export type ExecutionStartingKeepsake =
-  | { readonly keepsakeKey?: never; readonly equipResults?: never }
-  | { readonly keepsakeKey: string; readonly equipResults?: ExecutionKeepsakeEquipResults };
+  | { readonly keepsakeKey?: never; readonly rarity?: never; readonly equipResults?: never }
+  | {
+      readonly keepsakeKey: string;
+      /** Rarity name of the native `GetKeepsakeLevel` level; the planner's rank III is `Epic`. */
+      readonly rarity: ExecutionKeepsakeRarity;
+      readonly equipResults?: ExecutionKeepsakeEquipResults;
+    };
 
-/** Exact player-selected configuration checked before the first room session arms. */
+/** Native `TraitRarityData.WeaponRarityUpgradeOrder` below Perfect. */
+export type ExecutionAspectRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary';
+
+/** The player-selected run-start configuration the game module installs for the run. */
 export interface ExecutionStartingLoadout {
   readonly weaponKey: string;
   /** Omitted when the run starts with no aspect (a fresh profile's Staff). */
   readonly aspectKey?: string;
+  /** Rarity name of the native `GetWeaponUpgradeLevel` level (rank V is `Legendary`); present exactly with `aspectKey`. */
+  readonly aspectRarity?: ExecutionAspectRarity;
+  /** The equipped familiar; native `GetFamiliarTraitStacks` for each of its upgraded traits. */
+  readonly familiar?: { readonly name: string; readonly traitStacks: number };
   readonly arcana: readonly {
     readonly key: string;
     readonly origin: 'manual' | 'automatic';
@@ -952,8 +964,6 @@ export interface ExecutionOccurrence {
   readonly biomeKey: ExecutionBiomeKey;
   readonly gameName: string;
   readonly kind: string;
-  /** Selected canonical Postboss entry at which a fresh process may resynchronize. */
-  readonly resumeBoundary?: 'postbossEntry';
   /** Published only for the G Anomaly occurrence; ordinary target replacement stays in Doors/topology. */
   readonly anomaly?: ExecutionAnomalyReplacement;
   readonly overview: ExecutionOverview;

@@ -24,6 +24,8 @@ import {
   numberRecord,
   numberValue,
   object,
+  oneOf,
+  RARITY_UPGRADE_ORDER,
   stringArray,
   stringValue,
   type Dict,
@@ -32,7 +34,6 @@ import { hexGodSent, hexTreeNodes } from './rewards';
 
 const BIOME_KEYS: readonly string[] = ['F', 'G', 'H', 'I', 'N', 'O', 'P', 'Q'];
 const TRAIT_RARITIES: readonly string[] = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'];
-const KEEPSAKE_RARITIES: readonly string[] = ['Common', 'Rare', 'Epic', 'Heroic'];
 const MAX_STAT_SOURCE_KINDS: readonly string[] = ['trait', 'arcana', 'keepsake'];
 const WELL_CLOCKS: readonly string[] = ['encounters', 'rooms', 'bosses'];
 /** Room history grows by one record per departed room, Hub returns included. */
@@ -42,11 +43,6 @@ function record(value: unknown, label: string, required: string[], optional: str
   const result = object(value, label);
   exact(result, required, optional, label);
   return result;
-}
-
-function oneOf<T extends string>(value: unknown, allowed: readonly string[], label: string): T {
-  if (typeof value !== 'string' || !allowed.includes(value)) fail(`${label} is unsupported`);
-  return value as T;
 }
 
 /** An optional field that is present only as `true`. */
@@ -206,7 +202,7 @@ function keepsakeTrait(value: unknown, label: string): ExecutionStartKeepsakeTra
     optional(key, row[key], (entry) => numberValue(entry, `${label}.${key}`));
   return Object.freeze({
     name: stringValue(row.name, `${label}.name`),
-    rarity: oneOf<ExecutionKeepsakeRarity>(row.rarity, KEEPSAKE_RARITIES, `${label}.rarity`),
+    rarity: oneOf<ExecutionKeepsakeRarity>(row.rarity, RARITY_UPGRADE_ORDER, `${label}.rarity`),
     ...flag('slotted', row.slotted, `${label}.slotted`),
     ...count('remainingUses'),
     ...count('uses'),
@@ -255,7 +251,7 @@ function arcanaCard(value: unknown, label: string): ExecutionStartArcanaCard {
   );
   return Object.freeze({
     name: stringValue(row.name, `${label}.name`),
-    rarity: oneOf<ExecutionKeepsakeRarity>(row.rarity, KEEPSAKE_RARITIES, `${label}.rarity`),
+    rarity: oneOf<ExecutionKeepsakeRarity>(row.rarity, RARITY_UPGRADE_ORDER, `${label}.rarity`),
     ...flag('temporary', row.temporary, `${label}.temporary`),
     ...optional('currentRoom', row.currentRoom, (entry) => integer(entry, `${label}.currentRoom`)),
     ...optional('metaConversionUses', row.metaConversionUses, (entry) =>

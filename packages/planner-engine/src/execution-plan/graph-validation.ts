@@ -174,12 +174,6 @@ export function validateExecutionGraph(
           : 0)
     )
       invalid(`${occurrence.id}.overview.rewardWheels must match the Ship encounter phases`);
-    if (occurrence.resumeBoundary === undefined) continue;
-    if (occurrence.resumeBoundary !== 'postbossEntry')
-      invalid(`${occurrence.id} has an unsupported resume boundary`);
-    if (!selected.has(occurrence.id)) invalid(`${occurrence.id} resume boundary must be selected`);
-    if (occurrence.diagnostics?.roomEntered === undefined)
-      invalid(`${occurrence.id} resume boundary requires roomEntered diagnostics`);
   }
   const nHubContinuations = new Set(
     graph.occurrences.flatMap((entry) =>

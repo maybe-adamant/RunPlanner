@@ -11,7 +11,7 @@ export function normalizeFamiliars(
     const path = `familiars[${index}]`;
     const record = requireObject(familiar, path);
     const extra = Object.keys(record).find(
-      (key) => !['key', 'label', 'matureStatUpgradeCount', 'maxStatPerStack'].includes(key),
+      (key) => !['key', 'label', 'matureTraitUpgradeCount', 'maxStatPerStack'].includes(key),
     );
     if (extra !== undefined) fail(`${path}.${extra}`, 'is not supported');
     const effect = familiar.maxStatPerStack;
@@ -26,9 +26,9 @@ export function normalizeFamiliars(
     return Object.freeze({
       key: requireNonEmpty(familiar.key, `${path}.key`),
       label: requireNonEmpty(familiar.label, `${path}.label`),
-      matureStatUpgradeCount: requirePositiveInteger(
-        familiar.matureStatUpgradeCount,
-        `${path}.matureStatUpgradeCount`,
+      matureTraitUpgradeCount: requirePositiveInteger(
+        familiar.matureTraitUpgradeCount,
+        `${path}.matureTraitUpgradeCount`,
       ),
       ...(effect === undefined
         ? {}

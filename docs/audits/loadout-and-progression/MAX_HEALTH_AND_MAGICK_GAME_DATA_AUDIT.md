@@ -152,9 +152,10 @@ pre-acquisition state.
 
 ### Familiars
 
-`EquipFamiliar` runs at run start. A familiar's first trait gains one stack per
-owned stat upgrade (`GetFamiliarTraitStacks`); a mature save owns all three, so
-four stacks. Primal Psychic Connection is always offered at Common, whose
+`EquipFamiliar` runs at run start. `FamiliarShopData.lua` gives each of a
+familiar's three upgraded traits three levels, and each trait gains one stack per
+owned non-debug level (`GetFamiliarTraitStacks`); a mature save owns all of
+them, so the first trait has four stacks. Primal Psychic Connection is always offered at Common, whose
 `CircePetMultiplier` adds the current stacks once, doubling them.
 
 ## Planner disposition
