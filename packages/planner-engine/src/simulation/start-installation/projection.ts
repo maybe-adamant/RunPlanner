@@ -346,6 +346,7 @@ function families(
   return {
     equipment: equipment(catalog, state),
     traits: traits(state),
+    essences: state.traitHistory.essenceElements,
     chaos: chaos(state),
     keepsake: keepsake(catalog, state),
     arcana: arcana(catalog, state),
@@ -395,6 +396,7 @@ function families(
 const FAMILY_ORDER: readonly StartInstallationFamily[] = Object.freeze([
   'equipment',
   'traits',
+  'essences',
   'chaos',
   'keepsake',
   'arcana',

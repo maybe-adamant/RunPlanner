@@ -10,6 +10,7 @@ local loadoutSession = require("mods.loadout.session")
 local loadoutHooks = require("mods.loadout.hooks")
 local roomCoordinator = require("mods.room.coordinator")
 local admission = require("mods.room.conformance.admission")
+local readers = require("mods.room.conformance.readers")
 local install = require("mods.practice.install")
 local practiceHooks = require("mods.practice.hooks")
 
@@ -123,6 +124,9 @@ local function nativeWorld(base, start)
             if args.TraitName == "SpellPotionTrait" then data.MaxUses = 3 end
             if args.TraitName:match("^Chaos") then data.PropertyChanges, data.RarityBonus = { {}, {} }, {} end
             if args.TraitName == "FocusLastStandBoon" then data.AcquireFunctionArgs = { Name = "Athena" } end
+            -- TraitData_Essence: each <Element>Essence inherits its element boon's Elements.
+            local essence = args.TraitName:match("^(%u%l+)Essence$")
+            if essence then data.Elements = { essence } end
             return data
         end,
         AddTraitToHero = function(args)
@@ -153,7 +157,15 @@ local function nativeWorld(base, start)
         RemoveWeaponTrait = function(name) record("remove", name) remove(name) end,
         IncreaseTraitLevel = function(trait, stacks) record("level", trait.Name, tostring(stacks)) end,
         AddLastStand = function(args) record("lastStand", tostring(args.Name)) end,
-        UpdateHeroTraitDictionary = function() end,
+        -- TraitLogic.UpdateHeroTraitDictionary's element tally.
+        UpdateHeroTraitDictionary = function()
+            hero.Elements = { Aether = 0, Earth = 0, Air = 0, Fire = 0, Water = 0 }
+            for _, trait in ipairs(hero.Traits) do
+                for _, element in ipairs(trait.Elements or {}) do
+                    hero.Elements[element] = hero.Elements[element] + 1
+                end
+            end
+        end,
         CallFunctionName = function(name) record("call", name) end,
         ShrineUpgradeExtractValues = function() end,
         GetTotalHeroTraitValue = function(name) return name == "BonusSpellUses" and 1 or 0 end,
@@ -319,6 +331,20 @@ function TestPracticeStart.testOpeningInstallsBeforeNativeRerollsAndRecordsBefor
     -- The authored gold is added to the gold native StartNewRun credited.
     lu.assertEquals(world.gameState.Resources.Money, 130)
     lu.assertEquals(state.practiceStart.phase, "started")
+end
+
+function TestPracticeStart.testCollectedEssencesInstallAsHiddenEssenceTraits()
+    local plan = copy(decode("surface-start-q-opening"))
+    lu.assertEquals(plan.startState.elementEssences, { Fire = 0, Air = 0, Earth = 1, Water = 0 })
+    plan.startState.elementEssences = { Fire = 2, Air = 0, Earth = 1, Water = 3 }
+    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+    startRun(plan, world, { StartingBiome = "F" })
+    local function held(name) return #(world.hero.TraitDictionary[name] or {}) end
+    lu.assertEquals({ held("FireEssence"), held("AirEssence"), held("EarthEssence"), held("WaterEssence") },
+        { 2, 0, 1, 3 })
+    lu.assertEquals(held("ElementalEssence"), 0)
+    lu.assertEquals(readers.read("elementCounts", world.run),
+        { Aether = 0, Earth = 1, Air = 0, Fire = 2, Water = 3 })
 end
 
 -- RunLogic.GetBiomeDepth: rooms since the last NextRoomSet, the current one

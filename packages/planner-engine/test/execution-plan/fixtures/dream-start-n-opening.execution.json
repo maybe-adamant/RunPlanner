@@ -437,6 +437,7 @@
       { "name": "HermesWeaponBoon", "rarity": "Common" },
       { "name": "StaffDoubleAttackTrait" }
     ],
+    "elementEssences": { "Fire": 0, "Air": 0, "Earth": 0, "Water": 0 },
     "chaosCurses": [],
     "chaosBlessings": [],
     "keepsake": {
@@ -5040,5 +5041,5 @@
       }
     }
   ],
-  "planFingerprint": "0451c24e"
+  "planFingerprint": "f1fdf15d"
 }

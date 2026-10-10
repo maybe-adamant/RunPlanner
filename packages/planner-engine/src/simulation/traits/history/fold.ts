@@ -46,16 +46,21 @@ export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
 const BASE_ELEMENTS: readonly TraitElement[] = Object.freeze(['Earth', 'Air', 'Fire', 'Water']);
 
+type ElementTotals = Record<TraitElement, number>;
+
 function combinedElementFacts(
   fromTraits: ReturnType<typeof deriveFacts>,
-  pickupElements: Readonly<Record<TraitElement, number>>,
+  essenceElements: Readonly<ElementTotals>,
+  creationElements: Readonly<ElementTotals>,
 ) {
+  const sum = (element: TraitElement) =>
+    fromTraits.elementCounts[element] + essenceElements[element] + creationElements[element];
   const elementCounts = Object.freeze({
-    Aether: fromTraits.elementCounts.Aether + pickupElements.Aether,
-    Earth: fromTraits.elementCounts.Earth + pickupElements.Earth,
-    Air: fromTraits.elementCounts.Air + pickupElements.Air,
-    Fire: fromTraits.elementCounts.Fire + pickupElements.Fire,
-    Water: fromTraits.elementCounts.Water + pickupElements.Water,
+    Aether: sum('Aether'),
+    Earth: sum('Earth'),
+    Air: sum('Air'),
+    Fire: sum('Fire'),
+    Water: sum('Water'),
   });
   return Object.freeze({
     ...fromTraits,
@@ -70,6 +75,7 @@ export function createTraitHistoryState(): TraitHistoryState {
     equippedTraits: Object.freeze({}),
     equippedSlots: Object.freeze({}),
     elementCounts: emptyElements,
+    essenceElements: emptyElements,
     highestBaseElementCount: 0,
     godBoonRarityCounts: Object.freeze({}),
     upgradableTraitCount: 0,
@@ -230,13 +236,9 @@ export function foldTraitHistoryEvents(
   const equipped: Record<string, EquippedTrait> = {};
   const bannedTraitKeys = new Set<string>();
   const previouslyPickedTraitKeys = new Set<string>();
-  const pickupElements: Record<TraitElement, number> = {
-    Aether: 0,
-    Earth: 0,
-    Air: 0,
-    Fire: 0,
-    Water: 0,
-  };
+  const essenceElements: ElementTotals = { ...emptyElements };
+  // Creation's AddAllElements, counted while the blessing is held.
+  const creationElements: ElementTotals = { ...emptyElements };
   let activeSources: ReadonlySet<string> = new Set();
   const maxStatGrants: Record<string, MaxStatAmounts> = {};
   const grantMaxStat = (traitKey: string, stat: keyof MaxStatAmounts, amount: number) => {
@@ -269,7 +271,7 @@ export function foldTraitHistoryEvents(
         const outcome = blessing.derivedOutcome;
         if (outcome?.kind === 'creation')
           for (const element of ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const)
-            pickupElements[element] += outcome.elementsPerElementByRarity[event.rarity];
+            creationElements[element] += outcome.elementsPerElementByRarity[event.rarity];
         continue;
       }
       if (event.kind === 'directChaosBlessingRemoval') {
@@ -281,7 +283,7 @@ export function foldTraitHistoryEvents(
         const outcome = catalog.chaos.blessings.byKey[removed!.blessingKey]?.derivedOutcome;
         if (outcome?.kind === 'creation')
           for (const element of ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const)
-            pickupElements[element] -=
+            creationElements[element] -=
               outcome.elementsPerElementByRarity[
                 removed!.rarity === 'Legendary' ? 'Heroic' : removed!.rarity
               ];
@@ -335,7 +337,7 @@ export function foldTraitHistoryEvents(
           const outcome = catalog.chaos.blessings.byKey[active.blessingKey]?.derivedOutcome;
           if (outcome?.kind === 'creation')
             for (const element of ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const)
-              pickupElements[element] +=
+              creationElements[element] +=
                 outcome.elementsPerElementByRarity[
                   active.rarity === 'Legendary' ? 'Heroic' : active.rarity
                 ];
@@ -468,7 +470,7 @@ export function foldTraitHistoryEvents(
       }
       if (event.kind === 'elementContribution') {
         for (const [element, value] of Object.entries(event.contributions)) {
-          pickupElements[element as TraitElement] += value ?? 0;
+          essenceElements[element as TraitElement] += value ?? 0;
         }
         continue;
       }
@@ -658,7 +660,7 @@ export function foldTraitHistoryEvents(
       }
     }
     const fromTraits = deriveFacts(catalog, equipped);
-    const afterAcquisition = combinedElementFacts(fromTraits, pickupElements);
+    const afterAcquisition = combinedElementFacts(fromTraits, essenceElements, creationElements);
     const nextActiveSources = activeRarityFloorSources(
       catalog,
       equipped,
@@ -671,13 +673,14 @@ export function foldTraitHistoryEvents(
     activeSources = nextActiveSources;
   }
   const fromTraits = deriveFacts(catalog, equipped);
-  const derived = combinedElementFacts(fromTraits, pickupElements);
+  const derived = combinedElementFacts(fromTraits, essenceElements, creationElements);
   return Object.freeze({
     events: Object.freeze(ordered),
     bannedTraitKeys: Object.freeze([...bannedTraitKeys]),
     previouslyPickedTraitKeys: Object.freeze([...previouslyPickedTraitKeys]),
     equippedTraits: Object.freeze(equipped),
     ...derived,
+    essenceElements: Object.freeze({ ...essenceElements }),
     ...(activeSources.size === 0 ? {} : { properUpbringingActive: true as const }),
     activeChaosCurses: Object.freeze(activeChaos),
     maturedChaosBlessings: Object.freeze(maturedChaos),

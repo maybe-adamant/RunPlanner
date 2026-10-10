@@ -413,6 +413,26 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     );
   });
 
+  it('counts collected essences apart from Creation, which its held blessing carries', () => {
+    const essence = (sequence: number, contributions: Record<string, number>) =>
+      Object.freeze({
+        kind: 'elementContribution' as const,
+        owner,
+        acquisitionRole: 'test',
+        sequence,
+        acquisitionPoint: 'test',
+        contributions,
+      });
+    const history = foldTraitHistoryEvents(catalog, [
+      essence(1, { Earth: 1 }),
+      essence(2, { Earth: 1, Air: 1, Fire: 1, Water: 1 }),
+      directBlessing('ChaosElementalBlessing', 'embryo:creation', 3),
+    ]);
+    expect(history.essenceElements).toEqual({ Aether: 0, Earth: 2, Air: 1, Fire: 1, Water: 1 });
+    // Epic Creation adds three of every element, Aether included.
+    expect(history.elementCounts).toEqual({ Aether: 3, Earth: 5, Air: 4, Fire: 4, Water: 4 });
+  });
+
   it('folds immediate acquisition as a matured blessing and keeps its source marker', () => {
     const result = applyTranscendentEmbryoEquipResult(
       catalog,

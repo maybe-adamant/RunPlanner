@@ -180,6 +180,15 @@ local function installTraits(start)
     end
 end
 
+-- Each collected essence is one hidden <Element>Essence trait, as the
+-- ConsumableData *Boost pickups add it. ElementalBoost's single
+-- ElementalEssence counts the same as one of each of the four.
+local function installEssences(start)
+    for _, element in ipairs({ "Fire", "Air", "Earth", "Water" }) do
+        for _ = 1, start.elementEssences[element] do add(processed(element .. "Essence")) end
+    end
+end
+
 local function installChaos(start)
     for _, row in ipairs(start.chaosCurses) do
         local blessing = chaos.applyBlessing(processed(row.blessing.name, row.blessing.rarity),
@@ -442,6 +451,7 @@ function install.hero(start, context)
         installArcana(start)
         installEquipment(start, context.aspectKey)
         installTraits(start)
+        installEssences(start)
         installChaos(start)
         installKeepsakes(start)
         installHiddenGrants(start)

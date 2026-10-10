@@ -6,6 +6,7 @@ import type {
   ExecutionStartBiome,
   ExecutionStartChaosBlessing,
   ExecutionStartChaosCurse,
+  ExecutionStartEssences,
   ExecutionStartHex,
   ExecutionStartKeepsake,
   ExecutionStartKeepsakeTrait,
@@ -367,6 +368,16 @@ function hex(value: unknown, label: string): ExecutionStartHex {
   });
 }
 
+function elementEssences(value: unknown, label: string): ExecutionStartEssences {
+  const row = record(value, label, ['Fire', 'Air', 'Earth', 'Water']);
+  return Object.freeze({
+    Fire: integer(row.Fire, `${label}.Fire`),
+    Air: integer(row.Air, `${label}.Air`),
+    Earth: integer(row.Earth, `${label}.Earth`),
+    Water: integer(row.Water, `${label}.Water`),
+  });
+}
+
 function biome(value: unknown, label: string): ExecutionStartBiome {
   const row = record(
     value,
@@ -436,6 +447,7 @@ export function startState(value: unknown): ExecutionStartState {
       'encounterDepth',
       'aspectPerfect',
       'traits',
+      'elementEssences',
       'chaosCurses',
       'chaosBlessings',
       'keepsake',
@@ -490,6 +502,7 @@ export function startState(value: unknown): ExecutionStartState {
       });
     }),
     traits,
+    elementEssences: elementEssences(row.elementEssences, `${label}.elementEssences`),
     chaosCurses: list(row.chaosCurses, `${label}.chaosCurses`, chaosCurse),
     chaosBlessings: list(row.chaosBlessings, `${label}.chaosBlessings`, chaosBlessing),
     keepsake: keepsake(row.keepsake, `${label}.keepsake`),

@@ -369,6 +369,11 @@ export interface TraitHistoryState {
   /** All six declaration-owned equipment slots. */
   readonly equippedSlots: Readonly<Record<string, EquippedTrait>>;
   readonly elementCounts: Readonly<Record<TraitElement, number>>;
+  /**
+   * The part of `elementCounts` from collected essences (Essence pickups and
+   * resource points), which native holds as hidden `*Essence` traits.
+   */
+  readonly essenceElements: Readonly<Record<TraitElement, number>>;
   readonly highestBaseElementCount: number;
   readonly godBoonRarityCounts: Readonly<Record<string, number>>;
   readonly upgradableTraitCount: number;

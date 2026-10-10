@@ -596,6 +596,7 @@
       { "name": "RestockBoon", "rarity": "Epic" },
       { "name": "ZeusManaBoltBoon", "rarity": "Common", "stackNum": 1 }
     ],
+    "elementEssences": { "Fire": 0, "Air": 0, "Earth": 1, "Water": 0 },
     "chaosCurses": [],
     "chaosBlessings": [],
     "keepsake": {
@@ -7625,5 +7626,5 @@
       }
     }
   ],
-  "planFingerprint": "f29b32f7"
+  "planFingerprint": "6778a03d"
 }

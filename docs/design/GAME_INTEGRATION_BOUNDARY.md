@@ -428,6 +428,10 @@ state; assembly translates it, selecting and renaming fields. It carries:
   `EchoIncreaseStats` fields, and an Experimental Hammer's remaining uses.
   Traits native `StartNewRun` installs from the loadout are omitted, and so is
   the Spell, which `hex` carries;
+- `elementEssences`: collected Essence pickups and resource points per base
+  element, which the module installs as that many hidden `<Element>Essence`
+  traits; an `ElementalEssence` counts the same as one of each. Creation's
+  elements come from its installed blessing;
 - active Chaos curses with their remaining uses and blessing (`OnExpire`), and
   matured blessings with `FromChaosKeepsake`;
 - the keepsake: `KeepsakeCache`, `BlockedKeepsakes`, Fig Leaf's
