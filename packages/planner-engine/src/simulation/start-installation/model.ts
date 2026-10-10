@@ -186,14 +186,12 @@ export interface StartRunRecords {
 export interface StartBiomeRecords {
   readonly form: 'postReset' | 'current';
   readonly biomeUseRecord: Readonly<Record<string, number>>;
-  readonly lootBiomeRecord: Readonly<Record<string, number>>;
   readonly forfeitConsumed: boolean;
   readonly figLeafActivatedThisBiome: boolean;
 }
 
 export interface StartInstallationCounters {
   readonly roomHistoryOrdinal: number;
-  readonly runDepthCache: number;
   readonly routeEncounterDepth: number;
   readonly biomeDepthCache: number;
   readonly biomeEncounterDepth: number;
@@ -216,10 +214,11 @@ export interface StartRewardStore {
  * predecessor's, before the start room is created.
  */
 export interface StartRewardStores {
-  /** Stores exact across every branch; untouched stores stay native-fresh. */
+  /**
+   * Stores exact across every branch; untouched stores and stores that differ
+   * by branch stay native-fresh.
+   */
   readonly stores: readonly StartRewardStore[];
-  /** Stores that differ by branch, left for the game to build fresh. */
-  readonly omittedStoreKeys: readonly string[];
 }
 
 export interface StartMaxStats {

@@ -660,6 +660,10 @@ name. `HandleLootPickup` separately indexes `LootTypeHistory` and
 `LootBiomeRecord` by the concrete loot object's name. A `Boon` store entry is
 therefore not written to loot history as `Boon`; after offer resolution, the
 picked-up source such as `ApolloUpgrade` is the observed loot identity.
+No script reads `LootBiomeRecord`: it is initialized by `RunStateInit`,
+written by `HandleLootPickup` (`InteractLogic.lua:718`) and reset by
+`EndBiomeRecords` (`RunLogic.lua:399, 1913`), so nothing installs it into a
+fresh run.
 
 Phase 2.6 must normalize the following distinct declarations or derived
 records:

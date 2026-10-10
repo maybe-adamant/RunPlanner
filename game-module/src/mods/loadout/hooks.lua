@@ -95,7 +95,7 @@ function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         if state == nil then return base(hero, keepsakeKey, args) end
         local key = keepsakeKey or (_G.GameState and _G.GameState.LastAwardTrait)
         local start = state.plan and state.plan.startState
-        if startDepth > 0 and start ~= nil and practice.supported(start) and state.state == "starting" then
+        if startDepth > 0 and start ~= nil and state.state == "starting" then
             -- A Practice mode start equips the start state's keepsake at its
             -- rank, without the acquire effect the planner already counted. A
             -- disagreeing configuration equips natively and is rejected at run

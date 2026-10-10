@@ -50,7 +50,7 @@ describe('mid-run start installation', () => {
     expect(installation).toMatchObject({
       startRoomGameName: 'G_Intro',
       route: { routeKey: 'Underworld', enteredBiomes: 1, visitedBiomeKeys: ['F'] },
-      biomeRecords: { form: 'postReset', biomeUseRecord: {}, lootBiomeRecord: {} },
+      biomeRecords: { form: 'postReset', biomeUseRecord: {} },
       runRecords: {
         useRecord: terminal!.rewardHistory.useRecord,
         lootTypeHistory: terminal!.rewardHistory.lootTypeHistory,
@@ -60,7 +60,6 @@ describe('mid-run start installation', () => {
     const counters = f.history.afterTransition.ledgers.counters;
     expect(installation.counters).toMatchObject({
       roomHistoryOrdinal: counters.roomHistoryOrdinal,
-      runDepthCache: counters.roomHistoryOrdinal + 1,
       routeEncounterDepth: counters.routeEncounterDepth,
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,
@@ -97,7 +96,6 @@ describe('mid-run start installation', () => {
       biomeRecords: {
         form: 'current',
         biomeUseRecord: state!.rewardHistory.biomeUseRecord,
-        lootBiomeRecord: state!.rewardHistory.lootBiomeRecord,
       },
     });
     expect(installation.roomHistory).toHaveLength(installation.counters.roomHistoryOrdinal);
@@ -212,7 +210,7 @@ describe('mid-run start installation', () => {
       expect(result).toMatchObject({
         availability: 'available',
         installation: {
-          rewardStores: { stores: exact, omittedStoreKeys: [ranged!.storeKey] },
+          rewardStores: { stores: exact },
         },
       });
     });

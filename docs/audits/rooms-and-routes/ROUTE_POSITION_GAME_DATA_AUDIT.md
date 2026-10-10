@@ -2,8 +2,8 @@
 
 This audit owns source-backed starting-room, completion-room and NPC effect
 profiles whose meaning depends on itinerary position rather than physical
-biome identity, route-mode content restrictions, and the fresh-profile first
-attempt. Sources are the installed Hades II scripts; source inspection does not
+biome identity, route-mode content restrictions, the fresh-profile first
+attempt, and starting a run at a later biome. Sources are the installed Hades II scripts; source inspection does not
 constitute live Dream Dive verification.
 
 ## Biome order
@@ -217,6 +217,51 @@ Eris ([room action order](ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-require
 enemy introductions ([composition matrix](COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)),
 boss choices ([boss decisions](../game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#boss-decisions))
 and the Fields bridge ([H rules](../../biomes/H_GAME_RULES.md)).
+
+## Later-biome run start
+
+Debug and Chaos Trial bounties start a run at a later biome through
+`StartOver` → `StartNewRun` with `RunOverrides`, which native writes onto the
+fresh `CurrentRun` before hero creation (`BountyData.lua:162-232`,
+`RunLogic.lua:449-451`). They leave `RoomHistory` empty, so native depth
+restarts.
+
+On an Intro the game itself runs `EndBiomeRecords`, resetting the biome
+records and biome encounter depth; advances `EnteredBiomes` and
+`BiomeVisitOrder`, grants a `BiomeStartRoom`'s Tight Deadline allowance and
+runs the keepsake biome-start effects (`RoomLogic.lua:1205-1293`); calls
+`ChooseNextRewardStore`; and, in I, initializes the Clockwork counters. The
+Intro's reward and encounter are chosen while the previous biome's records are
+still live. Run-wide state is never reinitialized at a biome entry:
+`RoomHistory`, encounter caches and depths, room counts, `UseRecord`,
+`LootTypeHistory`, `ConsumableRecord`, `RewardStores`, `RewardPriorities`, the
+last Devotion and Well depths, `Blacklist` and talent points. Run depth is
+`1 + #RoomHistory`, and biome depth counts back to the last record with a
+`NextRoomSet` (`RunLogic.lua:GetRunDepth`, `GetBiomeDepth`);
+`RoomSaveWhitelist` (`SaveLogic.lua:86-114`) is the record shape native
+already tolerates.
+
+Every map load runs `DoPatches`, whose `UpdateRunHistoryCache` re-derives
+`RunDepthCache` and `BiomeDepthCache` from `RoomHistory` and the current room
+(`RoomLogic.lua:139`, `PatchLogic.lua:687-689`); `StartRoom` keeps those
+values (`RoomLogic.lua:1081`). A depth cache written between `StartNewRun`
+and the map load therefore never reaches `StartRoom`. `DoPatches` also sets
+`PrevRun` to the last `RunHistory` entry (`PatchLogic.lua:13-17`).
+
+A clear runs `RecordRunCleared` and `RecordRunStats`: the `ClearedWith*`
+tables, depth, fastest-clear, lifetime trait and boss difficulty records
+(`RunLogic.lua:1945-2120`). A death runs `KillHero`, which calls
+`RecordRunStats` and writes inline records (`DeathLoopLogic.lua:36-240`). The
+ended run is appended to `RunHistory` by `EndRun`, which `StartOver` calls as
+the next run begins (`RunLogic.lua:1848-1855`). Writes made during play (rooms
+entered, kills, dialogue, codex, `TraitsTaken`) and `CheckProgressAchievements`,
+which runs on every map load (`RoomLogic.lua:226`), are part of play; platform
+achievements can unlock irreversibly.
+
+Planner disposition: the
+[Practice mode start](../../design/GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)
+installs a stub `RoomHistory` and the run-wide records the planner holds
+exactly, and its only record change is removing the run from `RunHistory`.
 
 ## Coverage boundary
 

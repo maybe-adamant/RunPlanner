@@ -478,15 +478,47 @@ exists: the module writes them before native `CreateRoom`, the stores after
 `InitializeRewardStores` (`RunLogic.lua:502-506`), so the Intro's own reward
 draw, priorities and encounter choice read and update them natively. A
 Preboss's captured state already includes its own creation, so the module
-writes `RewardStores`, `RewardPriorities`, `UseRecord`, `LootTypeHistory`,
-`ConsumableRecord`, `EncounterDepth` and `biome` after native `CreateRoom`
-returns and before `StartRoom`, replacing whatever creation wrote. Creation
-records the Preboss encounter but draws no store entry, since `ForcedFirstReward`
-returns first (`RewardLogic.lua:89-101`); depths advance only in
-`StartEncounter`.
+writes the run-wide records and `biome` after native `CreateRoom` returns and
+before `StartRoom`, replacing whatever creation wrote. Creation draws no store
+entry for a Preboss
+([room contacts](../audits/game-execution-contacts/ROOM_FEATURES_AND_ACTIONS.md#published-presence-as-a-native-construction-input)),
+and depths advance only in `StartEncounter`.
+
+The `biome` section maps onto native fields: `BiomeEncounterDepth` and
+`BiomeUseRecord` directly; Forfeit's consumed use as `BiomeBoonSkipCount` 1,
+its single rank's allowance (`ShrineLogic.lua:918-921`); the Fig Leaf flag as
+`ActivatedThisBiome` on the held `PersistentDionysusSkipKeepsake`; and I's
+counters as `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`, which
+`InitClockworkGoalReward` would have set at the Intro. `BiomeDepthCache` is
+not written: the map load before `StartRoom` derives it from the stub history
+([route-position audit](../audits/rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md#later-biome-run-start)),
+and the self-check compares it with the published value. A Preboss is not a
+`BiomeStartRoom`, so its `StartRoom` grants no Tight Deadline time; while the
+vow is active and not disabled, the module adds the vow's allowance to
+`BiomeTime`. The module then generates the Preboss's shop with
+`RunShopGeneration`, as native `LeaveRoom` would for every next room, binding
+the global `roomData` to the start room's data for the call. Weather in F and
+N is absent on a Preboss start.
 
 Unknown state is not published and starts as a fresh install leaves it:
-timers, armor, pools, spell charges, rerolls and Personal Loan gold.
+timers, including the Expiring timer and Evade Evade Evade; armor, with Icarus
+armor boons intact; the Ghost Onion, Silver Wheel, Mist Veil and Hades
+lifesteal pools; spell charges, refilled including `BonusSpellUses`; rerolls;
+Personal Loan gold; Last Gasp eligibility; and the last Challenge depth. Under
+the Boon Mana Reserve vow, installed boons hold no reserved Magick. Current
+health is set to the maximum. An Opening's weather is whatever the native
+Intro produces. An I Opening leaves Clockwork to the native Intro; the plan's
+door rewards are forced as in a full run.
+
+Death Defiance comes from its native sources: run start adds the keepsake,
+familiar and Arcana charges, and installed Chaos blessings add theirs. The
+module adds the charges that only acquire functions add, Athena's
+`FocusLastStandBoon` and the Circe familiar multiplier's. Every charge starts
+unused. Dropping `FromLoot` is the only suppressed acquisition effect, and the
+install undoes only its own `TraitsTaken` entries and max-stat presentation;
+`GameState` writes made during play and achievements are real play. The
+[trait audit](../audits/game-execution-contacts/TRAITS_AND_OFFERS.md#re-creating-held-traits)
+owns the re-creation facts.
 
 The decoders check that the start occurrence is selected and matches the
 point, its biome and room name: an Opening's occurrence is its biome's first
@@ -499,23 +531,31 @@ counters exactly for I. Execution's route cursor starts at the start
 occurrence's index in `selectedOccurrenceIds`; earlier occurrences are never
 realized.
 
-For an Opening the module installs inside native `StartNewRun`: the keepsake
-at its `EquipKeepsake`, once the GameState loadout agrees; the hero's state
-when `EquipMetaUpgrades` returns; the records when `InitializeRewardStores`
-returns; the gold after `StartNewRun` returns. `CreateRoom` only prepares the
-start room for execution. The start room's `SetupHeroObject` repeats native
-first-room hero setup, which a non-empty `RoomHistory` skips; the run records
-its start room and history length, so the setup also repeats after Save & Quit
-and while execution is passive. The published maxima are checked right after
-that setup, before the Intro's own room-start effects (a Centaur threshold, an
-Echo replay) change them; the existing admission conformance families are
-checked at `StartRoomPresentation`. A mismatch makes execution passive, an
-install or self-check error is an executor fault, and the run continues
-natively either way. Conformance stays legality-only: the installed values are
-inputs, not new room-exit facts. The run's lifecycle is native except that the
-module removes the run from `RunHistory` before native `EndRun` strips the
-history by each run's distance from the end, and sets `PrevRun` to the last
-recorded run as a reload would; clear-time and depth records still write.
+The module installs inside native `StartNewRun`: the keepsake at its
+`EquipKeepsake`, once the GameState loadout agrees; the hero's state when
+`EquipMetaUpgrades` returns; when `InitializeRewardStores` returns, an
+Opening's records and, at either point, Barren's removal of the Arcana, after
+native Death Defiance and rerolls and before native starting gold; and, after
+`StartNewRun` returns with the start room created, a Preboss's records,
+`biome` section, Tight Deadline allowance and shop, then the gold.
+`CreateRoom` only prepares the start room for execution. A Dream Preboss is
+not a biome entry: it enters without the Dream biome entrance, and
+`PrevDreamBiome` is the biome before its own. The start room's
+`SetupHeroObject` repeats native first-room hero setup, which a non-empty
+`RoomHistory` skips; the run records its start room and history length, so
+the setup also repeats after Save & Quit and while execution is passive. The
+published maxima, and a Preboss's biome depth, are checked right after that
+setup, before the Intro's own room-start effects (a Centaur threshold, an Echo
+replay) change the maxima; the existing admission conformance families are
+checked at `StartRoomPresentation` against the start room's `roomEntered`
+frame, after an Opening's biome-start effects or a Preboss's ordinary
+room-start effects. A mismatch makes execution passive, an install or
+self-check error is an executor fault, and the run continues natively either
+way. Conformance stays legality-only: the installed values are inputs, not new
+room-exit facts. The run's lifecycle is native except that the module removes
+the run from `RunHistory` before native `EndRun` strips the history by each
+run's distance from the end, and sets `PrevRun` to the last recorded run as a
+reload would; clear-time and depth records still write.
 
 ### Content fingerprint
 

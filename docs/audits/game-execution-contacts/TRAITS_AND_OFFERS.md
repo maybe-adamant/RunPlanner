@@ -178,6 +178,40 @@ terminal, and the dispatch-only call must not retire the owner. Purchased and
 generated Pom Slices use this same path, without a purchase-specific level
 implementation.
 
+## Re-creating held traits
+
+These facts govern installing a planned hero into a fresh run (the
+[Practice mode start](../../design/GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)).
+
+- There is no bulk restore. Save load deserializes `Hero` as is, and
+  `RoomLogic.lua:SetupHeroObject` re-derives only engine properties. The Lua
+  tables `TraitLogic.lua:AddTraitData` fills (modifiers, `WeaponDataOverride`,
+  `EffectMultipliers`, ammo) are not rebuilt, so `AddTraitData` must run;
+  inserting into `Hero.Traits` directly is unsafe.
+- The game re-creates a trait with `AddTraitToHero` without `FromLoot`
+  (`IncreaseTraitLevel`, the rarity upgrades, `PatchLogic.lua`). `FromLoot`
+  alone gates `AcquireFunctionName`, `HealOnAcquire` and the store pin
+  (`TraitLogic.lua:901-907`).
+- Not gated by `FromLoot`: `GameState.TraitsTaken`, which drives Fated List
+  quests, is set unconditionally (`TraitLogic.lua:888`); max-stat
+  presentation text fires; a declaration's `AddLastStand`, such as
+  `ChaosLastStandBlessing`'s Death Defiance, is added unconditionally
+  (`TraitLogic.lua:893-894`); and `GetProcessedTraitData` draws from the
+  global RNG.
+- Several skipped acquire functions change another trait or run field
+  persistently, and nothing re-derives the result. Premium Service
+  (`WeaponUpgradeBoon`, `TraitLogic.lua:UpgradeAspect`) removes the aspect and
+  re-adds it one rank above the profile rank; removing the boon does not undo
+  it. `PowersLogic.lua:AddRandomHammer` gives an Experimental Hammer
+  `UsesAsEncounters` and an `OnExpire`, without which it never expires.
+  `RunLogic.lua:StartNewRun` overwrites `NumTalentPoints` from held traits.
+- Death Defiance is never recomputed: each source adds it once when equipped
+  (`CombatLogic.lua:AddLastStand`, which stores its args and skips the cap
+  check when silent). `StartNewRun` adds the keepsake, familiar and Arcana
+  charges; Chaos blessings add theirs on install. Athena's
+  `FocusLastStandBoon` and Circe's familiar multiplier add theirs only
+  through acquire functions.
+
 ## Trait removal contacts
 
 Purging Pool sales and Nemesis trait trades publish exact trait keys. The Pool
