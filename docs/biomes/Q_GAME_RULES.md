@@ -71,8 +71,11 @@ owns the atomic takeover. A consumer requiring native force provenance or
 weighted selection would need that distinction restored explicitly.
 
 First and second forks expose two physical doors; other declarations retain
-their own one- or two-door facts. Selection follows the common normal-exit
-contract. Fixed Boss declarations are completion rooms, never ordinary room
+their own one- or two-door facts. Unlike other biomes' minibosses, Q minibosses
+declare no `MaxCreationsThisRun`; only `BaseQ`'s entered-room
+`MaxAppearancesThisBiome = 1` applies (`RoomDataQ.lua:22`), so each fork door
+draws independently and both doors may name the same miniboss. Selection
+follows the common normal-exit contract. Fixed Boss declarations are completion rooms, never ordinary room
 candidates.
 
 Q ordinary batches own no Run/Meta base store. Rewardless combat preserves its
