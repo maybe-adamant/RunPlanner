@@ -10,6 +10,7 @@ commits, not these checklists.
 - [Victory summary](VICTORY_SUMMARY_LIVE_ACCEPTANCE.md)
 - [Editor layout](EDITOR_LAYOUT_LIVE_ACCEPTANCE.md)
 - [Loadout install](LOADOUT_INSTALL_LIVE_ACCEPTANCE.md)
+- [Room guide](ROOM_GUIDE_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete

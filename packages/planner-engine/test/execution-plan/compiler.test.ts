@@ -2039,6 +2039,7 @@ describe('execution-plan compiler and codec', () => {
     );
     if (occurrence === undefined) throw new Error('fixture lacks an associated guide row');
     const associated = occurrence.roomGuide.find((row) => row.transactionOwner !== undefined)!;
+    const associatedOwner = associated.transactionOwner;
 
     associated.transactionOwner = 'missing-owner';
     refreshWireFingerprint(wire);
@@ -2050,7 +2051,28 @@ describe('execution-plan compiler and codec', () => {
     expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
 
     occurrence.roomGuide.pop();
-    (associated.description as Record<string, unknown>).unexpected = true;
+    const shrinePurchase = {
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+      rewardType: 'MaxHealthDrop',
+      rushed: true,
+    };
+    associated.description = { ...shrinePurchase };
+    refreshWireFingerprint(wire);
+    expect(() => decodeExecutionPlan(wire)).not.toThrow();
+    // A real occurrence transaction owner is still refused on a Shrine row.
+    expect(associatedOwner).toBeDefined();
+    associated.transactionOwner = associatedOwner!;
+    refreshWireFingerprint(wire);
+    expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+    delete associated.transactionOwner;
+    for (const invalid of [{ rushed: 'yes' }, { generationKey: 'initial:healing' }]) {
+      associated.description = { ...shrinePurchase, ...invalid };
+      refreshWireFingerprint(wire);
+      expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+    }
+
+    associated.description = { ...shrinePurchase, unexpected: true };
     refreshWireFingerprint(wire);
     expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
   });

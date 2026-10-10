@@ -1,5 +1,5 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
-import type { RoomActionReference } from '../../authored-project/model';
+import { hermesShrineInitialSlotKey, type RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
@@ -148,8 +148,20 @@ function descriptionFor(
       });
     case 'interactEris':
       return Object.freeze({ kind: reference.kind });
-    case 'purchaseHermesShrineOffer':
-      throw new Error('room guide does not publish Shrine purchase actions');
+    case 'purchaseHermesShrineOffer': {
+      const shrine = room.hermesShrine;
+      const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
+      const offer =
+        slotKey === undefined ? shrine?.travelDealRefill?.offer : shrine?.offerBySlot[slotKey];
+      if (offer === undefined || offer === null)
+        throw new Error(`room guide Shrine purchase ${reference.generationKey} lacks its offer`);
+      return Object.freeze({
+        kind: reference.kind,
+        generationKey: reference.generationKey,
+        rewardType: offer.rewardType,
+        rushed: reference.rushed,
+      });
+    }
   }
 }
 
@@ -193,8 +205,6 @@ export function assembleExecutionRoomGuide(
   return Object.freeze(
     room.roomLifecycleTimeline.entries.flatMap((entry) => {
       if (entry.kind !== 'action') return [];
-      // Shrine purchases and their rush publish through the room Overview.
-      if (entry.action.reference.kind === 'purchaseHermesShrineOffer') return [];
       const owner = semanticAddressKey(entry.action.owner);
       const transaction = transactionsByOwner.get(owner);
       const convertedReward = timePiecedReward(entry.action.owner);

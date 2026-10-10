@@ -776,7 +776,17 @@
         }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
-      "roomGuide": [],
+      "roomGuide": [
+        {
+          "key": "[\"purchaseHermesShrineOffer\",\"initial:first\"]",
+          "description": {
+            "kind": "purchaseHermesShrineOffer",
+            "generationKey": "initial:first",
+            "rewardType": "HealBigDrop",
+            "rushed": false
+          }
+        }
+      ],
       "doors": {
         "owner": "[\"exitDecision\",\"Dream\",\"Q\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-q-ordinary\"}]",
         "kind": "batch",
@@ -1324,5 +1334,5 @@
       }
     }
   ],
-  "planFingerprint": "683f8962"
+  "planFingerprint": "8b526d18"
 }

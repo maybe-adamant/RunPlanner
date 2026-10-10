@@ -664,6 +664,27 @@ function TestProtocol.testRoomGuideRequiresUniqueKeysAndLocalTransactionOwners()
     plan.occurrences[1].roomGuide[1].description.unexpected = true
     refreshFingerprint(plan)
     lu.assertNil(protocol.decode(plan))
+
+    local function shrinePlan(extra, transactionOwner)
+        local value = minimalPlan({ {
+            kind = "acquisition", owner = "source", sourceOwner = "source", reward = reward(),
+            producerLifecycleKey = "pickup", roles = { role() }, window = window(),
+        } })
+        local description = { kind = "purchaseHermesShrineOffer", generationKey = "initial:first",
+            rewardType = "MaxHealthDrop", rushed = true }
+        for key, field in pairs(extra or {}) do description[key] = field end
+        value.occurrences[1].roomGuide = tagged({ {
+            key = "shrine", transactionOwner = transactionOwner, description = description,
+        } }, "roomGuide", true)
+        refreshFingerprint(value)
+        return value
+    end
+    decoded, errorMessage = protocol.decode(shrinePlan())
+    lu.assertNotNil(decoded, errorMessage)
+    lu.assertNil(protocol.decode(shrinePlan(nil, "source")))
+    for _, invalid in ipairs({ { rushed = "yes" }, { generationKey = "initial:healing" }, { unexpected = true } }) do
+        lu.assertNil(protocol.decode(shrinePlan(invalid)))
+    end
 end
 
 local function minimalShrinePlan()

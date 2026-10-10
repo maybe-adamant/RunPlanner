@@ -11,6 +11,7 @@ function composition.bind(root, moduleVersion, buildId)
     local route = import("mods/route/session.lua")
     local ephyra = import("mods/navigation/ephyra.lua")
     local room = import("mods/room/coordinator.lua")
+    local shrineInventory = import("mods/room/features/inventory/hermes_shrine.lua")
     local session = import("mods/runtime/session.lua")
     local executionState = session.create()
 
@@ -69,6 +70,10 @@ function composition.bind(root, moduleVersion, buildId)
                 kind = "room",
                 occurrence = active.occurrence,
                 isCompleted = active.isCompleted,
+                shrineProgress = function(generationKey)
+                    return shrineInventory.purchaseProgress(
+                        currentRun and currentRun.CurrentRoom and currentRun.CurrentRoom.Store, generationKey)
+                end,
                 navigation = navigation,
             }
         end

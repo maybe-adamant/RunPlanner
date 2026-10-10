@@ -13,6 +13,11 @@ names.occupants = {
     O_MiniBoss01 = "Charybdis", O_MiniBoss02 = "The Yargonaut",
     P_MiniBoss01 = "Talos", P_MiniBoss02 = "Mega-Dracon",
     Q_MiniBoss02 = "Brute", Q_MiniBoss03 = "Tail", Q_MiniBoss04 = "Eye", Q_MiniBoss05 = "Stalker",
+    -- "Scylla" shortens the catalog's "Scylla and the Sirens".
+    F_Boss01 = "Hecate", F_Boss02 = "Hecate", G_Boss01 = "Scylla", G_Boss02 = "Scylla",
+    H_Boss01 = "Cerberus", H_Boss02 = "Cerberus", I_Boss01 = "Chronos",
+    N_Boss01 = "Polyphemus", N_Boss02 = "Polyphemus", O_Boss01 = "Eris", O_Boss02 = "Eris",
+    P_Boss01 = "Prometheus", Q_Boss01 = "Typhon", Q_Boss02 = "Typhon", C_Boss01 = "Zagreus",
 }
 
 local biomes = { F = "Erebus", G = "Oceanus", H = "Fields", I = "Tartarus",
@@ -37,21 +42,32 @@ function names.display(key, fallback)
     return fallback
 end
 
+function names.biome(gameName)
+    local key = tostring(gameName):match("^(%u)_")
+    return key and biomes[key] or nil
+end
+
+-- Room name without its biome, or nil when the room has no biome-relative form.
+function names.localRoom(gameName)
+    local biome, kind, number = tostring(gameName):match("^(%u)_([%a]+)(%d*)$")
+    if not biomes[biome] then return nil end
+    if names.occupants[gameName] then return names.occupants[gameName] end
+    if not kinds[kind] then return nil end
+    local suffix = (kind == "Combat" or kind == "Sub" or kind == "MiniBoss" or kind == "Opening")
+        and number ~= "" and (" " .. tonumber(number)) or ""
+    return kinds[kind] .. suffix
+end
+
 function names.room(gameName)
     local localized = names.display(gameName, nil)
     if localized then return localized end
     local chaos = tostring(gameName):match("^Chaos_(%d+)$")
-    if chaos then return "Chaos · " .. chaos end
+    if chaos then return "Chaos " .. tonumber(chaos) end
     local dream = tostring(gameName):match("^Dream_PostBoss(%d+)$")
-    if dream then return "Dream · Postboss " .. dream end
-    local biome, kind, number = tostring(gameName):match("^(%u)_([%a]+)(%d*)$")
-    if biomes[biome] and names.occupants[gameName] then
-        return biomes[biome] .. " · " .. names.occupants[gameName]
-    end
-    if biomes[biome] and kinds[kind] then
-        local suffix = (kind == "Combat" or kind == "Sub" or kind == "MiniBoss" or kind == "Opening")
-            and number ~= "" and (" " .. number) or ""
-        return biomes[biome] .. " · " .. kinds[kind] .. suffix
+    if dream then return "Dream Postboss " .. tonumber(dream) end
+    local biome, roomName = names.biome(gameName), names.localRoom(gameName)
+    if biome and roomName then
+        return biome == roomName and roomName or (biome .. " " .. roomName)
     end
     return "Current room"
 end
