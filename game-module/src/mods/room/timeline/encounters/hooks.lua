@@ -53,12 +53,12 @@ end
 local function chooseForcedEncounter(base, currentRun, nativeRoom, args, declaration)
     if type(currentRun) ~= "table" or declaration == nil then return nil end
     local priorRunForce = currentRun.ForceNextEncounterData
-    local priorGlobalForce = _G.ForceNextEncounter
+    local priorGlobalForce = game.ForceNextEncounter
     currentRun.ForceNextEncounterData = declaration
-    _G.ForceNextEncounter = nil
+    game.ForceNextEncounter = nil
     local ok, result = pcall(base, currentRun, nativeRoom, args)
     currentRun.ForceNextEncounterData = priorRunForce
-    _G.ForceNextEncounter = priorGlobalForce
+    game.ForceNextEncounter = priorGlobalForce
     if not ok then error(result, 0) end
     return result
 end

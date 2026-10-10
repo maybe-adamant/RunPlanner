@@ -59,6 +59,13 @@ local function nativeWorld(base, start)
         return declaration
     end })
     local function record(...) log[#log + 1] = table.concat({ ... }, ":") end
+    -- The game's own globals, apart from the module environment: native
+    -- functions read what the install sets only through this table.
+    local presentationOff = function() error("max-stat presentation is not part of the install") end
+    local roomData = { N_Opening01 = { NextRoomSet = { "N" } }, N_PostBoss01 = { NextRoomSet = { "O" } },
+        I_PreBoss02 = { Name = "I_PreBoss02" } }
+    local nativeGlobals = { RoomData = roomData, MaxHealthIncreaseText = presentationOff,
+        BonusHealthAndManaPresentation = presentationOff, InCombatTextArgs = presentationOff }
     local function index(trait)
         hero.TraitDictionary[trait.Name] = hero.TraitDictionary[trait.Name] or {}
         table.insert(hero.TraitDictionary[trait.Name], trait)
@@ -82,8 +89,8 @@ local function nativeWorld(base, start)
     local bindings = {
         GameState = gameState,
         TraitData = traitData,
-        RoomData = { N_Opening01 = { NextRoomSet = { "N" } }, N_PostBoss01 = { NextRoomSet = { "O" } },
-            I_PreBoss02 = { Name = "I_PreBoss02" } },
+        game = nativeGlobals,
+        RoomData = roomData,
         TraitRarityData = { RarityUpgradeOrder = { "Common", "Rare", "Epic", "Heroic" } },
         MetaUpgradeCardData = {}, MetaUpgradeData = {},
         SpellData = { PotionSpell = { Name = "PotionSpell", TraitName = "SpellPotionTrait" } },
@@ -104,7 +111,8 @@ local function nativeWorld(base, start)
             return gameState.ShrineUpgrades[name] or 0
         end,
         RunShopGeneration = function(room)
-            record("shop", room.Name, tostring(_G.roomData and _G.roomData.Name))
+            local mapRoom = nativeGlobals.roomData
+            record("shop", room.Name, tostring(mapRoom and mapRoom.Name))
         end,
         GetProcessedTraitData = function(args)
             local data = { Name = args.TraitName, Rarity = args.Rarity, StackNum = args.StackNum }
@@ -125,6 +133,9 @@ local function nativeWorld(base, start)
             lu.assertNil(args.FromLoot)
             gameState.TraitsTaken[trait.Name] = true
             index(trait)
+            for _, change in ipairs(trait.PropertyChanges or {}) do
+                if change.LuaProperty == "MaxHealth" then nativeGlobals.MaxHealthIncreaseText() end
+            end
             return trait
         end,
         EquipKeepsake = function(_, name, args)
@@ -154,9 +165,9 @@ local function nativeWorld(base, start)
         UpdateMoneyUI = function() record("moneyUI") end,
         ValidateMaxHealth = function() validate("MaxHealth") end,
         ValidateMaxMana = function() validate("MaxMana") end,
-        MaxHealthIncreaseText = function() error("max-stat presentation is not part of the install") end,
     }
-    return { log = log, hero = hero, run = run, gameState = gameState, bindings = bindings }
+    return { log = log, hero = hero, run = run, gameState = gameState, bindings = bindings,
+        nativeGlobals = nativeGlobals, presentationOff = presentationOff }
 end
 
 local function recordingHexTree(log)
@@ -274,6 +285,9 @@ function TestPracticeStart.testOpeningInstallsBeforeNativeRerollsAndRecordsBefor
     lu.assertTrue(position(log, "add:RoomRewardMaxHealthTrait:nil") < rerolls)
     lu.assertTrue(position(log, "hexTree:SpellPotionTrait:Lung") < rerolls)
     lu.assertTrue(rerolls < position(log, "initializeRewardStores"))
+    -- Native presentation is silenced in the game's globals, then restored.
+    lu.assertIs(world.nativeGlobals.MaxHealthIncreaseText, world.presentationOff)
+    lu.assertIs(world.nativeGlobals.InCombatTextArgs, world.presentationOff)
 
     local hero, run = world.hero, world.run
     local health = hero.TraitDictionary.RoomRewardMaxHealthTrait[1]
@@ -504,7 +518,7 @@ function TestPracticeStart.testPrebossRecordsFollowItsCreation()
     for _, entry in ipairs(log) do if entry:match("^shop:") then shops = shops + 1 end end
     lu.assertEquals(shops, 1)
     lu.assertTrue(position(log, "createRoom") < position(log, "shop:I_PreBoss02:I_PreBoss02"))
-    lu.assertNil(_G.roomData)
+    lu.assertNil(world.nativeGlobals.roomData)
     lu.assertEquals(world.gameState.Resources.Money, 10)
     lu.assertEquals(state.practiceStart.phase, "started")
 end
@@ -546,11 +560,11 @@ function TestPracticeStart.testPrebossShopErrorRestoresTheGlobalRoomData()
     local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 }, start)
     world.bindings.RunShopGeneration = function() error("shop failed", 0) end
     local prior = { Name = "Hub_Main" }
-    world.bindings.roomData = prior
+    world.nativeGlobals.roomData = prior
     local restore = nativeGame.install(world.bindings)
     _G.CurrentRun = world.run
     local ok, errorValue = pcall(install.prebossRoom, start, { Name = start.roomName })
-    local roomData = _G.roomData
+    local roomData = world.nativeGlobals.roomData
     restore()
     lu.assertFalse(ok)
     lu.assertEquals(errorValue, "shop failed")
@@ -724,22 +738,23 @@ function TestPracticeStart.testEndRunRemovesOnlyAPracticeRun()
         for index, run in ipairs(gameState.RunHistory) do strip[run.Name] = #gameState.RunHistory - index end
         stripped[#stripped + 1] = strip
     end
-    local restore = nativeGame.install({ GameState = gameState, PrevRun = earlier,
+    local nativeGlobals = { PrevRun = earlier }
+    local restore = nativeGame.install({ GameState = gameState, game = nativeGlobals,
         StripRunHistoryForSave = function() return callbacks.StripRunHistoryForSave(nil, {}, nativeStrip) end })
     local function nativeEndRun(run)
         table.insert(gameState.RunHistory, run)
         gameState.CompletedRunsCache = #gameState.RunHistory
-        _G.PrevRun = run
+        nativeGlobals.PrevRun = run
         _G.StripRunHistoryForSave()
     end
     callbacks.EndRun(nil, {}, nativeEndRun, practice)
     lu.assertEquals(gameState.RunHistory, { earlier })
     lu.assertEquals(gameState.CompletedRunsCache, 1)
-    lu.assertIs(_G.PrevRun, earlier)
+    lu.assertIs(nativeGlobals.PrevRun, earlier)
     lu.assertEquals(stripped, { { earlier = 0 } })
     local native = { Name = "native" }
     callbacks.EndRun(nil, {}, nativeEndRun, native)
-    local prevRun = _G.PrevRun
+    local prevRun = nativeGlobals.PrevRun
     restore()
     lu.assertEquals(gameState.RunHistory, { earlier, native })
     lu.assertIs(prevRun, native)

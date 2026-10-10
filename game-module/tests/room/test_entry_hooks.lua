@@ -223,7 +223,7 @@ function TestRoomEntryHooks.testOpeningFinalizesLoadoutBeforeForcingNativeCreati
     encounterHooks.attach(module, session, function() return state end, function() end,
         roomCoordinatorModule)
 
-    local priorGame, priorForce = _G.game, _G.ForceNextEncounter
+    local priorGame = _G.game
     local rewardBag = { { Name = "Boon" }, { Name = "WeaponUpgrade" } }
     local currentRun = { RewardPriorities = {}, RewardStores = { RunProgress = rewardBag } }
     _G.game = {
@@ -272,7 +272,7 @@ function TestRoomEntryHooks.testOpeningFinalizesLoadoutBeforeForcingNativeCreati
         { kind = "offer", offerKey = "opening-reward" }))
     lu.assertTrue(roomCoordinatorModule.complete(state, handle))
     lu.assertNil(state.firstMismatch)
-    _G.game, _G.ForceNextEncounter = priorGame, priorForce
+    _G.game = priorGame
 end
 
 function TestRoomEntryHooks.testStartNewGameRoomNameRealizesTheOpeningWithoutARolledReward()
@@ -1198,16 +1198,16 @@ function TestRoomEntryHooks.testEncounterForcingKeepsNativeSetupAndGeneration()
         encounterPhase = function() return active.occurrence.overview.encounterPhases[1] end,
         encounterIsFinal = function() return true end,
     }
-    local priorGame, priorGlobalForce = _G.game, _G.ForceNextEncounter
-    _G.game = { IsEncounterEligible = function() return true end, EncounterData = { OpeningGeneratedF = declaration } }
-    _G.ForceNextEncounter = "DebugEncounter"
+    local priorGame = _G.game
+    _G.game = { IsEncounterEligible = function() return true end, EncounterData = { OpeningGeneratedF = declaration },
+        ForceNextEncounter = "DebugEncounter" }
     encounterHooks.attach(module, session, function() return state end, function() end, roomSession)
 
     local run = { ForceNextEncounterData = { Name = "PriorEncounter" } }
     local nativeRoom = { __runPlannerExecutionRoomId = "opening" }
     local result = callbacks.ChooseEncounter(nil, {}, function(currentRun, room, args)
         lu.assertEquals(currentRun.ForceNextEncounterData, declaration)
-        lu.assertNil(_G.ForceNextEncounter)
+        lu.assertNil(_G.game.ForceNextEncounter)
         lu.assertEquals(room, nativeRoom)
         return { Name = declaration.Name, GeneratedWaves = true, Args = args }
     end, run, nativeRoom, { Source = "test" })
@@ -1215,10 +1215,10 @@ function TestRoomEntryHooks.testEncounterForcingKeepsNativeSetupAndGeneration()
     lu.assertTrue(result.GeneratedWaves)
     lu.assertEquals(result.Args.Source, "test")
     lu.assertEquals(run.ForceNextEncounterData.Name, "PriorEncounter")
-    lu.assertEquals(_G.ForceNextEncounter, "DebugEncounter")
+    lu.assertEquals(_G.game.ForceNextEncounter, "DebugEncounter")
     lu.assertEquals(boundEncounter.native, result)
     lu.assertEquals(boundEncounter.slotKey, "Encounter")
-    _G.game, _G.ForceNextEncounter = priorGame, priorGlobalForce
+    _G.game = priorGame
 end
 
 function TestRoomEntryHooks.testEncounterChoiceUsesStampedDestinationInsteadOfActiveSourceRoom()
