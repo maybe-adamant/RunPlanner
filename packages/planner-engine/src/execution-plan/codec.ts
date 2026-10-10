@@ -7,6 +7,7 @@ import {
   EXECUTION_CATALOG_VERSION,
   EXECUTION_PLAN_FORMAT,
   type ExecutionPlan,
+  type ExecutionKeepsakeRarity,
   type ExecutionStartingKeepsake,
 } from './model';
 import {
@@ -15,6 +16,8 @@ import {
   exact,
   fail,
   object,
+  oneOf,
+  RARITY_UPGRADE_ORDER,
   stringArray,
   stringValue,
   type Dict,
@@ -148,27 +151,35 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     'runModifiers' in record ? runModifiersRecord(record.runModifiers) : undefined;
   const decodedStartingLoadout = startingLoadout(record.startingLoadout);
   const starting = object(record.startingKeepsake, 'execution plan.startingKeepsake');
-  exact(starting, [], ['keepsakeKey', 'equipResults'], 'execution plan.startingKeepsake');
-  if (starting.keepsakeKey === undefined && starting.equipResults !== undefined)
-    fail('execution plan.startingKeepsake.equipResults requires keepsakeKey');
-  const startingKeepsake: ExecutionStartingKeepsake = Object.freeze(
-    starting.keepsakeKey === undefined
-      ? {}
-      : {
-          keepsakeKey: stringValue(
-            starting.keepsakeKey,
-            'execution plan.startingKeepsake.keepsakeKey',
-          ),
-          ...(starting.equipResults === undefined
-            ? {}
-            : {
-                equipResults: equipResults(
-                  starting.equipResults,
-                  'execution plan.startingKeepsake.equipResults',
-                ),
-              }),
-        },
-  );
+  exact(starting, [], ['keepsakeKey', 'rarity', 'equipResults'], 'execution plan.startingKeepsake');
+  if (
+    starting.keepsakeKey === undefined &&
+    (starting.rarity !== undefined || starting.equipResults !== undefined)
+  )
+    fail('execution plan.startingKeepsake.rarity and equipResults require keepsakeKey');
+  let startingKeepsake: ExecutionStartingKeepsake = Object.freeze({});
+  if (starting.keepsakeKey !== undefined) {
+    const keepsakeKey = stringValue(
+      starting.keepsakeKey,
+      'execution plan.startingKeepsake.keepsakeKey',
+    );
+    startingKeepsake = Object.freeze({
+      keepsakeKey,
+      rarity: oneOf<ExecutionKeepsakeRarity>(
+        starting.rarity,
+        RARITY_UPGRADE_ORDER,
+        'execution plan.startingKeepsake.rarity',
+      ),
+      ...(starting.equipResults === undefined
+        ? {}
+        : {
+            equipResults: equipResults(
+              starting.equipResults,
+              'execution plan.startingKeepsake.equipResults',
+            ),
+          }),
+    });
+  }
   const occurrences = Object.freeze(
     array(record.occurrences, 'execution plan.occurrences').map((entry, index) =>
       occurrence(entry, index),

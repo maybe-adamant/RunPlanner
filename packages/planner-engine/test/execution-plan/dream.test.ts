@@ -59,7 +59,11 @@ it('publishes the saved Dream mixed-handoff route through the strict execution c
   expect(plan.extent.biomeKeys).toEqual(['Q', 'F', 'N']);
   expect(
     plan.occurrences
-      .filter((room) => room.resumeBoundary === 'postbossEntry')
+      .filter(
+        (room) =>
+          plan.selectedOccurrenceIds.includes(room.id) &&
+          room.gameName.startsWith('Dream_PostBoss'),
+      )
       .map((room) => room.gameName),
   ).toEqual(['Dream_PostBoss01', 'Dream_PostBoss02', 'Dream_PostBoss03']);
   for (const gameName of ['F_Opening02', 'N_Opening01']) {

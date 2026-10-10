@@ -56,18 +56,22 @@ local function startingKeepsake(value)
     local record, errorMessage = p.exact(
         value,
         {},
-        { "keepsakeKey", "equipResults" },
+        { "keepsakeKey", "rarity", "equipResults" },
         "execution plan.startingKeepsake"
     )
     if not record then return nil, errorMessage end
     if record.keepsakeKey == nil then
-        if record.equipResults ~= nil then
-            return p.fail("execution plan.startingKeepsake.equipResults requires keepsakeKey")
+        if record.rarity ~= nil or record.equipResults ~= nil then
+            return p.fail("execution plan.startingKeepsake.rarity and equipResults require keepsakeKey")
         end
         return record
     end
     if not p.str(record.keepsakeKey, "execution plan.startingKeepsake.keepsakeKey") then
         return p.fail("execution plan has invalid starting keepsake")
+    end
+    if not p.one(record.rarity, { Common = true, Rare = true, Epic = true, Heroic = true },
+        "execution plan.startingKeepsake.rarity") then
+        return p.fail("execution plan.startingKeepsake.rarity is unsupported")
     end
     if record.equipResults ~= nil then
         local _, equipError = rewards.equip(

@@ -399,13 +399,9 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   exact(
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'roomGuide', 'doors'],
-    ['anomaly', 'resumeBoundary', 'roomExitConformance', 'diagnostics', 'suppressedNpcShopping'],
+    ['anomaly', 'roomExitConformance', 'diagnostics', 'suppressedNpcShopping'],
     label,
   );
-  const resumeBoundary =
-    record.resumeBoundary === undefined
-      ? undefined
-      : stringValue(record.resumeBoundary, `${label}.resumeBoundary`);
   const suppressedNpcShopping =
     record.suppressedNpcShopping === undefined
       ? undefined
@@ -419,8 +415,6 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     new Set(suppressedNpcShopping).size !== suppressedNpcShopping.length
   )
     fail(`${label}.suppressedNpcShopping has duplicate families`);
-  if (resumeBoundary !== undefined && resumeBoundary !== 'postbossEntry')
-    fail(`${label}.resumeBoundary is unsupported`);
   const anomaly =
     record.anomaly === undefined ? undefined : object(record.anomaly, `${label}.anomaly`);
   if (anomaly !== undefined)
@@ -509,7 +503,6 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     biomeKey: biomeKey as ExecutionBiomeKey,
     gameName: stringValue(record.gameName, `${label}.gameName`),
     kind: stringValue(record.kind, `${label}.kind`),
-    ...(resumeBoundary === undefined ? {} : { resumeBoundary }),
     ...(parsedAnomaly === undefined ? {} : { anomaly: parsedAnomaly }),
     overview: parsedOverview,
     timeline: parsedTimeline,

@@ -400,7 +400,7 @@ All such effects must be normalized before entering production; an identity
 alone does not justify an unsupported effect transition.
 
 Familiars are a loadout collection: each declares its label, the familiar-shop
-upgrade count a mature save owns for its first trait (all three), and, for
+levels of each upgraded trait, all owned on a mature save (three), and, for
 Frinos and Hecuba, the flat max health or Magick that trait adds per stack. The
 catalog also declares the default familiar. Worry Free declares its acquisition
 max-health roll as a minimum per rarity, scaled from the source bounds, and one

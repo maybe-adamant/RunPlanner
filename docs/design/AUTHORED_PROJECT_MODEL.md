@@ -240,10 +240,10 @@ editable. They do not change simulation, candidates, or encounter eligibility.
 A mature route's loadout requires one catalog `familiarKey`; new routes start
 with the catalog's default familiar, Frinos. A Fresh File route stores `null`,
 like its other native-equipment selections. Familiar-shop upgrades are not
-authored: a mature save owns every stat upgrade, at the catalog-declared rank,
-as keepsakes are fixed at rank III. `ReplaceFamiliar` replaces the identity as
-one route-owned history edit, preserves identity for a no-op, and fails on
-Fresh File.
+authored: a mature save owns every familiar-shop level, at the catalog-declared
+rank, as keepsakes are fixed at rank III. `ReplaceFamiliar` replaces the
+identity as one route-owned history edit, preserves identity for a no-op, and
+fails on Fresh File.
 
 `ReplaceRunModifiers` replaces the complete settings as one route-owned history
 edit, normalizes its value through the same tolerant decode, preserves identity

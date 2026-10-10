@@ -1,7 +1,10 @@
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, FamiliarDeclaration } from '../../catalog-schema';
 import type { TraitHistoryState } from './history/model';
 
 type PickedTraits = Pick<TraitHistoryState, 'previouslyPickedTraitKeys'>;
+
+/** The planner assumes a mature file: every Aspect at rank V, the native `Legendary` level. */
+export const MATURE_ASPECT_RARITY = 'Legendary';
 
 /** A picked trait (Premium Service) permanently raised the equipped aspect to Perfect. */
 export function aspectIsPerfect(catalog: Catalog, history: PickedTraits): boolean {
@@ -18,4 +21,9 @@ export function familiarStackMultiplier(catalog: Catalog, history: PickedTraits)
     if (effect?.kind === 'familiarStackMultiplier') multiplier *= effect.multiplier;
   }
   return multiplier;
+}
+
+/** Native `GetFamiliarTraitStacks` of each upgraded trait on a mature save. */
+export function matureFamiliarTraitStacks(familiar: FamiliarDeclaration): number {
+  return familiar.matureTraitUpgradeCount + 1;
 }

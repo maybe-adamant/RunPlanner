@@ -11,6 +11,7 @@ import {
   MAX_ITEMS,
   numberRecord,
   object,
+  RARITY_UPGRADE_ORDER,
   stringArray,
   stringValue,
   stableJson,
@@ -104,7 +105,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     exact(row, ['key', 'origin', 'rarity'], [], `${label}.arcana.active[${index}]`);
     if (
       !['manual', 'automatic', 'temporary'].includes(row.origin as string) ||
-      !['Common', 'Rare', 'Epic', 'Heroic'].includes(row.rarity as string)
+      !RARITY_UPGRADE_ORDER.includes(row.rarity as string)
     )
       fail(`${label}.arcana.active[${index}] contains unsupported values`);
     return Object.freeze({
@@ -308,8 +309,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       });
     });
   const traitRarity = (value: unknown, nestedLabel: string) => {
-    if (!['Common', 'Rare', 'Epic', 'Heroic'].includes(value as string))
-      fail(`${nestedLabel} is unsupported`);
+    if (!RARITY_UPGRADE_ORDER.includes(value as string)) fail(`${nestedLabel} is unsupported`);
     return value as 'Common' | 'Rare' | 'Epic' | 'Heroic';
   };
   const olympianSources = array(
@@ -429,7 +429,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
   });
   const stone = nullable(keepsakeEffects.stone, 'stone', (row, nestedLabel) => {
     exact(row, ['origin', 'status', 'rank'], [], nestedLabel);
-    if (!['Common', 'Rare', 'Epic', 'Heroic'].includes(row.rank as string))
+    if (!RARITY_UPGRADE_ORDER.includes(row.rank as string))
       fail(`${nestedLabel}.rank is unsupported`);
     return Object.freeze({
       ...parseOrigin(row, nestedLabel),

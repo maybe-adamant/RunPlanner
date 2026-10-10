@@ -16,7 +16,7 @@ function TestNavigationHooks.testPublishedDreamPostbossRecoverySteersTheNextBiom
     local plan = assert(require("mods.protocol.decoder").decode(assert(require("mods.protocol.json").decode(source))))
     local module, _, callbacks = capture()
     local state = { state = "synchronized", plan = plan }
-    navigation.attach(module, stub(), function() return state end, function() end, routeSession, {})
+    local scope = navigation.attach(module, stub(), function() return state end, function() end, routeSession, {})
     local priorRun, priorGameState, priorRemove = _G.CurrentRun, _G.GameState, _G.RemoveValue
     _G.GameState = {}
     local function remove(values, value)
@@ -28,11 +28,13 @@ function TestNavigationHooks.testPublishedDreamPostbossRecoverySteersTheNextBiom
     local checked = 0
     for index, id in ipairs(plan.selectedOccurrenceIds) do
         local occurrence = plan.occurrencesById[id]
-        if occurrence.resumeBoundary == "postbossEntry" then
+        if occurrence.gameName:find("_PostBoss") ~= nil then
             checked = checked + 1
             state.route = assert(routeSession.newAt(plan, index))
             assert(routeSession.enter(state.route, id, occurrence.gameName))
             _G.CurrentRun = { IsDreamRun = true, CurrentRoom = {}, DreamBiomePool = { "H", "F", "N" } }
+            -- A Dream Postboss leaves through native Dream Points, not an offered door.
+            lu.assertTrue(scope.proveOutgoingDoors(state, _G.CurrentRun))
             local expected = ({ "F", "N", "H" })[checked]
             local nativeDraws = 0
             callbacks.SelectNextDreamBiome(nil, {}, function()

@@ -561,10 +561,10 @@ local function minimalPlan(transactions)
         planFingerprint = "00000000",
         routeKey = "Underworld",
         startingLoadout = {
-            weaponKey = "WeaponStaffSwing", aspectKey = "BaseStaffAspect", arcana = {},
-            fear = { configuredRanks = {}, effectiveRanks = {} },
+            weaponKey = "WeaponStaffSwing", aspectKey = "BaseStaffAspect", aspectRarity = "Legendary",
+            arcana = {}, fear = { configuredRanks = {}, effectiveRanks = {} },
         },
-        startingKeepsake = { keepsakeKey = "None" },
+        startingKeepsake = { keepsakeKey = "None", rarity = "Epic" },
         extent = { kind = "configuredPrefix", biomeKeys = { "F" }, terminalBiomeKey = "F" },
         selectedOccurrenceIds = { "opening" },
         resources = { occurrences = { {
@@ -626,7 +626,9 @@ function TestProtocol.testFreshFileOmitsAbsentLoadoutKeys()
     refreshFingerprint(orphan)
     local value, err = protocol.decode(orphan)
     lu.assertNil(value)
-    lu.assertStrContains(err, "equipResults requires keepsakeKey")
+    lu.assertStrContains(err, "equipResults require keepsakeKey")
+    lu.assertNil(decoded.startingLoadout.aspectRarity)
+    lu.assertNil(decoded.startingLoadout.familiar)
     local mixed = decode("fresh-file-fghi")
     mixed.routeKey = "FreshFile"
     mixed.extent = assert(json.decode('{"kind":"configuredPrefix","biomeKeys":["N"],"terminalBiomeKey":"N"}'))
@@ -1364,55 +1366,54 @@ function TestProtocol.testSelectedNormalAndBoostedWorldShopFixtureDecodesExactTr
     lu.assertNotEquals(owners[1], owners[2])
 end
 
-function TestProtocol.testPostbossBoundariesExposeExpandedRoomEntryDiagnostics()
-    local plan = decode("underworld-fghi")
-    local decoded, errorMessage = protocol.decode(plan)
-    lu.assertNotNil(decoded, errorMessage)
+function TestProtocol.testPostbossEntriesExposeExpandedRoomEntryDiagnostics()
+    local decoded = assert(protocol.decode(decode("underworld-fghi")))
     local selected = {}
     for _, occurrenceId in ipairs(decoded.selectedOccurrenceIds) do
         selected[occurrenceId] = true
     end
-    local marked = 0
+    local postbosses = 0
     for _, occurrence in ipairs(decoded.occurrences) do
-        if occurrence.resumeBoundary ~= nil then
-            marked = marked + 1
-            lu.assertEquals(occurrence.resumeBoundary, "postbossEntry")
-            lu.assertTrue(selected[occurrence.id])
-            lu.assertNotNil(occurrence.diagnostics)
-            lu.assertNotNil(occurrence.diagnostics.roomEntered)
+        if selected[occurrence.id] and occurrence.gameName:match("_PostBoss01$") then
+            postbosses = postbosses + 1
             lu.assertNotNil(occurrence.diagnostics.roomEntered.traits)
         end
-        if occurrence.biomeKey == "I" then
-            lu.assertNil(occurrence.resumeBoundary)
-        end
     end
-    lu.assertEquals(marked, 3)
+    lu.assertEquals(postbosses, 3)
 end
 
-function TestProtocol.testPostbossBoundaryRejectsUnsupportedValue()
+function TestProtocol.testRetiredResumeBoundaryIsRejected()
     local plan = decode("fg")
-    local boundary
     for _, occurrence in ipairs(plan.occurrences) do
-        if occurrence.resumeBoundary ~= nil then
-            boundary = occurrence
+        if occurrence.gameName == "F_PostBoss01" then
+            occurrence.resumeBoundary = "postbossEntry"
         end
     end
-    lu.assertNotNil(boundary)
-    boundary.resumeBoundary = "postbossExit"
-    lu.assertNil(protocol.decode(plan))
+    refreshFingerprint(plan)
+    local value, err = protocol.decode(plan)
+    lu.assertNil(value)
+    lu.assertStrContains(err, "resumeBoundary")
 end
 
-function TestProtocol.testPostbossBoundaryRequiresEntryDiagnostics()
-    local plan = decode("fg")
-    local boundary
-    for _, occurrence in ipairs(plan.occurrences) do
-        if occurrence.resumeBoundary ~= nil then
-            boundary = occurrence
-        end
+function TestProtocol.testStartingLoadoutPublishesInstallRanks()
+    local decoded = assert(protocol.decode(decode("f-opening")))
+    lu.assertEquals(decoded.startingLoadout.aspectRarity, "Legendary")
+    lu.assertEquals(decoded.startingLoadout.familiar, { name = "FrogFamiliar", traitStacks = 4 })
+    lu.assertEquals(decoded.startingKeepsake.rarity, "Epic")
+    local function rejects(edit, message)
+        local plan = decode("f-opening")
+        edit(plan)
+        refreshFingerprint(plan)
+        local value, err = protocol.decode(plan)
+        lu.assertNil(value)
+        lu.assertStrContains(err, message)
     end
-    lu.assertNotNil(boundary)
-    boundary.diagnostics = tagged({}, "diagnostics", false)
-    lu.assertNil(protocol.decode(plan))
+    rejects(function(plan) plan.startingLoadout.aspectRarity = nil end, "aspectRarity must accompany aspectKey")
+    rejects(function(plan) plan.startingLoadout.aspectRarity = "Perfect" end, "aspectRarity")
+    rejects(function(plan) plan.startingLoadout.familiar.traitStacks = 0 end, "familiar")
+    rejects(function(plan) plan.startingLoadout.familiar.multiplier = 1 end, "familiar")
+    rejects(function(plan) plan.startingKeepsake.rarity = nil end, "startingKeepsake.rarity")
+    rejects(function(plan) plan.startingKeepsake.rarity = "Legendary" end, "startingKeepsake.rarity")
 end
 
 function TestProtocol.testSurfaceNFixtureClosesHubAndNativeRestoreReferences()

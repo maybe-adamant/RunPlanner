@@ -225,8 +225,8 @@ export type KeepsakeRankProfile<
 export interface FamiliarDeclaration {
   readonly key: string;
   readonly label: string;
-  /** A mature save owns every familiar-shop upgrade of its first trait; each adds one stack. */
-  readonly matureStatUpgradeCount: number;
+  /** Familiar-shop levels of each upgraded trait, all owned on a mature save; each adds one stack. */
+  readonly matureTraitUpgradeCount: number;
   /** The flat maximum its first trait adds per stack, when that trait changes one. */
   readonly maxStatPerStack?: {
     readonly stat: MaxStatKey;

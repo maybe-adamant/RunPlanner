@@ -17,6 +17,18 @@ export function fail(message: string): never {
   throw new ExecutionPlanCodecError(message);
 }
 
+/** Native `TraitRarityData.RarityUpgradeOrder`: Arcana and keepsake rarities. */
+export const RARITY_UPGRADE_ORDER: readonly string[] = ['Common', 'Rare', 'Epic', 'Heroic'];
+
+export function oneOf<T extends string>(
+  value: unknown,
+  allowed: readonly string[],
+  label: string,
+): T {
+  if (typeof value !== 'string' || !allowed.includes(value)) fail(`${label} is unsupported`);
+  return value as T;
+}
+
 export function object(value: unknown, label: string): Dict {
   if (value === null || typeof value !== 'object' || Array.isArray(value))
     fail(`${label} must be an object`);

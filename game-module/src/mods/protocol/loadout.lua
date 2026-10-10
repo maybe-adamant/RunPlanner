@@ -4,6 +4,9 @@ local p = type(import) == "function" and import("mods/protocol/primitives.lua")
 
 local protocol = {}
 
+-- Native TraitRarityData.WeaponRarityUpgradeOrder below Perfect.
+local ASPECT_RARITIES = { Common = true, Rare = true, Epic = true, Heroic = true, Legendary = true }
+
 local function ranks(value, label)
     local record, errorMessage = p.obj(value, label)
     if not record then return nil, errorMessage end
@@ -17,13 +20,29 @@ end
 
 function protocol.decode(value)
     local record, errorMessage = p.exact(value,
-        { "weaponKey", "arcana", "fear" }, { "aspectKey", "startingHex" },
+        { "weaponKey", "arcana", "fear" }, { "aspectKey", "aspectRarity", "familiar", "startingHex" },
         "execution plan.startingLoadout")
     if not record then return nil, errorMessage end
     if not p.str(record.weaponKey, "execution plan.startingLoadout.weaponKey")
         or (record.aspectKey ~= nil
             and not p.str(record.aspectKey, "execution plan.startingLoadout.aspectKey")) then
         return p.fail("execution plan has invalid starting loadout")
+    end
+    if (record.aspectKey == nil) ~= (record.aspectRarity == nil) then
+        return p.fail("execution plan.startingLoadout.aspectRarity must accompany aspectKey")
+    end
+    if record.aspectRarity ~= nil and not p.one(record.aspectRarity, ASPECT_RARITIES,
+        "execution plan.startingLoadout.aspectRarity") then
+        return p.fail("execution plan.startingLoadout.aspectRarity is unsupported")
+    end
+    if record.familiar ~= nil then
+        local familiar, familiarError = p.exact(record.familiar, { "name", "traitStacks" }, {},
+            "execution plan.startingLoadout.familiar")
+        if not familiar then return nil, familiarError end
+        if not p.str(familiar.name, "execution plan.startingLoadout.familiar.name")
+            or not p.int(familiar.traitStacks, "execution plan.startingLoadout.familiar.traitStacks", 1) then
+            return p.fail("execution plan.startingLoadout.familiar is invalid")
+        end
     end
     if record.aspectKey == "SuitHexAspect" and record.startingHex == nil then
         return p.fail("execution plan.startingHex is required for SuitHexAspect")

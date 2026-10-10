@@ -6,6 +6,8 @@
   "startingLoadout": {
     "weaponKey": "WeaponStaffSwing",
     "aspectKey": "BaseStaffAspect",
+    "aspectRarity": "Legendary",
+    "familiar": { "name": "FrogFamiliar", "traitStacks": 4 },
     "arcana": [
       { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic" },
       { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic" },
@@ -52,7 +54,7 @@
       }
     }
   },
-  "startingKeepsake": { "keepsakeKey": "BossMetaUpgradeKeepsake" },
+  "startingKeepsake": { "keepsakeKey": "BossMetaUpgradeKeepsake", "rarity": "Epic" },
   "extent": { "kind": "configuredPrefix", "biomeKeys": ["F", "G"], "terminalBiomeKey": "G" },
   "selectedOccurrenceIds": [
     "golden-f-start",
@@ -2471,7 +2473,6 @@
       "biomeKey": "F",
       "gameName": "F_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
@@ -3946,7 +3947,6 @@
       "biomeKey": "G",
       "gameName": "G_PostBoss01",
       "kind": "SingleEncounter",
-      "resumeBoundary": "postbossEntry",
       "overview": {
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
@@ -4009,5 +4009,5 @@
       }
     }
   ],
-  "planFingerprint": "f6f4ea17"
+  "planFingerprint": "6c745668"
 }

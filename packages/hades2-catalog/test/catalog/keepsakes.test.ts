@@ -811,23 +811,23 @@ describe('keepsake normalization', () => {
 });
 
 describe('familiar declarations', () => {
-  it('declares every familiar at the mature upgrade rank with its first-trait max-stat effect', () => {
+  it('declares every familiar with its mature trait upgrade levels and first-trait max-stat effect', () => {
     expect(catalog.familiars.values).toEqual([
       {
         key: 'FrogFamiliar',
         label: 'Frinos',
-        matureStatUpgradeCount: 3,
+        matureTraitUpgradeCount: 3,
         maxStatPerStack: { stat: 'maxHealth', amount: 10 },
       },
-      { key: 'CatFamiliar', label: 'Toula', matureStatUpgradeCount: 3 },
-      { key: 'RavenFamiliar', label: 'Raki', matureStatUpgradeCount: 3 },
+      { key: 'CatFamiliar', label: 'Toula', matureTraitUpgradeCount: 3 },
+      { key: 'RavenFamiliar', label: 'Raki', matureTraitUpgradeCount: 3 },
       {
         key: 'HoundFamiliar',
         label: 'Hecuba',
-        matureStatUpgradeCount: 3,
+        matureTraitUpgradeCount: 3,
         maxStatPerStack: { stat: 'maxMana', amount: 15 },
       },
-      { key: 'PolecatFamiliar', label: 'Gale', matureStatUpgradeCount: 3 },
+      { key: 'PolecatFamiliar', label: 'Gale', matureTraitUpgradeCount: 3 },
     ]);
     expect(catalog.defaultFamiliarKey).toBe('FrogFamiliar');
   });
@@ -841,8 +841,8 @@ describe('familiar declarations', () => {
       } as Parameters<typeof createCatalog>[0]);
     const frinos = declarations.familiars[0]!;
     expect(() => withFamiliars([frinos, frinos])).toThrow('duplicates FrogFamiliar');
-    expect(() => withFamiliars([{ ...frinos, matureStatUpgradeCount: 0 }])).toThrow(
-      'familiars[0].matureStatUpgradeCount',
+    expect(() => withFamiliars([{ ...frinos, matureTraitUpgradeCount: 0 }])).toThrow(
+      'familiars[0].matureTraitUpgradeCount',
     );
     expect(() =>
       withFamiliars([{ ...frinos, maxStatPerStack: { stat: 'maxArmor', amount: 10 } }]),
