@@ -126,6 +126,12 @@ separately snapshots it only for `RarifyKeepsake` and restores it as the old
 count plus two. The nine Olympian keepsakes receive no equivalent nested-field
 preservation.
 
+The advanced keepsake is therefore its resolved rank plus these per-instance
+fields. Later equips re-derive the rank from the held boon, and a fresh run
+reproduces the result by equipping at that rank (`ForceRarity`) and writing
+the fields, including the nested `RarityUpgradeData.Uses`, without the boon's
+acquisition.
+
 Luckier Tooth also has an exact `UnequipKeepsake` fallback outside that field
 list. When its keepsake-owned Last Stand is already absent, the source removes
 one other non-priority Last Stand if available before reducing Tooth's added

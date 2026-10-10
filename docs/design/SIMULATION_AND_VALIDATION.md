@@ -584,6 +584,27 @@ rarity, level and effect facts belong to the
 [trait audits](../audits/README.md#traits) and their owning reward/candidate
 contracts.
 
+### Start installations
+
+A start installation is the pure projection of a Practice mode start point
+from folded states; it adds no simulation. An Opening installs its
+predecessor biome's terminal branches in post-reset biome form, since the
+native Intro resets the biome records before anything reads them; it requires
+a complete, valid predecessor. A Preboss installs the states its start room's
+preparation received, captured for every Preboss in every simulation, so they
+already include the room's own creation effects. Every installed family must
+agree across the reached branches, or the start point is unavailable and names
+the disagreeing families. Reward stores are the one exception: a store exact
+across branches is installed, and one that differs by branch is left
+native-fresh. The stub room history has one record per room-history ordinal
+advance, carrying its room's declared `NextRoomSet`; execution assembly adds a
+Dream route's `Dream_Intro` prologue, and the visited biomes are the
+itinerary prefix before the start (including its own biome for a Preboss).
+Availability and its reasons are
+[authored-model policy](AUTHORED_PROJECT_MODEL.md#route-loadout); the published
+form is the execution plan's
+[`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start).
+
 ## Extension and Verification
 
 Before changing a sensitive boundary, identify its complete input/output

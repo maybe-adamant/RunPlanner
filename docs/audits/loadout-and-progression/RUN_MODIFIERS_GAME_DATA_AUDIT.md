@@ -123,6 +123,20 @@ mutations, and there is no stricter final-parcel clamp or extra store.
   apply. Both bounds, including any hard-override table, are restored on return
   or error. The fixed story store is unaffected.
 
+## Practice mode start gold
+
+`RunLogic.lua:StartNewRun` ends by crediting `CalculateStartingMoney`, the
+hero's total `BonusMoney`, through `AddResource`. `ResourceLogic.lua:AddResource`
+also credits `GameState.LifetimeResourcesGained` unless `NoLifetimeEffect` is
+passed, and those lifetime totals gate incantations; it credits
+`CurrentRun.ResourcesGained` and runs the resource's added callbacks. The game
+writes `GameState.Resources.Money` directly where it sets gold without
+crediting (`DeathLoopLogic.lua:136`).
+
+Planner disposition: the start point's authored gold is added to
+`GameState.Resources.Money` directly after native starting gold, followed by
+`UpdateMoneyUI`, so it credits no lifetime total.
+
 ## Native lifetime contacts
 
 `RunLogic.lua:StartNewRun` creates a new `CurrentRun` table before hero creation.

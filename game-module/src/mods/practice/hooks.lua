@@ -57,9 +57,14 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
         if not ok then error(result, 0) end
         local state = getState(runtime)
         if startDepth == 0 and phase(state, "recorded") then
-            -- The authored gold, after native StartNewRun credits its own.
+            -- The start room exists and StartRoom has not run. The authored
+            -- gold follows the gold native StartNewRun credits.
             state.practiceStart.phase = "started"
-            guarded(session, state, function() install.creditGold(state.plan.startState) end)
+            local start = state.plan.startState
+            if start.point == "preboss" then
+                guarded(session, state, function() install.prebossRoom(start, _G.CurrentRun.CurrentRoom) end)
+            end
+            guarded(session, state, function() install.creditGold(start) end)
             report(runtime)
         end
         return result
@@ -70,10 +75,6 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
     local function begin(state)
         local plan = state.plan
         local start = plan.startState
-        if not install.supported(start) then
-            session.mismatch(state, "practice-start:point", "opening", start.point)
-            return
-        end
         loadout.verifyCompleted(state, session.mismatch)
         if state.state ~= "synchronized" then return end
         local familiar = start.familiar and start.familiar.name or nil
@@ -112,7 +113,11 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
         local state = getState(runtime)
         if startDepth > 0 and phase(state, "installed") then
             state.practiceStart.phase = "recorded"
-            guarded(session, state, function() install.records(state.plan.startState) end)
+            local start = state.plan.startState
+            guarded(session, state, function()
+                if start.point == "opening" then install.records(start) end
+                install.barren(start)
+            end)
             report(runtime)
         end
         return result
@@ -126,18 +131,20 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
         end
         local result = install.heroSetup(base, room)
         -- The maxima are final here, the slotted Silver Wheel's grant included;
-        -- the Intro's own room-start effects have not run.
+        -- the Intro's own room-start effects have not run. Map load has derived
+        -- the depth caches from the stub history.
         local state = getState(runtime)
         if phase(state, "started") and roomName(room) == state.plan.startState.roomName then
             state.practiceStart.phase = "entered"
-            selfCheck(session, state, install.verifyMaxStats)
+            selfCheck(session, state, install.verifyStart)
             report(runtime)
         end
         return result
     end)
 
     -- Room-start effects, including an Opening's biome-start keepsake effects,
-    -- have run; player input and the encounter have not.
+    -- have run; player input and the encounter have not. A Preboss is not a
+    -- BiomeStartRoom, so only its ordinary room-start effects have run.
     module.hooks.wrap("StartRoomPresentation", "run-planner-practice-check", function(_, runtime, base, ...)
         local state = getState(runtime)
         if phase(state, "entered") then

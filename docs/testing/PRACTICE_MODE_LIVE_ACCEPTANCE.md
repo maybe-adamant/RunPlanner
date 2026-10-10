@@ -7,6 +7,9 @@ the plan's weapon, aspect, keepsake, familiar, Arcana and Fear. Use the Dream
 door for a Dream plan. Source probes and automated tests are not live
 verification; the owner confirms or waives each remaining check.
 
+Accepted simplification: under the Boon Mana Reserve vow, installed boons hold
+no reserved Magick. This is not a failure.
+
 ## Opening starts
 
 - [ ] **Underworld.** Start at a later biome's Opening (for example G or H).
@@ -15,6 +18,28 @@ verification; the owner confirms or waives each remaining check.
 - [ ] **Dream.** Start at a later Dream biome's Opening. The room is entered
       with the Dream biome entrance, offers no extra reward choice, and the
       next biome choice after its Postboss excludes biomes already visited.
+
+## Preboss starts
+
+- [ ] **Underworld I.** Start at the I Preboss. The Clockwork countdown shows
+      no remaining goals, the Preboss's World Shop is stocked as planned, and
+      the I Boss and Postboss follow as in a full run.
+- [ ] **Surface.** Start at a Surface Preboss with a World Shop (N, O or P).
+      The shop is stocked as planned and its purchases price as in a full run.
+- [ ] **Tight Deadline.** With the vow active, a Preboss start shows the
+      biome's full allowance and the timer does not drain immediately. With
+      Circe having disabled the vow in the plan, no timer runs.
+- [ ] **Dream.** Start at a later Dream biome's Preboss. The room is entered
+      without the Dream biome entrance, and the next biome choice after its
+      Postboss excludes biomes already visited, including its own.
+- [ ] **Forfeit and Fig Leaf.** Start at a Preboss in a biome where the plan
+      already used Forfeit, or where Fig Leaf already skipped an encounter.
+      Forfeit is unavailable for the rest of the biome and Fig Leaf does not
+      skip again in it.
+- [ ] **Save & Quit.** Save & Quit in a Preboss start room and continue. The
+      World Shop still holds the planned stock and the room depth display is
+      unchanged.
+- [ ] **Weather.** An F or N Preboss start shows no weather. This is accepted.
 
 For each start, before taking any action in the start room:
 
@@ -29,8 +54,9 @@ For each start, before taking any action in the start room:
 - [ ] Max health and Magick equal the planned values and current health is
       full. Death Defiance charges match the equipped sources, all unused.
 - [ ] Gold equals the native starting gold plus the authored start gold.
-      Under Barren the native starting gold omits the unequipped Arcana's
-      bonus gold, since native counts it after the Arcana are removed.
+      Under Barren, at either start point, the native starting gold omits the
+      unequipped Arcana's bonus gold, since native counts it after the Arcana
+      are removed.
 - [ ] The Path of Stars shows the planned layout, invested nodes and unspent
       points.
 - [ ] The executor log shows the session admitted and no `practice-start`

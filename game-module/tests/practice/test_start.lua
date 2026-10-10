@@ -82,7 +82,8 @@ local function nativeWorld(base, start)
     local bindings = {
         GameState = gameState,
         TraitData = traitData,
-        RoomData = { N_Opening01 = { NextRoomSet = { "N" } }, N_PostBoss01 = { NextRoomSet = { "O" } } },
+        RoomData = { N_Opening01 = { NextRoomSet = { "N" } }, N_PostBoss01 = { NextRoomSet = { "O" } },
+            I_PreBoss02 = { Name = "I_PreBoss02" } },
         TraitRarityData = { RarityUpgradeOrder = { "Common", "Rare", "Epic", "Heroic" } },
         MetaUpgradeCardData = {}, MetaUpgradeData = {},
         SpellData = { PotionSpell = { Name = "PotionSpell", TraitName = "SpellPotionTrait" } },
@@ -97,7 +98,14 @@ local function nativeWorld(base, start)
             return stores
         end)(),
         GetEquippedWeapon = function() return "WeaponStaffSwing" end,
-        GetNumShrineUpgrades = function() return 0 end,
+        -- ShrineLogic.GetNumShrineUpgrades: a vow Circe disabled counts zero.
+        GetNumShrineUpgrades = function(name)
+            if run.ShrineUpgradesDisabled[name] then return 0 end
+            return gameState.ShrineUpgrades[name] or 0
+        end,
+        RunShopGeneration = function(room)
+            record("shop", room.Name, tostring(_G.roomData and _G.roomData.Name))
+        end,
         GetProcessedTraitData = function(args)
             local data = { Name = args.TraitName, Rarity = args.Rarity, StackNum = args.StackNum }
             if args.TraitName == "RoomRewardMaxHealthTrait" or args.TraitName == "RoomRewardMaxManaTrait" then
@@ -190,7 +198,10 @@ local function startRun(plan, world, startArgs)
             run.RewardStores = { Native = {} }
             world.log[#world.log + 1] = "initializeRewardStores"
         end, world.run)
-        created = { args = copy(args), creating = scope.creatingStartRoom(state, args) }
+        created = { args = copy(args), creating = scope.creatingStartRoom(state, args),
+            useRecord = copy(world.run.UseRecord) }
+        world.log[#world.log + 1] = "createRoom"
+        if args.RoomName ~= nil then world.run.CurrentRoom = { Name = args.RoomName } end
         world.gameState.Resources.Money = world.gameState.Resources.Money + 10
         return world.run
     end, nil, startArgs)
@@ -296,15 +307,28 @@ function TestPracticeStart.testOpeningInstallsBeforeNativeRerollsAndRecordsBefor
     lu.assertEquals(state.practiceStart.phase, "started")
 end
 
--- Native StartRoom: hero setup, then the room's own start effects, then its
--- presentation (RoomLogic.lua:1114-1119).
+-- RunLogic.GetBiomeDepth: rooms since the last NextRoomSet, the current one
+-- included.
+local function nativeBiomeDepth(run)
+    local depth = 1
+    for index = #run.RoomHistory, 1, -1 do
+        if run.RoomHistory[index].NextRoomSet ~= nil then return depth end
+        depth = depth + 1
+    end
+    return depth
+end
+
+-- The map load's UpdateRunHistoryCache (PatchLogic.lua:687-689), then native
+-- StartRoom: hero setup, the room's own start effects and its presentation
+-- (RoomLogic.lua:1114-1119).
 local function enterStartRoom(name, mutate, base, roomStart)
-    local plan = decode(name)
+    local plan = copy(decode(name))
     local world = nativeWorld(base or { MaxHealth = 70, MaxMana = 190 }, plan.startState)
     if mutate then mutate(plan, world) end
     local state, callbacks = startRun(plan, world, { StartingBiome = "F" })
     local restore = nativeGame.install(world.bindings)
     _G.CurrentRun = world.run
+    world.run.BiomeDepthCache = nativeBiomeDepth(world.run)
     local setup, presented = nil, false
     callbacks.SetupHeroObject(nil, {}, function(room, applyLuaUpgrades)
         setup = { room.Name, applyLuaUpgrades }
@@ -447,15 +471,143 @@ function TestPracticeStart.testLoadoutMismatchLeavesANativeRunUninstalled()
     lu.assertEquals(world.gameState.Resources.Money, 10)
 end
 
-function TestPracticeStart.testPrebossStartIsCursoredButNotYetInstalled()
+function TestPracticeStart.testPrebossRecordsFollowItsCreation()
     local plan = decode("underworld-start-i-preboss")
-    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 })
+    local start = plan.startState
+    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, start)
     local state, _, created = startRun(plan, world, { StartingBiome = "F" })
+    local log, run = world.log, world.run
+
+    lu.assertEquals(state.state, "synchronized")
     lu.assertEquals(state.route.index, indexOf(plan.selectedOccurrenceIds, "golden-i-preboss"))
-    lu.assertEquals(state.firstMismatch.checkpoint, "practice-start:point")
-    lu.assertEquals(world.log[1], "equip:ManaOverTimeRefundKeepsake:nil:true")
-    lu.assertNil(created.args.RoomName)
-    lu.assertNil(world.run.RunPlannerPracticeStart)
+    lu.assertEquals(created.args, { StartingBiome = "F", RoomName = "I_PreBoss02" })
+    lu.assertTrue(created.creating)
+    lu.assertEquals(log[1], "equip:ManaOverTimeRefundKeepsake:Epic:nil")
+    lu.assertTrue(position(log, "add:HestiaCastBoon:Rare") < position(log, "rerollsAndDeathDefiance"))
+    -- The run-wide records replace what creation wrote, before StartRoom.
+    lu.assertNil(created.useRecord)
+    lu.assertEquals(run.UseRecord, start.useRecord)
+    lu.assertEquals(run.LootTypeHistory, start.lootTypeHistory)
+    lu.assertEquals(run.ConsumableRecord, start.consumableRecord)
+    lu.assertEquals(#run.RewardStores.TartarusRewards, 7)
+    lu.assertEquals({ run.EnteredBiomes, run.EncounterDepth }, { 4, 30 })
+    lu.assertEquals(run.BiomeVisitOrder, { "F", "G", "H", "I" })
+    lu.assertEquals(#run.RoomHistory, #start.roomHistory)
+    -- Map load derives the biome depth from the stub history.
+    lu.assertNil(run.BiomeDepthCache)
+    lu.assertEquals({ run.BiomeEncounterDepth, run.BiomeBoonSkipCount }, { 6, 0 })
+    lu.assertEquals(run.BiomeUseRecord, {})
+    lu.assertEquals({ run.RemainingClockworkGoals, run.MaxClockworkNonGoalRewards }, { 0, 3 })
+    lu.assertNil(run.BiomeTime)
+    -- The shop is generated once, after creation, as LeaveRoom would.
+    local shops = 0
+    for _, entry in ipairs(log) do if entry:match("^shop:") then shops = shops + 1 end end
+    lu.assertEquals(shops, 1)
+    lu.assertTrue(position(log, "createRoom") < position(log, "shop:I_PreBoss02:I_PreBoss02"))
+    lu.assertNil(_G.roomData)
+    lu.assertEquals(world.gameState.Resources.Money, 10)
+    lu.assertEquals(state.practiceStart.phase, "started")
+end
+
+function TestPracticeStart.testOpeningGeneratesNoShop()
+    local plan = decode("surface-start-q-opening")
+    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+    startRun(plan, world, { StartingBiome = "F" })
+    for _, entry in ipairs(world.log) do lu.assertNil(entry:match("^shop:")) end
+end
+
+local function prebossRoom(mutate)
+    local start = copy(decode("underworld-start-i-preboss").startState)
+    local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 }, start)
+    world.bindings.MetaUpgradeData = { BiomeSpeedShrineUpgrade = { ChangeValue = 420 } }
+    if mutate then mutate(start, world) end
+    local restore = nativeGame.install(world.bindings)
+    _G.CurrentRun = world.run
+    local ok, errorValue = pcall(install.prebossRoom, start, { Name = start.roomName })
+    restore()
+    assert(ok, errorValue)
+    return world
+end
+
+function TestPracticeStart.testPrebossStartsWithTheFullTightDeadlineAllowance()
+    local world = prebossRoom(function(_, nativeWorldState)
+        nativeWorldState.gameState.ShrineUpgrades.BiomeSpeedShrineUpgrade = 2
+    end)
+    lu.assertEquals(world.run.BiomeTime, 420)
+    world = prebossRoom(function(_, nativeWorldState)
+        nativeWorldState.gameState.ShrineUpgrades.BiomeSpeedShrineUpgrade = 2
+        nativeWorldState.run.ShrineUpgradesDisabled.BiomeSpeedShrineUpgrade = true
+    end)
+    lu.assertNil(world.run.BiomeTime)
+end
+
+function TestPracticeStart.testPrebossShopErrorRestoresTheGlobalRoomData()
+    local start = decode("underworld-start-i-preboss").startState
+    local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 }, start)
+    world.bindings.RunShopGeneration = function() error("shop failed", 0) end
+    local prior = { Name = "Hub_Main" }
+    world.bindings.roomData = prior
+    local restore = nativeGame.install(world.bindings)
+    _G.CurrentRun = world.run
+    local ok, errorValue = pcall(install.prebossRoom, start, { Name = start.roomName })
+    local roomData = _G.roomData
+    restore()
+    lu.assertFalse(ok)
+    lu.assertEquals(errorValue, "shop failed")
+    lu.assertIs(roomData, prior)
+end
+
+function TestPracticeStart.testPrebossFigLeafFlagWithoutTheKeepsakeIsSkipped()
+    local world = prebossRoom(function(start) start.biome.dionysusSkipActivated = true end)
+    lu.assertNil(world.hero.TraitDictionary.PersistentDionysusSkipKeepsake)
+end
+
+function TestPracticeStart.testPrebossBiomeFlagsInstallTheirNativeFields()
+    local skip = { Name = "PersistentDionysusSkipKeepsake", RemainingUses = 2 }
+    local world = prebossRoom(function(start, nativeWorldState)
+        start.biome.forfeitConsumed = true
+        start.biome.dionysusSkipActivated = true
+        start.biome.biomeUseRecord = { TalentDrop = 1 }
+        nativeWorldState.hero.TraitDictionary.PersistentDionysusSkipKeepsake = { skip }
+    end)
+    lu.assertEquals(world.run.BiomeBoonSkipCount, 1)
+    lu.assertTrue(skip.ActivatedThisBiome)
+    lu.assertEquals(world.run.BiomeUseRecord, { TalentDrop = 1 })
+end
+
+function TestPracticeStart.testPrebossStartRoomSelfCheck()
+    local state, world, setup, presented
+    local calls = withAdmission(true, function()
+        state, world, setup, presented = enterStartRoom("underworld-start-i-preboss")
+    end)
+    lu.assertEquals(setup, { "I_PreBoss02", true })
+    lu.assertEquals({ world.hero.MaxHealth, world.hero.MaxMana, world.hero.Health }, { 130, 295, 130 })
+    lu.assertEquals(calls, { { occurrence = "golden-i-preboss", weapon = "WeaponStaffSwing", prefix = "practice-start" } })
+    lu.assertTrue(presented)
+    lu.assertEquals(state.state, "synchronized")
+    lu.assertEquals(state.practiceStart.phase, "checked")
+end
+
+function TestPracticeStart.testPrebossBiomeDepthMismatchMakesExecutionPassive()
+    local state
+    withAdmission(true, function()
+        state = enterStartRoom("underworld-start-i-preboss", function(plan)
+            plan.startState.biome.biomeDepthCache = plan.startState.biome.biomeDepthCache + 1
+        end)
+    end)
+    lu.assertEquals(state.state, "desynchronized")
+    lu.assertEquals(state.firstMismatch.checkpoint, "practice-start:biome-depth")
+end
+
+function TestPracticeStart.testDreamPrebossIsNotABiomeEntry()
+    local start = copy(decode("dream-start-n-opening").startState)
+    start.point, start.biomeVisitOrder = "preboss", { "F", "N" }
+    local overrides = install.runOverrides(start, "Dream")
+    lu.assertEquals(overrides.PrevDreamBiome, "F")
+    lu.assertEquals(overrides.DreamBiomePool, { "G", "H", "I", "O", "P", "Q" })
+    local args = { RoomName = "Dream_Intro" }
+    install.redirect(args, start, "Dream")
+    lu.assertEquals(args, { RoomName = start.roomName })
 end
 
 function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
@@ -540,15 +692,23 @@ function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
     lu.assertEquals(world.gameState.TraitsTaken, { BaseStaffAspect = true })
 end
 
-function TestPracticeStart.testBarrenUnequipsArcanaAfterNativeDeathDefiance()
-    local start = copy(decode("surface-start-q-opening").startState)
-    start.arcanaBarren = true
-    local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 }, start)
-    local restore = nativeGame.install(world.bindings)
-    _G.CurrentRun = world.run
-    install.records(start)
-    restore()
-    lu.assertEquals(world.log, { "unequipArcana" })
+-- Barren unequips the Arcana after native Death Defiance and rerolls and
+-- before native starting gold, at either start point.
+function TestPracticeStart.testBarrenUnequipsArcanaBeforeNativeStartingGold()
+    for _, name in ipairs({ "surface-start-q-opening", "underworld-start-i-preboss" }) do
+        local plan = copy(decode(name))
+        plan.startState.arcanaBarren = true
+        local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+        local state = startRun(plan, world, { StartingBiome = "F" })
+        local log = world.log
+        lu.assertEquals(state.state, "synchronized")
+        local unequip = position(log, "unequipArcana")
+        lu.assertTrue(position(log, "initializeRewardStores") < unequip)
+        lu.assertTrue(unequip < position(log, "createRoom"))
+        local count = 0
+        for _, entry in ipairs(log) do if entry == "unequipArcana" then count = count + 1 end end
+        lu.assertEquals(count, 1)
+    end
 end
 
 function TestPracticeStart.testEndRunRemovesOnlyAPracticeRun()

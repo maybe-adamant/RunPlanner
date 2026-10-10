@@ -60,11 +60,6 @@ local function held(name)
     return trait
 end
 
--- The start points this module installs; a Preboss start runs natively.
-function install.supported(start)
-    return start.point == "opening"
-end
-
 function install.slottedKeepsake(start)
     for _, row in ipairs(start.keepsake.traits) do
         if row.slotted then return row end
@@ -113,16 +108,20 @@ function install.runOverrides(start, routeKey)
             if not excluded[key] then pool[#pool + 1] = key end
         end
         overrides.DreamBiomePool = pool
-        overrides.PrevDreamBiome = start.biomeVisitOrder[#start.biomeVisitOrder]
+        -- The biome completed before the current one (DreamRunLogic.lua:76); a
+        -- Preboss's visit order already includes its own biome.
+        local previous = #start.biomeVisitOrder - (start.point == "preboss" and 1 or 0)
+        overrides.PrevDreamBiome = start.biomeVisitOrder[previous]
     end
     return overrides
 end
 
--- Native StartNewRun creates args.RoomName directly. A later Dream biome
--- enters as DreamRunLogic.EnterNextDreamBiome does from a Dream Postboss.
+-- Native StartNewRun creates args.RoomName directly. A later Dream biome's
+-- Opening enters as DreamRunLogic.EnterNextDreamBiome does from a Dream
+-- Postboss; a Preboss is not a biome entry.
 function install.redirect(args, start, routeKey)
     args.RoomName = start.roomName
-    if routeKey == "Dream" then
+    if routeKey == "Dream" and start.point == "opening" then
         args.SkipChooseReward = true
         args.RoomOverrides = copy(args.RoomOverrides) or {}
         args.RoomOverrides.ForcedEntranceFunctionName = "RoomEntranceDreamBiomeStart"
@@ -481,8 +480,17 @@ local function rewardStores(start)
     end
 end
 
--- Run-wide records, after native InitializeRewardStores and before the start
--- room's creation reads them (RunLogic.lua:502-506).
+-- Barren holds the Arcana unequipped. Removed after native Death Defiance and
+-- rerolls and before native StartNewRun credits starting gold
+-- (RunLogic.lua:489-514), at either start point.
+function install.barren(start)
+    -- PowersLogic.RemoveArcana.
+    if start.arcanaBarren then _G.UnequipMetaUpgrades(nil, hero()) end
+end
+
+-- Run-wide records: an Opening's after native InitializeRewardStores and before
+-- the start room's creation reads them (RunLogic.lua:502-506), a Preboss's
+-- after its creation.
 function install.records(start)
     local run = _G.CurrentRun
     run.UseRecord = copy(start.useRecord)
@@ -494,10 +502,48 @@ function install.records(start)
     run.WellShopPurchases = copy(start.stygianWell.wellShopPurchases)
     if start.hex ~= nil then run.NumTalentPoints = start.hex.talentPoints end
     rewardStores(start)
-    if start.arcanaBarren then
-        -- PowersLogic.RemoveArcana, after native Death Defiance and rerolls.
-        _G.UnequipMetaUpgrades(nil, run.Hero)
+end
+
+-- Native LeaveRoom generates every next room's shop (RoomLogic.lua:4394), which
+-- StartNewRun never does. RunShopGeneration names the room from the global
+-- roomData that map load sets (RoomLogic.lua:207, StoreLogic.lua:449), nil
+-- after a hub map; the name only feeds RequiredNextMaps and RequiredFalseNextMaps,
+-- which no store item declares.
+local function generateShop(room)
+    local prior = _G.roomData
+    _G.roomData = _G.RoomData[room.GenusName or room.Name]
+    local ok, result = pcall(_G.RunShopGeneration, room)
+    _G.roomData = prior
+    if not ok then error(result, 0) end
+end
+
+-- A Preboss's captured state already includes its own creation, so its records
+-- replace what native CreateRoom wrote, before StartRoom reads them. The map
+-- load before StartRoom derives BiomeDepthCache from the stub history
+-- (PatchLogic.lua:687-689); the self-check compares it.
+function install.prebossRoom(start, room)
+    install.records(start)
+    local run, biome = _G.CurrentRun, start.biome
+    run.BiomeEncounterDepth = biome.biomeEncounterDepth
+    run.BiomeUseRecord = copy(biome.biomeUseRecord)
+    -- Forfeit's single rank allows one use per biome (ShrineLogic.lua:918-921).
+    run.BiomeBoonSkipCount = biome.forfeitConsumed and 1 or 0
+    local skip = biome.dionysusSkipActivated and _G.GetHeroTrait("PersistentDionysusSkipKeepsake")
+    if skip then
+        -- EncounterLogic.HandleEnemySpawns marks the skip for the biome.
+        skip.ActivatedThisBiome = true
     end
+    if biome.clockwork ~= nil then
+        -- RewardLogic.InitClockworkGoalReward runs at I_Intro.
+        run.RemainingClockworkGoals = biome.clockwork.remainingClockworkGoals
+        run.MaxClockworkNonGoalRewards = biome.clockwork.maxClockworkNonGoalRewards
+    end
+    -- Tight Deadline grants its allowance only in a BiomeStartRoom
+    -- (RoomLogic.lua:1205-1215); a Preboss start begins with it full.
+    if _G.GetNumShrineUpgrades("BiomeSpeedShrineUpgrade") > 0 then
+        run.BiomeTime = math.max(run.BiomeTime or 0, 0) + _G.MetaUpgradeData.BiomeSpeedShrineUpgrade.ChangeValue
+    end
+    generateShop(room)
 end
 
 -- The authored gold on top of native starting gold, written as
@@ -529,11 +575,14 @@ function install.heroSetup(base, room)
     return result
 end
 
-function install.verifyMaxStats(start)
+-- The maxima, and a Preboss's biome depth as the map load derived it.
+function install.verifyStart(start)
     local unit = hero()
     local ok, mismatch = proof.compare("practice-start:max-health", start.maxStats.maxHealth, unit.MaxHealth)
     if not ok then return nil, mismatch end
-    return proof.compare("practice-start:max-mana", start.maxStats.maxMana, unit.MaxMana)
+    ok, mismatch = proof.compare("practice-start:max-mana", start.maxStats.maxMana, unit.MaxMana)
+    if not ok or start.biome == nil then return ok, mismatch end
+    return proof.compare("practice-start:biome-depth", start.biome.biomeDepthCache, _G.CurrentRun.BiomeDepthCache)
 end
 
 return install

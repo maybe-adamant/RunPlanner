@@ -64,6 +64,17 @@ to native eligibility. The adapters do not recreate spawn rules or create object
 these predicates and owns their resulting mutations. `StoreLogic.lua:RunShopGeneration`
 also calls the Well/Shrine predicates before spawning. Their occurrence-bound
 answers must therefore cover both contacts, not just a spawn-time scope.
+
+`RunShopGeneration` is reached only from `LeaveRoom` (`RoomLogic.lua:4394`);
+`StartNewRun` creates its room without it. Every Preboss forces `Shop` as its
+first reward, and I's forces `ClockworkGoal`; `ForcedFirstReward` returns
+before any store draw, even with no current room (`RewardLogic.lua:87-101`).
+A `Shop` reward becomes `WorldShop`; I and Q declare a static `StoreDataName`,
+which the in-room fallback (`StoreLogic.lua:596`) fills only while the room
+has no store. `RunShopGeneration` names the store's room from the global
+`roomData` that map load sets (`RoomLogic.lua:207`, `StoreLogic.lua:449`),
+which is nil after a hub map; that name feeds only `RequiredNextMaps` and
+`RequiredFalseNextMaps`, which no store item declares.
 `RoomLogic.lua:5155–5180` owns the Force/requirements/chance ordering. Base
 requirements (`RoomData.lua:573–605`) include biome depth cache >=3 and spacing;
 point availability remains outside that check. Inventory installation remains

@@ -262,7 +262,6 @@ function biomeRecords(state: SimulationState, form: StartBiomeRecords['form']): 
   return Object.freeze({
     form,
     biomeUseRecord: state.rewardHistory.biomeUseRecord,
-    lootBiomeRecord: state.rewardHistory.lootBiomeRecord,
     forfeitConsumed: state.arcanaFear.fear.forfeitConsumed,
     figLeafActivatedThisBiome: state.keepsakes.figLeaf?.activatedThisBiome === true,
   });
@@ -273,7 +272,6 @@ function counters(state: SimulationState, kind: StartPoint['kind']): StartInstal
   const { lastDevotionDepth } = state.rewardHistory;
   return Object.freeze({
     roomHistoryOrdinal: view.roomHistoryOrdinal,
-    runDepthCache: view.roomHistoryOrdinal + 1,
     routeEncounterDepth: view.routeEncounterDepth,
     biomeDepthCache: view.biomeDepthCache,
     biomeEncounterDepth: view.biomeEncounterDepth,
@@ -415,7 +413,6 @@ const FAMILY_ORDER: readonly StartInstallationFamily[] = Object.freeze([
 function rewardStores(catalog: Catalog, states: readonly SimulationState[]): StartRewardStores {
   const routeKey = states[0]!.reached.routePosition.routeKey;
   const stores: StartRewardStores['stores'][number][] = [];
-  const omittedStoreKeys: string[] = [];
   for (const store of catalog.rewards.stores.values) {
     if (states.every((state) => state.bags[store.key] === undefined)) continue;
     const initial = createRewardBagState(store, routeKey).remainingEntryCounts;
@@ -423,12 +420,8 @@ function rewardStores(catalog: Catalog, states: readonly SimulationState[]): Sta
     const first = counts[0]!;
     if (counts.every((entry) => stable(entry) === stable(first)))
       stores.push(Object.freeze({ storeKey: store.key, remainingEntryCounts: first }));
-    else omittedStoreKeys.push(store.key);
   }
-  return Object.freeze({
-    stores: Object.freeze(stores),
-    omittedStoreKeys: Object.freeze(omittedStoreKeys),
-  });
+  return Object.freeze({ stores: Object.freeze(stores) });
 }
 
 /**
