@@ -164,6 +164,7 @@ function normalizeMaxStatValue(
 function normalizeMaxStatEffect(
   raw: RawTraitMaxStatEffect,
   equippedRarities: readonly TraitRarity[],
+  elementalMultiplier: TraitElement | undefined,
   path: string,
 ): TraitMaxStatEffect {
   requireObject(raw, path);
@@ -199,14 +200,14 @@ function normalizeMaxStatEffect(
         fraction: normalizeMaxStatValue(raw.fraction, equippedRarities, `${path}.fraction`),
       });
     case 'perElement':
-      exact(['kind', 'element', 'stat', 'amount']);
-      if (!(ELEMENTS as readonly string[]).includes(raw.element))
-        fail(`${path}.element`, `must be one of ${ELEMENTS.join(', ')}`);
+      exact(['kind', 'stat', 'amount']);
       if (raw.stat !== 'maxHealth' && raw.stat !== 'maxMana')
         fail(`${path}.stat`, 'must be maxHealth or maxMana');
+      if (elementalMultiplier === undefined)
+        fail(path, 'a perElement effect requires an elementalMultiplier');
       return Object.freeze({
         kind: raw.kind,
-        element: raw.element,
+        element: elementalMultiplier,
         stat: raw.stat,
         amount: requirePositiveInteger(raw.amount, `${path}.amount`),
       });
@@ -234,6 +235,39 @@ function closedValue<const Values extends readonly string[]>(
     fail(path, `must be one of ${values.join(', ')}`);
   }
   return value as Values[number];
+}
+
+function normalizeActivationRequirement(
+  raw: unknown,
+  path: string,
+): NonNullable<TraitDeclaration['activationRequirement']> {
+  const requirement = requireObject(raw, path);
+  switch (requirement.kind) {
+    case 'elementMinimums': {
+      if (Object.keys(requirement).length !== 2 || !('minimums' in requirement))
+        fail(path, 'must contain exactly kind and minimums');
+      const rawMinimums = requireObject(requirement.minimums, `${path}.minimums`);
+      const minimums: Partial<Record<TraitElement, number>> = {};
+      for (const [element, minimum] of Object.entries(rawMinimums)) {
+        const elementPath = `${path}.minimums.${element}`;
+        minimums[closedValue(element, ELEMENTS, elementPath)] = requirePositiveInteger(
+          minimum as number,
+          elementPath,
+        );
+      }
+      if (Object.keys(minimums).length === 0) fail(`${path}.minimums`, 'must not be empty');
+      return Object.freeze({ kind: 'elementMinimums', minimums: Object.freeze(minimums) });
+    }
+    case 'highestBaseElementCount':
+      if (Object.keys(requirement).length !== 2 || !('minimum' in requirement))
+        fail(path, 'must contain exactly kind and minimum');
+      return Object.freeze({
+        kind: 'highestBaseElementCount',
+        minimum: requirePositiveInteger(requirement.minimum as number, `${path}.minimum`),
+      });
+    default:
+      fail(`${path}.kind`, `unknown activation requirement ${String(requirement.kind)}`);
+  }
 }
 export function normalizeTraits(
   raw: RawTraitCatalogInput['traits'],
@@ -365,6 +399,17 @@ export function normalizeTraits(
       trait.linkedBoonRequirements,
       `${path}.linkedBoonRequirements`,
     );
+    const activationRequirement =
+      trait.activationRequirement === undefined
+        ? undefined
+        : normalizeActivationRequirement(
+            trait.activationRequirement,
+            `${path}.activationRequirement`,
+          );
+    const elementalMultiplier =
+      trait.elementalMultiplier === undefined
+        ? undefined
+        : closedValue(trait.elementalMultiplier, ELEMENTS, `${path}.elementalMultiplier`);
     let rarityFloorEffect: ProperUpbringingEffect | undefined;
     if (trait.rarityFloorEffect !== undefined) {
       const effectPath = `${path}.rarityFloorEffect`;
@@ -372,40 +417,18 @@ export function normalizeTraits(
         fail(effectPath, 'is reserved to ElementalRarityUpgradeBoon');
       if (isRarityless) fail(effectPath, 'rarityless traits cannot declare a rarity floor effect');
       const effect = requireObject(trait.rarityFloorEffect, effectPath) as unknown as {
-        readonly activationElementMinimums?: unknown;
         readonly fromRarity?: unknown;
         readonly minimumRarity?: unknown;
         readonly boonRarityContribution?: unknown;
       };
-      const effectKeys = [
-        'activationElementMinimums',
-        'fromRarity',
-        'minimumRarity',
-        'boonRarityContribution',
-      ];
+      const effectKeys = ['fromRarity', 'minimumRarity', 'boonRarityContribution'];
       if (
         Object.keys(effect).length !== effectKeys.length ||
         effectKeys.some((key) => !(key in effect))
       )
         fail(effectPath, 'must contain exactly the Proper Upbringing effect fields');
-      const rawMinimums = requireObject(
-        effect.activationElementMinimums,
-        `${effectPath}.activationElementMinimums`,
-      );
-      const minimums: Partial<Record<TraitElement, number>> = {};
-      for (const [element, minimum] of Object.entries(rawMinimums)) {
-        const normalizedElement = closedValue(
-          element,
-          ELEMENTS,
-          `${effectPath}.activationElementMinimums.${element}`,
-        );
-        minimums[normalizedElement] = requirePositiveInteger(
-          minimum as number,
-          `${effectPath}.activationElementMinimums.${element}`,
-        );
-      }
-      if (Object.keys(minimums).length === 0)
-        fail(`${effectPath}.activationElementMinimums`, 'must not be empty');
+      if (activationRequirement === undefined)
+        fail(effectPath, 'requires the trait to declare an activationRequirement');
       const fromRarity = closedValue(
         effect.fromRarity,
         IN_RUN_RARITIES,
@@ -435,7 +458,6 @@ export function normalizeTraits(
       if (Object.keys(rawAdditive).length !== 1 || rawAdditive.Rare !== 1)
         fail(`${effectPath}.boonRarityContribution.additive`, 'must contain exactly Rare: 1');
       rarityFloorEffect = Object.freeze({
-        activationElementMinimums: Object.freeze(minimums),
         fromRarity: 'Common',
         minimumRarity: 'Rare',
         boonRarityContribution: Object.freeze({ additive: Object.freeze({ Rare: 1 }) }),
@@ -739,6 +761,8 @@ export function normalizeTraits(
         trait.excludeFromRarityCount,
         `${path}.excludeFromRarityCount`,
       ),
+      ...(activationRequirement === undefined ? {} : { activationRequirement }),
+      ...(elementalMultiplier === undefined ? {} : { elementalMultiplier }),
       ...(rarityFloorEffect === undefined ? {} : { rarityFloorEffect }),
       ...(targetedAcquisition === undefined ? {} : { targetedAcquisition }),
       ...(maximumEligibleLevelByRarity === undefined ? {} : { maximumEligibleLevelByRarity }),
@@ -763,6 +787,7 @@ export function normalizeTraits(
             maxStatEffect: normalizeMaxStatEffect(
               trait.maxStatEffect,
               equippedRarities,
+              elementalMultiplier,
               `${path}.maxStatEffect`,
             ),
           }),

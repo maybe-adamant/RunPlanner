@@ -156,12 +156,25 @@ derive bags, or infer availability.
 Equipped and banned trait labels come from the same engine snapshot. Forfeit's
 inactive, available, or consumed state is likewise passed through from the
 progressive Arcana/Fear ledger; the workspace does not infer it from the route
-loadout or room list. Keepsake presentation joins the exact engine history to
-catalog labels as a biome-by-biome chronology; React does not reconstruct that
-sequence from current and removed inventories.
-Steady Growth progress and its rarity-dependent interval are joined from the
-same equipped-trait snapshot; the workspace does not count lifecycle events or
-predict a future automatic target.
+loadout or room list. Keepsake presentation joins the engine's per-biome
+keepsake history to catalog labels; neither the projection nor React decodes
+when a postboss choice takes effect or reconstructs the sequence from current
+and removed inventories.
+
+Every bracket on the sheet comes from the snapshot's engine-derived `effects`
+product: each clock carries its unit and is either a countdown of what is left
+or a build-up with its progress and total, and each state is an engine fact.
+That product covers the aspect rank, the keepsake block and per-biome keepsake
+history, trait clocks (Steady Growth, clocked
+producers, `RoomsPerUpgrade` growth, keepsake-granted Hammer encounters),
+Infusion activation from the declared activation requirement, element-scaled
+Infusion counts, Gold Gold Gold's pending state, the acquisition order of
+non-slot traits and matured Chaos blessings, Arcana growth and Artificer
+charges, Barren, timed Well instances and held Well charges, Chaos curses,
+Shrine deliveries, and Path of Stars talent levels. The presentation formats
+those facts into finished rows, including max stats, the Reward Store Ratio,
+counters and bag totals, so React only renders them; it does not count
+lifecycle events, evaluate thresholds, or predict a future automatic target.
 
 The Modifiers panel renders from the engine's run modifier declarations: a toggle for a boolean kind, and for an optional percentage a
 checkbox plus a 0–100% slider that is disabled while unchecked, with the label

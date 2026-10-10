@@ -64,15 +64,15 @@ function projectRoomLifecycleTimeline(
     boundary: WorkspaceRoomLifecycleBoundary,
   ): WorkspaceRunStateLauncher | undefined => {
     if (boundary.kind === 'roomEntered' && roomLocal.kind !== 'ship') {
+      const roomLabel = routeRoomDeclaration(
+        requireRoom(input.catalog, input.occurrence.gameName),
+        input.biome.routeKey,
+      ).label;
       return runStateLauncher(
         input,
         createRoomRunStateCheckpointAddress(occurrence, { kind: 'roomEntered' }),
-        `the first action in ${
-          routeRoomDeclaration(
-            requireRoom(input.catalog, input.occurrence.gameName),
-            input.biome.routeKey,
-          ).label
-        }`,
+        `the first action in ${roomLabel}`,
+        `Before ${roomLabel}`,
       );
     }
     if (boundary.kind === 'encounterStart' && roomLocal.kind === 'ship') {
@@ -84,6 +84,7 @@ function projectRoomLifecycleTimeline(
           phaseKey: boundary.phaseKey,
         }),
         `${phase?.label ?? boundary.phaseKey} encounter`,
+        `Before ${phase?.label ?? boundary.phaseKey}`,
       );
     }
     return undefined;

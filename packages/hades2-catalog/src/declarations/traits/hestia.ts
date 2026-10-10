@@ -210,6 +210,7 @@ export const hestiaTraits = [
   {
     key: 'ElementalBaseDamageBoon',
     label: 'Slow Cooker',
+    elementalMultiplier: 'Fire',
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
     linkedBoonRequirements: [],

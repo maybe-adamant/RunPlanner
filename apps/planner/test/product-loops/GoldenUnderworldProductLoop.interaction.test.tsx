@@ -66,6 +66,15 @@ function currentEvaluation(application: ReturnType<typeof createApplication>) {
   return currentWorkspace(application).assembly.evaluation;
 }
 
+function runStateRowRight(scope: HTMLElement, name: string): string | undefined {
+  return (
+    within(scope)
+      .getByText(name, { selector: '.run-state-row-name' })
+      .closest('.run-state-row')
+      ?.querySelector('.run-state-row-right')?.textContent ?? undefined
+  );
+}
+
 describe('underworld product loop', () => {
   it('shows Moon Beam banked Path progress in Run State without inventing a Hex-node editor', async () => {
     const application = createApplication();
@@ -93,13 +102,9 @@ describe('underworld product loop', () => {
     const sheet = screen.getByRole('region', {
       name: 'State before the first action in Opening 01',
     });
-    await view.user.click(within(sheet).getByRole('tab', { name: 'Hex' }));
-    expect(
-      within(sheet).getByText('Banked', { selector: 'dt' }).nextElementSibling?.textContent,
-    ).toBe('5');
-    expect(
-      within(sheet).getByText('Invested', { selector: 'dt' }).nextElementSibling?.textContent,
-    ).toBe('0Sim-neutral nodes');
+    await view.user.click(within(sheet).getByRole('tab', { name: 'More Info' }));
+    expect(runStateRowRight(sheet, 'Path points banked')).toBe('5');
+    expect(runStateRowRight(sheet, 'Path points invested')).toBe('0');
     expect(within(sheet).queryByRole('button', { name: /Hex node|Path node/i })).toBeNull();
     application.dispose();
   });
@@ -134,9 +139,14 @@ describe('underworld product loop', () => {
     const sheet = screen.getByRole('region', {
       name: 'State before the first action in Opening 01',
     });
-    const zeus = within(sheet).getByText('Zeus', { selector: 'dt' }).nextElementSibling!;
-    expect(within(zeus as HTMLElement).getByText('Force 1 · Rarification 1')).toBeTruthy();
-    expect(within(zeus as HTMLElement).getByText('Source cap 3 · ordinary')).toBeTruthy();
+    const keepsakes = within(sheet).getByRole('list', { name: 'Keepsake' });
+    // The forced Zeus Boon is still pending at the Opening's first action.
+    expect(runStateRowRight(keepsakes, 'Cloud Bangle')).toMatch(/^★+$/);
+    expect(
+      within(keepsakes)
+        .getByText('Cloud Bangle', { selector: '.run-state-row-name' })
+        .querySelector('.run-state-row-bracket')?.textContent,
+    ).toBe('(Ready)');
     expect(within(sheet).queryByRole('button', { name: /Olympian|force/i })).toBeNull();
     application.dispose();
   });

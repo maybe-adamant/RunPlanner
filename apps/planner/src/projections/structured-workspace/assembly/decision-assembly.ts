@@ -1198,7 +1198,7 @@ function assembleBatchDecision(
               ? Object.freeze({
                   availability: 'available' as const,
                   owner,
-                  state: presentRunState(input.catalog, runState.snapshot),
+                  state: presentRunState(input.catalog, runState.snapshot, 'Leaving the Hub'),
                   title: 'Decision',
                 })
               : Object.freeze({

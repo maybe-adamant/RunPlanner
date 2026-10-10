@@ -1,5 +1,4 @@
-import type { ArcanaActivationOrigin, RunStateOwner } from '@run-planner/engine/simulation';
-import type { TraitRarity } from '@run-planner/engine/catalog-schema';
+import type { RunStateOwner } from '@run-planner/engine/simulation';
 
 /** A read-only checkpoint published by the engine for one outer decision. */
 export type WorkspaceRunStateLauncher =
@@ -16,190 +15,57 @@ export type WorkspaceRunStateLauncher =
       readonly title: string;
     };
 
+/**
+ * Display rows for the Run State sheet. Every tab renders the same row and
+ * section shapes; an empty section is omitted and an empty tab has no sections.
+ */
 export interface WorkspaceRunStatePresentation {
-  readonly maxStats: WorkspaceRunStateMaxStats;
-  readonly hexProgress: {
-    readonly baseSpellLabel?: string;
-    readonly layoutLabel?: string;
-    readonly baseCapacity?: number;
-    readonly effectiveCapacity?: number;
-    readonly godSentLabel: 'No Hex' | 'Not added' | 'Added';
-    readonly pathOfStarsLabel: 'Ineligible — no Hex' | 'Eligible' | 'Ineligible — tree full';
-    readonly bankedPathPoints: number;
-    readonly investedPathPoints: number;
+  /** One-line checkpoint moment, such as `Before Combat 12 · Oceanus`. */
+  readonly moment: string;
+  /** Aspect and familiar rows that open the Overview. */
+  readonly loadout: readonly WorkspaceRunStateRow[];
+  /** Max Health and Max Magick, then their flat sources for the Sources disclosure. */
+  readonly maxStats: {
+    readonly rows: readonly WorkspaceRunStateRow[];
+    readonly sources: readonly WorkspaceRunStateRow[];
   };
-  readonly keepsakes: {
-    readonly currentLabel: string;
-    readonly chronology: readonly {
-      readonly biomeNumber: number;
-      readonly label: string;
-    }[];
-    readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
-    readonly jeweledPomStatus: 'inactive' | 'active' | 'invalidated';
-    readonly experimentalHammers: readonly {
-      readonly status: 'active' | 'expired';
-      readonly traitLabel: string;
-      readonly remainingUses: number;
-      readonly acquisitionIdentity: string;
-    }[];
-    readonly transcendentEmbryo?: {
-      readonly origin: 'ordinary' | 'echo';
-      readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-      readonly progress: number;
-      readonly interval: number;
-      readonly markedBlessingLabel: string;
-      readonly markedBlessingAcquisitionIdentity: string;
-    };
-    readonly echoGift?: {
-      readonly capturedKeepsakeLabel: string;
-      readonly status: 'pending' | 'oneShotApplied' | 'everyBiome' | 'effectNeutral';
-      readonly replayCount: number;
-    };
-    readonly callingCardRemainingCharges?: number;
-    /** Future-outcome-only Olympian pressure; no producer internals or editable controls. */
-    readonly pendingRewardPriorities: readonly string[];
-    readonly olympianSources: readonly {
-      readonly providerKey: string;
-      readonly providerLabel: string;
-      readonly origin: 'ordinary' | 'echo';
-      readonly forceRemaining: 0 | 1;
-      readonly rarificationRemaining: 0 | 1;
-      readonly maximumSourceRarityLevel: 1 | 2 | 3;
-    }[];
-    readonly timePieceRemainingCharges?: number;
-    readonly figLeafRemainingUses?: number;
-    readonly figLeafActivatedThisBiome?: boolean;
-    readonly gorgonStatus?: 'pending' | 'consumed' | 'expired';
-    readonly gorgonRarityLevel?: 1 | 2 | 3 | 4;
-    readonly phialStatus?: 'pending' | 'consumed';
-    readonly figurineStatus?: 'pending' | 'consumed';
-    readonly figurineOrigin?: 'ordinary' | 'echo';
-    readonly figurineRarity?: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-    readonly stoneStatus?: 'pending' | 'consumed';
-    readonly stoneOrigin?: 'ordinary' | 'echo';
-    readonly stoneRank?: import('@run-planner/engine/catalog-schema').KeepsakeRank;
-    /** Already-formatted accumulated bonus to damage dealt and taken. */
-    readonly discordantBellBonusLabel?: string;
-    readonly lionFang?: {
-      readonly bonusLabel: string;
-      readonly expired: boolean;
-      readonly origin: 'ordinary' | 'echo';
-    };
-  };
-  readonly arcana: readonly {
-    readonly key: string;
-    readonly label: string;
-    readonly origin: ArcanaActivationOrigin;
-    readonly rarity: TraitRarity;
-    readonly roomEntryGrowth?: WorkspaceRunStateGrowth & { readonly maxHealthGranted: number };
-  }[];
-  readonly artificer?: {
-    readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
-    readonly spent: number;
-    readonly capacity: 1 | 2 | 3 | 4;
-    readonly remaining: number;
-  };
-  readonly bags: readonly WorkspaceRunStateBagPresentation[];
-  readonly rewardStoreController: WorkspaceRunStateRewardStoreController;
-  readonly counters: readonly { readonly key: string; readonly value: number }[];
-  readonly elements: readonly { readonly key: string; readonly value: number }[];
-  readonly godPool: {
-    readonly inPool: readonly WorkspaceRunStateSource[];
-  };
-  readonly fear: {
-    readonly configuredTotal: number;
-    readonly active: readonly {
-      readonly key: string;
-      readonly label: string;
-      readonly rank: number;
-    }[];
-    readonly disabled: readonly {
-      readonly key: string;
-      readonly label: string;
-      readonly rank: number;
-    }[];
-    readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
-  };
-  /** Absent until the run holds or has bought a Well item. */
-  readonly stygianWell?: WorkspaceRunStateStygianWell;
-  readonly traits: {
-    readonly properUpbringingActive?: true;
-    readonly coreSlots: readonly WorkspaceRunStateCoreTraitSlot[];
-    readonly other: readonly WorkspaceRunStateTrait[];
-    readonly banned: readonly WorkspaceRunStateSource[];
-    readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
+  readonly overview: readonly WorkspaceRunStateSection[];
+  readonly effects: readonly WorkspaceRunStateSection[];
+  readonly keepsakes: readonly WorkspaceRunStateSection[];
+  readonly arcana: readonly WorkspaceRunStateSection[];
+  readonly fear: readonly WorkspaceRunStateSection[];
+  readonly moreInfo: {
+    readonly sections: readonly WorkspaceRunStateSection[];
+    readonly bags: readonly WorkspaceRunStateBagPresentation[];
   };
 }
 
-/** Engine-derived maxima with already-formatted flat sources. */
-export interface WorkspaceRunStateMaxStats {
-  readonly maxHealth: number;
-  readonly maxMagick: number;
-  readonly maxHealthNote?: string;
-  readonly sources: readonly {
-    readonly key: string;
-    readonly label: string;
-    readonly maxHealth?: string;
-    readonly maxMagick?: string;
-  }[];
-  readonly convertedHealth?: string;
-  readonly maxHealthMultiplier?: string;
-  readonly maxMagickMultiplier?: string;
-}
-
-export interface WorkspaceRunStateStygianWell {
-  readonly timedBuffs: readonly {
-    readonly key: string;
-    readonly label: string;
-    /** Already-formatted remaining uses on the instance's own clock. */
-    readonly remainingLabel: string;
-  }[];
-  readonly charges: readonly { readonly label: string; readonly count: number }[];
-  readonly purchases: readonly { readonly label: string; readonly count: number }[];
-}
-
-export interface WorkspaceRunStateSource {
+export interface WorkspaceRunStateSection {
   readonly key: string;
-  readonly label: string;
+  readonly heading?: string;
+  /** Muted explanatory copy under the heading. */
+  readonly note?: string;
+  readonly rows: readonly WorkspaceRunStateRow[];
 }
 
-/** Already-formatted copy; React renders these rows without deciding what an absent value means. */
-export interface WorkspaceRunStateRewardStoreController {
-  readonly enteredLabel: string;
-  readonly ratioLabel: string;
-  readonly targetLabel: string;
-}
-
-export interface WorkspaceRunStateTrait {
-  readonly label: string;
-  readonly rarity?: TraitRarity;
-  readonly level?: number;
-  readonly hammerRank?: 'RankI' | 'RankII';
-  readonly traitKey: string;
-  readonly steadyGrowthProgress?: number;
-  readonly steadyGrowthInterval?: number;
-  readonly roomsPerUpgradeGrowth?: WorkspaceRunStateGrowth;
-}
-
-/** A max-stat growth cycle: progress toward the next grant, grants and their total. */
-export interface WorkspaceRunStateGrowth {
-  readonly progress: number;
-  readonly interval: number;
-  readonly grants: number;
-  readonly maxManaGranted: number;
-}
-
-export interface WorkspaceRunStateCoreTraitSlot {
-  readonly label: string;
-  readonly slotKey: string;
-  readonly trait?: WorkspaceRunStateTrait;
+/** `Name (bracket)  tag` on the left, `right` in the fixed right column. */
+export interface WorkspaceRunStateRow {
+  readonly key: string;
+  readonly name: string;
+  /** Already-formatted clock or current value, including its parentheses. */
+  readonly bracket?: string;
+  /** A short muted marker, such as `Automatic`. */
+  readonly tag?: string;
+  /** Rarity, level, rank or a plain value. */
+  readonly right?: string;
 }
 
 export interface WorkspaceRunStateBagPresentation {
   readonly eligible: WorkspaceRunStateBagSection;
   readonly ineligible: WorkspaceRunStateBagSection;
   readonly label: string;
-  readonly remaining: string;
+  /** Remaining, eligible and ineligible totals. */
+  readonly rows: readonly WorkspaceRunStateRow[];
   readonly technicalKey: string;
 }
 

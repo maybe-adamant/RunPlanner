@@ -42,6 +42,7 @@ export function runStateLauncher(
   input: WorkspaceOccurrenceActionsInput,
   owner: RoomRunStateCheckpointAddress,
   title: string,
+  momentLead: string,
 ): WorkspaceRunStateLauncher | undefined {
   const runState = input.runState(owner);
   if (runState === undefined) return undefined;
@@ -49,7 +50,7 @@ export function runStateLauncher(
     ? Object.freeze({
         availability: 'available' as const,
         owner,
-        state: presentRunState(input.catalog, runState.snapshot),
+        state: presentRunState(input.catalog, runState.snapshot, momentLead),
         title,
       })
     : Object.freeze({ availability: 'unavailable' as const, owner, title });
@@ -69,6 +70,7 @@ export function assembleOccurrenceRunState(
     input,
     createRoomRunStateCheckpointAddress(owner, { kind: 'beforeRoomExit' }),
     `exiting ${roomLabel}`,
+    `Leaving ${roomLabel}`,
   );
   const byTab: Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>> = {};
   for (const entry of roomActions?.timeline.entries ?? []) {

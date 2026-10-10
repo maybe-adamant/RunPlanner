@@ -219,6 +219,7 @@ export const aphroditeTraits = [
   {
     key: 'ElementalDodgeBoon',
     label: 'Wispy Wiles',
+    elementalMultiplier: 'Air',
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
     linkedBoonRequirements: [],

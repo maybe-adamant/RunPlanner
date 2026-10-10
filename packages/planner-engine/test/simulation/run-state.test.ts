@@ -1378,7 +1378,10 @@ describe('decision run-state snapshots', () => {
       Fire: 2,
       Water: 2,
     });
-    expect(snapshot?.traits.properUpbringingActive).toBe(true);
+    expect(snapshot?.effects.traitStates.ElementalRarityUpgradeBoon).toEqual({
+      kind: 'status',
+      status: 'active',
+    });
     expect(snapshot?.counters.upgradableTraitCount).toBe(traits.upgradableTraitCount);
   });
 });

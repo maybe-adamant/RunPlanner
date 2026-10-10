@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createCatalog } from '../../src';
+import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 import type { ProperUpbringingEffect } from '@run-planner/engine/catalog-schema';
 import type {
@@ -32,33 +32,8 @@ describe('trait rarity and elements', () => {
       });
     expect(() =>
       malformed({
-        fromRarity: 'Common',
-        minimumRarity: 'Rare',
-        activationElementMinimums: {},
-        boonRarityContribution: { additive: { Rare: 1 } },
-      }),
-    ).toThrow(/must not be empty/);
-    expect(() =>
-      malformed({
-        fromRarity: 'Common',
-        minimumRarity: 'Rare',
-        activationElementMinimums: { Lightning: 2 },
-        boonRarityContribution: { additive: { Rare: 1 } },
-      }),
-    ).toThrow(/unknown|must be one of/);
-    expect(() =>
-      malformed({
-        fromRarity: 'Common',
-        minimumRarity: 'Rare',
-        activationElementMinimums: { Fire: 0 },
-        boonRarityContribution: { additive: { Rare: 1 } },
-      }),
-    ).toThrow(/positive integer/);
-    expect(() =>
-      malformed({
         fromRarity: 'Epic',
         minimumRarity: 'Rare',
-        activationElementMinimums: { Fire: 2 },
         boonRarityContribution: { additive: { Rare: 1 } },
       }),
     ).toThrow(/must be Common/);
@@ -66,7 +41,6 @@ describe('trait rarity and elements', () => {
       malformed({
         fromRarity: 'Common',
         minimumRarity: 'Common',
-        activationElementMinimums: { Fire: 2 },
         boonRarityContribution: { additive: { Rare: 1 } },
       }),
     ).toThrow(/must be Rare|must follow/);
@@ -74,14 +48,12 @@ describe('trait rarity and elements', () => {
       malformed({
         fromRarity: 'Common',
         minimumRarity: 'Rare',
-        activationElementMinimums: { Fire: 2 },
       }),
     ).toThrow(/exactly the Proper Upbringing effect fields/);
     expect(() =>
       malformed({
         fromRarity: 'Common',
         minimumRarity: 'Rare',
-        activationElementMinimums: { Fire: 2 },
         boonRarityContribution: { additive: { Rare: 1, Epic: 0 } },
       }),
     ).toThrow(/exactly Rare: 1/);
@@ -89,7 +61,6 @@ describe('trait rarity and elements', () => {
       malformed({
         fromRarity: 'Common',
         minimumRarity: 'Rare',
-        activationElementMinimums: { Fire: 2 },
         boonRarityContribution: { additive: { Rare: 0 } },
       }),
     ).toThrow(/exactly Rare: 1/);
@@ -109,7 +80,6 @@ describe('trait rarity and elements', () => {
                   rarityFloorEffect: {
                     fromRarity: 'Common',
                     minimumRarity: 'Rare',
-                    activationElementMinimums: { Fire: 2 },
                     boonRarityContribution: { additive: { Rare: 1 } },
                   },
                 }
@@ -268,4 +238,79 @@ describe('trait rarity and elements', () => {
       expect(() => createCatalog(malformed)).toThrow(message);
     },
   );
+
+  it('declares source ActivationRequirements and ElementalMultipliers for the Infusions', () => {
+    const activation = Object.fromEntries(
+      catalog.traits.values.flatMap((trait) =>
+        trait.activationRequirement === undefined ? [] : [[trait.key, trait.activationRequirement]],
+      ),
+    );
+    expect(activation).toEqual({
+      ElementalRarityUpgradeBoon: {
+        kind: 'elementMinimums',
+        minimums: { Fire: 2, Earth: 2, Air: 2, Water: 2 },
+      },
+      ElementalUnifiedBoon: { kind: 'highestBaseElementCount', minimum: 8 },
+      ElementalOlympianDamageBoon: { kind: 'elementMinimums', minimums: { Earth: 8 } },
+      ElementalRallyBoon: { kind: 'elementMinimums', minimums: { Fire: 3 } },
+      ElementalDamageFloorBoon: { kind: 'elementMinimums', minimums: { Air: 5 } },
+      ElementalDamageCapBoon: { kind: 'elementMinimums', minimums: { Water: 6 } },
+    });
+    const scaling = Object.fromEntries(
+      catalog.traits.values.flatMap((trait) =>
+        trait.elementalMultiplier === undefined ? [] : [[trait.key, trait.elementalMultiplier]],
+      ),
+    );
+    expect(scaling).toEqual({
+      ElementalDamageBoon: 'Earth',
+      ElementalBaseDamageBoon: 'Fire',
+      ElementalDodgeBoon: 'Air',
+      ElementalHealthBoon: 'Water',
+    });
+  });
+
+  it('rejects malformed activation requirements and elemental multipliers', () => {
+    const withTrait = (traitKey: string, patch: Record<string, unknown>) => () =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === traitKey ? ({ ...trait, ...patch } as RawTraitDeclaration) : trait,
+          ),
+        },
+      });
+    expect(
+      withTrait('ElementalRallyBoon', {
+        activationRequirement: { kind: 'elementMinimums', minimums: {} },
+      }),
+    ).toThrow(/minimums: must not be empty/);
+    expect(
+      withTrait('ElementalRallyBoon', {
+        activationRequirement: { kind: 'elementMinimums', minimums: { Lightning: 2 } },
+      }),
+    ).toThrow(/must be one of/);
+    expect(
+      withTrait('ElementalRallyBoon', {
+        activationRequirement: { kind: 'elementMinimums', minimums: { Fire: 0 } },
+      }),
+    ).toThrow(/positive integer/);
+    expect(
+      withTrait('ElementalUnifiedBoon', {
+        activationRequirement: { kind: 'highestBaseElementCount', minimum: 8, element: 'Fire' },
+      }),
+    ).toThrow(/exactly kind and minimum/);
+    expect(
+      withTrait('ElementalUnifiedBoon', { activationRequirement: { kind: 'godBoonRarity' } }),
+    ).toThrow(/unknown activation requirement/);
+    expect(withTrait('ElementalRarityUpgradeBoon', { activationRequirement: undefined })).toThrow(
+      /requires the trait to declare an activationRequirement/,
+    );
+    expect(withTrait('ElementalDodgeBoon', { elementalMultiplier: 'Lightning' })).toThrow(
+      /elementalMultiplier: must be one of/,
+    );
+    expect(withTrait('ElementalHealthBoon', { elementalMultiplier: undefined })).toThrow(
+      /perElement effect requires an elementalMultiplier/,
+    );
+  });
 });

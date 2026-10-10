@@ -848,14 +848,35 @@ The ten included infusion/Unity traits use these offer thresholds:
 | `ElementalDamageCapBoon`      | `Water >= 4`                                                 |
 | `ElementalHealthBoon`         | `Water >= 2`                                                 |
 
-Their higher `ActivationRequirements` affect the strength or activation of an
-already equipped trait; they do not raise the offer threshold. Most remain
-outside the current simulation because their activated effects do not yet
-change a modeled history fact. `ElementalRarityUpgradeBoon` is the exception:
-its activation changes equipped rarities and the legal rarity domain of later
-offers, so that lifecycle is retained below. The external
-progression/narrative gate inherited by `UnityTrait` is collapsed by the
-progressed baseline.
+Their higher `ActivationRequirements` affect the activation of an already
+equipped trait; they do not raise the offer threshold. `CheckActivatedTraits`
+(`TraitLogic.lua:772`) re-evaluates them against the element counts that
+`UpdateHeroTraitDictionary` derives from the equipped traits. The four scaling
+Infusions instead declare `ElementalMultipliers`, and their values follow the
+summed current count of that element:
+
+| Trait                         | Activation requirement               | Scaling element |
+| ----------------------------- | ------------------------------------ | --------------- |
+| `ElementalUnifiedBoon`        | `HighestBaseElementCount >= 8`       |                 |
+| `ElementalRarityUpgradeBoon`  | each of Fire, Earth, Air, Water >= 2 |                 |
+| `ElementalOlympianDamageBoon` | `Earth >= 8`                         |                 |
+| `ElementalRallyBoon`          | `Fire >= 3`                          |                 |
+| `ElementalDamageFloorBoon`    | `Air >= 5`                           |                 |
+| `ElementalDamageCapBoon`      | `Water >= 6`                         |                 |
+| `ElementalDamageBoon`         |                                      | Earth           |
+| `ElementalBaseDamageBoon`     |                                      | Fire            |
+| `ElementalDodgeBoon`          |                                      | Air             |
+| `ElementalHealthBoon`         |                                      | Water           |
+
+`HighestBaseElementCount` is the largest current count among elements whose
+`TraitElementData` declares `BaseElement` (Earth, Air, Fire, Water; Aether is
+not a base element). Planner disposition: each trait declares its
+`activationRequirement` or `elementalMultiplier`, and the engine publishes the
+current activation or element count with the Run State. Only
+`ElementalRarityUpgradeBoon`'s activation changes a modeled history fact, since
+it changes equipped rarities and the legal rarity domain of later offers; that
+lifecycle is retained below. The external progression/narrative gate inherited
+by `UnityTrait` is collapsed by the progressed baseline.
 
 ### Rarity-derived facts
 

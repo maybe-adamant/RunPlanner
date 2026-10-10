@@ -57,7 +57,10 @@ function expectNoEvaluationWork(
 
 function stateRowValue(sheet: HTMLElement, label: string): string | undefined {
   return (
-    within(sheet).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent ?? undefined
+    within(sheet)
+      .getByText(label, { selector: '.run-state-row-name' })
+      .closest('.run-state-row')
+      ?.querySelector('.run-state-row-right')?.textContent ?? undefined
   );
 }
 
@@ -100,9 +103,8 @@ describe('Run State product loop', () => {
     const sheet = screen.getByRole('region', {
       name: 'State before the first action in Opening 01',
     });
-    expect(within(sheet).getByRole('heading', { name: 'Gods in pool' })).toBeTruthy();
     // Frinos +40 health; Staff rank V +40 and Silver Wheel +100 Magick.
-    expect(stateRowValue(sheet, 'Max health')).toBe('70');
+    expect(stateRowValue(sheet, 'Max Health')).toBe('70');
     expect(stateRowValue(sheet, 'Max Magick')).toBe('190');
     expect(within(sheet).getByRole('list', { name: 'Maxima sources' }).textContent).toContain(
       'Silver Wheel+100 Magick',

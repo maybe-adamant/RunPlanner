@@ -125,19 +125,78 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
 function activeRarityFloorSources(
   catalog: Catalog,
   equippedTraits: Readonly<Record<string, EquippedTrait>>,
-  elementCounts: Readonly<Record<TraitElement, number>>,
+  facts: TraitElementFacts,
 ): ReadonlySet<string> {
   const active = new Set<string>();
   for (const equipped of Object.values(equippedTraits)) {
-    const declaration = catalog.traits.byKey[equipped.traitKey];
-    const effect = declaration?.rarityFloorEffect;
-    if (effect === undefined) continue;
-    const activeForLedger = Object.entries(effect.activationElementMinimums).every(
-      ([element, minimum]) => (elementCounts[element as TraitElement] ?? 0) >= minimum,
-    );
-    if (activeForLedger) active.add(equipped.traitKey);
+    if (
+      catalog.traits.byKey[equipped.traitKey]?.rarityFloorEffect !== undefined &&
+      traitElementActivation(catalog, equipped.traitKey, facts) === true
+    )
+      active.add(equipped.traitKey);
   }
   return active;
+}
+
+type TraitElementFacts = Pick<TraitHistoryState, 'elementCounts' | 'highestBaseElementCount'>;
+
+/** Whether a trait currently meets its declared activation requirement; undefined when it has none. */
+export function traitElementActivation(
+  catalog: Catalog,
+  traitKey: string,
+  facts: TraitElementFacts,
+): boolean | undefined {
+  const requirement = catalog.traits.byKey[traitKey]?.activationRequirement;
+  switch (requirement?.kind) {
+    case undefined:
+      return undefined;
+    case 'elementMinimums':
+      return Object.entries(requirement.minimums).every(
+        ([element, minimum]) => facts.elementCounts[element as TraitElement] >= minimum,
+      );
+    case 'highestBaseElementCount':
+      return facts.highestBaseElementCount >= requirement.minimum;
+  }
+}
+
+/** Steady Growth's encounters per proc at an equipped instance's rarity; undefined for other traits. */
+export function steadyGrowthInterval(
+  catalog: Catalog,
+  equipped: EquippedTrait,
+): number | undefined {
+  const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'steadyGrowth' || equipped.rarity === undefined) return undefined;
+  return disposition.intervalsByRarity[
+    equipped.rarity as keyof typeof disposition.intervalsByRarity
+  ];
+}
+
+/**
+ * Gold Gold Gold once offered and picked: pending while equipped, consumed after
+ * its doubled Shop purchase removed it.
+ */
+export function echoShopDuplicateStatus(
+  catalog: Catalog,
+  history: Pick<TraitHistoryState, 'events' | 'equippedTraits'>,
+): { readonly traitKey: string; readonly status: 'pending' | 'consumed' } | undefined {
+  const trait = catalog.traits.values.find(
+    (candidate) =>
+      candidate.selectedDisposition.kind === 'echo' &&
+      candidate.selectedDisposition.effect === 'doubleShop',
+  );
+  if (
+    trait === undefined ||
+    !history.events.some(
+      (event) =>
+        event.kind === 'traitOffer' &&
+        event.options[optionIndex(event.selectedOptionKey)]?.traitKey === trait.key,
+    )
+  )
+    return undefined;
+  return Object.freeze({
+    traitKey: trait.key,
+    status: history.equippedTraits[trait.key] === undefined ? 'consumed' : 'pending',
+  });
 }
 
 function withRarityAndSteadyGrowthCredit(
@@ -661,11 +720,7 @@ export function foldTraitHistoryEvents(
     }
     const fromTraits = deriveFacts(catalog, equipped);
     const afterAcquisition = combinedElementFacts(fromTraits, essenceElements, creationElements);
-    const nextActiveSources = activeRarityFloorSources(
-      catalog,
-      equipped,
-      afterAcquisition.elementCounts,
-    );
+    const nextActiveSources = activeRarityFloorSources(catalog, equipped, afterAcquisition);
     const newlyActive = new Set(
       [...nextActiveSources].filter((sourceKey) => !activeSources.has(sourceKey)),
     );

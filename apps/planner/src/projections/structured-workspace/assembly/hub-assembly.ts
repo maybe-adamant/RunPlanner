@@ -648,7 +648,7 @@ function projectHubNode(
               ? Object.freeze({
                   availability: 'available' as const,
                   owner,
-                  state: presentRunState(input.catalog, runState.snapshot),
+                  state: presentRunState(input.catalog, runState.snapshot, 'Before the Hub'),
                   title: 'Hub',
                 })
               : Object.freeze({

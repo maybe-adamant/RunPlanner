@@ -233,6 +233,7 @@ export const zeusTraits = [
   {
     key: 'ElementalDamageFloorBoon',
     label: 'Air Quality',
+    activationRequirement: { kind: 'elementMinimums', minimums: { Air: 5 } },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],

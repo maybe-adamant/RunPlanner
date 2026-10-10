@@ -25,7 +25,9 @@ export type {
 export type {
   WorkspaceRunStateBagSection,
   WorkspaceRunStateLauncher,
-  WorkspaceRunStateTrait,
+  WorkspaceRunStatePresentation,
+  WorkspaceRunStateRow,
+  WorkspaceRunStateSection,
 } from './contracts/run-state';
 export type {
   StructuredWorkspaceProjection,

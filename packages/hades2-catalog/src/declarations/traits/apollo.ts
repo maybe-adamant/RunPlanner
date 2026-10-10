@@ -231,6 +231,7 @@ export const apolloTraits = [
   {
     key: 'ElementalRallyBoon',
     label: 'Self Healing',
+    activationRequirement: { kind: 'elementMinimums', minimums: { Fire: 3 } },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],
