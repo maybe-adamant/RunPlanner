@@ -105,11 +105,6 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.run-state-row-tag {
-  color: #aaa7af;
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
 .run-state-row-right {
   color: #aaa7af;
   font-size: 0.85rem;

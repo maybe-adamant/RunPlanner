@@ -48,14 +48,12 @@ export interface WorkspaceRunStateSection {
   readonly rows: readonly WorkspaceRunStateRow[];
 }
 
-/** `Name (bracket)  tag` on the left, `right` in the fixed right column. */
+/** `Name (bracket)` on the left, `right` in the fixed right column. */
 export interface WorkspaceRunStateRow {
   readonly key: string;
   readonly name: string;
   /** Already-formatted clock or current value, including its parentheses. */
   readonly bracket?: string;
-  /** A short muted marker, such as `Automatic`. */
-  readonly tag?: string;
   /** Rarity, level, rank or a plain value. */
   readonly right?: string;
 }

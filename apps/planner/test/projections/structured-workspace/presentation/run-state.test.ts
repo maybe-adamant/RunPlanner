@@ -138,15 +138,10 @@ function withEffects(effects: Partial<RunStateSnapshot['effects']>) {
   return { effects: { ...base.effects, ...effects } };
 }
 
-/** Each section as `heading: name (bracket) [tag] | right` lines. */
+/** Each section as `heading: name (bracket) | right` lines. */
 function lines(sections: readonly WorkspaceRunStateSection[]) {
   const text = (row: WorkspaceRunStateRow) =>
-    [
-      row.name,
-      row.bracket,
-      row.tag === undefined ? undefined : `[${row.tag}]`,
-      row.right === undefined ? undefined : `| ${row.right}`,
-    ]
+    [row.name, row.bracket, row.right === undefined ? undefined : `| ${row.right}`]
       .filter((part) => part !== undefined)
       .join(' ');
   return Object.fromEntries(
@@ -385,10 +380,7 @@ describe('Run State presentation', () => {
       }),
     });
     expect(lines(state.arcana)).toEqual({
-      equipped: [
-        'The Centaur (4/5 rooms) [Automatic] | Rank III',
-        'The Artificer (1 charge) | Rank I',
-      ],
+      equipped: ['The Centaur (4/5 rooms) | Rank III', 'The Artificer (1 charge) | Rank I'],
       Temporary: ['The Sorceress | Rank IV'],
       'Run effects': ['Barren (2 encounters)'],
     });
