@@ -204,13 +204,14 @@ each delegated gate it must:
 - omit full parent history by default and permit only one write-capable agent in
   the shared worktree, while allowing distinct bounded read-only investigations;
 - delegate to a standing executor for the task's lane and retire it when its
-  ownership, design, or context changes materially, after about ten tasks, once
-  its current context passes about half the window, or after its first
-  compaction (both read from its transcript); within a multi-gate plan, retire
-  only at a gate boundary, and only when the next gate would approach the window
-  or the agent has been compacted, handing off through the plan document; when a
-  large lane agent has gone cold and the task is small, prefer a fresh agent
-  with a tight packet;
+  ownership or design changes materially, after about ten tasks, after its
+  second compaction (read from its transcript), or when it visibly regresses by
+  forgetting or reopening a settled decision; an executor continuing the same
+  design whose decisions live in a written spec or plan document keeps working
+  through its first compaction, because a fresh agent must re-read everything;
+  within a multi-gate plan, retire only at a gate boundary, handing off through
+  the plan document; when a large lane agent has gone cold and the task is
+  small, prefer a fresh agent with a tight packet;
 - review stabilized work with the lane's standing reviewer, never an agent that
   executed the change; use a fresh independent reviewer for schema changes,
   execution-protocol changes, foundational model corrections, and plan
