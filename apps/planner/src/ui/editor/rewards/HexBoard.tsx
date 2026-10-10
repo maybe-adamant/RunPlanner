@@ -36,7 +36,7 @@ export function HexBoard<Node extends WorkspaceHexBoardNode>({
         <svg
           aria-hidden="true"
           className="hex-tree-links"
-          height={height}
+          height="100%"
           style={{ left: INSET_X, width: `calc(100% - ${INSET_X * 2}px)` }}
         >
           {nodes.flatMap((node) =>
