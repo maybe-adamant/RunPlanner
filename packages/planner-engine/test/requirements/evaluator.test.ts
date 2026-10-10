@@ -64,6 +64,7 @@ describe('requirement evaluator registry', () => {
       'clockworkNonGoalCapacity',
       'flagEquals',
       'routeKeyEquals',
+      'equippedAspectEquals',
     ]);
     expect(hasRequirementEvaluator('counterRange')).toBe(true);
     expect(hasRequirementEvaluator('externalSavePredicate')).toBe(false);
@@ -118,6 +119,22 @@ describe('requirement evaluator registry', () => {
     );
     expect(() => evaluateRequirement(requirement, baseContext)).toThrowError(
       'Route-key requirement evaluated without route identity',
+    );
+  });
+
+  it('compares the equipped aspect and requires loadout facts', () => {
+    const requirement = { kind: 'equippedAspectEquals', aspectKey: 'SuitHexAspect' } as const;
+    expect(
+      evaluateRequirement(requirement, { ...baseContext, equippedAspectKey: 'SuitHexAspect' }),
+    ).toBe(true);
+    expect(
+      evaluateRequirement(requirement, { ...baseContext, equippedAspectKey: 'BaseSuitAspect' }),
+    ).toBe(false);
+    expect(evaluateRequirement(requirement, { ...baseContext, equippedAspectKey: null })).toBe(
+      false,
+    );
+    expect(() => evaluateRequirement(requirement, baseContext)).toThrowError(
+      'Aspect requirement evaluated without loadout facts',
     );
   });
 

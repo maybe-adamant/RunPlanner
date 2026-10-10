@@ -131,6 +131,7 @@ interface RewardFactsOptions {
   /** Branch-local delayed Shrine Spell reservation. */
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
+  readonly equippedAspectKey: string | null;
   readonly fail: (detail: string) => never;
 }
 
@@ -148,6 +149,7 @@ export function createRewardFacts({
   offeredRewardTypes,
   pendingSpellDrop = false,
   allSpellInvested = false,
+  equippedAspectKey,
   fail,
 }: RewardFactsOptions): RewardKernelFacts {
   const staticFacts = staticRewardViewFacts(catalog, view);
@@ -209,6 +211,7 @@ export function createRewardFacts({
       allSpellInvested,
       pendingSpellDrop,
     }),
+    equippedAspectKey,
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
 }
@@ -268,6 +271,7 @@ export function createBiomeRewardFacts(input: BiomeRewardFactsInput): RewardKern
       (delivery) => delivery.rewardType === 'SpellDrop',
     ),
     allSpellInvested: state.hexProgress.talentDropsClosed === true,
+    equippedAspectKey: state.equipment.aspectKey,
     fail: (detail) => {
       throw new BiomeRewardSimulationContractError(detail);
     },
@@ -319,6 +323,7 @@ export function createRouteStartRewardFacts(
         (delivery) => delivery.rewardType === 'SpellDrop',
       ),
     }),
+    equippedAspectKey: state.equipment.aspectKey,
   });
   return factsWithHistory(Object.freeze({ requirements }), history, new Set<string>());
 }

@@ -51,6 +51,8 @@ export interface RequirementEvaluationContext {
   readonly currentBatchRoomGameNames: readonly string[];
   readonly clockwork: ClockworkRequirementFacts | undefined;
   readonly flags: Readonly<Record<CurrentRunFlag, boolean>>;
+  /** Present where reward facts reach the loadout; null for an aspectless weapon. */
+  readonly equippedAspectKey?: string | null;
 }
 
 type RequirementOfKind<Kind extends RequirementKind> = Extract<
@@ -117,6 +119,13 @@ function requireRouteKey(context: RequirementEvaluationContext): string {
     throw new Error('Route-key requirement evaluated without route identity');
   }
   return context.routeKey;
+}
+
+function requireEquippedAspectKey(context: RequirementEvaluationContext): string | null {
+  if (context.equippedAspectKey === undefined) {
+    throw new Error('Aspect requirement evaluated without loadout facts');
+  }
+  return context.equippedAspectKey;
 }
 
 export const requirementEvaluatorRegistry = Object.freeze({
@@ -209,6 +218,8 @@ export const requirementEvaluatorRegistry = Object.freeze({
   },
   flagEquals: (requirement, context) => context.flags[requirement.flag] === requirement.value,
   routeKeyEquals: (requirement, context) => requireRouteKey(context) === requirement.routeKey,
+  equippedAspectEquals: (requirement, context) =>
+    requireEquippedAspectKey(context) === requirement.aspectKey,
 } satisfies RequirementEvaluatorRegistry);
 
 export function hasRequirementEvaluator(kind: string): kind is RequirementKind {
@@ -266,5 +277,7 @@ export function evaluateRequirement(
       return requirementEvaluatorRegistry.flagEquals(requirement, context);
     case 'routeKeyEquals':
       return requirementEvaluatorRegistry.routeKeyEquals(requirement, context);
+    case 'equippedAspectEquals':
+      return requirementEvaluatorRegistry.equippedAspectEquals(requirement, context);
   }
 }

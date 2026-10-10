@@ -1,6 +1,6 @@
 import { CatalogContractError } from '@run-planner/hades2-catalog';
 import { catalog } from '../../src';
-import { validateRewardRouteRequirementReferences } from '../../src/compiler/rewards/requirements';
+import { validateRewardRouteAndAspectReferences } from '../../src/compiler/rewards/requirements';
 import {
   createRewardKernelCatalog,
   replaceShopOption,
@@ -126,6 +126,27 @@ describe('reward compiler Shop normalizer', () => {
         'WeaponUpgrade',
       ),
     ).toBe(false);
+  });
+
+  it('excludes Aspect of Selene from the Hermes shrine Spell Drop entry only', () => {
+    const notSelene = {
+      kind: 'not',
+      requirement: { kind: 'equippedAspectEquals', aspectKey: 'SuitHexAspect' },
+    };
+    const option = (profileKey: string, groupKey: string, optionKey: string) =>
+      rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey[groupKey]?.options.byKey[optionKey];
+    const shrine = option('SurfaceShop', 'Second', 'SpellDrop')?.requirement;
+    expect(shrine?.kind === 'all' ? shrine.requirements : []).toContainEqual(notSelene);
+    const holders = rewardKernelCatalog.shops.values.flatMap((shop) =>
+      shop.groups.values.flatMap((group) =>
+        group.options.values.flatMap((entry) =>
+          JSON.stringify(entry.requirement ?? null).includes('equippedAspectEquals')
+            ? [`${shop.key}.${group.key}.${entry.key}`]
+            : [],
+        ),
+      ),
+    );
+    expect(holders).toEqual(['SurfaceShop.Second.SpellDrop']);
   });
 
   it('normalizes World, Surface, I, and Q shop pools with their declared slot groups', () => {
@@ -717,8 +738,20 @@ describe('reward compiler Shop normalizer', () => {
         requirement: { kind: 'routeKeyEquals', routeKey: 'UnknownRoute' },
       })),
     );
-    expect(() => validateRewardRouteRequirementReferences(rewards, catalog.routes)).toThrow(
-      CatalogContractError,
+    expect(() =>
+      validateRewardRouteAndAspectReferences(rewards, catalog.routes, catalog.aspects),
+    ).toThrow(CatalogContractError);
+  });
+
+  it('rejects a Shop aspect requirement that does not resolve to a declared aspect', () => {
+    const rewards = createRewardKernelCatalog(
+      replaceShopOption('WorldShop', 'GiftDrop', (option) => ({
+        ...option,
+        requirement: { kind: 'equippedAspectEquals', aspectKey: 'UnknownAspect' },
+      })),
     );
+    expect(() =>
+      validateRewardRouteAndAspectReferences(rewards, catalog.routes, catalog.aspects),
+    ).toThrow(CatalogContractError);
   });
 });

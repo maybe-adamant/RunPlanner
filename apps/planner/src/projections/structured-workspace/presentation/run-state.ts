@@ -108,6 +108,8 @@ function requirementExplanation(requirement: RequirementExpression): string {
       return `Requires ${requirement.flag} to be ${requirement.value}.`;
     case 'routeKeyEquals':
       return `Requires route ${requirement.routeKey}.`;
+    case 'equippedAspectEquals':
+      return `Requires equipped aspect ${requirement.aspectKey}.`;
   }
 }
 

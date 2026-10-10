@@ -45,6 +45,11 @@ function phaseOption(
 }
 
 const dreamRoute: RequirementExpression = { kind: 'routeKeyEquals', routeKey: 'Dream' };
+/** Only the Hermes shrine Spell Drop excludes a hero holding Aspect of Selene. */
+const notSeleneAspect: RequirementExpression = {
+  kind: 'not',
+  requirement: { kind: 'equippedAspectEquals', aspectKey: 'SuitHexAspect' },
+};
 
 function routeOption(
   routeRequirement: RequirementExpression,
@@ -444,7 +449,10 @@ export const shops = [
           option({
             key: 'SpellDrop',
             rewardType: 'SpellDrop',
-            requirement: { kind: 'all', requirements: [spellLegal, hubSpellDropExcludes] },
+            requirement: {
+              kind: 'all',
+              requirements: [spellLegal, hubSpellDropExcludes, notSeleneAspect],
+            },
           }),
           option({
             key: 'ShopHermesUpgrade',

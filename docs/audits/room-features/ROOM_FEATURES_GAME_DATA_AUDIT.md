@@ -312,6 +312,11 @@ offer and two without-replacement second-group offers.
 | `BlindBoxLoot`      |
 | `TalentDrop`        |
 
+The `SpellDrop` option alone adds `PathFalse` on
+`CurrentRun.Hero.TraitDictionary.SuitHexAspect` (`StoreData.lua` `SurfaceShop`
+second group): the Shrine never offers a Spell Drop to Aspect of Selene, while
+Charon's `WorldShop` Spell entry and room-reward `SpellDropRequirements` do not.
+
 `LastStandDrop` retains `MissingLastStand` during generation and purchase;
 `FillInShopOptions` filters it before weighted selection. `RequiredNotInStore`
 observes the complete pre-purchase inventory: visible Hermes, Spell, and

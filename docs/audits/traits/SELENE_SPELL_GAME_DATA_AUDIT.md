@@ -118,9 +118,9 @@ Spell Drop, `OpenSpellScreen` checks that aspect first and routes directly to
 replace Sky Fall. Selene's Aspect-specific dialogue describes the same rule:
 the aspect bearer already knows Sky Fall and reshapes it through Path of Stars.
 
-Some individual Shop replacement tables independently exclude
-`SuitHexAspect`; that is a store-local option rule, not evidence that the
-aspect can never receive a Spell Drop. The normal `RunProgress` Spell entry
+Only the Hermes Shrine (`SurfaceShop`) Spell option excludes `SuitHexAspect`;
+that is a store-local option rule, not evidence that the aspect can never
+receive a Spell Drop. The normal `RunProgress` Spell entry
 uses the named requirements and remains available to the aspect. Thus the
 planner rule is:
 
