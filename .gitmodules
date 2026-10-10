@@ -1,0 +1,4 @@
+[submodule "external/adamant-ModpackLib"]
+	path = external/adamant-ModpackLib
+	url = https://github.com/h2-modpack/adamant-ModpackLib.git
+	branch = main

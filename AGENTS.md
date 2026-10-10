@@ -105,6 +105,14 @@ the result.
   planner code.
 - Primary tests are the Lua syntax pass, Lua suite, and Luacheck. Use
   `npm run test:game-module` while developing this lane.
+- ModpackLib's source is the `external/adamant-ModpackLib` submodule, pinned to
+  a release tag. Before changing ModpackLib-facing code (status UI, overlays,
+  victory summary, config), read its `API.md` and `CHANGELOG.md` there. The
+  required version is the `adamant-ModpackLib` dependency in the game module's
+  manifest; bump the submodule with each ModpackLib release and raise the
+  manifest requirement only when the module needs the newer API. The submodule
+  is reference only: nothing builds against it, and lint, format and tests skip
+  `external/`.
 
 When a feature crosses lanes, establish the authoritative fact or transition in
 its owning lane first, expose the narrow supported product, and adapt it

@@ -83,6 +83,11 @@ workspace symlinks must be created by Linux npm.
 
 ## Development and validation
 
+Clone with `git clone --recurse-submodules`, or run
+`git submodule update --init` afterwards, to fetch the ModpackLib source used
+for reference under `external/adamant-ModpackLib`. Builds and tests do not need
+it.
+
 ```bash
 npm run check          # complete typecheck, tests, lint, format, and build gate
 npm run test:changed   # tests related to uncommitted source/test changes
