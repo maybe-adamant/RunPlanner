@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
 import {
@@ -149,6 +150,31 @@ describe('execution start state', () => {
       biomeKey: 'N',
       biomeVisitOrder: biomeKeys.slice(0, biomeKeys.indexOf('N')),
     });
+  });
+
+  it('prepends the native Dream_Intro prologue and counts it in run depth', () => {
+    const project = withStartPoint(loadDreamMixedHandoffCheckpoint(), {
+      biomeKey: 'N',
+      point: 'opening',
+    });
+    const evaluation = simulateProject(catalog, project);
+    const result = startInstallationAt(catalog, project, evaluation, {
+      biomeKey: 'N',
+      kind: 'opening',
+    });
+    if (result.availability !== 'available') throw new Error('N opening is unavailable');
+    const { installation } = result;
+    const start = compile(project, true).startState!;
+    expect(start.roomHistory[0]).toEqual({ name: 'Dream_Intro', nextRoomSet: true });
+    expect(start.roomHistory.slice(1).map((record) => record.name)).toEqual(
+      installation.roomHistory.map((record) => record.gameName),
+    );
+    expect(start.lastDevotionDepth).toBe(
+      installation.counters.lastDevotionDepth === undefined
+        ? undefined
+        : installation.counters.lastDevotionDepth + 1,
+    );
+    expect(start.encounterDepth).toBe(installation.counters.routeEncounterDepth);
   });
 
   it('round-trips and fingerprints the start state', () => {

@@ -8,6 +8,7 @@ function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         "loadout runtime dependencies are required")
     assert(type(hexTree) == "table", "loadout Hex Tree instance is required")
     local nativeBindings = import("mods/native_bindings.lua")
+    local practice = import("mods/practice/install.lua")
     local roomCoordinator = room
     local startDepth, startingHexScope = 0, nil
 
@@ -93,6 +94,22 @@ function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         local state = getState(runtime)
         if state == nil then return base(hero, keepsakeKey, args) end
         local key = keepsakeKey or (_G.GameState and _G.GameState.LastAwardTrait)
+        local start = state.plan and state.plan.startState
+        if startDepth > 0 and start ~= nil and practice.supported(start) and state.state == "starting" then
+            -- A Practice mode start equips the start state's keepsake at its
+            -- rank, without the acquire effect the planner already counted. A
+            -- disagreeing configuration equips natively and is rejected at run
+            -- start.
+            local result
+            if not loadoutRuntime.loadout.configurationAgrees(state) then
+                result = base(hero, keepsakeKey, args)
+            else
+                local row = practice.slottedKeepsake(start)
+                result = row and base(hero, row.name, practice.keepsakeEquipArgs(args, row)) or nil
+            end
+            report(runtime)
+            return result
+        end
         if startDepth > 0 then
             local expectedStarting = loadoutRuntime.loadout.beginKeepsake(state, key)
             if expectedStarting == nil then

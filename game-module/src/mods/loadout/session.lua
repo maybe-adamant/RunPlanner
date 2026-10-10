@@ -30,31 +30,50 @@ local function sameKeys(expected, observed)
     return true
 end
 
-function session.verifyCompleted(state, mismatch)
-    local expected = state.plan and state.plan.startingLoadout
-    if not expected then return mismatch(state, "starting-loadout", "published loadout", nil) end
+-- The player configuration native StartNewRun reads from GameState: weapon,
+-- recorded aspect, Arcana, Fear and keepsake. It is final before the run
+-- equips anything; whether the hero holds the aspect is known only after
+-- EquipWeaponUpgrade. Returns the first disagreement.
+local function configuration(state, aspectHeld)
+    local expected = state.plan.startingLoadout
     local observedLoadout = native.readLoadout()
     if observedLoadout.weaponKey ~= expected.weaponKey then
-        return mismatch(state, "starting-weapon", expected.weaponKey, observedLoadout.weaponKey)
+        return "starting-weapon", expected.weaponKey, observedLoadout.weaponKey
     end
-    if not native.aspectAgrees(expected.aspectKey, observedLoadout.aspectKey) then
-        return mismatch(state, "starting-aspect", expected.aspectKey, observedLoadout.aspectKey)
+    local aspectAgrees = aspectHeld and native.aspectAgrees(expected.aspectKey, observedLoadout.aspectKey)
+        or (not aspectHeld and expected.aspectKey == observedLoadout.aspectKey)
+    if not aspectAgrees then
+        return "starting-aspect", expected.aspectKey, observedLoadout.aspectKey
     end
     local observedArcana = native.activeArcana()
-    if not sameSet(expected.arcana, observedArcana) then return mismatch(state, "starting-arcana", expected.arcana, observedArcana) end
+    if not sameSet(expected.arcana, observedArcana) then return "starting-arcana", expected.arcana, observedArcana end
     local configured = native.configuredFearRanks(expected.fear.configuredRanks)
     if not proof.compare("starting-fear", expected.fear.configuredRanks, configured) then
-        return mismatch(state, "starting-fear", expected.fear.configuredRanks, configured)
+        return "starting-fear", expected.fear.configuredRanks, configured
     end
     local effective = native.fearRanks(expected.fear.effectiveRanks)
     if not proof.compare("effective-fear", expected.fear.effectiveRanks, effective) then
-        return mismatch(state, "effective-fear", expected.fear.effectiveRanks, effective)
+        return "effective-fear", expected.fear.effectiveRanks, effective
     end
     local startingKeepsake = state.plan.startingKeepsake.keepsakeKey
     local observedKeepsake = (_G.GameState or {}).LastAwardTrait or (_G.GameState or {}).EquippedKeepsake
     if observedKeepsake ~= startingKeepsake then
-        return mismatch(state, "starting-keepsake", startingKeepsake, observedKeepsake)
+        return "starting-keepsake", startingKeepsake, observedKeepsake
     end
+    return nil
+end
+
+-- Whether the configuration agrees before native StartNewRun equips the
+-- keepsake; the complete verification still follows at run start.
+function session.configurationAgrees(state)
+    return state.plan ~= nil and state.plan.startingLoadout ~= nil and configuration(state, false) == nil
+end
+
+function session.verifyCompleted(state, mismatch)
+    local expected = state.plan and state.plan.startingLoadout
+    if not expected then return mismatch(state, "starting-loadout", "published loadout", nil) end
+    local checkpoint, expectedValue, observed = configuration(state, true)
+    if checkpoint ~= nil then return mismatch(state, checkpoint, expectedValue, observed) end
     if expected.startingHex then
         if not native.hasTrait(expected.startingHex.spellTraitKey) then
             return mismatch(state, "starting-hex-spell", expected.startingHex.spellTraitKey, nil)

@@ -366,6 +366,30 @@ function TestRuntimeSession.testPostbossAdmissionStateMismatchIsPassiveAndFinal(
     lu.assertEquals(state.firstMismatch, expectedMismatch)
 end
 
+function TestRuntimeSession.testPostbossSelfCheckErrorIsAFault()
+    local priorVerify = admission.verify
+    admission.verify = function() error("reader failed") end
+    local postboss = occurrence()
+    postboss.id, postboss.gameName = "postboss", "H_PostBoss01"
+    postboss.resumeBoundary = "postbossEntry"
+    local plan = {
+        kind = "ready", startingLoadout = { weaponKey = "WeaponStaffSwing", aspectKey = "BaseStaffAspect" },
+        occurrences = { postboss }, occurrencesById = { postboss = postboss },
+        selectedOccurrenceIds = { "postboss" },
+    }
+    local state = { initialized = false, state = "inactive", diagnostics = {} }
+    local result = runtime.attemptPostbossAdmission(state, {
+        load = function() return true, plan end,
+    }, 1, { Name = "H_PostBoss01" })
+    admission.verify = priorVerify
+
+    lu.assertNil(result)
+    lu.assertEquals(state.state, "faulted")
+    lu.assertNil(state.firstMismatch)
+    lu.assertEquals(state.firstFault.checkpoint, "postboss-admission:self-check")
+    lu.assertStrContains(state.firstFault.observed, "reader failed")
+end
+
 function TestRuntimeSession.testNewRunAdmissionClosesTheProcessLocalRecoveryBoundary()
     local row = occurrence()
     local plan = {

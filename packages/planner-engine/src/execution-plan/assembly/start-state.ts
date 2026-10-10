@@ -9,12 +9,24 @@ import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import type {
   ExecutionBiomeKey,
   ExecutionKeepsakeRarity,
+  ExecutionRouteKey,
   ExecutionStartKeepsakeTrait,
+  ExecutionStartRoomRecord,
   ExecutionStartState,
   ExecutionStartTrait,
   ExecutionStartingLoadout,
   ExecutionTraitRarity,
 } from '../model';
+
+/**
+ * A Dream run's native history starts with its Dream_Intro prologue, whose
+ * SelectNextDreamBiome sets NextRoomSet (RoomDataDream.lua, DreamRunLogic.lua).
+ * Native run depth counts it; encounter depth does not, since its encounter is
+ * non-combat.
+ */
+const DREAM_PROLOGUE: readonly ExecutionStartRoomRecord[] = Object.freeze([
+  Object.freeze({ name: 'Dream_Intro', nextRoomSet: true as const }),
+]);
 
 function missing(detail: string): never {
   throw new CompilerError('executionCoverageMissing', `start state ${detail}`);
@@ -245,6 +257,7 @@ function hex(catalog: Catalog, value: StartInstallation['hex']): ExecutionStartS
  */
 export function executionStartState(
   catalog: Catalog,
+  routeKey: ExecutionRouteKey,
   startPoint: RunStartPoint,
   installation: StartInstallation,
   selectedOccurrenceIds: readonly string[],
@@ -270,6 +283,7 @@ export function executionStartState(
     (card) => card.artificerCapacityByRarity !== undefined,
   )?.key;
   const { maxStats } = installation;
+  const prologue = routeKey === 'Dream' ? DREAM_PROLOGUE : [];
   return Object.freeze({
     point: installation.startPoint.kind,
     biomeKey: installation.startPoint.biomeKey as ExecutionBiomeKey,
@@ -277,18 +291,19 @@ export function executionStartState(
     roomName: room.gameName,
     gold: startPoint.gold ?? 0,
     biomeVisitOrder: route.visitedBiomeKeys,
-    roomHistory: Object.freeze(
-      installation.roomHistory.map((record) =>
+    roomHistory: Object.freeze([
+      ...prologue,
+      ...installation.roomHistory.map((record) =>
         Object.freeze({
           name: record.gameName,
           ...(record.nextRoomSet ? { nextRoomSet: true as const } : {}),
         }),
       ),
-    ),
+    ]),
     encounterDepth: counters.routeEncounterDepth,
     ...(counters.lastDevotionDepth === undefined
       ? {}
-      : { lastDevotionDepth: counters.lastDevotionDepth }),
+      : { lastDevotionDepth: counters.lastDevotionDepth + prologue.length }),
     ...(preboss
       ? {
           biome: Object.freeze({

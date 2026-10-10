@@ -1,0 +1,63 @@
+# Practice mode live acceptance
+
+Use a development build of the planner with internal run modifiers and a
+matching installed game-module build. In Loadout, choose a start point on a
+valid plan, optionally set its gold, save and send it, and start the run with
+the plan's weapon, aspect, keepsake, familiar, Arcana and Fear. Use the Dream
+door for a Dream plan. Source probes and automated tests are not live
+verification; the owner confirms or waives each remaining check.
+
+## Opening starts
+
+- [ ] **Underworld.** Start at a later biome's Opening (for example G or H).
+      The run opens in the plan's Intro room with no earlier rooms played.
+- [ ] **Surface.** Start at the Q Opening of a plan that crosses N, O and P.
+- [ ] **Dream.** Start at a later Dream biome's Opening. The room is entered
+      with the Dream biome entrance, offers no extra reward choice, and the
+      next biome choice after its Postboss excludes biomes already visited.
+
+For each start, before taking any action in the start room:
+
+- [ ] The trait tray shows the plan's boons, hammers, Chaos curses and
+      blessings, and Well, Hermes and Path of Stars entries at their planned
+      levels and rarities, with no acquisition presentation or duplicated
+      keepsake effect.
+- [ ] The equipped keepsake is the planned one at its planned rank; any kept
+      Permanent keepsake or Echo copy is held unslotted with its charges.
+- [ ] Active Arcana match the plan, including raised rarities, temporary
+      cards, Barren and vows Circe disabled.
+- [ ] Max health and Magick equal the planned values and current health is
+      full. Death Defiance charges match the equipped sources, all unused.
+- [ ] Gold equals the native starting gold plus the authored start gold.
+      Under Barren the native starting gold omits the unequipped Arcana's
+      bonus gold, since native counts it after the Arcana are removed.
+- [ ] The Path of Stars shows the planned layout, invested nodes and unspent
+      points.
+- [ ] The executor log shows the session admitted and no `practice-start`
+      mismatch or executor fault; the plan steers the start room and later
+      rooms (doors, rewards, offers) as in an ordinary run from that point.
+- [ ] Depth-dependent content (room depth display, Fear depth effects)
+      behaves as at that point of a full run. Timers are not installed: Tight
+      Deadline starts fresh with the biome's full allowance.
+- [ ] A Centaur threshold or an Echo replay at the start Intro changes the
+      maxima natively after entry, without a `practice-start` mismatch.
+- [ ] Save & Quit in the start room and continue. Max health and Magick still
+      equal the planned values (the start room repeats its first-room hero
+      setup), and the run continues natively.
+
+## Records
+
+- [ ] Die or clear, return to the Crossroads and start another run. The
+      practice run does not appear in the run history, and the run count is
+      unchanged.
+- [ ] In a practice run, Save & Quit at a later marked Postboss and continue.
+      The executor log shows Postboss re-admission, and after the run ends it
+      is still absent from the run history.
+
+## Optional Silver Wheel probe
+
+- [ ] On a plan with a Gift Gift Gift copy of Silver Wheel, start after the
+      copy. Dump the hero's `RoomRewardMaxManaTrait` entries (`Source`,
+      `PropertyChanges[1].ChangeValue`) and compare `CurrentRun.Hero.MaxMana`
+      with `GetExpectedMaxMana()`. Expect one `Source`-tagged entry for the
+      slotted Wheel at its rank and untagged entries for every other grant.

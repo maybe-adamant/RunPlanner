@@ -409,7 +409,11 @@ state; assembly translates it, selecting and renaming fields. It carries:
   `EnteredBiomes`; `IsDreamRun` follows from the route), one stub `RoomHistory`
   record per departed room (`name`, `nextRoomSet` where RoomData declares or
   inherits it, so native run and biome depth derive from it),
-  `encounterDepth` and `lastDevotionDepth`;
+  `encounterDepth` and `lastDevotionDepth`. A Dream route's history starts
+  with the native `Dream_Intro` prologue, whose `SelectNextDreamBiome` sets
+  its `NextRoomSet` (`DreamRunLogic.lua:1-40`); native run depth counts it, so
+  assembly adds it to `lastDevotionDepth`. Its encounter is non-combat, so
+  encounter depth does not count it;
 - for a Preboss only, `biome`: `BiomeDepthCache`, `BiomeEncounterDepth`,
   `BiomeUseRecord`, the Forfeit and Fig Leaf biome flags, and, exactly for I,
   `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`. An Opening omits
@@ -495,13 +499,23 @@ counters exactly for I. Execution's route cursor starts at the start
 occurrence's index in `selectedOccurrenceIds`; earlier occurrences are never
 realized.
 
-The module installs the start state inside its `StartNewRun` wrap and the
-start room's creation, then self-checks with the existing admission
-conformance families and the published maxima; a mismatch makes execution
-passive, and the run continues natively. Conformance stays legality-only: the
-installed values are inputs, not new room-exit facts. The run's lifecycle is
-native except that the module removes the run from `RunHistory`; clear-time and
-depth records still write.
+For an Opening the module installs inside native `StartNewRun`: the keepsake
+at its `EquipKeepsake`, once the GameState loadout agrees; the hero's state
+when `EquipMetaUpgrades` returns; the records when `InitializeRewardStores`
+returns; the gold after `StartNewRun` returns. `CreateRoom` only prepares the
+start room for execution. The start room's `SetupHeroObject` repeats native
+first-room hero setup, which a non-empty `RoomHistory` skips; the run records
+its start room and history length, so the setup also repeats after Save & Quit
+and while execution is passive. The published maxima are checked right after
+that setup, before the Intro's own room-start effects (a Centaur threshold, an
+Echo replay) change them; the existing admission conformance families are
+checked at `StartRoomPresentation`. A mismatch makes execution passive, an
+install or self-check error is an executor fault, and the run continues
+natively either way. Conformance stays legality-only: the installed values are
+inputs, not new room-exit facts. The run's lifecycle is native except that the
+module removes the run from `RunHistory` before native `EndRun` strips the
+history by each run's distance from the end, and sets `PrevRun` to the last
+recorded run as a reload would; clear-time and depth records still write.
 
 ### Content fingerprint
 

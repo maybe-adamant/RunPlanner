@@ -297,6 +297,7 @@ export function assembleExecutionProduct({
     startPoint?.kind === 'eligible'
       ? executionStartState(
           catalog,
+          routeKey,
           startPoint.startPoint,
           startPoint.installation,
           selectedOccurrenceIds,
