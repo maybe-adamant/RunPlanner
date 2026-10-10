@@ -1186,6 +1186,13 @@ export interface ExecutionStartBiome {
   };
 }
 
+export interface ExecutionStartEssences {
+  readonly Fire: number;
+  readonly Air: number;
+  readonly Earth: number;
+  readonly Water: number;
+}
+
 /**
  * The planner's exact state at a mid-run start, in the native terms the game
  * module installs into a fresh run. State the planner does not know starts as
@@ -1212,6 +1219,11 @@ export interface ExecutionStartState {
   readonly familiar?: { readonly name: string; readonly stackMultiplier: number };
   /** Held traits, less those native `StartNewRun` installs and the Spell (`hex`). */
   readonly traits: readonly ExecutionStartTrait[];
+  /**
+   * Collected essences per element, each one hidden `<Element>Essence` trait
+   * (an `ElementalBoost` counts once in each element).
+   */
+  readonly elementEssences: ExecutionStartEssences;
   readonly chaosCurses: readonly ExecutionStartChaosCurse[];
   readonly chaosBlessings: readonly ExecutionStartChaosBlessing[];
   readonly keepsake: ExecutionStartKeepsake;

@@ -251,6 +251,19 @@ function hex(catalog: Catalog, value: StartInstallation['hex']): ExecutionStartS
   });
 }
 
+/** Essence pickups and resource points grant only the four base elements. */
+function elementEssences(
+  essences: StartInstallation['essences'],
+): ExecutionStartState['elementEssences'] {
+  if (essences.Aether !== 0) missing('holds Aether essences');
+  return Object.freeze({
+    Fire: essences.Fire,
+    Air: essences.Air,
+    Earth: essences.Earth,
+    Water: essences.Water,
+  });
+}
+
 /**
  * Translates the engine's start installation into the native terms the game
  * module installs, selecting and renaming the engine's facts.
@@ -333,6 +346,7 @@ export function executionStartState(
           }),
         }),
     traits: traits(installation),
+    elementEssences: elementEssences(installation.essences),
     chaosCurses: Object.freeze(
       installation.chaos.active.map((curse) =>
         Object.freeze({

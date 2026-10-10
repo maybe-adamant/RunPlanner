@@ -14,6 +14,7 @@ local traitRarities = {
 local keepsakeRarities = { Common = true, Rare = true, Epic = true, Heroic = true }
 local maxStatSources = { trait = true, arcana = true, keepsake = true }
 local wellClocks = { encounters = true, rooms = true, bosses = true }
+local essenceElements = { "Fire", "Air", "Earth", "Water" }
 
 -- Shape failures unwind as a tagged message; any other error is a decoder fault.
 local function check(ok, label)
@@ -228,7 +229,7 @@ end
 local function shape(value)
     local row = exact(value, {
         "point", "biomeKey", "occurrenceId", "roomName", "gold", "biomeVisitOrder", "roomHistory",
-        "encounterDepth", "aspectPerfect", "traits", "chaosCurses", "chaosBlessings", "keepsake", "arcana",
+        "encounterDepth", "aspectPerfect", "traits", "elementEssences", "chaosCurses", "chaosBlessings", "keepsake", "arcana",
         "arcanaBarren", "disabledVows", "maxStats", "stygianWell", "hermesDeliveries", "rewardPriorities",
         "useRecord", "lootTypeHistory", "consumableRecord", "rewardStores",
     }, { "lastDevotionDepth", "biome", "familiar", "hex" }, LABEL)
@@ -255,6 +256,10 @@ local function shape(value)
     end, LABEL .. ".familiar")
     list(row.traits, LABEL .. ".traits", trait)
     uniqueNames(row.traits, LABEL .. ".traits")
+    local essences = exact(row.elementEssences, essenceElements, {}, LABEL .. ".elementEssences")
+    for _, element in ipairs(essenceElements) do
+        int(essences[element], LABEL .. ".elementEssences." .. element)
+    end
     list(row.chaosCurses, LABEL .. ".chaosCurses", chaosCurse)
     list(row.chaosBlessings, LABEL .. ".chaosBlessings", chaosBlessing)
     keepsake(row.keepsake, LABEL .. ".keepsake")

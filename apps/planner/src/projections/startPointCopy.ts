@@ -7,6 +7,7 @@ import type {
 const FAMILY_LABELS: Readonly<Record<StartInstallationFamily, string>> = Object.freeze({
   equipment: 'equipment',
   traits: 'boons and traits',
+  essences: 'collected Essences',
   chaos: 'Chaos effects',
   keepsake: 'keepsake',
   arcana: 'Arcana',

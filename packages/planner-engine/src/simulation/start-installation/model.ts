@@ -1,6 +1,6 @@
 import type { OccurrenceAddress } from '../../authored-project/addresses';
 import type { EquippedTrait } from '../../authored-project/traits/state';
-import type { InRunTraitRarity, KeepsakeRank } from '../../catalog-schema';
+import type { InRunTraitRarity, KeepsakeRank, TraitElement } from '../../catalog-schema';
 import type { ActiveArcanaState, ArcanaRoomEntryGrowth } from '../arcana-fear';
 import type { StygianWellRunState, StygianWellTimedInstance } from '../commerce/stygian-well';
 import type { HexProgressState } from '../hex-progress';
@@ -18,6 +18,7 @@ export interface StartPoint {
 export type StartInstallationFamily =
   | 'equipment'
   | 'traits'
+  | 'essences'
   | 'chaos'
   | 'keepsake'
   | 'arcana'
@@ -264,6 +265,8 @@ export interface StartInstallation {
   readonly counters: StartInstallationCounters;
   readonly equipment: StartInstallationEquipment;
   readonly traits: readonly StartInstalledTrait[];
+  /** Element counts from collected essences, which no installed trait carries. */
+  readonly essences: Readonly<Record<TraitElement, number>>;
   readonly chaos: StartInstallationChaos;
   readonly keepsake: StartInstallationKeepsake;
   readonly arcana: StartInstallationArcana;

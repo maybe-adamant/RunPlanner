@@ -128,6 +128,9 @@ describe('execution start state', () => {
       hiddenGrants: installation.maxStats.grants,
     });
     expect(start.maxStats.hiddenGrants.map((grant) => grant.source.kind)).toEqual(['pickups']);
+    // Collected essences become hidden essence traits; held traits carry their own elements.
+    expect(installation.essences).toEqual({ Aether: 0, Earth: 1, Air: 0, Fire: 0, Water: 0 });
+    expect(start.elementEssences).toEqual({ Fire: 0, Air: 0, Earth: 1, Water: 0 });
   });
 
   it('publishes the current biome state for a Preboss start', () => {
@@ -225,6 +228,19 @@ describe('execution start state', () => {
             { name: 'Y', rarity: 'Epic', slotted: true },
           ],
         }),
+    ],
+    ['missing essence counts', (start) => delete start.elementEssences],
+    [
+      'an Aether essence',
+      (start) => (start.elementEssences = { Fire: 0, Air: 0, Earth: 0, Water: 0, Aether: 1 }),
+    ],
+    [
+      'a negative essence count',
+      (start) => (start.elementEssences = { Fire: -1, Air: 0, Earth: 0, Water: 0 }),
+    ],
+    [
+      'a fractional essence count',
+      (start) => (start.elementEssences = { Fire: 0.5, Air: 0, Earth: 0, Water: 0 }),
     ],
   ])('rejects %s', (_, mutate) => {
     const wire = clone(iPrebossWire);

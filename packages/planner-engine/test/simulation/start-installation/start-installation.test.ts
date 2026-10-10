@@ -223,6 +223,24 @@ describe('mid-run start installation', () => {
       });
     });
 
+    it('carries collected essences, which must agree by branch', () => {
+      expect(base.essences).toEqual(state!.traitHistory.essenceElements);
+      const other = Object.freeze({
+        ...state!,
+        traitHistory: Object.freeze({
+          ...state!.traitHistory,
+          essenceElements: Object.freeze({
+            ...state!.traitHistory.essenceElements,
+            Fire: state!.traitHistory.essenceElements.Fire + 1,
+          }),
+        }),
+      });
+      expect(project([state!, other])).toEqual({
+        availability: 'unavailable',
+        reason: { kind: 'branchesDisagree', families: ['essences'] },
+      });
+    });
+
     it('compares records by content, not by key order', () => {
       const reordered = withRewardHistory({
         useRecord: Object.freeze(
