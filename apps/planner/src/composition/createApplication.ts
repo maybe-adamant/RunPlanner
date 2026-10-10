@@ -86,7 +86,10 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   const traitDomain = createTraitDomainProjection(catalog, contextualPicker);
-  const devBuild = options.devBuild ?? import.meta.env.DEV;
+  // Internal run modifiers: dev builds, or a release build made with VITE_INTERNAL_RUN_MODIFIERS=1.
+  const devBuild =
+    options.devBuild ??
+    (import.meta.env.DEV || import.meta.env.VITE_INTERNAL_RUN_MODIFIERS === '1');
   const structuredWorkspace = createStructuredWorkspaceProjection(
     catalog,
     {
