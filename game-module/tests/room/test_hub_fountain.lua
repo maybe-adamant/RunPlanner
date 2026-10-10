@@ -224,10 +224,9 @@ local function assertNativeRarity(delayed)
     lu.assertEquals(calls, 1)
 end
 
-function TestHubFountain.testScopeCancelsOnReplacementResyncDesyncAndHubLoss()
+function TestHubFountain.testScopeCancelsOnReplacementDesyncAndHubLoss()
     for _, invalidate in ipairs({
         function(state) state.route = route.new(state.plan) end,
-        function(state) state.route = assert(route.newAt(state.plan, 9)) end,
         function(state) state.state = "desynchronized" end,
         function() _G.CurrentRun.CurrentRoom = { Name = "N_Combat11" } end,
         function(state)
@@ -328,7 +327,7 @@ local function leaveHub(state)
     local navigation = navigationHooks.attach(module, session, function() return state end, function() end,
         route, {})
     roomHooks.attach(module, session, function() return state end, function() end, route, {}, nil,
-        navigation, { startingRun = function() return false end, synchronizeStartingRoom = function() return true end })
+        navigation, { startingRun = function() return false end, installedRun = function() return false end, synchronizeStartingRoom = function() return true end })
     state.route.transparentNativeRoom = "N_Hub"
     local priorCount = _G.GetTraitCount
     _G.GetTraitCount = function(hero, args)
@@ -440,27 +439,6 @@ function TestHubFountain.testUnfinishedClaimIsDiagnosticAndItsInventoryStillDeci
         lu.assertEquals(leaveHub(state), missed("incomplete"))
         assertTraitMismatch(state)
     end)
-end
-
--- A resynchronized route cannot know whether a spent fountain honored the Phial.
-function TestHubFountain.testSpentFountainAfterResyncIsDiagnosticAndStillChecksItsInventory()
-    for _, case in ipairs({ { "surface-n", 3, {} }, { PHIAL_FIXTURE, 9, phialTraits() } }) do
-        local plan = loadPlan(case[1])
-        local state = hubState(plan)
-        withRun(case[3], function(run)
-            advance(state, case[2])
-            run.Hero.Traits = departureTraits(state)
-            run.CurrentRoom.ObjectStates = { [HUB_FOUNTAIN] = { UseableOff = true } }
-            state.route = assert(route.newAt(plan, case[2]))
-            lu.assertNil(route.dueHubFountain(state.route, true))
-            state.route.transparentNativeRoom = "N_Hub"
-            lu.assertEquals(guide.project({ kind = "navigation", nativeRoomName = "N_Hub",
-                navigation = route.guideNavigation(state.route, true) }).rows, {})
-            lu.assertEquals(leaveHub(state), missed("unobserved"))
-            lu.assertEquals(state.state, "synchronized")
-            lu.assertNil(state.route.hubFountainClaim)
-        end)
-    end
 end
 
 -- Every return selects its own inventory, including the final Preboss handoff.

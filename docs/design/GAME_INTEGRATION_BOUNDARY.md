@@ -12,7 +12,9 @@ Executor reads the active slot from `active-slot.json` (see
 [Shared configuration folder](#shared-configuration-folder)), reads only that
 plan slot at the next run admission, and freezes the decoded plan for the live
 session. Execution normally admits at
-run start; publication does not hot-swap a live session. One bounded mid-run
+run start; publication does not hot-swap a live session. Every admitted run
+except a Fresh File route runs on the plan's
+[installed starting loadout](#loadout-install). One bounded mid-run
 attachment exists: a plan with a [Practice mode start](#practice-mode-start)
 admits at the start of a fresh run that the module installs at a later biome's
 Opening or a Preboss. No other mid-run attachment, edited-plan repair, or
@@ -176,7 +178,7 @@ ModpackLib `.cfg`.
   file already shows slot 1, the in-game picker saves slot 1 only after another
   slot was picked; it shows a hint while no choice is saved.
 - Last writer wins. Neither side keeps a copy: the module reads the file at
-  new-run admission and loadout resync, and the planner reads it
+  new-run admission, and the planner reads it
   with the slot facts. A change made during a run takes effect at the next
   admission.
 - Sending a plan also makes its slot active. The planner makes a slot active
@@ -362,8 +364,8 @@ point is not part of this record; it publishes the separate `startState`
 described below.
 
 The module binds settings to the admitted plan and native `CurrentRun` identity.
-They become active only after starting-loadout verification. Changing the
-selected slot does not change them.
+They become active once the admitted run synchronizes at its first room.
+Changing the selected slot does not change them.
 Only these run-wide modifiers continue after `configured-prefix-complete`;
 ordinary room steering remains passive. Rejection, mismatch, executor fault,
 death, Crossroads presence, and a different native run prevent their application.
@@ -386,6 +388,66 @@ error. Missing required native functions and escaping host errors fault executio
 recognized unsupported contacts pass through with bounded diagnostics. Modifier
 diagnostics may continue after prefix completion without enabling other adapters.
 There are no gold-total conformance obligations.
+
+### Loadout install
+
+Every admitted run except a Fresh File route replaces the player's loadout with
+the plan's [`startingLoadout`](#prefer-the-published-answer) for that run and
+restores the profile afterwards, as a Chaos Trial holds its own loadout for its
+run. The installed loadout is an input, not a checked fact: the run
+synchronizes when native `StartNewRun` reaches its first room.
+
+Admission and the install run in the `CreateNewHero` contact, before native
+construction: native `StartNewRun` has already replaced `CurrentRun` and
+extracted the profile's Vows, and `CreateNewHero` reads the EnemyDamage Vow.
+The module saves the profile's values on the new run
+(`CurrentRun.RunPlannerProfileLoadout`), then writes the GameState fields
+native `StartNewRun` reads: the weapon's `LastWeaponUpgradeName`, every card's
+`Equipped` (exactly the plan's cards, with adjacency bonuses cleared),
+`ShrineUpgrades` at the configured ranks, `LastAwardTrait` and
+`EquippedFamiliar`. It re-extracts every Vow and recomputes the Grasp and Fear
+point caches. After native construction the hero holds the planned weapon and
+its secondary instead of the profile's; `EquipPlayerWeapon` is not used because
+it unlocks the weapon. The run-start keepsake equip takes the plan's rarity. A
+Practice mode start's slotted keepsake is the run's keepsake.
+
+The planner assumes a mature file. Rank overrides read the installed ranks from
+the saved run: `GetWeaponUpgradeLevel` returns the planned Aspect rank,
+`GetMetaUpgradeLevel` each planned card's rank and every other card's maximum
+(for temporary draws), `GetKeepsakeLevel` sees the planned keepsake's chambers
+at its planned rank and every other keepsake's full chambers (rank III, so a
+keepsake swapped in at a rack equips at the planner's rank) for each call,
+with native level bonuses on top, and `GetFamiliarTraitStacks` returns the installed familiar's `traitStacks` for
+its traits. `AddRandomMetaUpgrades` sees every card unlocked for the call only;
+holding `Unlocked` would complete the unlock-all-cards quest. Unlocks and
+progression are never written: not `WeaponsUnlocked`, card `Unlocked` or
+`Level`, `FamiliarUpgrades`, keepsake chambers or the Grasp limit, and Grasp is
+not enforced.
+
+The profile comes back once the ended run is recorded and before `KillHero`
+saves. A death restores after `RecordRunStats`. A clear is recorded in the boss
+room, where `RecordRunCleared` credits the cleared loadout after its own
+`RecordRunStats`, but the run continues through linked rooms that re-equip from
+the run, so a cleared run restores when `KillHero` ends it. The restore
+returns the GameState fields, re-extracts the Vows and caches, gives the hero
+the profile's weapon, clears the run's temporary Arcana and removes the backup.
+A run that still carries a backup is restored again at the next `StartNewRun`
+and at every hub load; a restore that fails refuses the next admission, so a
+planned loadout is never backed up as the profile.
+
+Install state is saved with the run, so the rank overrides and the restore hold
+after Save & Quit, after a reload and while execution is passive. An install
+that fails restores the backup and is an executor fault; the run continues
+natively on the profile. A module removed mid-run leaves the planned values in
+the profile. Run records (including the `ClearedWith*` records that feed the
+Fated List), Shrine bounty completion and the chambers native `AdvanceKeepsake`
+adds credit the installed content, and the unused-weapon bonus follows the
+planned weapon.
+
+A Fresh File route admits only when native `StartNewGame` starts the run, which
+passes no previous run; on an existing save it is an admission rejection.
+Admission is also rejected while a Chaos Trial is starting or holds its stored
+loadout (`ActiveBounty`, `StoredGameState`).
 
 ### Practice mode start
 
@@ -533,8 +595,9 @@ counters exactly for I. Execution's route cursor starts at the start
 occurrence's index in `selectedOccurrenceIds`; earlier occurrences are never
 realized.
 
-The module installs inside native `StartNewRun`: the keepsake at its
-`EquipKeepsake`, once the GameState loadout agrees; the hero's state when
+The module installs inside native `StartNewRun`, on top of the
+[installed loadout](#loadout-install): the slotted keepsake at its
+`EquipKeepsake`; the hero's state when
 `EquipMetaUpgrades` returns; when `InitializeRewardStores` returns, an
 Opening's records and, at either point, Barren's removal of the Arcana, after
 native Death Defiance and rerolls and before native starting gold; and, after
@@ -548,7 +611,7 @@ not a biome entry: it enters without the Dream biome entrance, and
 the setup also repeats after Save & Quit and while execution is passive. The
 published maxima, and a Preboss's biome depth, are checked right after that
 setup, before the Intro's own room-start effects (a Centaur threshold, an Echo
-replay) change the maxima; the existing admission conformance families are
+replay) change the maxima; the entry conformance families are
 checked at `StartRoomPresentation` against the start room's `roomEntered`
 frame, after an Opening's biome-start effects or a Preboss's ordinary
 room-start effects. A mismatch makes execution passive, an install or
@@ -917,7 +980,8 @@ with their rarities; the configured Fear ranks; and the `familiar` with
 `traitStacks`, the native `GetFamiliarTraitStacks` of each of its upgraded
 traits when every FamiliarShopData level is owned. `startingKeepsake` carries
 the keepsake's native equip `rarity` (rank III, `Epic`). Arcana `origin` and the
-effective Fear ranks are status-panel presentation. A Fresh File route
+effective Fear ranks are status-panel presentation. The module
+[installs](#loadout-install) these values for the run. A Fresh File route
 publishes its fixed aspectless Staff with no familiar or keepsake, and the
 module installs nothing for it.
 
@@ -925,10 +989,10 @@ The route-start keepsake is a pre-room realization, not a room Timeline step.
 The wire carries its exact selected key and any already-authored immediate equip
 result. A run that starts without a keepsake or aspect, as on a fresh profile,
 omits `startingKeepsake.keepsakeKey` and `startingLoadout.aspectKey` (never JSON
-null), and its Run State diagnostics omit the current keepsake. An absent aspect
-requires no recorded aspect for the weapon at run start. Inside `StartNewRun`,
-the Executor admits and freezes the plan before native `CreateNewHero`
-construction, making the starting Hex available to aspect construction. The
+null), and its Run State diagnostics omit the current keepsake. Inside
+`StartNewRun`, the Executor admits and freezes the plan before native
+`CreateNewHero` construction, making the starting Hex available to aspect
+construction. The
 nested `EquipKeepsake` contact arms its immediate result and lets the matching
 native acquire callback consume it. Later rack changes use the same callback
 adapter from their ordinary Timeline trace. Only the opening presentation is
@@ -939,9 +1003,9 @@ The opening is realized where native creates it. Normally that is
 `ChooseStartingRoom`. A brand-new game instead runs
 `StartNewGame → StartNewRun(nil, { RoomName })`, which calls `CreateRoom`
 directly; when that call is nested in `StartNewRun` and names the expected
-opening, the `CreateRoom` contact completes loadout verification and prepares
-and realizes the opening the same way, so native does not roll an unplanned
-reward. Loadout timing is unchanged.
+opening, the `CreateRoom` contact synchronizes the run and prepares and
+realizes the opening the same way, so native does not roll an unplanned
+reward.
 
 ## Supported fixed-route surface
 
@@ -1130,9 +1194,10 @@ from the frozen session's loadout, room progress, admission, and failure
 information. It reports existing execution status without adding conformance
 checks or revalidating player state during rendering.
 
-Runtime execution state is process-local, never native-save-backed, and resets
-explicitly at new-run admission. A freshly loaded game never re-attaches to an
-existing run.
+Runtime execution state is process-local and resets explicitly at new-run
+admission. Only the loadout install's backup and installed ranks are saved with
+the run. A freshly loaded game never re-attaches to an existing run; for an
+installed run the status reports that it continues unsteered.
 
 The Run Planner game module reads its own `buildId` from its installed
 `execution-compatibility.json` at load. Before decoding, the inbox requires

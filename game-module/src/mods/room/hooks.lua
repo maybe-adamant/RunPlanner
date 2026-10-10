@@ -13,18 +13,12 @@ local function reportOutcome(session, state, errorValue)
 end
 
 function hooks.attach(module, session, getState, report, route, room, featureScope, navigation, loadoutScope,
-    admissionRuntime, practiceScope)
+    practiceScope)
     assert(type(loadoutScope) == "table"
         and type(loadoutScope.synchronizeStartingRoom) == "function"
-        and type(loadoutScope.startingRun) == "function",
+        and type(loadoutScope.startingRun) == "function"
+        and type(loadoutScope.installedRun) == "function",
         "starting-room loadout scope is required")
-    if admissionRuntime ~= nil then
-        assert(type(admissionRuntime.inbox) == "table"
-            and type(admissionRuntime.activePlanSlot) == "function"
-            and type(session.canAttemptPostbossAdmission) == "function"
-            and type(session.attemptPostbossAdmission) == "function",
-            "Postboss admission dependencies are required")
-    end
     module.hooks.wrap("ChooseStartingRoom", "run-planner-starting-room", function(_, runtime, base, currentRun,
         args)
         local state = getState(runtime)
@@ -71,7 +65,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         local state = getState(runtime)
         -- StartNewGame's StartNewRun(nil, { RoomName }) creates the opening
         -- directly, bypassing ChooseStartingRoom, and so does a Practice mode
-        -- start, whose loadout is already verified.
+        -- start, which is already synchronized.
         local opening
         local practice = state ~= nil and state.state == "synchronized" and practiceScope ~= nil
             and practiceScope.creatingStartRoom(state, args)
@@ -128,15 +122,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         local liveRun = type(currentRun) == "table" and currentRun or _G.CurrentRun
         if currentRun == nil then currentRun = liveRun end
         if nativeRoom == nil and type(liveRun) == "table" then nativeRoom = liveRun.CurrentRoom end
-        if admissionRuntime ~= nil and type(liveRun) == "table"
-            and session.canAttemptPostbossAdmission(state) then
-            session.attemptPostbossAdmission(
-                state,
-                admissionRuntime.inbox,
-                admissionRuntime.activePlanSlot(runtime),
-                nativeRoom
-            )
-        end
+        -- A run loaded into a fresh process continues unsteered.
+        if loadoutScope.installedRun(liveRun) then session.resumeUnsteered(state) end
         if state.state ~= "synchronized" then report(runtime); return base(currentRun, nativeRoom) end
         local expected = route.expected(state.route)
         local id = type(nativeRoom) == "table" and nativeRoom.__runPlannerExecutionRoomId or nil
@@ -178,6 +165,11 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     module.hooks.wrap("RestoreUnlockRoomExits", "run-planner-room-restore", function(_, runtime, base,
         currentRun, nativeRoom)
         local state = getState(runtime)
+        -- Loading a save into a cleared room restores it here instead of StartRoom
+        -- (RoomLogic.lua:233-237).
+        if state and loadoutScope.installedRun(currentRun) and session.resumeUnsteered(state) then
+            report(runtime)
+        end
         if state and state.state == "synchronized" then
             route.enterTransparent(state.route, roomName(nativeRoom))
         end

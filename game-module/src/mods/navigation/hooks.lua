@@ -394,8 +394,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         proveHubDeparture = function(state, currentRun)
             local nativeRoom = currentRun and currentRun.CurrentRoom
             if ephyra.hubFountainObjectId(nativeRoom) == nil then return true end
-            local outcome, _, carrier = routeSession.hubFountainDeparture(
-                state.route, ephyra.hubFountainUsed(nativeRoom))
+            local outcome, _, carrier = routeSession.hubFountainDeparture(state.route)
             if outcome ~= nil and outcome ~= "fulfilled" then
                 session.diagnostic(state, "hub-fountain", outcome, carrier)
             end

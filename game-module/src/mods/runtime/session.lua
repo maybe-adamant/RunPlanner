@@ -7,8 +7,6 @@ local room = type(import) == "function" and import("mods/room/coordinator.lua")
     or require("mods.room.coordinator")
 local conformance = type(import) == "function" and import("mods/room/conformance/readers.lua")
     or require("mods.room.conformance.readers")
-local admission = type(import) == "function" and import("mods/room/conformance/admission.lua")
-    or require("mods.room.conformance.admission")
 
 local runtime = {}
 local maxDiagnostics = 16
@@ -19,8 +17,6 @@ function runtime.create()
         state = "inactive",
         reason = "not-started",
         diagnostics = {},
-        admissionAttempted = false,
-        postbossAdmission = nil,
     }
 end
 
@@ -85,11 +81,7 @@ function runtime.rejectAdmission(state, checkpoint, expected, observed)
     return nil, state.admissionError
 end
 
-function runtime.canAttemptPostbossAdmission(state)
-    return type(state) == "table" and state.admissionAttempted ~= true
-end
-
-local function reset(state, admissionAttempted)
+local function reset(state)
     if state.room ~= nil then room.dispose(state) end
     state.initialized = false
     state.state = "inactive"
@@ -107,38 +99,22 @@ local function reset(state, admissionAttempted)
     state.admissionError = nil
     state.loggedMismatch = nil
     state.loggedAdmission = nil
-    state.postbossAdmission = nil
-    state.loggedPostbossAdmission = nil
     state.practiceStart = nil
     state.diagnostics = {}
     state.reason = "not-started"
-    state.admissionAttempted = admissionAttempted == true
     return state
 end
 
 function runtime.beginNewRun(state)
-    return reset(state, true)
+    return reset(state)
 end
 
-local function roomName(value)
-    return type(value) == "table" and (value.GenusName or value.Name) or nil
-end
-
-local function selectedPostboss(plan, gameName)
-    local selected = plan and plan.selectedOccurrenceIds or {}
-    local matches, matchIndex
-    for index, id in ipairs(selected) do
-        local occurrence = plan.occurrencesById and plan.occurrencesById[id]
-        if occurrence and occurrence.resumeBoundary == "postbossEntry"
-            and occurrence.gameName == gameName then
-            matches = (matches or 0) + 1
-            matchIndex = index
-        end
-    end
-    if matches == 1 then
-        return plan.occurrencesById[selected[matchIndex]], matchIndex
-    end
-    return nil, matches or 0
+-- A run loaded into a fresh process is never re-attached; it continues
+-- unsteered. The installed loadout and its restore still follow the saved run.
+function runtime.resumeUnsteered(state)
+    if state.initialized or state.reason ~= "not-started" then return false end
+    state.reason = "resumed-unsteered"
+    return true
 end
 
 local function nativeRunModeMatches(plan)
@@ -146,83 +122,20 @@ local function nativeRunModeMatches(plan)
     return (plan.routeKey == "Dream") == dream
 end
 
--- One fresh-process admission. Hades II already restored the native Postboss
--- room, so success constructs only fresh route and room coordinators. The
--- ordinary StartRoom path adopts and enters the existing native room.
-function runtime.attemptPostbossAdmission(state, inbox, activeSlot, nativeRoom)
-    if not runtime.canAttemptPostbossAdmission(state) then return nil end
-    reset(state, true)
+-- Context: freshSave when native StartNewGame starts the run, chaosTrial while
+-- a Chaos Trial holds its own loadout, restoreError when the previous run's
+-- profile could not be restored.
+function runtime.start(state, inbox, phase, activeSlot, context)
+    context = context or {}
+    reset(state)
     state.initialized = true
-
-    local loaded, plan = inbox.load(activeSlot)
-    if not loaded or type(plan) ~= "table" or plan.kind ~= "ready" then
-        local inboxStatus = inbox.status and inbox.status() or nil
-        local observed = inboxStatus and inboxStatus.error or plan
-        return runtime.rejectAdmission(state, "postboss-admission:active-plan",
-            "ready execution plan", observed)
+    if context.restoreError ~= nil then
+        return runtime.rejectAdmission(state, "loadout-restore", "restored profile loadout",
+            tostring(context.restoreError))
     end
-    if not nativeRunModeMatches(plan) then
-        return runtime.rejectAdmission(state, "postboss-admission:run-mode", plan.routeKey, {
-            isDreamRun = _G.CurrentRun and _G.CurrentRun.IsDreamRun == true,
-        })
+    if context.chaosTrial then
+        return runtime.rejectAdmission(state, "chaos-trial", "no active Chaos Trial", "active Chaos Trial")
     end
-
-    local current = nativeRoom or (_G.CurrentRun and _G.CurrentRun.CurrentRoom)
-    local gameName = roomName(current)
-    local occurrence, indexOrCount = selectedPostboss(plan, gameName)
-    if occurrence == nil then
-        return runtime.mismatch(state, "postboss-admission:room",
-            "exactly one selected Postboss entry", {
-                gameName = gameName, matches = indexOrCount,
-            })
-    end
-
-    -- A reader error is an executor fault, not a divergence.
-    local checked, verified, mismatch = pcall(admission.verify, occurrence, plan.startingLoadout)
-    if not checked then
-        return runtime.fault(state, type(verified) == "table" and verified or {
-            outcome = "fault", checkpoint = "postboss-admission:self-check", observed = tostring(verified),
-        })
-    end
-    if not verified then
-        return runtime.mismatch(state, type(mismatch) == "table" and mismatch
-            or "postboss-admission:state", "matching Postboss entry state", mismatch)
-    end
-
-    local routeState, routeError = route.newAt(plan, indexOrCount)
-    if routeState == nil then
-        return runtime.fault(state, routeError)
-    end
-    state.plan = plan
-    state.admittedNativeRun = _G.CurrentRun
-    state.planSlot = activeSlot
-    state.route = routeState
-    state.room = room.new(plan, function(errorValue, expected, observed)
-        return runtime.mismatch(state, errorValue, expected, observed)
-    end, {
-        onFault = function(errorValue, expected, observed)
-            return runtime.fault(state, errorValue, expected, observed)
-        end,
-        diagnostic = function(checkpoint, observed, owner)
-            return runtime.diagnostic(state, checkpoint, observed, owner)
-        end,
-        readConformance = function(kind, currentRun, gameState, expected)
-            return conformance.read(kind, currentRun, gameState, expected)
-        end,
-    })
-    state.state, state.reason = "synchronized", "ready"
-    state.postbossAdmission = {
-        occurrenceId = occurrence.id,
-        gameName = occurrence.gameName,
-        index = indexOrCount,
-        slot = activeSlot,
-    }
-    return { occurrence = occurrence, index = indexOrCount }
-end
-
-function runtime.start(state, inbox, phase, activeSlot)
-    reset(state, true)
-    state.initialized = true
     local loaded, plan = inbox.load(activeSlot)
     if not loaded or type(plan) ~= "table" or plan.kind ~= "ready" then
         local inboxStatus = inbox.status and inbox.status() or nil
@@ -233,6 +146,10 @@ function runtime.start(state, inbox, phase, activeSlot)
         return runtime.rejectAdmission(state, "run-mode", plan.routeKey, {
             isDreamRun = _G.CurrentRun and _G.CurrentRun.IsDreamRun == true,
         })
+    end
+    -- A Fresh File route is the first run of a brand-new save.
+    if plan.routeKey == "FreshFile" and not context.freshSave then
+        return runtime.rejectAdmission(state, "fresh-file", "brand-new save", "existing save")
     end
     for _, occurrence in ipairs(plan.occurrences) do
         for _, fact in ipairs((occurrence.roomExitConformance or {}).facts or {}) do

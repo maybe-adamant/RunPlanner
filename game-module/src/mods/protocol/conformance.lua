@@ -110,12 +110,12 @@ end
 
 function conformance.admissionExpected(value)
     local entry = value and value.roomEntered or value
-    if type(entry) ~= "table" then return nil, "postboss admission requires roomEntered diagnostics" end
+    if type(entry) ~= "table" then return nil, "start room self-check requires roomEntered diagnostics" end
     local expected = {}
     for _, kind in ipairs(admissionKinds) do
         local projected = admissionStateValue(entry, kind)
         if projected == nil then
-            return nil, "postboss admission requires roomEntered " .. kind
+            return nil, "start room self-check requires roomEntered " .. kind
         end
         expected[kind] = projected
     end

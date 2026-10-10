@@ -35,7 +35,6 @@ function fountain.attach(module, session, getState, report, room, route)
         local hub = route.dueHubFountain(routeState, used)
         local claim = hub ~= nil and hub.room.gameName == hubRoom
             and route.claimHubFountain(routeState, used) or nil
-        route.observeHubFountainUse(routeState)
         if claim == nil then return nil end
         return {
             transaction = hub.fountain,

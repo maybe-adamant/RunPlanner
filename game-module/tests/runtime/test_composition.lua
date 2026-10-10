@@ -21,7 +21,7 @@ local capture, stub = support.capture, support.stub
 local attachFeatureHooks = support.attachFeatureHooks
 local navigationEntryStub = support.navigationEntryStub
 local unusedLoadoutScope = {
-    startingRun = function() return false end, synchronizeStartingRoom = function()
+    startingRun = function() return false end, installedRun = function() return false end, synchronizeStartingRoom = function()
         error("starting-room loadout synchronization is outside this test")
     end,
 }
@@ -126,70 +126,6 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
     callbacks.interval(nil, overlayRuntime, overlay)
     lu.assertEquals(tables.rows, {})
     lu.assertTrue(roomSession.isCompleted(active, "guide-owner"))
-    _G.import, _G.rom = priorImport, priorRom
-end
-
-function TestRuntimeComposition.testSuccessfulPostbossAdmissionIsLoggedOnce()
-    local priorImport, priorRom = _G.import, _G.rom
-    local logs = {}
-    local admission = {
-        occurrenceId = "postboss",
-        gameName = "F_PostBoss01",
-        index = 3,
-        slot = 2,
-    }
-    local state = {
-        state = "synchronized",
-        reason = "ready",
-        postbossAdmission = admission,
-        diagnostics = {},
-    }
-    local function freshImport(path)
-        if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
-        if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
-        if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
-        end
-        if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/inbox.lua" then
-            return { create = function()
-                return { activeSlot = function() return 1 end, select = function() end,
-                    load = function() end, status = function() return {} end }
-            end }
-        end
-        if path == "mods/runtime/session.lua" then
-            return { create = function() return state end,
-                status = function() return { state = state.state, reason = state.reason } end }
-        end
-        if path == "mods/spells/hex_tree.lua" then
-            return { create = function() return { attach = function() end } end }
-        end
-        if path == "mods/room/timeline/encounters/thessaly.lua" then
-            return { create = shipCombatStub }
-        end
-        if path == "mods/room/timeline/encounters/generated.lua" then
-            return { create = generatedEncounterStub }
-        end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
-        if path == "mods/room/hooks.lua" then
-            return { attach = function(_, _, _, report)
-                report({})
-                report({})
-            end }
-        end
-        return { create = function() return {} end, attach = function() return {} end }
-    end
-    _G.import = freshImport
-    _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
-
-    freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({})
-
-    lu.assertEquals(#logs, 1)
-    lu.assertStrContains(logs[1], "postboss-resynchronized")
-    lu.assertStrContains(logs[1], "room=F_PostBoss01")
-    lu.assertStrContains(logs[1], "occurrence=postboss")
-    lu.assertStrContains(logs[1], "index=3")
-    lu.assertStrContains(logs[1], "slot=2")
     _G.import, _G.rom = priorImport, priorRom
 end
 
@@ -542,7 +478,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
             end }
         end
         if path == "mods/route/session.lua" or path == "mods/room/coordinator.lua"
-            or path == "mods/room/conformance/readers.lua" or path == "mods/loadout/session.lua" then
+            or path == "mods/room/conformance/readers.lua" then
             return {}
         end
         if path == "mods/runtime/session.lua" then
@@ -633,7 +569,6 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
                 status = function() return require("mods.runtime.session").status(state) end,
             }
         end
-        if path == "mods/loadout/session.lua" then return {} end
         if path == "mods/spells/hex_tree.lua" then
             return { create = function() return { attach = function() end } end }
         end
@@ -685,7 +620,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
     _G.import, _G.rom = priorImport, priorRom
 end
 
-function TestRuntimeComposition.testAdmissionLoadoutAndResyncReadTheActiveSlotFileEachTime()
+function TestRuntimeComposition.testAdmissionReadsTheActiveSlotFileEachTime()
     local priorImport, priorRom = _G.import, _G.rom
     local root = os.tmpname()
     os.remove(root)
@@ -696,7 +631,7 @@ function TestRuntimeComposition.testAdmissionLoadoutAndResyncReadTheActiveSlotFi
         file:write(content)
         file:close()
     end
-    local loadoutRuntime, admissionRuntime
+    local loadoutRuntime
     local function freshImport(importPath)
         if importPath == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if importPath == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. importPath))() end
@@ -715,23 +650,20 @@ function TestRuntimeComposition.testAdmissionLoadoutAndResyncReadTheActiveSlotFi
         if importPath == "mods/loadout/hooks.lua" then
             return { attach = function(_, value) loadoutRuntime = value; return {} end }
         end
-        if importPath == "mods/room/hooks.lua" then
-            return { attach = function(...) admissionRuntime = select(10, ...) end }
-        end
         return { create = function() return { attach = function() end } end, attach = function() return {} end }
     end
     _G.import = freshImport
     _G.rom = { path = { combine = function(base, name) return base .. "/" .. name end }, log = { info = function() end } }
     freshImport("mods/runtime/composition.lua").bind(root).attach({})
 
-    local startRead, resyncRead = loadoutRuntime.activePlanSlot, admissionRuntime.activePlanSlot
-    lu.assertEquals({ startRead({}), resyncRead({}) }, { 1, 1 })
+    local read = loadoutRuntime.activePlanSlot
+    lu.assertEquals(read({}), 1)
     publish(activeSlotModule.encode(4))
-    lu.assertEquals({ startRead({}), resyncRead({}) }, { 4, 4 })
+    lu.assertEquals(read({}), 4)
     publish('{ "format": "run-planner-active-slot", "formatVersion": 1, "slot": 2 }')
-    lu.assertEquals({ startRead({}), resyncRead({}) }, { 2, 2 })
+    lu.assertEquals(read({}), 2)
     publish('{"slot":9}')
-    lu.assertEquals({ startRead({}), resyncRead({}) }, { 1, 1 })
+    lu.assertEquals(read({}), 1)
     local file = assert(io.open(path, "rb"))
     lu.assertEquals(file:read("*a"), '{"slot":9}')
     file:close()
@@ -751,7 +683,7 @@ function TestRuntimeComposition.testRuntimeCompositionInstallsSupportedHookGroup
     _G.import = function(path)
         return require((path:gsub("%.lua$", ""):gsub("/", ".")))
     end
-    loadoutHooks.attach(module, { inbox = {}, session = session, loadout = {}, activePlanSlot = function() return 1 end },
+    loadoutHooks.attach(module, { inbox = {}, session = session, activePlanSlot = function() return 1 end },
         getState, report, session, hexTree)
     _G.import = priorImport
     acquisitions.attach(module, session, getState, report, session, hexTree)
@@ -797,7 +729,7 @@ function TestRuntimeComposition.testKeepsakeAdaptersAreInstalledOnceAtTheirCarri
     _G.import = function(path)
         return require((path:gsub("%.lua$", ""):gsub("/", ".")))
     end
-    loadoutHooks.attach(module, { inbox = {}, session = session, loadout = {}, activePlanSlot = function() return 1 end },
+    loadoutHooks.attach(module, { inbox = {}, session = session, activePlanSlot = function() return 1 end },
         function() end, function() end, session, hexTree)
     _G.import = priorImport
     encounterHooks.attach(module, session, function() end, function() end, session)

@@ -1,7 +1,7 @@
 -- Practice mode start: native contacts that install the published start state
--- into a fresh run, check it at the start room, and keep the run out of
--- RunHistory. The keepsake equip and start-room creation contacts stay with
--- their loadout and room owners.
+-- on top of the installed loadout, check it at the start room, and keep the
+-- run out of RunHistory. The keepsake equip and start-room creation contacts
+-- stay with their loadout and room owners.
 local install = type(import) == "function" and import("mods/practice/install.lua")
     or require("mods.practice.install")
 local admission = type(import) == "function" and import("mods/room/conformance/admission.lua")
@@ -42,8 +42,7 @@ local function selfCheck(session, state, check)
     end, "self-check")
 end
 
-function hooks.attach(module, session, getState, report, loadout, hexTree)
-    assert(type(loadout) == "table" and type(loadout.verifyCompleted) == "function", "loadout verification is required")
+function hooks.attach(module, session, getState, report, hexTree)
     assert(type(hexTree) == "table", "Hex Tree instance is required")
 
     -- Native StartNewRun reads the same args table it passes down.
@@ -70,18 +69,12 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
         return result
     end)
 
-    -- The loadout is complete once native StartNewRun has equipped the Arcana.
-    -- Only a verified loadout is moved to the start room and installed.
+    -- The installed loadout is the baseline once native StartNewRun has
+    -- equipped the Arcana; the start state is installed on top of it.
     local function begin(state)
         local plan = state.plan
         local start = plan.startState
-        loadout.verifyCompleted(state, session.mismatch)
-        if state.state ~= "synchronized" then return end
-        local familiar = start.familiar and start.familiar.name or nil
-        if familiar ~= _G.GameState.EquippedFamiliar then
-            session.mismatch(state, "practice-start:familiar", familiar, _G.GameState.EquippedFamiliar)
-            return
-        end
+        state.state, state.reason = "synchronized", "ready"
         for key, value in pairs(install.runOverrides(start, plan.routeKey)) do _G.CurrentRun[key] = value end
         install.redirect(startArgs, start, plan.routeKey)
         state.practiceStart = { phase = "installing" }
@@ -150,8 +143,7 @@ function hooks.attach(module, session, getState, report, loadout, hexTree)
         if phase(state, "entered") then
             state.practiceStart.phase = "checked"
             selfCheck(session, state, function(start)
-                return admission.verify(state.plan.occurrencesById[start.occurrenceId],
-                    state.plan.startingLoadout, "practice-start")
+                return admission.verify(state.plan.occurrencesById[start.occurrenceId])
             end)
             report(runtime)
         end

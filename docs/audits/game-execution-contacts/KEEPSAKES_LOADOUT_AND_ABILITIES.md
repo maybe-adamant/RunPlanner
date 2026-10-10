@@ -4,8 +4,8 @@ This file inventories all planner-modeled run-start and equip-time abilities.
 The execution boundary now has an explicit disposition for all 33 selectable
 keepsakes: it checks identity and retained planner-visible state, steers only
 exact authored volatile results, and otherwise hands deterministic or
-simulation-neutral behavior back to the game. It never repairs the player's
-selected loadout.
+simulation-neutral behavior back to the game. The starting loadout is
+installed for the run rather than checked.
 
 ## Source index
 
@@ -60,8 +60,8 @@ the game still applies its health, damage, armor, gold, or real-time behavior.
 
 All 33 selectable keepsakes share one identity boundary regardless of effect:
 
-- the starting loadout declares one exact keepsake, which is checked after
-  native run initialization;
+- the starting loadout declares one exact keepsake, which the module installs
+  at its planned rank for the run;
 - an authored postboss change binds the exact `EquipKeepsake` call to one
   `keepsakeChange` transaction;
 - opening and closing a rack without changing keepsake creates no transaction;
@@ -229,6 +229,66 @@ transaction. Room-exit `keepsakeEffects` conformance proves its retained use
 and latch state. If Fig Leaf skips the phase, native `HandleAthenaSpawn` returns
 before consuming Gorgon, which preserves the planner's documented ordering.
 
+## Run-scoped loadout install
+
+The module installs the plan's starting loadout for one run
+([Loadout install](../../design/GAME_INTEGRATION_BOUNDARY.md#loadout-install)).
+These are the native facts that shape it.
+
+**Chaos Trial precedent.** A Chaos Trial backs up `PrimaryWeaponName`,
+`LastWeaponUpgradeName`, `LastAwardTrait`, `EquippedFamiliar`,
+`ShrineUpgrades`, `ActiveShrineBounty` and `MetaUpgradeState`
+(`StoredGameStateInit`, `BountyLogic.lua:513-521`), writes the trial's loadout
+into GameState before the run starts (`BountyLogic.lua:524-731`) and holds it
+for the whole run. `StoredGameState` is save-whitelisted (`SaveLogic.lua:4`).
+The hub load restores it and re-extracts the Vows and point caches
+(`RestorePackagedBountyGameState`, `BountyLogic.lua:734-753`, called from
+`HubPostBountyLoad`, `DeathLoopLogic.lua:398-405`).
+
+**The override lasts the whole run.** Fear, Aspect identity, Arcana
+`Equipped`, the keepsake and the familiar are read from GameState throughout
+the run, not only at its start: about 60 files read Vow values, and Barren's
+expiry re-equip, Circe, keepsake rack swaps and `AdvanceKeepsake` read the
+loadout mid-run. Restoring inside `StartNewRun` would change them.
+
+**Install and restore contacts.**
+
+- `StartNewRun` replaces `CurrentRun` (`RunLogic.lua:445`) and extracts every
+  Vow from the profile (`RunLogic.lua:453-455`); `CreateNewHero` reads the
+  EnemyDamage Vow (`RunLogic.lua:25-29`). The install therefore precedes base
+  `CreateNewHero` and re-extracts the Vows.
+- The run-start keepsake equip reads `LastAwardTrait` and the familiar equip
+  reads `EquippedFamiliar` (`RunLogic.lua:481-482`).
+- `EquipPlayerWeapon` writes `WeaponsUnlocked` (`CombatLogic.lua:4719-4722`),
+  so the hero's weapon table is changed directly.
+- `RecordRunCleared` calls `RecordRunStats` and then credits the cleared
+  loadout from GameState and the hero (`ClearedWith*`,
+  `RunLogic.lua:2037-2081`). `KillHero` skips `RecordRunStats` for a cleared
+  run (`DeathLoopLogic.lua:65-67`) and saves at `DeathLoopLogic.lua:238`.
+- A clear happens in the boss room, but the run continues through linked
+  rooms (for example `I_Boss01` to `I_PostBoss01`, `I_ChronosFlashback01` and
+  `I_DeathAreaRestored`, `RoomDataI.lua:1260`, `3472`, `3887`). Each room's
+  hero setup re-equips from `CurrentRun.Hero.Weapons`
+  (`GatherAndEquipWeapons`, `UpgradeLogic.lua:801`), so the planned loadout
+  must hold until `KillHero`.
+
+**Unlock-all-cards quest.** `QuestUnlockAllCards` completes when
+`GameState.MetaUpgradeUnlockedCountCache` reaches 14 (`QuestData.lua:5172-5184`).
+Only the Arcana screens recompute that cache
+(`UpdateMetaUpgradeUnlockedCountCache`, `MetaUpgradeCardScreenLogic.lua:784-796`;
+`MetaUpgradeCardUpgradeScreenLogic.lua:104`), so card `Unlocked` is set only
+for the duration of each `AddRandomMetaUpgrades` call.
+
+**Native rank formulas.** Each rank is derived from profile progression, so
+the install overrides the getter instead of writing progression:
+
+| Getter                   | Native source                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `GetWeaponUpgradeLevel`  | Counts purchased `WeaponsUnlocked` upgrades for the Aspect (`WeaponUpgradeLogic.lua:478`).                                  |
+| `GetMetaUpgradeLevel`    | The card's saved `Level` (`MetaUpgradeLogic.lua:51`); the maximum is `#UpgradeResourceCost + 1` (`:21`).                    |
+| `GetKeepsakeLevel`       | Cumulative `ChamberThresholds` against `KeepsakeChambers`, plus `KeepsakeLevelBonus` (`KeepsakeLogic.lua:1-40`).            |
+| `GetFamiliarTraitStacks` | One plus each purchased `FamiliarUpgrades` entry for the trait (`FamiliarShopLogic.lua:445`, `FamiliarShopData.lua:11-41`). |
+
 ## Weapons and aspects
 
 The catalog contains six weapons and 24 aspects:
@@ -240,9 +300,10 @@ The catalog contains six weapons and 24 aspects:
 - Argent Skull: Melinoë, Medea, Persephone, Hel
 - Black Coat: Melinoë, Nyx, Selene, Shiva
 
-Weapon and aspect are covered by the explicit checked starting-loadout product.
-The executor observes the player's equipped identities at run start and never
-equips, unlocks, or repairs them.
+Weapon and aspect are part of the installed starting loadout: the module gives
+the hero the planned weapon and records the planned aspect at its planned rank
+for the run, and never unlocks either
+([Loadout install](../../design/GAME_INTEGRATION_BOUNDARY.md#loadout-install)).
 
 Two aspect consequences are already modeled by the planner:
 
@@ -265,7 +326,7 @@ Strength, Divinity, and Judgment.
 
 | Arcana concern                                        | Execution disposition                                                                                                             |
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Starting active board and rarity                      | Covered by the checked starting-loadout product; the executor compares the native active board and rarities without rewriting it. |
+| Starting active board and rarity                      | Installed for the run with the starting loadout; the card ranks are overridden for the run and never written to the profile save. |
 | Rarity contributions from Excellence, Queen, Divinity | Covered indirectly because each trait offer publishes its final rarity table outcome.                                             |
 | Artificer capacity and conversions                    | Conversion disposition, producer relation, and uses are published; the executor must not recalculate Arcana capacity.             |
 | Judgment                                              | Covered by `automatic:judgment` and `AddRandomMetaUpgrades`.                                                                      |
@@ -279,9 +340,8 @@ of Rivals change modeled reward, offer, loadout, or boss identity. The other 13
 are currently simulation-neutral combat/economy modifiers, including Hordes,
 Return, Menace, and Fangs.
 
-Configured and effective ranks are covered by the checked starting-loadout
-product. The executor compares them and never rewrites Vows. Downstream
-planner results remain usable:
+The configured ranks are installed for the run with the starting loadout and
+the profile's Vows return after it. Downstream planner results remain usable:
 
 - Forfeit publishes the onion substitution and retained consumption.
 - Denial publishes the rejected trait option.

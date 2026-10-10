@@ -57,7 +57,7 @@ compared as a complete native inventory.
 ## Numeric comparison inventory
 
 `mods/room/conformance/proof.lua` owns numeric state equality for ordinary
-room exit, postboss admission, and starting configured/effective Fear. The
+room exit and the Practice mode start-room self-check. The
 tolerance applies recursively to numeric values, not table keys or identities.
 It is absolute, not proportional to the value: larger counters do not gain a
 larger error allowance. Published values, steering operands, and native state
@@ -66,11 +66,10 @@ digits so distinct double-precision values remain distinguishable.
 
 | Comparison path                                                                           | Numeric exposure                                                                                                                                                                                                                                                                                                | Disposition                                                                                                                                                                                                 |
 | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keepsakeEffects.transcendentEmbryo.markedBlessingValues`                                 | Weapon/Special/Cast damage bonus and Money bonus become `1 + bonus` natively, then are read as `multiplier - 1`; Magick cost reduction uses `1 - reduction` in both directions. Speed, rarity bonus, regeneration, harvest chance, and other direct blessing operands also pass through this nested projection. | Shared tolerant proof at both room exit and postboss admission. The real `ChaosSpecialBlessing` round trip produces `1.2000000000000002` from authored `1.2`; that is representation noise, not divergence. |
+| `keepsakeEffects.transcendentEmbryo.markedBlessingValues`                                 | Weapon/Special/Cast damage bonus and Money bonus become `1 + bonus` natively, then are read as `multiplier - 1`; Magick cost reduction uses `1 - reduction` in both directions. Speed, rarity bonus, regeneration, harvest chance, and other direct blessing operands also pass through this nested projection. | Shared tolerant proof at room exit and the Practice self-check; the real `ChaosSpecialBlessing` round trip produces `1.2000000000000002` from authored `1.2`; that is representation noise, not divergence. |
 | Other `keepsakeEffects` numbers                                                           | Charges, uses, progress, rarity ceiling, level bonuses, temporary-Hammer durations, and retained acquisition order.                                                                                                                                                                                             | Shared proof; provenance is still not inferred from numbers. An off-by-one remains a mismatch.                                                                                                              |
 | `traitInventory`, `elementCounts`, `steadyGrowth`, `chaos`, `pathOfStars`, `stygianWell`  | Trait levels; element counts; growth progress/interval; curse remaining duration; path-point counters; pending uses and signed Well durations. Active Chaos conformance does not compare curse/blessing magnitudes.                                                                                             | Shared proof for numeric values, exact trait/rarity/clock identities and array structure.                                                                                                                   |
 | `rewardPriorities`, `forfeit`                                                             | Ordered names and a closed status string, respectively; no fractional values.                                                                                                                                                                                                                                   | Exact equality, unchanged.                                                                                                                                                                                  |
-| Starting loadout                                                                          | Configured/effective Fear ranks are the numeric comparison. Weapon, aspect, Arcana rarity/origin, keepsake, and Hex identities are discrete.                                                                                                                                                                    | Fear uses the shared proof instead of a second recursive numeric comparator. Other loadout checks stay exact.                                                                                               |
 | Current-room, encounter, feature, Door, Fields-cage Door payload, and Ephyra-board proofs | Object/occurrence/slot identities, presence, room/reward/source names, and collection lengths. No fractional measurements.                                                                                                                                                                                      | Keep exact comparisons and ID-keyed lookup. Fields positions are diagnostic, not blocking measurements.                                                                                                     |
 | Timeline prerequisites, checkpoint obligations, and session invariants                    | Owner/handle identity, membership, lifecycle names, and completion flags.                                                                                                                                                                                                                                       | Keep exact checks; these do not compare numeric outcome magnitudes.                                                                                                                                         |
 | Local actuator verification                                                               | Inventory generation checks names/carriers; failed steering is diagnostic. `chaos.matchesCurse` / `matchesBlessing` already tolerate operand roundoff and are used by adapter tests, not runtime mismatch checks.                                                                                               | No new callback mismatch or eligibility check. Protocol bounds and declaration validation also remain strict.                                                                                               |
@@ -91,12 +90,11 @@ digits so distinct double-precision values remain distinguishable.
 
 ## Named room-exit facts
 
-Postboss admission runs before the wrapped native `StartRoom`. The marked
-occurrence's expanded `roomEntered` diagnostics supply expected values to these
-same nine conformance families, alongside native weapon/aspect comparison.
-Other diagnostic sections remain nonblocking; admission does not add readers
-or compare the entire diagnostic frame. A match adopts the restored native room
-without rebuilding its contents.
+A Practice mode start's self-check runs at the start room's
+`StartRoomPresentation`. The start occurrence's expanded `roomEntered`
+diagnostics supply expected values to these same nine conformance families.
+Other diagnostic sections remain nonblocking; the self-check does not add
+readers or compare the entire diagnostic frame.
 
 Room-exit conformance runs immediately before the wrapped native `LeaveRoom`.
 
@@ -158,7 +156,7 @@ At minimum, they witness:
 - an unrelated `TemporaryMetaUpgrades` entry that cannot prove Crystal
   Figurine consumption;
 - real Chaos operand apply/read round trips accepted at both room exit and
-  postboss admission, while independently changed bonuses fail both;
+  the start-room self-check, while independently changed bonuses fail both;
 - the numeric tolerance boundary, meaningful fractional and count differences,
   type/key/order differences, and non-finite values;
 - full-precision numeric mismatch evidence in the runtime log.

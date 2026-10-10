@@ -12,7 +12,6 @@ function composition.bind(root, moduleVersion, buildId)
     local ephyra = import("mods/navigation/ephyra.lua")
     local room = import("mods/room/coordinator.lua")
     local session = import("mods/runtime/session.lua")
-    local loadout = import("mods/loadout/session.lua")
     local executionState = session.create()
 
     -- Imported chunks are stateless definitions. This explicit instance spans
@@ -26,7 +25,6 @@ function composition.bind(root, moduleVersion, buildId)
     local loadoutRuntime = {
         inbox = inbox,
         session = session,
-        loadout = loadout,
         activePlanSlot = function()
             return (activeSlotFile.read())
         end,
@@ -57,7 +55,6 @@ function composition.bind(root, moduleVersion, buildId)
         snapshot.lastExited = routeState and routeState.lastExitedOccurrence
         snapshot.restoredRoom = routeState and routeState.transparentNativeRoom
         snapshot.issue = executionState.firstMismatch or executionState.firstFault or executionState.admissionError
-        snapshot.postbossAdmission = executionState.postbossAdmission
         return snapshot
     end
 
@@ -242,18 +239,6 @@ function composition.bind(root, moduleVersion, buildId)
                         .. diagnosticValue(admission.observed))
                 end
             end
-            if state.postbossAdmission
-                and state.loggedPostbossAdmission ~= state.postbossAdmission then
-                state.loggedPostbossAdmission = state.postbossAdmission
-                if rom and rom.log and rom.log.info then
-                    local admission = state.postbossAdmission
-                    rom.log.info("[RunPlanner] postboss-resynchronized room="
-                        .. tostring(admission.gameName) .. " occurrence="
-                        .. tostring(admission.occurrenceId) .. " index="
-                        .. tostring(admission.index) .. " slot="
-                        .. tostring(admission.slot))
-                end
-            end
             highlights.refresh(runtime, state)
         end
 
@@ -261,7 +246,7 @@ function composition.bind(root, moduleVersion, buildId)
         hexTree.attach(module)
         local loadoutScope = loadoutHooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         local practiceScope = import("mods/practice/hooks.lua").attach(module, session, getState, report,
-            loadout, hexTree)
+            hexTree)
 
         acquisitionHooks.attach(module, session, getState, report, room, hexTree,
             shipCombat.takeRewardProducer, highlights)
@@ -271,10 +256,7 @@ function composition.bind(root, moduleVersion, buildId)
             transformationScope, shipCombat.rewardContext, generatedEncounter, highlights)
         highlights.attach(module, getState)
         roomHooks.attach(module, session, getState, report, route, room, featureScope, navigation,
-            loadoutScope, {
-                inbox = inbox,
-                activePlanSlot = loadoutRuntime.activePlanSlot,
-            }, practiceScope)
+            loadoutScope, practiceScope)
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
         featureInventory.attach(module, session, getState, report, room, route)
         interactionHooks.attach(module, session, getState, report, room, route)

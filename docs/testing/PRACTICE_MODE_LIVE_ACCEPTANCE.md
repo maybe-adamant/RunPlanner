@@ -2,10 +2,10 @@
 
 Use a development build of the planner with internal run modifiers and a
 matching installed game-module build. In Loadout, choose a start point on a
-valid plan, optionally set its gold, save and send it, and start the run with
-the plan's weapon, aspect, keepsake, familiar, Arcana and Fear. Use the Dream
-door for a Dream plan. Source probes and automated tests are not live
-verification; the owner confirms or waives each remaining check.
+valid plan, optionally set its gold, save and send it, and start the run; the
+module installs the plan's loadout. Use the Dream door for a Dream plan.
+Source probes and automated tests are not live verification; the owner
+confirms or waives each remaining check.
 
 Accepted simplification: under the Boon Mana Reserve vow, installed boons hold
 no reserved Magick. This is not a failure.
@@ -76,9 +76,9 @@ For each start, before taking any action in the start room:
 - [ ] Die or clear, return to the Crossroads and start another run. The
       practice run does not appear in the run history, and the run count is
       unchanged.
-- [ ] In a practice run, Save & Quit at a later marked Postboss and continue.
-      The executor log shows Postboss re-admission, and after the run ends it
-      is still absent from the run history.
+- [ ] In a practice run, Save & Quit in a later room and continue. The run
+      continues unsteered, and after it ends it is still absent from the run
+      history.
 
 ## Optional Silver Wheel probe
 
