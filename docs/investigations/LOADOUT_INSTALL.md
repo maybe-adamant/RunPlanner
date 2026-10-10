@@ -87,15 +87,9 @@ Game scripts live under `1GameData/Scripts`.
   - the weapon-of-the-night bonus depends on the planned weapon, which is
     unmodelled, as before.
 
-## Open points
+## Disposition
 
-1. Publish the familiar and explicit Aspect, keepsake and familiar ranks, or let
-   the module derive mature ranks from game data.
-2. Whether the starting Hex check goes as well.
-3. Replacing the weapon and Aspect admission checks (Postboss, Practice) with
-   an install-marker plan-fingerprint check.
-4. A Fresh File admission guard (`prevRun == nil`).
-5. Accepting run records, keepsake chambers and Shrine bounties earned with
-   installed content.
-6. Accepting save-backed install state.
-7. Rejecting admission during a Chaos Trial.
+Owner confirmed all open points (familiar and explicit ranks published;
+starting Hex check removed; Postboss admission retired; Fresh File guard;
+earned records accepted; save-backed install state accepted; Chaos Trial
+refused). See `docs/progress/LOADOUT_INSTALL_PLAN.md`.
