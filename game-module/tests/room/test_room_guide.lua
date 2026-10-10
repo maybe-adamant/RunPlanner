@@ -411,12 +411,71 @@ function TestRoomGuide.testStoryAndMinibossTitlesNameTheirOccupants()
     for name, title in pairs(expected) do
         lu.assertEquals(guide.project({ kind = "navigation", nativeRoomName = name }).header, title)
     end
-    for _, name in ipairs({ "F_MiniBoss01", "N_MiniBoss02" }) do
+    for name, footer in pairs({ F_MiniBoss01 = "Root-Stalker: Hera", N_MiniBoss02 = "Boar: Hera" }) do
         local projection = guide.project({ kind = "navigation", nativeRoomName = "N_Hub",
             navigation = { kind = "next", hubVisit = name == "N_MiniBoss02",
                 occurrence = { gameName = name }, reward = { rewardType = "Boon", source = "HeraUpgrade" } } })
-        lu.assertEquals(projection.footer, "Next: " .. names.occupants[name])
+        lu.assertEquals(projection.footer, footer)
     end
+end
+
+local function nextFooter(name, reward, cages)
+    return guide.project({ kind = "navigation", nativeRoomName = "H_Combat02",
+        navigation = { kind = "next", occurrence = { gameName = name },
+            reward = reward, cageRewards = cages } }).footer
+end
+
+function TestRoomGuide.testSingleMinibossDoorNamesTheMinibossAndItsCompactReward()
+    lu.assertEquals(nextFooter("Q_MiniBoss02", { rewardType = "Boon", source = "HephaestusUpgrade" }), "Brute: Heph")
+    lu.assertEquals(nextFooter("Q_MiniBoss05", { rewardType = "TalentBigDrop" }), "Stalker: Stars")
+    lu.assertEquals(nextFooter("N_MiniBoss02", { rewardType = "Boon", source = "AphroditeUpgrade" }), "Boar: Aphro")
+    lu.assertEquals(nextFooter("N_MiniBoss01", { rewardType = "Boon", source = "PoseidonUpgrade" }), "Satyr: Poseidon")
+    lu.assertEquals(nextFooter("O_MiniBoss02", { rewardType = "Boon", source = "ZeusUpgrade" }), "Yargonaut: Zeus")
+    lu.assertEquals(nextFooter("I_MiniBoss01", { rewardType = "WeaponUpgrade" }), "Verminancer: Hammer")
+    -- Miniboss doors offer god boons; Tartarus and Summit stores add Gold x3,
+    -- Pom x3, Hammer, Gleaming Stars and Trial.
+    for gameName in pairs(names.occupants) do
+        if gameName:match("_MiniBoss%d+$") then
+            for _, rewardKey in ipairs({ "PoseidonUpgrade", "HermesUpgrade" }) do
+                local footer = nextFooter(gameName, { rewardType = "Boon", source = rewardKey })
+                lu.assertTrue(guide.length(footer) <= guide.ROW_LIMIT, footer)
+            end
+            for _, rewardType in ipairs({ "RoomMoneyTripleDrop", "StackUpgradeTriple", "WeaponUpgrade",
+                "TalentBigDrop", "Devotion" }) do
+                local footer = nextFooter(gameName, { rewardType = rewardType })
+                lu.assertTrue(guide.length(footer) <= guide.ROW_LIMIT, footer)
+            end
+        end
+    end
+    lu.assertEquals(nextFooter("F_MiniBoss02", { rewardType = "Boon", source = "PoseidonUpgrade" }),
+        "Shadow-Spiller: Poseidon")
+end
+
+function TestRoomGuide.testBossAndRewardlessMinibossFootersNameTheOccupant()
+    lu.assertEquals(nextFooter("Q_Boss01"), "Next: Typhon")
+    lu.assertEquals(nextFooter("I_Boss01"), "Next: Chronos")
+    lu.assertEquals(nextFooter("N_MiniBoss02"), "Next: Erymanthian Boar")
+end
+
+function TestRoomGuide.testMultiDoorFooterTriesFullThenCompactThenFallbacks()
+    local function boon(god) return { rewardType = "Boon", source = god .. "Upgrade" } end
+    lu.assertEquals(guide.doorsFooter({ boon("Hephaestus"), { rewardType = "TalentBigDrop" } }),
+        "Next: Heph / Stars")
+    lu.assertEquals(guide.doorsFooter({ boon("Hephaestus"), boon("Hera") }), "Next: Hephaestus / Hera")
+    lu.assertEquals(guide.doorsFooter({ boon("Aphrodite"), { rewardType = "WeaponUpgrade" } }),
+        "Next: Aphrodite / Hammer")
+    lu.assertEquals(guide.doorsFooter({ boon("Aphrodite"), { rewardType = "MinorTalentDrop" } }),
+        "Next: Aphro / Stars")
+    lu.assertEquals(guide.doorsFooter({ boon("Poseidon"), boon("Hephaestus") }), "Next: Poseidon / Heph")
+    lu.assertEquals(guide.doorsFooter({ boon("Hephaestus"), boon("Aphrodite"), boon("Zeus") }),
+        "Next: Heph/Aphro/Zeus")
+    lu.assertEquals(guide.doorsFooter({ boon("Hera"), boon("Hephaestus"), boon("Zeus") }),
+        "Next: Hera / Heph / Zeus")
+    lu.assertEquals(guide.doorsFooter({ boon("Poseidon"), boon("Hephaestus"), { rewardType = "MaxHealthDrop" } }),
+        "Next: Poseidon +2")
+    -- Fields cage doors use the same chain.
+    lu.assertEquals(nextFooter("H_Combat02", nil, { boon("Hephaestus"), boon("Aphrodite") }),
+        "Next: Heph / Aphro")
 end
 
 function TestRoomGuide.testFooterNamesStoryAndRewardlessDestinationsAndShortensCages()
@@ -440,7 +499,7 @@ function TestRoomGuide.testFooterNamesStoryAndRewardlessDestinationsAndShortensC
         { rewardType = "Boon", source = "DemeterUpgrade" },
         { rewardType = "Boon", source = "HeraUpgrade" },
         { rewardType = "Boon", source = "AphroditeUpgrade" },
-    }), "Next: Demeter +2")
+    }), "Next: Demeter/Hera/Aphro")
     lu.assertEquals(footer("H_Combat02", nil, {
         { rewardType = "Boon", source = "ApolloUpgrade" },
         { rewardType = "Boon", source = "HeraUpgrade" },
@@ -688,7 +747,7 @@ function TestRoomGuide.testBackToDropsTheCurrentBiomeAndHubFootersUseRoomNumbers
     end
     lu.assertEquals(hub("N_Combat03", { rewardType = "MaxHealthDropBig" }), "Room 3: Big Max Health")
     lu.assertEquals(hub("N_Combat03"), "Next: Room 3")
-    lu.assertEquals(hub("N_MiniBoss02", { rewardType = "StackUpgrade" }), "Next: Erymanthian Boar")
+    lu.assertEquals(hub("N_MiniBoss02", { rewardType = "StackUpgrade" }), "Boar: Pom")
 end
 
 function TestRoomGuide.testEveryCatalogRewardHasAGuideName()

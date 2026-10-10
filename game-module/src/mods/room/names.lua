@@ -20,6 +20,11 @@ names.occupants = {
     P_Boss01 = "Prometheus", Q_Boss01 = "Typhon", Q_Boss02 = "Typhon", C_Boss01 = "Zagreus",
 }
 
+-- Footer forms for occupants too long to precede a door reward.
+names.compactOccupants = {
+    I_MiniBoss01 = "Verminancer", N_MiniBoss01 = "Satyr", N_MiniBoss02 = "Boar", O_MiniBoss02 = "Yargonaut",
+}
+
 local biomes = { F = "Erebus", G = "Oceanus", H = "Fields", I = "Tartarus",
     N = "Ephyra", O = "Thessaly", P = "Olympus", Q = "Summit", B = "Anomaly", C = "Zagreus" }
 

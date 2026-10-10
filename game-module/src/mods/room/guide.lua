@@ -218,20 +218,34 @@ local function instruction(description, occurrence, transaction)
     return "Planned action"
 end
 
-local function doorRewardName(reward)
-    if isMystery(reward) then return rewardName(reward) end
-    return sourceName(reward.source) or sourceName(reward.rewardType) or rewardName(reward)
+-- Footer forms for door rewards when the full names do not fit.
+local compactRewardNames = { Hephaestus = "Heph", Aphrodite = "Aphro",
+    ["Gleaming Stars"] = "Stars", ["Faint Stars"] = "Stars", ["Path of Stars"] = "Stars" }
+
+local function doorRewardName(reward, compact)
+    local name
+    if isMystery(reward) then
+        name = rewardName(reward)
+    else
+        name = sourceName(reward.source) or sourceName(reward.rewardType) or rewardName(reward)
+    end
+    return compact and compactRewardNames[name] or name
 end
 
-local function cageFooter(cageRewards)
-    local labels = {}
-    for _, cageReward in ipairs(cageRewards) do labels[#labels + 1] = doorRewardName(cageReward) end
-    for _, separator in ipairs({ " / ", "/" }) do
-        local text = "Next: " .. table.concat(labels, separator)
+-- Two or more doors: full names, then compact names, then tighter separators,
+-- then the first door with a count of the rest.
+local function doorsFooter(rewards)
+    local full, compact = {}, {}
+    for index, reward in ipairs(rewards) do
+        full[index], compact[index] = doorRewardName(reward), doorRewardName(reward, true)
+    end
+    for _, attempt in ipairs({ { full, " / " }, { compact, " / " }, { compact, "/" } }) do
+        local text = "Next: " .. table.concat(attempt[1], attempt[2])
         if length(text) <= ROW_LIMIT then return text end
     end
-    return "Next: " .. labels[1] .. " +" .. tostring(#labels - 1)
+    return "Next: " .. compact[1] .. " +" .. tostring(#compact - 1)
 end
+guide.doorsFooter = doorsFooter
 
 local function navigationFooter(navigation, currentGameName)
     if type(navigation) ~= "table" then return nil end
@@ -250,12 +264,17 @@ local function navigationFooter(navigation, currentGameName)
     local gameName = nextOccurrence.gameName or ""
     local overview = nextOccurrence.overview
     local reward = navigation.reward
+    if reward and reward.rewardType == "ClockworkGoal" then reward = nil end
     if roomOccupants[gameName] then
         -- A fresh profile's Bridge holds a shop rather than its story occupant.
         if overview and overview.shop then return "Next: Shop" end
+        -- A miniboss door's reward distinguishes it; bosses have no door reward.
+        if reward ~= nil and gameName:match("_MiniBoss%d+$") then
+            local occupant = names.compactOccupants[gameName] or roomOccupants[gameName]
+            return occupant .. ": " .. doorRewardName(reward, true)
+        end
         return "Next: " .. roomOccupants[gameName]
     end
-    if reward and reward.rewardType == "ClockworkGoal" then reward = nil end
     if navigation.hubVisit then
         local number = gameName:match("^N_Combat(%d+)$")
         if number and reward then return "Room " .. tonumber(number) .. ": " .. doorRewardName(reward) end
@@ -265,7 +284,7 @@ local function navigationFooter(navigation, currentGameName)
     if overview and overview.shop then return "Next: Shop" end
     if gameName:match("_Reprieve") then return "Next: Fountain" end
     if reward ~= nil then return "Next: " .. doorRewardName(reward) end
-    if navigation.cageRewards and #navigation.cageRewards > 0 then return cageFooter(navigation.cageRewards) end
+    if navigation.cageRewards and #navigation.cageRewards > 0 then return doorsFooter(navigation.cageRewards) end
     return "Next: " .. destinationName(gameName)
 end
 
