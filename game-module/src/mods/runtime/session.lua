@@ -109,6 +109,7 @@ local function reset(state, admissionAttempted)
     state.loggedAdmission = nil
     state.postbossAdmission = nil
     state.loggedPostbossAdmission = nil
+    state.practiceStart = nil
     state.diagnostics = {}
     state.reason = "not-started"
     state.admissionAttempted = admissionAttempted == true
@@ -176,7 +177,13 @@ function runtime.attemptPostbossAdmission(state, inbox, activeSlot, nativeRoom)
             })
     end
 
-    local verified, mismatch = admission.verify(occurrence, plan.startingLoadout)
+    -- A reader error is an executor fault, not a divergence.
+    local checked, verified, mismatch = pcall(admission.verify, occurrence, plan.startingLoadout)
+    if not checked then
+        return runtime.fault(state, type(verified) == "table" and verified or {
+            outcome = "fault", checkpoint = "postboss-admission:self-check", observed = tostring(verified),
+        })
+    end
     if not verified then
         return runtime.mismatch(state, type(mismatch) == "table" and mismatch
             or "postboss-admission:state", "matching Postboss entry state", mismatch)
@@ -235,10 +242,21 @@ function runtime.start(state, inbox, phase, activeSlot)
             end
         end
     end
+    -- A Practice mode start begins at its start occurrence; earlier
+    -- occurrences are never realized.
+    local routeState = route.new(plan)
+    if plan.startState ~= nil then
+        local index, routeError
+        for candidate, id in ipairs(plan.selectedOccurrenceIds) do
+            if id == plan.startState.occurrenceId then index = candidate break end
+        end
+        routeState, routeError = route.newAt(plan, index)
+        if routeState == nil then return runtime.fault(state, routeError) end
+    end
     state.plan = plan
     state.admittedNativeRun = _G.CurrentRun
     state.planSlot = activeSlot
-    state.route = route.new(plan)
+    state.route = routeState
     state.room = room.new(plan, function(errorValue, expected, observed)
         return runtime.mismatch(state, errorValue, expected, observed)
     end, {

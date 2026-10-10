@@ -260,6 +260,8 @@ function composition.bind(root, moduleVersion, buildId)
         runModifiers = import("mods/run_modifiers/hooks.lua").attach(module, session, getState, report)
         hexTree.attach(module)
         local loadoutScope = loadoutHooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
+        local practiceScope = import("mods/practice/hooks.lua").attach(module, session, getState, report,
+            loadout, hexTree)
 
         acquisitionHooks.attach(module, session, getState, report, room, hexTree,
             shipCombat.takeRewardProducer, highlights)
@@ -272,7 +274,7 @@ function composition.bind(root, moduleVersion, buildId)
             loadoutScope, {
                 inbox = inbox,
                 activePlanSlot = loadoutRuntime.activePlanSlot,
-            })
+            }, practiceScope)
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
         featureInventory.attach(module, session, getState, report, room, route)
         interactionHooks.attach(module, session, getState, report, room, route)

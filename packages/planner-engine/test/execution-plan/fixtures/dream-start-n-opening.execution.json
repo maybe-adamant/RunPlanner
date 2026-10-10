@@ -404,6 +404,7 @@
     "gold": 0,
     "biomeVisitOrder": ["Q", "F"],
     "roomHistory": [
+      { "name": "Dream_Intro", "nextRoomSet": true },
       { "name": "Q_Intro" },
       { "name": "Q_Combat10" },
       { "name": "Q_Combat03" },
@@ -5039,5 +5040,5 @@
       }
     }
   ],
-  "planFingerprint": "95635ab6"
+  "planFingerprint": "0451c24e"
 }

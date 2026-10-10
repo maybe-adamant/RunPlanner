@@ -13,7 +13,7 @@ local function reportOutcome(session, state, errorValue)
 end
 
 function hooks.attach(module, session, getState, report, route, room, featureScope, navigation, loadoutScope,
-    admissionRuntime)
+    admissionRuntime, practiceScope)
     assert(type(loadoutScope) == "table"
         and type(loadoutScope.synchronizeStartingRoom) == "function"
         and type(loadoutScope.startingRun) == "function",
@@ -70,13 +70,16 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     module.hooks.wrap("CreateRoom", "run-planner-create-room", function(_, runtime, base, roomData, args)
         local state = getState(runtime)
         -- StartNewGame's StartNewRun(nil, { RoomName }) creates the opening
-        -- directly, bypassing ChooseStartingRoom.
+        -- directly, bypassing ChooseStartingRoom, and so does a Practice mode
+        -- start, whose loadout is already verified.
         local opening
-        if state ~= nil and state.state == "starting" and loadoutScope.startingRun()
+        local practice = state ~= nil and state.state == "synchronized" and practiceScope ~= nil
+            and practiceScope.creatingStartRoom(state, args)
+        if state ~= nil and (state.state == "starting" or practice) and loadoutScope.startingRun()
             and type(args) == "table" and args.RoomName ~= nil then
             local expected = route.expected(state.route)
             if expected ~= nil and args.RoomName == expected.gameName then
-                if not loadoutScope.synchronizeStartingRoom(runtime, args)
+                if (not practice and not loadoutScope.synchronizeStartingRoom(runtime, args))
                     or room.prepare(state, expected) == nil or state.state ~= "synchronized" then
                     report(runtime)
                     return base(roomData, args)
