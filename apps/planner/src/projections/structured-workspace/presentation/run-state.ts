@@ -336,13 +336,12 @@ function percentBracket(fraction: number, signed: boolean): string {
 function row(
   key: string,
   name: string,
-  parts: { readonly bracket?: string; readonly tag?: string; readonly right?: string } = {},
+  parts: { readonly bracket?: string; readonly right?: string } = {},
 ): WorkspaceRunStateRow {
   return Object.freeze({
     key,
     name,
     ...(parts.bracket === undefined ? {} : { bracket: parts.bracket }),
-    ...(parts.tag === undefined ? {} : { tag: parts.tag }),
     ...(parts.right === undefined || parts.right === '' ? {} : { right: parts.right }),
   });
 }
@@ -586,7 +585,6 @@ function arcanaSections(
       const clock = snapshot.effects.arcanaClocks[card.key];
       return row(`arcana:${card.key}`, cardLabel(card.key), {
         ...(clock === undefined ? {} : { bracket: clockBracket(clock) }),
-        ...(card.origin === 'automatic' ? { tag: 'Automatic' } : {}),
         right: arcanaRanks[card.rarity],
       });
     });

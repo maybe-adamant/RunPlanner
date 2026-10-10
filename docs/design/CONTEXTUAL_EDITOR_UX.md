@@ -147,7 +147,7 @@ Shrine (pending deliveries) and Chaos (active curses with the blessing each
 matures into). Keepsakes is history only: one row per entered biome with its
 keepsake, where a postboss rack swap reads `Erebus · Calling Card → Silver
 Wheel` on the biome that ends with it, then kept keepsakes, then Fated status
-only once it is known. Arcana lists equipped cards with automatic ones marked, then temporary cards, then Barren. Fear lists
+only once it is known. Arcana lists equipped cards, then temporary cards, then Barren. Fear lists
 active vows, then Forfeit, Circe-disabled vows and banned traits.
 
 More Info lists the gods already in the ordinary pool (it does not list

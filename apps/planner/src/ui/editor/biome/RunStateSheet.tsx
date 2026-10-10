@@ -92,12 +92,6 @@ function RunStateRows({
                 <span className="run-state-row-bracket">{row.bracket}</span>
               </>
             )}
-            {row.tag === undefined ? null : (
-              <>
-                {' '}
-                <span className="run-state-row-tag">{row.tag}</span>
-              </>
-            )}
           </span>
           <span className="run-state-row-right">{row.right}</span>
         </li>
