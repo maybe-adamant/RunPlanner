@@ -3,39 +3,95 @@
 local guide = {}
 
 local MAX_ROWS = 6
+-- One character budget shared by the header, every row and the footer.
+local ROW_LIMIT = 24
+guide.ROW_LIMIT = ROW_LIMIT
+guide.MAX_ROWS = MAX_ROWS
 
 local names = type(import) == "function" and import("mods/room/names.lua")
     or require("mods.room.names")
 local roomName, displayName, roomOccupants = names.room, names.display, names.occupants
 
+-- UTF-8 character count; continuation bytes do not start a character.
+local function length(text)
+    local _, continuation = text:gsub("[\128-\191]", "")
+    return #text - continuation
+end
+guide.length = length
+
+-- Safety net for unknown native names only; every catalog name fits.
+local function fit(text)
+    if text == nil or length(text) <= ROW_LIMIT then return text end
+    local kept, count = {}, 0
+    for character in text:gmatch("[%z\1-\127\192-\253][\128-\191]*") do
+        if count == ROW_LIMIT - 1 then break end
+        kept[#kept + 1] = character
+        count = count + 1
+    end
+    return table.concat(kept) .. "…"
+end
+
+local gods = { Aphrodite = true, Apollo = true, Ares = true, Demeter = true,
+    Hephaestus = true, Hera = true, Hestia = true, Poseidon = true, Zeus = true, Hermes = true }
+
 local function sourceName(source)
     if type(source) ~= "string" then return nil end
     local god = source:match("^(.-)Upgrade$")
-    local gods = { Aphrodite = true, Apollo = true, Ares = true, Demeter = true,
-        Hephaestus = true, Hera = true, Hestia = true, Poseidon = true, Zeus = true, Hermes = true }
     return gods[god] and god or nil
+end
+
+-- Guide-owned names for every catalog reward type; native names are not used
+-- for rewards because many reward keys have no text entry.
+local rewardNames = {
+    StackUpgrade = "Pom", StackUpgradeBig = "Pom x2", StackUpgradeTriple = "Pom x3",
+    StoreRewardRandomStack = "Pom Slice", WeaponUpgrade = "Hammer", WeaponUpgradeDrop = "Hammer",
+    SpellDrop = "Hex", TalentDrop = "Path of Stars", TalentBigDrop = "Gleaming Stars",
+    MinorTalentDrop = "Faint Stars", ChaosWeaponUpgrade = "Anvil of Fates",
+    MaxHealthDrop = "Max Health", MaxHealthDropSmall = "Max Health", MaxHealthDropBig = "Big Max Health",
+    EmptyMaxHealthDrop = "Centaur Soul", EmptyMaxHealthSmallDrop = "Centaur Soul",
+    MaxManaDrop = "Max Magick", MaxManaDropSmall = "Max Magick", MaxManaDropBig = "Big Max Magick",
+    Currency = "Gold", RoomMoneyDrop = "Gold", RoomMoneySmallDrop = "Gold", RoomMoneyTinyDrop = "Gold",
+    RoomMoneyTripleDrop = "Gold x3",
+    RoomRewardHealDrop = "Heal", HealDrop = "Heal", HealDropMinor = "Minor Heal", HealBigDrop = "Big Heal",
+    RoomRewardConsolationPrize = "Red Onion", ArmorBoost = "Armor", ArmorBigBoost = "Big Armor",
+    AirBoost = "Air Essence", EarthBoost = "Earth Essence", FireBoost = "Fire Essence",
+    WaterBoost = "Water Essence", ElementalBoost = "All Essences",
+    LastStandDrop = "Death Defiance", InfernalContractBoon = "Champion", TrialUpgrade = "Chaos",
+    GiftDrop = "Nectar", ManaDrop = "Magick",
+    MetaCurrencyDrop = "Bones", MetaCurrencyBigDrop = "Big Bones",
+    MetaCardPointsCommonDrop = "Ashes", MetaCardPointsCommonBigDrop = "Big Ashes",
+    MemPointsCommonDrop = "Psyche", WeaponPointsRareDrop = "Nightmare",
+    CardUpgradePointsDrop = "Moon Dust", CharonPointsDrop = "Obol Points",
+    ShopHermesUpgrade = "Hermes", Devotion = "Trial", Boon = "Boon", RandomLoot = "Boon",
+    BlindBoxLoot = "Mystery Boon", RandomLootGiftItem = "Mystery Boon",
+    Story = "Story", Shop = "Shop", ClockworkGoal = "Clockwork Goal",
+}
+guide.rewardNames = rewardNames
+
+-- Short forms for god boons whose native names exceed the Sell and Phial rows.
+local traitNames = {
+    HealthRewardBonusBoon = "Affirmation", SelfCastBoon = "Hostile Env.",
+    HighHealthOffenseBoon = "Shameless", CharmCrowdBoon = "Obsession",
+    DoubleExManaBoon = "Exceptional", MissingHealthCritBoon = "Mutual Destr.",
+    KeepsakeLevelBoon = "Heirloom",
+}
+local keepsakeNames = { RandomBlessingKeepsake = "Embryo", TempHammerKeepsake = "Exp. Hammer" }
+
+local function shortName(table_, key)
+    return type(key) == "string" and table_[key] or displayName(key, nil)
+end
+
+local function isMystery(reward)
+    return reward.rewardType == "BlindBoxLoot" or reward.rewardType == "RandomLootGiftItem"
 end
 
 local function rewardName(reward, boosted)
     if type(reward) ~= "table" then return "reward" end
-    local common = {
-        StackUpgrade = "Pom", StackUpgradeBig = "Double Pom", StackUpgradeTriple = "Triple Pom",
-        StoreRewardRandomStack = "Pom Slice", WeaponUpgrade = "Hammer", WeaponUpgradeDrop = "Hammer",
-        SpellDrop = "Hex", TalentDrop = "Path of Stars", ChaosWeaponUpgrade = "Anvil of Fates",
-        MetaCurrencyDrop = "Bones", MetaCardPointsCommonDrop = "Ashes", MemPointsCommonDrop = "Psyche",
-        MaxHealthDrop = "Max Health", MaxManaDrop = "Max Magick", RoomMoneyDrop = "Gold",
-        MaxHealthDropSmall = "Max Health", MaxManaDropSmall = "Max Magick",
-        GiftDrop = "Nectar", HealDrop = "Health", ManaDrop = "Magick",
-    }
     local god = sourceName(reward.source) or sourceName(reward.rewardType)
-    local mystery = reward.rewardType == "BlindBoxLoot" or reward.rewardType == "RandomLootGiftItem"
-    if mystery or god or reward.rewardType == "RandomLoot" or reward.rewardType == "Boon" then
-        local label = mystery and "Mystery Boon" or boosted and "Boosted Boon" or "Boon"
-        if god and not mystery and not boosted then return god .. " boon" end
-        return god and (label .. " — " .. god) or label
-    end
-    if common[reward.rewardType] ~= nil then return common[reward.rewardType] end
-    return displayName(reward.rewardType, "reward")
+    if isMystery(reward) then return "Mystery Boon" end
+    if boosted then return "Boosted Boon" end
+    if god then return god end
+    return rewardNames[reward.rewardType] or displayName(reward.rewardType, "reward")
 end
 
 local function shopOffer(occurrence, offerKey)
@@ -45,13 +101,31 @@ local function shopOffer(occurrence, offerKey)
     end
 end
 
-local function cageName(phaseKey)
-    local index = type(phaseKey) == "string" and phaseKey:match("^Cage0*(%d+)$") or nil
-    return index and "Cage " .. index or "Cage"
+local function cageLabel(phaseKey)
+    local index = type(phaseKey) == "string" and phaseKey:match("^Cage(%d+)$") or nil
+    return index and ("Cage " .. tonumber(index)) or "Cage"
+end
+
+-- A rushed purchase's own pickup is collected at the Shrine; any other Shrine
+-- delivery pickup arrives in a later room.
+local function rushedHere(occurrence, sourceKey)
+    if sourceKey == nil then return false end
+    for _, offer in ipairs(occurrence.overview and occurrence.overview.hermesShrine
+        and occurrence.overview.hermesShrine.offers or {}) do
+        if offer.deliverySourceKey == sourceKey then return offer.purchase and offer.purchase.rushed == true end
+    end
+    for _, transaction in ipairs(occurrence.timeline and occurrence.timeline.transactions or {}) do
+        local replacement = transaction.kind == "travelDealRefill" and transaction.refill
+            and transaction.refill.replacement
+        if replacement and replacement.deliverySourceKey == sourceKey then
+            return replacement.purchase and replacement.purchase.rushed == true
+        end
+    end
+    return false
 end
 
 local function instruction(description, occurrence, transaction)
-    if type(description) ~= "table" then return "Complete planned action" end
+    if type(description) ~= "table" then return "Planned action" end
     local kind = description.kind
     local reward = description.reward or (transaction and transaction.reward)
     if reward and reward.rewardType == "Devotion" and transaction and transaction.kind == "acquisition" then
@@ -62,20 +136,16 @@ local function instruction(description, occurrence, transaction)
     end
     if transaction and transaction.kind == "acquisition" then
         for _, role in ipairs(transaction.roles or {}) do
-            if role.disposition == "artificer" then return "Use Artificer on " .. rewardName(reward) end
+            if role.disposition == "artificer" then return "Artificer: " .. rewardName(reward) end
         end
     end
-    if kind == "collectRequiredReward" then return "Collect boss reward" end
+    if kind == "collectRequiredReward" then return "Boss reward" end
     if kind == "completeFieldsCage" then
-        local label = "Clear " .. cageName(description.phaseKey)
-        if reward ~= nil then
-            local name = sourceName(reward.source) or sourceName(reward.rewardType) or rewardName(reward)
-            return label .. " — " .. name
-        end
-        return label
+        local label = cageLabel(description.phaseKey)
+        return reward ~= nil and (label .. ": " .. rewardName(reward)) or label
     end
-    if kind == "interactIncomingReward" or kind == "interactLocalReward" then
-        if description.conversion == "timePiece" then return "Use Time Piece on " .. rewardName(reward) end
+    if kind == "interactIncomingReward" or kind == "interactLocalReward" or kind == "interactWheelReward" then
+        if description.conversion == "timePiece" then return "Time Piece: " .. rewardName(reward) end
         return "Collect " .. rewardName(reward)
     end
     if kind == "chooseRewardWheel" then
@@ -88,27 +158,28 @@ local function instruction(description, occurrence, transaction)
                 end
             end
         end
-        return "Choose wheel reward"
-    end
-    if kind == "interactWheelReward" then
-        if description.conversion == "timePiece" then return "Use Time Piece on " .. rewardName(reward) end
-        return "Collect " .. rewardName(reward)
+        return "Wheel"
     end
     if kind == "interactShopOffer" then
-        if description.conversion == "anvilOfFates" then return "Use Anvil of Fates" end
+        if description.conversion == "anvilOfFates" then return "Anvil of Fates" end
         local offer = shopOffer(occurrence, description.offerKey)
         -- The acquisition owns the resolved Mystery Boon god; the inventory
         -- can still describe only its box carrier.
-        local label = rewardName(reward or offer or { rewardType = description.rewardType },
-            offer and offer.optionKey == "BoostedRandomLoot")
-        if description.conversion == "timePiece" then return "Use Time Piece on " .. label end
-        return "Buy " .. label
+        local target = reward or offer or { rewardType = description.rewardType }
+        local boosted = offer ~= nil and offer.optionKey == "BoostedRandomLoot"
+        if description.conversion == "timePiece" then return "Time Piece: " .. rewardName(target, boosted) end
+        local god = sourceName(target.source)
+        if god and isMystery(target) then return "Shop: Mystery " .. god end
+        if god and boosted then return "Shop: Boosted " .. god end
+        return "Shop: " .. rewardName(target, boosted)
     end
     if kind == "purchaseStygianWellOffer" then
-        return "Buy " .. displayName(description.itemKey, "Well item")
+        if description.itemKey == nil then return "Stygian Well" end
+        return "Well: " .. displayName(description.itemKey, "planned item")
     end
     if kind == "sellPurgingPoolTrait" then
-        return "Sell " .. displayName(description.traitKey, "trait")
+        local trait = shortName(traitNames, description.traitKey)
+        return trait and ("Sell: " .. trait) or "Sell trait"
     end
     if kind == "interactGorgon" then return "Talk to Athena" end
     if kind == "interactEris" then return "Talk to Eris" end
@@ -125,92 +196,132 @@ local function instruction(description, occurrence, transaction)
                 return "Talk to " .. name
             end
         end
-        return "Complete encounter"
+        return "Encounter"
     end
     if kind == "interactAcquisitionEntry" then
-        if description.conversion == "timePiece" then return "Use Time Piece on " .. rewardName(reward) end
-        if description.conversion == "anvilOfFates" then return "Use Anvil of Fates" end
+        if description.conversion == "timePiece" then return "Time Piece: " .. rewardName(reward) end
+        if description.conversion == "anvilOfFates" then return "Anvil of Fates" end
+        if reward and reward.producerLifecycleKey == "HermesShrineDelivery"
+            and not rushedHere(occurrence, transaction and transaction.hermesShrineSourceKey) then
+            return "Delivery: " .. rewardName(reward)
+        end
         return "Collect " .. rewardName(reward)
     end
     if kind == "useFountain" then
         local target = description.aromaticPhialTarget
-        if target ~= nil then
-            return "Use fountain — Phial: " .. displayName(target, "planned trait")
-        end
-        return "Use fountain"
+        if target == nil then return "Fountain" end
+        return "Phial: " .. (shortName(traitNames, target) or "planned trait")
     end
     if kind == "interactKeepsakeRack" then
-        return "Equip " .. displayName(description.keepsakeKey, "planned keepsake")
+        return "Rack: " .. (shortName(keepsakeNames, description.keepsakeKey) or "planned keepsake")
     end
-    return "Complete planned action"
+    return "Planned action"
 end
 
 local function doorRewardName(reward)
-    if reward.rewardType == "BlindBoxLoot" or reward.rewardType == "RandomLootGiftItem" then
-        return rewardName(reward)
-    end
+    if isMystery(reward) then return rewardName(reward) end
     return sourceName(reward.source) or sourceName(reward.rewardType) or rewardName(reward)
 end
 
-local function navigationFooter(navigation)
+local function cageFooter(cageRewards)
+    local labels = {}
+    for _, cageReward in ipairs(cageRewards) do labels[#labels + 1] = doorRewardName(cageReward) end
+    for _, separator in ipairs({ " / ", "/" }) do
+        local text = "Next: " .. table.concat(labels, separator)
+        if length(text) <= ROW_LIMIT then return text end
+    end
+    return "Next: " .. labels[1] .. " +" .. tostring(#labels - 1)
+end
+
+local function navigationFooter(navigation, currentGameName)
     if type(navigation) ~= "table" then return nil end
+    -- A destination in the current biome omits the biome.
+    local function destinationName(destination)
+        local localName = names.localRoom(destination)
+        if localName and names.biome(destination) == names.biome(currentGameName) then return localName end
+        return roomName(destination)
+    end
     if navigation.kind == "return" and navigation.gameName ~= nil then
-        return navigation.gameName == "N_Hub" and "Return to Hub" or ("Return to " .. roomName(navigation.gameName))
+        if navigation.gameName == "N_Hub" then return "Back to Hub" end
+        return "Back to " .. destinationName(navigation.gameName)
     end
     local nextOccurrence = navigation.occurrence
     if navigation.kind ~= "next" or type(nextOccurrence) ~= "table" then return nil end
     local gameName = nextOccurrence.gameName or ""
     local overview = nextOccurrence.overview
     local reward = navigation.reward
-    if roomOccupants[gameName] and (gameName:match("_Story%d+$") or gameName == "H_Bridge01") then
+    if roomOccupants[gameName] then
         -- A fresh profile's Bridge holds a shop rather than its story occupant.
         if overview and overview.shop then return "Next: Shop" end
         return "Next: " .. roomOccupants[gameName]
     end
     if reward and reward.rewardType == "ClockworkGoal" then reward = nil end
-    if navigation.hubVisit and not gameName:match("_MiniBoss%d+$") then
+    if navigation.hubVisit then
         local number = gameName:match("^N_Combat(%d+)$")
-        local label = number and ("Room " .. number) or roomName(gameName)
-        return "Next visit: " .. label .. (reward and (" — " .. doorRewardName(reward)) or "")
+        if number and reward then return "Room " .. tonumber(number) .. ": " .. doorRewardName(reward) end
+        if number then return "Next: Room " .. tonumber(number) end
     end
     if gameName:match("^Chaos_") then return "Next: Chaos" end
-    if gameName:match("^C_Boss") then return "Next: Zagreus" end
     if overview and overview.shop then return "Next: Shop" end
     if gameName:match("_Reprieve") then return "Next: Fountain" end
-    if reward ~= nil then return "Next door: " .. doorRewardName(reward) end
-    if navigation.cageRewards and #navigation.cageRewards > 0 then
-        local labels = {}
-        for _, cageReward in ipairs(navigation.cageRewards) do labels[#labels + 1] = doorRewardName(cageReward) end
-        return "Next door: " .. table.concat(labels, " / ")
-    end
-    return "Next: " .. roomName(gameName)
+    if reward ~= nil then return "Next: " .. doorRewardName(reward) end
+    if navigation.cageRewards and #navigation.cageRewards > 0 then return cageFooter(navigation.cageRewards) end
+    return "Next: " .. destinationName(gameName)
 end
 
-local function visibleRows(snapshot)
-    local rows = {}
-    for _, row in ipairs(snapshot.occurrence.roomGuide or {}) do
-        local completed = row.transactionOwner ~= nil and snapshot.isCompleted(row.transactionOwner) == true
-        if not completed then rows[#rows + 1] = row end
+-- Expands published rows into display entries. A Shrine purchase shows its
+-- purchase and, when planned, its rush; native Shrine state hides each step.
+local function visibleEntries(snapshot)
+    local entries = {}
+    local occurrence = snapshot.occurrence
+    for _, row in ipairs(occurrence.roomGuide or {}) do
+        local description = row.description
+        if type(description) == "table" and description.kind == "purchaseHermesShrineOffer" then
+            local progress = type(snapshot.shrineProgress) == "function"
+                and snapshot.shrineProgress(description.generationKey) or "pending"
+            local name = rewardName({ rewardType = description.rewardType })
+            if progress == "pending" then
+                entries[#entries + 1] = { text = "Shrine: " .. name, actionable = true }
+            end
+            if description.rushed == true and progress ~= "rushed" then
+                entries[#entries + 1] = { text = "Rush: " .. name, actionable = true }
+            end
+        else
+            local completed = row.transactionOwner ~= nil and snapshot.isCompleted(row.transactionOwner) == true
+            if not completed then
+                entries[#entries + 1] = {
+                    text = instruction(description, occurrence,
+                        occurrence.transactionsByOwner and occurrence.transactionsByOwner[row.transactionOwner]),
+                    actionable = row.transactionOwner ~= nil,
+                }
+            end
+        end
     end
-    return rows
+    return entries
 end
 
-local function window(rows)
-    if #rows <= MAX_ROWS then return rows, 0 end
-    local anchor = nil
-    for index, row in ipairs(rows) do
-        if row.transactionOwner ~= nil then anchor = index; break end
+-- Overflow keeps five rows and spends the sixth on a "+N more" marker.
+local function window(entries)
+    if #entries <= MAX_ROWS then return entries end
+    local anchor = 1
+    for index, entry in ipairs(entries) do
+        if entry.actionable then anchor = index; break end
     end
-    if anchor == nil then anchor = 1 end
     -- Keep one immediately preceding informational reminder adjacent to the
-    -- first still-pending transaction without letting old reminders pin it.
+    -- first still-pending action without letting old reminders pin it.
     local start = anchor
-    if start > 1 and rows[start - 1].transactionOwner == nil then start = start - 1 end
+    if start > 1 and not entries[start - 1].actionable then start = start - 1 end
+    start = math.max(1, math.min(start, #entries - (MAX_ROWS - 1) + 1))
     local displayed = {}
-    for index = start, math.min(#rows, start + MAX_ROWS - 1) do
-        displayed[#displayed + 1] = rows[index]
-    end
-    return displayed, #rows - #displayed
+    for index = start, start + MAX_ROWS - 2 do displayed[#displayed + 1] = entries[index] end
+    displayed[#displayed + 1] = { text = "+" .. tostring(#entries - (MAX_ROWS - 1)) .. " more" }
+    return displayed
+end
+
+local function rowsOf(entries)
+    local rows = {}
+    for _, entry in ipairs(entries) do rows[#rows + 1] = { instruction = fit(entry.text) } end
+    return rows
 end
 
 function guide.project(snapshot)
@@ -218,39 +329,25 @@ function guide.project(snapshot)
     if snapshot.kind == "navigation" then
         -- The Hub fountain use precedes the next visit or final handoff it is due before.
         local hubFountain = type(snapshot.navigation) == "table" and snapshot.navigation.hubFountain or nil
-        local rows = {}
+        local entries = {}
         if hubFountain ~= nil then
-            rows[1] = { instruction = instruction({
+            entries[1] = { text = instruction({
                 kind = "useFountain", aromaticPhialTarget = hubFountain.aromaticPhialTarget,
             }) }
         end
         return {
-            header = roomName(snapshot.nativeRoomName),
-            rows = rows,
-            footer = navigationFooter(snapshot.navigation),
+            header = fit(roomName(snapshot.nativeRoomName)),
+            rows = rowsOf(entries),
+            footer = fit(navigationFooter(snapshot.navigation, snapshot.nativeRoomName)),
         }
     end
     if snapshot.kind ~= "room" or type(snapshot.occurrence) ~= "table"
         or type(snapshot.isCompleted) ~= "function" then return nil end
-    local rows = visibleRows(snapshot)
-    local displayed, omitted = window(rows)
-    local projected = {}
-    for _, row in ipairs(displayed) do
-        projected[#projected + 1] = {
-            instruction = instruction(row.description, snapshot.occurrence,
-                snapshot.occurrence.transactionsByOwner
-                    and snapshot.occurrence.transactionsByOwner[row.transactionOwner]),
-        }
-    end
-    local footer = navigationFooter(snapshot.navigation)
-    if omitted > 0 then
-        local reminders = tostring(omitted) .. " hidden reminder" .. (omitted == 1 and "" or "s")
-        footer = footer and (reminders .. " | " .. footer) or reminders
-    end
+    local gameName = snapshot.occurrence.gameName
     return {
-        header = roomName(snapshot.occurrence.gameName),
-        rows = projected,
-        footer = footer,
+        header = fit(roomName(gameName)),
+        rows = rowsOf(window(visibleEntries(snapshot))),
+        footer = fit(navigationFooter(snapshot.navigation, gameName)),
     }
 end
 

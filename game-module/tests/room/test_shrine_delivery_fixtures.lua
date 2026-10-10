@@ -250,3 +250,41 @@ function TestShrineDeliveryFixtures.testDreamPendingDeliveryPublishesNoRowAndSta
         lu.assertNil(session.firstFault, id)
     end
 end
+
+function TestShrineDeliveryFixtures.testGuidePurchaseProgressReadsNativeShrineOptions()
+    local shrine = require("mods.room.features.inventory.hermes_shrine")
+    local function option(generationKey, purchased)
+        return { __runPlannerShrine = true, __runPlannerGenerationKey = generationKey, Purchased = purchased }
+    end
+    lu.assertEquals(shrine.purchaseProgress(nil, "initial:first"), "pending")
+    local store = { StoreOptions = {
+        option("initial:first"), option("initial:secondLeft", true), option("initial:secondRight"),
+    } }
+    lu.assertEquals(shrine.purchaseProgress(store, "initial:first"), "pending")
+    lu.assertEquals(shrine.purchaseProgress(store, "initial:secondLeft"), "purchased")
+    -- Rush removes the option; the refill has not appeared until the screen closes.
+    store.StoreOptions[1] = nil
+    lu.assertEquals(shrine.purchaseProgress(store, "initial:first"), "rushed")
+    lu.assertEquals(shrine.purchaseProgress(store, "travelDealRefill"), "pending")
+    store.StoreOptions[1] = option("travelDealRefill", true)
+    lu.assertEquals(shrine.purchaseProgress(store, "travelDealRefill"), "purchased")
+    store.StoreOptions[1] = nil
+    lu.assertEquals(shrine.purchaseProgress(store, "travelDealRefill"), "rushed")
+    -- With every bound option rushed away, each seen generation stays rushed.
+    store.StoreOptions = {}
+    for _, key in ipairs({ "initial:first", "initial:secondLeft", "initial:secondRight", "travelDealRefill" }) do
+        lu.assertEquals(shrine.purchaseProgress(store, key), "rushed", key)
+    end
+    local allThree = { StoreOptions = {
+        option("initial:first", true), option("initial:secondLeft", true), option("initial:secondRight", true),
+    } }
+    for _, key in ipairs({ "initial:first", "initial:secondLeft", "initial:secondRight" }) do
+        lu.assertEquals(shrine.purchaseProgress(allThree, key), "purchased", key)
+    end
+    allThree.StoreOptions = {}
+    for _, key in ipairs({ "initial:first", "initial:secondLeft", "initial:secondRight" }) do
+        lu.assertEquals(shrine.purchaseProgress(allThree, key), "rushed", key)
+    end
+    lu.assertEquals(shrine.purchaseProgress(allThree, "travelDealRefill"), "pending")
+    lu.assertEquals(shrine.purchaseProgress({ StoreOptions = {} }, "initial:first"), "pending")
+end

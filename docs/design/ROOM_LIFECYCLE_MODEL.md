@@ -1149,9 +1149,9 @@ the Shrine screen closes, so it is realized when the purchases are scheduled
 and does not depend on collecting the rushed item. A rushed pickup follows its
 purchase row, and the refill's purchase row follows the triggering purchase
 row; both dependencies constrain authoring only and are not published.
-Shrine purchase rows never reach the execution room guide or timeline
-transactions: each purchase's delay and rush publish through the room Overview
-inventory. A delayed
+Shrine purchase rows never become timeline transactions: each purchase's delay
+and rush publish through the room Overview inventory, and the execution room
+guide carries the row only as an informational reminder. A delayed
 purchase is scheduled at source cleanup without consuming a delay use and
 derives a later required pickup at the reached encounter-end host. At the
 Preboss of the fourth entered biome, entry expires every still-pending delivery

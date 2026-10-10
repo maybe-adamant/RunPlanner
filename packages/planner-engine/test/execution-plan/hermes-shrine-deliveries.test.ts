@@ -203,6 +203,40 @@ describe('surface-shrine-deliveries execution fixture', () => {
     );
   });
 
+  it('publishes informational Shrine purchase guide rows in timeline order', () => {
+    const shrine = plan.occurrences.find((occurrence) => occurrence.id === oShrine.occurrenceId);
+    const rows = shrine?.roomGuide.filter(
+      (row) => row.description.kind === 'purchaseHermesShrineOffer',
+    );
+    expect(rows?.map((row) => row.description)).toEqual([
+      {
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: 'initial:first',
+        rewardType: 'HealBigDrop',
+        rushed: true,
+      },
+      {
+        kind: 'purchaseHermesShrineOffer',
+        generationKey: 'travelDealRefill',
+        rewardType: 'ArmorBoost',
+        rushed: false,
+      },
+    ]);
+    expect(rows?.every((row) => row.transactionOwner === undefined)).toBe(true);
+    const kinds = shrine?.roomGuide.map((row) => row.description.kind) ?? [];
+    // The rushed pickup follows its purchase row.
+    expect(kinds.indexOf('purchaseHermesShrineOffer')).toBeLessThan(
+      kinds.indexOf('interactAcquisitionEntry'),
+    );
+    expect(
+      shrineOffers(plan, nSideRoom.occurrenceId).filter((offer) => offer.purchase).length,
+    ).toBe(
+      plan.occurrences
+        .find((occurrence) => occurrence.id === nSideRoom.occurrenceId)
+        ?.roomGuide.filter((row) => row.description.kind === 'purchaseHermesShrineOffer').length,
+    );
+  });
+
   it('flushes the fourth-biome delivery at Preboss entry and not at the Boss', () => {
     const boss = plan.occurrences.find((occurrence) => occurrence.id === 'surface-q-preboss:boss');
     expect(boss?.timeline.transactions).toEqual([]);

@@ -297,6 +297,25 @@ function roomGuideDescription(value: unknown, label: string) {
           : { twistResultKey: stringValue(record.twistResultKey, `${label}.twistResultKey`) }),
       });
     }
+    case 'purchaseHermesShrineOffer': {
+      exact(record, ['kind', 'generationKey', 'rewardType', 'rushed'], [], label);
+      const generationKey = stringValue(record.generationKey, `${label}.generationKey`);
+      if (
+        ![
+          'initial:first',
+          'initial:secondLeft',
+          'initial:secondRight',
+          'travelDealRefill',
+        ].includes(generationKey)
+      )
+        fail(`${label}.generationKey is unsupported`);
+      return Object.freeze({
+        kind,
+        generationKey: generationKey as import('../model').ExecutionHermesShrineGenerationKey,
+        rewardType: stringValue(record.rewardType, `${label}.rewardType`),
+        rushed: booleanValue(record.rushed, `${label}.rushed`),
+      });
+    }
     case 'sellPurgingPoolTrait': {
       exact(record, ['kind', 'slotKey', 'traitKey'], [], label);
       const slotKey = stringValue(record.slotKey, `${label}.slotKey`);
@@ -384,9 +403,12 @@ function roomGuide(value: unknown, timelineValue: ExecutionOccurrence['timeline'
           : stringValue(record.transactionOwner, `${rowLabel}.transactionOwner`, MAX_OWNER_STRING);
       if (transactionOwner !== undefined && !transactionOwners.has(transactionOwner))
         fail(`${rowLabel}.transactionOwner must name one occurrence transaction`);
+      const description = roomGuideDescription(record.description, `${rowLabel}.description`);
+      if (description.kind === 'purchaseHermesShrineOffer' && transactionOwner !== undefined)
+        fail(`${rowLabel}.transactionOwner is not published for Shrine purchases`);
       return Object.freeze({
         key,
-        description: roomGuideDescription(record.description, `${rowLabel}.description`),
+        description,
         ...(transactionOwner === undefined ? {} : { transactionOwner }),
       });
     }),

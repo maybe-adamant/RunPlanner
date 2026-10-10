@@ -307,9 +307,24 @@ Each occurrence carries an ordered room-guide projection, empty for unselected
 occurrences, with small resolved description operands and optional exact
 transaction owners. The module presents it as read-only guidance: owner
 completion can hide its
-associated row, while informational rows remain visible. Guide rows neither
+associated row, while informational rows remain visible unless native Shrine
+progress completes them. Guide rows neither
 add transactions nor participate in Timeline dependencies, obligations, or
 conformance; unavailable or desynchronized room state hides the presentation.
+A Shrine purchase row is informational on the wire and carries its generation,
+reward type and rush. The module shows it as `Shrine: X` and, when rushed, a
+following `Rush: X`, and hides each step from the native Shrine options
+(`Purchased` marks a purchase; a rush removes the option). A delivered Shrine
+pickup is the ordinary acquisition row; outside its rushed purchase room it
+reads `Delivery: X`.
+
+The guide's header, each row and the footer share one 24-character budget.
+The module owns that wording: a guide-owned name for every catalog reward type,
+short names for the few traits and keepsakes that would not fit, and room names
+without separators or zero padding. A name that still exceeds the budget is cut
+with `…` only as a safety net; the module suite fails if any fixture needs it.
+More than six visible rows show five and a final `+N more` row; the footer
+stays the navigation line.
 Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door target,
 which is never entered, publishes none.

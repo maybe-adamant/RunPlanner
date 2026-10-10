@@ -5,12 +5,12 @@ game-module build. The planner blocks sending on an older ModpackLib. Automated
 tests are not live verification; the owner confirms or waives each check.
 
 - [ ] Complete a fully planned run through the final boss with no mismatch. The
-      RunClear screen shows two rows, `Planned` then `Tartarus · Boss` (or
-      `Summit · Boss` on Surface), right-aligned directly beneath the `Modded`
+      RunClear screen shows two rows, `Planned` then `Tartarus Chronos` (or
+      `Summit Typhon` on Surface), right-aligned directly beneath the `Modded`
       label, drawn above the victory screen, same font as the label.
 - [ ] Plan a short prefix (for example Erebus only), finish it, and clear the run
       natively. The second row names the last planned room, for example
-      `Erebus · Boss`.
+      `Erebus Hecate`.
 - [ ] Cause a mismatch mid-run (take an unplanned door in Oceanus). The second row
       names the last room exited before the mismatch, never the mismatched room.
 - [ ] Die or mismatch inside the first planned room and clear a later run

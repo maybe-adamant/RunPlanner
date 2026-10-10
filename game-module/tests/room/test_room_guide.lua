@@ -2,6 +2,7 @@
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
 local guide = require("mods.room.guide")
+local names = require("mods.room.names")
 local json = require("mods.protocol.json")
 local protocol = require("mods.protocol.decoder")
 local route = require("mods.route.session")
@@ -42,9 +43,9 @@ function TestRoomGuide.testConversionsDescribeTheSourceAndKeepReplacementSeparat
                 producer = { kind = "artificerReplacement" } } } },
         }
         lu.assertEquals(guide.project(snapshot).rows, {
-            { instruction = "Use Artificer on Ashes" },
+            { instruction = "Artificer: Ashes" },
             { instruction = "Collect Hammer" },
-            { instruction = "Use Time Piece on Pom" },
+            { instruction = "Time Piece: Pom" },
         })
     end
 end
@@ -58,15 +59,15 @@ function TestRoomGuide.testTrialRowsNameTheirOwnAcquisitionGod()
         spurned = { kind = "acquisition", roles = { { gameName = "HephaestusUpgrade" } } },
     }
     lu.assertEquals(guide.project(snapshot).rows, {
-        { instruction = "Collect Ares boon" }, { instruction = "Collect Hephaestus boon" },
+        { instruction = "Collect Ares" }, { instruction = "Collect Hephaestus" },
     })
 end
 
 function TestRoomGuide.testShopLabelsUseResolvedGodWithoutDuplicatingCarrierName()
     for _, case in ipairs({
-        { "BlindBoxLoot", "DemeterUpgrade", "RandomLootGiftItem", "Buy Mystery Boon — Demeter" },
-        { "RandomLoot", "HeraUpgrade", "BoostedRandomLoot", "Buy Boosted Boon — Hera" },
-        { "StackUpgradeBig", nil, "StackUpgradeBig", "Buy Double Pom" },
+        { "BlindBoxLoot", "DemeterUpgrade", "RandomLootGiftItem", "Shop: Mystery Demeter" },
+        { "RandomLoot", "HeraUpgrade", "BoostedRandomLoot", "Shop: Boosted Hera" },
+        { "StackUpgradeBig", nil, "StackUpgradeBig", "Shop: Pom x2" },
     }) do
         local snapshot = room({ row("interactShopOffer", "buy", { offerKey = "slot" }) })
         snapshot.occurrence.overview = { shop = { offers = {
@@ -81,7 +82,7 @@ function TestRoomGuide.testShopLabelsUseResolvedGodWithoutDuplicatingCarrierName
     snapshot.occurrence.overview = { shop = { offers = {
         { offerKey = "slot", rewardType = "StackUpgrade" },
     } } }
-    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Use Time Piece on Pom")
+    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Time Piece: Pom")
 end
 
 function TestRoomGuide.testNativeMarkupIsRemovedFromRowsAndNavigation()
@@ -97,8 +98,8 @@ function TestRoomGuide.testNativeMarkupIsRemovedFromRowsAndNavigation()
     snapshot.navigation.reward = { rewardType = "GiftDrop" }
     local projection = guide.project(snapshot)
     lu.assertEquals(projection.rows[1].instruction, "Collect Nectar")
-    lu.assertEquals(projection.rows[2].instruction, "Buy Well Item")
-    lu.assertEquals(projection.footer, "Next door: Nectar")
+    lu.assertEquals(projection.rows[2].instruction, "Well: Well Item")
+    lu.assertEquals(projection.footer, "Next: Nectar")
 end
 
 function TestRoomGuide.testWheelChoiceUsesThePublishedPickedReward()
@@ -109,7 +110,7 @@ function TestRoomGuide.testWheelChoiceUsesThePublishedPickedReward()
             { offerKey = "offer2", reward = { rewardType = "Boon", source = "ZeusUpgrade" } },
         } },
     } }
-    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Wheel: Zeus boon")
+    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Wheel: Zeus")
 end
 
 function TestRoomGuide.testHidesOutOfOrderCompletedOwnersWithoutCompletingInformation()
@@ -120,9 +121,9 @@ function TestRoomGuide.testHidesOutOfOrderCompletedOwnersWithoutCompletingInform
         row("interactLocalReward", "later"),
     }, { later = true }))
     lu.assertEquals(projection.rows, {
-        { instruction = "Clear Cage 1" },
+        { instruction = "Cage 1" },
         { instruction = "Collect reward" },
-        { instruction = "Clear Cage 2" },
+        { instruction = "Cage 2" },
     })
 end
 
@@ -139,10 +140,11 @@ function TestRoomGuide.testLongWindowAnchorsTheFirstPendingOwnerAndCountsOnlyOmi
         row("interactLocalReward", "latest"),
     }
     local projection = guide.project(room(rows))
-    lu.assertEquals(projection.rows[1].instruction, "Clear Cage 4")
+    lu.assertEquals(projection.rows[1].instruction, "Cage 4")
     lu.assertEquals(projection.rows[2], { instruction = "Collect reward" })
     lu.assertEquals(#projection.rows, 6)
-    lu.assertEquals(projection.footer, "3 hidden reminders")
+    lu.assertEquals(projection.rows[6], { instruction = "+4 more" })
+    lu.assertNil(projection.footer)
 end
 
 function TestRoomGuide.testTimePieceWordingAndGenericFallbackNeverExposeOpaqueKeys()
@@ -151,7 +153,7 @@ function TestRoomGuide.testTimePieceWordingAndGenericFallbackNeverExposeOpaqueKe
         row("sellPurgingPoolTrait", nil, { traitKey = "OpaqueTrait" }),
     }))
     lu.assertEquals(projection.rows, {
-        { instruction = "Use Time Piece on reward" },
+        { instruction = "Time Piece: reward" },
         { instruction = "Sell trait" },
     })
     local shop = guide.project({
@@ -165,7 +167,7 @@ function TestRoomGuide.testTimePieceWordingAndGenericFallbackNeverExposeOpaqueKe
         },
         isCompleted = function() return false end,
     })
-    lu.assertEquals(shop.rows, { { instruction = "Buy Boosted Boon — Apollo" } })
+    lu.assertEquals(shop.rows, { { instruction = "Shop: Boosted Apollo" } })
 end
 
 function TestRoomGuide.testRoomReplacementNavigationAndSessionLossReplaceRatherThanReplayRows()
@@ -178,11 +180,11 @@ function TestRoomGuide.testRoomReplacementNavigationAndSessionLossReplaceRatherT
         navigation = { kind = "next", occurrence = { gameName = "N_Combat02", overview = {} } },
     })
     lu.assertEquals(first.rows[1].instruction, "Collect reward")
-    lu.assertEquals(first.header, "Ephyra · Combat 01")
-    lu.assertEquals(first.footer, "Next: Ephyra · Combat 02")
-    lu.assertEquals(replacement.rows, { { instruction = "Use fountain" } })
+    lu.assertEquals(first.header, "Ephyra Combat 1")
+    lu.assertEquals(first.footer, "Next: Combat 2")
+    lu.assertEquals(replacement.rows, { { instruction = "Fountain" } })
     lu.assertEquals(restored.rows, {})
-    lu.assertEquals(restored.footer, "Next: Ephyra · Combat 02")
+    lu.assertEquals(restored.footer, "Next: Combat 2")
     lu.assertNil(guide.project(nil))
 end
 
@@ -242,7 +244,7 @@ function TestRoomGuide.testOPhaseProgressKeepsOneGuideAndTerminalPrefixHasNoFoot
     lu.assertEquals(first.header, later.header)
     lu.assertEquals(later.rows, {
         { instruction = "Collect reward" },
-        { instruction = "Complete encounter" },
+        { instruction = "Encounter" },
     })
     lu.assertNil(later.footer)
 end
@@ -265,8 +267,8 @@ function TestRoomGuide.testRealFieldsSixRowGuideFitsTheCompactWindow()
     local reversedProjection = guide.project({
         kind = "room", occurrence = reversed, isCompleted = function() return false end,
     })
-    lu.assertEquals(reversedProjection.rows[1].instruction, "Clear Cage 2 — Max Magick")
-    lu.assertEquals(reversedProjection.rows[3].instruction, "Clear Cage 1 — Max Health")
+    lu.assertEquals(reversedProjection.rows[1].instruction, "Cage 2: Max Magick")
+    lu.assertEquals(reversedProjection.rows[3].instruction, "Cage 1: Max Health")
 end
 
 function TestRoomGuide.testCageRewardNamesDoNotDependOnPickupTransactions()
@@ -276,9 +278,9 @@ function TestRoomGuide.testCageRewardNamesDoNotDependOnPickupTransactions()
         row("interactLocalReward", nil, { conversion = "timePiece", reward = { rewardType = "StackUpgrade" } }),
     })
     lu.assertEquals(guide.project(snapshot).rows, {
-        { instruction = "Clear Cage 1 — Hera" },
-        { instruction = "Clear Cage 2 — Pom" },
-        { instruction = "Use Time Piece on Pom" },
+        { instruction = "Cage 1: Hera" },
+        { instruction = "Cage 2: Pom" },
+        { instruction = "Time Piece: Pom" },
     })
 end
 
@@ -297,7 +299,7 @@ function TestRoomGuide.testNpcNamesUsePublishedGiverAndGorgonDoesNotBorrowTheRoo
         { instruction = "Talk to Narcissus" },
         { instruction = "Talk to Icarus" },
         { instruction = "Talk to Athena" },
-        { instruction = "Complete encounter" },
+        { instruction = "Encounter" },
     })
 end
 
@@ -314,12 +316,12 @@ function TestRoomGuide.testEquipmentPoolAndPhialCopyUsesDisplayNamesWithoutInter
         row("purchaseStygianWellOffer", nil, { itemKey = "UnknownInternalItem" }),
         row("interactKeepsakeRack", nil, { keepsakeKey = "UnknownInternalKeepsake" }),
     })).rows, {
-        { instruction = "Equip Aromatic Phial" },
-        { instruction = "Sell Nova Strike" },
-        { instruction = "Use fountain — Phial: Nova Strike" },
-        { instruction = "Buy Spark of Ixion" },
-        { instruction = "Buy Well item" },
-        { instruction = "Equip planned keepsake" },
+        { instruction = "Rack: Aromatic Phial" },
+        { instruction = "Sell: Nova Strike" },
+        { instruction = "Phial: Nova Strike" },
+        { instruction = "Well: Spark of Ixion" },
+        { instruction = "Well: planned item" },
+        { instruction = "Rack: planned keepsake" },
     })
 end
 
@@ -331,22 +333,23 @@ function TestRoomGuide.testConciseRoomAndRewardLabelsKeepMeaningfulDistinctions(
     })
     snapshot.occurrence.gameName = "H_Combat15"
     local projection = guide.project(snapshot)
-    lu.assertEquals(projection.header, "Fields · Combat 15")
+    lu.assertEquals(projection.header, "Fields Combat 15")
     for name, expected in pairs({
-        Chaos_01 = "Chaos · 01", Dream_PostBoss02 = "Dream · Postboss 02",
-        N_Sub03 = "Ephyra · Side room 03", UnknownInternalRoom = "Current room",
+        Chaos_01 = "Chaos 1", Dream_PostBoss02 = "Dream Postboss 2",
+        N_Sub03 = "Ephyra Side room 3", UnknownInternalRoom = "Current room",
+        G_Boss01 = "Oceanus Scylla", P_Boss01 = "Olympus Prometheus", C_Boss01 = "Zagreus",
     }) do
         lu.assertEquals(guide.project({ kind = "navigation", nativeRoomName = name }).header, expected)
     end
     lu.assertEquals(projection.rows, {
-        { instruction = "Collect Hera boon" },
+        { instruction = "Collect Hera" },
         { instruction = "Collect Max Magick" },
-        { instruction = "Collect boss reward" },
+        { instruction = "Boss reward" },
     })
     lu.assertEquals(guide.project({
         kind = "navigation", nativeRoomName = "N_Combat05",
         navigation = { kind = "return", gameName = "N_Hub" },
-    }).footer, "Return to Hub")
+    }).footer, "Back to Hub")
 end
 
 function TestRoomGuide.testNextDoorUsesSelectedDoorPreviewNotTheDestinationAcquisition()
@@ -362,7 +365,7 @@ function TestRoomGuide.testNextDoorUsesSelectedDoorPreviewNotTheDestinationAcqui
     assert(route.enter(state, "current", "F_Combat01"))
     local snapshot = { kind = "room", occurrence = current, isCompleted = function() return false end,
         navigation = route.guideNavigation(state) }
-    lu.assertEquals(guide.project(snapshot).footer, "Next door: Ashes")
+    lu.assertEquals(guide.project(snapshot).footer, "Next: Ashes")
     lu.assertEquals(state.index, 1)
 end
 
@@ -377,7 +380,7 @@ function TestRoomGuide.testHubVisitUsesBoardRewardAndSpecialDestinationsKeepThei
     } })
     state.transparentNativeRoom = "N_Hub"
     local snapshot = { kind = "navigation", nativeRoomName = "N_Hub", navigation = route.guideNavigation(state) }
-    lu.assertEquals(guide.project(snapshot).footer, "Next visit: Room 12 — Hera")
+    lu.assertEquals(guide.project(snapshot).footer, "Room 12: Hera")
     for _, case in ipairs({
         { "F_Shop01", { shop = {} }, "Next: Shop" },
         { "F_Reprieve01", {}, "Next: Fountain" },
@@ -391,19 +394,19 @@ end
 
 function TestRoomGuide.testStoryAndMinibossTitlesNameTheirOccupants()
     local expected = {
-        F_Story01 = "Erebus · Arachne", G_Story01 = "Oceanus · Narcissus",
-        H_Bridge01 = "Fields · Echo", I_Story01 = "Tartarus · Hades",
-        N_Story01 = "Ephyra · Medea", O_Story01 = "Thessaly · Circe", P_Story01 = "Olympus · Dionysus",
-        F_MiniBoss01 = "Erebus · Root-Stalker", F_MiniBoss02 = "Erebus · Shadow-Spiller",
-        F_MiniBoss03 = "Erebus · Master-Slicer", G_MiniBoss01 = "Oceanus · Deep Serpent",
-        G_MiniBoss02 = "Oceanus · King Vermin", G_MiniBoss03 = "Oceanus · Hellifish",
-        H_MiniBoss01 = "Fields · Phantom", H_MiniBoss02 = "Fields · Queen Lamia",
-        I_MiniBoss01 = "Tartarus · The Verminancer", I_MiniBoss02 = "Tartarus · Goldwrath",
-        N_MiniBoss01 = "Ephyra · Satyr Champion", N_MiniBoss02 = "Ephyra · Erymanthian Boar",
-        O_MiniBoss01 = "Thessaly · Charybdis", O_MiniBoss02 = "Thessaly · The Yargonaut",
-        P_MiniBoss01 = "Olympus · Talos", P_MiniBoss02 = "Olympus · Mega-Dracon",
-        Q_MiniBoss02 = "Summit · Brute", Q_MiniBoss03 = "Summit · Tail",
-        Q_MiniBoss04 = "Summit · Eye", Q_MiniBoss05 = "Summit · Stalker",
+        F_Story01 = "Erebus Arachne", G_Story01 = "Oceanus Narcissus",
+        H_Bridge01 = "Fields Echo", I_Story01 = "Tartarus Hades",
+        N_Story01 = "Ephyra Medea", O_Story01 = "Thessaly Circe", P_Story01 = "Olympus Dionysus",
+        F_MiniBoss01 = "Erebus Root-Stalker", F_MiniBoss02 = "Erebus Shadow-Spiller",
+        F_MiniBoss03 = "Erebus Master-Slicer", G_MiniBoss01 = "Oceanus Deep Serpent",
+        G_MiniBoss02 = "Oceanus King Vermin", G_MiniBoss03 = "Oceanus Hellifish",
+        H_MiniBoss01 = "Fields Phantom", H_MiniBoss02 = "Fields Queen Lamia",
+        I_MiniBoss01 = "Tartarus The Verminancer", I_MiniBoss02 = "Tartarus Goldwrath",
+        N_MiniBoss01 = "Ephyra Satyr Champion", N_MiniBoss02 = "Ephyra Erymanthian Boar",
+        O_MiniBoss01 = "Thessaly Charybdis", O_MiniBoss02 = "Thessaly The Yargonaut",
+        P_MiniBoss01 = "Olympus Talos", P_MiniBoss02 = "Olympus Mega-Dracon",
+        Q_MiniBoss02 = "Summit Brute", Q_MiniBoss03 = "Summit Tail",
+        Q_MiniBoss04 = "Summit Eye", Q_MiniBoss05 = "Summit Stalker",
     }
     for name, title in pairs(expected) do
         lu.assertEquals(guide.project({ kind = "navigation", nativeRoomName = name }).header, title)
@@ -412,7 +415,7 @@ function TestRoomGuide.testStoryAndMinibossTitlesNameTheirOccupants()
         local projection = guide.project({ kind = "navigation", nativeRoomName = "N_Hub",
             navigation = { kind = "next", hubVisit = name == "N_MiniBoss02",
                 occurrence = { gameName = name }, reward = { rewardType = "Boon", source = "HeraUpgrade" } } })
-        lu.assertEquals(projection.footer, "Next door: Hera")
+        lu.assertEquals(projection.footer, "Next: " .. names.occupants[name])
     end
 end
 
@@ -430,17 +433,27 @@ function TestRoomGuide.testFooterNamesStoryAndRewardlessDestinationsAndShortensC
     lu.assertEquals(guide.project({ kind = "navigation", nativeRoomName = "H_Combat02",
         navigation = { kind = "next", occurrence = { gameName = "H_Bridge01", overview = { shop = {} } } } }).footer,
         "Next: Shop")
-    lu.assertEquals(footer("I_Combat05", { rewardType = "ClockworkGoal" }), "Next: Tartarus · Combat 05")
-    lu.assertEquals(footer("O_Combat04"), "Next: Thessaly · Combat 04")
-    lu.assertEquals(footer("Q_Combat11"), "Next: Summit · Combat 11")
+    lu.assertEquals(footer("I_Combat05", { rewardType = "ClockworkGoal" }), "Next: Tartarus Combat 5")
+    lu.assertEquals(footer("O_Combat04"), "Next: Thessaly Combat 4")
+    lu.assertEquals(footer("Q_Combat11"), "Next: Summit Combat 11")
     lu.assertEquals(footer("H_Combat02", nil, {
         { rewardType = "Boon", source = "DemeterUpgrade" },
         { rewardType = "Boon", source = "HeraUpgrade" },
         { rewardType = "Boon", source = "AphroditeUpgrade" },
-    }), "Next door: Demeter / Hera / Aphrodite")
+    }), "Next: Demeter +2")
+    lu.assertEquals(footer("H_Combat02", nil, {
+        { rewardType = "Boon", source = "ApolloUpgrade" },
+        { rewardType = "Boon", source = "HeraUpgrade" },
+        { rewardType = "Boon", source = "ZeusUpgrade" },
+    }), "Next: Apollo/Hera/Zeus")
+    lu.assertEquals(footer("H_Combat02", nil, {
+        { rewardType = "Boon", source = "HeraUpgrade" },
+        { rewardType = "Boon", source = "ZeusUpgrade" },
+        { rewardType = "Boon", source = "AresUpgrade" },
+    }), "Next: Hera / Zeus / Ares")
     lu.assertEquals(footer("H_Combat02", nil, {
         { rewardType = "WeaponUpgrade" }, { rewardType = "StackUpgrade" }, { rewardType = "MaxHealthDrop" },
-    }), "Next door: Hammer / Pom / Max Health")
+    }), "Next: Hammer +2")
 end
 
 function TestRoomGuide.testOverlayRefreshesOnlyOnProjectionChangesAndClearsOnToggle()
@@ -490,4 +503,205 @@ function TestRoomGuide.testOverlayRefreshesOnlyOnProjectionChangesAndClearsOnTog
     failInspection = true
     lu.assertTrue(pcall(callbacks.interval, nil, runtime, overlay))
     lu.assertEquals(refreshes, 2)
+end
+
+local function assertFits(text, context)
+    if text == nil then return end
+    lu.assertTrue(guide.length(text) <= guide.ROW_LIMIT, context .. ": " .. text)
+    lu.assertNil(text:find("…", 1, true), context .. " needed the safety cut: " .. text)
+end
+
+local seenPrefixes = {}
+
+local function assertProjectionFits(projection, context)
+    if projection == nil then return end
+    for _, value in ipairs(projection.rows) do
+        seenPrefixes[value.instruction:match("^[^:]+:") or value.instruction] = true
+    end
+    assertFits(projection.header, context .. " header")
+    assertFits(projection.footer, context .. " footer")
+    for index, value in ipairs(projection.rows) do
+        assertFits(value.instruction, context .. " row " .. index)
+        if value.instruction ~= "Boss reward" then
+            lu.assertNil(value.instruction:find("reward$"), context .. " unnamed reward: " .. value.instruction)
+        end
+        lu.assertNotEquals(value.instruction, "Planned action", context)
+    end
+end
+
+function TestRoomGuide.testEveryTemplateAtItsLongestInstantiationFits()
+    local rewards, boons = {}, { "Boon", "Mystery Boon", "Boosted Boon" }
+    for _, name in pairs(guide.rewardNames) do rewards[#rewards + 1] = name end
+    for _, god in ipairs({ "Aphrodite", "Apollo", "Ares", "Demeter", "Hephaestus", "Hera", "Hestia",
+        "Poseidon", "Zeus", "Hermes" }) do
+        rewards[#rewards + 1] = god
+        boons[#boons + 1] = god
+    end
+    local templates = {
+        { rewards, { "Collect %s", "Shop: %s", "Shrine: %s", "Rush: %s", "Delivery: %s", "Wheel: %s",
+            "Cage 3: %s", "Next: %s", "Room 23: %s" } },
+        { boons, { "Time Piece: %s" } },
+        { { "Hephaestus", "Aphrodite" }, { "Shop: Mystery %s", "Shop: Boosted %s" } },
+        { { "Path of Stars", "Nectar", "Bones", "Big Bones", "Ashes", "Big Ashes", "Psyche" },
+            { "Artificer: %s" } },
+        { { "Affirmation", "Hostile Env.", "Shameless Attitude", "Glorious Disaster" }, { "Sell: %s" } },
+        { { "Affirmation", "Hostile Env.", "Obsession", "Exceptional", "Mutual Destr.", "Heirloom",
+            "Glorious Disaster" }, { "Phial: %s" } },
+        { { "Embryo", "Exp. Hammer", "Everlasting Ember", "planned keepsake" }, { "Rack: %s" } },
+        { { "Sacrificial Hymn", "planned item" }, { "Well: %s" } },
+        { { "Narcissus", "Heracles", "Dionysus" }, { "Talk to %s" } },
+        { { "Combat 23", "Side room 15", "Hub entrance" }, { "Back to %s" } },
+        { { "Ephyra Combat 23" }, { "Back to %s" } },
+        { { "Ephyra Combat 23", "Tartarus Combat 24", "Side room 15", "Hub entrance" }, { "Next: %s" } },
+        { { "+99 more", "Next: Room 23", "Boss reward", "Anvil of Fates", "Stygian Well",
+            "Keepsake Rack", "Encounter", "Fountain", "Sell trait", "Wheel" }, { "%s" } },
+    }
+    for _, group in ipairs(templates) do
+        for _, template in ipairs(group[2]) do
+            for _, name in ipairs(group[1]) do assertFits(template:format(name), template) end
+        end
+    end
+    for gameName in pairs(names.occupants) do
+        assertFits(names.room(gameName), "header")
+        assertFits("Next: " .. names.occupants[gameName], "footer")
+    end
+    for _, biome in ipairs({ "F", "G", "H", "I", "N", "O", "P", "Q" }) do
+        assertFits(names.room(biome .. "_Sub15"), "header")
+        assertFits(names.room(biome .. "_Combat24"), "header")
+        assertFits(names.room(biome .. "_PreHub01"), "header")
+    end
+end
+
+function TestRoomGuide.testEveryFixtureGuideFitsWithoutTheSafetyCut()
+    local listing = assert(io.popen('ls "' .. fixtures.root .. '"'))
+    local checked = 0
+    for fileName in listing:lines() do
+        if fileName:match("%.execution%.json$") then
+            local file = assert(io.open(fixtures.path(fileName), "rb"))
+            local raw = file:read("*a")
+            file:close()
+            local plan = assert(protocol.decode(assert(json.decode(raw))))
+            local state = route.new(plan)
+            local index = plan.startState and plan.startState.occurrenceIndex or nil
+            if type(index) == "number" then state.index = index end
+            for _ = state.index, #plan.selectedOccurrenceIds do
+                local occurrence = route.expected(state)
+                if occurrence == nil or not route.enter(state, occurrence.id, occurrence.gameName) then break end
+                for _, progress in ipairs({ "pending", "purchased" }) do
+                    assertProjectionFits(guide.project({
+                        kind = "room", occurrence = occurrence, isCompleted = function() return false end,
+                        shrineProgress = function() return progress end,
+                        navigation = route.guideNavigation(state),
+                    }), fileName .. " " .. occurrence.id)
+                end
+                checked = checked + 1
+                if not route.exit(state) then break end
+                for _, native in ipairs({ "N_Hub", occurrence.gameName }) do
+                    state.transparentNativeRoom = native
+                    assertProjectionFits(guide.project({ kind = "navigation", nativeRoomName = native,
+                        navigation = route.guideNavigation(state) }), fileName .. " after " .. occurrence.id)
+                end
+                state.transparentNativeRoom = nil
+            end
+        end
+    end
+    listing:close()
+    lu.assertTrue(checked > 100)
+    for _, prefix in ipairs({ "Shrine:", "Rush:", "Delivery:", "Cage 1:", "Shop:", "Wheel:", "Phial:" }) do
+        lu.assertTrue(seenPrefixes[prefix], prefix)
+    end
+end
+
+function TestRoomGuide.testShrinePurchaseAndRushRowsFollowNativeProgress()
+    local progress = { ["initial:first"] = "pending", travelDealRefill = "pending" }
+    local snapshot = room({
+        row("purchaseHermesShrineOffer", nil, { generationKey = "initial:first",
+            rewardType = "LastStandDrop", rushed = true }),
+        row("purchaseHermesShrineOffer", nil, { generationKey = "travelDealRefill",
+            rewardType = "ArmorBoost", rushed = false }),
+    })
+    snapshot.occurrence.roomGuide[2].key = "refill"
+    snapshot.shrineProgress = function(generationKey) return progress[generationKey] end
+    lu.assertEquals(guide.project(snapshot).rows, {
+        { instruction = "Shrine: Death Defiance" }, { instruction = "Rush: Death Defiance" },
+        { instruction = "Shrine: Armor" },
+    })
+    progress["initial:first"] = "purchased"
+    lu.assertEquals(guide.project(snapshot).rows, {
+        { instruction = "Rush: Death Defiance" }, { instruction = "Shrine: Armor" },
+    })
+    progress["initial:first"], progress.travelDealRefill = "rushed", "purchased"
+    lu.assertEquals(guide.project(snapshot).rows, {})
+end
+
+function TestRoomGuide.testDeliveryPickupIsARemindedDeliveryUnlessRushedHere()
+    local delivery = { rewardType = "MaxHealthDropBig", producerLifecycleKey = "HermesShrineDelivery" }
+    local snapshot = room({
+        row("interactAcquisitionEntry", "later", { reward = delivery }),
+        row("interactAcquisitionEntry", "rushed", { reward = { rewardType = "HealBigDrop",
+            producerLifecycleKey = "HermesShrineDelivery" } }),
+    })
+    snapshot.occurrence.roomGuide[2].key = "second"
+    snapshot.occurrence.overview = { hermesShrine = { offers = {
+        { generationKey = "initial:first", deliverySourceKey = "here", purchase = { roomDelay = 2, rushed = true } },
+    } } }
+    snapshot.occurrence.transactionsByOwner = {
+        later = { kind = "acquisition", hermesShrineSourceKey = "elsewhere", roles = {} },
+        rushed = { kind = "acquisition", hermesShrineSourceKey = "here", roles = {} },
+    }
+    lu.assertEquals(guide.project(snapshot).rows, {
+        { instruction = "Delivery: Big Max Health" }, { instruction = "Collect Big Heal" },
+    })
+    snapshot.isCompleted = function(owner) return owner == "later" end
+    lu.assertEquals(guide.project(snapshot).rows, { { instruction = "Collect Big Heal" } })
+end
+
+function TestRoomGuide.testOverflowSpendsTheLastRowOnTheOmittedCount()
+    local rows = {}
+    for index = 1, 8 do
+        rows[index] = row("interactLocalReward", "owner" .. index, { reward = { rewardType = "StackUpgrade" } })
+        rows[index].key = "row" .. index
+    end
+    local snapshot = room(rows, nil, { gameName = "N_Combat02", overview = {} })
+    local projection = guide.project(snapshot)
+    lu.assertEquals(#projection.rows, guide.MAX_ROWS)
+    lu.assertEquals(projection.rows[6], { instruction = "+3 more" })
+    lu.assertEquals(projection.footer, "Next: Combat 2")
+    snapshot.isCompleted = function(owner) return owner == "owner1" or owner == "owner2" end
+    projection = guide.project(snapshot)
+    lu.assertEquals(#projection.rows, 6)
+    lu.assertEquals(projection.rows[6], { instruction = "Collect Pom" })
+end
+
+function TestRoomGuide.testBackToDropsTheCurrentBiomeAndHubFootersUseRoomNumbers()
+    local function back(current, destination)
+        return guide.project({ kind = "navigation", nativeRoomName = current,
+            navigation = { kind = "return", gameName = destination } }).footer
+    end
+    lu.assertEquals(back("N_Sub02", "N_Combat23"), "Back to Combat 23")
+    lu.assertEquals(back("N_Sub02", "N_Hub"), "Back to Hub")
+    lu.assertEquals(back("F_Combat03", "N_Combat07"), "Back to Ephyra Combat 7")
+    local function hub(gameName, reward)
+        return guide.project({ kind = "navigation", nativeRoomName = "N_Hub", navigation = {
+            kind = "next", hubVisit = true, occurrence = { gameName = gameName, overview = {} }, reward = reward,
+        } }).footer
+    end
+    lu.assertEquals(hub("N_Combat03", { rewardType = "MaxHealthDropBig" }), "Room 3: Big Max Health")
+    lu.assertEquals(hub("N_Combat03"), "Next: Room 3")
+    lu.assertEquals(hub("N_MiniBoss02", { rewardType = "StackUpgrade" }), "Next: Erymanthian Boar")
+end
+
+function TestRoomGuide.testEveryCatalogRewardHasAGuideName()
+    _G.GetDisplayName = function(args) return args.Text end
+    for _, rewardType in ipairs({ "ShopHermesUpgrade", "Devotion", "RandomLoot", "WeaponUpgradeDrop",
+        "RoomRewardHealDrop", "HealBigDrop", "ArmorBoost", "ArmorBigBoost", "AirBoost", "EarthBoost",
+        "FireBoost", "WaterBoost", "ElementalBoost", "EmptyMaxHealthSmallDrop", "WeaponPointsRareDrop",
+        "CardUpgradePointsDrop", "CharonPointsDrop", "StackUpgradeBig", "RoomMoneyTripleDrop" }) do
+        local text = guide.project(room({ row("interactLocalReward", nil, {
+            reward = { rewardType = rewardType } }) })).rows[1].instruction
+        lu.assertNotEquals(text, "Collect reward", rewardType)
+        lu.assertNotEquals(text, "Collect " .. rewardType, rewardType)
+    end
+    lu.assertEquals(guide.project(room({ row("interactLocalReward", nil, {
+        reward = { rewardType = "RoomMoneyTripleDrop" } }) })).rows[1].instruction, "Collect Gold x3")
 end

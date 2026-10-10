@@ -2170,6 +2170,24 @@
             }
           },
           "transactionOwner": "[\"acquisitionRole\",\"Surface\",\"N\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat11-sideDoor1\\\"]\",\"self\"]"
+        },
+        {
+          "key": "[\"purchaseHermesShrineOffer\",\"initial:secondLeft\"]",
+          "description": {
+            "kind": "purchaseHermesShrineOffer",
+            "generationKey": "initial:secondLeft",
+            "rewardType": "MaxHealthDrop",
+            "rushed": false
+          }
+        },
+        {
+          "key": "[\"purchaseHermesShrineOffer\",\"initial:secondRight\"]",
+          "description": {
+            "kind": "purchaseHermesShrineOffer",
+            "generationKey": "initial:secondRight",
+            "rewardType": "MaxManaDrop",
+            "rushed": false
+          }
         }
       ],
       "doors": {
@@ -3330,6 +3348,24 @@
             }
           },
           "transactionOwner": "[\"rewardWheelOffer\",\"Surface\",\"O\",\"surface-o-combat07\",\"wheel1\",\"offer1\"]"
+        },
+        {
+          "key": "[\"purchaseHermesShrineOffer\",\"initial:first\"]",
+          "description": {
+            "kind": "purchaseHermesShrineOffer",
+            "generationKey": "initial:first",
+            "rewardType": "HealBigDrop",
+            "rushed": true
+          }
+        },
+        {
+          "key": "[\"purchaseHermesShrineOffer\",\"travelDealRefill\"]",
+          "description": {
+            "kind": "purchaseHermesShrineOffer",
+            "generationKey": "travelDealRefill",
+            "rewardType": "ArmorBoost",
+            "rushed": false
+          }
         }
       ],
       "doors": {
@@ -5890,6 +5926,15 @@
           "key": "[\"useFountain\"]",
           "description": { "kind": "useFountain" },
           "transactionOwner": "[\"roomAction\",\"Surface\",\"P\",\"surface-p-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]"
+        },
+        {
+          "key": "[\"purchaseHermesShrineOffer\",\"initial:secondRight\"]",
+          "description": {
+            "kind": "purchaseHermesShrineOffer",
+            "generationKey": "initial:secondRight",
+            "rewardType": "MaxManaDrop",
+            "rushed": false
+          }
         }
       ],
       "doors": {
@@ -7411,5 +7456,5 @@
       }
     }
   ],
-  "planFingerprint": "1b5faa4d"
+  "planFingerprint": "8b6776d9"
 }

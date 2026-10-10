@@ -234,6 +234,17 @@ local function guideDescription(value, label)
         end
         return row
     end
+    if kind == "purchaseHermesShrineOffer" then
+        local row, rowError = p.exact(record, { "kind", "generationKey", "rewardType", "rushed" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.one(row.generationKey, { ["initial:first"] = true, ["initial:secondLeft"] = true,
+            ["initial:secondRight"] = true, travelDealRefill = true }, label .. ".generationKey")
+            or not p.str(row.rewardType, label .. ".rewardType")
+            or not p.bool(row.rushed, label .. ".rushed") then
+            return p.fail(label .. " has invalid Shrine guide operands")
+        end
+        return row
+    end
     if kind == "sellPurgingPoolTrait" then
         local row, rowError = p.exact(record, { "kind", "slotKey", "traitKey" }, {}, label)
         if not row then return nil, rowError end
@@ -300,8 +311,11 @@ local function roomGuide(value, transactionsByOwner, label)
             or transactionsByOwner[row.transactionOwner] == nil) then
             return p.fail(label .. ".transactionOwner must name one occurrence transaction")
         end
-        local _, descriptionError = guideDescription(row.description, label .. "[" .. index .. "].description")
+        local description, descriptionError = guideDescription(row.description, label .. "[" .. index .. "].description")
         if descriptionError then return nil, descriptionError end
+        if description.kind == "purchaseHermesShrineOffer" and row.transactionOwner ~= nil then
+            return p.fail(label .. "[" .. index .. "].transactionOwner is not published for Shrine purchases")
+        end
     end
     return rows
 end

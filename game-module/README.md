@@ -104,7 +104,7 @@ After Save & Quit, a continued run keeps its planned loadout but is no longer
 steered.
 
 The optional **Show room guide** setting is off by default. Enable it in the
-in-game inspector to show read-only, numbered guidance for the current planned
+in-game inspector to show read-only guidance for the current planned
 room; it does not make choices or change steering.
 
 After a victory, the RunClear screen names the last room completed as planned

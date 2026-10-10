@@ -61,4 +61,30 @@ function shrineInventory.prepare(shrine, storeData, args)
     return { kind = "shrine", expected = expectedOffers, args = primitives.withStoreData(args, storeData) }
 end
 
+-- Native purchase progress of one bound Shrine generation, for read-only
+-- guidance. Purchase marks the option `Purchased`; rush removes it. A refill
+-- appears only after the first rush, so absence means rushed only once seen.
+local seenGenerations = setmetatable({}, { __mode = "k" })
+
+function shrineInventory.purchaseProgress(store, generationKey)
+    if type(store) ~= "table" then return "pending" end
+    local seen = seenGenerations[store]
+    if seen == nil then
+        seen = {}
+        seenGenerations[store] = seen
+    end
+    for _, option in pairs(type(store.StoreOptions) == "table" and store.StoreOptions or {}) do
+        if type(option) == "table" and option.__runPlannerShrine == true and option.__runPlannerGenerationKey then
+            seen[option.__runPlannerGenerationKey] = true
+        end
+    end
+    for _, option in pairs(type(store.StoreOptions) == "table" and store.StoreOptions or {}) do
+        if type(option) == "table" and option.__runPlannerShrine == true
+            and option.__runPlannerGenerationKey == generationKey then
+            return option.Purchased == true and "purchased" or "pending"
+        end
+    end
+    return seen[generationKey] and "rushed" or "pending"
+end
+
 return shrineInventory
