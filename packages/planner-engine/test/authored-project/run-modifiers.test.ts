@@ -9,6 +9,7 @@ import {
   decodeRunModifiers,
   encodeProjectDocument,
   encodeRunModifiers,
+  isRunModifierAuthored,
   isRunModifierValue,
   NATIVE_RUN_MODIFIERS,
   RUN_MODIFIER_DECLARATIONS,
@@ -22,6 +23,7 @@ import {
   projectCommandAddress,
   ProjectCommandContractError,
   ProjectDocumentContractError,
+  type RunModifierDeclaration,
   type RunModifiers,
 } from '@run-planner/engine/authored-project';
 
@@ -125,12 +127,30 @@ describe('run modifier declarations', () => {
   });
 });
 
+describe('run modifier stage', () => {
+  it('authors released declarations always and internal ones only when enabled', () => {
+    const internal: RunModifierDeclaration = {
+      key: 'internalProbe',
+      kind: 'boolean',
+      label: 'Internal probe',
+      description: 'A hypothetical internal modifier.',
+      stage: 'internal',
+      default: false,
+    };
+    for (const declaration of RUN_MODIFIER_DECLARATIONS) {
+      expect(isRunModifierAuthored(declaration, false)).toBe(true);
+    }
+    expect(isRunModifierAuthored(internal, false)).toBe(false);
+    expect(isRunModifierAuthored(internal, true)).toBe(true);
+  });
+});
+
 describe('start point run modifier', () => {
   const startPoint = { biomeKey: 'G', point: 'preboss', gold: 250 } as const;
   const declaration = runModifierDeclaration('startPoint');
 
-  it('is an internal optional declaration that is absent natively', () => {
-    expect(declaration).toMatchObject({ kind: 'startPoint', stage: 'internal' });
+  it('is a released optional declaration that is absent natively', () => {
+    expect(declaration).toMatchObject({ kind: 'startPoint', stage: 'released' });
     expect(NATIVE_RUN_MODIFIERS).not.toHaveProperty('startPoint');
     expect(RUN_MODIFIER_GOLD).toEqual({ min: 0, max: 99_999, step: 1 });
     expect(isRunModifierValue(declaration, startPoint)).toBe(true);

@@ -215,8 +215,11 @@ and display domains come from the run-modifier declaration table. A boolean
 modifier is persisted only when it differs from its default. An optional
 percentage modifier is absent while off (native) and present as an enabled
 value from 0 to 100 while on; a malformed value decodes as off. Absence of the
-record means every modifier is native. The released modifiers are the optional
-percentages `enemyGoldDropChance` and `encounterGoldRange`. The internal
+record means every modifier is native. A declaration's stage is `released`
+or `internal`; an internal one is authored and published only when the
+composition enables internal modifiers (development builds), and none is
+currently declared. The released modifiers are the optional
+percentages `enemyGoldDropChance` and `encounterGoldRange` and the
 `startPoint` modifier (Practice mode) is absent for a normal run and present as
 `{ biomeKey, point: 'opening' | 'preboss', gold? }`; a malformed shape decodes
 as absent, malformed gold as absent, and finite gold rounds and clamps to
@@ -230,9 +233,8 @@ installed state agrees across every reached branch (`branchesDisagree`, naming
 the families). The picker offers every itinerary biome's Opening and Preboss
 with that availability; it does not consult project validity. A start point
 publishes only from a valid project, through the ordinary publication gate.
-Internal modifiers take part in publication only when assembly is told to
-include them (development builds); there, an ineligible start point blocks
-publication with its reason and an eligible one publishes the execution plan's
+An ineligible start point blocks publication with its reason and an eligible
+one publishes the execution plan's
 [`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start). These
 options are editable in Fresh File without making its fixed equipment
 editable. They do not change simulation, candidates, or encounter eligibility.

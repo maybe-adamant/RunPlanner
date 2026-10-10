@@ -21,7 +21,8 @@ it('restores authored modifiers through history, saved reload and published exec
   const application = createApplication({ profileFile: files.adapter, gameModuleHost: game.host });
   await files.openSaved(application, loadSurfaceNProject(), 'modifiers.runplanner.json');
   const { user } = renderPlannerForInteraction({ application });
-  await user.click(screen.getByRole('button', { name: 'Loadout' }));
+  const modifiers = () => user.click(screen.getByRole('button', { name: 'Modifiers' }));
+  await modifiers();
   const gold = () =>
     screen.getByRole('slider', { name: 'Encounter gold range' }) as HTMLInputElement;
   await user.click(screen.getByRole('checkbox', { name: 'Encounter gold range' }));
@@ -40,6 +41,8 @@ it('restores authored modifiers through history, saved reload and published exec
   await act(async () => {
     await files.openSaved(application, saved, 'modifiers.runplanner.json');
   });
+  // Opening a document returns the workspace to Route.
+  await modifiers();
   expect(gold().value).toBe('35');
   await act(async () => {
     expect((await application.projectOperations.publishGame(1)).status).toBe('success');

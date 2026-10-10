@@ -38,6 +38,13 @@ export function describeStartPointUnavailable(reason: StartInstallationUnavailab
   }
 }
 
+/** A picker option's hover: only a reason the plan does not already make evident. */
+export function startPointOptionHint(
+  reason: StartInstallationUnavailableReason,
+): string | undefined {
+  return reason.kind === 'branchesDisagree' ? describeStartPointUnavailable(reason) : undefined;
+}
+
 /** Why the authored start point keeps the plan from being sent. */
 export function describeStartPointBlocked(block: StartPointPublicationBlock): string {
   return `The start point can’t start this run. ${describeStartPointUnavailable(block.reason)}`;

@@ -618,7 +618,9 @@
   padding-block: 1rem 0.75rem;
 }
 
-.route-scope {
+.route-scope-rows {
+  display: grid;
+  gap: 0.75rem;
   margin-top: 0.75rem;
 }
 
@@ -652,6 +654,7 @@
 }
 
 @container app-viewport (min-width: 701px) {
+  .route-scope-rows > .route-run-modifier-practice,
   .route-scope.field-control-inline,
   .route-loadout-controls > .contextual-picker,
   .route-loadout-controls > .loadout-dialog-launcher,
@@ -1094,9 +1097,6 @@
 .route-run-modifiers {
   display: grid;
   gap: 0.75rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #3a3b45;
 }
 
 .route-run-modifier-controls {

@@ -685,7 +685,7 @@ export function createStructuredWorkspaceProjection(
             ...routeDestination(routeStartingReward),
             focusAddress: routeStartingReward,
             focusKey: semanticAddressKey(routeStartingReward),
-            presentationPanel: 'overview' as const,
+            presentationPanel: 'loadout' as const,
           }),
         ],
         [semanticAddressKey(routeStartKeepsake), routeDestination(routeStartKeepsake)],

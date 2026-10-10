@@ -24,12 +24,11 @@ import qOpeningWire from './fixtures/surface-start-q-opening.execution.json';
 import iPrebossWire from './fixtures/underworld-start-i-preboss.execution.json';
 import dreamOpeningWire from './fixtures/dream-start-n-opening.execution.json';
 
-function compile(project: ProjectDocument, internalRunModifiers?: boolean): ExecutionPlan {
+function compile(project: ProjectDocument): ExecutionPlan {
   return compileExecutionPlan({
     product: assembleExecutionProduct({
       assembly: simulateProjectAssembly(catalog, project),
       catalog,
-      ...(internalRunModifiers === undefined ? {} : { internalRunModifiers }),
     }),
   });
 }
@@ -47,29 +46,25 @@ type Wire = Record<string, unknown> & { startState: Record<string, unknown> };
 const clone = (wire: unknown): Wire => structuredClone(wire) as Wire;
 
 describe('execution start state', () => {
-  it('publishes an eligible start point, blocks an ineligible one, and is ignored in released builds', () => {
+  it('publishes an eligible start point and blocks an ineligible one', () => {
     const base = loadUnderworldFGHICheckpoint();
     const eligible = withStartPoint(base, { biomeKey: 'I', point: 'preboss' });
     const ineligible = withStartPoint(base, { biomeKey: 'N', point: 'preboss' });
-    const published = compile(eligible, true);
+    const published = compile(eligible);
     expect(published.startState).toMatchObject({
       point: 'preboss',
       biomeKey: 'I',
       occurrenceId: 'golden-i-preboss',
     });
     expect(published).not.toHaveProperty('runModifiers');
-    expect(failure(() => compile(ineligible, true))).toBeInstanceOf(ExecutionCompilerError);
-    expect(failure(() => compile(ineligible, true))).toMatchObject({
+    expect(failure(() => compile(ineligible))).toBeInstanceOf(ExecutionCompilerError);
+    expect(failure(() => compile(ineligible))).toMatchObject({
       code: 'startPointIneligible',
       startPointReason: { kind: 'notOnItinerary' },
     });
     const plan = decodeExecutionPlan(fghiWire);
     expect(published.planFingerprint).not.toBe(plan.planFingerprint);
-    for (const project of [eligible, ineligible]) {
-      const ignored = compile(project);
-      expect(ignored).not.toHaveProperty('startState');
-      expect(ignored.planFingerprint).toBe(plan.planFingerprint);
-    }
+    expect(compile(base).planFingerprint).toBe(plan.planFingerprint);
   });
 
   it('translates the engine start installation for an Opening', () => {
@@ -167,7 +162,7 @@ describe('execution start state', () => {
     });
     if (result.availability !== 'available') throw new Error('N opening is unavailable');
     const { installation } = result;
-    const start = compile(project, true).startState!;
+    const start = compile(project).startState!;
     expect(start.roomHistory[0]).toEqual({ name: 'Dream_Intro', nextRoomSet: true });
     expect(start.roomHistory.slice(1).map((record) => record.name)).toEqual(
       installation.roomHistory.map((record) => record.gameName),

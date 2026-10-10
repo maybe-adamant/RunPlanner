@@ -128,8 +128,6 @@ interface ExecutionFixture {
   readonly wire: unknown;
   /** A test-only catalog context; production declarations otherwise. */
   readonly catalog?: () => Catalog;
-  /** Internal run modifiers (the Practice mode start point) take part, as in development builds. */
-  readonly internalRunModifiers?: true;
 }
 
 /** The project starting mid-run at a Practice mode start point. */
@@ -281,21 +279,18 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
         gold: 120,
       }),
     wire: surfaceStartQOpeningFixture,
-    internalRunModifiers: true,
   },
   {
     name: 'underworld-start-i-preboss',
     project: () =>
       withStartPoint(loadUnderworldFGHICheckpoint(), { biomeKey: 'I', point: 'preboss' }),
     wire: underworldStartIPrebossFixture,
-    internalRunModifiers: true,
   },
   {
     name: 'dream-start-n-opening',
     project: () =>
       withStartPoint(loadDreamMixedHandoffCheckpoint(), { biomeKey: 'N', point: 'opening' }),
     wire: dreamStartNOpeningFixture,
-    internalRunModifiers: true,
   },
 ]);
 
@@ -320,7 +315,6 @@ export async function buildExecutionFixture(
     product: assembleExecutionProduct({
       assembly,
       catalog: fixtureCatalog,
-      ...(fixture.internalRunModifiers === undefined ? {} : { internalRunModifiers: true }),
     }),
   });
   const filepath = executionFixturePath(fixture.name);

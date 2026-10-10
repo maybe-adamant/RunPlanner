@@ -5,16 +5,11 @@ import {
   createKeepsakeEquipResultAddress,
   deriveRouteLoadout,
   routeInitialProfile,
-  RUN_MODIFIER_PERCENTAGE,
-  type BooleanRunModifierDeclaration,
-  type OptionalPercentageRunModifierDeclaration,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
-import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { useAppDispatch } from '@planner/state/store';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -26,16 +21,13 @@ import {
 } from '@planner/ui/editor/KeepsakePickers';
 import { AspectHexTreeDialog } from '@planner/ui/editor/rewards/AspectHexTreeDialog';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
-import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
 import { useFindingAnchor, useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
-import { RunStartPointModifier } from './RunStartPointModifier';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
-import { hintProps } from '@planner/ui/controls/hint';
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -57,35 +49,19 @@ const fearVowGridOrder = Object.freeze([
   'BossDifficultyShrineUpgrade',
 ] as const);
 
-export function RouteOverview({
+/** The starting choices; route-scoped findings anchor here. */
+export function RouteLoadoutPanel({
   catalog,
-  label,
-  navigation,
-  feedback,
   project,
   workspaceRoute,
   interactions,
 }: {
   readonly catalog: Catalog;
-  readonly label: string;
-  readonly navigation: RouteEditorNavigation;
-  readonly feedback: RouteFeedbackPresentation;
   readonly project: ProjectDocument;
   readonly workspaceRoute: WorkspaceRoute;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const findingAnchor = useFindingAnchor();
-  const dispatch = useAppDispatch();
-  const replacementRevision = useAppSelector(
-    (state) => state.editorSession.workspaceReplacementRevision,
-  );
-  const configuredBiomeCount = workspaceRoute.biomes.length;
-  const configuredBiomeLabels = navigation.biomePanels
-    .slice(0, configuredBiomeCount)
-    .map((biome) => biome.label);
-  const lastConfiguredBiome = configuredBiomeLabels[configuredBiomeLabels.length - 1];
-  const routeExtent =
-    lastConfiguredBiome === undefined ? 'No biomes' : `Through ${lastConfiguredBiome}`;
   const authoredRoute =
     project.route.routeKey === workspaceRoute.routeKey ? project.route : undefined;
   if (authoredRoute === undefined)
@@ -99,37 +75,7 @@ export function RouteOverview({
     >
       <header className="panel-heading">
         <h2 className="eyebrow route-loadout-heading">Loadout</h2>
-        <div className="panel-heading-actions">
-          <StatusBadge status={feedback.status} />
-          <FindingCount count={feedback.findingCount} label={`${label} findings`} />
-          <span className="neutral-status">{routeExtent}</span>
-        </div>
       </header>
-      <div className="route-scope field-control field-control-inline">
-        <span>Plan up to</span>
-        <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
-          {navigation.biomePanels.map((biome, index) => (
-            <label key={biome.biomeKey}>
-              <input
-                type="radio"
-                name={`${workspaceRoute.routeKey}-configured-prefix`}
-                value={index + 1}
-                checked={configuredBiomeCount === index + 1}
-                onChange={() =>
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'ConfigureRoutePrefix',
-                      route: createRouteAddress(workspaceRoute.routeKey),
-                      configuredBiomeCount: index + 1,
-                    }),
-                  )
-                }
-              />
-              {biome.label}
-            </label>
-          ))}
-        </div>
-      </div>
       {initialProfile.kind === 'freshFile' ? (
         <FreshFileLoadout catalog={catalog} fixedWeaponKey={initialProfile.fixedWeaponKey} />
       ) : (
@@ -140,10 +86,6 @@ export function RouteOverview({
           workspaceRoute={workspaceRoute}
         />
       )}
-      <RunModifiersEditor
-        key={`${project.projectId}:${replacementRevision}`}
-        workspaceRoute={workspaceRoute}
-      />
     </section>
   );
 }
@@ -501,186 +443,5 @@ function MatureRouteLoadout({
         />
       </div>
     </>
-  );
-}
-
-function RunModifiersEditor({ workspaceRoute }: { readonly workspaceRoute: WorkspaceRoute }) {
-  const control = workspaceRoute.runModifiers;
-  const prefix = `${workspaceRoute.routeKey}-run-modifiers`;
-  return (
-    <section
-      className="route-run-modifiers route-loadout-section"
-      aria-labelledby={`${prefix}-heading`}
-    >
-      <header className="panel-heading">
-        <h2 id={`${prefix}-heading`} className="eyebrow route-loadout-heading">
-          Modifiers
-        </h2>
-      </header>
-      <div className="route-run-modifier-controls">
-        {control.declarations.map((declaration) =>
-          declaration.kind === 'startPoint' ? (
-            control.startPoint === undefined ? null : (
-              <RunStartPointModifier
-                key={declaration.key}
-                control={control.startPoint}
-                id={`${prefix}-${declaration.key}`}
-              />
-            )
-          ) : declaration.kind === 'boolean' ? (
-            <BooleanRunModifierToggle
-              key={declaration.key}
-              control={control}
-              declaration={declaration}
-            />
-          ) : (
-            <OptionalPercentageRunModifier
-              key={declaration.key}
-              control={control}
-              declaration={declaration}
-              id={`${prefix}-${declaration.key}`}
-            />
-          ),
-        )}
-      </div>
-    </section>
-  );
-}
-
-function BooleanRunModifierToggle({
-  control,
-  declaration,
-}: {
-  readonly control: WorkspaceRoute['runModifiers'];
-  readonly declaration: BooleanRunModifierDeclaration;
-}) {
-  const dispatch = useAppDispatch();
-  const values: Readonly<Record<string, unknown>> = control.value;
-  return (
-    <label className="route-run-modifier-toggle" {...hintProps(declaration.description)}>
-      <span>{declaration.label}</span>
-      <input
-        type="checkbox"
-        aria-description={declaration.description}
-        checked={values[declaration.key] === true}
-        onChange={(event) =>
-          dispatch(
-            authoredProjectCommandDispatched(
-              control.setValue(declaration, event.target.checked).command,
-            ),
-          )
-        }
-      />
-    </label>
-  );
-}
-
-const SLIDER_COMMIT_KEYS = [
-  'ArrowLeft',
-  'ArrowRight',
-  'ArrowUp',
-  'ArrowDown',
-  'Home',
-  'End',
-  'PageUp',
-  'PageDown',
-];
-
-/** Enabling with no earlier value in this session starts at the full percentage. */
-const PERCENTAGE_ENABLE_DEFAULT = RUN_MODIFIER_PERCENTAGE.max;
-
-export function OptionalPercentageRunModifier({
-  control,
-  declaration,
-  id,
-}: {
-  readonly control: WorkspaceRoute['runModifiers'];
-  readonly declaration: OptionalPercentageRunModifierDeclaration;
-  readonly id: string;
-}) {
-  const dispatch = useAppDispatch();
-  const values: Readonly<Record<string, unknown>> = control.value;
-  const raw = values[declaration.key];
-  const authored = typeof raw === 'number' ? raw : undefined;
-  // The last enabled value is UI state only; turning the modifier off removes it from the plan.
-  const [remembered, setRemembered] = useState(authored);
-  if (authored !== undefined && authored !== remembered) setRemembered(authored);
-  const [draft, setDraft] = useState<{
-    readonly source: number;
-    readonly text: string;
-    readonly error?: string;
-  }>();
-  // An authored replacement (including history restoration) supersedes its draft.
-  if (draft !== undefined && draft.source !== authored) setDraft(undefined);
-  const currentDraft = authored !== undefined && draft?.source === authored ? draft : undefined;
-  const resting = authored ?? remembered ?? PERCENTAGE_ENABLE_DEFAULT;
-  const shown = currentDraft?.text ?? String(resting);
-  // An off modifier shows no value; the unchecked box already says it is native.
-  const valueText = authored === undefined ? undefined : `${shown}${RUN_MODIFIER_PERCENTAGE.unit}`;
-  const commit = () => {
-    if (currentDraft === undefined) return;
-    const result = control.draftIntent(declaration, currentDraft.text);
-    if (result.kind === 'invalid') {
-      setDraft({ ...currentDraft, error: result.message });
-      return;
-    }
-    setDraft(undefined);
-    dispatch(authoredProjectCommandDispatched(result.intent.command));
-  };
-  const toggle = (enabled: boolean) => {
-    setDraft(undefined);
-    if (!enabled) {
-      dispatch(authoredProjectCommandDispatched(control.clearValue(declaration).command));
-      return;
-    }
-    const result = control.draftIntent(declaration, String(resting));
-    if (result.kind === 'valid') dispatch(authoredProjectCommandDispatched(result.intent.command));
-  };
-  const error = currentDraft?.error;
-  return (
-    <div className="route-run-modifier-percentage" {...hintProps(error ?? declaration.description)}>
-      <label className="route-run-modifier-switch">
-        <input
-          type="checkbox"
-          aria-description={declaration.description}
-          checked={authored !== undefined}
-          onChange={(event) => toggle(event.target.checked)}
-        />
-        <span>{declaration.label}</span>
-      </label>
-      <div className="route-run-modifier-slider">
-        <input
-          id={id}
-          aria-label={declaration.label}
-          aria-description={error ?? declaration.description}
-          aria-invalid={error === undefined ? undefined : true}
-          type="range"
-          disabled={authored === undefined}
-          min={RUN_MODIFIER_PERCENTAGE.min}
-          max={RUN_MODIFIER_PERCENTAGE.max}
-          step={RUN_MODIFIER_PERCENTAGE.step}
-          value={shown}
-          aria-valuetext={valueText}
-          onChange={(event) => {
-            if (authored !== undefined) setDraft({ source: authored, text: event.target.value });
-          }}
-          onPointerUp={commit}
-          onKeyUp={(event) => {
-            if (SLIDER_COMMIT_KEYS.includes(event.key)) commit();
-          }}
-          onBlur={commit}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              commit();
-            } else if (event.key === 'Escape') {
-              event.preventDefault();
-              setDraft(undefined);
-            }
-          }}
-        />
-        <output htmlFor={id}>{valueText}</output>
-      </div>
-    </div>
   );
 }

@@ -3,6 +3,7 @@ import {
   RUN_MODIFIER_GOLD,
   RUN_MODIFIER_PERCENTAGE,
   createRouteAddress,
+  isRunModifierAuthored,
   isRunModifierValue,
   routeRunModifiers,
   type BooleanRunModifierDeclaration,
@@ -20,7 +21,7 @@ import {
   type StartPointPublicationBlock,
 } from '@run-planner/engine/execution-plan';
 import { startPointDomain, type ProjectEvaluation } from '@run-planner/engine/simulation';
-import { describeStartPointUnavailable } from '@planner/projections/startPointCopy';
+import { startPointOptionHint } from '@planner/projections/startPointCopy';
 import type {
   WorkspaceRunModifierDraftResult,
   WorkspaceRunModifiersControl,
@@ -35,15 +36,18 @@ export function startPointLabel(catalog: Catalog, startPoint: Omit<RunStartPoint
   return `${biome} · ${START_POINT_LABELS[startPoint.point]}`;
 }
 
-/** `released` declarations are always authored; `internal` ones only in a development build. */
+/** `internal` declarations are authored only in a development build. */
 export function visibleRunModifierDeclarations<D extends RunModifierDeclaration>(
   declarations: readonly D[],
   devBuild: boolean,
 ): readonly D[] {
   return Object.freeze(
-    declarations.filter((declaration) => devBuild || declaration.stage === 'released'),
+    declarations.filter((declaration) => isRunModifierAuthored(declaration, devBuild)),
   );
 }
+
+const optionalHint = (hint: string | undefined) =>
+  hint === undefined ? {} : { unavailableHint: hint };
 
 function assertDeclared(declaration: RunModifierDeclaration): void {
   const declared: readonly RunModifierDeclaration[] = RUN_MODIFIER_DECLARATIONS;
@@ -80,7 +84,6 @@ export function bindRunModifiers(
     (declaration): declaration is StartPointRunModifierDeclaration =>
       declaration.kind === 'startPoint',
   );
-  // Internal modifiers take part in publication only where they are authored.
   const startPointBlock =
     startPointDeclaration === undefined || value.startPoint === undefined
       ? undefined
@@ -160,7 +163,7 @@ function bindStartPoint(
                   ? { available: true }
                   : {
                       available: false,
-                      unavailableHint: describeStartPointUnavailable(option.status.reason),
+                      ...optionalHint(startPointOptionHint(option.status.reason)),
                     }),
               }),
             ),
@@ -174,9 +177,7 @@ function bindStartPoint(
     declaration,
     value: current,
     valueLabel: current === undefined ? '' : startPointLabel(catalog, current),
-    ...(block?.code === 'startPointIneligible'
-      ? { unavailableHint: describeStartPointUnavailable(block.reason) }
-      : {}),
+    ...(block?.code === 'startPointIneligible' ? { unavailable: true as const } : {}),
     loadDomain,
     selectIntent: (next) =>
       intentFor(

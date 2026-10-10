@@ -82,7 +82,7 @@ export const RUN_MODIFIER_DECLARATIONS = declareRunModifiers([
     kind: 'startPoint',
     label: 'Practice mode',
     description: "Starts the run at a later biome's Opening or at a biome's Preboss.",
-    stage: 'internal',
+    stage: 'released',
   },
 ]);
 
@@ -128,6 +128,14 @@ export const NATIVE_RUN_MODIFIERS: RunModifiers = Object.freeze(
     ),
   ) as RunModifiers,
 );
+
+/** Whether a modifier is authored and published; `internal` ones only when internal modifiers are enabled. */
+export function isRunModifierAuthored(
+  declaration: RunModifierDeclaration,
+  internalRunModifiers: boolean,
+): boolean {
+  return internalRunModifiers || declaration.stage === 'released';
+}
 
 export function runModifierDeclaration(key: RunModifierKey): RunModifierDeclaration {
   const declaration = RUN_MODIFIER_DECLARATIONS.find((candidate) => candidate.key === key);

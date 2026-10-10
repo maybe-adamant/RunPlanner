@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   createCirceResolutionAddress,
   createEncounterPhaseAddress,
+  createHexTreeAddress,
   createIncomingRewardAddress,
   createJudgmentArcanaAddress,
   createEchoLastRunBoonAddress,
@@ -80,7 +81,7 @@ describe('editor session navigation', () => {
   it('starts with one route panel and no duplicated route session state', () => {
     expect(reducer(undefined, { type: 'test/initialize' })).toEqual({
       activeSection: 'route',
-      activePanel: { kind: 'overview' },
+      activePanel: { kind: 'route' },
       focusedSemanticOwner: null,
       selectedFinding: null,
       semanticNavigationRevision: 0,
@@ -220,7 +221,7 @@ describe('editor session navigation', () => {
     );
     expect(selected.activeSection).toBe('route');
     expect(selected.activePanel).toEqual({ kind: 'biome', biomeKey: 'G' });
-    expect(reducer(selected, routeSelected('Surface')).activePanel).toEqual({ kind: 'overview' });
+    expect(reducer(selected, routeSelected('Surface')).activePanel).toEqual({ kind: 'route' });
   });
 
   it('routes biome and route findings through their semantic owner', () => {
@@ -237,7 +238,16 @@ describe('editor session navigation', () => {
 
     expect(selectedBiome.activePanel).toEqual({ kind: 'biome', biomeKey: 'O' });
     expect(selectedBiome.focusedSemanticOwner).toEqual(biomeSelection.origin);
-    expect(selectedRoute.activePanel).toEqual({ kind: 'overview' });
+    expect(selectedRoute.activePanel).toEqual({ kind: 'loadout' });
+    // Route-start owners, such as the Aspect's Hex tree, also select Loadout.
+    const hexTree = reducer(
+      selectedBiome,
+      findingSelected({
+        key: 'hex-finding',
+        origin: createHexTreeAddress(createRouteAddress('Underworld')),
+      }),
+    );
+    expect(hexTree.activePanel).toEqual({ kind: 'loadout' });
   });
 
   it('lets a projected starting-room finding select Loadout without changing ordinary navigation', () => {
@@ -251,12 +261,12 @@ describe('editor session navigation', () => {
         key: 'opening-reward',
         origin: opening,
         focusAddress: opening,
-        presentationPanel: { kind: 'overview' },
+        presentationPanel: { kind: 'loadout' },
       }),
     );
     const navigated = reducer(finding, semanticOwnerNavigated(opening));
 
-    expect(finding.activePanel).toEqual({ kind: 'overview' });
+    expect(finding.activePanel).toEqual({ kind: 'loadout' });
     expect(navigated.activePanel).toEqual({ kind: 'biome', biomeKey: 'F' });
   });
 
@@ -368,7 +378,7 @@ describe('editor session navigation', () => {
 
     expect(replacement).toMatchObject({
       activeSection: 'route',
-      activePanel: { kind: 'overview' },
+      activePanel: { kind: 'route' },
       focusedSemanticOwner: null,
       selectedFinding: null,
     });

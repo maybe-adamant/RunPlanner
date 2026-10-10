@@ -89,7 +89,7 @@ the authoring surface to a narrow content column. A short structure rail does
 not advertise overflow merely because its connector decoration extends beyond
 a terminal stop.
 
-The route overview remains ordinary editor-panel content and may use that
+The Route, Loadout and Modifiers panels remain ordinary editor-panel content and may use that
 panel's scroll container. At narrow widths the layout intentionally returns to
 one document-flow column rather than retaining nested scrollports. These are
 CSS presentation boundaries only: scroll position remains transient and no
@@ -97,7 +97,8 @@ layout state enters the authored project or semantic commands.
 
 Before a project is open, the application presents a catalog-driven route
 chooser. Once a route is selected, the header displays its identity and the
-route-local navigation provides Route, configured biomes, and nonempty indexes;
+route-local navigation provides Route, Loadout and Modifiers, then configured
+biomes and nonempty indexes;
 it does not switch between sibling authored runs. The route rail is the
 selected route's local overview and biome navigation, not a competing second
 route selector.
@@ -105,9 +106,15 @@ route selector.
 ### Route Rail
 
 The route rail projects the selected route's normalized biome order and current
-project evaluation. It shows Route Overview, each configured biome, its
-status, and whether contextual evaluation is active, complete, or blocked by an
-earlier biome. The catalog route collection is used only to populate the
+project evaluation. It shows the Route, Loadout and Modifiers panels, each
+configured biome, its status, and whether contextual evaluation is active,
+complete, or blocked by an earlier biome. The workspace opens on Route, which
+holds Plan up to, Practice mode and the whole-plan status. Loadout holds the
+starting choices (on Fresh File, only its fixed weapon) and carries the same
+status marker and finding count as a biome for route-start owners; every
+route-scoped or route-start finding opens it. Modifiers holds the run
+modifiers other than Practice mode and appears only while one is declared;
+Route and Modifiers carry no marker. The catalog route collection is used only to populate the
 chooser; it is not rendered as sibling project workspaces.
 
 Selecting a biome changes UI-session navigation only. A downstream biome remains
@@ -156,23 +163,27 @@ Steady Growth progress and its rarity-dependent interval are joined from the
 same equipped-trait snapshot; the workspace does not count lifecycle events or
 predict a future automatic target.
 
-The Loadout modifiers section renders from the engine's run modifier
-declarations: a toggle for a boolean kind, and for an optional percentage a
+The Modifiers panel renders from the engine's run modifier declarations: a toggle for a boolean kind, and for an optional percentage a
 checkbox plus a 0–100% slider that is disabled while unchecked, with the label
 and description taken from the declaration. The slider keeps its last value in
-UI state only, so re-enabling restores it; with none, enabling starts at 100%.
-Practice mode is one row: a checkbox, a Start at picker and a Gold field, the
+UI state only, so re-enabling restores it until the panel is left; with none,
+enabling starts at 100%.
+Practice mode is one Route-panel row beside Plan up to, on every route
+including Fresh File (where a practice run skips earlier first-time story, see
+[Practice mode start](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)): a checkbox, a Start at picker and a Gold field, the
 latter two disabled while unchecked. Checking opens the picker over the
 engine's start-point domain (biome rows of Opening and Preboss; an unavailable
-option is disabled with its reason as hover hint), and only a choice sets the
+option is disabled, with a hover hint only when branches disagree, since an
+unreached or route-start point is evident), and only a choice sets the
 value; unchecking removes the start point and its gold in one edit. Gold is a
 base amount added to the game's own starting gold; empty adds none and shows a
 0 placeholder. Clicking the checkbox while the picker is open without a value
 cancels it and returns focus to the checkbox. An
 ineligible saved start point stays checked and its label carries a quiet
-"(unavailable)" with the reason as hover hint.
-`internal` declarations appear only when the application composition marks a
-development build.
+"(unavailable)" without a hover; the Game panel states the reason. The row
+itself has no descriptive hover.
+An `internal` declaration appears only when the application composition marks
+a development build; no declared modifier is currently internal.
 
 Run State remains available through the covered lifecycle checkpoint that
 precedes or contains the first blocking value and unavailable afterward. The
@@ -540,7 +551,7 @@ edit makes the substitution no longer apply.
 
 ### Keepsake Products
 
-Route Overview projects the mandatory starting selection. Each fixed Postboss
+The Loadout panel projects the mandatory starting selection. Each fixed Postboss
 occurrence with a declared rack projects an optional `Choose keepsake` action
 at every supported nonterminal route position; when active, that action owns
 the replacement selection. Immediate Jeweled Pom and Experimental Hammer

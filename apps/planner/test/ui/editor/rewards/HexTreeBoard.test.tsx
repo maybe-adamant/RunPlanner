@@ -9,6 +9,7 @@ import {
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import { createApplication } from '@planner/composition/createApplication';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
@@ -32,6 +33,9 @@ function seleneApplication() {
       weaponKey: 'WeaponSuit',
       aspectKey: 'SuitHexAspect',
     }),
+  );
+  application.store.dispatch(
+    routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'loadout' } }),
   );
   return application;
 }

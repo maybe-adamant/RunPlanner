@@ -32,7 +32,6 @@ function planSection(
     const product = assembleExecutionProduct({
       assembly,
       catalog: entry.catalog,
-      ...(entry.internalRunModifiers === undefined ? {} : { internalRunModifiers: true }),
     });
     const encoded = encodeExecutionPlan(compileExecutionPlan({ product }));
     // The digest covers the exact wire bytes; the canonical tree only locates a change.
