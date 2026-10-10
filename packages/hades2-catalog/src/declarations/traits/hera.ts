@@ -262,13 +262,11 @@ export const heraTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    activationRequirement: {
+      kind: 'elementMinimums',
+      minimums: { Fire: 2, Earth: 2, Air: 2, Water: 2 },
+    },
     rarityFloorEffect: {
-      activationElementMinimums: {
-        Fire: 2,
-        Earth: 2,
-        Air: 2,
-        Water: 2,
-      },
       fromRarity: 'Common',
       minimumRarity: 'Rare',
       boonRarityContribution: { additive: { Rare: 1 } },

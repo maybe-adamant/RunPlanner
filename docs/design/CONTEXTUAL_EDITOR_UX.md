@@ -97,37 +97,74 @@ anchored to the left edge of the editor workspace. On desktop it overlays the
 route and general-navigation side while leaving the active inspector in place;
 at narrow widths it becomes a full-width sheet rather than a compressed column.
 It uses the workspace visual language and is descriptive only: no Save, Cancel,
-Apply, or authored controls appear. Its sticky single-line header uses the
-compact `State before {title}` form and keeps the close control visible while
-the state content scrolls.
+Apply, or authored controls appear. The sheet region keeps the accessible name
+`State before {title}`; its sticky header shows one moment line, such as
+`Before Combat 12 · Oceanus`, and keeps the close control visible while the
+content scrolls.
 
-The sheet presents only the catalog-labeled gods already in the ordinary pool;
-it does not list possible future sources, expose internal `XxxUpgrade` keys, or
-repeat the four-source-cap state. Equipped traits use fixed Attack, Special,
-Cast, Sprint, and Magick rows sourced from the engine's ordinary-slot ledger,
-followed by all other equipped traits. This presentation uses catalog labels
-plus optional rarity or Hammer rank; it does not expose trait, giver, or slot
-keys. Collapsed Keepsakes, Arcana, and Fear sections keep those dense ledgers
-inspectable rather than expanded by default. Keepsakes presents the engine's
-exact biome-by-biome equip/retain chronology, Fated state, and only the retained
-effect ledgers that actually exist; it does not enumerate inactive keepsakes,
-infer an effect from the current identity, or recreate charge and encounter-use
-folds. Arcana omits redundant rarity and activation-origin labels, while Fear
-uses one vow per row. The sheet also presents elements, followed by a `More
-Info` section with a `Reward Store Ratio` block and collapsed `Counters` and
-`Reward Bags` disclosures. Reward Store Ratio states the run-wide entered-store
-tallies, the current ratio, and the biome target in effect so a reading can be
-compared against the live game. Where no door rolls it never prints the dead
-declared target: a biome that banks nothing reads `This biome ignores Reward
-Store.`, and one that banks a single key reads `This biome rolls only` that
-store's label. Counters
-use one key/value row each;
-individual reward bags retain their nested disclosures. Bag disclosures use the
-projected `Eligible now` and `Ineligible now` groups; they do not claim which
-upcoming door can be selected. Opening moves focus to the sheet close control,
-Escape and that control close it, and close restores focus to the launcher.
-The target and disclosure state are transient presentation state, outside
-authored history and persistence.
+Six tabs are always present in a fixed order, so switching never shifts the
+layout: Overview, Effects, Keepsakes, Arcana, Fear and More Info. A section
+without rows is omitted, and a tab with no sections reads `Nothing active`.
+
+Every tab uses one heading style and one row: `Name (bracket)` on the left and
+a fixed right column. When the row is too wide the name and bracket wrap; the
+right column stays in place and the bracket is never shortened. The bracket is
+one engine-published fact, never two:
+
+- a countdown or charge shows only what is left: `Calling Card (2 charges)`,
+  `Chimaera Jerky (3 encounters)`, `Pauper's → Strike (3 encounters)`;
+- a build-up shows progress toward its total: `Steady Growth (4/6 encounters)`,
+  `The Centaur (4/5 rooms)`;
+- a current value shows that value: `Lion Fang (+25%)`, a decaying trait's
+  `(60%)`;
+- an element-scaled Infusion shows its element's count: `Water Fitness (Water 4)`;
+- an on/off or one-use state reads `(Active)`, `(Inactive)`, `(Ready)`,
+  `(Used)`, `(Pending)` or `(Consumed)`.
+
+The qualifier is one word from the engine's clock unit (charges, uses,
+encounters, rooms, guardians, biomes or boons), singular for a count of one.
+The right column holds `Rarity · Lv. N` (each part only when it applies),
+`Rank II` for an upgraded Hammer, `Lv. N` for a Path of Stars talent, keepsake
+stars, an Arcana rank (`Rank I` to `Rank IV`, always shown) or vow rank, or a
+plain value; rarityless traits and Rank I Hammers leave it blank. Rows use catalog labels and never expose trait, giver, slot or store
+keys or raw engine states. Source-only markers are omitted: a keepsake-granted
+Hammer is an ordinary Hammer row with its encounters left, and an Aspect,
+Arcana or rarity effect shows only its result.
+
+Overview opens with the loadout (the aspect at Rank V, or VI once made Perfect,
+then the familiar), then Max Health and Max Magick with a Sources disclosure.
+The Keepsake block follows: the equipped keepsake, then each still-running
+effect of it or of a kept keepsake. A forced-boon keepsake such as Cloud Bangle
+reads `(Ready)` until its forced Boon is delivered and `(Used)` after; Jeweled
+Pom reads `(Active)` or, once invalidated, `(Inactive)`. Then come one Elements line of non-zero
+counts; Traits, with the Attack, Special, Cast, Sprint and Magick slot boons
+first (empty slots omitted) and every other trait, matured Chaos blessing and
+consumed Gold Gold Gold after them in acquisition order; and Hex, the spell
+followed by its invested talents.
+
+Effects has three groups by type: Well (timed buffs and remaining charges),
+Shrine (pending deliveries) and Chaos (active curses with the blessing each
+matures into). Keepsakes is history only: one row per entered biome with its
+keepsake, where a postboss rack swap reads `Erebus · Calling Card → Silver
+Wheel` on the biome that ends with it, then kept keepsakes, then Fated status
+only once it is known. Arcana lists equipped cards with automatic ones marked, then temporary cards, then Barren. Fear lists
+active vows, then Forfeit, Circe-disabled vows and banned traits.
+
+More Info lists the gods already in the ordinary pool (it does not list
+possible future sources or repeat the four-source-cap state), the Hex details
+(layout, capacity, God Sent, and Path points banked and invested, which appear
+before a Hex once Moon Beam has banked points), a `Reward Store Ratio` section,
+one key/value row per counter, and the reward bags. Reward Store Ratio states
+the run-wide entered-store tallies, the current ratio, and the biome target in
+effect so a reading can be compared against the live game. Where no door rolls
+it never prints the dead declared target: a biome that banks nothing reads
+`This biome ignores Reward Store.`, and one that banks a single key reads
+`This biome rolls only` that store's label. Individual reward bags retain their
+nested disclosures, using the projected `Eligible` and `Ineligible` groups;
+they do not claim which upcoming door can be selected. Opening moves focus to
+the sheet close control, Escape and that control close it, and close restores
+focus to the launcher. The target, tab and disclosure state are transient
+presentation state, outside authored history and persistence.
 
 The application also projects the ordered picker sections consumed by React.
 The shared component may mechanically render those sections, manage search and

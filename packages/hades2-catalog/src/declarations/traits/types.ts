@@ -32,6 +32,10 @@ export interface RawTraitDeclaration {
   /** Native boss payout leaves this equipped instance present but no longer rarifiable. */
   readonly nonFinalBossRarityBlock?: true;
   readonly excludeFromRarityCount: boolean;
+  /** Source `ActivationRequirements` over element counts. */
+  readonly activationRequirement?: TraitDeclaration['activationRequirement'];
+  /** Source `ElementalMultipliers`. */
+  readonly elementalMultiplier?: TraitElement;
   readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
   readonly maximumEligibleLevelByRarity?: TraitDeclaration['maximumEligibleLevelByRarity'];
@@ -78,7 +82,6 @@ export type RawTraitMaxStatEffect =
   | { readonly kind: 'manaToHealthConversion'; readonly fraction: RawMaxStatValue }
   | {
       readonly kind: 'perElement';
-      readonly element: TraitElement;
       readonly stat: 'maxHealth' | 'maxMana';
       readonly amount: number;
     }

@@ -4,7 +4,6 @@ import {
   type HubDecisionAddress,
   type RoomRunStateCheckpointAddress,
 } from '../../authored-project/addresses';
-import { optionIndex } from '../../authored-project/traits/state';
 import type { BiomeLayout, Catalog, TraitElement } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
@@ -27,6 +26,7 @@ import {
   type EnteredRewardStoreTally,
 } from './biome/reward-store-support';
 import type { TraitHistoryState } from '../traits/history/model';
+import { echoShopDuplicateStatus, steadyGrowthInterval } from '../traits/history/fold';
 import type { SimulationState } from '../state/model';
 import { artificerStatus, attestEffectiveHordesRank } from '../arcana-fear';
 import {
@@ -35,6 +35,7 @@ import {
 } from '../commerce/stygian-well';
 import { deriveMaxStats, type MaxStats } from '../max-stats';
 import { hexOlympianTalentInvested } from '../hex-progress';
+import { deriveRunStateEffects, type RunStateEffects } from './run-state-effects';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -53,7 +54,6 @@ export interface DecisionTraitState {
   readonly godBoonRarityCounts: TraitHistoryState['godBoonRarityCounts'];
   readonly upgradableTraitCount: number;
   readonly bannedTraitKeys: TraitHistoryState['bannedTraitKeys'];
-  readonly properUpbringingActive?: TraitHistoryState['properUpbringingActive'];
   readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
   /** Engine-derived Steady Growth progress and current rarity interval. */
   readonly steadyGrowth?: Readonly<
@@ -127,6 +127,8 @@ export interface RunStateRewardStoreController extends EnteredRewardStoreTally {
 export interface RunStateSnapshot {
   readonly owner: RunStateOwner;
   readonly historySequence: number;
+  /** The checkpoint's biome. */
+  readonly biomeKey: string;
   readonly checkpoint:
     'beforeTargetGeneration' | 'roomEntered' | 'beforeEncounterStart' | 'beforeRoomExit';
   readonly godPool: DecisionGodPoolState;
@@ -135,7 +137,7 @@ export interface RunStateSnapshot {
   readonly arcanaFear: SimulationState['arcanaFear'];
   /** Attested at this lifecycle checkpoint; generated encounters consume this exact rank. */
   readonly effectiveHordesRank?: number;
-  /** Branch-derived identity chronology; effects are introduced by later gates. */
+  /** Branch-derived identity chronology and retained effect ledgers. */
   readonly keepsakes: SimulationState['keepsakes'];
   readonly rewardPriorities: SimulationState['rewardPriorities'];
   /** Cross-room Shrine orders, including their exact maturity clocks and due hosts. */
@@ -167,6 +169,8 @@ export interface RunStateSnapshot {
   readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
   /** Max health and max Magick at this checkpoint, with their flat sources. */
   readonly maxStats: MaxStats;
+  /** Running effect clocks and derived effect identities. */
+  readonly effects: RunStateEffects;
   readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -237,6 +241,7 @@ interface RunStateDerivationCache {
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
       readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
       readonly maxStats: MaxStats;
+      readonly effects: RunStateEffects;
     }
   >;
   nextObjectId: number;
@@ -496,33 +501,18 @@ export function aggregateDecisionRewardBag(
 }
 
 function traitState(catalog: Catalog, source: TraitHistoryState): DecisionTraitState {
-  const echoShopTrait = catalog.traits.values.find(
-    (trait) =>
-      trait.selectedDisposition.kind === 'echo' &&
-      trait.selectedDisposition.effect === 'doubleShop',
-  );
-  const echoShopAcquired =
-    echoShopTrait !== undefined &&
-    source.events.some((event) => {
-      if (event.kind !== 'traitOffer') return false;
-      return event.options[optionIndex(event.selectedOptionKey)]?.traitKey === echoShopTrait.key;
-    });
+  const echoShop = echoShopDuplicateStatus(catalog, source);
   const steadyGrowth = Object.fromEntries(
     Object.values(source.equippedTraits).flatMap((equipped) => {
-      const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
-      if (disposition?.kind !== 'steadyGrowth') return [];
-      const rarity = equipped.rarity;
-      if (rarity === undefined || !(rarity in disposition.intervalsByRarity)) return [];
-      return [
-        [
-          equipped.traitKey,
-          Object.freeze({
-            interval:
-              disposition.intervalsByRarity[rarity as keyof typeof disposition.intervalsByRarity],
-            progress: equipped.steadyGrowthProgress ?? 0,
-          }),
-        ] as const,
-      ];
+      const interval = steadyGrowthInterval(catalog, equipped);
+      return interval === undefined
+        ? []
+        : [
+            [
+              equipped.traitKey,
+              Object.freeze({ interval, progress: equipped.steadyGrowthProgress ?? 0 }),
+            ] as const,
+          ];
     }),
   );
   return Object.freeze({
@@ -575,17 +565,7 @@ function traitState(catalog: Catalog, source: TraitHistoryState): DecisionTraitS
         ),
       ),
     }),
-    ...(echoShopTrait === undefined || !echoShopAcquired
-      ? {}
-      : {
-          echoShopDuplicateStatus:
-            source.equippedTraits[echoShopTrait.key] === undefined
-              ? ('consumed' as const)
-              : ('pending' as const),
-        }),
-    ...(source.properUpbringingActive === undefined
-      ? {}
-      : { properUpbringingActive: source.properUpbringingActive }),
+    ...(echoShop === undefined ? {} : { echoShopDuplicateStatus: echoShop.status }),
   });
 }
 
@@ -722,6 +702,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         forfeitStatus: forfeitStatus(state.arcanaFear),
         resourceGains: state.rewardHistory.resourceGains,
         maxStats: deriveMaxStats(context.catalog, state),
+        effects: deriveRunStateEffects(context.catalog, state),
       });
       if (identityKey !== undefined) {
         cache?.branchStateByIdentity.set(identityKey, derived);
@@ -790,6 +771,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
   return Object.freeze({
     owner: context.owner,
     historySequence: firstState.reached.historyView.sequence,
+    biomeKey: firstState.reached.routePosition.biomeKey,
     checkpoint:
       context.owner.kind === 'roomRunStateCheckpoint'
         ? context.owner.checkpoint.kind
@@ -838,6 +820,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     forfeitStatus: first.forfeitStatus,
     resourceGains: first.resourceGains,
     maxStats: first.maxStats,
+    effects: first.effects,
     rewardStoreController: Object.freeze({
       // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.
       ...enteredRewardStoreTally(firstState.reached.historyView),

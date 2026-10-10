@@ -242,6 +242,7 @@ export const demeterTraits = [
   {
     key: 'ElementalDamageCapBoon',
     label: 'Frosty Veneer',
+    activationRequirement: { kind: 'elementMinimums', minimums: { Water: 6 } },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],

@@ -1,37 +1,25 @@
-import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { Catalog, InRunTraitRarity, KeepsakeRank } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   DecisionRewardBagCount,
   MaxStatSource,
   MaxStats,
+  RunStateClock,
+  RunStateEffectState,
   RunStateSnapshot,
+  RunStateStatus,
 } from '@run-planner/engine/simulation';
-import {
-  artificerStatus,
-  hexBaseCapacity,
-  hexEffectiveCapacity,
-} from '@run-planner/engine/simulation';
+import { hexBaseCapacity, hexEffectiveCapacity } from '@run-planner/engine/simulation';
 
 import { workspaceRewardStoreLabel } from '../assembly/reward-labels';
 import type {
   WorkspaceRunStateBagCondition,
   WorkspaceRunStateBagEntry,
   WorkspaceRunStateBagSection,
-  WorkspaceRunStateMaxStats,
   WorkspaceRunStatePresentation,
-  WorkspaceRunStateRewardStoreController,
-  WorkspaceRunStateSource,
-  WorkspaceRunStateStygianWell,
+  WorkspaceRunStateRow,
+  WorkspaceRunStateSection,
 } from '../contracts/run-state';
-
-const coreTraitSlots = Object.freeze([
-  Object.freeze({ label: 'Attack', slotKey: 'Melee' }),
-  Object.freeze({ label: 'Special', slotKey: 'Secondary' }),
-  Object.freeze({ label: 'Cast', slotKey: 'Ranged' }),
-  Object.freeze({ label: 'Sprint', slotKey: 'Rush' }),
-  Object.freeze({ label: 'Magick', slotKey: 'Mana' }),
-  Object.freeze({ label: 'Hex', slotKey: 'Spell' }),
-] as const);
 
 function count(value: DecisionRewardBagCount): string {
   return value.kind === 'exact' ? `x${value.count}` : `x${value.min}–${value.max}`;
@@ -113,46 +101,6 @@ function requirementExplanation(requirement: RequirementExpression): string {
   }
 }
 
-function sourcePresentation(catalog: Catalog, sourceKey: string): WorkspaceRunStateSource {
-  const source = catalog.rewards.rewardTypes.values.find(
-    (rewardType) => rewardType.gameName === sourceKey,
-  );
-  return Object.freeze({ key: sourceKey, label: source?.label ?? sourceKey });
-}
-
-function traitPresentation(
-  catalog: Catalog,
-  equipped: RunStateSnapshot['traits']['equippedTraits'][string],
-  steadyGrowth: RunStateSnapshot['traits']['steadyGrowth'],
-) {
-  const trait = catalog.traits.byKey[equipped.traitKey];
-  const growth = trait?.roomsPerUpgradeGrowth;
-  const counted = equipped.roomsPerUpgradeGrowth;
-  return Object.freeze({
-    ...(growth === undefined || counted === undefined
-      ? {}
-      : {
-          roomsPerUpgradeGrowth: Object.freeze({
-            progress: counted.progress,
-            interval: growth.interval,
-            grants: counted.grants,
-            maxManaGranted: counted.grants * counted.maxManaPerGrant,
-          }),
-        }),
-    label: trait?.label ?? equipped.traitKey,
-    ...(equipped.rarity === undefined ? {} : { rarity: equipped.rarity }),
-    ...(equipped.level === undefined ? {} : { level: equipped.level }),
-    ...(equipped.hammerRank === undefined ? {} : { hammerRank: equipped.hammerRank }),
-    ...(steadyGrowth?.[equipped.traitKey] === undefined
-      ? {}
-      : {
-          steadyGrowthInterval: steadyGrowth[equipped.traitKey]!.interval,
-          steadyGrowthProgress: steadyGrowth[equipped.traitKey]!.progress,
-        }),
-    traitKey: equipped.traitKey,
-  });
-}
-
 function bagSection(
   catalog: Catalog,
   entries: RunStateSnapshot['bags'][number]['entries'],
@@ -193,73 +141,32 @@ function unrolledTargetLabel(bankableStoreKeys: readonly string[] | undefined): 
     : 'This biome rolls no base store.';
 }
 
-function rewardStoreControllerPresentation(
+function rewardStoreSection(
   controller: RunStateSnapshot['rewardStoreController'],
-): WorkspaceRunStateRewardStoreController {
+): WorkspaceRunStateSection {
   // Three decimals on both ratios so a reading lines up with the declared target digit for digit.
-  return Object.freeze({
-    enteredLabel: `${controller.enteredStoreCount} entered, ${controller.enteredMetaStoreCount} ${workspaceRewardStoreLabel('MetaProgress')}`,
-    ratioLabel:
-      controller.currentMetaRatio === null
-        ? 'None counted yet'
-        : controller.currentMetaRatio.toFixed(3),
-    targetLabel:
-      controller.targetMetaRewardsRatio === undefined
-        ? unrolledTargetLabel(controller.bankableStoreKeys)
-        : controller.targetMetaRewardsRatio.toFixed(3),
-  });
-}
-
-const wellClockNouns = Object.freeze({
-  encounters: ['encounter', 'encounters'],
-  rooms: ['room', 'rooms'],
-  bosses: ['Boss encounter', 'Boss encounters'],
-} as const);
-
-/** Labels the engine's Well holdings; uses and clocks are read, never advanced. */
-function stygianWellPresentation(
-  catalog: Catalog,
-  well: RunStateSnapshot['stygianWell'],
-): WorkspaceRunStateStygianWell | undefined {
-  const options =
-    catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) => group.options.values) ??
-    [];
-  const label = (itemKey: string) =>
-    options.find((option) => option.key === itemKey)?.label ?? itemKey;
-  const chargeLabel = (charge: 'spark' | 'yarn' | 'hymn' | 'extended') =>
-    options.find((option) => {
-      const grant = option.stygianWell?.grant;
-      return grant?.kind === 'charge' && grant.charge === charge;
-    })?.label ?? charge;
-  const charges = (
+  return section(
+    'reward-store',
+    'Reward Store Ratio',
     [
-      ['spark', well.sparkUses],
-      ['yarn', well.yarnUses],
-      ['hymn', well.hymnUses],
-      ['extended', well.extendedUses],
-    ] as const
-  ).flatMap(([charge, count]) =>
-    count > 0 ? [Object.freeze({ label: chargeLabel(charge), count })] : [],
-  );
-  const purchases = Object.entries(well.directPurchases).map(([itemKey, count]) =>
-    Object.freeze({ label: label(itemKey), count }),
-  );
-  if (well.timedInstances.length === 0 && charges.length === 0 && purchases.length === 0)
-    return undefined;
-  return Object.freeze({
-    timedBuffs: Object.freeze(
-      well.timedInstances.map((instance, index) => {
-        const [singular, plural] = wellClockNouns[instance.clock];
-        return Object.freeze({
-          key: `${index}:${instance.source.occurrence.occurrenceId}:${instance.source.generationKey}`,
-          label: label(instance.itemKey),
-          remainingLabel: `${instance.remainingUses} ${instance.remainingUses === 1 ? singular : plural} remaining`,
-        });
+      row('entered', 'Entered stores', {
+        right: `${controller.enteredStoreCount} entered, ${controller.enteredMetaStoreCount} ${workspaceRewardStoreLabel('MetaProgress')}`,
       }),
-    ),
-    charges: Object.freeze(charges),
-    purchases: Object.freeze(purchases),
-  });
+      row('ratio', 'Current ratio', {
+        right:
+          controller.currentMetaRatio === null
+            ? 'None counted yet'
+            : controller.currentMetaRatio.toFixed(3),
+      }),
+      row('target', 'Biome target', {
+        right:
+          controller.targetMetaRewardsRatio === undefined
+            ? unrolledTargetLabel(controller.bankableStoreKeys)
+            : controller.targetMetaRewardsRatio.toFixed(3),
+      }),
+    ],
+    'Every counted room entered so far this run. A door rolls Minor Reward with chance 11 × target − 10 × ratio.',
+  );
 }
 
 function maxStatSourceLabel(catalog: Catalog, source: MaxStatSource): string {
@@ -293,333 +200,550 @@ function signedAmount(value: number): string | undefined {
   return value > 0 ? `+${text}` : text;
 }
 
-function maxStatsPresentation(catalog: Catalog, stats: MaxStats): WorkspaceRunStateMaxStats {
+function healthAndMagick(health: string | undefined, magick: string | undefined): string {
+  return [
+    health === undefined ? undefined : `${health} health`,
+    magick === undefined ? undefined : `${magick} Magick`,
+  ]
+    .filter((part) => part !== undefined)
+    .join(' · ');
+}
+
+function maxStatsPresentation(
+  catalog: Catalog,
+  stats: MaxStats,
+): WorkspaceRunStatePresentation['maxStats'] {
   const multiplier = (value: number) => (value === 1 ? undefined : `×${value.toFixed(2)}`);
   const healthMultiplier = multiplier(stats.multipliers.maxHealth);
   const magickMultiplier = multiplier(stats.multipliers.maxMana);
   const converted = signedAmount(stats.convertedHealth);
+  const cap = stats.maxHealthCap;
   return Object.freeze({
-    maxHealth: stats.maxHealth,
-    maxMagick: stats.maxMana,
-    ...(stats.maxHealthCap === undefined
-      ? {}
-      : {
-          maxHealthNote: `Fixed at ${stats.maxHealthCap.maxHealth} by ${
-            catalog.keepsakes.byKey[stats.maxHealthCap.keepsakeKey]?.label ??
-            stats.maxHealthCap.keepsakeKey
-          }`,
-        }),
-    sources: Object.freeze(
-      stats.flat.map((entry) => {
-        const maxHealth = signedAmount(entry.maxHealth);
-        const maxMagick = signedAmount(entry.maxMana);
-        return Object.freeze({
-          key:
-            entry.source.kind === 'base' || entry.source.kind === 'pickups'
-              ? entry.source.kind
-              : `${entry.source.kind}:${entry.source.key}`,
-          label: maxStatSourceLabel(catalog, entry.source),
-          ...(maxHealth === undefined ? {} : { maxHealth }),
-          ...(maxMagick === undefined ? {} : { maxMagick }),
-        });
+    rows: Object.freeze([
+      row('max-health', 'Max Health', {
+        ...(cap === undefined
+          ? {}
+          : { bracket: `(Fixed by ${keepsakeLabel(catalog, cap.keepsakeKey)})` }),
+        right: `${stats.maxHealth}`,
       }),
-    ),
-    ...(converted === undefined ? {} : { convertedHealth: converted }),
-    ...(healthMultiplier === undefined ? {} : { maxHealthMultiplier: healthMultiplier }),
-    ...(magickMultiplier === undefined ? {} : { maxMagickMultiplier: magickMultiplier }),
+      row('max-magick', 'Max Magick', { right: `${stats.maxMana}` }),
+    ]),
+    sources: Object.freeze([
+      ...stats.flat.map((entry) =>
+        row(
+          entry.source.kind === 'base' || entry.source.kind === 'pickups'
+            ? entry.source.kind
+            : `${entry.source.kind}:${entry.source.key}`,
+          maxStatSourceLabel(catalog, entry.source),
+          { right: healthAndMagick(signedAmount(entry.maxHealth), signedAmount(entry.maxMana)) },
+        ),
+      ),
+      ...(converted === undefined
+        ? []
+        : [row('converted', 'From Magick', { right: healthAndMagick(converted, undefined) })]),
+      ...(healthMultiplier === undefined && magickMultiplier === undefined
+        ? []
+        : [
+            row('multipliers', 'Multipliers', {
+              right: healthAndMagick(healthMultiplier, magickMultiplier),
+            }),
+          ]),
+    ]),
   });
 }
 
-/** Presentation joins only: the engine has already evaluated all bag conditions. */
+const slotBoonKeys = Object.freeze(['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const);
+
+const keepsakeStars: Readonly<Record<KeepsakeRank, string>> = Object.freeze({
+  Common: '★',
+  Rare: '★★',
+  Epic: '★★★',
+  Heroic: '★★★★',
+});
+
+const arcanaRanks: Readonly<Record<InRunTraitRarity, string>> = Object.freeze({
+  Common: 'Rank I',
+  Rare: 'Rank II',
+  Epic: 'Rank III',
+  Heroic: 'Rank IV',
+});
+
+function roman(value: number): string {
+  const numerals = [
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ] as const;
+  let rest = value;
+  let text = '';
+  for (const [amount, numeral] of numerals) {
+    while (rest >= amount) {
+      text += numeral;
+      rest -= amount;
+    }
+  }
+  return text;
+}
+
+const singularUnits: Readonly<Record<RunStateClock['unit'], string>> = Object.freeze({
+  charges: 'charge',
+  uses: 'use',
+  encounters: 'encounter',
+  rooms: 'room',
+  guardians: 'guardian',
+  boons: 'boon',
+});
+
+function countText(value: number, unit: RunStateClock['unit']): string {
+  return `${value} ${value === 1 ? singularUnits[unit] : unit}`;
+}
+
+/** A countdown shows only what is left; a build-up shows progress toward its total. */
+function clockBracket(clock: RunStateClock): string {
+  return clock.direction === 'progress'
+    ? `(${clock.value}/${clock.total} ${clock.unit})`
+    : `(${countText(clock.value, clock.unit)})`;
+}
+
+const statusLabels: Readonly<Record<RunStateStatus, string>> = Object.freeze({
+  active: 'Active',
+  inactive: 'Inactive',
+  ready: 'Ready',
+  used: 'Used',
+  pending: 'Pending',
+});
+
+function effectBracket(state: RunStateEffectState): string {
+  switch (state.kind) {
+    case 'clock':
+      return clockBracket(state.clock);
+    case 'status':
+      return `(${statusLabels[state.status]})`;
+    case 'bonus':
+      return percentBracket(state.fraction, true);
+    case 'elementCount':
+      return `(${state.element} ${state.count})`;
+  }
+}
+
+function percentBracket(fraction: number, signed: boolean): string {
+  const percent = Math.round(fraction * 1000) / 10;
+  return `(${signed && percent > 0 ? '+' : ''}${percent}%)`;
+}
+
+function row(
+  key: string,
+  name: string,
+  parts: { readonly bracket?: string; readonly tag?: string; readonly right?: string } = {},
+): WorkspaceRunStateRow {
+  return Object.freeze({
+    key,
+    name,
+    ...(parts.bracket === undefined ? {} : { bracket: parts.bracket }),
+    ...(parts.tag === undefined ? {} : { tag: parts.tag }),
+    ...(parts.right === undefined || parts.right === '' ? {} : { right: parts.right }),
+  });
+}
+
+function sections(
+  ...candidates: readonly (WorkspaceRunStateSection | undefined)[]
+): readonly WorkspaceRunStateSection[] {
+  return Object.freeze(
+    candidates.filter(
+      (section): section is WorkspaceRunStateSection =>
+        section !== undefined && section.rows.length > 0,
+    ),
+  );
+}
+
+function section(
+  key: string,
+  heading: string | undefined,
+  rows: readonly WorkspaceRunStateRow[],
+  note?: string,
+): WorkspaceRunStateSection {
+  return Object.freeze({
+    key,
+    ...(heading === undefined ? {} : { heading }),
+    ...(note === undefined ? {} : { note }),
+    rows: Object.freeze([...rows]),
+  });
+}
+
+function traitLabel(catalog: Catalog, traitKey: string): string {
+  return catalog.traits.byKey[traitKey]?.label ?? traitKey;
+}
+
+function keepsakeLabel(catalog: Catalog, key: string): string {
+  return catalog.keepsakes.byKey[key]?.label ?? key;
+}
+
+function biomeLabel(catalog: Catalog, key: string | undefined): string {
+  return key === undefined ? '' : (catalog.biomes.byKey[key]?.label ?? key);
+}
+
+function wellItemLabel(catalog: Catalog, itemKey: string): string {
+  return (
+    catalog.rewards.shops.byKey.RoomShop?.groups.values
+      .flatMap((group) => group.options.values)
+      .find((option) => option.key === itemKey)?.label ?? itemKey
+  );
+}
+
+/** `Rarity · Lv. N`, or `Rank II` for an upgraded Hammer; each part only when it applies. */
+function traitRight(equipped: RunStateSnapshot['traits']['equippedTraits'][string]): string {
+  if (equipped.hammerRank !== undefined) return equipped.hammerRank === 'RankII' ? 'Rank II' : '';
+  return [equipped.rarity, equipped.level === undefined ? undefined : `Lv. ${equipped.level}`]
+    .filter((part) => part !== undefined)
+    .join(' · ');
+}
+
+function traitRow(catalog: Catalog, snapshot: RunStateSnapshot, traitKey: string) {
+  const equipped = snapshot.traits.equippedTraits[traitKey];
+  if (equipped === undefined) return undefined;
+  const state = snapshot.effects.traitStates[traitKey];
+  const decay = equipped.roomDecay;
+  return row(`trait:${traitKey}`, traitLabel(catalog, traitKey), {
+    ...(state !== undefined
+      ? { bracket: effectBracket(state) }
+      : decay !== undefined
+        ? { bracket: percentBracket(decay.fraction, false) }
+        : {}),
+    right: traitRight(equipped),
+  });
+}
+
+function hexTalentLabel(catalog: Catalog, snapshot: RunStateSnapshot, talentKey: string): string {
+  const spellKey = snapshot.hexProgress.spellTraitKey;
+  const hex = spellKey === undefined ? undefined : catalog.hexes.byKey[spellKey];
+  if (hex === undefined) return talentKey;
+  if (hex.godSent.olympianTalentKey === talentKey) return hex.godSent.olympianTalentLabel;
+  if (hex.godSent.lineageTalentKey === talentKey) return hex.godSent.lineageTalentLabel;
+  return (
+    hex.rareCandidates.byKey[talentKey]?.label ??
+    hex.epicCandidates.byKey[talentKey]?.label ??
+    hex.repeatableCandidates.byKey[talentKey]?.label ??
+    talentKey
+  );
+}
+
+const aspectRanks = Object.freeze({ 5: 'Rank V', 6: 'Rank VI' } as const);
+
+function loadoutRows(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateRow[] {
+  const { aspect, familiarKey } = snapshot.effects;
+  return Object.freeze([
+    ...(aspect === undefined
+      ? []
+      : [
+          row('aspect', catalog.aspects.byKey[aspect.aspectKey]?.label ?? aspect.aspectKey, {
+            right: aspectRanks[aspect.rank],
+          }),
+        ]),
+    ...(familiarKey === undefined
+      ? []
+      : [row('familiar', catalog.familiars.byKey[familiarKey]?.label ?? familiarKey)]),
+  ]);
+}
+
+function overviewSections(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateSection[] {
+  const slotRows = slotBoonKeys.flatMap((slotKey) => {
+    const equipped = snapshot.traits.equippedSlots[slotKey];
+    const traitRowValue =
+      equipped === undefined ? undefined : traitRow(catalog, snapshot, equipped.traitKey);
+    return traitRowValue === undefined ? [] : [traitRowValue];
+  });
+  const otherRows = snapshot.effects.traitEntries.flatMap((entry) => {
+    switch (entry.kind) {
+      case 'trait': {
+        const traitRowValue = traitRow(catalog, snapshot, entry.traitKey);
+        return traitRowValue === undefined ? [] : [traitRowValue];
+      }
+      case 'consumedTrait':
+        return [
+          row(`consumed:${entry.acquisitionIdentity}`, traitLabel(catalog, entry.traitKey), {
+            bracket: '(Consumed)',
+          }),
+        ];
+      case 'chaosBlessing':
+        return [
+          row(
+            `blessing:${entry.acquisitionIdentity}`,
+            catalog.chaos.blessings.byKey[entry.blessingKey]?.label ?? entry.blessingKey,
+            { right: entry.rarity },
+          ),
+        ];
+    }
+  });
+  const spell = snapshot.traits.equippedSlots.Spell;
+  const hexRows = [
+    ...(spell === undefined
+      ? []
+      : [row(`hex:${spell.traitKey}`, traitLabel(catalog, spell.traitKey))]),
+    ...snapshot.effects.hexTalents.map((talent) =>
+      row(`talent:${talent.talentKey}`, hexTalentLabel(catalog, snapshot, talent.talentKey), {
+        right: `Lv. ${talent.level}`,
+      }),
+    ),
+  ];
+  const elements = Object.entries(snapshot.traits.elementCounts)
+    .filter(([, value]) => value > 0)
+    .sort(([, left], [, right]) => right - left)
+    .map(([key, value]) => `${key} ${value}`)
+    .join(' · ');
+  const keepsakeRows = snapshot.effects.keepsakes.map((keepsake) =>
+    row(`keepsake:${keepsake.keepsakeKey}`, keepsakeLabel(catalog, keepsake.keepsakeKey), {
+      ...(keepsake.state === undefined ? {} : { bracket: effectBracket(keepsake.state) }),
+      ...(keepsake.rank === undefined ? {} : { right: keepsakeStars[keepsake.rank] }),
+    }),
+  );
+  return sections(
+    section('keepsake', 'Keepsake', keepsakeRows),
+    section('elements', 'Elements', elements === '' ? [] : [row('elements', elements)]),
+    section('traits', 'Traits', [...slotRows, ...otherRows]),
+    section('hex', 'Hex', hexRows),
+  );
+}
+
+function effectSections(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateSection[] {
+  const wellRows = snapshot.effects.stygianWell.map((entry, index) =>
+    row(`well:${index}:${entry.itemKey}`, wellItemLabel(catalog, entry.itemKey), {
+      bracket: clockBracket(entry.clock),
+    }),
+  );
+  const shrineRows = snapshot.effects.hermesDeliveries.map((delivery) =>
+    row(
+      `shrine:${delivery.entryKey}`,
+      catalog.rewards.rewardTypes.byKey[delivery.rewardType]?.label ?? delivery.rewardType,
+      { bracket: clockBracket(delivery.clock) },
+    ),
+  );
+  const chaosRows = snapshot.effects.chaosCurses.map((curse, index) =>
+    row(
+      `chaos:${index}:${curse.curseKey}`,
+      `${catalog.chaos.curses.byKey[curse.curseKey]?.label ?? curse.curseKey} → ${
+        catalog.chaos.blessings.byKey[curse.blessingKey]?.label ?? curse.blessingKey
+      }`,
+      { bracket: clockBracket(curse.clock), right: curse.rarity },
+    ),
+  );
+  return sections(
+    section('well', 'Well', wellRows),
+    section('shrine', 'Shrine', shrineRows),
+    section('chaos', 'Chaos', chaosRows),
+  );
+}
+
+/** One row per entered biome with its keepsake; a postboss swap reads `old → new`. */
+function keepsakeHistorySections(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateSection[] {
+  const keepsakes = snapshot.keepsakes;
+  const biomeRows = snapshot.effects.keepsakeHistory.map((entry, index) =>
+    row(
+      `biome:${index + 1}`,
+      `${biomeLabel(catalog, entry.biomeKey)} · ${entry.keepsakeKeys
+        .map((key) => keepsakeLabel(catalog, key))
+        .join(' → ')}`,
+    ),
+  );
+  const keptRows = (keepsakes.retained ?? []).map((entry) =>
+    row(`kept:${entry.key}`, keepsakeLabel(catalog, entry.key), {
+      right: keepsakeStars[entry.rank],
+    }),
+  );
+  return sections(
+    section('history', undefined, biomeRows),
+    section('kept', 'Kept', keptRows),
+    section(
+      'fated',
+      undefined,
+      keepsakes.fatedStatus === 'Unknown' ? [] : [row('fated', keepsakes.fatedStatus)],
+    ),
+  );
+}
+
+function arcanaSections(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateSection[] {
+  const cardLabel = (key: string) => catalog.arcanaCards.byKey[key]?.label ?? key;
+  const active = snapshot.arcanaFear.arcana.active;
+  const equipped = active
+    .filter((card) => card.origin !== 'temporary')
+    .map((card) => {
+      const clock = snapshot.effects.arcanaClocks[card.key];
+      return row(`arcana:${card.key}`, cardLabel(card.key), {
+        ...(clock === undefined ? {} : { bracket: clockBracket(clock) }),
+        ...(card.origin === 'automatic' ? { tag: 'Automatic' } : {}),
+        right: arcanaRanks[card.rarity],
+      });
+    });
+  const temporary = active
+    .filter((card) => card.origin === 'temporary')
+    .map((card) => {
+      const clock = snapshot.effects.arcanaClocks[card.key];
+      return row(`temporary:${card.key}`, cardLabel(card.key), {
+        ...(clock === undefined ? {} : { bracket: clockBracket(clock) }),
+        right: arcanaRanks[card.rarity],
+      });
+    });
+  const barren =
+    snapshot.effects.arcanaBarren === undefined
+      ? []
+      : [row('barren', 'Barren', { bracket: clockBracket(snapshot.effects.arcanaBarren) })];
+  return sections(
+    section('equipped', undefined, equipped),
+    section('temporary', 'Temporary', temporary),
+    section('barren', 'Run effects', barren),
+  );
+}
+
+function fearSections(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateSection[] {
+  const fear = snapshot.arcanaFear.fear;
+  const vows = catalog.fearVows.values.flatMap((vow) => {
+    const rank = fear.effectiveRanks[vow.key] ?? 0;
+    return rank > 0 ? [row(`vow:${vow.key}`, vow.label, { right: `Rank ${roman(rank)}` })] : [];
+  });
+  const forfeit =
+    snapshot.forfeitStatus === 'inactive'
+      ? []
+      : [
+          row('forfeit', 'Forfeit', {
+            right: snapshot.forfeitStatus === 'consumed' ? 'Used' : 'Unused',
+          }),
+        ];
+  const disabled = fear.disabledVowKeys.flatMap((key) => {
+    const rank = fear.configuredRanks[key] ?? 0;
+    return rank > 0
+      ? [
+          row(`disabled:${key}`, catalog.fearVows.byKey[key]?.label ?? key, {
+            right: `Rank ${roman(rank)}`,
+          }),
+        ]
+      : [];
+  });
+  const banned = snapshot.traits.bannedTraitKeys.map((key) =>
+    row(`banned:${key}`, traitLabel(catalog, key)),
+  );
+  return sections(
+    section('vows', undefined, vows),
+    section('forfeit', 'Effects', forfeit),
+    section('disabled', 'Disabled by Circe', disabled),
+    section('banned', 'Banned', banned),
+  );
+}
+
+function moreInfoSections(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): readonly WorkspaceRunStateSection[] {
+  const hex = snapshot.hexProgress;
+  const spell = snapshot.traits.equippedSlots.Spell;
+  const base = hexBaseCapacity(catalog, hex);
+  const effective = hexEffectiveCapacity(catalog, hex);
+  const layout =
+    hex.spellTraitKey === undefined || hex.tree === undefined
+      ? undefined
+      : (catalog.hexes.byKey[hex.spellTraitKey]?.layouts.byKey[hex.tree.layoutKey]?.label ??
+        hex.tree.layoutKey);
+  // Moon Beam banks Path points before any Hex is equipped.
+  const pathRows =
+    spell === undefined && hex.bankedPathPoints === 0
+      ? []
+      : [
+          row('hex-banked', 'Path points banked', { right: `${hex.bankedPathPoints}` }),
+          row('hex-invested', 'Path points invested', { right: `${hex.investedNodeKeys.length}` }),
+        ];
+  const hexRows = [
+    ...(spell === undefined
+      ? []
+      : [
+          ...(layout === undefined ? [] : [row('hex-layout', 'Layout', { right: layout })]),
+          ...(base === undefined
+            ? []
+            : [
+                row('hex-capacity', 'Capacity', {
+                  right:
+                    effective === undefined || effective === base
+                      ? `${base}`
+                      : `${base} → ${effective}`,
+                }),
+              ]),
+          row('hex-god-sent', 'God Sent', {
+            right: hex.godSentAdded === true ? 'Added' : 'Not added',
+          }),
+        ]),
+    ...pathRows,
+  ];
+  const gods = snapshot.godPool.acquiredSourceKeys
+    .map(
+      (key) =>
+        catalog.rewards.rewardTypes.values.find((rewardType) => rewardType.gameName === key)
+          ?.label ?? key,
+    )
+    .join(' · ');
+  return sections(
+    section('gods', 'Gods in pool', gods === '' ? [] : [row('gods', gods)]),
+    section('hex', 'Hex', hexRows),
+    rewardStoreSection(snapshot.rewardStoreController),
+    section(
+      'counters',
+      'Counters',
+      Object.entries(snapshot.counters).flatMap(([key, value]) =>
+        typeof value === 'number' ? [row(`counter:${key}`, key, { right: `${value}` })] : [],
+      ),
+    ),
+  );
+}
+
+/** Presentation joins only: the engine has already folded every clock and evaluated every bag. */
 export function presentRunState(
   catalog: Catalog,
   snapshot: RunStateSnapshot,
+  momentLead: string,
 ): WorkspaceRunStatePresentation {
-  const coreTraitKeys = new Set(
-    Object.values(snapshot.traits.equippedSlots).map(({ traitKey }) => traitKey),
-  );
-  const artificer = artificerStatus(catalog, snapshot.arcanaFear);
-  const equippedSpell = snapshot.traits.equippedSlots.Spell;
-  const hexBase = hexBaseCapacity(catalog, snapshot.hexProgress);
-  const hexEffective = hexEffectiveCapacity(catalog, snapshot.hexProgress);
-  const wellPresentation = stygianWellPresentation(catalog, snapshot.stygianWell);
   return Object.freeze({
+    moment: `${momentLead} · ${biomeLabel(catalog, snapshot.biomeKey)}`,
+    loadout: loadoutRows(catalog, snapshot),
     maxStats: maxStatsPresentation(catalog, snapshot.maxStats),
-    hexProgress: Object.freeze({
-      ...(equippedSpell === undefined
-        ? {}
-        : {
-            baseSpellLabel:
-              catalog.traits.byKey[equippedSpell.traitKey]?.label ?? equippedSpell.traitKey,
-          }),
-      ...(snapshot.hexProgress.spellTraitKey === undefined ||
-      snapshot.hexProgress.tree === undefined
-        ? {}
-        : {
-            layoutLabel:
-              catalog.hexes.byKey[snapshot.hexProgress.spellTraitKey]?.layouts.byKey[
-                snapshot.hexProgress.tree.layoutKey
-              ]?.label ?? snapshot.hexProgress.tree.layoutKey,
-          }),
-      ...(hexBase === undefined
-        ? {}
-        : {
-            baseCapacity: hexBase,
-            ...(hexEffective === undefined ? {} : { effectiveCapacity: hexEffective }),
-          }),
-      godSentLabel:
-        equippedSpell === undefined
-          ? 'No Hex'
-          : snapshot.hexProgress.godSentAdded === true
-            ? 'Added'
-            : 'Not added',
-      pathOfStarsLabel:
-        equippedSpell === undefined
-          ? 'Ineligible — no Hex'
-          : snapshot.hexProgress.talentDropsClosed === true
-            ? 'Ineligible — tree full'
-            : 'Eligible',
-      bankedPathPoints: snapshot.hexProgress.bankedPathPoints,
-      investedPathPoints: snapshot.hexProgress.investedNodeKeys.length,
-    }),
-    keepsakes: Object.freeze({
-      currentLabel:
-        snapshot.keepsakes.currentKey === null
-          ? 'None'
-          : (catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??
-            snapshot.keepsakes.currentKey),
-      chronology: Object.freeze(
-        snapshot.keepsakes.history.map((entry) =>
-          Object.freeze({
-            biomeNumber: entry.biomeNumber,
-            label: catalog.keepsakes.byKey[entry.key]?.label ?? entry.key,
-          }),
-        ),
-      ),
-      fatedStatus: snapshot.keepsakes.fatedStatus,
-      pendingRewardPriorities: Object.freeze([...snapshot.rewardPriorities]),
-      olympianSources: Object.freeze(
-        snapshot.keepsakes.olympianSources.map((source) =>
-          Object.freeze({
-            providerKey: source.providerKey,
-            providerLabel:
-              catalog.traitGivers.byKey[source.providerKey]?.label ?? source.providerKey,
-            origin: source.origin,
-            forceRemaining: source.remainingForceUses,
-            rarificationRemaining: source.remainingRarificationUses,
-            maximumSourceRarityLevel: source.maximumSourceRarityLevel,
-          }),
-        ),
-      ),
-      jeweledPomStatus:
-        snapshot.keepsakes.jeweledPom === undefined
-          ? 'inactive'
-          : snapshot.keepsakes.jeweledPom.active
-            ? 'active'
-            : 'invalidated',
-      experimentalHammers: Object.freeze(
-        snapshot.keepsakes.experimentalHammers.map((hammer) =>
-          Object.freeze({
-            status: hammer.active ? ('active' as const) : ('expired' as const),
-            traitLabel: catalog.traits.byKey[hammer.traitKey]?.label ?? hammer.traitKey,
-            remainingUses: hammer.remainingUses,
-            acquisitionIdentity: hammer.acquisitionIdentity,
-          }),
-        ),
-      ),
-      ...(snapshot.keepsakes.transcendentEmbryo === undefined
-        ? {}
-        : {
-            transcendentEmbryo: Object.freeze({
-              origin: snapshot.keepsakes.transcendentEmbryo.origin,
-              rarity: snapshot.keepsakes.transcendentEmbryo.rarity,
-              progress: snapshot.keepsakes.transcendentEmbryo.progress,
-              interval: 8,
-              markedBlessingLabel:
-                catalog.chaos.blessings.byKey[
-                  snapshot.keepsakes.transcendentEmbryo.markedBlessingKey
-                ]?.label ?? snapshot.keepsakes.transcendentEmbryo.markedBlessingKey,
-              markedBlessingAcquisitionIdentity:
-                snapshot.keepsakes.transcendentEmbryo.markedBlessingAcquisitionIdentity,
-            }),
-          }),
-      ...(() => {
-        const gift = snapshot.traits.equippedTraits.EchoRepeatKeepsakeBoon;
-        const captured = gift?.echoRepeatedKeepsakeKey;
-        const declaration = captured === undefined ? undefined : catalog.keepsakes.byKey[captured];
-        if (
-          gift === undefined ||
-          captured === undefined ||
-          declaration?.echoGift.availability !== 'eligible'
-        )
-          return {};
-        const replayCount = gift.echoKeepsakeReplayCount ?? 0;
-        const effect = declaration.echoGift.effect;
-        return {
-          echoGift: Object.freeze({
-            capturedKeepsakeLabel: declaration.label,
-            replayCount,
-            status:
-              effect.kind === 'modeledNeutral'
-                ? ('effectNeutral' as const)
-                : effect.schedule === 'everyBiome'
-                  ? ('everyBiome' as const)
-                  : replayCount > 0
-                    ? ('oneShotApplied' as const)
-                    : ('pending' as const),
-          }),
-        };
-      })(),
-      ...(snapshot.keepsakes.callingCard === undefined
-        ? {}
-        : { callingCardRemainingCharges: snapshot.keepsakes.callingCard.remainingCharges }),
-      ...(snapshot.keepsakes.timePiece === undefined
-        ? {}
-        : { timePieceRemainingCharges: snapshot.keepsakes.timePiece.remainingCharges }),
-      ...(snapshot.keepsakes.figLeaf === undefined
-        ? {}
-        : {
-            figLeafRemainingUses: snapshot.keepsakes.figLeaf.remainingUses,
-            figLeafActivatedThisBiome: snapshot.keepsakes.figLeaf.activatedThisBiome,
-          }),
-      ...(snapshot.keepsakes.gorgon === undefined
-        ? {}
-        : {
-            gorgonStatus: snapshot.keepsakes.gorgon.status,
-            ...(snapshot.keepsakes.gorgon.status === 'pending'
-              ? { gorgonRarityLevel: snapshot.keepsakes.gorgon.rarityLevel }
-              : {}),
-          }),
-      ...(snapshot.keepsakes.phial === undefined
-        ? {}
-        : { phialStatus: snapshot.keepsakes.phial.status }),
-      ...(snapshot.keepsakes.figurine === undefined
-        ? {}
-        : {
-            figurineStatus: snapshot.keepsakes.figurine.status,
-            figurineOrigin: snapshot.keepsakes.figurine.origin,
-            figurineRarity: snapshot.keepsakes.figurine.rarity,
-          }),
-      ...(snapshot.keepsakes.stone === undefined
-        ? {}
-        : {
-            stoneStatus: snapshot.keepsakes.stone.status,
-            stoneOrigin: snapshot.keepsakes.stone.origin,
-            stoneRank: snapshot.keepsakes.stone.rank,
-          }),
-      ...(snapshot.keepsakes.discordantBell === undefined
-        ? {}
-        : {
-            discordantBellBonusLabel: `+${((snapshot.keepsakes.discordantBell.multiplier - 1) * 100).toFixed(1)}%`,
-          }),
-      ...(snapshot.keepsakes.lionFang === undefined
-        ? {}
-        : {
-            lionFang: Object.freeze({
-              bonusLabel: `+${Math.round((snapshot.keepsakes.lionFang.multiplier - 1) * 100)}%`,
-              expired: snapshot.keepsakes.lionFang.expired,
-              origin: snapshot.keepsakes.lionFang.origin,
-            }),
-          }),
-    }),
-    arcana: Object.freeze(
-      snapshot.arcanaFear.arcana.active.map((card) => {
-        const growth = catalog.arcanaCards.byKey[card.key]?.roomEntryStatGrowth;
-        const counted = snapshot.arcanaFear.arcana.roomEntryGrowth?.[card.key];
-        return Object.freeze({
-          key: card.key,
-          label: catalog.arcanaCards.byKey[card.key]?.label ?? card.key,
-          origin: card.origin,
-          rarity: card.rarity,
-          ...(growth === undefined
-            ? {}
-            : {
-                roomEntryGrowth: Object.freeze({
-                  progress: counted?.progress ?? 0,
-                  interval: growth.interval,
-                  grants: counted?.grants ?? 0,
-                  maxHealthGranted: counted?.maxHealthGranted ?? 0,
-                  maxManaGranted: counted?.maxManaGranted ?? 0,
-                }),
-              }),
-        });
-      }),
-    ),
-    ...(artificer === undefined ? {} : { artificer }),
-    bags: Object.freeze(
-      snapshot.bags.map((bag) =>
-        Object.freeze({
-          eligible: bagSection(catalog, bag.entries, 'eligible'),
-          ineligible: bagSection(catalog, bag.entries, 'ineligible'),
-          label: workspaceRewardStoreLabel(bag.storeKey),
-          remaining: count(bag.remaining),
-          technicalKey: bag.storeKey,
-        }),
-      ),
-    ),
-    rewardStoreController: rewardStoreControllerPresentation(snapshot.rewardStoreController),
-    counters: Object.freeze(
-      Object.entries(snapshot.counters)
-        .filter(([, value]) => typeof value === 'number')
-        .map(([key, value]) => Object.freeze({ key, value: value as number })),
-    ),
-    elements: Object.freeze(
-      Object.entries(snapshot.traits.elementCounts).map(([key, value]) =>
-        Object.freeze({ key, value }),
-      ),
-    ),
-    godPool: Object.freeze({
-      inPool: Object.freeze(
-        snapshot.godPool.acquiredSourceKeys.map((key) => sourcePresentation(catalog, key)),
-      ),
-    }),
-    fear: Object.freeze({
-      configuredTotal: snapshot.arcanaFear.fear.configuredTotal,
-      active: Object.freeze(
-        catalog.fearVows.values.flatMap((vow) => {
-          const rank = snapshot.arcanaFear.fear.effectiveRanks[vow.key] ?? 0;
-          return rank > 0 ? [Object.freeze({ key: vow.key, label: vow.label, rank })] : [];
-        }),
-      ),
-      disabled: Object.freeze(
-        snapshot.arcanaFear.fear.disabledVowKeys.flatMap((key) => {
-          const rank = snapshot.arcanaFear.fear.configuredRanks[key] ?? 0;
-          return rank > 0
-            ? [Object.freeze({ key, label: catalog.fearVows.byKey[key]?.label ?? key, rank })]
-            : [];
-        }),
-      ),
-      forfeitStatus: snapshot.forfeitStatus,
-    }),
-    ...(wellPresentation === undefined ? {} : { stygianWell: wellPresentation }),
-    traits: Object.freeze({
-      ...(snapshot.traits.echoShopDuplicateStatus === undefined
-        ? {}
-        : { echoShopDuplicateStatus: snapshot.traits.echoShopDuplicateStatus }),
-      ...(snapshot.traits.properUpbringingActive === undefined
-        ? {}
-        : { properUpbringingActive: true as const }),
-      coreSlots: Object.freeze(
-        coreTraitSlots.map(({ label, slotKey }) => {
-          const equipped = snapshot.traits.equippedSlots[slotKey];
+    overview: overviewSections(catalog, snapshot),
+    effects: effectSections(catalog, snapshot),
+    keepsakes: keepsakeHistorySections(catalog, snapshot),
+    arcana: arcanaSections(catalog, snapshot),
+    fear: fearSections(catalog, snapshot),
+    moreInfo: Object.freeze({
+      sections: moreInfoSections(catalog, snapshot),
+      bags: Object.freeze(
+        snapshot.bags.map((bag) => {
+          const eligible = bagSection(catalog, bag.entries, 'eligible');
+          const ineligible = bagSection(catalog, bag.entries, 'ineligible');
           return Object.freeze({
-            label,
-            slotKey,
-            ...(equipped === undefined
-              ? {}
-              : { trait: traitPresentation(catalog, equipped, snapshot.traits.steadyGrowth) }),
+            eligible,
+            ineligible,
+            label: workspaceRewardStoreLabel(bag.storeKey),
+            rows: Object.freeze([
+              row('remaining', 'Remaining', { right: count(bag.remaining) }),
+              row('eligible', 'Eligible', { right: eligible.total }),
+              row('ineligible', 'Ineligible', { right: ineligible.total }),
+            ]),
+            technicalKey: bag.storeKey,
           });
         }),
-      ),
-      other: Object.freeze(
-        Object.values(snapshot.traits.equippedTraits)
-          .filter(({ traitKey }) => !coreTraitKeys.has(traitKey))
-          .map((equipped) => traitPresentation(catalog, equipped, snapshot.traits.steadyGrowth)),
-      ),
-      banned: Object.freeze(
-        snapshot.traits.bannedTraitKeys.map((key) =>
-          Object.freeze({ key, label: catalog.traits.byKey[key]?.label ?? key }),
-        ),
       ),
     }),
   });

@@ -358,6 +358,13 @@ export {
   type RunStateOwner,
   type RunStateRewardStoreController,
   type RunStateSnapshot,
+  type RunStateClock,
+  type RunStateClockUnit,
+  type RunStateEffectState,
+  type RunStateKeepsakeEffect,
+  type RunStateStatus,
+  type RunStateTraitEntry,
+  type RunStateEffects,
   type DecisionTraitState,
 } from './rewards';
 export {

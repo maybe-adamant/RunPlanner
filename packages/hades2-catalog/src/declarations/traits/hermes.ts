@@ -214,6 +214,7 @@ export const hermesTraits = [
   {
     key: 'ElementalUnifiedBoon',
     label: 'Tall Order',
+    activationRequirement: { kind: 'highestBaseElementCount', minimum: 8 },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],

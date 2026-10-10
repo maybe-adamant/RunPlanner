@@ -577,6 +577,16 @@ Acquisition identities distinguish repeated temporary effects. Snapshots
 observe those engine products instead of reconstructing clocks, charges or
 rarity state from the current selected key.
 
+Each snapshot also carries its biome and an `effects` product derived from the
+same folded state: every running clock with its game unit, as a countdown of
+what is left or a build-up toward its total; one keepsake chain per entered
+biome, with a postboss rack's choice on the biome that ends with it; the current
+state of keepsake effects and activation-gated traits (a trait's declared
+`activationRequirement` evaluated over the folded element counts), the current
+element count of an element-scaled trait, the equipped aspect's rank, and the
+acquisition order of non-slot traits, consumed Gold Gold Gold and matured
+Chaos blessings.
+
 Offer-local rarity and level context is not a global Run State table.
 Exact room/item witnesses, generation-time contributions and history govern
 each offer; sibling selection cannot rewrite that frozen context. Detailed

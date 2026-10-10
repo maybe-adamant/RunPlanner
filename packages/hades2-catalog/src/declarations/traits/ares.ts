@@ -215,6 +215,7 @@ export const aresTraits = [
   {
     key: 'ElementalOlympianDamageBoon',
     label: 'Rallying Cry',
+    activationRequirement: { kind: 'elementMinimums', minimums: { Earth: 8 } },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic'],
     linkedBoonRequirements: [],

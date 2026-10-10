@@ -211,6 +211,7 @@ export const hephaestusTraits = [
   {
     key: 'ElementalDamageBoon',
     label: 'Martial Art',
+    elementalMultiplier: 'Earth',
     freshOfferRarities: ['Common'],
     equippedRarities: ['Common'],
     linkedBoonRequirements: [],

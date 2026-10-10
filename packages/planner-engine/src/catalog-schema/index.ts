@@ -50,6 +50,7 @@ export type {
   TraitMaxStatValue,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
+  TraitActivationRequirement,
   ProperUpbringingEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,

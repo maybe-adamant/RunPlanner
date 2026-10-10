@@ -36,6 +36,15 @@ export type {
   DecisionTraitState,
 } from './run-state';
 export type {
+  RunStateClock,
+  RunStateClockUnit,
+  RunStateEffectState,
+  RunStateEffects,
+  RunStateKeepsakeEffect,
+  RunStateStatus,
+  RunStateTraitEntry,
+} from './run-state-effects';
+export type {
   RoomExitConformanceDelta,
   RoomExitConformanceFactKind,
 } from './run-state-conformance';

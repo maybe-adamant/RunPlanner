@@ -38,12 +38,16 @@
 .run-state-sheet h3 {
   margin: 0;
 }
-.run-state-sheet h2 {
+.run-state-sheet .run-state-heading h2 {
   min-width: 0;
+  overflow: hidden;
   color: #e0cbed;
-  font-size: 1.2rem;
-  line-height: 1.25;
-  letter-spacing: 0.02em;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .run-state-tabs {
   display: flex;
@@ -75,21 +79,46 @@
 .run-state-sheet details {
   margin: 8px 0;
 }
-.run-state-fear-list {
+.run-state-sheet h4 {
+  margin: 12px 0 6px;
+}
+.run-state-rows {
   display: grid;
-  gap: 10px;
-  margin: 9px 0;
+  gap: 7px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
-.run-state-fear-list > li {
+.run-state-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 12px;
+  line-height: 1.4;
 }
-.run-state-sheet h4 {
-  margin: 12px 0 6px;
+.run-state-row-name {
+  min-width: 0;
+  color: #ede7f2;
+}
+.run-state-row-bracket {
+  color: #cdb8df;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.run-state-row-tag {
+  color: #aaa7af;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.run-state-row-right {
+  color: #aaa7af;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.run-state-sheet details > .run-state-rows {
+  margin-top: 8px;
 }
 .run-state-section + .run-state-section {
   padding-top: 16px;
@@ -107,112 +136,8 @@
   font-size: 0.88rem;
   font-weight: 500;
 }
-.run-state-sheet .run-state-current-keepsake {
-  margin-bottom: 10px;
-  color: #f3ede4;
-  font-weight: 600;
-}
-.run-state-values {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-.run-state-values > div {
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr);
-  gap: 12px;
-  line-height: 1.4;
-}
-.run-state-values dt,
-.run-state-elements dt,
-.run-state-bag-counts dt,
 .run-state-muted {
   color: #aaa7af;
-}
-.run-state-values dd,
-.run-state-elements dd,
-.run-state-bag-counts dd {
-  min-width: 0;
-  margin: 0;
-  color: #ede7f2;
-}
-.run-state-metadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-  color: #aaa7af;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-.run-state-metadata:empty {
-  display: none;
-}
-.run-state-trait-name {
-  color: #ede7f2;
-  font-weight: 500;
-}
-.run-state-plain-list,
-.run-state-inline-list {
-  display: flex;
-  gap: 10px;
-  margin: 8px 0;
-  padding: 0;
-  list-style: none;
-}
-.run-state-plain-list {
-  flex-direction: column;
-}
-.run-state-values .run-state-plain-list {
-  margin: 0;
-}
-.run-state-inline-list {
-  flex-wrap: wrap;
-  gap: 6px 14px;
-}
-.run-state-elements {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  margin: 0;
-}
-.run-state-elements > div {
-  display: flex;
-  gap: 6px;
-}
-.run-state-core-traits {
-  display: grid;
-  gap: 10px;
-  margin: 8px 0 12px;
-}
-.run-state-core-traits > div {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 10px;
-}
-.run-state-core-traits dt {
-  color: #aaa7af;
-}
-.run-state-core-traits dd {
-  margin: 0;
-}
-.run-state-counter-list {
-  display: grid;
-  gap: 5px;
-  margin: 8px 0 0;
-}
-.run-state-counter-list > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-}
-.run-state-counter-list dt {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: #aaa7af;
-}
-.run-state-counter-list dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
 }
 .run-state-bag {
   margin-top: 14px;
@@ -220,17 +145,6 @@
 .run-state-bag + .run-state-bag {
   padding-top: 12px;
   border-top: 1px solid #393841;
-}
-.run-state-bag-counts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 10px 0;
-  font-variant-numeric: tabular-nums;
-}
-.run-state-bag-counts dt {
-  margin-bottom: 3px;
-  font-size: 0.78rem;
 }
 .run-state-bag-section h5 {
   margin: 12px 0 4px;

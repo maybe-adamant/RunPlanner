@@ -155,7 +155,7 @@ export type TraitMaxStatEffect =
     }
   /** `MaxManaToMaxHealthConversion`: this fraction of `ceil(max Magick)` as flat health. */
   | { readonly kind: 'manaToHealthConversion'; readonly fraction: TraitMaxStatValue }
-  /** `MultipliedByElement`: a flat amount per current count of one element. */
+  /** `MultipliedByElement`: a flat amount per current count of the trait's `elementalMultiplier`. */
   | {
       readonly kind: 'perElement';
       readonly element: TraitElement;
@@ -166,11 +166,24 @@ export type TraitMaxStatEffect =
   | { readonly kind: 'familiarStackMultiplier'; readonly multiplier: number };
 
 /**
- * One declaration-owned, scalable god-trait rarity floor.  This intentionally
+ * Source `ActivationRequirements` over element counts: the trait's effect
+ * applies only while the requirement holds.
+ */
+export type TraitActivationRequirement =
+  | {
+      /** Every listed element at or above its minimum. */
+      readonly kind: 'elementMinimums';
+      readonly minimums: Readonly<Partial<Record<TraitElement, number>>>;
+    }
+  /** `HighestBaseElementCount`: the largest of Earth, Air, Fire and Water. */
+  | { readonly kind: 'highestBaseElementCount'; readonly minimum: number };
+
+/**
+ * One declaration-owned, scalable god-trait rarity floor, applied while its
+ * trait's activation requirement holds.  This intentionally
  * remains a closed product rather than a general trait-effect language.
  */
 export interface ScalableGodTraitRarityFloorEffect {
-  readonly activationElementMinimums: Readonly<Partial<Record<TraitElement, number>>>;
   readonly fromRarity: 'Common';
   readonly minimumRarity: 'Rare';
 }
@@ -570,6 +583,9 @@ export interface TraitDeclaration {
   /** A qualifying non-final boss payout blocks this equipped instance from later rarification. */
   readonly nonFinalBossRarityBlock?: true;
   readonly excludeFromRarityCount: boolean;
+  readonly activationRequirement?: TraitActivationRequirement;
+  /** Source `ElementalMultipliers`: the element whose current count scales this trait. */
+  readonly elementalMultiplier?: TraitElement;
   readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
   /**

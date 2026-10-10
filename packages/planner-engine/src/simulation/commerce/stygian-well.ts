@@ -33,6 +33,17 @@ export function stygianWellGrant(catalog: Catalog, itemKey: string): StygianWell
   return wellOption(catalog, itemKey)?.stygianWell?.grant;
 }
 
+/** The Well item that grants one charge kind. */
+export function stygianWellChargeItemKey(
+  catalog: Catalog,
+  charge: Extract<StygianWellGrant, { readonly kind: 'charge' }>['charge'],
+): string | undefined {
+  return wellOptions(catalog).find((option) => {
+    const grant = option.stygianWell?.grant;
+    return grant?.kind === 'charge' && grant.charge === charge;
+  })?.key;
+}
+
 export function stygianWellOfferEffect(grant: StygianWellGrant): StygianWellEffect {
   switch (grant.kind) {
     case 'charge':

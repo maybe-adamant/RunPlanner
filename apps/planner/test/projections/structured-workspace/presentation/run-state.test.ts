@@ -7,125 +7,398 @@ import {
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
-import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly, type RunStateSnapshot } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import type {
+  WorkspaceRunStateRow,
+  WorkspaceRunStateSection,
+} from '@planner/projections/structured-workspace';
 import { presentRunState } from '@planner/projections/structured-workspace/presentation/run-state';
 
+const equippedTrait = (
+  traitKey: string,
+  fields: Partial<RunStateSnapshot['traits']['equippedTraits'][string]> = {},
+) => ({
+  traitKey,
+  giverKey: 'test',
+  providerKind: 'olympian' as const,
+  sourceRole: 'test',
+  ...fields,
+});
+
+const base: RunStateSnapshot = {
+  owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
+    kind: 'occurrence',
+    occurrenceId: createOccurrenceId('x'),
+  }),
+  historySequence: 1,
+  biomeKey: 'G',
+  checkpoint: 'beforeTargetGeneration',
+  godPool: { acquiredSourceKeys: [], effectiveSourceKeys: [], capNarrowed: false },
+  traits: {
+    equippedTraits: {},
+    equippedSlots: {},
+    elementCounts: { Aether: 0, Air: 0, Earth: 0, Fire: 0, Water: 0 },
+    godBoonRarityCounts: {},
+    upgradableTraitCount: 0,
+    bannedTraitKeys: [],
+    chaos: { active: [], matured: [] },
+  },
+  counters: {
+    biomeDepthCache: 0,
+    biomeEncounterDepth: 0,
+    routeEncounterDepth: 0,
+    roomHistoryOrdinal: 0,
+    runDepthCache: 1,
+    enteredBiomes: 1,
+    upgradableTraitCount: 0,
+  },
+  arcanaFear: {
+    arcana: { active: [], artificerUses: [] },
+    fear: {
+      configuredRanks: {},
+      configuredTotal: 0,
+      disabledVowKeys: [],
+      effectiveRanks: {},
+      forfeitConsumed: false,
+    },
+    events: [],
+  } as unknown as RunStateSnapshot['arcanaFear'],
+  keepsakes: {
+    currentKey: null,
+    history: [],
+    removedKeys: [],
+    fatedStatus: 'Unknown',
+    olympianSources: [],
+    nextOlympianAcquisitionOrder: 0,
+    experimentalHammers: [],
+  },
+  rewardPriorities: [],
+  pendingHermesShrineDeliveries: {},
+  stygianWell: {
+    sparkUses: 0,
+    yarnUses: 0,
+    hymnUses: 0,
+    extendedUses: 0,
+    timedInstances: [],
+    directPurchases: {},
+  },
+  stygianWellLegality: {
+    sparkUses: 0,
+    yarnUses: 0,
+    hymnUses: 0,
+    discountUses: [],
+    emptySlotUses: [],
+    extendedUses: 0,
+  },
+  hexProgress: { bankedPathPoints: 0, investedNodeKeys: [] },
+  hexObserver: {
+    talentKeys: [],
+    closed: false,
+    bankedPathPoints: 0,
+    investedPathPoints: 0,
+    olympianTalentInvested: false,
+  },
+  forfeitStatus: 'inactive',
+  resourceGains: {},
+  maxStats: {
+    maxHealth: 30,
+    maxMana: 50,
+    flat: [{ source: { kind: 'base' }, maxHealth: 30, maxMana: 50 }],
+    multipliers: { maxHealth: 1, maxMana: 1 },
+    convertedHealth: 0,
+  },
+  effects: {
+    keepsakes: [],
+    keepsakeHistory: [],
+    traitStates: {},
+    traitEntries: [],
+    arcanaClocks: {},
+    stygianWell: [],
+    chaosCurses: [],
+    hermesDeliveries: [],
+    hexTalents: [],
+  },
+  rewardStoreController: {
+    enteredStoreCount: 7,
+    enteredMetaStoreCount: 2,
+    currentMetaRatio: 2 / 7,
+    targetMetaRewardsRatio: 0.3,
+  },
+  bags: [],
+};
+
+function present(patch: Partial<RunStateSnapshot> = {}) {
+  return presentRunState(catalog, { ...base, ...patch }, 'Before Combat 12');
+}
+
+function withEffects(effects: Partial<RunStateSnapshot['effects']>) {
+  return { effects: { ...base.effects, ...effects } };
+}
+
+/** Each section as `heading: name (bracket) [tag] | right` lines. */
+function lines(sections: readonly WorkspaceRunStateSection[]) {
+  const text = (row: WorkspaceRunStateRow) =>
+    [
+      row.name,
+      row.bracket,
+      row.tag === undefined ? undefined : `[${row.tag}]`,
+      row.right === undefined ? undefined : `| ${row.right}`,
+    ]
+      .filter((part) => part !== undefined)
+      .join(' ');
+  return Object.fromEntries(
+    sections.map((section) => [section.heading ?? section.key, section.rows.map(text)]),
+  );
+}
+
 describe('Run State presentation', () => {
-  it('joins catalog labels while retaining technical store and reward keys', () => {
-    const snapshot = {
-      owner: createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
-        kind: 'occurrence',
-        occurrenceId: 'x' as never,
-      }),
-      historySequence: 1,
-      checkpoint: 'beforeTargetGeneration',
-      godPool: {
-        acquiredSourceKeys: ['ApolloUpgrade'],
-        effectiveSourceKeys: ['ApolloUpgrade'],
-        capNarrowed: true,
-      },
+  it('names the moment, and returns every tab with empty sections dropped', () => {
+    const state = present();
+    expect(state.moment).toBe('Before Combat 12 · Oceanus');
+    expect(state.loadout).toEqual([]);
+    expect(state.overview).toEqual([]);
+    expect(state.effects).toEqual([]);
+    expect(state.keepsakes).toEqual([]);
+    expect(state.arcana).toEqual([]);
+    expect(state.fear).toEqual([]);
+    expect(state.moreInfo.sections.map((section) => section.heading)).toEqual([
+      'Reward Store Ratio',
+      'Counters',
+    ]);
+  });
+
+  it('opens the Overview with the loadout and orders keepsake, elements, traits and Hex', () => {
+    const state = present({
       traits: {
+        ...base.traits,
         equippedTraits: {
-          ApolloWeaponBoon: {
-            giverKey: 'Apollo',
-            providerKind: 'olympian',
-            rarity: 'Rare',
-            level: 3,
-            sourceRole: 'main',
-            traitKey: 'ApolloWeaponBoon',
-          },
-          AllElementalBoon: {
-            giverKey: 'Hera',
-            providerKind: 'olympian',
-            rarity: 'Legendary',
-            sourceRole: 'source',
-            traitKey: 'AllElementalBoon',
-          },
-          ElementalDamageBoon: {
-            giverKey: 'Hephaestus',
-            providerKind: 'olympian',
-            level: 1,
-            sourceRole: 'directTraitGrant',
-            traitKey: 'ElementalDamageBoon',
-          },
-          InfernalContractBoon: {
-            giverKey: 'InfernalContractBoon',
-            providerKind: 'npc',
-            sourceRole: 'directTraitGrant',
-            traitKey: 'InfernalContractBoon',
-          },
-          RestockBoon: {
-            giverKey: 'Hermes',
-            providerKind: 'hermes',
-            rarity: 'Epic',
-            sourceRole: 'self',
-            traitKey: 'RestockBoon',
-          },
-          EchoRepeatKeepsakeBoon: {
-            traitKey: 'EchoRepeatKeepsakeBoon',
-            giverKey: 'Echo',
-            providerKind: 'npc',
-            sourceRole: 'selection',
-            acquisitionIdentity: 'echo-gift-test',
-            echoRepeatedKeepsakeKey: 'GoldifyKeepsake',
-            echoKeepsakeReplayCount: 2,
-          },
-          StaffDoubleAttackTrait: {
-            giverKey: 'WeaponUpgrade',
-            hammerRank: 'RankII',
+          ApolloWeaponBoon: equippedTrait('ApolloWeaponBoon', { rarity: 'Rare', level: 3 }),
+          BoonGrowthBoon: equippedTrait('BoonGrowthBoon', { rarity: 'Common', level: 1 }),
+          ElementalHealthBoon: equippedTrait('ElementalHealthBoon', { rarity: 'Common' }),
+          ElementalDamageFloorBoon: equippedTrait('ElementalDamageFloorBoon', { rarity: 'Rare' }),
+          StaffDoubleAttackTrait: equippedTrait('StaffDoubleAttackTrait', {
             providerKind: 'hammer',
-            sourceRole: 'main',
-            traitKey: 'StaffDoubleAttackTrait',
-          },
-          SpellMoonBeamTrait: {
-            giverKey: 'SpellDrop',
-            providerKind: 'spell',
-            sourceRole: 'directTraitGrant',
-            traitKey: 'SpellMoonBeamTrait',
-          },
+            hammerRank: 'RankII',
+          }),
+          StaffLongAttackTrait: equippedTrait('StaffLongAttackTrait', {
+            providerKind: 'hammer',
+            hammerRank: 'RankI',
+          }),
+          EchoDoubleShop: equippedTrait('EchoDoubleShop', { providerKind: 'npc' }),
+          SpellMoonBeamTrait: equippedTrait('SpellMoonBeamTrait', { providerKind: 'spell' }),
         },
         equippedSlots: {
-          Melee: {
-            giverKey: 'Apollo',
-            providerKind: 'olympian',
+          Melee: equippedTrait('ApolloWeaponBoon', { rarity: 'Rare', level: 3 }),
+          Spell: equippedTrait('SpellMoonBeamTrait', { providerKind: 'spell' }),
+        },
+        elementCounts: { Aether: 0, Air: 5, Earth: 0, Fire: 1, Water: 4 },
+      },
+      hexProgress: {
+        spellTraitKey: 'SpellMoonBeamTrait',
+        bankedPathPoints: 0,
+        investedNodeKeys: [],
+      },
+      ...withEffects({
+        aspect: { aspectKey: 'BaseStaffAspect', rank: 6 },
+        familiarKey: 'FrogFamiliar',
+        keepsakes: [
+          {
+            keepsakeKey: 'RarifyKeepsake',
+            rank: 'Epic',
+            state: { kind: 'clock', clock: { unit: 'charges', direction: 'remaining', value: 1 } },
+          },
+          {
+            keepsakeKey: 'DecayingBoostKeepsake',
+            state: { kind: 'bonus', fraction: 0.2499999999999998 },
+          },
+          { keepsakeKey: 'EscalatingKeepsake', rank: 'Rare' },
+        ],
+        traitStates: {
+          BoonGrowthBoon: {
+            kind: 'clock',
+            clock: { unit: 'encounters', direction: 'progress', value: 4, total: 6 },
+          },
+          ElementalHealthBoon: { kind: 'elementCount', element: 'Water', count: 4 },
+          ElementalDamageFloorBoon: { kind: 'status', status: 'active' },
+          StaffLongAttackTrait: {
+            kind: 'clock',
+            clock: { unit: 'encounters', direction: 'remaining', value: 1 },
+          },
+          EchoDoubleShop: { kind: 'status', status: 'pending' },
+        },
+        traitEntries: [
+          { kind: 'trait', traitKey: 'BoonGrowthBoon' },
+          {
+            kind: 'chaosBlessing',
+            acquisitionIdentity: 'b',
+            blessingKey: 'ChaosHealthBlessing',
+            rarity: 'Epic',
+          },
+          { kind: 'trait', traitKey: 'ElementalHealthBoon' },
+          { kind: 'trait', traitKey: 'ElementalDamageFloorBoon' },
+          { kind: 'trait', traitKey: 'StaffDoubleAttackTrait' },
+          { kind: 'trait', traitKey: 'StaffLongAttackTrait' },
+          { kind: 'trait', traitKey: 'EchoDoubleShop' },
+          { kind: 'consumedTrait', traitKey: 'EchoDoubleShop', acquisitionIdentity: 'old' },
+        ],
+        hexTalents: [{ talentKey: 'UnknownTalent', level: 2 }],
+      }),
+    });
+    expect(lines([{ key: 'loadout', rows: state.loadout }])).toEqual({
+      loadout: ['Aspect of Melinoë | Rank VI', 'Frinos'],
+    });
+    expect(state.overview.map((section) => section.heading)).toEqual([
+      'Keepsake',
+      'Elements',
+      'Traits',
+      'Hex',
+    ]);
+    expect(lines(state.overview)).toEqual({
+      Keepsake: ['Calling Card (1 charge) | ★★★', 'Lion Fang (+25%)', 'Discordant Bell | ★★'],
+      Elements: ['Air 5 · Water 4 · Fire 1'],
+      Traits: [
+        'Nova Strike | Rare · Lv. 3',
+        'Steady Growth (4/6 encounters) | Common · Lv. 1',
+        'Soul | Epic',
+        'Water Fitness (Water 4) | Common',
+        'Air Quality (Active) | Rare',
+        'Wicked Thrasher | Rank II',
+        `${catalog.traits.byKey.StaffLongAttackTrait!.label} (1 encounter)`,
+        'Gold Gold Gold (Pending)',
+        'Gold Gold Gold (Consumed)',
+      ],
+      Hex: ['Sky Fall', 'UnknownTalent | Lv. 2'],
+    });
+  });
+
+  it('groups Well, Shrine and Chaos effects with remaining-only countdowns', () => {
+    const state = present({
+      ...withEffects({
+        stygianWell: [
+          {
+            itemKey: 'TemporaryImprovedSecondaryTrait',
+            clock: { unit: 'encounters', direction: 'remaining', value: 3 },
+          },
+          {
+            itemKey: 'TemporaryDoorHealTrait',
+            clock: { unit: 'guardians', direction: 'remaining', value: 1 },
+          },
+          {
+            itemKey: 'TemporaryBoonRarityTrait',
+            clock: { unit: 'charges', direction: 'remaining', value: 1 },
+          },
+          {
+            itemKey: 'ExtendedShopTrait',
+            clock: { unit: 'charges', direction: 'remaining', value: 2 },
+          },
+        ],
+        hermesDeliveries: [
+          {
+            entryKey: 'e',
+            rewardType: 'SpellDrop',
+            clock: { unit: 'encounters', direction: 'remaining', value: 2 },
+          },
+        ],
+        chaosCurses: [
+          {
+            curseKey: 'ChaosHiddenRoomRewardCurse',
+            blessingKey: 'ChaosHealthBlessing',
             rarity: 'Rare',
-            level: 3,
-            sourceRole: 'main',
-            traitKey: 'ApolloWeaponBoon',
+            clock: { unit: 'boons', direction: 'remaining', value: 1 },
           },
-          Spell: {
-            giverKey: 'SpellDrop',
-            providerKind: 'spell',
-            sourceRole: 'directTraitGrant',
-            traitKey: 'SpellMoonBeamTrait',
+        ],
+      }),
+    });
+    expect(lines(state.effects)).toEqual({
+      Well: [
+        'Chimaera Jerky (3 encounters)',
+        'HydraLite (1 guardian)',
+        'Yarn of Ariadne (1 charge)',
+        'Archaic Seal (2 charges)',
+      ],
+      Shrine: ["Selene's Gift (2 encounters)"],
+      Chaos: ['Enshrouded → Soul (1 boon) | Rare'],
+    });
+    expect(
+      lines(
+        present(
+          withEffects({
+            hermesDeliveries: [
+              {
+                entryKey: 'e',
+                rewardType: 'SpellDrop',
+                clock: { unit: 'encounters', direction: 'remaining', value: 1 },
+              },
+            ],
+          }),
+        ).effects,
+      ),
+    ).toEqual({ Shrine: ["Selene's Gift (1 encounter)"] });
+  });
+
+  it('formats each biome keepsake chain, kept keepsakes and known Fated status', () => {
+    const history = (fatedStatus: RunStateSnapshot['keepsakes']['fatedStatus']) =>
+      lines(
+        present({
+          keepsakes: {
+            ...base.keepsakes,
+            retained: [{ key: 'EscalatingKeepsake', rank: 'Rare' }],
+            fatedStatus,
           },
-        },
-        elementCounts: { Aether: 0, Air: 0, Earth: 0, Fire: 0, Water: 0 },
-        godBoonRarityCounts: {},
-        upgradableTraitCount: 1,
-        bannedTraitKeys: ['ApolloSpecialBoon'],
-        properUpbringingActive: true,
-        echoShopDuplicateStatus: 'pending',
-        steadyGrowth: { ApolloWeaponBoon: { progress: 2, interval: 6 } },
-        chaos: { active: [], matured: [] },
-      },
-      counters: {
-        biomeDepthCache: 0,
-        biomeEncounterDepth: 0,
-        routeEncounterDepth: 0,
-        roomHistoryOrdinal: 0,
-        runDepthCache: 0,
-        enteredBiomes: 0,
-        upgradableTraitCount: 0,
-      },
+          ...withEffects({
+            keepsakeHistory: [
+              { biomeKey: 'F', keepsakeKeys: ['RarifyKeepsake', 'ManaOverTimeRefundKeepsake'] },
+              { biomeKey: 'G', keepsakeKeys: ['ManaOverTimeRefundKeepsake'] },
+            ],
+          }),
+        }).keepsakes,
+      );
+    expect(history('Unknown')).toEqual({
+      history: ['Erebus · Calling Card → Silver Wheel', 'Oceanus · Silver Wheel'],
+      Kept: ['Discordant Bell | ★★'],
+    });
+    expect(history('Fated').fated).toEqual(['Fated']);
+  });
+
+  it('shows equipped Arcana with clocks and ranks, then temporary cards and Barren', () => {
+    const state = present({
       arcanaFear: {
+        ...base.arcanaFear,
         arcana: {
-          active: [{ key: 'ChanneledCast', origin: 'temporary', rarity: 'Heroic' }],
-          artificerUses: [],
+          ...base.arcanaFear.arcana,
+          active: [
+            { key: 'MaxHealthPerRoom', origin: 'automatic', rarity: 'Epic' },
+            { key: 'MetaToRunUpgrade', origin: 'equipped', rarity: 'Common' },
+            { key: 'ChanneledCast', origin: 'temporary', rarity: 'Heroic' },
+          ],
         },
+      } as unknown as RunStateSnapshot['arcanaFear'],
+      ...withEffects({
+        arcanaClocks: {
+          MaxHealthPerRoom: { unit: 'rooms', direction: 'progress', value: 4, total: 5 },
+          MetaToRunUpgrade: { unit: 'charges', direction: 'remaining', value: 1 },
+        },
+        arcanaBarren: { unit: 'encounters', direction: 'remaining', value: 2 },
+      }),
+    });
+    expect(lines(state.arcana)).toEqual({
+      equipped: [
+        'The Centaur (4/5 rooms) [Automatic] | Rank III',
+        'The Artificer (1 charge) | Rank I',
+      ],
+      Temporary: ['The Sorceress | Rank IV'],
+      'Run effects': ['Barren (2 encounters)'],
+    });
+  });
+
+  it('shows active vows with ranks, then Forfeit, Circe-disabled vows and banned traits', () => {
+    const state = present({
+      forfeitStatus: 'consumed',
+      arcanaFear: {
+        ...base.arcanaFear,
         fear: {
           configuredRanks: { EnemyDamageShrineUpgrade: 2, EnemyHealthShrineUpgrade: 1 },
           configuredTotal: 4,
@@ -133,107 +406,30 @@ describe('Run State presentation', () => {
           effectiveRanks: { EnemyDamageShrineUpgrade: 0, EnemyHealthShrineUpgrade: 1 },
           forfeitConsumed: true,
         },
-        events: [],
-      },
-      keepsakes: {
-        currentKey: 'GoldifyKeepsake',
-        history: [
-          { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
-          { key: 'GoldifyKeepsake', kind: 'replace', biomeNumber: 2 },
-        ],
-        removedKeys: ['ManaOverTimeRefundKeepsake'],
-        fatedStatus: 'Unknown',
-        olympianSources: [
-          {
-            keepsakeKey: 'ForceZeusBoonKeepsake',
-            providerKey: 'Zeus',
-            origin: 'echo',
-            acquisitionOrder: 4,
-            remainingForceUses: 1,
-            remainingRarificationUses: 0,
-            maximumSourceRarityLevel: 1,
-          },
-        ],
-        nextOlympianAcquisitionOrder: 5,
-        callingCard: { remainingCharges: 0 },
-        experimentalHammers: [
-          {
-            traitKey: 'StaffDoubleAttackTrait',
-            remainingUses: 7,
-            acquisitionIdentity: 'experimental-hammer-test',
-            active: true,
-          },
-        ],
-        figLeaf: { remainingUses: 2, activatedThisBiome: true },
-        gorgon: { status: 'pending' as const, rarityLevel: 3 as const },
-        phial: { status: 'pending' as const },
-        stone: { status: 'pending' as const, origin: 'echo' as const, rank: 'Common' as const },
-        transcendentEmbryo: {
-          origin: 'echo' as const,
-          rarity: 'Heroic' as const,
-          progress: 7,
-          markedBlessingKey: 'ChaosElementalBlessing',
-          markedBlessingValues: {},
-          markedBlessingAcquisitionIdentity: 'embryo-run-state',
-        },
-      },
-      rewardPriorities: ['Boon', 'Boon'],
-      pendingHermesShrineDeliveries: {},
-      stygianWell: {
-        sparkUses: 0,
-        yarnUses: 0,
-        hymnUses: 0,
-        extendedUses: 0,
-        timedInstances: [],
-        directPurchases: {},
-      },
-      stygianWellLegality: {
-        sparkUses: 0,
-        yarnUses: 0,
-        hymnUses: 0,
-        discountUses: [],
-        emptySlotUses: [],
-        extendedUses: 0,
+      } as unknown as RunStateSnapshot['arcanaFear'],
+      traits: { ...base.traits, bannedTraitKeys: ['ApolloSpecialBoon'] },
+    });
+    expect(lines(state.fear)).toEqual({
+      vows: ['Vow of Grit | Rank I'],
+      Effects: ['Forfeit | Used'],
+      'Disabled by Circe': ['Vow of Pain | Rank II'],
+      Banned: ['Nova Flourish'],
+    });
+  });
+
+  it('keeps More Info details: gods, Hex, bags and the Reward Store ratio', () => {
+    const state = present({
+      godPool: { ...base.godPool, acquiredSourceKeys: ['ApolloUpgrade'] },
+      traits: {
+        ...base.traits,
+        equippedSlots: { Spell: equippedTrait('SpellMoonBeamTrait', { providerKind: 'spell' }) },
       },
       hexProgress: {
         spellTraitKey: 'SpellMoonBeamTrait',
         tree: { layoutKey: 'Maze', nodes: {} },
         godSentAdded: true,
-        talentDropsClosed: false,
         bankedPathPoints: 2,
-        investedNodeKeys: ['1:3', '2:2', '2:3', '2:4', '3:2'],
-      },
-      hexObserver: {
-        spellTraitKey: 'SpellMoonBeamTrait',
-        layoutKey: 'Maze',
-        talentKeys: [],
-        closed: false,
-        bankedPathPoints: 2,
-        investedPathPoints: 5,
-        olympianTalentInvested: false,
-      },
-      forfeitStatus: 'consumed',
-      resourceGains: {},
-      maxStats: {
-        maxHealth: 92,
-        maxMana: 150,
-        flat: [
-          { source: { kind: 'base' }, maxHealth: 30, maxMana: 50 },
-          { source: { kind: 'aspect', key: 'AxeRecoveryAspect' }, maxHealth: 50.1, maxMana: 0 },
-          {
-            source: { kind: 'keepsake', key: 'ManaOverTimeRefundKeepsake' },
-            maxHealth: 0,
-            maxMana: 100,
-          },
-        ],
-        multipliers: { maxHealth: 1.15, maxMana: 1 },
-        convertedHealth: 0,
-      },
-      rewardStoreController: {
-        enteredStoreCount: 7,
-        enteredMetaStoreCount: 2,
-        currentMetaRatio: 2 / 7,
-        targetMetaRewardsRatio: 0.3,
+        investedNodeKeys: ['1:3', '2:2'],
       },
       bags: [
         {
@@ -254,386 +450,112 @@ describe('Run State presentation', () => {
           ],
         },
       ],
-    } as const;
-    const state = presentRunState(catalog, snapshot);
-    expect(state.maxStats).toEqual({
-      maxHealth: 92,
-      maxMagick: 150,
-      sources: [
-        { key: 'base', label: 'Base', maxHealth: '+30', maxMagick: '+50' },
-        { key: 'aspect:AxeRecoveryAspect', label: 'Aspect of Melinoë', maxHealth: '+50.1' },
-        { key: 'keepsake:ManaOverTimeRefundKeepsake', label: 'Silver Wheel', maxMagick: '+100' },
+    });
+    expect(lines(state.moreInfo.sections)).toEqual({
+      'Gods in pool': ['Apollo'],
+      Hex: [
+        'Layout | Maze',
+        'Capacity | 22 → 24',
+        'God Sent | Added',
+        'Path points banked | 2',
+        'Path points invested | 2',
       ],
-      maxHealthMultiplier: '×1.15',
+      'Reward Store Ratio': [
+        'Entered stores | 7 entered, 2 Minor Reward',
+        'Current ratio | 0.286',
+        'Biome target | 0.300',
+      ],
+      Counters: [
+        'biomeDepthCache | 0',
+        'biomeEncounterDepth | 0',
+        'routeEncounterDepth | 0',
+        'roomHistoryOrdinal | 0',
+        'runDepthCache | 1',
+        'enteredBiomes | 1',
+        'upgradableTraitCount | 0',
+      ],
     });
     expect(
-      presentRunState(catalog, {
-        ...snapshot,
-        maxStats: {
-          ...snapshot.maxStats,
-          maxHealth: 30,
-          maxHealthCap: { maxHealth: 30, keepsakeKey: 'LowHealthCritKeepsake' },
-        },
-      }).maxStats.maxHealthNote,
-    ).toBe('Fixed at 30 by White Antler');
-    expect(state.rewardStoreController).toEqual({
-      enteredLabel: '7 entered, 2 Minor Reward',
-      ratioLabel: '0.286',
-      targetLabel: '0.300',
+      lines(
+        present({ hexProgress: { bankedPathPoints: 5, investedNodeKeys: [] } }).moreInfo.sections,
+      ),
+    ).toMatchObject({ Hex: ['Path points banked | 5', 'Path points invested | 0'] });
+    expect(state.moreInfo.bags[0]).toMatchObject({
+      label: 'Major Reward',
+      technicalKey: 'RunProgress',
+      rows: [
+        { name: 'Remaining', right: 'x1' },
+        { name: 'Eligible', right: 'x1' },
+        { name: 'Ineligible', right: 'x0' },
+      ],
+      eligible: {
+        total: 'x1',
+        entries: [
+          {
+            label: 'Boon',
+            technicalKey: 'Boon',
+            conditions: [
+              {
+                technicalKey: 'counterRange',
+                explanation: 'Requires biomeDepthCache at least 2.',
+              },
+            ],
+          },
+        ],
+      },
     });
-    const unrolled = (bankableStoreKeys: readonly string[]) =>
-      presentRunState(catalog, {
-        ...snapshot,
+    const target = (bankableStoreKeys: readonly string[]) =>
+      present({
         rewardStoreController: {
           enteredStoreCount: 0,
           enteredMetaStoreCount: 0,
           currentMetaRatio: null,
           bankableStoreKeys,
         },
-      }).rewardStoreController;
-    expect(unrolled([])).toEqual({
-      enteredLabel: '0 entered, 0 Minor Reward',
-      ratioLabel: 'None counted yet',
-      targetLabel: 'This biome ignores Reward Store.',
-    });
-    expect(unrolled(['RunProgress']).targetLabel).toBe('This biome rolls only Major Reward.');
-    expect(unrolled(['TartarusRewards']).targetLabel).toBe(
-      'This biome rolls only Tartarus Reward.',
-    );
-    expect(unrolled(['RunProgress', 'MetaProgress']).targetLabel).toBe(
+      }).moreInfo.sections.find((section) => section.key === 'reward-store')!.rows;
+    expect(lines([{ key: 'r', rows: target([]) }]).r).toEqual([
+      'Entered stores | 0 entered, 0 Minor Reward',
+      'Current ratio | None counted yet',
+      'Biome target | This biome ignores Reward Store.',
+    ]);
+    expect(target(['TartarusRewards'])[2]?.right).toBe('This biome rolls only Tartarus Reward.');
+    expect(target(['RunProgress', 'MetaProgress'])[2]?.right).toBe(
       'This biome rolls no base store.',
     );
-    expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
-    expect(state.keepsakes.pendingRewardPriorities).toEqual(['Boon', 'Boon']);
-    expect(state.hexProgress).toEqual({
-      baseSpellLabel: 'Sky Fall',
-      layoutLabel: 'Maze',
-      baseCapacity: 22,
-      effectiveCapacity: 24,
-      godSentLabel: 'Added',
-      pathOfStarsLabel: 'Eligible',
-      bankedPathPoints: 2,
-      investedPathPoints: 5,
-    });
-    const withoutHex = presentRunState(catalog, {
-      ...snapshot,
-      traits: { ...snapshot.traits, equippedSlots: {}, equippedTraits: {} },
-      hexProgress: { bankedPathPoints: 5, investedNodeKeys: [] },
-    }).hexProgress;
-    expect(withoutHex).toMatchObject({
-      godSentLabel: 'No Hex',
-      pathOfStarsLabel: 'Ineligible — no Hex',
-      bankedPathPoints: 5,
-    });
-    for (const godSentAdded of [false, true]) {
-      for (const talentDropsClosed of [false, true]) {
-        const projected = presentRunState(catalog, {
-          ...snapshot,
-          hexProgress: {
-            ...snapshot.hexProgress,
-            godSentAdded,
-            talentDropsClosed,
-            investedNodeKeys: Array.from(
-              { length: talentDropsClosed ? (godSentAdded ? 24 : 22) : 5 },
-              (_, index) => `node${index}`,
-            ),
+  });
+
+  it('formats max stats with signed sources, multipliers and a cap note', () => {
+    const state = present({
+      maxStats: {
+        maxHealth: 30,
+        maxMana: 150,
+        flat: [
+          { source: { kind: 'base' }, maxHealth: 30, maxMana: 50 },
+          { source: { kind: 'aspect', key: 'BaseStaffAspect' }, maxHealth: 50.1, maxMana: 0 },
+          {
+            source: { kind: 'keepsake', key: 'ManaOverTimeRefundKeepsake' },
+            maxHealth: 0,
+            maxMana: 100,
           },
-        }).hexProgress;
-        expect(projected.godSentLabel).toBe(godSentAdded ? 'Added' : 'Not added');
-        expect(projected.pathOfStarsLabel).toBe(
-          talentDropsClosed ? 'Ineligible — tree full' : 'Eligible',
-        );
-      }
-    }
-    expect(state.keepsakes.olympianSources).toEqual([
-      expect.objectContaining({
-        providerKey: 'Zeus',
-        origin: 'echo',
-        forceRemaining: 1,
-        rarificationRemaining: 0,
-        maximumSourceRarityLevel: 1,
-      }),
+        ],
+        multipliers: { maxHealth: 1.15, maxMana: 1 },
+        convertedHealth: 0,
+        maxHealthCap: { maxHealth: 30, keepsakeKey: 'LowHealthCritKeepsake' },
+      },
+    });
+    expect(lines([{ key: 'rows', rows: state.maxStats.rows }]).rows).toEqual([
+      'Max Health (Fixed by White Antler) | 30',
+      'Max Magick | 150',
     ]);
-    expect(state.keepsakes.transcendentEmbryo).toEqual({
-      origin: 'echo',
-      rarity: 'Heroic',
-      progress: 7,
-      interval: 8,
-      markedBlessingLabel: 'Creation',
-      markedBlessingAcquisitionIdentity: 'embryo-run-state',
-    });
-    expect(state.bags[0]).toMatchObject({ label: 'Major Reward', technicalKey: 'RunProgress' });
-    expect(state.bags[0]?.eligible.entries[0]).toMatchObject({
-      label: 'Boon',
-      technicalKey: 'Boon',
-    });
-    expect(state.bags[0]?.eligible).toMatchObject({ total: 'x1' });
-    expect(state.bags[0]?.eligible.entries[0]?.conditions[0]).toMatchObject({
-      technicalKey: 'counterRange',
-      explanation: 'Requires biomeDepthCache at least 2.',
-    });
-    expect(state.godPool).toMatchObject({
-      inPool: [{ key: 'ApolloUpgrade', label: 'Apollo' }],
-    });
-    expect(state.arcana).toEqual([
-      { key: 'ChanneledCast', label: 'The Sorceress', origin: 'temporary', rarity: 'Heroic' },
-    ]);
-    expect(state.fear.forfeitStatus).toBe('consumed');
-    expect(state.fear).toMatchObject({
-      configuredTotal: 4,
-      active: [{ key: 'EnemyHealthShrineUpgrade', label: 'Vow of Grit', rank: 1 }],
-      disabled: [{ key: 'EnemyDamageShrineUpgrade', label: 'Vow of Pain', rank: 2 }],
-    });
-    expect(state.keepsakes).toMatchObject({
-      currentLabel: 'Time Piece',
-      chronology: [
-        { biomeNumber: 1, label: 'Silver Wheel' },
-        { biomeNumber: 2, label: 'Time Piece' },
-      ],
-      callingCardRemainingCharges: 0,
-      echoGift: {
-        capturedKeepsakeLabel: 'Time Piece',
-        replayCount: 2,
-        status: 'everyBiome',
-      },
-      experimentalHammers: [
-        {
-          status: 'active',
-          traitLabel: 'Wicked Thrasher',
-          remainingUses: 7,
-          acquisitionIdentity: 'experimental-hammer-test',
-        },
-      ],
-      figLeafRemainingUses: 2,
-      figLeafActivatedThisBiome: true,
-      gorgonStatus: 'pending',
-      gorgonRarityLevel: 3,
-      phialStatus: 'pending',
-      stoneStatus: 'pending',
-      stoneOrigin: 'echo',
-      stoneRank: 'Common',
-    });
-    expect(state.traits).toMatchObject({
-      properUpbringingActive: true,
-      echoShopDuplicateStatus: 'pending',
-      coreSlots: [
-        {
-          label: 'Attack',
-          slotKey: 'Melee',
-          trait: {
-            label: 'Nova Strike',
-            traitKey: 'ApolloWeaponBoon',
-            rarity: 'Rare',
-            level: 3,
-            steadyGrowthProgress: 2,
-            steadyGrowthInterval: 6,
-          },
-        },
-        { label: 'Special', slotKey: 'Secondary' },
-        { label: 'Cast', slotKey: 'Ranged' },
-        { label: 'Sprint', slotKey: 'Rush' },
-        { label: 'Magick', slotKey: 'Mana' },
-        {
-          label: 'Hex',
-          slotKey: 'Spell',
-          trait: { label: 'Sky Fall', traitKey: 'SpellMoonBeamTrait' },
-        },
-      ],
-      other: [
-        {
-          label: 'All Together',
-          rarity: 'Legendary',
-          traitKey: 'AllElementalBoon',
-        },
-        {
-          label: 'Martial Art',
-          level: 1,
-          traitKey: 'ElementalDamageBoon',
-        },
-        {
-          label: 'Champion of Elysium',
-          traitKey: 'InfernalContractBoon',
-        },
-        {
-          label: 'Travel Deal',
-          rarity: 'Epic',
-          traitKey: 'RestockBoon',
-        },
-        {
-          label: 'Gift Gift Gift',
-          traitKey: 'EchoRepeatKeepsakeBoon',
-        },
-        {
-          hammerRank: 'RankII',
-          label: 'Wicked Thrasher',
-          traitKey: 'StaffDoubleAttackTrait',
-        },
-      ],
-    });
-    expect(
-      presentRunState(catalog, {
-        ...snapshot,
-        traits: { ...snapshot.traits, echoShopDuplicateStatus: 'consumed' },
-      }).traits.echoShopDuplicateStatus,
-    ).toBe('consumed');
-    for (const status of ['pending', 'consumed', 'expired'] as const) {
-      const projected = presentRunState(catalog, {
-        ...snapshot,
-        keepsakes: {
-          ...snapshot.keepsakes,
-          gorgon: status === 'pending' ? { status, rarityLevel: 3 } : { status },
-        },
-      });
-      expect(projected.keepsakes.gorgonStatus).toBe(status);
-      expect(projected.keepsakes.gorgonRarityLevel).toBe(status === 'pending' ? 3 : undefined);
-    }
-    expect(
-      presentRunState(catalog, {
-        ...snapshot,
-        keepsakes: { ...snapshot.keepsakes, phial: { status: 'consumed' } },
-      }).keepsakes.phialStatus,
-    ).toBe('consumed');
-    expect(presentRunState(catalog, snapshot).stygianWell).toBeUndefined();
-    const source = {
-      occurrence: createOccurrenceAddress(
-        createBiomeAddress('Underworld', 'F'),
-        createOccurrenceId('well'),
-      ),
-      generationKey: 'initial:healing',
-    } as const;
-    expect(
-      presentRunState(catalog, {
-        ...snapshot,
-        stygianWell: {
-          ...snapshot.stygianWell,
-          yarnUses: 1,
-          extendedUses: 1,
-          timedInstances: [
-            {
-              itemKey: 'TemporaryDoorHealTrait',
-              traitKey: 'TemporaryDoorHealTrait',
-              clock: 'bosses',
-              remainingUses: 2,
-              source,
-            },
-            {
-              itemKey: 'TemporaryMoveSpeedTrait',
-              traitKey: 'TemporaryMoveSpeedTrait',
-              clock: 'encounters',
-              remainingUses: 1,
-              source: { ...source, generationKey: 'initial:secondLeft' },
-            },
-          ],
-          directPurchases: {
-            ExtendedShopTrait: 2,
-            TemporaryDoorHealTrait: 1,
-            TemporaryMoveSpeedTrait: 1,
-            TemporaryBoonRarityTrait: 1,
-          },
-        },
-      }).stygianWell,
-    ).toEqual({
-      timedBuffs: [
-        {
-          key: '0:well:initial:healing',
-          label: 'HydraLite',
-          remainingLabel: '2 Boss encounters remaining',
-        },
-        {
-          key: '1:well:initial:secondLeft',
-          label: 'Ignited Ichor',
-          remainingLabel: '1 encounter remaining',
-        },
-      ],
-      charges: [
-        { label: 'Yarn of Ariadne', count: 1 },
-        { label: 'Archaic Seal', count: 1 },
-      ],
-      purchases: [
-        { label: 'Archaic Seal', count: 2 },
-        { label: 'HydraLite', count: 1 },
-        { label: 'Ignited Ichor', count: 1 },
-        { label: 'Yarn of Ariadne', count: 1 },
-      ],
-    });
-    const growing = presentRunState(catalog, {
-      ...snapshot,
-      arcanaFear: {
-        ...snapshot.arcanaFear,
-        arcana: {
-          ...snapshot.arcanaFear.arcana,
-          active: [{ key: 'MaxHealthPerRoom', origin: 'automatic', rarity: 'Epic' }],
-          roomEntryGrowth: {
-            MaxHealthPerRoom: { progress: 3, grants: 2, maxHealthGranted: 11, maxManaGranted: 11 },
-          },
-        },
-      },
-      keepsakes: {
-        ...snapshot.keepsakes,
-        discordantBell: { rank: 'Epic', multiplier: 1.0299999999999998 },
-        lionFang: { origin: 'ordinary', multiplier: 1.2499999999999998, expired: false },
-      },
-      traits: {
-        ...snapshot.traits,
-        equippedTraits: {
-          ManaOverTimeCurse: {
-            giverKey: 'Medea',
-            providerKind: 'npc',
-            sourceRole: 'selection',
-            traitKey: 'ManaOverTimeCurse',
-            roomsPerUpgradeGrowth: { progress: 0, grants: 4, maxManaPerGrant: 5 },
-          },
-        },
-      },
-    });
-    expect(growing.keepsakes).toMatchObject({
-      discordantBellBonusLabel: '+3.0%',
-      lionFang: { bonusLabel: '+25%', expired: false, origin: 'ordinary' },
-    });
-    expect(growing.arcana).toEqual([
-      expect.objectContaining({
-        label: 'The Centaur',
-        roomEntryGrowth: {
-          progress: 3,
-          interval: 5,
-          grants: 2,
-          maxHealthGranted: 11,
-          maxManaGranted: 11,
-        },
-      }),
-    ]);
-    const fangGift = (echoKeepsakeReplayCount: number) =>
-      presentRunState(catalog, {
-        ...snapshot,
-        traits: {
-          ...snapshot.traits,
-          equippedTraits: {
-            EchoRepeatKeepsakeBoon: {
-              giverKey: 'Echo',
-              providerKind: 'npc',
-              sourceRole: 'selection',
-              traitKey: 'EchoRepeatKeepsakeBoon',
-              echoRepeatedKeepsakeKey: 'DecayingBoostKeepsake',
-              echoKeepsakeReplayCount,
-            },
-          },
-        },
-      }).keepsakes.echoGift;
-    expect(fangGift(0)).toEqual({
-      capturedKeepsakeLabel: 'Lion Fang',
-      replayCount: 0,
-      status: 'pending',
-    });
-    expect(fangGift(1)).toMatchObject({ replayCount: 1, status: 'oneShotApplied' });
-    expect(growing.traits.other).toEqual([
-      expect.objectContaining({
-        label: 'Traces of Spirit',
-        roomsPerUpgradeGrowth: { progress: 0, interval: 1, grants: 4, maxManaGranted: 20 },
-      }),
+    expect(lines([{ key: 'sources', rows: state.maxStats.sources }]).sources).toEqual([
+      'Base | +30 health · +50 Magick',
+      'Aspect of Melinoë | +50.1 health',
+      'Silver Wheel | +100 Magick',
+      'Multipliers | ×1.15 health',
     ]);
   });
 
-  it('presents a G replacement as effective in H when the F rack was skipped', () => {
+  it('shows a G postboss replacement as the G swap when the F rack was skipped', () => {
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(
@@ -656,9 +578,10 @@ describe('Run State presentation', () => {
         candidate.owner.checkpoint.kind === 'beforeRoomExit',
     );
     if (snapshot === undefined) throw new Error('expected G postboss Run State checkpoint');
-    expect(presentRunState(catalog, snapshot).keepsakes.chronology).toContainEqual({
-      biomeNumber: 3,
-      label: 'Knuckle Bones',
-    });
+    const history = presentRunState(catalog, snapshot, 'Leaving Postboss').keepsakes[0]!.rows;
+    expect(history.map((row) => row.name)).toEqual([
+      'Erebus · Silver Wheel',
+      'Oceanus · Silver Wheel → Knuckle Bones',
+    ]);
   });
 });
