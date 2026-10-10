@@ -66,6 +66,7 @@ function requirementContext(
     currentBatchRoomGameNames: [],
     clockwork: undefined,
     flags: { allSpellInvested: false, pendingSpellDrop: false },
+    equippedAspectKey: 'BaseSuitAspect',
     ...overrides,
   };
 }
@@ -730,6 +731,27 @@ describe('ordered shop transitions', () => {
         : [],
     );
   }
+
+  it('withholds the Hermes shrine Spell Drop from Aspect of Selene but not the World Shop one', () => {
+    const spellDropSupported = (
+      profileKey: 'SurfaceShop' | 'WorldShop',
+      groupKey: string,
+      equippedAspectKey: string,
+    ) => {
+      const profile = rewardKernelCatalog.shops.byKey[profileKey]!;
+      const slotIndex = profile.slots.values.findIndex((slot) => slot.groupKey === groupKey);
+      return findShopIndexedGenerationWitnesses(
+        rewardKernelCatalog,
+        profile,
+        slotIndex,
+        { rewardType: 'SpellDrop' },
+        facts([], { equippedAspectKey }),
+      ).some((witness) => witness.optionKeys[slotIndex] === 'SpellDrop');
+    };
+    expect(spellDropSupported('SurfaceShop', 'Second', 'BaseSuitAspect')).toBe(true);
+    expect(spellDropSupported('SurfaceShop', 'Second', 'SuitHexAspect')).toBe(false);
+    expect(spellDropSupported('WorldShop', 'Minor', 'SuitHexAspect')).toBe(true);
+  });
 
   it.each([1, 3])(
     'applies Dream World Shop inventory independently of I/Q ordinal phase (entered biomes=%d)',

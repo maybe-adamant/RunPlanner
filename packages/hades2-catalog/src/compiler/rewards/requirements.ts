@@ -1,4 +1,8 @@
-import type { CatalogCollection, RouteDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  AspectDeclaration,
+  CatalogCollection,
+  RouteDeclaration,
+} from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
   RewardStoreDeclaration,
@@ -70,6 +74,7 @@ function validateRequirementRewardReferences(
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':
     case 'routeKeyEquals':
+    case 'equippedAspectEquals':
       return;
   }
 }
@@ -154,35 +159,46 @@ export function normalizeStores(
 
 export { normalizeAndValidateRequirement };
 
-function validateRouteRequirementReferences(
+interface LateRequirementReferences {
+  readonly routes: CatalogCollection<RouteDeclaration>;
+  readonly aspects: CatalogCollection<AspectDeclaration>;
+}
+
+function validateLateRequirementReferences(
   requirement: RequirementExpression,
-  routes: CatalogCollection<RouteDeclaration>,
+  references: LateRequirementReferences,
   path: string,
 ): void {
   switch (requirement.kind) {
     case 'all':
     case 'any':
       requirement.requirements.forEach((child, index) =>
-        validateRouteRequirementReferences(child, routes, `${path}.requirements[${index}]`),
+        validateLateRequirementReferences(child, references, `${path}.requirements[${index}]`),
       );
       return;
     case 'not':
-      validateRouteRequirementReferences(requirement.requirement, routes, `${path}.requirement`);
+      validateLateRequirementReferences(requirement.requirement, references, `${path}.requirement`);
       return;
     case 'routeKeyEquals':
-      if (routes.byKey[requirement.routeKey] === undefined)
+      if (references.routes.byKey[requirement.routeKey] === undefined)
         fail(`${path}.routeKey`, `unknown route ${requirement.routeKey}`);
+      return;
+    case 'equippedAspectEquals':
+      if (references.aspects.byKey[requirement.aspectKey] === undefined)
+        fail(`${path}.aspectKey`, `unknown aspect ${requirement.aspectKey}`);
       return;
     default:
       return;
   }
 }
 
-/** Completes route identity references after route normalization breaks the reward/route cycle. */
-export function validateRewardRouteRequirementReferences(
+/** Completes route and aspect references once those collections exist after the reward kernel. */
+export function validateRewardRouteAndAspectReferences(
   rewards: RewardKernelCatalog,
   routes: CatalogCollection<RouteDeclaration>,
+  aspects: CatalogCollection<AspectDeclaration>,
 ): void {
+  const references: LateRequirementReferences = { routes, aspects };
   rewards.stores.values.forEach((store) =>
     store.entries.forEach((entry, index) => {
       entry.routeKeys?.forEach((routeKey, routeIndex) => {
@@ -193,9 +209,9 @@ export function validateRewardRouteRequirementReferences(
           );
       });
       if (entry.requirement !== undefined)
-        validateRouteRequirementReferences(
+        validateLateRequirementReferences(
           entry.requirement,
-          routes,
+          references,
           `stores.${store.key}.entries[${index}].requirement`,
         );
     }),
@@ -235,15 +251,15 @@ export function validateRewardRouteRequirementReferences(
             );
         });
         if (option.requirement !== undefined)
-          validateRouteRequirementReferences(
+          validateLateRequirementReferences(
             option.requirement,
-            routes,
+            references,
             `shops.${shop.key}.groups.${group.key}.options.${option.key}.requirement`,
           );
         if (option.purchaseRequirement !== undefined)
-          validateRouteRequirementReferences(
+          validateLateRequirementReferences(
             option.purchaseRequirement,
-            routes,
+            references,
             `shops.${shop.key}.groups.${group.key}.options.${option.key}.purchaseRequirement`,
           );
       }),

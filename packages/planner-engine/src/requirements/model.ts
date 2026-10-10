@@ -151,4 +151,9 @@ export type RequirementExpression =
       /** Exact saved route identity at the current evaluation frontier. */
       readonly kind: 'routeKeyEquals';
       readonly routeKey: string;
+    }
+  | {
+      /** The run's equipped weapon aspect (`CurrentRun.Hero.TraitDictionary`). */
+      readonly kind: 'equippedAspectEquals';
+      readonly aspectKey: string;
     };

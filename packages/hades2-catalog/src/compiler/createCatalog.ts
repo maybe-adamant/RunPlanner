@@ -34,7 +34,7 @@ import {
 import { createRewardKernelCatalog } from './rewards/normalize';
 import { normalizeRewardBinding } from './rewards/bindings';
 import { fail } from './errors';
-import { validateRewardRouteRequirementReferences } from './rewards/requirements';
+import { validateRewardRouteAndAspectReferences } from './rewards/requirements';
 import { normalizeRoutes } from './routes';
 import {
   createTraitGiverByAcquisitionGameName,
@@ -116,7 +116,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     exitTypes,
   );
   const routes = normalizeRoutes(input.routes, biomes, rooms);
-  validateRewardRouteRequirementReferences(rewards, routes);
+  validateRewardRouteAndAspectReferences(rewards, routes, traitCatalog.aspects);
   validateTraitRouteReferences(traitCatalog, routes);
   validateLifecycleBindings({
     rooms,

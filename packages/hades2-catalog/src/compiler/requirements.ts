@@ -253,6 +253,11 @@ function normalizeRequirementWith(
         kind: 'routeKeyEquals',
         routeKey: requireNonEmpty(requirement.routeKey, `${path}.routeKey`),
       });
+    case 'equippedAspectEquals':
+      return Object.freeze({
+        kind: 'equippedAspectEquals',
+        aspectKey: requireNonEmpty(requirement.aspectKey, `${path}.aspectKey`),
+      });
   }
 }
 
@@ -368,6 +373,7 @@ export function validateRequirementReferences(
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':
     case 'routeKeyEquals':
+    case 'equippedAspectEquals':
       return;
   }
 }

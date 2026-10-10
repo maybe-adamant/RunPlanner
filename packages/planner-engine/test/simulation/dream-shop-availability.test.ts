@@ -181,6 +181,7 @@ describe('Dream Shop availability', () => {
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },
         offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
+        equippedAspectKey: state.equipment.aspectKey,
         fail: (detail) => {
           throw new Error(detail);
         },
@@ -228,6 +229,7 @@ describe('Dream Shop availability', () => {
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },
         offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
+        equippedAspectKey: state.equipment.aspectKey,
         fail: (detail) => {
           throw new Error(detail);
         },
@@ -401,6 +403,7 @@ describe('Dream Shop trait offers against the state they were built from', () =>
         currentBatchRoomGameNames: [],
         rewardLookups: { hubRewardLookup: new Set() },
         offeredRewardTypes: offeredRewardTypeSet(state.offeredRewardTypes),
+        equippedAspectKey: state.equipment.aspectKey,
         fail: (detail) => {
           throw new Error(detail);
         },
