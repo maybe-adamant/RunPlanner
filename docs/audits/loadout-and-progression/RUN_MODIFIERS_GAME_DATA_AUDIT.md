@@ -145,8 +145,8 @@ hero's `IsDead` flag without replacing that table. Hub entry sets
 `CurrentHubRoom`; leaving the hub clears it. These are distinct lifetime facts.
 
 Planner disposition: settings belong to the admitted plan and that native run
-identity, and require successful starting-loadout verification or supported
-Postboss entry admission. Same-run prefix completion does not end these
+identity, and apply once the admitted run synchronizes at its first room.
+A reloaded run is never re-admitted. Same-run prefix completion does not end these
 run-wide options; mismatch and executor faults do. Native death/hub guards and
 run-identity replacement prevent carryover without persisting activation into
 game saves. Already-entered room restoration does not introduce an additional

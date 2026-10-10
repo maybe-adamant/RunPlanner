@@ -346,13 +346,12 @@ function TestStatusUi.testRunningPlanStaysSeparateFromPreviewAndRetainsFailureDe
     local first, last = frozen.occurrences[2], frozen.occurrences[1]
     local snapshot = {
         state = "synchronized", reason = "ready", slot = 2, plan = frozen, index = 2,
-        current = first, lastExited = last, postbossAdmission = { gameName = "F_PostBoss01" },
+        current = first, lastExited = last,
     }
     local text, ui, ctx = inspect(other, snapshot, "Current Run")
     lu.assertStrContains(text, "Run: Synchronized | Steering: active")
     lu.assertStrContains(text, "Running plan: Slot 2")
     lu.assertStrContains(text, "Tracked room: " .. first.gameName)
-    lu.assertStrContains(text, "Postboss resync succeeded at F_PostBoss01")
     lu.assertStrContains(text, "Weapon: Witch's Staff")
     lu.assertNotStrContains(text, "OtherWeapon")
     snapshot.state, snapshot.reason, snapshot.checkpoint = "desynchronized", "first-mismatch", "room-exit"
@@ -375,11 +374,16 @@ function TestStatusUi.testStatusDistinguishesStartupAdmissionCompletionAndFaults
         { "inactive", "configured-prefix-complete", "Plan complete", "off" },
         { "starting", "ready", "Starting", "active" },
         { "faulted", "executor-fault", "Executor fault", "off" },
+        { "inactive", "resumed-unsteered", "Inactive", "off" },
     }) do
         local snapshot = { state = case[1], reason = case[2] }
         local text = inspect(nil, snapshot, "Current Run")
         lu.assertStrContains(text, "Run: " .. case[3] .. " | Steering: " .. case[4])
         lu.assertEquals(snapshot, { state = case[1], reason = case[2] })
+        if case[2] == "resumed-unsteered" then
+            lu.assertStrContains(text, "This run was resumed after a reload. It continues unsteered.")
+            lu.assertNotStrContains(text, "diverged")
+        end
     end
 end
 

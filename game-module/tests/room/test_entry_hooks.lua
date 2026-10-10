@@ -6,7 +6,6 @@ local roomHooks = require("mods.room.hooks")
 local roomCoordinatorModule = require("mods.room.coordinator")
 local routeSessionModule = require("mods.route.session")
 local runtimeSessionModule = require("mods.runtime.session")
-local admissionProjection = require("mods.room.conformance.admission")
 local encounterHooks = require("mods.room.timeline.encounters.hooks")
 local roomFeatureHooks = require("mods.room.features.hooks")
 local support = require("tests.harness.hook_composition")
@@ -14,7 +13,7 @@ local capture, stub = support.capture, support.stub
 local attachRewardHooks = support.attachRewardHooks
 local navigationEntryStub = support.navigationEntryStub
 local unusedLoadoutScope = {
-    startingRun = function() return false end, synchronizeStartingRoom = function()
+    startingRun = function() return false end, installedRun = function() return false end, synchronizeStartingRoom = function()
         error("starting-room loadout synchronization is outside this test")
     end,
 }
@@ -111,69 +110,49 @@ function TestRoomEntryHooks.testStartRoomExecutorFaultStillCallsNativeExactlyOnc
     lu.assertEquals(state.state, "faulted")
 end
 
-function TestRoomEntryHooks.testFreshPostbossStartRoomAdmissionAdoptsTheRestoredNativeRoom()
-    local priorVerify, priorGame, priorCurrentRun = admissionProjection.verify, _G.game, _G.CurrentRun
-    admissionProjection.verify = function() return true end
-
-    local opening = {
-        id = "opening", gameName = "F_Opening01",
-        overview = { encounterPhases = {}, requiredObjects = {}, additional = {} },
-        transactionsByOwner = {}, timeline = { transactions = {}, dependencies = {}, obligations = {} },
-        doors = { kind = "terminal" }, roomExitConformance = { facts = {} },
-    }
-    local postboss = {
-        id = "postboss", gameName = "F_PostBoss01", resumeBoundary = "postbossEntry",
-        overview = { encounterPhases = {}, requiredObjects = {}, additional = {} },
-        transactionsByOwner = {}, timeline = { transactions = {}, dependencies = {}, obligations = {} },
-        doors = { kind = "terminal" }, roomExitConformance = { facts = {} },
-    }
-    local plan = {
-        kind = "ready",
-        startingLoadout = { weaponKey = "WeaponStaffSwing", aspectKey = "BaseStaffAspect" },
-        occurrences = { opening, postboss }, occurrencesById = { opening = opening, postboss = postboss },
-        selectedOccurrenceIds = { "opening", "postboss" },
-    }
+-- A run loaded into a fresh process is never re-attached: the restored room
+-- runs natively and the status says the installed run continues unsteered.
+function TestRoomEntryHooks.testReloadedInstalledRunContinuesUnsteered()
+    local priorCurrentRun = _G.CurrentRun
     local state = runtimeSessionModule.create()
     local currentRun = { CurrentRoom = { Name = "F_PostBoss01" } }
     _G.CurrentRun = currentRun
-    _G.game = { RoomData = { F_PostBoss01 = { Name = "F_PostBoss01" } } }
     local module, _, callbacks = capture()
-    local session = runtimeSessionModule
-    local navigationEntry = {
-        realizeIncomingReward = function() error("restored room must not be realized again") end,
-        proveIncomingReward = function() return true end,
-        proveOutgoingDoors = function() return true end,
+    local unsteered = {
+        realizeIncomingReward = function() error("a reloaded run is not steered") end,
+        proveIncomingReward = function() error("a reloaded run is not steered") end,
     }
-    local synchronizedRoom, startingSyncCalled = false, false
-    roomHooks.attach(module, session, function() return state end, function() end,
-        routeSessionModule, roomCoordinatorModule, nil, navigationEntry,
-        { startingRun = function() return false end, synchronizeStartingRoom = function()
-            startingSyncCalled = true
-            return false
-        end }, {
-            inbox = { load = function(slot)
-                lu.assertEquals(slot, 5)
-                return true, plan
-            end },
-            activePlanSlot = function() return 5 end,
+    local installed = { [currentRun] = true }
+    roomHooks.attach(module, runtimeSessionModule, function() return state end, function() end,
+        routeSessionModule, roomCoordinatorModule, nil, unsteered, {
+            startingRun = function() return false end,
+            installedRun = function(run) return installed[run] == true end,
+            synchronizeStartingRoom = function() error("a reloaded run is not starting") end,
         })
-
-    local result = callbacks.StartRoom(nil, {}, function(run, nativeRoom)
-        synchronizedRoom = nativeRoom
-        lu.assertEquals(run.CurrentRoom, nativeRoom)
+    local started
+    local result = callbacks.StartRoom(nil, {}, function(_, nativeRoom)
+        started = nativeRoom
         return "native-started"
     end, currentRun, nil)
-
-    admissionProjection.verify, _G.game, _G.CurrentRun = priorVerify, priorGame, priorCurrentRun
+    _G.CurrentRun = priorCurrentRun
     lu.assertEquals(result, "native-started")
-    lu.assertFalse(startingSyncCalled)
-    lu.assertTrue(rawequal(synchronizedRoom, currentRun.CurrentRoom))
-    lu.assertEquals(synchronizedRoom.Name, "F_PostBoss01")
-    lu.assertNil(synchronizedRoom.RewardType)
-    lu.assertEquals(state.state, "synchronized")
-    lu.assertEquals(routeSessionModule.current(state.route).id, "postboss")
-    lu.assertEquals(state.route.index, 2)
-    lu.assertNotNil(roomCoordinatorModule.current(state))
+    lu.assertIs(started, currentRun.CurrentRoom)
+    lu.assertEquals(runtimeSessionModule.status(state), { state = "inactive", reason = "resumed-unsteered" })
+    lu.assertNil(state.firstMismatch)
+    lu.assertNil(state.route)
+
+    -- An uninstalled run, such as a Fresh File route, keeps the plain status.
+    local plain = runtimeSessionModule.create()
+    installed[currentRun] = nil
+    state = plain
+    callbacks.StartRoom(nil, {}, function() end, currentRun, nil)
+    lu.assertEquals(plain.reason, "not-started")
+
+    -- A save loaded into a cleared room is restored without StartRoom.
+    installed[currentRun] = true
+    state = runtimeSessionModule.create()
+    callbacks.RestoreUnlockRoomExits(nil, {}, function() end, currentRun, currentRun.CurrentRoom)
+    lu.assertEquals(state.reason, "resumed-unsteered")
 end
 
 function TestRoomEntryHooks.testOpeningFinalizesLoadoutBeforeForcingNativeCreationFacts()
@@ -211,7 +190,7 @@ function TestRoomEntryHooks.testOpeningFinalizesLoadoutBeforeForcingNativeCreati
         state.state = "desynchronized"
     end
     local loadoutScope = {
-        startingRun = function() return false end, synchronizeStartingRoom = function()
+        startingRun = function() return false end, installedRun = function() return false end, synchronizeStartingRoom = function()
             state.state = "synchronized"
             return true
         end,
@@ -302,7 +281,7 @@ function TestRoomEntryHooks.testStartNewGameRoomNameRealizesTheOpeningWithoutARo
     end
     local insideStartNewRun, synchronized = false, 0
     local loadoutScope = {
-        startingRun = function() return insideStartNewRun end,
+        startingRun = function() return insideStartNewRun end, installedRun = function() return false end,
         synchronizeStartingRoom = function()
             synchronized = synchronized + 1
             state.state = "synchronized"
@@ -366,7 +345,7 @@ function TestRoomEntryHooks.testOpeningLoadoutMismatchReturnsToUnblockedNativeSe
     roomHooks.attach(module, stub(), function() return state end, function() end,
         { expected = function() error("route must remain untouched") end }, {}, nil,
         navigationEntryStub, {
-            startingRun = function() return false end, synchronizeStartingRoom = function()
+            startingRun = function() return false end, installedRun = function() return false end, synchronizeStartingRoom = function()
                 state.state = "desynchronized"
                 return false
             end,
@@ -413,7 +392,7 @@ function TestRoomEntryHooks.testLaterDreamStartingRoomForcesTheCursorSuccessorBe
         }, room, nil, {
             realizeIncomingReward = function(_, data) return data end,
         }, {
-            startingRun = function() return false end, synchronizeStartingRoom = function()
+            startingRun = function() return false end, installedRun = function() return false end, synchronizeStartingRoom = function()
                 error("later Dream entry must not re-run startup synchronization")
             end,
         })

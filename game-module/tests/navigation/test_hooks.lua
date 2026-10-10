@@ -55,8 +55,7 @@ end
 function TestNavigationHooks.testDreamSelectorUsesThePublishedFirstAndPostbossSuccessorThroughNativePoolRemoval()
     local module, _, callbacks = capture()
     local first = { id = "first", gameName = "Q_Opening01", biomeKey = "Q" }
-    local postboss = { id = "postboss", gameName = "Dream_PostBoss01", biomeKey = "Q",
-        resumeBoundary = "postbossEntry" }
+    local postboss = { id = "postboss", gameName = "Dream_PostBoss01", biomeKey = "Q" }
     local following = { id = "next", gameName = "N_Opening01", biomeKey = "N" }
     local plan = { routeKey = "Dream", selectedOccurrenceIds = { "first", "postboss", "next" },
         occurrencesById = { first = first, postboss = postboss, next = following } }

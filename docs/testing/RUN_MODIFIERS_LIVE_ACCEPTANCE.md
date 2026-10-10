@@ -22,9 +22,9 @@ confirms or waives each remaining check.
 - [ ] Change the selected plan slot mid-run. Active settings remain those of the
       admitted plan. Die, return to the Crossroads, and start another run with
       native defaults; the previous activation does not carry over.
-- [ ] Resume a supported pre-entry Postboss save in a fresh game process with
-      its matching published plan. The modifier activates only after
-      successful admission. A rejected plan, reproduced mismatch, or executor
-      fault leaves subsequent combat/drop behavior native.
+- [ ] Save & Quit mid-run and continue in a fresh game process. The run
+      continues unsteered and both modifiers stay native for the rest of it. A
+      rejected plan, reproduced mismatch, or executor fault also leaves
+      subsequent combat/drop behavior native.
 - [ ] On Fresh File, edit and publish both gold modifiers while native
       starting equipment remains fixed.

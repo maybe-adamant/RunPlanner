@@ -6,12 +6,12 @@ local support = require("tests.harness.hook_composition")
 local json = require("mods/protocol/json")
 local decoder = require("mods.protocol.decoder")
 local session = require("mods.runtime.session")
-local loadoutSession = require("mods.loadout.session")
 local loadoutHooks = require("mods.loadout.hooks")
 local roomCoordinator = require("mods.room.coordinator")
 local admission = require("mods.room.conformance.admission")
 local readers = require("mods.room.conformance.readers")
 local install = require("mods.practice.install")
+local loadoutInstall = require("mods.loadout.install")
 local practiceHooks = require("mods.practice.hooks")
 
 TestPracticeStart = {}
@@ -40,7 +40,7 @@ end
 local function nativeWorld(base, start)
     local log, hero = {}, {
         Traits = {}, TraitDictionary = { BaseStaffAspect = { { Name = "BaseStaffAspect", Rarity = "Common" } } },
-        MaxHealth = 0, MaxMana = 0, Health = 1,
+        MaxHealth = 0, MaxMana = 0, Health = 1, Weapons = { WeaponStaffSwing = true },
     }
     hero.Traits[1] = hero.TraitDictionary.BaseStaffAspect[1]
     local run = { Hero = hero, TemporaryMetaUpgrades = {}, ShrineUpgradesDisabled = {}, RewardStores = {},
@@ -49,7 +49,7 @@ local function nativeWorld(base, start)
         LastWeaponUpgradeName = { WeaponStaffSwing = "BaseStaffAspect" },
         LastAwardTrait = "ManaOverTimeRefundKeepsake", EquippedFamiliar = "FrogFamiliar",
         ShrineUpgrades = {}, MetaUpgradeState = {}, TraitsTaken = { BaseStaffAspect = true },
-        Resources = { Money = 0 }, RunHistory = {},
+        Resources = { Money = 0 }, RunHistory = {}, KeepsakeChambers = {},
     }
     local traitData = setmetatable({
         StorePendingDeliveryItem = { Name = "StorePendingDeliveryItem", RemainingUses = 3, UsesAsEncounters = true },
@@ -92,8 +92,15 @@ local function nativeWorld(base, start)
         TraitData = traitData,
         game = nativeGlobals,
         RoomData = roomData,
-        TraitRarityData = { RarityUpgradeOrder = { "Common", "Rare", "Epic", "Heroic" } },
+        TraitRarityData = { RarityUpgradeOrder = { "Common", "Rare", "Epic", "Heroic" },
+            WeaponRarityUpgradeOrder = { "Common", "Rare", "Epic", "Heroic", "Legendary", "Perfect" } },
         MetaUpgradeCardData = {}, MetaUpgradeData = {},
+        -- The loadout install's native surface (tests/loadout/test_install.lua owns it).
+        WeaponData = { WeaponStaffSwing = {}, WeaponDagger = {} },
+        WeaponSets = { HeroPrimaryWeapons = { "WeaponStaffSwing", "WeaponDagger" } },
+        FamiliarData = { FrogFamiliar = { TraitNames = { "FrogFamiliarTrait" } }, CatFamiliar = { TraitNames = {} } },
+        GetCurrentMetaUpgradeCost = function() return 0 end,
+        GetTotalSpentShrinePoints = function() return 0 end,
         SpellData = { PotionSpell = { Name = "PotionSpell", TraitName = "SpellPotionTrait" } },
         RewardStoreData = (function()
             local stores = {}
@@ -204,9 +211,9 @@ local function startRun(plan, world, startArgs)
     local function getState() return state end
     local hexTree = recordingHexTree(world.log)
     loadoutHooks.attach(module, {
-        inbox = inbox, session = session, loadout = loadoutSession, activePlanSlot = function() return 1 end,
+        inbox = inbox, session = session, activePlanSlot = function() return 1 end,
     }, getState, function() end, roomCoordinator, hexTree)
-    local scope = practiceHooks.attach(module, session, getState, function() end, loadoutSession, hexTree)
+    local scope = practiceHooks.attach(module, session, getState, function() end, hexTree)
     _G.import = priorImport
     local created
     local ok, errorValue = pcall(callbacks.StartNewRun, nil, {}, function(previousRun, args)
@@ -381,8 +388,8 @@ end
 
 local function withAdmission(result, action)
     local verify, calls = admission.verify, {}
-    admission.verify = function(occurrence, startingLoadout, prefix)
-        calls[#calls + 1] = { occurrence = occurrence.id, weapon = startingLoadout.weaponKey, prefix = prefix }
+    admission.verify = function(occurrence)
+        calls[#calls + 1] = occurrence.id
         if result == true then return true end
         return nil, result
     end
@@ -399,7 +406,7 @@ function TestPracticeStart.testStartRoomForcesHeroSetupAndPassesTheSelfCheck()
     end)
     lu.assertEquals(setup, { "Q_Intro", true })
     lu.assertEquals({ world.hero.MaxHealth, world.hero.MaxMana, world.hero.Health }, { 150, 325, 150 })
-    lu.assertEquals(calls, { { occurrence = "surface-q-intro", weapon = "WeaponStaffSwing", prefix = "practice-start" } })
+    lu.assertEquals(calls, { "surface-q-intro" })
     lu.assertTrue(presented)
     lu.assertEquals(state.state, "synchronized")
     lu.assertEquals(state.practiceStart.phase, "checked")
@@ -454,7 +461,7 @@ function TestPracticeStart.testResumedStartRoomForcesHeroSetupWithoutExecution()
     withAdmission(true, function() _, world = enterStartRoom("surface-start-q-opening") end)
     local module, _, callbacks = support.capture()
     local passive = session.create()
-    practiceHooks.attach(module, session, function() return passive end, function() end, loadoutSession,
+    practiceHooks.attach(module, session, function() return passive end, function() end,
         recordingHexTree({}))
     local restore = nativeGame.install(world.bindings)
     _G.CurrentRun = world.run
@@ -496,12 +503,36 @@ function TestPracticeStart.testDreamStartRedirectsWithTheDreamEntrance()
     lu.assertEquals(world.gameState.Resources.Money, 10)
 end
 
-function TestPracticeStart.testLoadoutMismatchLeavesANativeRunUninstalled()
+-- On a mismatched profile the loadout install is the baseline and the start
+-- state installs on top; the slotted keepsake is the run's keepsake.
+function TestPracticeStart.testStartStateInstallsOnTheInstalledLoadout()
+    local plan = decode("surface-start-q-opening")
+    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+    world.hero.Weapons = { WeaponDagger = true }
+    world.gameState.LastWeaponUpgradeName = { WeaponStaffSwing = "StaffProfileAspect" }
+    world.gameState.LastAwardTrait, world.gameState.EquippedFamiliar = "ProfileKeepsake", "CatFamiliar"
+    local state, _, created = startRun(plan, world, { StartingBiome = "F" })
+    lu.assertEquals(state.state, "synchronized")
+    lu.assertEquals(world.hero.Weapons, { WeaponStaffSwing = true })
+    lu.assertEquals(world.gameState.LastWeaponUpgradeName.WeaponStaffSwing, "BaseStaffAspect")
+    lu.assertEquals(world.gameState.LastAwardTrait, "ManaOverTimeRefundKeepsake")
+    lu.assertEquals(world.gameState.EquippedFamiliar, "FrogFamiliar")
+    lu.assertEquals(world.log[1], "equip:ManaOverTimeRefundKeepsake:Epic:nil")
+    lu.assertEquals(created.args.RoomName, "Q_Intro")
+    local saved = world.run[loadoutInstall.marker]
+    lu.assertEquals(saved.installed.keepsakeKey, "ManaOverTimeRefundKeepsake")
+    lu.assertEquals(saved.profile.lastAwardTrait, "ProfileKeepsake")
+    lu.assertEquals(saved.profile.weaponKey, "WeaponDagger")
+end
+
+function TestPracticeStart.testLoadoutInstallFaultLeavesANativeRunUninstalled()
     local plan = decode("surface-start-q-opening")
     local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 })
-    world.bindings.GetEquippedWeapon = function() return "WeaponDagger" end
+    world.bindings.FamiliarData = {}
     local state, _, created = startRun(plan, world, { StartingBiome = "F" })
-    lu.assertEquals(state.firstMismatch.checkpoint, "starting-weapon")
+    lu.assertEquals(state.state, "faulted")
+    lu.assertEquals(state.firstFault.checkpoint, "loadout-install:familiar")
+    lu.assertNil(world.run[loadoutInstall.marker])
     -- The run-start keepsake equip stays native, with its acquire effect.
     lu.assertEquals(world.log[1], "equip:ManaOverTimeRefundKeepsake:nil:true")
     lu.assertNil(created.args.RoomName)
@@ -622,7 +653,7 @@ function TestPracticeStart.testPrebossStartRoomSelfCheck()
     end)
     lu.assertEquals(setup, { "I_PreBoss02", true })
     lu.assertEquals({ world.hero.MaxHealth, world.hero.MaxMana, world.hero.Health }, { 130, 295, 130 })
-    lu.assertEquals(calls, { { occurrence = "golden-i-preboss", weapon = "WeaponStaffSwing", prefix = "practice-start" } })
+    lu.assertEquals(calls, { "golden-i-preboss" })
     lu.assertTrue(presented)
     lu.assertEquals(state.state, "synchronized")
     lu.assertEquals(state.practiceStart.phase, "checked")
@@ -753,7 +784,7 @@ end
 
 function TestPracticeStart.testEndRunRemovesOnlyAPracticeRun()
     local module, _, callbacks = support.capture()
-    practiceHooks.attach(module, session, function() return nil end, function() end, loadoutSession,
+    practiceHooks.attach(module, session, function() return nil end, function() end,
         recordingHexTree({}))
     local earlier, practice = { Name = "earlier" }, { Name = "practice", RunPlannerPracticeStart = true }
     local gameState = { RunHistory = { earlier } }
@@ -787,7 +818,7 @@ function TestPracticeStart.testEndRunRemovesOnlyAPracticeRun()
     lu.assertEquals(stripped[2], { earlier = 1, native = 0 })
 end
 
-function TestPracticeStart.testStartRoomCreationUsesTheVerifiedPracticeLoadout()
+function TestPracticeStart.testStartRoomCreationUsesTheSynchronizedPracticeStart()
     local roomHooks = require("mods.room.hooks")
     local routeSession = require("mods.route.session")
     local occurrence = {
@@ -811,9 +842,9 @@ function TestPracticeStart.testStartRoomCreationUsesTheVerifiedPracticeLoadout()
         realizeIncomingReward = function(_, data) return data end,
         applyZagreusContractPresence = function() end,
     }, {
-        startingRun = function() return true end,
-        synchronizeStartingRoom = function() error("a practice loadout is verified before its start room") end,
-    }, nil, { creatingStartRoom = function(_, args) return args.RoomName == "Q_Intro" end })
+        startingRun = function() return true end, installedRun = function() return false end,
+        synchronizeStartingRoom = function() error("a practice start is synchronized before its start room") end,
+    }, { creatingStartRoom = function(_, args) return args.RoomName == "Q_Intro" end })
     local restore = nativeGame.install({ game = { RoomData = { Q_Intro = { Name = "Q_Intro" } } } })
     local created = callbacks.CreateRoom(nil, {}, function(roomData) return { Name = roomData.Name } end,
         { Name = "Q_Intro" }, { RoomName = "Q_Intro" })
@@ -829,7 +860,7 @@ function TestPracticeStart.testPlanWithoutStartStatePassesThroughThePracticeHook
     local state, callbacks, created = startRun(plan, world, { StartingBiome = "F" })
     lu.assertEquals(state.route.index, 1)
     lu.assertNil(state.practiceStart)
-    lu.assertEquals(world.log[1], "equip:ManaOverTimeRefundKeepsake:nil:true")
+    lu.assertEquals(world.log[1], "equip:ManaOverTimeRefundKeepsake:Epic:true")
     lu.assertNil(created.args.RoomName)
     lu.assertFalse(created.creating)
     lu.assertNil(world.run.RoomHistory)

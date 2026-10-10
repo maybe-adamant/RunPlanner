@@ -34,7 +34,9 @@ to play it in Hades II. The app carries the mod and installs it for you.
    six plan slots.
 6. Launch the game with that profile. In Run Planner's in-game settings,
    select the published slot as your active plan.
-7. Start a new run with the loadout you planned and follow its choices.
+7. Start a new run and follow its choices. The mod gives the run your planned
+   weapon, Aspect, Arcana, Fear, keepsake and familiar, and puts your own
+   loadout back when the run ends.
 
 After updating the app, open the Game panel and choose **Update**; sending waits
 until the installed mod matches the app.
@@ -46,7 +48,7 @@ You can keep up to six plans ready to play. Changing the active slot during a
 run only changes which plan will be used for the next run; it does not replace
 the plan already in progress.
 
-The in-game **Plan for next run / resync** picker and the planner share one
+The in-game **Plan for next run** picker and the planner share one
 active slot, saved as `active-slot.json` next to the plan slots. Picking a slot
 in either place changes it for both, and the picker shows a change made in the
 planner within a second. If the file is missing or damaged, slot 1 is used.
@@ -98,6 +100,8 @@ played, room progress, and details if something goes wrong. Sync and
 steering status stay visible in either tab.
 
 **Synchronized | Steering: active** means the mod is following your plan.
+After Save & Quit, a continued run keeps its planned loadout but is no longer
+steered.
 
 The optional **Show room guide** setting is off by default. Enable it in the
 in-game inspector to show read-only, numbered guidance for the current planned

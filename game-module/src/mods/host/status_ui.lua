@@ -31,6 +31,7 @@ local REASONS = {
     ["configured-prefix-complete"] = "The planned route is complete. Native gameplay continues.",
     ["first-mismatch"] = "A checkpoint diverged. Steering has stopped; native gameplay continues.",
     ["executor-fault"] = "An executor fault stopped steering. Native gameplay continues.",
+    ["resumed-unsteered"] = "This run was resumed after a reload. It continues unsteered.",
 }
 
 local function drawValues(imgui, label, value, ancestors)
@@ -161,9 +162,6 @@ function ui.bind(inbox, inspectSession, activeSlotFile, clock)
             end
             if snapshot.restoredRoom then imgui.TextWrapped("Restored room: " .. snapshot.restoredRoom) end
             if snapshot.lastExited then imgui.TextWrapped("Last exited: " .. snapshot.lastExited.gameName) end
-            if snapshot.postbossAdmission then
-                imgui.TextWrapped("Postboss resync succeeded at " .. snapshot.postbossAdmission.gameName)
-            end
             if imgui.CollapsingHeader("Frozen plan loadout") then
                 imgui.PushID("frozen_plan")
                 drawPlan(imgui, plan)
@@ -194,7 +192,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, clock)
         if field:read() ~= viewSlot then field:write(viewSlot) end
         local picked = drawApi.widgets.dropdown(field, {
             id = "active_plan_slot",
-            label = "Plan for next run / resync",
+            label = "Plan for next run",
             values = SLOT_VALUES,
             displayValues = SLOT_LABELS,
         })

@@ -18,9 +18,9 @@ function routeSession.new(plan)
     }
 end
 
--- Recovery starts at one exact selected occurrence.  The cursor remains
--- otherwise identical to an ordinary new-run cursor: only exit advances it,
--- and entry still proves the occurrence identity at that index.
+-- A Practice mode start begins at its start occurrence. The cursor is
+-- otherwise an ordinary new-run cursor: only exit advances it, and entry
+-- still proves the occurrence identity at that index.
 function routeSession.newAt(plan, index)
     local selected = plan and plan.selectedOccurrenceIds
     if type(selected) ~= "table"
@@ -130,11 +130,6 @@ function routeSession.claimHubFountain(route, nativeUsed)
     return claim
 end
 
--- Any Hub fountain use this route saw, including one outside its position.
-function routeSession.observeHubFountainUse(route)
-    if route ~= nil then route.hubFountainObserved = true end
-end
-
 function routeSession.releaseHubFountain(claim)
     if claim and claim.route.hubFountainClaim == claim and not claim.completed then
         claim.route.hubFountainClaim = nil
@@ -152,13 +147,12 @@ function routeSession.holdsHubFountain(route, claim)
 end
 
 -- Leaving the Hub from the fountain's position: "fulfilled", "incomplete" (claimed,
--- unfinished), "missed" (skipped or used elsewhere), or "unobserved" (already spent).
-function routeSession.hubFountainDeparture(route, nativeUsed)
+-- unfinished), or "missed" (skipped or used elsewhere).
+function routeSession.hubFountainDeparture(route)
     local hub, carrier = hubFountainPosition(route)
     if hub == nil then return nil end
     local claim = route.hubFountainClaim
     if claim ~= nil then return claim.completed and "fulfilled" or "incomplete", hub, carrier end
-    if nativeUsed and not route.hubFountainObserved then return "unobserved", hub, carrier end
     return "missed", hub, carrier
 end
 
