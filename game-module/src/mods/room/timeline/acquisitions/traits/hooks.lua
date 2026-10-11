@@ -30,8 +30,9 @@ local function boundNormal(room, state, current, native)
     return handle, room.begin(state, handle)
 end
 
-function hooks.attach(module, session, getState, report, room, seaStar, highlights)
+function hooks.attach(module, session, getState, report, room, seaStar, highlights, rowOptions)
     assert(type(seaStar) == "table", "trait acquisition Sea Star instance is required")
+    assert(type(rowOptions) == "table", "trait row options are required")
     chaosOffer.attach(module, session, getState, report, room, highlights)
     local allTogetherPending = {}
     local activeAllTogether = nil
@@ -418,6 +419,8 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         end
         local offer = ordinary.offer(payload)
         if not ordinary.isCarrier(loot, offer) then return base(currentRun, loot, args) end
+        -- Button construction repeats this install with the same result.
+        if rowOptions.eagerInstall then ordinary.install(payload, loot, rowOptions) end
         local result = base(currentRun, loot, args)
         report(runtime)
         return result
@@ -432,7 +435,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local completeAfterInstall = false
         -- A native reroll intentionally abandons the frozen initial offer.
         if ordinary.isCarrier(loot, offer) and reroll ~= true then
-            if ordinary.install(payload, loot) ~= true then
+            if ordinary.install(payload, loot, rowOptions) ~= true then
                 diagnostic(state, "trait-offer-install", "published native rows", nativeName(loot))
             end
             if isAcquisition(payload) and not requiresSelectedSteering(payload) then

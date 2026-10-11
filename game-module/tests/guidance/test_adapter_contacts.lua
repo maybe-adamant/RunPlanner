@@ -6,6 +6,7 @@ local traits = require("mods.room.timeline.acquisitions.traits.hooks")
 local chaos = require("mods.room.timeline.acquisitions.traits.chaos_offer")
 local levels = require("mods.room.timeline.acquisitions.levels.hooks")
 local npc = require("mods.room.timeline.acquisitions.npc.hooks")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
 local echo = require("mods.room.timeline.acquisitions.npc.echo")
 local seaStar = require("mods.room.timeline.acquisitions.sea_star")
 local nativeGame = require("tests.harness.native_game")
@@ -98,7 +99,7 @@ function TestHighlightAdapterContacts:testOrdinaryHammerAndFallbackRemainMarkedA
         local h = harness({ transaction = { kind = "acquisition" },
             detail = { disposition = "normal", traitOffer = authored } }, source,
             function(module, session, getState, report, room, guide)
-                traits.attach(module, session, getState, report, room, seaStar.create(), guide)
+                traits.attach(module, session, getState, report, room, seaStar.create(), guide, rowOptions)
             end)
         local screen = { Source = source, Components = {} }
         h.construct(screen, source, false)
@@ -179,7 +180,7 @@ function TestHighlightAdapterContacts:testNpcAndNestedEchoBindDuringVoidNativeMe
     local h = harness({ transaction = { kind = "encounterInteraction",
         resolution = { kind = "traitOffer", offer = authored } } }, source,
         function(module, session, getState, report, room, guide)
-            local scope = npc.attach(module, session, getState, report, room, guide)
+            local scope = npc.attach(module, session, getState, report, room, guide, rowOptions)
             echo.attach(module, session, report, scope, {}, guide, getState)
         end)
     local screen = { Source = source, Components = {} }

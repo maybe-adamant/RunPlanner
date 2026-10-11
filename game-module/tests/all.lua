@@ -72,5 +72,19 @@ require("tests/room/test_acquisition_hook_composition")
 require("tests/runtime/test_composition")
 require("tests/practice/test_start")
 
+local lfs = require("lfs")
+local variantTests = {}
+if lfs.attributes("variants/dev", "mode") == "directory" then
+    for filename in lfs.dir("variants/dev") do
+        if filename:match("^test_.*%.lua$") then
+            variantTests[#variantTests + 1] = filename:sub(1, -5)
+        end
+    end
+end
+table.sort(variantTests)
+for _, testModule in ipairs(variantTests) do
+    require("variants/dev/" .. testModule)
+end
+
 local lu = require("luaunit")
 os.exit(lu.LuaUnit.run())

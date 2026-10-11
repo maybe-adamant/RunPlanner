@@ -26,6 +26,9 @@ local spell = type(import) == "function" and import("mods/room/timeline/acquisit
     or require("mods.room.timeline.acquisitions.spell.hooks")
 local path = type(import) == "function" and import("mods/room/timeline/acquisitions/path/hooks.lua")
     or require("mods.room.timeline.acquisitions.path.hooks")
+local rowOptions = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/row_options.lua")
+    or require("mods.room.timeline.acquisitions.traits.row_options")
 
 local acquisitions = {}
 
@@ -36,8 +39,9 @@ function acquisitions.attach(module, session, getState, report, room, hexTree, r
     local seaStar = seaStarDefinition.create()
     seaStar.attach(module)
     binding.attach(module, session, getState, report, room, rewardWheelProducer)
-    local traitScopes = traits.attach(module, session, getState, report, room, seaStar, highlights)
-    local npcScope = npc.attach(module, session, getState, report, room, highlights)
+    local traitScopes = traits.attach(module, session, getState, report, room, seaStar, highlights,
+        rowOptions)
+    local npcScope = npc.attach(module, session, getState, report, room, highlights, rowOptions)
     circe.attach(module, session, report, npcScope)
     icarus.attach(module, session, report, npcScope)
     echo.attach(module, session, report, npcScope, traitScopes, highlights, getState)

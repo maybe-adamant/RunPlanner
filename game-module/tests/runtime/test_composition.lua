@@ -9,6 +9,7 @@ local acquisitions = require("mods.room.timeline.acquisitions.hooks")
 local seaStarDefinition = require("mods.room.timeline.acquisitions.sea_star")
 local nativeGame = require("tests.harness.native_game")
 local traitAcquisitions = require("mods.room.timeline.acquisitions.traits.hooks")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
 local hexTreeDefinition = require("mods.spells.hex_tree")
 local loadoutHooks = require("mods.loadout.hooks")
 local roomSession = require("mods.room.session")
@@ -733,7 +734,8 @@ function TestRuntimeComposition.testKeepsakeAdaptersAreInstalledOnceAtTheirCarri
         function() end, function() end, session, hexTree)
     _G.import = priorImport
     encounterHooks.attach(module, session, function() end, function() end, session)
-    traitAcquisitions.attach(module, session, function() end, function() end, session, seaStar)
+    traitAcquisitions.attach(module, session, function() end, function() end, session, seaStar, nil,
+        rowOptions)
 
     local expected = {
         { "GiveDurationHammer", "run-planner-equip-hammer" },

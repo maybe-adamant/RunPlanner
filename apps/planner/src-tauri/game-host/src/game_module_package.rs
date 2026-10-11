@@ -129,14 +129,18 @@ pub fn checkout_package() -> Result<ModulePackage, String> {
     ModulePackage::from_assembly(
         BUNDLED_VERSION,
         PackageSource::Checkout,
-        crate::game_module_assembly::assemble(&module_dir, BUNDLED_VERSION)?,
+        crate::game_module_assembly::assemble(
+            &module_dir,
+            BUNDLED_VERSION,
+            crate::game_module_assembly::ModuleSelection::DevelopmentIfPresent,
+        )?,
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game_module_assembly;
+    use crate::game_module_assembly::{self, ModuleSelection};
     use std::fs;
     use std::path::Path;
 
@@ -165,7 +169,7 @@ mod tests {
         ModulePackage::from_assembly(
             version,
             PackageSource::Checkout,
-            game_module_assembly::assemble(root, version).unwrap(),
+            game_module_assembly::assemble(root, version, ModuleSelection::Release).unwrap(),
         )
         .unwrap()
         .build_id
@@ -177,8 +181,10 @@ mod tests {
             std::env::temp_dir().join(format!("run-planner-assembly-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         module_checkout(&root);
-        let first = game_module_assembly::assemble(&root, "2.3.4").unwrap();
-        let second = game_module_assembly::assemble(&root, "2.3.4").unwrap();
+        let first =
+            game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).unwrap();
+        let second =
+            game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).unwrap();
         let paths: Vec<&str> = first.iter().map(|file| file.path.as_str()).collect();
         assert_eq!(
             paths,
@@ -212,9 +218,9 @@ mod tests {
                 "buildId": package.build_id,
             })
         );
-        assert!(game_module_assembly::assemble(&root, "2.3").is_err());
+        assert!(game_module_assembly::assemble(&root, "2.3", ModuleSelection::Release).is_err());
         write(&root.join("src/LICENSE"), b"collision");
-        assert!(game_module_assembly::assemble(&root, "2.3.4").is_err());
+        assert!(game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).is_err());
         fs::remove_dir_all(&root).unwrap();
     }
 
@@ -240,12 +246,59 @@ mod tests {
             &root.join("src/execution-compatibility.json"),
             br#"{"format":"run-planner-execution","catalogVersion":"c","buildId":"x"}"#,
         );
-        assert!(game_module_assembly::assemble(&root, "2.3.4")
-            .err()
-            .unwrap()
-            .contains("must not carry a buildId"));
+        assert!(
+            game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release)
+                .err()
+                .unwrap()
+                .contains("must not carry a buildId")
+        );
         fs::remove_file(root.join("src/execution-compatibility.json")).unwrap();
-        assert!(game_module_assembly::assemble(&root, "2.3.4").is_err());
+        assert!(game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).is_err());
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn module_selection_replaces_the_release_module_when_development_is_selected() {
+        let root = std::env::temp_dir().join(format!("run-planner-variant-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        module_checkout(&root);
+        let module = "mods/room/timeline/acquisitions/traits/row_options.lua";
+        write(&root.join("src").join(module), b"return 'release'\n");
+        let assembled = |selection| {
+            let files = game_module_assembly::assemble(&root, "2.3.4", selection)?;
+            let shipped = files
+                .iter()
+                .find(|file| file.path == module)
+                .unwrap()
+                .bytes
+                .clone();
+            let package =
+                ModulePackage::from_assembly("2.3.4", PackageSource::Checkout, files).unwrap();
+            Ok::<_, String>((shipped, package.build_id))
+        };
+        let (release, release_id) = assembled(ModuleSelection::Release).unwrap();
+        assert_eq!(release, b"return 'release'\n");
+        assert_eq!(
+            assembled(ModuleSelection::DevelopmentIfPresent).unwrap(),
+            (release, release_id.clone())
+        );
+        assert_eq!(
+            assembled(ModuleSelection::DevelopmentRequired).unwrap_err(),
+            "VITE_INTERNAL_FEATURES=1 requires the development module variant"
+        );
+
+        write(
+            &root.join(game_module_assembly::DEVELOPMENT_MODULE_FILE),
+            b"return 'dev'\n",
+        );
+        let (dev, dev_id) = assembled(ModuleSelection::DevelopmentIfPresent).unwrap();
+        assert_eq!(dev, b"return 'dev'\n");
+        assert_ne!(dev_id, release_id);
+        assert_eq!(
+            assembled(ModuleSelection::DevelopmentRequired).unwrap(),
+            (dev, dev_id)
+        );
+        assert_eq!(assembled(ModuleSelection::Release).unwrap().1, release_id);
         fs::remove_dir_all(&root).unwrap();
     }
 

@@ -154,7 +154,7 @@ function ordinary.isNull(value)
     return json.isNull(value)
 end
 
-function ordinary.install(payload, loot)
+function ordinary.install(payload, loot, rowOptions)
     local offer = ordinary.offer(payload)
     if offer == nil or type(loot) ~= "table" then return false end
     if offer.kind == "fallbackGold" then
@@ -176,7 +176,7 @@ function ordinary.install(payload, loot)
             row.StackNum = nil
         else
             row.TraitToReplace, row.OldRarity = nil, nil
-            row.StackNum = option.effectiveLevel
+            row.StackNum = rowOptions.rowLevel(option.effectiveLevel)
         end
         installed[index] = row
     end

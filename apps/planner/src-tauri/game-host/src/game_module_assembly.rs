@@ -12,9 +12,19 @@ pub const INSTALL_RECORD_FILE: &str = "run-planner-install.json";
 pub const COMPATIBILITY_FILE: &str = "execution-compatibility.json";
 const MANIFEST_TEMPLATE_FILE: &str = "manifest.template.json";
 const PAYLOAD_DIRECTORY: &str = "src";
+const OVERRIDDEN_MODULE_PATH: &str = "mods/room/timeline/acquisitions/traits/row_options.lua";
+pub const DEVELOPMENT_MODULE_FILE: &str = "variants/dev/row_options.lua";
 // r2modman flattens a Thunderstore package's root files and its `plugins/`
 // payload into one `ReturnOfModding/plugins/<FullName>/` folder.
 const PACKAGE_ROOT_FILES: [&str; 3] = ["icon.png", "LICENSE", "README.md"];
+
+/// Selects which source supplies an override module in the assembled payload.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModuleSelection {
+    Release,
+    DevelopmentIfPresent,
+    DevelopmentRequired,
+}
 
 pub struct AssembledFile {
     pub path: String,
@@ -187,7 +197,11 @@ fn collect_payload(
 }
 
 /// Builds the flattened plugin folder contents in stable path order.
-pub fn assemble(module_dir: &Path, version: &str) -> Result<Vec<AssembledFile>, String> {
+pub fn assemble(
+    module_dir: &Path,
+    version: &str,
+    selection: ModuleSelection,
+) -> Result<Vec<AssembledFile>, String> {
     if parse_version(version).is_none() {
         return Err(format!(
             "planner version {version:?} is not a stable x.y.z version"
@@ -205,6 +219,23 @@ pub fn assemble(module_dir: &Path, version: &str) -> Result<Vec<AssembledFile>, 
     collect_payload(&module_dir.join(PAYLOAD_DIRECTORY), "", &mut payload)?;
     if !payload.contains_key("main.lua") {
         return Err("the game module payload has no main.lua".to_owned());
+    }
+    let development_module = module_dir.join(DEVELOPMENT_MODULE_FILE);
+    let use_development_module = match selection {
+        ModuleSelection::Release => false,
+        ModuleSelection::DevelopmentIfPresent => development_module.exists(),
+        ModuleSelection::DevelopmentRequired if development_module.exists() => true,
+        ModuleSelection::DevelopmentRequired => {
+            return Err(
+                "VITE_INTERNAL_FEATURES=1 requires the development module variant".to_owned(),
+            )
+        }
+    };
+    if use_development_module {
+        let module = payload.get_mut(OVERRIDDEN_MODULE_PATH).ok_or(format!(
+            "the game module payload has no {OVERRIDDEN_MODULE_PATH}"
+        ))?;
+        *module = read(&development_module)?;
     }
     let build_id = payload_build_id(&payload);
     let compatibility = payload.get_mut(COMPATIBILITY_FILE).ok_or(format!(

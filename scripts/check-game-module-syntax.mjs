@@ -1,6 +1,6 @@
 // Parses every game-module Lua file with `luac -p`, including files Luacheck excludes.
 import { spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { exit, stderr, stdout } from 'node:process';
 import { URL, fileURLToPath } from 'node:url';
@@ -13,7 +13,8 @@ function luaFiles(directory) {
     .map((entry) => join(entry.parentPath, entry.name));
 }
 
-const files = [...luaFiles('src/'), ...luaFiles('tests/')].sort();
+const optional = existsSync(join(moduleRoot, 'variants/')) ? luaFiles('variants/') : [];
+const files = [...luaFiles('src/'), ...luaFiles('tests/'), ...optional].sort();
 const result = spawnSync('luac', ['-p', ...files], { stdio: 'inherit' });
 if (result.error !== undefined) {
   stderr.write(`Unable to run luac: ${result.error.message}\n`);

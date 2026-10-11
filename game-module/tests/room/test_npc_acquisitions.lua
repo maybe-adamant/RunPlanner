@@ -3,6 +3,7 @@ local lu = require("luaunit")
 local npc = require("mods.room.timeline.acquisitions.npc.hooks")
 local traitSeaStar = require("mods.room.timeline.acquisitions.sea_star").create()
 local traits = require("mods.room.timeline.acquisitions.traits.hooks")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
 local circe = require("mods.room.timeline.acquisitions.npc.circe")
 local icarus = require("mods.room.timeline.acquisitions.npc.icarus")
 local echo = require("mods.room.timeline.acquisitions.npc.echo")
@@ -96,13 +97,14 @@ local function harness(giver, _, options)
         begin = function(_, currentHandle) return payloads[currentHandle] end,
         peek = function(_, currentHandle) return payloads[currentHandle] end,
     }
-    local npcScope = npc.attach(module, session, function() return state end, function() end, room)
+    local npcScope = npc.attach(module, session, function() return state end, function() end, room, nil,
+        rowOptions)
     circe.attach(module, session, function() end, npcScope)
     icarus.attach(module, session, function() end, npcScope)
     local traitScopes
     if options.realTraitScopes then
         traitScopes = traits.attach(module, session, function() return state end,
-            function() end, room, traitSeaStar)
+            function() end, room, traitSeaStar, nil, rowOptions)
     else
         traitScopes = {
             runExternalSelection = function(_, _, _, currentHandle, _, callback)
