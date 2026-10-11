@@ -1,10 +1,11 @@
-import { createAction, type Reducer } from '@reduxjs/toolkit';
+import { createAction, type Middleware, type Reducer } from '@reduxjs/toolkit';
 import {
   publishProjectHistoryEdit,
   createProjectHistory,
   reidentifyProjectHistory,
   projectCommandAuthoringAddresses,
   redoProjectHistory,
+  semanticAddressKey,
   undoProjectHistory,
   type ProjectCommand,
   type ProjectDocument,
@@ -88,6 +89,22 @@ function publishPreparedWorkspace(
     ...(settlementFault === undefined ? {} : { settlementFault }),
   });
 }
+
+/** Warns once per recorded settlement fault; a fault signals an engine repair defect. */
+export const settlementFaultWarning: Middleware<
+  object,
+  { readonly projectWorkspace: ProjectWorkspaceState }
+> = (api) => (next) => (action) => {
+  const before = api.getState().projectWorkspace.settlementFault;
+  const result = next(action);
+  const fault = api.getState().projectWorkspace.settlementFault;
+  if (fault !== undefined && fault !== before) {
+    globalThis.console.warn(
+      `Settlement could not finish repairing ${semanticAddressKey(fault.owner)} (${fault.key}).`,
+    );
+  }
+  return result;
+};
 
 export function createProjectWorkspaceReducer(
   catalog: Catalog,

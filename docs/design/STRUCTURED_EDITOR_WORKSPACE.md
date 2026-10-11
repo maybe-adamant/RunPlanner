@@ -939,9 +939,10 @@ assessment issue folds its inner reasons into one finding per dialog owner
 a count; a reason is inner when its origin lies beneath the owner or when a
 same-origin reason carries dialog-level evidence (`traitKey`/`optionKey`,
 `decisionKey`). The entry navigates to the launcher that opens the editor and
-never opens the dialog itself. A biome whose view is blocked or unassessed has
-its explanation as the muted blocked-view entry of the same panel, not as a
-banner in the workbench. Status badges may change their text width inside a pill.
+never opens the dialog itself. The panel holds only that single next-repair
+card; a blocked or unassessed biome view adds no entry or workbench banner and
+shows its state through its navigation marker and rail. Status badges may change
+their text width inside a pill.
 
 The inner layer is one always-mounted feedback region at the bottom of every
 visible dialog body (trait offer and its nested Echo choice, Pom, Circe, Chaos,

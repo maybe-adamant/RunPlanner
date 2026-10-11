@@ -1,8 +1,16 @@
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { gameSendFailed, gameSentSlotNotActivated } from '@planner/state/gameSendSessionSlice';
-import { bugReportFileName } from '@planner/workspace/bugReport';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { bugReportFileName, projectBugReportFacts } from '@planner/workspace/bugReport';
 import { createFakeGameModuleHost } from '@planner-test/fixtures/gameModuleHost';
 
 describe('bug report operations', () => {
@@ -37,8 +45,33 @@ describe('bug report operations', () => {
         openPlan: null,
         lastSendFailure: { message: 'Target unavailable.', at: '1970-01-01T00:00:00.000Z' },
         lastSendNotActivated: { slot: 2, message: 'Locked.', at: '1970-01-01T00:00:00.000Z' },
+        settlementFault: null,
       },
     });
+  });
+
+  it('carries the recorded settlement fault', () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHProject()));
+    const state = application.store.getState();
+    if (state.projectWorkspace.kind !== 'openProject') throw new Error('Expected an open project');
+    const owner = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('settlement-fault-owner'),
+    );
+    const key = `delivery:${semanticAddressKey(owner)}`;
+    const facts = projectBugReportFacts(
+      {
+        ...state,
+        projectWorkspace: { ...state.projectWorkspace, settlementFault: { key, owner } },
+      },
+      {
+        buildIdentity: application.buildIdentity,
+        catalogVersion: application.catalogSummary.version,
+        currentGamePlan: application.projectOperations.inspectCurrentGamePlan(),
+      },
+    );
+    expect(facts.settlementFault).toEqual({ key, owner: semanticAddressKey(owner) });
   });
 
   it('is absent without a desktop host', () => {

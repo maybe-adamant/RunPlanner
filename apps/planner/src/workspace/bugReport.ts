@@ -1,6 +1,7 @@
 import {
   encodeProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 
 import type { BuildIdentity } from '../composition/buildIdentity';
@@ -60,6 +61,7 @@ export function projectBugReportFacts(
 ): Readonly<Record<string, unknown>> {
   const failure = state.gameSendSession.lastFailure;
   const activationFailure = state.gameSendSession.lastActivationFailure;
+  const settlementFault = state.projectWorkspace.settlementFault;
   return {
     plannerVersion: options.buildIdentity.version,
     build: options.buildIdentity.build,
@@ -87,6 +89,10 @@ export function projectBugReportFacts(
             message: activationFailure.message,
             at: new Date(activationFailure.atMs).toISOString(),
           },
+    settlementFault:
+      settlementFault === undefined
+        ? null
+        : { key: settlementFault.key, owner: semanticAddressKey(settlementFault.owner) },
   };
 }
 

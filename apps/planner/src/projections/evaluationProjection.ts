@@ -1065,44 +1065,6 @@ export function projectFeedbackHierarchy(
   return projected;
 }
 
-/**
- * The findings-panel entry for a biome whose view is blocked or not yet
- * evaluated; `blockedAt` names the blocking owner's destination.
- */
-export function presentBlockedView(
-  catalog: Catalog,
-  feedback: BiomeFeedbackPresentation,
-  blockedAt: string | undefined,
-): FindingPresentation | undefined {
-  const biome = catalog.biomes.byKey[feedback.biomeKey];
-  if (biome === undefined) {
-    throw new Error(`Feedback references unknown biome ${feedback.biomeKey}`);
-  }
-  if (feedback.context === 'unassessed') {
-    return Object.freeze({ title: `${biome.label} is not evaluated yet` });
-  }
-  if (feedback.context !== 'blocked') {
-    return undefined;
-  }
-  const blocker =
-    feedback.blockedByBiomeKey === undefined
-      ? undefined
-      : catalog.biomes.byKey[feedback.blockedByBiomeKey];
-  if (feedback.blockedByBiomeKey !== undefined && blocker === undefined) {
-    throw new Error(`Feedback references unknown blocking biome ${feedback.blockedByBiomeKey}`);
-  }
-  return Object.freeze({
-    title:
-      blockedAt === undefined
-        ? `${biome.label} is blocked`
-        : `${biome.label} is blocked at ${blockedAt}`,
-    description:
-      blocker === undefined
-        ? 'Finish the earlier biomes before this biome can be evaluated.'
-        : `Finish and fix ${blocker.label} before ${biome.label} can be evaluated.`,
-  });
-}
-
 /** The navigation intent for the route's next repair, shared by every entry point to it. */
 export function nextRepairSelection(
   issue: AssessmentIssue,

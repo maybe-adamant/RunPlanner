@@ -550,15 +550,11 @@ describe('planner history interaction', () => {
     expect(repair().parentElement).toBe(
       screen.getByRole('region', { name: 'Oceanus route structure' }),
     );
-    // A blocked view leads its panel with the blocked entry; the repair entry follows unchanged.
+    // A blocked view shows the same single repair card.
     const entries = within(repair()).getAllByRole('button');
-    expect(entries).toHaveLength(2);
-    expect(entries[0]!.textContent).toContain('Oceanus is blocked at Erebus');
-    expect(repair().textContent).toContain(copy!.replace('Next repair', ''));
-    expect(screen.queryByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBe(
-      within(entries[0]!).getByText('Finish and fix Erebus before Oceanus can be evaluated.'),
-    );
-    await user.click(entries[1]!);
+    expect(entries).toHaveLength(1);
+    expect(repair().textContent).toBe(copy);
+    await user.click(entries[0]!);
     expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
       key: issue.regionKey,
       origin: issue.owner,
@@ -2514,11 +2510,9 @@ describe('planner history interaction', () => {
     ).toBe('Blocked');
 
     await user.click(oceanus);
-    const blockedBanner = screen.getByText(
-      'Finish the earlier biomes before this biome can be evaluated.',
-    );
-    expect(blockedBanner.getAttribute('role')).toBeNull();
-    expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
+    const repair = screen.getByRole('heading', { name: 'Next repair' }).closest('section')!;
+    expect(within(repair).getAllByRole('button')).toHaveLength(1);
+    expect(repair.textContent).not.toContain('is blocked');
     expect(screen.queryByRole('button', { name: 'Start biome' })).toBeNull();
     expect(
       application.store.getState().projectWorkspace.history!.present.route.biomes[1]?.topology

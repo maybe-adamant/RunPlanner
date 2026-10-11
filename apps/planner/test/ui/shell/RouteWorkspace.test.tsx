@@ -219,7 +219,7 @@ describe('RouteWorkspace', () => {
     expect(markup).toContain('aria-label="Start room configuration"');
   });
 
-  it('shows a blocked biome through the findings panel instead of a context banner', () => {
+  it('shows only the route issue card in a blocked biome view', () => {
     const application = createOpenTestApplication('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({
@@ -238,13 +238,11 @@ describe('RouteWorkspace', () => {
       markup.indexOf('class="project-findings"'),
       markup.indexOf('</section>', markup.indexOf('class="project-findings"')),
     );
-    expect(findings).toContain('data-feedback-context="blocked"');
+    expect(findings.match(/class="assessment-issue-button"/g)).toHaveLength(1);
+    expect(findings).not.toContain('data-feedback-context');
+    expect(findings).not.toContain('is blocked');
     // The missing starting reward blocks the route before any biome.
-    expect(findings).toContain('Oceanus is blocked at Loadout');
-    expect(findings).toContain('Finish the earlier biomes before this biome can be evaluated.');
-    expect(findings.indexOf('Oceanus is blocked at ')).toBeLessThan(
-      findings.lastIndexOf('class="assessment-issue-button"'),
-    );
+    expect(findings).toContain('Loadout');
   });
 
   it('keeps the singleton later P entry automatic in its biome workbench', () => {

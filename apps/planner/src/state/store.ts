@@ -18,6 +18,7 @@ import {
   createProjectWorkspaceReducer,
   type ProjectEvaluationAssembler,
   type PreparedProjectWorkspace,
+  settlementFaultWarning,
 } from './projectWorkspaceSlice';
 
 export interface CreatePlannerStoreOptions {
@@ -29,8 +30,10 @@ export interface CreatePlannerStoreOptions {
 
 export function createPlannerStore(options: CreatePlannerStoreOptions) {
   return configureStore({
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
+    middleware: (getDefaultMiddleware) => {
+      const middleware = getDefaultMiddleware({ immutableCheck: false, serializableCheck: false });
+      return import.meta.env.DEV ? middleware.concat(settlementFaultWarning) : middleware;
+    },
     reducer: {
       projectWorkspace: createProjectWorkspaceReducer(
         options.catalog,
