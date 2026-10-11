@@ -417,7 +417,8 @@ type HubAction = { kind: 'roomVisit'; hubSlotKey: string } | { kind: 'useFountai
 
 An `ExitDecision` has at most one semantic source. Occurrence-sourced batches
 belong to a layout's normal-decision policy, including N's bounded entry;
-Hub-sourced batches belong only to N's completed-Hub Preboss handoff.
+Hub-sourced batches belong only to N's completed-Hub Preboss exit, which
+every `HubDecision` owns exactly once.
 
 Selection belongs to the enclosing decision: a width-one normal-only batch uses
 `derived`; a multi-target or sibling-additional decision may be `unresolved`;
@@ -593,11 +594,14 @@ The catalog bounds N's normal entry to one `prehub` physical exit and one
 staged `N_PreHub01` target at biome depth 1. After PreHub reaches depth 2,
 `CreateBatch` may create the exact zero-target terminal envelope.
 `ReplaceWithHubDecision` atomically replaces that envelope with a Hub carrying
-the PreHub occurrence as its source; `RemoveHubDecision` removes Hub-owned
-state and restores the exact envelope. The Hub declaration owns the fixed
+the PreHub occurrence as its source, together with the Hub's completed-Hub
+exit: a width-one `N_PreBoss01` batch whose occurrence ID the command supplies
+(`prebossOccurrenceId`), and the fixed Boss and route-position Postboss
+occurrences it links. `RemoveHubDecision` removes Hub-owned state, including
+that chain, and restores the exact envelope. The Hub declaration owns the fixed
 physical slot-to-room mapping, opening bounds and constraints, six distinct
 ordered room visits, the one fountain use, side-room policy, restores, and the
-dedicated completed-Hub handoff. An open slot creates one occurrence; its room
+dedicated completed-Hub exit. An open slot creates one occurrence; its room
 identity is not replaceable. Open unvisited slots remain real offered leaves.
 
 The action list is a chronological prefix: at most six distinct open-slot
@@ -606,16 +610,23 @@ never infers a use. `ReplaceHubActionOrder` edits it by action identity; visit
 ordinals count room visits only. Reordering keeps the Phial outcome, while
 removing the fountain use removes it. `ResetHubBoard` retains the Hub decision
 and its source while atomically clearing its open slots, actions, fountain
-outcome, owned main/side rooms, and completed-Hub handoff subtree.
+outcome, and owned main/side rooms; the completed-Hub chain stays.
 Unlike `RemoveHubDecision`, it does not restore the preceding terminal envelope.
 Resetting an empty board is a no-op; Undo restores all cleared contents together.
 
-The completed-Hub batch is permitted only after the declared open-set and
-six-visit predicate holds. Fountain placement is not part of that structural
-predicate: removing only the fountain use keeps the handoff and its downstream
-rooms, and completeness separately requires the use. Its source is
-`{ kind: 'hubDecision', decisionKey: 'hub' }`, not a rendered visit index or
-synthetic completion source.
+The completed-Hub exit exists for the Hub's whole lifetime and is removed only
+with the Hub. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
+a rendered visit index or synthetic completion source; decoding rejects a Hub
+without it. Board, visit, fountain and slot edits (`ReplaceHubActionOrder`,
+`OpenHubSlot`, `CloseHubSlot`, `ResetHubBoard`) never touch it, so its Preboss,
+Boss and Postboss state survives them. The declared open-set and six-visit
+predicate gates only reachability: while it fails, materialization stops at
+the Hub frontier and the chain is an authored, unreached context whose state
+stays finding-backed. Fountain placement is not part of that predicate;
+completeness separately requires the use before departure. The unreached chain
+still counts as structurally active for the command boundary's Room Action
+domain closure, so its delivery and pickup rows are kept and seeded like any
+other authored room, but it is not assessed until the Hub is complete.
 
 Each entered main occurrence may own a `LocalVisitDecision` whose generated
 targets are distinct side-room occurrences. Generation and visit order remain
@@ -624,9 +635,8 @@ lifecycle. Parent and Hub restoration preserve the canonical walk without
 replaying either occurrence's already-settled actions.
 
 Closing an unvisited slot below the declared open-set minimum retains the
-already-authored visit sequence as an incomplete Hub board, but atomically
-removes the completed-Hub batch and every descendant it owns. The handoff may
-be authored again only after the board is restored to its completion predicate.
+already-authored visit sequence and the completed-Hub chain as an incomplete
+Hub board.
 
 ## Occurrence State and Replacement
 
@@ -1221,7 +1231,7 @@ Anomaly and Zagreus detour commands. The current union is defined by
 additional branches, clearing references on surviving owners in the same edit.
 Removal follows ordinary, Hub, local-visit and fixed-link ownership, not array
 order. Removing N's Opening decision therefore removes PreHub, its
-source-bearing Hub, and any completed-Hub batch through persisted ownership.
+source-bearing Hub, and its completed-Hub chain through persisted ownership.
 Navigation and focus are not commands and do not enter authored history.
 
 ## Persistence and Validation
@@ -1302,6 +1312,9 @@ and can only shrink.
 
 Schema 95 adds that field. The 94 → 95 migration only bumps the version, so
 every screen is unresolved and each reached one asks for its nodes.
+Schema 96 requires every Hub's completed-Hub exit; the 95 → 96 migration gives
+each Hub without one its Preboss, Boss and Postboss with declaration-owned
+defaults and new biome-scoped identities, leaving existing identities intact.
 
 ## Undo and Redo
 

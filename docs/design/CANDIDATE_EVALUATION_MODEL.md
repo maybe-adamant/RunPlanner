@@ -367,8 +367,9 @@ depth requirement against PreHub's committed post-room history and returns
 `required` or `impossible`. The application projects that result as the
 affordance for one complete `ReplaceWithHubDecision` intent. Findings or
 unavailable candidate coverage may disable the action, but they never remove
-the authored terminal control. The completed-Hub Preboss remains in the
-separate takeover-Preboss domain owned by the Hub-sourced handoff.
+the authored terminal control. The completed-Hub Preboss is created with the
+Hub and has no candidate domain; the takeover-Preboss domain belongs only to
+generated layouts' occurrence sources.
 
 For a reward domain, the session prepares the producer frontier described
 below. Every complete offer is evaluated from the same frontier.

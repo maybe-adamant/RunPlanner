@@ -179,10 +179,11 @@ topology-selection effect, not a React-only visibility convention.
 ## Hub handoff and fixed completion links
 
 A Hub uses one `HubDecision` for its declaration-fixed slot membership and
-visit order. Once its completion predicate holds, it owns a completed-Hub
-width-one normal exit whose persisted source is
-`{ kind: 'hubDecision', decisionKey }`. That exit creates the declaration-fixed
-Preboss occurrence through the same batch language as other biomes.
+visit order. It owns exactly one completed-Hub width-one normal exit whose
+persisted source is `{ kind: 'hubDecision', decisionKey }`, created and removed
+with the Hub. That exit holds the declaration-fixed Preboss occurrence in the
+same batch language as other biomes; the Hub's completion predicate gates its
+reachability, not its existence.
 
 Selecting any Preboss stops editable traversal and realizes its fixed Boss and
 route-position Postboss occurrences, when a Postboss exists. Those rooms are

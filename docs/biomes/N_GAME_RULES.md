@@ -85,21 +85,21 @@ visits, rewards, history, completion, and removal/undo behavior.
 
 ### Completed-Hub Preboss remains separate
 
-`N_PreBoss01` does not participate in the post-PreHub terminal envelope. A Hub
-that satisfies its open-set and six-visit predicate owns the existing
-completed-Hub frontier:
+`N_PreBoss01` does not participate in the post-PreHub terminal envelope. Every
+Hub owns the completed-Hub chain from the moment it is created:
 
 ```text
-complete HubDecision
+HubDecision
   -> completed-Hub exit `preboss`
-  -> fixed width-one N_PreBoss01 takeover batch
+  -> fixed width-one N_PreBoss01 batch
   -> N_Boss01 -> N_PostBoss01 through fixed links
 ```
 
-The handoff remains sourced by `{ kind: 'hubDecision', decisionKey: 'hub' }`.
-An incomplete Hub exposes no Preboss handoff, while a complete Hub exposes
-exactly that one fixed target. The Preboss batch does not replace the Hub node
-or make `N_PreBoss01` an occurrence-sourced candidate.
+The exit is sourced by `{ kind: 'hubDecision', decisionKey: 'hub' }`. While
+the Hub fails its open-set and six-visit predicate the chain stays authored but
+unreached; a complete Hub reaches exactly that one fixed target. The Preboss
+batch does not replace the Hub node or make `N_PreBoss01` an
+occurrence-sourced candidate.
 
 ## Authored shape
 
@@ -118,17 +118,18 @@ or make `N_PreBoss01` an occurrence-sourced candidate.
   by its slot while its incoming reward belongs to that occurrence. Its local
   generation and visit order belong to a parent-sourced `LocalVisitDecision`;
   each generated side target is a distinct occurrence.
-- Completing the six-visit predicate enables the declaration-fixed
-  completed-Hub exit. Fountain placement does not gate that handoff, but an
-  unplanned fountain use stops assessment before departure.
-  Its persisted source is `{ kind: 'hubDecision', decisionKey: 'hub' }` and
-  it creates the fixed width-one `N_PreBoss01` Shop occurrence.
-- Selecting that Preboss creates the ordinary `N_Boss01` and route-position
-  `N_PostBoss01` occurrences through fixed links.
+- Creating the Hub also creates its declaration-fixed completed-Hub exit,
+  persisted as `{ kind: 'hubDecision', decisionKey: 'hub' }`, with the fixed
+  width-one `N_PreBoss01` Shop occurrence, the ordinary `N_Boss01` and the
+  route-position `N_PostBoss01` linked through fixed links. Only removing the
+  Hub removes them; board, visit, fountain and slot edits keep them.
+- Completing the six-visit predicate makes that chain reachable. Fountain
+  placement does not gate reachability, but an unplanned fountain use stops
+  assessment before departure.
 
-This is a completed-Hub handoff, not the PreHub-owned terminal envelope or a
-Door 1 room choice. The Hub's completion predicate remains the sole authority
-for creating it.
+This is a completed-Hub exit, not the PreHub-owned terminal envelope or a
+Door 1 room choice. The Hub's completion predicate is the sole authority for
+reaching it.
 
 ## Hub and side-room facts
 
