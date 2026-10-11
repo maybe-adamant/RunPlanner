@@ -654,19 +654,6 @@ describe('outer finding collapse', () => {
     });
     expect(
       presentAssessmentIssue(
-        issueOf(phase, [
-          traitFinding('encounterCustomizationRequired', phase, { decisionKey: 'composition' }),
-        ]),
-        byOrigin,
-      ),
-    ).toEqual({
-      title: 'Encounter customization required',
-      description: 'Fresh File plans require customized encounters.',
-      dialog: { kind: 'encounterCustomization', owner: phase },
-      innerFindingCount: 1,
-    });
-    expect(
-      presentAssessmentIssue(
         issueOf(phase, [traitFinding('encounterUnavailable', phase)]),
         byOrigin,
       ),

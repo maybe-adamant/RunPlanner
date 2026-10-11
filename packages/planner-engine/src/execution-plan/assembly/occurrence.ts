@@ -34,6 +34,7 @@ export function executionOccurrence(
   hubExit: CanonicalBatch | undefined,
   localSlots: readonly CanonicalLocalVisitRoom[] | undefined,
   selected: boolean,
+  nativeExclusions: ReadonlyMap<string, readonly string[]>,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
   const publishedHub =
@@ -49,7 +50,7 @@ export function executionOccurrence(
     kind: room.encounterEnvelopeKey,
     ...(anomaly === undefined ? {} : { anomaly }),
     overview: Object.freeze({
-      ...assembleExecutionOverview(catalog, room, biome, batch, transactions),
+      ...assembleExecutionOverview(catalog, room, biome, batch, transactions, nativeExclusions),
       ...(publishedHub === undefined ? {} : { hub: publishedHub }),
       ...(publishedLocalSlots === undefined ? {} : { localSlots: publishedLocalSlots }),
     }),

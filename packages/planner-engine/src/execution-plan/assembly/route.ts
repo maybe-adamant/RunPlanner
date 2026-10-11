@@ -5,7 +5,12 @@ import type {
   CanonicalHubDecision,
 } from '../../simulation/materialization';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
-import { semanticAddressKey } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  semanticAddressKey,
+} from '../../authored-project/addresses';
+import type { ResolvedGeneratedPhase } from '../../simulation/encounters/model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionRoomOwnerKey } from './support';
 import type { ExecutionAssemblerInput } from '../model';
@@ -29,6 +34,36 @@ function addRoom(
   if (seen.has(key)) return;
   seen.add(key);
   rooms.push(room);
+}
+
+/** Every reached generated phase of the route in generation order: biome, room entry, phase. */
+export function executionGeneratedPhases(
+  biomes: readonly CompleteValidBiomeProjectEvaluation[],
+): readonly ResolvedGeneratedPhase[] {
+  return biomes.flatMap((biome) => {
+    const roomOrder = new Map(
+      biome.history.rooms.map((room, index) => [semanticAddressKey(room.origin), index] as const),
+    );
+    const roomIndex = (phase: ResolvedGeneratedPhase) => {
+      const index = roomOrder.get(
+        semanticAddressKey(
+          createOccurrenceAddress(
+            createBiomeAddress(phase.origin.routeKey, phase.origin.biomeKey),
+            phase.origin.owner.occurrenceId,
+          ),
+        ),
+      );
+      if (index === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `generated phase ${semanticAddressKey(phase.origin)} has no entered room`,
+        );
+      return index;
+    };
+    return [...biome.roomGeneration.resolvedGenerated].sort(
+      (left, right) => roomIndex(left) - roomIndex(right),
+    );
+  });
 }
 
 export function orderedExecutionRooms(

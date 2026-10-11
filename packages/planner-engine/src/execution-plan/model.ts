@@ -619,6 +619,14 @@ export interface ExecutionOverview {
         }
       | ExecutionGeneratedEncounterCustomization
     )[];
+    /**
+     * Enemies this generated phase's native roll must not draw: those whose
+     * introduction would replace the encounter, then once-per-run enemies a
+     * later authored composition draws through native eligibility. It governs
+     * an uncustomized phase's roll, and an authored phase's only when its
+     * composition is declined; it may name that composition's own members.
+     */
+    readonly excludedEnemies?: readonly { readonly choiceKey: string; readonly nativeId: string }[];
   }[];
   /** Exact active ShipCombat wheel materialization for each encounter phase. */
   readonly rewardWheels?: readonly {

@@ -103,10 +103,11 @@ describe('resolved execution encounters', () => {
         withoutPhase('Combat'),
         undefined,
         [],
+        new Map(),
       ).encounterPhases.map((phase) => phase.slotKey),
     ).toEqual(['Intro']);
     expect(() =>
-      assembleExecutionOverview(catalog, room, withoutPhase('Intro'), undefined, []),
+      assembleExecutionOverview(catalog, room, withoutPhase('Intro'), undefined, [], new Map()),
     ).toThrow('P_Combat02 lacks recorded encounter Intro');
   });
 

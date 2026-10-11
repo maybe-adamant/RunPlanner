@@ -582,54 +582,34 @@ describe('generated encounter customization workflows', () => {
     expect(button.disabled).toBe(true);
     expect(hintOf(button)).toBe('Waits on an earlier choice.');
   });
-  it('repairs required Fields passive composition from Overview without opening its dialog automatically', async () => {
+  it('leaves an uncustomized Fields passive composition unflagged and editable from Overview', async () => {
     const owner = createEncounterPhaseAddress(
       createBiomeAddress('FreshFile', 'H'),
       { kind: 'occurrence', occurrenceId: newHFieldsRoomId },
       'Passive',
     );
-    const authored = authorFreshFileRoomIssues(
+    const project = authorFreshFileRoomIssues(
       withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
       'H',
       newHFieldsRoomId,
     ).project;
-    const project = applyProjectCommand(authored, catalog, {
-      kind: 'ReplaceEncounterCustomization',
-      phase: owner,
-      decisionKey: 'generatedComposition',
-      value: null,
-    });
+    expect(
+      simulateProject(catalog, project).findings.filter(
+        (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(owner),
+      ),
+    ).toEqual([]);
     const view = renderOccurrenceWorkbench(
       project,
       'FreshFile',
       'H',
       occurrenceById(newHFieldsRoomId),
     );
-    openRoomTab('Room Timeline');
-    expect(screen.queryByLabelText('Passive encounter events')).toBeNull();
     openRoomTab('Room Overview');
-    const finding = simulateProject(catalog, project).findings.find(
-      (entry) => entry.code === 'encounterCustomizationRequired',
-    )!;
-    expect(finding.origin).toEqual(owner);
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
     const encounters = screen.getByRole('region', { name: 'Encounter structure' });
-    expect(within(encounters).getByRole('heading', { name: 'Encounters' })).toBeTruthy();
     const passive = within(encounters).getByRole('region', { name: 'Passive encounter phase' });
-    expect(within(passive).getByText('Passive encounter')).toBeTruthy();
-    const trigger = within(passive).getByRole('button', {
-      name: 'Customize encounter',
-    });
-    await waitFor(() => expect(document.activeElement).toBe(trigger));
-    expect(trigger.dataset.hasFindings).toBe('true');
-    expect(
-      within(encounters).getByRole('checkbox', { name: 'Nemesis Event' }).dataset.hasFindings,
-    ).toBe('false');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    const trigger = within(passive).getByRole('button', { name: 'Customize encounter' });
+    expect(current(view, owner)).toBeUndefined();
+    expect(trigger.dataset.hasFindings).toBe('false');
     await view.user.click(trigger);
     const dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
     await view.user.click(within(dialog).getByRole('button', { name: 'Edit' }));
@@ -647,13 +627,15 @@ describe('generated encounter customization workflows', () => {
       'H',
       newHFieldsRoomId,
     ).project;
+    // An unavailable composition stops the room at its Overview.
     const project = applyProjectCommand(authored, catalog, {
       kind: 'ReplaceEncounterCustomization',
       phase: room('Cage02'),
       decisionKey: 'generatedComposition',
-      value: null,
+      value: { kind: 'generated', waveCount: 1, waves: [{ waveIndex: 1, typeKeys: ['Dragon'] }] },
     });
     const earlier = await open(project, room('Cage01'));
+    await initialize(earlier);
     expect(within(earlier.dialog).queryByRole('tab', { name: /^Wave 1/ })).toBeTruthy();
     expect(
       (within(earlier.dialog).getByRole('button', { name: 'Wave 1 enemies' }) as HTMLButtonElement)
@@ -823,7 +805,7 @@ describe('generated encounter customization workflows', () => {
       'Fixed waves cannot be edited. Customize the remaining waves.',
     );
     expect(help.textContent).toContain(
-      'You must customize this encounter again before continuing.',
+      'Reset removes the customization and returns the encounter to game control.',
     );
     expect(within(help).queryByRole('heading', { name: 'Fangs' })).toBeNull();
     expect(within(help).queryByRole('heading', { name: 'Menace' })).toBeNull();
@@ -865,7 +847,7 @@ describe('generated encounter customization workflows', () => {
     expect(within(table).queryByRole('row', { name: /^Budget/ })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'Wave 4 enemies' })).toBeNull();
   });
-  it('shows native placeholders and the required finding on an uncustomized fresh phase', async () => {
+  it('shows native placeholders without a finding on an uncustomized fresh phase', async () => {
     const owner = createEncounterPhaseAddress(
       freshFileFBiome,
       { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-2-0') },
@@ -878,33 +860,17 @@ describe('generated encounter customization workflows', () => {
       value: null,
     });
     const view = await open(cleared, owner);
-    await view.user.click(within(view.dialog).getByRole('button', { name: 'Done' }));
-    const finding = simulateProject(catalog, cleared).findings.find(
-      (entry) => entry.code === 'encounterCustomizationRequired',
-    )!;
-    const trigger = screen.getByRole('button', { name: 'Customize encounter' });
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
-    await waitFor(() => expect(document.activeElement).toBe(trigger));
-    expect(screen.queryByRole('dialog')).toBeNull();
-    await view.user.click(trigger);
-    view.dialog = await screen.findByRole('dialog', { name: /\(.+\)$/ });
+    expect(simulateProject(catalog, cleared).findings).toEqual([]);
     expect(
       screen.getByRole('button', { name: 'Customize encounter' }).getAttribute('data-has-findings'),
-    ).toBe('true');
+    ).toBe('false');
     expect(
       within(view.dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-    ).toContain('Customize this encounter');
-    expect(
-      within(view.dialog).getByRole('status', { name: 'Encounter feedback' }).textContent,
-    ).toContain('Fresh File plans require customized encounters.');
+    ).toContain('No current findings.');
     expect(within(view.dialog).queryByRole('button', { name: 'Reset to default' })).toBeNull();
     expect(within(view.dialog).getByRole('button', { name: 'Edit' })).toBeTruthy();
     expect(within(view.dialog).queryByRole('button', { name: 'Wave 2 enemies' })).toBeNull();
-    expect(within(view.dialog).getByText('Select Edit to configure this wave.')).toBeTruthy();
+    expect(within(view.dialog).getByText('The game generates this wave’s enemies.')).toBeTruthy();
     expect(
       (within(view.dialog).getByRole('radio', { name: '2' }) as HTMLInputElement).disabled,
     ).toBe(true);
@@ -926,31 +892,6 @@ describe('generated encounter customization workflows', () => {
     await initialize(native);
     expect(within(native.dialog).getByText('This encounter is generated')).toBeTruthy();
     expect(within(native.dialog).getByRole('button', { name: 'Reset to default' })).toBeTruthy();
-  });
-  it('warns about declared once-per-run enemies among engine-assessed active members', async () => {
-    const owner = createEncounterPhaseAddress(
-      goldenHBiome,
-      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat05') },
-      'Cage01',
-    );
-    const view = await open(
-      customize(createGoldenFGHIProject(), owner, {
-        kind: 'generated',
-        waveCount: 1,
-        waves: [{ waveIndex: 1, typeKeys: ['FogEmitter2', 'BrokenHearted', 'Lovesick'] }],
-      }),
-      owner,
-    );
-    const warning = within(view.dialog).getByText(
-      'Sorrow-Spiller can appear only once per run. An earlier uncustomized encounter may already include it.',
-    );
-    const findings = within(view.dialog).getByRole('status', { name: 'Encounter feedback' });
-    expect(findings.contains(warning)).toBe(true);
-    expect(findings.textContent).not.toContain('No current findings.');
-    // Warnings follow the wave controls instead of mounting above the wave tabs.
-    const tabs = within(view.dialog).getByRole('tablist', { name: 'Wave budgets' });
-    expect(tabs.compareDocumentPosition(findings) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(tabs.contains(warning)).toBe(false);
   });
   it('initializes reward-owned Devotion at its exact phase', async () => {
     const owner = createEncounterPhaseAddress(

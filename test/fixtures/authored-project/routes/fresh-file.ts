@@ -32,9 +32,38 @@ import {
 } from '../checkpoints/underworld';
 import { authorLegalTraitOffers } from '../shared';
 
+/** The first reached generated phase without an authored composition, in route chronology. */
+function firstUncustomizedGeneratedPhase(
+  assembly: ReturnType<typeof simulateProjectAssembly>,
+): { readonly phase: EncounterPhaseAddress; readonly decisionKey: string } | undefined {
+  for (const biome of assembly.evaluation.route.biomes) {
+    if (!('roomGeneration' in biome) || !('history' in biome)) continue;
+    const roomOrder = biome.history.rooms.map((room) =>
+      room.origin.kind === 'occurrence' ? room.origin.occurrenceId : undefined,
+    );
+    const pending = biome.roomGeneration.resolvedGenerated
+      .filter((entry) => entry.customization === undefined)
+      .sort(
+        (left, right) =>
+          roomOrder.indexOf(left.origin.owner.occurrenceId) -
+          roomOrder.indexOf(right.origin.owner.occurrenceId),
+      )[0];
+    if (pending === undefined) continue;
+    const decisionKey = generatedEncounterSupportForProjectEvaluationAssembly(
+      assembly,
+      pending.origin,
+    )?.decisionKey;
+    if (decisionKey === undefined)
+      throw new Error(`fresh fixture lost generation at ${JSON.stringify(pending.origin)}`);
+    return { phase: pending.origin, decisionKey };
+  }
+  return undefined;
+}
+
 /**
- * Authors, in chronological order, each reached generated composition a fresh
- * profile requires (its deterministic initial value) and each missing trait offer.
+ * Authors, in chronological order, each reached generated composition (its
+ * deterministic initial value) and each missing trait offer, so fixture routes
+ * keep exact compositions.
  */
 export function authorFreshFileFrontier(
   project: ProjectDocument,
@@ -43,20 +72,20 @@ export function authorFreshFileFrontier(
   let current = project;
   for (let pass = 0; pass < 256; pass += 1) {
     const assembly = simulateProjectAssembly(catalog, current);
-    const required = assembly.evaluation.findings.find(
-      (finding) => finding.code === 'encounterCustomizationRequired',
-    );
-    const phase = required?.origin as EncounterPhaseAddress | undefined;
+    const uncustomized = firstUncustomizedGeneratedPhase(assembly);
     // A composition's generation contact needs the reward frontier before it.
     const value =
-      phase === undefined
+      uncustomized === undefined
         ? undefined
-        : generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase)?.initialize();
-    if (phase !== undefined && value !== undefined) {
+        : generatedEncounterSupportForProjectEvaluationAssembly(
+            assembly,
+            uncustomized.phase,
+          )?.initialize();
+    if (uncustomized !== undefined && value !== undefined) {
       current = applyProjectCommand(current, catalog, {
         kind: 'ReplaceEncounterCustomization',
-        phase,
-        decisionKey: String(required!.evidence.decisionKey),
+        phase: uncustomized.phase,
+        decisionKey: uncustomized.decisionKey,
         value,
       });
       observe?.(current);
@@ -64,8 +93,8 @@ export function authorFreshFileFrontier(
     }
     const authored = authorLegalTraitOffers(current);
     if (authored === current) {
-      if (phase !== undefined)
-        throw new Error(`fresh fixture cannot compose ${JSON.stringify(phase)}`);
+      if (uncustomized !== undefined)
+        throw new Error(`fresh fixture cannot compose ${JSON.stringify(uncustomized.phase)}`);
       return current;
     }
     current = authored;
@@ -179,6 +208,17 @@ export function createFreshFileFProject(): ProjectDocument {
 }
 
 let freshFileF: ProjectDocument | undefined;
+
+/** The same Fresh File F with every generated composition left to the native roll. */
+export function createFreshFileFNativeProject(): ProjectDocument {
+  let current = freshFileFTopology();
+  for (let pass = 0; pass < 64; pass += 1) {
+    const authored = authorLegalTraitOffers(current);
+    if (authored === current) return current;
+    current = authored;
+  }
+  throw new Error('fresh native frontier did not settle');
+}
 
 /** The F topology, rewards and Shops, before compositions and trait offers. */
 function freshFileFTopology(): ProjectDocument {
@@ -656,23 +696,7 @@ export function authorFreshFileRoomIssues(
     const codes = issue.reasons.map((reason) => reason.code);
     const observed = observe === undefined ? '' : ` ${observe(assembly)}`;
     let label: string;
-    if (owner.kind === 'encounterPhase' && codes.includes('encounterCustomizationRequired')) {
-      label = `composition:${owner.phaseKey}`;
-      const required = issue.reasons.find(
-        (reason) => reason.code === 'encounterCustomizationRequired',
-      )!;
-      const value = generatedEncounterSupportForProjectEvaluationAssembly(
-        assembly,
-        owner as EncounterPhaseAddress,
-      )?.initialize();
-      if (value === undefined) throw new Error(`${owner.phaseKey} cannot initialize`);
-      current = applyProjectCommand(current, catalog, {
-        kind: 'ReplaceEncounterCustomization',
-        phase: owner as EncounterPhaseAddress,
-        decisionKey: String(required.evidence.decisionKey),
-        value,
-      });
-    } else if (owner.kind === 'localReward' && owner.groupKey === 'optionalRewards') {
+    if (owner.kind === 'localReward' && owner.groupKey === 'optionalRewards') {
       label = 'optionalReward';
       current = applyProjectCommand(current, catalog, {
         kind: 'ReplaceLocalReward',

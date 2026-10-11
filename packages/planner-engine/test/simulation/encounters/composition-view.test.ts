@@ -198,7 +198,7 @@ describe('encounter composition view', () => {
       value: null,
     });
     const fresh = viewAt(cleared, freshFileFBiome, 'fresh-2-0');
-    expect(fresh.findings).toEqual(['encounterCustomizationRequired']);
+    expect(fresh.findings).toEqual([]);
     expect(fresh.view).toMatchObject({
       disposition: { key: 'fixedWavePrefix', fixedWaveCount: 1 },
       waveCount: { min: 2, max: 2, value: 2 },

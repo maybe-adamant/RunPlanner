@@ -203,8 +203,6 @@ export interface WorkspaceGeneratedEncounterAssessment {
     readonly field?: 'baseRoll' | 'waveCount' | 'highlight' | 'fangs' | 'enemies';
   }[];
   readonly composition: 'active' | 'missingWaveCount' | 'missingHighlight';
-  /** Declared once-per-run enemies among the engine-assessed active members. */
-  readonly warnings: readonly string[];
   readonly budgetDomain?: {
     readonly baseRoll: { readonly min: number; readonly max: number };
     readonly total: { readonly min: number; readonly max: number };
@@ -246,7 +244,6 @@ export interface WorkspaceEncounterComposition {
   readonly label: string;
   readonly dispositionLabel: string;
   readonly editable: boolean;
-  readonly customizationRequired: boolean;
   readonly waveCount: { readonly min: number; readonly max: number; readonly value?: number };
   readonly waves: readonly {
     readonly waveIndex: number;
@@ -573,8 +570,6 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly difficultyRating: number;
           readonly unitGroupSize?: number;
           readonly fangsCaveat?: 'squad';
-          /** Declared once-per-run identity. */
-          readonly blacklistAfterAppearance?: true;
           readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly fixedEnemies: readonly {
@@ -583,8 +578,6 @@ export type WorkspaceEncounterCustomizationDecision =
           readonly difficultyRating: number;
           readonly unitGroupSize?: number;
           readonly fangsCaveat?: 'squad';
-          /** Declared once-per-run identity. */
-          readonly blacklistAfterAppearance?: true;
           readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
         }[];
         readonly waveCount: { readonly min: number; readonly max: number };

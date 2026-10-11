@@ -298,10 +298,9 @@ describe('a finding never disables the launcher that repairs it', () => {
     );
     expect(seen).toEqual([]);
     expect(checked.trait).toBeGreaterThan(0);
-    expect(checked.encounter).toBeGreaterThan(0);
   });
 
-  it('holds on Fresh routes with a cleared trait offer or composition', () => {
+  it('holds on Fresh routes with a cleared trait offer or an unavailable composition', () => {
     const fresh = createFreshFileRouteProject();
     for (const project of [
       createFreshFileFProject(),
@@ -317,7 +316,7 @@ describe('a finding never disables the launcher that repairs it', () => {
           'Encounter',
         ),
         decisionKey: 'generatedComposition',
-        value: null,
+        value: { kind: 'generated', waveCount: 1, waves: [{ waveIndex: 1, typeKeys: ['Dragon'] }] },
       }),
     ])
       expect(check(project)).toEqual([]);

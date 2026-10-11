@@ -9,6 +9,7 @@ import type { MaterializedBiomePrefix } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { BiomeRewardSimulation } from '../rewards';
 import type { BiomeCandidateArtifacts } from '../evaluation/candidate-artifacts';
+import type { ResolvedGeneratedPhase } from '../encounters/model';
 
 /** The complete generation result published by progressive biome evaluation. */
 export interface BiomeGenerationValidation {
@@ -16,13 +17,8 @@ export interface BiomeGenerationValidation {
   readonly ordinary: GeneratedRoomGenerationValidation;
   readonly hub: HubRoomGenerationValidation;
   readonly findings: readonly SemanticFinding[];
-  /** Exact active generated operands produced after reward evaluation. */
-  readonly resolvedGenerated: readonly {
-    readonly origin: import('../../authored-project/addresses').EncounterPhaseAddress;
-    readonly customization: NonNullable<
-      import('../encounters/model').ResolvedEncounterPhase['generatedCustomization']
-    >;
-  }[];
+  /** Every reached generated phase, with any authored operands, after reward evaluation. */
+  readonly resolvedGenerated: readonly ResolvedGeneratedPhase[];
 }
 
 /** The evaluated prefix and its progressive simulation products. */

@@ -1,6 +1,7 @@
 import type { EncounterPhaseKind, EncounterSlotRewardAttachment } from '../../catalog-schema';
 import type { AuthoredEncounterCustomization } from '../../authored-project/model';
 import type { EncounterCustomizationDecision } from '../../catalog-schema';
+import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 
 /**
  * Retained materialization for one active envelope slot. It deliberately
@@ -62,4 +63,23 @@ export interface ResolvedEncounterPhase {
   };
   readonly sequenceEffect?: { readonly kind: 'terminateSuffix' };
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
+}
+
+/** Native-roll facts of one reached generated phase at its own generation checkpoint. */
+export interface GeneratedNativeRollFacts {
+  readonly origin: EncounterPhaseAddress;
+  /** Admissible enemies whose introduction would replace this encounter here. */
+  readonly triggerExcludedEnemyKeys: readonly string[];
+  /** Admissible once-per-run enemies this phase's native roll could draw and so use up. */
+  readonly oncePerRunEnemyKeys: readonly string[];
+  /**
+   * An authored composition's once-per-run enemies that pass native eligibility
+   * here, so an earlier native roll must not use them up. Absent when uncustomized.
+   */
+  readonly authoredOncePerRunUses?: readonly string[];
+}
+
+/** One reached generated phase after reward settlement, with its authored operands when composed. */
+export interface ResolvedGeneratedPhase extends GeneratedNativeRollFacts {
+  readonly customization?: NonNullable<ResolvedEncounterPhase['generatedCustomization']>;
 }

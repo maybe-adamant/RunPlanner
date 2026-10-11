@@ -99,7 +99,6 @@ describe('Fresh File route start', () => {
     const codes = simulateProject(catalog, project).findings.map((finding) => finding.code);
     for (const code of [
       'encounterCustomizationUnavailable',
-      'encounterCustomizationRequired',
       'encounterIntroductionRequired',
     ] as const)
       expect(codes).not.toContain(code);

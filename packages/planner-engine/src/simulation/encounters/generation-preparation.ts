@@ -3,10 +3,12 @@ import { semanticAddressKey, type EncounterPhaseAddress } from '../../authored-p
 import type { GeneratedEncounterSelection } from '../../catalog-schema';
 import type { HistoryStateView, ProgressiveRoomHistoryViews } from '../history/model';
 import type { RoomHistoryOrigin } from '../lifecycle';
-import type { ResolvedEncounterPhase } from './model';
+import type { GeneratedNativeRollFacts, ResolvedEncounterPhase } from './model';
 import {
   assessGeneratedEncounter,
+  admissibleEnemyKeys,
   initializeGeneratedEncounter,
+  triggerExcludedEnemyKeys,
   type EncounterGenerationContext,
   type GeneratedEncounterAssessment,
 } from './generation';
@@ -80,6 +82,7 @@ export function prepareGeneratedEncounter(
 ): {
   readonly phase: ResolvedEncounterPhase;
   readonly capability?: GeneratedEncounterCandidateCapability;
+  readonly nativeRoll?: GeneratedNativeRollFacts;
 } {
   const decision = phase.customization?.find(
     (entry) => entry.selection.kind === 'generated' && entry.replaced !== true,
@@ -124,7 +127,16 @@ export function prepareGeneratedEncounter(
     assess,
     initialize: () => initializeGeneratedEncounter(policy, context),
   });
-  if (decision.value?.kind !== 'generated') return { phase, capability };
+  const nativeRoll: GeneratedNativeRollFacts = Object.freeze({
+    origin,
+    triggerExcludedEnemyKeys: triggerExcludedEnemyKeys(policy, context),
+    oncePerRunEnemyKeys: Object.freeze(
+      admissibleEnemyKeys(policy, context).filter(
+        (key) => policy.choices.find((choice) => choice.key === key)?.blacklistAfterAppearance,
+      ),
+    ),
+  });
+  if (decision.value?.kind !== 'generated') return { phase, capability, nativeRoll };
   const assessment = assess(decision.value);
   const operands = assessment.operands;
   const introductionRequirements = assessment.issues.flatMap((issue) =>
@@ -140,6 +152,10 @@ export function prepareGeneratedEncounter(
   );
   return {
     capability,
+    nativeRoll: Object.freeze({
+      ...nativeRoll,
+      authoredOncePerRunUses: assessment.oncePerRunUses ?? Object.freeze([]),
+    }),
     phase: Object.freeze({
       ...phase,
       customization: Object.freeze(

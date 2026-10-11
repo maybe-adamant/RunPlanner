@@ -332,9 +332,7 @@ describe('introduction members on a fresh route', () => {
     expect(domain.introductionExcludedKeysByPosition?.[0]).toEqual(
       expect.arrayContaining(['Lamia', 'Lovesick']),
     );
-    expect(findingsAt(project, phase)).toEqual([
-      expect.objectContaining({ code: 'encounterCustomizationRequired' }),
-    ]);
+    expect(findingsAt(project, phase)).toEqual([]);
   });
 
   it('reports a retained unintroduced enemy and a lapsed introduction, retaining both', () => {
@@ -380,28 +378,6 @@ describe('introduction members on a fresh route', () => {
     });
     expect(findingsAt(repeated, lapsed)).toEqual([
       expect.objectContaining({ code: 'encounterUnavailable' }),
-    ]);
-  });
-
-  it('requires every generated composition on the fresh route', () => {
-    const phase = phaseAt(freshFileFBiome, 'fresh-1-0');
-    const cleared = applyProjectCommand(createFreshFileRouteProject(), catalog, {
-      kind: 'ReplaceEncounterCustomization',
-      phase,
-      decisionKey: 'generatedComposition',
-      value: null,
-    });
-    // A missing composition is required input, not an invalid value.
-    const evaluation = simulateProject(catalog, cleared);
-    expect(evaluation.status).toBe('incomplete');
-    expect(findingsAt(cleared, phase)).toEqual([
-      {
-        code: 'encounterCustomizationRequired',
-        severity: 'error',
-        phase: 'encounterResolution',
-        origin: phase,
-        evidence: { beforeSequence: expect.any(Number), decisionKey: 'generatedComposition' },
-      },
     ]);
   });
 

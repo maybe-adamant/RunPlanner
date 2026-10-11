@@ -553,7 +553,12 @@ describe('native generated composition possibility', () => {
   it('preserves fixed H elite seeds and their separate placeholder semantics', () => {
     const row = { waveIndex: 1, typeKeys: ['FogEmitter2'], allocations: { FogEmitter2: 1 } };
     const mixed = assess('GeneratedH_Treant2', { waves: [row] });
-    expect(mixed).toMatchObject({ supported: true, knownRunBlacklistAdditions: [] });
+    // The companion passes native eligibility but never enters the run blacklist.
+    expect(mixed).toMatchObject({
+      supported: true,
+      knownRunBlacklistAdditions: [],
+      oncePerRunUses: ['FogEmitter2'],
+    });
     expect(mixed.operands?.waves).toEqual([
       expect.objectContaining({
         typeKeys: ['Treant2', 'FogEmitter2'],
@@ -632,6 +637,7 @@ describe('native generated composition possibility', () => {
     expect(assess('GeneratedH', value)).toMatchObject({
       supported: true,
       knownRunBlacklistAdditions: ['FogEmitter2'],
+      oncePerRunUses: ['FogEmitter2'],
     });
     expect(assess('GeneratedH', value, 8, 8, ['FogEmitter2']).issues).toContainEqual(
       expect.objectContaining({ reason: 'enemyUnavailable', key: 'FogEmitter2' }),
@@ -641,6 +647,26 @@ describe('native generated composition possibility', () => {
         .knownRunBlacklistAdditions,
     ).toEqual([]);
     expect(assess('GeneratedH', {}).knownRunBlacklistAdditions).toEqual([]);
+    expect(assess('GeneratedH', {})).not.toHaveProperty('oncePerRunUses');
+  });
+
+  it('counts a once-per-run highlight among the eligibility-checked uses', () => {
+    const source = policy('GeneratedF');
+    // A two-wave policy with a once-per-run Guard; its initial value highlights Guard.
+    const onceGuard = {
+      ...source,
+      waveCount: { min: 2, max: 2 },
+      choices: source.choices.map((choice) =>
+        choice.key === 'Guard' ? { ...choice, blacklistAfterAppearance: true } : choice,
+      ),
+    };
+    const context = { biomeDepthCache: 8, biomeEncounterDepth: 8, knownRunBlacklist: [] };
+    const initial = initializeGeneratedEncounter(onceGuard, context)!;
+    expect(initial.highlightKey).toBe('Guard');
+    const assessment = assessGeneratedEncounter(onceGuard, initial, context);
+    expect(assessment.supported).toBe(true);
+    expect(assessment.oncePerRunUses).toEqual(['Guard']);
+    expect(assessment.knownRunBlacklistAdditions).toEqual([]);
   });
 });
 

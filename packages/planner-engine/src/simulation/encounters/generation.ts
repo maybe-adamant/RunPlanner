@@ -123,6 +123,12 @@ export interface GeneratedEncounterAssessment {
   }[];
   readonly operands?: GeneratedEncounterOperands;
   readonly knownRunBlacklistAdditions: readonly string[];
+  /**
+   * Once-per-run enemies this supported composition draws through native
+   * eligibility (additions, placeholder companions, highlight); a run
+   * blacklist entry would reject them. Absent when none.
+   */
+  readonly oncePerRunUses?: readonly string[];
   readonly budgetDomain?: {
     readonly baseRoll: { readonly min: number; readonly max: number };
     readonly total: { readonly min: number; readonly max: number };
@@ -243,6 +249,23 @@ function introductionBlock(
 }
 
 /**
+ * Native draw status of one choice at this contact before composition
+ * constraints: undefined when IsEnemyEligible rejects it, otherwise whether its
+ * introduction would replace the encounter.
+ */
+function nativeDraw(
+  policy: GeneratedEncounterSelection,
+  context: EncounterGenerationContext,
+  choice: EncounterEnemyChoice,
+): 'draws' | 'triggers' | undefined {
+  if (context.knownRunBlacklist.includes(choice.key) || !enemyAdmitted(choice, context))
+    return undefined;
+  const block = introductionBlock(policy, context, choice);
+  if (block === undefined) return 'draws';
+  return block.admitted ? 'triggers' : undefined;
+}
+
+/**
  * Enemies native generation may draw at this contact before composition
  * constraints; an enemy whose introduction would trigger remains admissible.
  */
@@ -252,12 +275,22 @@ export function admissibleEnemyKeys(
 ): readonly string[] {
   return Object.freeze(
     policy.choices
-      .filter(
-        (choice) =>
-          !context.knownRunBlacklist.includes(choice.key) &&
-          enemyAdmitted(choice, context) &&
-          introductionBlock(policy, context, choice)?.admitted !== false,
-      )
+      .filter((choice) => nativeDraw(policy, context, choice) !== undefined)
+      .map((choice) => choice.key),
+  );
+}
+
+/**
+ * Admissible enemies whose introduction would replace the whole encounter at
+ * this contact: the trigger set a selected ordinary identity excludes.
+ */
+export function triggerExcludedEnemyKeys(
+  policy: GeneratedEncounterSelection,
+  context: EncounterGenerationContext,
+): readonly string[] {
+  return Object.freeze(
+    policy.choices
+      .filter((choice) => nativeDraw(policy, context, choice) === 'triggers')
       .map((choice) => choice.key),
   );
 }
@@ -434,6 +467,7 @@ export function assessGeneratedEncounter(
   const runBlacklist = new Set(context.knownRunBlacklist);
   const encounterBlacklist = new Set<string>();
   const knownAdditions = new Set<string>();
+  const oncePerRunUses = new Set<string>();
   const block = (choice: EncounterEnemyChoice) => introductionBlock(policy, context, choice);
   const introduced = (choice: EncounterEnemyChoice) => block(choice) === undefined;
   const triggers = (choice: EncounterEnemyChoice) => block(choice)?.admitted === true;
@@ -511,7 +545,10 @@ export function assessGeneratedEncounter(
     waveCount !== undefined &&
     (!usesHighlight || highlight !== undefined)
   ) {
-    if (usesHighlight && highlight !== undefined) encounterBlacklist.add(highlight.key);
+    if (usesHighlight && highlight !== undefined) {
+      encounterBlacklist.add(highlight.key);
+      if (highlight.blacklistAfterAppearance) oncePerRunUses.add(highlight.key);
+    }
     for (let waveIndex = fixedWaveCount + 1; waveIndex <= waveCount; waveIndex++) {
       const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
       const max = Math.floor(
@@ -573,6 +610,7 @@ export function assessGeneratedEncounter(
           break;
         }
         spawns.push(selected);
+        if (selected.blacklistAfterAppearance) oncePerRunUses.add(key);
         pool = pool.filter(
           (choice) => choice.key !== key && candidate(choice, spawns, selectedCount, blockElites),
         );
@@ -909,6 +947,9 @@ export function assessGeneratedEncounter(
     ),
     ...(operands === undefined ? {} : { operands }),
     knownRunBlacklistAdditions: Object.freeze(compositionSupported ? [...knownAdditions] : []),
+    ...(compositionSupported && oncePerRunUses.size > 0
+      ? { oncePerRunUses: Object.freeze([...oncePerRunUses]) }
+      : {}),
     ...(typeof base === 'number'
       ? {}
       : {

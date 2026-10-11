@@ -132,10 +132,6 @@ const findingCopy = {
     title: 'Encounter customization unavailable',
     description: 'Fix it or reset the customization.',
   },
-  encounterCustomizationRequired: {
-    title: 'Customize this encounter',
-    description: 'Fresh File plans require customized encounters.',
-  },
   encounterIntroductionRequired: {
     title: 'Enemy not introduced',
     description: 'Select its introduction encounter or remove the enemy.',
@@ -716,7 +712,6 @@ const dialogTitleByCode: {
   readonly [Kind in FindingDialogKind]?: Partial<Record<FindingCode, string>>;
 } = {
   encounterCustomization: {
-    encounterCustomizationRequired: 'Encounter customization required',
     encounterCustomizationUnavailable: 'Encounter customization unavailable',
   },
 };

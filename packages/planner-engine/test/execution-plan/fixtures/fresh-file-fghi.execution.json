@@ -1152,6 +1152,10 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
             ]
           }
         ],
@@ -1357,6 +1361,10 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
             ]
           }
         ],
@@ -1661,6 +1669,10 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
             ]
           }
         ],
@@ -1834,6 +1846,10 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
             ]
           }
         ],
@@ -2007,6 +2023,10 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
             ]
           }
         ],
@@ -2204,6 +2224,10 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
             ]
           }
         ],
@@ -2864,6 +2888,11 @@
                   }
                 ]
               }
+            ],
+            "excludedEnemies": [
+              { "choiceKey": "FishSwarmerSquad", "nativeId": "FishSwarmerSquad" },
+              { "choiceKey": "FishSwarmerSquad_Elite", "nativeId": "FishSwarmerSquad_Elite" },
+              { "choiceKey": "Turtle_Elite", "nativeId": "Turtle_Elite" }
             ]
           }
         ],
@@ -3265,7 +3294,8 @@
                   }
                 ]
               }
-            ]
+            ],
+            "excludedEnemies": [{ "choiceKey": "Turtle_Elite", "nativeId": "Turtle_Elite" }]
           }
         ],
         "requiredObjects": []
@@ -3775,7 +3805,8 @@
                   }
                 ]
               }
-            ]
+            ],
+            "excludedEnemies": [{ "choiceKey": "Turtle_Elite", "nativeId": "Turtle_Elite" }]
           }
         ],
         "requiredObjects": []
@@ -6121,5 +6152,5 @@
       }
     }
   ],
-  "planFingerprint": "e495728f"
+  "planFingerprint": "a431f7bf"
 }

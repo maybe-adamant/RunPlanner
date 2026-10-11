@@ -7,11 +7,7 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
-import {
-  useFindingAnchor,
-  useFindingExplanations,
-  useFindingTarget,
-} from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -63,10 +59,6 @@ function EncounterCustomizationControl({
   // A retained removal-only decision on a fixed identity is still an edit.
   const editable = composition?.editable === true || phase.customization !== undefined;
   const findingTarget = useFindingTarget();
-  const required = useFindingExplanations(
-    phase.address,
-    (finding) => finding.code === 'encounterCustomizationRequired',
-  );
   const customizationId =
     phase.customizable || interaction === undefined
       ? `encounter-customization-${semanticOwnerControlElementId(phase.address)}`
@@ -102,7 +94,6 @@ function EncounterCustomizationControl({
     ...(initializationFailure
       ? [['initialization', 'No supported composition is available here.'] as const]
       : []),
-    ...required.map((message, index) => [`required-${index}`, message] as const),
     ...(phase.customization ?? []).flatMap((decision) =>
       decision.value !== undefined &&
       (!decision.valueSupported ||
@@ -121,7 +112,6 @@ function EncounterCustomizationControl({
       (message, index) => [`composition-${index}`, message] as const,
     ),
   ];
-  const warnings = assessment?.composition === 'active' ? assessment.warnings : [];
   return (
     <>
       <button
@@ -144,7 +134,7 @@ function EncounterCustomizationControl({
       {manualOpen ? (
         <EditorDialog
           eyebrow="Encounter"
-          feedback={<CustomizationFindings entries={findingEntries} warnings={warnings} />}
+          feedback={<CustomizationFindings entries={findingEntries} />}
           model={{ kind: 'live', onDone: close }}
           returnFocusId={customizationId}
           size="narrow"
@@ -174,7 +164,6 @@ function EncounterCustomizationControl({
               )
             ) : (
               <EncounterCompositionControl
-                hasRequiredFindings={required.length > 0}
                 onInitializationFailure={setInitializationFailure}
                 composition={composition}
                 {...(generatedDecision === undefined ? {} : { decision: generatedDecision })}

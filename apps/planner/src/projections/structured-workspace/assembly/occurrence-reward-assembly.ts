@@ -903,9 +903,6 @@ export function activeEncounterPhasesForOwner(
                           ...(choice.fangs?.caveat === 'squad'
                             ? { fangsCaveat: 'squad' as const }
                             : {}),
-                          ...(choice.blacklistAfterAppearance
-                            ? { blacklistAfterAppearance: true as const }
-                            : {}),
                         }),
                       ),
                     ),
@@ -923,9 +920,6 @@ export function activeEncounterPhasesForOwner(
                             : { menace: projectGeneratedMenace(enemy.menace)! }),
                           ...(enemy.fangs?.caveat === 'squad'
                             ? { fangsCaveat: 'squad' as const }
-                            : {}),
-                          ...(enemy.blacklistAfterAppearance
-                            ? { blacklistAfterAppearance: true as const }
                             : {}),
                         }),
                       ),
@@ -1028,10 +1022,7 @@ export function activeEncounterPhasesForOwner(
               });
             }),
           );
-    const compositionView = encounterCompositionView(input.catalog, {
-      ...domain,
-      routeKey: input.biome.routeKey,
-    });
+    const compositionView = encounterCompositionView(input.catalog, domain);
     const candidateChoices = Object.freeze(
       domain.choices.map((choice) =>
         Object.freeze({
