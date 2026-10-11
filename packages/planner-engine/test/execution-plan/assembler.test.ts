@@ -1686,6 +1686,7 @@ describe('engine-owned F/G execution semantic product', () => {
       biome,
       undefined,
       [],
+      new Map(),
     ).shop?.offers.find((offer) => offer.offerKey === 'PremiumProgress');
     expect(overviewOffer).toMatchObject({
       offerKey: 'PremiumProgress',
@@ -1727,7 +1728,14 @@ describe('engine-owned F/G execution semantic product', () => {
       (room) => room.occurrenceId === shrineAddress.occurrenceId,
     );
     if (shrineRoom === undefined) throw new Error('Shrine execution fixture lacks N Postboss');
-    const overview = assembleExecutionOverview(catalog, shrineRoom, nEvaluation, undefined, []);
+    const overview = assembleExecutionOverview(
+      catalog,
+      shrineRoom,
+      nEvaluation,
+      undefined,
+      [],
+      new Map(),
+    );
     expect(overview.hermesShrine?.offers).toEqual([
       expect.objectContaining({
         generationKey: 'initial:first',
@@ -2239,6 +2247,7 @@ describe('engine-owned F/G execution semantic product', () => {
       f,
       undefined,
       inactiveTimeline,
+      new Map(),
     );
     expect(
       inactiveTimeline.some(

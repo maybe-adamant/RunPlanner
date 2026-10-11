@@ -1084,6 +1084,30 @@ export function createGoldenFGHIProject(): ProjectDocument {
   return loadUnderworldFGHICheckpoint();
 }
 
+/** Complete F/G/H whose last H cage draws the once-per-run Sorrow-Spiller. */
+export function underworldFogEmitterReservationProject(): ProjectDocument {
+  return applyProjectCommand(createGoldenFGHProject(), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-combat05') },
+      'Cage03',
+    ),
+    decisionKey: 'generatedComposition',
+    value: {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [
+        {
+          waveIndex: 1,
+          typeKeys: ['BrokenHearted', 'Lovesick', 'FogEmitter2'],
+          allocations: { BrokenHearted: 260, Lovesick: 260 },
+        },
+      ],
+    },
+  });
+}
+
 /** Complete F/G/H/I route with positive Menace, Fangs, and an H Treant cage. */
 export function underworldGeneratedCompositionProject(): ProjectDocument {
   let project = createGoldenFGHIProject();

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -36,6 +37,7 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { generatedEncounter } from '../../src/execution-plan/codec/generated-encounter';
 import { targetRewardGenerationCheckpoint } from '../../src/simulation/encounters/generation-preparation';
+import { executionFixturePath } from './support/execution-fixtures';
 
 const phase = createEncounterPhaseAddress(
   goldenFBiome,
@@ -511,6 +513,44 @@ describe('generated execution decoding', () => {
       ].map((entry) => [{ ...wave, conversions: [entry] }]),
     ]) {
       expect(() => generatedEncounter({ ...value, menace }, 'test')).toThrow();
+    }
+  });
+});
+
+describe('native-roll exclusion decoding', () => {
+  const wire = () =>
+    JSON.parse(readFileSync(executionFixturePath('fresh-file-f-native'), 'utf8')) as {
+      occurrences: { overview: { encounterPhases: Record<string, unknown>[] } }[];
+    };
+  const excludedPhase = (plan: ReturnType<typeof wire>) =>
+    plan.occurrences
+      .flatMap((room) => room.overview.encounterPhases)
+      .find((phase) => phase.excludedEnemies !== undefined)!;
+
+  it('round-trips a published exclusion list', () => {
+    const plan = decodeExecutionPlan(wire());
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    expect(
+      plan.occurrences.flatMap((room) =>
+        room.overview.encounterPhases.flatMap((phase) => phase.excludedEnemies ?? []),
+      ),
+    ).toContainEqual({ choiceKey: 'Screamer', nativeId: 'Screamer' });
+  });
+
+  it('rejects an empty, duplicated or malformed list', () => {
+    const screamer = { choiceKey: 'Screamer', nativeId: 'Screamer' };
+    for (const malformed of [
+      [],
+      [screamer, screamer],
+      [{ ...screamer, choiceKey: 'Other' }, screamer],
+      [{ choiceKey: 'Screamer' }],
+      [{ ...screamer, source: 'addition' }],
+      ['Screamer'],
+      { 0: screamer },
+    ]) {
+      const plan = wire();
+      excludedPhase(plan).excludedEnemies = malformed;
+      expect(() => decodeExecutionPlan(plan), JSON.stringify(malformed)).toThrow(/excludedEnemies/);
     }
   });
 });

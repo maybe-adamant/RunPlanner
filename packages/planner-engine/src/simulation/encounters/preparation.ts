@@ -1,4 +1,4 @@
-import { routeStartsWithUnfinishedIntroductions } from '../../authored-project/route-profile';
+import { routeInitialProfile } from '../../authored-project/route-profile';
 import { customizationValueRouteExcluded } from '../../authored-project/room-state/encounter-customization';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import { resolveEntryDeclaration } from '../../authored-project/room-state/entry-resolution';
@@ -37,7 +37,7 @@ import {
 import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
-import type { ResolvedEncounterPhase } from './model';
+import type { GeneratedNativeRollFacts, ResolvedEncounterPhase } from './model';
 import {
   generationAdmissionContext,
   prepareGeneratedEncounter,
@@ -111,6 +111,8 @@ export interface PreparedEncounterPhases {
   readonly recordedPhases: readonly ResolvedEncounterPhase[];
   readonly candidates: readonly EncounterPhaseCandidateSupport[];
   readonly generation: readonly GeneratedEncounterCandidateCapability[];
+  /** Every reached generated phase's native-roll facts, in phase order. */
+  readonly nativeRolls: readonly GeneratedNativeRollFacts[];
   readonly rosters: readonly InfiniteRosterCandidateCapability[];
   readonly statuses: readonly EncounterPhaseSequenceStatusEntry[];
   readonly findings: readonly SemanticFinding[];
@@ -309,7 +311,6 @@ function appendCustomizationFindings(
   phase: ResolvedEncounterPhase,
   origin: EncounterPhaseAddress,
   beforeSequence: number,
-  customizationRequired: boolean,
 ): void {
   for (const decision of phase.customization ?? []) {
     const generated =
@@ -328,22 +329,6 @@ function appendCustomizationFindings(
       );
     if (!decision.valueSupported && generated?.onlyIntroductionIssues !== true)
       findings.push(customizationFinding(origin, beforeSequence, decision.key));
-    // Only an authored composition keeps the route's introduction history exact.
-    if (
-      customizationRequired &&
-      decision.selection.kind === 'generated' &&
-      decision.replaced !== true &&
-      decision.value === undefined
-    )
-      findings.push(
-        Object.freeze({
-          code: 'encounterCustomizationRequired',
-          severity: 'error',
-          phase: 'encounterResolution',
-          origin,
-          evidence: Object.freeze({ beforeSequence, decisionKey: decision.key }),
-        }),
-      );
   }
 }
 
@@ -447,6 +432,7 @@ export function prepareRoomEncounterPhases(
   );
   const candidates: EncounterPhaseCandidateSupport[] = [];
   const generation: GeneratedEncounterCandidateCapability[] = [];
+  const nativeRolls: GeneratedNativeRollFacts[] = [];
   const rosters: InfiniteRosterCandidateCapability[] = [];
   const statuses: EncounterPhaseSequenceStatusEntry[] = [];
   const findings: SemanticFinding[] = [];
@@ -461,10 +447,9 @@ export function prepareRoomEncounterPhases(
   let prefixValid = true;
   let suffixTerminated = false;
 
-  const unfinishedIntroductions = routeStartsWithUnfinishedIntroductions(
-    catalog,
-    routePosition.routeKey,
-  );
+  // A fresh profile starts with every enemy introduction unfinished.
+  const unfinishedIntroductions =
+    routeInitialProfile(catalog, routePosition.routeKey).kind === 'freshFile';
   const minDepthBeforeIntros = unfinishedIntroductions
     ? catalog.biomes.byKey[room.origin.biomeKey]?.minDepthBeforeIntros
     : undefined;
@@ -534,6 +519,7 @@ export function prepareRoomEncounterPhases(
       admissionAt,
     );
     if (result.capability !== undefined) generation.push(result.capability);
+    if (result.nativeRoll !== undefined) nativeRolls.push(result.nativeRoll);
     const roster = prepareInfiniteRoster(result.phase, origin, preparation);
     if (roster.capability !== undefined) rosters.push(roster.capability);
     return roster.phase;
@@ -632,13 +618,7 @@ export function prepareRoomEncounterPhases(
       }
       if (prefixValid) {
         resolvedPhase = prepareCustomization(resolvedPhase, origin);
-        appendCustomizationFindings(
-          findings,
-          resolvedPhase,
-          origin,
-          preparation.sequence,
-          unfinishedIntroductions,
-        );
+        appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
         validPrefix.push(resolvedPhase);
         recordedPhases.push(resolvedPhase);
         preparation = projectEncounterRecordPreparation(
@@ -777,13 +757,7 @@ export function prepareRoomEncounterPhases(
       if (resolvedPhase === undefined)
         throw new Error(`${set.key}.${phase.authoredChoiceKey} lacks resolution`);
       resolvedPhase = prepareCustomization(resolvedPhase, origin);
-      appendCustomizationFindings(
-        findings,
-        resolvedPhase,
-        origin,
-        preparation.sequence,
-        unfinishedIntroductions,
-      );
+      appendCustomizationFindings(findings, resolvedPhase, origin, preparation.sequence);
       validPrefix.push(resolvedPhase);
       recordedPhases.push(resolvedPhase);
       preparation = projectEncounterRecordPreparation(
@@ -802,6 +776,7 @@ export function prepareRoomEncounterPhases(
     recordedPhases: Object.freeze(recordedPhases),
     candidates: Object.freeze(candidates),
     generation: Object.freeze(generation),
+    nativeRolls: Object.freeze(nativeRolls),
     rosters: Object.freeze(rosters),
     statuses: Object.freeze(statuses),
     findings: Object.freeze(findings),

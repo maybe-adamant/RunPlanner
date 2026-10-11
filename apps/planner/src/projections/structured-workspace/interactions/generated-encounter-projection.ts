@@ -20,7 +20,6 @@ type ChoiceLabel = {
   readonly label: string;
   readonly difficultyRating?: number;
   readonly fangsCaveat?: 'squad';
-  readonly blacklistAfterAppearance?: true;
   readonly menace?: import('@run-planner/engine/catalog-schema').EncounterEnemyChoice['menace'];
 };
 
@@ -260,7 +259,6 @@ export function projectEncounterComposition(
     label: view.label,
     dispositionLabel: dispositionLabel(view.disposition),
     editable: view.editable,
-    customizationRequired: view.customizationRequired,
     waveCount: view.waveCount,
     waves: Object.freeze(
       view.waves.map((wave) =>
@@ -322,16 +320,6 @@ export function projectGeneratedEncounterAssessment(
       }),
     ),
     composition: assessment.composition,
-    warnings: Object.freeze(
-      [...new Set(assessment.waves.flatMap((wave) => wave.activeMemberKeys))]
-        .filter(
-          (key) => labels.find((choice) => choice.key === key)?.blacklistAfterAppearance === true,
-        )
-        .map(
-          (key) =>
-            `${labelFor(key)} can appear only once per run. An earlier uncustomized encounter may already include it.`,
-        ),
-    ),
     ...(assessment.budgetDomain === undefined ? {} : { budgetDomain: assessment.budgetDomain }),
     ...(assessment.budget === undefined ? {} : { budget: assessment.budget }),
     waves: Object.freeze(

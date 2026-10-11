@@ -28,7 +28,7 @@ import {
   type EncounterPhaseSequenceStatus,
   type PreparedEncounterPhases,
 } from './preparation';
-import type { MaterializedEncounterPhase } from './model';
+import type { MaterializedEncounterPhase, ResolvedGeneratedPhase } from './model';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport, TargetRewardHistoryCheckpoint } from '../rewards/model';
 import { attestEffectiveHordesRank, type EncounterEntryVowRanks } from '../arcana-fear';
@@ -92,13 +92,8 @@ export interface EncounterRoomCandidateCapability {
 export interface EncounterCandidateEvaluation {
   readonly artifacts: EncounterCandidateArtifacts;
   readonly findings: readonly SemanticFinding[];
-  /** Data product, not a candidate capability: exact selected generated operands after reward settlement. */
-  readonly resolvedGenerated: readonly {
-    readonly origin: EncounterPhaseAddress;
-    readonly customization: NonNullable<
-      import('./model').ResolvedEncounterPhase['generatedCustomization']
-    >;
-  }[];
+  /** Data product, not a candidate capability: every reached generated phase after reward settlement. */
+  readonly resolvedGenerated: readonly ResolvedGeneratedPhase[];
 }
 
 /**
@@ -123,7 +118,7 @@ export function evaluateEncounterCandidatesInternal(
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const generation = new Map<string, GeneratedEncounterCandidateCapability>();
   const rosters = new Map<string, InfiniteRosterCandidateCapability>();
-  const resolvedGenerated: EncounterCandidateEvaluation['resolvedGenerated'][number][] = [];
+  const resolvedGenerated: ResolvedGeneratedPhase[] = [];
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
   const preparedAt = new Map<string, HistoryFindingChronology>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
@@ -240,14 +235,19 @@ export function evaluateEncounterCandidatesInternal(
       generation.set(semanticAddressKey(capability.origin), capability);
     for (const capability of prepared.rosters)
       rosters.set(semanticAddressKey(capability.origin), capability);
-    for (const capability of prepared.generation) {
+    for (const nativeRoll of prepared.nativeRolls) {
       const phase = prepared.validPrefix.find(
-        (entry) => entry.slotKey === capability.origin.phaseKey,
+        (entry) => entry.slotKey === nativeRoll.origin.phaseKey,
       );
-      if (phase?.generatedCustomization !== undefined)
-        resolvedGenerated.push(
-          Object.freeze({ origin: capability.origin, customization: phase.generatedCustomization }),
-        );
+      if (phase === undefined) continue;
+      resolvedGenerated.push(
+        Object.freeze({
+          ...nativeRoll,
+          ...(phase.generatedCustomization === undefined
+            ? {}
+            : { customization: phase.generatedCustomization }),
+        }),
+      );
     }
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);

@@ -131,20 +131,6 @@ describe('generated enemy presentation', () => {
     );
   });
 
-  it('warns for declared once-per-run enemies among assessed active members', () => {
-    const wave = (activeMemberKeys: readonly string[]) =>
-      ({ activeMemberKeys }) as unknown as GeneratedEncounterAssessment['waves'][number];
-    const projected = (waves: GeneratedEncounterAssessment['waves']) =>
-      projectGeneratedEncounterAssessment(
-        { ...baseAssessment, waves },
-        [...labels, { key: 'Once', label: 'One-time enemy', blacklistAfterAppearance: true }],
-        introductionLabel,
-      ).warnings;
-    expect(projected([wave(['Guard', 'Once']), wave(['Guard', 'Once'])])).toEqual([
-      'One-time enemy can appear only once per run. An earlier uncustomized encounter may already include it.',
-    ]);
-    expect(projected([wave(['Guard', 'Brawler'])])).toEqual([]);
-  });
   it('names the Menace source in each Menace finding', () => {
     const messages = projectGeneratedEncounterAssessment(
       {

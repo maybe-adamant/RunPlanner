@@ -19,6 +19,7 @@ import {
   completeExecutionBiomes,
   executionBatchesByRoom,
   executionFixedTargetsByRoom,
+  executionGeneratedPhases,
   executionRoomSnapshots,
   orderedExecutionRooms,
   executionHubs,
@@ -31,6 +32,7 @@ import { executionTimelineTransactions } from './assembly/timeline-transactions'
 import { executionStartingLoadout } from './assembly/loadout';
 import { assembleRoomExitConformance } from './assembly/diagnostics';
 import { semanticAddressKey } from '../authored-project/addresses';
+import { nativeRollExclusions } from '../simulation/encounters/native-roll-exclusions';
 import { assessPublicDreamItinerary } from '../authored-project/dream-itinerary';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
@@ -131,6 +133,7 @@ export function assembleExecutionProduct({
     ),
   );
   const fixedTargets = executionFixedTargetsByRoom(biomes);
+  const nativeExclusions = nativeRollExclusions(executionGeneratedPhases(biomes));
   const resolvedPostbossIdsByBiome = new Map(
     biomes.flatMap((biome) => {
       const postboss = biome.snapshot.fixedRoomLinks.find(
@@ -229,6 +232,7 @@ export function assembleExecutionProduct({
       hubExitsBySource.get(executionRoomOwnerKey(room)),
       localSlotsByParent.get(room.occurrenceId),
       selectedOccurrenceIdSet.has(room.occurrenceId),
+      nativeExclusions,
     );
     const policy = evaluation.route.npcShopping.occurrences.find(
       (entry) => entry.occurrenceId === room.occurrenceId,

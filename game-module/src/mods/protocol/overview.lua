@@ -9,6 +9,25 @@ local overview = {}
 local generatedEncounter = type(import) == "function" and import("mods/protocol/generated_encounter.lua")
     or require("mods.protocol.generated_encounter")
 
+local function excludedEnemies(value, label)
+    local entries, entriesError = p.arr(value, label, 64)
+    if not entries then return nil, entriesError end
+    if #entries == 0 then return p.fail(label .. " must be non-empty when present") end
+    local seenKeys, seenNatives = {}, {}
+    for index, entry in ipairs(entries) do
+        local entryLabel = label .. "[" .. index .. "]"
+        local row, rowError = p.exact(entry, { "choiceKey", "nativeId" }, {}, entryLabel)
+        if not row then return nil, rowError end
+        if not p.str(row.choiceKey, entryLabel .. ".choiceKey")
+            or not p.str(row.nativeId, entryLabel .. ".nativeId")
+            or seenKeys[row.choiceKey] or seenNatives[row.nativeId] then
+            return p.fail(entryLabel .. " has invalid or duplicate enemy identity")
+        end
+        seenKeys[row.choiceKey], seenNatives[row.nativeId] = true, true
+    end
+    return entries
+end
+
 local function customization(value, label)
     local decisions, decisionsError = p.arr(value, label, 16)
     if not decisions then return nil, decisionsError end
@@ -502,7 +521,7 @@ function overview.decode(value, label)
         local row, rowError = p.exact(
             valueRow,
             { "slotKey", "encounterKey", "kind" },
-            { "figLeafSkip", "customization" },
+            { "figLeafSkip", "customization", "excludedEnemies" },
             phaseLabel
         )
         if not row then return nil, rowError end
@@ -518,6 +537,10 @@ function overview.decode(value, label)
         if row.customization ~= nil then
             local _, customizationError = customization(row.customization, phaseLabel .. ".customization")
             if customizationError then return nil, customizationError end
+        end
+        if row.excludedEnemies ~= nil then
+            local _, excludedError = excludedEnemies(row.excludedEnemies, phaseLabel .. ".excludedEnemies")
+            if excludedError then return nil, excludedError end
         end
     end
     if record.incomingReward ~= nil then

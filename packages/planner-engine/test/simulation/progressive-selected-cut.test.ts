@@ -42,7 +42,7 @@ import {
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
-import { freshFileRouteFrontierWalk } from '@run-planner/test-fixtures/fresh-file';
+import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 
 import * as fixture from './support/progressive-biome-fixtures';
 
@@ -444,9 +444,18 @@ describe('room Overview block', () => {
 
 describe('room Overview block keeps its incoming reward candidates', () => {
   it('assesses an Overview-stopped room reward offer without its unreached pickup', () => {
-    // fresh-3-0 stops at its encounter Overview; its Apollo Boon offer has no trait offer yet.
-    const project = freshFileRouteFrontierWalk()[3]!;
+    // An unavailable composition stops fresh-3-0 at its encounter Overview.
     const room = createOccurrenceId('fresh-3-0');
+    const project = applyProjectCommand(createFreshFileFProject(), catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase: createEncounterPhaseAddress(
+        createBiomeAddress('FreshFile', 'F'),
+        { kind: 'occurrence', occurrenceId: room },
+        'Encounter',
+      ),
+      decisionKey: 'generatedComposition',
+      value: { kind: 'generated', waveCount: 1, waves: [{ waveIndex: 1, typeKeys: ['Dragon'] }] },
+    });
     const f = biomeEvaluation(project, 'F');
     expect(f.coverage.blockedAt).toMatchObject({ kind: 'encounterPhase', phaseKey: 'Encounter' });
 

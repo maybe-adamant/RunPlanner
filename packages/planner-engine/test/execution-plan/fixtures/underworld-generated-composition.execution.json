@@ -4231,8 +4231,18 @@
       "overview": {
         "encounterPhases": [
           { "slotKey": "Passive", "encounterKey": "GeneratedH_PassiveSmall", "kind": "combat" },
-          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
-          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" }
+          {
+            "slotKey": "Cage01",
+            "encounterKey": "GeneratedH",
+            "kind": "combat",
+            "excludedEnemies": [{ "choiceKey": "FogEmitter2", "nativeId": "FogEmitter2" }]
+          },
+          {
+            "slotKey": "Cage02",
+            "encounterKey": "GeneratedH",
+            "kind": "combat",
+            "excludedEnemies": [{ "choiceKey": "FogEmitter2", "nativeId": "FogEmitter2" }]
+          }
         ],
         "requiredObjects": [],
         "fields": {
@@ -4457,8 +4467,18 @@
       "overview": {
         "encounterPhases": [
           { "slotKey": "Passive", "encounterKey": "GeneratedH_PassiveSmall", "kind": "combat" },
-          { "slotKey": "Cage01", "encounterKey": "GeneratedH", "kind": "combat" },
-          { "slotKey": "Cage02", "encounterKey": "GeneratedH", "kind": "combat" }
+          {
+            "slotKey": "Cage01",
+            "encounterKey": "GeneratedH",
+            "kind": "combat",
+            "excludedEnemies": [{ "choiceKey": "FogEmitter2", "nativeId": "FogEmitter2" }]
+          },
+          {
+            "slotKey": "Cage02",
+            "encounterKey": "GeneratedH",
+            "kind": "combat",
+            "excludedEnemies": [{ "choiceKey": "FogEmitter2", "nativeId": "FogEmitter2" }]
+          }
         ],
         "requiredObjects": [],
         "fields": {
@@ -6180,5 +6200,5 @@
       }
     }
   ],
-  "planFingerprint": "0f6a23d4"
+  "planFingerprint": "509050b4"
 }

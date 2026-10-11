@@ -61,17 +61,6 @@ export function biomeStartRoomGameNames(start: BiomeLayout['start']): readonly s
   return start.kind === 'authoredChoice' ? start.roomGameNames : [start.roomGameName];
 }
 
-/**
- * A fresh profile starts with every enemy introduction unfinished. Its generated
- * compositions must be authored so the route's introduction history is exact.
- */
-export function routeStartsWithUnfinishedIntroductions(
-  catalog: Catalog,
-  routeKey: string,
-): boolean {
-  return routeInitialProfile(catalog, routeKey).kind === 'freshFile';
-}
-
 const routeOverlaidRooms = new WeakMap<RoomDeclaration, Map<string, RoomDeclaration>>();
 
 /**

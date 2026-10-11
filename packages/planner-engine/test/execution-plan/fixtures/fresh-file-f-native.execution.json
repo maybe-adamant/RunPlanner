@@ -1,0 +1,2168 @@
+{
+  "format": "run-planner-execution",
+  "catalogVersion": "0.55.0-anvil-of-fates",
+  "projectId": "fresh-f",
+  "routeKey": "FreshFile",
+  "startingLoadout": {
+    "weaponKey": "WeaponStaffSwing",
+    "arcana": [],
+    "fear": {
+      "configuredRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      },
+      "effectiveRanks": {
+        "HealingReductionShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyDamageShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 0,
+        "MinibossCountShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0
+      }
+    }
+  },
+  "startingKeepsake": {},
+  "extent": { "kind": "configuredPrefix", "biomeKeys": ["F"], "terminalBiomeKey": "F" },
+  "selectedOccurrenceIds": [
+    "F:start",
+    "fresh-0-0",
+    "fresh-1-0",
+    "fresh-2-0",
+    "fresh-3-0",
+    "fresh-4-0",
+    "fresh-5-0",
+    "fresh-6-0",
+    "fresh-7-0",
+    "fresh-8-0",
+    "fresh-9-0",
+    "fresh-preboss-shop",
+    "fresh-preboss-shop:boss",
+    "fresh-preboss-shop:postboss"
+  ],
+  "resources": {
+    "occurrences": [
+      {
+        "occurrenceId": "F:start",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-0-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-1-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-2-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-3-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-4-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-5-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-6-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-7-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-8-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-9-0",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-preboss-shop",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-preboss-shop:boss",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "fresh-preboss-shop:postboss",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      }
+    ]
+  },
+  "occurrences": [
+    {
+      "id": "F:start",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"F:start\"]",
+      "biomeKey": "F",
+      "gameName": "F_Opening01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "OpeningEmpty", "kind": "nonCombat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"F:start\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-0-0", "biomeKey": "F", "gameName": "F_Combat01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 0,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"F:start\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {
+            "counters": { "biomeDepthCache": 0, "routeEncounterDepth": 1, "roomHistoryOrdinal": 0 },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 19 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "godPool": {
+              "acquiredSourceKeys": [],
+              "effectiveSourceKeys": ["ApolloUpgrade", "DemeterUpgrade", "PoseidonUpgrade"],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [],
+              "slots": [
+                { "slot": "Melee" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 0, "Fire": 0, "Water": 0 },
+              "godRarityCounts": {},
+              "upgradableCount": 0,
+              "bannedTraitKeys": []
+            },
+            "arcana": { "active": [] },
+            "vows": {
+              "configuredRanks": {
+                "HealingReductionShrineUpgrade": 0,
+                "ShopPricesShrineUpgrade": 0,
+                "EnemyHealthShrineUpgrade": 0,
+                "EnemyDamageShrineUpgrade": 0,
+                "EnemySpeedShrineUpgrade": 0,
+                "EnemyShieldShrineUpgrade": 0,
+                "EnemyCountShrineUpgrade": 0,
+                "EnemyRespawnShrineUpgrade": 0,
+                "NextBiomeEnemyShrineUpgrade": 0,
+                "BiomeSpeedShrineUpgrade": 0,
+                "MinibossCountShrineUpgrade": 0,
+                "BossDifficultyShrineUpgrade": 0,
+                "BoonSkipShrineUpgrade": 0,
+                "BoonManaReserveShrineUpgrade": 0,
+                "BanUnpickedBoonsShrineUpgrade": 0,
+                "LimitGraspShrineUpgrade": 0,
+                "EnemyEliteShrineUpgrade": 0
+              },
+              "effectiveRanks": {
+                "HealingReductionShrineUpgrade": 0,
+                "ShopPricesShrineUpgrade": 0,
+                "EnemyHealthShrineUpgrade": 0,
+                "EnemyDamageShrineUpgrade": 0,
+                "EnemySpeedShrineUpgrade": 0,
+                "EnemyShieldShrineUpgrade": 0,
+                "EnemyCountShrineUpgrade": 0,
+                "EnemyRespawnShrineUpgrade": 0,
+                "NextBiomeEnemyShrineUpgrade": 0,
+                "BiomeSpeedShrineUpgrade": 0,
+                "MinibossCountShrineUpgrade": 0,
+                "BossDifficultyShrineUpgrade": 0,
+                "BoonSkipShrineUpgrade": 0,
+                "BoonManaReserveShrineUpgrade": 0,
+                "BanUnpickedBoonsShrineUpgrade": 0,
+                "LimitGraspShrineUpgrade": 0,
+                "EnemyEliteShrineUpgrade": 0
+              },
+              "disabledKeys": []
+            },
+            "forfeit": "inactive",
+            "chaos": { "active": [], "matured": [] },
+            "keepsakes": { "usedKeys": [], "blockedKeys": [], "fatedStatus": "Unknown" },
+            "rewardPriorities": [],
+            "hexProgress": {
+              "talentKeys": [],
+              "closed": false,
+              "bankedPathPoints": 0,
+              "investedPathPoints": 0,
+              "olympianTalentInvested": false
+            },
+            "artificer": null,
+            "retainedEffects": {
+              "echoShopDuplicateStatus": null,
+              "keepsakes": {
+                "olympianSources": [],
+                "jeweledPom": null,
+                "experimentalHammers": [],
+                "callingCard": null,
+                "timePiece": null,
+                "figLeaf": null,
+                "phial": null,
+                "figurine": null,
+                "stone": null,
+                "transcendentEmbryo": null,
+                "gorgon": null
+              },
+              "steadyGrowth": [],
+              "hermesShrineDeliveries": [],
+              "stygianWell": {
+                "sparkUses": 0,
+                "yarnUses": 0,
+                "hymnUses": 0,
+                "discountUses": [],
+                "emptySlotUses": [],
+                "extendedUses": 0
+              }
+            }
+          }
+        },
+        "beforeRoomExit": {
+          "frame": 1,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"F:start\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": { "biomeDepthCache": 1, "routeEncounterDepth": 1, "roomHistoryOrdinal": 1 }
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-0-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-0-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ApolloUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "FIntroFight", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-0-0\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-0-0\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "ApolloUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-0-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-0-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Apollo",
+                  "options": [
+                    { "key": "ApolloWeaponBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloManaBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-0-0\\\"]\",\"source\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-0-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-1-0", "biomeKey": "F", "gameName": "F_Combat02" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 2,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-0-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 3,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-0-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": { "biomeDepthCache": 2, "routeEncounterDepth": 1, "roomHistoryOrdinal": 2 },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "godPool": {
+              "acquiredSourceKeys": ["ApolloUpgrade"],
+              "effectiveSourceKeys": ["ApolloUpgrade", "DemeterUpgrade", "PoseidonUpgrade"],
+              "capNarrowed": false
+            },
+            "traits": {
+              "equipped": [{ "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 }],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 1 },
+              "upgradableCount": 1,
+              "bannedTraitKeys": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-1-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-1-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat02",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MetaCardPointsCommonDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-1-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-1-0\"]",
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "resource",
+                "gameName": "MetaCardPointsCommonDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-1-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-1-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-1-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-1-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-2-0", "biomeKey": "F", "gameName": "F_Combat03" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-2-1", "biomeKey": "F", "gameName": "F_Combat04" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxManaDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 4,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-1-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 5,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-1-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 3,
+              "biomeEncounterDepth": 2,
+              "routeEncounterDepth": 2,
+              "roomHistoryOrdinal": 3
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-2-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-2-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat03",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "RoomMoneyDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-2-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-2-0\"]",
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "consumable",
+                "gameName": "RoomMoneyDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-2-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-2-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-2-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-2-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-3-0", "biomeKey": "F", "gameName": "F_Combat07" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-3-1", "biomeKey": "F", "gameName": "F_Combat06" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "PoseidonUpgrade"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 6,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-2-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 7,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-2-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 4,
+              "biomeEncounterDepth": 3,
+              "routeEncounterDepth": 3,
+              "roomHistoryOrdinal": 4
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-2-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-2-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat04",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxManaDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-2-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-3-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-3-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat07",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ApolloUpgrade"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-3-0\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-3-0\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "ApolloUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-3-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-3-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Apollo",
+                  "options": [
+                    { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-3-0\\\"]\",\"source\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-3-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-4-0", "biomeKey": "F", "gameName": "F_Combat19" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-4-1", "biomeKey": "F", "gameName": "F_Combat08" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxManaDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 8,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-3-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 9,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-3-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 5,
+              "biomeEncounterDepth": 4,
+              "routeEncounterDepth": 4,
+              "roomHistoryOrdinal": 5
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "traits": {
+              "equipped": [
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                { "traitKey": "ApolloSpecialBoon", "rarity": "Common", "level": 1 }
+              ],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ApolloSpecialBoon" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 2, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2 },
+              "upgradableCount": 2,
+              "bannedTraitKeys": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-3-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-3-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat06",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "PoseidonUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-3-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-4-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-4-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat19",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxHealthDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-4-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-4-0\"]",
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "consumable",
+                "gameName": "MaxHealthDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-4-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-4-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-4-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-4-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-5-0", "biomeKey": "F", "gameName": "F_Shop01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Shop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-5-1", "biomeKey": "F", "gameName": "F_MiniBoss01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 10,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-4-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 11,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-4-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 6,
+              "biomeEncounterDepth": 5,
+              "routeEncounterDepth": 5,
+              "roomHistoryOrdinal": 6
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-4-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-4-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat08",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxManaDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-4-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-5-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-5-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Shop01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Shop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
+        ],
+        "requiredObjects": [],
+        "shop": {
+          "profileKey": "WorldShop",
+          "offers": [
+            {
+              "offerKey": "Boon",
+              "profileSlotIndex": 0,
+              "optionKey": "RandomLoot",
+              "rewardType": "RandomLoot",
+              "source": "ApolloUpgrade"
+            },
+            {
+              "offerKey": "MajorNonBoon",
+              "profileSlotIndex": 1,
+              "optionKey": "RoomRewardHealDrop",
+              "rewardType": "RoomRewardHealDrop"
+            },
+            {
+              "offerKey": "Minor",
+              "profileSlotIndex": 2,
+              "optionKey": "MaxManaDrop",
+              "rewardType": "MaxManaDrop"
+            }
+          ]
+        }
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-5-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-6-0", "biomeKey": "F", "gameName": "F_Combat11" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-6-1", "biomeKey": "F", "gameName": "F_Combat12" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 12,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-5-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 13,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-5-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 7,
+              "biomeEncounterDepth": 5,
+              "routeEncounterDepth": 5,
+              "roomHistoryOrdinal": 7
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 11 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-5-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-5-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_MiniBoss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ApolloUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "MiniBossTreant", "kind": "miniboss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-5-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-6-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-6-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat11",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MetaCardPointsCommonDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-6-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-6-0\"]",
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "resource",
+                "gameName": "MetaCardPointsCommonDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-6-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-6-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-6-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-6-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-7-0", "biomeKey": "F", "gameName": "F_Combat13" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-7-1", "biomeKey": "F", "gameName": "F_Combat14" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ApolloUpgrade"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 14,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-6-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 15,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-6-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 8,
+              "biomeEncounterDepth": 6,
+              "routeEncounterDepth": 6,
+              "roomHistoryOrdinal": 8
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-6-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-6-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat12",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MetaCurrencyDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-6-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-7-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-7-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat13",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "RoomMoneyDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-7-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-7-0\"]",
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "consumable",
+                "gameName": "RoomMoneyDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-7-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-7-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-7-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-7-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-8-0", "biomeKey": "F", "gameName": "F_Combat15" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "StackUpgrade",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-8-1", "biomeKey": "F", "gameName": "F_Combat16" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MaxHealthDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 16,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-7-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 17,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-7-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 9,
+              "biomeEncounterDepth": 7,
+              "routeEncounterDepth": 7,
+              "roomHistoryOrdinal": 9
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 7 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 16 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-7-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-7-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat14",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ApolloUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-7-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-8-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-8-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat15",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "StackUpgrade",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-8-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-8-0\"]",
+            "reward": {
+              "rewardType": "StackUpgrade",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "StackUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-8-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-8-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                },
+                "levelResolution": {
+                  "offeredTargets": ["ApolloWeaponBoon", "ApolloSpecialBoon"],
+                  "selectedTarget": "ApolloWeaponBoon",
+                  "levelCount": 1
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "StackUpgrade",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-8-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-8-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-9-0", "biomeKey": "F", "gameName": "F_Combat17" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-9-1", "biomeKey": "F", "gameName": "F_Combat18" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "MetaCurrencyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "MetaProgress"
+      },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 18,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-8-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 19,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-8-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 10,
+              "biomeEncounterDepth": 8,
+              "routeEncounterDepth": 8,
+              "roomHistoryOrdinal": 10
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 7 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 14 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "traits": {
+              "equipped": [
+                { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 2 },
+                { "traitKey": "ApolloSpecialBoon", "rarity": "Common", "level": 1 }
+              ],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "ApolloSpecialBoon" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 0, "Air": 2, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2 },
+              "upgradableCount": 2,
+              "bannedTraitKeys": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-8-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-8-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat16",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MaxHealthDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-8-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-9-0",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-9-0\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat17",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MetaCardPointsCommonDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          {
+            "slotKey": "Encounter",
+            "encounterKey": "GeneratedF",
+            "kind": "combat",
+            "excludedEnemies": [
+              { "choiceKey": "Radiator", "nativeId": "Radiator" },
+              { "choiceKey": "Radiator_Elite", "nativeId": "Radiator_Elite" },
+              { "choiceKey": "Screamer", "nativeId": "Screamer" },
+              { "choiceKey": "Screamer_Elite", "nativeId": "Screamer_Elite" }
+            ]
+          }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-9-0\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"FreshFile\",\"F\",\"fresh-9-0\"]",
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "self",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "resource",
+                "gameName": "MetaCardPointsCommonDrop",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"FreshFile\",\"F\",\"[\\\"occurrence\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-9-0\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"FreshFile\",\"F\",\"[\\\"acquisitionSite\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"FreshFile\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"fresh-9-0\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"self\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "MetaCardPointsCommonDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "MetaProgress"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"FreshFile\",\"F\",\"[\\\"incomingReward\\\",\\\"FreshFile\\\",\\\"F\\\",\\\"fresh-9-0\\\"]\",\"self\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"FreshFile\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"fresh-9-0\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
+            "room": { "id": "fresh-preboss-shop", "biomeKey": "F", "gameName": "F_PreBoss01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Shop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "fresh-preboss-free", "biomeKey": "F", "gameName": "F_PreBoss01" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "StackUpgrade",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 20,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-9-0\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 21,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-9-0\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 11,
+              "biomeEncounterDepth": 9,
+              "routeEncounterDepth": 9,
+              "roomHistoryOrdinal": 11
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 14 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-9-1",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-9-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat18",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "MetaCurrencyDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "MetaProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-9-1\"]", "kind": "terminal" }
+    },
+    {
+      "id": "fresh-preboss-shop",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop\"]",
+      "biomeKey": "F",
+      "gameName": "F_PreBoss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Shop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
+        ],
+        "requiredObjects": [],
+        "shop": {
+          "profileKey": "WorldShop",
+          "offers": [
+            {
+              "offerKey": "Boon",
+              "profileSlotIndex": 0,
+              "optionKey": "RandomLoot",
+              "rewardType": "RandomLoot",
+              "source": "ApolloUpgrade"
+            },
+            {
+              "offerKey": "MajorNonBoon",
+              "profileSlotIndex": 1,
+              "optionKey": "RoomRewardHealDrop",
+              "rewardType": "RoomRewardHealDrop"
+            },
+            {
+              "offerKey": "Minor",
+              "profileSlotIndex": 2,
+              "optionKey": "MaxManaDrop",
+              "rewardType": "MaxManaDrop"
+            }
+          ]
+        }
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop\"]",
+        "kind": "fixed",
+        "target": { "id": "fresh-preboss-shop:boss", "biomeKey": "F", "gameName": "F_Boss01" },
+        "zagreusContractPresent": false
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 22,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-preboss-shop\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 23,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-preboss-shop\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 12,
+              "biomeEncounterDepth": 9,
+              "routeEncounterDepth": 9,
+              "roomHistoryOrdinal": 12
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-preboss-free",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-free\"]",
+      "biomeKey": "F",
+      "gameName": "F_PreBoss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "StackUpgrade",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": {
+        "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-free\"]",
+        "kind": "terminal"
+      }
+    },
+    {
+      "id": "fresh-preboss-shop:boss",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop:boss\"]",
+      "biomeKey": "F",
+      "gameName": "F_Boss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "effectNeutralRequiredReward": true,
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "BossHecate01", "kind": "boss" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [
+        { "key": "[\"collectRequiredReward\"]", "description": { "kind": "collectRequiredReward" } }
+      ],
+      "doors": {
+        "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop:boss\"]",
+        "kind": "fixed",
+        "target": {
+          "id": "fresh-preboss-shop:postboss",
+          "biomeKey": "F",
+          "gameName": "F_PostBoss01"
+        },
+        "zagreusContractPresent": false
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 24,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-preboss-shop:boss\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 25,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-preboss-shop:boss\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 13,
+              "biomeEncounterDepth": 9,
+              "routeEncounterDepth": 9,
+              "roomHistoryOrdinal": 13
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "fresh-preboss-shop:postboss",
+      "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\"]",
+      "biomeKey": "F",
+      "gameName": "F_PostBoss01",
+      "kind": "SingleEncounter",
+      "overview": {
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
+        ],
+        "requiredObjects": [],
+        "fountain": {}
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "fountainUse",
+            "owner": "[\"roomAction\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
+            "interactionKey": "fountain",
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": [
+          {
+            "owner": "[\"roomAction\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]",
+            "checkpoint": "exitUsable"
+          }
+        ]
+      },
+      "roomGuide": [
+        {
+          "key": "[\"useFountain\"]",
+          "description": { "kind": "useFountain" },
+          "transactionOwner": "[\"roomAction\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\",\"[\\\"useFountain\\\"]\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"occurrence\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\"]",
+        "kind": "terminal"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 26,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 9,
+              "routeEncounterDepth": 9,
+              "roomHistoryOrdinal": 13
+            }
+          }
+        },
+        "beforeRoomExit": {
+          "frame": 27,
+          "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-preboss-shop:postboss\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 9,
+              "routeEncounterDepth": 9,
+              "roomHistoryOrdinal": 14
+            }
+          }
+        }
+      }
+    }
+  ],
+  "planFingerprint": "e4a35420"
+}

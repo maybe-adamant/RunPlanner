@@ -34,25 +34,15 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 import { executionFixturePath } from '../execution-plan/support/execution-fixtures';
 
-describe('Fresh File generated-composition issue chronology', () => {
-  it('asks for every cage composition in the room Overview, before its features and Timeline', () => {
+describe('Fresh File room issue chronology with uncustomized compositions', () => {
+  it('asks for no cage composition, only the room features and Timeline', () => {
     expect(
       authorFreshFileRoomIssues(
         withNewHFieldsRoom(createFreshFileRouteProject(), 'FreshFile', 'max'),
         'H',
         newHFieldsRoomId,
       ).labels,
-    ).toEqual([
-      // Every phase's composition is fixed when the room is prepared.
-      'composition:Passive',
-      'composition:Cage01',
-      'composition:Cage02',
-      'composition:Cage03',
-      'optionalReward',
-      'spatial',
-      'trait:cage2',
-      'continuation',
-    ]);
+    ).toEqual(['optionalReward', 'spatial', 'trait:cage2', 'continuation']);
   });
 
   it('keeps every phase support in its room while an Overview or Timeline input is the issue', () => {
@@ -80,16 +70,9 @@ describe('Fresh File generated-composition issue chronology', () => {
         supported,
       ).labels,
     ).toEqual(
-      [
-        'composition:Passive',
-        'composition:Cage01',
-        'composition:Cage02',
-        'composition:Cage03',
-        'optionalReward',
-        'spatial',
-        'trait:cage2',
-        'continuation',
-      ].map((label) => `${label} ${all}`),
+      ['optionalReward', 'spatial', 'trait:cage2', 'continuation'].map(
+        (label) => `${label} ${all}`,
+      ),
     );
   });
 
@@ -103,7 +86,7 @@ describe('Fresh File generated-composition issue chronology', () => {
     ).toEqual(['optionalReward', 'spatial', 'trait:cage1', 'continuation']);
   });
 
-  it('asks for a new F combat composition after its door reward and before its offer', () => {
+  it('asks a new uncustomized F combat only for its door reward and offer', () => {
     const biome = createBiomeAddress('FreshFile', 'F');
     const source = { kind: 'occurrence', occurrenceId: createOccurrenceId('fresh-2-0') } as const;
     const decision = createExitDecisionAddress(biome, source);
@@ -145,7 +128,6 @@ describe('Fresh File generated-composition issue chronology', () => {
       value: { kind: 'normal', exitKey: 'exit1' },
     });
     expect(authorFreshFileRoomIssues(project, 'F', combat).labels).toEqual([
-      'composition:Encounter',
       'trait:incomingReward',
       'continuation',
     ]);

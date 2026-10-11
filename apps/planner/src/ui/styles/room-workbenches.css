@@ -613,12 +613,6 @@
   font-weight: 500;
 }
 
-.encounter-composition-warning {
-  margin: 0;
-  color: var(--attention);
-  font-size: 0.88rem;
-}
-
 .encounter-generated-heading,
 .encounter-generated-wave-heading {
   display: flex;

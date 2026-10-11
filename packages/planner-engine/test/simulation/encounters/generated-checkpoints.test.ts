@@ -46,7 +46,7 @@ function completeBiome(project: ProjectDocument, biomeKey: string) {
 function emitted(biome: ReturnType<typeof completeBiome>['biome'], phase: EncounterPhaseAddress) {
   return biome.roomGeneration.resolvedGenerated.find(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(phase),
-  )?.customization.operands;
+  )?.customization?.operands;
 }
 function generatedPolicy(key: string) {
   const selection = catalog.encounterDefinitions.byKey[key]?.customization?.find(

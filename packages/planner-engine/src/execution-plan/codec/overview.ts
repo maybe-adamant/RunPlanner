@@ -19,6 +19,25 @@ import type {
 import { equippedTraits } from './diagnostics';
 import { generatedEncounter } from './generated-encounter';
 
+/** A present native-roll exclusion list is non-empty and distinct. */
+function excludedEnemies(value: unknown, label: string) {
+  const enemies = array(value, label, 64).map((entry, index) => {
+    const row = object(entry, `${label}[${index}]`);
+    exact(row, ['choiceKey', 'nativeId'], [], `${label}[${index}]`);
+    return Object.freeze({
+      choiceKey: stringValue(row.choiceKey, `${label}[${index}].choiceKey`),
+      nativeId: stringValue(row.nativeId, `${label}[${index}].nativeId`),
+    });
+  });
+  if (enemies.length === 0) fail(`${label} must be non-empty when present`);
+  if (
+    new Set(enemies.map((enemy) => enemy.choiceKey)).size !== enemies.length ||
+    new Set(enemies.map((enemy) => enemy.nativeId)).size !== enemies.length
+  )
+    fail(`${label} must be distinct`);
+  return Object.freeze(enemies);
+}
+
 function encounterCustomization(value: unknown, label: string) {
   const decisions = array(value, label, 16).map((entry, index) => {
     const row = object(entry, `${label}[${index}]`);
@@ -265,7 +284,7 @@ export function overview(value: unknown, label: string) {
       exact(
         row,
         ['slotKey', 'encounterKey', 'kind'],
-        ['figLeafSkip', 'customization'],
+        ['figLeafSkip', 'customization', 'excludedEnemies'],
         `${label}.encounterPhases[${index}]`,
       );
       return Object.freeze({
@@ -289,6 +308,14 @@ export function overview(value: unknown, label: string) {
               customization: encounterCustomization(
                 row.customization,
                 `${label}.encounterPhases[${index}].customization`,
+              ),
+            }),
+        ...(row.excludedEnemies === undefined
+          ? {}
+          : {
+              excludedEnemies: excludedEnemies(
+                row.excludedEnemies,
+                `${label}.encounterPhases[${index}].excludedEnemies`,
               ),
             }),
       });

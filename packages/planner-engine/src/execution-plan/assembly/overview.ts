@@ -714,7 +714,7 @@ function executionFieldsLayout(
 }
 
 type ResolvedEncounterCustomization = NonNullable<
-  NonNullable<CanonicalAuthoredRoom['structuralEncounterIdentities']>[number]['customization']
+  import('../../simulation/encounters/model').ResolvedEncounterPhase['customization']
 >;
 
 function executionEncounterCustomization(
@@ -914,6 +914,31 @@ function executionEncounterCustomization(
   return published.length === 0 ? undefined : Object.freeze(published);
 }
 
+/** The phase's native-roll exclusions as generated choices of its generated decision. */
+function executionExcludedEnemies(
+  customization: ResolvedEncounterCustomization | undefined,
+  room: CanonicalAuthoredRoom,
+  slotKey: string,
+  excludedKeys: readonly string[] | undefined,
+): ExecutionOverview['encounterPhases'][number]['excludedEnemies'] {
+  if (excludedKeys === undefined || excludedKeys.length === 0) return undefined;
+  const decision = customization?.find(
+    (entry) => entry.selection.kind === 'generated' && entry.replaced !== true,
+  );
+  const choices = decision?.selection.kind === 'generated' ? decision.selection.choices : [];
+  return Object.freeze(
+    excludedKeys.map((key) => {
+      const choice = choices.find((entry) => entry.key === key);
+      if (choice === undefined)
+        throw new CompilerError(
+          'executionCoverageMissing',
+          `${room.gameName}.${slotKey} lost excluded enemy ${key}`,
+        );
+      return Object.freeze({ choiceKey: choice.key, nativeId: choice.nativeId });
+    }),
+  );
+}
+
 /** Assemble the complete room-entry realization facts for one occurrence. */
 export function assembleExecutionOverview(
   catalog: Catalog,
@@ -921,6 +946,7 @@ export function assembleExecutionOverview(
   biome: CompleteValidBiomeProjectEvaluation,
   batch: CanonicalBatch | undefined,
   transactions: readonly ExecutionTimelineTransaction[],
+  nativeExclusions: ReadonlyMap<string, readonly string[]>,
 ): ExecutionOverview {
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome, transactions);
@@ -1012,6 +1038,12 @@ export function assembleExecutionOverview(
               phase.slotKey,
               resolvedGenerated,
             );
+            const excludedEnemies = executionExcludedEnemies(
+              structural?.customization,
+              room,
+              phase.slotKey,
+              nativeExclusions.get(semanticAddressKey(phaseAddress)),
+            );
             return Object.freeze({
               slotKey: phase.slotKey,
               encounterKey:
@@ -1034,6 +1066,7 @@ export function assembleExecutionOverview(
                 })(),
               ...(figLeaf === undefined ? {} : { figLeafSkip: figLeaf.selected }),
               ...(customization === undefined ? {} : { customization }),
+              ...(excludedEnemies === undefined ? {} : { excludedEnemies }),
             });
           })(),
         ),

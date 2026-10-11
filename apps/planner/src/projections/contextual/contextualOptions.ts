@@ -244,7 +244,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'unsupportedSparseTraitOffer':
       return { kind: 'trait', message: 'This provider needs three choices.' };
     case 'encounterCustomizationUnavailable':
-    case 'encounterCustomizationRequired':
       return { kind: 'generic', message: presentFinding(finding).description! };
     case 'encounterIntroductionRequired': {
       const introductionKey = String(finding.evidence.introductionEncounterKey);

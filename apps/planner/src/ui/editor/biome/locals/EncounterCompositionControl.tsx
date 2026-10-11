@@ -377,17 +377,13 @@ type CompositionWave = WorkspaceEncounterComposition['waves'][number];
 function ReadOnlyWavePanel({
   idKey,
   wave,
-  customizationRequired,
 }: {
   readonly idKey: string;
   readonly wave: CompositionWave;
-  readonly customizationRequired: boolean;
 }) {
   const summary =
     wave.spawns.length === 0
-      ? customizationRequired
-        ? 'Not customized'
-        : 'Native generation'
+      ? 'Native generation'
       : wave.spawns.map((spawn) => spawn.label).join(' · ');
   return (
     <>
@@ -405,11 +401,7 @@ function ReadOnlyWavePanel({
         </div>
       </div>
       {wave.spawns.length === 0 ? (
-        <p className="encounter-generated-context">
-          {customizationRequired
-            ? 'Select Edit to configure this wave.'
-            : 'The game generates this wave’s enemies.'}
-        </p>
+        <p className="encounter-generated-context">The game generates this wave’s enemies.</p>
       ) : (
         <div className="encounter-budget-table-scroll">
           <table className="encounter-budget-table" aria-label={`Wave ${wave.waveIndex} enemies`}>
@@ -445,14 +437,12 @@ function ReadOnlyWavePanel({
 export function EncounterCompositionControl({
   composition,
   decision,
-  hasRequiredFindings = false,
   idKey,
   interaction,
   onInitializationFailure,
 }: {
   readonly composition: WorkspaceEncounterComposition;
   readonly decision?: Decision;
-  readonly hasRequiredFindings?: boolean;
   readonly idKey: string;
   readonly interaction?: WorkspaceEncounterCustomizationInteraction;
   /** Reports whether the last Edit attempt found no supported composition. */
@@ -780,11 +770,7 @@ export function EncounterCompositionControl({
           id={`wave-budget-panel-${idKey}-${row.waveIndex}`}
           aria-labelledby={`wave-budget-tab-${idKey}-${row.waveIndex}`}
         >
-          <ReadOnlyWavePanel
-            idKey={idKey}
-            wave={row}
-            customizationRequired={composition.customizationRequired}
-          />
+          <ReadOnlyWavePanel idKey={idKey} wave={row} />
         </section>
       );
     const wave =
@@ -805,7 +791,6 @@ export function EncounterCompositionControl({
           decision === undefined || interaction === undefined ? null : (
             <button
               className="secondary-action action-compact encounter-composition-edit"
-              data-has-findings={hasRequiredFindings}
               disabled={interaction.initializeGenerated === undefined}
               onClick={() => {
                 const initial = interaction.initializeGenerated?.();
@@ -842,9 +827,7 @@ export function EncounterCompositionControl({
       {value === undefined && decision !== undefined && interaction !== undefined ? (
         <>
           <p className="encounter-customization-explanation">
-            {composition.customizationRequired
-              ? 'Select Edit to choose this encounter’s enemies.'
-              : 'The game chooses these enemies unless you select Edit.'}
+            The game chooses these enemies unless you select Edit.
           </p>
         </>
       ) : null}
@@ -897,10 +880,8 @@ export function EncounterCompositionControl({
           ) : null}
           <h4>Editing</h4>
           <p>
-            Changes apply immediately. Undo reverses edits.{' '}
-            {composition.customizationRequired
-              ? 'Reset clears the customization. You must customize this encounter again before continuing.'
-              : 'Reset removes the customization and returns the encounter to game control.'}
+            Changes apply immediately. Undo reverses edits. Reset removes the customization and
+            returns the encounter to game control.
           </p>
         </section>
       ) : null}
@@ -1081,29 +1062,16 @@ export function compositionIssueMessages(
 }
 
 /** The dialog's one feedback region: always mounted, with an empty state. */
-export function CustomizationFindings({
-  entries,
-  warnings = [],
-}: {
-  readonly entries: readonly FeedbackEntry[];
-  readonly warnings?: readonly string[];
-}) {
+export function CustomizationFindings({ entries }: { readonly entries: readonly FeedbackEntry[] }) {
   return (
     <EditorDialogFeedback name="Encounter feedback">
-      {entries.length === 0 && warnings.length === 0 ? undefined : (
-        <>
-          {entries.map(([key, message]) => (
+      {entries.length === 0
+        ? undefined
+        : entries.map(([key, message]) => (
             <p className="encounter-customization-repair" key={key}>
               {message}
             </p>
           ))}
-          {warnings.map((warning) => (
-            <p className="encounter-composition-warning" key={warning}>
-              {warning}
-            </p>
-          ))}
-        </>
-      )}
     </EditorDialogFeedback>
   );
 }

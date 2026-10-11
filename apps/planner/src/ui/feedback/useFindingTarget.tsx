@@ -91,18 +91,6 @@ export interface FindingTargetProps {
 
 export type FindingTargetFilter = (finding: { readonly code: string }) => boolean;
 
-/** Presented explanations of the owner's findings that pass the filter. */
-// eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
-export function useFindingExplanations(
-  address: SemanticAddress,
-  filter: FindingTargetFilter,
-): readonly string[] {
-  const { findings } = useContext(feedback);
-  return (findings.get(semanticAddressKey(address)) ?? [])
-    .filter(filter)
-    .map((finding) => formatFindingExplanation(presentFinding(finding)));
-}
-
 /** The owner's findings as dialog feedback entries, folded as its launcher marks them. */
 // eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
 export function useFindingFeedbackEntries(

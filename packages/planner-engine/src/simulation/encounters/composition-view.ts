@@ -1,5 +1,4 @@
 import type { Catalog, EncounterEnemyChoice } from '../../catalog-schema';
-import { routeStartsWithUnfinishedIntroductions } from '../../authored-project/route-profile';
 import type {
   AuthoredEncounterCustomization,
   AuthoredGeneratedEncounterCustomization,
@@ -12,8 +11,6 @@ import type { GeneratedEncounterAssessment } from './generation';
  */
 export interface EncounterCompositionPhase {
   readonly selectedEncounterDefinitionKey?: string;
-  /** The route this phase is authored on; decides whether customization is required. */
-  readonly routeKey?: string;
   readonly customization?: readonly {
     readonly key: string;
     readonly selection: { readonly kind: string };
@@ -61,8 +58,6 @@ export interface EncounterCompositionView {
   readonly waves: readonly EncounterCompositionWave[];
   /** Some wave is authored or authorable here. */
   readonly editable: boolean;
-  /** The route authors every generated composition, so an unauthored one is a finding. */
-  readonly customizationRequired: boolean;
   /** The assessed shared-enemy decision applies to this composition. */
   readonly sharedEnemy: boolean;
   /** Effective Fear controls active at the assessed checkpoint. */
@@ -121,7 +116,6 @@ export function encounterCompositionView(
       waveCount: Object.freeze({ min: count, max: count, value: count }),
       waves: Object.freeze(definition.fixedRoster.map((wave, index) => fixedRow(index + 1, wave))),
       editable: false,
-      customizationRequired: false,
       sharedEnemy: false,
       fangs: false,
       menace: false,
@@ -204,10 +198,6 @@ export function encounterCompositionView(
     }),
     waves,
     editable: decision !== undefined,
-    customizationRequired:
-      decision !== undefined &&
-      phase.routeKey !== undefined &&
-      routeStartsWithUnfinishedIntroductions(catalog, phase.routeKey),
     // Pre-existing waves suppress the shared highlight (RunLogic GenerateEncounter).
     sharedEnemy:
       value !== undefined &&

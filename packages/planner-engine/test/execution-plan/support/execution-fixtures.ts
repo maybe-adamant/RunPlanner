@@ -18,6 +18,7 @@ import {
   createCompleteFGProject,
   createEchoGoldIAnvilDuplicateProject,
   echoGoldIDuplicateAnvilResult,
+  underworldFogEmitterReservationProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadUnderworldArachneCocoonsCheckpoint,
@@ -33,7 +34,10 @@ import {
   dreamOSkippedShipProject,
   dreamSingleQShrineDeliveryProject,
 } from '@run-planner/test-fixtures/dream';
-import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
+import {
+  createFreshFileFNativeProject,
+  createFreshFileRouteProject,
+} from '@run-planner/test-fixtures/fresh-file';
 import {
   loadSurfaceNPhialIntermediateFountainCheckpoint,
   loadSurfaceScheduledLifecycleCheckpoint,
@@ -70,6 +74,7 @@ import fgAnomalyRosterFixture from '../fixtures/fg-anomaly-roster.execution.json
 import fgIxionChaosFixture from '../fixtures/fg-ixion-chaos.execution.json';
 import fgNpcShoppingProtectionFixture from '../fixtures/fg-npc-shopping-protection.execution.json';
 import freshFileFGHIFixture from '../fixtures/fresh-file-fghi.execution.json';
+import freshFileFNativeFixture from '../fixtures/fresh-file-f-native.execution.json';
 import surfaceGeneratedPrecombatFixture from '../fixtures/surface-generated-precombat.execution.json';
 import surfaceNPhialIntermediateFountainFixture from '../fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixture from '../fixtures/surface-n.execution.json';
@@ -88,6 +93,7 @@ import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
 import underworldFGHIEmptyShopGroupFixture from '../fixtures/underworld-fghi-empty-shop-group.execution.json';
 import underworldGeneratedCompositionFixture from '../fixtures/underworld-generated-composition.execution.json';
+import underworldFogEmitterReservationFixture from '../fixtures/underworld-fog-emitter-reservation.execution.json';
 import underworldEchoGoldAnvilDuplicateFixture from '../fixtures/underworld-echo-gold-anvil-duplicate.execution.json';
 import surfaceStartQOpeningFixture from '../fixtures/surface-start-q-opening.execution.json';
 import underworldStartIPrebossFixture from '../fixtures/underworld-start-i-preboss.execution.json';
@@ -181,6 +187,16 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'fresh-file-fghi',
     project: createFreshFileRouteProject,
     wire: freshFileFGHIFixture,
+  },
+  {
+    name: 'fresh-file-f-native',
+    project: createFreshFileFNativeProject,
+    wire: freshFileFNativeFixture,
+  },
+  {
+    name: 'underworld-fog-emitter-reservation',
+    project: underworldFogEmitterReservationProject,
+    wire: underworldFogEmitterReservationFixture,
   },
   {
     name: 'fg-ixion-chaos',

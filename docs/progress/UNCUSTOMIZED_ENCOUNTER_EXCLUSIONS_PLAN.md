@@ -62,6 +62,11 @@ keeps only native additions.
 Planner simplification: the native roll is still unmodelled beyond identity;
 only its excluded set is published.
 
+The reservation covers every natively eligibility-checked member of a later
+authored composition (typed additions, template companions, highlight). H
+introductions declare all three waves (`MinWaves = MaxWaves = 3`), so their
+`WaveTemplate` never fills a wave and they draw nothing natively.
+
 ## Ownership
 
 - **Catalog:** none expected. `BlacklistAfterFirstAppearance` must already be a
