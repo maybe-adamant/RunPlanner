@@ -597,8 +597,8 @@ function createHeraclesCombatFixture(project: ProjectDocument) {
       .filter((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(room))
       .map((entry) => entry.encounterKey),
     encounterDepthDelta:
-      selectedRoom.postCommit.ledgers.counters.biomeEncounterDepth -
-      selectedRoom.preparation.ledgers.counters.biomeEncounterDepth,
+      selectedRoom.postCommit.ledgers.counters.biomeEncounterDepth! -
+      selectedRoom.preparation.ledgers.counters.biomeEncounterDepth!,
     encounterKeyByPhase: selectedPAuthored.encounters.encounterKeyByPhase,
     introSequence: sequenceStatus(selectedPProject, intro),
     nHeraclesSupport: support(selectedPProject, nHeracles),
@@ -1539,8 +1539,8 @@ describe('field NPC encounter requirements', () => {
     }
     expect(nemesisAdvance?.sequence).toBeGreaterThan(nemesisStart.sequence);
     expect(
-      validRoom.postCommit.ledgers.counters.biomeEncounterDepth -
-        validRoom.preparation.ledgers.counters.biomeEncounterDepth,
+      validRoom.postCommit.ledgers.counters.biomeEncounterDepth! -
+        validRoom.preparation.ledgers.counters.biomeEncounterDepth!,
     ).toBe(2);
     expect(
       materializedRoom.localRewards?.find((reward) => reward.slotKey === 'cage1')?.offer,
@@ -1661,11 +1661,11 @@ describe('field NPC encounter requirements', () => {
       },
     ]);
     expect(
-      selectedPostCommit.ledgers.counters.biomeEncounterDepth -
-        selected.preparation.ledgers.counters.biomeEncounterDepth,
+      selectedPostCommit.ledgers.counters.biomeEncounterDepth! -
+        selected.preparation.ledgers.counters.biomeEncounterDepth!,
     ).toBe(
-      ordinaryPostCommit.ledgers.counters.biomeEncounterDepth -
-        ordinary.preparation.ledgers.counters.biomeEncounterDepth +
+      ordinaryPostCommit.ledgers.counters.biomeEncounterDepth! -
+        ordinary.preparation.ledgers.counters.biomeEncounterDepth! +
         1,
     );
     if (!('rewards' in selectedEvaluation)) {

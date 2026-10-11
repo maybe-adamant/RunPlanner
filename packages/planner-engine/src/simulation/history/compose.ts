@@ -30,6 +30,7 @@ import {
   type EncounterValidatedBiomeHistoryPrefix,
   type FigLeafLifecycleState,
 } from './composition';
+import { BIOME_ENTRY_ENCOUNTER_DEPTH } from '../encounters/biome-encounter-depth';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
   BiomeHistoryPrefix,
@@ -488,11 +489,12 @@ function initialCounters(
 ) {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) fail(`catalog lost ${snapshot.biomeKey} layout`);
-  const biomeDepthCache = routePosition.routeKey !== 'Dream' && routePosition.isFirst ? 0 : 1;
+  // StartNewRun creates a non-Dream route's first room before any biome record is set.
+  const runStart = routePosition.routeKey !== 'Dream' && routePosition.isFirst;
   const progression = layout.progression;
   return Object.freeze({
-    biomeDepthCache,
-    biomeEncounterDepth: layout.initialCounters.biomeEncounterDepth,
+    biomeDepthCache: runStart ? 0 : 1,
+    ...(runStart ? {} : { biomeEncounterDepth: BIOME_ENTRY_ENCOUNTER_DEPTH }),
     routeEncounterDepth: seed?.ledgers.counters.routeEncounterDepth ?? 1,
     roomHistoryOrdinal: seed?.ledgers.counters.roomHistoryOrdinal ?? 0,
     ...(progression.kind === 'generated' && progression.batchPolicy.kind === 'fields'

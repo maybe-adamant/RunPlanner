@@ -1816,6 +1816,15 @@ function TestProtocol.testRecomputedFingerprintCannotHideClosedUnionViolations()
     value.occurrences[1].diagnostics.roomEntered.replace.counters.routeEncounterDepth = "one"
     refreshFingerprint(value)
     lu.assertNil(protocol.decode(value))
+
+    -- A run's first room is entered with native BiomeEncounterDepth unset.
+    value = decode("f-opening")
+    lu.assertNil(value.occurrences[1].diagnostics.roomEntered.replace.counters.biomeEncounterDepth)
+    lu.assertNotNil(protocol.decode(value))
+    value = decode("f-opening")
+    value.occurrences[1].diagnostics.roomEntered.replace.counters.biomeEncounterDepth = "one"
+    refreshFingerprint(value)
+    lu.assertNil(protocol.decode(value))
 end
 
 function TestProtocol.testEveryTimelineTransactionUnionDecodes()

@@ -378,18 +378,14 @@ function biome(value: unknown, label: string): ExecutionStartBiome {
   const row = record(
     value,
     label,
-    [
-      'biomeDepthCache',
-      'biomeEncounterDepth',
-      'biomeUseRecord',
-      'forfeitConsumed',
-      'dionysusSkipActivated',
-    ],
-    ['clockwork'],
+    ['biomeDepthCache', 'biomeUseRecord', 'forfeitConsumed', 'dionysusSkipActivated'],
+    ['biomeEncounterDepth', 'clockwork'],
   );
   return Object.freeze({
     biomeDepthCache: integer(row.biomeDepthCache, `${label}.biomeDepthCache`),
-    biomeEncounterDepth: integer(row.biomeEncounterDepth, `${label}.biomeEncounterDepth`),
+    ...optional('biomeEncounterDepth', row.biomeEncounterDepth, (entry) =>
+      integer(entry, `${label}.biomeEncounterDepth`),
+    ),
     biomeUseRecord: numberRecord(row.biomeUseRecord, `${label}.biomeUseRecord`),
     forfeitConsumed: booleanValue(row.forfeitConsumed, `${label}.forfeitConsumed`),
     dionysusSkipActivated: booleanValue(

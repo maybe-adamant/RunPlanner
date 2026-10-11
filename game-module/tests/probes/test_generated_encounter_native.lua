@@ -747,6 +747,22 @@ function TestGeneratedEncounterNative.testAdmissionReadsTheNativeFinalBudget()
     end
 end
 
+-- A run's first room is generated before any biome record sets BiomeEncounterDepth.
+function TestGeneratedEncounterNative.testUnsetEncounterDepthReadsZeroForTheBudget()
+    for _, case in ipairs({ { depth = nil, budget = 60 }, { depth = 1, budget = 85 } }) do
+        local _, instance, _, restore = configuredProduction()
+        _G.game.EnemyData = _G.EnemyData
+        _G.CurrentRun.BiomeEncounterDepth = case.depth
+        local state = { state = "synchronized", diagnostics = {} }
+        local realized = install(instance, state, { id = "depth" }, phase("Combat", fullDecision({ expectedBudget = 60 })),
+            { Name = "depth" }, declaration({ BaseDifficulty = 60, DepthDifficultyRamp = 25, UseEncounterDepth = true }))
+        lu.assertEquals(realized.DifficultyRating, case.budget)
+        lu.assertEquals(state.diagnostics[1].observed.kind,
+            case.depth == nil and "generated-installed" or "generated-admission")
+        restore()
+    end
+end
+
 function TestGeneratedEncounterNative.testAdmittedDecisionMountsEveryWaveWithoutReevaluation()
     local _, instance, _, restore = configuredProduction()
     _G.game.EnemyData = _G.EnemyData

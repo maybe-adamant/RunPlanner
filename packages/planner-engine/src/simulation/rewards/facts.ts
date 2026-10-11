@@ -18,6 +18,7 @@ import type { SimulationState } from '../state/model';
 import { rewardLookupSets } from '../state/reward-lookups';
 import { offeredRewardTypeSet } from '../state/offered-rewards';
 import { BiomeRewardSimulationContractError } from './biome/biome-contract';
+import { readBiomeEncounterDepth } from '../encounters/biome-encounter-depth';
 
 /** Visible store names that participate in RequiredNotInStore at room entry. */
 export function visibleStoreOptionNames(
@@ -165,7 +166,10 @@ export function createRewardFacts({
     routeKey: sourceOrigin.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
-      biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
+      biomeEncounterDepth: readBiomeEncounterDepth(
+        view.ledgers.counters.biomeEncounterDepth,
+        'requirement',
+      ),
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
       enteredBiomes: enteredBiomeCount,
       // The trait ledger owns this derived count.  Reward history remains the
@@ -293,7 +297,7 @@ export function createRouteStartRewardFacts(
     routeKey: route.routeKey,
     counters: Object.freeze({
       biomeDepthCache: 0,
-      biomeEncounterDepth: 0,
+      biomeEncounterDepth: readBiomeEncounterDepth(undefined, 'requirement'),
       encounterDepth: 0,
       enteredBiomes: 0,
       upgradableTraitCount: history.traitFacts.upgradableTraitCount,

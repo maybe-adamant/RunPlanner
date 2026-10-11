@@ -20,6 +20,7 @@ import {
   customizationValueKnown,
   supportsGeneratedEncounterCustomization,
 } from '../../authored-project/room-state/encounter-customization';
+import { atBiomeEntryEncounterDepth } from './biome-encounter-depth';
 
 export class EncounterResolutionContractError extends Error {
   constructor(detail: string) {
@@ -108,7 +109,7 @@ export type EncounterResolutionContext = (
 
 /** The preparation checkpoint's biome depth and route encounter identities before this phase. */
 export interface EncounterResolutionReachedFacts {
-  readonly biomeEncounterDepth: number;
+  readonly biomeEncounterDepth: number | undefined;
   readonly routeEncounterKeyCounts: Readonly<Record<string, number>>;
 }
 
@@ -161,7 +162,7 @@ export function resolveEncounterAuthoringProfile(
   if (firstBiomeKey !== undefined) {
     if (context.reached === undefined) return undefined;
     if (
-      context.reached.biomeEncounterDepth === 1 &&
+      atBiomeEntryEncounterDepth(context.reached.biomeEncounterDepth) &&
       (context.reached.routeEncounterKeyCounts[firstBiomeKey] ?? 0) === 0
     )
       return firstBiomeKey;

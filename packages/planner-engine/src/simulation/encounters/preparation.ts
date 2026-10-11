@@ -56,6 +56,7 @@ import {
   type EncounterCandidateExclusion,
   type EncounterRequirementEvidence,
 } from './requirement-evidence';
+import { readBiomeEncounterDepth } from './biome-encounter-depth';
 
 export interface EncounterPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
@@ -150,7 +151,10 @@ function requirementContext(
     routeKey: routePosition.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
-      biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
+      biomeEncounterDepth: readBiomeEncounterDepth(
+        view.ledgers.counters.biomeEncounterDepth,
+        'requirement',
+      ),
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
       enteredBiomes: routePosition.ordinal,
       // Encounter declarations do not consume reward-owned trait facts; keep

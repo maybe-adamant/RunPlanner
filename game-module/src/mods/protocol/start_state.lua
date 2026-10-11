@@ -212,10 +212,10 @@ end
 
 local function biome(value, label)
     local row = exact(value, {
-        "biomeDepthCache", "biomeEncounterDepth", "biomeUseRecord", "forfeitConsumed", "dionysusSkipActivated",
-    }, { "clockwork" }, label)
+        "biomeDepthCache", "biomeUseRecord", "forfeitConsumed", "dionysusSkipActivated",
+    }, { "biomeEncounterDepth", "clockwork" }, label)
     int(row.biomeDepthCache, label .. ".biomeDepthCache")
-    int(row.biomeEncounterDepth, label .. ".biomeEncounterDepth")
+    optional(row.biomeEncounterDepth, int, label .. ".biomeEncounterDepth")
     numbers(row.biomeUseRecord, label .. ".biomeUseRecord")
     bool(row.forfeitConsumed, label .. ".forfeitConsumed")
     bool(row.dionysusSkipActivated, label .. ".dionysusSkipActivated")

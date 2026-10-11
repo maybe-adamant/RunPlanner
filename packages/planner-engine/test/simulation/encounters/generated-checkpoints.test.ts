@@ -151,7 +151,7 @@ describe('generated budget preparation evidence', () => {
     // GeneratedH reads encounter depth, which the earlier cage's start has already advanced.
     const repriced = assessGeneratedEncounter(generatedPolicy('GeneratedH'), values[laterPhase], {
       biomeDepthCache: counters.biomeDepthCache,
-      biomeEncounterDepth: counters.biomeEncounterDepth + 1,
+      biomeEncounterDepth: counters.biomeEncounterDepth! + 1,
       knownRunBlacklist: [],
     }).operands;
     expect(emittedSecond.expectedBudget).toBe(emittedFirst.expectedBudget);

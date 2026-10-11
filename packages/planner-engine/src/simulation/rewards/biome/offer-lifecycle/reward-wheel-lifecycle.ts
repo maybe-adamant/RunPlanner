@@ -33,6 +33,7 @@ import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
 import { rewardStoreHistorySupport, type RewardStoreHistorySupport } from '../reward-store-support';
 import type { SimulationState } from '../../../state/model';
+import { biomeEncounterDepthAfterStart } from '../../../encounters/biome-encounter-depth';
 
 export interface WheelLifecycleView {
   readonly generation: HistoryStateView;
@@ -115,7 +116,13 @@ function projectDormantWheelView(
       encounterCompletions: Object.freeze([...generation.ledgers.encounterCompletions, completion]),
       counters: Object.freeze({
         ...generation.ledgers.counters,
-        biomeEncounterDepth: generation.ledgers.counters.biomeEncounterDepth + encounterDelta,
+        ...(phase.countsEncounterDepth
+          ? {
+              biomeEncounterDepth: biomeEncounterDepthAfterStart(
+                generation.ledgers.counters.biomeEncounterDepth,
+              ),
+            }
+          : {}),
         routeEncounterDepth: generation.ledgers.counters.routeEncounterDepth + encounterDelta,
       }),
     }),

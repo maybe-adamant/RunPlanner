@@ -627,12 +627,7 @@
           "owner": "[\"roomRunStateCheckpoint\",\"Surface\",\"N\",\"surface-n-opening\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
-            "counters": {
-              "biomeDepthCache": 0,
-              "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 1,
-              "roomHistoryOrdinal": 0
-            },
+            "counters": { "biomeDepthCache": 0, "routeEncounterDepth": 1, "roomHistoryOrdinal": 0 },
             "bags": [
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
@@ -7456,5 +7451,5 @@
       }
     }
   ],
-  "planFingerprint": "8b6776d9"
+  "planFingerprint": "090880df"
 }

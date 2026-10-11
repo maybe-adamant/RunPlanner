@@ -2,7 +2,6 @@ import type { RawBiomeLayoutDeclaration } from './types';
 
 export const pBiomeLayout = {
   biomeKey: 'P',
-  initialCounters: { biomeEncounterDepth: 1 },
   start: { kind: 'fixedAuthored', roomGameName: 'P_Intro' },
   progression: {
     kind: 'generated',

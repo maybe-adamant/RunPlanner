@@ -838,6 +838,23 @@ describe('execution-plan compiler and codec', () => {
     expect(() => decodeExecutionPlan(misplaced)).toThrow(/facts\[0\]/);
   });
 
+  it('decodes an unset run-start biome encounter depth and rejects a non-integer one', () => {
+    const counters = (wire: Record<string, unknown>) =>
+      (
+        wire.occurrences as {
+          diagnostics: { roomEntered: { replace: { counters: Record<string, unknown> } } };
+        }[]
+      )[0]!.diagnostics.roomEntered.replace.counters;
+    const plan = decodeExecutionPlan(fOpeningFixture);
+    expect(plan.occurrences[0]!.diagnostics!.roomEntered!.counters).not.toHaveProperty(
+      'biomeEncounterDepth',
+    );
+    const wrong = structuredClone(fOpeningFixture) as Record<string, unknown>;
+    counters(wrong).biomeEncounterDepth = 'one';
+    refreshWireFingerprint(wrong);
+    expect(() => decodeExecutionPlan(wrong)).toThrow(/biomeEncounterDepth/);
+  });
+
   it('carries an optional display name outside the fingerprint', () => {
     const plan = decodeExecutionPlan(surfaceQShopCorrelationFixture);
     expect(plan.displayName).toBeUndefined();

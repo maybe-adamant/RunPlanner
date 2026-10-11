@@ -667,6 +667,24 @@ export function surfaceGeneratedPreCombatProject(): ProjectDocument {
   });
 }
 
+/** Surface N with an authored composition for the run's first-room encounter. */
+export function surfaceNOpeningCompositionProject(): ProjectDocument {
+  return applyProjectCommand(loadSurfaceNProject(), catalog, {
+    kind: 'ReplaceEncounterCustomization',
+    phase: createEncounterPhaseAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: nOccurrenceIds.opening },
+      'Encounter',
+    ),
+    decisionKey: 'generatedComposition',
+    value: {
+      kind: 'generated',
+      waveCount: 1,
+      waves: [{ waveIndex: 1, typeKeys: ['Carrion', 'Mudman'], allocations: { Carrion: 30 } }],
+    },
+  });
+}
+
 /** Q Boss egg choices retained as the producer for the existing N/O/P/Q execution wire. */
 export function typhonCustomizationProject(): ProjectDocument {
   let project = loadSurfaceNOPQProject();

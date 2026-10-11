@@ -74,8 +74,6 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & {
       readonly kind: 'encounterDepthAdvanced';
       readonly phaseKey: string;
-      readonly roomEncounterDepthDelta: 1;
-      readonly biomeEncounterDepthDelta: 1;
       readonly routeEncounterDepthDelta: 1;
     })
   | (RoomLifecycleEventBase & {

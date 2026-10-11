@@ -510,12 +510,7 @@
           "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"F:start\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
-            "counters": {
-              "biomeDepthCache": 0,
-              "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 1,
-              "roomHistoryOrdinal": 0
-            },
+            "counters": { "biomeDepthCache": 0, "routeEncounterDepth": 1, "roomHistoryOrdinal": 0 },
             "bags": [
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 19 } },
@@ -637,12 +632,7 @@
           "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"F:start\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
-            "counters": {
-              "biomeDepthCache": 1,
-              "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 1,
-              "roomHistoryOrdinal": 1
-            }
+            "counters": { "biomeDepthCache": 1, "routeEncounterDepth": 1, "roomHistoryOrdinal": 1 }
           }
         }
       }
@@ -755,12 +745,7 @@
           "owner": "[\"roomRunStateCheckpoint\",\"FreshFile\",\"F\",\"fresh-0-0\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
-            "counters": {
-              "biomeDepthCache": 2,
-              "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 1,
-              "roomHistoryOrdinal": 2
-            },
+            "counters": { "biomeDepthCache": 2, "routeEncounterDepth": 1, "roomHistoryOrdinal": 2 },
             "bags": [
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 18 } },
@@ -6115,5 +6100,5 @@
       }
     }
   ],
-  "planFingerprint": "21643845"
+  "planFingerprint": "e3b7d7bb"
 }

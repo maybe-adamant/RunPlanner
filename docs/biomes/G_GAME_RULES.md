@@ -59,9 +59,9 @@ implementation coverage is recorded directly in this map and its focused tests.
 batches and terminates through `G_PreBoss01`, forced at
 `biomeDepthCache = 8`.
 
-The layout declares G's entry baseline as `biomeDepthCache = 1` and
-`biomeEncounterDepth = 1`. Route-wide encounter depth and room-history ordinal
-continue from validated F after F's biome-local transition resets.
+G's entry baseline is `biomeDepthCache = 1` and `biomeEncounterDepth = 1`.
+Route-wide encounter depth and room-history ordinal continue from validated F
+after F's biome-local transition resets.
 
 `G_Intro` generates the first ordinary decision at source
 `biomeDepthCache = 1`, then advances the cache to `2` when it commits. Seven

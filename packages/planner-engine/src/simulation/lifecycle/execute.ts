@@ -226,8 +226,6 @@ const lifecycleEffectRegistry = Object.freeze({
     return appendEvent(state, context, {
       kind: 'encounterDepthAdvanced',
       phaseKey: phase.slotKey,
-      roomEncounterDepthDelta: 1,
-      biomeEncounterDepthDelta: 1,
       routeEncounterDepthDelta: 1,
     });
   },

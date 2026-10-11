@@ -27,7 +27,12 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPProject, nBiome, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPProject,
+  nBiome,
+  nOccurrenceIds,
+  surfaceNOpeningCompositionProject,
+} from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { generatedEncounter } from '../../src/execution-plan/codec/generated-encounter';
 import { targetRewardGenerationCheckpoint } from '../../src/simulation/encounters/generation-preparation';
@@ -308,6 +313,25 @@ describe('generated customization publication', () => {
       encounterKey: 'DevotionTestF',
       customization: [expect.objectContaining({ kind: 'generated', waves: expect.any(Array) })],
     });
+  });
+
+  it('budgets the run-start Surface opening at unset encounter depth', () => {
+    const project = surfaceNOpeningCompositionProject();
+    const plan = publish(project);
+    const opening = plan.occurrences.find((room) => room.id === nOccurrenceIds.opening)!;
+    expect(opening.overview.encounterPhases[0]).toMatchObject({
+      encounterKey: 'OpeningGeneratedN',
+      customization: [expect.objectContaining({ kind: 'generated', expectedBudget: 60 })],
+    });
+    const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes[0]!;
+    if (biome.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error('Surface N fixture did not complete');
+    const room = biome.history.rooms.find(
+      (view) =>
+        'occurrenceId' in view.origin && view.origin.occurrenceId === nOccurrenceIds.opening,
+    )!;
+    expect(room.entry!.ledgers.counters).not.toHaveProperty('biomeEncounterDepth');
+    expect(room.exit!.ledgers.counters.biomeEncounterDepth).toBe(2);
   });
 
   it('carries known H blacklist consequences across preparation records, including later cages', () => {

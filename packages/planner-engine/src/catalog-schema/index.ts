@@ -1327,9 +1327,6 @@ export type ProgressionDescriptor = GeneratedProgressionDescriptor | HubDecision
 
 export interface BiomeLayout {
   readonly biomeKey: string;
-  readonly initialCounters: {
-    readonly biomeEncounterDepth: number;
-  };
   readonly start: StartDescriptor;
   readonly progression: ProgressionDescriptor;
   /** Closed target domain and default for authored Chaos exits in this host. */
