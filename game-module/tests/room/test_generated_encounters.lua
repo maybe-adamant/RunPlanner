@@ -524,3 +524,143 @@ function TestGeneratedEncounters.testNativeGenerationErrorPropagatesWithDiagnost
         lu.assertEquals(diagnostics[1].reason, "generation-error")
     end)
 end
+
+local function excluded(...)
+    local result = {}
+    for _, name in ipairs({ ... }) do result[#result + 1] = { choiceKey = name, nativeId = name } end
+    return result
+end
+
+local function copied(value)
+    if value == nil then return nil end
+    local result = {}
+    for key, entry in pairs(value) do result[key] = entry end
+    return result
+end
+
+-- Scripted native SetupEncounter/GenerateEncounter over an uncustomized phase:
+-- setup deep-copies the template; draws read Blacklist after the cap contact.
+local function generateUncustomized(excludedEnemies, template, run)
+    local callbacks, instance, state, room, phase = fixture()
+    phase.customization, phase.excludedEnemies = nil, excludedEnemies
+    local observed = {}
+    instance.withPhase(state, room, phase, {}, function()
+        return callbacks.SetupEncounter(nil, {}, function(data, nativeRoom)
+            local encounter = copied(data)
+            encounter.Blacklist = copied(data.Blacklist)
+            return callbacks.GenerateEncounter(nil, {}, function(currentRun, generationRoom, generated)
+                callbacks.CalculateActiveEnemyCap(nil, {}, function() return 7 end, currentRun, generationRoom, generated)
+                observed.afterCap = copied(generated.Blacklist)
+                generated.Blacklist = generated.Blacklist or {}
+                observed.atDraw = copied(generated.Blacklist)
+                return generated
+            end, run, nativeRoom, encounter)
+        end, template, {})
+    end)
+    return observed
+end
+
+function TestGeneratedEncounters.testUncustomizedPhaseExclusionsJoinTheGenerationCopyBlacklist()
+    local template, run = encounterData({ Blacklist = { ZombieSpawner = true } }), { Blacklist = { Prior = true } }
+    local observed = generateUncustomized(excluded("FogEmitter2", "Elite"), template, run)
+    lu.assertEquals(observed.atDraw, { ZombieSpawner = true, FogEmitter2 = true, Elite = true })
+    lu.assertEquals(template.Blacklist, { ZombieSpawner = true })
+    lu.assertEquals(run.Blacklist, { Prior = true })
+end
+
+function TestGeneratedEncounters.testUncustomizedPhaseCreatesTheBlacklistWhenTheTemplateHasNone()
+    local template = encounterData()
+    local observed = generateUncustomized(excluded("FogEmitter2"), template, { Blacklist = {} })
+    lu.assertEquals(observed.afterCap, { FogEmitter2 = true })
+    lu.assertNil(template.Blacklist)
+end
+
+function TestGeneratedEncounters.testAbsentExclusionsLeaveNativeGenerationUntouched()
+    local observed = generateUncustomized(nil, encounterData(), { Blacklist = {} })
+    lu.assertNil(observed.afterCap)
+    observed = generateUncustomized(nil, encounterData({ Blacklist = { ZombieSpawner = true } }), { Blacklist = {} })
+    lu.assertEquals(observed.atDraw, { ZombieSpawner = true })
+end
+
+function TestGeneratedEncounters.testAdmittedAuthoredCompositionIgnoresItsDeclineExclusions()
+    withGame(eligibleGame(), function()
+        local context = { fixture() }
+        -- The decline list may name the composition's own members.
+        context[5].excludedEnemies = excluded("Cinder", "Elite", "FogEmitter2")
+        local encounter = encounterData({ Blacklist = {} })
+        generate(context, encounter, { Blacklist = {} })
+        lu.assertEquals(context[6][1].kind, "generated-installed")
+        lu.assertNil(encounter.Blacklist.Cinder)
+        lu.assertNil(encounter.Blacklist.Elite)
+        lu.assertNil(encounter.Blacklist.FogEmitter2)
+    end)
+end
+
+function TestGeneratedEncounters.testAdmissionDeclineAppliesExclusionsBeforeNativeDraws()
+    withGame(eligibleGame(), function()
+        local context = { fixture() }
+        context[5].excludedEnemies = excluded("FogEmitter2")
+        local encounter, run = encounterData({ Blacklist = { ZombieSpawner = true } }), { Blacklist = { Cinder = true } }
+        local atDraw
+        local callbacks, instance, state, room, phase = table.unpack(context)
+        instance.withPhase(state, room, phase, {}, function()
+            callbacks.SetupEncounter(nil, {}, function(data, nativeRoom)
+                return callbacks.GenerateEncounter(nil, {}, function(currentRun, generationRoom, generated)
+                    generated.DifficultyRating = generated.BaseDifficultyMin
+                    callbacks.CalculateActiveEnemyCap(nil, {}, function() return 7 end, currentRun, generationRoom, generated)
+                    generated.Blacklist = generated.Blacklist or {}
+                    atDraw = copied(generated.Blacklist)
+                    return generated
+                end, run, nativeRoom, data)
+            end, encounter, {})
+        end)
+        lu.assertEquals(context[6][1].reason, "native-enemy-ineligible")
+        lu.assertEquals(atDraw, { ZombieSpawner = true, FogEmitter2 = true })
+        lu.assertEquals(run.Blacklist, { Cinder = true })
+    end)
+end
+
+function TestGeneratedEncounters.testBaseRollDeclineAppliesExclusionsBeforeNativeGeneration()
+    withGame(eligibleGame(), function()
+        local context = { fixture() }
+        context[5].excludedEnemies = excluded("FogEmitter2")
+        local encounter = encounterData({ IsHardEncounter = true,
+            HardEncounterOverrideValues = { BaseDifficultyMin = 50, BaseDifficultyMax = 60 } })
+        local atEntry
+        local callbacks, instance, state, room, phase = table.unpack(context)
+        instance.withPhase(state, room, phase, {}, function()
+            callbacks.SetupEncounter(nil, {}, function(data, nativeRoom)
+                return callbacks.GenerateEncounter(nil, {}, function(_, _, generated)
+                    atEntry = copied(generated.Blacklist)
+                    return generated
+                end, { Blacklist = {} }, nativeRoom, data)
+            end, encounter, {})
+        end)
+        lu.assertEquals(context[6][1].reason, "base-roll-out-of-range")
+        lu.assertEquals(atEntry, { FogEmitter2 = true })
+    end)
+end
+
+function TestGeneratedEncounters.testUncustomizedExclusionsSkipADifferentlyNamedEncounter()
+    local callbacks, instance, state, room, phase = fixture()
+    phase.customization, phase.excludedEnemies = nil, excluded("FogEmitter2")
+    local afterCap = {}
+    local function generateNamed(data)
+        return callbacks.GenerateEncounter(nil, {}, function(currentRun, generationRoom, generated)
+            callbacks.CalculateActiveEnemyCap(nil, {}, function() return 7 end, currentRun, generationRoom, generated)
+            afterCap[generated.Name] = copied(generated.Blacklist) or false
+            return generated
+        end, { Blacklist = {} }, {}, data)
+    end
+    instance.withPhase(state, room, phase, {}, function()
+        -- Native chose another encounter than the plan's.
+        callbacks.SetupEncounter(nil, {}, function(data) return generateNamed(copied(data)) end,
+            encounterData({ Name = "OtherGenerated" }), {})
+        -- The planned encounter is replaced by its introduction.
+        callbacks.SetupEncounter(nil, {}, function(data)
+            generateNamed(copied(data))
+            return generateNamed(encounterData({ Name = "Intro" }))
+        end, encounterData(), {})
+    end)
+    lu.assertEquals(afterCap, { OtherGenerated = false, Generated = { FogEmitter2 = true }, Intro = false })
+end
