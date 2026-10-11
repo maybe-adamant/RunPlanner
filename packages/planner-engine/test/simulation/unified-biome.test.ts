@@ -593,7 +593,6 @@ describe('unified biome simulation', () => {
         occurrenceId: createOccurrenceId('f-prefix-start'),
       }),
     });
-    expect(result.findings.map((finding) => finding.code)).not.toContain('continuationMissing');
     expect(result.findings.map((finding) => finding.code)).toContain('baseRewardStoreUnavailable');
     expect(
       project.route?.biomes[0]?.topology?.occurrences.map((occurrence) => occurrence.occurrenceId),

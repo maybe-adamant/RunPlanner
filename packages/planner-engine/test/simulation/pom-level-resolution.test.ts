@@ -664,13 +664,6 @@ describe('Pom level resolutions', () => {
       }
       return evaluated.rewards;
     };
-    expect(
-      rewardProduct(continuedAssembly).findings.some(
-        (finding) =>
-          finding.code === 'continuationMissing' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(decision),
-      ),
-    ).toBe(false);
     const entry = createAcquisitionEntryAddress(site, 'Minor');
     const settled = (assembly: ReturnType<typeof simulateProjectAssembly>) =>
       rewardProduct(assembly).branches.flatMap((branch) =>

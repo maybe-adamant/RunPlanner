@@ -706,11 +706,11 @@ describe('decision run-state snapshots', () => {
     expect(beforePreboss.traits.upgradableTraitCount).toBe(5);
   });
 
-  it('publishes the reached N Preboss frontier before its handoff is authored', () => {
+  it('publishes the completed-Hub exit snapshot when a complete Hub reaches its Preboss', () => {
     const evaluation = simulateProject(catalog, loadSurfaceNCompleteHubFrontierProject());
     const biome = evaluation.route.biomes.find((candidate) => candidate.biomeKey === 'N');
-    if (biome?.authoring !== 'incomplete' || !('rewards' in biome)) {
-      throw new Error('N frontier did not remain incomplete');
+    if (biome === undefined || !('rewards' in biome)) {
+      throw new Error('N frontier did not publish rewards');
     }
     const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
     expect(decisions).toHaveLength(3);

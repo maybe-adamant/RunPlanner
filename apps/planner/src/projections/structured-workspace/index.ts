@@ -62,7 +62,6 @@ export type {
   WorkspaceCandidateInteraction,
   WorkspaceNativeCandidateInteraction,
   WorkspacePickerCandidateInteraction,
-  WorkspaceCompletedHubHandoffInteraction,
   WorkspaceCommandIntent,
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,

@@ -101,9 +101,6 @@ const findingCopy = {
   biomeTopologyMissing: {
     title: 'Create the opening room',
   },
-  continuationMissing: {
-    title: 'Open the next room from the Hub',
-  },
   hubOpenSetIncomplete: {
     title: 'Choose open Hub rooms',
   },

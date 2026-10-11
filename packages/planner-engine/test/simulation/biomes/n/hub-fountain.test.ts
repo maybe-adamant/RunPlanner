@@ -307,7 +307,7 @@ describe('Hub fountain settlement', () => {
     expectPhialCandidate(project);
   });
 
-  it('offers the Hub Phial target candidate for a final use before any handoff exists', () => {
+  it('offers the Hub Phial target candidate for a final use after the sixth visit', () => {
     const shortened = applyProjectCommand(withPhial(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub,
@@ -320,10 +320,7 @@ describe('Hub fountain settlement', () => {
         ?.topology?.decisions.some(
           (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
         ),
-    ).toBe(false);
-    expect(nEvaluation(project).findings).toContainEqual(
-      expect.objectContaining({ code: 'continuationMissing' }),
-    );
+    ).toBe(true);
     expectPhialCandidate(project);
   });
 

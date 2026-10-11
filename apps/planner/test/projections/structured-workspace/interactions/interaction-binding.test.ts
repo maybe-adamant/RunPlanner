@@ -19,7 +19,7 @@ const {
 } = support;
 
 describe('structured workspace interaction binding', () => {
-  it('binds the terminal Hub as the generic Door 1 choice and preserves completed handoff', () => {
+  it('binds the terminal Hub as the generic Door 1 choice that creates its Preboss chain', () => {
     const boardProject = loadSurfaceNEntryFrontierResolvedProject();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const terminalOwner = createExitDecisionAddress(nBiome, {
@@ -27,9 +27,12 @@ describe('structured workspace interaction binding', () => {
       occurrenceId: nOccurrenceIds.preHub,
     });
     const terminalTarget = createTargetAddress(nBiome, terminalOwner.source, 'exit1');
-    const roomPicker = bind(boardProject, 'Surface', 'N').interactions.rooms.get(
-      semanticAddressKey(terminalTarget),
-    );
+    const allocated: ReturnType<typeof createOccurrenceId>[] = [];
+    const roomPicker = bind(boardProject, 'Surface', 'N', () => {
+      const occurrenceId = createOccurrenceId(`bound-hub-preboss-${allocated.length + 1}`);
+      allocated.push(occurrenceId);
+      return occurrenceId;
+    }).interactions.rooms.get(semanticAddressKey(terminalTarget));
     if (roomPicker?.kind !== 'decisionEntryRoom') {
       throw new Error('terminal Hub Door 1 room interaction is missing');
     }
@@ -38,36 +41,29 @@ describe('structured workspace interaction binding', () => {
       .sections.flatMap((section) => section.items)
       .find((item) => item.value.gameName === 'N_Hub');
     expect(hubChoice).toMatchObject({ disabled: false, state: 'forced' });
+    expect(allocated).toEqual([]);
     expect(roomPicker.intentFor('N_Hub')).toEqual({
-      command: { decision: terminalOwner, hub, kind: 'ReplaceWithHubDecision' },
+      command: {
+        decision: terminalOwner,
+        hub,
+        kind: 'ReplaceWithHubDecision',
+        prebossOccurrenceId: createOccurrenceId('bound-hub-preboss-1'),
+      },
       focus: { owner: hub, timing: 'after' },
     });
+    expect(allocated).toHaveLength(1);
 
-    const handoffProject = loadSurfaceNCompleteHubFrontierProject();
     const handoffOwner = createExitDecisionAddress(nBiome, {
       decisionKey: 'hub',
       kind: 'hubDecision',
     });
-    const allocated: ReturnType<typeof createOccurrenceId>[] = [];
-    const handoff = bind(handoffProject, 'Surface', 'N', () => {
-      const occurrenceId = createOccurrenceId(`bound-hub-handoff-${allocated.length + 1}`);
-      allocated.push(occurrenceId);
-      return occurrenceId;
-    }).interactions.takeoverBatches.get(semanticAddressKey(handoffOwner));
-    if (handoff?.presentation !== 'completedHubHandoff') {
-      throw new Error('completed Hub handoff interaction is missing');
-    }
-    expect(allocated).toEqual([]);
-    expect(handoff.intent()).toEqual({
-      command: {
-        decision: handoffOwner,
-        gameName: 'N_PreBoss01',
-        kind: 'CreateTakeoverBatch',
-        targetOccurrenceIds: { preboss: createOccurrenceId('bound-hub-handoff-1') },
-      },
-      focus: { owner: handoffOwner, timing: 'before' },
-    });
-    expect(allocated).toHaveLength(1);
+    expect(
+      bind(
+        loadSurfaceNCompleteHubFrontierProject(),
+        'Surface',
+        'N',
+      ).interactions.takeoverBatches.get(semanticAddressKey(handoffOwner)),
+    ).toBeUndefined();
   });
 
   it('binds selected N natural Chaos to the same sole Hub Door 1 choice', () => {
@@ -92,6 +88,7 @@ describe('structured workspace interaction binding', () => {
         decision: terminalOwner,
         hub: createHubDecisionAddress(nBiome, 'hub'),
         kind: 'ReplaceWithHubDecision',
+        prebossOccurrenceId: expect.any(String),
       },
       focus: { owner: createHubDecisionAddress(nBiome, 'hub'), timing: 'after' },
     });
@@ -139,6 +136,7 @@ describe('structured workspace interaction binding', () => {
         edit: {
           hub: createHubDecisionAddress(nBiome, 'hub'),
           kind: 'hub',
+          prebossOccurrenceId: expect.any(String),
         },
         kind: 'InitializeExitDecision',
       },

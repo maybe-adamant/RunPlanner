@@ -372,10 +372,7 @@ export function evaluateBiomeCompleteness(
       });
       const handoff = exitDecisionForSource(topology, hubSource);
       if (handoff === undefined) {
-        const origin = createExitDecisionAddress(biome, sourceAddress(hubSource));
-        return incomplete([
-          finding('continuationMissing', origin, { hubKey: hubProgression.hubKey }),
-        ]);
+        throw new CompletenessContractError(`${hubProgression.hubKey} lost its completed-Hub exit`);
       }
       const handoffCompleteness = evaluateBatchCompleteness(
         catalog,

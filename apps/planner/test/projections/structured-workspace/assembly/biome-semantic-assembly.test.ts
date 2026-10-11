@@ -564,7 +564,7 @@ describe('structured workspace biome semantic assembly', () => {
     expect(assembly.hubInteractionRequirements.size).toBe(1);
     expect(assembly.occurrenceInteractionRequirements.size).toBeGreaterThan(0);
     expect(assembly.topologyRemovalInteractionRequirements.size).toBe(1);
-    expect(assembly.takeoverInteractionRequirements.size).toBeGreaterThan(0);
+    expect(assembly.takeoverInteractionRequirements.size).toBe(0);
 
     const hubNode = assembly.nodes.find((node) => node.kind === 'hubDecision');
     const completion = assembly.completionOutline[0];

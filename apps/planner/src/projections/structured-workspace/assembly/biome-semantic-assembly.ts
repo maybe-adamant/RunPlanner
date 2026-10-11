@@ -737,10 +737,6 @@ export function assembleWorkspaceBiomeSemantics(
       descriptor,
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       markerDestinations,
-      completedExitReady:
-        frontier?.kind === 'exitDecision' &&
-        frontier.owner.source.kind === 'hubDecision' &&
-        frontier.owner.source.decisionKey === descriptor.hubKey,
       ...(nextHubVisitIndex === undefined ? {} : { nextVisitIndex: nextHubVisitIndex }),
       source,
       topology: plan.topology,

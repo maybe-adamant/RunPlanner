@@ -25,6 +25,7 @@ import {
   ProjectDocumentContractError,
   type RunModifierDeclaration,
   type RunModifiers,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
 } from '@run-planner/engine/authored-project';
 
 const route = createRouteAddress('Underworld');
@@ -226,7 +227,7 @@ describe('authored run modifiers', () => {
     const original = project();
     const bytes = encodeProjectDocument(original);
     const decoded = decodeProjectDocument(JSON.parse(bytes), catalog);
-    expect(decoded.schemaVersion).toBe(95);
+    expect(decoded.schemaVersion).toBe(PROJECT_DOCUMENT_SCHEMA_VERSION);
     expect(decoded.route.loadout).not.toHaveProperty('runModifiers');
     expect(routeRunModifiers(decoded.route.loadout)).toEqual(NATIVE_RUN_MODIFIERS);
     expect(encodeProjectDocument(decoded)).toBe(bytes);

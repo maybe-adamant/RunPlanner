@@ -408,6 +408,7 @@ describe('structured workspace Hub assembly', () => {
         occurrenceId: nOccurrenceIds.preHub,
       }),
       hub: createHubDecisionAddress(nBiome, 'hub'),
+      prebossOccurrenceId: nOccurrenceIds.preboss,
       kind: 'ReplaceWithHubDecision',
     });
     const source = biomeSource(project);

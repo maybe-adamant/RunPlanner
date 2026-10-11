@@ -144,6 +144,7 @@ export function createCompleteNProject(): ProjectDocument {
     kind: 'ReplaceWithHubDecision',
     decision: preHubDecision,
     hub: createHubDecisionAddress(nBiome, 'hub'),
+    prebossOccurrenceId: createOccurrenceId('round-trip-n-preboss'),
   });
   for (let index = 1; index <= 9; index += 1) {
     const slotKey = `combat${String(index).padStart(2, '0')}`;
@@ -223,15 +224,6 @@ export function createCompleteNProject(): ProjectDocument {
       'combat05',
       'combat06',
     ]),
-  });
-  document = applyProjectCommand(document, catalog, {
-    kind: 'CreateTakeoverBatch',
-    decision: createExitDecisionAddress(nBiome, {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    }),
-    gameName: 'N_PreBoss01',
-    targetOccurrenceIds: { preboss: createOccurrenceId('round-trip-n-preboss') },
   });
   for (const [offerKey, value] of Object.entries({
     Boon: {

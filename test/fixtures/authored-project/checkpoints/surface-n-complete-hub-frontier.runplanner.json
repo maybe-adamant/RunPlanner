@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 95,
+  "schemaVersion": 96,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -1147,6 +1147,99 @@
                 "order": []
               },
               "additionalExits": []
+            },
+            {
+              "occurrenceId": "N:preboss",
+              "gameName": "N_PreBoss01",
+              "state": {
+                "kind": "shop",
+                "shop": {
+                  "profileKey": "WorldShop",
+                  "offers": {
+                    "Boon": {
+                      "optionKey": null,
+                      "reward": null
+                    },
+                    "MajorNonBoon": {
+                      "optionKey": null,
+                      "reward": null
+                    },
+                    "Minor": {
+                      "optionKey": null,
+                      "reward": null
+                    },
+                    "infernalContractReward": {
+                      "optionKey": null,
+                      "reward": null
+                    }
+                  }
+                }
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": []
+              },
+              "acquisitionSites": {
+                "roomExit": {}
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "N:preboss:boss",
+              "gameName": "N_Boss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "collectRequiredReward"
+                  }
+                ]
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "N:preboss:postboss",
+              "gameName": "N_PostBoss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "useFountain"
+                  }
+                ]
+              },
+              "hermesShrine": {
+                "offerBySlot": {
+                  "first": null,
+                  "secondLeft": null,
+                  "secondRight": null
+                }
+              },
+              "additionalExits": []
             }
           ],
           "decisions": [
@@ -1370,9 +1463,41 @@
                 }
               },
               "visitOrder": []
+            },
+            {
+              "kind": "exit",
+              "source": {
+                "kind": "hubDecision",
+                "decisionKey": "hub"
+              },
+              "normal": {
+                "kind": "batch",
+                "rewardStore": {
+                  "kind": "none"
+                },
+                "batchState": null,
+                "targets": [
+                  {
+                    "exitKey": "preboss",
+                    "occurrenceId": "N:preboss"
+                  }
+                ]
+              },
+              "selection": {
+                "kind": "derived"
+              }
             }
           ],
-          "fixedRoomLinks": []
+          "fixedRoomLinks": [
+            {
+              "sourceOccurrenceId": "N:preboss",
+              "targetOccurrenceId": "N:preboss:boss"
+            },
+            {
+              "sourceOccurrenceId": "N:preboss:boss",
+              "targetOccurrenceId": "N:preboss:postboss"
+            }
+          ]
         }
       }
     ]

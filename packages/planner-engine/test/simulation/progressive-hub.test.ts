@@ -164,6 +164,7 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
     kind: 'ReplaceWithHubDecision',
     decision: preHubDecision,
     hub: createHubDecisionAddress(nBiome, 'hub'),
+    prebossOccurrenceId: createOccurrenceId('progressive-n-preboss'),
   });
   const boardSlotKeys = [...nOpenSlotKeys, 'combat12'] as const;
   for (const slotKey of boardSlotKeys.slice(0, slotCount)) {

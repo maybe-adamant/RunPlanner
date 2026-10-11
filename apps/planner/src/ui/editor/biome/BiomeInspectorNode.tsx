@@ -3,7 +3,6 @@ import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 
 import {
-  requireWorkspaceInteraction,
   type WorkspaceBossDoorRewardStoreControl,
   type WorkspaceAuthoringFrontier,
   type WorkspaceHubTab,
@@ -12,7 +11,7 @@ import {
   type WorkspaceOccurrenceStageOutgoing,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
-import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
+import { AuthoringFrontier, BatchWorkbench } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { HubFountainControls } from './HubFountainControls';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
@@ -164,15 +163,7 @@ function OccurrenceInspector({
   readonly defaultToDoors?: boolean;
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }) {
-  const sourceRemovalAnchor = node.sourceDecisionRemoval;
   const dispatch = useAppDispatch();
-  const sourceRemoval =
-    sourceRemovalAnchor === undefined
-      ? undefined
-      : requireWorkspaceInteraction(
-          interactions.topologyRemovals,
-          sourceRemovalAnchor.interactionKey,
-        );
   return (
     <>
       <OccurrenceWorkbench
@@ -230,9 +221,6 @@ function OccurrenceInspector({
           )
         }
       />
-      {sourceRemovalAnchor === undefined || sourceRemoval === undefined ? null : (
-        <TopologyRemovalAction interaction={sourceRemoval} label={sourceRemovalAnchor.label} />
-      )}
       {node.hubFountain === undefined ? null : (
         <HubFountainControls fountain={node.hubFountain} interactions={interactions} />
       )}
@@ -257,7 +245,6 @@ export function BiomeInspectorNode(props: BiomeInspectorNodeProps) {
     case 'hubDecision':
       return (
         <HubDecisionWorkbench
-          frontier={props.frontier}
           {...(props.hubTab === undefined ? {} : { initialTab: props.hubTab })}
           {...(props.navigationRevision === undefined
             ? {}

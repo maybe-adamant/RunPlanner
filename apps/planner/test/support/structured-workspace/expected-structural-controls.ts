@@ -7,7 +7,6 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createTargetAddress,
-  completedHubHandoffForSource,
   declaredPhysicalExits,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
@@ -191,7 +190,7 @@ export function expectedWorkspaceStructuralControls(
   for (const decision of decisions) {
     const owner = createExitDecisionAddress(biome, decision.source);
     const ownerKey = workspaceTestOwnerKey(owner);
-    add('topologyRemoval', ownerKey, owner);
+    if (decision.source.kind === 'occurrence') add('topologyRemoval', ownerKey, owner);
     if (decision.source.kind === 'occurrence') {
       const sourceOccurrence = occurrencesById.get(decision.source.occurrenceId);
       const sourceRoom =
@@ -242,7 +241,10 @@ export function expectedWorkspaceStructuralControls(
       add('fieldsCageOutcome', ownerKey, owner);
     }
     if (takeover) {
-      if (declaredPhysicalExits(catalog, layout, topology, decision.source) !== undefined) {
+      if (
+        decision.source.kind === 'occurrence' &&
+        declaredPhysicalExits(catalog, layout, topology, decision.source) !== undefined
+      ) {
         addTakeover(owner);
       }
     } else if (decision.source.kind === 'occurrence') {
@@ -315,14 +317,6 @@ export function expectedWorkspaceStructuralControls(
       const owner = completeness.frontier;
       const ownerKey = workspaceTestOwnerKey(owner);
       const existing = decisionsByOwner.get(ownerKey);
-      const fixedTransition = completedHubHandoffForSource(catalog, layout, topology, owner.source);
-      if (
-        existing === undefined &&
-        fixedTransition?.kind === 'completedHubHandoff' &&
-        declaredPhysicalExits(catalog, layout, topology, owner.source) !== undefined
-      ) {
-        addTakeover(owner);
-      }
       if (existing === undefined && owner.source.kind === 'occurrence') {
         const progression = normalDecisionProgressionForLayout(layout);
         const sourceOccurrence = occurrencesById.get(owner.source.occurrenceId);

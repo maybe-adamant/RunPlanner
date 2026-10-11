@@ -9,10 +9,12 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createProjectDocument,
+  createShopOfferAddress,
   createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
+  type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -145,6 +147,7 @@ describe('N B1 entry and terminal baseline', () => {
       kind: 'ReplaceWithHubDecision',
       decision: preHubDecision,
       hub: createHubDecisionAddress(nBiome, 'hub'),
+      prebossOccurrenceId: nOccurrenceIds.preboss,
     });
 
     const biome = nBiomeEvaluation(project);
@@ -261,7 +264,7 @@ describe('N B1 entry and terminal baseline', () => {
     ).toBe(false);
   });
 
-  it('keeps the current N terminal matrix closed: the PreHub source opens Hub, while only a complete Hub owns Preboss', () => {
+  it('keeps the current N terminal matrix closed: the PreHub source opens Hub, which owns its Preboss', () => {
     const entry = currentNEntryProject();
     const preHubSource = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -329,6 +332,7 @@ describe('N B1 entry and terminal baseline', () => {
       kind: 'ReplaceWithHubDecision',
       decision: preHubSource,
       hub: createHubDecisionAddress(nBiome, 'hub'),
+      prebossOccurrenceId: nOccurrenceIds.preboss,
     });
     const openedBiome = nBiomeEvaluation(hubOpened);
     if (openedBiome.authoring !== 'incomplete' || !('materializedPrefix' in openedBiome)) {
@@ -340,43 +344,40 @@ describe('N B1 entry and terminal baseline', () => {
     ]);
     expect(openedBiome.materializedPrefix.frontier).toMatchObject({ kind: 'hubBoard' });
 
-    const completeHubWithoutHandoff = loadSurfaceNCompleteHubFrontierProject();
-    const completeHubCandidates = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, completeHubWithoutHandoff),
-    );
-
     expect(
-      completeHubCandidates.evaluate({
+      nTopology(hubOpened)
+        .occurrences.map((occurrence) => occurrence.gameName)
+        .slice(-3),
+    ).toEqual(['N_PreBoss01', 'N_Boss01', 'N_PostBoss01']);
+
+    const completeHub = loadSurfaceNCompleteHubFrontierProject();
+    expect(() =>
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, completeHub),
+      ).evaluate({
         kind: 'takeoverPrebossBatch',
-        source: createExitDecisionAddress(nBiome, {
-          kind: 'hubDecision',
-          decisionKey: 'hub',
-        }),
+        source: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
         gameName: 'N_PreBoss01',
       }),
-    ).toMatchObject({
-      kind: 'takeoverPrebossBatch',
-      result: {
-        requiredExitKeys: ['preboss'],
-        support: 'required',
-        selectedPossible: true,
-      },
-    });
+    ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
   });
 
-  it('keeps an undersized retained Hub at its board instead of publishing a rejected Preboss handoff', () => {
+  it('keeps an undersized retained Hub at its board with its Preboss authored but unreached', () => {
     const handoff = createExitDecisionAddress(nBiome, {
       kind: 'hubDecision',
       decisionKey: 'hub',
     });
-    let project = loadSurfaceNCompleteHubFrontierProject();
+    const complete = loadSurfaceNCompleteHubFrontierProject();
+    const prebossId = prebossOccurrenceId(complete);
+    let project = complete;
     for (const hubSlotKey of ['combat10', 'combat03', 'combat01']) {
       project = applyProjectCommand(project, catalog, {
         kind: 'CloseHubSlot',
         slot: createHubSlotAddress(nBiome, 'hub', hubSlotKey),
       });
     }
+    expect(prebossOccurrenceId(project)).toBe(prebossId);
 
     const biome = nBiomeEvaluation(project);
     if (biome.authoring !== 'incomplete' || !('materializedPrefix' in biome)) {
@@ -389,20 +390,24 @@ describe('N B1 entry and terminal baseline', () => {
       }),
     );
     expect(biome.materializedPrefix.frontier).toMatchObject({ kind: 'hubBoard' });
-    expect(
+    expect(biome.materializedPrefix.decisions.map((decision) => decision.kind)).toEqual([
+      'batch',
+      'hub',
+    ]);
+    const prebossShop = (document: typeof project) =>
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, project),
+        simulateProjectAssembly(catalog, document),
       ).evaluate({
-        kind: 'takeoverPrebossBatch',
-        source: handoff,
-        gameName: 'N_PreBoss01',
-      }),
-    ).toMatchObject({
+        kind: 'shopOfferOption',
+        offer: createShopOfferAddress(nBiome, prebossId, 'MajorNonBoon'),
+        value: { optionKey: 'MaxHealthDrop', offer: { rewardType: 'MaxHealthDrop' } },
+      });
+    expect(prebossShop(project)).toMatchObject({
       kind: 'unavailable',
       reason: 'coverageNotReached',
-      evidence: { requiredOwner: handoff },
     });
+    expect(prebossShop(complete)).toMatchObject({ kind: 'shopOffer' });
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'CreateTakeoverBatch',
@@ -410,6 +415,21 @@ describe('N B1 entry and terminal baseline', () => {
         gameName: 'N_PreBoss01',
         targetOccurrenceIds: { preboss: nOccurrenceIds.preboss },
       }),
-    ).toThrow(/complete the declared Hub board and required visits/);
+    ).toThrow(/created and removed only with its Hub/);
   });
 });
+
+function nTopology(project: ProjectDocument) {
+  const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+  if (topology === null || topology === undefined) throw new Error('missing N topology');
+  return topology;
+}
+
+function prebossOccurrenceId(project: ProjectDocument): OccurrenceId {
+  const handoff = nTopology(project).decisions.find(
+    (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+  );
+  const id = handoff?.kind === 'exit' ? handoff.normal.targets[0]?.occurrenceId : undefined;
+  if (id === undefined) throw new Error('missing completed-Hub Preboss');
+  return id;
+}

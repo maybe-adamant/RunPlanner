@@ -71,7 +71,7 @@ function validN(project = loadSurfaceNProject()) {
 }
 
 describe('N Hub rewards, validation, and candidates', () => {
-  it('owns takeover candidates only at the completed Hub decision', () => {
+  it('owns no takeover candidate domain in N, where the Hub creates its Preboss', () => {
     const openingOnly = createProjectDocument(catalog, {
       projectId: 'candidate-n-opening-domain',
       routeKey: 'Surface',
@@ -94,17 +94,10 @@ describe('N Hub rewards, validation, and candidates', () => {
       }),
     ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
 
-    const withoutHandoff = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(nBiome, {
-        kind: 'hubDecision',
-        decisionKey: 'hub',
-      }),
-    });
-    expect(
+    expect(() =>
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, withoutHandoff),
+        simulateProjectAssembly(catalog, loadSurfaceNProject()),
       ).evaluate({
         kind: 'takeoverPrebossBatch',
         source: createExitDecisionAddress(nBiome, {
@@ -113,10 +106,7 @@ describe('N Hub rewards, validation, and candidates', () => {
         }),
         gameName: 'N_PreBoss01',
       }),
-    ).toMatchObject({
-      kind: 'takeoverPrebossBatch',
-      result: { requiredExitKeys: ['preboss'], selectedPossible: true },
-    });
+    ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
   });
 
   it('consumes the physical board while acquiring only the six visited target rewards', () => {
@@ -390,10 +380,6 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHubActionOrder',

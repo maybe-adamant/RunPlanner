@@ -48,7 +48,6 @@ export type {
 } from './contracts/rewards';
 export type {
   WorkspaceBatchRewardStoreInteraction,
-  WorkspaceCompletedHubHandoffInteraction,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubBoardResetInteraction,
   WorkspaceHubSlotCloseInteraction,
@@ -56,7 +55,6 @@ export type {
   WorkspaceHubSlotOpeningAttempt,
   WorkspaceHubActionOrderInteraction,
   WorkspaceHubActionOrderProposal,
-  WorkspaceStageDecisionRemoval,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTakeoverRepairInteraction,

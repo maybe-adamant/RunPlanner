@@ -679,10 +679,8 @@ export type HubDecisionHandoffReadiness =
   | { readonly kind: 'ready' };
 
 /**
- * One shared structural gate for a bounded Hub's completed-Hub handoff.
- * Commands, materialization, completeness, and candidate evaluation all use
- * this result so an intentionally retained undersized board cannot publish a
- * Preboss transition that its command boundary would reject.
+ * Whether a Hub's board and visits let the run leave through its completed-Hub
+ * exit. The exit always exists; this gates reaching it, not authoring it.
  */
 export function hubDecisionHandoffReadiness(
   descriptor: HubDecisionDescriptor,
@@ -787,42 +785,6 @@ export function hubTerminalTakeoverForSource(
     room,
     force: layout.progression.terminal.force,
   });
-}
-
-/**
- * The completed Hub handoff exists only after its declaration-owned board and
- * visit prerequisites are structurally ready, then creates its one fixed
- * target directly. Generated Preboss takeovers remain room-candidate results
- * governed by their own eligibility and force declarations.
- */
-export interface CompletedHubHandoff {
-  readonly kind: 'completedHubHandoff';
-  readonly room: RoomDeclaration;
-}
-
-export function completedHubHandoffForSource(
-  catalog: Catalog,
-  layout: BiomeLayout,
-  topology: BiomeTopology,
-  source: ExitDecisionSource,
-): CompletedHubHandoff | undefined {
-  const progression = layout.progression;
-  if (
-    source.kind !== 'hubDecision' ||
-    progression.kind !== 'hub' ||
-    source.decisionKey !== progression.hubKey
-  ) {
-    return undefined;
-  }
-  const hub = topology.decisions.find(
-    (decision): decision is HubDecision =>
-      decision.kind === 'hub' && decision.hubKey === progression.hubKey,
-  );
-  if (hubDecisionHandoffReadiness(progression, hub).kind !== 'ready') return undefined;
-  const room = catalog.rooms.byKey[progression.completedExit.roomGameName];
-  return room === undefined
-    ? undefined
-    : Object.freeze({ kind: 'completedHubHandoff' as const, room });
 }
 
 /** Structurally entered occurrence identities, independent of evaluation reach. */

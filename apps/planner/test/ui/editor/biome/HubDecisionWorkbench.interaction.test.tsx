@@ -175,7 +175,7 @@ describe('HubDecisionWorkbench interaction', () => {
     fireEvent.keyDown(timeline, { key: 'End' });
     expect(exit.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('button', { name: 'Remove Hub' })).toBe(removal);
-    expect(screen.getByRole('article', { name: 'Preboss room offer' })).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'Preboss room' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
       'disabled',
       true,

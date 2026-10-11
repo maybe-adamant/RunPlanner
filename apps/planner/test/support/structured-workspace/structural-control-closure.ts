@@ -130,15 +130,6 @@ function assertRenderedNodeControls(
   switch (node.kind) {
     case 'occurrenceWorkbench':
       assertRenderedRoomControls(node.room, interactions);
-      if (node.sourceDecisionRemoval !== undefined) {
-        const key = node.sourceDecisionRemoval.interactionKey;
-        assertExactObservedInteraction(
-          interactions.topologyRemovals.get(key),
-          key,
-          undefined,
-          `staged decision removal ${key}`,
-        );
-      }
       return;
     case 'ordinaryBatch':
     case 'mixedBatch':
@@ -173,7 +164,7 @@ function assertRenderedNodeControls(
           `Fields cage outcome ${node.fieldsCageOutcome.focusKey}`,
         );
       }
-      if (node.kind === 'takeoverBatch') {
+      if (node.kind === 'takeoverBatch' && node.takeoverInteractionKey !== undefined) {
         assertExactObservedInteraction(
           interactions.takeoverBatches.get(node.takeoverInteractionKey),
           node.takeoverInteractionKey,
@@ -248,7 +239,11 @@ function assertRenderedNodeControls(
         }
         assertRenderedRoomControls(chaos.door.room, interactions);
       }
-      if (node.persistence === 'authored') {
+      if (node.source.kind === 'hubDecision') {
+        if (interactions.topologyRemovals.has(ownerKey)) {
+          throw new Error(`completed-Hub exit ${ownerKey} exposes topology removal`);
+        }
+      } else if (node.persistence === 'authored') {
         assertExactObservedInteraction(
           interactions.topologyRemovals.get(ownerKey),
           ownerKey,

@@ -8,7 +8,7 @@ import type {
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 95 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 96 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {

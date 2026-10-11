@@ -215,7 +215,8 @@ export interface WorkspaceOrdinaryBatchNode extends WorkspaceBatchNodeBase {
 export interface WorkspaceTakeoverBatchNode extends WorkspaceBatchNodeBase {
   readonly kind: 'takeoverBatch';
   readonly targetInteraction: 'readOnly';
-  readonly takeoverInteractionKey: string;
+  /** Absent for the completed-Hub exit, which is fixed with its Hub. */
+  readonly takeoverInteractionKey?: string;
 }
 
 export interface WorkspaceMixedBatchNode extends WorkspaceBatchNodeBase {
@@ -306,24 +307,11 @@ export interface WorkspaceHubDecisionNode {
   readonly owner: HubDecisionAddress;
   readonly requiredVisitCount: number;
   readonly requirements: WorkspaceHubRequirements;
-  /** The declaration-owned fixed exit and its exact authored readiness state. */
-  readonly completedExit:
-    | {
-        readonly kind: 'locked';
-        readonly marker: WorkspaceMarker;
-        readonly targetLabel: string;
-      }
-    | {
-        readonly kind: 'ready';
-        readonly marker: WorkspaceMarker;
-        readonly targetLabel: string;
-      }
-    | {
-        readonly kind: 'opened';
-        readonly marker: WorkspaceMarker;
-        readonly target: { readonly label: string; readonly marker: WorkspaceMarker };
-        readonly targetLabel: string;
-      };
+  /** The completed-Hub exit and the Preboss it always owns. */
+  readonly completedExit: {
+    readonly marker: WorkspaceMarker;
+    readonly target: { readonly label: string; readonly marker: WorkspaceMarker };
+  };
   readonly slots: readonly WorkspaceHubSlot[];
   readonly visits: readonly WorkspaceHubVisit[];
   readonly fountain: WorkspaceHubFountain;
@@ -344,7 +332,8 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly inspectorPresentation: 'doorTarget' | 'full' | 'hubRoomLocal';
   /** Predecessor-owned door context. The occurrence may only render this read-only. */
   readonly incomingDoor?: WorkspaceDoorContract;
-  readonly sourceDecisionRemoval?: WorkspaceStageDecisionRemoval;
+  /** The Preboss of a Hub's completed exit, shown as its own stage. */
+  readonly completedHubExitStage?: true;
   readonly railMarker?: WorkspaceMarker;
   readonly railVisibility?: 'inspectorOnly';
   readonly room: WorkspaceRoomSummary;
@@ -710,12 +699,6 @@ export interface WorkspaceTopologyRemovalInteraction {
   readonly owner: BiomeAddress | ExitDecisionAddress | HubDecisionAddress;
 }
 
-/** A visible stage can carry removal for its hidden source decision. */
-export interface WorkspaceStageDecisionRemoval {
-  readonly interactionKey: string;
-  readonly label: string;
-}
-
 export interface WorkspaceExitSelectionInteraction {
   readonly key: string;
   readonly owner: ExitDecisionAddress;
@@ -790,13 +773,6 @@ interface WorkspaceTakeoverBatchInteractionBase {
   readonly owner: ExitDecisionAddress;
 }
 
-export interface WorkspaceCompletedHubHandoffInteraction extends WorkspaceTakeoverBatchInteractionBase {
-  readonly action: 'create';
-  readonly intent: () => WorkspaceTakeoverCommandIntent;
-  readonly label: string;
-  readonly presentation: 'completedHubHandoff';
-}
-
 export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBatchInteractionBase {
   readonly action: 'reconcile';
   readonly intent: () => WorkspaceTakeoverCommandIntent;
@@ -804,7 +780,6 @@ export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBat
   readonly presentation: 'repair';
 }
 
-export type WorkspaceTakeoverBatchInteraction =
-  WorkspaceCompletedHubHandoffInteraction | WorkspaceTakeoverRepairInteraction;
+export type WorkspaceTakeoverBatchInteraction = WorkspaceTakeoverRepairInteraction;
 
 type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;

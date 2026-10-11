@@ -20,6 +20,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
+  createShopOfferAddress,
   createStartingRewardAddress,
   decodeProjectDocument,
   createTargetAddress,
@@ -40,7 +41,6 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import {
-  loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
   loadSurfaceNOPQProject,
@@ -541,7 +541,7 @@ describe('BiomeWorkspace', () => {
 
   it.each([
     ['after the preceding room', nVisitSlotKeys, 'Combat 02', 3],
-    ['before Preboss exists', nVisitSlotKeys, 'Combat 09', 6],
+    ['after the final room', nVisitSlotKeys, 'Combat 09', 6],
   ] as const)(
     'routes a missing Phial target to the Hub fountain controls %s',
     async (_case, visits, hostLabel, afterVisits) => {
@@ -550,17 +550,11 @@ describe('BiomeWorkspace', () => {
         selection: createRouteStartKeepsakeSelectionAddress('Surface'),
         keepsakeKey: 'FountainRarityKeepsake',
       });
-      let project = applyProjectCommand(withPhial, catalog, {
+      const project = applyProjectCommand(withPhial, catalog, {
         kind: 'ReplaceHubActionOrder',
         hub: createHubDecisionAddress(nBiome, 'hub'),
         actions: hubVisitActions(visits, afterVisits),
       });
-      if (afterVisits === 6) {
-        project = applyProjectCommand(project, catalog, {
-          kind: 'RemoveExitDecision',
-          decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
-        });
-      }
       const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
       const view = renderWorkspace(project, 'Surface', 'N');
       const finding = view.application.store
@@ -1658,35 +1652,58 @@ describe('BiomeWorkspace', () => {
     nApplication.dispose();
   });
 
-  it('routes an explicit completed-Hub handoff focus back to the Hub workbench and executes it', async () => {
-    const project = loadSurfaceNCompleteHubFrontierProject();
-    const view = renderWorkspace(project, 'Surface', 'N');
-    const handoff = createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    });
+  it('routes the Hub Exit Preboss to its stage, with no removal of its own', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const handoff = createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' });
+    const preboss = createOccurrenceAddress(nBiome, nOccurrenceIds.preboss);
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createHubDecisionAddress(nBiome, 'hub')),
+      ),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    expect(screen.getByRole('article', { name: 'Preboss room' }).dataset.hubExitState).toBe(
+      'reached',
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(preboss);
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(handoff)));
-    expect(screen.getByRole('tab', { name: 'Hub Exit' }).getAttribute('aria-selected')).toBe(
-      'true',
-    );
-    expect(screen.getByRole('article', { name: 'Preboss room offer' })).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(within(inspector).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
+    expect(within(inspector).queryByRole('button', { name: 'Remove Preboss' })).toBeNull();
+  });
 
-    const nPlan = view.application.store
-      .getState()
-      .projectWorkspace.history!.present.route?.biomes.find(
-        (candidate) => candidate.biomeKey === 'N',
+  it('keeps the Hub-owned Preboss readable but locked while the Hub is incomplete', async () => {
+    const complete = loadSurfaceNProject();
+    const incomplete = applyProjectCommand(complete, catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      actions: hubVisitActions(nVisitSlotKeys.slice(0, 5)),
+    });
+    const offer = semanticAddressKey(
+      createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
+    );
+    const offerControl = () =>
+      Array.from(document.querySelectorAll<HTMLElement>('[data-semantic-owner]')).find(
+        (element) => element.dataset.semanticOwner === offer,
       );
-    expect(
-      nPlan?.topology?.decisions.some(
-        (decision) =>
-          decision.kind === 'exit' &&
-          semanticAddressKey(
-            createExitDecisionAddress(createBiomeAddress('Surface', 'N'), decision.source),
-          ) === semanticAddressKey(handoff),
-      ),
-    ).toBe(true);
+    for (const [project, locked] of [
+      [incomplete, true],
+      [complete, false],
+    ] as const) {
+      const view = renderWorkspace(project, 'Surface', 'N');
+      act(() =>
+        view.application.store.dispatch(
+          semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceIds.preboss)),
+        ),
+      );
+      const control = offerControl();
+      if (control === undefined) throw new Error('Preboss Shop offer control is not rendered');
+      expect(control.dataset.authoringLocked === 'true').toBe(locked);
+      cleanup();
+    }
   });
 
   it('keeps direct Preboss choice inside Door 1 and out of ordinary batches', async () => {
@@ -1728,60 +1745,6 @@ describe('BiomeWorkspace', () => {
     act(() => view.application.store.dispatch(semanticOwnerFocused(second)));
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
-  });
-
-  it('keeps N completed-Hub handoff removal reachable from the visible Preboss stage', async () => {
-    const handoff = createExitDecisionAddress(nBiome, {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    });
-    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    const structure = screen.getByRole('region', { name: 'Ephyra route structure' });
-    expect(structure.querySelector('[data-kind="takeoverBatch"]')).toBeNull();
-    await view.user.click(
-      railButtonForMarker(
-        structure,
-        semanticAddressKey(createTargetAddress(nBiome, handoff.source, 'preboss')),
-      ),
-    );
-    const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).queryByText(/This removes/)).toBeNull();
-    const removal = within(inspector).getByRole('button', { name: 'Remove Preboss' });
-
-    removal.focus();
-    await view.user.keyboard('{Enter}');
-
-    await waitFor(() => {
-      const plan = view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find(
-          (candidate) => candidate.biomeKey === 'N',
-        );
-      expect(plan?.topology?.decisions.some((decision) => decision.kind === 'hub')).toBe(true);
-      expect(
-        plan?.topology?.decisions.some(
-          (decision) =>
-            decision.kind === 'exit' &&
-            semanticAddressKey(createExitDecisionAddress(nBiome, decision.source)) ===
-              semanticAddressKey(handoff),
-        ),
-      ).toBe(false);
-      expect(
-        plan?.topology?.occurrences.some(
-          (occurrence) => occurrence.occurrenceId === nOccurrenceIds.opening,
-        ),
-      ).toBe(true);
-      expect(
-        plan?.topology?.occurrences.some(
-          (occurrence) => occurrence.occurrenceId === nOccurrenceIds.preHub,
-        ),
-      ).toBe(true);
-      expect(
-        plan?.topology?.occurrences.some(
-          (occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss,
-        ),
-      ).toBe(false);
-    });
   });
 
   it('aggregates a target-owned finding onto its decision rail stop', async () => {

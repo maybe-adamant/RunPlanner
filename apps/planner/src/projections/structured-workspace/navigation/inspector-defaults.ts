@@ -128,7 +128,7 @@ export function defaultInspectorDestination(
     )
     .at(-1);
   if (activeDetails !== undefined) {
-    if (activeDetails.sourceDecisionRemoval !== undefined) {
+    if (activeDetails.completedHubExitStage === true) {
       return nodeDestination(input, activeDetails);
     }
     const containingDecision = nodes.find(

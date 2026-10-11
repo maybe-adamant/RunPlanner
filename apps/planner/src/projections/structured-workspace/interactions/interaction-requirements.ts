@@ -330,31 +330,21 @@ export interface WorkspaceStartInteractionRequirement {
 }
 
 /**
- * Production requirement for an authored takeover repair or the completed
- * Hub handoff. Generated Preboss selection is bound by the empty decision's
- * explicit Door 1 Room control instead.
+ * Production requirement for an authored takeover repair. Generated Preboss
+ * selection is bound by the empty decision's explicit Door 1 Room control.
  */
-export type WorkspaceTakeoverInteractionRequirement =
-  | {
-      readonly action: 'reconcile';
-      readonly existingTargets: readonly {
-        readonly exitKey: string;
-        readonly occurrenceId: OccurrenceId;
-      }[];
-      readonly gameName: string;
-      readonly kind: 'takeoverBatch';
-      readonly owner: ExitDecisionAddress;
-      readonly presentation: 'repair';
-      readonly requiredExitKeys: readonly string[];
-    }
-  | {
-      readonly action: 'create';
-      readonly gameName: string;
-      readonly kind: 'takeoverBatch';
-      readonly owner: ExitDecisionAddress;
-      readonly presentation: 'completedHubHandoff';
-      readonly requiredExitKeys: readonly string[];
-    };
+export interface WorkspaceTakeoverInteractionRequirement {
+  readonly action: 'reconcile';
+  readonly existingTargets: readonly {
+    readonly exitKey: string;
+    readonly occurrenceId: OccurrenceId;
+  }[];
+  readonly gameName: string;
+  readonly kind: 'takeoverBatch';
+  readonly owner: ExitDecisionAddress;
+  readonly presentation: 'repair';
+  readonly requiredExitKeys: readonly string[];
+}
 
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,

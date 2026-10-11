@@ -176,6 +176,7 @@ it('marks the Overview requirement box for an incomplete Hub open set', async ()
       occurrenceId: nOccurrenceIds.preHub,
     }),
     hub: createHubDecisionAddress(biome, 'hub'),
+    prebossOccurrenceId: createOccurrenceId('control-n-preboss'),
   });
   const view = renderWorkspace(project, 'Surface', 'N');
   const box = await openFirstFinding(view);

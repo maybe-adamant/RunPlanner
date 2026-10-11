@@ -189,6 +189,35 @@ describe('topology relational closure codec', () => {
     expect(decodeProjectDocument(encodedProject(selected), catalog)).toEqual(selected);
   });
 
+  it('requires every Hub to own its completed-Hub chain, complete or not', () => {
+    const missing = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const chainIds = new Set(
+      missing.topology.fixedRoomLinks.flatMap((link) => [
+        link.sourceOccurrenceId,
+        link.targetOccurrenceId,
+      ]),
+    );
+    missing.topology.decisions = missing.topology.decisions.filter(
+      (decision) =>
+        decision.kind !== 'exit' || (decision.source as { kind: string }).kind !== 'hubDecision',
+    );
+    missing.topology.occurrences = missing.topology.occurrences.filter(
+      (occurrence) => !chainIds.has(occurrence.occurrenceId as string),
+    );
+    missing.topology.fixedRoomLinks = [];
+    const hubIndex = missing.topology.decisions.findIndex((decision) => decision.kind === 'hub');
+    expectDocumentError(missing.document, {
+      path: `${missing.path}.decisions[${hubIndex}]`,
+      detail: 'Hub decision requires its completed-Hub exit',
+    });
+
+    const incomplete = encodedTopology(createCompleteNProject(), 'Surface', 'N');
+    const hub = incomplete.topology.decisions.find((decision) => decision.kind === 'hub');
+    if (hub === undefined) throw new Error('missing Hub decision');
+    hub.actions = [];
+    expect(() => decodeProjectDocument(incomplete.document, catalog)).not.toThrow();
+  });
+
   it('accepts Hub decision storage order but rejects malformed Hub source and linked normal ownership', () => {
     const reordered = encodedTopology(createCompleteNProject(), 'Surface', 'N');
     reordered.topology.decisions.reverse();

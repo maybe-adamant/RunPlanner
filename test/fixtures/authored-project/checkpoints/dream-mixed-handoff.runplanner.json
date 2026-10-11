@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 95,
+  "schemaVersion": 96,
   "projectId": "execution-dream-q-f-n-h",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -2097,6 +2097,136 @@
               "additionalExits": []
             },
             {
+              "occurrenceId": "dream-n-preboss",
+              "gameName": "N_PreBoss01",
+              "state": {
+                "kind": "shop",
+                "shop": {
+                  "profileKey": "WorldShop",
+                  "offers": {
+                    "Boon": {
+                      "optionKey": "RandomLoot",
+                      "reward": {
+                        "offer": {
+                          "rewardType": "RandomLoot",
+                          "payload": {
+                            "kind": "BoonSource",
+                            "source": "ApolloUpgrade"
+                          }
+                        },
+                        "traitOffersByAcquisitionRole": {
+                          "source": null
+                        },
+                        "dispositionByAcquisitionRole": {
+                          "source": {
+                            "kind": "normal"
+                          }
+                        }
+                      }
+                    },
+                    "MajorNonBoon": {
+                      "optionKey": "MaxHealthDrop",
+                      "reward": {
+                        "offer": {
+                          "rewardType": "MaxHealthDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      }
+                    },
+                    "Minor": {
+                      "optionKey": "MaxManaDrop",
+                      "reward": {
+                        "offer": {
+                          "rewardType": "MaxManaDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      }
+                    },
+                    "infernalContractReward": {
+                      "optionKey": null,
+                      "reward": null
+                    }
+                  }
+                }
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": []
+              },
+              "acquisitionSites": {
+                "roomExit": {}
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "dream-n-preboss:boss",
+              "gameName": "N_Boss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "collectRequiredReward"
+                  }
+                ]
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "dream-n-preboss:postboss",
+              "gameName": "Dream_PostBoss03",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "useFountain"
+                  }
+                ]
+              },
+              "stygianWell": {
+                "interacted": false,
+                "offerKeyBySlot": {
+                  "healing": null,
+                  "secondLeft": null,
+                  "secondRight": null
+                }
+              },
+              "additionalExits": []
+            },
+            {
               "occurrenceId": "surface-n-combat11",
               "gameName": "N_Combat11",
               "state": {
@@ -2979,136 +3109,6 @@
                 "order": []
               },
               "additionalExits": []
-            },
-            {
-              "occurrenceId": "dream-n-preboss",
-              "gameName": "N_PreBoss01",
-              "state": {
-                "kind": "shop",
-                "shop": {
-                  "profileKey": "WorldShop",
-                  "offers": {
-                    "Boon": {
-                      "optionKey": "RandomLoot",
-                      "reward": {
-                        "offer": {
-                          "rewardType": "RandomLoot",
-                          "payload": {
-                            "kind": "BoonSource",
-                            "source": "ApolloUpgrade"
-                          }
-                        },
-                        "traitOffersByAcquisitionRole": {
-                          "source": null
-                        },
-                        "dispositionByAcquisitionRole": {
-                          "source": {
-                            "kind": "normal"
-                          }
-                        }
-                      }
-                    },
-                    "MajorNonBoon": {
-                      "optionKey": "MaxHealthDrop",
-                      "reward": {
-                        "offer": {
-                          "rewardType": "MaxHealthDrop"
-                        },
-                        "traitOffersByAcquisitionRole": {},
-                        "dispositionByAcquisitionRole": {
-                          "self": {
-                            "kind": "normal"
-                          }
-                        }
-                      }
-                    },
-                    "Minor": {
-                      "optionKey": "MaxManaDrop",
-                      "reward": {
-                        "offer": {
-                          "rewardType": "MaxManaDrop"
-                        },
-                        "traitOffersByAcquisitionRole": {},
-                        "dispositionByAcquisitionRole": {
-                          "self": {
-                            "kind": "normal"
-                          }
-                        }
-                      }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
-                    }
-                  }
-                }
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "acquisitionSites": {
-                "roomExit": {}
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "dream-n-preboss:boss",
-              "gameName": "N_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "collectRequiredReward"
-                  }
-                ]
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "dream-n-preboss:postboss",
-              "gameName": "Dream_PostBoss03",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  }
-                ]
-              },
-              "stygianWell": {
-                "interacted": false,
-                "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
-                }
-              },
-              "additionalExits": []
             }
           ],
           "decisions": [
@@ -3209,6 +3209,29 @@
                   "hubSlotKey": "combat01"
                 }
               ]
+            },
+            {
+              "kind": "exit",
+              "source": {
+                "kind": "hubDecision",
+                "decisionKey": "hub"
+              },
+              "normal": {
+                "kind": "batch",
+                "rewardStore": {
+                  "kind": "none"
+                },
+                "batchState": null,
+                "targets": [
+                  {
+                    "exitKey": "preboss",
+                    "occurrenceId": "dream-n-preboss"
+                  }
+                ]
+              },
+              "selection": {
+                "kind": "derived"
+              }
             },
             {
               "kind": "localVisit",
@@ -3325,29 +3348,6 @@
                 }
               },
               "visitOrder": []
-            },
-            {
-              "kind": "exit",
-              "source": {
-                "kind": "hubDecision",
-                "decisionKey": "hub"
-              },
-              "normal": {
-                "kind": "batch",
-                "rewardStore": {
-                  "kind": "none"
-                },
-                "batchState": null,
-                "targets": [
-                  {
-                    "exitKey": "preboss",
-                    "occurrenceId": "dream-n-preboss"
-                  }
-                ]
-              },
-              "selection": {
-                "kind": "derived"
-              }
             }
           ],
           "fixedRoomLinks": [

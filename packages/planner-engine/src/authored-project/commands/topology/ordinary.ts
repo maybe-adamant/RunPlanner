@@ -118,7 +118,7 @@ export function createBatch(
   const progression = normalDecisionProgressionForLayout(located.layout);
   if (progression === undefined) failCommand(command, 'layout has no normal-door decision policy');
   if (command.decision.source.kind === 'hubDecision') {
-    failCommand(command, 'the completed Hub emits its declaration-fixed takeover batch');
+    failCommand(command, 'the completed-Hub exit is created only with its Hub');
   }
   if (exitDecisionForSource(topology, command.decision.source) !== undefined)
     failCommand(command, 'exit decision already exists');
@@ -182,6 +182,7 @@ export function initializeExitDecision(
         kind: 'ReplaceWithHubDecision',
         decision: command.decision,
         hub: command.edit.hub,
+        prebossOccurrenceId: command.edit.prebossOccurrenceId,
       });
     case 'rewardStore':
       return replaceBatchRewardStore(created, catalog, nextLocated, {
@@ -850,6 +851,9 @@ export function removeExitDecision(
   command: Extract<TopologyCommand, { readonly kind: 'RemoveExitDecision' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
+  if (command.decision.source.kind === 'hubDecision') {
+    failCommand(command, 'the completed-Hub exit is removed only with its Hub');
+  }
   const impact = describeExitDecisionRemovalImpact(
     topology,
     sourceFromAddress(command.decision.source),

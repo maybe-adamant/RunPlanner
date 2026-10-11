@@ -19,7 +19,6 @@ import {
   automaticHostContinuationExitForDetourRoom,
   bossDeclarationTakesAuthoredRewardStore,
   bossDoorRewardStoreKeysForLayout,
-  hubDecisionHandoffReadiness,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   isHostRouteDetourRoom,
@@ -1041,6 +1040,16 @@ export function decodeTopologyStructure(
           'Hub source does not resolve the declared terminal Hub takeover',
         );
       }
+      if (
+        !decisions.some(
+          (candidate) =>
+            candidate.kind === 'exit' &&
+            candidate.source.kind === 'hubDecision' &&
+            candidate.source.decisionKey === decision.hubKey,
+        )
+      ) {
+        failProjectDocument(decisionPath, 'Hub decision requires its completed-Hub exit');
+      }
       continue;
     }
     if (
@@ -1052,19 +1061,8 @@ export function decodeTopologyStructure(
         'source is not on the selected topology spine',
       );
     }
-    if (decision.source.kind === 'hubDecision') {
-      if (hubDecision === undefined) {
-        failProjectDocument(
-          `${decisionPath}.source`,
-          'completed-Hub exit requires its Hub decision',
-        );
-      }
-      if (
-        layout.progression.kind !== 'hub' ||
-        hubDecisionHandoffReadiness(layout.progression, hubDecision).kind !== 'ready'
-      ) {
-        failProjectDocument(`${decisionPath}.source`, 'completed-Hub exit requires a complete Hub');
-      }
+    if (decision.source.kind === 'hubDecision' && hubDecision === undefined) {
+      failProjectDocument(`${decisionPath}.source`, 'completed-Hub exit requires its Hub decision');
     }
     if (decision.source.kind === 'occurrence') {
       const source = occurrences.get(decision.source.occurrenceId);

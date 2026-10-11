@@ -89,7 +89,6 @@ interface WorkspaceHubAssemblyBaseInput {
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
   /** The frontier-derived create capability for the fixed completed-Hub exit. */
-  readonly completedExitReady?: boolean;
   readonly descriptor: HubDecisionDescriptor;
   readonly fountainRarityAssessment?: WorkspaceOccurrenceActionsInput['fountainRarityAssessment'];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
@@ -511,7 +510,6 @@ function projectHubNode(
     decisionKey: descriptor.hubKey,
     kind: 'hubDecision',
   });
-  const completedExitMarker = markerDestinations.marker(completedExitOwner);
   const completedExitDecision = input.topology?.decisions.find(
     (decision): decision is ExitDecision =>
       decision.kind === 'exit' &&
@@ -520,35 +518,20 @@ function projectHubNode(
   );
   const completedExitTarget =
     completedExitDecision === undefined ? undefined : selectedExitTarget(completedExitDecision);
-  if (completedExitDecision !== undefined && completedExitTarget === undefined) {
+  if (completedExitTarget === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(completedExitOwner)} has no selected completed-Hub target`,
+      `${semanticAddressKey(completedExitOwner)} has no completed-Hub Preboss`,
     );
   }
-  const completedExit =
-    completedExitTarget === undefined
-      ? input.completedExitReady === true
-        ? Object.freeze({
-            kind: 'ready' as const,
-            marker: completedExitMarker,
-            targetLabel: completedExitRoom.label,
-          })
-        : Object.freeze({
-            kind: 'locked' as const,
-            marker: completedExitMarker,
-            targetLabel: completedExitRoom.label,
-          })
-      : Object.freeze({
-          kind: 'opened' as const,
-          marker: completedExitMarker,
-          target: Object.freeze({
-            label: completedExitRoom.label,
-            marker: markerDestinations.marker(
-              createOccurrenceAddress(biome, completedExitTarget.occurrenceId),
-            ),
-          }),
-          targetLabel: completedExitRoom.label,
-        });
+  const completedExit = Object.freeze({
+    marker: markerDestinations.marker(completedExitOwner),
+    target: Object.freeze({
+      label: completedExitRoom.label,
+      marker: markerDestinations.marker(
+        createOccurrenceAddress(biome, completedExitTarget.occurrenceId),
+      ),
+    }),
+  });
   const fountainAddress = createHubFountainAddress(biome, descriptor.hubKey);
   const fountainOutcome = createFountainRarityOutcomeAddress(fountainAddress);
   const fountainIndex = hub.actions.findIndex((action) => action.kind === 'useFountain');
@@ -702,8 +685,8 @@ function projectHubNode(
     'overview',
   );
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
-  markerDestinations.redirect([completedExitMarker], node.key);
-  markerDestinations.setHubTab([completedExitMarker], 'exit');
+  markerDestinations.redirect([completedExit.marker], node.key);
+  markerDestinations.setHubTab([completedExit.marker], 'exit');
   // Placement always repairs on Hub Timeline; only the Phial target follows its host.
   markerDestinations.redirect([fountain.marker], node.key);
   markerDestinations.setHubTab([fountain.marker], 'timeline');

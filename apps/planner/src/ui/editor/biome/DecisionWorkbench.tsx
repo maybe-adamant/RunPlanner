@@ -13,11 +13,9 @@ import {
   type WorkspaceMarker,
   type WorkspaceMissingPhysicalTarget,
   type WorkspacePhysicalTarget,
-  type WorkspaceTakeoverBatchInteraction,
   type WorkspaceTakeoverBatchNode,
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
-  type WorkspaceCompletedHubHandoffInteraction,
   type WorkspaceTakeoverRepairInteraction,
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
@@ -471,16 +469,6 @@ function AdditionalExitCard({
   );
 }
 
-function CompletedHubHandoffAction({
-  interaction,
-}: {
-  readonly interaction: WorkspaceCompletedHubHandoffInteraction;
-}): never {
-  throw new BiomeWorkspaceContractError(
-    `The completed Hub handoff for ${interaction.label} belongs to the Hub workbench cutover.`,
-  );
-}
-
 function TakeoverRepairAction({
   interaction,
   repairNeeded,
@@ -510,31 +498,23 @@ function TakeoverRepairAction({
   );
 }
 
-function TakeoverAction({
-  interaction,
-  repairNeeded,
-}: {
-  readonly interaction: WorkspaceTakeoverBatchInteraction;
-  readonly repairNeeded: boolean;
-}) {
-  switch (interaction.presentation) {
-    case 'completedHubHandoff':
-      return <CompletedHubHandoffAction interaction={interaction} />;
-    case 'repair':
-      return <TakeoverRepairAction interaction={interaction} repairNeeded={repairNeeded} />;
-  }
-}
-
-function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
-  const dispatch = useAppDispatch();
-  const continuation = node.selectedContinuation;
+function batchContinuationHint(node: BatchNode): string {
   const doorSelected =
     node.targets.some((target) => target.selected) ||
     node.zagreusContract?.selected === true ||
     node.chaos?.selected === true;
-  const disabledHint = doorSelected
-    ? 'Fill the remaining doors to continue.'
-    : 'Select a door to continue.';
+  return doorSelected ? 'Fill the remaining doors to continue.' : 'Select a door to continue.';
+}
+
+/** Moves to the occurrence a decision continues into; disabled while none is selected. */
+export function SelectedContinuationAction({
+  continuation,
+  disabledHint,
+}: {
+  readonly continuation: { readonly marker: WorkspaceMarker } | undefined;
+  readonly disabledHint?: string;
+}) {
+  const dispatch = useAppDispatch();
   return (
     <button
       className="primary-action"
@@ -684,7 +664,7 @@ export function BatchWorkbench({
 }) {
   const findingAnchor = useFindingAnchor();
   const takeover =
-    node.kind === 'takeoverBatch'
+    node.kind === 'takeoverBatch' && node.takeoverInteractionKey !== undefined
       ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
       : undefined;
   const takeoverRepairNeeded =
@@ -692,7 +672,7 @@ export function BatchWorkbench({
     (node.targets.some((target) => target.physicalState === 'unavailable') ||
       node.missingTargets.length > 0);
   const removal =
-    node.persistence === 'authored'
+    node.persistence === 'authored' && node.source.kind === 'occurrence'
       ? requireWorkspaceInteraction(
           interactions.topologyRemovals,
           workspaceInteractionKey(node.owner),
@@ -756,11 +736,14 @@ export function BatchWorkbench({
         )}
       </div>
       {takeover === undefined ? null : (
-        <TakeoverAction interaction={takeover} repairNeeded={takeoverRepairNeeded} />
+        <TakeoverRepairAction interaction={takeover} repairNeeded={takeoverRepairNeeded} />
       )}
       <div className="workbench-action-row">
         <ExactRepairAction intent={node.repairIntent} />
-        <SelectedContinuationAction node={node} />
+        <SelectedContinuationAction
+          continuation={node.selectedContinuation}
+          disabledHint={batchContinuationHint(node)}
+        />
         <TopologyRemovalAction
           disabledHint="No doors chosen yet."
           interaction={removal}

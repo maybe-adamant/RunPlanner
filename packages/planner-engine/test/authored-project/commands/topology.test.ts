@@ -235,7 +235,7 @@ describe('authored-project commands and topology', () => {
     ).toBe(true);
   });
 
-  it('resets a Hub board with its main, side and handoff rooms as one reversible edit', () => {
+  it('resets a Hub board with its main and side rooms as one reversible edit, keeping its chain', () => {
     const project = createEnteredNLocalProject();
     const before = startedNTopology(project);
     const hub = before.decisions.find((decision) => decision.kind === 'hub');
@@ -253,17 +253,19 @@ describe('authored-project commands and topology', () => {
       actions: [],
     });
     const preservedRooms = before.occurrences.filter((room) =>
-      ['N_Opening01', 'N_PreHub01'].includes(room.gameName),
+      ['N_Opening01', 'N_PreHub01', 'N_PreBoss01', 'N_Boss01', 'N_PostBoss01'].includes(
+        room.gameName,
+      ),
     );
-    expect(preservedRooms).toHaveLength(2);
+    expect(preservedRooms).toHaveLength(5);
     expect(reset.occurrences).toEqual(preservedRooms);
-    expect(reset.fixedRoomLinks).toEqual([]);
+    expect(reset.fixedRoomLinks).toEqual(before.fixedRoomLinks);
     expect(reset.decisions.filter((decision) => decision.kind !== 'hub')).toEqual(
       before.decisions.filter(
         (decision) =>
           decision.kind === 'exit' &&
-          decision.source.kind === 'occurrence' &&
-          decision.source.occurrenceId === before.startOccurrenceId,
+          (decision.source.kind === 'hubDecision' ||
+            decision.source.occurrenceId === before.startOccurrenceId),
       ),
     );
     expect(history.past).toEqual([project]);
@@ -361,8 +363,9 @@ describe('authored-project commands and topology', () => {
     );
   });
 
-  it('removes the completed-Hub Preboss handoff when an unvisited ninth slot closes', () => {
-    const project = applyProjectCommand(createCompleteNProject(), catalog, {
+  it('keeps the completed-Hub chain and its room state when an unvisited ninth slot closes', () => {
+    const complete = createCompleteNProject();
+    const project = applyProjectCommand(complete, catalog, {
       kind: 'CloseHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat07'),
     });
@@ -370,6 +373,10 @@ describe('authored-project commands and topology', () => {
     if (topology === null || topology === undefined) throw new Error('N topology is required');
     const hub = topology.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('N Hub decision is required');
+    const chainRooms = (document: typeof complete) =>
+      startedNTopology(document).occurrences.filter((occurrence) =>
+        ['N_PreBoss01', 'N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
+      );
 
     expect(hub.openTargets).toHaveLength(8);
     expect(hub.openTargets.map((target) => target.hubSlotKey)).not.toContain('combat07');
@@ -379,10 +386,10 @@ describe('authored-project commands and topology', () => {
       topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
       ),
-    ).toBe(false);
-    expect(topology.occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01')).toBe(
-      false,
-    );
+    ).toBe(true);
+    expect(chainRooms(project)).toHaveLength(3);
+    expect(chainRooms(project)).toEqual(chainRooms(complete));
+    expect(topology.fixedRoomLinks).toEqual(startedNTopology(complete).fixedRoomLinks);
   });
 
   it('requires topology null until an authored start exists and preserves selected starts', () => {
@@ -1227,9 +1234,57 @@ describe('authored-project commands and topology', () => {
       kind: 'ReplaceWithHubDecision',
       decision: preHubDecision,
       hub,
+      prebossOccurrenceId: createOccurrenceId('topology-n-preboss'),
     });
+    const created = startedNTopology(project);
+    const prebossId = createOccurrenceId('topology-n-preboss');
+    expect(created.decisions.filter((decision) => decision.kind !== 'localVisit')).toEqual([
+      expect.objectContaining({ kind: 'exit', source: openingDecision.source }),
+      expect.objectContaining({ kind: 'hub', openTargets: [], actions: [] }),
+      {
+        kind: 'exit',
+        source: { kind: 'hubDecision', decisionKey: 'hub' },
+        normal: {
+          kind: 'batch',
+          rewardStore: { kind: 'none' },
+          batchState: null,
+          targets: [{ exitKey: 'preboss', occurrenceId: prebossId }],
+        },
+        selection: { kind: 'derived' },
+      },
+    ]);
+    expect(
+      created.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence.gameName]),
+    ).toEqual([
+      ['wrapper-n-opening', 'N_Opening01'],
+      ['wrapper-n-prehub', 'N_PreHub01'],
+      [prebossId, 'N_PreBoss01'],
+      [`${prebossId}:boss`, 'N_Boss01'],
+      [`${prebossId}:postboss`, 'N_PostBoss01'],
+    ]);
+    expect(created.fixedRoomLinks).toEqual([
+      { sourceOccurrenceId: prebossId, targetOccurrenceId: `${prebossId}:boss` },
+      { sourceOccurrenceId: `${prebossId}:boss`, targetOccurrenceId: `${prebossId}:postboss` },
+    ]);
+    const handoff = createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' });
+    expect(() =>
+      applyProjectCommand(project, catalog, { kind: 'RemoveExitDecision', decision: handoff }),
+    ).toThrow(ProjectCommandContractError);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReconcileTakeoverBatch',
+        decision: handoff,
+        gameName: 'N_PreBoss01',
+        targetOccurrenceIds: { preboss: prebossId },
+      }),
+    ).toThrow(ProjectCommandContractError);
     project = applyProjectCommand(project, catalog, { kind: 'RemoveHubDecision', hub });
     const topology = project.route.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    expect(topology?.fixedRoomLinks).toEqual([]);
+    expect(topology?.occurrences.map((occurrence) => occurrence.gameName)).toEqual([
+      'N_Opening01',
+      'N_PreHub01',
+    ]);
     expect(topology?.decisions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -1281,6 +1336,7 @@ describe('authored-project commands and topology', () => {
           kind: 'ReplaceWithHubDecision',
           decision: terminalDecision,
           hub,
+          prebossOccurrenceId: createOccurrenceId('topology-n-preboss'),
         }),
       ).toThrowError(
         expect.objectContaining({

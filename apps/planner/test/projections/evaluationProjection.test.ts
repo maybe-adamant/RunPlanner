@@ -63,7 +63,6 @@ const allFindingCodes = [
   'fieldsCageOutcomeUnavailable',
   'hubOpenSlotUnavailable',
   'biomeTopologyMissing',
-  'continuationMissing',
   'pickedTargetMissing',
   'targetMissing',
   'targetRoomSupportEmpty',
@@ -169,8 +168,8 @@ describe('evaluation presentation', () => {
   });
 
   it('keeps concise repair titles and only details that add constraints', () => {
-    expect(presentFinding(finding('continuationMissing'))).toEqual({
-      title: 'Open the next room from the Hub',
+    expect(presentFinding(finding('hubOpenSetIncomplete'))).toEqual({
+      title: 'Choose open Hub rooms',
     });
     expect(presentFinding(finding('wrongHammerLoadout'))).toEqual({
       title: 'Hammer incompatible with loadout',
@@ -295,7 +294,7 @@ describe('evaluation presentation', () => {
       kind: 'incomplete',
       owner: biome,
       regionKey: 'underworld-f-start',
-      reasons: [fFinding, finding('continuationMissing')],
+      reasons: [fFinding, finding('pickedTargetMissing')],
     } as const satisfies AssessmentIssue;
     const fEvaluation = {
       biomeKey: 'F',

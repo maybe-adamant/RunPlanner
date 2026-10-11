@@ -10,7 +10,6 @@ export type CompletenessFindingCode =
   | 'batchStateMissing'
   | 'biomeFieldMissing'
   | 'biomeTopologyMissing'
-  | 'continuationMissing'
   | 'hubOpenSetIncomplete'
   | 'hubVisitOrderIncomplete'
   | 'pickedTargetMissing'
@@ -200,7 +199,6 @@ export function isRequiredMissingInputFinding(
     case 'batchStateMissing':
     case 'biomeFieldMissing':
     case 'biomeTopologyMissing':
-    case 'continuationMissing':
     case 'hubOpenSetIncomplete':
     case 'hubVisitOrderIncomplete':
     case 'pickedTargetMissing':
