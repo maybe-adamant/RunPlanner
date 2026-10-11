@@ -71,7 +71,6 @@ export function RouteWorkspace({
     (state) => state.editorSession.workspaceReplacementRevision,
   );
   const replacementKey = `${project.projectId}:${replacementRevision}`;
-  const settlementFault = useAppSelector((state) => state.projectWorkspace.settlementFault);
   const activeBiomeProjection =
     activePanel.kind !== 'biome'
       ? undefined
@@ -179,8 +178,6 @@ export function RouteWorkspace({
       issue={routeEvaluation.issue}
       focusByOwner={workspace.focusByOwner}
       route={workspaceRoute}
-      blockedView={activeBiomeFeedback}
-      settlementFault={settlementFault}
     />
   );
 

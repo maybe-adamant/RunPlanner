@@ -4,7 +4,6 @@ import {
   createBiomeAddress,
   createEchoPomTargetAddress,
   createEncounterPhaseAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -207,64 +206,6 @@ it('collapses inner trait reasons into one attention entry that selects the laun
   expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
 });
 
-it('leads a blocked view with its entry and navigates it to the blocking owner', () => {
-  const application = createOpenTestApplication();
-  const { container } = render(
-    <Provider store={application.store}>
-      <ProjectFindings
-        blockedView={{
-          biomeKey: 'G',
-          blockedByBiomeKey: 'F',
-          context: 'blocked',
-          findingCount: 0,
-          status: { label: 'Blocked', tone: 'blocked' },
-        }}
-        catalog={catalog}
-        focusByOwner={new Map([[semanticAddressKey(trait), destination]])}
-        issue={issue}
-      />
-    </Provider>,
-  );
-
-  const buttons = within(container).getAllByRole('button');
-  expect(buttons).toHaveLength(2);
-  expect(buttons[0]?.textContent).toContain('Oceanus is blocked at Erebus');
-  expect(buttons[0]?.textContent).toContain(
-    'Finish and fix Erebus before Oceanus can be evaluated.',
-  );
-  expect(container.querySelector('.feedback-context-banner')).toBeNull();
-
-  fireEvent.click(buttons[0]!);
-
-  expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
-    key: issue.regionKey,
-    origin: trait,
-  });
-  expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
-});
-
-it('shows an unevaluated view entry without a repair when the engine selected none', () => {
-  const application = createOpenTestApplication();
-  const { container } = render(
-    <Provider store={application.store}>
-      <ProjectFindings
-        blockedView={{
-          biomeKey: 'F',
-          context: 'unassessed',
-          findingCount: 0,
-          status: { label: 'Incomplete', tone: 'incomplete' },
-        }}
-        catalog={catalog}
-        focusByOwner={new Map()}
-        issue={undefined}
-      />
-    </Provider>,
-  );
-
-  const entry = within(container).getByRole('button', { name: 'Erebus is not evaluated yet' });
-  expect(entry.hasAttribute('disabled')).toBe(true);
-});
-
 it('keeps details that explain how to repair the issue', () => {
   const application = createOpenTestApplication();
   render(
@@ -283,27 +224,13 @@ it('keeps details that explain how to repair the issue', () => {
   );
 });
 
-it('names the owner of an unfinished automatic repair and navigates to it', () => {
+it('renders nothing when the engine selected no route issue', () => {
   const application = createOpenTestApplication();
-  const owner = createOccurrenceAddress(biome, createOccurrenceId('settlement-fault-owner'));
-  const fault = { key: `delivery:${semanticAddressKey(owner)}`, owner };
-  render(
+  const { container } = render(
     <Provider store={application.store}>
-      <ProjectFindings
-        catalog={catalog}
-        focusByOwner={new Map()}
-        issue={undefined}
-        settlementFault={fault}
-      />
+      <ProjectFindings catalog={catalog} focusByOwner={new Map()} issue={undefined} />
     </Provider>,
   );
 
-  const entry = screen.getByRole('button', { name: /Settlement could not finish repairing/ });
-  expect(entry.textContent).toBe('Settlement could not finish repairing ErebusEdit it directly.');
-  fireEvent.click(entry);
-  expect(application.store.getState().editorSession.selectedFinding).toMatchObject({
-    key: fault.key,
-    origin: owner,
-  });
-  expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+  expect(container.querySelector('.project-findings')).toBeNull();
 });

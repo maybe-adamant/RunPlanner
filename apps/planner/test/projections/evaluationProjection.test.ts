@@ -39,11 +39,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
-  type BiomeFeedbackPresentation,
   findingDestinationLabel,
   indexFindingsByOwner,
   isChaosGatePositionFinding,
-  presentBlockedView,
   presentBiomeStatus,
   presentFinding,
   presentAnvilDraftFinding,
@@ -360,33 +358,6 @@ describe('evaluation presentation', () => {
       context: 'blocked',
       findingCount: 0,
       status: { tone: 'blocked' },
-    });
-    if (fFeedback === undefined || gFeedback === undefined) {
-      throw new Error('feedback hierarchy omitted a configured biome');
-    }
-    expect(presentBlockedView(catalog, fFeedback, 'Erebus')).toEqual({
-      title: 'Erebus is not evaluated yet',
-    });
-    expect(presentBlockedView(catalog, gFeedback, 'Erebus · Opening')).toEqual({
-      title: 'Oceanus is blocked at Erebus · Opening',
-      description: 'Finish and fix Erebus before Oceanus can be evaluated.',
-    });
-    expect(
-      presentBlockedView(catalog, { ...gFeedback, context: 'complete' }, 'Erebus'),
-    ).toBeUndefined();
-  });
-
-  it('explains a blocked biome without exposing evaluated-prefix internals', () => {
-    const feedback = {
-      biomeKey: 'F',
-      context: 'blocked',
-      findingCount: 0,
-      status: { label: 'Blocked', tone: 'blocked' },
-    } as const satisfies BiomeFeedbackPresentation;
-
-    expect(presentBlockedView(catalog, feedback, undefined)).toEqual({
-      title: 'Erebus is blocked',
-      description: 'Finish the earlier biomes before this biome can be evaluated.',
     });
   });
 

@@ -870,7 +870,7 @@ describe('project workspace application state', () => {
     expect(assembleProjectEvaluation).toHaveBeenCalledTimes(2);
   });
 
-  it('publishes the settled assembly and records an unfinished automatic repair', () => {
+  it('publishes the settled assembly, records an unfinished automatic repair and warns in dev', () => {
     const { store } = createStore();
     const command = {
       kind: 'ConfigureRoutePrefix',
@@ -883,10 +883,14 @@ describe('project workspace application state', () => {
       assembly: options.evaluate(applyProjectCommand(options.before.project, catalog, command)),
       fault,
     }));
+    const warn = vi.spyOn(globalThis.console, 'warn').mockImplementation(() => undefined);
     try {
       store.dispatch(authoredProjectCommandDispatched(command));
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn.mock.calls[0]?.[0]).toContain(fault.key);
     } finally {
       settle.mockRestore();
+      warn.mockRestore();
     }
     const workspace = store.getState().projectWorkspace;
     expect(workspace.settlementFault).toEqual(fault);

@@ -455,35 +455,10 @@
     0 12px 28px rgb(0 0 0 / 24%);
 }
 
-.assessment-issue-button[data-feedback-context] {
-  border-color: rgb(132 130 143 / 35%);
-  background: rgb(100 98 112 / 8%);
-  box-shadow: none;
-}
-
-.assessment-issue-button[data-feedback-context='unassessed'] {
-  border-color: color-mix(in srgb, var(--attention) 30%, transparent);
-  background: color-mix(in srgb, var(--attention) 6%, transparent);
-}
-
-.assessment-issue-button:disabled {
-  cursor: default;
-}
-
 .assessment-issue-button:hover,
 .assessment-issue-button[data-selected='true'] {
   border-color: rgb(231 135 135 / 72%);
   background: linear-gradient(135deg, rgb(132 61 66 / 34%), transparent 58%), rgb(49 27 31 / 58%);
-}
-
-.assessment-issue-button[data-feedback-context]:hover {
-  border-color: rgb(132 130 143 / 50%);
-  background: rgb(100 98 112 / 12%);
-}
-
-.assessment-issue-button[data-feedback-context='unassessed']:hover {
-  border-color: color-mix(in srgb, var(--attention) 45%, transparent);
-  background: color-mix(in srgb, var(--attention) 10%, transparent);
 }
 
 .finding-title {

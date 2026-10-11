@@ -131,7 +131,8 @@ The planner does not check whether the game is running.
 **Create bug report…** (Game panel and About, desktop only) saves one zip
 where the user chooses. The host assembles it from explicit inputs:
 `report.json` (planner facts supplied by the application, including the last
-send failure or a last send that was not made active, merged with the host's
+send failure or a last send that was not made active and the current
+settlement fault, merged with the host's
 status of the established target), the open plan document when chosen, the
 six plan slot files and `active-slot.json` when plans in game are chosen, and
 log tails from `ReturnOfModding`: `LogOutput.log` and the newest `backup/*_LogOutput.log`

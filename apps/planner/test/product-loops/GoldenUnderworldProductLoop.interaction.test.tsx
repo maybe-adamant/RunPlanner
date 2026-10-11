@@ -652,8 +652,13 @@ describe('underworld product loop', () => {
         value: { rewardType: 'WeaponUpgrade' },
       }),
     );
-    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
-    expect(screen.getByText('Finish and fix Erebus before Oceanus can be evaluated.')).toBeTruthy();
+    const oceanus = screen.getByRole('button', { name: 'Oceanus' });
+    await view.user.click(oceanus);
+    expect(
+      document
+        .getElementById(oceanus.getAttribute('aria-describedby') ?? '')
+        ?.getAttribute('aria-label'),
+    ).toBe('Blocked');
     await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
     const start = screen.getByRole('button', { name: 'Door 1 room' });
     expect(start.getAttribute('aria-disabled')).toBe('true');

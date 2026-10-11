@@ -90,7 +90,9 @@ unchanged obligation has that correspondence and is retained when first reached.
 repair consumes an explicit obligation or displaced owner. A repeated repair is
 not replayed: settlement stops and returns the last evaluated assembly with a
 settlement fault naming the owner, which the application publishes beside the
-assembly rather than treating as an error. Loading and projection
+assembly rather than treating as an error. A fault signals an engine defect, not
+an authoring task: it never appears as an editor finding; dev builds warn in the
+console when one is recorded, and bug reports carry the current one. Loading and projection
 remain read-only, and Undo/Redo restore the settled snapshots.
 
 Evaluation rebuilds synchronously for a new authored snapshot. Application
