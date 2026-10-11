@@ -48,7 +48,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'POpeningEncounters' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -84,7 +83,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -125,7 +123,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -161,7 +158,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -202,7 +198,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -238,7 +233,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -274,7 +268,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -310,7 +303,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -346,7 +338,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -382,7 +373,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -418,7 +408,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -454,7 +443,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -490,7 +478,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -526,7 +513,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -562,7 +548,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -598,7 +583,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -634,7 +618,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -670,7 +653,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -711,7 +693,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -752,7 +733,6 @@ export const pRooms = [
       },
       { slotKey: 'Combat', kind: 'set', encounterSetKey: 'PEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -778,7 +758,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Dionysus_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -817,7 +796,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'HealthRestore' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -860,7 +838,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -897,7 +874,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossTalos' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -938,7 +914,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossDragon' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1001,7 +976,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1033,7 +1007,6 @@ export const pRooms = [
         rivalsEncounterDefinitionKey: 'BossPrometheus02',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1056,7 +1029,6 @@ export const pRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];

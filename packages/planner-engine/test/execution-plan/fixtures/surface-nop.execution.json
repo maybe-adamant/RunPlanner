@@ -2469,7 +2469,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 23,
+              "biomeDepthCache": 24,
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 24
@@ -2519,7 +2519,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 24,
+              "biomeDepthCache": 25,
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 25
@@ -3686,7 +3686,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 8,
+              "biomeDepthCache": 9,
               "biomeEncounterDepth": 6,
               "routeEncounterDepth": 13,
               "roomHistoryOrdinal": 34
@@ -3736,7 +3736,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 9,
+              "biomeDepthCache": 10,
               "biomeEncounterDepth": 6,
               "routeEncounterDepth": 13,
               "roomHistoryOrdinal": 35
@@ -5224,7 +5224,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 10,
+              "biomeDepthCache": 11,
               "biomeEncounterDepth": 7,
               "routeEncounterDepth": 19,
               "roomHistoryOrdinal": 46
@@ -5274,7 +5274,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 11,
+              "biomeDepthCache": 12,
               "biomeEncounterDepth": 7,
               "routeEncounterDepth": 19,
               "roomHistoryOrdinal": 47
@@ -5724,5 +5724,5 @@
       }
     }
   ],
-  "planFingerprint": "0df245a1"
+  "planFingerprint": "1a2e58ca"
 }

@@ -31,7 +31,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -62,7 +61,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoomLight' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -93,7 +91,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -124,7 +121,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -155,7 +151,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -186,7 +181,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -217,7 +211,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -248,7 +241,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -283,7 +275,6 @@ export const nSideRooms = [
         encounterDefinitionKey: 'GeneratedNSubRoom_Bigger',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -318,7 +309,6 @@ export const nSideRooms = [
         encounterDefinitionKey: 'GeneratedNSubRoom_Bigger',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -353,7 +343,6 @@ export const nSideRooms = [
         encounterDefinitionKey: 'GeneratedNSubRoom_Bigger',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -384,7 +373,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -415,7 +403,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -450,7 +437,6 @@ export const nSideRooms = [
         encounterDefinitionKey: 'GeneratedNSubRoom_Bigger',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
   {
@@ -481,7 +467,6 @@ export const nSideRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSubRoom' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 999 },
   },
 ] satisfies readonly RawRoomDeclaration[];

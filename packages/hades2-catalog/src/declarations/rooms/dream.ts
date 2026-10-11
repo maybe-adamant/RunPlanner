@@ -23,7 +23,6 @@ const dreamPostboss = (gameName: string) => ({
   encounterSlotBindings: [
     { slotKey: 'Encounter', kind: 'fixed' as const, encounterDefinitionKey: 'Empty' },
   ],
-  counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
   caps: { maxAppearancesThisBiome: 1 },
 });
 

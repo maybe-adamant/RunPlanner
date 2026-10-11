@@ -30,7 +30,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
   {
@@ -56,7 +55,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
   {
@@ -82,7 +80,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
   {
@@ -108,7 +105,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
   {
@@ -134,7 +130,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
   {
@@ -160,7 +155,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
   {
@@ -186,7 +180,6 @@ export const anomalyRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedAnomalyB' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
 ] as const satisfies readonly RawRoomDeclaration[];

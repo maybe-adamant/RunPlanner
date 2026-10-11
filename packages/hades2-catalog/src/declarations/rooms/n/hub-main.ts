@@ -18,7 +18,6 @@ export const nHubMainRooms = [
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -44,7 +43,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -71,7 +69,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -120,7 +117,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -163,7 +159,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -212,7 +207,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -267,7 +261,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -316,7 +309,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -343,7 +335,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -370,7 +361,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -425,7 +415,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -474,7 +463,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -517,7 +505,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -572,7 +559,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -599,7 +585,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -626,7 +611,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -669,7 +653,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -712,7 +695,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -755,7 +737,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -798,7 +779,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -825,7 +805,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -868,7 +847,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersBigger' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
   },
@@ -895,7 +873,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -944,7 +921,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'NEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     requiredObjects: [soulPylon],
     localChildren: [
@@ -1000,7 +976,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossSatyrCrossbow' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     requiredObjects: [soulPylon],
   },
@@ -1028,7 +1003,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossBoar' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     requiredObjects: [soulPylon],
   },
@@ -1054,7 +1028,6 @@ export const nHubMainRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Medea_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxCreationsThisRun: 1 },
     requiredObjects: [soulPylon],
   },

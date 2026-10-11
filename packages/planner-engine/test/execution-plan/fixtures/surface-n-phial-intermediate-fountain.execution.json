@@ -2303,7 +2303,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 23,
+              "biomeDepthCache": 24,
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 24
@@ -2353,7 +2353,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 24,
+              "biomeDepthCache": 25,
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 25
@@ -2578,5 +2578,5 @@
       }
     }
   ],
-  "planFingerprint": "7e47a610"
+  "planFingerprint": "0d0b0da7"
 }

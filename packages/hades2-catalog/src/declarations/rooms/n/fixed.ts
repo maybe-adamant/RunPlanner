@@ -29,7 +29,6 @@ export const nFixedRouteRooms = [
         encounterDefinitionKey: 'OpeningGeneratedN',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -59,7 +58,6 @@ export const nFixedRouteRooms = [
         encounterDefinitionKey: 'PreHubGeneratedN',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 1, max: 1 } },
   },

@@ -263,15 +263,21 @@ function appendRestore(
     origin: room.origin,
     after: restore.after,
     restoreKind,
-    biomeDepthCacheDelta: room.counterEffects.biomeDepthCache,
-    roomHistoryOrdinalDelta: room.counterEffects.roomHistoryOrdinal,
     surfaceShopPresent: room.kind === 'authored' && room.hermesShrine !== undefined,
     roomShopPresent: room.kind === 'authored' && room.stygianWell !== undefined,
   });
 }
 
-function appendDeparture(writer: HistorySegmentWriter, room: CanonicalLifecycleRoom): void {
-  writer.append({ kind: 'roomDeparted', origin: room.origin });
+function appendDeparture(
+  writer: HistorySegmentWriter,
+  room: CanonicalLifecycleRoom,
+  restored: boolean,
+): void {
+  writer.append({
+    kind: 'roomDeparted',
+    origin: room.origin,
+    ...(restored ? { leavesRestoredRoom: true as const } : {}),
+  });
 }
 
 /**
@@ -293,13 +299,13 @@ function appendVisit(
     if (!local.entered || local.localVisit.generation !== 'generated') {
       fail(`Hub visit ${visit.visitIndex} enters an unavailable side room`);
     }
-    if (index > 0) appendDeparture(writer, visit.target.room);
+    if (index > 0) appendDeparture(writer, visit.target.room, true);
     appendCanonicalRoomLifecycle(writer, catalog, local, fail);
     const restore = visit.parentRestores[index];
     if (restore === undefined) fail(`Hub visit ${visit.visitIndex} has no parent restore`);
     appendRestore(writer, restore, visit.target.room, 'parent');
   }
-  if (visit.enteredLocalRooms.length > 0) appendDeparture(writer, visit.target.room);
+  if (visit.enteredLocalRooms.length > 0) appendDeparture(writer, visit.target.room, true);
   appendRestore(writer, visit.hubRestore, hub, 'hub');
 }
 
@@ -345,8 +351,9 @@ function appendHubDecision(
     });
   };
   appendFountainAfter(0);
-  for (const visit of decision.visits) {
-    appendDeparture(writer, decision.room);
+  // Every visit ends by restoring the Hub; the first departure follows its commit.
+  for (const [index, visit] of decision.visits.entries()) {
+    appendDeparture(writer, decision.room, index > 0);
     appendVisit(writer, catalog, visit, decision.room);
     appendFountainAfter(visit.visitIndex);
   }
@@ -356,7 +363,7 @@ function appendHubDecision(
     startIndex: decision.board.targets.length,
     count: generationCount,
   });
-  appendDeparture(writer, decision.room);
+  appendDeparture(writer, decision.room, decision.visits.length > 0);
   return selectedTarget(handoff).room;
 }
 

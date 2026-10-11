@@ -45,7 +45,6 @@ export const iRooms = [
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
     // RoomDataI.lua I_Intro `SpawnErisForCurse`: while completed runs <= 7.
@@ -72,7 +71,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Hades_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -121,7 +119,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -150,7 +147,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -181,7 +177,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -213,7 +208,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -242,7 +236,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -275,7 +268,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -308,7 +300,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -336,7 +327,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -367,7 +357,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -404,7 +393,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -441,7 +429,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -478,7 +465,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -512,7 +498,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -545,7 +530,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -576,7 +560,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -605,7 +588,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -638,7 +620,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -669,7 +650,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -703,7 +683,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -731,7 +710,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -762,7 +740,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -794,7 +771,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'clockworkNonGoalCapacity', reserve: 1 },
   },
@@ -828,7 +804,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersSmaller' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -860,7 +835,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'IEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'all',
@@ -903,7 +877,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'HealthRestore' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -949,7 +922,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossRatCatcher' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1006,7 +978,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossGoldElemental' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1067,7 +1038,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsPerRoom: 1 },
     eligibility: { kind: 'clockworkGoalsRemaining', range: { max: 0 } },
     force: { kind: 'always' },
@@ -1110,7 +1080,6 @@ export const iRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsPerRoom: 1 },
     eligibility: { kind: 'clockworkGoalsRemaining', range: { max: 0 } },
     force: { kind: 'always' },
@@ -1149,7 +1118,6 @@ export const iRooms = [
         rivalsEncounterDefinitionKey: 'BossChronos02',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];

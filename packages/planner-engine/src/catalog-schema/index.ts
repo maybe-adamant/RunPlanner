@@ -845,10 +845,9 @@ export interface ChaosAdditionalExitDeclaration {
 export type AdditionalExitDeclaration =
   ZagreusContractAdditionalExitDeclaration | ChaosAdditionalExitDeclaration;
 
+/** Each native LeaveRoom adds one room-history record; rooms declare no history or depth step. */
 export interface RoomCounterEffects {
-  readonly biomeDepthCache: number;
-  readonly roomHistoryOrdinal: number;
-  /** Native StartRoom `RunOverrides.BiomeDepthCache`, applied on entry. */
+  /** Native StartRoom `RunOverrides.BiomeDepthCache`: an absolute value set on entry. */
   readonly enteredBiomeDepthCache?: number;
   /**
    * Derived from `nextRoomSet`: native GetBiomeDepth is 1 while the current room

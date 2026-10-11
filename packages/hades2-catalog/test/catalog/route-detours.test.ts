@@ -191,7 +191,6 @@ describe('route detour catalog declarations', () => {
           kind: 'countedChoice',
           ineligibleRewardTypes: ['Devotion', 'SpellDrop'],
         },
-        counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
         exits: [
           {
             type: 'AnomalyAutoExitDoor',
@@ -221,7 +220,6 @@ describe('route detour catalog declarations', () => {
       // Fixed at spawn by RunLogic.lua:604-606, not inherited from the host
       // biome: the ledger records RunProgress for this room's entry.
       enteredRewardStoreHistory: { kind: 'fixed', storeKey: 'RunProgress' },
-      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
       exits: [
         {
           type: 'AnomalyAutoExitDoor',

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createAdditionalExitAddress,
   createBiomeAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
@@ -102,8 +103,6 @@ function canonicalEvents(): readonly HistoryEvent[] {
       kind: 'roomCountersAdvanced',
       origin,
       operationIndex: 7,
-      biomeDepthCacheDelta: 1,
-      roomHistoryOrdinalDelta: 1,
     },
     { kind: 'roomExited', origin, operationIndex: 8 },
     { kind: 'biomeCompleted', origin: biome },
@@ -365,5 +364,154 @@ describe('history fold encounter checkpoint closure', () => {
     expect(
       projectEncounterPreparationRoomWindow(view, gOrigin).map((room) => room.encounterKeys),
     ).toEqual([['GeneratedF'], [], ['GeneratedF'], ['GeneratedF']]);
+  });
+});
+
+interface DepthRoom {
+  readonly id: string;
+  readonly gameName: string;
+  /** Native NextRoomSet, derived as resetsBiomeDepthCache. */
+  readonly nextRoomSet?: boolean;
+  /** Native StartRoom RunOverrides.BiomeDepthCache. */
+  readonly enteredBiomeDepthCache?: number;
+}
+
+function depthRoomEvents(room: DepthRoom): readonly UnsequencedHistoryEvent[] {
+  const roomOrigin = createOccurrenceAddress(biome, createOccurrenceId(room.id));
+  const reset = room.nextRoomSet === true ? { biomeDepthCacheReset: true as const } : {};
+  return [
+    {
+      kind: 'roomCreated',
+      origin: roomOrigin,
+      gameName: room.gameName,
+      encounterEnvelopeKey: 'SingleEncounter',
+      source: 'biomeEntry',
+      picked: true,
+    },
+    { kind: 'roomPrepared', origin: roomOrigin, operationIndex: 1 },
+    {
+      kind: 'roomEntered',
+      origin: roomOrigin,
+      operationIndex: 2,
+      ...reset,
+      ...(room.enteredBiomeDepthCache === undefined
+        ? {}
+        : { enteredBiomeDepthCache: room.enteredBiomeDepthCache }),
+    },
+    { kind: 'roomCommitted', origin: roomOrigin, operationIndex: 3 },
+    { kind: 'roomCountersAdvanced', origin: roomOrigin, operationIndex: 4, ...reset },
+    { kind: 'roomExited', origin: roomOrigin, operationIndex: 5 },
+    { kind: 'roomDeparted', origin: roomOrigin },
+  ];
+}
+
+/** Entry and exit biome depth of each room, folded from a run start at depth 0. */
+function foldDepths(rooms: readonly DepthRoom[], depth = 0, ordinal = 0) {
+  const history = foldHistoryEvents(
+    numbered([
+      {
+        kind: 'biomeStarted',
+        origin: biome,
+        counters: {
+          biomeDepthCache: depth,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: ordinal,
+        },
+      },
+      ...rooms.flatMap(depthRoomEvents),
+      { kind: 'biomeCompleted', origin: biome },
+      { kind: 'biomeCounterReset', origin: biome, axis: 'biomeDepthCache', value: 0 },
+      { kind: 'biomeCounterReset', origin: biome, axis: 'biomeEncounterDepth', value: 0 },
+    ]),
+  );
+  return history.rooms.map((room) => [
+    room.entry.ledgers.counters.biomeDepthCache,
+    room.exit.ledgers.counters.biomeDepthCache,
+  ]);
+}
+
+describe('history fold biome depth cache', () => {
+  it('adds one per room-history record and resets nothing at a Preboss or Boss', () => {
+    expect(
+      foldDepths(
+        [
+          { id: 'combat', gameName: 'F_Combat02' },
+          { id: 'preboss', gameName: 'F_PreBoss01' },
+          { id: 'boss', gameName: 'F_Boss01' },
+        ],
+        10,
+        10,
+      ),
+    ).toEqual([
+      [10, 11],
+      [11, 12],
+      [12, 13],
+    ]);
+  });
+
+  it('keeps the run-start cache at the first room and leaves a NextRoomSet room at 1', () => {
+    expect(
+      foldDepths([
+        { id: 'opening', gameName: 'N_Opening01', nextRoomSet: true },
+        { id: 'prehub', gameName: 'N_PreHub01' },
+      ]),
+    ).toEqual([
+      [0, 1],
+      [1, 2],
+    ]);
+  });
+
+  it('enters a later NextRoomSet room at 1 and applies its RunOverrides value', () => {
+    expect(
+      foldDepths(
+        [
+          { id: 'boss', gameName: 'F_Boss01' },
+          { id: 'postboss', gameName: 'F_PostBoss01', nextRoomSet: true },
+          { id: 'opening', gameName: 'F_Opening02', nextRoomSet: true, enteredBiomeDepthCache: 0 },
+          { id: 'combat', gameName: 'F_Combat02' },
+        ],
+        12,
+        12,
+      ),
+    ).toEqual([
+      [12, 13],
+      [1, 1],
+      [0, 1],
+      [1, 2],
+    ]);
+  });
+
+  it('records a restored room when it is left again, not when it is restored', () => {
+    const main = createOccurrenceAddress(biome, createOccurrenceId('depth-main'));
+    const events = numbered([
+      {
+        kind: 'biomeStarted',
+        origin: biome,
+        counters: {
+          biomeDepthCache: 3,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 3,
+        },
+      },
+      ...depthRoomEvents({ id: 'depth-main', gameName: 'N_Combat01' }),
+      ...depthRoomEvents({ id: 'depth-side', gameName: 'N_Sub01' }),
+      {
+        kind: 'roomRestored',
+        origin: main,
+        after: createLocalVisitSlotAddress(biome, main.occurrenceId, 'side', 'slot'),
+        restoreKind: 'parent',
+      },
+      { kind: 'roomDeparted', origin: main, leavesRestoredRoom: true },
+    ]);
+    const history = foldBiomeHistoryPrefixEvents(events);
+    const counters = (sequence: number) => history.viewsBySequence[sequence]!.ledgers.counters;
+    const restored = events.at(-2)!.sequence;
+    expect(counters(restored)).toMatchObject({ biomeDepthCache: 5, roomHistoryOrdinal: 5 });
+    expect(counters(restored + 1)).toMatchObject({ biomeDepthCache: 6, roomHistoryOrdinal: 6 });
+
+    const unmarked = numbered([...events.slice(0, -1), { kind: 'roomDeparted', origin: main }]);
+    expect(() => foldBiomeHistoryPrefixEvents(unmarked)).toThrow(HistoryFoldContractError);
   });
 });

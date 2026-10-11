@@ -18,8 +18,9 @@ function historyEvents(biome: ProjectBiomeEvaluation | undefined): readonly Hist
 }
 
 /**
- * One stub record per room-history ordinal advance through `throughSequence`,
- * in native order, each carrying its room's declared `NextRoomSet`.
+ * One stub record per room-history record through `throughSequence` (a room's
+ * commit or a restored room's departure), in native order, each carrying its
+ * room's declared `NextRoomSet`.
  */
 function stubRoomHistory(
   catalog: Catalog,
@@ -34,19 +35,17 @@ function stubRoomHistory(
       names.set(semanticAddressKey(event.origin), event.gameName);
       continue;
     }
-    const delta =
-      event.kind === 'roomCountersAdvanced' || event.kind === 'roomRestored'
-        ? event.roomHistoryOrdinalDelta
-        : 0;
-    if (delta === 0) continue;
+    const recorded =
+      event.kind === 'roomCountersAdvanced' ||
+      (event.kind === 'roomDeparted' && event.leavesRestoredRoom === true);
+    if (!recorded) continue;
     const key = semanticAddressKey(event.origin);
     const gameName = names.get(key);
     if (gameName === undefined) throw new Error(`${key} advances room history before creation`);
     const room = catalog.rooms.byKey[gameName];
     if (room === undefined) throw new Error(`${gameName} has no room declaration`);
     const nextRoomSet = room.nextRoomSet;
-    for (let count = 0; count < delta; count += 1)
-      records.push(Object.freeze({ gameName, nextRoomSet }));
+    records.push(Object.freeze({ gameName, nextRoomSet }));
   }
   return Object.freeze(records);
 }

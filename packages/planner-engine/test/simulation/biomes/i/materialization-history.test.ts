@@ -483,7 +483,7 @@ describe('canonical I Clockwork materialization and history', () => {
       'roomDeparted',
     ]);
     expect(history.biomeCompletion.ledgers.counters).toMatchObject({
-      biomeDepthCache: 12,
+      biomeDepthCache: 13,
       biomeEncounterDepth: 10,
       routeEncounterDepth: 29,
       roomHistoryOrdinal: 42,

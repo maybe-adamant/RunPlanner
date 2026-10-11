@@ -56,7 +56,7 @@ resolves only to the required `H_PreBoss01` normal-door takeover. An unresolved
 Fields cage outcome is ordinary setup for that envelope and does not remove the
 supported Preboss resolution; takeover discards that ordinary-only setup.
 Additional exits do not satisfy this room-history requirement. A selected Chaos
-gate still advances its declared depth counters and Fields depth effects, while
+gate still adds its room-history record and Fields depth effects, while
 the abandoned normal batch does not consume one of H's four qualifying
 progression steps. Returning from Chaos therefore exposes another Fields batch
 until the fourth qualifying H occurrence has actually been entered.
@@ -195,8 +195,8 @@ a second owner or chronology.
 
 ### Depth, force, and completion facts
 
-H keeps `biomeDepthCache`, `biomeEncounterDepth`, and room-history effects as
-separate declared lifecycle axes. The lower Fields outcomes are possible at
+H keeps `biomeEncounterDepth` separate from room history and the biome depth
+cache that follows it. The lower Fields outcomes are possible at
 the early optional depths; the maximum outcome support is required at the
 later declared depths. Combat and miniboss force windows, the bridge's fixed
 place after the ordinary Fields body, and the Preboss pressure are catalog

@@ -177,7 +177,7 @@ const lifecycleEffectRegistry = Object.freeze({
         : {}),
       ...(context.input.counterEffects.enteredBiomeDepthCache === undefined
         ? {}
-        : { biomeDepthCache: context.input.counterEffects.enteredBiomeDepthCache }),
+        : { enteredBiomeDepthCache: context.input.counterEffects.enteredBiomeDepthCache }),
     }),
   recordRequiredObjectSpawns: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
@@ -312,8 +312,6 @@ const lifecycleEffectRegistry = Object.freeze({
   advanceRoomCounters: (context, state) =>
     appendEvent(state, context, {
       kind: 'roomCountersAdvanced',
-      biomeDepthCacheDelta: context.input.counterEffects.biomeDepthCache,
-      roomHistoryOrdinalDelta: context.input.counterEffects.roomHistoryOrdinal,
       ...(context.input.counterEffects.resetsBiomeDepthCache === true
         ? { biomeDepthCacheReset: true as const }
         : {}),
