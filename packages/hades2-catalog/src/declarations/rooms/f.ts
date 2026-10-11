@@ -66,7 +66,8 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         encounterDefinitionKey: 'OpeningGeneratedF',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    // RunOverrides BiomeDepthCache = 0, applied at StartRoom (RoomDataF.lua:406-410).
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1, enteredBiomeDepthCache: 0 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -101,7 +102,8 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         encounterDefinitionKey: 'OpeningGeneratedF',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    // RunOverrides BiomeDepthCache = 0, applied at StartRoom (RoomDataF.lua:406-410).
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1, enteredBiomeDepthCache: 0 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -136,7 +138,8 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         encounterDefinitionKey: 'OpeningGeneratedF',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    // RunOverrides BiomeDepthCache = 0, applied at StartRoom (RoomDataF.lua:406-410).
+    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1, enteredBiomeDepthCache: 0 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {

@@ -35,15 +35,13 @@ const baseline = {
   },
   Dream: {
     branches: [1, 1, 1],
-    // F carries nine batches: a tenth would be saturated to RunProgress and its
-    // draws would empty the Run bag F_PreBoss01's forced reward needs, so the
-    // prefix stops one room — and its three run-state snapshots — short.
-    snapshots: [27, 36, 25],
-    // The Dream F prefix carries a Boon batch in the Meta bag and the N prehub
-    // holds a Hammer rather than a Pom, so one trait offer sits in N, not F.
-    offers: [3, 2, 5],
-    owners: 10,
-    contexts: 10,
+    // F carries ten batches, reaching F_PreBoss01's biome depth 10.
+    snapshots: [27, 39, 25],
+    // The Dream F prefix carries a Boon batch in the Meta bag and a Zeus Boon in
+    // its last batch; the N prehub holds a Hammer rather than a Pom.
+    offers: [3, 3, 5],
+    owners: 11,
+    contexts: 11,
   },
 };
 

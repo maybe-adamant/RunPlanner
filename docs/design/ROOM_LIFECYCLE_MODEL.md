@@ -1341,13 +1341,21 @@ start and every later biome begin at `biomeDepthCache = 1` and
 room starts, after the room and its encounter were created; no such encounter
 reads encounter depth (Intros use non-combat or fixed encounters, and a Dream
 F or N opening forces `OpeningEmpty`), so the planner seeds it at biome entry.
-In both cases, a supported Opening or Intro with a one-step room-history contribution generates
+A room whose declaration has `NextRoomSet` (F and N Openings and the
+Postbosses) follows native `GetBiomeDepth`, which is 1 while the current room
+has one: its map load sets the cache to 1 after the run's first room, and
+leaving it leaves the cache at 1 whatever it was. F Openings' `RunOverrides`
+then set the cache to 0 at `StartRoom`. A Dream N Opening is therefore created,
+entered and left at 1; a Dream F Opening is created at 1, entered and generates
+its doors at 0, and is left at 1. Either way the rooms after a Dream Opening
+share the ordinary run's depths. An Intro has no `NextRoomSet`: it generates
 its outgoing target from the initial source depth and advances the cache once
 at commit. Candidate evaluation consumes the recorded source view directly and
 must not add that contribution speculatively.
 
 The semantic `enterRoom` event may record that an occurrence was entered, while
-game-shaped room-history caches remain commit-time effects. Consumers must name
+game-shaped room-history caches remain commit-time effects apart from the
+entry-time `NextRoomSet` and `RunOverrides` values above. Consumers must name
 the exact ledger they require rather than treating "appearance" and "committed
 room count" as the same timestamp.
 

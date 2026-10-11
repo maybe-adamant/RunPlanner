@@ -53,7 +53,7 @@ it('publishes the saved Dream mixed-handoff route through the strict execution c
       target: nTarget,
       gameName: 'N_PreHub01',
     }),
-  ).toMatchObject({ result: { pressure: { biomeDepthCache: 2, selectedPossible: true } } });
+  ).toMatchObject({ result: { pressure: { biomeDepthCache: 1, selectedPossible: true } } });
   const plan = compileExecutionPlan({ product: assembleExecutionProduct({ assembly, catalog }) });
   expect(plan.routeKey).toBe('Dream');
   expect(plan.extent.biomeKeys).toEqual(['Q', 'F', 'N']);

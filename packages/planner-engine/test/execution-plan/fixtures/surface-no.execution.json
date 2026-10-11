@@ -2479,7 +2479,14 @@
           "frame": 28,
           "owner": "[\"roomRunStateCheckpoint\",\"Surface\",\"N\",\"surface-n-preboss:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 8,
+              "routeEncounterDepth": 8,
+              "roomHistoryOrdinal": 25
+            }
+          }
         },
         "beforeRoomExit": {
           "frame": 29,
@@ -2487,7 +2494,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 25,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 26
@@ -3687,7 +3694,14 @@
           "frame": 44,
           "owner": "[\"roomRunStateCheckpoint\",\"Surface\",\"O\",\"surface-o-preboss:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 6,
+              "routeEncounterDepth": 13,
+              "roomHistoryOrdinal": 35
+            }
+          }
         },
         "beforeRoomExit": {
           "frame": 45,
@@ -3695,7 +3709,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 10,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 6,
               "routeEncounterDepth": 13,
               "roomHistoryOrdinal": 36
@@ -3826,5 +3840,5 @@
       }
     }
   ],
-  "planFingerprint": "0c66cf0a"
+  "planFingerprint": "0eaaee59"
 }

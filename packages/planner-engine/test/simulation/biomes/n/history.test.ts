@@ -4,6 +4,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 
 function fixture() {
   const project = loadSurfaceNProject();
@@ -176,5 +177,28 @@ describe('N Hub lifecycle composition and history', () => {
     ).toEqual(['biomeDepthCache', 'biomeEncounterDepth']);
     expect(Object.isFrozen(history)).toBe(true);
     expect(Object.isFrozen(history.events)).toBe(true);
+  });
+});
+
+describe('N biome depth after a Dream entry', () => {
+  it('reads depth 1 at the NextRoomSet opening and matches an ordinary run afterwards', () => {
+    const biome = simulateProject(catalog, loadDreamMixedHandoffCheckpoint()).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'N',
+    );
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error('Dream N did not complete validly');
+    const depths = biome.history.rooms
+      .slice(0, 3)
+      .map((room) => [
+        room.preparation.ledgers.counters.biomeDepthCache,
+        room.entry?.ledgers.counters.biomeDepthCache,
+        room.exit?.ledgers.counters.biomeDepthCache,
+      ]);
+    // Opening, PreHub, Hub: prepared, entered and left.
+    expect(depths).toEqual([
+      [1, 1, 1],
+      [1, 1, 2],
+      [2, 2, 3],
+    ]);
   });
 });
