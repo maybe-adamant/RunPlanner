@@ -848,6 +848,13 @@ export type AdditionalExitDeclaration =
 export interface RoomCounterEffects {
   readonly biomeDepthCache: number;
   readonly roomHistoryOrdinal: number;
+  /** Native StartRoom `RunOverrides.BiomeDepthCache`, applied on entry. */
+  readonly enteredBiomeDepthCache?: number;
+  /**
+   * Derived from `nextRoomSet`: native GetBiomeDepth is 1 while the current room
+   * has NextRoomSet, so leaving it leaves the cache at 1 whatever it was.
+   */
+  readonly resetsBiomeDepthCache?: true;
 }
 
 export interface RoomCaps {

@@ -172,6 +172,12 @@ const lifecycleEffectRegistry = Object.freeze({
       kind: 'roomEntered',
       surfaceShopPresent: context.input.surfaceShopPresent === true,
       roomShopPresent: context.input.roomShopPresent === true,
+      ...(context.input.counterEffects.resetsBiomeDepthCache === true
+        ? { biomeDepthCacheReset: true as const }
+        : {}),
+      ...(context.input.counterEffects.enteredBiomeDepthCache === undefined
+        ? {}
+        : { biomeDepthCache: context.input.counterEffects.enteredBiomeDepthCache }),
     }),
   recordRequiredObjectSpawns: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
@@ -308,6 +314,9 @@ const lifecycleEffectRegistry = Object.freeze({
       kind: 'roomCountersAdvanced',
       biomeDepthCacheDelta: context.input.counterEffects.biomeDepthCache,
       roomHistoryOrdinalDelta: context.input.counterEffects.roomHistoryOrdinal,
+      ...(context.input.counterEffects.resetsBiomeDepthCache === true
+        ? { biomeDepthCacheReset: true as const }
+        : {}),
     }),
   recordEnteredRewardStore: (context, state) =>
     context.input.enteredRewardStoreKey === undefined

@@ -53,6 +53,19 @@ describe('room common normalization', () => {
       'O_PostBoss01',
       'P_PostBoss01',
     ]);
+    // GetBiomeDepth is 1 while the current room has NextRoomSet; F's RunOverrides set 0 at StartRoom.
+    expect(rooms.filter((room) => room.counters.resetsBiomeDepthCache === true)).toEqual(
+      rooms.filter((room) => room.nextRoomSet),
+    );
+    expect(
+      rooms
+        .filter((room) => room.counters.enteredBiomeDepthCache !== undefined)
+        .map((room) => [room.gameName, room.counters.enteredBiomeDepthCache]),
+    ).toEqual([
+      ['F_Opening01', 0],
+      ['F_Opening02', 0],
+      ['F_Opening03', 0],
+    ]);
   });
 
   it('derives ordinary offer surfaces from each room incoming declaration', () => {

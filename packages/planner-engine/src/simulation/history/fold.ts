@@ -497,6 +497,11 @@ function foldHistoryEventStream(
           roomShopPresent: event.roomShopPresent === true,
         });
         ledgers.roomAppearances.push(entry);
+        // UpdateRunHistoryCache keeps the cache while RoomHistory is empty.
+        if (event.biomeDepthCacheReset === true && ledgers.counters.roomHistoryOrdinal > 0)
+          ledgers.counters.biomeDepthCache = 1;
+        if (event.biomeDepthCache !== undefined)
+          ledgers.counters.biomeDepthCache = event.biomeDepthCache;
         requireRoomViews(viewsByOrigin, event).entry = stateView(
           event.sequence,
           ledgers,
@@ -730,7 +735,10 @@ function foldHistoryEventStream(
         );
         break;
       case 'roomCountersAdvanced':
-        ledgers.counters.biomeDepthCache += event.biomeDepthCacheDelta;
+        ledgers.counters.biomeDepthCache =
+          event.biomeDepthCacheReset === true
+            ? 1
+            : ledgers.counters.biomeDepthCache + event.biomeDepthCacheDelta;
         ledgers.counters.roomHistoryOrdinal += event.roomHistoryOrdinalDelta;
         break;
       case 'enteredRewardStoreRecorded': {

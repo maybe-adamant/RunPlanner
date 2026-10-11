@@ -11,6 +11,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  simulateProject,
   composeBiomeHistory,
   composeBiomeHistoryPrefix,
   evaluateBiomeCompleteness,
@@ -19,6 +20,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { createCompleteFTakeoverProject, fBiome } from '../../support/f-takeover-project';
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 
 function fPlan(project: ProjectDocument) {
   const plan = project.route.biomes.find((biome) => biome.biomeKey === 'F');
@@ -176,5 +178,27 @@ describe('F takeover history', () => {
     expect(snapshot).toEqual(before);
     expect(Object.isFrozen(first)).toBe(true);
     expect(Object.isFrozen(first.events)).toBe(true);
+  });
+});
+
+describe('F biome depth after a Dream entry', () => {
+  it('creates the opening at depth 1, enters it at its RunOverrides 0 and leaves it at 1', () => {
+    const biome = simulateProject(catalog, loadDreamMixedHandoffCheckpoint()).route?.biomes.find(
+      (candidate) => candidate.biomeKey === 'F',
+    );
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error('Dream F did not complete validly');
+    const depths = biome.history.rooms
+      .slice(0, 2)
+      .map((room) => [
+        room.preparation.ledgers.counters.biomeDepthCache,
+        room.entry?.ledgers.counters.biomeDepthCache,
+        room.preOutgoing?.ledgers.counters.biomeDepthCache,
+        room.exit?.ledgers.counters.biomeDepthCache,
+      ]);
+    expect(depths).toEqual([
+      [1, 0, 0, 1],
+      [1, 1, 1, 2],
+    ]);
   });
 });

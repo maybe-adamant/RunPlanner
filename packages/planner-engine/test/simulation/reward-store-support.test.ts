@@ -185,7 +185,7 @@ describe('run-wide entered-store ledger', () => {
     // so the store sequence is forced and only a same-store permutation is a
     // legal itinerary.
     const base = loadDreamMixedHandoffCheckpoint();
-    const reordered = dreamMixedHandoffProject([0, 1, 3, 2, 4, 5, 6, 7, 8]);
+    const reordered = dreamMixedHandoffProject([0, 1, 3, 2, 4, 5, 6, 7, 8, 9]);
     const sorted = (entries: readonly string[]): readonly string[] => [...entries].sort();
 
     // Both itineraries are legal routes, so the comparison is between two runs

@@ -269,7 +269,7 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
     rewardType: 'Boon',
     payload: { kind: 'BoonSource', source: `${god}Upgrade` },
   });
-  const authoredBatches: readonly [string, readonly [string, ResolvedRewardOffer][]][] = [
+  const authoredBatches: readonly [string, readonly [string, ResolvedRewardOffer | null][]][] = [
     ['MetaProgress', [['F_Combat02', { rewardType: 'MetaCurrencyBigDrop' }]]],
     // The run-wide ledger is saturated high entering this batch (6 entered /
     // 1 meta, selection 1.80), so it is a Meta batch and carries Meta-bag drops
@@ -305,11 +305,13 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
       ],
     ],
     ['MetaProgress', [['F_Combat06', { rewardType: 'MetaCardPointsCommonBigDrop' }]]],
+    // F_Shop01 is forced onto the first door at its biome-depth deadline 6; the
+    // route continues through the second.
     [
       'RunProgress',
       [
+        ['F_Shop01', null],
         ['F_Combat11', { rewardType: 'MaxManaDrop' }],
-        ['F_Combat11', { rewardType: 'StackUpgrade' }],
       ],
     ],
     [
@@ -319,18 +321,21 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
         ['F_Combat12', { rewardType: 'SpellDrop' }],
       ],
     ],
-    // The prefix ends here. One more batch would be saturated to RunProgress
-    // (14 entered / 5 meta, selection -0.106), and its two offer draws would
-    // empty the Run bag that F_PreBoss01's forced-RunProgress reward must still
-    // pay from — both of that Preboss's declaration-owned peers draw, so the
-    // selected exit does not relieve it. No one-exit room that would draw once
-    // is eligible at this depth (eligibility offers F_Combat05/13/14/15/16/17/
-    // 18/20, all two-exit).
     [
       'MetaProgress',
       [
         ['F_Combat14', { rewardType: 'MetaCardPointsCommonBigDrop' }],
         ['F_Combat14', { rewardType: 'GiftDrop' }],
+      ],
+    ],
+    // F_PreBoss01 needs biome depth 10. This batch is saturated to RunProgress
+    // (14 entered / 5 meta, selection -0.106); its draws leave the Run bag's
+    // MaxHealthDrop for the Preboss's free door.
+    [
+      'RunProgress',
+      [
+        ['F_Combat13', boon('Zeus')],
+        ['F_Combat15', { rewardType: 'RoomMoneyDrop' }],
       ],
     ],
   ];
@@ -360,20 +365,25 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
         occurrenceId,
         gameName,
       });
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(f, occurrenceId),
-        value,
-      });
+      if (value !== null)
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceIncomingReward',
+          reward: createIncomingRewardAddress(f, occurrenceId),
+          value,
+        });
     }
+    const selected = targets[0]![0] === 'F_Shop01' ? 2 : 1;
     if (targets.length > 1) {
       project = applyProjectCommand(project, catalog, {
         kind: 'SetExitSelection',
         selection: createExitSelectionAddress(f, source),
-        value: { kind: 'normal', exitKey: 'exit1' },
+        value: { kind: 'normal', exitKey: `exit${selected}` },
       });
     }
-    source = { kind: 'occurrence', occurrenceId: createOccurrenceId(`dream-f-${index + 1}-1`) };
+    source = {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId(`dream-f-${index + 1}-${selected}`),
+    };
   }
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTakeoverBatch',

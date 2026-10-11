@@ -2308,7 +2308,14 @@
           "frame": 26,
           "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-preboss-shop:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 12,
+              "routeEncounterDepth": 12,
+              "roomHistoryOrdinal": 13
+            }
+          }
         },
         "beforeRoomExit": {
           "frame": 27,
@@ -2316,7 +2323,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 13,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 12,
               "routeEncounterDepth": 12,
               "roomHistoryOrdinal": 14
@@ -2326,5 +2333,5 @@
       }
     }
   ],
-  "planFingerprint": "ece51c8d"
+  "planFingerprint": "51f2be96"
 }

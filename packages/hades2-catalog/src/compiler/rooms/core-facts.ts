@@ -322,6 +322,15 @@ export function normalizeRoomCounters(room: RawRoomDeclaration, path: string): R
         room.counters.roomHistoryOrdinal,
         `${path}.counters.roomHistoryOrdinal`,
       ),
+      ...(room.counters.enteredBiomeDepthCache === undefined
+        ? {}
+        : {
+            enteredBiomeDepthCache: requireNonNegativeInteger(
+              room.counters.enteredBiomeDepthCache,
+              `${path}.counters.enteredBiomeDepthCache`,
+            ),
+          }),
+      ...(room.nextRoomSet === true ? { resetsBiomeDepthCache: true as const } : {}),
     }),
     caps: normalizeRoomCaps(room.caps, `${path}.caps`),
   });

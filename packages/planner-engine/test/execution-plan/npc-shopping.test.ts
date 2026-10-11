@@ -69,7 +69,7 @@ describe('published NPC shopping protection', () => {
       kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
         createBiomeAddress('Dream', 'F'),
-        { kind: 'occurrence', occurrenceId: createOccurrenceId('dream-f-3-1') },
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('dream-f-6-1') },
         'Encounter',
       ),
       encounterKey: 'NemesisCombatF',

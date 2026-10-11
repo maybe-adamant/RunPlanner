@@ -309,7 +309,7 @@ describe('N B1 entry and terminal baseline', () => {
         hubKey: 'hub',
         gameName: 'N_Hub',
         eligibility: {
-          kind: 'any',
+          kind: 'counterRange',
           satisfied: true,
         },
         force: 'required',

@@ -2419,7 +2419,14 @@
           "frame": 26,
           "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-preboss-shop:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 12,
+              "routeEncounterDepth": 12,
+              "roomHistoryOrdinal": 13
+            }
+          }
         },
         "beforeRoomExit": {
           "frame": 27,
@@ -2427,7 +2434,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 13,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 12,
               "routeEncounterDepth": 12,
               "roomHistoryOrdinal": 14
@@ -3847,7 +3854,14 @@
           "frame": 48,
           "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"G\",\"golden-g-preboss-shop:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 6,
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 24
+            }
+          }
         },
         "beforeRoomExit": {
           "frame": 49,
@@ -3855,7 +3869,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 11,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 6,
               "routeEncounterDepth": 17,
               "roomHistoryOrdinal": 25
@@ -3865,5 +3879,5 @@
       }
     }
   ],
-  "planFingerprint": "230faac3"
+  "planFingerprint": "4c6e1404"
 }

@@ -70,9 +70,10 @@
     "dream-f-4-1",
     "dream-f-5-1",
     "dream-f-6-1",
-    "dream-f-7-1",
+    "dream-f-7-2",
     "dream-f-8-1",
     "dream-f-9-1",
+    "dream-f-10-1",
     "dream-f-free",
     "dream-f-free:boss",
     "dream-f-free:postboss",
@@ -244,7 +245,7 @@
         }
       },
       {
-        "occurrenceId": "dream-f-7-1",
+        "occurrenceId": "dream-f-7-2",
         "pointDispositions": {
           "Pickaxe": "native",
           "Exorcism": "native",
@@ -263,6 +264,15 @@
       },
       {
         "occurrenceId": "dream-f-9-1",
+        "pointDispositions": {
+          "Pickaxe": "native",
+          "Exorcism": "native",
+          "Shovel": "native",
+          "Fishing": "native"
+        }
+      },
+      {
+        "occurrenceId": "dream-f-10-1",
         "pointDispositions": {
           "Pickaxe": "native",
           "Exorcism": "native",
@@ -1417,7 +1427,14 @@
           "frame": 18,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"Q\",\"dream-q-preboss:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 7,
+              "routeEncounterDepth": 7,
+              "roomHistoryOrdinal": 9
+            }
+          }
         },
         "beforeRoomExit": {
           "frame": 19,
@@ -1425,7 +1442,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 10,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 7,
               "routeEncounterDepth": 7,
               "roomHistoryOrdinal": 10
@@ -1474,7 +1491,7 @@
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 1,
+              "biomeDepthCache": 0,
               "biomeEncounterDepth": 1,
               "routeEncounterDepth": 7,
               "roomHistoryOrdinal": 10
@@ -1487,7 +1504,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 2,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 1,
               "routeEncounterDepth": 7,
               "roomHistoryOrdinal": 11
@@ -1615,7 +1632,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 3,
+              "biomeDepthCache": 2,
               "biomeEncounterDepth": 2,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 12
@@ -1750,7 +1767,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 4,
+              "biomeDepthCache": 3,
               "biomeEncounterDepth": 3,
               "routeEncounterDepth": 9,
               "roomHistoryOrdinal": 13
@@ -1896,7 +1913,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 5,
+              "biomeDepthCache": 4,
               "biomeEncounterDepth": 4,
               "routeEncounterDepth": 10,
               "roomHistoryOrdinal": 14
@@ -2033,7 +2050,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 6,
+              "biomeDepthCache": 5,
               "biomeEncounterDepth": 5,
               "routeEncounterDepth": 11,
               "roomHistoryOrdinal": 15
@@ -2194,7 +2211,7 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 7,
+              "biomeDepthCache": 6,
               "biomeEncounterDepth": 6,
               "routeEncounterDepth": 12,
               "roomHistoryOrdinal": 16
@@ -2319,10 +2336,10 @@
           {
             "exitKey": "exit1",
             "index": 1,
-            "room": { "id": "dream-f-7-1", "biomeKey": "F", "gameName": "F_Combat11" },
+            "room": { "id": "dream-f-7-1", "biomeKey": "F", "gameName": "F_Shop01" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "MaxManaDrop",
+              "rewardType": "Shop",
               "producerLifecycleKey": "RoomReward",
               "resolvedStoreKey": "RunProgress"
             }
@@ -2333,7 +2350,7 @@
             "room": { "id": "dream-f-7-2", "biomeKey": "F", "gameName": "F_Combat11" },
             "zagreusContractPresent": false,
             "reward": {
-              "rewardType": "StackUpgrade",
+              "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
               "resolvedStoreKey": "RunProgress"
             }
@@ -2355,13 +2372,13 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 8,
+              "biomeDepthCache": 7,
               "biomeEncounterDepth": 7,
               "routeEncounterDepth": 13,
               "roomHistoryOrdinal": 17
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -2379,8 +2396,8 @@
       }
     },
     {
-      "id": "dream-f-7-1",
-      "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-7-1\"]",
+      "id": "dream-f-7-2",
+      "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-7-2\"]",
       "biomeKey": "F",
       "gameName": "F_Combat11",
       "kind": "SingleEncounter",
@@ -2399,8 +2416,8 @@
         "transactions": [
           {
             "kind": "acquisition",
-            "owner": "[\"acquisitionRole\",\"Dream\",\"F\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-7-1\\\"]\",\"self\"]",
-            "sourceOwner": "[\"incomingReward\",\"Dream\",\"F\",\"dream-f-7-1\"]",
+            "owner": "[\"acquisitionRole\",\"Dream\",\"F\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-7-2\\\"]\",\"self\"]",
+            "sourceOwner": "[\"incomingReward\",\"Dream\",\"F\",\"dream-f-7-2\"]",
             "reward": {
               "rewardType": "MaxManaDrop",
               "producerLifecycleKey": "RoomReward",
@@ -2415,8 +2432,8 @@
                 "kind": "consumable",
                 "gameName": "MaxManaDrop",
                 "settlement": {
-                  "site": "[\"acquisitionSite\",\"Dream\",\"F\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-7-1\\\"]\",\"roomRewardPickup\"]",
-                  "entry": "[\"acquisitionEntry\",\"Dream\",\"F\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"dream-f-7-1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
+                  "site": "[\"acquisitionSite\",\"Dream\",\"F\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-7-2\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"F\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"dream-f-7-2\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"self\"]"
                 }
               }
             ],
@@ -2437,11 +2454,11 @@
               "resolvedStoreKey": "RunProgress"
             }
           },
-          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"F\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-7-1\\\"]\",\"self\"]"
+          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"F\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-7-2\\\"]\",\"self\"]"
         }
       ],
       "doors": {
-        "owner": "[\"exitDecision\",\"Dream\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-f-7-1\"}]",
+        "owner": "[\"exitDecision\",\"Dream\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-f-7-2\"}]",
         "kind": "batch",
         "targets": [
           {
@@ -2473,23 +2490,23 @@
       "diagnostics": {
         "roomEntered": {
           "frame": 34,
-          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-7-1\",\"roomEntered\"]",
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-7-2\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {}
         },
         "beforeRoomExit": {
           "frame": 35,
-          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-7-1\",\"beforeRoomExit\"]",
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-7-2\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 9,
+              "biomeDepthCache": 8,
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 14,
               "roomHistoryOrdinal": 18
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 7 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 8 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -2623,13 +2640,13 @@
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 10,
+              "biomeDepthCache": 9,
               "biomeEncounterDepth": 9,
               "routeEncounterDepth": 15,
               "roomHistoryOrdinal": 19
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 7 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 8 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -2734,6 +2751,159 @@
           {
             "exitKey": "exit1",
             "index": 1,
+            "room": { "id": "dream-f-10-1", "biomeKey": "F", "gameName": "F_Combat13" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ZeusUpgrade"
+            }
+          },
+          {
+            "exitKey": "exit2",
+            "index": 2,
+            "room": { "id": "dream-f-10-2", "biomeKey": "F", "gameName": "F_Combat15" },
+            "zagreusContractPresent": false,
+            "reward": {
+              "rewardType": "RoomMoneyDrop",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress"
+            }
+          }
+        ],
+        "resolvedSharedRewardStoreKey": "RunProgress"
+      },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "diagnostics": {
+        "roomEntered": {
+          "frame": 38,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-9-1\",\"roomEntered\"]",
+          "checkpoint": "roomEntered",
+          "replace": {}
+        },
+        "beforeRoomExit": {
+          "frame": 39,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-9-1\",\"beforeRoomExit\"]",
+          "checkpoint": "beforeRoomExit",
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 10,
+              "biomeEncounterDepth": 10,
+              "routeEncounterDepth": 16,
+              "roomHistoryOrdinal": 20
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "dream-f-10-1",
+      "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-10-1\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat13",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "Boon",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress",
+          "source": "ZeusUpgrade"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": {
+        "transactions": [
+          {
+            "kind": "acquisition",
+            "owner": "[\"acquisitionRole\",\"Dream\",\"F\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-10-1\\\"]\",\"source\"]",
+            "sourceOwner": "[\"incomingReward\",\"Dream\",\"F\",\"dream-f-10-1\"]",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ZeusUpgrade"
+            },
+            "producerLifecycleKey": "RoomReward",
+            "roles": [
+              {
+                "role": "source",
+                "disposition": "normal",
+                "lifecyclePoint": "roomRewardPickup",
+                "kind": "loot",
+                "gameName": "ZeusUpgrade",
+                "settlement": {
+                  "site": "[\"acquisitionSite\",\"Dream\",\"F\",\"[\\\"occurrence\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-10-1\\\"]\",\"roomRewardPickup\"]",
+                  "entry": "[\"acquisitionEntry\",\"Dream\",\"F\",\"[\\\"acquisitionSite\\\",\\\"Dream\\\",\\\"F\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Dream\\\\\\\",\\\\\\\"F\\\\\\\",\\\\\\\"dream-f-10-1\\\\\\\"]\\\",\\\"roomRewardPickup\\\"]\",\"source\"]"
+                },
+                "traitOffer": {
+                  "kind": "traits",
+                  "giver": "Zeus",
+                  "options": [
+                    {
+                      "key": "ZeusWeaponBoon",
+                      "rarity": "Heroic",
+                      "effectiveLevel": 3,
+                      "replacement": {
+                        "slot": "Melee",
+                        "replacedTraitKey": "HeraWeaponBoon",
+                        "oldRarity": "Epic",
+                        "newTraitKey": "ZeusWeaponBoon",
+                        "requiredRarity": "Heroic"
+                      }
+                    },
+                    { "key": "ZeusSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
+                    { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 }
+                  ],
+                  "selected": "option1"
+                }
+              }
+            ],
+            "window": { "kind": "standard", "phase": "afterCombat" }
+          }
+        ],
+        "dependencies": [],
+        "obligations": []
+      },
+      "roomGuide": [
+        {
+          "key": "[\"interactIncomingReward\",\"roomRewardPickup\",\"source\"]",
+          "description": {
+            "kind": "interactIncomingReward",
+            "reward": {
+              "rewardType": "Boon",
+              "producerLifecycleKey": "RoomReward",
+              "resolvedStoreKey": "RunProgress",
+              "source": "ZeusUpgrade"
+            }
+          },
+          "transactionOwner": "[\"acquisitionRole\",\"Dream\",\"F\",\"[\\\"incomingReward\\\",\\\"Dream\\\",\\\"F\\\",\\\"dream-f-10-1\\\"]\",\"source\"]"
+        }
+      ],
+      "doors": {
+        "owner": "[\"exitDecision\",\"Dream\",\"F\",{\"kind\":\"occurrence\",\"occurrenceId\":\"dream-f-10-1\"}]",
+        "kind": "batch",
+        "targets": [
+          {
+            "exitKey": "exit1",
+            "index": 1,
             "room": { "id": "dream-f-shop", "biomeKey": "F", "gameName": "F_PreBoss01" },
             "zagreusContractPresent": false,
             "reward": {
@@ -2756,27 +2926,29 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+      },
       "diagnostics": {
         "roomEntered": {
-          "frame": 38,
-          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-9-1\",\"roomEntered\"]",
+          "frame": 40,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-10-1\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {}
         },
         "beforeRoomExit": {
-          "frame": 39,
-          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-9-1\",\"beforeRoomExit\"]",
+          "frame": 41,
+          "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-10-1\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
               "biomeDepthCache": 11,
-              "biomeEncounterDepth": 10,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 20
+              "biomeEncounterDepth": 11,
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 21
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 5 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -2788,7 +2960,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 2 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
-            ]
+            ],
+            "godPool": {
+              "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HeraUpgrade", "ZeusUpgrade"],
+              "effectiveSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HeraUpgrade", "ZeusUpgrade"],
+              "capNarrowed": true
+            },
+            "traits": {
+              "equipped": [
+                { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
+                { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 }
+              ],
+              "slots": [
+                { "slot": "Melee", "traitKey": "ZeusWeaponBoon" },
+                { "slot": "Secondary" },
+                { "slot": "Ranged" },
+                { "slot": "Rush" },
+                { "slot": "Mana" },
+                { "slot": "Spell" }
+              ],
+              "elements": { "Aether": 0, "Earth": 1, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 1, "Heroic": 1 },
+              "upgradableCount": 1,
+              "bannedTraitKeys": []
+            }
           }
         }
       }
@@ -2864,21 +3060,21 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 40,
+          "frame": 42,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-free\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {}
         },
         "beforeRoomExit": {
-          "frame": 41,
+          "frame": 43,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-free\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
               "biomeDepthCache": 11,
-              "biomeEncounterDepth": 10,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 21
+              "biomeEncounterDepth": 11,
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 22
             }
           }
         }
@@ -2914,21 +3110,21 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 42,
+          "frame": 44,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-free:boss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {}
         },
         "beforeRoomExit": {
-          "frame": 43,
+          "frame": 45,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-free:boss\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
               "biomeDepthCache": 12,
-              "biomeEncounterDepth": 10,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 22
+              "biomeEncounterDepth": 11,
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 23
             }
           }
         }
@@ -2982,21 +3178,28 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 44,
+          "frame": 46,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-free:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 11,
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 23
+            }
+          }
         },
         "beforeRoomExit": {
-          "frame": 45,
+          "frame": 47,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"F\",\"dream-f-free:postboss\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 13,
-              "biomeEncounterDepth": 10,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 23
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 11,
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 24
             }
           }
         }
@@ -3037,31 +3240,31 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 46,
+          "frame": 48,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"N:start\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
               "biomeDepthCache": 1,
               "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 23
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 24
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 47,
+          "frame": 49,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"N:start\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 2,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 24
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 25
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 5 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -3208,8 +3411,8 @@
               "traits": {
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                  { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" }
                 ]
               }
@@ -3220,8 +3423,8 @@
               "traits": {
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                  { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesSpecialBoon", "rarity": "Common" }
                 ]
@@ -3233,8 +3436,8 @@
               "traits": {
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                  { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
                   { "traitKey": "HeraSpecialBoon", "rarity": "Common", "level": 1 }
@@ -3247,8 +3450,8 @@
               "traits": {
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                  { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
                   { "traitKey": "HeraSpecialBoon", "rarity": "Common", "level": 1 }
@@ -3262,10 +3465,10 @@
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
-                  { "traitKey": "HeraSpecialBoon", "rarity": "Common", "level": 1 },
-                  { "traitKey": "AresWeaponBoon", "rarity": "Heroic", "level": 3 }
+                  { "traitKey": "AresSpecialBoon", "rarity": "Rare", "level": 1 }
                 ]
               }
             },
@@ -3276,10 +3479,10 @@
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
-                  { "traitKey": "AresWeaponBoon", "rarity": "Heroic", "level": 3 },
-                  { "traitKey": "ApolloSpecialBoon", "rarity": "Rare", "level": 1 }
+                  { "traitKey": "ApolloSpecialBoon", "rarity": "Epic", "level": 1 }
                 ]
               }
             },
@@ -3290,10 +3493,10 @@
                 "equipped": [
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                   { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                   { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
-                  { "traitKey": "AresWeaponBoon", "rarity": "Heroic", "level": 3 },
-                  { "traitKey": "ApolloSpecialBoon", "rarity": "Rare", "level": 1 }
+                  { "traitKey": "ApolloSpecialBoon", "rarity": "Epic", "level": 1 }
                 ]
               }
             }
@@ -3364,39 +3567,39 @@
       },
       "diagnostics": {
         "roomEntered": {
-          "frame": 48,
+          "frame": 50,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-prehub\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {}
         },
         "beforeRoomExit": {
-          "frame": 49,
+          "frame": 51,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-prehub\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 3,
+              "biomeDepthCache": 2,
               "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 25
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 26
             },
             "traits": {
               "equipped": [
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                 { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                 { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" }
               ],
               "slots": [
-                { "slot": "Melee", "traitKey": "HeraWeaponBoon" },
+                { "slot": "Melee", "traitKey": "ZeusWeaponBoon" },
                 { "slot": "Secondary" },
                 { "slot": "Ranged" },
                 { "slot": "Rush" },
                 { "slot": "Mana" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 2, "Air": 0, "Fire": 0, "Water": 0 },
-              "godRarityCounts": { "Epic": 1, "Common": 1 },
+              "elements": { "Aether": 0, "Earth": 1, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 1, "Heroic": 1 },
               "upgradableCount": 1,
               "bannedTraitKeys": []
             }
@@ -3532,18 +3735,18 @@
       },
       "diagnostics": {
         "roomEntered": {
-          "frame": 50,
+          "frame": 52,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat05\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 4,
+              "biomeDepthCache": 3,
               "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 16,
-              "roomHistoryOrdinal": 26
+              "routeEncounterDepth": 17,
+              "roomHistoryOrdinal": 27
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 21 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
@@ -3559,18 +3762,18 @@
           }
         },
         "beforeRoomExit": {
-          "frame": 51,
+          "frame": 53,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat05\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 5,
+              "biomeDepthCache": 4,
               "biomeEncounterDepth": 2,
-              "routeEncounterDepth": 17,
-              "roomHistoryOrdinal": 27
+              "routeEncounterDepth": 18,
+              "roomHistoryOrdinal": 28
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 21 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
@@ -3586,21 +3789,21 @@
             "traits": {
               "equipped": [
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                 { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                 { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                 { "traitKey": "HermesSpecialBoon", "rarity": "Common" }
               ],
               "slots": [
-                { "slot": "Melee", "traitKey": "HeraWeaponBoon" },
+                { "slot": "Melee", "traitKey": "ZeusWeaponBoon" },
                 { "slot": "Secondary" },
                 { "slot": "Ranged" },
                 { "slot": "Rush" },
                 { "slot": "Mana" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 3, "Air": 0, "Fire": 0, "Water": 0 },
-              "godRarityCounts": { "Epic": 1, "Common": 2 },
+              "elements": { "Aether": 0, "Earth": 2, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2, "Heroic": 1 },
               "upgradableCount": 1,
               "bannedTraitKeys": []
             }
@@ -3693,48 +3896,48 @@
       },
       "diagnostics": {
         "roomEntered": {
-          "frame": 52,
+          "frame": 54,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-miniBoss01\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 6,
+              "biomeDepthCache": 5,
               "biomeEncounterDepth": 2,
-              "routeEncounterDepth": 17,
-              "roomHistoryOrdinal": 28
+              "routeEncounterDepth": 18,
+              "roomHistoryOrdinal": 29
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 53,
+          "frame": 55,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-miniBoss01\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 7,
+              "biomeDepthCache": 6,
               "biomeEncounterDepth": 3,
-              "routeEncounterDepth": 18,
-              "roomHistoryOrdinal": 29
+              "routeEncounterDepth": 19,
+              "roomHistoryOrdinal": 30
             },
             "traits": {
               "equipped": [
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
-                { "traitKey": "HeraWeaponBoon", "rarity": "Epic", "level": 3 },
                 { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                 { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                 { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
                 { "traitKey": "HeraSpecialBoon", "rarity": "Common", "level": 1 }
               ],
               "slots": [
-                { "slot": "Melee", "traitKey": "HeraWeaponBoon" },
+                { "slot": "Melee", "traitKey": "ZeusWeaponBoon" },
                 { "slot": "Secondary", "traitKey": "HeraSpecialBoon" },
                 { "slot": "Ranged" },
                 { "slot": "Rush" },
                 { "slot": "Mana" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 4, "Air": 0, "Fire": 0, "Water": 0 },
-              "godRarityCounts": { "Epic": 1, "Common": 3 },
+              "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 3, "Heroic": 1 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
             }
@@ -3843,31 +4046,31 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 54,
+          "frame": 56,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat02\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 8,
+              "biomeDepthCache": 7,
               "biomeEncounterDepth": 3,
-              "routeEncounterDepth": 18,
-              "roomHistoryOrdinal": 30
+              "routeEncounterDepth": 19,
+              "roomHistoryOrdinal": 31
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 55,
+          "frame": 57,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat02\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 9,
+              "biomeDepthCache": 8,
               "biomeEncounterDepth": 4,
-              "routeEncounterDepth": 19,
-              "roomHistoryOrdinal": 31
+              "routeEncounterDepth": 20,
+              "roomHistoryOrdinal": 32
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 21 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
@@ -3948,15 +4151,15 @@
                   "giver": "Ares",
                   "options": [
                     {
-                      "key": "AresWeaponBoon",
-                      "rarity": "Heroic",
-                      "effectiveLevel": 3,
+                      "key": "AresSpecialBoon",
+                      "rarity": "Rare",
+                      "effectiveLevel": 1,
                       "replacement": {
-                        "slot": "Melee",
-                        "replacedTraitKey": "HeraWeaponBoon",
-                        "oldRarity": "Epic",
-                        "newTraitKey": "AresWeaponBoon",
-                        "requiredRarity": "Heroic"
+                        "slot": "Secondary",
+                        "replacedTraitKey": "HeraSpecialBoon",
+                        "oldRarity": "Common",
+                        "newTraitKey": "AresSpecialBoon",
+                        "requiredRarity": "Rare"
                       }
                     },
                     { "key": "AresCastBoon", "rarity": "Common", "effectiveLevel": 1 },
@@ -3996,31 +4199,31 @@
       },
       "diagnostics": {
         "roomEntered": {
-          "frame": 56,
+          "frame": 58,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat11\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 10,
+              "biomeDepthCache": 9,
               "biomeEncounterDepth": 4,
-              "routeEncounterDepth": 19,
-              "roomHistoryOrdinal": 32
+              "routeEncounterDepth": 20,
+              "roomHistoryOrdinal": 33
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 57,
+          "frame": 59,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat11\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 11,
+              "biomeDepthCache": 10,
               "biomeEncounterDepth": 5,
-              "routeEncounterDepth": 20,
-              "roomHistoryOrdinal": 33
+              "routeEncounterDepth": 21,
+              "roomHistoryOrdinal": 34
             },
             "bags": [
-              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 21 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
               { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
@@ -4037,21 +4240,21 @@
               "equipped": [
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
                 { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                 { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                 { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
-                { "traitKey": "HeraSpecialBoon", "rarity": "Common", "level": 1 },
-                { "traitKey": "AresWeaponBoon", "rarity": "Heroic", "level": 3 }
+                { "traitKey": "AresSpecialBoon", "rarity": "Rare", "level": 1 }
               ],
               "slots": [
-                { "slot": "Melee", "traitKey": "AresWeaponBoon" },
-                { "slot": "Secondary", "traitKey": "HeraSpecialBoon" },
+                { "slot": "Melee", "traitKey": "ZeusWeaponBoon" },
+                { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
                 { "slot": "Ranged" },
                 { "slot": "Rush" },
                 { "slot": "Mana" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 4, "Air": 0, "Fire": 0, "Water": 0 },
-              "godRarityCounts": { "Common": 3, "Heroic": 1 },
+              "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2, "Heroic": 1, "Rare": 1 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
             }
@@ -4112,14 +4315,14 @@
                   "options": [
                     {
                       "key": "ApolloSpecialBoon",
-                      "rarity": "Rare",
+                      "rarity": "Epic",
                       "effectiveLevel": 1,
                       "replacement": {
                         "slot": "Secondary",
-                        "replacedTraitKey": "HeraSpecialBoon",
-                        "oldRarity": "Common",
+                        "replacedTraitKey": "AresSpecialBoon",
+                        "oldRarity": "Rare",
                         "newTraitKey": "ApolloSpecialBoon",
-                        "requiredRarity": "Rare"
+                        "requiredRarity": "Epic"
                       }
                     },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 },
@@ -4159,48 +4362,48 @@
       },
       "diagnostics": {
         "roomEntered": {
-          "frame": 58,
+          "frame": 60,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat23\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 12,
+              "biomeDepthCache": 11,
               "biomeEncounterDepth": 5,
-              "routeEncounterDepth": 20,
-              "roomHistoryOrdinal": 34
+              "routeEncounterDepth": 21,
+              "roomHistoryOrdinal": 35
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 59,
+          "frame": 61,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat23\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 13,
+              "biomeDepthCache": 12,
               "biomeEncounterDepth": 6,
-              "routeEncounterDepth": 21,
-              "roomHistoryOrdinal": 35
+              "routeEncounterDepth": 22,
+              "roomHistoryOrdinal": 36
             },
             "traits": {
               "equipped": [
                 { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" },
                 { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                { "traitKey": "ZeusWeaponBoon", "rarity": "Heroic", "level": 3 },
                 { "traitKey": "StaffLongAttackTrait", "hammerRank": "RankI" },
                 { "traitKey": "HermesSpecialBoon", "rarity": "Common" },
-                { "traitKey": "AresWeaponBoon", "rarity": "Heroic", "level": 3 },
-                { "traitKey": "ApolloSpecialBoon", "rarity": "Rare", "level": 1 }
+                { "traitKey": "ApolloSpecialBoon", "rarity": "Epic", "level": 1 }
               ],
               "slots": [
-                { "slot": "Melee", "traitKey": "AresWeaponBoon" },
+                { "slot": "Melee", "traitKey": "ZeusWeaponBoon" },
                 { "slot": "Secondary", "traitKey": "ApolloSpecialBoon" },
                 { "slot": "Ranged" },
                 { "slot": "Rush" },
                 { "slot": "Mana" },
                 { "slot": "Spell" }
               ],
-              "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
-              "godRarityCounts": { "Common": 2, "Heroic": 1, "Rare": 1 },
+              "elements": { "Aether": 0, "Earth": 2, "Air": 2, "Fire": 0, "Water": 0 },
+              "godRarityCounts": { "Common": 2, "Heroic": 1, "Epic": 1 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
             }
@@ -4278,28 +4481,28 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 60,
+          "frame": 62,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat01\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 14,
+              "biomeDepthCache": 13,
               "biomeEncounterDepth": 6,
-              "routeEncounterDepth": 21,
-              "roomHistoryOrdinal": 36
+              "routeEncounterDepth": 22,
+              "roomHistoryOrdinal": 37
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 61,
+          "frame": 63,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"surface-n-combat01\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 15,
+              "biomeDepthCache": 14,
               "biomeEncounterDepth": 7,
-              "routeEncounterDepth": 22,
-              "roomHistoryOrdinal": 37
+              "routeEncounterDepth": 23,
+              "roomHistoryOrdinal": 38
             }
           }
         }
@@ -4353,28 +4556,28 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 62,
+          "frame": 64,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-preboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
             "counters": {
-              "biomeDepthCache": 16,
+              "biomeDepthCache": 15,
               "biomeEncounterDepth": 7,
-              "routeEncounterDepth": 22,
-              "roomHistoryOrdinal": 38
+              "routeEncounterDepth": 23,
+              "roomHistoryOrdinal": 39
             }
           }
         },
         "beforeRoomExit": {
-          "frame": 63,
+          "frame": 65,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-preboss\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 16,
+              "biomeDepthCache": 15,
               "biomeEncounterDepth": 7,
-              "routeEncounterDepth": 22,
-              "roomHistoryOrdinal": 39
+              "routeEncounterDepth": 23,
+              "roomHistoryOrdinal": 40
             }
           }
         }
@@ -4410,21 +4613,21 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 64,
+          "frame": 66,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-preboss:boss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {}
         },
         "beforeRoomExit": {
-          "frame": 65,
+          "frame": 67,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-preboss:boss\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 17,
+              "biomeDepthCache": 16,
               "biomeEncounterDepth": 7,
-              "routeEncounterDepth": 22,
-              "roomHistoryOrdinal": 40
+              "routeEncounterDepth": 23,
+              "roomHistoryOrdinal": 41
             }
           }
         }
@@ -4476,21 +4679,28 @@
       "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
       "diagnostics": {
         "roomEntered": {
-          "frame": 66,
+          "frame": 68,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-preboss:postboss\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
-          "replace": {}
+          "replace": {
+            "counters": {
+              "biomeDepthCache": 1,
+              "biomeEncounterDepth": 7,
+              "routeEncounterDepth": 23,
+              "roomHistoryOrdinal": 41
+            }
+          }
         },
         "beforeRoomExit": {
-          "frame": 67,
+          "frame": 69,
           "owner": "[\"roomRunStateCheckpoint\",\"Dream\",\"N\",\"dream-n-preboss:postboss\",\"beforeRoomExit\"]",
           "checkpoint": "beforeRoomExit",
           "replace": {
             "counters": {
-              "biomeDepthCache": 18,
+              "biomeDepthCache": 1,
               "biomeEncounterDepth": 7,
-              "routeEncounterDepth": 22,
-              "roomHistoryOrdinal": 41
+              "routeEncounterDepth": 23,
+              "roomHistoryOrdinal": 42
             }
           }
         }
@@ -4631,25 +4841,25 @@
       "doors": { "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-5-2\"]", "kind": "terminal" }
     },
     {
-      "id": "dream-f-7-2",
-      "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-7-2\"]",
+      "id": "dream-f-7-1",
+      "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-7-1\"]",
       "biomeKey": "F",
-      "gameName": "F_Combat11",
+      "gameName": "F_Shop01",
       "kind": "SingleEncounter",
       "overview": {
         "incomingReward": {
-          "rewardType": "StackUpgrade",
+          "rewardType": "Shop",
           "producerLifecycleKey": "RoomReward",
           "resolvedStoreKey": "RunProgress"
         },
         "encounterPhases": [
-          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+          { "slotKey": "Encounter", "encounterKey": "Shop", "kind": "nonCombat" }
         ],
         "requiredObjects": []
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
-      "doors": { "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-7-2\"]", "kind": "terminal" }
+      "doors": { "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-7-1\"]", "kind": "terminal" }
     },
     {
       "id": "dream-f-8-2",
@@ -4692,6 +4902,27 @@
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
       "roomGuide": [],
       "doors": { "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-9-2\"]", "kind": "terminal" }
+    },
+    {
+      "id": "dream-f-10-2",
+      "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-10-2\"]",
+      "biomeKey": "F",
+      "gameName": "F_Combat15",
+      "kind": "SingleEncounter",
+      "overview": {
+        "incomingReward": {
+          "rewardType": "RoomMoneyDrop",
+          "producerLifecycleKey": "RoomReward",
+          "resolvedStoreKey": "RunProgress"
+        },
+        "encounterPhases": [
+          { "slotKey": "Encounter", "encounterKey": "GeneratedF", "kind": "combat" }
+        ],
+        "requiredObjects": []
+      },
+      "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
+      "roomGuide": [],
+      "doors": { "owner": "[\"occurrence\",\"Dream\",\"F\",\"dream-f-10-2\"]", "kind": "terminal" }
     },
     {
       "id": "dream-f-shop",
@@ -4933,5 +5164,5 @@
       }
     }
   ],
-  "planFingerprint": "666d548a"
+  "planFingerprint": "5ccd2ee3"
 }
