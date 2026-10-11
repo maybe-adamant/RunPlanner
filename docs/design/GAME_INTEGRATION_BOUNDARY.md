@@ -820,9 +820,14 @@ itself and does not rescan that replacement, so the first generation declines as
 an introduction substitution and the replacement is admitted.
 
 The exact phase scopes synchronous native preparation, with a stamped destination
-handoff for reward-owned Devotion. Uncustomized encounters delegate unchanged. A
-supplied base roll is validated against the effective native range, including hard
-overrides, before native consumes it; an invalid roll declines customization.
+handoff for reward-owned Devotion. An uncustomized phase rolls natively; its
+optional `excludedEnemies` list (the planner's native-roll exclusions, owned by
+the [introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions)) joins the
+generation copy's own `Blacklist` before native generation. That copy is per
+encounter, so nothing is restored; `CurrentRun.Blacklist` and shared templates
+keep only native additions. A supplied base roll is validated against the
+effective native range, including hard overrides, before native consumes it; an
+invalid roll declines customization.
 Native then computes `DifficultyRating` with all its modifiers, Hordes and minimum.
 At the generation-scoped `CalculateActiveEnemyCap` contact, after that rating and
 before wave construction, the executor makes one whole-encounter admission decision:
@@ -842,7 +847,8 @@ Acceptance configures the published wave count and suppresses native highlight
 generation; native fill contacts then mount the roster and counts, and later
 hooks apply Fangs and Menace from that same decision without per-wave re-checks.
 Decline records the reason with expected and observed evidence, and native
-generation continues uncustomized. A valid supplied base roll is retained on
+generation continues uncustomized under the phase's `excludedEnemies`, applied
+on both the base-roll and admission declines. A valid supplied base roll is retained on
 decline: that is native continuation from a legal roll, not untouched RNG history.
 
 Planner evaluation and decoding own the facts admission trusts: highlight

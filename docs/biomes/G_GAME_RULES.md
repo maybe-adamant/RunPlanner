@@ -304,13 +304,14 @@ trait at encounter completion.
 The first G combat resolves `FishmanIntro`: native `AlwaysForce` holds until
 its first completion, and its three fixed waves (FishmanMelee ×1; ×2 plus
 FishmanRanged ×1; ×3 each) neither count encounter depth nor skip. Later
-combats may resolve `FishSwarmerIntro` (FishSwarmerSquad ×4, then an authored
-generated wave) or `TurtleIntro` (Turtle ×2, then two authored generated waves).
+combats may resolve `FishSwarmerIntro` (FishSwarmerSquad ×4, then a
+generated wave) or `TurtleIntro` (Turtle ×2, then two generated waves).
 `TurtleIntro` is reached only through `Turtle_Elite` at G depth 3 or more,
 because the ordinary Turtle needs two lifetime `G_Intro` visits
 ([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
 WaterUnit is admissible only after a completed `MiniBossWaterUnit` on the
-route. Every generated G combat is customized on this route.
+route. An uncustomized G combat rolls natively without the enemies whose
+introduction would replace it.
 
 `G_Intro` hosts Eris when the author observes her spawn: talking applies
 `ErisCurseTrait` and drops a required 20-Ashes gift, exempt from resource

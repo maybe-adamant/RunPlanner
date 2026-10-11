@@ -224,9 +224,10 @@ the `ForceLootTableFirstRun` table (Attack, Sprint and Magick boons) at the
 
 Later F combats may resolve `RadiatorIntro` or `ScreamerIntro` where the
 introduction's trigger enemy is admissible: a fixed first wave (Radiator ×5 or
-Screamer ×2) and an authored generated second wave
+Screamer ×2) and a generated second wave
 ([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
-Every generated F combat is customized on this route. No field-NPC combat,
+An uncustomized F combat rolls natively without the enemies whose introduction
+would replace it. No field-NPC combat,
 cocoon or Nemesis event occurs. Root Stalker is the only
 miniboss; Reprieve, Arachne's story room, Chaos, Zagreus Contract, Wells, the
 Postboss Pool and keepsake rack are absent, while the Postboss fountain stays.

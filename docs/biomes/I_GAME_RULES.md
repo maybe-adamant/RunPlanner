@@ -153,8 +153,8 @@ The first I combat resolves the fixed three-wave `ClockworkIntro` (native
 `AlwaysForce` until its first completion; it counts encounter depth and cannot
 skip) instead of `GeneratedIChronosIntro`, which needs `ClockworkIntro`
 completed, so the Chronos intro variants never occur on this route. Ordinary I
-pools carry no enemy introduction, and every other generated I combat is
-customized on this route.
+pools carry no enemy introduction, so every other generated I combat may roll
+natively.
 
 `I_Intro` hosts Eris when observed and not yet cursed on the route; her
 required gift is 300 Bones

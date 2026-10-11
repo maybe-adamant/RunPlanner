@@ -516,11 +516,10 @@ A sequence failure belongs to chronology, not every supported sibling. Missing
 trait or target authorship retains the exact child finding rather than an
 additional generic purchase failure.
 
-Encounter preparation owns two Fresh File findings on the exact phase:
-`encounterCustomizationRequired` for a reached generated composition that is
-not authored, and `encounterIntroductionRequired` for a retained enemy whose
-introduction is unfinished. Both are errors that withhold execution. Like every
-encounter identity and composition finding, they stop assessment at the room's
+Encounter preparation owns the Fresh File finding
+`encounterIntroductionRequired` on the exact phase for a retained enemy whose
+introduction is unfinished. It is an error that withholds execution. Like every
+encounter identity and composition finding, it stops assessment at the room's
 Overview; the [introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
 owns the rules. Fig Leaf, Aetos and Gorgon findings have their own phase-child
 owners and stop assessment where the phase starts.

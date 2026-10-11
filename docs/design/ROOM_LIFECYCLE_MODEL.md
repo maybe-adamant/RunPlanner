@@ -767,12 +767,18 @@ H cage members are evaluated in cage-preparation order against the records of
 earlier cages, not their completions. A prepared cage is never re-prepared when
 an earlier cage completes; only later preparation sees that completion.
 
-On a fresh profile every reached generated phase, including an introduction's
-suffix, needs an authored composition so the route's introduction history is
-exact; an uncustomized one reports `encounterCustomizationRequired`. Fixed
-identities and all-fixed H introductions have none, and a contextually replaced
-decision stays removal-only. Fangs and Menace controls follow effective Fear,
-so they stay hidden on a fresh profile.
+Composition stays optional on every route. Each reached generated phase
+publishes the enemies its native roll must not draw: its trigger-exclusion set
+at its checkpoint (empty once every introduction is complete), then each
+once-per-run (`BlacklistAfterFirstAppearance`) enemy it could draw that a later
+authored composition in the run draws through native eligibility (typed
+additions, template companions or the highlight). The list never repeats native
+admission and never names a gated unfinished introduction, which spawns without
+substitution. It governs an uncustomized phase's roll, and an authored phase's
+only when its composition is declined. The native roll is otherwise unmodelled,
+so an uncustomized phase records exactly its selected identity. A contextually
+replaced decision stays removal-only. Fangs and Menace controls follow effective
+Fear, so they stay hidden on a fresh profile.
 
 A later slot in the same room evaluates against the preceding recorded prefix.
 It can therefore observe exact earlier encounter identities, while encounter
