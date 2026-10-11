@@ -37,8 +37,8 @@ export type RoomLifecycleEvent =
       readonly roomShopPresent?: boolean;
       /** A NextRoomSet room's map load recomputes the biome depth cache to 1 after the run's first room. */
       readonly biomeDepthCacheReset?: true;
-      /** Native StartRoom RunOverrides then set the biome depth cache. */
-      readonly biomeDepthCache?: number;
+      /** Native StartRoom RunOverrides then set the biome depth cache to this value. */
+      readonly enteredBiomeDepthCache?: number;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'fountainUsed';
@@ -148,10 +148,8 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & { readonly kind: 'roomCommitted' })
   | (RoomLifecycleEventBase & {
       readonly kind: 'roomCountersAdvanced';
-      readonly biomeDepthCacheDelta: number;
       /** Leaving a NextRoomSet room leaves the biome depth cache at 1. */
       readonly biomeDepthCacheReset?: true;
-      readonly roomHistoryOrdinalDelta: number;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'enteredRewardStoreRecorded';

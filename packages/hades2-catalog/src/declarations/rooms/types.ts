@@ -175,7 +175,7 @@ export interface RawRoomDeclaration {
   /** Source `SkipTimedDropResourceInDream`, used by declaration-clocked timed pickups. */
   readonly skipTimedDropResourcesInDream?: boolean;
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
-  readonly counters: Omit<RoomCounterEffects, 'resetsBiomeDepthCache'>;
+  readonly counters?: Omit<RoomCounterEffects, 'resetsBiomeDepthCache'>;
   readonly caps: RoomCaps;
   /** Exact source-backed point support, declared beside this room literal. */
   readonly resourcePointSupport: import('@run-planner/engine/catalog-schema').ResourcePointSupport;

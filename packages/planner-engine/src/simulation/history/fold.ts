@@ -311,6 +311,7 @@ function foldHistoryEventStream(
   let pendingTargetGeneration: PendingTargetGeneration | undefined;
   let biomeStarted = false;
   let biomeCompletion: HistoryStateView | undefined;
+  const restoredRooms = new Set<string>();
   let biomeCompletionOrigin:
     Extract<HistoryEvent, { readonly kind: 'biomeCompleted' }>['origin'] | undefined;
   let biomeStartOrigin:
@@ -500,8 +501,8 @@ function foldHistoryEventStream(
         // UpdateRunHistoryCache keeps the cache while RoomHistory is empty.
         if (event.biomeDepthCacheReset === true && ledgers.counters.roomHistoryOrdinal > 0)
           ledgers.counters.biomeDepthCache = 1;
-        if (event.biomeDepthCache !== undefined)
-          ledgers.counters.biomeDepthCache = event.biomeDepthCache;
+        if (event.enteredBiomeDepthCache !== undefined)
+          ledgers.counters.biomeDepthCache = event.enteredBiomeDepthCache;
         requireRoomViews(viewsByOrigin, event).entry = stateView(
           event.sequence,
           ledgers,
@@ -735,11 +736,10 @@ function foldHistoryEventStream(
         );
         break;
       case 'roomCountersAdvanced':
+        // GetBiomeDepth counts each room-history record since the last NextRoomSet room.
         ledgers.counters.biomeDepthCache =
-          event.biomeDepthCacheReset === true
-            ? 1
-            : ledgers.counters.biomeDepthCache + event.biomeDepthCacheDelta;
-        ledgers.counters.roomHistoryOrdinal += event.roomHistoryOrdinalDelta;
+          event.biomeDepthCacheReset === true ? 1 : ledgers.counters.biomeDepthCache + 1;
+        ledgers.counters.roomHistoryOrdinal += 1;
         break;
       case 'enteredRewardStoreRecorded': {
         const entry: EnteredRewardStoreHistoryEntry = Object.freeze({
@@ -757,13 +757,21 @@ function foldHistoryEventStream(
         views.exit = stateView(event.sequence, ledgers, viewsBySequence);
         break;
       }
-      case 'roomDeparted':
+      case 'roomDeparted': {
+        const key = semanticAddressKey(event.origin);
         if (requireRoomViews(viewsByOrigin, event).exit === undefined) {
-          throw new HistoryFoldContractError(
-            `${semanticAddressKey(event.origin)} departs before its first exit`,
-          );
+          throw new HistoryFoldContractError(`${key} departs before its first exit`);
+        }
+        if (restoredRooms.delete(key) !== (event.leavesRestoredRoom === true)) {
+          throw new HistoryFoldContractError(`${key} departure disagrees with its restore`);
+        }
+        // Restored N main rooms and the Hub never have NextRoomSet.
+        if (event.leavesRestoredRoom === true) {
+          ledgers.counters.biomeDepthCache += 1;
+          ledgers.counters.roomHistoryOrdinal += 1;
         }
         break;
+      }
       case 'roomRestored': {
         const gameName = roomName(namesByOrigin, event);
         ledgers.roomAppearances.push(
@@ -784,8 +792,12 @@ function foldHistoryEventStream(
             restoreKind: event.restoreKind,
           }),
         );
-        ledgers.counters.biomeDepthCache += event.biomeDepthCacheDelta;
-        ledgers.counters.roomHistoryOrdinal += event.roomHistoryOrdinalDelta;
+        if (restoredRooms.has(semanticAddressKey(event.origin))) {
+          throw new HistoryFoldContractError(
+            `${semanticAddressKey(event.origin)} is restored again before it departs`,
+          );
+        }
+        restoredRooms.add(semanticAddressKey(event.origin));
         break;
       }
       case 'biomeCompleted':

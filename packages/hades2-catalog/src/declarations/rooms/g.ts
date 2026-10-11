@@ -45,7 +45,6 @@ export const gRooms = [
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
     // RoomDataG.lua G_Intro `SpawnErisForCurse`: while completed runs <= 1.
@@ -92,7 +91,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -138,7 +136,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -180,7 +177,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -224,7 +220,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -269,7 +264,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -314,7 +308,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -359,7 +352,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -404,7 +396,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -451,7 +442,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -496,7 +486,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -542,7 +531,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -587,7 +575,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -632,7 +619,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -680,7 +666,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -728,7 +713,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -775,7 +759,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -822,7 +805,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -868,7 +850,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'all',
@@ -915,7 +896,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -962,7 +942,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'GEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1004,7 +983,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossWaterUnit' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1051,7 +1029,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossCrawler' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1102,7 +1079,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossJellyfish' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1142,7 +1118,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Narcissus_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1189,7 +1164,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'HealthRestore' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1245,7 +1219,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1307,7 +1280,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1334,7 +1306,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossScylla01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1355,7 +1326,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossScylla02' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1392,7 +1362,6 @@ export const gRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];

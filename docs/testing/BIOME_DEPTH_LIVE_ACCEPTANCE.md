@@ -13,3 +13,6 @@ confirms or waives each check.
       preceding `Dream_PostBoss`, 0 at the `F_Opening` room, 1 at the first F
       combat (the deciding check) and 2 at the second.
 - [ ] Ordinary run. `BiomeDepth` reads 1 at a biome's Postboss room.
+- [ ] Ordinary run. `BiomeDepth` at a Boss room reads one more than at its
+      Preboss (for example 12 at `F_Boss01` after `F_PreBoss01` at its forced
+      depth 10 plus one, and 9 at `O_Boss01` after `O_PreBoss01` at 7 plus one).

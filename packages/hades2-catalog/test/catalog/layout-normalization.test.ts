@@ -89,6 +89,40 @@ describe('biome layout declaration normalization', () => {
     };
     expect(() => createCatalog(incorrectTerminal)).toThrow(CatalogContractError);
 
+    const invertedTerminal = input();
+    const invertedLayout = invertedTerminal.biomeLayouts.find((layout) => layout.biomeKey === 'N');
+    if (invertedLayout === undefined || invertedLayout.progression.kind !== 'hub') {
+      throw new Error('missing N Hub fixture');
+    }
+    (
+      invertedLayout.progression as unknown as {
+        terminal: { eligibility: unknown };
+      }
+    ).terminal.eligibility = {
+      kind: 'counterRange',
+      axis: 'biomeDepthCache',
+      range: { min: 3, max: 2 },
+    };
+    expect(() => createCatalog(invertedTerminal)).toThrow(/must be biomeDepthCache exactly 2/);
+
+    const preHubBase = input();
+    const widenedPreHub = {
+      ...preHubBase,
+      rooms: preHubBase.rooms.map((room) =>
+        room.gameName === 'N_PreHub01'
+          ? {
+              ...room,
+              eligibility: {
+                kind: 'counterRange' as const,
+                axis: 'biomeDepthCache' as const,
+                range: { min: 1, max: 2 },
+              },
+            }
+          : room,
+      ),
+    };
+    expect(() => createCatalog(widenedPreHub)).toThrow(/N_PreHub01 must be eligible at depth 1/);
+
     const incorrectStart = input();
     const layout = incorrectStart.biomeLayouts.find((candidate) => candidate.biomeKey === 'N');
     if (layout === undefined) throw new Error('missing N layout fixture');

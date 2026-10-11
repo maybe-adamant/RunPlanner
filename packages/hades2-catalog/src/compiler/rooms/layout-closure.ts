@@ -44,18 +44,14 @@ function knownTakeoverSourceWidths(
       room.kind !== 'PostBoss' &&
       room.exits.length > 0,
   );
-  const predecessorCommitDelta = sources[0]?.counters.biomeDepthCache;
-  // A target is generated before its predecessor commits. Its own outgoing
-  // generation sees that predecessor's increment, not its own later commit.
-  // Prove a uniform increment over the full source set before excluding any
-  // source by depth. Detours and specialized lifecycles remain conservative.
+  // A target is generated before its predecessor commits, and each commit of a
+  // room without NextRoomSet advances the biome depth cache by one. Detours and
+  // specialized lifecycles remain conservative.
   const directProgression =
     layout.chaos === undefined &&
     layout.progression.anomalyReplacement === undefined &&
-    predecessorCommitDelta !== undefined &&
     sources.every(
       (room) =>
-        room.counters.biomeDepthCache === predecessorCommitDelta &&
         room.lifecycleProfileKey === undefined &&
         room.additionalExits.length === 0 &&
         room.exits.every((exit) => exit.behavior.kind === 'playerSelected'),
@@ -76,8 +72,8 @@ function knownTakeoverSourceWidths(
         targetRequirement.axis !== 'biomeDepthCache'
       )
         return true;
-      const minimum = sourceRequirement.range.min + predecessorCommitDelta;
-      const maximum = sourceRequirement.range.max + predecessorCommitDelta;
+      const minimum = sourceRequirement.range.min + 1;
+      const maximum = sourceRequirement.range.max + 1;
       return !(
         (targetRequirement.range.min !== undefined && maximum < targetRequirement.range.min) ||
         (targetRequirement.range.max !== undefined && minimum > targetRequirement.range.max)

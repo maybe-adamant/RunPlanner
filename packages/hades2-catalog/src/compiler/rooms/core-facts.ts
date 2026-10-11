@@ -314,15 +314,7 @@ export function normalizeRoomCoreFacts(room: RawRoomDeclaration, path: string): 
 export function normalizeRoomCounters(room: RawRoomDeclaration, path: string): RoomCounterFacts {
   return Object.freeze({
     counters: Object.freeze({
-      biomeDepthCache: requireNonNegativeInteger(
-        room.counters.biomeDepthCache,
-        `${path}.counters.biomeDepthCache`,
-      ),
-      roomHistoryOrdinal: requirePositiveInteger(
-        room.counters.roomHistoryOrdinal,
-        `${path}.counters.roomHistoryOrdinal`,
-      ),
-      ...(room.counters.enteredBiomeDepthCache === undefined
+      ...(room.counters?.enteredBiomeDepthCache === undefined
         ? {}
         : {
             enteredBiomeDepthCache: requireNonNegativeInteger(

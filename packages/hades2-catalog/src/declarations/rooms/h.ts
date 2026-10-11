@@ -84,7 +84,6 @@ export const hRooms = [
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
     // RoomDataH.lua H_Intro `SpawnErisForCurse`: while completed runs <= 4.
@@ -120,7 +119,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -169,7 +167,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -223,7 +220,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -272,7 +268,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -321,7 +316,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -370,7 +364,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -419,7 +412,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -468,7 +460,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -517,7 +508,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -571,7 +561,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -620,7 +609,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -669,7 +657,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     localChildren: [
       {
@@ -718,7 +705,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -772,7 +758,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -826,7 +811,6 @@ export const hRooms = [
       { slotKey: 'Cage02', kind: 'set', encounterSetKey: 'HEncountersDefault' },
       { slotKey: 'Cage03', kind: 'set', encounterSetKey: 'HEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -881,7 +865,6 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossVampire' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'recordCount',
@@ -917,7 +900,6 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossLamia' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'recordCount',
@@ -972,7 +954,6 @@ export const hRooms = [
         ],
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'recordCount',
@@ -1047,7 +1028,6 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recordCount',
@@ -1101,7 +1081,6 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossInfestedCerberus01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1123,7 +1102,6 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossInfestedCerberus02' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1155,7 +1133,6 @@ export const hRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];

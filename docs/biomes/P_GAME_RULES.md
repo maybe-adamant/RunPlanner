@@ -46,8 +46,8 @@ rule, not a depth predicate. The planner represents possible and forced room
 support, not weighted RNG. A positive-chance eligible room remains possible;
 a non-empty forced set excludes ordinary candidates for that decision.
 
-The `biomeDepthCache` and `biomeEncounterDepth` effects in the room
-declarations are separate lifecycle facts. Creation caps, appearance caps,
+The biome depth cache follows room history and `biomeEncounterDepth` follows
+counting encounters; they are separate lifecycle facts. Creation caps, appearance caps,
 and force windows use their own histories. No external profile or save gate
 is included in production catalog data.
 

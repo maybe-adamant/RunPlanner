@@ -67,7 +67,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
       },
     ],
     // RunOverrides BiomeDepthCache = 0, applied at StartRoom (RoomDataF.lua:406-410).
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1, enteredBiomeDepthCache: 0 },
+    counters: { enteredBiomeDepthCache: 0 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -103,7 +103,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
       },
     ],
     // RunOverrides BiomeDepthCache = 0, applied at StartRoom (RoomDataF.lua:406-410).
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1, enteredBiomeDepthCache: 0 },
+    counters: { enteredBiomeDepthCache: 0 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -139,7 +139,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
       },
     ],
     // RunOverrides BiomeDepthCache = 0, applied at StartRoom (RoomDataF.lua:406-410).
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1, enteredBiomeDepthCache: 0 },
+    counters: { enteredBiomeDepthCache: 0 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -195,7 +195,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'GeneratedF' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -236,7 +235,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -276,7 +274,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -321,7 +318,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -367,7 +363,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -412,7 +407,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -452,7 +446,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -492,7 +485,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -529,7 +521,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -571,7 +562,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -616,7 +606,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -662,7 +651,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -708,7 +696,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -748,7 +735,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -793,7 +779,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -839,7 +824,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -886,7 +870,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -932,7 +915,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -979,7 +961,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1026,7 +1007,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1072,7 +1052,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1114,7 +1093,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'set', encounterSetKey: 'FEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1153,7 +1131,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         shadowEncounterDefinitionKey: 'MiniBossTreant_Shrine',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1200,7 +1177,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
         shadowEncounterDefinitionKey: 'MiniBossFogEmitter_Shrine',
       },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1248,7 +1224,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossAssassin' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1291,7 +1266,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Arachne_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1338,7 +1312,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'HealthRestore' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1394,7 +1367,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -1456,7 +1428,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -1483,7 +1454,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossHecate01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1509,7 +1479,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossHecate02' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -1541,7 +1510,6 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Chronos_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];

@@ -45,7 +45,6 @@ export const chaosRooms = chaosMaps.map(
       encounterSlotBindings: [
         { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty_Chaos' },
       ],
-      counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
       caps: {},
     }) as const,
 ) satisfies readonly RawRoomDeclaration[];

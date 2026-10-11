@@ -86,45 +86,40 @@ describe('room-layout compiler closure', () => {
     ).toThrow(CatalogContractError);
   });
 
-  it.each([
-    'eligibleWideSource',
-    'nonuniformPredecessor',
-    'unknownPredicate',
-    'missingUpperBound',
-  ] as const)('retains conservative takeover width for %s', (mutation) => {
-    const fixture = input();
-    expect(() =>
-      createCatalog({
-        ...fixture,
-        rooms: fixture.rooms.map((room) => {
-          if (mutation === 'nonuniformPredecessor' && room.gameName === 'Q_Combat01') {
-            return { ...room, counters: { ...room.counters, biomeDepthCache: 2 } };
-          }
-          if (room.gameName !== 'Q_Combat12') return room;
-          if (mutation === 'eligibleWideSource')
-            return {
-              ...room,
-              eligibility: {
-                kind: 'counterRange',
-                axis: 'biomeDepthCache',
-                range: { min: 6, max: 6 },
-              },
-            };
-          if (mutation === 'missingUpperBound')
-            return {
-              ...room,
-              eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 5 } },
-            };
-          if (mutation === 'unknownPredicate')
-            return {
-              ...room,
-              eligibility: { kind: 'all', requirements: [room.eligibility!] },
-            };
-          return room;
+  it.each(['eligibleWideSource', 'unknownPredicate', 'missingUpperBound'] as const)(
+    'retains conservative takeover width for %s',
+    (mutation) => {
+      const fixture = input();
+      expect(() =>
+        createCatalog({
+          ...fixture,
+          rooms: fixture.rooms.map((room) => {
+            if (room.gameName !== 'Q_Combat12') return room;
+            if (mutation === 'eligibleWideSource')
+              return {
+                ...room,
+                eligibility: {
+                  kind: 'counterRange',
+                  axis: 'biomeDepthCache',
+                  range: { min: 6, max: 6 },
+                },
+              };
+            if (mutation === 'missingUpperBound')
+              return {
+                ...room,
+                eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 5 } },
+              };
+            if (mutation === 'unknownPredicate')
+              return {
+                ...room,
+                eligibility: { kind: 'all', requirements: [room.eligibility!] },
+              };
+            return room;
+          }),
         }),
-      }),
-    ).toThrow(/none is only valid when every supported normal-door source is width one/);
-  });
+      ).toThrow(/none is only valid when every supported normal-door source is width one/);
+    },
+  );
 
   it('does not infer direct takeover widths for a layout admitting a detour', () => {
     const catalog = createCatalog(declarations);

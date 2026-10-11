@@ -41,7 +41,6 @@ export const cRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossZagreus01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: {},
   },
 ] as const satisfies readonly RawRoomDeclaration[];

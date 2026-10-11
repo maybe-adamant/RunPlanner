@@ -142,8 +142,6 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly origin: RoomHistoryOrigin;
   readonly after: HubVisitAddress | LocalVisitSlotAddress;
   readonly restoreKind: 'hub' | 'parent';
-  readonly biomeDepthCacheDelta: number;
-  readonly roomHistoryOrdinalDelta: number;
   readonly surfaceShopPresent?: boolean;
   readonly roomShopPresent?: boolean;
 }
@@ -156,6 +154,8 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
 export interface RoomDepartedHistoryEvent extends HistoryEventBase {
   readonly kind: 'roomDeparted';
   readonly origin: RoomHistoryOrigin;
+  /** Leaving a restored room adds its room-history record; a first exit's commit already did. */
+  readonly leavesRestoredRoom?: true;
 }
 
 /** The Hub-owned fountain use, settled in the restored Hub between room visits. */

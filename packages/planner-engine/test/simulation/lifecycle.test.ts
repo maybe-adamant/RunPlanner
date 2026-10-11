@@ -93,7 +93,7 @@ function input(overrides: Partial<RoomLifecycleExecutionInput> = {}): RoomLifecy
         payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
       },
     },
-    counterEffects: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
+    counterEffects: {},
     ...overrides,
   };
 }
@@ -768,11 +768,7 @@ describe('single-room lifecycle execution', () => {
       role: 'source',
       lifecyclePoint: 'roomRewardPickup',
     });
-    expect(fragment.events[13]).toMatchObject({
-      kind: 'roomCountersAdvanced',
-      biomeDepthCacheDelta: 1,
-      roomHistoryOrdinalDelta: 1,
-    });
+    expect(fragment.events[13]).toMatchObject({ kind: 'roomCountersAdvanced' });
     expect(fragment.events.map((event) => event.sequence)).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);

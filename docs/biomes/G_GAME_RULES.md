@@ -66,8 +66,8 @@ after F's biome-local transition resets.
 `G_Intro` generates the first ordinary decision at source
 `biomeDepthCache = 1`, then advances the cache to `2` when it commits. Seven
 selected ordinary rooms advance the entered spine through source depth `8`,
-where `G_PreBoss01` is forced. The intro's reward-free empty profile, 0-to-1
-force window, and one-step room-history contribution are exact catalog facts.
+where `G_PreBoss01` is forced. The intro's reward-free empty profile and 0-to-1
+force window are exact catalog facts.
 The legacy exact-depth intro predicate is rejected because it did not match
 the game.
 

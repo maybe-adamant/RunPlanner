@@ -26,7 +26,6 @@ export const oRooms = [
     encounterEnvelopeKey: 'EmptyEncounter',
     unmodeledEncounterKeys: ['Empty'],
     encounterSlotBindings: [],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     force: { kind: 'depthWindow', axis: 'biomeDepthCache', start: 0, deadline: 1 },
   },
@@ -49,7 +48,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -78,7 +76,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -107,7 +104,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -136,7 +132,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { max: 3 } },
   },
@@ -159,7 +154,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -188,7 +182,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -217,7 +210,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { max: 3 } },
   },
@@ -240,7 +232,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -269,7 +260,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -298,7 +288,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -327,7 +316,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { max: 3 } },
   },
@@ -350,7 +338,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -379,7 +366,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'all',
@@ -414,7 +400,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'recentEnvelopeSlotCount',
@@ -443,7 +428,6 @@ export const oRooms = [
       { slotKey: 'Combat1', kind: 'set', encounterSetKey: 'OEncountersDefault' },
       { slotKey: 'Combat2', kind: 'set', encounterSetKey: 'OEncountersDefault' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: { kind: 'counterRange', axis: 'biomeDepthCache', range: { max: 3 } },
   },
@@ -472,7 +456,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossCharybdis' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -512,7 +495,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'MiniBossCaptain' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -557,7 +539,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -608,7 +589,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'HealthRestore' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -638,7 +618,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Story_Circe_01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -685,7 +664,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'DevotionTestO' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1, maxCreationsThisRun: 1 },
     eligibility: {
       kind: 'all',
@@ -742,7 +720,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
     ],
-    counters: { biomeDepthCache: 0, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
     eligibility: {
       kind: 'counterRange',
@@ -769,7 +746,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossEris01' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -790,7 +766,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'BossEris02' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
   {
@@ -813,7 +788,6 @@ export const oRooms = [
     encounterSlotBindings: [
       { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Empty' },
     ],
-    counters: { biomeDepthCache: 1, roomHistoryOrdinal: 1 },
     caps: { maxAppearancesThisBiome: 1 },
   },
 ] as const satisfies readonly RawRoomDeclaration[];
