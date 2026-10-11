@@ -20,8 +20,10 @@ import type {
 } from './model';
 import {
   exitDecisionForSource,
+  hubDecisionHandoffReadiness,
   hubVisitSlotKeys,
   selectedExitContinuation,
+  selectedExitTarget,
 } from './topology/query';
 import { applyRouteDetourCommand } from './commands/route-detours';
 import type { LocatedBiome } from './commands/contract';
@@ -124,14 +126,15 @@ function reachedBiome(
           }
         }
       }
-      const handoff = exitDecisionForSource(topology, {
-        kind: 'hubDecision',
-        decisionKey: hub.hubKey,
-      });
-      const target = handoff?.normal.targets.find(
-        (candidate) =>
-          handoff.selection.kind === 'normal' && candidate.exitKey === handoff.selection.exitKey,
-      );
+      // The Hub always owns its Preboss chain; it is reached only once the Hub is complete.
+      const progression = catalog.biomeLayouts.byKey[plan.biomeKey]?.progression;
+      const ready =
+        progression?.kind === 'hub' &&
+        hubDecisionHandoffReadiness(progression, hub).kind === 'ready';
+      const handoff = ready
+        ? exitDecisionForSource(topology, { kind: 'hubDecision', decisionKey: hub.hubKey })
+        : undefined;
+      const target = handoff === undefined ? undefined : selectedExitTarget(handoff);
       if (target === undefined)
         return Object.freeze({ complete: false, occurrences: Object.freeze(reached) });
       current = occurrenceById(topology, target.occurrenceId);
