@@ -19,7 +19,6 @@ import {
 
 import {
   declaredPhysicalExits,
-  completedHubHandoffForSource,
   exitDecisionForSource,
   automaticHostContinuationExitForDetourRoom,
   declaredPhysicalExitsForSourceRoom,
@@ -267,12 +266,5 @@ describe('authored topology queries', () => {
         decisionKey: 'missing',
       }),
     ).toBeUndefined();
-
-    expect(
-      completedHubHandoffForSource(catalog, nLayout, nTopology, {
-        kind: 'hubDecision',
-        decisionKey: 'hub',
-      }),
-    ).toMatchObject({ kind: 'completedHubHandoff', room: { gameName: 'N_PreBoss01' } });
   });
 });

@@ -3,10 +3,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createExitDecisionAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
-  createOccurrenceId,
   hubVisitSlotKeys,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -206,12 +204,7 @@ describe('HubMapTimeline', () => {
   });
 
   it('resets a completed Hub through its existing cleanup and Undo restores its open rooms and rewards', async () => {
-    const project = applyProjectCommand(loadSurfaceNCompleteHubFrontierProject(), catalog, {
-      kind: 'CreateTakeoverBatch',
-      decision: createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
-      gameName: 'N_PreBoss01',
-      targetOccurrenceIds: { preboss: createOccurrenceId('hub-reset-preboss') },
-    });
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     await showTimeline(view.user);
     const before = nHubState(view.application).topology;
@@ -236,7 +229,7 @@ describe('HubMapTimeline', () => {
       nHubState(view.application).topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
       ),
-    ).toBe(false);
+    ).toBe(true);
     for (const room of openRooms) {
       expect(
         nHubState(view.application).topology.occurrences.find(

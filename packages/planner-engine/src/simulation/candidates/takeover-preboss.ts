@@ -1,8 +1,7 @@
 import { resolveRoutePosition } from '../../authored-project/route-context';
 import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey, type ExitDecisionAddress } from '../../authored-project/addresses';
-import type { HubDecision, ProjectDocument } from '../../authored-project/model';
-import { hubDecisionHandoffReadiness } from '../../authored-project/topology/query';
+import type { ProjectDocument } from '../../authored-project/model';
 import {
   evaluateTakeoverPrebossBatchCandidate,
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
@@ -68,28 +67,6 @@ function evaluatePrefixTakeover(
     return undefined;
   }
   if (semanticAddressKey(frontier.origin) !== semanticAddressKey(query.source)) return undefined;
-  if (frontier.parent.origin.kind === 'hubRoom') {
-    if (!hubHandoffIsReady(catalog, project, query)) return undefined;
-    const layout = catalog.biomeLayouts.byKey[prefix.biomeKey];
-    if (layout?.progression.kind !== 'hub') return undefined;
-    const requiredExitKeys = Object.freeze([layout.progression.completedExit.exitKey]);
-    return Object.freeze({
-      kind: 'takeoverPrebossBatch',
-      result: Object.freeze({
-        source: query.source,
-        gameName: query.gameName,
-        requiredExitKeys,
-        requiredTargetCount: requiredExitKeys.length,
-        support:
-          query.gameName === layout.progression.completedExit.roomGameName
-            ? ('required' as const)
-            : ('impossible' as const),
-        pressure: Object.freeze([]),
-        selectedPossible: query.gameName === layout.progression.completedExit.roomGameName,
-        findings: Object.freeze([]),
-      }),
-    });
-  }
   if (frontier.parent.origin.kind !== 'occurrence') return undefined;
   const owner = prefixAuthoredRooms(prefix).find(
     (room) => semanticAddressKey(room.origin) === semanticAddressKey(frontier.parent.origin),
@@ -117,8 +94,8 @@ function evaluatePrefixTakeover(
 }
 
 /**
- * Generated layouts own occurrence sources; a Hub owns only its completed Hub
- * decision. The candidate domain must match the semantic command domain.
+ * Only generated layouts own takeover sources; a Hub's completed-Hub exit is
+ * created with the Hub. The candidate domain matches the command domain.
  */
 function assertTakeoverPrebossBatchDomain(
   catalog: Catalog,
@@ -133,38 +110,9 @@ function assertTakeoverPrebossBatchDomain(
   if (layout.progression.kind === 'generated' && query.source.source.kind === 'occurrence') {
     return;
   }
-  if (
-    layout.progression.kind === 'hub' &&
-    query.source.source.kind === 'hubDecision' &&
-    query.source.source.decisionKey === layout.progression.hubKey
-  ) {
-    return;
-  }
   throw new CandidateEvaluationContractError(
     `${semanticAddressKey(query.source)} has no declaration-owned takeover Preboss candidate domain`,
   );
-}
-
-/**
- * A Hub source is a declaration-owned candidate domain before it becomes an
- * evaluated candidate.  Its Preboss handoff itself remains unavailable until
- * the shared persisted-board gate is ready; invalid reward/generation
- * findings intentionally do not participate in this structural check.
- */
-function hubHandoffIsReady(
-  catalog: Catalog,
-  project: ProjectDocument,
-  query: TakeoverPrebossBatchCandidateQuery,
-): boolean {
-  if (query.source.source.kind !== 'hubDecision') return true;
-  const hubKey = query.source.source.decisionKey;
-  const plan = planFor(project, query.source.routeKey, query.source.biomeKey);
-  const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
-  if (layout?.progression.kind !== 'hub') return false;
-  const hub = plan.topology?.decisions.find(
-    (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
-  );
-  return hubDecisionHandoffReadiness(layout.progression, hub).kind === 'ready';
 }
 
 export function evaluateTakeoverPrebossBatch(

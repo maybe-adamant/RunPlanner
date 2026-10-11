@@ -354,7 +354,7 @@ describe('surface product loop', () => {
       nTopology?.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(edited).not.toEqual(authored);
     expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
     expect(recovery.hasPendingAutosave()).toBe(true);
@@ -378,7 +378,7 @@ describe('surface product loop', () => {
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(edited));
   });
 
-  it('closes a ninth unvisited Hub member and its completed handoff as one undoable autosaved command', async () => {
+  it('closes a ninth unvisited Hub member, keeping its Preboss chain, as one undoable autosaved command', async () => {
     const recovery = createRecoveryPersistence();
     const application = createApplication({
       autosaveRecovery: recovery.adapter,
@@ -424,15 +424,21 @@ describe('surface product loop', () => {
       topology.decisions.some(
         (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       topology.occurrences.some(
         (occurrence) => occurrence.occurrenceId === nOccurrenceId('combat03'),
       ),
     ).toBe(false);
     expect(
-      topology.occurrences.some((occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss),
-    ).toBe(false);
+      topology.occurrences.find((occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss),
+    ).toEqual(
+      authored.route.biomes
+        .find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss,
+        ),
+    );
     expect(currentEvaluation(application).findings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: 'hubOpenSetIncomplete' })]),
     );

@@ -435,6 +435,7 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
     kind: 'ReplaceWithHubDecision',
     hub,
     decision: createExitDecisionAddress(n, { kind: 'occurrence', occurrenceId: prehubId }),
+    prebossOccurrenceId: createOccurrenceId('dream-n-preboss'),
   });
   const board = nBlueprint.decisions.find((decision) => decision.kind === 'hub')!;
   if (board.kind !== 'hub') throw new Error('N fixture has no hub');
@@ -501,12 +502,6 @@ export function dreamMixedHandoffProject(fBatchOrder?: readonly number[]): Proje
       'combat23',
       'combat01',
     ]),
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTakeoverBatch',
-    decision: createExitDecisionAddress(n, { kind: 'hubDecision', decisionKey: 'hub' }),
-    gameName: 'N_PreBoss01',
-    targetOccurrenceIds: { preboss: createOccurrenceId('dream-n-preboss') },
   });
   for (const [offerKey, optionKey, offer] of [
     [

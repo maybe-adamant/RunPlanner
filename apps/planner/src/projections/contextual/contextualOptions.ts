@@ -557,7 +557,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'batchStateMissing':
     case 'biomeFieldMissing':
     case 'biomeTopologyMissing':
-    case 'continuationMissing':
     case 'hubOpenSetIncomplete':
     case 'hubVisitOrderIncomplete':
     case 'pickedTargetMissing':

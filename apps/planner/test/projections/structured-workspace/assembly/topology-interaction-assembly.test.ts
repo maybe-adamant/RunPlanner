@@ -96,7 +96,7 @@ describe('structured workspace topology interaction assembly', () => {
     expect(repair.existingTargets.length).toBeGreaterThan(0);
   });
 
-  it('adapts N removal commands and its completed-Hub handoff without traversing rendered nodes', () => {
+  it('adapts N removal commands without a completed-Hub handoff creation step', () => {
     const representative = assemble(loadSurfaceNOPQProject(), 'Surface', 'N');
     const removals = representative.assembly.topologyRemovalInteractionRequirements[0]?.removals;
     const openingDecision = createExitDecisionAddress(nBiome, {
@@ -113,16 +113,19 @@ describe('structured workspace topology interaction assembly', () => {
       ),
     ).toBe(true);
 
-    const completedProject = loadSurfaceNCompleteHubFrontierProject();
-    const completed = assemble(completedProject, 'Surface', 'N').assembly;
-    const handoff = completed.takeoverInteractionRequirements.find(
-      (requirement) => requirement.presentation === 'completedHubHandoff',
+    // The completed-Hub exit has neither its own removal nor a takeover repair.
+    const handoff = semanticAddressKey(
+      createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }),
     );
-    expect(handoff).toMatchObject({
-      action: 'create',
-      kind: 'takeoverBatch',
-      presentation: 'completedHubHandoff',
-    });
+    for (const project of [loadSurfaceNCompleteHubFrontierProject(), loadSurfaceNOPQProject()]) {
+      const completed = assemble(project, 'Surface', 'N').assembly;
+      expect(completed.takeoverInteractionRequirements).toEqual([]);
+      expect(
+        completed.topologyRemovalInteractionRequirements[0]?.removals.some(
+          (removal) => semanticAddressKey(removal.owner) === handoff,
+        ),
+      ).toBe(false);
+    }
   });
 
   it('publishes complete removal requirements without normal-batch takeover replacement', () => {
@@ -179,13 +182,6 @@ describe('structured workspace topology interaction assembly', () => {
         kind: 'occurrence' as const,
         occurrenceId: createOccurrenceId('golden-h-combat05'),
       },
-    },
-    {
-      biome: nBiome,
-      gameName: 'N_PreBoss01',
-      project: loadSurfaceNOPQProject,
-      routeKey: 'Surface',
-      source: { decisionKey: 'hub', kind: 'hubDecision' as const },
     },
     {
       biome: oBiome,

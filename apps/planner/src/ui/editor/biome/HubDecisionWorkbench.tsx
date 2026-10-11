@@ -4,7 +4,6 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
-  type WorkspaceAuthoringFrontier,
   type WorkspaceHubDecisionNode,
   type WorkspaceHubTab,
   type WorkspaceInteractionCatalog,
@@ -33,7 +32,6 @@ import { RunStateLauncher } from './RunStateSheet';
 import { hintProps } from '@planner/ui/controls/hint';
 
 interface HubDecisionWorkbenchProps {
-  readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly initialTab?: WorkspaceHubTab;
   /** Reapply a finding-owned tab request even when the requested tab is unchanged. */
   readonly navigationRevision?: number;
@@ -58,7 +56,6 @@ interface PendingHubMembershipFocus extends HubMembershipTransition {
 }
 
 export function HubDecisionWorkbench({
-  frontier,
   initialTab,
   findingNavigationRevision,
   navigationRevision,
@@ -82,13 +79,6 @@ export function HubDecisionWorkbench({
   );
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
-  const handoff =
-    frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision'
-      ? requireWorkspaceInteraction(interactions.takeoverBatches, frontier.interactionKey)
-      : undefined;
-  if (handoff !== undefined && handoff.presentation !== 'completedHubHandoff') {
-    throw new Error('The completed Hub frontier must expose its fixed Preboss handoff.');
-  }
   const titleId = `hub-${domId(node.marker.focusKey)}`;
   const actionOrderInteraction = requireWorkspaceInteraction(
     interactions.hubActionOrders,
@@ -423,7 +413,7 @@ export function HubDecisionWorkbench({
         )}
         {activeTab === 'exit' ? (
           <section className="hub-board" aria-label="Hub exit">
-            <HubCompletionHandoff interaction={handoff} node={node} />
+            <HubCompletionHandoff node={node} />
           </section>
         ) : null}
       </section>

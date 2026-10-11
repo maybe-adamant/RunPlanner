@@ -277,7 +277,7 @@ describe('workspace candidate interaction families', () => {
     }
   });
 
-  it('retains only completed-Hub handoff and authored takeover repair as standalone actions', () => {
+  it('retains only authored takeover repair as a standalone action', () => {
     const services = createStructuredWorkspaceTestServices();
     const hubHandoffProject = loadSurfaceNCompleteHubFrontierProject();
     const hubHandoffInteractions = services.structuredWorkspace.project(
@@ -290,12 +290,7 @@ describe('workspace candidate interaction families', () => {
     const hubHandoff = hubHandoffInteractions.takeoverBatches.get(
       semanticAddressKey(hubHandoffOwner),
     );
-    if (hubHandoff?.presentation !== 'completedHubHandoff') {
-      throw new Error('N completed-Hub handoff capability is missing');
-    }
-    expect(hubHandoff.action).toBe('create');
-    expect('load' in hubHandoff).toBe(false);
-    expect(typeof hubHandoff.intent).toBe('function');
+    expect(hubHandoff).toBeUndefined();
 
     const repairProject = createGoldenFGHIProject();
     const repairInteractions = services.structuredWorkspace.project(

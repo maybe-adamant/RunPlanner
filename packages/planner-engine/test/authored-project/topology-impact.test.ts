@@ -4,6 +4,7 @@ import {
   describeClearTopologyImpact,
   describeExitDecisionRemovalImpact,
   describeHubDecisionRemovalImpact,
+  describeHubBoardResetImpact,
   describeHubSlotClosureImpact,
   describeTopologyRemovalImpact,
   type OccurrenceId,
@@ -368,25 +369,6 @@ describe('topology removal impact', () => {
       decisions: [],
     });
 
-    const handoffImpact = describeExitDecisionRemovalImpact(topology, {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    });
-    expect(handoffImpact).toEqual({
-      removedExitDecisionSources: [
-        { kind: 'hubDecision', decisionKey: 'hub' },
-        { kind: 'occurrence', occurrenceId: preboss },
-      ],
-      removedHubDecisionKeys: [],
-      removedOccurrenceIds: [preboss, postPreboss],
-    });
-    if (handoffImpact === undefined) throw new Error('completed-Hub handoff is required');
-    expect(
-      applyTopologyRemovalImpact(topology, handoffImpact).occurrences.map(
-        (occurrence) => occurrence.occurrenceId,
-      ),
-    ).toEqual([opening, preHub, hubSlot]);
-
     const hubImpact = describeHubDecisionRemovalImpact(topology, 'hub');
     expect(hubImpact).toEqual({
       removedExitDecisionSources: [
@@ -443,15 +425,15 @@ describe('topology removal impact', () => {
       ],
     };
 
-    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01', 1)).toEqual({
+    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01')).toEqual({
       removedExitDecisionSources: [{ kind: 'occurrence', occurrenceId: hubSlot }],
       removedHubDecisionKeys: [],
       removedOccurrenceIds: [hubSlot, hubChild],
     });
-    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat02', 1)).toBeUndefined();
+    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat02')).toBeUndefined();
   });
 
-  it('removes the completed-Hub handoff subtree when closing falls below its open-slot minimum', () => {
+  it('keeps the completed-Hub chain when closing a slot or resetting the board', () => {
     const hubSlot = createOccurrenceId('hub-slot-combat01');
     const retainedSlot = createOccurrenceId('hub-slot-combat02');
     const preboss = createOccurrenceId('hub-preboss');
@@ -493,34 +475,24 @@ describe('topology removal impact', () => {
       ],
     };
 
-    const impact = describeHubSlotClosureImpact(topology, 'hub', 'combat01', 2);
-    expect(impact).toEqual({
-      removedExitDecisionSources: [
-        { kind: 'hubDecision', decisionKey: 'hub' },
-        { kind: 'occurrence', occurrenceId: preboss },
-      ],
-      removedHubDecisionKeys: [],
-      removedOccurrenceIds: [hubSlot, preboss, completionChild],
-    });
-    if (impact === undefined) throw new Error('Hub slot closure impact is missing');
-    expect(applyTopologyRemovalImpact(topology, impact)).toEqual({
-      startOccurrenceId: root,
-      occurrences: [root, retainedSlot].map((occurrenceId) => ({
-        occurrenceId,
-        gameName: 'TestRoom',
-        state: { kind: 'none' },
-        encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
-        roomActions: { order: [] },
-        additionalExits: [],
-      })),
-      fixedRoomLinks: [],
-      decisions: [topology.decisions[0]],
-    });
-    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01', 1)).toEqual({
+    expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01')).toEqual({
       removedExitDecisionSources: [],
       removedHubDecisionKeys: [],
       removedOccurrenceIds: [hubSlot],
     });
+    const reset = describeHubBoardResetImpact(topology, 'hub');
+    expect(reset).toEqual({
+      removedExitDecisionSources: [],
+      removedHubDecisionKeys: [],
+      removedOccurrenceIds: [hubSlot, retainedSlot],
+    });
+    if (reset === undefined) throw new Error('Hub board reset impact is missing');
+    expect(applyTopologyRemovalImpact(topology, reset).decisions).toEqual(topology.decisions);
+    expect(
+      applyTopologyRemovalImpact(topology, reset).occurrences.map(
+        (occurrence) => occurrence.occurrenceId,
+      ),
+    ).toEqual([root, preboss, completionChild]);
   });
 
   it('describes ClearTopology as every persisted occurrence and decision owner', () => {

@@ -219,47 +219,37 @@ export function describeTopologyRemovalImpact(
 }
 
 /**
- * Describes the full topology consequence of closing a Hub slot. The Hub
- * decision itself stays authored and is updated by CloseHubSlot. Crossing the
- * declared open-set minimum additionally detaches the completed-Hub handoff
- * because the retained board is incomplete.
+ * Describes the topology removed by closing one Hub slot: its occurrence and
+ * everything it owns. The Hub decision and its completed-Hub chain stay.
  */
 export function describeHubSlotClosureImpact(
   topology: BiomeTopology,
   hubKey: string,
   hubSlotKey: string,
-  minimumOpenCount: number,
 ): TopologyRemovalImpact | undefined {
   const hub = topology.decisions.find(
     (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
   );
   const target = hub?.openTargets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
   if (hub === undefined || target === undefined) return undefined;
+  return describeTopologyRemovalImpact(topology, new Set([target.occurrenceId]));
+}
 
-  // An undersized Hub remains an intentionally incomplete authored board, but
-  // it can no longer own its completed-Hub exit.  Remove that handoff and its
-  // selected subtree in the same CloseHubSlot impact as the detached slot.
-  const removedExitDecisionSources = new Set<string>();
-  if (hub.openTargets.length - 1 < minimumOpenCount) {
-    const handoff = topology.decisions.find(
-      (decision): decision is ExitDecision =>
-        decision.kind === 'exit' &&
-        decision.source.kind === 'hubDecision' &&
-        decision.source.decisionKey === hubKey,
-    );
-    if (handoff !== undefined) {
-      removedExitDecisionSources.add(exitDecisionSourceKey(handoff.source));
-    }
-  }
-  const closure = collectTopologyRemovalClosure(topology, {
-    occurrenceIds: new Set([target.occurrenceId]),
-    exitDecisionSources: removedExitDecisionSources,
-  });
-  return impactFor(
+/**
+ * Describes the board cleared by ResetHubBoard: every open slot occurrence and
+ * what it owns. The Hub decision, its source and its completed-Hub chain stay.
+ */
+export function describeHubBoardResetImpact(
+  topology: BiomeTopology,
+  hubKey: string,
+): TopologyRemovalImpact | undefined {
+  const hub = topology.decisions.find(
+    (decision): decision is HubDecision => decision.kind === 'hub' && decision.hubKey === hubKey,
+  );
+  if (hub === undefined) return undefined;
+  return describeTopologyRemovalImpact(
     topology,
-    closure.removedOccurrences,
-    closure.removedSourceKeys,
-    closure.removedHubDecisionKeys,
+    new Set(hub.openTargets.map((target) => target.occurrenceId)),
   );
 }
 
@@ -287,9 +277,7 @@ export function describeClearTopologyImpact(topology: BiomeTopology): TopologyRe
 /**
  * Describes the semantic effect of RemoveExitDecision. If its removed targets
  * include a Hub source, the Hub board, every open Hub occurrence, and the
- * completed-Hub handoff are removed through that persisted ownership edge.
- * Removing a completed-Hub exit itself does not remove the still-authored
- * Hub board.
+ * completed-Hub chain are removed through that persisted ownership edge.
  */
 export function describeExitDecisionRemovalImpact(
   topology: BiomeTopology,

@@ -220,13 +220,7 @@ export function renderHubDecisionWorkbench(
     (biome, workspace) => {
       const node = biome.nodes.find((candidate) => candidate.kind === 'hubDecision');
       if (node?.kind !== 'hubDecision') return <p>No Hub decision workbench</p>;
-      return (
-        <HubDecisionWorkbench
-          frontier={biome.frontier}
-          interactions={workspace.interactions}
-          node={node}
-        />
-      );
+      return <HubDecisionWorkbench interactions={workspace.interactions} node={node} />;
     },
     application,
   );
@@ -259,7 +253,6 @@ export function renderStaticHubDecisionWorkbench(
           {...(next.findingNavigationRevision === undefined
             ? {}
             : { findingNavigationRevision: next.findingNavigationRevision })}
-          frontier={biome.frontier}
           {...(next.initialTab === undefined ? {} : { initialTab: next.initialTab })}
           interactions={workspace.interactions}
           node={node}

@@ -1450,7 +1450,7 @@ describe('workspace inspector destinations', () => {
       (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'occurrenceWorkbench' }> =>
         node.kind === 'occurrenceWorkbench' &&
         node.room.occurrenceId === nOccurrenceIds.preboss &&
-        node.sourceDecisionRemoval !== undefined,
+        node.completedHubExitStage === true,
     );
     const prebossTarget = createTargetAddress(nBiome, handoffOwner.source, 'preboss');
     if (preboss === undefined) throw new Error('N fixed Preboss workbench is missing');
@@ -1501,16 +1501,19 @@ describe('workspace inspector destinations', () => {
     expect(unroomedVisit.inspectorSubject).toEqual({ kind: 'node', nodeKey: truncatedHub.key });
     expect(unroomedVisit.selectedRailKey).toBeUndefined();
 
+    // The completed-Hub exit always owns its Preboss, so its owner routes to that stage.
     const handoff = project(loadSurfaceNCompleteHubFrontierProject());
     const handoffN = biome(handoff, 'N');
-    const handoffHub = handoffN.nodes.find(
-      (node): node is Extract<(typeof handoffN.nodes)[number], { readonly kind: 'hubDecision' }> =>
-        node.kind === 'hubDecision',
+    const handoffPreboss = handoffN.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'Preboss',
     );
-    if (handoffHub === undefined) throw new Error('completed N Hub handoff board is missing');
+    if (handoffPreboss === undefined) throw new Error('completed N Hub Preboss stage is missing');
     const handoffDestination = destination(handoff, handoffOwner);
     expect(handoffDestination.hubTab).toBe('exit');
-    expect(handoffDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: handoffHub.key });
+    expect(handoffDestination.inspectorSubject).toEqual({
+      kind: 'node',
+      nodeKey: handoffPreboss.key,
+    });
     expect(handoffDestination.selectedRailKey).toBeUndefined();
   });
 

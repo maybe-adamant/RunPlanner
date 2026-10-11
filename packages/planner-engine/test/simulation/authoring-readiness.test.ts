@@ -689,25 +689,11 @@ describe('chronological authoring horizon', () => {
       ),
     ).toBe('locked');
 
-    const handoff = createExitDecisionAddress(nBiome, {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    });
-    const missingHandoff = simulateProjectAssembly(
-      catalog,
-      applyProjectCommand(loadSurfaceNProject(), catalog, {
-        kind: 'RemoveExitDecision',
-        decision: handoff,
-      }),
-    );
-    expect(missingHandoff.evaluation.authoringHorizon).toMatchObject({
-      kind: 'incomplete',
-      blockedAfter: handoff,
-    });
-    expect(authoringReadinessAt(missingHandoff, handoff)).toBe('editable');
+    const preboss = createOccurrenceAddress(nBiome, nOccurrenceIds.preboss);
+    expect(authoringReadinessAt(incompleteVisits, preboss)).toBe('locked');
     expect(
-      authoringReadinessAt(missingHandoff, createOccurrenceAddress(nBiome, nOccurrenceIds.preboss)),
-    ).toBe('locked');
+      authoringReadinessAt(simulateProjectAssembly(catalog, loadSurfaceNProject()), preboss),
+    ).toBe('editable');
   });
 
   it('keeps a blocking main Hub room repairable while locking side generation', () => {

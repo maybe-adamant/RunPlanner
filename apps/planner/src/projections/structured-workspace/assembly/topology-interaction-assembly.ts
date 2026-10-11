@@ -1,7 +1,6 @@
 import {
   createExitDecisionAddress,
   createHubDecisionAddress,
-  completedHubHandoffForSource,
   semanticAddressKey,
   type ExitDecision,
   type ExitDecisionSourceAddress,
@@ -79,7 +78,8 @@ function topologyRemovalInteractionRequirements(
           owner,
         }),
       );
-    } else if (decision.kind === 'exit') {
+    } else if (decision.kind === 'exit' && decision.source.kind === 'occurrence') {
+      // The completed-Hub exit is removed only with its Hub.
       const owner = createExitDecisionAddress(biome, decision.source);
       removals.push(
         Object.freeze({
@@ -150,17 +150,16 @@ function declaredTakeoverExitKeys(
 }
 
 /**
- * Topology retains only already-authored takeover repair and the completed-Hub
- * handoff. Generated Preboss selection belongs to the empty decision's Door 1
- * Room control, where the ordinary and takeover candidate families meet.
+ * Topology retains only already-authored takeover repair. Generated Preboss
+ * selection belongs to the empty decision's Door 1 Room control, where the
+ * ordinary and takeover candidate families meet.
  */
 function takeoverInteractionRequirements(
   input: WorkspaceTopologyInteractionAssemblyInput,
 ): readonly WorkspaceTakeoverInteractionRequirement[] {
   const { catalog, source } = input;
-  const { biome, layout, plan } = source;
-  const topology = plan.topology;
-  if (topology === null) return Object.freeze([]);
+  const { biome, plan } = source;
+  if (plan.topology === null) return Object.freeze([]);
   const requirementsByOwner = new Map<string, WorkspaceTakeoverInteractionRequirement>();
   const add = (requirement: WorkspaceTakeoverInteractionRequirement): void => {
     const key = workspaceTakeoverInteractionRequirementKey(requirement);
@@ -173,6 +172,8 @@ function takeoverInteractionRequirements(
   };
   const authoredDecisions = authoredExitDecisionsByOwner(source);
   for (const decision of authoredDecisions.values()) {
+    // The completed-Hub exit is fixed with its Hub and has no takeover repair.
+    if (decision.source.kind === 'hubDecision') continue;
     const owner = createExitDecisionAddress(biome, decision.source);
     const existingTargets = takeoverExistingTargets(decision);
     const takeoverGameName = authoredBatchTakeoverGameName(catalog, source, decision);
@@ -193,33 +194,6 @@ function takeoverInteractionRequirements(
       }
       continue;
     }
-  }
-  const completeness = source.completeness;
-  if (completeness.completion !== 'incomplete' || completeness.frontier.kind !== 'exitDecision') {
-    return Object.freeze([...requirementsByOwner.values()]);
-  }
-  const owner = completeness.frontier;
-  const existing = authoredDecisions.get(semanticAddressKey(owner));
-  const fixedTransition = completedHubHandoffForSource(catalog, layout, topology, owner.source);
-  const requiredExitKeys =
-    fixedTransition === undefined
-      ? undefined
-      : declaredTakeoverExitKeys(catalog, source, owner.source);
-  if (
-    fixedTransition?.kind === 'completedHubHandoff' &&
-    existing === undefined &&
-    requiredExitKeys !== undefined
-  ) {
-    add(
-      Object.freeze({
-        action: 'create' as const,
-        gameName: fixedTransition.room.gameName,
-        kind: 'takeoverBatch' as const,
-        owner,
-        presentation: 'completedHubHandoff' as const,
-        requiredExitKeys,
-      }),
-    );
   }
   return Object.freeze([...requirementsByOwner.values()]);
 }

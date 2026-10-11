@@ -148,64 +148,32 @@ function bindTakeoverBatchInteractions(
         `${key} has multiple bound takeover batch interactions`,
       );
     }
-    switch (requirement.presentation) {
-      case 'repair': {
-        const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
-        takeoverBatches.set(
-          key,
+    const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
+    takeoverBatches.set(
+      key,
+      Object.freeze({
+        action: 'reconcile' as const,
+        intent: () =>
           Object.freeze({
-            action: 'reconcile' as const,
-            intent: () =>
-              Object.freeze({
-                command: createTakeoverBatchCommand({
-                  action: 'reconcile',
-                  allocateOccurrenceId,
-                  decision: requirement.owner,
-                  existingTargetOccurrenceIds,
-                  gameName: requirement.gameName,
-                  requiredExitKeys: requirement.requiredExitKeys,
-                }),
-                focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-              }),
-            key,
-            label: routeRoomDeclaration(
-              requireWorkspaceRoom(catalog, requirement.gameName),
-              requirement.owner.routeKey,
-            ).label,
-            owner: requirement.owner,
-            presentation: 'repair' as const,
+            command: createTakeoverBatchCommand({
+              action: 'reconcile',
+              allocateOccurrenceId,
+              decision: requirement.owner,
+              existingTargetOccurrenceIds,
+              gameName: requirement.gameName,
+              requiredExitKeys: requirement.requiredExitKeys,
+            }),
+            focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
           }),
-        );
-        break;
-      }
-      case 'completedHubHandoff':
-        takeoverBatches.set(
-          key,
-          Object.freeze({
-            action: 'create' as const,
-            intent: () =>
-              Object.freeze({
-                command: createTakeoverBatchCommand({
-                  action: 'create',
-                  allocateOccurrenceId,
-                  decision: requirement.owner,
-                  existingTargetOccurrenceIds: new Map(),
-                  gameName: requirement.gameName,
-                  requiredExitKeys: requirement.requiredExitKeys,
-                }),
-                focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-              }),
-            key,
-            label: routeRoomDeclaration(
-              requireWorkspaceRoom(catalog, requirement.gameName),
-              requirement.owner.routeKey,
-            ).label,
-            owner: requirement.owner,
-            presentation: 'completedHubHandoff' as const,
-          }),
-        );
-        break;
-    }
+        key,
+        label: routeRoomDeclaration(
+          requireWorkspaceRoom(catalog, requirement.gameName),
+          requirement.owner.routeKey,
+        ).label,
+        owner: requirement.owner,
+        presentation: 'repair' as const,
+      }),
+    );
   }
   return takeoverBatches;
 }
@@ -546,18 +514,21 @@ export function bindTopologyInteractions(input: {
                   `${gameName} Hub candidate disagrees with its declared terminal for ${key}`,
                 );
               }
+              const prebossOccurrenceId = allocateOccurrenceId();
               const command =
                 control.persistence === 'authored'
                   ? Object.freeze({
                       decision: control.decisionOwner,
                       hub: hub.decision,
                       kind: 'ReplaceWithHubDecision' as const,
+                      prebossOccurrenceId,
                     })
                   : Object.freeze({
                       decision: control.decisionOwner,
                       edit: Object.freeze({
                         hub: hub.decision,
                         kind: 'hub' as const,
+                        prebossOccurrenceId,
                       }),
                       kind: 'InitializeExitDecision' as const,
                     });

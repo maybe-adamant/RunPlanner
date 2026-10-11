@@ -242,6 +242,7 @@ describe('workspace inspector defaults', () => {
           occurrenceId: nOccurrenceIds.preHub,
         }),
         hub: createHubDecisionAddress(nBiome, 'hub'),
+        prebossOccurrenceId: nOccurrenceIds.preboss,
         kind: 'ReplaceWithHubDecision',
       }),
       'N',
@@ -268,18 +269,14 @@ describe('workspace inspector defaults', () => {
       'hubDecision',
     );
 
+    // A complete Hub reaches its retained chain, so the default follows its last active room.
     const handoff = biome(loadSurfaceNCompleteHubFrontierProject(), 'N');
-    if (
-      handoff.frontier?.kind !== 'exitDecision' ||
-      handoff.frontier.owner.source.kind !== 'hubDecision'
-    ) {
-      throw new Error('N completed Hub handoff frontier is missing');
-    }
     expect(handoff.defaultInspectorDestination?.kind).toBe('node');
     if (handoff.defaultInspectorDestination?.kind !== 'node') return;
-    expect(nodeByKey(handoff, handoff.defaultInspectorDestination.nodeKey).kind).toBe(
-      'hubDecision',
-    );
+    expect(nodeByKey(handoff, handoff.defaultInspectorDestination.nodeKey)).toMatchObject({
+      kind: 'occurrenceWorkbench',
+      room: { kind: 'PostBoss' },
+    });
 
     const complete = biome(loadSurfaceNOPQProject(), 'N');
     const postboss = complete.nodes.find(

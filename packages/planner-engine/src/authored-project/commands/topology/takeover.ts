@@ -6,7 +6,6 @@ import type {
   ExitDecision,
   ExitSelection,
   FixedRoomLink,
-  HubDecision,
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
@@ -19,7 +18,6 @@ import {
   bossDeclarationTakesAuthoredRewardStore,
   bossDoorRewardStoreKeysForLayout,
   exitDecisionForSource,
-  hubDecisionHandoffReadiness,
   normalDecisionProgressionForLayout,
   selectedExitKey,
 } from '../../topology/query';
@@ -293,6 +291,80 @@ export function reconcileCompletionChain(
   return completionChainForSelection(catalog, located, next, nextPrebossOccurrenceId, command);
 }
 
+/**
+ * Appends a Hub's fixed completed-Hub exit: the width-one Preboss batch and,
+ * through the fixed links, its Boss and route-position Postboss.
+ */
+export function appendCompletedHubChain(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  hubKey: string,
+  prebossOccurrenceId: OccurrenceId,
+  command: TopologyCommand,
+): BiomeTopology {
+  const progression = located.layout.progression;
+  if (progression.kind !== 'hub' || progression.hubKey !== hubKey) {
+    failCommand(command, 'only a Hub progression has a completed-Hub exit');
+  }
+  const room = requireRoom(
+    catalog,
+    progression.completedExit.roomGameName,
+    located.layout.biomeKey,
+    command,
+  );
+  if (located.routePosition.completion.prebossRoomGameName !== room.gameName)
+    failCommand(command, `${room.gameName} is not this route position's declared Preboss`);
+  const createdIds = [
+    prebossOccurrenceId,
+    fixedCompletionOccurrenceId(prebossOccurrenceId, 'boss'),
+    fixedCompletionOccurrenceId(prebossOccurrenceId, 'postboss'),
+  ];
+  if (topology.occurrences.some((occurrence) => createdIds.includes(occurrence.occurrenceId))) {
+    failCommand(
+      command,
+      `occurrence ${prebossOccurrenceId} or its completion chain already exists`,
+    );
+  }
+  const decision: ExitDecision = Object.freeze({
+    kind: 'exit',
+    source: Object.freeze({ kind: 'hubDecision', decisionKey: hubKey }),
+    normal: Object.freeze({
+      kind: 'batch',
+      rewardStore: createInitialBatchRewardStore(
+        normalDecisionProgressionForLayout(located.layout) ??
+          failCommand(command, 'layout has no normal-door decision policy'),
+      ),
+      batchState: null,
+      targets: Object.freeze([
+        Object.freeze({
+          exitKey: progression.completedExit.exitKey,
+          occurrenceId: prebossOccurrenceId,
+        }),
+      ]),
+    }),
+    selection: Object.freeze({ kind: 'derived' }),
+  });
+  const preboss = defaultOccurrence(
+    catalog,
+    room,
+    located.routeKey,
+    prebossOccurrenceId,
+    expectedPrebossRole(room, 0, command),
+    true,
+    undefined,
+    located.loadout,
+  );
+  const withPreboss = appendDecision(
+    Object.freeze({
+      ...topology,
+      occurrences: Object.freeze([...topology.occurrences, preboss]),
+    }),
+    decision,
+  );
+  return completionChainForSelection(catalog, located, withPreboss, prebossOccurrenceId, command);
+}
+
 export function replaceTakeoverBatch(
   document: ProjectDocument,
   catalog: Catalog,
@@ -303,28 +375,11 @@ export function replaceTakeoverBatch(
   >,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  if (
-    (located.layout.progression.kind === 'hub' && command.decision.source.kind !== 'hubDecision') ||
-    (located.layout.progression.kind === 'generated' &&
-      command.decision.source.kind !== 'occurrence')
-  ) {
-    failCommand(command, 'takeover source does not match this progression');
-  }
   if (command.decision.source.kind === 'hubDecision') {
-    const hubSource = command.decision.source;
-    if (located.layout.progression.kind !== 'hub') {
-      failCommand(command, 'only a Hub progression has a completed-Hub exit');
-    }
-    const hub = topology.decisions.find(
-      (decision): decision is HubDecision =>
-        decision.kind === 'hub' && decision.hubKey === hubSource.decisionKey,
-    );
-    if (hubDecisionHandoffReadiness(located.layout.progression, hub).kind !== 'ready') {
-      failCommand(
-        command,
-        'complete the declared Hub board and required visits before creating its Preboss batch',
-      );
-    }
+    failCommand(command, 'the completed-Hub exit is created and removed only with its Hub');
+  }
+  if (located.layout.progression.kind !== 'generated') {
+    failCommand(command, 'takeover source does not match this progression');
   }
   const existing = exitDecisionForSource(topology, command.decision.source);
   if (command.kind === 'CreateTakeoverBatch' && existing !== undefined)

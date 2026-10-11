@@ -52,6 +52,27 @@ function hasHandoff(project: ProjectDocument): boolean {
   );
 }
 
+/** The Hub's completed exit with its Preboss, Boss and Postboss rooms and links. */
+function completionChain(project: ProjectDocument) {
+  const topology = nTopology(project);
+  const handoff = topology.decisions.find(
+    (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
+  );
+  const prebossId = handoff?.kind === 'exit' ? handoff.normal.targets[0]?.occurrenceId : undefined;
+  const ids = new Set([
+    prebossId,
+    ...topology.fixedRoomLinks.flatMap((link) => [
+      link.sourceOccurrenceId,
+      link.targetOccurrenceId,
+    ]),
+  ]);
+  return {
+    handoff,
+    occurrences: topology.occurrences.filter((occurrence) => ids.has(occurrence.occurrenceId)),
+    fixedRoomLinks: topology.fixedRoomLinks,
+  };
+}
+
 function withOutcome(project: ProjectDocument, targetTraitKey: string): ProjectDocument {
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceFountainRarityTarget',
@@ -94,7 +115,7 @@ describe('Hub action order commands', () => {
     }
   });
 
-  it('removing a room visit keeps retained actions in order and removes the completed handoff', () => {
+  it('removing a room visit keeps retained actions in order and the completed-Hub chain', () => {
     const project = replaceActions(loadSurfaceNProject(), hubVisitActions(nVisitSlotKeys, 3));
     const actions = authoredHub(project).actions;
     const removed = replaceActions(
@@ -109,10 +130,9 @@ describe('Hub action order commands', () => {
         2,
       ),
     );
-    expect(hasHandoff(removed)).toBe(false);
-    expect(
-      nTopology(removed).occurrences.some((occurrence) => occurrence.gameName === 'N_PreBoss01'),
-    ).toBe(false);
+    expect(hasHandoff(removed)).toBe(true);
+    expect(completionChain(removed)).toEqual(completionChain(project));
+    expect(completionChain(replaceActions(project, []))).toEqual(completionChain(project));
   });
 
   it('removing only the fountain keeps the six-visit handoff and every downstream room', () => {
@@ -162,6 +182,7 @@ describe('Hub action order commands', () => {
       openTargets: [],
       actions: [],
     });
+    expect(completionChain(history.present)).toEqual(completionChain(project));
     expect(undoProjectHistory(history).present).toBe(project);
 
     const fountainOnly = replaceActions(history.present, [{ kind: 'useFountain' }]);
@@ -186,9 +207,15 @@ describe('new Hub decisions', () => {
         occurrenceId: nOccurrenceIds.preHub,
       }),
       hub,
+      prebossOccurrenceId: nOccurrenceIds.preboss,
     });
     expect(authoredHub(recreated).actions).toEqual([]);
     expect(authoredHub(recreated).fountainRarityResult).toBeUndefined();
+    expect(hasHandoff(removed)).toBe(false);
+    expect(hasHandoff(recreated)).toBe(true);
+    expect(completionChain(recreated).occurrences.map((occurrence) => occurrence.gameName)).toEqual(
+      ['N_PreBoss01', 'N_Boss01', 'N_PostBoss01'],
+    );
   });
 });
 

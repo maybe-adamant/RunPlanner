@@ -383,6 +383,7 @@ describe('authored-project room replacement commands', () => {
       kind: 'ReplaceWithHubDecision',
       decision: preHubDecision,
       hub: createHubDecisionAddress(nBiome, 'hub'),
+      prebossOccurrenceId: createOccurrenceId('replacement-n-preboss'),
     });
     const slotId = createOccurrenceId('replacement-n-combat02');
     const localIds = nLocalOccurrenceIds('combat02', 'replacement');

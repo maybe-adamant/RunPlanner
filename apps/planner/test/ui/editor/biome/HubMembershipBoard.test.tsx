@@ -38,6 +38,7 @@ describe('HubMembershipBoard', () => {
         occurrenceId: nOccurrenceIds.preHub,
       }),
       hub: createHubDecisionAddress(nBiome, 'hub'),
+      prebossOccurrenceId: nOccurrenceIds.preboss,
       kind: 'ReplaceWithHubDecision',
     });
     const view = renderHubDecisionWorkbench(project);

@@ -177,6 +177,7 @@ describe('App', () => {
         decision: preHubDecision,
         hub: createHubDecisionAddress(biome, 'hub'),
         kind: 'ReplaceWithHubDecision',
+        prebossOccurrenceId: nOccurrenceIds.preboss,
       },
     );
     application.store.dispatch(authoredProjectReplaced(project));

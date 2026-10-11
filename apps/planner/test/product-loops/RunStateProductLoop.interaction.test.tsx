@@ -187,19 +187,20 @@ describe('Run State product loop', () => {
     expectNoEvaluationWork(events, 'N Preboss Run State open/close');
   });
 
-  it('retains the visible completed-Hub Preboss handoff as one outer transition', async () => {
+  it('reaches the completed-Hub Preboss from the Hub Exit tab', async () => {
     const application = createApplication();
-    const project = loadSurfaceNCompleteHubFrontierProject();
-    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNCompleteHubFrontierProject()));
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(screen.getByRole('button', { name: /Hub.*visits/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
-    const handoff = document.querySelector<HTMLElement>('[data-hub-exit-door="true"]');
-    if (handoff === null) throw new Error('completed Hub Preboss handoff is missing');
-    expect(within(handoff).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
-    expect(within(handoff).getByText('All required Hub visits are complete.')).toBeTruthy();
+    const door = screen.getByRole('article', { name: 'Preboss room' });
+    expect(door.dataset.hubExitState).toBe('reached');
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
+    const prebossWorkbench = document.querySelector<HTMLElement>('.biome-occurrence-workbench');
+    if (prebossWorkbench === null) throw new Error('Preboss room workbench is missing');
+    expect(within(prebossWorkbench).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     application.dispose();
   });
 });

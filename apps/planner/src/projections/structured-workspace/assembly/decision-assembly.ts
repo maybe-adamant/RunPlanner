@@ -40,7 +40,6 @@ import {
   workspaceInteractionKey,
   type WorkspaceRoomPickerControl,
 } from '../contract';
-import type { WorkspaceStageDecisionRemoval } from '../contracts/structure';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceBatchInteractionRequirement,
@@ -156,22 +155,6 @@ export interface WorkspaceBatchDecisionAssembly {
 }
 
 export type WorkspaceDecisionAssembly = WorkspaceBatchDecisionAssembly;
-
-function hubStageDecisionRemoval(
-  input: WorkspaceDecisionAssemblyBaseInput,
-  owner: ExitDecisionAddress,
-): WorkspaceStageDecisionRemoval | undefined {
-  const { source } = input;
-  const layout = source.layout;
-  if (layout.progression.kind !== 'hub') return undefined;
-  const isExpectedSource =
-    owner.source.kind === 'hubDecision' && owner.source.decisionKey === layout.progression.hubKey;
-  if (!isExpectedSource) return undefined;
-  return Object.freeze({
-    interactionKey: workspaceInteractionKey(owner),
-    label: 'Remove Preboss',
-  });
-}
 
 /**
  * Ordinary offer and finding owners remain exact semantic addresses, while
@@ -523,7 +506,7 @@ function projectAuthoredTargetWithOverlay(
   target: AuthoredBatchTarget,
   fieldsFacts: FieldsBatchFacts | undefined,
   physical: readonly DeclaredPhysicalExit[],
-  sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
+  completedHubExitStage: boolean,
   evaluatedTarget: CanonicalTarget | undefined,
   batchKind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
 ): {
@@ -604,7 +587,7 @@ function projectAuthoredTargetWithOverlay(
     ...occurrenceAssembly.node,
     incomingDoor: door,
     inspectorPresentation: 'doorTarget' as const,
-    ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
+    ...(completedHubExitStage ? { completedHubExitStage: true as const } : {}),
     railMarker: markerForTarget,
   });
   return Object.freeze({
@@ -923,10 +906,7 @@ function assembleBatchDecision(
     source.occurrence,
     decision,
   );
-  const sourceDecisionRemoval =
-    kind === 'takeoverBatch' && decision.source.kind === 'hubDecision'
-      ? hubStageDecisionRemoval(input, owner)
-      : undefined;
+  const completedHubExitStage = decision.source.kind === 'hubDecision';
   const physical = workspaceDeclaredPhysicalExits(
     input.catalog,
     source.layout,
@@ -945,7 +925,7 @@ function assembleBatchDecision(
         target,
         authoredFieldsFacts,
         physical,
-        sourceDecisionRemoval,
+        completedHubExitStage,
         overlay,
         kind,
       );
@@ -1214,7 +1194,9 @@ function assembleBatchDecision(
           ...base,
           kind: 'takeoverBatch' as const,
           targetInteraction: 'readOnly' as const,
-          takeoverInteractionKey: workspaceInteractionKey(owner),
+          ...(completedHubExitStage
+            ? {}
+            : { takeoverInteractionKey: workspaceInteractionKey(owner) }),
         })
       : kind === 'mixedBatch'
         ? Object.freeze({
@@ -1241,7 +1223,7 @@ function assembleBatchDecision(
         );
     }
   }
-  if (sourceDecisionRemoval !== undefined) {
+  if (completedHubExitStage) {
     const workbench = projectedTargets[0]?.node;
     if (workbench === undefined) {
       throw new StructuredWorkspaceProjectionContractError(

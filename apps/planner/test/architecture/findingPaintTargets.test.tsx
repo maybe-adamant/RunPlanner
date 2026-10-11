@@ -121,6 +121,7 @@ const constructed: readonly (readonly [string, () => ProjectDocument])[] = [
           occurrenceId: nOccurrenceIds.preHub,
         }),
         hub: createHubDecisionAddress(surfaceN, 'hub'),
+        prebossOccurrenceId: createOccurrenceId('paint-n-preboss'),
       }),
   ],
 ];

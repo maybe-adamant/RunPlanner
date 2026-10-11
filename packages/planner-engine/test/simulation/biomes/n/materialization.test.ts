@@ -286,6 +286,7 @@ describe('canonical N Hub materialization', () => {
         occurrenceId: nOccurrenceIds.preHub,
       }),
       hub: createHubDecisionAddress(nBiome, 'hub'),
+      prebossOccurrenceId: nOccurrenceIds.preboss,
     });
     const plan = project.route.biomes.find((biome) => biome.biomeKey === 'N');
     if (plan === undefined) throw new Error('N Hub-source fixture lost its biome plan');
@@ -367,36 +368,59 @@ describe('canonical N Hub materialization', () => {
     ]);
   });
 
-  it('keeps a completed Hub composable at its Hub-owned handoff frontier', () => {
-    const withoutHandoff = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
-        kind: 'hubDecision',
-        decisionKey: 'hub',
-      }),
+  it('stops at the Hub frontier while the Hub is incomplete and reaches its retained chain once complete', () => {
+    const complete = loadSurfaceNProject();
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const completeHub = complete.route.biomes
+      .find((candidate) => candidate.biomeKey === 'N')
+      ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+    if (completeHub?.kind !== 'hub') throw new Error('complete N fixture has no Hub');
+    const fiveVisits = completeHub.actions.filter(
+      (action, index, actions) =>
+        action.kind !== 'roomVisit' ||
+        actions.slice(index + 1).some((later) => later.kind === 'roomVisit'),
+    );
+    const incomplete = applyProjectCommand(complete, catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions: fiveVisits,
     });
-    const biome = simulateProject(catalog, withoutHandoff).route?.biomes.find(
+    const nTopology = (document: typeof complete) =>
+      document.route.biomes.find((candidate) => candidate.biomeKey === 'N')?.topology;
+    const chain = (document: typeof complete) =>
+      nTopology(document)?.occurrences.filter((occurrence) =>
+        ['N_PreBoss01', 'N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
+      );
+    expect(chain(incomplete)).toEqual(chain(complete));
+    expect(nTopology(incomplete)?.fixedRoomLinks).toEqual(nTopology(complete)?.fixedRoomLinks);
+
+    const biome = simulateProject(catalog, incomplete).route?.biomes.find(
       (candidate) => candidate.biomeKey === 'N',
     );
-    if (biome?.authoring !== 'incomplete') throw new Error('N handoff fixture did not remain open');
-    if (biome.coverage.kind !== 'prefix') throw new Error('N handoff fixture lost prefix coverage');
-    if (!('history' in biome)) throw new Error('N handoff fixture did not compose history');
+    if (biome?.authoring !== 'incomplete' || !('materializedPrefix' in biome)) {
+      throw new Error('incomplete N Hub did not retain a materialized prefix');
+    }
+    expect(biome.materializedPrefix.frontier).toMatchObject({ kind: 'hubVisit' });
+    expect(biome.materializedPrefix.decisions.map((decision) => decision.kind)).toEqual([
+      'batch',
+      'hub',
+    ]);
+    expect(
+      biome.findings.some((finding) =>
+        semanticAddressKey(finding.origin).includes(nOccurrenceIds.preboss),
+      ),
+    ).toBe(false);
 
-    expect(biome).toMatchObject({
-      coverage: {
-        kind: 'prefix',
-        through: {
-          owner: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
-            kind: 'hubDecision',
-            decisionKey: 'hub',
-          }),
-        },
-      },
-      frontier: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
-        kind: 'hubDecision',
-        decisionKey: 'hub',
-      }),
+    const restored = applyProjectCommand(incomplete, catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions: completeHub.actions,
     });
-    expect(biome.history.events.some((event) => event.kind === 'roomCreated')).toBe(true);
+    expect(encodeProjectDocument(restored)).toBe(encodeProjectDocument(complete));
+    expect(
+      simulateProject(catalog, restored).route?.biomes.find(
+        (candidate) => candidate.biomeKey === 'N',
+      ),
+    ).toMatchObject({ authoring: 'complete', validity: 'valid' });
   });
 });

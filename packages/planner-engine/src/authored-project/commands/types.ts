@@ -180,7 +180,11 @@ export type TopologyCommand =
       readonly edit:
         | { readonly kind: 'rewardStore'; readonly storeKey: string }
         | { readonly kind: 'fieldsCageOutcome'; readonly cageOutcome: 'min' | 'max' }
-        | { readonly kind: 'hub'; readonly hub: HubDecisionAddress }
+        | {
+            readonly kind: 'hub';
+            readonly hub: HubDecisionAddress;
+            readonly prebossOccurrenceId: OccurrenceId;
+          }
         | {
             readonly kind: 'target';
             readonly target: TargetAddress;
@@ -217,6 +221,7 @@ export type TopologyCommand =
       readonly kind: 'ReplaceWithHubDecision';
       readonly decision: ExitDecisionAddress;
       readonly hub: HubDecisionAddress;
+      readonly prebossOccurrenceId: OccurrenceId;
     }
   | { readonly kind: 'RemoveHubDecision'; readonly hub: HubDecisionAddress }
   | { readonly kind: 'ResetHubBoard'; readonly hub: HubDecisionAddress }

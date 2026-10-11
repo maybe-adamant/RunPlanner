@@ -2,11 +2,11 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   applyTopologyRemovalImpact,
   describeExitDecisionRemovalImpact,
+  describeHubBoardResetImpact,
   describeHubDecisionRemovalImpact,
   describeHubSlotClosureImpact,
 } from '../../topology/impact';
 import type {
-  BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
   HubAction,
@@ -26,21 +26,7 @@ import { failCommand, requireRoom, requireTopology, type LocatedBiome } from '..
 import type { TopologyCommand } from '../types';
 import { replaceDecision, appendDecision, appendOccurrence, updateTopology } from './construction';
 import { defaultOccurrence } from '../../topology/construction';
-
-/**
- * A completed Hub owns one fixed width-one Preboss handoff. Reducing the room
- * visits below its declared completion requirement must remove that handoff
- * and its target subtree in the same semantic edit; otherwise the persisted
- * topology would retain an invalid Hub-source exit. Fountain placement alone
- * never gates the handoff.
- */
-function removeCompletedHubHandoff(topology: BiomeTopology, hubKey: string): BiomeTopology {
-  const impact = describeExitDecisionRemovalImpact(topology, {
-    kind: 'hubDecision',
-    decisionKey: hubKey,
-  });
-  return impact === undefined ? topology : applyTopologyRemovalImpact(topology, impact);
-}
+import { appendCompletedHubChain } from './takeover';
 
 function terminalHubEnvelope(source: ExitDecisionSource): ExitDecision {
   return Object.freeze({
@@ -91,18 +77,26 @@ export function replaceWithHubDecision(
   }
   const impact = describeExitDecisionRemovalImpact(topology, source);
   if (impact === undefined) throw new Error('terminal Hub envelope disappeared during replacement');
+  const withHub = appendDecision(
+    applyTopologyRemovalImpact(topology, impact),
+    Object.freeze({
+      kind: 'hub',
+      hubKey: command.hub.hubKey,
+      source,
+      openTargets: Object.freeze([]),
+      actions: Object.freeze([]),
+    }),
+  );
   return updateTopology(
     document,
     located,
-    appendDecision(
-      applyTopologyRemovalImpact(topology, impact),
-      Object.freeze({
-        kind: 'hub',
-        hubKey: command.hub.hubKey,
-        source,
-        openTargets: Object.freeze([]),
-        actions: Object.freeze([]),
-      }),
+    appendCompletedHubChain(
+      catalog,
+      located,
+      withHub,
+      command.hub.hubKey,
+      command.prebossOccurrenceId,
+      command,
     ),
   );
 }
@@ -281,12 +275,7 @@ export function updateHub(
     if (target === undefined) return document;
     if (hubVisitSlotKeys(hub).includes(target.hubSlotKey))
       failCommand(command, 'remove Hub visits before closing a slot');
-    const impact = describeHubSlotClosureImpact(
-      topology,
-      descriptor.hubKey,
-      target.hubSlotKey,
-      descriptor.openCount.min,
-    );
+    const impact = describeHubSlotClosureImpact(topology, descriptor.hubKey, target.hubSlotKey);
     if (impact === undefined)
       failCommand(command, `Hub slot ${target.hubSlotKey} has no open target`);
     const replacement: HubDecision = Object.freeze({
@@ -303,12 +292,12 @@ export function updateHub(
     failCommand(command, 'Hub address does not match this decision');
   if (command.kind === 'ResetHubBoard') {
     if (hub.openTargets.length === 0 && hub.actions.length === 0) return document;
-    const impact = describeHubDecisionRemovalImpact(topology, hub.hubKey);
+    const impact = describeHubBoardResetImpact(topology, hub.hubKey);
     if (impact === undefined) throw new Error('Hub decision disappeared during reset');
     return updateTopology(
       document,
       located,
-      appendDecision(
+      replaceDecision(
         applyTopologyRemovalImpact(topology, impact),
         Object.freeze({
           kind: 'hub',
@@ -343,11 +332,6 @@ export function updateHub(
   ) {
     return document;
   }
-  const withoutCompletedHandoff =
-    hubVisitSlotKeys(hub).length === descriptor.requiredVisits &&
-    visits.length < descriptor.requiredVisits
-      ? removeCompletedHubHandoff(topology, descriptor.hubKey)
-      : topology;
   // An authored Phial target follows the fountain use through reordering, but
   // no outcome survives once the use itself is no longer planned.
   const { fountainRarityResult, ...withoutOutcome } = hub;
@@ -356,7 +340,7 @@ export function updateHub(
     document,
     located,
     replaceDecision(
-      withoutCompletedHandoff,
+      topology,
       Object.freeze({
         ...withoutOutcome,
         actions: Object.freeze(actions),
