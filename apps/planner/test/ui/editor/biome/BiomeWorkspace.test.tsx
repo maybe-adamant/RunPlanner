@@ -1663,8 +1663,9 @@ describe('BiomeWorkspace', () => {
       ),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
-    expect(screen.getByRole('article', { name: 'Preboss room' }).dataset.hubExitState).toBe(
-      'reached',
+    expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
+      'disabled',
+      false,
     );
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(preboss);
