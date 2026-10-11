@@ -895,6 +895,67 @@ function TestGeneratedEncounterNative.testRepeatedCagePhasesAdmitAgainstTheLiveR
     restore()
 end
 
+local function spawnNames(encounter)
+    local names = {}
+    for _, wave in ipairs(encounter.SpawnWaves) do
+        for _, spawn in ipairs(wave.Spawns) do names[#names + 1] = spawn.Name end
+    end
+    return names
+end
+
+-- Native draws read the planner exclusions from the generation copy's Blacklist.
+function TestGeneratedEncounterNative.testExclusionsGovernUncustomizedAndDeclinedNativeDraws()
+    local excludeAsh = { { choiceKey = "Ash", nativeId = "Ash" } }
+    local function run(phaseValue, source, configure)
+        local _, instance, _, restore = configuredProduction()
+        _G.game.EnemyData = _G.EnemyData
+        if configure then configure() end
+        local state = { state = "synchronized", diagnostics = {} }
+        local realized = install(instance, state, { id = "exclusions" }, phaseValue, { Name = "exclusions" }, source)
+        local runBlacklist = probe.copy(_G.CurrentRun.Blacklist)
+        restore()
+        return realized, state.diagnostics, runBlacklist
+    end
+    local rawRealized, _, rawRestore = rawRun(declaration())
+    lu.assertEquals(spawnNames(rawRealized), { "Ash" })
+    rawRestore()
+
+    local template = declaration({ Blacklist = { Dawn = true } })
+    local realized, _, runBlacklist = run({ slotKey = "Combat", encounterKey = "ProbeGenerated",
+        excludedEnemies = excludeAsh }, template)
+    lu.assertEquals(spawnNames(realized), { "Brine" })
+    lu.assertEquals(realized.Blacklist, { Dawn = true, Ash = true })
+    lu.assertEquals(template.Blacklist, { Dawn = true })
+    lu.assertNil(runBlacklist.Ash)
+
+    realized = run({ slotKey = "Combat", encounterKey = "ProbeGenerated" }, declaration())
+    lu.assertEquals(spawnNames(realized), { "Ash" })
+
+    local declined = phase("Combat", fullDecision())
+    declined.excludedEnemies = excludeAsh
+    local diagnostics
+    template = declaration({ Blacklist = { Dawn = true } })
+    realized, diagnostics = run(declined, template, function() _G.CurrentRun.Blacklist.Brine = true end)
+    lu.assertEquals(diagnostics[1].observed.reason, "native-enemy-ineligible")
+    lu.assertEquals(spawnNames(realized), { "Cinder" })
+    lu.assertEquals(template.Blacklist, { Dawn = true })
+
+    local rolled = phase("Combat", fullDecision({ baseRoll = 99 }))
+    rolled.excludedEnemies = excludeAsh
+    template = declaration({ BaseDifficultyMin = 10, BaseDifficultyMax = 20, Blacklist = { Dawn = true } })
+    realized, diagnostics = run(rolled, template)
+    lu.assertEquals(diagnostics[1].observed.reason, "base-roll-out-of-range")
+    lu.assertEquals(spawnNames(realized), { "Brine" })
+    lu.assertEquals(template.Blacklist, { Dawn = true })
+
+    local admitted = phase("Combat", fullDecision())
+    admitted.excludedEnemies = { { choiceKey = "Brine", nativeId = "Brine" }, { choiceKey = "Cinder", nativeId = "Cinder" } }
+    realized, diagnostics = run(admitted, declaration())
+    lu.assertEquals(diagnostics[1].observed.kind, "generated-installed")
+    lu.assertEquals(spawnNames(realized), { "Brine", "Cinder" })
+    lu.assertNil(realized.Blacklist.Brine)
+end
+
 function TestGeneratedEncounterNative.testFixedSeedsBypassSamplingAndUniquePlaceholdersObservePriorSeeds()
     local _, instance, _, restore = configuredProduction()
     _G.game.EnemyData = _G.EnemyData

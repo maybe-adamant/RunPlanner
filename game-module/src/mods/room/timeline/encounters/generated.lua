@@ -433,6 +433,22 @@ local function applyDraw(scope, encounter, name)
     end
 end
 
+-- Planner-excluded enemies join the generation copy's own Blacklist, which every
+-- native draw reads; the run blacklist and shared templates stay untouched.
+local function exclude(encounter, excluded)
+    if excluded == nil then return end
+    encounter.Blacklist = encounter.Blacklist or {}
+    for _, entry in ipairs(excluded) do encounter.Blacklist[entry.nativeId] = true end
+end
+
+-- A native setup scope keeps an uncustomized phase's exclusions for its own encounter.
+local function nativeScope(parent, encounterKey)
+    if parent and parent.kind == "native" and parent.excluded and parent.encounterKey == encounterKey then
+        return { kind = "native", excluded = parent.excluded, encounterKey = encounterKey }
+    end
+    return { kind = "native" }
+end
+
 function generated.create()
     local instance, stack = {}, {}
     local function current() return stack[#stack] end
@@ -453,7 +469,11 @@ function generated.create()
     function instance.withPhase(state, room, phase, nativeRoom, action)
         local decision = compositionFor(phase) or rosterFor(phase)
         local occurrence = state and room.occurrence and room.occurrence(state, nativeRoom)
-        if decision == nil or occurrence == nil then return scoped(stack, { kind = "native" }, action) end
+        if phase == nil or occurrence == nil then return scoped(stack, { kind = "native" }, action) end
+        if decision == nil then
+            return scoped(stack, { kind = "native", excluded = phase.excludedEnemies, encounterKey = phase.encounterKey },
+                action)
+        end
         return scoped(stack, {
             kind = "preparation", state = state, session = instance.session, occurrence = occurrence,
             phase = phase, encounterKey = phase.encounterKey, decision = decision,
@@ -481,7 +501,9 @@ function generated.create()
             encounterData, nativeRoom)
             local parent = current()
             if parent == nil or parent.kind ~= "preparation" or parent.encounterKey ~= encounterData.Name then
-                return scoped(stack, { kind = "native" }, function() return base(encounterData, nativeRoom) end)
+                return scoped(stack, nativeScope(parent, encounterData.Name), function()
+                    return base(encounterData, nativeRoom)
+                end)
             end
             local ok, result = pcall(function()
                 return scoped(stack, { kind = "setup", owner = parent }, function()
@@ -504,6 +526,9 @@ function generated.create()
             currentRun, nativeRoom, encounter)
             local parent = current()
             if parent == nil or parent.kind ~= "setup" or parent.owner.encounterKey ~= encounter.Name then
+                if parent and parent.kind == "native" and parent.encounterKey == encounter.Name then
+                    exclude(encounter, parent.excluded)
+                end
                 return scoped(stack, { kind = "native" }, function() return base(currentRun, nativeRoom, encounter) end)
             end
             local owner, gameValue = parent.owner, _G.game or game or _G
@@ -512,8 +537,8 @@ function generated.create()
             local replacement = parent.generated == true
             parent.generated = true
             -- A new owned preparation supersedes any restored realization. A
-            -- failed attempt must fall back natively rather than leave a stale
-            -- marker for Fangs or zero-Menace spawn interception.
+            -- declined attempt falls back to native generation under the phase's
+            -- exclusions, never a stale marker for Fangs or zero-Menace interception.
             if encounter.__runPlannerGeneratedComposition ~= nil then
                 encounter.__runPlannerGeneratedComposition = nil
             end
@@ -523,6 +548,7 @@ function generated.create()
                 restoreRoll, rejection = supplyBaseRoll(encounter, decision.baseRoll)
                 if not restoreRoll then
                     decline(owner, rejection.reason, rejection)
+                    exclude(encounter, owner.phase.excludedEnemies)
                     return scoped(stack, { kind = "native" }, function() return base(currentRun, nativeRoom, encounter) end)
                 end
             end
@@ -605,6 +631,8 @@ function generated.create()
             if reason then
                 scope.admission = reason
                 decline(scope.owner, reason, evidence)
+                -- Native assigns encounter.Blacklist only after this contact and before any draw.
+                exclude(encounter, scope.owner.phase.excludedEnemies)
                 return result
             end
             scope.admission, scope.admitted = "accepted", true
