@@ -942,8 +942,8 @@ The inner layer is one always-mounted feedback region at the bottom of every
 visible dialog body (trait offer and its nested Echo choice, Pom, Circe, Chaos,
 Anvil, encounter composition and customization, Arcana activation). The region
 keeps a minimum height and an empty state; draft feedback (branch disagreement,
-an unassessable retained outcome, once-per-run enemy warnings, a carrier not yet
-complete) is reported there by reporter key and never between controls.
+an unassessable retained outcome, a carrier not yet complete) is reported there
+by reporter key and never between controls.
 Controls inside carry only an invalid marker and a hint; entries navigate
 to the control they correct. A loading choice region holds its loaded height so
 the dialog resizes once.

@@ -267,7 +267,8 @@ ordinary enemy once cage 1 recorded `MournerIntro`, and a prepared cage never
 changes when an earlier cage completes. `GeneratedH_Screamer2` needs
 `ScreamerIntro` completed on the route
 ([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
-Every generated cage is customized on this route.
+An uncustomized cage rolls natively without the enemies whose introduction
+would replace it at its preparation.
 
 `H_Intro` hosts Eris when observed and not yet cursed on the route; her
 required gift is 50 Psyche, which the planner does not track

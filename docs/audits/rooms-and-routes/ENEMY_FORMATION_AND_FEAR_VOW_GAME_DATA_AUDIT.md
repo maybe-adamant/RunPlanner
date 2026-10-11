@@ -708,7 +708,8 @@ The following are not collapsed into deterministic Planner facts:
 Generated encounters are native or fully customized. The planner resolves
 concrete budget/wave/type/allocation choices into ordered source counts, plus
 applicable Fangs assignments and Menace conversions. Incomplete active choices
-remain editable but do not publish; unauthored encounters retain native draws.
+remain editable but do not publish; unauthored encounters retain native draws
+outside their published exclusions.
 Health, damage, combat success, duration, summons and Return rolls are not modeled.
 
 Fangs selects a native elite source type from the complete composition, including

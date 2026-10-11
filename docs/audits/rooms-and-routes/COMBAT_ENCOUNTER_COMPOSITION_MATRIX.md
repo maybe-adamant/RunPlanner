@@ -770,7 +770,10 @@ work.
 
 The implementation uses encounter-owned native-or-full customization, including
 field-NPC generated combats, not a room-wide default-combat override. Native
-requires no authoring. Customized encounters resolve complete ordered waves,
+requires no authoring; its roll is unmodelled except for the published enemies
+it must not draw (the
+[introduction model](../../design/ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
+owns that list). Customized encounters resolve complete ordered waves,
 shared highlight where applicable, budget allocations/counts and applicable
 Fangs/Menace outcomes. Fixed seeds remain declaration-owned. Incomplete active
 choices stay repairable but cannot publish a partial answer. Realization failures
@@ -799,6 +802,9 @@ acceptance. The implementation preserves the following boundaries:
 3. Ordered type-choice possibility, including highlight/placeholder seeding,
    P group gates, run blacklists and declaration-owned hard context. A blanket
    independent-per-wave or final-set validator would misstate native support.
+   A `FogEmitter2` that a later authored composition draws is excluded from every
+   earlier native roll that could draw it, so the run blacklist cannot consume it
+   first.
 4. The planner resolves the budget table above and allocation requests using
    native array-order count rules, including fixed costs and the full-index
    remainder branch. The executor admits the whole encounter once after native
