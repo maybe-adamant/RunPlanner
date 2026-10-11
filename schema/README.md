@@ -1,5 +1,18 @@
 # Project schema boundary
 
+Schema 96 makes every N Hub own its completed-Hub exit: the width-one
+`N_PreBoss01` batch sourced by the Hub decision, with its fixed Boss and
+route-position Postboss.
+
+```bash
+npm run schema:migrate-95-to-96 -- path/to/schema-95-project.runplanner.json
+```
+
+The migration gives each Hub without that exit the chain with
+declaration-owned default room state and new biome-scoped identities
+(`<biomeKey>:preboss`, `:boss`, `:postboss`); Hubs that already own it and
+every existing identity are unchanged.
+
 Schema 95 adds `hexActivationsByAcquisitionRole` to a reward: the nodes each
 reached Path of Stars screen invests.
 
@@ -228,9 +241,9 @@ output. It has no route-selection, in-place, or target-version mode.
 
 The schema-72 splitter's pure transformation is exported from
 `schema/split-project-72-to-73.js` for checkpoint conversion. The source value
-is never mutated. The application migrates schema 86, 87, 88, 89 and 90
-documents to schema 91 when it opens them; older documents need the offline
-tools above.
+is never mutated. The application migrates documents from schema 86 onward to
+the current schema when it opens them; older documents need the offline tools
+above.
 
 Migrate a schema-74 document with:
 

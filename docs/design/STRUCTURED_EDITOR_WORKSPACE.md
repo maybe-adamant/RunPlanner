@@ -224,7 +224,7 @@ slots, side-room occurrences, and restores are inner chronology. Opening
 remains a fixed stage. Entered N occurrences use the same room-entry and
 pre-exit lifecycle launchers as other ordinary rooms. The Hub launcher is owned
 by the Hub decision before board generation, and the visible completed-Hub
-handoff owns the retained generation diagnostic before Preboss. React consumes
+exit owns the retained generation diagnostic before Preboss. React consumes
 these projected owners and never distinguishes them from room names or rendered
 nesting.
 
@@ -728,12 +728,18 @@ language, but its center is not an ordinary decision spine. The
 - Hub Overview for the complete fixed-slot set, open/closed membership, and
   each open room's reward editor; Hub Timeline for the exact authored action
   prefix (up to six room visits and one fountain use) on the map, with
-  read-only reward context; and Hub Exit's fixed `Preboss` card for the
-  existing completed-Hub handoff;
+  read-only reward context; and Hub Exit's fixed Preboss door for the Hub's
+  completed-Hub exit;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
-- the fixed completed-Hub handoff to the width-one Preboss Shop and its derived
-  completion sequence.
+- the fixed completed-Hub exit to the width-one Preboss Shop and its derived
+  completion sequence, authored with the Hub.
+
+Hub Exit shows the Preboss as Door 1 with the shared `Open next room`
+continuation; it has no create or remove action. While the Hub is incomplete
+the chain is unreached: the continuation is disabled with the hint "Complete
+the Hub to continue." and the Preboss rooms follow the unreached-context
+policy. There is no status chip.
 
 Exact Hub inspector destinations also carry their presentation tab: Hub,
 slot-set, and main incoming-reward-identity owners open Hub Overview; main
@@ -742,8 +748,8 @@ their incoming-reward acquisition children open the main occurrence Timeline;
 parent-owned side generation, side reward identity, and side entry order open
 the parent main occurrence Side Rooms workbench;
 entered side occurrences and their acquisition
-children open the side occurrence Timeline; the uncommitted completed-Hub
-handoff opens Exit; Hub fountain placement opens Hub Timeline; and its Phial
+children open the side occurrence Timeline; the completed-Hub exit opens
+Exit; Hub fountain placement opens Hub Timeline; and its Phial
 outcome opens the room entered after the use, or Hub Timeline until that room
 exists. React consumes that explicit destination and
 does not infer tab ownership from semantic-address shapes or rendered ancestry.
@@ -762,8 +768,8 @@ The List keeps all 26 cards in declaration order, with four/two/one columns as
 space narrows and equal reward-control/closed-placeholder height.
 
 **Reset Board** dispatches one atomic command that closes all slots and removes
-their owned visits, rooms and handoff subtree while retaining the Hub and its
-source. It differs from Remove Hub and participates in ordinary Undo/Redo.
+their owned visits and rooms while retaining the Hub, its source and its
+completed-Hub chain. It differs from Remove Hub and participates in ordinary Undo/Redo.
 
 Timeline is map-only. Open doors retain their stable room labels and reward
 icons; transparent markers are unvisited, solid markers carry a badge above the
@@ -822,8 +828,8 @@ Hub Overview owns membership and main-reward editing; Hub Timeline owns visit
 order. Both display read-only room labels. The rail is the primary navigation
 to visited room details, with findings retaining their exact destinations.
 N never acquires arbitrary room replacement merely to reuse an ordinary room
-picker. Membership, visits, and the completed-Hub handoff remain Hub-owned
-semantic interactions.
+picker. Membership and visits remain Hub-owned semantic interactions; the
+completed-Hub exit has no authoring interaction of its own.
 
 Hub membership changes are batch composition rather than navigation. Their
 bound `OpenHubSlot` and `CloseHubSlot` intents have no semantic-focus product:
@@ -896,7 +902,7 @@ subtractive effect. They do not receive a different command, history,
 confirmation, or recovery path. The workspace has no generic removal-action
 abstraction, completion status, or post-edit focus policy.
 
-Retained-overflow and Preboss-handoff repairs remain explicit:
+Retained-overflow and Preboss repairs remain explicit:
 
 1. show unavailable retained targets at their semantic owner;
 2. show which picked target or Preboss realization is no longer available;
@@ -918,10 +924,9 @@ command-intent capability with its declared before-focus behavior, not a
 projected impact closure. Neither the projection nor React walks authored
 descendants to infer deletion.
 
-For a completed Hub, closing an unvisited slot that crosses the declared
-open-set minimum includes both the detached slot subtree and the Hub-owned
-completed-handoff subtree in that one engine-owned impact. The resulting board
-remains visible as incomplete with its authored visits retained.
+Closing an unvisited slot that crosses the declared open-set minimum removes
+only the detached slot subtree. The resulting board remains visible as
+incomplete with its authored visits and completed-Hub chain retained.
 
 ## Feedback Layers
 
