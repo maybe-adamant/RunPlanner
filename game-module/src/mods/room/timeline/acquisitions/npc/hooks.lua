@@ -30,7 +30,8 @@ local function encounterHandle(room, state, source)
     return type(room.encounterHandle) == "function" and room.encounterHandle(state, source) or nil
 end
 
-function npc.attach(module, session, getState, report, room, highlights)
+function npc.attach(module, session, getState, report, room, highlights, rowOptions)
+    assert(type(rowOptions) == "table", "NPC row options are required")
     local choices = setmetatable({}, { __mode = "k" })
     local activeSelection
     local selectionObservers = {}
@@ -39,7 +40,7 @@ function npc.attach(module, session, getState, report, room, highlights)
         if scope.payload == nil then return false end
         -- Install before the named NPC callback so native option-specific work
         -- (for example Circe's familiar preparation) sees the authored rows.
-        return adapter.applyNpcTraitOffer(scope.payload, args)
+        return adapter.applyNpcTraitOffer(scope.payload, args, rowOptions)
     end
 
     local function reportUnavailable(scope)
@@ -90,7 +91,7 @@ function npc.attach(module, session, getState, report, room, highlights)
         if scope ~= nil then
             -- Native selection may reorder the three rows. Reapply the same
             -- authored set at the shared menu contact after native preparation.
-            if not adapter.applyNpcTraitOffer(scope.payload, source) then
+            if not adapter.applyNpcTraitOffer(scope.payload, source, rowOptions) then
                 reportUnavailable(scope)
             else
                 scope.steered = true

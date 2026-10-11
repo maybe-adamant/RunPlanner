@@ -4,6 +4,7 @@ local roomCoordinatorModule = require("mods.room.coordinator")
 local mysteryAcquisitions = require("mods.room.timeline.acquisitions.mystery.hooks")
 local traitSeaStar = require("mods.room.timeline.acquisitions.sea_star").create()
 local traitAcquisitions = require("mods.room.timeline.acquisitions.traits.hooks")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
 local loadoutHexTree = require("mods.spells.hex_tree").create()
 local loadoutHooks = require("mods.loadout.hooks")
 local runtimeSession = require("mods.runtime.session")
@@ -588,7 +589,7 @@ function TestFeatureInteractionHooks.testPurchasedMysteryBoonCompletesAfterItsTr
     end
     mysteryAcquisitions.attach(module, session, function() return state end, function() end, roomCoordinatorModule)
     traitAcquisitions.attach(module, session, function() return state end,
-        function() end, roomCoordinatorModule, traitSeaStar)
+        function() end, roomCoordinatorModule, traitSeaStar, nil, rowOptions)
 
     callbacks.UnwrapRandomLoot(nil, {}, function()
         callbacks.GiveLoot(nil, {}, function(args)
@@ -1097,7 +1098,7 @@ function TestFeatureInteractionHooks.testBlockedStampedWorldShopOwnerReachesNati
     }
     attachFeatureHooks(module, session, function() return state end, function() end, roomCoordinatorModule)
     traitAcquisitions.attach(module, session, function() return state end,
-        function() end, roomCoordinatorModule, traitSeaStar)
+        function() end, roomCoordinatorModule, traitSeaStar, nil, rowOptions)
 
     local generated = callbacks.FillInShopOptions(nil, {}, function(args)
         return { StoreOptions = {

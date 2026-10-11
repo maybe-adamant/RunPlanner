@@ -1,6 +1,7 @@
 local binding = require("mods.room.timeline.acquisitions.binding")
 local seaStar = require("mods.room.timeline.acquisitions.sea_star").create()
 local hooks = require("mods.room.timeline.acquisitions.traits.hooks")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
 
 local support = {}
 
@@ -67,10 +68,42 @@ function support.attached(offer, disposition, carrierName, adapters)
     binding.attach(module, session, function() return state end, function() end, room)
     local traitHooks = adapters and adapters.traits or hooks
     local seaStarAdapter = adapters and adapters.seaStar or seaStar
-    traitHooks.attach(module, session, function() return state end, function() end, room, seaStarAdapter)
+    traitHooks.attach(module, session, function() return state end, function() end, room, seaStarAdapter,
+        nil, adapters and adapters.rowOptions or rowOptions)
     if adapters and adapters.seaStar then seaStarAdapter.attach(module) end
     return callbacks, function() return begins end, function() return completed end,
         function() return mismatches end, function(value) active = value end
 end
+
+local function nativePickupObservation()
+    local observed = {}
+    return observed, function(_, loot)
+        observed.keys, observed.rowLevels = {}, {}
+        for index, itemData in ipairs(loot.UpgradeOptions or {}) do
+            observed.keys[index] = itemData.ItemName
+            observed.rowLevels[index] = itemData.StackNum
+        end
+        return true
+    end
+end
+
+-- Runs a stub pickup callback before the hook constructs the published rows.
+function support.pickUp(offer, nativeRows, rowOptions)
+    local callbacks, _, _, mismatches = support.attached(offer, nil, nil, { rowOptions = rowOptions })
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = nativeRows }
+    local observed, nativePickup = nativePickupObservation()
+    callbacks.SpawnRoomReward(nil, {}, function()
+        local created = callbacks.CreateLoot(nil, {}, function() return loot end, {})
+        callbacks.HandleLootPickup(nil, {}, nativePickup, {}, created, {})
+        return created
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+    return observed, loot, mismatches()
+end
+
+support.rowOffer = { kind = "traits", selected = "option1", options = {
+    { key = "ApolloAttack", effectiveLevel = 4 },
+    { key = "ApolloSpecial", effectiveLevel = 2 },
+} }
 
 return support

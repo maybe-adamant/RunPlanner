@@ -8,6 +8,7 @@ local directPickups = require("mods.room.timeline.acquisitions.pickups.hooks")
 local chaosAcquisitions = require("mods.room.timeline.acquisitions.traits.chaos_offer")
 local traitAcquisitions = require("mods.room.timeline.acquisitions.traits.hooks")
 local npcAcquisitions = require("mods.room.timeline.acquisitions.npc.hooks")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
 local mysteryAcquisitions = require("mods.room.timeline.acquisitions.mystery.hooks")
 local support = require("tests.harness.hook_composition")
 local nativeGame = require("tests.harness.native_game")
@@ -292,7 +293,7 @@ local function mysteryBoonAcquisition(deliveryBinding)
     }
     for name, callback in pairs(mysteryCallbacks) do callbacks[name] = callback end
     traitAcquisitions.attach(module, session, function() return state end,
-        function() end, roomCoordinatorModule, seaStar)
+        function() end, roomCoordinatorModule, seaStar, nil, rowOptions)
 
     if deliveryBinding then
         encounterHooks.attach(module, session, function() return state end, function() end, roomCoordinatorModule)
@@ -392,7 +393,8 @@ function TestAcquisitionHookComposition.testEachNativeNpcChoiceFunctionBindsItsP
             completed = { row = actualRow }
             return true
         end
-        npcAcquisitions.attach(module, session, function() return state end, function() end, session)
+        npcAcquisitions.attach(module, session, function() return state end, function() end, session, nil,
+            rowOptions)
         local priorRun = _G.CurrentRun
         _G.CurrentRun = {
             CurrentRoom = { Encounter = { Name = giver .. "Encounter" } },

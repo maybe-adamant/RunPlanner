@@ -34,6 +34,17 @@ fn planner_version(manifest_dir: &Path) -> String {
         .to_owned()
 }
 
+fn module_selection() -> game_module_assembly::ModuleSelection {
+    println!("cargo:rerun-if-env-changed=VITE_INTERNAL_FEATURES");
+    if env::var("VITE_INTERNAL_FEATURES").is_ok_and(|value| value == "1") {
+        game_module_assembly::ModuleSelection::DevelopmentRequired
+    } else if env::var("PROFILE").is_ok_and(|profile| profile == "debug") {
+        game_module_assembly::ModuleSelection::DevelopmentIfPresent
+    } else {
+        game_module_assembly::ModuleSelection::Release
+    }
+}
+
 fn embed_game_module() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
     let module_dir = manifest_dir.join("../../../../game-module");
@@ -49,8 +60,14 @@ fn embed_game_module() {
             module_dir.join(input).display()
         );
     }
+    // Watch the nearest existing ancestor so the file appearing later also reruns;
+    // a missing watched path would rerun every build.
+    let development_module = module_dir.join(game_module_assembly::DEVELOPMENT_MODULE_FILE);
+    if let Some(watched) = development_module.ancestors().find(|path| path.exists()) {
+        println!("cargo:rerun-if-changed={}", watched.display());
+    }
     let version = planner_version(&manifest_dir);
-    let files = game_module_assembly::assemble(&module_dir, &version)
+    let files = game_module_assembly::assemble(&module_dir, &version, module_selection())
         .unwrap_or_else(|error| panic!("could not assemble the game module package: {error}"));
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));

@@ -9,3 +9,6 @@
 
 # Compiled Lua sources
 luac.out
+
+# Local module variant
+/variants/dev/

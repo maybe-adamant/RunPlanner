@@ -5,6 +5,14 @@ local ordinary = require("mods.room.timeline.acquisitions.traits.ordinary")
 local seaStar = require("mods.room.timeline.acquisitions.sea_star").create()
 local hooks = require("mods.room.timeline.acquisitions.traits.hooks")
 local traitSupport = require("tests.room.ordinary_trait_support")
+local rowOptions = require("mods.room.timeline.acquisitions.traits.row_options")
+local stubRowOptions = {
+    rowLevel = function(level)
+        if level == nil then return nil end
+        return "row-" .. tostring(level)
+    end,
+    eagerInstall = true,
+}
 local nativeGame = require("tests.harness.native_game")
 
 TestOrdinaryTraits = {}
@@ -34,11 +42,24 @@ function TestOrdinaryTraits.testInstallsBaseRarityAndFinalEffectiveLevelOnNative
         },
     })
     local loot = { GodLoot = true, UpgradeOptions = { { Type = "Trait", Native = true } } }
-    lu.assertTrue(ordinary.install(row, loot))
+    lu.assertTrue(ordinary.install(row, loot, rowOptions))
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
     lu.assertEquals(loot.UpgradeOptions[1].Rarity, "Common")
     lu.assertEquals(loot.UpgradeOptions[1].StackNum, 4)
     lu.assertTrue(loot.UpgradeOptions[1].Native)
+end
+
+function TestOrdinaryTraits.testRowLevelUsesTheSuppliedAdapter()
+    local row = payload({
+        kind = "traits", selected = "option1", options = {
+            { key = "ApolloAttack", rarity = "Common", effectiveLevel = 4 },
+            { key = "ApolloSpecial", rarity = "Common" },
+        },
+    })
+    local loot = { GodLoot = true, UpgradeOptions = {} }
+    lu.assertTrue(ordinary.install(row, loot, stubRowOptions))
+    lu.assertEquals(loot.UpgradeOptions[1].StackNum, "row-4")
+    lu.assertNil(loot.UpgradeOptions[2].StackNum)
 end
 
 function TestOrdinaryTraits.testRejectedIdentitySurvivesNativeReorder()
@@ -142,7 +163,8 @@ local function encounterLootUsesTheOrdinaryOfferLifecycle(giver, name, keys)
             mismatches[#mismatches + 1] = { checkpoint = checkpoint, observed = observed }
         end,
     }
-    hooks.attach(module, session, function() return state end, function() end, room, seaStar)
+    hooks.attach(module, session, function() return state end, function() end, room, seaStar, nil,
+        rowOptions)
     local loot = {
         Name = name,
         UpgradeOptions = {
@@ -210,7 +232,7 @@ function TestOrdinaryTraits.testOlympianHermesAndHammerShareTheNativeRowContract
         { Name = "WeaponUpgrade", UpgradeOptions = {} },
     }) do
         lu.assertTrue(ordinary.isCarrier(loot, ordinary.offer(row)))
-        lu.assertTrue(ordinary.install(row, loot))
+        lu.assertTrue(ordinary.install(row, loot, rowOptions))
         lu.assertEquals(loot.UpgradeOptions[1].ItemName, "Chosen")
         lu.assertEquals(loot.UpgradeOptions[1].Rarity, "Common")
     end
@@ -292,7 +314,8 @@ function TestOrdinaryTraits.testUnboundHammerCarriersUsePublishedReadyOrderWitho
             completions[#completions + 1] = { handle = handle }
         end,
     }
-    hooks.attach(module, session, function() return state end, function() end, room, seaStar)
+    hooks.attach(module, session, function() return state end, function() end, room, seaStar, nil,
+        rowOptions)
 
     local priorRun = _G.CurrentRun
     _G.CurrentRun = { Hero = { Traits = { { Name = "ApolloAttack" } } } }
@@ -735,4 +758,21 @@ function TestOrdinaryTraits.testNaturalSelectionOuterBaseErrorClearsScopeBeforeN
     lu.assertEquals(nativeOrder, { "Attack", "Special" })
     lu.assertEquals(completed(), 0)
     lu.assertEquals(mismatches(), {})
+end
+
+function TestOrdinaryTraits.testEagerInstallPassesPublishedRowsToThePickupStub()
+    local observed, loot, mismatches = traitSupport.pickUp(traitSupport.rowOffer,
+        { { ItemName = "NativeA" }, { ItemName = "NativeB" } }, stubRowOptions)
+    lu.assertEquals(observed.keys, { "ApolloAttack", "ApolloSpecial" })
+    lu.assertEquals(observed.rowLevels, { "row-4", "row-2" })
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
+    lu.assertEquals(mismatches, {})
+end
+
+function TestOrdinaryTraits.testDeferredInstallLeavesNativeRowsForThePickupStub()
+    local observed, loot = traitSupport.pickUp(traitSupport.rowOffer,
+        { { ItemName = "NativeA" }, { ItemName = "NativeB" } }, rowOptions)
+    lu.assertEquals(observed.keys, { "NativeA", "NativeB" })
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
+    lu.assertEquals(loot.UpgradeOptions[1].StackNum, 4)
 end

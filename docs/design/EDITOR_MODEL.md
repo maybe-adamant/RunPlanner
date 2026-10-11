@@ -178,7 +178,7 @@ The Practice mode start point renders on the Route panel; its picker domain is
 evaluated when it opens. An
 unchecked percentage modifier is native; its slider is disabled and shows no
 value. Development builds, and release builds made with
-`VITE_INTERNAL_RUN_MODIFIERS=1`, also render `internal` declarations. Application binding reads
+`VITE_INTERNAL_FEATURES=1`, also render `internal` declarations. Application binding reads
 engine-owned defaults and validates a complete replacement through the engine
 before dispatch. Slider adjustments remain local until pointer release, navigation-key release,
 blur or Enter, producing one history edit per gesture. Stored values outside

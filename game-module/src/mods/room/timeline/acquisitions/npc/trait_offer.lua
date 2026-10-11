@@ -32,7 +32,7 @@ function timeline.expectedTrait(row)
     return nil
 end
 
-function timeline.applyTraitOffer(row, lootData)
+function timeline.applyTraitOffer(row, lootData, rowOptions)
     local _, offer = timeline.expectedTrait(row)
     if offer == nil or type(lootData) ~= "table" then return false end
     if offer.kind == "fallbackGold" then
@@ -52,7 +52,7 @@ function timeline.applyTraitOffer(row, lootData)
         local item = copyRecord(existing[expectedOptionKey])
         item.ItemName = expectedOptionKey
         if option.rarity ~= nil then item.Rarity = option.rarity end
-        if option.effectiveLevel ~= nil then item.StackNum = option.effectiveLevel end
+        if option.effectiveLevel ~= nil then item.StackNum = rowOptions.rowLevel(option.effectiveLevel) end
         item.TraitToReplace = option.replacement and option.replacement.replacedTraitKey or nil
         item.OldRarity = option.replacement and option.replacement.oldRarity or nil
         lootData.UpgradeOptions[index] = item
@@ -60,7 +60,7 @@ function timeline.applyTraitOffer(row, lootData)
     return true
 end
 
-function timeline.applyNpcTraitOffer(row, args)
+function timeline.applyNpcTraitOffer(row, args, rowOptions)
     local _, offer = timeline.expectedTrait(row)
     if offer == nil or offer.kind ~= "traits" or type(args) ~= "table"
         or type(args.UpgradeOptions) ~= "table" then
@@ -75,7 +75,7 @@ function timeline.applyNpcTraitOffer(row, args)
     for index in ipairs(offer.options or {}) do
         if candidates[optionKey(offer, index)] == nil then return false end
     end
-    if not timeline.applyTraitOffer(row, args) then return false end
+    if not timeline.applyTraitOffer(row, args, rowOptions) then return false end
     return true
 end
 
