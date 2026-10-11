@@ -19,8 +19,6 @@ export function HubCompletionHandoff({ node }: { readonly node: WorkspaceHubDeci
           aria-label={`${target.label} room`}
           className="exit-row hub-exit-door"
           data-available={!locked}
-          data-hub-exit-state={locked ? 'locked' : 'reached'}
-          data-hub-exit-door="true"
         >
           <div className="exit-marker" aria-hidden="true" />
           <div className="exit-content">
@@ -29,13 +27,15 @@ export function HubCompletionHandoff({ node }: { readonly node: WorkspaceHubDeci
                 <p className="card-kicker">Door 1</p>
                 <h4>{target.label}</h4>
               </div>
-              <span className="neutral-status">{locked ? 'Locked' : 'Reached'}</span>
             </div>
           </div>
         </article>
       </div>
       <div className="workbench-action-row">
-        <SelectedContinuationAction continuation={target} />
+        <SelectedContinuationAction
+          continuation={locked ? undefined : target}
+          disabledHint="Complete the Hub to continue."
+        />
       </div>
     </section>
   );

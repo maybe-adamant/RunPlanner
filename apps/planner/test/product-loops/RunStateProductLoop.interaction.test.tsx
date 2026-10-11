@@ -195,8 +195,6 @@ describe('Run State product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(screen.getByRole('button', { name: /Hub.*visits/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
-    const door = screen.getByRole('article', { name: 'Preboss room' });
-    expect(door.dataset.hubExitState).toBe('reached');
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const prebossWorkbench = document.querySelector<HTMLElement>('.biome-occurrence-workbench');
     if (prebossWorkbench === null) throw new Error('Preboss room workbench is missing');
