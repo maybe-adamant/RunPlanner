@@ -321,7 +321,9 @@ export function executionStartState(
       ? {
           biome: Object.freeze({
             biomeDepthCache: counters.biomeDepthCache,
-            biomeEncounterDepth: counters.biomeEncounterDepth,
+            ...(counters.biomeEncounterDepth === undefined
+              ? {}
+              : { biomeEncounterDepth: counters.biomeEncounterDepth }),
             biomeUseRecord: biomeRecords.biomeUseRecord,
             forfeitConsumed: biomeRecords.forfeitConsumed,
             dionysusSkipActivated: biomeRecords.figLeafActivatedThisBiome,

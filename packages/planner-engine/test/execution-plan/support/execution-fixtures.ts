@@ -44,6 +44,7 @@ import {
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
   surfaceGeneratedPreCombatProject,
+  surfaceNOpeningCompositionProject,
   surfaceShrineDeliveriesProject,
   surfaceShrineRushedUnrankedProject,
   surfaceTravelDealRefillAnvilProject,
@@ -72,6 +73,7 @@ import freshFileFGHIFixture from '../fixtures/fresh-file-fghi.execution.json';
 import surfaceGeneratedPrecombatFixture from '../fixtures/surface-generated-precombat.execution.json';
 import surfaceNPhialIntermediateFountainFixture from '../fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixture from '../fixtures/surface-n.execution.json';
+import surfaceNOpeningCompositionFixture from '../fixtures/surface-n-opening-composition.execution.json';
 import surfaceNOFixture from '../fixtures/surface-no.execution.json';
 import surfaceNOPFixture from '../fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from '../fixtures/surface-nopq.execution.json';
@@ -197,6 +199,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     wire: automaticBossFixture,
   },
   { name: 'surface-n', project: loadSurfaceNProject, wire: surfaceNFixture },
+  {
+    name: 'surface-n-opening-composition',
+    project: surfaceNOpeningCompositionProject,
+    wire: surfaceNOpeningCompositionFixture,
+  },
   { name: 'surface-no', project: loadSurfaceNOProject, wire: surfaceNOFixture },
   { name: 'surface-nop', project: loadSurfaceNOPProject, wire: surfaceNOPFixture },
   { name: 'surface-nopq', project: typhonCustomizationProject, wire: surfaceNOPQFixture },

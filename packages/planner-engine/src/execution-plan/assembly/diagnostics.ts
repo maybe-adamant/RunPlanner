@@ -54,7 +54,9 @@ function assembleRunStateDiagnostic(
     checkpoint: snapshot.checkpoint === 'roomEntered' ? 'roomEntered' : 'beforeRoomExit',
     counters: Object.freeze({
       biomeDepthCache: snapshot.counters.biomeDepthCache,
-      biomeEncounterDepth: snapshot.counters.biomeEncounterDepth,
+      ...(snapshot.counters.biomeEncounterDepth === undefined
+        ? {}
+        : { biomeEncounterDepth: snapshot.counters.biomeEncounterDepth }),
       routeEncounterDepth: snapshot.counters.routeEncounterDepth,
       roomHistoryOrdinal: snapshot.counters.roomHistoryOrdinal,
     }),

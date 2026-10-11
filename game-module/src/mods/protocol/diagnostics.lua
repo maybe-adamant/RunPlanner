@@ -40,17 +40,18 @@ local function validateIntegerList(value, label, minimum)
 end
 
 local function validateCounters(value, label)
+    -- An absent biomeEncounterDepth is native BiomeEncounterDepth unset.
     local record, errorMessage = p.exact(
         value,
-        { "biomeDepthCache", "biomeEncounterDepth", "routeEncounterDepth", "roomHistoryOrdinal" },
-        {},
+        { "biomeDepthCache", "routeEncounterDepth", "roomHistoryOrdinal" },
+        { "biomeEncounterDepth" },
         label
     )
     if not record then return nil, errorMessage end
     for _, key in ipairs({
         "biomeDepthCache", "biomeEncounterDepth", "routeEncounterDepth", "roomHistoryOrdinal",
     }) do
-        if not p.int(record[key], label .. "." .. key, 0) then
+        if (key ~= "biomeEncounterDepth" or record[key] ~= nil) and not p.int(record[key], label .. "." .. key, 0) then
             return p.fail(label .. " has invalid counter")
         end
     end

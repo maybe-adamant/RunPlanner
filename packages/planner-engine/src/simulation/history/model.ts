@@ -226,7 +226,8 @@ export interface RoomRestoreHistoryEntry {
 
 export interface HistoryCounters {
   readonly biomeDepthCache: number;
-  readonly biomeEncounterDepth: number;
+  /** Absent while native BiomeEncounterDepth is unset, from run start to the first counting encounter. */
+  readonly biomeEncounterDepth?: number;
   readonly routeEncounterDepth: number;
   readonly roomHistoryOrdinal: number;
   readonly fieldsMaxDoorsRolled?: number;

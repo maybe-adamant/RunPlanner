@@ -76,11 +76,11 @@ uses its ordinary `GeneratedF` encounter. `FCastTutorialFight` is an excluded
 save-profile variant. The Fresh File route resolves `OpeningEmpty` and
 `FIntroFight` instead; see [Fresh File](#fresh-file).
 
-The opening begins with `biomeDepthCache = 0` and
-`biomeEncounterDepth = 1`. Its counting encounter increments encounter depth
-to `2` at encounter start, before outgoing doors are generated. Its later room
-commit advances biome depth cache to `1`; encounter completion is not either
-counter's mutation point.
+The opening begins with `biomeDepthCache = 0` and `biomeEncounterDepth`
+unset. Its counting encounter sets encounter depth to `2` at encounter start,
+before outgoing doors are generated. Its later room commit advances biome
+depth cache to `1`; encounter completion is not either counter's mutation
+point.
 
 Every opening forces RunProgress and excludes `Devotion`, `RoomMoneyDrop`,
 `MaxHealthDrop`, and `MaxManaDrop`.

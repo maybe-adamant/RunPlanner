@@ -59,8 +59,8 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
   const counters = object(record.counters, `${label}.counters`);
   exact(
     counters,
-    ['biomeDepthCache', 'biomeEncounterDepth', 'routeEncounterDepth', 'roomHistoryOrdinal'],
-    [],
+    ['biomeDepthCache', 'routeEncounterDepth', 'roomHistoryOrdinal'],
+    ['biomeEncounterDepth'],
     `${label}.counters`,
   );
   const bags = array(record.bags, `${label}.bags`).map((entry, index) => {
@@ -476,10 +476,14 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     checkpoint: record.checkpoint as 'roomEntered' | 'beforeRoomExit',
     counters: Object.freeze({
       biomeDepthCache: integer(counters.biomeDepthCache, `${label}.counters.biomeDepthCache`),
-      biomeEncounterDepth: integer(
-        counters.biomeEncounterDepth,
-        `${label}.counters.biomeEncounterDepth`,
-      ),
+      ...(counters.biomeEncounterDepth === undefined
+        ? {}
+        : {
+            biomeEncounterDepth: integer(
+              counters.biomeEncounterDepth,
+              `${label}.counters.biomeEncounterDepth`,
+            ),
+          }),
       routeEncounterDepth: integer(
         counters.routeEncounterDepth,
         `${label}.counters.routeEncounterDepth`,

@@ -195,7 +195,8 @@ export interface StartInstallationCounters {
   readonly roomHistoryOrdinal: number;
   readonly routeEncounterDepth: number;
   readonly biomeDepthCache: number;
-  readonly biomeEncounterDepth: number;
+  /** Absent while native BiomeEncounterDepth is unset. */
+  readonly biomeEncounterDepth?: number;
   readonly lastDevotionDepth?: number;
   /** I's Clockwork counters, at an I Preboss. */
   readonly clockwork?: {

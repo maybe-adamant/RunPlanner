@@ -1,10 +1,12 @@
 import type { EncounterEnemyChoice, GeneratedEncounterSelection } from '../../catalog-schema';
 import type { AuthoredGeneratedEncounterCustomization } from '../../authored-project/model';
 import { assessFangs } from './fangs';
+import { readBiomeEncounterDepth, type BiomeEncounterDepthReader } from './biome-encounter-depth';
 
 export interface EncounterGenerationContext {
   readonly biomeDepthCache: number;
-  readonly biomeEncounterDepth: number;
+  /** Undefined while native BiomeEncounterDepth is unset. */
+  readonly biomeEncounterDepth: number | undefined;
   /** Only consequences of earlier explicit, valid ordinary additions are known. */
   readonly knownRunBlacklist: readonly string[];
   readonly hard?: boolean;
@@ -195,10 +197,20 @@ const wavePatterns: Readonly<Record<number, readonly number[]>> = Object.freeze(
   4: [0.3, 0.1, 0.2, 0.4],
 });
 
+function depthAt(
+  context: EncounterGenerationContext,
+  axis: 'biomeDepthCache' | 'biomeEncounterDepth',
+  reader: BiomeEncounterDepthReader,
+): number {
+  return axis === 'biomeDepthCache'
+    ? context.biomeDepthCache
+    : readBiomeEncounterDepth(context.biomeEncounterDepth, reader);
+}
+
 function enemyAdmitted(choice: EncounterEnemyChoice, context: EncounterGenerationContext) {
   return (
     (choice.minimumDepth === undefined ||
-      context[choice.minimumDepth.axis] >= choice.minimumDepth.value) &&
+      depthAt(context, choice.minimumDepth.axis, 'requirement') >= choice.minimumDepth.value) &&
     context.inadmissibleEnemyKeys?.includes(choice.key) !== true
   );
 }
@@ -255,7 +267,7 @@ function totalBudget(
   context: EncounterGenerationContext,
   roll: number,
 ) {
-  const depth = context[policy.budget.depthAxis];
+  const depth = depthAt(context, policy.budget.depthAxis, 'difficulty');
   const ramp =
     context.hard === true && policy.budget.hardDepthRamp !== undefined
       ? policy.budget.hardDepthRamp
@@ -503,7 +515,8 @@ export function assessGeneratedEncounter(
     for (let waveIndex = fixedWaveCount + 1; waveIndex <= waveCount; waveIndex++) {
       const row = authored.waves?.find((wave) => wave.waveIndex === waveIndex);
       const max = Math.floor(
-        policy.types.max + policy.types.depthRamp * context[policy.types.depthAxis],
+        policy.types.max +
+          policy.types.depthRamp * depthAt(context, policy.types.depthAxis, 'typeCount'),
       );
       const highlightCount = Math.min(
         waveIndex,

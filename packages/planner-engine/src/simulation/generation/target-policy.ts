@@ -44,6 +44,7 @@ import {
   type FindingRegionEntry,
   type HistoryFindingChronology,
 } from '../finding-regions';
+import { readBiomeEncounterDepth } from '../encounters/biome-encounter-depth';
 
 export class BiomeRoomGenerationContractError extends Error {
   constructor(detail: string) {
@@ -236,7 +237,10 @@ function projectRoomGenerationRequirementContext(
     routeKey: source.origin.routeKey,
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
-      biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
+      biomeEncounterDepth: readBiomeEncounterDepth(
+        view.ledgers.counters.biomeEncounterDepth,
+        'requirement',
+      ),
       encounterDepth: view.ledgers.counters.routeEncounterDepth,
       enteredBiomes: enteredBiomeCount,
       // Generation requirements consume the same derived trait facts as the

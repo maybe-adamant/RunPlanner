@@ -57,7 +57,8 @@ export interface ExecutionRunStateDiagnostic {
   readonly checkpoint: 'roomEntered' | 'beforeRoomExit';
   readonly counters: {
     readonly biomeDepthCache: number;
-    readonly biomeEncounterDepth: number;
+    /** Absent while native BiomeEncounterDepth is unset. */
+    readonly biomeEncounterDepth?: number;
     readonly routeEncounterDepth: number;
     readonly roomHistoryOrdinal: number;
   };
@@ -1190,7 +1191,8 @@ export interface ExecutionStartHex {
 /** Biome-local state a Preboss start installs; an Opening's native Intro resets it. */
 export interface ExecutionStartBiome {
   readonly biomeDepthCache: number;
-  readonly biomeEncounterDepth: number;
+  /** Absent while native BiomeEncounterDepth is unset. */
+  readonly biomeEncounterDepth?: number;
   readonly biomeUseRecord: Readonly<Record<string, number>>;
   /** Forfeit's skip is spent: native `BiomeBoonSkipCount` reaches its vow rank. */
   readonly forfeitConsumed: boolean;

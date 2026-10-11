@@ -534,6 +534,7 @@ end
 function install.prebossRoom(start, room)
     install.records(start)
     local run, biome = _G.CurrentRun, start.biome
+    -- Absent is native BiomeEncounterDepth unset.
     run.BiomeEncounterDepth = biome.biomeEncounterDepth
     run.BiomeUseRecord = copy(biome.biomeUseRecord)
     -- Forfeit's single rank allows one use per biome (ShrineLogic.lua:918-921).

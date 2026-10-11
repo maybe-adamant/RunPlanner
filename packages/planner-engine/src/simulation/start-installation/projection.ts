@@ -274,7 +274,9 @@ function counters(state: SimulationState, kind: StartPoint['kind']): StartInstal
     roomHistoryOrdinal: view.roomHistoryOrdinal,
     routeEncounterDepth: view.routeEncounterDepth,
     biomeDepthCache: view.biomeDepthCache,
-    biomeEncounterDepth: view.biomeEncounterDepth,
+    ...(view.biomeEncounterDepth === undefined
+      ? {}
+      : { biomeEncounterDepth: view.biomeEncounterDepth }),
     ...(lastDevotionDepth === undefined ? {} : { lastDevotionDepth }),
     ...(kind === 'preboss' && view.clockworkGoalsRemaining !== undefined
       ? { clockwork: clockwork(view) }

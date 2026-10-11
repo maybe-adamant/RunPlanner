@@ -1,5 +1,6 @@
 import type { BiomeTransitionCounterAxis } from '../../catalog-schema';
 import { semanticAddressKey } from '../../authored-project/addresses';
+import { biomeEncounterDepthAfterStart } from '../encounters/biome-encounter-depth';
 import type {
   CanonicalBiomeHistory,
   EncounterHistoryEntry,
@@ -33,7 +34,7 @@ interface MutableLedgers {
   roomRestores: RoomRestoreHistoryEntry[];
   counters: {
     biomeDepthCache: number;
-    biomeEncounterDepth: number;
+    biomeEncounterDepth?: number;
     routeEncounterDepth: number;
     roomHistoryOrdinal: number;
     fieldsMaxDoorsRolled?: number;
@@ -112,7 +113,6 @@ export function createRouteStartHistoryView(): HistoryStateView {
       roomRestores: [],
       counters: {
         biomeDepthCache: 0,
-        biomeEncounterDepth: 0,
         routeEncounterDepth: 0,
         roomHistoryOrdinal: 0,
       },
@@ -290,7 +290,6 @@ function foldHistoryEventStream(
     counters: {
       ...(seed?.ledgers.counters ?? {
         biomeDepthCache: 0,
-        biomeEncounterDepth: 0,
         routeEncounterDepth: 0,
         roomHistoryOrdinal: 0,
       }),
@@ -335,6 +334,9 @@ function foldHistoryEventStream(
           throw new HistoryFoldContractError('history has an invalid biome start event');
         }
         Object.assign(ledgers.counters, event.counters);
+        if (event.counters.biomeEncounterDepth === undefined) {
+          delete ledgers.counters.biomeEncounterDepth;
+        }
         if (event.counters.fieldsMaxDoorsRolled === undefined) {
           delete ledgers.counters.fieldsMaxDoorsRolled;
         }
@@ -664,7 +666,9 @@ function foldHistoryEventStream(
           );
         }
         advancedEncounterDepths.add(key);
-        ledgers.counters.biomeEncounterDepth += event.biomeEncounterDepthDelta;
+        ledgers.counters.biomeEncounterDepth = biomeEncounterDepthAfterStart(
+          ledgers.counters.biomeEncounterDepth,
+        );
         ledgers.counters.routeEncounterDepth += event.routeEncounterDepthDelta;
         break;
       }

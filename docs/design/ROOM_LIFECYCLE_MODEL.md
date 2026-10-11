@@ -669,7 +669,8 @@ post-predecessor-commit checkpoint. Eligibility never selects another identity.
 The identity context distinguishes known reward type, known no-reward, and
 unavailable authorship, and carries the route. A declared first-biome identity
 (the route's own key where the choice declares one, else its default) resolves
-at reached biome encounter depth one before reward context, but only while that
+at reached biome encounter depth one (an unset depth reads as zero and does not
+match) before reward context, but only while that
 definition has not yet been recorded on the route. For the intro keys this
 mirrors native `AlwaysForce` until completion; the mature Chronos intro is
 natively forced at depth one once `ClockworkIntro` is completed, which is
@@ -1329,11 +1330,18 @@ Consequently:
 - the picked target does not contribute its own depth-cache increment until it
   later commits.
 
-Layout initial counters describe the state before the fixed start commits;
+A biome's initial counters describe the state before its fixed start commits;
 they are not a replacement for that room's declaration-owned contribution.
-F and N begin new routes at `biomeDepthCache = 0`. Later biomes begin at
-`biomeDepthCache = 1` after the prior biome transition. In both cases, a
-supported Opening or Intro with a one-step room-history contribution generates
+A non-Dream route's first biome (F or N) begins at `biomeDepthCache = 0` with
+`biomeEncounterDepth` unset: `StartNewRun` creates the first room before any
+biome record is set. An unset encounter depth reads as each native reader
+defaults it, and the first counting `startEncounter` makes it `2`. A Dream
+start and every later biome begin at `biomeDepthCache = 1` and
+`biomeEncounterDepth = 1`. Native `EndBiomeRecords` sets that `1` when the start
+room starts, after the room and its encounter were created; no such encounter
+reads encounter depth (Intros use non-combat or fixed encounters, and a Dream
+F or N opening forces `OpeningEmpty`), so the planner seeds it at biome entry.
+In both cases, a supported Opening or Intro with a one-step room-history contribution generates
 its outgoing target from the initial source depth and advances the cache once
 at commit. Candidate evaluation consumes the recorded source view directly and
 must not add that contribution speculatively.
@@ -1384,20 +1392,19 @@ not biome-local and therefore receive no reset event.
 ## History Views and Composition
 
 Composition begins with one addressed `biomeStarted` event whose payload owns
-the biome's resolved initial counter state. Route position determines its entry
-depth baseline: an ordinary first biome starts at zero; later entries and
-Dream entries start at one. Layout declarations retain biome-local counter
-facts; carried route counters come from actual predecessor history. For ordinary F that state is
-`biomeDepthCache = 0`, `biomeEncounterDepth = 1`, route encounter depth `1`,
-and room-history ordinal `0`. The opening's later commit applies its declared
+the biome's resolved initial counter state. Route position determines its
+biome-local baseline: a non-Dream first biome starts at `biomeDepthCache = 0`
+with `biomeEncounterDepth` unset; later entries and Dream entries start both at
+one. Carried route counters come from actual predecessor history. For ordinary
+F that state is `biomeDepthCache = 0`, unset `biomeEncounterDepth`, route
+encounter depth `1`, and room-history ordinal `0`. The opening's later commit applies its declared
 `biomeDepthCache = 1` delta. These are separate events so generation contacts
 never depend on an implicit fold initializer or a hidden opening exception.
 G begins at `biomeDepthCache = 1` and `biomeEncounterDepth = 1`, matching the
 game's between-biome depth baseline. Its route encounter depth and room-history
 ordinal are carried from F after F's declared biome-local resets.
-N is the first Surface biome and starts at `biomeDepthCache = 0`,
-`biomeEncounterDepth = 1`, route encounter depth `1`, and room-history ordinal
-`0`. Its Hub history additionally initializes generated-side-room and Soul
+N is the first Surface biome and starts at `biomeDepthCache = 0`, unset
+`biomeEncounterDepth`, route encounter depth `1`, and room-history ordinal `0`. Its Hub history additionally initializes generated-side-room and Soul
 Pylon spawn/completion counters at zero.
 
 Every fragment exposes conceptually distinct states:

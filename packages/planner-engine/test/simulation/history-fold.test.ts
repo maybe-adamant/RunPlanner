@@ -85,8 +85,6 @@ function canonicalEvents(): readonly HistoryEvent[] {
       origin,
       operationIndex: 3,
       phaseKey: 'Encounter',
-      roomEncounterDepthDelta: 1,
-      biomeEncounterDepthDelta: 1,
       routeEncounterDepthDelta: 1,
     },
     {

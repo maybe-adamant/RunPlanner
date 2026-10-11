@@ -415,12 +415,7 @@
           "owner": "[\"roomRunStateCheckpoint\",\"Underworld\",\"F\",\"golden-f-start\",\"roomEntered\"]",
           "checkpoint": "roomEntered",
           "replace": {
-            "counters": {
-              "biomeDepthCache": 0,
-              "biomeEncounterDepth": 1,
-              "routeEncounterDepth": 1,
-              "roomHistoryOrdinal": 0
-            },
+            "counters": { "biomeDepthCache": 0, "routeEncounterDepth": 1, "roomHistoryOrdinal": 0 },
             "bags": [
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
@@ -4009,5 +4004,5 @@
       }
     }
   ],
-  "planFingerprint": "6c745668"
+  "planFingerprint": "a55e66f6"
 }

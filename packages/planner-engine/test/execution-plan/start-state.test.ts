@@ -18,6 +18,7 @@ import {
   type ExecutionPlan,
 } from '../../src/execution-plan';
 import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
+import { fingerprint } from '../../src/execution-plan/fingerprint';
 import { withStartPoint } from './support/execution-fixtures';
 import fghiWire from './fixtures/underworld-fghi.execution.json';
 import qOpeningWire from './fixtures/surface-start-q-opening.execution.json';
@@ -184,6 +185,21 @@ describe('execution start state', () => {
     const stripped = clone(iPrebossWire);
     delete (stripped as Record<string, unknown>).startState;
     expect(() => decodeExecutionPlan(stripped)).toThrow(/planFingerprint/);
+  });
+
+  it('accepts an unset Preboss biome encounter depth and rejects a non-integer one', () => {
+    const plan = decodeExecutionPlan(iPrebossWire);
+    const biome: Record<string, unknown> = { ...plan.startState!.biome! };
+    delete biome.biomeEncounterDepth;
+    const body: Record<string, unknown> = { ...plan, startState: { ...plan.startState!, biome } };
+    delete body.planFingerprint;
+    const unset = clone(iPrebossWire);
+    delete (unset.startState.biome as Record<string, unknown>).biomeEncounterDepth;
+    unset.planFingerprint = fingerprint(body);
+    expect(decodeExecutionPlan(unset).startState!.biome).not.toHaveProperty('biomeEncounterDepth');
+    const wrong = clone(iPrebossWire);
+    (wrong.startState.biome as Record<string, unknown>).biomeEncounterDepth = 'one';
+    expect(() => decodeExecutionPlan(wrong)).toThrow(/biomeEncounterDepth/);
   });
 
   it.each<[string, (start: Record<string, unknown>) => void]>([

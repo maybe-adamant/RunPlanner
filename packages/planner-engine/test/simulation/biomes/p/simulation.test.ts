@@ -113,7 +113,7 @@ describe('P core loop', () => {
       talos.entry.ledgers.counters.biomeEncounterDepth,
     );
     expect(combat.postCommit.ledgers.counters.biomeEncounterDepth).toBe(
-      combat.entry.ledgers.counters.biomeEncounterDepth + 1,
+      combat.entry.ledgers.counters.biomeEncounterDepth! + 1,
     );
   });
 

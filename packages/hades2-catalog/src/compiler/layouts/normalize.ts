@@ -13,7 +13,6 @@ import {
   createCollection,
   freezeUniqueStrings,
   requireNonEmpty,
-  requireNonNegativeInteger,
   requirePositiveInteger,
 } from '../common';
 import { normalizeAuthoredFields } from '../descriptors';
@@ -103,12 +102,6 @@ export function normalizeBiomeLayouts(
           })();
     return Object.freeze({
       biomeKey: layout.biomeKey,
-      initialCounters: Object.freeze({
-        biomeEncounterDepth: requireNonNegativeInteger(
-          layout.initialCounters.biomeEncounterDepth,
-          `${path}.initialCounters.biomeEncounterDepth`,
-        ),
-      }),
       start,
       progression,
       ...(chaos === undefined ? {} : { chaos }),

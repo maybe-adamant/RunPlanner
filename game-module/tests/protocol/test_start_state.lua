@@ -74,6 +74,15 @@ function TestStartState.testStartStateShapeIsStrict()
     end
 end
 
+-- An absent BiomeEncounterDepth is native unset; a present one is an integer.
+-- Shape and graph checks precede the fingerprint, so only the stale fingerprint rejects the absent value.
+function TestStartState.testPrebossBiomeEncounterDepthIsOptional()
+    rejected("underworld-start-i-preboss", function(start) start.biome.biomeEncounterDepth = nil end,
+        "fingerprint does not match")
+    rejected("underworld-start-i-preboss", function(start) start.biome.biomeEncounterDepth = "one" end,
+        "biomeEncounterDepth")
+end
+
 function TestStartState.testStartOccurrenceIsTheStartPointRoom()
     rejected("underworld-start-i-preboss", function(start) start.occurrenceId = "missing" end, "must be selected")
     rejected("underworld-start-i-preboss", function(start) start.roomName = "I_PreBoss01" end,

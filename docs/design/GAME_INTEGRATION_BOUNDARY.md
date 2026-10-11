@@ -564,10 +564,11 @@ entry for a Preboss
 ([room contacts](../audits/game-execution-contacts/ROOM_FEATURES_AND_ACTIONS.md#published-presence-as-a-native-construction-input)),
 and depths advance only in `StartEncounter`.
 
-The `biome` section maps onto native fields: `BiomeEncounterDepth` and
-`BiomeUseRecord` directly; Forfeit's consumed use as `BiomeBoonSkipCount` 1,
-its single rank's allowance (`ShrineLogic.lua:918-921`); the Fig Leaf flag as
-`ActivatedThisBiome` on the held `PersistentDionysusSkipKeepsake`; and I's
+The `biome` section maps onto native fields: `BiomeEncounterDepth` (absent
+while native leaves it unset) and `BiomeUseRecord` directly; Forfeit's
+consumed use as `BiomeBoonSkipCount` 1, its single rank's allowance
+(`ShrineLogic.lua:918-921`); the Fig Leaf flag as `ActivatedThisBiome` on the
+held `PersistentDionysusSkipKeepsake`; and I's
 counters as `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`, which
 `InitClockworkGoalReward` would have set at the Intro. `BiomeDepthCache` is
 not written: the map load before `StartRoom` derives it from the stub history
@@ -1083,8 +1084,9 @@ and leaves the native destination unchanged, not a placement-only mismatch.
 
 Complete Run State snapshots are diagnostic-only at the published room-entered
 and before-room-exit checkpoints. They may expose counters, ranged reward-bag
-counts, acquired traits, and retained effects for later adjudication, but a
-difference in that diagnostic frame never blocks execution by itself. The
+counts, acquired traits, and retained effects for later adjudication (an
+absent `biomeEncounterDepth` counter is native `BiomeEncounterDepth` unset),
+but a difference in that diagnostic frame never blocks execution by itself. The
 planner separately publishes the sparse named facts that changed during the
 room. Only a mismatch in one of those named conformance facts, a required
 Timeline obligation, or another explicit structural/transaction comparison

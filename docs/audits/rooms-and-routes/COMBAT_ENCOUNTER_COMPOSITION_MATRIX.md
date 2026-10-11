@@ -383,8 +383,13 @@ native 0 and 1. No supported row declares `MinimumDifficulty`,
 `BiomeEncounterDepth`. That flag occurs only at `EncounterData_Generated.lua:245,697,850,1314`
 (H cage, N, O, Q lineages) and is independent of `UseEncounterDepthForTypes`.
 H passive encounters do not set it, so they price from `BiomeDepthCache` while
-H cages price from encounter depth. Values below are inheritance-resolved (own value, then first
-parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
+H cages price from encounter depth. A run's first room is generated in
+`StartNewRun` before any `EndBiomeRecords`, with `BiomeEncounterDepth` unset:
+budget and active cap read 0 (`RunLogic.lua:1201`, `EncounterLogic.lua:1329`),
+type count 1 (`RunLogic.lua:1323`) and requirements 0, so Surface
+`OpeningGeneratedN` budgets 60; `StartEncounter` then sets 2
+(`RoomLogic.lua:1902`). Values below are inheritance-resolved (own value, then
+first parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
 `DepthDifficultyRamp`; hard and Dream overrides carry no other budget key.
 
 | Identity                      | Base    | Depth ramp | Axis      | Modifier | Multiplier | Hard | Source                                                  |
