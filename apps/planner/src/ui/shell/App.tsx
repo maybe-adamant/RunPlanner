@@ -32,6 +32,7 @@ import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
+import type { EventSlotOperations } from '@planner/workspace/communityEvents';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -55,6 +56,8 @@ interface AppProps {
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
+  /** Present only in development builds of the desktop application. */
+  readonly eventSlot?: EventSlotOperations;
   readonly gameStatus?: GameStatusController;
   readonly projectOperations: ProjectOperations;
   readonly releaseUpdates?: ReleaseUpdateController;
@@ -70,6 +73,7 @@ export function App({
   catalog,
   catalogSummary,
   editorNavigation,
+  eventSlot,
   gameStatus,
   projectOperations,
   releaseUpdates,
@@ -275,6 +279,7 @@ export function App({
           <GamePanel
             {...(bugReport === undefined ? {} : { bugReport })}
             catalog={catalog}
+            {...(eventSlot === undefined ? {} : { eventSlot })}
             focusPlans={gameOpen === 'plans'}
             {...(gameStatus === undefined ? {} : { gameStatus })}
             onClose={() => {

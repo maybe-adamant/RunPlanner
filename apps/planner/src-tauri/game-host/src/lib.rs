@@ -1,9 +1,10 @@
 //! Tauri-free desktop host capabilities over explicit paths: the embedded game
 //! module package, the game target, module install, plan-slot publication and
-//! its slot overview, bug reports and the macOS/Linux system opener.
+//! its slot overview, the community event slot, bug reports and the macOS/Linux system opener.
 
 pub mod atomic_file;
 pub mod bug_report;
+pub mod community_event;
 pub mod external_url;
 pub mod game_module_assembly;
 pub mod game_module_install;

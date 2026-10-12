@@ -5,14 +5,17 @@ local names = type(import) == "function" and import("mods/presentation/names.lua
     or require("mods.presentation.names")
 local mismatchText = type(import) == "function" and import("mods/presentation/mismatch_text.lua")
     or require("mods.presentation.mismatch_text")
+local inbox = type(import) == "function" and import("mods/host/inbox.lua") or require("mods.host.inbox")
 
 local presentation = {}
+presentation.EVENT_SLOT = inbox.EVENT_SLOT
 
 local ROUTES = { Underworld = "Underworld", Surface = "Surface", FreshFile = "Fresh File", Dream = "Dream Dive" }
 local START_POINTS = { Opening = "Opening", PreBoss = "Preboss", Boss = "Boss" }
 local MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
 
 function presentation.slotName(slot)
+    if slot == inbox.EVENT_SLOT then return "Event" end
     return "Slot " .. tostring(slot)
 end
 
@@ -28,6 +31,16 @@ function presentation.entryFor(plan, entry)
         return entry
     end
     return nil
+end
+
+-- The community event a plan belongs to: the event slot entry's event while
+-- the event slot's file exists and the entry describes this plan's fingerprint.
+-- Display only.
+function presentation.runningEvent(plan, entries, present)
+    if type(present) ~= "table" or not present[inbox.EVENT_SLOT] then return nil end
+    local entry = type(entries) == "table" and entries[inbox.EVENT_SLOT] or nil
+    local described = presentation.entryFor(plan, entry)
+    return described and described.event or nil
 end
 
 function presentation.planName(plan, entry, slot)
@@ -146,7 +159,7 @@ local function utcEpoch(year, month, day, hour, minute, second)
 end
 
 -- "2026-10-12T10:00:00.000Z" in local time, such as "12 Oct 2026, 12:00".
-function presentation.sentAt(iso)
+function presentation.localTime(iso)
     local year, month, day, hour, minute, second =
         tostring(iso):match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)")
     if year == nil or MONTHS[tonumber(month)] == nil then return nil end
@@ -161,8 +174,12 @@ end
 function presentation.entryDetails(entry)
     local rows = {}
     local function add(label, value) if value ~= nil then rows[#rows + 1] = { label, value } end end
+    if entry.event then
+        add("Event", entry.event.title)
+        add("Ends", presentation.localTime(entry.event.endsAt))
+    end
     add("Plan", entry.planName)
-    add("Sent", presentation.sentAt(entry.sentAt))
+    add("Sent", presentation.localTime(entry.sentAt))
     add("Aspect", entry.aspect)
     add("Route", entry.route .. " -> " .. entry.endBiome)
     add("Keepsake", entry.startingKeepsake)

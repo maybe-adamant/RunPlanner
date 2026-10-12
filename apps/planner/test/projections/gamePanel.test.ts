@@ -17,7 +17,12 @@ import {
 import { catalog } from '@run-planner/hades2-catalog';
 import type { GameActiveSlot } from '@planner/persistence/gameModuleHost';
 import type { GameActivationActivity } from '@planner/projections/gamePanel';
-import { gameModuleStatus, planSlot, planSlots } from '@planner-test/fixtures/gameModuleHost';
+import {
+  eventSlot,
+  gameModuleStatus,
+  planSlot,
+  planSlots,
+} from '@planner-test/fixtures/gameModuleHost';
 
 type StatusOverrides = NonNullable<Parameters<typeof gameModuleStatus>[0]>;
 
@@ -805,6 +810,77 @@ describe('Game panel projection', () => {
     const failed = plans({ state: 'present', slot: 5 }, { kind: 'failed', message: 'locked.' });
     expect(failed?.activeSlot).toMatchObject({ selected: 5, notice: 'Not made active: locked.' });
     expect(failed?.rows[1]?.active.intent).toEqual({ kind: 'setActiveSlot', slot: 2 });
+  });
+
+  it('shows the read-only event slot while it holds a file or is active', () => {
+    const now = Date.UTC(2026, 9, 12, 12);
+    const plans = (
+      slot: ReturnType<typeof eventSlot>,
+      activeSlot: GameActiveSlot = { state: 'missing' },
+      activation?: GameActivationActivity,
+    ) =>
+      projectGamePlans(
+        gameModuleStatus({ inspection: { eventSlot: slot, activeSlot } }),
+        { kind: 'noProject' },
+        'clean',
+        catalog,
+        now,
+        activation,
+      );
+    expect(plans(eventSlot())?.event).toBeNull();
+    expect(plans(eventSlot(), { state: 'present', slot: 0 })?.event).toEqual({
+      state: 'empty',
+      columns: null,
+      summary: 'No event',
+      active: { checked: true, intent: null },
+    });
+    const present = eventSlot({
+      state: 'present',
+      modifiedAtMs: now - 60 * 60_000,
+      routeKey: 'Surface',
+      biomeKeys: ['N', 'O', 'P', 'Q'],
+      weaponKey: 'WeaponStaffSwing',
+      aspectKey: 'BaseStaffAspect',
+      displayName: 'Staff sprint',
+      event: {
+        id: '2026-w42-staff',
+        title: 'Week 42: Staff sprint',
+        endsAt: '2026-10-19T00:00:00Z',
+      },
+    });
+    const ends = new Date('2026-10-19T00:00:00Z');
+    expect(plans(present)?.event).toEqual({
+      state: 'present',
+      columns: {
+        title: 'Week 42: Staff sprint',
+        eventEnds: {
+          text: `Ends ${ends.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`,
+          iso: ends.toISOString(),
+        },
+        route: catalog.routes.byKey.Surface!.label,
+        endsAt: catalog.biomes.byKey.Q!.label,
+        aspect: 'Melinoë (Staff)',
+        sent: expect.objectContaining({ ago: '1h ago' }),
+      },
+      summary: null,
+      active: { checked: false, intent: { kind: 'setActiveSlot', slot: 0 } },
+    });
+    // The event row has no send action; the twelve slots keep theirs.
+    expect(plans(present)?.event).not.toHaveProperty('action');
+    expect(plans(present)?.rows).toHaveLength(12);
+    expect(
+      plans(present, { state: 'present', slot: 0 }, { kind: 'pending' })?.event?.active,
+    ).toEqual({ checked: true, intent: null });
+    expect(plans({ ...present, event: null })?.event?.columns).toMatchObject({
+      title: null,
+      eventEnds: null,
+    });
+    expect(plans(eventSlot({ state: 'stale', routeKey: 'Surface' }))?.event).toMatchObject({
+      columns: expect.anything(),
+      summary: 'Made for another game module build',
+      active: { checked: false, intent: null },
+    });
+    expect(plans(eventSlot({ state: 'unreadable' }))?.event?.summary).toBe('Unreadable');
   });
 
   it('describes why an Active slot write did not take effect', () => {

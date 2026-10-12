@@ -122,6 +122,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
+          {...(application.eventSlot === undefined ? {} : { eventSlot: application.eventSlot })}
           {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
           projectOperations={application.projectOperations}
           selectStructuredWorkspace={application.selectStructuredWorkspace}

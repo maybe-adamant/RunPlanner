@@ -8,7 +8,9 @@ import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
 import { ownEntry, slotAspectLabel } from '@planner/projections/gameSlotSummary';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
+  GameActiveSlotNumber,
   GameActiveSlotSetting,
+  GameEventSlot,
   GameModuleInstallResult,
   GameModuleRemoveResult,
   GameModuleStatus,
@@ -549,7 +551,27 @@ export interface GamePlanSlotRow {
 
 export interface GameActiveSlotIntent {
   readonly kind: 'setActiveSlot';
-  readonly slot: GamePlanSlotNumber;
+  readonly slot: GameActiveSlotNumber;
+}
+
+export type GameEventSlotSummary = 'No event' | 'Made for another game module build' | 'Unreadable';
+
+/** The read-only event slot: it is never sent to, but may be made active. */
+export interface GameEventSlotRow {
+  readonly state: GameEventSlot['state'];
+  /** Present only for a readable plan. */
+  readonly columns: {
+    /** The event's title, or null when the overview does not describe the slot. */
+    readonly title: string | null;
+    /** When the event ends, in local time. */
+    readonly eventEnds: { readonly text: string; readonly iso: string } | null;
+    readonly route: string;
+    readonly endsAt: string;
+    readonly aspect: string;
+    readonly sent: GamePlanSentTime | null;
+  } | null;
+  readonly summary: GameEventSlotSummary | null;
+  readonly active: { readonly checked: boolean; readonly intent: GameActiveSlotIntent | null };
 }
 
 /** A pending or failed Active slot write in the panel. */
@@ -561,7 +583,7 @@ export type GameActivationActivity =
 export interface GameActiveSlotGroup {
   readonly label: 'Active slot';
   /** The slot `active-slot.json` names, or null when it is missing or invalid. */
-  readonly selected: GamePlanSlotNumber | null;
+  readonly selected: GameActiveSlotNumber | null;
   readonly pending: boolean;
   readonly notice: string | null;
 }
@@ -575,6 +597,8 @@ export interface GamePlanSentTime {
 }
 
 export interface GamePlansProduct {
+  /** Shown while the event slot holds a file or is the active slot. */
+  readonly event: GameEventSlotRow | null;
   readonly rows: readonly GamePlanSlotRow[];
   /** Why the current project cannot be sent; send actions are absent while set. */
   readonly unavailableReason: string | null;
@@ -608,7 +632,7 @@ function ownLabel(
 }
 
 function slotColumns(
-  slot: GamePlanSlot,
+  slot: Omit<GamePlanSlot, 'slot'>,
   catalog: Catalog,
   now: number,
 ): GamePlanSlotRow['columns'] {
@@ -684,9 +708,57 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
 
 const IDLE_ACTIVATION: GameActivationActivity = Object.freeze({ kind: 'idle' });
 
+const EVENT_SLOT_SUMMARIES: Readonly<Record<GameEventSlot['state'], GameEventSlotSummary | null>> =
+  {
+    empty: 'No event',
+    present: null,
+    stale: 'Made for another game module build',
+    unreadable: 'Unreadable',
+  };
+
+function eventEnds(iso: string): { readonly text: string; readonly iso: string } | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    text: `Ends ${date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`,
+    iso: date.toISOString(),
+  };
+}
+
+function eventSlotRow(
+  slot: GameEventSlot,
+  selected: GameActiveSlotNumber | null,
+  pending: boolean,
+  catalog: Catalog,
+  now: number,
+): GameEventSlotRow | null {
+  if (slot.state === 'empty' && selected !== slot.slot) return null;
+  const columns = slotColumns(slot, catalog, now);
+  return {
+    state: slot.state,
+    columns:
+      columns === null
+        ? null
+        : {
+            title: slot.event?.title ?? null,
+            eventEnds: slot.event === null ? null : eventEnds(slot.event.endsAt),
+            route: columns.route,
+            endsAt: columns.endsAt,
+            aspect: columns.aspect,
+            sent: columns.sent,
+          },
+    summary: EVENT_SLOT_SUMMARIES[slot.state],
+    active: {
+      checked: selected === slot.slot,
+      intent:
+        pending || slot.state !== 'present' ? null : { kind: 'setActiveSlot', slot: slot.slot },
+    },
+  };
+}
+
 /**
- * The twelve plan slots, shown only while the game module is ready. The Active slot radios show
- * the file as last read and enable only slots that hold a plan.
+ * The twelve plan slots and the read-only event slot, shown only while the game module is ready.
+ * The Active slot radios show the file as last read and enable only slots that hold a plan.
  */
 export function projectGamePlans(
   status: GameModuleStatus,
@@ -709,6 +781,7 @@ export function projectGamePlans(
       pending,
       notice: activation.kind === 'failed' ? `Not made active: ${activation.message}` : null,
     },
+    event: eventSlotRow(status.inspection.eventSlot, selected, pending, catalog, now),
     rows: status.inspection.planSlots.map((slot): GamePlanSlotRow => ({
       slot: slot.slot,
       state: slot.state,

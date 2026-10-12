@@ -28,6 +28,7 @@ import {
   projectGameProfileChoices,
   type GameActivationActivity,
   type GameActiveSlotIntent,
+  type GameEventSlotRow,
   type GamePlansProduct,
   type GameLocationProduct,
   type GameModuleSectionProduct,
@@ -35,6 +36,7 @@ import {
 import { ContextualPicker } from '../controls/ContextualPicker';
 import { ExternalPageLink } from '../controls/ExternalPageLink';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
+import type { EventSlotOperations, EventSlotOutcome } from '@planner/workspace/communityEvents';
 import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 import { BugReportDialog } from './BugReportDialog';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -412,7 +414,99 @@ function Callout({
   );
 }
 
+function EventSlotRow({
+  onSetActive,
+  row,
+}: {
+  readonly onSetActive: (intent: GameActiveSlotIntent) => void;
+  readonly row: GameEventSlotRow;
+}) {
+  return (
+    <tr data-event-slot="" data-state={row.state}>
+      <th scope="row">
+        <label className="game-panel-active-slot">
+          <input
+            checked={row.active.checked}
+            data-active-slot={0}
+            aria-disabled={row.active.intent === null || undefined}
+            name="game-active-slot"
+            onChange={() => {
+              if (row.active.intent !== null) onSetActive(row.active.intent);
+            }}
+            type="radio"
+          />
+          Event
+        </label>
+      </th>
+      {row.columns === null ? (
+        <td className="game-panel-slot-summary" colSpan={5}>
+          {row.summary}
+        </td>
+      ) : (
+        <>
+          <td className="game-panel-slot-wrap" data-label="Plan">
+            {row.columns.title ?? <span className="game-panel-slot-unnamed">Unnamed</span>}
+            {row.columns.eventEnds === null ? null : (
+              <span className="game-panel-event-ends">
+                <time dateTime={row.columns.eventEnds.iso}>{row.columns.eventEnds.text}</time>
+              </span>
+            )}
+          </td>
+          <td data-label="Route">{row.columns.route}</td>
+          <td data-label="Ends">{row.columns.endsAt}</td>
+          <td className="game-panel-slot-wrap" data-label="Aspect">
+            {row.columns.aspect}
+          </td>
+          <td data-label="Sent">
+            {row.columns.sent === null ? (
+              '—'
+            ) : (
+              <time dateTime={row.columns.sent.iso} {...hintProps(row.columns.sent.exact)}>
+                {row.columns.sent.ago}
+              </time>
+            )}
+          </td>
+        </>
+      )}
+      <td className="game-panel-slot-action" />
+    </tr>
+  );
+}
+
+function EventSlotActions({
+  onClear,
+  onImport,
+  pending,
+}: {
+  readonly onClear: () => void;
+  readonly onImport: () => void;
+  readonly pending: boolean;
+}) {
+  return (
+    <div className="game-panel-event-actions" role="group" aria-label="Event slot (development)">
+      <button
+        aria-haspopup="dialog"
+        className="quiet-action action-compact"
+        disabled={pending}
+        onClick={onImport}
+        type="button"
+      >
+        Import event file…
+      </button>
+      <button
+        className="quiet-action action-compact"
+        disabled={pending}
+        onClick={onClear}
+        type="button"
+      >
+        Clear event
+      </button>
+    </div>
+  );
+}
+
 function PlansSection({
+  eventActions,
   feedback,
   focusPlans,
   focusSlot,
@@ -422,6 +516,8 @@ function PlansSection({
   pending,
   plans,
 }: {
+  /** The development event slot actions; absent in release builds. */
+  readonly eventActions: ReactNode;
   readonly focusPlans: boolean;
   readonly focusSlot: FocusRequest | null;
   readonly feedback: Feedback | null;
@@ -481,6 +577,9 @@ function PlansSection({
             </tr>
           </thead>
           <tbody>
+            {plans.event === null ? null : (
+              <EventSlotRow onSetActive={onSetActive} row={plans.event} />
+            )}
             {plans.rows.map((row) => (
               <tr data-state={row.state} key={row.slot}>
                 <th scope="row">
@@ -558,6 +657,7 @@ function PlansSection({
           {plans.activeSlot.notice}
         </p>
       )}
+      {eventActions}
       <FeedbackLine feedback={feedback} />
     </section>
   );
@@ -565,12 +665,14 @@ function PlansSection({
 
 function GameSection({
   catalog,
+  eventSlot,
   focusPlans,
   gameStatus,
   onShowFindings,
   operations,
 }: {
   readonly catalog: Catalog;
+  readonly eventSlot: EventSlotOperations | undefined;
   readonly focusPlans: boolean;
   readonly gameStatus: GameStatusController;
   readonly onShowFindings: (() => void) | undefined;
@@ -692,6 +794,29 @@ function GameSection({
     } finally {
       setPending(false);
       returnFocusTo(slot);
+    }
+  };
+
+  const changeEventSlot = async (
+    change: (operations: EventSlotOperations) => Promise<EventSlotOutcome>,
+  ) => {
+    if (eventSlot === undefined) return;
+    setPending(true);
+    setActivation(IDLE_ACTIVATION);
+    setPlansFeedback(null);
+    try {
+      const outcome = await change(eventSlot);
+      if (outcome.kind !== 'cancelled') {
+        setPlansFeedback({
+          tone: outcome.kind === 'done' ? 'status' : 'alert',
+          text: outcome.message,
+        });
+      }
+      await gameStatus.refresh();
+    } catch (error) {
+      setPlansFeedback({ tone: 'alert', text: errorText(error) });
+    } finally {
+      setPending(false);
     }
   };
 
@@ -856,6 +981,15 @@ function GameSection({
       )}
       {plans === null ? null : (
         <PlansSection
+          eventActions={
+            eventSlot === undefined ? null : (
+              <EventSlotActions
+                onClear={() => void changeEventSlot((operations) => operations.clearEvent())}
+                onImport={() => void changeEventSlot((operations) => operations.importEventFile())}
+                pending={pending}
+              />
+            )
+          }
           feedback={plansFeedback}
           focusPlans={focusPlans}
           focusSlot={focusSlot}
@@ -939,6 +1073,7 @@ function GameSection({
 export function GamePanel({
   bugReport,
   catalog,
+  eventSlot,
   focusPlans = false,
   gameStatus,
   onClose,
@@ -948,6 +1083,8 @@ export function GamePanel({
   /** Present only in the desktop application. */
   readonly bugReport?: BugReportOperations;
   readonly catalog: Catalog;
+  /** Present only in development builds of the desktop application. */
+  readonly eventSlot?: EventSlotOperations;
   /** Opens with focus on Plans in game when they show. */
   readonly focusPlans?: boolean;
   readonly gameStatus?: GameStatusController;
@@ -972,6 +1109,7 @@ export function GamePanel({
       ) : (
         <GameSection
           catalog={catalog}
+          eventSlot={eventSlot}
           focusPlans={focusPlans}
           gameStatus={gameStatus}
           onShowFindings={onShowFindings}

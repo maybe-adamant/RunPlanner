@@ -1,8 +1,11 @@
 import { vi } from 'vitest';
 
 import {
+  GAME_EVENT_SLOT,
   GAME_PLAN_SLOT_NUMBERS,
   type GameActiveSlotSetting,
+  type GameEventPlan,
+  type GameEventSlot,
   type GamePlanSlot,
   type GamePlanSlotNumber,
   type GameModuleHost,
@@ -54,6 +57,7 @@ export function gameModuleStatus(
       weaponKey: null,
       aspectKey: null,
     })),
+    eventSlot: eventSlot(),
     activeSlot: { state: 'missing' },
   };
   const inspection =
@@ -137,6 +141,14 @@ export function createFakeGameModuleHost(
       }),
     ),
     revealBugReport: vi.fn<GameModuleHost['revealBugReport']>(() => Promise.resolve()),
+    pickEventFile: vi.fn<GameModuleHost['pickEventFile']>(() => Promise.resolve(null)),
+    readEventFile: vi.fn<GameModuleHost['readEventFile']>(() =>
+      Promise.reject(new Error('No event file.')),
+    ),
+    publishEvent: vi.fn<GameModuleHost['publishEvent']>(() => Promise.resolve(publication)),
+    clearEvent: vi.fn<GameModuleHost['clearEvent']>(() =>
+      Promise.resolve({ status: 'cleared', message: 'The event slot was cleared.', blockers: [] }),
+    ),
   } satisfies GameModuleHost;
   return { host, published };
 }
@@ -166,4 +178,30 @@ export function planSlots(...present: readonly GamePlanSlot[]): readonly GamePla
   return GAME_PLAN_SLOT_NUMBERS.map(
     (slot) => present.find((entry) => entry.slot === slot) ?? planSlot(slot),
   );
+}
+
+/** The event slot as the host reports it; empty unless overridden. */
+export function eventSlot(overrides: Partial<GameEventSlot> = {}): GameEventSlot {
+  return {
+    ...planSlot(1),
+    slot: GAME_EVENT_SLOT,
+    event: null,
+    ...overrides,
+  };
+}
+
+/** A host-decoded event file whose plan is `planJson`. */
+export function eventPlan(planJson: string): GameEventPlan {
+  return {
+    event: {
+      id: '2026-w42-staff',
+      title: 'Week 42: Staff sprint',
+      description: 'Clear the Surface.',
+      rules: null,
+      startsAt: '2026-10-12T00:00:00Z',
+      endsAt: '2026-10-19T00:00:00Z',
+      projectUrl: null,
+    },
+    planJson,
+  };
 }

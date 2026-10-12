@@ -57,7 +57,8 @@ end
 
 function TestActiveSlot.testEncodeIsCanonicalAndRejectsOutOfRangeSlots()
     lu.assertEquals(activeSlot.encode(3), '{"format":"run-planner-active-slot","formatVersion":1,"slot":3}')
-    for _, slot in ipairs({ 0, 13, 2.5, "3" }) do
+    lu.assertEquals(activeSlot.encode(0), '{"format":"run-planner-active-slot","formatVersion":1,"slot":0}')
+    for _, slot in ipairs({ -1, 13, 2.5, "3" }) do
         lu.assertError(activeSlot.encode, slot)
     end
 end
@@ -65,13 +66,17 @@ end
 function TestActiveSlot.testDecodeAcceptsOnlyTheExactContract()
     lu.assertEquals(activeSlot.decode(activeSlot.encode(6)), 6)
     lu.assertEquals(activeSlot.decode(activeSlot.encode(12)), 12)
+    lu.assertEquals(activeSlot.decode(activeSlot.encode(0)), 0)
     lu.assertEquals(activeSlot.decode(' { "slot" : 1, "formatVersion": 1, "format": "run-planner-active-slot" }\n'), 1)
     for _, raw in ipairs({
         "",
         "[]",
         '"x"',
         '{"format":"run-planner-active-slot","formatVersion":1}',
-        '{"format":"run-planner-active-slot","formatVersion":1,"slot":0}',
+        '{"format":"run-planner-active-slot","formatVersion":1,"slot":00}',
+        '{"format":"run-planner-active-slot","formatVersion":1,"slot":-0}',
+        '{"format":"run-planner-active-slot","formatVersion":1,"slot":0.0}',
+        '{"format":"run-planner-active-slot","formatVersion":1,"slot":-1}',
         '{"format":"run-planner-active-slot","formatVersion":1,"slot":13}',
         '{"format":"run-planner-active-slot","formatVersion":1,"slot":07}',
         '{"format":"run-planner-active-slot","formatVersion":1,"slot":100}',

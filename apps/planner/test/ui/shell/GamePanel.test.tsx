@@ -11,6 +11,7 @@ import type {
 } from '@planner/persistence/gameModuleHost';
 import {
   createFakeGameModuleHost,
+  eventSlot,
   gameModuleStatus,
   planSlot,
   planSlots,
@@ -572,6 +573,68 @@ describe('Game panel', () => {
     ).toBeTruthy();
     expect(radio(5).checked).toBe(true);
     expect(radio(2).checked).toBe(false);
+  });
+
+  it('shows the event slot read-only, selectable as active, without a send action', async () => {
+    const withEvent = (activeSlot: GameActiveSlot) =>
+      gameModuleStatus({
+        inspection: {
+          eventSlot: eventSlot({
+            state: 'present',
+            routeKey: 'Underworld',
+            biomeKeys: ['F'],
+            event: {
+              id: '2026-w42-staff',
+              title: 'Week 42: Staff sprint',
+              endsAt: '2026-10-19T00:00:00Z',
+            },
+          }),
+          activeSlot,
+        },
+      });
+    const game = createFakeGameModuleHost(withEvent({ state: 'present', slot: 3 }));
+    const { dialog, user } = await openGame(
+      game.host,
+      (application) => {
+        application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
+      },
+      { devBuild: false },
+    );
+    const group = within(dialog).getByRole('radiogroup', { name: 'Active slot' });
+    const event = await within(group).findByRole<HTMLInputElement>('radio', { name: 'Event' });
+    const row = event.closest('tr')!;
+    expect(within(row).getByText('Week 42: Staff sprint')).toBeTruthy();
+    expect(within(row).getByText(/^Ends /)).toBeTruthy();
+    expect(within(row).queryByRole('button')).toBeNull();
+    expect(within(group).getAllByRole('button', { name: /\(slot \d+\)$/ })).toHaveLength(12);
+    expect(within(dialog).queryByRole('button', { name: 'Import event file…' })).toBeNull();
+
+    await waitFor(() => expect(event.getAttribute('aria-disabled')).toBeNull());
+    game.host.status.mockResolvedValue(withEvent({ state: 'present', slot: 0 }));
+    await user.click(event);
+    expect(game.host.setActiveSlot).toHaveBeenCalledWith(0);
+    await waitFor(() => expect(event.checked).toBe(true));
+  });
+
+  it('imports and clears an event file through the development actions', async () => {
+    const game = createFakeGameModuleHost();
+    const { dialog, user } = await openGame(game.host, undefined, { devBuild: true });
+    const importButton = await within(dialog).findByRole('button', { name: 'Import event file…' });
+    expect(within(dialog).queryByRole('radio', { name: 'Event' })).toBeNull();
+
+    await user.click(importButton);
+    expect(game.host.pickEventFile).toHaveBeenCalledTimes(1);
+    expect(game.host.publishEvent).not.toHaveBeenCalled();
+
+    game.host.pickEventFile.mockResolvedValueOnce('/events/e.json');
+    await user.click(importButton);
+    expect(await within(dialog).findByText('No event file.')).toBeTruthy();
+
+    const refreshes = game.host.status.mock.calls.length;
+    await user.click(within(dialog).getByRole('button', { name: 'Clear event' }));
+    expect(await within(dialog).findByText('The event slot was cleared.')).toBeTruthy();
+    expect(game.host.clearEvent).toHaveBeenCalledTimes(1);
+    expect(game.host.status.mock.calls.length).toBeGreaterThan(refreshes);
   });
 
   it('keeps the group reachable by Tab when the file names a slot without a plan', async () => {

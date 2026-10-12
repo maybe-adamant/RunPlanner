@@ -1,4 +1,5 @@
--- The module inbox owns transport for the twelve fixed published plan slots. It
+-- The module inbox owns transport for the fixed published plan slots: the
+-- planner's event slot 0 and the twelve sendable slots. It
 -- reads one bounded file only when the session explicitly asks for a new-run
 -- plan or an inspection, and admits only a slot written for this module build.
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
@@ -11,7 +12,10 @@ inbox.SLOT_FORMAT = "run-planner-slot"
 local PLAN_FORMAT = "run-planner-execution"
 local ENVELOPE_KEYS = { format = true, buildId = true, plan = true }
 inbox.SLOT_COUNT = 12
+-- The read-only slot the planner fills with the community event plan.
+inbox.EVENT_SLOT = 0
 inbox.SLOT_FILES = {
+    [0] = "slot-0.runplanner.json",
     "slot-1.runplanner.json",
     "slot-2.runplanner.json",
     "slot-3.runplanner.json",
@@ -28,7 +32,7 @@ inbox.SLOT_FILES = {
 
 local function normalizeSlot(slot)
     if type(slot) ~= "number" or slot ~= math.floor(slot)
-        or slot < 1 or slot > inbox.SLOT_COUNT then
+        or slot < inbox.EVENT_SLOT or slot > inbox.SLOT_COUNT then
         return nil
     end
     return slot
@@ -45,7 +49,7 @@ local function slotPath(root, pathApi, slot)
         error("inbox requires rom.path.combine", 3)
     end
     local fileName = inbox.slotFileName(slot)
-    if fileName == nil then return nil, "invalid-slot", "plan slot must be an integer from 1 through 12" end
+    if fileName == nil then return nil, "invalid-slot", "plan slot must be an integer from 0 through 12" end
     return pathApi.combine(root, fileName)
 end
 
@@ -158,7 +162,7 @@ function inbox.create(root, decode, pathApi, buildId)
                 state.status.slot = slot
                 state.status.file = "error"
                 state.status.inspection, state.status.load = "failed", "error"
-                state.status.error = { code = selectError, message = "plan slot must be an integer from 1 through 12" }
+                state.status.error = { code = selectError, message = "plan slot must be an integer from 0 through 12" }
                 return false, selectError
             end
         end

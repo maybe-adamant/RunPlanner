@@ -21,7 +21,8 @@ Opening, or at a biome's Preboss or Boss. No other mid-run attachment, edited-pl
 recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
-`slot-12.runplanner.json` under the Run Planner game module configuration directory. The
+`slot-12.runplanner.json` under the Run Planner game module configuration directory,
+beside the read-only [event slot](#event-slot) `slot-0.runplanner.json`. The
 planner changes the active slot only when the user sends a plan or picks a slot,
 and never chooses a game target on the user's behalf. There is no
 compatibility alias or implicit migration. An empty or
@@ -168,7 +169,7 @@ where the user chooses. The host assembles it from explicit inputs:
 send failure or a last send that was not made active and the current
 settlement fault, merged with the host's
 status of the established target), the open plan document when chosen, the
-twelve plan slot files, `active-slot.json` and the slot overview when plans in
+event slot and twelve plan slot files, `active-slot.json` and the slot overview when plans in
 game are chosen, and
 log tails from `ReturnOfModding`: `LogOutput.log` and the newest `backup/*_LogOutput.log`
 (last 2 MiB each) and `lovely.log` (last 1 MiB), each cut forward to a line
@@ -183,8 +184,8 @@ last wrote.
 Anything both the planner and the game module need lives in
 `config/adamantRunPlanner-Run_Planner/`, in a format they own together:
 
-- the twelve plan slots `slot-N.runplanner.json`, which only the planner writes,
-  each the envelope
+- the twelve plan slots `slot-N.runplanner.json` and the event slot
+  `slot-0.runplanner.json`, which only the planner writes, each the envelope
   `{"format":"run-planner-slot","buildId":"…","plan":<plan>}` with the plan
   bytes unchanged and the whole file within 1 MiB;
 - `active-slot.json`, the plan slot the module plays next, which both write;
@@ -202,7 +203,7 @@ ModpackLib `.cfg`.
 ```
 
 - Both sides decode strictly: exactly these three keys, `slot` an integer
-  from 1 through 12, and at most 1 KiB. The module writes the compact form
+  from 0 (the event slot) through 12 written without a leading zero, and at most 1 KiB. The module writes the compact form
   `{"format":"run-planner-active-slot","formatVersion":1,"slot":3}`.
 - The planner writes it atomically, as it writes plan slots. The module writes
   a temporary file beside it, removes the old file, then renames (retrying
@@ -220,7 +221,9 @@ ModpackLib `.cfg`.
   with the slot facts. A change made during a run takes effect at the next
   admission.
 - Sending a plan also makes its slot active. The planner makes a slot active
-  only when that slot holds a plan; the in-game picker offers all twelve.
+  only when that slot holds a plan; the in-game picker offers all twelve, and
+  the event slot first while it holds a file or is the active slot. Writing or
+  clearing the event slot never changes the active slot.
 
 ### Slot overview
 
@@ -242,6 +245,17 @@ need not decode every plan to describe them:
       "startingKeepsake": "Silver Wheel",
       "startingFear": 8,
       "practiceStart": "Thessaly · Boss",
+      "buildId": "…",
+      "fingerprint": "…"
+    },
+    "0": {
+      "label": "Circe - Surface",
+      "…": "the same summary fields",
+      "event": {
+        "id": "2026-w42-staff",
+        "title": "Week 42: Staff sprint",
+        "endsAt": "2026-10-19T00:00:00Z"
+      },
       "buildId": "…",
       "fingerprint": "…"
     }
@@ -274,14 +288,59 @@ need not decode every plan to describe them:
   second while its window is drawn and once when the victory screen opens. A
   missing or invalid file holds no entries; an invalid entry is skipped on its
   own.
+- Only the event slot's entry carries `event`: the event's `id`, `title` (at most
+  80 characters) and UTC ISO 8601 `endsAt`. Regeneration keeps it only on slot
+  0 and only while it still validates, and the module reads it only from key
+  `"0"`. It is kept and dropped like any other entry; because the module always
+  checks that `slot-0.runplanner.json` exists, an entry left behind by a slot 0
+  file removed outside the planner names no event, and the next clear removes it.
 - The picker labels a slot from its entry. Without an entry, a slot whose file
-  exists is labelled "Slot N" and any other slot is labelled empty. Existence
+  exists is labelled "Slot N" and any other slot is labelled empty. The event
+  slot is labelled `Event: <title> (<label>)` from an entry with its event,
+  "Event" when its file exists without one, and "Event (none)" when it is
+  active without a file; its details add the event
+  title and "Ends" with the end time in local time. Existence
   is checked by opening the file, never by reading it.
 - The shown slot is loaded once, and again whenever its entry's fingerprint or
   build, or the existence of its file, changes. Its details come from its
   entry. When the loaded plan's fingerprint differs from the entry, the details
   come from the loaded plan instead. A slot that is not loaded is marked stale
   when its entry names another build than the installed module.
+
+### Event slot
+
+Slot 0 holds the community event plan. It is the same envelope, read and
+loaded by the module like any other slot, but it is read-only to the user:
+sending can never target it (the host refuses any send outside 1 through 12),
+and the Game panel shows it as an **Event** row above the twelve slots, with the
+event title in the Plan column and its end time beneath, the same Route, Ends,
+Aspect and Sent columns, and no send action. The row shows while the slot holds
+a file or is the active slot; its radio makes it active like any other slot.
+
+Only two host operations change it, each through the same staged
+slot-and-overview transaction as a send (see
+[Publication preconditions](#publication-preconditions)): writing an event plan
+with its summary and `event` metadata, under the same target, compatibility and
+reference-build checks as a send, and clearing, which removes slot 0 and its
+entry together (an entry left without its file included) and needs only an
+established target. Neither touches
+`active-slot.json`; an active event slot that is cleared stays active and is an
+empty slot at the next admission. The host validates the event metadata before
+any write: an `id` of lower-case letters, digits and inner hyphens within 64
+characters, a non-blank single-line `title` within 80 characters and an `endsAt`
+of the form `YYYY-MM-DDTHH:MM:SS[.fraction]Z`.
+
+Development builds (and release builds made with `VITE_INTERNAL_FEATURES=1`)
+offer **Import event file…** and **Clear event** under Plans in game. The
+import reads a local event document, selects its plan for the bundled module
+build, summarizes it with the catalog as a send does, and writes it to slot 0.
+
+The module names a running plan by its event when its `planFingerprint` equals
+the event slot entry's `fingerprint`, wherever it was loaded from: Current Run
+reads "Event: <title>", and the victory summary's first row reads
+`Planned event - <title>` instead of `Planned run - <plan name>`, provided the
+event slot's file still exists. This is display only; the status row is
+unchanged.
 
 ### Publication preconditions
 
@@ -300,6 +359,8 @@ the host stages both complete files beside their destinations, with a copy of
 the slot's previous file, then replaces the slot and then the overview. If the
 overview cannot be replaced, the slot is restored from that copy (or removed
 when it had no file) and the send fails; no staged file remains either way.
+Clearing the event slot follows the same order with a removal in place of the
+slot write.
 Only then does the host write `active-slot.json`; if only the activation fails,
 the send still succeeds, the plan
 stays, and the result carries the activation problem, which the planner shows
@@ -1316,7 +1377,7 @@ explicit replacement that clears prior state.
 Publication is target-scoped transport, not authored or execution semantics.
 The desktop adapter revalidates the established target at write time, maps a
 caller-supplied slot number in the closed range 1 through 12 to its fixed
-filename, confines the destination below that target's Run Planner game module
+filename (the event slot is written only by the event operations), confines the destination below that target's Run Planner game module
 configuration tree, rejects links and non-regular files, enforces the existing
 1 MiB bound, and atomically replaces only the selected slot. The Run Planner game module
 reads the active slot from `active-slot.json` (see

@@ -6,7 +6,7 @@ function data.buildStorage()
             type = "int",
             alias = "ActivePlanSlot",
             default = 1,
-            min = 1,
+            min = 0,
             max = 12,
             persist = false,
         },

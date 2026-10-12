@@ -35,10 +35,10 @@ function TestVictorySummary.testRowsNameThePlanAndItsOutcome()
         index = 3, current = named.occurrencesById.c }),
         { { text = "Planned run - Golden run" }, { text = "Complete" } })
     lu.assertEquals(victorySummary.rows({ state = "inactive", reason = "configured-prefix-complete", slot = 2,
-        plan = plan(), index = 2 }, { planName = "Overview name", fingerprint = "06bef552" }),
+        plan = plan(), index = 2 }, { [2] = { planName = "Overview name", fingerprint = "06bef552" } }),
         { { text = "Planned run - Overview name" }, { text = "Complete" } })
     lu.assertEquals(victorySummary.rows({ state = "desynchronized", reason = "first-mismatch", slot = 4,
-        plan = plan(), index = 2, current = plan().occurrencesById.b }, { planName = "Other", fingerprint = "x" }),
+        plan = plan(), index = 2, current = plan().occurrencesById.b }, { [4] = { planName = "Other", fingerprint = "x" } }),
         { { text = "Planned run - Slot 4" }, { text = "Out of sync at Tartarus Preboss" } })
     lu.assertEquals(victorySummary.rows({ state = "desynchronized", reason = "first-mismatch", slot = 4,
         plan = plan(), index = 2, issue = { checkpoint = "room-entry", expected = plan().occurrencesById.b,
@@ -47,6 +47,28 @@ function TestVictorySummary.testRowsNameThePlanAndItsOutcome()
     lu.assertEquals(victorySummary.rows({ state = "desynchronized", reason = "first-mismatch", slot = 4,
         plan = plan(), index = 2 }),
         { { text = "Planned run - Slot 4" }, { text = "Out of sync at Tartarus Preboss" } })
+end
+
+function TestVictorySummary.testAPlanWithTheEventEntrysFingerprintIsNamedByItsEvent()
+    local event = { id = "2026-w42-staff", title = "Week 42: Staff sprint", endsAt = "2026-10-19T00:00:00Z" }
+    local entries = { [0] = { planName = "Staff sprint", fingerprint = "06bef552", event = event } }
+    local present = { [0] = true }
+    local complete = { state = "inactive", reason = "configured-prefix-complete", slot = 0, plan = plan("Staff sprint"),
+        index = 3 }
+    lu.assertEquals(victorySummary.rows(complete, entries, present),
+        { { text = "Planned event - Week 42: Staff sprint" }, { text = "Complete" } })
+    -- Naming follows the fingerprint, not the slot the run was played from.
+    complete.slot = 5
+    lu.assertEquals(victorySummary.rows(complete, entries, present)[1],
+        { text = "Planned event - Week 42: Staff sprint" })
+    -- An entry left behind after the event slot's file is gone names no event.
+    lu.assertEquals(victorySummary.rows(complete, entries, {})[1], { text = "Planned run - Staff sprint" })
+    lu.assertEquals(victorySummary.rows(complete, entries)[1], { text = "Planned run - Staff sprint" })
+    entries[0].fingerprint = "ffffffff"
+    lu.assertEquals(victorySummary.rows(complete, entries, present)[1], { text = "Planned run - Staff sprint" })
+    entries[0] = { planName = "Staff sprint", fingerprint = "06bef552" }
+    complete.slot = 0
+    lu.assertEquals(victorySummary.rows(complete, entries, present)[1], { text = "Planned run - Staff sprint" })
 end
 
 function TestVictorySummary.testDeclaresOneVictoryStackTableAndRefreshesOnRunClear()

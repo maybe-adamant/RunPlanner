@@ -170,7 +170,7 @@ function TestStatusUi.testStorageIncludesTheViewSlotAndDefaultDisabledGuidanceSe
     local storage = hostData.buildStorage()
     lu.assertEquals(#storage, 3)
     lu.assertEquals(storage[1], {
-        type = "int", alias = "ActivePlanSlot", default = 1, min = 1, max = 12, persist = false,
+        type = "int", alias = "ActivePlanSlot", default = 1, min = 0, max = 12, persist = false,
     })
     lu.assertEquals(storage[2].alias, "ShowRoomGuide")
     lu.assertFalse(storage[2].default)
@@ -195,6 +195,32 @@ function TestStatusUi.testPickerLabelsSlotsFromTheOverviewAndSlotFiles()
     lu.assertEquals(h.checkboxes[1].opts, { id = "show_room_guide", label = "Show room guide" })
     lu.assertIs(h.checkboxes[1].target, h.guide)
     lu.assertEquals(h.checkboxes[2].opts, { id = "highlight_planned_choices", label = "Highlight planned choices" })
+end
+
+local EVENT = { id = "2026-w42-staff", title = "Week 42: Staff sprint", endsAt = "2026-10-19T00:00:00Z" }
+
+function TestStatusUi.testTheEventSlotIsListedFirstOnlyWhileItHoldsAFileOrIsActive()
+    local h = harness({ slot = 2, present = { [2] = true } })
+    h.draw()
+    lu.assertEquals(h.dropdown.opts.values, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 })
+    lu.assertNil(h.dropdown.opts.displayValues[0])
+
+    h = harness({
+        slot = 2, entries = { [0] = entry({ label = "Circe - Surface", event = EVENT }) }, present = { [0] = true },
+    })
+    h.draw()
+    lu.assertEquals(h.dropdown.opts.values, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 })
+    lu.assertEquals(h.dropdown.opts.displayValues[0], "Event: Week 42: Staff sprint (Circe - Surface)")
+    h.draw(0)
+    lu.assertEquals(h.file.writes, { 0 })
+    lu.assertEquals(h.inbox.loads[#h.inbox.loads], 0)
+
+    -- An active event slot whose file is gone stays listed so the picker shows it.
+    h = harness({ slot = 0 })
+    local text = h.draw()
+    lu.assertEquals(h.dropdown.opts.values[1], 0)
+    lu.assertEquals(h.dropdown.opts.displayValues[0], "Event (none)")
+    lu.assertStrContains(text, "No event right now.")
 end
 
 function TestStatusUi.testShownSlotLoadsOnceAndAPickWritesTheFileAndLoadsIt()
@@ -369,6 +395,31 @@ end
 function TestStatusUi.testNoRunNamesTheNextRunSlot()
     local h = harness({ tab = "Current Run", slot = 3, entries = { [3] = entry({ label = "Circe - Surface" }) } })
     lu.assertStrContains(h.draw(), "No plan is running. The next run will use Slot 3 (Circe - Surface).")
+end
+
+function TestStatusUi.testEventDetailsAndTheRunningEventComeFromTheEventEntry()
+    local plan = publishedPlan()
+    local h = harness({
+        slot = 0, slots = { [0] = { plan = plan } },
+        entries = { [0] = entry({ event = EVENT }) }, present = { [0] = true },
+    })
+    local text = h.draw()
+    lu.assertStrContains(text, "Event:\nWeek 42: Staff sprint")
+    lu.assertStrMatches(text, ".*Ends:\n%d+ Oct 2026, %d%d:%d%d\n.*")
+    lu.assertStrContains(text, "Plan:\nStaff practice")
+
+    h.tab = "Current Run"
+    h.snapshot = synchronized(plan, 2)
+    lu.assertStrContains(h.draw(), "Event: Week 42: Staff sprint\n")
+    h.overview.present[0] = false
+    h.now = h.now + 2
+    lu.assertNotStrContains(h.draw(), "Week 42")
+    h.overview.present[0] = true
+    h.overview.entries[0] = entry({ event = EVENT, fingerprint = "ffffffff" })
+    h.now = h.now + 2
+    local other = h.draw()
+    lu.assertStrContains(other, "Slot 2\nRoom 2 of 25")
+    lu.assertNotStrContains(other, "Week 42")
 end
 
 local function desynchronized(issue, index, between)

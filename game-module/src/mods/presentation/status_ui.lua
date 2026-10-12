@@ -13,6 +13,9 @@ local ui = {}
 ui.ACTIVE_SLOT_REFRESH_SECONDS = 1
 
 local SLOT_VALUES = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
+-- The event slot is listed first while it holds a file or is the active slot.
+local EVENT_SLOT = presentation.EVENT_SLOT
+local WITH_EVENT_VALUES = { EVENT_SLOT, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
 local LABEL_COLUMN = 110
 local TONES = {
     inactive = { color = { 0.7, 0.7, 0.7, 1 } },
@@ -116,9 +119,14 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     -- The picker and slot descriptions are a view of active-slot.json and the
     -- slot overview, reread at most once per interval while drawn.
     local viewSlot, refreshedAt, failedSlot, loadedKey = nil, nil, nil, nil
-    local entries, present, labels = {}, {}, {}
+    local entries, present, labels, values = {}, {}, {}, SLOT_VALUES
     local function slotLabel(slot)
         local entry = entries[slot]
+        if slot == EVENT_SLOT then
+            if not present[slot] then return "Event (none)" end
+            if entry and entry.event then return "Event: " .. entry.event.title .. " (" .. entry.label .. ")" end
+            return "Event"
+        end
         if entry then return presentation.slotName(slot) .. " (" .. entry.label .. ")" end
         if present[slot] then return presentation.slotName(slot) end
         return presentation.slotName(slot) .. " (empty)"
@@ -133,8 +141,9 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         viewSlot, state = activeSlotFile.read()
         if state == "present" and viewSlot == failedSlot then failedSlot = nil end
         entries, present = slotOverview.read()
+        values = (present[EVENT_SLOT] or viewSlot == EVENT_SLOT) and WITH_EVENT_VALUES or SLOT_VALUES
         labels = {}
-        for _, slot in ipairs(SLOT_VALUES) do labels[slot] = ascii.fold(slotLabel(slot)) end
+        for _, slot in ipairs(values) do labels[slot] = ascii.fold(slotLabel(slot)) end
         refreshedAt = now
     end
 
@@ -190,7 +199,8 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     local function drawDetails(drawApi)
         local status, plan, entry = inbox.status(), inbox.plan(), entries[viewSlot]
         if status.file == "not-published" or (entry == nil and plan == nil and not present[viewSlot]) then
-            drawApi.imgui.TextWrapped("Nothing sent to this slot yet.")
+            drawApi.imgui.TextWrapped(viewSlot == EVENT_SLOT and "No event right now."
+                or "Nothing sent to this slot yet.")
             return
         end
         local described = plan == nil and entry or presentation.entryFor(plan, entry)
@@ -211,7 +221,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         local picked = drawApi.widgets.dropdown(field, {
             id = "active_plan_slot",
             label = "Plan for next run",
-            values = SLOT_VALUES,
+            values = values,
             displayValues = labels,
         })
         if picked then
@@ -244,7 +254,8 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
             return { lines = { "No plan is running. The next run will use " .. slotLabel(viewSlot) .. "." } }
         end
         local practice = presentation.practicePlace(plan)
-        local lines = { presentation.title(planName, snapshot.slot)
+        local event = presentation.runningEvent(plan, entries, present)
+        local lines = { (event and "Event: " .. event.title or presentation.title(planName, snapshot.slot))
             .. (practice and " - Practice from " .. practice or "") }
         local progress = presentation.progress(snapshot)
         if presentation.isComplete(snapshot) then

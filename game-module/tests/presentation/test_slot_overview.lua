@@ -39,7 +39,8 @@ function TestSlotOverview.testMissingOverviewHoldsNoEntriesAndSlotFilesAreProbed
     lu.assertTrue(present[2])
     lu.assertFalse(present[1])
     lu.assertFalse(present[12])
-    lu.assertEquals(#opened, 13)
+    lu.assertFalse(present[0])
+    lu.assertEquals(#opened, 14)
     lu.assertEquals(opened[1], "slots.runplanner.json")
 end
 
@@ -93,6 +94,32 @@ function TestSlotOverview.testInvalidFilesAndEntriesAreIgnored()
     local count = 0
     for _ in pairs(entries) do count = count + 1 end
     lu.assertEquals(count, 2)
+end
+
+function TestSlotOverview.testTheEventSlotEntryCarriesItsEvent()
+    local event = '"event":{"id":"2026-w42-staff","title":"Week 42: Staff sprint","endsAt":"2026-10-19T00:00:00Z"},'
+    local withEvent = ENTRY:gsub('"buildId"', event .. '"buildId"', 1)
+    local overviewStore = store({
+        ["slots.runplanner.json"] = overview('"0":' .. withEvent .. ',"2":' .. ENTRY),
+        ["slot-0.runplanner.json"] = "{}",
+    })
+    local entries, present = overviewStore.read()
+    lu.assertEquals(entries[0].event, {
+        id = "2026-w42-staff", title = "Week 42: Staff sprint", endsAt = "2026-10-19T00:00:00Z",
+    })
+    lu.assertTrue(present[0])
+    lu.assertNil(entries[2].event)
+    -- Only the event slot names an event, and its file is probed even with an entry.
+    local misplaced = slotOverview.decode(overview('"2":' .. withEvent))
+    lu.assertNil(misplaced[2].event)
+    local gone = store({ ["slots.runplanner.json"] = overview('"0":' .. withEvent) })
+    local goneEntries, gonePresent = gone.read()
+    lu.assertNotNil(goneEntries[0].event)
+    lu.assertFalse(gonePresent[0])
+    local malformed = slotOverview.decode(overview('"0":' .. ENTRY:gsub('"buildId"', '"event":{"id":"x"},"buildId"', 1)
+        .. ',"00":' .. withEvent))
+    lu.assertNotNil(malformed[0])
+    lu.assertNil(malformed[0].event)
 end
 
 return TestSlotOverview
