@@ -8,6 +8,7 @@ commits, not these checklists.
 - [Run modifiers](RUN_MODIFIERS_LIVE_ACCEPTANCE.md)
 - [Trait offer generation](TRAIT_OFFER_LIVE_ACCEPTANCE.md)
 - [Victory summary](VICTORY_SUMMARY_LIVE_ACCEPTANCE.md)
+- [Status window](STATUS_WINDOW_LIVE_ACCEPTANCE.md)
 - [Editor layout](EDITOR_LAYOUT_LIVE_ACCEPTANCE.md)
 - [Loadout install](LOADOUT_INSTALL_LIVE_ACCEPTANCE.md)
 - [Room guide](ROOM_GUIDE_LIVE_ACCEPTANCE.md)

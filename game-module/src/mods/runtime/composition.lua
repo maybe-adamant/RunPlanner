@@ -8,6 +8,7 @@ function composition.bind(root, moduleVersion, buildId)
     local inbox = import("mods/host/inbox.lua").create(root, protocol.decode, rom.path, buildId)
     local build = type(buildId) == "string" and buildId:sub(1, 12) or "unknown"
     local activeSlotFile = import("mods/host/active_slot.lua").create(root, rom.path)
+    local slotOverview = import("mods/host/slot_overview.lua").create(root, rom.path, buildId)
     local route = import("mods/route/session.lua")
     local ephyra = import("mods/navigation/ephyra.lua")
     local room = import("mods/room/coordinator.lua")
@@ -43,6 +44,7 @@ function composition.bind(root, moduleVersion, buildId)
             read = activeSlotFile.read,
             write = activeSlotFile.write,
         },
+        slotOverview = { read = slotOverview.read },
     }
 
     -- Read-only inspection of the admitted session, independent of inbox previews.
@@ -177,10 +179,6 @@ function composition.bind(root, moduleVersion, buildId)
             local state = getState(runtime)
             if state == nil then return end
             if runModifiers then runModifiers.verifyNative(state) end
-            if runtime.status and runtime.status.write then
-                local status = session.status(state)
-                runtime.status.write("ExecutionSessionStatus", status.state .. ": " .. status.reason)
-            end
             if state.plan and state.loggedSession ~= state.plan then
                 state.loggedSession = state.plan
                 if rom and rom.log and rom.log.info then

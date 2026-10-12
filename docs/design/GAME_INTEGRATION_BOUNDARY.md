@@ -190,7 +190,7 @@ ModpackLib `.cfg`.
   one is picked. The module logs one `[RunPlanner] active-slot` line per slot
   it writes and one per change of invalid content it reads. Because a missing
   file already shows slot 1, the in-game picker saves slot 1 only after another
-  slot was picked; it shows a hint while no choice is saved.
+  slot was picked.
 - Last writer wins. Neither side keeps a copy: the module reads the file at
   new-run admission, and the planner reads it
   with the slot facts. A change made during a run takes effect at the next
@@ -246,6 +246,18 @@ need not decode every plan to describe them:
 - Entries are advisory, for listing and describing slots: a missing entry is
   unknown, and the module checks `buildId` and `fingerprint` only against the
   one slot it loads. An overview that would exceed 64 KiB fails the send.
+- The module reads the overview beside `active-slot.json`, at most once a
+  second while its window is drawn and once when the victory screen opens. A
+  missing or invalid file holds no entries; an invalid entry is skipped on its
+  own.
+- The picker labels a slot from its entry. Without an entry, a slot whose file
+  exists is labelled "Slot N" and any other slot is labelled empty. Existence
+  is checked by opening the file, never by reading it.
+- The shown slot is loaded once, and again whenever its entry's fingerprint or
+  build, or the existence of its file, changes. Its details come from its
+  entry. When the loaded plan's fingerprint differs from the entry, the details
+  come from the loaded plan instead. A slot that is not loaded is marked stale
+  when its entry names another build than the installed module.
 
 ### Publication preconditions
 
@@ -1287,9 +1299,17 @@ reads the active slot from `active-slot.json` (see
 [Shared configuration folder](#shared-configuration-folder)), displays the
 selected slot's bounded status, and loads and freezes that one slot only at the
 next new-run admission. Changing the active slot cannot
-hot-swap a live session. The read-only inspector separates the selected slot's plan preview
-from the frozen session's loadout, room progress, admission, and failure
-information. It reports existing execution status without adding conformance
+hot-swap a live session. The module's window, drawn only as ModpackLib's
+standalone fallback window, keeps one status header above its tabs. **Plan**
+picks the next run's slot and describes it from the slot overview. **Current Run** shows the frozen
+session's room progress, counted from a Practice start's room, and words its
+first mismatch from the record's checkpoint and expected and observed values;
+an unrecognized record is shown only as readable fields. **Diagnostics**,
+present only in the module's Debug Mode, shows the raw slot status, identities
+and records. The window draws ASCII only, because its ImGui font has no other
+glyphs: names from the overview, the plan or the game are shown with accented
+Latin letters folded to their base letters and common punctuation folded to
+ASCII. The window reports existing execution status without adding conformance
 checks or revalidating player state during rendering.
 
 Runtime execution state is process-local and resets explicitly at new-run

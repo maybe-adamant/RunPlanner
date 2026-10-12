@@ -16,27 +16,51 @@ local function stubModule()
     return module, tables, hooks
 end
 
-function TestVictorySummary.testRowsNameTheLastExitedOccurrenceOnly()
+local function plan(displayName)
+    return {
+        displayName = displayName, planFingerprint = "06bef552",
+        selectedOccurrenceIds = { "a", "b", "c" },
+        occurrencesById = {
+            a = { id = "a", gameName = "F_Combat11" }, b = { id = "b", gameName = "I_PreBoss01" },
+            c = { id = "c", gameName = "I_Boss01" },
+        },
+    }
+end
+
+function TestVictorySummary.testRowsNameThePlanAndItsOutcome()
     lu.assertEquals(victorySummary.rows(nil), {})
-    lu.assertEquals(victorySummary.rows({ state = "synchronized" }), {})
-    lu.assertEquals(victorySummary.rows({ lastExited = { gameName = "F_Combat11" } }),
-        { { text = "Planned" }, { text = "Erebus Combat 11" } })
-    local preboss = { gameName = "I_PreBoss01" }
-    lu.assertEquals(victorySummary.rows({ state = "synchronized",
-        current = { gameName = "I_Boss01" }, lastExited = preboss }),
-        { { text = "Planned" }, { text = "Tartarus Chronos" } })
-    lu.assertEquals(victorySummary.rows({ state = "desynchronized",
-        current = { gameName = "I_Boss01" }, lastExited = preboss }),
-        { { text = "Planned" }, { text = "Tartarus Preboss" } })
+    lu.assertEquals(victorySummary.rows({ state = "inactive", reason = "not-started" }), {})
+    local named = plan("Golden run")
+    lu.assertEquals(victorySummary.rows({ state = "synchronized", reason = "ready", slot = 2, plan = named,
+        index = 3, current = named.occurrencesById.c }),
+        { { text = "Planned run - Golden run" }, { text = "Complete" } })
+    lu.assertEquals(victorySummary.rows({ state = "inactive", reason = "configured-prefix-complete", slot = 2,
+        plan = plan(), index = 2 }, { planName = "Overview name", fingerprint = "06bef552" }),
+        { { text = "Planned run - Overview name" }, { text = "Complete" } })
+    lu.assertEquals(victorySummary.rows({ state = "desynchronized", reason = "first-mismatch", slot = 4,
+        plan = plan(), index = 2, current = plan().occurrencesById.b }, { planName = "Other", fingerprint = "x" }),
+        { { text = "Planned run - Slot 4" }, { text = "Out of sync at Tartarus Preboss" } })
+    lu.assertEquals(victorySummary.rows({ state = "desynchronized", reason = "first-mismatch", slot = 4,
+        plan = plan(), index = 2, issue = { checkpoint = "room-entry", expected = plan().occurrencesById.b,
+            observed = { id = "b", gameName = "I_Combat07" } } }),
+        { { text = "Planned run - Slot 4" }, { text = "Out of sync at Tartarus Combat 7" } })
+    lu.assertEquals(victorySummary.rows({ state = "desynchronized", reason = "first-mismatch", slot = 4,
+        plan = plan(), index = 2 }),
+        { { text = "Planned run - Slot 4" }, { text = "Out of sync at Tartarus Preboss" } })
 end
 
 function TestVictorySummary.testDeclaresOneVictoryStackTableAndRefreshesOnRunClear()
     local module, tables, hooks = stubModule()
-    local snapshot, failInspection = { lastExited = { gameName = "F_Combat11" } }, false
+    local snapshot = { state = "desynchronized", reason = "first-mismatch", slot = 3, plan = plan(), index = 1,
+        current = plan().occurrencesById.a }
+    local failInspection, overviewReads = false, 0
     victorySummary.attach(module, function()
         if failInspection then error("inspection failure") end
         return snapshot
-    end)
+    end, { read = function()
+        overviewReads = overviewReads + 1
+        return { [3] = { planName = "Erebus warmup", fingerprint = "06bef552" } }, {}
+    end })
     local spec = tables["victory-summary"]
     lu.assertEquals(spec.region, "victoryStack")
     lu.assertEquals(spec.maxRows, 4)
@@ -57,7 +81,8 @@ function TestVictorySummary.testDeclaresOneVictoryStackTableAndRefreshesOnRunCle
 
     opened(nil, nil, overlay, { path = "OnScreenOpened", args = { { Name = "RunClear" } } })
     lu.assertEquals(sets, { { name = "victory-summary",
-        rows = { { text = "Planned" }, { text = "Erebus Combat 11" } } } })
+        rows = { { text = "Planned run - Erebus warmup" }, { text = "Out of sync at Erebus Combat 11" } } } })
+    lu.assertEquals(overviewReads, 1)
     lu.assertEquals(refreshes, { "victory-summary" })
 
     failInspection = true

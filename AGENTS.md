@@ -8,7 +8,7 @@ simulation around ImGui or ModpackLib.
 
 ## Read Before Editing
 
-Use `README.md` as the documentation map when a task does not already provide a
+Use `CONTRIBUTING.md` as the documentation map when a task does not already provide a
 focused navigation packet. Before changing architecture or domain behavior,
 read the exact relevant authority sections under `docs/`; do not read the whole
 README or broad document sets by default. Stable cross-cutting design lives in

@@ -1,5 +1,7 @@
 -- Victory-screen summary of the admitted plan. Rows are produced from the
--- session snapshot when the RunClear screen opens; nothing else is read.
+-- session snapshot and its slot's overview entry when the RunClear screen opens.
+local presentation = type(import) == "function" and import("mods/host/run_presentation.lua")
+    or require("mods.host.run_presentation")
 local names = type(import) == "function" and import("mods/room/names.lua")
     or require("mods.room.names")
 
@@ -14,33 +16,40 @@ victorySummary.declaration = {
 }
 
 -- RunClear opens inside the final boss room before LeaveRoom, so a synchronized
--- session's current occurrence is the last room realized as planned. Otherwise
--- the last exited occurrence is: the cursor never leaves a mismatched, faulted,
--- hub, or transparent room.
-local function plannedThrough(snapshot)
-    if type(snapshot) ~= "table" then return nil end
-    local current = snapshot.current
-    if snapshot.state == "synchronized" and type(current) == "table" and current.gameName ~= nil then
-        return current
+-- session in the last planned room has realized the whole plan.
+local function outcome(snapshot)
+    if presentation.isComplete(snapshot) then return "Complete" end
+    local place = presentation.stopPlace(snapshot)
+    if snapshot.state == "desynchronized" then
+        return place and "Out of sync at " .. place or "Out of sync"
     end
-    local exited = snapshot.lastExited
-    if type(exited) == "table" and exited.gameName ~= nil then return exited end
+    if snapshot.state == "faulted" then
+        return place and "Stopped at " .. place .. " (planner error)" or "Stopped (planner error)"
+    end
+    if snapshot.state == "synchronized" and type(snapshot.current) == "table" then
+        local ids = snapshot.plan.selectedOccurrenceIds
+        if snapshot.current.id == ids[#ids] then return "Complete" end
+        return "Planned through " .. names.room(snapshot.current.gameName)
+    end
     return nil
 end
 
-function victorySummary.rows(snapshot)
-    local rows = {}
-    local occurrence = plannedThrough(snapshot)
-    if occurrence ~= nil then
-        rows[#rows + 1] = { text = "Planned" }
-        rows[#rows + 1] = { text = names.room(occurrence.gameName) }
-    end
-    return rows
+-- entry is the running slot's overview entry, which may name the plan.
+function victorySummary.rows(snapshot, entry)
+    if type(snapshot) ~= "table" or type(snapshot.plan) ~= "table" then return {} end
+    local result = outcome(snapshot)
+    if result == nil then return {} end
+    return {
+        { text = "Planned run - " .. presentation.planName(snapshot.plan, entry, snapshot.slot) },
+        { text = result },
+    }
 end
 
-function victorySummary.attach(module, inspect)
+function victorySummary.attach(module, inspect, slotOverview)
     assert(type(module) == "table" and type(module.overlays) == "table", "victory summary module is required")
     assert(type(inspect) == "function", "victory summary inspection is required")
+    assert(type(slotOverview) == "table" and type(slotOverview.read) == "function",
+        "victory summary slot overview is required")
     local spec = {}
     for key, value in pairs(victorySummary.declaration) do spec[key] = value end
     spec.order = module.overlays.order.module
@@ -49,7 +58,11 @@ function victorySummary.attach(module, inspect)
     module.overlays.afterHook("OnScreenOpened", function(_, _, overlay, event)
         local screen = type(event) == "table" and type(event.args) == "table" and event.args[1] or nil
         if type(screen) ~= "table" or screen.Name ~= "RunClear" then return end
-        local ok, rows = pcall(function() return victorySummary.rows(inspect()) end)
+        local ok, rows = pcall(function()
+            local snapshot = inspect()
+            local entries = slotOverview.read()
+            return victorySummary.rows(snapshot, type(snapshot) == "table" and entries[snapshot.slot] or nil)
+        end)
         overlay.setTable(victorySummary.TABLE, ok and rows or {})
         overlay.refresh(victorySummary.TABLE)
     end)

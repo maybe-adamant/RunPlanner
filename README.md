@@ -1,120 +1,28 @@
 # Run Planner
 
-Run Planner is a standalone Hades II route-authoring and simulation
-application for Run Director. It owns the supported catalog, authored route,
-deterministic game-language history, possibility and eligibility evaluation,
-validation, findings, editor projections, profiles, recovery, and undo/redo.
-The [Run Planner game module](game-module/) consumes a validated execution plan
-and audits live runtime behavior; it is not a second planner or simulator.
+Design a Hades II run, then play it.
 
-## Architecture
+Have a build you want to try? Want to recreate the build and route from the
+world-record run? Plan the rooms you'll visit, the boons you'll be offered, and
+the rewards you'll pick up along the way. Choose an Underworld or Surface run,
+or put together your own biome order in a Dream Dive. You can even choose enemy
+lineups and certain boss attacks.
 
-The repository is split by ownership:
+The plan has to work within the game's rules. Run Planner checks your choices
+as you build, and every completed plan is checked against the game's rules.
+Once it's ready, the Run Planner mod makes the game follow your plan. You still
+do the fighting and make the choices you planned.
 
-```text
-packages/hades2-catalog   Hades II declarations and catalog construction
-packages/planner-engine   pure authored model, reward kernel, simulation, and validation
-apps/planner              application composition, Redux session state, and React UI
-game-module               Hades II Lua module that executes published plans
-```
+You'll use two pieces: the Run Planner app to create your plan, and the Run
+Planner mod to play it in Hades II. The app carries the mod and installs it for
+you.
 
-The dependency direction is:
-
-```text
-catalog construction -> pure planner engine <- application composition -> React UI
-```
-
-Immutable catalog declarations and authored project state are the durable
-semantic inputs. Materialization, history, validation, candidates, findings,
-and UI projections are replaceable derived products. Simulation models
-possibility, not probability. Game Room Declarations are unique; authored Room
-Occurrences are repeatable and own stable persisted IDs. Incomplete and
-context-invalid authored states remain visible and repairable; chronological
-authoring locks only the suffix beyond the engine-published authoring horizon.
-UI-session state never enters authored history.
-
-## Documentation
-
-Start with [Architecture](docs/design/ARCHITECTURE.md) for dependency direction,
-ownership and how to add a feature. Then use the relevant lane entry:
-
-- [Catalog Model](docs/design/CATALOG_MODEL.md): source-backed declarations and
-  normalization.
-- [Planner Engine](docs/design/SIMULATION_AND_VALIDATION.md): authored inputs,
-  evaluation products, chronology, candidates and findings.
-- [Planner Application and Editor](docs/design/EDITOR_MODEL.md): composition,
-  persistence, projections, interaction binding and presentation.
-
-For a specific contract, go directly to its specialist authority:
-
-- [Authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
-  [game generation](docs/design/GAME_GENERATION_RULES.md),
-  [rewards](docs/design/REWARD_MODEL.md),
-  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md), and
-  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md) own the
-  detailed engine contracts.
-- [Structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) owns layout
-  and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
-  picker and draft presentation.
-- [Biome rules](docs/biomes/) contain the route authorities.
-- [In-game testing](docs/testing/) tracks pending live acceptance checks separately
-  from implementation plans.
-- [Game integration](docs/design/GAME_INTEGRATION_BOUNDARY.md) defines the
-  compiler/executor contract; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
-  defines only the biome-specific execution work beyond the shared F/G
-  baseline. The [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
-  maps published planner facts to native contacts and explains each intervention.
-- [Source audit map](docs/audits/README.md) routes source evidence by subject.
-
-## Quickstart
-
-The repository uses the Linux-native Node installation selected by `.nvmrc`.
-From the repository root in WSL:
-
-```bash
-source "$HOME/.nvm/nvm.sh"
-nvm use
-npm install
-npm run dev
-```
-
-Activating `nvm` matters when Windows npm also appears in the WSL `PATH`;
-workspace symlinks must be created by Linux npm.
-
-## Development and validation
-
-Clone with `git clone --recurse-submodules`, or run
-`git submodule update --init` afterwards, to fetch the ModpackLib source used
-for reference under `external/adamant-ModpackLib`. Builds and tests do not need
-it.
-
-```bash
-npm run check          # complete typecheck, tests, lint, format, and build gate
-npm run test:changed   # tests related to uncommitted source/test changes
-npm run test:ui        # React component and editor fixtures
-npm run test:planner   # planner, UI, architecture, and workspace support
-npm run test:contract  # application architecture and workspace contracts
-npm run test:product   # browser product loops
-npm run test:engine    # authored model, simulator, and validation
-npm run test:catalog   # declaration and catalog construction
-npm run test:game-module  # game module Lua syntax, tests, and Luacheck
-npm run test:game-host    # Rust game module package, target, install, and publication
-```
-
-Individual `typecheck`, `lint`, `format:check`, `build`, and `test:watch`
-scripts are also available. The game host lane needs Rust (`cargo`). The game
-module lane needs Lua 5.2 (`lua` and `luac`) with LuaUnit and Luacheck from LuaRocks on
-`PATH`. Use the narrowest truthful lane while developing; configuration,
-dependency, shared setup, and cross-layer changes require the complete gate.
-
-## Desktop application
-
-### Install
+## Download and install
 
 Each [release](https://github.com/maybe-adamant/RunPlanner/releases/latest)
 carries a Windows installer and a Linux x64 AppImage.
 
-**Windows**
+### Windows
 
 1. Download `RunPlanner-<version>-windows-x64-setup.exe`. It needs 64-bit
    Windows 10 or 11; the installer fetches the Microsoft Edge WebView2 Runtime
@@ -123,13 +31,13 @@ carries a Windows installer and a Linux x64 AppImage.
    administrator rights.
 3. The installer is not code signed, so Windows SmartScreen may warn about an
    unrecognized app. Choose **More info**, then **Run anyway**.
-4. Start **Run Planner** from the Start menu, then follow Game setup below.
+4. Start **Run Planner** from the Start menu.
 
-**Linux**
+### Linux and Steam Deck
 
 1. Download `RunPlanner-<version>-linux-x64.AppImage`, mark it executable
-   (`chmod +x RunPlanner-<version>-linux-x64.AppImage`) and run it. It also
-   runs in Steam Deck desktop mode.
+   (`chmod +x RunPlanner-<version>-linux-x64.AppImage`) and run it. On a Steam
+   Deck, run it in desktop mode.
 2. AppImages mount through FUSE 2. If it does not start, install it, for
    example `sudo apt install libfuse2` (`libfuse2t64` on Ubuntu 24.04 and
    later), or run it without FUSE as
@@ -142,87 +50,140 @@ Hades II runs on Linux through Steam's Proton. Hell2Modding loads as a
 community-documented, not verified by this project.
 
 Settings, the remembered project file and autosave recovery live in your user
-profile, not the install folder, so an earlier portable build's data carries
-over. Project files (`.runplanner.json`) stay wherever you save them.
+profile, not the install folder. Project files (`.runplanner.json`) stay
+wherever you save them.
 
-Official Windows and AppImage releases check for updates without delaying
-startup, and About offers a manual check. When an update is found, choose
-**Update**, then **Install and restart**: the planner closes, installs the
-signed update and reopens. If there are unsaved changes, the button is **Save
-and install** and saves first; if the save is cancelled or fails, nothing is
-installed. If the installer fails after the planner has closed, reopen Run
-Planner and try again. **Later** hides the notice for this session; **Skip this
-version** hides it until a newer release. Development builds do not check for
-updates. Portable builds from before the installer do not detect installer
-releases; install once manually to start receiving updates.
+## Getting started
 
-### Game setup
-
-1. Install `adamant-ModpackLib` in your Hades II r2modman profile. r2modman
-   also installs its dependencies. The planner reports ModpackLib and missing
-   dependencies but never installs them.
-2. In the desktop planner, open the **Game** panel. Under Game location, choose
-   **Find r2modman profiles** and pick your profile, or **Choose folder…** for
-   the folder that contains `ReturnOfModding` in a manual Hell2Modding install.
-   On Linux, discovery reads a native r2modman install's profiles, or the
+1. Install **adamant-ModpackLib** in your Hades II r2modman profile. r2modman
+   also installs its dependencies. The app checks ModpackLib but never
+   installs it.
+2. In the app, open the **Game** panel. Under Game location, choose **Find
+   r2modman profiles** and pick your profile, or **Choose folder…** for the
+   folder that contains `ReturnOfModding` in a manual Hell2Modding install. On
+   Linux, discovery reads a native r2modman install's profiles, or the
    Flatpak's when only that one exists.
-3. Follow the Game module steps, ending with **Install**. The module is built
-   into the planner, so each planner release carries its matching module.
-4. Under Plans in game, choose **Send here** on a slot. Later sends can use
-   the header's **Send to game (slot N)**.
+3. Follow the Game module steps, ending with **Install**. The Game panel lists
+   anything else to fix first, such as an older ModpackLib.
+4. Create or load a plan, configure your loadout and route, and fix any issues
+   the planner points out.
+5. Under **Plans in game**, choose **Send here** on one of the twelve slots, or
+   **Replace** on an occupied one. Sending also makes that slot the one used
+   for the next run. Later sends can use the header's **Send to game (slot
+   N)**.
+6. Launch the game with that profile and open the **Run Planner** window from
+   the ReturnOfModding menu bar. **Plan for next run** shows the slot the next
+   run will use; pick another slot there or in the app.
+7. Start a new run and follow its choices. The mod gives the run your planned
+   weapon, Aspect, Arcana, Fear, keepsake and familiar, and puts your own
+   loadout back when the run ends.
 
-### Development
+The in-game picker and the app share one active slot: picking a slot in either
+place changes it for both. Changing it during a run only changes which plan the
+next run uses; it never replaces the plan already in progress.
 
-The desktop host wraps the same production Vite build without adding
-Rust-side domain behavior. Its native File menu remembers the last accepted
-project file across restarts: Save overwrites that file, while Save As chooses
-and activates another one. Autosave remains a separate recovery channel, so
-recovered unsaved edits stay associated with their desktop file without
-writing it implicitly. The browser build retains portable upload/download
-behavior and exposes no duplicate Save As command. On a machine with the
-platform's Tauri prerequisites:
+## Planning
 
-```bash
-npm run desktop:dev
-npm run desktop:build
-```
+Create an **Underworld**, **Surface**, **Dream Dive** or **Fresh File**
+project, or load an existing plan. A Dream Dive sets your own biome order; a
+Fresh File plans the very first run of a brand-new save, with its fixed
+starting weapon.
 
-To cross-build the Windows executable directly from WSL, install the Rust
-target once and run the dedicated build command:
+Choose your starting weapon, Arcana, Fear, keepsake and reward in **Loadout**.
+Select a room and open its **Room Timeline** to plan its interactions, such as
+which boons are offered and which one you take. You can leave choices
+unfinished or conflicting while editing; a plan can be sent once it passes the
+game-rule checks.
 
-```bash
-sudo apt install gcc-mingw-w64-x86-64-posix
-rustup target add x86_64-pc-windows-gnu
-npm run desktop:build:windows
-```
+Run modifiers live with the route:
 
-The executable is written to
-`apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
+- **Practice mode** starts the run later: at a later biome's Opening, or at a
+  biome's Preboss or Boss, with an amount of gold added to what the game
+  starts you with. The mod sets up the run as if the earlier rooms had been
+  played.
+- **Enemy gold drop chance** sets the chance that eligible enemies drop gold,
+  and **Encounter gold range** fixes each encounter's gold budget at one point
+  of its usual range.
 
-The manually dispatched **Release** workflow validates the version and the
-`main` commit once, then calls the reusable **Build Windows** and **Build
-Linux** workflows. Windows builds the NSIS installer; Linux builds the AppImage
-on Ubuntu 22.04. Each build embeds the release version and source commit shown
-in About, checks the bundle type stamped into the executable, signs its updater
-asset (the installer or the AppImage), launch-tests it (the AppImage under
-Xvfb), and uploads a workflow artifact. A single publish job then creates one
-draft release, uploads every platform's assets with one `latest.json` naming the
-Windows installer and the AppImage, and publishes it once all are present. The
-workflow needs the `TAURI_SIGNING_PRIVATE_KEY` and
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets and refuses to build
-while `plugins.updater.pubkey` in `apps/planner/src-tauri/tauri.conf.json` is
-the placeholder. Its `dry_run` input builds, signs and launch-tests both
-platforms without tagging or publishing; dispatching **Build Windows** or
-**Build Linux** directly is a single-platform build-only check that never
-publishes. Each published version identifies one build; choose a new version for
-a new build. Run `npm run check` locally on the commit being released before
-dispatching it; packaging does not repeat that repository gate. The separate
-**Desktop host** workflow checks Rust compilation of the desktop application on
-Windows and Linux and runs the game host crate tests on Linux, and the **Game
-module** workflow runs `npm run test:game-module`, on pull requests and pushes
-to `main`.
+## Playing
 
-The app's compatible-loading baseline is schema 86. Current files open without
-conversion; future approved schema changes must supply explicit migrations and
-original-file preservation. Older files still need the relevant offline tool
-from [`schema/README.md`](schema/README.md).
+The **Run Planner** window's top line always shows where things stand:
+
+- **No run**: no plan is running yet.
+- **Starting** and then **Synchronized**, with the plan's name and slot, while
+  the mod follows your plan; a Practice run adds **Practice**.
+- **Desynchronized**: the run no longer matches the plan, and the window names
+  the room where it stopped matching.
+- **Plan complete**: every planned room is done.
+- **Plan not used**: the selected plan couldn't start, with the reason, for
+  example a plan sent for another Run Planner version.
+- **Not steering**: a run continued after Save & Quit keeps its planned
+  loadout but is no longer steered.
+- **Stopped (planner error)**: the mod hit an internal problem.
+
+The **Plan** tab picks the slot for the next run. Each slot is labelled with
+the plan sent to it, or marked empty. The chosen slot shows its plan name, when
+it was sent, its aspect, route, keepsake, Fear and any Practice start, with a
+status: **Ready**, or a note when it was sent for another Run Planner version
+or can't be read. The details follow a resend on their own; **Reload** reads
+the slot again if needed.
+
+The **Current Run** tab shows the running plan, which room of the plan you're
+in and the next planned room. A Practice run counts from its starting room.
+
+Out of sync means the run no longer matches the plan: you took a different
+door or reward, or the game did something the plan didn't expect. The mod
+stops steering and normal gameplay continues—you can keep playing or start a
+fresh planned run. **Current Run** says where it happened and what differed,
+with **More details** below.
+
+The **Plan** tab also has two optional settings, both off by default:
+
+- **Show room guide** shows read-only guidance for the current planned room;
+  it doesn't make choices or change steering.
+- **Highlight planned choices** marks an available planned exit, Ship wheel
+  offer, or trait-screen row; it never selects it for you.
+
+After a victory, the victory screen shows `Planned run - <plan name>` and
+`Complete`, or the room where the run went out of sync, beneath the `Modded`
+label.
+
+With **Debug Mode** on, a **Diagnostics** tab shows the raw slot and run
+records to include in a bug report.
+
+## Updating
+
+Official releases check for updates when the app starts, and About offers a
+manual check. When an update is found, choose **Update**, then **Install and
+restart**; with unsaved changes the button is **Save and install** and saves
+first.
+
+After updating the app, open the **Game** panel and choose **Update** to update
+the mod. Sending waits until the installed mod matches the app, and a slot sent
+for another version is marked in the game until you send it again.
+
+## Feedback
+
+Run Planner is in beta. You may encounter bugs or differences between your plan
+and the game.
+
+If something goes wrong,
+[report an issue](https://github.com/maybe-adamant/RunPlanner/issues) with your
+plan, the room where it happened, what you expected, and what you actually saw.
+In the app, **Create bug report…** in the Game panel saves a zip with your
+plan, plans in game and game logs to attach.
+
+Otherwise include `logOutput.log` from your profile's `ReturnOfModding` folder.
+With r2modman, profiles are in:
+
+- Windows: `%APPDATA%\r2modmanPlus-local\HadesII\profiles\`
+- Linux: `~/.config/r2modmanPlus-local/HadesII/profiles/`, or
+  `~/.var/app/com.github.ebkr.r2modman/config/r2modmanPlus-local/HadesII/profiles/`
+  for the Flatpak
+
+Open the profile you play with, then its `ReturnOfModding` folder.
+
+## For developers
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture, documentation map,
+development setup and release process.
