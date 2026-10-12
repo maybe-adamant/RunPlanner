@@ -169,6 +169,38 @@ published version identifies one build; choose a new version for a new build.
 Run `npm run check` locally on the commit being released before dispatching
 it; packaging does not repeat that repository gate.
 
+Each release also publishes `module-build.json`, `{"version", "buildId"}` of
+the game module it ships, written by the Linux build from the same Rust assembly
+the app embeds (`events_ci module-build`). The community event workflows read it.
+
+### Community events
+
+Events live in the separate
+[RunPlanner-Events](https://github.com/maybe-adamant/RunPlanner-Events)
+repository, which validates pull requests and publishes the signed feed with its
+own workflows; this repository only reads the feed (see
+[Event feed](docs/design/GAME_INTEGRATION_BOUNDARY.md#event-feed)). Those
+workflows check out the latest planner release and call its single event
+builder, `npm run events:build` (`apps/planner/src/workspace/eventFeedBuilder.ts`
+over `eventDocument.ts`, the builder the development **Export event file…** also
+uses), and the `events_ci` example of the game host crate for the module build,
+host-side feed checks and signature verification.
+
+The feed is signed with a dedicated event key, not the updater key. The app
+embeds its public key from `apps/planner/src-tauri/event-feed.pub`, which ships
+as a placeholder that turns events off. To set the key up once:
+
+1. `npx @tauri-apps/cli signer generate -w events.key` and keep the private key
+   and password safe.
+2. In the events repository, create the `events-publish` environment with a
+   deployment branch policy of `main` only, and add the
+   `EVENTS_SIGNING_PRIVATE_KEY` and `EVENTS_SIGNING_PRIVATE_KEY_PASSWORD`
+   secrets to that environment, not the repository: repository secrets would be
+   reachable from a workflow run on any branch.
+3. Replace `event-feed.pub` here with the one-line contents of `events.key.pub`
+   and release the planner. The events workflows refuse a planner release that
+   still ships the placeholder.
+
 The separate **Desktop host** workflow checks Rust compilation of the desktop
 application on Windows and Linux and runs the game host crate tests on Linux,
 and the **Game module** workflow runs `npm run test:game-module`, on pull

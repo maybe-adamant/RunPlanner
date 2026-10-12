@@ -135,7 +135,26 @@ jobs:
           {
             echo "artifact_name=${artifact_name}"
             echo "appimage=${staging}/${artifact_name}.AppImage"
+            echo "module_build=${staging}/module-build.json"
           } >> "${GITHUB_OUTPUT}"
+
+      # The release names the game module build it ships, from the same Rust assembly the app
+      # embeds, so the community event feed can compile plans for it.
+      - name: Record module build
+        env:
+          MODULE_BUILD: ${{ steps.package.outputs.module_build }}
+          RUN_PLANNER_BUILD_COMMIT: ${{ steps.release.outputs.release_sha }}
+          RUN_PLANNER_OFFICIAL_RELEASE: 'true'
+          RUN_PLANNER_RELEASE_VERSION: ${{ steps.release.outputs.release_version }}
+        run: |
+          cargo run --release --locked \
+            --manifest-path apps/planner/src-tauri/Cargo.toml \
+            -p run-planner-game-host --example events_ci -- module-build > "${MODULE_BUILD}"
+          if ! jq -e --arg version "${RUN_PLANNER_RELEASE_VERSION}" \
+            '.version == $version and (.buildId | test("^[0-9a-f]{64}$"))' "${MODULE_BUILD}" >/dev/null; then
+            echo "module-build.json does not name a ${RUN_PLANNER_RELEASE_VERSION} module build." >&2
+            exit 1
+          fi
 
       # The updater picks its manifest entry by the bundle type Tauri patches
       # into the packaged executable over its unknown-type marker.
@@ -209,5 +228,6 @@ jobs:
           path: |
             ${{ steps.package.outputs.appimage }}
             ${{ steps.package.outputs.appimage }}.sig
+            ${{ steps.package.outputs.module_build }}
           if-no-files-found: error
           retention-days: 30

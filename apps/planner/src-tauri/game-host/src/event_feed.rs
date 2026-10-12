@@ -11,14 +11,34 @@ use std::path::Path;
 use crate::atomic_file;
 use crate::community_event::{decode_event, EventDecodeError, EventPlan, Instant};
 
-/// The signed community event feed, replaced in place on the `events` release.
-pub const EVENT_FEED_URL: &str =
-    "https://github.com/maybe-adamant/RunPlanner/releases/download/events/events.json";
-pub const EVENT_FEED_SIGNATURE_URL: &str =
-    "https://github.com/maybe-adamant/RunPlanner/releases/download/events/events.json.sig";
+// The repository whose `events` release publishes the feed; renaming it is this one edit.
+macro_rules! events_repository {
+    () => {
+        "maybe-adamant/RunPlanner-Events"
+    };
+}
+pub const EVENTS_REPOSITORY: &str = events_repository!();
+/// The signed community event feed, replaced in place on the events repository's `events` release.
+pub const EVENT_FEED_URL: &str = concat!(
+    "https://github.com/",
+    events_repository!(),
+    "/releases/download/events/events.json"
+);
+pub const EVENT_FEED_SIGNATURE_URL: &str = concat!(
+    "https://github.com/",
+    events_repository!(),
+    "/releases/download/events/events.json.sig"
+);
 /// Every event's project file is published beside the feed as `<id>.runplanner.json`.
-pub const EVENT_PROJECT_URL_PREFIX: &str =
-    "https://github.com/maybe-adamant/RunPlanner/releases/download/events/";
+pub const EVENT_PROJECT_URL_PREFIX: &str = concat!(
+    "https://github.com/",
+    events_repository!(),
+    "/releases/download/events/"
+);
+/// Stands in the checked-in event public key until the owner installs the real one; a feed is
+/// never verified against it.
+pub const EVENT_PUBLIC_KEY_PLACEHOLDER: &str =
+    "PLACEHOLDER: replace with the event feed public key";
 /// The signed file name the signature's trusted comment must name.
 pub const EVENT_FEED_FILE_NAME: &str = "events.json";
 pub const EVENT_FEED_FORMAT: &str = "run-planner-event-feed";
@@ -65,8 +85,19 @@ fn base64_text(encoded: &[u8], artifact: &str) -> Result<String, String> {
     String::from_utf8(decoded).map_err(|_| format!("The {artifact} is not text."))
 }
 
+/// The event feed public key as checked in, refused while it is still the placeholder.
+pub fn event_public_key(checked_in: &str) -> Result<&str, String> {
+    let key = checked_in.trim();
+    if key.is_empty() || key.starts_with("PLACEHOLDER") {
+        return Err(
+            "No event feed public key is installed, so community events are off.".to_owned(),
+        );
+    }
+    Ok(key)
+}
+
 /// Verifies `data` against a signature file as `tauri signer sign` writes it (base64 of a
-/// prehashed minisign signature), with the updater public key as `tauri.conf.json` holds it.
+/// prehashed minisign signature), with the event public key in the same base64 form.
 /// The trusted comment, covered by the signature, must name `events.json`; its timestamp is
 /// returned.
 pub fn verify_signature(
@@ -272,6 +303,8 @@ pub enum FeedSource {
     Network,
     /// The last verified feed kept in application data.
     Cache,
+    /// No event public key is installed, so there are no events.
+    Disabled,
 }
 
 /// The host's verified events for this session. Only an event this session holds can be
@@ -337,6 +370,15 @@ impl EventSession {
         }
         self.checked_at = Some(at);
         self.last_failed = true;
+    }
+
+    /// Without an installed event key there are no events: the session holds an empty feed,
+    /// so the event slot is cleared rather than kept.
+    pub fn disable(&mut self) {
+        self.feed = Some(DecodedFeed::default());
+        self.signed_at = None;
+        self.source = FeedSource::Disabled;
+        self.local = None;
     }
 
     pub fn source(&self) -> FeedSource {
@@ -426,7 +468,7 @@ pub mod test_support {
     /// A signature of the same bytes whose trusted comment names `other.json`.
     pub const OTHER_FILE_SIGNATURE: &[u8] =
         include_bytes!("../tests/fixtures/event-feed/events.json.other-name.sig");
-    pub const FEED_SIGNED_AT: u64 = 1_791_831_272;
+    pub const FEED_SIGNED_AT: u64 = 1_791_832_588;
     pub const FEED_BUILD: &str = "test-build";
     /// The project file whose hash the signed fixture names.
     pub const PROJECT_BYTES: &[u8] = b"event project bytes";
@@ -440,9 +482,28 @@ mod tests {
     use crate::community_event::test_support::EVENT_PLAN;
     use crate::game_target::test_support::TemporaryDirectory;
 
-    // The updater key in tauri.conf.json, which did not sign the test fixture.
-    const UPDATER_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOTZDOEExM0I5OUYyN0UKUldSKzhwazdvY2lXN2MzMVNGR1pQQWFGOTV2V1l5dEg5Yis1dzRYTDk2VWFldFdweER3Z3huRjcK";
+    // A real minisign key (the app updater's) that did not sign the test fixture.
+    const OTHER_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOTZDOEExM0I5OUYyN0UKUldSKzhwazdvY2lXN2MzMVNGR1pQQWFGOTV2V1l5dEg5Yis1dzRYTDk2VWFldFdweER3Z3huRjcK";
     const HASH: &str = "5650824531e382c27c755760f7bc6db4c5b690a5df74dc9438e26995bf2f7fbf";
+
+    #[test]
+    fn the_placeholder_public_key_is_never_used() {
+        assert!(event_public_key(EVENT_PUBLIC_KEY_PLACEHOLDER).is_err());
+        assert!(event_public_key("  ").is_err());
+        assert_eq!(
+            event_public_key(TEST_PUBLIC_KEY),
+            Ok(TEST_PUBLIC_KEY.trim())
+        );
+        let shipped = include_str!("../../event-feed.pub");
+        assert!(
+            shipped.trim() == EVENT_PUBLIC_KEY_PLACEHOLDER || event_public_key(shipped).is_ok(),
+            "event-feed.pub holds the placeholder or a key"
+        );
+        assert_eq!(
+            EVENT_FEED_URL,
+            "https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/events.json"
+        );
+    }
 
     #[test]
     fn a_feed_signed_by_the_key_for_events_json_verifies_and_anything_else_is_refused() {
@@ -454,7 +515,7 @@ mod tests {
         tampered[10] ^= 1;
         assert!(verify_signature(&tampered, FEED_SIGNATURE, TEST_PUBLIC_KEY).is_err());
         assert_eq!(
-            verify_signature(SIGNED_FEED, FEED_SIGNATURE, UPDATER_PUBLIC_KEY),
+            verify_signature(SIGNED_FEED, FEED_SIGNATURE, OTHER_PUBLIC_KEY),
             Err("The event feed signature does not match.".to_owned())
         );
         assert_eq!(
@@ -692,7 +753,7 @@ mod tests {
         let plan = &verified.feed.events[0];
         assert_eq!(
             project_url(plan),
-            Ok("https://github.com/maybe-adamant/RunPlanner/releases/download/events/2026-w42-staff.runplanner.json")
+            Ok("https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/2026-w42-staff.runplanner.json")
         );
         assert_eq!(verify_project(plan, PROJECT_BYTES), Ok(()));
         assert_eq!(
@@ -791,5 +852,16 @@ mod tests {
         none.fetch_failed(|| None, now);
         assert_eq!(none.source(), FeedSource::None);
         assert!(!none.has_verified_feed());
+    }
+
+    #[test]
+    fn a_session_without_an_event_key_holds_no_events_and_clears_the_slot() {
+        let mut session = session_with_feed(std::time::Instant::now());
+        session.disable();
+        assert_eq!(session.source(), FeedSource::Disabled);
+        assert!(session.has_verified_feed());
+        assert!(session
+            .active(parse_instant("2026-10-14T00:00:00Z").unwrap())
+            .is_none());
     }
 }

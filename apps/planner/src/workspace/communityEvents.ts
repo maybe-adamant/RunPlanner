@@ -15,13 +15,14 @@ import { projectGameSlotSummary } from '../projections/gameSlotSummary';
 import {
   compileEventPlan,
   encodeEventDocument,
+  eventMetadataProblem,
   eventProjectUrl,
   projectFileSha256,
-  type EventDocumentMetadata,
+  type AuthoredEventMetadata,
 } from './eventDocument';
 
 /** What an event export asks for; the project's URL and hash follow from the open project. */
-export type EventExportMetadata = Omit<EventDocumentMetadata, 'projectUrl' | 'projectSha256'>;
+export type EventExportMetadata = AuthoredEventMetadata;
 import type { ProjectOperationResult } from './projectOperations';
 
 /** The notice area's community event entry. */
@@ -116,21 +117,6 @@ function clearingProblem(clearing: EventSlotClearing): string | null {
     case 'nativeWrite':
       return clearing.message;
   }
-}
-
-const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$/;
-
-function metadataProblem(metadata: EventExportMetadata): string | null {
-  if ([metadata.id, metadata.title, metadata.description].some((text) => text.trim() === '')) {
-    return 'An event needs an id, a title and a description.';
-  }
-  if (!ISO_INSTANT.test(metadata.startsAt) || !ISO_INSTANT.test(metadata.endsAt)) {
-    return 'Event times must be UTC ISO 8601 instants, such as 2026-10-12T00:00:00Z.';
-  }
-  if (Date.parse(metadata.endsAt) <= Date.parse(metadata.startsAt)) {
-    return 'An event must end after it starts.';
-  }
-  return null;
 }
 
 export function createCommunityEventController(
@@ -266,7 +252,7 @@ export function createCommunityEventController(
             },
             exportEventFile: async (metadata: EventExportMetadata): Promise<EventSlotOutcome> => {
               try {
-                const problem = metadataProblem(metadata);
+                const problem = eventMetadataProblem(metadata);
                 if (problem !== null) return { kind: 'failed', message: problem };
                 const assembly = options.currentAssembly();
                 const project = options.currentProject();

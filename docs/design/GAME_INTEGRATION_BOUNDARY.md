@@ -366,9 +366,13 @@ unchanged.
 
 ### Event feed
 
-The event feed is `events.json` with its signature `events.json.sig`, both on
-the repository's `events` release
-(`https://github.com/maybe-adamant/RunPlanner/releases/download/events/`):
+Events are authored and published in the separate
+[RunPlanner-Events](https://github.com/maybe-adamant/RunPlanner-Events)
+repository; the planner only reads its feed. The repository name is one constant
+on each side (`EVENTS_REPOSITORY` in the game host's `event_feed.rs` and in
+`eventDocument.ts`). The feed is `events.json` with its signature
+`events.json.sig`, both on that repository's `events` release
+(`https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/`):
 
 ```json
 { "format": "run-planner-event-feed", "formatVersion": 1, "events": [<event document>] }
@@ -377,10 +381,12 @@ the repository's `events` release
 Each event document is `run-planner-event` version 1: `id`, `title`,
 `description`, optional `rules`, `startsAt`, `endsAt`, `projectUrl`,
 `projectSha256` (lower-case hex) and `plans` keyed by module build id. The
-signature is the updater's: `tauri signer sign` output, a prehashed minisign
-signature verified with the updater public key in `tauri.conf.json`. Its
-trusted comment, which the signature covers, must name `file:events.json`, and
-its `timestamp` orders feeds.
+signature is `tauri signer sign` output, a prehashed minisign signature, made
+with a dedicated event key, not the updater key. The app embeds the event public
+key from `apps/planner/src-tauri/event-feed.pub` at compile time; while that file
+holds its checked-in placeholder, the host refuses to verify any feed and events
+stay off. The trusted comment, which the signature covers, must name
+`file:events.json`, and its `timestamp` orders feeds.
 
 - The host downloads the feed (at most 16 MiB) and signature (at most 4 KiB)
   over HTTPS only, verifies the signature before decoding, and decodes strictly.
@@ -388,7 +394,7 @@ its `timestamp` orders feeds.
   signed earlier than the newest feed already verified (in this session or in
   the cache) is refused whole. Within it, an invalid event, one whose
   `projectUrl` is not exactly
-  `https://github.com/maybe-adamant/RunPlanner/releases/download/events/<id>.runplanner.json`
+  `https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/<id>.runplanner.json`
   or that has no `projectSha256`, or a repeated id is refused alone and logged;
   a valid event without a plan for the bundled build is skipped.
 - Text fields are bounded, with no control or Unicode format characters, and
@@ -412,6 +418,19 @@ its `timestamp` orders feeds.
   `projectSha256`, and opens it as a new, never-saved copy with its own
   `projectId`, so a copy sent to a slot is not the event's plan. When the open
   project has unsaved changes, the planner asks before replacing it.
+
+Publishing is the events repository's workflow. Each planner release publishes
+`module-build.json`, `{"version", "buildId"}` of the game module it ships, from
+the same Rust assembly the app embeds. The workflow reads it from the latest
+planner release, checks out that release, and compiles every event that has not
+ended with that release's own builder (`npm run events:build`, over the same
+`eventDocument.ts` as the development export), so plans match what the release
+accepts. It keeps the plans the published feed carries for older builds while an
+event's project file is unchanged, checks the result with the host decoder
+(`events_ci check`), publishes only a changed feed, and verifies its signature
+with the release's event key before uploading. The `events` release is a
+pre-release. An event starts and ends by its own dates, since the app selects
+the active event by time.
 
 The notice area above the workspace shows one notice: an app update first,
 otherwise the event, `Event: <title> · ends <date>`, with **Details** (the

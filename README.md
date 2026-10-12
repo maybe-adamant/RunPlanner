@@ -151,6 +151,20 @@ label.
 With **Debug Mode** on, a **Diagnostics** tab shows the raw slot and run
 records to include in a bug report.
 
+### Community events
+
+From time to time a community event offers everyone the same planned run. The
+app shows it above your project, `Event: <title> · ends <date>`, with
+**Details**, **Open project** (opens the event's plan as an unsaved copy you can
+study or change), **Copy link** and **Dismiss**. You don't need to send
+anything: once the mod is set up, the app puts the event in the game's read-only
+**Event** slot, listed first in the **Plan** tab's picker. Pick it to play the
+event; the victory screen then reads `Planned event - <title>`. When the event
+ends, the Event slot is cleared, and if it was selected the next run uses Slot
+1; the notice tells you so. Events come from the
+[RunPlanner-Events](https://github.com/maybe-adamant/RunPlanner-Events)
+repository.
+
 ## Updating
 
 Official releases check for updates when the app starts, and About offers a

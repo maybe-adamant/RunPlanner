@@ -24,8 +24,97 @@ export interface EventDocumentMetadata {
   readonly projectSha256?: string;
 }
 
+/** The fields an event's author writes; the project's URL and hash follow from its file. */
+export type AuthoredEventMetadata = Omit<EventDocumentMetadata, 'projectUrl' | 'projectSha256'>;
+
+const EVENT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const ISO_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?Z$/;
+const MAX_TITLE_CHARS = 80;
+const MAX_TEXT_CHARS = 2000;
+/** The host decoder's bound on one event document. */
+export const MAX_EVENT_DOCUMENT_BYTES = 4 * 1_048_576;
+
+// Unicode format characters (category Cf) and the line and paragraph separators, which the
+// host refuses in every event text.
+const INVISIBLE = /[\p{Cf}\u2028\u2029]/u;
+// Control characters; multiline text may hold line breaks.
+const CONTROL = /\p{Cc}/u;
+const CONTROL_EXCEPT_BREAKS = /[^\P{Cc}\n\r]/u;
+
+/** Text the host accepts: non-blank, bounded, and without control or format characters. */
+function validText(text: string, maxChars: number, multiline: boolean): boolean {
+  return (
+    text.trim() !== '' &&
+    Array.from(text).length <= maxChars &&
+    !INVISIBLE.test(text) &&
+    !(multiline ? CONTROL_EXCEPT_BREAKS : CONTROL).test(text)
+  );
+}
+
+/** A real UTC calendar instant from year 2000, as comparable parts; null otherwise. */
+function instant(text: string): readonly number[] | null {
+  const match = ISO_INSTANT.exec(text);
+  if (match === null) return null;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  const nanos = Number((match[7] ?? '').padEnd(9, '0'));
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const valid =
+    year >= 2000 &&
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= daysInMonth &&
+    hour < 24 &&
+    minute < 60 &&
+    second < 60;
+  return valid ? [year, month, day, hour, minute, second, nanos] : null;
+}
+
+function compareInstants(left: readonly number[], right: readonly number[]): number {
+  for (let index = 0; index < left.length; index += 1) {
+    const difference = left[index]! - right[index]!;
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+/** The refusal the host's decoder would give this metadata, worded for its author. */
+export function eventMetadataProblem(metadata: AuthoredEventMetadata): string | null {
+  if (!EVENT_ID.test(metadata.id) || metadata.id.length > 64) {
+    return 'An event id uses lower-case letters, digits and single hyphens, at most 64 characters.';
+  }
+  if (!validText(metadata.title, MAX_TITLE_CHARS, false)) {
+    return 'An event title is one non-blank line of at most 80 characters, without control or invisible formatting characters.';
+  }
+  const texts = [metadata.description, ...(metadata.rules === undefined ? [] : [metadata.rules])];
+  if (!texts.every((text) => validText(text, MAX_TEXT_CHARS, true))) {
+    return 'An event description, and its rules when given, are non-blank text of at most 2000 characters, without control or invisible formatting characters.';
+  }
+  const starts = instant(metadata.startsAt);
+  const ends = instant(metadata.endsAt);
+  if (starts === null || ends === null) {
+    return 'Event times must be real UTC ISO 8601 instants from 2000, such as 2026-10-12T00:00:00Z.';
+  }
+  if (compareInstants(ends, starts) <= 0) {
+    return 'An event must end after it starts.';
+  }
+  return null;
+}
+
 export const EVENT_DOCUMENT_FORMAT = 'run-planner-event';
 export const EVENT_DOCUMENT_FORMAT_VERSION = 1;
+
+/** The plan's display name for an event: its title, bounded as plan names are. */
+export function eventPlanDisplayName(title: string): string {
+  return Array.from(title.trim()).slice(0, EXECUTION_DISPLAY_NAME_MAX).join('');
+}
 
 /**
  * Compiles an event's project through the same execution-plan assembly as a send. The plan
@@ -39,7 +128,7 @@ export function compileEventPlan(
   return encodeExecutionPlan(
     compileExecutionPlan({
       product: assembleExecutionProduct({ assembly, catalog }),
-      displayName: Array.from(title.trim()).slice(0, EXECUTION_DISPLAY_NAME_MAX).join(''),
+      displayName: eventPlanDisplayName(title),
     }),
   );
 }
@@ -67,9 +156,12 @@ export function encodeEventDocument(
   });
 }
 
+/** The repository whose `events` release publishes the feed; renaming it is this one edit. */
+export const EVENTS_REPOSITORY = 'maybe-adamant/RunPlanner-Events';
+
 /** The URL an event's project file has beside the feed. */
 export function eventProjectUrl(id: string): string {
-  return `https://github.com/maybe-adamant/RunPlanner/releases/download/events/${id}.runplanner.json`;
+  return `https://github.com/${EVENTS_REPOSITORY}/releases/download/events/${id}.runplanner.json`;
 }
 
 /** Lower-case hex SHA-256 of a project file's text, as the event document records it. */

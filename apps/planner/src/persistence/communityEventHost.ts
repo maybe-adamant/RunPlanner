@@ -31,8 +31,11 @@ export interface CommunityEventPlan {
 export interface EventFeedSnapshot {
   /** The active event for this app's game module build, or null when there is none. */
   readonly active: CommunityEventPlan | null;
-  /** Where the verified events came from; `cache` is the last verified feed, kept offline. */
-  readonly source: 'none' | 'network' | 'cache';
+  /**
+   * Where the verified events came from; `cache` is the last verified feed, kept offline, and
+   * `disabled` means no event key is installed, so there are no events.
+   */
+  readonly source: 'none' | 'network' | 'cache' | 'disabled';
   /** Why the last fetch failed, when it did. */
   readonly problem: string | null;
 }

@@ -16,6 +16,7 @@ commits, not these checklists.
 - [Generated encounters](GENERATED_ENCOUNTER_LIVE_ACCEPTANCE.md)
 - [Practice Boss start](PRACTICE_BOSS_START_LIVE_ACCEPTANCE.md)
 - [Linux desktop](LINUX_DESKTOP_LIVE_ACCEPTANCE.md)
+- [Community events](COMMUNITY_EVENTS_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete
