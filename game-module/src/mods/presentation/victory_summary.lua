@@ -1,5 +1,5 @@
 -- Victory-screen summary of the admitted plan. Rows are produced from the
--- session snapshot and its slot's overview entry when the RunClear screen opens.
+-- session snapshot and the slot overview when the RunClear screen opens.
 local presentation = type(import) == "function" and import("mods/presentation/run_presentation.lua")
     or require("mods.presentation.run_presentation")
 local names = type(import) == "function" and import("mods/presentation/names.lua")
@@ -37,13 +37,18 @@ local function outcome(snapshot)
     return nil
 end
 
--- entry is the running slot's overview entry, which may name the plan.
-function victorySummary.rows(snapshot, entry)
+-- entries and present are the slot overview read: the running slot's entry may
+-- name the plan, and the event slot's entry names the event a plan with its
+-- fingerprint belongs to while the event slot's file exists.
+function victorySummary.rows(snapshot, entries, present)
     if type(snapshot) ~= "table" or type(snapshot.plan) ~= "table" then return {} end
     local result = outcome(snapshot)
     if result == nil then return {} end
+    entries = type(entries) == "table" and entries or {}
+    local event = presentation.runningEvent(snapshot.plan, entries, present)
     return {
-        { text = "Planned run - " .. presentation.planName(snapshot.plan, entry, snapshot.slot) },
+        { text = event and "Planned event - " .. event.title
+            or "Planned run - " .. presentation.planName(snapshot.plan, entries[snapshot.slot], snapshot.slot) },
         { text = result },
     }
 end
@@ -62,9 +67,8 @@ function victorySummary.attach(module, inspect, slotOverview)
         local screen = type(event) == "table" and type(event.args) == "table" and event.args[1] or nil
         if type(screen) ~= "table" or screen.Name ~= "RunClear" then return end
         local ok, rows = pcall(function()
-            local snapshot = inspect()
-            local entries = slotOverview.read()
-            return victorySummary.rows(snapshot, type(snapshot) == "table" and entries[snapshot.slot] or nil)
+            local entries, present = slotOverview.read()
+            return victorySummary.rows(inspect(), entries, present)
         end)
         overlay.setTable(victorySummary.TABLE, ok and rows or {})
         overlay.refresh(victorySummary.TABLE)

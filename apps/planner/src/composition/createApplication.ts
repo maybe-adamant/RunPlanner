@@ -23,6 +23,7 @@ import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
 import { createBugReportOperations } from '../workspace/bugReport';
+import { createEventSlotOperations } from '../workspace/communityEvents';
 import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
 import {
   createUnavailableProfileFileAdapter,
@@ -86,7 +87,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   const traitDomain = createTraitDomainProjection(catalog, contextualPicker);
-  // Internal run modifiers: dev builds, or a release build made with VITE_INTERNAL_FEATURES=1.
+  // Internal run modifiers and the event file import: dev builds, or a release build made with
+  // VITE_INTERNAL_FEATURES=1.
   const devBuild =
     options.devBuild ?? (import.meta.env.DEV || import.meta.env.VITE_INTERNAL_FEATURES === '1');
   const structuredWorkspace = createStructuredWorkspaceProjection(
@@ -183,6 +185,11 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     catalogSummary,
     editorNavigation,
+    // Filling the event slot from a local event file is a development action.
+    eventSlot:
+      options.gameModuleHost === undefined || !devBuild
+        ? undefined
+        : createEventSlotOperations({ catalog, host: options.gameModuleHost }),
     gameStatus:
       options.gameModuleHost === undefined
         ? undefined

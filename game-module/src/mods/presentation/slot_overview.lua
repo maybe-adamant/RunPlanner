@@ -17,7 +17,15 @@ local function text(value)
     return type(value) == "string" and value:match("%S") ~= nil and value or nil
 end
 
-local function entry(value)
+-- The event slot's entry names its event; a malformed event leaves the entry without one.
+local function event(value)
+    if not json.isObject(value) then return nil end
+    local result = { id = text(value.id), title = text(value.title), endsAt = text(value.endsAt) }
+    if result.id == nil or result.title == nil or result.endsAt == nil then return nil end
+    return result
+end
+
+local function entry(value, slot)
     if not json.isObject(value) then return nil end
     local result = {}
     for _, key in ipairs(REQUIRED_TEXT) do
@@ -28,6 +36,7 @@ local function entry(value)
     local fear = value.startingFear
     if type(fear) ~= "number" or fear < 0 or fear ~= math.floor(fear) then return nil end
     result.startingFear = fear
+    if slot == inbox.EVENT_SLOT then result.event = event(value.event) end
     return result
 end
 
@@ -42,8 +51,8 @@ function overview.decode(raw)
     end
     local entries = {}
     for key, slotValue in pairs(value.slots) do
-        local slot = type(key) == "string" and key:match("^[1-9]%d?$") and tonumber(key) or nil
-        if slot ~= nil and slot <= inbox.SLOT_COUNT then entries[slot] = entry(slotValue) end
+        local slot = type(key) == "string" and (key == "0" or key:match("^[1-9]%d?$")) and tonumber(key) or nil
+        if slot ~= nil and slot <= inbox.SLOT_COUNT then entries[slot] = entry(slotValue, slot) end
     end
     return entries
 end
@@ -53,7 +62,8 @@ local function nativeFiles()
 end
 
 -- files replaces io.open. read() returns the entries, each marked whether it
--- names this module build, and for each slot whether its plan file exists;
+-- names this module build, and for each slot, the event slot included,
+-- whether its plan file exists;
 -- existence is an open and close, never a read.
 function overview.create(root, pathApi, buildId, options)
     options = options or {}
@@ -78,8 +88,9 @@ function overview.create(root, pathApi, buildId, options)
         end
         for _, value in pairs(entries) do value.matchesBuild = buildId ~= nil and value.buildId == buildId end
         local present = {}
-        for slot = 1, inbox.SLOT_COUNT do
-            if entries[slot] ~= nil then
+        for slot = inbox.EVENT_SLOT, inbox.SLOT_COUNT do
+            -- The event slot is always probed: only its file confirms that its entry's event is current.
+            if entries[slot] ~= nil and slot ~= inbox.EVENT_SLOT then
                 present[slot] = true
             else
                 local slotFile = files.open(path(inbox.slotFileName(slot)), "rb")

@@ -16,7 +16,8 @@ use crate::game_target::{
     DiscoveredProfile, GameTargetFacts, ProfileModule, ResolvedTarget, TargetKind,
     PLUGINS_DIRECTORY,
 };
-use crate::plan_slots::{inspect_active_slot, inspect_slots, ActiveSlotFacts, PlanSlotFacts};
+use crate::plan_slots::{inspect_active_slot, inspect_all_slots, ActiveSlotFacts, PlanSlotFacts};
+use crate::slot_overview::{describe_event_slot, EventSlotFacts};
 
 pub const MODULE_DIRECTORY: &str = "adamantRunPlanner-Run_Planner";
 const MODULE_NAMESPACE: &str = "adamantRunPlanner";
@@ -154,6 +155,8 @@ pub struct TargetInspection {
     /// A previous install left beside `plugins/` after a failed restore.
     pub stranded_install: Option<String>,
     pub plan_slots: Vec<PlanSlotFacts>,
+    /// The read-only community event slot, slot 0.
+    pub event_slot: EventSlotFacts,
     pub active_slot: ActiveSlotFacts,
 }
 
@@ -607,7 +610,8 @@ pub fn inspect(
         consent_required: consent_required(&module, &r2modman),
     };
     let removable = planner_owns(module.state, r2modman.state);
-    let plan_slots = inspect_slots(target, module.build_id.as_deref());
+    let mut plan_slots = inspect_all_slots(target, module.build_id.as_deref());
+    let event_slot = describe_event_slot(target, plan_slots.remove(0));
     Ok(TargetInspection {
         module,
         r2modman,
@@ -621,6 +625,7 @@ pub fn inspect(
             .and_then(|folder| folder.file_name())
             .map(|name| name.to_string_lossy().into_owned()),
         plan_slots,
+        event_slot,
         active_slot: inspect_active_slot(target),
     })
 }

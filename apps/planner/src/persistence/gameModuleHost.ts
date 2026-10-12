@@ -72,12 +72,14 @@ export interface GameTargetInspection {
   /** A previous install left beside `plugins/` after a failed restore. */
   readonly strandedInstall: string | null;
   readonly planSlots: readonly GamePlanSlot[];
+  /** The read-only community event slot, slot 0. */
+  readonly eventSlot: GameEventSlot;
   /** `active-slot.json`; a missing or invalid file names no slot. */
   readonly activeSlot: GameActiveSlot;
 }
 
 export type GameActiveSlot =
-  | { readonly state: 'present'; readonly slot: GamePlanSlotNumber }
+  | { readonly state: 'present'; readonly slot: GameActiveSlotNumber }
   | { readonly state: 'missing' }
   | { readonly state: 'invalid' };
 
@@ -97,6 +99,44 @@ export interface GamePlanSlot {
   readonly displayName: string | null;
   readonly weaponKey: string | null;
   readonly aspectKey: string | null;
+}
+
+/** The event the event slot's plan belongs to, as its slot overview entry names it. */
+export interface GameEventSummary {
+  readonly id: string;
+  readonly title: string;
+  /** UTC ISO 8601 end time. */
+  readonly endsAt: string;
+}
+
+/** The event slot as found on disk, with its event while the overview still describes it. */
+export interface GameEventSlot extends Omit<GamePlanSlot, 'slot'> {
+  readonly slot: typeof GAME_EVENT_SLOT;
+  readonly event: GameEventSummary | null;
+}
+
+/** One community event's metadata, as the host validated it from an event document. */
+export interface CommunityEvent {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly rules: string | null;
+  readonly startsAt: string;
+  readonly endsAt: string;
+  readonly projectUrl: string | null;
+}
+
+/** An event and its execution plan for this app's game module build, as published. */
+export interface GameEventPlan {
+  readonly event: CommunityEvent;
+  readonly planJson: string;
+}
+
+export interface GameEventSlotClearing {
+  /** `alreadyEmpty`: no event slot file and no overview entry. */
+  readonly status: 'cleared' | 'alreadyEmpty' | 'blocked' | 'nativeWrite';
+  readonly message: string;
+  readonly blockers: readonly GamePublicationBlocker[];
 }
 
 /** Host-reported facts about the established game target. */
@@ -176,7 +216,12 @@ export type BugReportCreation =
     };
 
 export const GAME_PLAN_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+/** The plan slots a plan may be sent to. */
 export type GamePlanSlotNumber = (typeof GAME_PLAN_SLOT_NUMBERS)[number];
+/** The read-only slot the community event plan is written to; never a send destination. */
+export const GAME_EVENT_SLOT = 0;
+/** Any slot the game module may play next, the event slot included. */
+export type GameActiveSlotNumber = typeof GAME_EVENT_SLOT | GamePlanSlotNumber;
 
 export interface GamePlanPublisher {
   readonly publish: (
@@ -203,7 +248,19 @@ export interface GameModuleHost extends GamePlanPublisher {
   readonly installFromCheckout: (overwriteConsent: boolean) => Promise<GameModuleInstallResult>;
   readonly remove: () => Promise<GameModuleRemoveResult>;
   /** Makes a slot that holds a plan the one the game module plays next. */
-  readonly setActiveSlot: (slotNumber: GamePlanSlotNumber) => Promise<GameActiveSlotSetting>;
+  readonly setActiveSlot: (slotNumber: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
+  /** Resolves null when the file picker is cancelled. */
+  readonly pickEventFile: () => Promise<string | null>;
+  /** Reads a local event file and selects its plan for this app's build; rejects with the reason. */
+  readonly readEventFile: (path: string) => Promise<GameEventPlan>;
+  /** Writes an event's plan to the event slot; the active slot is left as it is. */
+  readonly publishEvent: (
+    planJson: string,
+    summary: GamePlanSlotSummary,
+    event: GameEventSummary,
+  ) => Promise<GamePlanPublication>;
+  /** Removes the event slot's plan and its overview entry. */
+  readonly clearEvent: () => Promise<GameEventSlotClearing>;
   /** Asks where to save through the host's own dialog, then writes the report there. */
   readonly createBugReport: (
     defaultFileName: string,
@@ -216,6 +273,7 @@ export interface GameModuleHost extends GamePlanPublisher {
 export interface TauriGameModuleEnvironment {
   readonly invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
   readonly chooseDirectory: () => Promise<string | null>;
+  readonly chooseEventFile: () => Promise<string | null>;
 }
 
 export function createTauriGameModuleHost(
@@ -226,6 +284,13 @@ export function createTauriGameModuleHost(
         directory: true,
         multiple: false,
         title: 'Choose a Folder Containing ReturnOfModding',
+      }),
+    chooseEventFile: () =>
+      open({
+        directory: false,
+        filters: [{ extensions: ['json'], name: 'Run Planner event' }],
+        multiple: false,
+        title: 'Import Event File',
       }),
   },
 ): GameModuleHost {
@@ -254,8 +319,14 @@ export function createTauriGameModuleHost(
         planJson,
         summary,
       }),
-    setActiveSlot: (slotNumber: GamePlanSlotNumber) =>
+    setActiveSlot: (slotNumber: GameActiveSlotNumber) =>
       environment.invoke<GameActiveSlotSetting>('game_active_slot_set', { slotNumber }),
+    pickEventFile: () => environment.chooseEventFile(),
+    readEventFile: (path: string) =>
+      environment.invoke<GameEventPlan>('game_event_file_read', { path }),
+    publishEvent: (planJson: string, summary: GamePlanSlotSummary, event: GameEventSummary) =>
+      environment.invoke<GamePlanPublication>('game_event_publish', { planJson, summary, event }),
+    clearEvent: () => environment.invoke<GameEventSlotClearing>('game_event_clear'),
     createBugReport: (defaultFileName: string, request: BugReportRequest) =>
       environment.invoke<BugReportCreation>('bug_report_create', { defaultFileName, request }),
     revealBugReport: () => environment.invoke<void>('bug_report_reveal'),

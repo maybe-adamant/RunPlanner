@@ -11,8 +11,8 @@ use crate::game_module_install::{self, GameModuleStatus};
 use crate::game_module_package::ModulePackage;
 use crate::game_target::{existing_directory, ResolvedTarget};
 use crate::plan_slots::{
-    module_config_dir, slot_file_name, ACTIVE_SLOT_FILE, MAX_ACTIVE_SLOT_BYTES, MAX_PLAN_BYTES,
-    PLAN_SLOT_COUNT,
+    any_slot_file_name, module_config_dir, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_ACTIVE_SLOT_BYTES,
+    MAX_PLAN_BYTES, PLAN_SLOT_COUNT,
 };
 use crate::slot_overview::{MAX_SLOT_OVERVIEW_BYTES, SLOT_OVERVIEW_FILE};
 
@@ -502,8 +502,8 @@ fn collect_slots(target: &ResolvedTarget, entries: &mut Vec<ReportEntry>) -> Sec
             }
         }
     };
-    let mut files: Vec<FileRecord> = (1..=PLAN_SLOT_COUNT)
-        .filter_map(|slot| slot_file_name(slot).ok())
+    let mut files: Vec<FileRecord> = (EVENT_SLOT..=PLAN_SLOT_COUNT)
+        .filter_map(|slot| any_slot_file_name(slot).ok())
         .map(|name| bounded_entry(&directory, name, MAX_PLAN_BYTES, entries))
         .collect();
     files.push(bounded_entry(
@@ -948,13 +948,17 @@ mod tests {
         };
         let entries = assemble_now();
         let recorded = files(&entries);
-        assert_eq!(recorded.len(), 14);
+        assert_eq!(recorded.len(), 15);
         assert_eq!(
-            recorded[12],
-            ("active-slot.json".to_owned(), "missing".to_owned())
+            recorded[0],
+            ("slot-0.runplanner.json".to_owned(), "missing".to_owned())
         );
         assert_eq!(
             recorded[13],
+            ("active-slot.json".to_owned(), "missing".to_owned())
+        );
+        assert_eq!(
+            recorded[14],
             ("slots.runplanner.json".to_owned(), "missing".to_owned())
         );
         write(
@@ -962,7 +966,7 @@ mod tests {
             &" ".repeat(MAX_ACTIVE_SLOT_BYTES + 1),
         );
         let oversized = assemble_now();
-        assert_eq!(files(&oversized)[12].1, "unreadable");
+        assert_eq!(files(&oversized)[13].1, "unreadable");
         assert!(oversized
             .iter()
             .all(|entry| entry.name != "plans-in-game/active-slot.json"));

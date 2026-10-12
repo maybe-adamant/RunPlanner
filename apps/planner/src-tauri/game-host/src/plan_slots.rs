@@ -11,8 +11,12 @@ use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 pub const MODULE_CONFIG_DIRECTORY: &str = crate::game_module_install::MODULE_DIRECTORY;
 pub const MAX_PLAN_BYTES: usize = 1_048_576;
 pub const PLAN_SLOT_COUNT: u8 = 12;
+/// The read-only slot that holds the community event plan; only the event write fills it.
+pub const EVENT_SLOT: u8 = 0;
 
-const PLAN_SLOT_FILES: [&str; PLAN_SLOT_COUNT as usize] = [
+// Indexed by slot number, the event slot first.
+const PLAN_SLOT_FILES: [&str; PLAN_SLOT_COUNT as usize + 1] = [
+    "slot-0.runplanner.json",
     "slot-1.runplanner.json",
     "slot-2.runplanner.json",
     "slot-3.runplanner.json",
@@ -32,13 +36,22 @@ pub const ACTIVE_SLOT_FILE: &str = "active-slot.json";
 pub const MAX_ACTIVE_SLOT_BYTES: usize = 1024;
 const ACTIVE_SLOT_FORMAT: &str = "run-planner-active-slot";
 
+/// The file of a slot a plan may be sent to: 1 through 12, never the event slot.
 pub fn slot_file_name(slot_number: u8) -> Result<&'static str, String> {
     match slot_number {
-        1..=PLAN_SLOT_COUNT => Ok(PLAN_SLOT_FILES[usize::from(slot_number - 1)]),
+        1..=PLAN_SLOT_COUNT => Ok(PLAN_SLOT_FILES[usize::from(slot_number)]),
         slot => Err(format!(
             "plan slot must be between 1 and {PLAN_SLOT_COUNT} (got {slot})"
         )),
     }
+}
+
+/// The file of any slot the module may play, the event slot included.
+pub fn any_slot_file_name(slot_number: u8) -> Result<&'static str, String> {
+    PLAN_SLOT_FILES
+        .get(usize::from(slot_number))
+        .copied()
+        .ok_or_else(|| format!("slot must be between 0 and {PLAN_SLOT_COUNT} (got {slot_number})"))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -145,6 +158,11 @@ fn decode_slot(bytes: &[u8]) -> Option<(Option<String>, PlanIdentity)> {
     }
 }
 
+/// A slot with no file.
+pub fn empty_slot(slot: u8) -> PlanSlotFacts {
+    slot_facts(slot, PlanSlotState::Empty, None)
+}
+
 fn slot_facts(slot: u8, state: PlanSlotState, modified_at_ms: Option<u64>) -> PlanSlotFacts {
     PlanSlotFacts {
         slot,
@@ -197,12 +215,12 @@ pub fn decode_active_slot(bytes: &[u8]) -> Option<u8> {
     (literal_keys
         && file.format == ACTIVE_SLOT_FORMAT
         && file.format_version == 1
-        && (1..=PLAN_SLOT_COUNT).contains(&file.slot))
-    .then_some(file.slot)
+        && file.slot <= PLAN_SLOT_COUNT)
+        .then_some(file.slot)
 }
 
 pub fn encode_active_slot(slot_number: u8) -> Result<String, String> {
-    slot_file_name(slot_number)?;
+    any_slot_file_name(slot_number)?;
     Ok(format!(
         r#"{{"format":"{ACTIVE_SLOT_FORMAT}","formatVersion":1,"slot":{slot_number}}}"#
     ))
@@ -319,13 +337,13 @@ pub fn inspect_active_slot(target: &ResolvedTarget) -> ActiveSlotFacts {
     }
 }
 
-/// Reads all twelve plan slots against the installed module build; an unsafe config folder
-/// makes every slot unreadable.
-pub fn inspect_slots(
+/// Reads every slot, the event slot through slot 12 and indexed by slot number, against the
+/// installed module build; an unsafe config folder makes every slot unreadable.
+pub fn inspect_all_slots(
     target: &ResolvedTarget,
     installed_build_id: Option<&str>,
 ) -> Vec<PlanSlotFacts> {
-    let slots = 1..=PLAN_SLOT_COUNT;
+    let slots = EVENT_SLOT..=PLAN_SLOT_COUNT;
     match module_config_dir(target) {
         Ok(None) => slots
             .map(|slot| slot_facts(slot, PlanSlotState::Empty, None))
@@ -337,7 +355,7 @@ pub fn inspect_slots(
             .map(|slot| {
                 read_slot(
                     slot,
-                    &directory.join(PLAN_SLOT_FILES[usize::from(slot - 1)]),
+                    &directory.join(PLAN_SLOT_FILES[usize::from(slot)]),
                     installed_build_id,
                 )
             })
@@ -350,6 +368,11 @@ mod tests {
     use super::*;
     use crate::game_target::test_support::TemporaryDirectory;
     use crate::game_target::{resolve_target, TargetKind, RETURN_OF_MODDING_DIRECTORY};
+
+    // The twelve sendable slots.
+    fn inspect_slots(target: &ResolvedTarget, build: Option<&str>) -> Vec<PlanSlotFacts> {
+        inspect_all_slots(target, build).split_off(1)
+    }
 
     fn make_target(root: &Path) -> ResolvedTarget {
         fs::create_dir_all(root.join(RETURN_OF_MODDING_DIRECTORY)).unwrap();
@@ -460,6 +483,31 @@ mod tests {
     }
 
     #[test]
+    fn the_event_slot_is_slot_zero_and_never_a_send_destination() {
+        assert_eq!(any_slot_file_name(EVENT_SLOT), Ok("slot-0.runplanner.json"));
+        assert_eq!(any_slot_file_name(12), Ok("slot-12.runplanner.json"));
+        assert!(any_slot_file_name(13).is_err());
+        assert!(slot_file_name(EVENT_SLOT).is_err());
+        let temporary = TemporaryDirectory::new("event-slot");
+        let target = make_target(&temporary.0);
+        let directory = slot_path(&target, 1).parent().unwrap().to_owned();
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(
+            directory.join("slot-0.runplanner.json"),
+            encode_slot(BUILD, PLAN),
+        )
+        .unwrap();
+        let all = inspect_all_slots(&target, Some(BUILD));
+        assert_eq!(all.len(), 13);
+        assert_eq!((all[0].slot, all[0].state), (0, PlanSlotState::Present));
+        assert!(all[1..]
+            .iter()
+            .enumerate()
+            .all(|(index, slot)| usize::from(slot.slot) == index + 1
+                && slot.state == PlanSlotState::Empty));
+    }
+
+    #[test]
     fn slots_for_another_build_or_without_an_envelope_are_stale() {
         let temporary = TemporaryDirectory::new("stale-slots");
         let target = make_target(&temporary.0);
@@ -488,7 +536,7 @@ mod tests {
 
     #[test]
     fn active_slot_decodes_only_the_exact_integer_form() {
-        for slot in 1..=12 {
+        for slot in 0..=12 {
             let encoded = encode_active_slot(slot).unwrap();
             assert_eq!(decode_active_slot(encoded.as_bytes()), Some(slot));
         }
@@ -496,7 +544,6 @@ mod tests {
             encode_active_slot(3).unwrap(),
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3}"#
         );
-        assert!(encode_active_slot(0).is_err());
         assert!(encode_active_slot(13).is_err());
         assert_eq!(
             decode_active_slot(
@@ -512,7 +559,7 @@ mod tests {
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3.0}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3e0}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":"3"}"#,
-            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":0}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":00}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":13}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":-1}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1.0,"slot":3}"#,

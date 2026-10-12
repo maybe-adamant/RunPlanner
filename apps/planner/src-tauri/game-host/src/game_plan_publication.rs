@@ -9,10 +9,11 @@ use crate::game_module_install::{
 use crate::game_module_package::{ModulePackage, PackageSource};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
-    encode_active_slot, encode_slot, inspect_slots, read_slot, slot_file_name, PlanSlotState,
-    ACTIVE_SLOT_FILE, MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
+    any_slot_file_name, empty_slot, encode_active_slot, encode_slot, inspect_all_slots, read_slot,
+    slot_file_name, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_PLAN_BYTES,
+    MODULE_CONFIG_DIRECTORY,
 };
-use crate::slot_overview::{self, SlotSummary, SLOT_OVERVIEW_FILE};
+use crate::slot_overview::{self, SentEntry, SlotEvent, SlotSummary, SLOT_OVERVIEW_FILE};
 
 // The plan fields the installed module's compatibility file must match.
 #[derive(Deserialize)]
@@ -49,11 +50,20 @@ fn native_write(message: String) -> GamePlanPublication {
     }
 }
 
+fn blocked(message: &str, blockers: Vec<PublicationBlocker>) -> GamePlanPublication {
+    GamePlanPublication {
+        status: PublicationStatus::Blocked,
+        message: message.to_owned(),
+        blockers,
+        activation_problem: None,
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ActivationStatus {
     Activated,
-    /// The slot number is outside 1 through 12.
+    /// The slot number is outside 0 through 12.
     InvalidSlot,
     Blocked,
     /// The slot holds no readable plan, so it cannot be made active.
@@ -77,8 +87,26 @@ fn activation(status: ActivationStatus, message: String) -> ActiveSlotSetting {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EventClearStatus {
+    Cleared,
+    /// The event slot had no file and the overview no entry for it.
+    AlreadyEmpty,
+    Blocked,
+    NativeWrite,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventSlotClearing {
+    pub status: EventClearStatus,
+    pub message: String,
+    pub blockers: Vec<PublicationBlocker>,
+}
+
 fn safe_destination(target: &ResolvedTarget, slot_number: u8) -> Result<PathBuf, String> {
-    shared_file_destination(target, slot_file_name(slot_number)?, "plan slot")
+    shared_file_destination(target, any_slot_file_name(slot_number)?, "plan slot")
 }
 
 // A regular file or absent entry directly inside the module's config folder.
@@ -126,18 +154,17 @@ fn reference_build_id(package: &ModulePackage, module: &InstalledModule) -> Resu
     Ok(package.build_id.clone())
 }
 
-/// Writes one plan slot of an already-established target whose module accepts the
-/// plan's header and is the reference build, as an envelope naming that build, together
-/// with the slot overview that records its summary.
+/// Writes one slot of an already-established target whose module accepts the plan's header
+/// and is the reference build, as an envelope naming that build, together with the slot
+/// overview that records its entry.
 fn write_plan(
     target: &ResolvedTarget,
     module: &InstalledModule,
     reference_build_id: &str,
-    slot_number: u8,
     plan_json: &str,
-    summary: SlotSummary,
+    entry: SentEntry,
 ) -> Result<(), String> {
-    slot_file_name(slot_number)?;
+    any_slot_file_name(entry.slot)?;
     let header: PlanHeader = serde_json::from_str(plan_json)
         .map_err(|error| format!("Invalid execution plan header: {error}"))?;
     let Some(installed) = installed_compatibility(target) else {
@@ -169,18 +196,30 @@ fn write_plan(
     }
     let staged = stage_slot_and_overview(
         target,
-        &installed.build_id,
-        slot_number,
-        envelope.as_bytes(),
-        summary,
+        Some(&installed.build_id),
+        entry.slot,
+        SlotChange::Write {
+            envelope: envelope.as_bytes(),
+            entry,
+        },
     )?;
     commit_slot_and_overview(staged)
 }
 
-/// A slot write and the overview regenerated with it, both staged in full, with a copy of
+/// What a staged send does to its slot.
+enum SlotChange<'a> {
+    Write {
+        envelope: &'a [u8],
+        entry: SentEntry,
+    },
+    Remove,
+}
+
+/// A slot change and the overview regenerated with it, both staged in full, with a copy of
 /// the slot's previous file to restore if the overview cannot follow.
 struct StagedSend {
-    slot: atomic_file::StagedFile,
+    /// `None` removes the slot's file.
+    slot: Option<atomic_file::StagedFile>,
     overview: atomic_file::StagedFile,
     /// `None` when the slot had no file.
     previous_slot: Option<atomic_file::StagedFile>,
@@ -189,21 +228,29 @@ struct StagedSend {
 
 fn stage_slot_and_overview(
     target: &ResolvedTarget,
-    build_id: &str,
+    build_id: Option<&str>,
     slot_number: u8,
-    envelope: &[u8],
-    summary: SlotSummary,
+    change: SlotChange,
 ) -> Result<StagedSend, String> {
     let slot_destination = safe_destination(target, slot_number)?;
     let overview_destination =
         shared_file_destination(target, SLOT_OVERVIEW_FILE, "slot overview")?;
-    let slot = atomic_file::stage(&slot_destination, envelope, "plan slot")?;
-    let mut slots = inspect_slots(target, Some(build_id));
-    slots[usize::from(slot_number - 1)] = read_slot(slot_number, slot.path(), Some(build_id));
+    let mut slots = inspect_all_slots(target, build_id);
+    let (slot, sent) = match change {
+        SlotChange::Write { envelope, entry } => {
+            let slot = atomic_file::stage(&slot_destination, envelope, "plan slot")?;
+            slots[usize::from(slot_number)] = read_slot(slot_number, slot.path(), build_id);
+            (Some(slot), Some(entry))
+        }
+        SlotChange::Remove => {
+            slots[usize::from(slot_number)] = empty_slot(slot_number);
+            (None, None)
+        }
+    };
     let overview = slot_overview::regenerate(
         slot_overview::read_overview(&overview_destination),
         &slots,
-        Some((slot_number, summary)),
+        sent,
     );
     let overview = atomic_file::stage(
         &overview_destination,
@@ -223,7 +270,16 @@ fn stage_slot_and_overview(
     })
 }
 
-/// Commits the slot, then the overview; when the overview fails, the slot is restored
+fn remove_slot_file(destination: &Path) -> Result<(), String> {
+    match fs::remove_file(destination) {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+            Err(format!("could not remove plan slot: {error}"))
+        }
+        _ => Ok(()),
+    }
+}
+
+/// Commits the slot change, then the overview; when the overview fails, the slot is restored
 /// to its previous file, or removed when it had none, and the send fails.
 fn commit_slot_and_overview(staged: StagedSend) -> Result<(), String> {
     let StagedSend {
@@ -232,14 +288,16 @@ fn commit_slot_and_overview(staged: StagedSend) -> Result<(), String> {
         previous_slot,
         slot_destination,
     } = staged;
-    slot.commit()?;
+    match slot {
+        Some(slot) => slot.commit()?,
+        None => remove_slot_file(&slot_destination)?,
+    }
     let Err(problem) = overview.commit() else {
         return Ok(());
     };
     let restored = match previous_slot {
         Some(previous) => previous.commit(),
-        None => fs::remove_file(&slot_destination)
-            .map_err(|error| format!("could not remove plan slot: {error}")),
+        None => remove_slot_file(&slot_destination),
     };
     Err(match restored {
         Ok(()) => format!("{problem}; the plan slot was left as it was."),
@@ -266,13 +324,22 @@ fn ready_target(
     }
 }
 
-/// Makes a slot that holds a readable plan active, under the same target checks as publishing.
+fn slot_name(slot_number: u8) -> String {
+    if slot_number == EVENT_SLOT {
+        "The event slot".to_owned()
+    } else {
+        format!("Slot {slot_number}")
+    }
+}
+
+/// Makes a slot that holds a readable plan active, the event slot included, under the same
+/// target checks as publishing.
 pub fn set_active_slot(
     config_dir: &Path,
     package: &ModulePackage,
     slot_number: u8,
 ) -> ActiveSlotSetting {
-    if let Err(message) = slot_file_name(slot_number) {
+    if let Err(message) = any_slot_file_name(slot_number) {
         return activation(ActivationStatus::InvalidSlot, message);
     }
     let (target, inspection) = match ready_target(config_dir, package) {
@@ -285,17 +352,21 @@ pub fn set_active_slot(
             }
         }
     };
-    let slot = &inspection.plan_slots[usize::from(slot_number - 1)];
+    let slot = if slot_number == EVENT_SLOT {
+        &inspection.event_slot.facts
+    } else {
+        &inspection.plan_slots[usize::from(slot_number - 1)]
+    };
     if slot.state != PlanSlotState::Present {
         return activation(
             ActivationStatus::NotPresent,
-            format!("Slot {slot_number} has no plan to make active."),
+            format!("{} has no plan to make active.", slot_name(slot_number)),
         );
     }
     match write_active_slot(&target, slot_number) {
         Ok(()) => activation(
             ActivationStatus::Activated,
-            format!("Slot {slot_number} is active."),
+            format!("{} is active.", slot_name(slot_number)),
         ),
         Err(message) => activation(ActivationStatus::NativeWrite, message),
     }
@@ -303,6 +374,7 @@ pub fn set_active_slot(
 
 /// Publishes to the remembered target only when its status has no blockers, writing the
 /// slot and the overview that records its summary together, then makes that slot active.
+/// The event slot is never a destination.
 pub fn publish(
     config_dir: &Path,
     package: &ModulePackage,
@@ -320,23 +392,19 @@ pub fn publish(
     }
     let (target, inspection) = match ready_target(config_dir, package) {
         Ok(ready) => ready,
-        Err(blockers) => {
-            return GamePlanPublication {
-                status: PublicationStatus::Blocked,
-                message: "The game target is not ready for publication.".to_owned(),
-                blockers,
-                activation_problem: None,
-            }
-        }
+        Err(blockers) => return blocked("The game target is not ready for publication.", blockers),
     };
     let written = reference_build_id(package, &inspection.module).and_then(|reference| {
         write_plan(
             &target,
             &inspection.module,
             &reference,
-            slot_number,
             plan_json,
-            summary,
+            SentEntry {
+                slot: slot_number,
+                summary,
+                event: None,
+            },
         )
     });
     if let Err(message) = written {
@@ -354,6 +422,93 @@ pub fn publish(
     }
 }
 
+/// Writes a community event's plan to the event slot with its overview entry, under the same
+/// target and build checks as publishing. The active slot is left as it is.
+pub fn publish_event(
+    config_dir: &Path,
+    package: &ModulePackage,
+    plan_json: &str,
+    summary: SlotSummary,
+    event: SlotEvent,
+) -> GamePlanPublication {
+    if let Err(message) = summary.validate().and(event.validate()) {
+        return native_write(message);
+    }
+    if plan_json.len() > MAX_PLAN_BYTES {
+        return native_write(format!(
+            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
+        ));
+    }
+    let (target, inspection) = match ready_target(config_dir, package) {
+        Ok(ready) => ready,
+        Err(blockers) => return blocked("The game target is not ready for publication.", blockers),
+    };
+    let title = event.title.clone();
+    let written = reference_build_id(package, &inspection.module).and_then(|reference| {
+        write_plan(
+            &target,
+            &inspection.module,
+            &reference,
+            plan_json,
+            SentEntry {
+                slot: EVENT_SLOT,
+                summary,
+                event: Some(event),
+            },
+        )
+    });
+    match written {
+        Ok(()) => GamePlanPublication {
+            status: PublicationStatus::Published,
+            message: format!("The event slot now holds {title}."),
+            blockers: Vec::new(),
+            activation_problem: None,
+        },
+        Err(message) => native_write(message),
+    }
+}
+
+/// Removes the event slot's file and its overview entry together on the established target.
+/// The active slot is left as it is.
+pub fn clear_event(config_dir: &Path, package: &ModulePackage) -> EventSlotClearing {
+    let clearing = |status, message: String| EventSlotClearing {
+        status,
+        message,
+        blockers: Vec::new(),
+    };
+    let (status, target) = status(config_dir, package);
+    let (Some(target), Some(inspection)) = (target, status.inspection) else {
+        return EventSlotClearing {
+            status: EventClearStatus::Blocked,
+            message: "The game target is not ready.".to_owned(),
+            blockers: status.publication_blockers,
+        };
+    };
+    // An entry left behind by a slot file removed outside the planner is repaired too.
+    if inspection.event_slot.facts.state == PlanSlotState::Empty
+        && !slot_overview::has_entry(&target, EVENT_SLOT)
+    {
+        return clearing(
+            EventClearStatus::AlreadyEmpty,
+            "The event slot is empty.".to_owned(),
+        );
+    }
+    let cleared = stage_slot_and_overview(
+        &target,
+        inspection.module.build_id.as_deref(),
+        EVENT_SLOT,
+        SlotChange::Remove,
+    )
+    .and_then(commit_slot_and_overview);
+    match cleared {
+        Ok(()) => clearing(
+            EventClearStatus::Cleared,
+            "The event slot was cleared.".to_owned(),
+        ),
+        Err(message) => clearing(EventClearStatus::NativeWrite, message),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -363,7 +518,15 @@ mod tests {
     use crate::game_target::test_support::TemporaryDirectory;
     use crate::game_target::{remember_target, TargetKind};
     use crate::plan_slots::{inspect_active_slot, ActiveSlotFacts};
-    use crate::slot_overview::test_support::summary;
+    use crate::slot_overview::test_support::{event, summary};
+
+    fn sent(slot: u8) -> SentEntry {
+        SentEntry {
+            slot,
+            summary: summary("Circe - Surface"),
+            event: None,
+        }
+    }
 
     const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#;
 
@@ -446,7 +609,7 @@ mod tests {
                 format!("Slot {slot} has no plan to make active.")
             );
         }
-        for slot in [0, 13] {
+        for slot in [13, u8::MAX] {
             assert_eq!(
                 set_active_slot(&config, &package, slot).status,
                 ActivationStatus::InvalidSlot
@@ -588,10 +751,16 @@ mod tests {
             let envelope = encode_slot(&package.build_id, &second);
             let staged = stage_slot_and_overview(
                 &target,
-                &package.build_id,
+                Some(&package.build_id),
                 slot,
-                envelope.as_bytes(),
-                summary("Momus - Underworld"),
+                SlotChange::Write {
+                    envelope: envelope.as_bytes(),
+                    entry: SentEntry {
+                        slot,
+                        summary: summary("Momus - Underworld"),
+                        event: None,
+                    },
+                },
             )
             .unwrap();
             // The overview's destination stops accepting a file after staging.
@@ -762,7 +931,7 @@ mod tests {
         let module = inspect(&target, &package).unwrap().module;
         assert_eq!(module.build_id.as_deref(), Some(package.build_id.as_str()));
         assert_eq!(
-            write_plan(&target, &module, "another-build", 1, PLAN, summary("Circe - Surface")),
+            write_plan(&target, &module, "another-build", PLAN, sent(1)),
             Err("The installed game module is not this app's build. Install it again from the Game panel.".to_owned())
         );
         let compatibility = crate::game_module_install::test_support::module_path(&target)
@@ -773,7 +942,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            write_plan(&target, &module, &package.build_id, 1, PLAN, summary("Circe - Surface")),
+            write_plan(&target, &module, &package.build_id, PLAN, sent(1)),
             Err("The installed game module has no build identity. Install it again from the Game panel.".to_owned())
         );
         assert!(!safe_destination(&target, 1).unwrap().exists());
@@ -851,5 +1020,308 @@ mod tests {
         symlink(&outside, target.rom.join(CONFIG_DIRECTORY)).unwrap();
         assert!(safe_destination(&target, 1).is_err());
         assert_eq!(fs::read_dir(outside).unwrap().count(), 0);
+    }
+
+    const EVENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","projectId":"e","planFingerprint":"event-print","routeKey":"Surface","extent":{"biomeKeys":["N"]}}"#;
+
+    fn event_slot_path(target: &ResolvedTarget) -> PathBuf {
+        safe_destination(target, EVENT_SLOT).unwrap()
+    }
+
+    #[test]
+    fn the_event_write_fills_slot_zero_with_its_event_entry_and_leaves_the_active_slot() {
+        let temporary = TemporaryDirectory::new("publish-event");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        let unset = publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        assert_eq!(unset.status, PublicationStatus::Blocked);
+        remember_target(&config, &target).unwrap();
+        publish(
+            &config,
+            &package,
+            3,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        let written = publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        assert_eq!(
+            written.status,
+            PublicationStatus::Published,
+            "{}",
+            written.message
+        );
+        assert_eq!(
+            written.message,
+            "The event slot now holds Week 42: Staff sprint."
+        );
+        assert_eq!(
+            event_slot_path(&target)
+                .file_name()
+                .and_then(|name| name.to_str()),
+            Some("slot-0.runplanner.json")
+        );
+        assert_eq!(
+            fs::read_to_string(event_slot_path(&target)).unwrap(),
+            encode_slot(&package.build_id, EVENT_PLAN)
+        );
+        let written = overview(&target);
+        assert_eq!(
+            written["slots"]["0"]["event"],
+            serde_json::json!({
+                "id": "2026-w42-staff",
+                "title": "Week 42: Staff sprint",
+                "endsAt": "2026-10-19T00:00:00Z"
+            })
+        );
+        assert_eq!(written["slots"]["0"]["fingerprint"], "event-print");
+        assert_eq!(written["slots"]["3"]["label"], "Circe - Surface");
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 3 }
+        );
+        let inspection = inspect(&target, &package).unwrap();
+        assert_eq!(inspection.event_slot.facts.state, PlanSlotState::Present);
+        assert_eq!(inspection.event_slot.event, Some(event()));
+        assert_eq!(inspection.plan_slots.len(), 12);
+        // A later send to another slot keeps the event entry.
+        publish(
+            &config,
+            &package,
+            4,
+            PRESENT_PLAN,
+            summary("Momus - Underworld"),
+        );
+        assert_eq!(
+            overview(&target)["slots"]["0"]["event"]["id"],
+            "2026-w42-staff"
+        );
+    }
+
+    #[test]
+    fn the_event_slot_is_never_a_send_destination_but_may_be_made_active() {
+        let temporary = TemporaryDirectory::new("publish-event-readonly");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let refused = publish(
+            &config,
+            &package,
+            EVENT_SLOT,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        assert_eq!(refused.status, PublicationStatus::NativeWrite);
+        assert_eq!(
+            refused.message,
+            "plan slot must be between 1 and 12 (got 0)"
+        );
+        assert!(!event_slot_path(&target).exists());
+        let empty = set_active_slot(&config, &package, EVENT_SLOT);
+        assert_eq!(empty.status, ActivationStatus::NotPresent);
+        assert_eq!(empty.message, "The event slot has no plan to make active.");
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        let set = set_active_slot(&config, &package, EVENT_SLOT);
+        assert_eq!(set.status, ActivationStatus::Activated, "{}", set.message);
+        assert_eq!(
+            fs::read_to_string(active_slot_path(&target)).unwrap(),
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":0}"#
+        );
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 0 }
+        );
+    }
+
+    #[test]
+    fn invalid_event_metadata_writes_nothing() {
+        let temporary = TemporaryDirectory::new("publish-event-invalid");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let mut late = event();
+        late.ends_at = "2026-10-19".to_owned();
+        let refused = publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            late,
+        );
+        assert_eq!(refused.message, "Invalid event summary.");
+        assert!(!event_slot_path(&target).exists());
+        assert!(!event_slot_path(&target)
+            .with_file_name(SLOT_OVERVIEW_FILE)
+            .exists());
+    }
+
+    #[test]
+    fn clearing_the_event_slot_removes_its_file_and_entry_only() {
+        let temporary = TemporaryDirectory::new("clear-event");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        assert_eq!(
+            clear_event(&config, &package).status,
+            EventClearStatus::Blocked
+        );
+        remember_target(&config, &target).unwrap();
+        assert_eq!(
+            clear_event(&config, &package).status,
+            EventClearStatus::AlreadyEmpty
+        );
+        publish(
+            &config,
+            &package,
+            2,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        set_active_slot(&config, &package, EVENT_SLOT);
+        let cleared = clear_event(&config, &package);
+        assert_eq!(
+            cleared.status,
+            EventClearStatus::Cleared,
+            "{}",
+            cleared.message
+        );
+        assert!(!event_slot_path(&target).exists());
+        let slots = overview(&target)["slots"].as_object().unwrap().clone();
+        assert_eq!(slots.keys().collect::<Vec<_>>(), ["2"]);
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 0 }
+        );
+        assert_eq!(
+            clear_event(&config, &package).status,
+            EventClearStatus::AlreadyEmpty
+        );
+        assert_eq!(
+            config_files(&target),
+            [
+                ACTIVE_SLOT_FILE,
+                "slot-2.runplanner.json",
+                SLOT_OVERVIEW_FILE
+            ]
+        );
+        // Slot 0 deleted by hand leaves its entry; clearing repairs the overview.
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        fs::remove_file(event_slot_path(&target)).unwrap();
+        assert!(overview(&target)["slots"]["0"].is_object());
+        assert_eq!(inspect(&target, &package).unwrap().event_slot.event, None);
+        let repaired = clear_event(&config, &package);
+        assert_eq!(
+            repaired.status,
+            EventClearStatus::Cleared,
+            "{}",
+            repaired.message
+        );
+        assert!(overview(&target)["slots"].get("0").is_none());
+        assert_eq!(overview(&target)["slots"]["2"]["label"], "Circe - Surface");
+    }
+
+    #[test]
+    fn an_event_write_or_clear_whose_overview_cannot_be_committed_rolls_slot_zero_back() {
+        let temporary = TemporaryDirectory::new("event-rollback");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let overview_path = event_slot_path(&target).with_file_name(SLOT_OVERVIEW_FILE);
+        let block_overview = || {
+            fs::remove_file(&overview_path).unwrap();
+            fs::create_dir(&overview_path).unwrap();
+            fs::write(overview_path.join("held"), "x").unwrap();
+        };
+        // A first event write that fails leaves no slot 0 behind.
+        publish(
+            &config,
+            &package,
+            1,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        let previous_overview = fs::read(&overview_path).unwrap();
+        let envelope = encode_slot(&package.build_id, EVENT_PLAN);
+        let event_entry = || SentEntry {
+            slot: EVENT_SLOT,
+            summary: summary("Circe - Surface"),
+            event: Some(event()),
+        };
+        let staged = stage_slot_and_overview(
+            &target,
+            Some(&package.build_id),
+            EVENT_SLOT,
+            SlotChange::Write {
+                envelope: envelope.as_bytes(),
+                entry: event_entry(),
+            },
+        )
+        .unwrap();
+        block_overview();
+        let failed = commit_slot_and_overview(staged).unwrap_err();
+        assert!(
+            failed.ends_with("; the plan slot was left as it was."),
+            "{failed}"
+        );
+        assert!(!event_slot_path(&target).exists());
+        fs::remove_dir_all(&overview_path).unwrap();
+        fs::write(&overview_path, &previous_overview).unwrap();
+        // A clear that fails restores the event plan.
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        let previous_slot = fs::read(event_slot_path(&target)).unwrap();
+        let staged = stage_slot_and_overview(
+            &target,
+            Some(&package.build_id),
+            EVENT_SLOT,
+            SlotChange::Remove,
+        )
+        .unwrap();
+        block_overview();
+        assert!(commit_slot_and_overview(staged).is_err());
+        assert_eq!(fs::read(event_slot_path(&target)).unwrap(), previous_slot);
+        fs::remove_dir_all(&overview_path).unwrap();
+        assert_eq!(
+            config_files(&target),
+            [
+                ACTIVE_SLOT_FILE,
+                "slot-0.runplanner.json",
+                "slot-1.runplanner.json"
+            ]
+        );
     }
 }

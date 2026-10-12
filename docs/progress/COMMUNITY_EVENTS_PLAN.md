@@ -36,6 +36,35 @@ victory screen.
 - `events.json` (versioned format) lists events with metadata, the project
   download URL and compiled plans keyed by build id:
   `plans: { "<buildId>": <execution plan> }`.
+- Each listed event is one event document, the same object a local event file
+  holds (gate 1's development import reads exactly this shape):
+
+  ```json
+  {
+    "format": "run-planner-event",
+    "formatVersion": 1,
+    "id": "2026-w42-staff",
+    "title": "Week 42: Staff sprint",
+    "description": "Free text, line breaks allowed.",
+    "rules": "Optional free text.",
+    "startsAt": "2026-10-12T00:00:00Z",
+    "endsAt": "2026-10-19T00:00:00Z",
+    "projectUrl": "https://… (optional)",
+    "plans": { "<buildId>": { "format": "run-planner-execution", "…": "…" } }
+  }
+  ```
+
+  Strict decode (unknown keys refused), at most 4 MiB: `id` lower-case letters,
+  digits and inner hyphens within 64 characters; `title` single-line within 80;
+  `description` and `rules` within 2000; no Unicode format characters or line and
+  paragraph separators in any text; times UTC `YYYY-MM-DDTHH:MM:SS[.f]Z`
+  with `endsAt` after `startsAt`; `projectUrl` `https://` within 2048; 1 to 16
+  plans keyed by distinct build ids, each an execution-plan object kept byte for
+  byte. A valid document without a plan for the bundled build is a distinct
+  `NoPlanForBuild` outcome (skip), separate from an invalid document (refuse).
+  The host owns this decoder (`community_event.rs`) and selects the plan for
+  the bundled build.
+
 - Signed with the existing updater minisign key; the app verifies it with the
   embedded updater public key.
 - Expired events (past `endsAt`) are dropped from the feed.

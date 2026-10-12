@@ -1036,6 +1036,19 @@
   color: #e8c27a;
 }
 
+.game-panel-event-ends {
+  display: block;
+  color: #aaa7af;
+  font-size: 0.9em;
+}
+
+.game-panel-event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 @media (max-width: 640px) {
   .game-panel-slots thead {
     position: absolute;
