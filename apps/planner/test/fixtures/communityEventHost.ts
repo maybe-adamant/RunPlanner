@@ -21,7 +21,7 @@ export function eventPlan(
       startsAt: '2026-10-12T00:00:00Z',
       endsAt: '2026-10-19T00:00:00Z',
       projectUrl:
-        'https://github.com/maybe-adamant/RunPlanner/releases/download/events/2026-w42-staff.runplanner.json',
+        'https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/2026-w42-staff.runplanner.json',
       projectSha256: '5650824531e382c27c755760f7bc6db4c5b690a5df74dc9438e26995bf2f7fbf',
       ...overrides,
     },

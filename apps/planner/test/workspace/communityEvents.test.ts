@@ -268,7 +268,7 @@ describe('community event controller', () => {
       rules: 'Fear 8.',
     });
     expect(document.projectUrl).toBe(
-      'https://github.com/maybe-adamant/RunPlanner/releases/download/events/2026-w42-staff.runplanner.json',
+      'https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/2026-w42-staff.runplanner.json',
     );
     const project = application.store.getState().projectWorkspace;
     if (project.kind !== 'openProject') throw new Error('Expected an open project');

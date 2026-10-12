@@ -49,16 +49,13 @@ fn session<'a>(
         .map_err(|_| "Community event state is unavailable.".to_owned())
 }
 
-/// The updater public key in `tauri.conf.json`, which also signs the event feed.
-fn public_key(app: &AppHandle) -> Result<String, String> {
-    app.config()
-        .plugins
-        .0
-        .get("updater")
-        .and_then(|updater| updater.get("pubkey"))
-        .and_then(|key| key.as_str())
-        .map(str::to_owned)
-        .ok_or_else(|| "The updater public key is not configured.".to_owned())
+/// The event feed's own public key, checked in beside the app; not the updater's.
+const EVENT_PUBLIC_KEY: &str = include_str!("../event-feed.pub");
+
+fn public_key() -> Result<&'static str, String> {
+    event_feed::event_public_key(EVENT_PUBLIC_KEY).inspect_err(|problem| {
+        eprintln!("[RunPlanner] community events: {problem}");
+    })
 }
 
 fn cache_directory(app: &AppHandle) -> Result<PathBuf, String> {
@@ -148,13 +145,20 @@ pub async fn event_feed_refresh(
         )
     };
     if fetch {
-        let key = public_key(&app)?;
+        let Ok(key) = public_key() else {
+            session(&events)?.disable();
+            return Ok(EventFeedSnapshot {
+                active: None,
+                source: FeedSource::Disabled,
+                problem: None,
+            });
+        };
         let not_before =
-            held.or_else(|| cached_feed(&app, &key, &build_id).map(|cached| cached.signed_at));
-        match fetch_feed(&app, &key, &build_id, not_before).await {
+            held.or_else(|| cached_feed(&app, key, &build_id).map(|cached| cached.signed_at));
+        match fetch_feed(&app, key, &build_id, not_before).await {
             Ok(verified) => session(&events)?.accept_fetched(verified, started),
             Err(message) => {
-                let cached = cached_feed(&app, &key, &build_id);
+                let cached = cached_feed(&app, key, &build_id);
                 session(&events)?.fetch_failed(|| cached, started);
                 problem = Some(message);
             }
