@@ -156,6 +156,7 @@ describe('start point run modifier', () => {
     expect(RUN_MODIFIER_GOLD).toEqual({ min: 0, max: 99_999, step: 1 });
     expect(isRunModifierValue(declaration, startPoint)).toBe(true);
     expect(isRunModifierValue(declaration, { biomeKey: 'G', point: 'opening' })).toBe(true);
+    expect(isRunModifierValue(declaration, { biomeKey: 'G', point: 'boss' })).toBe(true);
     for (const value of [
       undefined,
       { ...startPoint, gold: 2.5 },
@@ -190,6 +191,9 @@ describe('start point run modifier', () => {
       expect(
         decodeRunModifiers({ startPoint: { ...startPoint, gold: stored } }, 'runModifiers'),
       ).toEqual({ startPoint: { ...startPoint, gold: healed } });
+    expect(
+      decodeRunModifiers({ startPoint: { biomeKey: 'G', point: 'boss' } }, 'runModifiers'),
+    ).toEqual({ startPoint: { biomeKey: 'G', point: 'boss' } });
     const dangling = { biomeKey: 'NotABiome', point: 'opening', extra: true };
     expect(decodeRunModifiers({ startPoint: dangling }, 'runModifiers')).toEqual({
       startPoint: { biomeKey: 'NotABiome', point: 'opening' },

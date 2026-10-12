@@ -15,11 +15,12 @@ export interface ExecutionGraphDocument {
 
 /**
  * A mid-run start names a selected occurrence of a configured biome: the
- * biome's first selected room for an Opening, a later one for a Preboss. The
- * route cursor starts at its index, so every earlier selected occurrence
- * belongs to the biomes the start's visit order has already entered. That a
- * Preboss start names the biome's Preboss room is assembly's guarantee, which
- * the fingerprint carries; occurrences do not publish room kinds.
+ * biome's first selected room for an Opening, a later one for a Preboss or
+ * Boss. The route cursor starts at its index, so every earlier selected
+ * occurrence belongs to the biomes the start's visit order has already
+ * entered. That a mid-biome start names the biome's Preboss or Boss room is
+ * assembly's guarantee, which the fingerprint carries; occurrences do not
+ * publish room kinds.
  */
 function validateStartState(
   graph: ExecutionGraphDocument,
@@ -33,10 +34,10 @@ function validateStartState(
   if (target.biomeKey !== start.biomeKey || target.gameName !== start.roomName)
     invalid('startState contradicts its occurrence identity');
   const biomeIndex = graph.extent.biomeKeys.indexOf(start.biomeKey);
-  const preboss = start.point === 'preboss';
-  if (biomeIndex < 0 || (!preboss && biomeIndex === 0))
+  const midBiome = start.point !== 'opening';
+  if (biomeIndex < 0 || (!midBiome && biomeIndex === 0))
     invalid('startState.biomeKey must be a configured biome after the route start');
-  const visited = graph.extent.biomeKeys.slice(0, preboss ? biomeIndex + 1 : biomeIndex);
+  const visited = graph.extent.biomeKeys.slice(0, midBiome ? biomeIndex + 1 : biomeIndex);
   if (
     start.biomeVisitOrder.length !== visited.length ||
     start.biomeVisitOrder.some((biomeKey, index) => biomeKey !== visited[index])
@@ -45,13 +46,13 @@ function validateStartState(
   const firstOfBiome = graph.selectedOccurrenceIds.findIndex(
     (id) => occurrences.get(id)?.biomeKey === start.biomeKey,
   );
-  if (preboss ? cursor === firstOfBiome : cursor !== firstOfBiome)
+  if (midBiome ? cursor === firstOfBiome : cursor !== firstOfBiome)
     invalid(`startState.occurrenceId is not the ${start.biomeKey} ${start.point}`);
-  if (preboss !== (start.biome !== undefined))
-    invalid('startState.biome is present exactly for a Preboss start');
+  if (midBiome !== (start.biome !== undefined))
+    invalid('startState.biome is present exactly for a Preboss or Boss start');
   if (
     start.biome !== undefined &&
-    (start.biome.clockwork !== undefined) !== (start.biomeKey === 'I')
+    (start.biome.clockwork !== undefined) !== (start.biomeKey === 'I' && start.point === 'preboss')
   )
     invalid('startState.biome.clockwork is present exactly for an I Preboss');
 }

@@ -443,10 +443,10 @@ generation exceptions retain public launchers. A literal pre-exit snapshot must
 not replace or relabel either exception. N parent and Hub restoration replay no
 lifecycle and therefore create no duplicate Run State checkpoint.
 
-Separately from these checkpoints, each Preboss occurrence captures the raw
-states its preparation receives as the source of a mid-run start installation:
-after its predecessor's departure clocks and before its own preparation and
-entry effects. Those states already include the room's creation (its incoming
+Separately from these checkpoints, each Preboss and completion Boss occurrence
+captures the raw states its preparation receives as the source of a mid-run
+start installation: after its predecessor's departure clocks and before its
+own preparation and entry effects. Those states already include the room's creation (its incoming
 offer and bag effects). The capture is owned by the occurrence and is never a
 Run State.
 

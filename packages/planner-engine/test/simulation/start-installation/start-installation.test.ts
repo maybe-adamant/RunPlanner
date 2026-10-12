@@ -87,7 +87,7 @@ describe('mid-run start installation', () => {
 
   it('installs a Preboss from its captured start state with current biome records', () => {
     const installation = golden.installed({ biomeKey: 'G', kind: 'preboss' });
-    const capture = golden.biome('G').rewards.prebossStartState!;
+    const capture = golden.biome('G').rewards.midBiomeStartStates!.preboss!;
     const [state] = capture.states;
     expect(installation).toMatchObject({
       startOccurrence: capture.owner,
@@ -105,11 +105,42 @@ describe('mid-run start installation', () => {
     });
   });
 
-  it('stubs Hub restores in the room history of a Hub-sourced Preboss', () => {
-    const installation = evaluated(loadSurfaceNOPQProject()).installed({
-      biomeKey: 'N',
-      kind: 'preboss',
+  const nopq = evaluated(loadSurfaceNOPQProject());
+
+  it.each([
+    ['a generated biome', golden, 'G'],
+    ['Mourning Fields', golden, 'H'],
+    ['Ephyra', nopq, 'N'],
+  ] as const)('installs a Boss in %s from the state after its Preboss', (_, route, biomeKey) => {
+    const preboss = route.installed({ biomeKey, kind: 'preboss' });
+    const boss = route.installed({ biomeKey, kind: 'boss' });
+    const capture = route.biome(biomeKey).rewards.midBiomeStartStates!.boss!;
+    expect(boss).toMatchObject({
+      startOccurrence: capture.owner,
+      startRoomGameName: capture.gameName,
+      route: preboss.route,
+      biomeRecords: { form: 'current' },
     });
+    // The Preboss departs with one room-history record and no encounter.
+    expect(boss.roomHistory).toEqual([
+      ...preboss.roomHistory,
+      { gameName: preboss.startRoomGameName, nextRoomSet: false },
+    ]);
+    expect(boss.counters).toMatchObject({
+      roomHistoryOrdinal: preboss.counters.roomHistoryOrdinal + 1,
+      routeEncounterDepth: preboss.counters.routeEncounterDepth,
+      biomeDepthCache: preboss.counters.biomeDepthCache + 1,
+    });
+  });
+
+  it('installs Clockwork counters at an I Preboss only', () => {
+    const boss = golden.installed({ biomeKey: 'I', kind: 'boss' });
+    expect(boss.startRoomGameName).toBe('I_Boss01');
+    expect(boss.counters).not.toHaveProperty('clockwork');
+  });
+
+  it('stubs Hub restores in the room history of a Hub-sourced Preboss', () => {
+    const installation = nopq.installed({ biomeKey: 'N', kind: 'preboss' });
     expect(installation.startRoomGameName).toBe('N_PreBoss01');
     expect(installation.roomHistory).toHaveLength(installation.counters.roomHistoryOrdinal);
     expect(installation.roomHistory.at(-1)?.gameName).toBe('N_Hub');
@@ -161,7 +192,7 @@ describe('mid-run start installation', () => {
   describe('branch agreement', () => {
     const startPoint: StartPoint = { biomeKey: 'G', kind: 'preboss' };
     const base = golden.installed(startPoint);
-    const [state] = golden.biome('G').rewards.prebossStartState!.states;
+    const [state] = golden.biome('G').rewards.midBiomeStartStates!.preboss!.states;
     const project = (states: readonly SimulationState[], kind: StartPoint['kind'] = 'preboss') =>
       projectStartInstallation(catalog, {
         startPoint: { biomeKey: 'G', kind },
@@ -187,7 +218,7 @@ describe('mid-run start installation', () => {
         clock,
         remainingUses,
         source: Object.freeze({
-          occurrence: golden.biome('G').rewards.prebossStartState!.owner,
+          occurrence: golden.biome('G').rewards.midBiomeStartStates!.preboss!.owner,
           generationKey: 'initial:healing' as const,
         }),
       });
@@ -313,7 +344,7 @@ describe('mid-run start installation', () => {
   describe('held keepsakes and max-stat grants', () => {
     const startPoint: StartPoint = { biomeKey: 'G', kind: 'preboss' };
     const base = golden.installed(startPoint);
-    const [state] = golden.biome('G').rewards.prebossStartState!.states;
+    const [state] = golden.biome('G').rewards.midBiomeStartStates!.preboss!.states;
     const wheel = 'ManaOverTimeRefundKeepsake';
     const installed = (
       keepsakes: Partial<SimulationState['keepsakes']>,

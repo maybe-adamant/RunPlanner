@@ -109,8 +109,8 @@ function install.runOverrides(start, routeKey)
         end
         overrides.DreamBiomePool = pool
         -- The biome completed before the current one (DreamRunLogic.lua:76); a
-        -- Preboss's visit order already includes its own biome.
-        local previous = #start.biomeVisitOrder - (start.point == "preboss" and 1 or 0)
+        -- mid-biome start's visit order already includes its own biome.
+        local previous = #start.biomeVisitOrder - (start.point ~= "opening" and 1 or 0)
         overrides.PrevDreamBiome = start.biomeVisitOrder[previous]
     end
     return overrides
@@ -118,7 +118,7 @@ end
 
 -- Native StartNewRun creates args.RoomName directly. A later Dream biome's
 -- Opening enters as DreamRunLogic.EnterNextDreamBiome does from a Dream
--- Postboss; a Preboss is not a biome entry.
+-- Postboss; a Preboss or Boss is not a biome entry.
 function install.redirect(args, start, routeKey)
     args.RoomName = start.roomName
     if routeKey == "Dream" and start.point == "opening" then
@@ -499,7 +499,7 @@ function install.barren(start)
 end
 
 -- Run-wide records: an Opening's after native InitializeRewardStores and before
--- the start room's creation reads them (RunLogic.lua:502-506), a Preboss's
+-- the start room's creation reads them (RunLogic.lua:502-506), a Preboss's or Boss's
 -- after its creation.
 function install.records(start)
     local run = _G.CurrentRun
@@ -527,11 +527,11 @@ local function generateShop(room)
     if not ok then error(result, 0) end
 end
 
--- A Preboss's captured state already includes its own creation, so its records
--- replace what native CreateRoom wrote, before StartRoom reads them. The map
--- load before StartRoom derives BiomeDepthCache from the stub history
--- (PatchLogic.lua:687-689); the self-check compares it.
-function install.prebossRoom(start, room)
+-- A Preboss's or Boss's captured state already includes its own creation, so
+-- its records replace what native CreateRoom wrote, before StartRoom reads
+-- them. The map load before StartRoom derives BiomeDepthCache from the stub
+-- history (PatchLogic.lua:687-689); the self-check compares it.
+function install.midBiomeRoom(start, room)
     install.records(start)
     local run, biome = _G.CurrentRun, start.biome
     -- Absent is native BiomeEncounterDepth unset.
@@ -550,11 +550,13 @@ function install.prebossRoom(start, room)
         run.MaxClockworkNonGoalRewards = biome.clockwork.maxClockworkNonGoalRewards
     end
     -- Tight Deadline grants its allowance only in a BiomeStartRoom
-    -- (RoomLogic.lua:1205-1215); a Preboss start begins with it full.
+    -- (RoomLogic.lua:1205-1215), which neither a Preboss nor a Boss inherits
+    -- (RoomDataF.lua:2019-2021); the start begins with it full.
     if _G.GetNumShrineUpgrades("BiomeSpeedShrineUpgrade") > 0 then
         run.BiomeTime = math.max(run.BiomeTime or 0, 0) + _G.MetaUpgradeData.BiomeSpeedShrineUpgrade.ChangeValue
     end
-    generateShop(room)
+    -- A Boss spawns no shop; the Postboss's follows the Boss's own LeaveRoom.
+    if start.point == "preboss" then generateShop(room) end
 end
 
 -- The authored gold on top of native starting gold, written as
@@ -586,7 +588,7 @@ function install.heroSetup(base, room)
     return result
 end
 
--- The maxima, and a Preboss's biome depth as the map load derived it.
+-- The maxima, and a mid-biome start's biome depth as the map load derived it.
 function install.verifyStart(start)
     local unit = hero()
     local ok, mismatch = proof.compare("practice-start:max-health", start.maxStats.maxHealth, unit.MaxHealth)

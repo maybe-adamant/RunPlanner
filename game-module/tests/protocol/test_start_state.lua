@@ -33,6 +33,10 @@ function TestStartState.testStartFixturesDecodeWithTheirStartPoint()
     lu.assertEquals(preboss.startState.biome.clockwork.remainingClockworkGoals, 0)
     lu.assertEquals(opening.startState.keepsake.traits,
         { { name = "ManaOverTimeRefundKeepsake", rarity = "Epic", slotted = true } })
+    local boss = assert(protocol.decode(wire("underworld-start-g-rivals-boss")))
+    lu.assertEquals({ boss.startState.point, boss.startState.roomName }, { "boss", "G_Boss02" })
+    lu.assertNotNil(boss.startState.biome)
+    lu.assertNil(boss.startState.biome.clockwork)
     local dream = assert(protocol.decode(wire("dream-start-n-opening")))
     lu.assertEquals(dream.routeKey, "Dream")
     lu.assertEquals(dream.startState.biomeKey, "N")
@@ -99,6 +103,14 @@ function TestStartState.testStartOccurrenceIsTheStartPointRoom()
             if occurrence.id == start.occurrenceId then start.roomName = occurrence.gameName end
         end
     end, "start point's room")
+end
+
+function TestStartState.testBossStartCarriesBiomeRecordsWithoutClockwork()
+    rejected("underworld-start-g-rivals-boss", function(start) start.biome = nil end,
+        "exactly for a Preboss or Boss")
+    rejected("underworld-start-g-rivals-boss", function(start)
+        start.biome.clockwork = assert(json.decode('{"remainingClockworkGoals":0,"maxClockworkNonGoalRewards":3}'))
+    end, "exactly for an I Preboss")
 end
 
 function TestStartState.testVisitOrderIsTheBiomesEnteredBeforeTheStart()

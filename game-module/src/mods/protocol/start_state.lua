@@ -1,5 +1,5 @@
 -- Strict decoder for the mid-run start section: the planner's state at a later
--- biome's Opening or a Preboss, in the native terms its install writes.
+-- biome's Opening or at a Preboss or Boss, in the native terms its install writes.
 local p = type(import) == "function" and import("mods/protocol/primitives.lua")
     or require("mods.protocol.primitives")
 
@@ -233,7 +233,7 @@ local function shape(value)
         "arcanaBarren", "disabledVows", "maxStats", "stygianWell", "hermesDeliveries", "rewardPriorities",
         "useRecord", "lootTypeHistory", "consumableRecord", "rewardStores",
     }, { "lastDevotionDepth", "biome", "familiar", "hex" }, LABEL)
-    check(row.point == "opening" or row.point == "preboss", LABEL .. ".point is unsupported")
+    check(row.point == "opening" or row.point == "preboss" or row.point == "boss", LABEL .. ".point is unsupported")
     one(row.biomeKey, biomes, LABEL .. ".biomeKey")
     str(row.occurrenceId, LABEL .. ".occurrenceId")
     str(row.roomName, LABEL .. ".roomName")
@@ -289,7 +289,8 @@ end
 
 -- The start names a selected occurrence of a configured biome after the route
 -- start: its biome's first selected room for an Opening, a later one for a
--- Preboss. That it is the Preboss room the fingerprinted assembly guarantees.
+-- Preboss or Boss. That it is the Preboss or completion Boss room the
+-- fingerprinted assembly guarantees.
 -- Execution's route cursor starts at that index.
 local function references(start, plan, occurrencesById)
     local cursor
@@ -304,10 +305,10 @@ local function references(start, plan, occurrencesById)
     for index, key in ipairs(biomeKeys) do
         if key == start.biomeKey then biomeIndex = index break end
     end
-    local preboss = start.point == "preboss"
-    check(biomeIndex ~= nil and (preboss or biomeIndex > 1),
+    local midBiome = start.point ~= "opening"
+    check(biomeIndex ~= nil and (midBiome or biomeIndex > 1),
         LABEL .. ".biomeKey must be a configured biome after the route start")
-    local entered = preboss and biomeIndex or biomeIndex - 1
+    local entered = midBiome and biomeIndex or biomeIndex - 1
     check(#start.biomeVisitOrder == entered, LABEL .. ".biomeVisitOrder must be the biomes entered before the start")
     for index = 1, entered do
         check(start.biomeVisitOrder[index] == biomeKeys[index],
@@ -318,9 +319,10 @@ local function references(start, plan, occurrencesById)
         local entry = occurrencesById[id]
         if entry and entry.biomeKey == start.biomeKey then first = index break end
     end
-    check((cursor == first) ~= preboss, LABEL .. ".occurrenceId is not the start point's room")
-    check((start.biome ~= nil) == preboss, LABEL .. ".biome is present exactly for a Preboss start")
-    check(start.biome == nil or (start.biome.clockwork ~= nil) == (start.biomeKey == "I"),
+    check((cursor == first) ~= midBiome, LABEL .. ".occurrenceId is not the start point's room")
+    check((start.biome ~= nil) == midBiome, LABEL .. ".biome is present exactly for a Preboss or Boss start")
+    check(start.biome == nil
+        or (start.biome.clockwork ~= nil) == (start.biomeKey == "I" and start.point == "preboss"),
         LABEL .. ".biome.clockwork is present exactly for an I Preboss")
 end
 

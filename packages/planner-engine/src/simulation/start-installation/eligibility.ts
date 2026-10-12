@@ -1,5 +1,9 @@
 import type { ProjectDocument } from '../../authored-project/model';
-import { routeRunModifiers, type RunStartPoint } from '../../authored-project/run-modifiers';
+import {
+  RUN_START_POINTS,
+  routeRunModifiers,
+  type RunStartPoint,
+} from '../../authored-project/run-modifiers';
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type { StartInstallation, StartInstallationUnavailableReason } from './model';
@@ -31,8 +35,6 @@ export type AuthoredStartPointEligibility =
       readonly reason: StartInstallationUnavailableReason;
     };
 
-const START_POINTS: readonly RunStartPoint['point'][] = ['opening', 'preboss'];
-
 function installationFor(
   catalog: Catalog,
   project: ProjectDocument,
@@ -43,7 +45,7 @@ function installationFor(
   return startInstallationAt(catalog, project, evaluation, { biomeKey, kind: point });
 }
 
-/** Every Opening and Preboss on the route's itinerary, in route order. */
+/** Every Opening, Preboss and Boss on the route's itinerary, in route order. */
 export function startPointDomain(
   catalog: Catalog,
   project: ProjectDocument,
@@ -51,7 +53,7 @@ export function startPointDomain(
 ): readonly StartPointOption[] {
   return Object.freeze(
     project.route.itineraryBiomeKeys.flatMap((biomeKey) =>
-      START_POINTS.map((point) => {
+      RUN_START_POINTS.map((point) => {
         const result = installationFor(catalog, project, evaluation, biomeKey, point);
         return Object.freeze({
           biomeKey,

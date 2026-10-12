@@ -6,12 +6,13 @@ import type { StygianWellRunState, StygianWellTimedInstance } from '../commerce/
 import type { HexProgressState } from '../hex-progress';
 import type { KeepsakeState, OlympianProviderSource } from '../keepsakes/state';
 import type { MaxStatGrant } from '../max-stats';
+import type { MidBiomeStartPoint } from '../rewards/model';
 import type { ChaosBlessingInstance, ChaosCurseInstance } from '../traits/history/model';
 
-/** A mid-run start: a biome's Opening (Intro) or its Preboss. */
+/** A mid-run start: a biome's Opening (Intro), its Preboss or its Boss. */
 export interface StartPoint {
   readonly biomeKey: string;
-  readonly kind: 'opening' | 'preboss';
+  readonly kind: 'opening' | MidBiomeStartPoint;
 }
 
 /** The install families that must agree across every reached branch. */
@@ -183,7 +184,7 @@ export interface StartRunRecords {
   readonly consumableRecord: Readonly<Record<string, number>>;
 }
 
-/** Biome-local records: after the native biome-start reset at an Opening, current at a Preboss. */
+/** Biome-local records: after the native biome-start reset at an Opening, current mid-biome. */
 export interface StartBiomeRecords {
   readonly form: 'postReset' | 'current';
   readonly biomeUseRecord: Readonly<Record<string, number>>;
@@ -212,7 +213,7 @@ export interface StartRewardStore {
 }
 
 /**
- * A Preboss's stores already include its own creation; an Opening's are its
+ * A mid-biome start's stores already include its room's creation; an Opening's are its
  * predecessor's, before the start room is created.
  */
 export interface StartRewardStores {
@@ -242,7 +243,7 @@ export interface StartRoomHistoryRecord {
 
 /**
  * The start biome is excluded for an Opening, whose native Intro enters it,
- * and included for a Preboss, which is already inside it.
+ * and included mid-biome, where the run is already inside it.
  */
 export interface StartInstallationRoute {
   readonly routeKey: string;
@@ -258,7 +259,7 @@ export interface StartInstallationRoute {
  */
 export interface StartInstallation {
   readonly startPoint: StartPoint;
-  /** The Preboss whose received state is installed; an Opening installs its predecessor's terminal state. */
+  /** The Preboss or Boss whose received state is installed; an Opening installs its predecessor's terminal state. */
   readonly startOccurrence?: OccurrenceAddress;
   readonly startRoomGameName: string;
   readonly route: StartInstallationRoute;

@@ -60,8 +60,8 @@ function hooks.attach(module, session, getState, report, hexTree)
             -- gold follows the gold native StartNewRun credits.
             state.practiceStart.phase = "started"
             local start = state.plan.startState
-            if start.point == "preboss" then
-                guarded(session, state, function() install.prebossRoom(start, _G.CurrentRun.CurrentRoom) end)
+            if start.point ~= "opening" then
+                guarded(session, state, function() install.midBiomeRoom(start, _G.CurrentRun.CurrentRoom) end)
             end
             guarded(session, state, function() install.creditGold(start) end)
             report(runtime)
@@ -136,8 +136,8 @@ function hooks.attach(module, session, getState, report, hexTree)
     end)
 
     -- Room-start effects, including an Opening's biome-start keepsake effects,
-    -- have run; player input and the encounter have not. A Preboss is not a
-    -- BiomeStartRoom, so only its ordinary room-start effects have run.
+    -- have run; player input and the encounter have not. A Preboss or Boss is
+    -- not a BiomeStartRoom, so only its ordinary room-start effects have run.
     module.hooks.wrap("StartRoomPresentation", "run-planner-practice-check", function(_, runtime, base, ...)
         local state = getState(runtime)
         if phase(state, "entered") then

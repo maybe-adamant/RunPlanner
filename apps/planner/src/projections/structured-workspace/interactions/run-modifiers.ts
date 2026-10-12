@@ -29,7 +29,11 @@ import type {
   WorkspaceStartPointRow,
 } from '../contracts/structure';
 
-const START_POINT_LABELS = Object.freeze({ opening: 'Opening', preboss: 'Preboss' } as const);
+const START_POINT_LABELS = Object.freeze({
+  opening: 'Opening',
+  preboss: 'Preboss',
+  boss: 'Boss',
+} as const);
 
 export function startPointLabel(catalog: Catalog, startPoint: Omit<RunStartPoint, 'gold'>): string {
   const biome = catalog.biomes.byKey[startPoint.biomeKey]?.label ?? startPoint.biomeKey;

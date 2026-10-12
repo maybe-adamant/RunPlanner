@@ -1184,6 +1184,11 @@
   padding: 0.5rem;
 }
 
+/* Sized to its four-column grid rather than the trigger. */
+.contextual-picker-popover.route-start-point-popover {
+  width: max-content;
+}
+
 .route-start-point-option {
   padding: 0.3rem 0.6rem;
   border: 1px solid #3a3b45;
@@ -1216,7 +1221,7 @@
 
 .route-start-point-row {
   display: grid;
-  grid-template-columns: 8rem 6rem 6rem;
+  grid-template-columns: 8rem 6rem 6rem 6rem;
   align-items: center;
   gap: 0.35rem;
 }

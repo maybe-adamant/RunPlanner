@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -236,12 +236,25 @@ describe('Practice mode', () => {
     expect(view.modifiers()).toEqual({
       startPoint: { biomeKey: 'H', point: 'preboss', gold: 250 },
     });
+    // The Boss is the row's third column.
+    await view.user.click(startAt());
+    const fields = await screen.findByRole('group', { name: 'Fields' });
+    expect(
+      within(fields)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Opening', 'Preboss', 'Boss']);
+    await view.user.click(within(fields).getByRole('button', { name: 'Fields Boss' }));
+    expect(view.modifiers()).toEqual({
+      startPoint: { biomeKey: 'H', point: 'boss', gold: 250 },
+    });
+    expect(startAt().textContent).toContain('Fields · Boss');
     await view.user.click(practice());
     expect(view.project().route.loadout.runModifiers).toBeUndefined();
     expect(gold().value).toBe('');
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(view.modifiers()).toEqual({
-      startPoint: { biomeKey: 'H', point: 'preboss', gold: 250 },
+      startPoint: { biomeKey: 'H', point: 'boss', gold: 250 },
     });
   });
 

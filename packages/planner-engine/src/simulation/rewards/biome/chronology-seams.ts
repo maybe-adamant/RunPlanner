@@ -7,6 +7,7 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
+import { resolveCompletionBoss } from '../../../authored-project/completion-boss';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { attestEncounterEntryVowRanks } from '../../arcana-fear';
 import type { HistoryEvent } from '../../history';
@@ -20,6 +21,7 @@ import {
 import { reachSimulationHistory } from '../../state/transitions';
 import { attestDerivedAcquisitionEntryCandidateCapability } from '../acquisition/artifacts';
 import { advanceRewardBranches } from '../branch-lifecycle';
+import type { MidBiomeStartPoint } from '../model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import {
   generationFindings,
@@ -843,24 +845,38 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   };
 };
 
+/** The completion room a mid-biome start point names, when `room` is one. */
+function midBiomeStartPoint(
+  context: ChronologyWalkContext,
+  room: CanonicalAuthoredRoom,
+): MidBiomeStartPoint | undefined {
+  const { catalog, routePosition } = context;
+  if (room.gameName === routePosition.completion.prebossRoomGameName) return 'preboss';
+  if (room.roomKind !== 'Boss') return undefined;
+  const boss = resolveCompletionBoss(
+    catalog,
+    routePosition,
+    context.routeLoadout.fearRanks.BossDifficultyShrineUpgrade ?? 0,
+  );
+  return room.gameName === boss.gameName ? 'boss' : undefined;
+}
+
 /**
- * A Preboss's received states, after its predecessor's departure and before
- * its own preparation and entry, are the mid-run start state.
+ * A Preboss's or completion Boss's received states, after its predecessor's
+ * departure and before its own preparation and entry, are a mid-biome start state.
  */
-function prebossStartState(
+function roomStartState(
   context: ChronologyWalkContext,
   state: ChronologyWalkState,
   room: CanonicalAuthoredRoom | undefined,
 ): readonly ChronologyEmission[] {
-  if (
-    room === undefined ||
-    room.gameName !== context.routePosition.completion.prebossRoomGameName ||
-    state.branches.length === 0
-  )
-    return [];
+  if (room === undefined || state.branches.length === 0) return [];
+  const point = midBiomeStartPoint(context, room);
+  if (point === undefined) return [];
   return [
     {
-      kind: 'prebossStartState',
+      kind: 'roomStartState',
+      point,
       capture: Object.freeze({
         owner: room.origin,
         gameName: room.gameName,
@@ -880,7 +896,7 @@ const roomPrepared: ChronologySeamHandler<'roomPrepared'> = (context, state, eve
     state.branches,
   );
   return {
-    leadingEmissions: prebossStartState(context, state, room),
+    leadingEmissions: roomStartState(context, state, room),
     state: Object.freeze({
       ...state,
       branches: transition.branches,

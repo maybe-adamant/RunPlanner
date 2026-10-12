@@ -257,7 +257,7 @@ function arcana(catalog: Catalog, state: SimulationState): StartInstallation['ar
   });
 }
 
-/** An Opening's states have already had the biome-start reset; a Preboss's are current. */
+/** An Opening's states have already had the biome-start reset; a Preboss's or Boss's are current. */
 function biomeRecords(state: SimulationState, form: StartBiomeRecords['form']): StartBiomeRecords {
   return Object.freeze({
     form,

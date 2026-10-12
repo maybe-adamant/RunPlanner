@@ -129,7 +129,9 @@ local function nativeWorld(base, start)
                 data.PropertyChanges = { { LuaProperty = property, ChangeValue = 25 } }
             end
             if args.TraitName == "SpellPotionTrait" then data.MaxUses = 3 end
-            if args.TraitName:match("^Chaos") then data.PropertyChanges, data.RarityBonus = { {}, {} }, {} end
+            if args.TraitName:match("^Chaos") then
+                data.PropertyChanges, data.RarityBonus, data.AddOutgoingDamageModifiers = { {}, {} }, {}, {}
+            end
             if args.TraitName == "FocusLastStandBoon" then data.AcquireFunctionArgs = { Name = "Athena" } end
             -- TraitData_Essence: each <Element>Essence inherits its element boon's Elements.
             local essence = args.TraitName:match("^(%u%l+)Essence$")
@@ -580,6 +582,28 @@ function TestPracticeStart.testPrebossRecordsFollowItsCreation()
     lu.assertEquals(state.practiceStart.phase, "started")
 end
 
+function TestPracticeStart.testBossRecordsFollowItsCreationWithoutAShop()
+    local plan = decode("underworld-start-g-rivals-boss")
+    local start = plan.startState
+    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, start)
+    local state, _, created = startRun(plan, world, { StartingBiome = "F" })
+    local run = world.run
+    lu.assertEquals(state.state, "synchronized")
+    lu.assertEquals(state.route.index, indexOf(plan.selectedOccurrenceIds, start.occurrenceId))
+    lu.assertEquals(created.args, { StartingBiome = "F", RoomName = "G_Boss02" })
+    lu.assertTrue(created.creating)
+    lu.assertEquals(run.UseRecord, start.useRecord)
+    lu.assertEquals(run.LootTypeHistory, start.lootTypeHistory)
+    lu.assertEquals(run.BiomeVisitOrder, { "F", "G" })
+    lu.assertEquals(run.EnteredBiomes, 2)
+    lu.assertEquals(run.RoomHistory[#run.RoomHistory].Name, "G_PreBoss01")
+    lu.assertEquals(run.BiomeEncounterDepth, start.biome.biomeEncounterDepth)
+    lu.assertEquals(run.BiomeUseRecord, start.biome.biomeUseRecord)
+    lu.assertNil(run.RemainingClockworkGoals)
+    for _, entry in ipairs(world.log) do lu.assertNil(entry:match("^shop:")) end
+    lu.assertEquals(state.practiceStart.phase, "started")
+end
+
 function TestPracticeStart.testOpeningGeneratesNoShop()
     local plan = decode("surface-start-q-opening")
     local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
@@ -594,7 +618,7 @@ local function prebossRoom(mutate)
     if mutate then mutate(start, world) end
     local restore = nativeGame.install(world.bindings)
     _G.CurrentRun = world.run
-    local ok, errorValue = pcall(install.prebossRoom, start, { Name = start.roomName })
+    local ok, errorValue = pcall(install.midBiomeRoom, start, { Name = start.roomName })
     restore()
     assert(ok, errorValue)
     return world
@@ -612,6 +636,20 @@ function TestPracticeStart.testPrebossStartsWithTheFullTightDeadlineAllowance()
     lu.assertNil(world.run.BiomeTime)
 end
 
+function TestPracticeStart.testBossStartsWithTheFullTightDeadlineAllowance()
+    local start = copy(decode("underworld-start-g-rivals-boss").startState)
+    local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 }, start)
+    world.bindings.MetaUpgradeData = { BiomeSpeedShrineUpgrade = { ChangeValue = 420 } }
+    world.gameState.ShrineUpgrades.BiomeSpeedShrineUpgrade = 1
+    local restore = nativeGame.install(world.bindings)
+    _G.CurrentRun = world.run
+    local ok, errorValue = pcall(install.midBiomeRoom, start, { Name = start.roomName })
+    restore()
+    assert(ok, errorValue)
+    lu.assertEquals(world.run.BiomeTime, 420)
+    for _, entry in ipairs(world.log) do lu.assertNil(entry:match("^shop:")) end
+end
+
 function TestPracticeStart.testPrebossShopErrorRestoresTheGlobalRoomData()
     local start = decode("underworld-start-i-preboss").startState
     local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 }, start)
@@ -620,7 +658,7 @@ function TestPracticeStart.testPrebossShopErrorRestoresTheGlobalRoomData()
     world.nativeGlobals.roomData = prior
     local restore = nativeGame.install(world.bindings)
     _G.CurrentRun = world.run
-    local ok, errorValue = pcall(install.prebossRoom, start, { Name = start.roomName })
+    local ok, errorValue = pcall(install.midBiomeRoom, start, { Name = start.roomName })
     local roomData = world.nativeGlobals.roomData
     restore()
     lu.assertFalse(ok)
@@ -668,6 +706,39 @@ function TestPracticeStart.testPrebossBiomeDepthMismatchMakesExecutionPassive()
     end)
     lu.assertEquals(state.state, "desynchronized")
     lu.assertEquals(state.firstMismatch.checkpoint, "practice-start:biome-depth")
+end
+
+function TestPracticeStart.testBossStartRoomSelfCheck()
+    local state, setup, presented
+    local calls = withAdmission(true, function()
+        local entered = table.pack(enterStartRoom("underworld-start-g-rivals-boss"))
+        state, setup, presented = entered[1], entered[3], entered[4]
+    end)
+    lu.assertEquals(setup, { "G_Boss02", true })
+    lu.assertEquals(calls, { "ixion-chaos-g-preboss-shop:boss" })
+    lu.assertTrue(presented)
+    lu.assertEquals(state.state, "synchronized")
+    lu.assertEquals(state.practiceStart.phase, "checked")
+end
+
+function TestPracticeStart.testBossBiomeDepthMismatchMakesExecutionPassive()
+    local state
+    withAdmission(true, function()
+        state = enterStartRoom("underworld-start-g-rivals-boss", function(plan)
+            plan.startState.biome.biomeDepthCache = plan.startState.biome.biomeDepthCache - 1
+        end)
+    end)
+    lu.assertEquals(state.state, "desynchronized")
+    lu.assertEquals(state.firstMismatch.checkpoint, "practice-start:biome-depth")
+end
+
+function TestPracticeStart.testDreamBossIsNotABiomeEntry()
+    local start = copy(decode("dream-start-n-opening").startState)
+    start.point, start.biomeVisitOrder = "boss", { "F", "N" }
+    lu.assertEquals(install.runOverrides(start, "Dream").PrevDreamBiome, "F")
+    local args = { RoomName = "Dream_Intro" }
+    install.redirect(args, start, "Dream")
+    lu.assertEquals(args, { RoomName = start.roomName })
 end
 
 function TestPracticeStart.testDreamPrebossIsNotABiomeEntry()

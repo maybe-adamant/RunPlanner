@@ -51,9 +51,9 @@ function stubRoomHistory(
 }
 
 /**
- * The start installation at a biome's Opening or Preboss. An Opening installs
- * its predecessor's terminal state, before the native Intro's own biome start;
- * a Preboss installs the state its preparation received.
+ * The start installation at a biome's Opening, Preboss or Boss. An Opening
+ * installs its predecessor's terminal state, before the native Intro's own
+ * biome start; a Preboss or Boss installs the state its preparation received.
  */
 export function startInstallationAt(
   catalog: Catalog,
@@ -98,8 +98,8 @@ export function startInstallationAt(
       visitedBiomeKeys: Object.freeze(itineraryBiomeKeys.slice(0, index)),
     });
   }
-  const capture =
-    start !== undefined && 'rewards' in start ? start.rewards.prebossStartState : undefined;
+  const rewards = start !== undefined && 'rewards' in start ? start.rewards : undefined;
+  const capture = rewards?.midBiomeStartStates?.[startPoint.kind];
   const sequence = capture?.states[0]?.reached.historyView.sequence;
   if (capture === undefined || sequence === undefined) return unavailable({ kind: 'notReached' });
   return projectStartInstallation(catalog, {

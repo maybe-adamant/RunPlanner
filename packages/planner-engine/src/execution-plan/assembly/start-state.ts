@@ -32,7 +32,7 @@ function missing(detail: string): never {
   throw new CompilerError('executionCoverageMissing', `start state ${detail}`);
 }
 
-/** The selected occurrence the run starts in: a biome's first room, or its Preboss. */
+/** The selected occurrence the run starts in: a biome's first room, its Preboss or its Boss. */
 function startOccurrence(
   installation: StartInstallation,
   selectedOccurrenceIds: readonly string[],
@@ -40,18 +40,19 @@ function startOccurrence(
 ): CanonicalAuthoredRoom {
   const { biomeKey, kind } = installation.startPoint;
   const id =
-    kind === 'preboss'
-      ? installation.startOccurrence?.occurrenceId
-      : selectedOccurrenceIds.find(
+    kind === 'opening'
+      ? selectedOccurrenceIds.find(
           (candidate) => roomById.get(candidate)?.origin.biomeKey === biomeKey,
-        );
+        )
+      : installation.startOccurrence?.occurrenceId;
   const room = id === undefined ? undefined : roomById.get(id);
   if (room === undefined || !selectedOccurrenceIds.includes(room.occurrenceId))
     missing(`${biomeKey} ${kind} occurrence is not selected`);
   if (
     room.origin.biomeKey !== biomeKey ||
     room.gameName !== installation.startRoomGameName ||
-    (kind === 'preboss' && room.roomKind !== 'Preboss')
+    (kind === 'preboss' && room.roomKind !== 'Preboss') ||
+    (kind === 'boss' && room.roomKind !== 'Boss')
   )
     missing(`${room.occurrenceId} is not the ${biomeKey} ${kind}`);
   return room;
@@ -286,8 +287,8 @@ export function executionStartState(
     (equipment.aspectKey ?? undefined) !== startingLoadout.aspectKey
   )
     missing('equipment disagrees with the starting loadout');
-  const preboss = installation.startPoint.kind === 'preboss';
-  if (biomeRecords.form !== (preboss ? 'current' : 'postReset'))
+  const midBiome = installation.startPoint.kind !== 'opening';
+  if (biomeRecords.form !== (midBiome ? 'current' : 'postReset'))
     missing('biome records are not in their start form');
   const temporaryCards = new Set(
     arcana.active.filter((card) => card.origin === 'temporary').map((card) => card.key),
@@ -317,7 +318,7 @@ export function executionStartState(
     ...(counters.lastDevotionDepth === undefined
       ? {}
       : { lastDevotionDepth: counters.lastDevotionDepth + prologue.length }),
-    ...(preboss
+    ...(midBiome
       ? {
           biome: Object.freeze({
             biomeDepthCache: counters.biomeDepthCache,

@@ -7,6 +7,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 const golden = createGoldenFGHIProject();
@@ -17,12 +18,13 @@ const withStartPoint = (startPoint: RunStartPoint): ProjectDocument => ({
 });
 
 describe('start point eligibility', () => {
-  it('lists every itinerary Opening and Preboss with its installation availability', () => {
+  it('lists every itinerary Opening, Preboss and Boss with its installation availability', () => {
     const domain = startPointDomain(catalog, golden, evaluation);
     expect(domain.map(({ biomeKey, point }) => `${biomeKey}:${point}`)).toEqual(
       golden.route.itineraryBiomeKeys.flatMap((biomeKey) => [
         `${biomeKey}:opening`,
         `${biomeKey}:preboss`,
+        `${biomeKey}:boss`,
       ]),
     );
     expect(domain[0]!.status).toEqual({
@@ -32,6 +34,16 @@ describe('start point eligibility', () => {
     expect(domain.slice(1).every((option) => option.status.availability === 'available')).toBe(
       true,
     );
+  });
+
+  it('offers a Boss wherever its Preboss is offered', () => {
+    for (const project of [golden, loadDreamMixedHandoffCheckpoint()]) {
+      const domain = startPointDomain(catalog, project, simulateProject(catalog, project));
+      const status = (biomeKey: string, point: string) =>
+        domain.find((option) => option.biomeKey === biomeKey && option.point === point)!.status;
+      for (const biomeKey of project.route.itineraryBiomeKeys)
+        expect(status(biomeKey, 'boss')).toEqual(status(biomeKey, 'preboss'));
+    }
   });
 
   it('assesses the authored start point, keeping a dangling biome as not on the itinerary', () => {

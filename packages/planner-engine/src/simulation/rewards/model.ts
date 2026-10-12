@@ -209,6 +209,9 @@ interface RewardSimulationBase {
  * include the room's own creation (its incoming offer and bag effects). Raw
  * states, never a Run State checkpoint.
  */
+/** A start inside its biome, at its Preboss or completion Boss. */
+export type MidBiomeStartPoint = 'preboss' | 'boss';
+
 export interface RoomStartStateCapture {
   readonly owner: import('../../authored-project/addresses').OccurrenceAddress;
   readonly gameName: string;
@@ -250,8 +253,10 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly runStateAvailability: readonly RunStateAvailability[];
   /** Every reached Hub departure in order; execution-only, never a Run State launcher. */
   readonly hubDepartures: readonly HubDepartureRunState[];
-  /** The reached Preboss's start state, the mid-run start installation's source. */
-  readonly prebossStartState?: RoomStartStateCapture;
+  /** The reached Preboss's and completion Boss's start states, the mid-run start installations' sources. */
+  readonly midBiomeStartStates?: Readonly<
+    Partial<Record<MidBiomeStartPoint, RoomStartStateCapture>>
+  >;
   /** Exact room-entry Pool generation assessments, before any sale action. */
   readonly purgingPoolAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;

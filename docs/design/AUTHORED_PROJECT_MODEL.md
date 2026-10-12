@@ -221,7 +221,7 @@ composition enables internal modifiers (development builds), and none is
 currently declared. The released modifiers are the optional
 percentages `enemyGoldDropChance` and `encounterGoldRange` and the
 `startPoint` modifier (Practice mode) is absent for a normal run and present as
-`{ biomeKey, point: 'opening' | 'preboss', gold? }`; a malformed shape decodes
+`{ biomeKey, point: 'opening' | 'preboss' | 'boss', gold? }`; a malformed shape decodes
 as absent, malformed gold as absent, and finite gold rounds and clamps to
 0–99 999. Gold is a base amount added to the game's own starting gold. A
 well-formed start point whose biome is off the itinerary is kept. Its
@@ -230,7 +230,7 @@ eligibility is the engine's start-installation availability
 (`notOnItinerary`), the point is not the route-start biome's Opening, which is
 a normal run (`routeStart`), the simulation reaches it (`notReached`), and its
 installed state agrees across every reached branch (`branchesDisagree`, naming
-the families). The picker offers every itinerary biome's Opening and Preboss
+the families). The picker offers every itinerary biome's Opening, Preboss and Boss
 with that availability; it does not consult project validity. A start point
 publishes only from a valid project, through the ordinary publication gate.
 An ineligible start point blocks publication with its reason and an eligible
