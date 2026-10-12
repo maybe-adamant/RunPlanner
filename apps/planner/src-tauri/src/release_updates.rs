@@ -97,8 +97,9 @@ fn open_in_browser(url: &str) -> Result<(), String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn open_in_browser(_url: &str) -> Result<(), String> {
-    Err("Opening links is available only in the Windows desktop application.".into())
+fn open_in_browser(url: &str) -> Result<(), String> {
+    run_planner_game_host::system_opener::open(std::ffi::OsStr::new(url))
+        .map_err(|_| "Could not open the link in the default browser.".into())
 }
 
 #[cfg(target_os = "windows")]

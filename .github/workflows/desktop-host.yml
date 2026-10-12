@@ -36,6 +36,38 @@ jobs:
       - name: Check desktop host
         run: cargo check --manifest-path apps/planner/src-tauri/Cargo.toml --locked
 
+  linux:
+    name: Check Linux desktop host
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libdbus-1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            libwebkit2gtk-4.1-dev \
+            pkg-config
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable 2026-08-03
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
+        with:
+          workspaces: apps/planner/src-tauri -> target
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Check desktop host
+        run: cargo check --manifest-path apps/planner/src-tauri/Cargo.toml --locked
+
   game-host:
     name: Test game host on Linux
     runs-on: ubuntu-latest

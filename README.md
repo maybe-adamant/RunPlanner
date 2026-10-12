@@ -111,28 +111,48 @@ dependency, shared setup, and cross-layer changes require the complete gate.
 
 ### Install
 
-1. Download `RunPlanner-<version>-windows-x64-setup.exe` from the
-   [latest release](https://github.com/maybe-adamant/RunPlanner/releases/latest).
-   It needs 64-bit Windows 10 or 11; the installer fetches the Microsoft Edge
-   WebView2 Runtime if it is missing.
+Each [release](https://github.com/maybe-adamant/RunPlanner/releases/latest)
+carries a Windows installer and a Linux x64 AppImage.
+
+**Windows**
+
+1. Download `RunPlanner-<version>-windows-x64-setup.exe`. It needs 64-bit
+   Windows 10 or 11; the installer fetches the Microsoft Edge WebView2 Runtime
+   if it is missing.
 2. Run the installer. It installs for your Windows account only and needs no
    administrator rights.
 3. The installer is not code signed, so Windows SmartScreen may warn about an
    unrecognized app. Choose **More info**, then **Run anyway**.
 4. Start **Run Planner** from the Start menu, then follow Game setup below.
 
-Settings, the remembered project file and autosave recovery live in your
-Windows profile, not the install folder, so an earlier portable build's data
-carries over. Project files (`.runplanner.json`) stay wherever you save them.
+**Linux**
 
-Official releases check for updates without delaying startup, and About offers
-a manual check. When an update is found, choose **Update**, then
-**Install and restart**: the planner closes, installs the signed update
-and reopens. If there are unsaved changes, the button is **Save and install**
-and saves first; if the save is cancelled or fails, nothing is installed. If
-the installer fails after the planner has closed, reopen Run Planner from the
-Start menu and try again. **Later** hides the notice for this session; **Skip
-this version** hides it until a newer release. Development builds do not check for
+1. Download `RunPlanner-<version>-linux-x64.AppImage`, mark it executable
+   (`chmod +x RunPlanner-<version>-linux-x64.AppImage`) and run it. It also
+   runs in Steam Deck desktop mode.
+2. AppImages mount through FUSE 2. If it does not start, install it, for
+   example `sudo apt install libfuse2` (`libfuse2t64` on Ubuntu 24.04 and
+   later), or run it without FUSE as
+   `APPIMAGE_EXTRACT_AND_RUN=1 ./RunPlanner-<version>-linux-x64.AppImage`.
+3. Keep the AppImage where you run it from; in-app updates replace that file.
+
+Hades II runs on Linux through Steam's Proton. Hell2Modding loads as a
+`d3d12.dll` proxy, so the game's Steam launch options need
+`WINEDLLOVERRIDES="d3d12=n,b" %command%` for mods to load. This setting is
+community-documented, not verified by this project.
+
+Settings, the remembered project file and autosave recovery live in your user
+profile, not the install folder, so an earlier portable build's data carries
+over. Project files (`.runplanner.json`) stay wherever you save them.
+
+Official Windows and AppImage releases check for updates without delaying
+startup, and About offers a manual check. When an update is found, choose
+**Update**, then **Install and restart**: the planner closes, installs the
+signed update and reopens. If there are unsaved changes, the button is **Save
+and install** and saves first; if the save is cancelled or fails, nothing is
+installed. If the installer fails after the planner has closed, reopen Run
+Planner and try again. **Later** hides the notice for this session; **Skip this
+version** hides it until a newer release. Development builds do not check for
 updates. Portable builds from before the installer do not detect installer
 releases; install once manually to start receiving updates.
 
@@ -144,6 +164,8 @@ releases; install once manually to start receiving updates.
 2. In the desktop planner, open the **Game** panel. Under Game location, choose
    **Find r2modman profiles** and pick your profile, or **Choose folder…** for
    the folder that contains `ReturnOfModding` in a manual Hell2Modding install.
+   On Linux, discovery reads a native r2modman install's profiles, or the
+   Flatpak's when only that one exists.
 3. Follow the Game module steps, ending with **Install**. The module is built
    into the planner, so each planner release carries its matching module.
 4. Under Plans in game, choose **Send here** on a slot. Later sends can use
@@ -177,21 +199,28 @@ npm run desktop:build:windows
 The executable is written to
 `apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
 
-The manually dispatched **Windows release** workflow builds and signs the
-installer, installs and launch-tests it, and publishes the release. It embeds
-the release version and source commit shown in About, uploads the installer,
-its updater signature and `latest.json` to a draft, then publishes it. It
-needs the `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-repository secrets and refuses to build while `plugins.updater.pubkey` in
-`apps/planner/src-tauri/tauri.conf.json` is the placeholder. Its `dry_run`
-input builds, signs and launch-tests without tagging or publishing. Each
-published version identifies one build; choose a new version for a new build.
-Run `npm run check` locally on the commit being
-released before dispatching it; packaging does not repeat that repository gate.
-The separate **Desktop host** workflow checks Windows Rust compilation and runs
-the game host crate tests on Linux, and the
-**Game module** workflow runs `npm run test:game-module`, on pull requests and
-pushes to `main`.
+The manually dispatched **Release** workflow validates the version and the
+`main` commit once, then calls the reusable **Build Windows** and **Build
+Linux** workflows. Windows builds the NSIS installer; Linux builds the AppImage
+on Ubuntu 22.04. Each build embeds the release version and source commit shown
+in About, checks the bundle type stamped into the executable, signs its updater
+asset (the installer or the AppImage), launch-tests it (the AppImage under
+Xvfb), and uploads a workflow artifact. A single publish job then creates one
+draft release, uploads every platform's assets with one `latest.json` naming the
+Windows installer and the AppImage, and publishes it once all are present. The
+workflow needs the `TAURI_SIGNING_PRIVATE_KEY` and
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets and refuses to build
+while `plugins.updater.pubkey` in `apps/planner/src-tauri/tauri.conf.json` is
+the placeholder. Its `dry_run` input builds, signs and launch-tests both
+platforms without tagging or publishing; dispatching **Build Windows** or
+**Build Linux** directly is a single-platform build-only check that never
+publishes. Each published version identifies one build; choose a new version for
+a new build. Run `npm run check` locally on the commit being released before
+dispatching it; packaging does not repeat that repository gate. The separate
+**Desktop host** workflow checks Rust compilation of the desktop application on
+Windows and Linux and runs the game host crate tests on Linux, and the **Game
+module** workflow runs `npm run test:game-module`, on pull requests and pushes
+to `main`.
 
 The app's compatible-loading baseline is schema 86. Current files open without
 conversion; future approved schema changes must supply explicit migrations and

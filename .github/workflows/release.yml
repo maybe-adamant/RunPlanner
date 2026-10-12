@@ -1,0 +1,232 @@
+name: Release
+run-name: Release v${{ inputs.version }}${{ inputs.dry_run && ' (dry run)' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Stable release version without the v prefix (for example, 0.1.0)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Build, sign and launch-test only; create no tag, draft or release'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release version and commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release_sha: ${{ steps.release.outputs.release_sha }}
+      release_tag: ${{ steps.release.outputs.release_tag }}
+      release_version: ${{ steps.release.outputs.release_version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 1
+
+      - name: Prepare release metadata
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          node scripts/assert-release-version.mjs "${RELEASE_VERSION}"
+          if ! [[ "${GITHUB_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'GitHub must supply a full lowercase commit hash for an official release.' >&2
+            exit 1
+          fi
+
+          comparison="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${GITHUB_SHA}" --jq .status)"
+          if [ "${comparison}" != 'identical' ] && [ "${comparison}" != 'behind' ]; then
+            echo "Official releases must be dispatched from a commit on main (comparison: ${comparison})." >&2
+            exit 1
+          fi
+
+          tag="v${RELEASE_VERSION}"
+          tag_lines="$(git ls-remote --tags origin "refs/tags/${tag}" "refs/tags/${tag}^{}")"
+          if [ -n "${tag_lines}" ]; then
+            resolved_line="$(grep -F '^{}' <<<"${tag_lines}" | head -n 1 || true)"
+            if [ -z "${resolved_line}" ]; then
+              resolved_line="$(head -n 1 <<<"${tag_lines}")"
+            fi
+            tag_sha="$(awk '{ print $1 }' <<<"${resolved_line}")"
+            if [ "${tag_sha}" != "${GITHUB_SHA}" ]; then
+              echo "Release tag ${tag} already points to ${tag_sha} instead of ${GITHUB_SHA}." >&2
+              exit 1
+            fi
+          fi
+
+          {
+            echo "release_version=${RELEASE_VERSION}"
+            echo "release_tag=${tag}"
+            echo "release_sha=${GITHUB_SHA}"
+          } >> "${GITHUB_OUTPUT}"
+
+  build-windows:
+    name: Windows
+    needs: validate
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      version: ${{ needs.validate.outputs.release_version }}
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+  build-linux:
+    name: Linux
+    needs: validate
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.validate.outputs.release_version }}
+    secrets:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+  release:
+    name: Publish tagged release
+    needs: [validate, build-windows, build-linux]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    env:
+      LINUX_ARTIFACT: ${{ needs.build-linux.outputs.artifact_name }}
+      RELEASE_SHA: ${{ needs.validate.outputs.release_sha }}
+      RELEASE_TAG: ${{ needs.validate.outputs.release_tag }}
+      RELEASE_VERSION: ${{ needs.validate.outputs.release_version }}
+      WINDOWS_ARTIFACT: ${{ needs.build-windows.outputs.artifact_name }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 1
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ${{ needs.build-windows.outputs.artifact_name }}
+          path: release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: ${{ needs.build-linux.outputs.artifact_name }}
+          path: release
+
+      - name: List release assets
+        id: assets
+        run: |
+          {
+            echo 'files<<EOF'
+            echo "release/${WINDOWS_ARTIFACT}.exe"
+            echo "release/${WINDOWS_ARTIFACT}.exe.sig"
+            echo "release/${LINUX_ARTIFACT}.AppImage"
+            echo "release/${LINUX_ARTIFACT}.AppImage.sig"
+            echo 'release/latest.json'
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Create release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            existing_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RELEASE_TAG}" --jq .sha)"
+            if [ "${existing_sha}" != "${RELEASE_SHA}" ]; then
+              echo "Release tag ${RELEASE_TAG} points to ${existing_sha}, not ${RELEASE_SHA}." >&2
+              exit 1
+            fi
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${RELEASE_TAG}" \
+              -f sha="${RELEASE_SHA}" >/dev/null
+          fi
+
+      - name: Create or resume draft release
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
+              exit 1
+            fi
+          else
+            gh release create "${RELEASE_TAG}" \
+              --draft \
+              --verify-tag \
+              --generate-notes \
+              --title "Run Planner ${RELEASE_TAG}"
+          fi
+
+      # One manifest names every updatable platform, the AppImage keyed by bundle type.
+      - name: Assemble updater manifest
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${RELEASE_TAG}" --json body --jq .body > release/notes.md
+          node scripts/updater-release.mjs manifest \
+            --config apps/planner/src-tauri/tauri.conf.json \
+            --version "${RELEASE_VERSION}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --notes release/notes.md \
+            --out release/latest.json \
+            --platform windows-x86_64 \
+            --asset "${WINDOWS_ARTIFACT}.exe" \
+            --signature "release/${WINDOWS_ARTIFACT}.exe.sig" \
+            --platform linux-x86_64-appimage \
+            --asset "${LINUX_ARTIFACT}.AppImage" \
+            --signature "release/${LINUX_ARTIFACT}.AppImage.sig"
+
+      - name: Upload release assets to draft
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_FILES: ${{ steps.assets.outputs.files }}
+        run: |
+          if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
+            exit 1
+          fi
+          mapfile -t files <<<"${RELEASE_FILES}"
+          gh release upload "${RELEASE_TAG}" "${files[@]}" --clobber
+
+      - name: Publish complete draft release
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_FILES: ${{ steps.assets.outputs.files }}
+        run: |
+          node scripts/assert-release-version.mjs "${RELEASE_VERSION}"
+          if [ "$(gh release view "${RELEASE_TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+            echo "Release ${RELEASE_TAG} is already published and cannot be replaced." >&2
+            exit 1
+          fi
+          mapfile -t uploaded_assets < <(gh release view "${RELEASE_TAG}" --json assets --jq '.assets[].name')
+          mapfile -t files <<<"${RELEASE_FILES}"
+          for file in "${files[@]}"; do
+            asset="$(basename "${file}")"
+            if ! printf '%s\n' "${uploaded_assets[@]}" | grep -Fqx "${asset}"; then
+              echo "Draft release ${RELEASE_TAG} is missing ${asset}." >&2
+              exit 1
+            fi
+          done
+          gh release edit "${RELEASE_TAG}" --draft=false --latest

@@ -60,19 +60,29 @@ authored save schema:
   plan wire and the execution fixtures never carry a build identity.
 
 The game target is an application setting in the desktop configuration
-directory, never authored state or history. The Game panel's Game location offers
-**Find r2modman profiles**, which lists the Hades II profiles under the
-platform's r2modman data root (`%APPDATA%\r2modmanPlus-local\HadesII\profiles`
-on Windows; other platforms currently offer only the folder picker), and
-**Choose folder…**, which accepts any folder that is, or directly contains, a
-real `ReturnOfModding` folder: an r2modman profile or a manual Hell2Modding
-install. Discovery marks each profile's existing copy from cheap folder checks:
-the same ownership rule as removal (a planner install record that r2modman
-does not manage), a planner record whose `mods.yml` cannot be read, another
-copy (Thunderstore or r2modman-managed), or none. The record keeps whether the
-target was discovered or chosen. Links, files and paths resolving outside the
-chosen folder are rejected; every write stays inside its `ReturnOfModding`
-folder.
+directory, never authored state or history. The Game panel's Game location
+offers **Find r2modman profiles**, which lists the Hades II profiles under the
+platform's r2modman data root (below), and **Choose folder…**, which accepts any
+folder that is, or directly contains, a real `ReturnOfModding` folder: an
+r2modman profile or a manual Hell2Modding install. Discovery marks each
+profile's existing copy from cheap folder checks: the same ownership rule as
+removal (a planner install record that r2modman does not manage), a planner
+record whose `mods.yml` cannot be read, another copy (Thunderstore or
+r2modman-managed), or none. The record keeps whether the target was discovered
+or chosen. Links, files and paths resolving outside the chosen folder are
+rejected; every write stays inside its `ReturnOfModding` folder.
+
+The r2modman data root is `r2modmanPlus-local/HadesII/profiles` under:
+
+| Platform | Data root parent                                                                                                               |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Windows  | `%APPDATA%`                                                                                                                    |
+| Linux    | `$XDG_CONFIG_HOME` (absolute) or `~/.config` for a native install, then `~/.var/app/com.github.ebkr.r2modman/config` (Flatpak) |
+| macOS    | none; only the folder picker is offered                                                                                        |
+
+On Linux discovery uses the first of the two roots that exists, else the
+native one, and lists and accepts only that root's profiles; a profile of the
+other install is still reachable through **Choose folder…**.
 
 The planner tracks one target. Changing it only changes the saved setting: it
 never installs into the new target or removes from the old one. The candidate

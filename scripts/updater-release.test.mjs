@@ -4,7 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { describe, it } from 'node:test';
 
 import {
-  UPDATER_PLATFORM,
+  UPDATER_PLATFORMS,
   UPDATER_PUBKEY_PLACEHOLDER,
   updaterManifest,
   updaterPubkey,
@@ -38,45 +38,100 @@ describe('updater public key guard', () => {
 });
 
 describe('updater manifest', () => {
-  const input = {
+  const windows = (sig = signature()) => ({
     asset: 'RunPlanner-1.2.3-windows-x64-setup.exe',
+    platform: 'windows-x86_64',
+    signature: sig,
+  });
+  const linux = (sig = signature()) => ({
+    asset: 'RunPlanner-1.2.3-linux-x64.AppImage',
+    platform: 'linux-x86_64-appimage',
+    signature: sig,
+  });
+  const input = {
     notes: 'Notes',
     pubDate: '2026-09-27T00:00:00.000Z',
     pubkey,
     repository: 'maybe-adamant/RunPlanner',
     version: '1.2.3',
   };
+  const download = 'https://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3';
 
-  it('describes the signed Windows installer in the Tauri v2 format', () => {
-    const sig = signature();
-    assert.deepEqual(updaterManifest({ ...input, signature: `${sig}\n` }), {
-      version: '1.2.3',
-      notes: 'Notes',
-      pub_date: '2026-09-27T00:00:00.000Z',
-      platforms: {
-        [UPDATER_PLATFORM]: {
-          signature: sig,
-          url: 'https://github.com/maybe-adamant/RunPlanner/releases/download/v1.2.3/RunPlanner-1.2.3-windows-x64-setup.exe',
+  it('describes the signed Windows installer and Linux AppImage in the Tauri v2 format', () => {
+    const windowsSig = signature();
+    const linuxSig = signature();
+    assert.deepEqual(
+      updaterManifest({
+        ...input,
+        entries: [windows(`${windowsSig}\n`), linux(`${linuxSig}\n`)],
+      }),
+      {
+        version: '1.2.3',
+        notes: 'Notes',
+        pub_date: '2026-09-27T00:00:00.000Z',
+        platforms: {
+          'windows-x86_64': {
+            signature: windowsSig,
+            url: `${download}/RunPlanner-1.2.3-windows-x64-setup.exe`,
+          },
+          'linux-x86_64-appimage': {
+            signature: linuxSig,
+            url: `${download}/RunPlanner-1.2.3-linux-x64.AppImage`,
+          },
         },
       },
-    });
-    assert.equal(UPDATER_PLATFORM, 'windows-x86_64');
+    );
+    assert.deepEqual(Object.keys(UPDATER_PLATFORMS), ['windows-x86_64', 'linux-x86_64-appimage']);
   });
 
-  it('rejects a signature from a key the application does not trust', () => {
+  it('rejects a signature from a key the application does not trust on any platform', () => {
+    for (const entries of [
+      [windows(signature(randomBytes(8))), linux()],
+      [windows(), linux(signature(randomBytes(8)))],
+    ]) {
+      assert.throws(() => updaterManifest({ ...input, entries }), /signed by key .* trusts key/);
+    }
+  });
+
+  it('rejects missing, unknown, duplicated and mismatched platforms', () => {
+    assert.throws(() => updaterManifest({ ...input, entries: [] }), /at least one platform/);
     assert.throws(
-      () => updaterManifest({ ...input, signature: signature(randomBytes(8)) }),
-      /signed by key .* trusts key/,
+      () => updaterManifest({ ...input, entries: [{ ...linux(), platform: 'darwin-aarch64' }] }),
+      /not one of/,
+    );
+    assert.throws(
+      () => updaterManifest({ ...input, entries: [windows(), windows()] }),
+      /more than once/,
+    );
+    assert.throws(
+      () =>
+        updaterManifest({
+          ...input,
+          entries: [{ ...windows(), asset: 'RunPlanner-1.2.3-linux-x64.AppImage' }],
+        }),
+      /not a windows-x86_64 updater asset/,
+    );
+    assert.throws(
+      () =>
+        updaterManifest({
+          ...input,
+          entries: [{ ...linux(), asset: 'RunPlanner-1.2.3-linux-x64.deb' }],
+        }),
+      /not a linux-x86_64-appimage updater asset/,
     );
   });
 
-  it('rejects unstable versions, malformed signatures and unsafe asset names', () => {
-    assert.throws(() =>
-      updaterManifest({ ...input, signature: signature(), version: '1.2.3-rc.1' }),
+  it('rejects unstable versions, malformed signatures and unsafe names', () => {
+    assert.throws(() => updaterManifest({ ...input, entries: [windows()], version: '1.2.3-rc.1' }));
+    assert.throws(
+      () => updaterManifest({ ...input, entries: [windows(pubkey)] }),
+      /minisign signature/,
     );
-    assert.throws(() => updaterManifest({ ...input, signature: pubkey }), /minisign signature/);
     assert.throws(() =>
-      updaterManifest({ ...input, asset: '../latest.json', signature: signature() }),
+      updaterManifest({ ...input, entries: [{ ...windows(), asset: '../latest.exe' }] }),
+    );
+    assert.throws(() =>
+      updaterManifest({ ...input, entries: [windows()], repository: 'not a repository' }),
     );
   });
 });
