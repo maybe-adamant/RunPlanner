@@ -1,7 +1,7 @@
 -- luacheck: globals TestStatusUi
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
-local statusUi = require("mods.host.status_ui")
+local statusUi = require("mods.presentation.status_ui")
 local hostData = require("mods.host.data")
 local nativeGame = require("tests.harness.native_game")
 

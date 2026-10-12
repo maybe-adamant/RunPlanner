@@ -8,7 +8,6 @@ function composition.bind(root, moduleVersion, buildId)
     local inbox = import("mods/host/inbox.lua").create(root, protocol.decode, rom.path, buildId)
     local build = type(buildId) == "string" and buildId:sub(1, 12) or "unknown"
     local activeSlotFile = import("mods/host/active_slot.lua").create(root, rom.path)
-    local slotOverview = import("mods/host/slot_overview.lua").create(root, rom.path, buildId)
     local route = import("mods/route/session.lua")
     local ephyra = import("mods/navigation/ephyra.lua")
     local room = import("mods/room/coordinator.lua")
@@ -21,7 +20,6 @@ function composition.bind(root, moduleVersion, buildId)
     local hexTree = import("mods/spells/hex_tree.lua").create()
     local shipCombat = import("mods/room/timeline/encounters/thessaly.lua").create()
     local generatedEncounter = import("mods/room/timeline/encounters/generated.lua").create()
-    local highlights = import("mods/guidance/highlights.lua").create(route)
     local loadoutHooks = import("mods/loadout/hooks.lua")
     local acquisitionHooks = import("mods/room/timeline/acquisitions/hooks.lua")
     local loadoutRuntime = {
@@ -44,7 +42,7 @@ function composition.bind(root, moduleVersion, buildId)
             read = activeSlotFile.read,
             write = activeSlotFile.write,
         },
-        slotOverview = { read = slotOverview.read },
+        nextOccurrence = route.next,
     }
 
     -- Read-only inspection of the admitted session, independent of inbox previews.
@@ -90,7 +88,8 @@ function composition.bind(root, moduleVersion, buildId)
         return nil
     end
 
-    function bound.attach(module)
+    -- highlights is the optional planned-choice presentation; execution only notifies it.
+    function bound.attach(module, highlights)
         local roomHooks = import("mods/room/hooks.lua")
         local encounterHooks = import("mods/room/timeline/encounters/hooks.lua")
         local roomFeatureHooks = import("mods/room/features/hooks.lua")
@@ -242,7 +241,7 @@ function composition.bind(root, moduleVersion, buildId)
                         .. diagnosticValue(admission.observed))
                 end
             end
-            highlights.refresh(runtime, state)
+            if highlights then highlights.refresh(runtime, state) end
         end
 
         runModifiers = import("mods/run_modifiers/hooks.lua").attach(module, session, getState, report)
@@ -257,13 +256,13 @@ function composition.bind(root, moduleVersion, buildId)
         local featureScope = roomFeatureHooks.attach(module, session, getState, report, room)
         local navigation = navigationHooks.attach(module, session, getState, report, route, room,
             transformationScope, shipCombat.rewardContext, generatedEncounter, highlights)
-        highlights.attach(module, getState)
+        if highlights then highlights.attach(module, getState) end
         roomHooks.attach(module, session, getState, report, route, room, featureScope, navigation,
             loadoutScope, practiceScope)
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
         featureInventory.attach(module, session, getState, report, room, route)
         interactionHooks.attach(module, session, getState, report, room, route)
-        if module.overlays then
+        if highlights and module.overlays then
             module.overlays.onCommit(function(_, runtime) highlights.refresh(runtime, getState(runtime)) end)
         end
     end

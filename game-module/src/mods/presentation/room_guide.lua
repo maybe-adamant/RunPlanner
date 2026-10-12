@@ -8,8 +8,10 @@ local ROW_LIMIT = 24
 guide.ROW_LIMIT = ROW_LIMIT
 guide.MAX_ROWS = MAX_ROWS
 
-local names = type(import) == "function" and import("mods/room/names.lua")
-    or require("mods.room.names")
+local safeHooks = type(import) == "function" and import("mods/host/presentation_hooks.lua")
+    or require("mods.host.presentation_hooks")
+local names = type(import) == "function" and import("mods/presentation/names.lua")
+    or require("mods.presentation.names")
 local roomName, displayName, roomOccupants = names.room, names.display, names.occupants
 
 -- UTF-8 character count; continuation bytes do not start a character.
@@ -421,8 +423,8 @@ function guide.attach(module, inspect)
         overlay.refreshOwned()
     end
 
-    module.overlays.onCommit(refresh)
-    module.overlays.onInterval("room-guide-refresh", 0.25, refresh)
+    safeHooks.onCommit(module, "room-guide-commit", refresh)
+    safeHooks.onInterval(module, "room-guide-refresh", 0.25, refresh)
 end
 
 return guide

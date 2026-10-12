@@ -1,13 +1,13 @@
 -- The Run Planner window: a status header, the next run's slot, the current
 -- run's progress and, in Debug Mode, the raw session and slot records.
-local presentation = type(import) == "function" and import("mods/host/run_presentation.lua")
-    or require("mods.host.run_presentation")
-local mismatchText = type(import) == "function" and import("mods/host/mismatch_text.lua")
-    or require("mods.host.mismatch_text")
-local names = type(import) == "function" and import("mods/room/names.lua")
-    or require("mods.room.names")
-local ascii = type(import) == "function" and import("mods/host/ascii.lua")
-    or require("mods.host.ascii")
+local presentation = type(import) == "function" and import("mods/presentation/run_presentation.lua")
+    or require("mods.presentation.run_presentation")
+local mismatchText = type(import) == "function" and import("mods/presentation/mismatch_text.lua")
+    or require("mods.presentation.mismatch_text")
+local names = type(import) == "function" and import("mods/presentation/names.lua")
+    or require("mods.presentation.names")
+local ascii = type(import) == "function" and import("mods/presentation/ascii.lua")
+    or require("mods.presentation.ascii")
 
 local ui = {}
 ui.ACTIVE_SLOT_REFRESH_SECONDS = 1

@@ -1,6 +1,6 @@
 -- luacheck: globals TestGuidanceWorld
 local lu = require("luaunit")
-local world = require("mods.guidance.world")
+local world = require("mods.presentation.highlights.world")
 
 TestGuidanceWorld = {}
 
@@ -13,7 +13,7 @@ function TestGuidanceWorld:setUp()
     end
     _G.Destroy = function(args) self.destroyed[#self.destroyed + 1] = args.Ids[1] end
     self.route = { next = function(value) return value.nextTarget end }
-    self.guidance = world.create(self.route)
+    self.guidance = world.create(self.route.next)
     self.runtime = { data = { read = function() return true end } }
     self.state = { state = "synchronized", route = self.route }
 end
@@ -72,7 +72,7 @@ function TestGuidanceWorld:testMapSubiconsFollowNextVisitAndPreserveNativeIcons(
 end
 
 function TestGuidanceWorld:testMapHookOnlyAddsIconsDuringNativeMapConstruction()
-    local highlights = require("mods.guidance.highlights").create(self.route)
+    local highlights = require("mods.presentation.highlights.highlights").create(self.route.next)
     local callbacks = {}
     highlights.attach({ hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } },
         function() return self.state end)
@@ -140,7 +140,7 @@ end
 
 function TestGuidanceWorld:testGlobalPreviewAndRoomHooksRetireMarkersBeforeNativeTeardown()
     local callbacks = {}
-    local guide = require("mods.guidance.highlights").create(self.route)
+    local guide = require("mods.presentation.highlights.highlights").create(self.route.next)
     guide.attach({ hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } },
         function() return self.state end)
     local door = { __runPlannerExecutionDoorTarget = "next", RewardPreviewIconIds = { 20 },

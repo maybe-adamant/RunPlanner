@@ -12,6 +12,8 @@ pub const INSTALL_RECORD_FILE: &str = "run-planner-install.json";
 pub const COMPATIBILITY_FILE: &str = "execution-compatibility.json";
 const MANIFEST_TEMPLATE_FILE: &str = "manifest.template.json";
 const PAYLOAD_DIRECTORY: &str = "src";
+// Draw-only payload: shipped, but outside the build identity.
+pub const PRESENTATION_DIRECTORY: &str = "mods/presentation/";
 const OVERRIDDEN_MODULE_PATH: &str = "mods/room/timeline/acquisitions/traits/row_options.lua";
 pub const DEVELOPMENT_MODULE_FILE: &str = "variants/dev/row_options.lua";
 // r2modman flattens a Thunderstore package's root files and its `plugins/`
@@ -127,10 +129,13 @@ fn stamped_manifest(module_dir: &Path, version: &str) -> Result<Vec<u8>, String>
 }
 
 /// The module build identity: SHA-256 over the sorted `path NUL sha256 LF` lines of the
-/// checked-in `src/` payload.
+/// checked-in `src/` payload outside the presentation directory.
 fn payload_build_id(payload: &BTreeMap<String, Vec<u8>>) -> String {
     let mut lines = Vec::new();
-    for (path, bytes) in payload {
+    for (path, bytes) in payload
+        .iter()
+        .filter(|(path, _)| !path.starts_with(PRESENTATION_DIRECTORY))
+    {
         lines.extend_from_slice(path.as_bytes());
         lines.push(0);
         lines.extend_from_slice(sha256_hex(bytes).as_bytes());

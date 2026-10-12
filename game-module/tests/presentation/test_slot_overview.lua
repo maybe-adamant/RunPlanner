@@ -1,6 +1,6 @@
 -- luacheck: globals TestSlotOverview
 local lu = require("luaunit")
-local slotOverview = require("mods.host.slot_overview")
+local slotOverview = require("mods.presentation.slot_overview")
 
 TestSlotOverview = {}
 

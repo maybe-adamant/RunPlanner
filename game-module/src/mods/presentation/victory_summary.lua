@@ -1,9 +1,12 @@
 -- Victory-screen summary of the admitted plan. Rows are produced from the
 -- session snapshot and its slot's overview entry when the RunClear screen opens.
-local presentation = type(import) == "function" and import("mods/host/run_presentation.lua")
-    or require("mods.host.run_presentation")
-local names = type(import) == "function" and import("mods/room/names.lua")
-    or require("mods.room.names")
+local presentation = type(import) == "function" and import("mods/presentation/run_presentation.lua")
+    or require("mods.presentation.run_presentation")
+local names = type(import) == "function" and import("mods/presentation/names.lua")
+    or require("mods.presentation.names")
+
+local safeHooks = type(import) == "function" and import("mods/host/presentation_hooks.lua")
+    or require("mods.host.presentation_hooks")
 
 local victorySummary = {}
 
@@ -55,7 +58,7 @@ function victorySummary.attach(module, inspect, slotOverview)
     spec.order = module.overlays.order.module
     module.overlays.createTable(victorySummary.TABLE, spec)
 
-    module.overlays.afterHook("OnScreenOpened", function(_, _, overlay, event)
+    safeHooks.afterHook(module, "OnScreenOpened", "victory-summary", function(_, _, overlay, event)
         local screen = type(event) == "table" and type(event.args) == "table" and event.args[1] or nil
         if type(screen) ~= "table" or screen.Name ~= "RunClear" then return end
         local ok, rows = pcall(function()

@@ -1,7 +1,7 @@
 -- Player-facing wording for a session's first mismatch, fault or admission
 -- record. Display only: the records are read, never compared or repaired.
-local names = type(import) == "function" and import("mods/room/names.lua")
-    or require("mods.room.names")
+local names = type(import) == "function" and import("mods/presentation/names.lua")
+    or require("mods.presentation.names")
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
 
 local text = {}

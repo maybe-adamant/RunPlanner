@@ -3,10 +3,11 @@ local lu = require("luaunit")
 local seaStar = require("mods.room.timeline.acquisitions.sea_star").create()
 local path = require("mods.room.timeline.acquisitions.path.hooks")
 local nativeGame = require("tests.harness.native_game")
+local highlights = require("mods.presentation.highlights.highlights")
 
 TestPathAcquisitions = {}
 
-local function capture(payload, bound, installSeaStar, pathAdapter, seaStarAdapter)
+local function capture(payload, bound, installSeaStar, pathAdapter, seaStarAdapter, guide)
     local callbacks = {}
     local module = { hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } }
     local item = { Name = payload.detail.gameName, UseFunctionName = "OpenTalentScreen" }
@@ -38,7 +39,8 @@ local function capture(payload, bound, installSeaStar, pathAdapter, seaStarAdapt
     pathAdapter = pathAdapter or path
     seaStarAdapter = seaStarAdapter or seaStar
     pathAdapter.attach(module, session, function() return state end,
-        function() reports = reports + 1 end, room, seaStarAdapter)
+        function() reports = reports + 1 end, room, seaStarAdapter, guide)
+    if guide then guide.attach(module, function() return state end) end
     if installSeaStar then seaStarAdapter.attach(module) end
     return callbacks, item, function() return began end, completed, mismatches, function() return reports end
 end
@@ -166,11 +168,16 @@ function TestPathAcquisitions.testAcceptedPathUseWithoutATalentScreenLeavesTheNo
     lu.assertEquals(mismatches, {})
 end
 
-function TestPathAcquisitions.testPlannedNodesAreMarkedOnlyWhileTheirScreenIsOpen()
+function TestPathAcquisitions.testPlannedNodesAreMarkedOnlyWhileTheirScreenIsOpenAndHighlightsAreOn()
     local row = payload("TalentDrop")
     row.detail.plannedHexNodeKeys = { "1:2", "2:2" }
-    local callbacks, item = capture(row)
-    local created, destroyed = {}, {}
+    local guide = highlights.create(function() end)
+    local callbacks, item = capture(row, nil, nil, nil, nil, guide)
+    local created, destroyed, enabled = {}, {}, false
+    local runtime = { data = { read = function(alias)
+        lu.assertEquals(alias, "HighlightPlannedChoices")
+        return enabled
+    end } }
     local previousCreate, previousDestroy = _G.CreateScreenComponent, _G.Destroy
     _G.CreateScreenComponent = function(args)
         created[#created + 1] = args
@@ -182,21 +189,40 @@ function TestPathAcquisitions.testPlannedNodesAreMarkedOnlyWhileTheirScreenIsOpe
         TalentObject1_4 = { Id = 2, Data = {} },
         TalentObject2_2 = { Id = 3, Data = { Invested = true } },
     } }
-    local function update() callbacks.UpdateTalentButtons(nil, {}, function() end, screen, false) end
+    local function update() callbacks.UpdateTalentButtons(nil, runtime, function() end, screen, false) end
     local ok, failure = pcall(use, callbacks, item, function()
+        update()
+        lu.assertEquals(created, {})
+        enabled = true
         update()
         lu.assertEquals(#created, 1)
         lu.assertEquals(created[1].DestinationId, 1)
         lu.assertEquals(created[1].Animation, "ActiveTrait")
-        screen.Components.TalentObject1_2.Data.QueuedInvested = true
+        enabled = false
         update()
         lu.assertEquals(destroyed, { 101 })
+        enabled = true
+        update()
+        lu.assertEquals(#created, 2)
+        screen.Components.TalentObject1_2.Data.QueuedInvested = true
+        update()
+        lu.assertEquals(destroyed, { 101, 102 })
+        screen.Components.TalentObject1_2.Data.QueuedInvested = nil
+        -- The setting's commit refresh re-applies the open screen without a button update.
+        enabled = false
+        update()
+        enabled = true
+        guide.refresh(runtime, { state = "synchronized" })
+        lu.assertEquals(#created, 3)
+        enabled = false
+        guide.refresh(runtime, { state = "synchronized" })
+        lu.assertEquals(destroyed, { 101, 102, 103 })
         return "native-screen-return"
     end)
-    _G.CreateScreenComponent, _G.Destroy = previousCreate, previousDestroy
     lu.assertTrue(ok, failure)
-    screen.Components.TalentObject1_2.Data.QueuedInvested = nil
-    _G.CreateScreenComponent = function() error("no plan is open") end
+    enabled = true
     update()
-    _G.CreateScreenComponent = previousCreate
+    guide.refresh(runtime, { state = "synchronized" })
+    _G.CreateScreenComponent, _G.Destroy = previousCreate, previousDestroy
+    lu.assertEquals(#created, 3)
 end
