@@ -15,6 +15,7 @@ const statusLabels: Record<ProfileStatus, string> = {
 
 const failureLabels: Record<ProjectOperation, string> = {
   new: 'Couldn’t create project',
+  openCopy: 'Couldn’t open project',
   loadProfile: 'Couldn’t load file',
   saveProfile: 'Couldn’t save file',
   saveProfileAs: 'Couldn’t save file',
@@ -26,6 +27,7 @@ const failureLabels: Record<ProjectOperation, string> = {
 
 const successLabels: Record<ProjectOperation, string> = {
   new: 'Project created',
+  openCopy: 'Project opened',
   loadProfile: 'File loaded',
   saveProfile: 'File saved',
   saveProfileAs: 'Saved as new file',

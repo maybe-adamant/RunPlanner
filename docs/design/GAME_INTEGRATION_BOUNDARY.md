@@ -222,8 +222,9 @@ ModpackLib `.cfg`.
   admission.
 - Sending a plan also makes its slot active. The planner makes a slot active
   only when that slot holds a plan; the in-game picker offers all twelve, and
-  the event slot first while it holds a file or is the active slot. Writing or
-  clearing the event slot never changes the active slot.
+  the event slot first while it holds a file or is the active slot. Writing the
+  event slot never changes the active slot; clearing it while it is active
+  makes slot 1 active (see [Event slot](#event-slot)).
 
 ### Slot overview
 
@@ -317,23 +318,44 @@ event title in the Plan column and its end time beneath, the same Route, Ends,
 Aspect and Sent columns, and no send action. The row shows while the slot holds
 a file or is the active slot; its radio makes it active like any other slot.
 
-Only two host operations change it, each through the same staged
-slot-and-overview transaction as a send (see
-[Publication preconditions](#publication-preconditions)): writing an event plan
-with its summary and `event` metadata, under the same target, compatibility and
-reference-build checks as a send, and clearing, which removes slot 0 and its
-entry together (an entry left without its file included) and needs only an
-established target. Neither touches
-`active-slot.json`; an active event slot that is cleared stays active and is an
-empty slot at the next admission. The host validates the event metadata before
-any write: an `id` of lower-case letters, digits and inner hyphens within 64
-characters, a non-blank single-line `title` within 80 characters and an `endsAt`
-of the form `YYYY-MM-DDTHH:MM:SS[.fraction]Z`.
+The application keeps slot 0 in step with the [event feed](#event-feed) without
+any user action: at start-up and whenever the Game panel opens it writes the
+active event, or clears slot 0 when there is none. Only two host operations
+change it, each through the same staged slot-and-overview transaction as a
+send (see [Publication preconditions](#publication-preconditions)):
+
+- **Write** takes only an event id and the display summary. The host writes its
+  own verified plan and `event` metadata, and only for the event that is active
+  now; the application cannot supply plan bytes or event metadata. It has the
+  same target, compatibility and reference-build checks as a send, and leaves a
+  slot already holding that plan and event as it is. It never touches
+  `active-slot.json`.
+- **Clear** removes slot 0 and its entry together (an entry left without its
+  file included) and needs only an established target. Without verified event
+  data (no feed fetched or cached this session), the host clears slot 0 only
+  when its own overview entry names an event that has ended, and otherwise keeps
+  it. When `active-slot.json` names slot 0, the host then makes slot 1 active,
+  since the slot played before the event may no longer hold its plan, and the
+  application's notice says the event ended and the next run uses Slot 1, or,
+  when slot 1 is empty, that the next run has no plan until a slot is chosen
+  (the module then reports "Nothing was sent to this slot." and the run plays
+  unplanned).
+
+The host validates the event metadata before any write: an `id` of lower-case
+letters, digits and inner hyphens within 64 characters, a non-blank single-line
+`title` within 80 characters and an `endsAt` of the form
+`YYYY-MM-DDTHH:MM:SS[.fraction]Z`.
 
 Development builds (and release builds made with `VITE_INTERNAL_FEATURES=1`)
-offer **Import event file…** and **Clear event** under Plans in game. The
-import reads a local event document, selects its plan for the bundled module
-build, summarizes it with the catalog as a send does, and writes it to slot 0.
+offer **Import event file…**, **Clear event** and **Export event file…** under
+Plans in game. Import loads a local event document into the host in place of
+the feed's event for the session, so the same write applies; Clear returns to
+the feed's event. Export compiles the open project, through the same
+execution-plan assembly as a send, into an event document for the bundled
+build, naming the project's file beside the feed and the SHA-256 of the project
+as encoded at export, which is the file to publish. The host registers the local-file commands only in those builds
+(`debug_assertions`, or the `internal_features` cfg its build script sets from
+`VITE_INTERNAL_FEATURES=1`).
 
 The module names a running plan by its event when its `planFingerprint` equals
 the event slot entry's `fingerprint`, wherever it was loaded from: Current Run
@@ -341,6 +363,61 @@ reads "Event: <title>", and the victory summary's first row reads
 `Planned event - <title>` instead of `Planned run - <plan name>`, provided the
 event slot's file still exists. This is display only; the status row is
 unchanged.
+
+### Event feed
+
+The event feed is `events.json` with its signature `events.json.sig`, both on
+the repository's `events` release
+(`https://github.com/maybe-adamant/RunPlanner/releases/download/events/`):
+
+```json
+{ "format": "run-planner-event-feed", "formatVersion": 1, "events": [<event document>] }
+```
+
+Each event document is `run-planner-event` version 1: `id`, `title`,
+`description`, optional `rules`, `startsAt`, `endsAt`, `projectUrl`,
+`projectSha256` (lower-case hex) and `plans` keyed by module build id. The
+signature is the updater's: `tauri signer sign` output, a prehashed minisign
+signature verified with the updater public key in `tauri.conf.json`. Its
+trusted comment, which the signature covers, must name `file:events.json`, and
+its `timestamp` orders feeds.
+
+- The host downloads the feed (at most 16 MiB) and signature (at most 4 KiB)
+  over HTTPS only, verifies the signature before decoding, and decodes strictly.
+  A malformed feed, one listing more than 32 events, a bad signature, or a feed
+  signed earlier than the newest feed already verified (in this session or in
+  the cache) is refused whole. Within it, an invalid event, one whose
+  `projectUrl` is not exactly
+  `https://github.com/maybe-adamant/RunPlanner/releases/download/events/<id>.runplanner.json`
+  or that has no `projectSha256`, or a repeated id is refused alone and logged;
+  a valid event without a plan for the bundled build is skipped.
+- Text fields are bounded, with no control or Unicode format characters, and
+  times are UTC instants; an event must end after it starts. Plans keep their
+  bytes, and a build id may appear once.
+- The active event is the one whose window (`startsAt` inclusive, `endsAt`
+  exclusive) contains now; of several, the latest start wins, then the greater
+  id. There is at most one.
+- Start-up reads the feed at most once every ten minutes; opening the Game panel
+  also retries at once after a failed fetch. The last verified feed and its
+  signature are kept together in one file in the application data folder
+  (`event-feed/events.cache`) and verified again when read. A failed fetch
+  keeps the feed already held or falls back to that copy, so a verified event
+  stays offline until it ends; with neither, slot 0 is kept until its own event
+  ends.
+- The application computes the display summary from the plan the host returned
+  and names that plan's fingerprint when writing; the host refuses the write if
+  its active event or plan has changed since.
+- **Open project** downloads the event's project file (at most 8 MiB, HTTPS
+  only) from its verified `projectUrl`, refuses it unless its SHA-256 matches
+  `projectSha256`, and opens it as a new, never-saved copy with its own
+  `projectId`, so a copy sent to a slot is not the event's plan. When the open
+  project has unsaved changes, the planner asks before replacing it.
+
+The notice area above the workspace shows one notice: an app update first,
+otherwise the event, `Event: <title> · ends <date>`, with **Details** (the
+description and rules), **Open project**, **Copy link** (the project URL) and
+**Dismiss**. A dismissal is remembered per event id in the browser profile; the
+event slot is still written.
 
 ### Publication preconditions
 

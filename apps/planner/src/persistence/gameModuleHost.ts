@@ -115,33 +115,11 @@ export interface GameEventSlot extends Omit<GamePlanSlot, 'slot'> {
   readonly event: GameEventSummary | null;
 }
 
-/** One community event's metadata, as the host validated it from an event document. */
-export interface CommunityEvent {
-  readonly id: string;
-  readonly title: string;
-  readonly description: string;
-  readonly rules: string | null;
-  readonly startsAt: string;
-  readonly endsAt: string;
-  readonly projectUrl: string | null;
-}
-
-/** An event and its execution plan for this app's game module build, as published. */
-export interface GameEventPlan {
-  readonly event: CommunityEvent;
-  readonly planJson: string;
-}
-
-export interface GameEventSlotClearing {
-  /** `alreadyEmpty`: no event slot file and no overview entry. */
-  readonly status: 'cleared' | 'alreadyEmpty' | 'blocked' | 'nativeWrite';
-  readonly message: string;
-  readonly blockers: readonly GamePublicationBlocker[];
-}
-
 /** Host-reported facts about the established game target. */
 export interface GameModuleStatus {
   readonly bundledVersion: string;
+  /** The module build this app ships, which selects an event's plan. */
+  readonly bundledBuildId: string;
   readonly developmentInstallAvailable: boolean;
   readonly target: GameTarget | null;
   readonly targetProblem: string | null;
@@ -249,18 +227,6 @@ export interface GameModuleHost extends GamePlanPublisher {
   readonly remove: () => Promise<GameModuleRemoveResult>;
   /** Makes a slot that holds a plan the one the game module plays next. */
   readonly setActiveSlot: (slotNumber: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
-  /** Resolves null when the file picker is cancelled. */
-  readonly pickEventFile: () => Promise<string | null>;
-  /** Reads a local event file and selects its plan for this app's build; rejects with the reason. */
-  readonly readEventFile: (path: string) => Promise<GameEventPlan>;
-  /** Writes an event's plan to the event slot; the active slot is left as it is. */
-  readonly publishEvent: (
-    planJson: string,
-    summary: GamePlanSlotSummary,
-    event: GameEventSummary,
-  ) => Promise<GamePlanPublication>;
-  /** Removes the event slot's plan and its overview entry. */
-  readonly clearEvent: () => Promise<GameEventSlotClearing>;
   /** Asks where to save through the host's own dialog, then writes the report there. */
   readonly createBugReport: (
     defaultFileName: string,
@@ -273,7 +239,6 @@ export interface GameModuleHost extends GamePlanPublisher {
 export interface TauriGameModuleEnvironment {
   readonly invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
   readonly chooseDirectory: () => Promise<string | null>;
-  readonly chooseEventFile: () => Promise<string | null>;
 }
 
 export function createTauriGameModuleHost(
@@ -284,13 +249,6 @@ export function createTauriGameModuleHost(
         directory: true,
         multiple: false,
         title: 'Choose a Folder Containing ReturnOfModding',
-      }),
-    chooseEventFile: () =>
-      open({
-        directory: false,
-        filters: [{ extensions: ['json'], name: 'Run Planner event' }],
-        multiple: false,
-        title: 'Import Event File',
       }),
   },
 ): GameModuleHost {
@@ -321,12 +279,6 @@ export function createTauriGameModuleHost(
       }),
     setActiveSlot: (slotNumber: GameActiveSlotNumber) =>
       environment.invoke<GameActiveSlotSetting>('game_active_slot_set', { slotNumber }),
-    pickEventFile: () => environment.chooseEventFile(),
-    readEventFile: (path: string) =>
-      environment.invoke<GameEventPlan>('game_event_file_read', { path }),
-    publishEvent: (planJson: string, summary: GamePlanSlotSummary, event: GameEventSummary) =>
-      environment.invoke<GamePlanPublication>('game_event_publish', { planJson, summary, event }),
-    clearEvent: () => environment.invoke<GameEventSlotClearing>('game_event_clear'),
     createBugReport: (defaultFileName: string, request: BugReportRequest) =>
       environment.invoke<BugReportCreation>('bug_report_create', { defaultFileName, request }),
     revealBugReport: () => environment.invoke<void>('bug_report_reveal'),

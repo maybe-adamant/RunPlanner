@@ -12,7 +12,6 @@ describe('Tauri game module host adapter', () => {
     const host = createTauriGameModuleHost({
       invoke,
       chooseDirectory: vi.fn(),
-      chooseEventFile: vi.fn(),
     });
 
     await host.status();
@@ -33,14 +32,6 @@ describe('Tauri game module host adapter', () => {
     await host.publish(3, '{"format":"run-planner-execution"}', summary);
     await host.setActiveSlot(2);
     await host.setActiveSlot(0);
-    await host.readEventFile('/events/2026-w42.json');
-    const event = {
-      id: '2026-w42-staff',
-      title: 'Week 42: Staff sprint',
-      endsAt: '2026-10-19T00:00:00Z',
-    };
-    await host.publishEvent('{"format":"run-planner-execution"}', summary, event);
-    await host.clearEvent();
     await host.openExternalPage('https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/');
     const request = {
       appFacts: { plannerVersion: '1.0.0' },
@@ -65,9 +56,6 @@ describe('Tauri game module host adapter', () => {
       ],
       ['game_active_slot_set', { slotNumber: 2 }],
       ['game_active_slot_set', { slotNumber: 0 }],
-      ['game_event_file_read', { path: '/events/2026-w42.json' }],
-      ['game_event_publish', { planJson: '{"format":"run-planner-execution"}', summary, event }],
-      ['game_event_clear'],
       ['external_open_url', { url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/' }],
       ['bug_report_create', { defaultFileName: 'report.zip', request }],
       ['bug_report_reveal'],
@@ -80,7 +68,7 @@ describe('Tauri game module host adapter', () => {
       .fn()
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce('/games/Hades II/Ship');
-    const host = createTauriGameModuleHost({ invoke, chooseDirectory, chooseEventFile: vi.fn() });
+    const host = createTauriGameModuleHost({ invoke, chooseDirectory });
 
     expect(await host.pickTargetFolder()).toBeNull();
     expect(await host.pickTargetFolder()).toBe('/games/Hades II/Ship');

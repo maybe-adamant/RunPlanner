@@ -50,6 +50,7 @@ victory screen.
     "startsAt": "2026-10-12T00:00:00Z",
     "endsAt": "2026-10-19T00:00:00Z",
     "projectUrl": "https://… (optional)",
+    "projectSha256": "<lower-case hex> (optional)",
     "plans": { "<buildId>": { "format": "run-planner-execution", "…": "…" } }
   }
   ```
@@ -65,6 +66,14 @@ victory screen.
   The host owns this decoder (`community_event.rs`) and selects the plan for
   the bundled build.
 
+- The feed wrapper is
+  `{"format":"run-planner-event-feed","formatVersion":1,"events":[…]}`; in the
+  feed, `projectUrl` is required and must be exactly
+  `https://github.com/maybe-adamant/RunPlanner/releases/download/events/<id>.runplanner.json`,
+  and `projectSha256` (lower-case hex SHA-256 of that file) is required.
+  The `.sig` is `tauri signer sign` output (prehashed), whose trusted comment must
+  name `file:events.json`; a feed signed earlier than one already verified is
+  refused.
 - Signed with the existing updater minisign key; the app verifies it with the
   embedded updater public key.
 - Expired events (past `endsAt`) are dropped from the feed.

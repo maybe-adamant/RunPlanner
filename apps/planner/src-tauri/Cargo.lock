@@ -2598,6 +2598,7 @@ dependencies = [
 name = "run-planner"
 version = "0.1.0"
 dependencies = [
+ "reqwest",
  "run-planner-game-host",
  "serde",
  "serde_json",
@@ -2613,7 +2614,9 @@ dependencies = [
 name = "run-planner-game-host"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "flate2",
+ "minisign-verify",
  "serde",
  "serde_json",
  "sha2",

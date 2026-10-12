@@ -125,7 +125,20 @@
 .release-update-actions {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: 6px;
+}
+
+.event-notice-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.event-notice-details p,
+.event-notice-body > p {
+  margin: 0;
+  white-space: pre-line;
 }
 
 .about-shortcuts h2 {
@@ -172,4 +185,14 @@
 
 .about-popover-arrow {
   fill: #41424c;
+}
+
+.export-event-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.export-event-fields label {
+  display: grid;
+  gap: 4px;
 }

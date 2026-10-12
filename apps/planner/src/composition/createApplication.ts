@@ -23,7 +23,10 @@ import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
 import { createBugReportOperations } from '../workspace/bugReport';
-import { createEventSlotOperations } from '../workspace/communityEvents';
+import {
+  createCommunityEventController,
+  type EventDismissalPreference,
+} from '../workspace/communityEvents';
 import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
 import {
   createUnavailableProfileFileAdapter,
@@ -31,7 +34,11 @@ import {
   type ProfileFileRestoreResult,
 } from '../persistence/profileFile';
 import { createGameStatusController, type GameModuleHost } from '../persistence/gameModuleHost';
-import { createPlannerStore } from '../state/store';
+import type {
+  CommunityEventDevelopmentHost,
+  CommunityEventHost,
+} from '../persistence/communityEventHost';
+import { createPlannerStore, selectPresentProject } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { profileFileErrorReported } from '../state/profileSessionSlice';
 import { createDevelopmentBuildIdentity, type BuildIdentity } from './buildIdentity';
@@ -47,6 +54,11 @@ export interface CreateApplicationOptions {
   readonly profileFile?: ProfileFileAdapter;
   readonly profileFileRestore?: ProfileFileRestoreResult;
   readonly gameModuleHost?: GameModuleHost;
+  /** The signed community event feed; given with the game module host. */
+  readonly communityEventHost?: CommunityEventHost;
+  /** Local event files and export; used only in development builds. */
+  readonly communityEventDevelopmentHost?: CommunityEventDevelopmentHost;
+  readonly eventDismissals?: EventDismissalPreference;
   readonly mintProjectId?: () => string;
   readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
 }
@@ -87,7 +99,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
   const contextualPicker = createContextualPickerProjection(contextualOptions);
   const rewardPicker = createRewardPickerProjection(catalog, contextualPicker);
   const traitDomain = createTraitDomainProjection(catalog, contextualPicker);
-  // Internal run modifiers and the event file import: dev builds, or a release build made with
+  // Internal run modifiers and the event file actions: dev builds, or a release build made with
   // VITE_INTERNAL_FEATURES=1.
   const devBuild =
     options.devBuild ?? (import.meta.env.DEV || import.meta.env.VITE_INTERNAL_FEATURES === '1');
@@ -167,6 +179,39 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       ? structuredWorkspace.project(state.projectWorkspace.assembly)
       : undefined;
 
+  const gameStatus =
+    options.gameModuleHost === undefined
+      ? undefined
+      : createGameStatusController(options.gameModuleHost);
+  const gameModuleHost = options.gameModuleHost;
+  const dismissed = new Set<string>();
+  const communityEvents =
+    options.communityEventHost === undefined || gameModuleHost === undefined
+      ? undefined
+      : createCommunityEventController({
+          catalog,
+          host: options.communityEventHost,
+          // Filling the event slot from a local event file is a development action.
+          ...(devBuild && options.communityEventDevelopmentHost !== undefined
+            ? { development: options.communityEventDevelopmentHost }
+            : {}),
+          dismissals: options.eventDismissals ?? {
+            isDismissed: (eventId) => dismissed.has(eventId),
+            dismiss: (eventId) => void dismissed.add(eventId),
+          },
+          openProjectCopy: (json) => projectOperations.openProjectCopy(json),
+          onSlotsChanged: () => {
+            gameStatus?.refresh().catch(() => {
+              // The header indicator reports a failed status read.
+            });
+          },
+          currentProject: () => selectPresentProject(store.getState()),
+          currentAssembly: () => {
+            const workspace = store.getState().projectWorkspace;
+            return workspace.kind === 'openProject' ? workspace.assembly : undefined;
+          },
+          bundledBuildId: async () => (await gameModuleHost.status()).bundledBuildId,
+        });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);
 
@@ -185,15 +230,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     catalog,
     catalogSummary,
     editorNavigation,
-    // Filling the event slot from a local event file is a development action.
-    eventSlot:
-      options.gameModuleHost === undefined || !devBuild
-        ? undefined
-        : createEventSlotOperations({ catalog, host: options.gameModuleHost }),
-    gameStatus:
-      options.gameModuleHost === undefined
-        ? undefined
-        : createGameStatusController(options.gameModuleHost),
+    communityEvents,
+    gameStatus,
     projectOperations,
     store,
     selectStructuredWorkspace,

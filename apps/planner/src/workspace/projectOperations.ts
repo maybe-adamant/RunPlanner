@@ -53,6 +53,7 @@ export type ProjectOperation =
   | 'exportRecovery'
   | 'loadProfile'
   | 'new'
+  | 'openCopy'
   | 'publishGame'
   | 'saveBeforeUpdate'
   | 'saveProfile'
@@ -96,6 +97,8 @@ export interface ProjectOperations {
   saveProfile(): Promise<ProjectOperationResult>;
   saveProfileAs(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
+  /** Opens a project document as a new, never-saved copy with its own identity. */
+  openProjectCopy(json: string): Promise<ProjectOperationResult>;
 }
 
 interface CreateProjectOperationsOptions {
@@ -126,6 +129,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   exportRecovery: 'Export Autosave',
   loadProfile: 'Load Profile',
   new: 'New project',
+  openCopy: 'Open project',
   publishGame: 'Send to game',
   saveBeforeUpdate: 'Save before update',
   saveProfile: 'Save Profile',
@@ -465,6 +469,20 @@ export function createProjectOperations(
           return failure('saveProfileAs', error);
         }
       }),
+    async openProjectCopy(json: string): Promise<ProjectOperationResult> {
+      try {
+        const { project: loaded } = loadProjectDocument(json, options.catalog);
+        // A copy never shares the original's identity, so its sends are its own.
+        const project: ProjectDocument = { ...loaded, projectId: mintProjectId() };
+        assertPublicProjectAdmission(options.catalog, project);
+        await options.profileFile.clearActive();
+        activeProfileFile = null;
+        options.store.dispatch(newProjectCreated(project));
+        return result('openCopy', 'success', 'Opened the project as an unsaved copy.');
+      } catch (error) {
+        return failure('openCopy', error);
+      }
+    },
     async loadProfile(): Promise<ProjectOperationResult> {
       try {
         const loaded = await options.profileFile.load();
