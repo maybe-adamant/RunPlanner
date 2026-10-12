@@ -1,5 +1,5 @@
 -- Display-only room and key names matching the catalog; native map IDs are
--- not text keys. Shared by the room guide and the victory summary.
+-- not text keys. Shared by the room guide, the status window and the victory summary.
 local names = {}
 
 names.occupants = {
@@ -50,6 +50,11 @@ end
 function names.biome(gameName)
     local key = tostring(gameName):match("^(%u)_")
     return key and biomes[key] or nil
+end
+
+-- Biome name for a plan's biome key, such as "F".
+function names.biomeName(key)
+    return biomes[key]
 end
 
 -- Room name without its biome, or nil when the room has no biome-relative form.

@@ -8,8 +8,7 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
     local bridge = { renderWindow = function() end, addMenuBar = function() end }
     local module = {
         data = { define = function() end },
-        status = { define = function() end },
-        ui = { tab = function() end, quickContent = function() end },
+        ui = { tab = function(draw) registered.tab = draw end },
         overlays = {
             order = { module = 30 },
             createLine = function() end, createTable = function() end,
@@ -26,9 +25,11 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
         attach = function(target) lu.assertIs(target, module) end,
         roomGuideInspection = function() end,
         sessionInspection = function() end,
+        inboxInspection = {}, activeSlot = {}, slotOverview = {},
     }
+    local drawTab = function() end
     local imports = {
-        ["mods/host/data.lua"] = { buildStorage = function() return {} end, buildStatus = function() return {} end },
+        ["mods/host/data.lua"] = { buildStorage = function() return {} end },
         ["mods/host/build_identity.lua"] = { read = function(pluginRoot, pathApi)
             lu.assertEquals(pluginRoot, "plugin-folder")
             lu.assertIs(pathApi, registered.pathApi)
@@ -38,14 +39,21 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
             lu.assertEquals({ root, version, buildId }, { "unused", "1.2.3", "installed-build" })
             return runtime
         end },
-        ["mods/host/status_ui.lua"] = { bind = function() return { drawTab = function() end, drawQuickContent = function() end } end },
+        ["mods/host/status_ui.lua"] = { bind = function(inbox, inspect, activeSlot, slotOverview)
+            lu.assertIs(inbox, runtime.inboxInspection)
+            lu.assertIs(inspect, runtime.sessionInspection)
+            lu.assertIs(activeSlot, runtime.activeSlot)
+            lu.assertIs(slotOverview, runtime.slotOverview)
+            return { drawTab = drawTab }
+        end },
         ["mods/room/guide.lua"] = { attach = function(target, inspection)
             lu.assertIs(target, module)
             lu.assertIs(inspection, runtime.roomGuideInspection)
         end },
-        ["mods/host/victory_summary.lua"] = { attach = function(target, inspection)
+        ["mods/host/victory_summary.lua"] = { attach = function(target, inspection, slotOverview)
             lu.assertIs(target, module)
             lu.assertIs(inspection, runtime.sessionInspection)
+            lu.assertIs(slotOverview, runtime.slotOverview)
         end },
     }
     local environment = setmetatable({
@@ -74,4 +82,5 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
     }, { __index = _G })
     assert(loadfile("src/main.lua", "t", environment))()
     lu.assertTrue(registered.activated)
+    lu.assertIs(registered.tab, drawTab)
 end

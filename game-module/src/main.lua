@@ -19,7 +19,7 @@ local function initialize()
     local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version,
         buildId)
     local ui = import("mods/host/status_ui.lua").bind(runtime.inboxInspection, runtime.sessionInspection,
-        runtime.activeSlot)
+        runtime.activeSlot, runtime.slotOverview)
     local guide = import("mods/room/guide.lua")
     local victorySummary = import("mods/host/victory_summary.lua")
     local module = lib.createModule({
@@ -32,11 +32,9 @@ local function initialize()
     })
     if not module then return end
     module.data.define(data.buildStorage())
-    module.status.define(data.buildStatus())
     module.ui.tab(ui.drawTab)
-    module.ui.quickContent(ui.drawQuickContent)
     guide.attach(module, runtime.roomGuideInspection)
-    victorySummary.attach(module, runtime.sessionInspection)
+    victorySummary.attach(module, runtime.sessionInspection, runtime.slotOverview)
     runtime.attach(module)
     module.fallbackUi.attachGuiOnce(function(fallbackUi)
         rom.gui.add_imgui(fallbackUi.renderWindow)
