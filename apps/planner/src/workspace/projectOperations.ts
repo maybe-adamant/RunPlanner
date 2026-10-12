@@ -23,6 +23,7 @@ import {
 } from '../persistence/profileFile';
 import type { GamePlanPublisher, GamePlanSlotNumber } from '../persistence/gameModuleHost';
 import { describePublicationBlocker } from '../projections/gamePanel';
+import { projectGameSlotSummary } from '../projections/gameSlotSummary';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -270,6 +271,7 @@ export function createProjectOperations(
         const publication = await options.gamePlanPublisher.publish(
           slotNumber,
           encodeExecutionPlan(plan),
+          projectGameSlotSummary(plan, options.catalog, new Date()),
         );
         if (publication.status === 'published') {
           options.store.dispatch(gamePlanSent({ slot: slotNumber }));

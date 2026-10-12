@@ -36,14 +36,14 @@ function activeSlot.decode(raw)
         return nil, "formatVersion must be 1"
     end
     local slotToken = numberToken(raw, "slot")
-    if not validSlot(value.slot) or slotToken == nil or not slotToken:match("^[1-6]$") then
-        return nil, "slot must be an integer from 1 through 6"
+    if not validSlot(value.slot) or slotToken == nil or not slotToken:match("^[1-9]%d?$") then
+        return nil, "slot must be an integer from 1 through 12"
     end
     return value.slot
 end
 
 function activeSlot.encode(slot)
-    if not validSlot(slot) then error("active slot must be an integer from 1 through 6", 2) end
+    if not validSlot(slot) then error("active slot must be an integer from 1 through 12", 2) end
     return '{"format":"' .. activeSlot.FORMAT .. '","formatVersion":' .. activeSlot.FORMAT_VERSION
         .. ',"slot":' .. string.format("%d", slot) .. "}"
 end

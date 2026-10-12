@@ -31,7 +31,7 @@ to play it in Hades II. The app carries the mod and installs it for you.
 4. Create or load a plan in the app, configure your loadout and route, and
    fix any issues shown by the planner.
 5. In the Game panel's **Plans in game**, choose **Send here** on one of the
-   six plan slots.
+   twelve plan slots.
 6. Launch the game with that profile. In Run Planner's in-game settings,
    select the published slot as your active plan.
 7. Start a new run and follow its choices. The mod gives the run your planned
@@ -44,7 +44,7 @@ until the installed mod matches the app.
 For more about the application and its source, visit the
 [planner repository](https://github.com/maybe-adamant/RunPlanner).
 
-You can keep up to six plans ready to play. Changing the active slot during a
+You can keep up to twelve plans ready to play. Changing the active slot during a
 run only changes which plan will be used for the next run; it does not replace
 the plan already in progress.
 

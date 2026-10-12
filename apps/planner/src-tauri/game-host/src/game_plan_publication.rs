@@ -9,9 +9,10 @@ use crate::game_module_install::{
 use crate::game_module_package::{ModulePackage, PackageSource};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
-    encode_active_slot, encode_slot, slot_file_name, PlanSlotState, ACTIVE_SLOT_FILE,
-    MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
+    encode_active_slot, encode_slot, inspect_slots, read_slot, slot_file_name, PlanSlotState,
+    ACTIVE_SLOT_FILE, MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
 };
+use crate::slot_overview::{self, SlotSummary, SLOT_OVERVIEW_FILE};
 
 // The plan fields the installed module's compatibility file must match.
 #[derive(Deserialize)]
@@ -52,7 +53,7 @@ fn native_write(message: String) -> GamePlanPublication {
 #[serde(rename_all = "camelCase")]
 pub enum ActivationStatus {
     Activated,
-    /// The slot number is outside 1 through 6.
+    /// The slot number is outside 1 through 12.
     InvalidSlot,
     Blocked,
     /// The slot holds no readable plan, so it cannot be made active.
@@ -114,20 +115,6 @@ fn shared_file_destination(
     Ok(destination)
 }
 
-fn bounded_atomic_write(
-    target: &ResolvedTarget,
-    slot_number: u8,
-    bytes: &[u8],
-) -> Result<(), String> {
-    if bytes.len() > MAX_PLAN_BYTES {
-        return Err(format!(
-            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
-        ));
-    }
-    let destination = safe_destination(target, slot_number)?;
-    atomic_file::write(&destination, bytes, "plan slot")
-}
-
 /// The module build a slot must name: this app's package or, in a development build
 /// with a checkout install, the checkout as it is now.
 fn reference_build_id(package: &ModulePackage, module: &InstalledModule) -> Result<String, String> {
@@ -140,13 +127,15 @@ fn reference_build_id(package: &ModulePackage, module: &InstalledModule) -> Resu
 }
 
 /// Writes one plan slot of an already-established target whose module accepts the
-/// plan's header and is the reference build, as an envelope naming that build.
+/// plan's header and is the reference build, as an envelope naming that build, together
+/// with the slot overview that records its summary.
 fn write_plan(
     target: &ResolvedTarget,
     module: &InstalledModule,
     reference_build_id: &str,
     slot_number: u8,
     plan_json: &str,
+    summary: SlotSummary,
 ) -> Result<(), String> {
     slot_file_name(slot_number)?;
     let header: PlanHeader = serde_json::from_str(plan_json)
@@ -172,11 +161,90 @@ fn write_plan(
                 .to_owned()
         });
     }
-    bounded_atomic_write(
+    let envelope = encode_slot(&installed.build_id, plan_json);
+    if envelope.len() > MAX_PLAN_BYTES {
+        return Err(format!(
+            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
+        ));
+    }
+    let staged = stage_slot_and_overview(
         target,
+        &installed.build_id,
         slot_number,
-        encode_slot(&installed.build_id, plan_json).as_bytes(),
-    )
+        envelope.as_bytes(),
+        summary,
+    )?;
+    commit_slot_and_overview(staged)
+}
+
+/// A slot write and the overview regenerated with it, both staged in full, with a copy of
+/// the slot's previous file to restore if the overview cannot follow.
+struct StagedSend {
+    slot: atomic_file::StagedFile,
+    overview: atomic_file::StagedFile,
+    /// `None` when the slot had no file.
+    previous_slot: Option<atomic_file::StagedFile>,
+    slot_destination: PathBuf,
+}
+
+fn stage_slot_and_overview(
+    target: &ResolvedTarget,
+    build_id: &str,
+    slot_number: u8,
+    envelope: &[u8],
+    summary: SlotSummary,
+) -> Result<StagedSend, String> {
+    let slot_destination = safe_destination(target, slot_number)?;
+    let overview_destination =
+        shared_file_destination(target, SLOT_OVERVIEW_FILE, "slot overview")?;
+    let slot = atomic_file::stage(&slot_destination, envelope, "plan slot")?;
+    let mut slots = inspect_slots(target, Some(build_id));
+    slots[usize::from(slot_number - 1)] = read_slot(slot_number, slot.path(), Some(build_id));
+    let overview = slot_overview::regenerate(
+        slot_overview::read_overview(&overview_destination),
+        &slots,
+        Some((slot_number, summary)),
+    );
+    let overview = atomic_file::stage(
+        &overview_destination,
+        slot_overview::encode_overview(&overview)?.as_bytes(),
+        "slot overview",
+    )?;
+    let previous_slot = match fs::symlink_metadata(&slot_destination) {
+        Ok(_) => Some(atomic_file::stage_copy(&slot_destination, "plan slot")?),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => return Err(format!("could not inspect plan slot: {error}")),
+    };
+    Ok(StagedSend {
+        slot,
+        overview,
+        previous_slot,
+        slot_destination,
+    })
+}
+
+/// Commits the slot, then the overview; when the overview fails, the slot is restored
+/// to its previous file, or removed when it had none, and the send fails.
+fn commit_slot_and_overview(staged: StagedSend) -> Result<(), String> {
+    let StagedSend {
+        slot,
+        overview,
+        previous_slot,
+        slot_destination,
+    } = staged;
+    slot.commit()?;
+    let Err(problem) = overview.commit() else {
+        return Ok(());
+    };
+    let restored = match previous_slot {
+        Some(previous) => previous.commit(),
+        None => fs::remove_file(&slot_destination)
+            .map_err(|error| format!("could not remove plan slot: {error}")),
+    };
+    Err(match restored {
+        Ok(()) => format!("{problem}; the plan slot was left as it was."),
+        Err(restore) => format!("{problem}; restoring the plan slot also failed: {restore}"),
+    })
 }
 
 fn write_active_slot(target: &ResolvedTarget, slot_number: u8) -> Result<(), String> {
@@ -233,15 +301,16 @@ pub fn set_active_slot(
     }
 }
 
-/// Publishes to the remembered target only when its status has no blockers, then
-/// makes that slot active.
+/// Publishes to the remembered target only when its status has no blockers, writing the
+/// slot and the overview that records its summary together, then makes that slot active.
 pub fn publish(
     config_dir: &Path,
     package: &ModulePackage,
     slot_number: u8,
     plan_json: &str,
+    summary: SlotSummary,
 ) -> GamePlanPublication {
-    if let Err(message) = slot_file_name(slot_number) {
+    if let Err(message) = slot_file_name(slot_number).and(summary.validate()) {
         return native_write(message);
     }
     if plan_json.len() > MAX_PLAN_BYTES {
@@ -267,6 +336,7 @@ pub fn publish(
             &reference,
             slot_number,
             plan_json,
+            summary,
         )
     });
     if let Err(message) = written {
@@ -293,6 +363,7 @@ mod tests {
     use crate::game_target::test_support::TemporaryDirectory;
     use crate::game_target::{remember_target, TargetKind};
     use crate::plan_slots::{inspect_active_slot, ActiveSlotFacts};
+    use crate::slot_overview::test_support::summary;
 
     const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#;
 
@@ -317,11 +388,11 @@ mod tests {
             let temporary = TemporaryDirectory::new("publish");
             let config = temporary.0.join("app-config");
             let (target, package) = ready_target(&temporary.0.join("target"), kind);
-            let blocked = publish(&config, &package, 1, PLAN);
+            let blocked = publish(&config, &package, 1, PLAN, summary("Circe - Surface"));
             assert_eq!(blocked.status, PublicationStatus::Blocked);
             assert_eq!(blocked.blockers[0].code, BlockerCode::NoTarget);
             remember_target(&config, &target).unwrap();
-            let published = publish(&config, &package, 6, PLAN);
+            let published = publish(&config, &package, 12, PLAN, summary("Circe - Surface"));
             assert_eq!(
                 published.status,
                 PublicationStatus::Published,
@@ -329,13 +400,13 @@ mod tests {
                 published.message
             );
             assert_eq!(
-                fs::read_to_string(safe_destination(&target, 6).unwrap()).unwrap(),
+                fs::read_to_string(safe_destination(&target, 12).unwrap()).unwrap(),
                 encode_slot(&package.build_id, PLAN)
             );
             assert_eq!(published.activation_problem, None);
             assert_eq!(
                 inspect_active_slot(&target),
-                ActiveSlotFacts::Present { slot: 6 }
+                ActiveSlotFacts::Present { slot: 12 }
             );
         }
     }
@@ -375,7 +446,7 @@ mod tests {
                 format!("Slot {slot} has no plan to make active.")
             );
         }
-        for slot in [0, 7] {
+        for slot in [0, 13] {
             assert_eq!(
                 set_active_slot(&config, &package, slot).status,
                 ActivationStatus::InvalidSlot
@@ -399,6 +470,161 @@ mod tests {
         );
     }
 
+    fn overview(target: &ResolvedTarget) -> serde_json::Value {
+        let path = safe_destination(target, 1)
+            .unwrap()
+            .with_file_name(SLOT_OVERVIEW_FILE);
+        serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn each_publication_regenerates_the_slot_overview_from_the_slots() {
+        let temporary = TemporaryDirectory::new("publish-overview");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let second = PRESENT_PLAN.replace(r#""f""#, r#""g""#);
+        for (slot, plan, label) in [
+            (1, PRESENT_PLAN, "Circe - Surface"),
+            (12, second.as_str(), "Momus - Underworld"),
+            (5, PRESENT_PLAN, "Anubis - Surface"),
+        ] {
+            let published = publish(&config, &package, slot, plan, summary(label));
+            assert_eq!(
+                published.status,
+                PublicationStatus::Published,
+                "{}",
+                published.message
+            );
+        }
+        let written = overview(&target);
+        assert_eq!(written["format"], "run-planner-slot-overview");
+        assert_eq!(written["formatVersion"], 1);
+        assert_eq!(written["slots"]["12"]["label"], "Momus - Underworld");
+        assert_eq!(written["slots"]["12"]["fingerprint"], "g");
+        assert_eq!(written["slots"]["12"]["buildId"], package.build_id.as_str());
+        assert_eq!(written["slots"]["1"]["startingFear"], 12);
+        // A slot replaced or cleared outside the planner loses its entry at the next send.
+        fs::write(
+            safe_destination(&target, 1).unwrap(),
+            encode_slot(&package.build_id, &second),
+        )
+        .unwrap();
+        fs::remove_file(safe_destination(&target, 5).unwrap()).unwrap();
+        // A plan without a readable identity is written but has no entry.
+        publish(&config, &package, 3, PLAN, summary("Unread"));
+        let regenerated = overview(&target);
+        let slots = regenerated["slots"].as_object().unwrap();
+        assert_eq!(slots.keys().collect::<Vec<_>>(), ["12"]);
+        let names: Vec<String> = fs::read_dir(active_slot_path(&target).parent().unwrap())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            names.iter().all(|name| !name.ends_with(".tmp")),
+            "{names:?}"
+        );
+    }
+
+    fn config_files(target: &ResolvedTarget) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(active_slot_path(target).parent().unwrap())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn a_send_whose_summary_or_overview_cannot_be_written_writes_nothing() {
+        let temporary = TemporaryDirectory::new("publish-overview-fail");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let refused = publish(&config, &package, 2, PRESENT_PLAN, summary(""));
+        assert_eq!(refused.status, PublicationStatus::NativeWrite);
+        assert_eq!(refused.message, "Invalid plan slot summary.");
+        assert!(!safe_destination(&target, 2).unwrap().exists());
+        fs::create_dir_all(
+            safe_destination(&target, 1)
+                .unwrap()
+                .with_file_name(SLOT_OVERVIEW_FILE),
+        )
+        .unwrap();
+        let blocked = publish(
+            &config,
+            &package,
+            2,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        assert_eq!(blocked.status, PublicationStatus::NativeWrite);
+        assert_eq!(blocked.message, "slot overview must be a regular file");
+        assert!(!safe_destination(&target, 2).unwrap().exists());
+        assert!(!active_slot_path(&target).exists());
+        assert_eq!(config_files(&target), [SLOT_OVERVIEW_FILE]);
+    }
+
+    #[test]
+    fn an_overview_that_cannot_be_committed_rolls_the_slot_back() {
+        let temporary = TemporaryDirectory::new("publish-rollback");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        publish(
+            &config,
+            &package,
+            1,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        let previous_slot = fs::read(safe_destination(&target, 1).unwrap()).unwrap();
+        let previous_overview = overview(&target);
+        let overview_path = safe_destination(&target, 1)
+            .unwrap()
+            .with_file_name(SLOT_OVERVIEW_FILE);
+        let second = PRESENT_PLAN.replace(r#""f""#, r#""g""#);
+        for (slot, existed) in [(1, true), (4, false)] {
+            let envelope = encode_slot(&package.build_id, &second);
+            let staged = stage_slot_and_overview(
+                &target,
+                &package.build_id,
+                slot,
+                envelope.as_bytes(),
+                summary("Momus - Underworld"),
+            )
+            .unwrap();
+            // The overview's destination stops accepting a file after staging.
+            fs::remove_file(&overview_path).unwrap();
+            fs::create_dir(&overview_path).unwrap();
+            fs::write(overview_path.join("held"), "x").unwrap();
+            let failed = commit_slot_and_overview(staged).unwrap_err();
+            assert!(
+                failed.ends_with("; the plan slot was left as it was."),
+                "{failed}"
+            );
+            assert_eq!(safe_destination(&target, slot).unwrap().exists(), existed);
+            fs::remove_dir_all(&overview_path).unwrap();
+            fs::write(&overview_path, previous_overview.to_string()).unwrap();
+        }
+        assert_eq!(
+            fs::read(safe_destination(&target, 1).unwrap()).unwrap(),
+            previous_slot
+        );
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 1 }
+        );
+        assert_eq!(
+            config_files(&target),
+            [
+                ACTIVE_SLOT_FILE,
+                "slot-1.runplanner.json",
+                SLOT_OVERVIEW_FILE
+            ]
+        );
+    }
+
     #[test]
     fn a_failed_activation_after_publishing_keeps_the_plan_and_says_so() {
         let temporary = TemporaryDirectory::new("publish-activation");
@@ -406,7 +632,7 @@ mod tests {
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
         fs::create_dir_all(active_slot_path(&target)).unwrap();
-        let published = publish(&config, &package, 3, PLAN);
+        let published = publish(&config, &package, 3, PLAN, summary("Circe - Surface"));
         assert_eq!(published.status, PublicationStatus::Published);
         assert_eq!(
             published.activation_problem.as_deref(),
@@ -433,15 +659,27 @@ mod tests {
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Discovered);
         remember_target(&config, &target).unwrap();
-        publish(&config, &package, 2, PLAN);
+        publish(&config, &package, 2, PLAN, summary("Circe - Surface"));
         let newer = crate::game_module_install::test_support::package("1.3.0", "return 2");
-        let mismatch = publish(&config, &newer, 2, r#"{"other":true}"#);
+        let mismatch = publish(
+            &config,
+            &newer,
+            2,
+            r#"{"other":true}"#,
+            summary("Circe - Surface"),
+        );
         assert_eq!(mismatch.status, PublicationStatus::Blocked);
         assert_eq!(mismatch.blockers[0].code, BlockerCode::ModuleMismatch);
         assert_eq!(mismatch.blockers[0].found.as_deref(), Some("1.2.0"));
         assert_eq!(mismatch.blockers[0].required.as_deref(), Some("1.3.0"));
         modpack_lib(&target.root, "4.0.1");
-        let older = publish(&config, &package, 2, r#"{"other":true}"#);
+        let older = publish(
+            &config,
+            &package,
+            2,
+            r#"{"other":true}"#,
+            summary("Circe - Surface"),
+        );
         assert_eq!(older.blockers[0].code, BlockerCode::ModpackLibOlder);
         assert_eq!(older.blockers[0].found.as_deref(), Some("4.0.1"));
         assert_eq!(older.blockers[0].required.as_deref(), Some("4.2.0"));
@@ -457,13 +695,13 @@ mod tests {
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
-        publish(&config, &package, 4, PLAN);
+        publish(&config, &package, 4, PLAN, summary("Circe - Surface"));
         for plan in [
             r#"{"format":"run-planner-execution","catalogVersion":"other"}"#,
             "{}",
         ] {
             assert_eq!(
-                publish(&config, &package, 4, plan).status,
+                publish(&config, &package, 4, plan, summary("Circe - Surface")).status,
                 PublicationStatus::NativeWrite
             );
         }
@@ -477,14 +715,14 @@ mod tests {
         );
         for plan in [oversized, fills_the_envelope] {
             assert_eq!(
-                publish(&config, &package, 4, &plan).status,
+                publish(&config, &package, 4, &plan, summary("Circe - Surface")).status,
                 PublicationStatus::NativeWrite
             );
         }
-        for slot in [0, 7, u8::MAX] {
+        for slot in [0, 13, u8::MAX] {
             assert_eq!(
-                publish(&config, &package, slot, PLAN).message,
-                format!("plan slot must be between 1 and 6 (got {slot})")
+                publish(&config, &package, slot, PLAN, summary("Circe - Surface")).message,
+                format!("plan slot must be between 1 and 12 (got {slot})")
             );
         }
         assert_eq!(
@@ -501,7 +739,7 @@ mod tests {
         remember_target(&config, &target).unwrap();
         let plan = "{ \"catalogVersion\" : \"test-catalog\",\n  \"format\":\"run-planner-execution\",\"note\":\"é\\u00e9\" }";
         assert_eq!(
-            publish(&config, &package, 1, plan).status,
+            publish(&config, &package, 1, plan, summary("Circe - Surface")).status,
             PublicationStatus::Published
         );
         let written = fs::read_to_string(safe_destination(&target, 1).unwrap()).unwrap();
@@ -524,7 +762,7 @@ mod tests {
         let module = inspect(&target, &package).unwrap().module;
         assert_eq!(module.build_id.as_deref(), Some(package.build_id.as_str()));
         assert_eq!(
-            write_plan(&target, &module, "another-build", 1, PLAN),
+            write_plan(&target, &module, "another-build", 1, PLAN, summary("Circe - Surface")),
             Err("The installed game module is not this app's build. Install it again from the Game panel.".to_owned())
         );
         let compatibility = crate::game_module_install::test_support::module_path(&target)
@@ -535,7 +773,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            write_plan(&target, &module, &package.build_id, 1, PLAN),
+            write_plan(&target, &module, &package.build_id, 1, PLAN, summary("Circe - Surface")),
             Err("The installed game module has no build identity. Install it again from the Game panel.".to_owned())
         );
         assert!(!safe_destination(&target, 1).unwrap().exists());
@@ -560,7 +798,7 @@ mod tests {
         )
         .unwrap();
         remember_target(&config, &target).unwrap();
-        let refused = publish(&config, &bundled, 1, PLAN);
+        let refused = publish(&config, &bundled, 1, PLAN, summary("Circe - Surface"));
         assert_eq!(refused.status, PublicationStatus::NativeWrite);
         assert_eq!(
             refused.message,
@@ -570,10 +808,10 @@ mod tests {
     }
 
     #[test]
-    fn slot_numbers_map_to_the_six_closed_filenames_and_replace_only_that_slot() {
+    fn slot_numbers_map_to_the_twelve_closed_filenames_and_replace_only_that_slot() {
         let temporary = TemporaryDirectory::new("slots");
         let (target, _) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
-        for slot_number in 1_u8..=6 {
+        for slot_number in 1_u8..=12 {
             let expected = format!("slot-{slot_number}.runplanner.json");
             let destination = safe_destination(&target, slot_number).unwrap();
             assert_eq!(
@@ -581,9 +819,17 @@ mod tests {
                 Some(expected.as_str())
             );
         }
-        bounded_atomic_write(&target, 1, b"one").unwrap();
-        bounded_atomic_write(&target, 2, b"two").unwrap();
-        bounded_atomic_write(&target, 1, b"uno").unwrap();
+        let write = |slot, bytes: &[u8]| {
+            atomic_file::write(
+                &safe_destination(&target, slot).unwrap(),
+                bytes,
+                "plan slot",
+            )
+            .unwrap()
+        };
+        write(1, b"one");
+        write(2, b"two");
+        write(1, b"uno");
         assert_eq!(
             fs::read(safe_destination(&target, 1).unwrap()).unwrap(),
             b"uno"

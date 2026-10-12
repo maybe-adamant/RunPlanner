@@ -21,24 +21,70 @@ fn temporary_path(destination: &Path) -> Result<PathBuf, String> {
     )))
 }
 
-pub fn write(destination: &Path, bytes: &[u8], artifact: &str) -> Result<(), String> {
-    let temporary = temporary_path(destination)?;
-    let result = (|| -> Result<(), String> {
-        let mut file = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(&temporary)
-            .map_err(|error| format!("could not create temporary {artifact}: {error}"))?;
-        file.write_all(bytes)
-            .map_err(|error| format!("could not write temporary {artifact}: {error}"))?;
-        file.sync_all()
-            .map_err(|error| format!("could not flush temporary {artifact}: {error}"))?;
-        replace_file(&temporary, destination, artifact)
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
+/// A complete temporary file beside its destination, removed unless committed.
+pub struct StagedFile {
+    temporary: PathBuf,
+    destination: PathBuf,
+    artifact: String,
+    committed: bool,
+}
+
+impl StagedFile {
+    /// The staged bytes, readable before they replace the destination.
+    pub fn path(&self) -> &Path {
+        &self.temporary
     }
-    result
+
+    /// Atomically replaces the destination with the staged bytes.
+    pub fn commit(mut self) -> Result<(), String> {
+        replace_file(&self.temporary, &self.destination, &self.artifact)?;
+        self.committed = true;
+        Ok(())
+    }
+}
+
+impl Drop for StagedFile {
+    fn drop(&mut self) {
+        if !self.committed {
+            let _ = fs::remove_file(&self.temporary);
+        }
+    }
+}
+
+fn staged(destination: &Path, artifact: &str) -> Result<StagedFile, String> {
+    Ok(StagedFile {
+        temporary: temporary_path(destination)?,
+        destination: destination.to_owned(),
+        artifact: artifact.to_owned(),
+        committed: false,
+    })
+}
+
+/// Writes and flushes `bytes` to a temporary file that `commit` moves over `destination`.
+pub fn stage(destination: &Path, bytes: &[u8], artifact: &str) -> Result<StagedFile, String> {
+    let staged = staged(destination, artifact)?;
+    let mut file = OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(&staged.temporary)
+        .map_err(|error| format!("could not create temporary {artifact}: {error}"))?;
+    file.write_all(bytes)
+        .map_err(|error| format!("could not write temporary {artifact}: {error}"))?;
+    file.sync_all()
+        .map_err(|error| format!("could not flush temporary {artifact}: {error}"))?;
+    Ok(staged)
+}
+
+/// Stages a copy of `destination` as it is now, so committing it restores those bytes.
+pub fn stage_copy(destination: &Path, artifact: &str) -> Result<StagedFile, String> {
+    let staged = staged(destination, artifact)?;
+    fs::copy(destination, &staged.temporary)
+        .map_err(|error| format!("could not copy {artifact}: {error}"))?;
+    Ok(staged)
+}
+
+pub fn write(destination: &Path, bytes: &[u8], artifact: &str) -> Result<(), String> {
+    stage(destination, bytes, artifact)?.commit()
 }
 
 #[cfg(target_os = "windows")]

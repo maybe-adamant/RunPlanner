@@ -5,7 +5,7 @@
 The strict execution protocol carries a
 complete-valid configured Underworld, Fresh File or Surface prefix, through
 `F/G/H/I` (both Underworld profiles) or `N/O/P/Q`, or a public Dream prefix. The desktop
-publisher writes an execution-only JSON artifact to one of six fixed Plan
+publisher writes an execution-only JSON artifact to one of twelve fixed Plan
 Executor slots in the established game target; the browser build has no
 publication capability. Sending a plan also makes its slot active. The
 Executor reads the active slot from `active-slot.json` (see
@@ -21,7 +21,7 @@ Opening, or at a biome's Preboss or Boss. No other mid-run attachment, edited-pl
 recovery after a mismatch is supported.
 
 The transport names the slots `slot-1.runplanner.json` through
-`slot-6.runplanner.json` under the Run Planner game module configuration directory. The
+`slot-12.runplanner.json` under the Run Planner game module configuration directory. The
 planner changes the active slot only when the user sends a plan or picks a slot,
 and never chooses a game target on the user's behalf. There is no
 compatibility alias or implicit migration. An empty or
@@ -144,7 +144,8 @@ where the user chooses. The host assembles it from explicit inputs:
 send failure or a last send that was not made active and the current
 settlement fault, merged with the host's
 status of the established target), the open plan document when chosen, the
-six plan slot files and `active-slot.json` when plans in game are chosen, and
+twelve plan slot files, `active-slot.json` and the slot overview when plans in
+game are chosen, and
 log tails from `ReturnOfModding`: `LogOutput.log` and the newest `backup/*_LogOutput.log`
 (last 2 MiB each) and `lovely.log` (last 1 MiB), each cut forward to a line
 start. Missing or unreadable sources are recorded in `report.json`. Every entry
@@ -158,11 +159,13 @@ last wrote.
 Anything both the planner and the game module need lives in
 `config/adamantRunPlanner-Run_Planner/`, in a format they own together:
 
-- the six plan slots `slot-N.runplanner.json`, which only the planner writes,
+- the twelve plan slots `slot-N.runplanner.json`, which only the planner writes,
   each the envelope
   `{"format":"run-planner-slot","buildId":"…","plan":<plan>}` with the plan
   bytes unchanged and the whole file within 1 MiB;
-- `active-slot.json`, the plan slot the module plays next, which both write.
+- `active-slot.json`, the plan slot the module plays next, which both write;
+- `slots.runplanner.json`, the [slot overview](#slot-overview), which only the
+  planner writes.
 
 Settings that only the game uses, such as the room guide, highlights and
 `Enabled`, stay in ModpackLib storage. The planner never reads or writes the
@@ -175,7 +178,7 @@ ModpackLib `.cfg`.
 ```
 
 - Both sides decode strictly: exactly these three keys, `slot` an integer
-  from 1 through 6, and at most 1 KiB. The module writes the compact form
+  from 1 through 12, and at most 1 KiB. The module writes the compact form
   `{"format":"run-planner-active-slot","formatVersion":1,"slot":3}`.
 - The planner writes it atomically, as it writes plan slots. The module writes
   a temporary file beside it, removes the old file, then renames (retrying
@@ -193,7 +196,56 @@ ModpackLib `.cfg`.
   with the slot facts. A change made during a run takes effect at the next
   admission.
 - Sending a plan also makes its slot active. The planner makes a slot active
-  only when that slot holds a plan; the in-game picker offers all six.
+  only when that slot holds a plan; the in-game picker offers all twelve.
+
+### Slot overview
+
+`slots.runplanner.json` names each occupied slot for display, so the module
+need not decode every plan to describe them:
+
+```json
+{
+  "format": "run-planner-slot-overview",
+  "formatVersion": 1,
+  "slots": {
+    "3": {
+      "label": "Circe - Surface",
+      "planName": "Surface Phial run",
+      "sentAt": "2026-10-12T10:00:00.000Z",
+      "aspect": "Circe (Staff)",
+      "route": "Surface",
+      "endBiome": "Olympus",
+      "startingKeepsake": "Silver Wheel",
+      "startingFear": 8,
+      "practiceStart": "Thessaly · Boss",
+      "buildId": "…",
+      "fingerprint": "…"
+    }
+  }
+}
+```
+
+- The application computes the display summary when it sends, from the
+  compiled plan and catalog labels: `label` is the aspect's name without
+  "Aspect of" and the route ("Circe - Surface"), naming the weapon too when
+  several catalog aspects share that name ("Melinoë (Axe) - Surface"), or
+  only the weapon's short label when the plan has no aspect; `aspect` adds the weapon's short label, `endBiome` names the
+  extent's terminal biome, `startingFear` is the configured Fear total the
+  Oath shows, and `practiceStart` names a Practice mode start's biome and
+  point. `planName`, `startingKeepsake` and `practiceStart` are omitted when
+  the plan has none. The summary goes to the host with the send.
+- The host adds the slot's `buildId` and the plan's `planFingerprint` as
+  `fingerprint`, as read back from the staged slot file, and regenerates the
+  whole file with every send (see
+  [Publication preconditions](#publication-preconditions)). The overview is the
+  only store of summaries: a slot keeps its entry only while its file still
+  holds that build and fingerprint, so a slot emptied, made unreadable or
+  replaced outside the planner loses its entry at the next send, and a slot
+  without a known summary (sent by an older planner, or a bare plan) has no
+  entry. A missing or invalid previous overview holds no entries.
+- Entries are advisory, for listing and describing slots: a missing entry is
+  unknown, and the module checks `buildId` and `fingerprint` only against the
+  one slot it loads. An overview that would exceed 64 KiB fails the send.
 
 ### Publication preconditions
 
@@ -207,8 +259,13 @@ embedded package, or, in a development build whose install record names a
 checkout install, the checkout freshly assembled at send time (a mismatch asks
 to **Install from checkout** again). The slot is then written as an envelope
 naming that build. `mods.yml` is never edited, and under `config/` the planner writes only
-the shared folder described above. After writing the plan the host writes
-`active-slot.json`; if only that write fails, the send still succeeds, the plan
+the shared folder described above. The slot and the overview change together:
+the host stages both complete files beside their destinations, with a copy of
+the slot's previous file, then replaces the slot and then the overview. If the
+overview cannot be replaced, the slot is restored from that copy (or removed
+when it had no file) and the send fails; no staged file remains either way.
+Only then does the host write `active-slot.json`; if only the activation fails,
+the send still succeeds, the plan
 stays, and the result carries the activation problem, which the planner shows
 as a notice rather than a failed send. Making a slot active without sending
 has the same target checks and requires the slot to hold a readable plan.
@@ -226,14 +283,15 @@ and only logs it. Save As from an already-saved file gives the copy a new `proje
 (the first save of a never-saved project keeps its own), so earlier sends no
 longer match it.
 
-Once the module is ready, the Game panel shows the six slots as a table: Slot,
+Once the module is ready, the Game panel shows the twelve slots as a table: Slot,
 Plan, Route, Ends, Aspect and Sent. The host reads each slot under the same
 link and containment rules and the 1 MiB bound, and reports it as empty,
 present, stale or unreadable with its modified time, the envelope's `buildId`,
 and only existing wire fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
-`planFingerprint`. The application labels the route, final biome, aspect and
-weapon (by its `shortLabel`) from the catalog; a loadout without an aspect
+`planFingerprint`. The application labels the route and final biome from the
+catalog, and the aspect as its name without "Aspect of" followed by the
+weapon's `shortLabel` ("Circe (Staff)"); a loadout without an aspect
 shows "None", and a plan without `displayName` shows _Unnamed_, Sent is a compact relative time with the exact local time as
 its title and description, and an unreadable slot shows only "Unreadable". A
 slot whose envelope names another build than the installed module, or a bare
@@ -1221,7 +1279,7 @@ explicit replacement that clears prior state.
 
 Publication is target-scoped transport, not authored or execution semantics.
 The desktop adapter revalidates the established target at write time, maps a
-caller-supplied slot number in the closed range 1 through 6 to its fixed
+caller-supplied slot number in the closed range 1 through 12 to its fixed
 filename, confines the destination below that target's Run Planner game module
 configuration tree, rejects links and non-regular files, enforces the existing
 1 MiB bound, and atomically replaces only the selected slot. The Run Planner game module

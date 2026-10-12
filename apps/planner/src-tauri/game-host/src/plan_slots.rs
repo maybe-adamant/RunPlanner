@@ -10,15 +10,21 @@ use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 /// Plan slots live under the module's own config folder name.
 pub const MODULE_CONFIG_DIRECTORY: &str = crate::game_module_install::MODULE_DIRECTORY;
 pub const MAX_PLAN_BYTES: usize = 1_048_576;
-pub const PLAN_SLOT_COUNT: u8 = 6;
+pub const PLAN_SLOT_COUNT: u8 = 12;
 
-const PLAN_SLOT_FILES: [&str; 6] = [
+const PLAN_SLOT_FILES: [&str; PLAN_SLOT_COUNT as usize] = [
     "slot-1.runplanner.json",
     "slot-2.runplanner.json",
     "slot-3.runplanner.json",
     "slot-4.runplanner.json",
     "slot-5.runplanner.json",
     "slot-6.runplanner.json",
+    "slot-7.runplanner.json",
+    "slot-8.runplanner.json",
+    "slot-9.runplanner.json",
+    "slot-10.runplanner.json",
+    "slot-11.runplanner.json",
+    "slot-12.runplanner.json",
 ];
 
 /// The plan slot the game module plays next, written by both the planner and the module.
@@ -28,8 +34,10 @@ const ACTIVE_SLOT_FORMAT: &str = "run-planner-active-slot";
 
 pub fn slot_file_name(slot_number: u8) -> Result<&'static str, String> {
     match slot_number {
-        1..=6 => Ok(PLAN_SLOT_FILES[usize::from(slot_number - 1)]),
-        slot => Err(format!("plan slot must be between 1 and 6 (got {slot})")),
+        1..=PLAN_SLOT_COUNT => Ok(PLAN_SLOT_FILES[usize::from(slot_number - 1)]),
+        slot => Err(format!(
+            "plan slot must be between 1 and {PLAN_SLOT_COUNT} (got {slot})"
+        )),
     }
 }
 
@@ -223,7 +231,8 @@ fn present(path: &Path) -> Result<bool, String> {
     }
 }
 
-fn read_slot(slot: u8, path: &Path, installed_build_id: Option<&str>) -> PlanSlotFacts {
+/// Reads one slot file, which may be a staged copy, as the slot numbered `slot`.
+pub fn read_slot(slot: u8, path: &Path, installed_build_id: Option<&str>) -> PlanSlotFacts {
     let metadata = match fs::symlink_metadata(path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return slot_facts(slot, PlanSlotState::Empty, None)
@@ -310,7 +319,7 @@ pub fn inspect_active_slot(target: &ResolvedTarget) -> ActiveSlotFacts {
     }
 }
 
-/// Reads all six plan slots against the installed module build; an unsafe config folder
+/// Reads all twelve plan slots against the installed module build; an unsafe config folder
 /// makes every slot unreadable.
 pub fn inspect_slots(
     target: &ResolvedTarget,
@@ -379,7 +388,7 @@ mod tests {
         .unwrap();
         fs::write(slot_path(&target, 4), vec![b' '; MAX_PLAN_BYTES + 1]).unwrap();
         let slots = inspect_slots(&target, Some(BUILD));
-        assert_eq!(slots.len(), 6);
+        assert_eq!(slots.len(), 12);
         assert_eq!(
             slots[0],
             PlanSlotFacts {
@@ -445,7 +454,9 @@ mod tests {
         assert_eq!(unknown.weapon_key, None);
         fs::remove_file(slot_path(&target, 5)).unwrap();
         assert_eq!(slots[4].state, PlanSlotState::Empty);
-        assert_eq!(slots[5].state, PlanSlotState::Empty);
+        assert!(slots[5..]
+            .iter()
+            .all(|slot| slot.state == PlanSlotState::Empty));
     }
 
     #[test]
@@ -477,7 +488,7 @@ mod tests {
 
     #[test]
     fn active_slot_decodes_only_the_exact_integer_form() {
-        for slot in 1..=6 {
+        for slot in 1..=12 {
             let encoded = encode_active_slot(slot).unwrap();
             assert_eq!(decode_active_slot(encoded.as_bytes()), Some(slot));
         }
@@ -486,7 +497,7 @@ mod tests {
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3}"#
         );
         assert!(encode_active_slot(0).is_err());
-        assert!(encode_active_slot(7).is_err());
+        assert!(encode_active_slot(13).is_err());
         assert_eq!(
             decode_active_slot(
                 br#" { "slot" : 2, "formatVersion" : 1, "format" : "run-planner-active-slot" } "#
@@ -502,7 +513,7 @@ mod tests {
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":3e0}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":"3"}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":0}"#,
-            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":7}"#,
+            r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":13}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1,"slot":-1}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":1.0,"slot":3}"#,
             r#"{"format":"run-planner-active-slot","formatVersion":2,"slot":3}"#,

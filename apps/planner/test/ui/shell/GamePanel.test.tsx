@@ -414,7 +414,7 @@ describe('Game panel', () => {
       within(table)
         .getAllByRole('rowheader')
         .map((header) => header.textContent),
-    ).toEqual(['Slot 1', 'Slot 2', 'Slot 3', 'Slot 4', 'Slot 5', 'Slot 6']);
+    ).toEqual(Array.from({ length: 12 }, (_, index) => `Slot ${index + 1}`));
     expect(within(table).queryAllByRole('button')).toEqual([]);
   });
 
@@ -456,14 +456,14 @@ describe('Game panel', () => {
       { profileFile: files.adapter },
     );
     const table = within(dialog).getByRole('table', { name: 'Plans in game' });
-    const row = within(table).getByRole('row', { name: /Slot 1/ });
+    const row = within(table).getByRole('row', { name: /Slot 1\b/ });
     expect(within(row).getByText('Their run')).toBeTruthy();
     expect(within(row).getByText(catalog.biomes.byKey.F!.label)).toBeTruthy();
-    expect(within(row).getByText('Aspect of Melinoë (Staff)')).toBeTruthy();
+    expect(within(row).getByText('Melinoë (Staff)')).toBeTruthy();
     expect(within(row).getByText('just now')).toBeTruthy();
-    const unnamed = within(table).getByRole('row', { name: /Slot 3/ });
+    const unnamed = within(table).getByRole('row', { name: /Slot 3\b/ });
     expect(within(unnamed).getByText('Unnamed')).toBeTruthy();
-    expect(within(unnamed).getByText('Aspect of Melinoë (Blades)')).toBeTruthy();
+    expect(within(unnamed).getByText('Melinoë (Blades)')).toBeTruthy();
     const sent = within(unnamed).getByText('4h ago');
     const exact = new Date(fourHoursAgo).toLocaleString(undefined, {
       dateStyle: 'medium',
@@ -517,9 +517,9 @@ describe('Game panel', () => {
     const unavailable = (slot: number) => radio(slot).getAttribute('aria-disabled') === 'true';
     await waitFor(() => expect(unavailable(2)).toBe(false));
     const radios = within(group).getAllByRole<HTMLInputElement>('radio');
-    expect(radios.map((entry) => entry.checked)).toEqual(Array(6).fill(false));
+    expect(radios.map((entry) => entry.checked)).toEqual(Array(12).fill(false));
     expect(radios.every((entry) => !entry.disabled)).toBe(true);
-    expect([1, 3, 4, 6].every(unavailable)).toBe(true);
+    expect([1, 3, 4, 6, 12].every(unavailable)).toBe(true);
 
     // Choosing a row without a plan writes nothing.
     await user.click(radio(3));

@@ -21,7 +21,15 @@ describe('Tauri game module host adapter', () => {
     await host.install(true);
     await host.installFromCheckout(true);
     await host.remove();
-    await host.publish(3, '{"format":"run-planner-execution"}');
+    const summary = {
+      label: 'Circe - Surface',
+      sentAt: '2026-10-12T10:00:00.000Z',
+      aspect: 'Circe (Staff)',
+      route: 'Surface',
+      endBiome: 'Olympus',
+      startingFear: 0,
+    };
+    await host.publish(3, '{"format":"run-planner-execution"}', summary);
     await host.setActiveSlot(2);
     await host.openExternalPage('https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/');
     const request = {
@@ -41,7 +49,10 @@ describe('Tauri game module host adapter', () => {
       ['game_module_install', { overwriteConsent: true }],
       ['game_module_install_from_checkout', { overwriteConsent: true }],
       ['game_module_remove'],
-      ['game_plan_publish', { slotNumber: 3, planJson: '{"format":"run-planner-execution"}' }],
+      [
+        'game_plan_publish',
+        { slotNumber: 3, planJson: '{"format":"run-planner-execution"}', summary },
+      ],
       ['game_active_slot_set', { slotNumber: 2 }],
       ['external_open_url', { url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/' }],
       ['bug_report_create', { defaultFileName: 'report.zip', request }],

@@ -85,7 +85,7 @@ function TestStatusUi.testStorageIncludesIndependentDefaultDisabledGuidanceSetti
     lu.assertEquals(storage[1].alias, "ActivePlanSlot")
     lu.assertEquals(storage[1].default, 1)
     lu.assertEquals(storage[1].min, 1)
-    lu.assertEquals(storage[1].max, 6)
+    lu.assertEquals(storage[1].max, 12)
     lu.assertFalse(storage[1].persist)
     lu.assertEquals(storage[2], {
         type = "bool", alias = "ShowRoomGuide", label = "Show room guide",
@@ -163,7 +163,7 @@ function TestStatusUi.testPickerShowsTheActiveSlotFileAndSelectsItWithoutWriting
 
     lu.assertEquals(dropdown.target, field)
     lu.assertEquals(dropdown.shown, 4)
-    lu.assertEquals(dropdown.opts.values, { 1, 2, 3, 4, 5, 6 })
+    lu.assertEquals(dropdown.opts.values, { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 })
     lu.assertEquals(selected, 4)
     lu.assertEquals(file.writes, {})
     lu.assertNil(loaded)

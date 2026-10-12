@@ -334,6 +334,13 @@ describe('project profile operations', () => {
       routeKey: 'Underworld',
       extent: { biomeKeys: ['F'] },
     });
+    // The summary names the plan as sent, for the slot overview.
+    expect(publication.summary).toMatchObject({
+      route: application.catalog.routes.byKey.Underworld!.label,
+      endBiome: application.catalog.biomes.byKey.F!.label,
+      sentAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
+    });
+    expect(publication.summary.label).toMatch(/ - Underworld$/);
     // Sending records only UI-session state; authored state and history are untouched.
     expect(application.store.getState().gameSendSession.lastSentSlot).toBe(3);
     expect(application.store.getState().editorSession).toBe(beforePublication.editorSession);
