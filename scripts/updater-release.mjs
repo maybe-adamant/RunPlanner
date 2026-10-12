@@ -1,6 +1,6 @@
 // Release-time owner of the updater signing contract: the committed public key
-// must be a real minisign key, and latest.json must carry a signature made by
-// that key for the uploaded installer.
+// must be a real minisign key, and latest.json must carry, for each updatable
+// platform, a signature made by that key for that platform's uploaded asset.
 import { Buffer } from 'node:buffer';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit, stderr, stdout } from 'node:process';
@@ -8,7 +8,13 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
 export const UPDATER_PUBKEY_PLACEHOLDER = 'RUN_PLANNER_UPDATER_PUBKEY_PLACEHOLDER';
-export const UPDATER_PLATFORM = 'windows-x86_64';
+// Each updater target and the extension of the asset it installs. The Tauri
+// updater tries `{os}-{arch}-{bundle}` before `{os}-{arch}`; the AppImage is
+// keyed by bundle so no other Linux bundle can match it.
+export const UPDATER_PLATFORMS = Object.freeze({
+  'windows-x86_64': '.exe',
+  'linux-x86_64-appimage': '.AppImage',
+});
 const STABLE_SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 // Tauri stores minisign keys and signatures as base64 of the minisign text file.
@@ -40,33 +46,44 @@ export function updaterPubkey(tauriConfig) {
   return pubkey;
 }
 
-export function updaterManifest({ asset, notes, pubDate, pubkey, repository, signature, version }) {
+export function updaterManifest({ entries, notes, pubDate, pubkey, repository, version }) {
   if (!STABLE_SEMVER.test(version)) throw new Error(`Version ${version} is not stable SemVer.`);
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) {
+    throw new Error(`Repository ${repository} is malformed.`);
+  }
+  if (entries.length === 0) throw new Error('The updater manifest needs at least one platform.');
   const publicKeyId = minisignKeyId(pubkey, {
     label: 'Public key',
     algorithms: ['Ed'],
     payloadBytes: 32,
   });
-  const signatureKeyId = minisignKeyId(signature, {
-    label: 'Signature',
-    algorithms: ['Ed', 'ED'],
-    payloadBytes: 64,
-  });
-  if (signatureKeyId !== publicKeyId) {
-    throw new Error(
-      `The installer was signed by key ${signatureKeyId}, but tauri.conf.json trusts key ${publicKeyId}.`,
-    );
+  const platforms = {};
+  for (const { asset, platform, signature } of entries) {
+    if (!Object.hasOwn(UPDATER_PLATFORMS, platform)) {
+      throw new Error(
+        `Updater platform ${platform} is not one of ${Object.keys(UPDATER_PLATFORMS).join(', ')}.`,
+      );
+    }
+    if (Object.hasOwn(platforms, platform)) {
+      throw new Error(`Updater platform ${platform} is listed more than once.`);
+    }
+    const signatureKeyId = minisignKeyId(signature, {
+      label: 'Signature',
+      algorithms: ['Ed', 'ED'],
+      payloadBytes: 64,
+    });
+    if (signatureKeyId !== publicKeyId) {
+      throw new Error(
+        `The ${platform} asset was signed by key ${signatureKeyId}, but tauri.conf.json trusts key ${publicKeyId}.`,
+      );
+    }
+    if (!/^[\w.-]+$/.test(asset) || !asset.endsWith(UPDATER_PLATFORMS[platform])) {
+      throw new Error(`Release asset ${asset} is malformed or not a ${platform} updater asset.`);
+    }
+    const url = `https://github.com/${repository}/releases/download/v${version}/${asset}`;
+    platforms[platform] = { signature: signature.trim(), url };
   }
-  if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !/^[\w.-]+$/.test(asset)) {
-    throw new Error(`Repository ${repository} or installer asset ${asset} is malformed.`);
-  }
-  const url = `https://github.com/${repository}/releases/download/v${version}/${asset}`;
-  return {
-    version,
-    notes,
-    pub_date: pubDate,
-    platforms: { [UPDATER_PLATFORM]: { signature: signature.trim(), url } },
-  };
+  return { version, notes, pub_date: pubDate, platforms };
 }
 
 function main(args) {
@@ -83,29 +100,38 @@ function main(args) {
     const { values } = parseArgs({
       args: rest,
       options: {
-        asset: { type: 'string' },
+        asset: { type: 'string', multiple: true, default: [] },
         config: { type: 'string' },
         notes: { type: 'string' },
         out: { type: 'string' },
+        platform: { type: 'string', multiple: true, default: [] },
         repository: { type: 'string' },
-        signature: { type: 'string' },
+        signature: { type: 'string', multiple: true, default: [] },
         version: { type: 'string' },
       },
     });
-    for (const name of ['asset', 'config', 'notes', 'out', 'repository', 'signature', 'version']) {
+    for (const name of ['config', 'notes', 'out', 'repository', 'version']) {
       if (values[name] === undefined) throw new Error(`manifest requires --${name}.`);
     }
+    // Each --platform pairs with the --asset and --signature at the same position.
+    const { asset, platform, signature } = values;
+    if (asset.length !== platform.length || signature.length !== platform.length) {
+      throw new Error('manifest requires one --asset and one --signature per --platform.');
+    }
     const manifest = updaterManifest({
-      asset: values.asset,
+      entries: platform.map((name, index) => ({
+        asset: asset[index],
+        platform: name,
+        signature: readFileSync(signature[index], 'utf8'),
+      })),
       notes: readFileSync(values.notes, 'utf8').trim(),
       pubDate: new Date().toISOString(),
       pubkey: updaterPubkey(readConfig(values.config)),
       repository: values.repository,
-      signature: readFileSync(values.signature, 'utf8'),
       version: values.version,
     });
     writeFileSync(values.out, `${JSON.stringify(manifest, null, 2)}\n`);
-    stdout.write(`Wrote ${values.out} for ${values.version}.\n`);
+    stdout.write(`Wrote ${values.out} for ${values.version} (${platform.join(', ')}).\n`);
     return;
   }
   throw new Error('Usage: updater-release.mjs <assert-pubkey|manifest> ...');

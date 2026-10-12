@@ -83,14 +83,6 @@ fn reveal(path: &Path) -> Result<(), String> {
 #[cfg(not(target_os = "windows"))]
 fn reveal(path: &Path) -> Result<(), String> {
     let folder = path.parent().ok_or("The report has no folder.")?;
-    let opener = if cfg!(target_os = "macos") {
-        "open"
-    } else {
-        "xdg-open"
-    };
-    std::process::Command::new(opener)
-        .arg(folder)
-        .spawn()
-        .map(|_| ())
+    run_planner_game_host::system_opener::open(folder.as_os_str())
         .map_err(|error| format!("Could not open the folder: {error}"))
 }

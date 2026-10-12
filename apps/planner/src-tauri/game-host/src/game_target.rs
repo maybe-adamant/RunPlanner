@@ -77,7 +77,16 @@ pub fn r2modman_profiles_root() -> Option<PathBuf> {
     {
         std::env::var_os("APPDATA").map(|appdata| profiles_root_from_appdata(Path::new(&appdata)))
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "linux")]
+    {
+        let xdg_config_home = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
+        let home = std::env::var_os("HOME").map(PathBuf::from);
+        preferred_profiles_root(&linux_profiles_roots(
+            xdg_config_home.as_deref(),
+            home.as_deref(),
+        ))
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         None
     }
@@ -88,6 +97,36 @@ pub fn profiles_root_from_appdata(appdata: &Path) -> PathBuf {
         .join(R2MODMAN_DIRECTORY)
         .join(GAME_ID)
         .join(PROFILE_DIRECTORY)
+}
+
+/// Linux r2modman profile roots in preference order: the native install's
+/// config folder (`$XDG_CONFIG_HOME`, else `~/.config`), then the Flatpak's.
+pub fn linux_profiles_roots(xdg_config_home: Option<&Path>, home: Option<&Path>) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    // The XDG base directory rules ignore a relative XDG_CONFIG_HOME.
+    match xdg_config_home.filter(|path| path.is_absolute()) {
+        Some(config) => roots.push(profiles_root_from_appdata(config)),
+        None => {
+            if let Some(home) = home {
+                roots.push(profiles_root_from_appdata(&home.join(".config")));
+            }
+        }
+    }
+    if let Some(home) = home {
+        roots.push(profiles_root_from_appdata(
+            &home.join(".var/app/com.github.ebkr.r2modman/config"),
+        ));
+    }
+    roots
+}
+
+/// The first candidate root that exists, else the first candidate.
+pub fn preferred_profiles_root(candidates: &[PathBuf]) -> Option<PathBuf> {
+    candidates
+        .iter()
+        .find(|root| root.is_dir())
+        .or_else(|| candidates.first())
+        .cloned()
 }
 
 /// Resolves `path` as a real directory whose canonical location stays inside
@@ -438,6 +477,49 @@ mod tests {
             profiles_root_from_appdata(Path::new("/appdata")),
             Path::new("/appdata/r2modmanPlus-local/HadesII/profiles")
         );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn linux_profile_roots_prefer_the_native_config_folder_then_the_flatpak() {
+        let flatpak = Path::new(
+            "/home/u/.var/app/com.github.ebkr.r2modman/config/r2modmanPlus-local/HadesII/profiles",
+        );
+        assert_eq!(
+            linux_profiles_roots(Some(Path::new("/xdg")), Some(Path::new("/home/u"))),
+            vec![
+                PathBuf::from("/xdg/r2modmanPlus-local/HadesII/profiles"),
+                flatpak.to_path_buf()
+            ]
+        );
+        for xdg in [None, Some(Path::new("relative"))] {
+            assert_eq!(
+                linux_profiles_roots(xdg, Some(Path::new("/home/u"))),
+                vec![
+                    PathBuf::from("/home/u/.config/r2modmanPlus-local/HadesII/profiles"),
+                    flatpak.to_path_buf()
+                ]
+            );
+        }
+        assert_eq!(
+            linux_profiles_roots(Some(Path::new("/xdg")), None),
+            vec![PathBuf::from("/xdg/r2modmanPlus-local/HadesII/profiles")]
+        );
+        assert!(linux_profiles_roots(None, None).is_empty());
+    }
+
+    #[test]
+    fn preferred_profiles_root_is_the_first_existing_candidate() {
+        let temporary = TemporaryDirectory::new("profile-roots");
+        let native = temporary.0.join("native");
+        let flatpak = temporary.0.join("flatpak");
+        let candidates = [native.clone(), flatpak.clone()];
+        assert_eq!(preferred_profiles_root(&candidates), Some(native.clone()));
+        fs::create_dir_all(&flatpak).unwrap();
+        assert_eq!(preferred_profiles_root(&candidates), Some(flatpak));
+        fs::create_dir_all(&native).unwrap();
+        assert_eq!(preferred_profiles_root(&candidates), Some(native));
+        assert_eq!(preferred_profiles_root(&[]), None);
     }
 
     #[cfg(unix)]
