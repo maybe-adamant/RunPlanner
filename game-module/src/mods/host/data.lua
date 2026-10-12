@@ -9,7 +9,7 @@ function data.buildStorage()
             tooltip = "Run Planner uses this slot for the next run.",
             default = 1,
             min = 1,
-            max = 6,
+            max = 12,
             persist = false,
         },
         {

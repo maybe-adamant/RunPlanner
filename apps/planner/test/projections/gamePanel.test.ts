@@ -405,7 +405,7 @@ describe('Game panel projection', () => {
         plan: 'Surface Phial run',
         route: catalog.routes.byKey.Surface!.label,
         endsAt: catalog.biomes.byKey.Q!.label,
-        aspect: 'Aspect of Melinoë (Staff)',
+        aspect: 'Melinoë (Staff)',
         sent: {
           ago: '3m ago',
           exact: exact(now - 3 * 60_000),
@@ -434,14 +434,7 @@ describe('Game panel projection', () => {
     });
 
     const dirty = projectGamePlans(status, current, 'dirty', catalog, now);
-    expect(dirty?.rows.map((row) => row.action?.label)).toEqual([
-      'Save and send',
-      'Save and send',
-      'Save and send',
-      'Save and send',
-      'Save and send',
-      'Save and send',
-    ]);
+    expect(dirty?.rows.map((row) => row.action?.label)).toEqual(Array(12).fill('Save and send'));
     expect(dirty?.rows[0]?.action?.confirm).toBe(true);
     expect(projectGamePlans(status, current, 'unsaved', catalog, now)?.rows[5]?.action).toEqual({
       label: 'Save and send…',
@@ -731,8 +724,8 @@ describe('Game panel projection', () => {
       ]),
     );
     expect(
-      projectGameSendButton(ready, mine, 6, 'clean', { kind: 'sent', slot: 6, atMs: 0 }).label,
-    ).toBe('✓ Sent · Slot 6');
+      projectGameSendButton(ready, mine, 12, 'clean', { kind: 'sent', slot: 12, atMs: 0 }).label,
+    ).toBe('✓ Sent · Slot 12');
     const notActive = projectGameSendButton(
       ready,
       mine,
@@ -791,7 +784,7 @@ describe('Game panel projection', () => {
       { checked: false, intent: null },
       { checked: false, intent: null },
       { checked: true, intent: { kind: 'setActiveSlot', slot: 5 } },
-      { checked: false, intent: null },
+      ...Array(7).fill({ checked: false, intent: null }),
     ]);
     // A file naming an empty slot still shows it; the radio stays disabled.
     expect(plans({ state: 'present', slot: 1 })?.rows[0]?.active).toEqual({

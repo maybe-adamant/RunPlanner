@@ -5,6 +5,7 @@ import type { StartPointPublicationBlock } from '@run-planner/engine/execution-p
 import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
+import { ownEntry, slotAspectLabel } from '@planner/projections/gameSlotSummary';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameActiveSlotSetting,
@@ -599,14 +600,6 @@ function sentTime(modifiedAtMs: number, now: number): GamePlanSentTime {
   };
 }
 
-// Wire keys are untrusted, so only the catalog's own entries are read.
-function ownEntry<Entry>(
-  records: Readonly<Record<string, Entry | undefined>>,
-  key: string | null,
-): Entry | undefined {
-  return key !== null && Object.hasOwn(records, key) ? records[key] : undefined;
-}
-
 function ownLabel(
   records: Readonly<Record<string, { readonly label: string } | undefined>>,
   key: string | null,
@@ -621,15 +614,6 @@ function slotColumns(
 ): GamePlanSlotRow['columns'] {
   if (slot.state !== 'present' && slot.state !== 'stale') return null;
   const endKey = slot.biomeKeys.at(-1);
-  const weapon =
-    slot.weaponKey === null
-      ? undefined
-      : (ownEntry(catalog.weapons.byKey, slot.weaponKey)?.shortLabel ?? slot.weaponKey);
-  // A plan with a loadout but no aspect starts without one.
-  const aspectLabel =
-    ownLabel(catalog.aspects.byKey, slot.aspectKey) ??
-    slot.aspectKey ??
-    (slot.weaponKey === null ? 'Unknown' : 'None');
   return {
     plan: slot.displayName,
     route:
@@ -637,7 +621,7 @@ function slotColumns(
         ? '—'
         : (ownLabel(catalog.routes.byKey, slot.routeKey) ?? slot.routeKey),
     endsAt: endKey === undefined ? '—' : (ownLabel(catalog.biomes.byKey, endKey) ?? endKey),
-    aspect: weapon === undefined ? aspectLabel : `${aspectLabel} (${weapon})`,
+    aspect: slotAspectLabel(catalog, slot.weaponKey, slot.aspectKey),
     sent: slot.modifiedAtMs === null ? null : sentTime(slot.modifiedAtMs, now),
   };
 }
@@ -701,7 +685,7 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
 const IDLE_ACTIVATION: GameActivationActivity = Object.freeze({ kind: 'idle' });
 
 /**
- * The six plan slots, shown only while the game module is ready. The Active slot radios show
+ * The twelve plan slots, shown only while the game module is ready. The Active slot radios show
  * the file as last read and enable only slots that hold a plan.
  */
 export function projectGamePlans(

@@ -1,13 +1,15 @@
 import { vi } from 'vitest';
 
-import type {
-  GameActiveSlotSetting,
-  GamePlanSlot,
-  GamePlanSlotNumber,
-  GameModuleHost,
-  GameModuleStatus,
-  GamePlanPublication,
-  GameTargetInspection,
+import {
+  GAME_PLAN_SLOT_NUMBERS,
+  type GameActiveSlotSetting,
+  type GamePlanSlot,
+  type GamePlanSlotNumber,
+  type GameModuleHost,
+  type GameModuleStatus,
+  type GamePlanPublication,
+  type GameTargetInspection,
+  type GamePlanSlotSummary,
 } from '@planner/persistence/gameModuleHost';
 
 type InspectionOverrides = {
@@ -40,7 +42,7 @@ export function gameModuleStatus(
     install: { action: 'current', consentRequired: false },
     removable: true,
     strandedInstall: null,
-    planSlots: ([1, 2, 3, 4, 5, 6] as const).map((slot) => ({
+    planSlots: GAME_PLAN_SLOT_NUMBERS.map((slot) => ({
       slot,
       state: 'empty' as const,
       modifiedAtMs: null,
@@ -96,7 +98,7 @@ export function createFakeGameModuleHost(
   },
   activation: GameActiveSlotSetting = { status: 'activated', message: 'Active.', blockers: [] },
 ) {
-  const published: { slotNumber: number; json: string }[] = [];
+  const published: { slotNumber: number; json: string; summary: GamePlanSlotSummary }[] = [];
   const host = {
     status: vi.fn<GameModuleHost['status']>(() => Promise.resolve(status)),
     openExternalPage: vi.fn<GameModuleHost['openExternalPage']>(() => Promise.resolve()),
@@ -122,8 +124,8 @@ export function createFakeGameModuleHost(
     ),
     remove: vi.fn<GameModuleHost['remove']>(() => Promise.resolve({ outcome: 'removed', status })),
     setActiveSlot: vi.fn<GameModuleHost['setActiveSlot']>(() => Promise.resolve(activation)),
-    publish: vi.fn<GameModuleHost['publish']>((slotNumber, json) => {
-      published.push({ slotNumber, json });
+    publish: vi.fn<GameModuleHost['publish']>((slotNumber, json, summary) => {
+      published.push({ slotNumber, json, summary });
       return Promise.resolve(publication);
     }),
     createBugReport: vi.fn<GameModuleHost['createBugReport']>((defaultFileName) =>
@@ -159,9 +161,9 @@ export function planSlot(
   };
 }
 
-/** Six slots with the given ones replaced. */
+/** Every slot, with the given ones replaced. */
 export function planSlots(...present: readonly GamePlanSlot[]): readonly GamePlanSlot[] {
-  return ([1, 2, 3, 4, 5, 6] as const).map(
+  return GAME_PLAN_SLOT_NUMBERS.map(
     (slot) => present.find((entry) => entry.slot === slot) ?? planSlot(slot),
   );
 }

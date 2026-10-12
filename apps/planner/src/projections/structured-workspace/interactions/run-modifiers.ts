@@ -12,7 +12,6 @@ import {
   type RunModifierDeclaration,
   type RunModifiers,
   type RunModifierValue,
-  type RunStartPoint,
   type StartPointRunModifierDeclaration,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -21,24 +20,17 @@ import {
   type StartPointPublicationBlock,
 } from '@run-planner/engine/execution-plan';
 import { startPointDomain, type ProjectEvaluation } from '@run-planner/engine/simulation';
-import { startPointOptionHint } from '@planner/projections/startPointCopy';
+import {
+  START_POINT_LABELS,
+  startPointLabel,
+  startPointOptionHint,
+} from '@planner/projections/startPointCopy';
 import type {
   WorkspaceRunModifierDraftResult,
   WorkspaceRunModifiersControl,
   WorkspaceStartPointControl,
   WorkspaceStartPointRow,
 } from '../contracts/structure';
-
-const START_POINT_LABELS = Object.freeze({
-  opening: 'Opening',
-  preboss: 'Preboss',
-  boss: 'Boss',
-} as const);
-
-export function startPointLabel(catalog: Catalog, startPoint: Omit<RunStartPoint, 'gold'>): string {
-  const biome = catalog.biomes.byKey[startPoint.biomeKey]?.label ?? startPoint.biomeKey;
-  return `${biome} · ${START_POINT_LABELS[startPoint.point]}`;
-}
 
 /** `internal` declarations are authored only in a development build. */
 export function visibleRunModifierDeclarations<D extends RunModifierDeclaration>(

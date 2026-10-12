@@ -14,6 +14,7 @@ use crate::plan_slots::{
     module_config_dir, slot_file_name, ACTIVE_SLOT_FILE, MAX_ACTIVE_SLOT_BYTES, MAX_PLAN_BYTES,
     PLAN_SLOT_COUNT,
 };
+use crate::slot_overview::{MAX_SLOT_OVERVIEW_BYTES, SLOT_OVERVIEW_FILE};
 
 pub const REPORT_FORMAT: &str = "run-planner-bug-report";
 pub const LOG_OUTPUT_TAIL_BYTES: u64 = 2 * 1024 * 1024;
@@ -511,6 +512,12 @@ fn collect_slots(target: &ResolvedTarget, entries: &mut Vec<ReportEntry>) -> Sec
         MAX_ACTIVE_SLOT_BYTES,
         entries,
     ));
+    files.push(bounded_entry(
+        &directory,
+        SLOT_OVERVIEW_FILE,
+        MAX_SLOT_OVERVIEW_BYTES,
+        entries,
+    ));
     SectionRecord {
         requested: true,
         problem: None,
@@ -941,17 +948,21 @@ mod tests {
         };
         let entries = assemble_now();
         let recorded = files(&entries);
-        assert_eq!(recorded.len(), 7);
+        assert_eq!(recorded.len(), 14);
         assert_eq!(
-            recorded[6],
+            recorded[12],
             ("active-slot.json".to_owned(), "missing".to_owned())
+        );
+        assert_eq!(
+            recorded[13],
+            ("slots.runplanner.json".to_owned(), "missing".to_owned())
         );
         write(
             &folder.join(ACTIVE_SLOT_FILE),
             &" ".repeat(MAX_ACTIVE_SLOT_BYTES + 1),
         );
         let oversized = assemble_now();
-        assert_eq!(files(&oversized)[6].1, "unreadable");
+        assert_eq!(files(&oversized)[12].1, "unreadable");
         assert!(oversized
             .iter()
             .all(|entry| entry.name != "plans-in-game/active-slot.json"));

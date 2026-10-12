@@ -10,6 +10,7 @@ use run_planner_game_host::game_plan_publication::{self, ActiveSlotSetting, Game
 use run_planner_game_host::game_target::{
     self, GameTargetDiscovery, GameTargetFacts, ResolvedTarget, TargetKind,
 };
+use run_planner_game_host::slot_overview::SlotSummary;
 
 const BACKUP_DIRECTORY: &str = "game-module-backup";
 
@@ -182,12 +183,14 @@ pub(crate) fn game_plan_publish(
     app: tauri::AppHandle,
     slot_number: u8,
     plan_json: String,
+    summary: SlotSummary,
 ) -> Result<GamePlanPublication, String> {
     Ok(game_plan_publication::publish(
         &config_dir(&app)?,
         ModulePackage::bundled(),
         slot_number,
         &plan_json,
+        summary,
     ))
 }
 

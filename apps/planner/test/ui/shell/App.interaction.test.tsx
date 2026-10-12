@@ -949,10 +949,10 @@ describe('planner history interaction', () => {
     expect(hintOf(button)).toBe('Saves your changes, then sends to slot 5.');
     let publish: (() => void) | undefined;
     game.host.publish.mockImplementationOnce(
-      (slotNumber, json) =>
+      (slotNumber, json, summary) =>
         new Promise((resolve) => {
           publish = () => {
-            game.published.push({ slotNumber, json });
+            game.published.push({ slotNumber, json, summary });
             resolve({
               status: 'published',
               message: 'Published.',

@@ -4,7 +4,7 @@ local planSummary = type(import) == "function" and import("mods/host/plan_summar
 local ui = {}
 ui.ACTIVE_SLOT_REFRESH_SECONDS = 1
 
-local SLOT_VALUES = { 1, 2, 3, 4, 5, 6 }
+local SLOT_VALUES = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
 local SLOT_LABELS = {
     [1] = "Slot 1",
     [2] = "Slot 2",
@@ -12,6 +12,12 @@ local SLOT_LABELS = {
     [4] = "Slot 4",
     [5] = "Slot 5",
     [6] = "Slot 6",
+    [7] = "Slot 7",
+    [8] = "Slot 8",
+    [9] = "Slot 9",
+    [10] = "Slot 10",
+    [11] = "Slot 11",
+    [12] = "Slot 12",
 }
 
 local STATUS_LABELS = {

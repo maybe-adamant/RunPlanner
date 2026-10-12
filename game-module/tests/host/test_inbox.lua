@@ -51,7 +51,7 @@ function TestInbox.testOnlyTheSelectedFixedSlotIsRead()
     write(root .. "/slot-2.runplanner.json", string.rep("x", inbox.MAX_BYTES + 1))
     lu.assertFalse(runtime.load())
     lu.assertEquals(runtime.status().error.code, "plan-too-large")
-    lu.assertFalse(runtime.load(7))
+    lu.assertFalse(runtime.load(13))
     lu.assertEquals(runtime.status().error.code, "invalid-slot")
     removeDirectory(root)
 end
@@ -147,12 +147,13 @@ function TestInbox.testBuildIdentityReadsOnlyAStampedCompatibilityFile()
     removeDirectory(root)
 end
 
-function TestInbox.testAllSixSlotsUseTheClosedFileMapping()
+function TestInbox.testAllTwelveSlotsUseTheClosedFileMapping()
+    lu.assertEquals(inbox.SLOT_COUNT, 12)
     for slot = 1, inbox.SLOT_COUNT do
         lu.assertEquals(inbox.slotFileName(slot), "slot-" .. tostring(slot) .. ".runplanner.json")
     end
     lu.assertNil(inbox.slotFileName(0))
-    lu.assertNil(inbox.slotFileName(7))
+    lu.assertNil(inbox.slotFileName(13))
     lu.assertNil(inbox.slotFileName(1.5))
 end
 

@@ -128,6 +128,27 @@ export interface GamePlanPublication {
   readonly activationProblem: string | null;
 }
 
+/**
+ * A sent plan's display summary, which the host records in the slot overview
+ * `slots.runplanner.json` beside the slots, with the slot's build and fingerprint.
+ */
+export interface GamePlanSlotSummary {
+  /** Picker text, such as "Circe - Surface". */
+  readonly label: string;
+  readonly planName?: string;
+  /** ISO 8601 send time. */
+  readonly sentAt: string;
+  /** Such as "Circe (Staff)". */
+  readonly aspect: string;
+  readonly route: string;
+  readonly endBiome: string;
+  readonly startingKeepsake?: string;
+  /** The configured Fear total the Oath shows. */
+  readonly startingFear: number;
+  /** Such as "Thessaly · Boss"; absent for a run from the start. */
+  readonly practiceStart?: string;
+}
+
 export interface GameActiveSlotSetting {
   /** `notPresent`: the slot holds no readable plan. */
   readonly status: 'activated' | 'invalidSlot' | 'blocked' | 'notPresent' | 'nativeWrite';
@@ -154,13 +175,14 @@ export type BugReportCreation =
       readonly issuePageUrl: string;
     };
 
-export const GAME_PLAN_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
+export const GAME_PLAN_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
 export type GamePlanSlotNumber = (typeof GAME_PLAN_SLOT_NUMBERS)[number];
 
 export interface GamePlanPublisher {
   readonly publish: (
     slotNumber: GamePlanSlotNumber,
     planJson: string,
+    summary: GamePlanSlotSummary,
   ) => Promise<GamePlanPublication>;
 }
 
@@ -226,8 +248,12 @@ export function createTauriGameModuleHost(
         overwriteConsent,
       }),
     remove: () => environment.invoke<GameModuleRemoveResult>('game_module_remove'),
-    publish: (slotNumber: GamePlanSlotNumber, planJson: string) =>
-      environment.invoke<GamePlanPublication>('game_plan_publish', { slotNumber, planJson }),
+    publish: (slotNumber: GamePlanSlotNumber, planJson: string, summary: GamePlanSlotSummary) =>
+      environment.invoke<GamePlanPublication>('game_plan_publish', {
+        slotNumber,
+        planJson,
+        summary,
+      }),
     setActiveSlot: (slotNumber: GamePlanSlotNumber) =>
       environment.invoke<GameActiveSlotSetting>('game_active_slot_set', { slotNumber }),
     createBugReport: (defaultFileName: string, request: BugReportRequest) =>
