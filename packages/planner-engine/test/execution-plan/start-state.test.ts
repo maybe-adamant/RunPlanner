@@ -24,6 +24,7 @@ import fghiWire from './fixtures/underworld-fghi.execution.json';
 import qOpeningWire from './fixtures/surface-start-q-opening.execution.json';
 import iPrebossWire from './fixtures/underworld-start-i-preboss.execution.json';
 import dreamOpeningWire from './fixtures/dream-start-n-opening.execution.json';
+import gBossWire from './fixtures/underworld-start-g-rivals-boss.execution.json';
 
 function compile(project: ProjectDocument): ExecutionPlan {
   return compileExecutionPlan({
@@ -138,6 +139,53 @@ describe('execution start state', () => {
       biomeVisitOrder: ['F', 'G', 'H', 'I'],
       biome: { clockwork: { remainingClockworkGoals: 0 } },
     });
+  });
+
+  it('publishes the current biome state for a Rivals Boss start', () => {
+    const plan = decodeExecutionPlan(gBossWire);
+    const start = plan.startState!;
+    expect(start).toMatchObject({
+      point: 'boss',
+      biomeKey: 'G',
+      roomName: 'G_Boss02',
+      biomeVisitOrder: ['F', 'G'],
+    });
+    expect(start.roomHistory.at(-1)).toEqual({ name: 'G_PreBoss01' });
+    expect(start.biome).toBeDefined();
+    expect(start.biome).not.toHaveProperty('clockwork');
+    const prebossIndex = plan.selectedOccurrenceIds.indexOf(start.occurrenceId) - 1;
+    expect(
+      plan.occurrences.find((entry) => entry.id === plan.selectedOccurrenceIds[prebossIndex])
+        ?.gameName,
+    ).toBe('G_PreBoss01');
+  });
+
+  it('publishes an I Boss start without Clockwork counters and rejects them', () => {
+    const plan = compile(
+      withStartPoint(loadUnderworldFGHICheckpoint(), { biomeKey: 'I', point: 'boss' }),
+    );
+    const start = plan.startState!;
+    expect(start).toMatchObject({ point: 'boss', roomName: 'I_Boss01' });
+    expect(start.biome).toBeDefined();
+    expect(start.biome).not.toHaveProperty('clockwork');
+    const wire = clone(JSON.parse(encodeExecutionPlan(plan)));
+    (wire.startState.biome as Record<string, unknown>).clockwork = {
+      remainingClockworkGoals: 0,
+      maxClockworkNonGoalRewards: 3,
+    };
+    expect(() => decodeExecutionPlan(wire)).toThrow(
+      /clockwork is present exactly for an I Preboss/,
+    );
+  });
+
+  it('publishes an Ephyra Boss start after its Hub-sourced Preboss', () => {
+    const start = compile(
+      withStartPoint(surfaceShrineDeliveriesProject(), { biomeKey: 'N', point: 'boss' }),
+    ).startState!;
+    expect(start).toMatchObject({ point: 'boss', roomName: 'N_Boss01', biomeVisitOrder: ['N'] });
+    expect(start.roomHistory.at(-1)).toEqual({ name: 'N_PreBoss01' });
+    expect(start.biome).toBeDefined();
+    expect(start.biome).not.toHaveProperty('clockwork');
   });
 
   it('publishes the Dream visited prefix for a Dream Opening', () => {
@@ -320,7 +368,29 @@ describe('execution start state', () => {
           forfeitConsumed: false,
           dionysusSkipActivated: false,
         }),
-      /exactly for a Preboss/,
+      /exactly for a Preboss or Boss/,
+    ],
+    [
+      'a Boss at the biome’s first room',
+      clone(qOpeningWire),
+      (start) => {
+        start.point = 'boss';
+        start.biomeVisitOrder = ['N', 'O', 'P', 'Q'];
+        start.biome = {
+          biomeDepthCache: 1,
+          biomeEncounterDepth: 1,
+          biomeUseRecord: {},
+          forfeitConsumed: false,
+          dionysusSkipActivated: false,
+        };
+      },
+      /is not the Q boss/,
+    ],
+    [
+      'a Boss without biome records',
+      clone(gBossWire),
+      (start) => delete start.biome,
+      /exactly for a Preboss or Boss/,
     ],
     [
       'an I Preboss without Clockwork counters',

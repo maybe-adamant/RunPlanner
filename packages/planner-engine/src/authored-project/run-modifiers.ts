@@ -19,7 +19,7 @@ export interface OptionalPercentageRunModifierDeclaration extends RunModifierDec
   readonly kind: 'optionalPercentage';
 }
 
-/** Absent is a normal run; a present value starts the run at a biome's Opening or Preboss. */
+/** Absent is a normal run; a present value starts the run at a biome's Opening, Preboss or Boss. */
 export interface StartPointRunModifierDeclaration extends RunModifierDeclarationShape {
   readonly kind: 'startPoint';
 }
@@ -35,10 +35,13 @@ export type ExecutionRunModifierDeclaration = Exclude<
   StartPointRunModifierDeclaration
 >;
 
+/** The mid-run start points of a biome, in route order. */
+export const RUN_START_POINTS = Object.freeze(['opening', 'preboss', 'boss'] as const);
+
 /** A mid-run start; the biome may dangle from the route. */
 export interface RunStartPoint {
   readonly biomeKey: string;
-  readonly point: 'opening' | 'preboss';
+  readonly point: (typeof RUN_START_POINTS)[number];
   /** Base gold added to the game's own starting gold; absent adds none. */
   readonly gold?: number;
 }
@@ -199,12 +202,16 @@ export function sameRunModifierValue(left: unknown, right: unknown): boolean {
   return sameStartPoint(left as RunStartPoint, right as RunStartPoint);
 }
 
+function isRunStartPointKind(value: unknown): value is RunStartPoint['point'] {
+  return RUN_START_POINTS.some((point) => point === value);
+}
+
 /** A malformed shape is absent; malformed gold is absent; finite gold clamps to an integer in its domain. */
 function healStartPoint(raw: unknown): RunStartPoint | undefined {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
   const { biomeKey, point, gold } = raw as Record<string, unknown>;
   if (typeof biomeKey !== 'string' || biomeKey.length === 0) return undefined;
-  if (point !== 'opening' && point !== 'preboss') return undefined;
+  if (!isRunStartPointKind(point)) return undefined;
   if (typeof gold !== 'number' || !Number.isFinite(gold)) return Object.freeze({ biomeKey, point });
   const healedGold = Math.min(
     RUN_MODIFIER_GOLD.max,

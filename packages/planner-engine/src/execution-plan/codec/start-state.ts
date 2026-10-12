@@ -462,7 +462,11 @@ export function startState(value: unknown): ExecutionStartState {
   const arcana = list(row.arcana, `${label}.arcana`, arcanaCard);
   uniqueNames(arcana, `${label}.arcana`);
   return Object.freeze({
-    point: oneOf<ExecutionStartState['point']>(row.point, ['opening', 'preboss'], `${label}.point`),
+    point: oneOf<ExecutionStartState['point']>(
+      row.point,
+      ['opening', 'preboss', 'boss'],
+      `${label}.point`,
+    ),
     biomeKey: oneOf<ExecutionBiomeKey>(row.biomeKey, BIOME_KEYS, `${label}.biomeKey`),
     occurrenceId: stringValue(row.occurrenceId, `${label}.occurrenceId`),
     roomName: stringValue(row.roomName, `${label}.roomName`),

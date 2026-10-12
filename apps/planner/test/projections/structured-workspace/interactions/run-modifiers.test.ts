@@ -129,6 +129,7 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
       available: false,
     },
     { biomeKey: 'F', point: 'preboss', label: 'Preboss', selected: false, available: true },
+    { biomeKey: 'F', point: 'boss', label: 'Boss', selected: false, available: true },
   ]);
   const route = createRouteAddress('Underworld');
   const choose = startPoint().selectIntent({ biomeKey: 'G', point: 'opening' }).command;
@@ -148,6 +149,9 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
   application.store.dispatch(authoredProjectCommandDispatched(gold.intent.command));
   expect(valueOf(startPoint().selectIntent({ biomeKey: 'H', point: 'preboss' }))).toEqual({
     startPoint: { biomeKey: 'H', point: 'preboss', gold: 120 },
+  });
+  expect(valueOf(startPoint().selectIntent({ biomeKey: 'H', point: 'boss' }))).toEqual({
+    startPoint: { biomeKey: 'H', point: 'boss', gold: 120 },
   });
   const none = startPoint().goldDraftIntent('');
   expect(none.kind === 'valid' && valueOf(none.intent)).toEqual({

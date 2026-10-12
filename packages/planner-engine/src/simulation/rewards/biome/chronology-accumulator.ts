@@ -50,6 +50,7 @@ import type {
   GorgonPhaseCandidateSupport,
   HubDepartureRunState,
   NemesisRandomEventCandidateSupport,
+  MidBiomeStartPoint,
   RewardStoreSupportEntry,
   RoomStartStateCapture,
   TargetRewardHistoryCheckpoint,
@@ -144,7 +145,11 @@ export type ChronologyEmission =
       readonly hub: HubDecisionAddress;
       readonly departure: RunStateSnapshot;
     }
-  | { readonly kind: 'prebossStartState'; readonly capture: RoomStartStateCapture }
+  | {
+      readonly kind: 'roomStartState';
+      readonly point: MidBiomeStartPoint;
+      readonly capture: RoomStartStateCapture;
+    }
   | {
       readonly kind: 'keepsakeSelectionCandidate';
       readonly key: string;
@@ -243,7 +248,9 @@ export interface ChronologyAccumulation {
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly hubDepartures: readonly HubDepartureRunState[];
-  readonly prebossStartState: RoomStartStateCapture | undefined;
+  readonly midBiomeStartStates: Readonly<
+    Partial<Record<MidBiomeStartPoint, RoomStartStateCapture>>
+  >;
   readonly echoKeepsakeReplayOutcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
   readonly keepsakeSelectionContexts: ReadonlyMap<string, KeepsakeSelectionCandidateCapability>;
   readonly keepsakeEquipResultContexts: ReadonlyMap<string, KeepsakeEquipResultCandidateCapability>;
@@ -394,7 +401,7 @@ export function createChronologyAccumulator(
   const targetHistoryByOrigin = new Map<string, TargetRewardHistoryCheckpoint>();
   const storeSupportEntries: RewardStoreSupportEntry[] = [];
   const hubDepartures: HubDepartureRunState[] = [];
-  let prebossStartState: RoomStartStateCapture | undefined;
+  const midBiomeStartStates: Partial<Record<MidBiomeStartPoint, RoomStartStateCapture>> = {};
   let echoKeepsakeReplayOutcome: BiomeRewardSimulation['volatileEchoKeepsakeReplay'];
   const keepsakeSelectionContexts = new Map<string, KeepsakeSelectionCandidateCapability>();
   const keepsakeEquipResultContexts = new Map<string, KeepsakeEquipResultCandidateCapability>();
@@ -762,9 +769,10 @@ export function createChronologyAccumulator(
       case 'hubDeparture':
         recordHubDeparture(emission);
         return;
-      case 'prebossStartState':
-        if (prebossStartState !== undefined) fail('a biome captures one Preboss start state');
-        prebossStartState = emission.capture;
+      case 'roomStartState':
+        if (midBiomeStartStates[emission.point] !== undefined)
+          fail(`a biome captures one ${emission.point} start state`);
+        midBiomeStartStates[emission.point] = emission.capture;
         return;
       case 'keepsakeSelectionCandidate':
         keepsakeSelectionContexts.set(emission.key, emission.candidate);
@@ -876,7 +884,7 @@ export function createChronologyAccumulator(
         targetHistory: Object.freeze([...targetHistoryByOrigin.values()]),
         storeSupport: Object.freeze(storeSupportEntries),
         hubDepartures: Object.freeze([...hubDepartures]),
-        prebossStartState,
+        midBiomeStartStates: Object.freeze(midBiomeStartStates),
         echoKeepsakeReplayOutcome,
         keepsakeSelectionContexts,
         keepsakeEquipResultContexts,

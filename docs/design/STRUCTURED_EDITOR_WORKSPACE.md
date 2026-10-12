@@ -185,7 +185,7 @@ Practice mode is one Route-panel row beside Plan up to, on every route
 including Fresh File (where a practice run skips earlier first-time story, see
 [Practice mode start](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)): a checkbox, a Start at picker and a Gold field, the
 latter two disabled while unchecked. Checking opens the picker over the
-engine's start-point domain (biome rows of Opening and Preboss; an unavailable
+engine's start-point domain (biome rows of Opening, Preboss and Boss; an unavailable
 option is disabled, with a hover hint only when branches disagree, since an
 unreached or route-start point is evident), and only a choice sets the
 value; unchecking removes the start point and its gold in one edit. Gold is a

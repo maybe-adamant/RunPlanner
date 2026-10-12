@@ -28,6 +28,7 @@ import {
   loadUnderworldGAnomalyRosterCheckpoint,
   loadUnderworldGeneratedCompositionCheckpoint,
   loadUnderworldIxionChaosCheckpoint,
+  loadUnderworldTwistScyllaCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import {
@@ -98,6 +99,7 @@ import underworldEchoGoldAnvilDuplicateFixture from '../fixtures/underworld-echo
 import surfaceStartQOpeningFixture from '../fixtures/surface-start-q-opening.execution.json';
 import underworldStartIPrebossFixture from '../fixtures/underworld-start-i-preboss.execution.json';
 import dreamStartNOpeningFixture from '../fixtures/dream-start-n-opening.execution.json';
+import underworldStartGRivalsBossFixture from '../fixtures/underworld-start-g-rivals-boss.execution.json';
 
 const fixtureDirectory = join(dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 
@@ -314,6 +316,12 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: () =>
       withStartPoint(loadDreamMixedHandoffCheckpoint(), { biomeKey: 'N', point: 'opening' }),
     wire: dreamStartNOpeningFixture,
+  },
+  {
+    name: 'underworld-start-g-rivals-boss',
+    project: () =>
+      withStartPoint(loadUnderworldTwistScyllaCheckpoint(), { biomeKey: 'G', point: 'boss' }),
+    wire: underworldStartGRivalsBossFixture,
   },
 ]);
 

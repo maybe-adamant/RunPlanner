@@ -1196,7 +1196,7 @@ export interface ExecutionStartHex {
   readonly allSpellInvested: boolean;
 }
 
-/** Biome-local state a Preboss start installs; an Opening's native Intro resets it. */
+/** Biome-local state a Preboss or Boss start installs; an Opening's native Intro resets it. */
 export interface ExecutionStartBiome {
   readonly biomeDepthCache: number;
   /** Absent while native BiomeEncounterDepth is unset. */
@@ -1206,7 +1206,7 @@ export interface ExecutionStartBiome {
   readonly forfeitConsumed: boolean;
   /** Native `ActivatedThisBiome` on `PersistentDionysusSkipKeepsake`. */
   readonly dionysusSkipActivated: boolean;
-  /** I's `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`. */
+  /** I's `RemainingClockworkGoals` and `MaxClockworkNonGoalRewards`, at an I Preboss. */
   readonly clockwork?: {
     readonly remainingClockworkGoals: number;
     readonly maxClockworkNonGoalRewards: number;
@@ -1226,7 +1226,7 @@ export interface ExecutionStartEssences {
  * a fresh install leaves it.
  */
 export interface ExecutionStartState {
-  readonly point: 'opening' | 'preboss';
+  readonly point: 'opening' | 'preboss' | 'boss';
   readonly biomeKey: ExecutionBiomeKey;
   /** The selected start occurrence; execution's route cursor starts at its index. */
   readonly occurrenceId: string;
@@ -1240,7 +1240,7 @@ export interface ExecutionStartState {
   /** Native `CurrentRun.EncounterDepth`. */
   readonly encounterDepth: number;
   readonly lastDevotionDepth?: number;
-  /** Present exactly for a Preboss start. */
+  /** Present exactly for a Preboss or Boss start. */
   readonly biome?: ExecutionStartBiome;
   readonly aspectPerfect: boolean;
   readonly familiar?: { readonly name: string; readonly stackMultiplier: number };
