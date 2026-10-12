@@ -5,6 +5,7 @@
 pub mod atomic_file;
 pub mod bug_report;
 pub mod community_event;
+pub mod event_feed;
 pub mod external_url;
 pub mod game_module_assembly;
 pub mod game_module_install;

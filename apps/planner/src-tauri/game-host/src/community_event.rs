@@ -83,6 +83,8 @@ struct EventDocument<'a> {
     ends_at: String,
     #[serde(default)]
     project_url: Option<String>,
+    #[serde(default)]
+    project_sha256: Option<String>,
     #[serde(borrow)]
     plans: Plans<'a>,
 }
@@ -98,6 +100,8 @@ pub struct CommunityEvent {
     pub starts_at: String,
     pub ends_at: String,
     pub project_url: Option<String>,
+    /// Lower-case hex SHA-256 of the project file at `project_url`.
+    pub project_sha256: Option<String>,
 }
 
 /// An event and its plan for one module build, with the plan bytes as published.
@@ -162,9 +166,12 @@ pub fn valid_text(text: &str, max_chars: usize, multiline: bool) -> bool {
         })
 }
 
+/// A UTC instant as comparable parts: year, month, day, hour, minute, second, nanoseconds.
+pub type Instant = (u32, u32, u32, u32, u32, u32, u64);
+
 /// A UTC instant written `YYYY-MM-DDTHH:MM:SS` with optional fractional seconds and `Z`,
 /// as its comparable parts.
-pub fn parse_instant(text: &str) -> Option<(u32, u32, u32, u32, u32, u32, u64)> {
+pub fn parse_instant(text: &str) -> Option<Instant> {
     let bytes = text.as_bytes();
     if bytes.len() < 20 || bytes.len() > 30 || !text.is_ascii() || !text.ends_with('Z') {
         return None;
@@ -237,8 +244,47 @@ impl CommunityEvent {
                 return Err("Invalid event project URL.".to_owned());
             }
         }
+        if let Some(hash) = &self.project_sha256 {
+            if hash.len() != 64
+                || !hash
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            {
+                return Err("Invalid event project hash.".to_owned());
+            }
+        }
         Ok(())
     }
+}
+
+/// The UTC instant `seconds` after the Unix epoch.
+pub fn instant_from_unix(seconds: u64, nanos: u32) -> Instant {
+    let days = (seconds / 86_400) as i64;
+    let rest = seconds % 86_400;
+    // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let day_of_era = z - era * 146_097;
+    let year_of_era =
+        (day_of_era - day_of_era / 1460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_index = (5 * day_of_year + 2) / 153;
+    let day = (day_of_year - (153 * month_index + 2) / 5 + 1) as u32;
+    let month = if month_index < 10 {
+        month_index + 3
+    } else {
+        month_index - 9
+    } as u32;
+    let year = (year_of_era + era * 400 + i64::from(month <= 2)) as u32;
+    (
+        year,
+        month,
+        day,
+        (rest / 3600) as u32,
+        (rest % 3600 / 60) as u32,
+        (rest % 60) as u32,
+        u64::from(nanos),
+    )
 }
 
 /// Decodes one event document and selects its plan for `build_id`.
@@ -264,6 +310,7 @@ pub fn decode_event(bytes: &[u8], build_id: &str) -> Result<EventPlan, EventDeco
         starts_at: document.starts_at,
         ends_at: document.ends_at,
         project_url: document.project_url,
+        project_sha256: document.project_sha256,
     };
     event.validate().map_err(invalid)?;
     if plans.is_empty()
@@ -336,6 +383,7 @@ mod tests {
                 starts_at: "2026-10-12T00:00:00Z".to_owned(),
                 ends_at: "2026-10-19T00:00:00.000Z".to_owned(),
                 project_url: None,
+                project_sha256: None,
             }
         );
         assert_eq!(
@@ -372,6 +420,11 @@ mod tests {
             (r#""2026-10-12T00:00:00Z""#, r#""2026-10-12T24:00:00Z""#),
             (r#""plans""#, r#""extra":1,"plans""#),
             (r#""plans""#, r#""projectUrl":"http://example.org","plans""#),
+            (r#""plans""#, r#""projectSha256":"ABC","plans""#),
+            (
+                r#""plans""#,
+                r#""projectSha256":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","plans""#,
+            ),
         ] {
             let changed = base.replace(from, to);
             assert_ne!(changed, base, "{from}");
@@ -416,6 +469,19 @@ mod tests {
             assert!(!valid_text(text, 80, true), "{text:?}");
         }
         assert!(!valid_text("line\nbreak", 80, false));
+    }
+
+    #[test]
+    fn unix_time_converts_to_the_same_instant_as_its_iso_form() {
+        assert_eq!(instant_from_unix(0, 0), (1970, 1, 1, 0, 0, 0, 0));
+        assert_eq!(
+            Some(instant_from_unix(1_791_829_464, 500_000_000)),
+            parse_instant("2026-10-12T18:24:24.5Z")
+        );
+        assert_eq!(
+            Some(instant_from_unix(1_835_481_599, 0)),
+            parse_instant("2028-02-29T23:59:59Z")
+        );
     }
 
     #[test]

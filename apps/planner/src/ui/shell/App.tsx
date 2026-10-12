@@ -32,7 +32,7 @@ import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
-import type { EventSlotOperations } from '@planner/workspace/communityEvents';
+import type { CommunityEventController } from '@planner/workspace/communityEvents';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -42,7 +42,8 @@ import { HintLayer } from '../controls/HintLayer';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
 import { useAppScale } from './useAppScale';
-import { ReleaseUpdateCheck, ReleaseUpdateNotice } from './ReleaseUpdates';
+import { ReleaseUpdateCheck } from './ReleaseUpdates';
+import { NoticeArea } from './NoticeArea';
 import { GameHeaderControls } from './GameHeaderControls';
 import { GamePanel } from './GamePanel';
 import { BugReportDialog } from './BugReportDialog';
@@ -56,8 +57,8 @@ interface AppProps {
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
   readonly editorNavigation: EditorNavigation;
-  /** Present only in development builds of the desktop application. */
-  readonly eventSlot?: EventSlotOperations;
+  /** Present only in the desktop application. */
+  readonly communityEvents?: CommunityEventController;
   readonly gameStatus?: GameStatusController;
   readonly projectOperations: ProjectOperations;
   readonly releaseUpdates?: ReleaseUpdateController;
@@ -73,7 +74,7 @@ export function App({
   catalog,
   catalogSummary,
   editorNavigation,
-  eventSlot,
+  communityEvents,
   gameStatus,
   projectOperations,
   releaseUpdates,
@@ -81,6 +82,11 @@ export function App({
 }: AppProps) {
   const scalePercent = useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
+  // Opening an event's project replaces the open one, so unsaved work is confirmed first.
+  const unsavedWork = useAppSelector(
+    (state) =>
+      state.projectWorkspace.kind === 'openProject' && selectProfileStatus(state) !== 'Clean',
+  );
   const installLabel = useAppSelector((state) =>
     updateInstallLabel(
       state.projectWorkspace.kind === 'openProject',
@@ -267,9 +273,12 @@ export function App({
           </div>
         </header>
 
-        {releaseUpdates === undefined ? null : (
-          <ReleaseUpdateNotice controller={releaseUpdates} installLabel={installLabel} />
-        )}
+        <NoticeArea
+          communityEvents={communityEvents}
+          confirmOpenProject={unsavedWork}
+          installLabel={installLabel}
+          releaseUpdates={releaseUpdates}
+        />
 
         {aboutReporting && bugReport !== undefined && (
           <BugReportDialog onClose={() => setAboutReporting(false)} operations={bugReport} />
@@ -279,7 +288,7 @@ export function App({
           <GamePanel
             {...(bugReport === undefined ? {} : { bugReport })}
             catalog={catalog}
-            {...(eventSlot === undefined ? {} : { eventSlot })}
+            {...(communityEvents === undefined ? {} : { communityEvents })}
             focusPlans={gameOpen === 'plans'}
             {...(gameStatus === undefined ? {} : { gameStatus })}
             onClose={() => {

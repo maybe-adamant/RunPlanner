@@ -1,4 +1,5 @@
 mod bug_report_commands;
+mod community_events;
 mod game_module_commands;
 mod profile_file_session;
 mod release_updates;
@@ -18,9 +19,14 @@ pub fn run() {
             game_module_commands::game_module_remove,
             game_module_commands::game_plan_publish,
             game_module_commands::game_active_slot_set,
-            game_module_commands::game_event_file_read,
-            game_module_commands::game_event_publish,
-            game_module_commands::game_event_clear,
+            community_events::event_feed_refresh,
+            community_events::event_project_download,
+            community_events::game_event_publish,
+            community_events::game_event_clear,
+            #[cfg(any(debug_assertions, internal_features))]
+            community_events::game_event_file_load,
+            #[cfg(any(debug_assertions, internal_features))]
+            community_events::game_event_local_clear,
             bug_report_commands::bug_report_create,
             bug_report_commands::bug_report_reveal,
             profile_file_session::profile_file_restore_active,
@@ -36,6 +42,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(release_updates::PendingUpdate::default())
         .manage(bug_report_commands::LastBugReport::default())
+        .manage(community_events::CommunityEvents::default())
         .run(tauri::generate_context!())
         .expect("failed to run Run Planner");
 }

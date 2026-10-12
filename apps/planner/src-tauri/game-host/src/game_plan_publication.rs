@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::atomic_file;
+use crate::community_event::{parse_instant, Instant};
 use crate::game_module_install::{
     installed_compatibility, status, InstalledModule, PublicationBlocker, TargetInspection,
 };
@@ -10,10 +11,16 @@ use crate::game_module_package::{ModulePackage, PackageSource};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
     any_slot_file_name, empty_slot, encode_active_slot, encode_slot, inspect_all_slots, read_slot,
-    slot_file_name, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_PLAN_BYTES,
+    slot_file_name, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_PLAN_BYTES,
     MODULE_CONFIG_DIRECTORY,
 };
 use crate::slot_overview::{self, SentEntry, SlotEvent, SlotSummary, SLOT_OVERVIEW_FILE};
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PlanIdentity {
+    plan_fingerprint: String,
+}
 
 // The plan fields the installed module's compatibility file must match.
 #[derive(Deserialize)]
@@ -93,6 +100,8 @@ pub enum EventClearStatus {
     Cleared,
     /// The event slot had no file and the overview no entry for it.
     AlreadyEmpty,
+    /// Without verified event data, the event slot is cleared only once its own event ended.
+    Kept,
     Blocked,
     NativeWrite,
 }
@@ -103,6 +112,14 @@ pub struct EventSlotClearing {
     pub status: EventClearStatus,
     pub message: String,
     pub blockers: Vec<PublicationBlocker>,
+    /// The event the cleared slot held, as its overview entry named it.
+    pub cleared_event: Option<SlotEvent>,
+    /// The event slot was active, so slot 1 was made active instead.
+    pub active_slot_moved: bool,
+    /// Why the event slot stayed active although it is now empty.
+    pub activation_problem: Option<String>,
+    /// Whether slot 1, which takes over from an active event slot, holds a plan.
+    pub fallback_slot_has_plan: bool,
 }
 
 fn safe_destination(target: &ResolvedTarget, slot_number: u8) -> Result<PathBuf, String> {
@@ -200,7 +217,7 @@ fn write_plan(
         entry.slot,
         SlotChange::Write {
             envelope: envelope.as_bytes(),
-            entry,
+            entry: Box::new(entry),
         },
     )?;
     commit_slot_and_overview(staged)
@@ -210,7 +227,7 @@ fn write_plan(
 enum SlotChange<'a> {
     Write {
         envelope: &'a [u8],
-        entry: SentEntry,
+        entry: Box<SentEntry>,
     },
     Remove,
 }
@@ -240,7 +257,7 @@ fn stage_slot_and_overview(
         SlotChange::Write { envelope, entry } => {
             let slot = atomic_file::stage(&slot_destination, envelope, "plan slot")?;
             slots[usize::from(slot_number)] = read_slot(slot_number, slot.path(), build_id);
-            (Some(slot), Some(entry))
+            (Some(slot), Some(*entry))
         }
         SlotChange::Remove => {
             slots[usize::from(slot_number)] = empty_slot(slot_number);
@@ -443,6 +460,23 @@ pub fn publish_event(
         Ok(ready) => ready,
         Err(blockers) => return blocked("The game target is not ready for publication.", blockers),
     };
+    // An event slot already holding this plan and event is left as it is.
+    let fingerprint = serde_json::from_str::<PlanIdentity>(plan_json)
+        .ok()
+        .map(|plan| plan.plan_fingerprint);
+    let current = &inspection.event_slot;
+    if current.facts.state == PlanSlotState::Present
+        && fingerprint.is_some()
+        && current.facts.plan_fingerprint == fingerprint
+        && current.event.as_ref() == Some(&event)
+    {
+        return GamePlanPublication {
+            status: PublicationStatus::Published,
+            message: format!("The event slot already holds {}.", event.title),
+            blockers: Vec::new(),
+            activation_problem: None,
+        };
+    }
     let title = event.title.clone();
     let written = reference_build_id(package, &inspection.module).and_then(|reference| {
         write_plan(
@@ -469,44 +503,90 @@ pub fn publish_event(
 }
 
 /// Removes the event slot's file and its overview entry together on the established target.
-/// The active slot is left as it is.
-pub fn clear_event(config_dir: &Path, package: &ModulePackage) -> EventSlotClearing {
+/// When the event slot is the active slot, slot 1 is made active, since the slot played before
+/// the event may no longer hold its plan.
+///
+/// With `ended_only_at`, used when no verified event data is held, the slot is cleared only
+/// when its overview entry names an event that ended by then.
+pub fn clear_event(
+    config_dir: &Path,
+    package: &ModulePackage,
+    ended_only_at: Option<Instant>,
+) -> EventSlotClearing {
     let clearing = |status, message: String| EventSlotClearing {
         status,
         message,
         blockers: Vec::new(),
+        cleared_event: None,
+        active_slot_moved: false,
+        activation_problem: None,
+        fallback_slot_has_plan: false,
     };
     let (status, target) = status(config_dir, package);
     let (Some(target), Some(inspection)) = (target, status.inspection) else {
         return EventSlotClearing {
-            status: EventClearStatus::Blocked,
-            message: "The game target is not ready.".to_owned(),
             blockers: status.publication_blockers,
+            ..clearing(
+                EventClearStatus::Blocked,
+                "The game target is not ready.".to_owned(),
+            )
         };
     };
+    let fallback_slot_has_plan = inspection
+        .plan_slots
+        .first()
+        .is_some_and(|slot| slot.state == PlanSlotState::Present);
+    if let Some(now) = ended_only_at {
+        let ended = inspection
+            .event_slot
+            .event
+            .as_ref()
+            .and_then(|event| parse_instant(&event.ends_at))
+            .is_some_and(|ends| ends <= now);
+        let holds_something = inspection.event_slot.facts.state != PlanSlotState::Empty
+            || slot_overview::has_entry(&target, EVENT_SLOT);
+        if holds_something && !ended {
+            return clearing(
+                EventClearStatus::Kept,
+                "The event slot is kept until its event ends.".to_owned(),
+            );
+        }
+    }
     // An entry left behind by a slot file removed outside the planner is repaired too.
-    if inspection.event_slot.facts.state == PlanSlotState::Empty
+    let mut result = if inspection.event_slot.facts.state == PlanSlotState::Empty
         && !slot_overview::has_entry(&target, EVENT_SLOT)
     {
-        return clearing(
+        clearing(
             EventClearStatus::AlreadyEmpty,
             "The event slot is empty.".to_owned(),
-        );
+        )
+    } else {
+        let cleared = stage_slot_and_overview(
+            &target,
+            inspection.module.build_id.as_deref(),
+            EVENT_SLOT,
+            SlotChange::Remove,
+        )
+        .and_then(commit_slot_and_overview);
+        match cleared {
+            Ok(()) => EventSlotClearing {
+                cleared_event: inspection.event_slot.event.clone(),
+                ..clearing(
+                    EventClearStatus::Cleared,
+                    "The event slot was cleared.".to_owned(),
+                )
+            },
+            Err(message) => return clearing(EventClearStatus::NativeWrite, message),
+        }
+    };
+    result.fallback_slot_has_plan = fallback_slot_has_plan;
+    if inspection.active_slot == (ActiveSlotFacts::Present { slot: EVENT_SLOT }) {
+        match write_active_slot(&target, 1) {
+            Ok(()) => result.active_slot_moved = true,
+            Err(problem) => result.activation_problem = Some(problem),
+        }
     }
-    let cleared = stage_slot_and_overview(
-        &target,
-        inspection.module.build_id.as_deref(),
-        EVENT_SLOT,
-        SlotChange::Remove,
-    )
-    .and_then(commit_slot_and_overview);
-    match cleared {
-        Ok(()) => clearing(
-            EventClearStatus::Cleared,
-            "The event slot was cleared.".to_owned(),
-        ),
-        Err(message) => clearing(EventClearStatus::NativeWrite, message),
-    }
+    result
 }
 
 #[cfg(test)]
@@ -755,11 +835,11 @@ mod tests {
                 slot,
                 SlotChange::Write {
                     envelope: envelope.as_bytes(),
-                    entry: SentEntry {
+                    entry: Box::new(SentEntry {
                         slot,
                         summary: summary("Momus - Underworld"),
                         event: None,
-                    },
+                    }),
                 },
             )
             .unwrap();
@@ -1095,6 +1175,30 @@ mod tests {
         assert_eq!(inspection.event_slot.facts.state, PlanSlotState::Present);
         assert_eq!(inspection.event_slot.event, Some(event()));
         assert_eq!(inspection.plan_slots.len(), 12);
+        // The same event and plan again writes nothing.
+        let before = fs::metadata(event_slot_path(&target))
+            .unwrap()
+            .modified()
+            .unwrap();
+        let again = publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Other label"),
+            event(),
+        );
+        assert_eq!(
+            again.message,
+            "The event slot already holds Week 42: Staff sprint."
+        );
+        assert_eq!(overview(&target)["slots"]["0"]["label"], "Circe - Surface");
+        assert_eq!(
+            fs::metadata(event_slot_path(&target))
+                .unwrap()
+                .modified()
+                .unwrap(),
+            before
+        );
         // A later send to another slot keeps the event entry.
         publish(
             &config,
@@ -1178,12 +1282,12 @@ mod tests {
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         assert_eq!(
-            clear_event(&config, &package).status,
+            clear_event(&config, &package, None).status,
             EventClearStatus::Blocked
         );
         remember_target(&config, &target).unwrap();
         assert_eq!(
-            clear_event(&config, &package).status,
+            clear_event(&config, &package, None).status,
             EventClearStatus::AlreadyEmpty
         );
         publish(
@@ -1201,7 +1305,7 @@ mod tests {
             event(),
         );
         set_active_slot(&config, &package, EVENT_SLOT);
-        let cleared = clear_event(&config, &package);
+        let cleared = clear_event(&config, &package, None);
         assert_eq!(
             cleared.status,
             EventClearStatus::Cleared,
@@ -1209,15 +1313,41 @@ mod tests {
             cleared.message
         );
         assert!(!event_slot_path(&target).exists());
+        assert_eq!(cleared.cleared_event, Some(event()));
         let slots = overview(&target)["slots"].as_object().unwrap().clone();
         assert_eq!(slots.keys().collect::<Vec<_>>(), ["2"]);
+        // The cleared event slot was active, so slot 1 now is.
+        assert!(cleared.active_slot_moved);
+        assert_eq!(cleared.activation_problem, None);
         assert_eq!(
             inspect_active_slot(&target),
-            ActiveSlotFacts::Present { slot: 0 }
+            ActiveSlotFacts::Present { slot: 1 }
         );
+        let again = clear_event(&config, &package, None);
+        assert_eq!(again.status, EventClearStatus::AlreadyEmpty);
+        assert!(!again.active_slot_moved);
+        // An empty event slot left active is moved too.
+        fs::write(
+            active_slot_path(&target),
+            encode_active_slot(EVENT_SLOT).unwrap(),
+        )
+        .unwrap();
+        let empty_active = clear_event(&config, &package, None);
+        assert_eq!(empty_active.status, EventClearStatus::AlreadyEmpty);
+        assert!(empty_active.active_slot_moved);
+        // A slot other than the event slot stays active.
+        set_active_slot(&config, &package, 2);
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        assert!(!clear_event(&config, &package, None).active_slot_moved);
         assert_eq!(
-            clear_event(&config, &package).status,
-            EventClearStatus::AlreadyEmpty
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 2 }
         );
         assert_eq!(
             config_files(&target),
@@ -1238,7 +1368,7 @@ mod tests {
         fs::remove_file(event_slot_path(&target)).unwrap();
         assert!(overview(&target)["slots"]["0"].is_object());
         assert_eq!(inspect(&target, &package).unwrap().event_slot.event, None);
-        let repaired = clear_event(&config, &package);
+        let repaired = clear_event(&config, &package, None);
         assert_eq!(
             repaired.status,
             EventClearStatus::Cleared,
@@ -1282,7 +1412,7 @@ mod tests {
             EVENT_SLOT,
             SlotChange::Write {
                 envelope: envelope.as_bytes(),
-                entry: event_entry(),
+                entry: Box::new(event_entry()),
             },
         )
         .unwrap();
@@ -1323,5 +1453,67 @@ mod tests {
                 "slot-1.runplanner.json"
             ]
         );
+    }
+
+    #[test]
+    fn without_verified_events_the_event_slot_is_cleared_only_after_its_own_end() {
+        let temporary = TemporaryDirectory::new("clear-event-ended-only");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        let during = parse_instant("2026-10-14T00:00:00Z");
+        let after = parse_instant("2026-10-19T00:00:00Z");
+        assert_eq!(
+            clear_event(&config, &package, during).status,
+            EventClearStatus::AlreadyEmpty
+        );
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        set_active_slot(&config, &package, EVENT_SLOT);
+        let kept = clear_event(&config, &package, during);
+        assert_eq!(kept.status, EventClearStatus::Kept);
+        assert!(!kept.active_slot_moved);
+        assert!(event_slot_path(&target).exists());
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 0 }
+        );
+        let ended = clear_event(&config, &package, after);
+        assert_eq!(ended.status, EventClearStatus::Cleared);
+        assert!(ended.active_slot_moved);
+        // Slot 1, which took over, holds no plan.
+        assert!(!ended.fallback_slot_has_plan);
+        assert!(!event_slot_path(&target).exists());
+    }
+
+    #[test]
+    fn a_cleared_active_event_slot_says_whether_slot_1_holds_a_plan() {
+        let temporary = TemporaryDirectory::new("clear-event-fallback");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        publish(
+            &config,
+            &package,
+            1,
+            PRESENT_PLAN,
+            summary("Circe - Surface"),
+        );
+        publish_event(
+            &config,
+            &package,
+            EVENT_PLAN,
+            summary("Circe - Surface"),
+            event(),
+        );
+        set_active_slot(&config, &package, EVENT_SLOT);
+        let cleared = clear_event(&config, &package, None);
+        assert!(cleared.active_slot_moved);
+        assert!(cleared.fallback_slot_has_plan);
     }
 }

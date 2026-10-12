@@ -36,7 +36,12 @@ import {
 import { ContextualPicker } from '../controls/ContextualPicker';
 import { ExternalPageLink } from '../controls/ExternalPageLink';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
-import type { EventSlotOperations, EventSlotOutcome } from '@planner/workspace/communityEvents';
+import type {
+  CommunityEventController,
+  EventDevelopmentOperations,
+  EventSlotOutcome,
+} from '@planner/workspace/communityEvents';
+import { ExportEventDialog } from './ExportEventDialog';
 import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 import { BugReportDialog } from './BugReportDialog';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -475,10 +480,12 @@ function EventSlotRow({
 
 function EventSlotActions({
   onClear,
+  onExport,
   onImport,
   pending,
 }: {
   readonly onClear: () => void;
+  readonly onExport: () => void;
   readonly onImport: () => void;
   readonly pending: boolean;
 }) {
@@ -500,6 +507,15 @@ function EventSlotActions({
         type="button"
       >
         Clear event
+      </button>
+      <button
+        aria-haspopup="dialog"
+        className="quiet-action action-compact"
+        disabled={pending}
+        onClick={onExport}
+        type="button"
+      >
+        Export event file…
       </button>
     </div>
   );
@@ -665,14 +681,14 @@ function PlansSection({
 
 function GameSection({
   catalog,
-  eventSlot,
+  communityEvents,
   focusPlans,
   gameStatus,
   onShowFindings,
   operations,
 }: {
   readonly catalog: Catalog;
-  readonly eventSlot: EventSlotOperations | undefined;
+  readonly communityEvents: CommunityEventController | undefined;
   readonly focusPlans: boolean;
   readonly gameStatus: GameStatusController;
   readonly onShowFindings: (() => void) | undefined;
@@ -797,15 +813,21 @@ function GameSection({
     }
   };
 
+  const development = communityEvents?.development;
+  const [exportingEvent, setExportingEvent] = useState(false);
+  // Opening the panel also brings the event slot up to date with the event feed.
+  useEffect(() => {
+    void communityEvents?.sync('panel');
+  }, [communityEvents]);
   const changeEventSlot = async (
-    change: (operations: EventSlotOperations) => Promise<EventSlotOutcome>,
+    change: (operations: EventDevelopmentOperations) => Promise<EventSlotOutcome>,
   ) => {
-    if (eventSlot === undefined) return;
+    if (development === undefined) return;
     setPending(true);
     setActivation(IDLE_ACTIVATION);
     setPlansFeedback(null);
     try {
-      const outcome = await change(eventSlot);
+      const outcome = await change(development);
       if (outcome.kind !== 'cancelled') {
         setPlansFeedback({
           tone: outcome.kind === 'done' ? 'status' : 'alert',
@@ -982,9 +1004,10 @@ function GameSection({
       {plans === null ? null : (
         <PlansSection
           eventActions={
-            eventSlot === undefined ? null : (
+            development === undefined ? null : (
               <EventSlotActions
                 onClear={() => void changeEventSlot((operations) => operations.clearEvent())}
+                onExport={() => setExportingEvent(true)}
                 onImport={() => void changeEventSlot((operations) => operations.importEventFile())}
                 pending={pending}
               />
@@ -1001,6 +1024,12 @@ function GameSection({
           }}
           pending={pending}
           plans={plans}
+        />
+      )}
+      {exportingEvent && development !== undefined && (
+        <ExportEventDialog
+          onClose={() => setExportingEvent(false)}
+          onExport={(metadata) => development.exportEventFile(metadata)}
         />
       )}
       {replaceSlot !== null && (
@@ -1073,7 +1102,7 @@ function GameSection({
 export function GamePanel({
   bugReport,
   catalog,
-  eventSlot,
+  communityEvents,
   focusPlans = false,
   gameStatus,
   onClose,
@@ -1083,8 +1112,8 @@ export function GamePanel({
   /** Present only in the desktop application. */
   readonly bugReport?: BugReportOperations;
   readonly catalog: Catalog;
-  /** Present only in development builds of the desktop application. */
-  readonly eventSlot?: EventSlotOperations;
+  /** Present only in the desktop application. */
+  readonly communityEvents?: CommunityEventController;
   /** Opens with focus on Plans in game when they show. */
   readonly focusPlans?: boolean;
   readonly gameStatus?: GameStatusController;
@@ -1109,7 +1138,7 @@ export function GamePanel({
       ) : (
         <GameSection
           catalog={catalog}
-          eventSlot={eventSlot}
+          communityEvents={communityEvents}
           focusPlans={focusPlans}
           gameStatus={gameStatus}
           onShowFindings={onShowFindings}

@@ -2,18 +2,15 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
-use run_planner_game_host::community_event::{self, EventPlan};
 use run_planner_game_host::game_module_install::{
     self, GameModuleStatus, InstallOutcome, NativeSwap, RemoveOutcome,
 };
 use run_planner_game_host::game_module_package::ModulePackage;
-use run_planner_game_host::game_plan_publication::{
-    self, ActiveSlotSetting, EventSlotClearing, GamePlanPublication,
-};
+use run_planner_game_host::game_plan_publication::{self, ActiveSlotSetting, GamePlanPublication};
 use run_planner_game_host::game_target::{
     self, GameTargetDiscovery, GameTargetFacts, ResolvedTarget, TargetKind,
 };
-use run_planner_game_host::slot_overview::{SlotEvent, SlotSummary};
+use run_planner_game_host::slot_overview::SlotSummary;
 
 const BACKUP_DIRECTORY: &str = "game-module-backup";
 
@@ -206,36 +203,5 @@ pub(crate) fn game_active_slot_set(
         &config_dir(&app)?,
         ModulePackage::bundled(),
         slot_number,
-    ))
-}
-
-/// Reads a local community event file and selects its plan for this app's module build.
-#[tauri::command]
-pub(crate) fn game_event_file_read(path: String) -> Result<EventPlan, String> {
-    community_event::read_event_file(Path::new(&path), &ModulePackage::bundled().build_id)
-        .map_err(|error| error.to_string())
-}
-
-#[tauri::command]
-pub(crate) fn game_event_publish(
-    app: tauri::AppHandle,
-    plan_json: String,
-    summary: SlotSummary,
-    event: SlotEvent,
-) -> Result<GamePlanPublication, String> {
-    Ok(game_plan_publication::publish_event(
-        &config_dir(&app)?,
-        ModulePackage::bundled(),
-        &plan_json,
-        summary,
-        event,
-    ))
-}
-
-#[tauri::command]
-pub(crate) fn game_event_clear(app: tauri::AppHandle) -> Result<EventSlotClearing, String> {
-    Ok(game_plan_publication::clear_event(
-        &config_dir(&app)?,
-        ModulePackage::bundled(),
     ))
 }

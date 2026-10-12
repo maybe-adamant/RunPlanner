@@ -10,6 +10,11 @@ import { createBrowserProfileFileAdapter } from './persistence/browserProfileFil
 import { createTauriProfileFileAdapter } from './persistence/tauriProfileFileAdapter';
 import { createTauriGameModuleHost } from './persistence/gameModuleHost';
 import {
+  createBrowserEventDismissalPreference,
+  createTauriCommunityEventDevelopmentHost,
+  createTauriCommunityEventHost,
+} from './persistence/communityEventHost';
+import {
   createBrowserAutosaveRecoveryAdapter,
   createBrowserAutosaveScheduler,
 } from './persistence/browserAutosaveRecoveryAdapter';
@@ -84,7 +89,14 @@ const application = createApplication({
   buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
   profileFile,
   profileFileRestore: await profileFile.restoreActive(),
-  ...(tauriHost ? { gameModuleHost: createTauriGameModuleHost() } : {}),
+  ...(tauriHost
+    ? {
+        communityEventDevelopmentHost: createTauriCommunityEventDevelopmentHost(),
+        communityEventHost: createTauriCommunityEventHost(),
+        eventDismissals: createBrowserEventDismissalPreference(() => globalThis.localStorage),
+        gameModuleHost: createTauriGameModuleHost(),
+      }
+    : {}),
 });
 
 await application.startupReady;
@@ -122,7 +134,9 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
           editorNavigation={application.editorNavigation}
-          {...(application.eventSlot === undefined ? {} : { eventSlot: application.eventSlot })}
+          {...(application.communityEvents === undefined
+            ? {}
+            : { communityEvents: application.communityEvents })}
           {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
           projectOperations={application.projectOperations}
           selectStructuredWorkspace={application.selectStructuredWorkspace}
@@ -134,3 +148,4 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
 );
 
 releaseUpdates?.checkAutomatically();
+void application.communityEvents?.sync();

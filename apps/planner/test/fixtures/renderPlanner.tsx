@@ -44,7 +44,9 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
         {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}
-        {...(application.eventSlot === undefined ? {} : { eventSlot: application.eventSlot })}
+        {...(application.communityEvents === undefined
+          ? {}
+          : { communityEvents: application.communityEvents })}
         {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
         projectOperations={application.projectOperations}
         selectStructuredWorkspace={application.selectStructuredWorkspace}

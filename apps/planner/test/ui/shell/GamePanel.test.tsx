@@ -17,6 +17,10 @@ import {
   planSlots,
 } from '@planner-test/fixtures/gameModuleHost';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import {
+  createFakeCommunityEventDevelopmentHost,
+  createFakeCommunityEventHost,
+} from '@planner-test/fixtures/communityEventHost';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
@@ -616,25 +620,47 @@ describe('Game panel', () => {
     await waitFor(() => expect(event.checked).toBe(true));
   });
 
-  it('imports and clears an event file through the development actions', async () => {
+  it('syncs the event slot on opening and runs the development event actions', async () => {
     const game = createFakeGameModuleHost();
-    const { dialog, user } = await openGame(game.host, undefined, { devBuild: true });
+    const events = createFakeCommunityEventHost();
+    const development = createFakeCommunityEventDevelopmentHost();
+    const { dialog, user } = await openGame(game.host, undefined, {
+      communityEventDevelopmentHost: development,
+      communityEventHost: events,
+      devBuild: true,
+    });
+    await vi.waitFor(() => expect(events.refreshFeed).toHaveBeenCalledWith(true));
     const importButton = await within(dialog).findByRole('button', { name: 'Import event file…' });
     expect(within(dialog).queryByRole('radio', { name: 'Event' })).toBeNull();
 
     await user.click(importButton);
-    expect(game.host.pickEventFile).toHaveBeenCalledTimes(1);
-    expect(game.host.publishEvent).not.toHaveBeenCalled();
+    expect(development.pickEventFile).toHaveBeenCalledTimes(1);
+    expect(events.publishEvent).not.toHaveBeenCalled();
 
-    game.host.pickEventFile.mockResolvedValueOnce('/events/e.json');
+    development.pickEventFile.mockResolvedValueOnce('/events/e.json');
     await user.click(importButton);
     expect(await within(dialog).findByText('No event file.')).toBeTruthy();
 
-    const refreshes = game.host.status.mock.calls.length;
     await user.click(within(dialog).getByRole('button', { name: 'Clear event' }));
-    expect(await within(dialog).findByText('The event slot was cleared.')).toBeTruthy();
-    expect(game.host.clearEvent).toHaveBeenCalledTimes(1);
-    expect(game.host.status.mock.calls.length).toBeGreaterThan(refreshes);
+    expect(await within(dialog).findByText('The event slot is empty.')).toBeTruthy();
+    expect(development.clearLocalEvent).toHaveBeenCalledTimes(1);
+
+    await user.click(within(dialog).getByRole('button', { name: 'Export event file…' }));
+    const exporting = await screen.findByRole('dialog', { name: 'Export event file' });
+    await user.type(within(exporting).getByLabelText('Id'), 'local-test');
+    await user.click(within(exporting).getByRole('button', { name: 'Export…' }));
+    expect(await within(exporting).findByRole('alert')).toBeTruthy();
+    expect(development.saveEventFile).not.toHaveBeenCalled();
+  });
+
+  it('offers no event actions in release builds', async () => {
+    const game = createFakeGameModuleHost();
+    const { dialog } = await openGame(game.host, undefined, {
+      communityEventHost: createFakeCommunityEventHost(),
+      devBuild: false,
+    });
+    await within(dialog).findByRole('heading', { name: 'Game location' });
+    expect(within(dialog).queryByRole('button', { name: 'Import event file…' })).toBeNull();
   });
 
   it('keeps the group reachable by Tab when the file names a slot without a plan', async () => {
