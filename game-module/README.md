@@ -1,73 +1,59 @@
-# Run Planner game module
+# Run Planner
 
-The Hades II mod that plays plans made in the Run Planner application. To
-install and use it, see the
-[Run Planner README](https://github.com/maybe-adamant/RunPlanner#readme); the
-app installs this mod for you.
+Design a Hades II run, then play it.
 
-The rest of this file is for contributors.
+This mod plays plans made in the Run Planner desktop app. You plan the rooms,
+boons and rewards of a run in the app; the mod makes the game follow that plan
+while you do the fighting and make the choices you planned. For full
+instructions, see the
+[Run Planner README](https://github.com/maybe-adamant/RunPlanner#readme).
 
-## What it does
+## Requirements
 
-The planner owns authoring, simulation and validation. This module consumes
-its published execution plans; it is not a second planner or simulator. At
-each new run it decodes the active plan slot strictly, freezes it, steers the
-native game through the plan's choices and checks the run against the plan's
-published state, stopping at the first mismatch while native gameplay
-continues. It also presents that status: the **Run Planner** window, drawn as
-ModpackLib's standalone fallback window, the optional room guide and choice
-highlights, and the victory-screen row. Ownership rules for this lane live in
-the repository's [`AGENTS.md`](../AGENTS.md), and the contract with the planner
-in [Game integration](../docs/design/GAME_INTEGRATION_BOUNDARY.md).
+- The [Run Planner app](https://github.com/maybe-adamant/RunPlanner/releases/latest).
+  It installs and updates this mod from its **Game** panel; plans are sent only
+  to a mod that matches the app.
+- `adamant-ModpackLib` in the same r2modman profile.
 
-## Layout
+## How to use it
 
-- `src/` — the active Hades II module. `src/main.lua` creates the ModpackLib
-  module and `src/mods/runtime/composition.lua` composes the runtime.
-- `tests/` — Lua unit and integration tests; `tests/probes/` holds opt-in
-  probes against the game's own scripts.
+1. In the app, send a plan to one of the twelve slots under **Plans in game**.
+2. In the game, open the **Run Planner** window from the ReturnOfModding menu
+   bar and pick that slot in **Plan for next run**.
+3. Start a new run and follow its choices. The mod gives the run your planned
+   loadout and puts your own back when the run ends.
 
-Within `src/mods/`, code is grouped by runtime responsibility: host and
-protocol integration, route navigation, room behavior, timeline interactions,
-and modeled traits or keepsakes.
+## The Run Planner window
 
-The tests read the planner's execution fixtures in place from
-`packages/planner-engine/test/execution-plan/fixtures/`; there is no
-module-local copy.
+The top line shows where things stand: **No run**, **Starting** or
+**Synchronized** while the mod follows your plan (with **Practice** for a
+Practice run), **Desynchronized** once the run no longer matches it, **Plan
+complete**, **Plan not used** with the reason, or **Not steering** for a run
+continued after Save & Quit.
 
-`manifest.template.json` is the source of the package manifest; the release
-build adds `version_number`. Assembly also stamps `buildId`, a hash of the
-`src/` payload, into `execution-compatibility.json`; the checked-in file
-carries no `buildId`.
+- **Plan** picks the slot for the next run and shows the chosen plan's name,
+  when it was sent, aspect, route, keepsake, Fear and any Practice start, with
+  its status.
+- **Current Run** shows which room of the plan you're in and the next planned
+  room.
 
-## ModpackLib
+Out of sync means you took a different door or reward, or the game did
+something the plan didn't expect. The mod stops steering and normal gameplay
+continues; **Current Run** says where it happened and what differed.
 
-The module is built on `adamant-ModpackLib`. The required version is the
-`adamant-ModpackLib` dependency in `manifest.template.json`; raise it only when
-the module needs a newer API. ModpackLib's source is the
-`external/adamant-ModpackLib` submodule, pinned to a release tag and bumped with
-each ModpackLib release. It is reference only: nothing builds against it, and
-lint, format and tests skip `external/`. Before changing ModpackLib-facing code
-(the window, overlays, the victory summary, configuration), read its `API.md`
-and `CHANGELOG.md`.
+**Show room guide** and **Highlight planned choices** on the **Plan** tab are
+off by default. The guide shows read-only instructions for the current planned
+room; highlights mark the next planned exit or choice but never select it.
 
-## Checks
+After a victory, the victory screen shows the plan's name and `Complete`, or
+the room where the run went out of sync.
 
-From the repository root, run the Lua suite and Luacheck together:
+With **Debug Mode** on, a **Diagnostics** tab shows the raw slot and run
+records.
 
-```sh
-npm run test:game-module
-```
+## Feedback
 
-This parses every Lua file under `src/` and `tests/` with `luac -p`, then runs
-`lua tests/all.lua` and `luacheck src` from `game-module/`. It requires Lua 5.2
-with LuaUnit and Luacheck installed from LuaRocks.
-
-The probes under `tests/probes/` are not part of the suite. Each one's header
-says how to run it from `game-module/` against the game's `Scripts` folder,
-given as `HADES2_SCRIPTS_PATH` or as an argument:
-
-```sh
-HADES2_SCRIPTS_PATH=/path/to/Scripts lua tests/probes/test_generated_encounter_native.lua
-lua tests/probes/test_inventory_native.lua /path/to/Scripts
-```
+Run Planner is in beta. To report a problem, use **Create bug report…** in the
+app's **Game** panel and attach the zip to an
+[issue](https://github.com/maybe-adamant/RunPlanner/issues). Otherwise attach
+`logOutput.log` from your r2modman profile's `ReturnOfModding` folder.
