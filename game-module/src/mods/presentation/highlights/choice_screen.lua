@@ -1,4 +1,6 @@
 -- Exact screen/source-local markers; native hover and pins remain untouched.
+local safeHooks = type(import) == "function" and import("mods/host/presentation_hooks.lua")
+    or require("mods.host.presentation_hooks")
 local guidance = {}
 
 function guidance.create()
@@ -135,77 +137,58 @@ function guidance.create()
     end
 
     function instance.attach(module, getState)
-        module.hooks.wrap("AcceptAndCloseSpellScreen", "run-planner-highlight-spell-close", function(_, _, base,
-            screen, button)
-            instance.clear(screen)
-            return base(screen, button)
-        end)
-        module.hooks.wrap("CreateBoonLootButtons", "run-planner-highlight-source-screen", function(_, runtime,
-            base, screen, loot, reroll, args)
-            suspend(screen, "rebuilding")
-            local result = base(screen, loot, reroll, args)
-            instance.constructed(runtime, screen, getState(runtime))
-            local context = screens[screen]
-            if context then
-                context.rebuilding = nil
-                render(runtime, getState(runtime), screen, context)
-            end
-            return result
-        end)
-        module.hooks.wrap("CloseUpgradeChoiceScreen", "run-planner-highlight-choice-close", function(_, _, base,
-            screen, button)
-            instance.clear(screen)
-            return base(screen, button)
-        end)
-        module.hooks.wrap("TryUpgradeBoon", "run-planner-highlight-choice-rarify", function(_, runtime,
-            base, loot, screen, button)
-            suspend(screen, "rebuilding")
-            local result = base(loot, screen, button)
+        local function suspendScreen(_, screen) suspend(screen, "rebuilding") end
+        local function refreshRebuilt(runtime, screen)
             if screens[screen] then
                 screens[screen].rebuilding = nil
                 instance.refresh(runtime, getState(runtime))
             end
-            return result
-        end)
-        module.hooks.wrap("UpgradeChoiceScreenCloseBoonInfo", "run-planner-highlight-choice-boon-info", function(_, runtime,
-            base, info, args)
-            local result = base(info, args)
-            if type(args) == "table" and screens[args.Screen] then
-                screens[args.Screen].infoOpen = nil
-                instance.refresh(runtime, getState(runtime))
-            end
-            return result
-        end)
-        module.hooks.wrap("AttemptOpenUpgradeChoiceBoonInfo", "run-planner-highlight-choice-boon-info-open", function(_, _,
-            base, screen, button)
-            suspend(screen, "infoOpen")
-            return base(screen, button)
-        end)
-        module.hooks.wrap("RerollBoonLoot", "run-planner-highlight-choice-reroll", function(_, runtime, base,
-            screen, button)
-            suspend(screen, "rebuilding")
-            local result = base(screen, button)
-            if screens[screen] then
-                screens[screen].rebuilding = nil
-                instance.refresh(runtime, getState(runtime))
-            end
-            return result
-        end)
-        module.hooks.wrap("DestroyBoonLootButtons", "run-planner-highlight-choice-rows-destroy", function(_, _,
-            base, screen, loot)
-            suspend(screen, "rebuilding")
-            return base(screen, loot)
-        end)
-        module.hooks.wrap("DestroyBoonLootButton", "run-planner-highlight-choice-row-destroy", function(_, _,
-            base, screen, index)
-            suspend(screen, "rebuilding")
-            return base(screen, index)
-        end)
-        module.hooks.wrap("LeaveRoom", "run-planner-highlight-choice-room-leave", function(_, _, base,
-            currentRun, door)
-            instance.clear()
-            return base(currentRun, door)
-        end)
+        end
+        safeHooks.wrap(module, "AcceptAndCloseSpellScreen", "run-planner-highlight-spell-close", {
+            before = function(_, screen) instance.clear(screen) end,
+        })
+        safeHooks.wrap(module, "CreateBoonLootButtons", "run-planner-highlight-source-screen", {
+            before = suspendScreen,
+            after = function(runtime, screen)
+                instance.constructed(runtime, screen, getState(runtime))
+                local context = screens[screen]
+                if context then
+                    context.rebuilding = nil
+                    render(runtime, getState(runtime), screen, context)
+                end
+            end,
+        })
+        safeHooks.wrap(module, "CloseUpgradeChoiceScreen", "run-planner-highlight-choice-close", {
+            before = function(_, screen) instance.clear(screen) end,
+        })
+        safeHooks.wrap(module, "TryUpgradeBoon", "run-planner-highlight-choice-rarify", {
+            before = function(_, _, screen) suspend(screen, "rebuilding") end,
+            after = function(runtime, _, screen) refreshRebuilt(runtime, screen) end,
+        })
+        safeHooks.wrap(module, "UpgradeChoiceScreenCloseBoonInfo", "run-planner-highlight-choice-boon-info", {
+            after = function(runtime, _, args)
+                if type(args) == "table" and screens[args.Screen] then
+                    screens[args.Screen].infoOpen = nil
+                    instance.refresh(runtime, getState(runtime))
+                end
+            end,
+        })
+        safeHooks.wrap(module, "AttemptOpenUpgradeChoiceBoonInfo", "run-planner-highlight-choice-boon-info-open", {
+            before = function(_, screen) suspend(screen, "infoOpen") end,
+        })
+        safeHooks.wrap(module, "RerollBoonLoot", "run-planner-highlight-choice-reroll", {
+            before = suspendScreen,
+            after = refreshRebuilt,
+        })
+        safeHooks.wrap(module, "DestroyBoonLootButtons", "run-planner-highlight-choice-rows-destroy", {
+            before = suspendScreen,
+        })
+        safeHooks.wrap(module, "DestroyBoonLootButton", "run-planner-highlight-choice-row-destroy", {
+            before = suspendScreen,
+        })
+        safeHooks.wrap(module, "LeaveRoom", "run-planner-highlight-choice-room-leave", {
+            before = function() instance.clear() end,
+        })
     end
     return instance
 end

@@ -2,7 +2,8 @@
 local world = {}
 local MARKER_KEY = "RunPlannerPlannedChoice"
 
-function world.create(route)
+-- nextOccurrence reads the route's next published occurrence.
+function world.create(nextOccurrence)
     local instance, markers = {}, setmetatable({}, { __mode = "k" })
     local desired = { route = nil, doors = {} }
     local function enabled(runtime, state)
@@ -69,7 +70,7 @@ function world.create(route)
         if enabled(runtime, state) then mark(matches[1]) end
     end
     function instance.hub(runtime, state, nativeDoors, hub)
-        local target = state and route.next(state.route) or nil
+        local target = state and nextOccurrence(state.route) or nil
         if type(hub) ~= "table" or type(target) ~= "table" then instance.clear(); return end
         for _, slot in ipairs(hub.slots or {}) do
             if slot.room and slot.room.id == target.id then

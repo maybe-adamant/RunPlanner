@@ -1,6 +1,6 @@
 -- luacheck: globals TestVictorySummary
 local lu = require("luaunit")
-local victorySummary = require("mods.host.victory_summary")
+local victorySummary = require("mods.presentation.victory_summary")
 
 TestVictorySummary = {}
 

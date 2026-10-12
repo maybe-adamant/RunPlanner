@@ -1,10 +1,10 @@
 -- Display text for plans, slots and the session state, shared by the status
 -- window and the victory summary. Reads decoded plans, overview entries and
 -- session snapshots; never native loadout state.
-local names = type(import) == "function" and import("mods/room/names.lua")
-    or require("mods.room.names")
-local mismatchText = type(import) == "function" and import("mods/host/mismatch_text.lua")
-    or require("mods.host.mismatch_text")
+local names = type(import) == "function" and import("mods/presentation/names.lua")
+    or require("mods.presentation.names")
+local mismatchText = type(import) == "function" and import("mods/presentation/mismatch_text.lua")
+    or require("mods.presentation.mismatch_text")
 
 local presentation = {}
 

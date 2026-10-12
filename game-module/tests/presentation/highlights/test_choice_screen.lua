@@ -1,6 +1,6 @@
 -- luacheck: globals TestChoiceScreenGuidance
 local lu = require("luaunit")
-local screenGuidance = require("mods.guidance.choice_screen")
+local screenGuidance = require("mods.presentation.highlights.choice_screen")
 
 TestChoiceScreenGuidance = {}
 

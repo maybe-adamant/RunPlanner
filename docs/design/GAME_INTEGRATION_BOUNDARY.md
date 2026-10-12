@@ -50,14 +50,38 @@ authored save schema:
   module's tests keep that declaration aligned with its decoder and decode the
   planner-engine execution fixtures in place.
 - The module **build identity** (`buildId`) is SHA-256 over the sorted
-  `path NUL sha256 LF` lines of the checked-in `src/` payload; the manifest,
-  icon, license and readme, and the engine source, are outside it. A wire change
-  always changes the strict Lua decoder, so it changes the build, while the
+  `path NUL sha256 LF` lines of the `src/` payload outside
+  `src/mods/presentation/`, after any development variant replaces its module;
+  the presentation layer, the manifest, icon, license and readme, and the
+  engine source, are outside it. Every file that decodes, steers, installs,
+  checks conformance or composes the runtime is inside it, so a wire change
+  always changes the strict Lua decoder and with it the build, while the
   fixture-decode lane catches engine/module drift. Assembly (shared by the
-  embedded package and the development checkout install) computes it and
-  stamps the packaged `execution-compatibility.json` as
-  `{format, catalogVersion, buildId}`; a checked-in `buildId` is refused. The
-  plan wire and the execution fixtures never carry a build identity.
+  embedded package and the development checkout install) computes it, ships
+  the whole payload including the presentation layer, and stamps the packaged
+  `execution-compatibility.json` as `{format, catalogVersion, buildId}`; a
+  checked-in `buildId` is refused. The plan wire and the execution fixtures
+  never carry a build identity.
+- The **presentation layer**, `src/mods/presentation/`, only draws and formats:
+  the status window and its slot overview reader, the room guide, the victory
+  summary and the planned-choice markers. Because it is outside the build
+  identity, it never decides execution. `src/main.lua` is the only execution
+  file that imports it; it builds and attaches each surface under pcall,
+  skipping a surface that fails, and hands presentation read-only inspections
+  of the session, inbox and route. Execution notifies the planned-choice
+  markers through the instance it is given. Presentation imports only other
+  presentation modules, the JSON codec, the inbox's slot-file names and the
+  build-covered hook boundary `mods/host/presentation_hooks.lua`, and writes
+  no session, route, room, inbox, `CurrentRun` or game global state. Its one
+  write is the status window's slot picker, a player action: it writes
+  `active-slot.json` and loads the picked slot through the active-slot and
+  inbox capabilities `main.lua` injects. Presentation registers native hooks
+  and overlay callbacks, and exposes entry points to execution, only through
+  the hook boundary. It always runs native base with its original arguments
+  and returns base's results unchanged, except the allowlisted map sub-icon
+  decoration, and contains, logging once, any presentation failure. The
+  module's architecture test rejects direct writes, and writes through simple
+  local aliases, by static scan.
 
 The game target is an application setting in the desktop configuration
 directory, never authored state or history. The Game panel's Game location

@@ -14,7 +14,7 @@ local hexTreeDefinition = require("mods.spells.hex_tree")
 local loadoutHooks = require("mods.loadout.hooks")
 local roomSession = require("mods.room.session")
 local routeSession = require("mods.route.session")
-local roomGuide = require("mods.room.guide")
+local roomGuide = require("mods.presentation.room_guide")
 local support = require("tests.harness.hook_composition")
 local activeSlotModule = require("mods.host.active_slot")
 local lfs = require("lfs")
@@ -40,14 +40,6 @@ local function generatedEncounterStub()
         withRewardDestination = function(_, _, _, action) return action() end,
     }
 end
-local function highlightStub()
-    return { create = function() return {
-        attach = function() end, refresh = function() end, doors = function() end, hub = function() end,
-        wheel = function() end, clearWorld = function() end, retireWorld = function() end,
-        screen = function() end, bindSource = function() end,
-    } end }
-end
-
 TestRuntimeComposition = {}
 
 function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionWithoutMutatingExecution()
@@ -79,7 +71,6 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function() return {
                 activeSlot = function() return 1 end, select = function() end, load = function() end,
@@ -96,7 +87,6 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
         if path == "mods/spells/hex_tree.lua" then return { create = function() return { attach = function() end } end } end
         if path == "mods/room/timeline/encounters/thessaly.lua" then return { create = shipCombatStub } end
         if path == "mods/room/timeline/encounters/generated.lua" then return { create = generatedEncounterStub } end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         return { attach = function() end }
     end
     _G.import, _G.rom = freshImport, { path = {} }
@@ -157,7 +147,6 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -177,7 +166,6 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
         if path == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         if path == "mods/room/hooks.lua" then
             return { attach = function(_, _, _, report) report({}) end }
         end
@@ -224,7 +212,6 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
             return { create = function() return state end,
@@ -234,7 +221,6 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
         if path == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         if path == "mods/room/hooks.lua" then
             return { attach = function(_, _, _, report) report({}); report({}) end }
         end
@@ -293,7 +279,6 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return { activeSlot = function() return 1 end, select = function() end,
@@ -313,7 +298,6 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
         if path == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         if path == "mods/room/hooks.lua" then
             return { attach = function(_, _, _, report)
                 report({})
@@ -357,7 +341,6 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
             return { create = function() return state end,
@@ -367,7 +350,6 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
         if path == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         if path == "mods/room/hooks.lua" then
             return { attach = function(_, _, _, report)
                 report({})
@@ -473,7 +455,6 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return {
@@ -501,7 +482,6 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
         if path == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         if path == "mods/loadout/hooks.lua" then
             return { attach = function(_, _, _, _, _, sharedTree)
                 loadoutTree = sharedTree
@@ -556,7 +536,6 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
             return { decode = function(value) return value end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
             return { create = function()
                 return {
@@ -586,7 +565,6 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
         if path == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if path == "mods/guidance/highlights.lua" then return highlightStub() end
         if path == "mods/loadout/hooks.lua" or path == "mods/room/timeline/acquisitions/hooks.lua" then
             return { attach = function() return {} end }
         end
@@ -644,7 +622,6 @@ function TestRuntimeComposition.testAdmissionReadsTheActiveSlotFileEachTime()
         if importPath == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if importPath == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. importPath))() end
         if importPath == "mods/host/active_slot.lua" then return activeSlotModule end
-        if importPath == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if importPath == "mods/protocol/json.lua" or importPath == "mods/protocol/decoder.lua" then
             return { decode = function(value) return value end }
         end
@@ -655,7 +632,6 @@ function TestRuntimeComposition.testAdmissionReadsTheActiveSlotFileEachTime()
         if importPath == "mods/room/timeline/encounters/generated.lua" then
             return { create = generatedEncounterStub }
         end
-        if importPath == "mods/guidance/highlights.lua" then return highlightStub() end
         if importPath == "mods/loadout/hooks.lua" then
             return { attach = function(_, value) loadoutRuntime = value; return {} end }
         end
@@ -836,7 +812,6 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
         end
         if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
         if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
-        if path == "mods/host/slot_overview.lua" then return { create = function() return {} end } end
         if path == 'mods/host/inbox.lua' then return { create = function() return {
             load = function() return true, preview end, plan = function() return preview end,
             status = function() return {} end,
@@ -844,7 +819,6 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
         if path == 'mods/spells/hex_tree.lua' then return { create = function() return { attach = function() end } end } end
         if path == 'mods/room/timeline/encounters/thessaly.lua' then return { create = shipCombatStub } end
         if path == 'mods/room/timeline/encounters/generated.lua' then return { create = generatedEncounterStub } end
-        if path == 'mods/guidance/highlights.lua' then return highlightStub() end
         if path == 'mods/loadout/hooks.lua' then return { attach = function(_, _, _, report)
             assert(runtimeSession.start(state, { load = function() return true, plan end }, 'starting', 1))
             report({})

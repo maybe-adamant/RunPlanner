@@ -258,6 +258,50 @@ mod tests {
     }
 
     #[test]
+    fn the_build_id_excludes_only_the_presentation_directory() {
+        let root =
+            std::env::temp_dir().join(format!("run-planner-presentation-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        module_checkout(&root);
+        let presentation = format!(
+            "{}status_ui.lua",
+            game_module_assembly::PRESENTATION_DIRECTORY
+        );
+        write(&root.join("src").join(&presentation), b"return 'window'\n");
+        let original = build_id(&root, "2.3.4");
+        write(&root.join("src").join(&presentation), b"return 'redrawn'\n");
+        write(
+            &root.join("src/mods/presentation/overlays/guide.lua"),
+            b"return 'new'\n",
+        );
+        assert_eq!(build_id(&root, "2.3.4"), original);
+        let files =
+            game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).unwrap();
+        let shipped = |path: &str| {
+            files
+                .iter()
+                .find(|file| file.path == path)
+                .map(|file| file.bytes.clone())
+        };
+        assert_eq!(shipped(&presentation).unwrap(), b"return 'redrawn'\n");
+        assert_eq!(
+            shipped("mods/presentation/overlays/guide.lua").unwrap(),
+            b"return 'new'\n"
+        );
+        for (path, bytes) in [
+            ("src/mods/a.lua", &b"return 2\n"[..]),
+            ("src/mods/presentation.lua", b"return 'beside'\n"),
+            ("src/mods/presentation_extra/a.lua", b"return 'sibling'\n"),
+            ("src/main.lua", b"return false\n"),
+        ] {
+            let before = build_id(&root, "2.3.4");
+            write(&root.join(path), bytes);
+            assert_ne!(build_id(&root, "2.3.4"), before, "{path}");
+        }
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
     fn module_selection_replaces_the_release_module_when_development_is_selected() {
         let root = std::env::temp_dir().join(format!("run-planner-variant-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
@@ -322,6 +366,7 @@ mod tests {
             "execution-compatibility.json",
             "icon.png",
             "LICENSE",
+            "mods/presentation/status_ui.lua",
         ] {
             assert!(package.files.iter().any(|file| file.path == required));
         }

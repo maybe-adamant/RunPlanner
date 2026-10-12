@@ -47,7 +47,7 @@ function acquisitions.attach(module, session, getState, report, room, hexTree, r
     echo.attach(module, session, report, npcScope, traitScopes, highlights, getState)
     mystery.attach(module, session, getState, report, room)
     spell.attach(module, session, getState, report, room, hexTree, highlights)
-    path.attach(module, session, getState, report, room, seaStar)
+    path.attach(module, session, getState, report, room, seaStar, highlights)
     pickups.attach(module, session, getState, report, room, seaStar)
     levels.attach(module, session, getState, report, room, seaStar, highlights)
 end

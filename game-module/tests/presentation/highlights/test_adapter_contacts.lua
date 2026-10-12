@@ -1,7 +1,7 @@
 -- Native-shaped menu construction through actual acquisition adapters and guidance.
 -- luacheck: globals TestHighlightAdapterContacts
 local lu = require("luaunit")
-local highlights = require("mods.guidance.highlights")
+local highlights = require("mods.presentation.highlights.highlights")
 local traits = require("mods.room.timeline.acquisitions.traits.hooks")
 local chaos = require("mods.room.timeline.acquisitions.traits.chaos_offer")
 local levels = require("mods.room.timeline.acquisitions.levels.hooks")
@@ -44,7 +44,7 @@ local function harness(payload, source, install)
     end } }
     local state = { state = "synchronized", route = {} }
     local runtime = { data = { read = function() return true end } }
-    local guide = highlights.create({})
+    local guide = highlights.create(function() end)
     local handle, current, completed = {}, { occurrence = { overview = {} } }, 0
     local room = {
         current = function() return current end,

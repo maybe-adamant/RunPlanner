@@ -1,8 +1,6 @@
 -- Path of Stars accepts only its exact native consumable, then leaves all
 -- point accounting, node choice, and closure to the writable Talent screen.
 local path = {}
-local highlights = type(import) == "function" and import("mods/room/timeline/acquisitions/path/highlight.lua")
-    or require("mods.room.timeline.acquisitions.path.highlight")
 
 local pathNames = {
     MinorTalentDrop = true,
@@ -42,9 +40,8 @@ local function boundScope(room, state, item, claimReady)
     return { state = state, current = current, handle = handle, item = item }
 end
 
-function path.attach(module, session, getState, report, room, seaStar)
+function path.attach(module, session, getState, report, room, seaStar, highlights)
     assert(type(seaStar) == "table", "Path of Stars Sea Star instance is required")
-    local highlight = highlights.create()
     local acceptedUses = setmetatable({}, { __mode = "k" })
     local routedSpellDrops = setmetatable({}, { __mode = "k" })
     local function seaStarDiagnostic(state, checkpoint, expected, observed)
@@ -56,9 +53,9 @@ function path.attach(module, session, getState, report, room, seaStar)
         local payload = room.begin(scope.state, scope.handle)
         if payload == nil then return base(args, item, context) end
         local role = pathRole(payload.transaction, { gameName = nativeName(item) })
-        highlight.plan(role and role.plannedHexNodeKeys)
+        if highlights then highlights.pathNodes(role and role.plannedHexNodeKeys) end
         local ok, result = pcall(base, args, item, context)
-        highlight.clear()
+        if highlights then highlights.pathNodes(nil) end
         if not ok then error(result, 0) end
         seaStar.requireConsumed(scope.seaStar, seaStarDiagnostic)
         session.complete(scope.state, scope.handle)
@@ -128,13 +125,6 @@ function path.attach(module, session, getState, report, room, seaStar)
         end
         if not ok then error(result, 0) end
         report(runtime)
-        return result
-    end)
-
-    module.hooks.wrap("UpdateTalentButtons", "run-planner-path-planned-nodes", function(_, _, base,
-        screen, skipUsableCheck)
-        local result = base(screen, skipUsableCheck)
-        highlight.refresh(screen)
         return result
     end)
 
