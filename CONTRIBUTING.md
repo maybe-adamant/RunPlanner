@@ -69,7 +69,7 @@ For a specific contract, go directly to its specialist authority:
   baseline. The [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
   maps published planner facts to native contacts and explains each intervention.
 - [Source audit map](docs/audits/README.md) routes source evidence by subject.
-- [Game module](game-module/README.md) describes the module's layout,
+- [Game module](game-module/CONTRIBUTING.md) describes the module's layout,
   dependencies and checks.
 
 ## Quickstart
