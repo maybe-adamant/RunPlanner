@@ -573,7 +573,11 @@ keepsakes and their retained effects, the resources gained by acquisitions
 settled before the checkpoint, and max health and Magick with their flat
 sources. The maxima are derived from folded state only; their settlement-time
 inputs (pickup grants, permanent trait grants, the Fight Fight Fight base, the
-Silver Wheel grants and the White Antler window) are folded by their owners. Configured Fear and effective suppression
+Silver Wheel grants and the White Antler window) are folded by their owners.
+Snapshots also publish lasting armor with its sources under the planner's
+no-damage assumption, so armor is never consumed: held armor traits at their
+rarity, Pom level or acquisition ordinal, the hidden item total and the held
+Silken Sash's `CurrentArmor`. Configured Fear and effective suppression
 remain distinct; spent effects are not restored by later suppression.
 Acquisition identities distinguish repeated temporary effects. Snapshots
 observe those engine products instead of reconstructing clocks, charges or

@@ -83,6 +83,8 @@ export const icarusTraits = [
     key: 'BreakInvincibleArmorBoon',
     label: 'Protective Coating',
     ...raritylessNpcTrait,
+    // BaseValue 100; only Heroic scales it (14/10).
+    armor: { source: 'Icarus', amount: [100, 100, 100, 140] },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -90,6 +92,7 @@ export const icarusTraits = [
     key: 'BreakExplosiveArmorBoon',
     label: 'Volatile Coating',
     ...raritylessNpcTrait,
+    armor: { source: 'Icarus', amount: 50 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

@@ -110,6 +110,7 @@ const base: RunStateSnapshot = {
     multipliers: { maxHealth: 1, maxMana: 1 },
     convertedHealth: 0,
   },
+  armor: { armor: 0, sources: [] },
   effects: {
     keepsakes: [],
     keepsakeHistory: [],
@@ -544,6 +545,27 @@ describe('Run State presentation', () => {
       'Aspect of Melinoë | +50.1 health',
       'Silver Wheel | +100 Magick',
       'Multipliers | ×1.15 health',
+    ]);
+  });
+
+  it('formats armor with its trait, item and Silken Sash sources', () => {
+    const state = present({
+      armor: {
+        armor: 145,
+        sources: [
+          { source: { kind: 'trait', key: 'ArmorBoon' }, armor: 25 },
+          { source: { kind: 'trait', key: 'HighArmorCostume' }, armor: 80 },
+          { source: { kind: 'items' }, armor: 20 },
+          { source: { kind: 'keepsake', key: 'ArmorGainKeepsake', origin: 'echo' }, armor: 20 },
+        ],
+      },
+    });
+    expect(lines([{ key: 'rows', rows: state.armor.rows }]).rows).toEqual(['Armor | 145']);
+    expect(lines([{ key: 'sources', rows: state.armor.sources }]).sources).toEqual([
+      'Trusty Shield | +25',
+      'Onyx Dress | +80',
+      'Items | +20',
+      'Silken Sash (Gift Gift Gift) | +20',
     ]);
   });
 

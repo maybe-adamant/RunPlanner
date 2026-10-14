@@ -220,6 +220,8 @@ export interface EquippedTrait {
     readonly grants: number;
     readonly maxManaPerGrant: number;
   };
+  /** Acquisition-time armor of an ordinal-scaled NPC trait. */
+  readonly armor?: number;
   /** Derived retained credit for a declaration-clocked generated-pickup producer. */
   readonly pickupProducerProgress?: number;
   /** Exact acquisition-time interval retained for an ordinal-scaled pickup producer. */

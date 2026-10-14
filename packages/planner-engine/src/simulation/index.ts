@@ -1,4 +1,5 @@
 export { hexBaseCapacity, hexEffectiveCapacity, attestTalentDropsClosed } from './hex-progress';
+export type { Armor, ArmorContribution, ArmorSource } from './armor';
 export type { MaxStatContribution, MaxStatSource, MaxStats } from './max-stats';
 export { authoringReadinessAt, type AuthoringReadiness } from './progressive/authoring-readiness';
 export {

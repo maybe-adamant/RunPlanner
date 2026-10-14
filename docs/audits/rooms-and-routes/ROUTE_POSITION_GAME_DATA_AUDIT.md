@@ -82,10 +82,13 @@ effects by acquisition ordinal on both ordinary and Dream routes.
 | Icarus Ingenious Strike / Flourish levels | 3 / 3 / 3 / 5          |
 | Icarus Supply Chain interval              | 7 / 7 / 7 / 3          |
 | Icarus Latest Model targets               | 1 / 1 / 1 / 2          |
+| Icarus Protective Coating armor           | 100 / 100 / 100 / 140  |
+| Arachne Onyx Dress armor                  | 60 / 80 / 100 / 140    |
 
 Sources: `TraitData_Narcissus.lua`, `TraitData_Circe.lua`,
-`TraitData_Icarus.lua`, and their acquire functions in `TraitLogic.lua` and
-`EventLogic.lua`. Selection counts cap at the native eligible pool.
+`TraitData_Icarus.lua`, `TraitData_Arachne.lua`, and their acquire functions
+in `TraitLogic.lua` and `EventLogic.lua`. Selection counts cap at the native
+eligible pool.
 The ordinary-position values match native ordinary effects without assigning
 artificial Rare/Epic rarity to normally Common NPC traits. Acquired producer
 intervals persist across biome changes; maturity does not rescale the source.

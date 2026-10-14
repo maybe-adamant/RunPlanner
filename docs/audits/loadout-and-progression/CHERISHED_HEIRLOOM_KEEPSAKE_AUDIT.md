@@ -3,8 +3,8 @@
 ## Status
 
 Source audit completed against the installed Hades II scripts on 2026-08-14
-and extended across the 13 previously effect-neutral declarations on
-2026-08-26. This document isolates the game behavior of Demeter and Hera's
+and extended across the 13 health/Magick/gold/armor/damage/time declarations
+on 2026-08-26. This document isolates the game behavior of Demeter and Hera's
 `KeepsakeLevelBoon` (Cherished Heirloom) for the keepsakes whose effects are
 implemented or deliberately deferred by the planner.
 
@@ -16,13 +16,14 @@ same-offer Concave Stone chronology.
 
 The detailed matrix covers all 33 selectable keepsakes: the six modeled
 effects, the four trait/fountain/Arcana effects, Moon Beam and the nine Olympian
-reward-steering effects, and the 13 effects that are strictly sim-neutral under
-the planner's current health/Magick/gold/armor/damage/time boundary.
+reward-steering effects, and the 13 health/Magick/gold/armor/damage/time
+effects. Silver Wheel, White Antler, Discordant Bell, Lion Fang and Silken Sash
+among them carry planner state; the other eight are strictly sim-neutral.
 
 Effect-neutral is a planner disposition, not a missing source result. The 13
-rows below now record their exact rank values and reconstruction outcomes even
-though production rank profiles remain deferred until an effect slice needs
-them. They also continue to participate in ordinary equip/retain/replace
+rows below record their exact rank values and reconstruction outcomes; the five
+state-carrying ones have production rank profiles, while the eight sim-neutral
+ones defer theirs until an effect slice needs them. All 13 also continue to participate in ordinary equip/retain/replace
 history, removed-key and no-return legality, Fated/Unfated state, and Run State
 identity.
 
@@ -160,7 +161,7 @@ is always evaluated from the planner's rank-III player-equip baseline.
 | Discordant Bell     | encounter growth 0.5% / 0.75% / 1% / 1.5%                                    | Preserve accumulated `EscalatingKeepsakeValue`; only future qualifying encounters use the new 1.5% growth.                                                                     |
 | Metallic Droplet    | duration 200 / 250 / 300 / 400 seconds; speed effect is always 20%           | Preserve `CurrentTime`; do not refill or add time. The larger 400-second value applies only to a later rank-IV equip.                                                          |
 | White Antler        | critical chance 20% / 25% / 30% / 50%; maximum-health cap is always 30       | Preserve `Uses` and `CapMaxHealth`. An active copy becomes 50%; an expired copy remains expired and retains its neutralized property state.                                    |
-| Silken Sash         | room armor 2 / 3 / 4 / 6; initial armor is always 30                         | Preserve current armor, grant no fresh 30, and make later room gains 6 while armor remains.                                                                                    |
+| Silken Sash         | room armor 2 / 3 / 4 / 6; initial armor is always 30                         | Unequip moves current armor into `MinorArmorBoon` and the re-equip restores it, duplicating it; no fresh 30, and later door gains are 6.                                       |
 | Lion Fang           | starting damage 30% / 40% / 50% / 70%; decay is always five points           | The declaration-specific special case resets `CurrentKeepsakeDamageBonus` to the rank-IV 70%, including after partial or complete decay.                                       |
 | Blackened Fleece    | Omega damage 20% / 30% / 40% / 60%; threshold is always 250 damage taken     | Rebuild the modifier at 60% while leaving the run-owned accumulated-damage state unchanged.                                                                                    |
 | Gorgon Amulet       | Athena rarity level 1 / 2 / 3 / 4                                            | Preserve `RemainingUses`. If still pending, the future Athena appearance uses Heroic; if consumed, it remains consumed.                                                        |
@@ -340,11 +341,13 @@ canonical trait history, preserves removed ledgers, and snapshots Gorgon rarity
 at encounter start. It does not use a callback registry or authored player
 ranks.
 
-The remaining 27 audited rows are source evidence, not implemented behavior.
-The 13 sim-neutral effects, Transcendent Embryo, Aromatic Phial, Concave Stone,
-Crystal Figurine, Moon Beam, and the Olympian reward-steering keepsakes retain
-the dispositions above for their own future effect slices. Cherished currently
-gives those identities no individual planner gameplay mutation.
+Cherished also raises Silver Wheel's grant, advances Discordant Bell's growth
+rank, resets Lion Fang, and moves Silken Sash's armor before raising its door
+gain; White Antler keeps its window. The eight sim-neutral effects, Transcendent
+Embryo, Aromatic Phial, Concave Stone, Crystal Figurine, Moon Beam, and the
+Olympian reward-steering keepsakes retain the dispositions above for their own
+future effect slices. Cherished currently gives those identities no individual
+planner gameplay mutation.
 
 ## Audit Conclusions
 
@@ -358,7 +361,7 @@ prospectively, Calling Card gains two uses, and Time Piece gains one.
 The deferred effects are equally explicit. The 13 sim-neutral rows preserve,
 replace, refill, or reset their exact source-owned fields as recorded in the
 matrix; notably Tooth recreates its Last Stand, Onion and Droplet do not refill,
-Sash preserves armor, and Lion Fang resets to its new maximum. Embryo changes
+Sash duplicates its armor, and Lion Fang resets to its new maximum. Embryo changes
 its next transformation, Phial has no rank IV, unused Concave and Crystal
 effects become rank IV, Moon Beam adds two points, and each Olympian keepsake
 refills its one nested rarify use without replaying reward priority. Concave

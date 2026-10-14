@@ -33,6 +33,7 @@ import {
   projectStygianWellLegality,
   type StygianWellLegalityState,
 } from '../commerce/stygian-well';
+import { deriveArmor, type Armor } from '../armor';
 import { deriveMaxStats, type MaxStats } from '../max-stats';
 import { hexOlympianTalentInvested } from '../hex-progress';
 import { deriveRunStateEffects, type RunStateEffects } from './run-state-effects';
@@ -169,6 +170,8 @@ export interface RunStateSnapshot {
   readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
   /** Max health and max Magick at this checkpoint, with their flat sources. */
   readonly maxStats: MaxStats;
+  /** Lasting hero armor at this checkpoint under no damage, with its sources. */
+  readonly armor: Armor;
   /** Running effect clocks and derived effect identities. */
   readonly effects: RunStateEffects;
   readonly rewardStoreController: RunStateRewardStoreController;
@@ -241,6 +244,7 @@ interface RunStateDerivationCache {
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
       readonly resourceGains: SimulationState['rewardHistory']['resourceGains'];
       readonly maxStats: MaxStats;
+      readonly armor: Armor;
       readonly effects: RunStateEffects;
     }
   >;
@@ -702,6 +706,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         forfeitStatus: forfeitStatus(state.arcanaFear),
         resourceGains: state.rewardHistory.resourceGains,
         maxStats: deriveMaxStats(context.catalog, state),
+        armor: deriveArmor(context.catalog, state),
         effects: deriveRunStateEffects(context.catalog, state),
       });
       if (identityKey !== undefined) {
@@ -820,6 +825,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     forfeitStatus: first.forfeitStatus,
     resourceGains: first.resourceGains,
     maxStats: first.maxStats,
+    armor: first.armor,
     effects: first.effects,
     rewardStoreController: Object.freeze({
       // No `currentStoreKey`: a checkpoint reports the ledger at its own settled boundary.

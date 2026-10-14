@@ -29,6 +29,11 @@ export interface WorkspaceRunStatePresentation {
     readonly rows: readonly WorkspaceRunStateRow[];
     readonly sources: readonly WorkspaceRunStateRow[];
   };
+  /** The one Armor row, then its sources for its own disclosure. */
+  readonly armor: {
+    readonly rows: readonly WorkspaceRunStateRow[];
+    readonly sources: readonly WorkspaceRunStateRow[];
+  };
   readonly overview: readonly WorkspaceRunStateSection[];
   readonly effects: readonly WorkspaceRunStateSection[];
   readonly keepsakes: readonly WorkspaceRunStateSection[];

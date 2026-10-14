@@ -65,10 +65,21 @@ export interface RawTraitDeclaration {
     readonly maximum: RawRarityScaledValue;
   };
   readonly maxStatEffect?: RawTraitMaxStatEffect;
+  readonly armor?: RawTraitArmor;
   /** Source acquire (`WeaponUpgradeBoon`): re-adds the equipped aspect at Perfect. */
   readonly raisesAspectToPerfect?: true;
   /** The native offer requirement reads Death Defiance (Last Stand) state, which is not modeled. */
   readonly offerDependsOnDeathDefiance?: true;
+}
+
+/**
+ * Source `CostumeArmor`/`HephaestusArmor` armor: a ranked trait's `BaseValue`
+ * scaled by rarity, or a rarityless amount, alone or one per acquisition ordinal.
+ */
+export interface RawTraitArmor {
+  readonly source: string;
+  readonly amount: number | readonly [number, number, number, number] | RawRarityScaledValue;
+  readonly levelBonuses?: readonly number[];
 }
 
 /** A rarityless number, or a base scaled by `RarityLevels` (excess over one with `sourceIsMultiplier`). */

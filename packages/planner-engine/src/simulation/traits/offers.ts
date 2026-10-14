@@ -784,8 +784,10 @@ export function recordReachedTraitOffer(
   // generated pickups are a later acquisition-site effect.
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
   const roomsPerUpgradeGrowth = catalog.traits.byKey[selectedTraitKey]?.roomsPerUpgradeGrowth;
+  const armor = catalog.traits.byKey[selectedTraitKey]?.armor;
   const requiresAcquisitionOrdinal =
     roomsPerUpgradeGrowth !== undefined ||
+    armor?.amount.kind === 'byAcquisitionOrdinal' ||
     selectedDisposition?.kind === 'upgradeOccupiedBoonSlot' ||
     (selectedDisposition?.kind === 'echo' && selectedDisposition.effect === 'roomDecay') ||
     (selectedDisposition?.kind === 'producePickups' && selectedDisposition.clock !== undefined);
@@ -796,8 +798,11 @@ export function recordReachedTraitOffer(
           selectedDisposition,
           acquisitionOrdinal,
           roomsPerUpgradeGrowth,
+          armor,
         )
       : undefined;
+  if (armor?.amount.kind === 'byAcquisitionOrdinal' && ordinalEffect?.armor === undefined)
+    throw new Error(`${selectedTraitKey} declares ordinal armor but resolved none`);
   const roomDecayStartFraction = ordinalEffect?.roomDecayStartFraction;
   // EchoIncreaseStats snapshots the hero's current maxima on acquisition.
   const roomDecayStartMaxima =
@@ -862,6 +867,7 @@ export function recordReachedTraitOffer(
     ...(ordinalEffect?.roomsPerUpgradeMaxMana === undefined
       ? {}
       : { roomsPerUpgradeMaxMana: ordinalEffect.roomsPerUpgradeMaxMana }),
+    ...(ordinalEffect?.armor === undefined ? {} : { acquisitionArmor: ordinalEffect.armor }),
   }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =

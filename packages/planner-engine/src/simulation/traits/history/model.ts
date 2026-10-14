@@ -39,6 +39,8 @@ export interface TraitOfferEvent {
   readonly roomDecayStartMaxima?: MaxStatAmounts;
   /** Acquisition-time max Magick per `RoomsPerUpgrade` grant. */
   readonly roomsPerUpgradeMaxMana?: number;
+  /** Acquisition-time armor of an ordinal-scaled NPC trait. */
+  readonly acquisitionArmor?: number;
 }
 
 export interface MaxStatAmounts {
@@ -68,6 +70,8 @@ export interface ConcaveStoneSecondaryEvent {
   readonly roomDecayStartMaxima?: MaxStatAmounts;
   /** Acquisition-time max Magick per `RoomsPerUpgrade` grant. */
   readonly roomsPerUpgradeMaxMana?: number;
+  /** Acquisition-time armor of an ordinal-scaled NPC trait. */
+  readonly acquisitionArmor?: number;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */
