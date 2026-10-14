@@ -232,7 +232,6 @@ function hubOpenSetIncompleteFinding(
 ): SemanticFinding {
   return Object.freeze({
     code: 'hubOpenSetIncomplete',
-    severity: 'error',
     phase: 'completeness',
     origin: createHubOpenSetAddress(
       createBiomeAddress(query.slot.routeKey, query.slot.biomeKey),

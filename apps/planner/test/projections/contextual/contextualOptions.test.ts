@@ -256,63 +256,54 @@ describe('contextual option projection', () => {
     const explanations = [
       invalidReward({
         code: 'targetRoomSupportEmpty',
-        severity: 'error',
         phase: 'roomGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'targetRoomUnavailable',
-        severity: 'error',
         phase: 'roomGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'sideRoomGenerationUnavailable',
-        severity: 'error',
         phase: 'roomGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'rewardAcquisitionUnavailable',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'rewardBagSupportEmpty',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'rewardPayloadInvalid',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'shopOfferUnavailable',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'targetMissing',
-        severity: 'error',
         phase: 'completeness',
         origin: target,
         evidence: {},
       }),
       invalidReward({
         code: 'shopPurchaseUnavailable',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: target,
         evidence: {},
@@ -345,7 +336,7 @@ describe('contextual option projection', () => {
     ) =>
       explainCandidateEvaluation(
         catalog,
-        invalidReward({ code, evidence: {}, origin, phase: 'completeness', severity: 'error' }),
+        invalidReward({ code, evidence: {}, origin, phase: 'completeness' }),
       )?.message;
 
     expect(explanation('keepsakeEquipResultMissing', jeweledPom)).toBe(
@@ -374,7 +365,6 @@ describe('contextual option projection', () => {
         catalog,
         invalidReward({
           code: 'echoPomTargetMissing',
-          severity: 'error',
           phase: 'rewardGeneration',
           origin: target,
           evidence: {},
@@ -398,7 +388,6 @@ describe('contextual option projection', () => {
     ]);
     const sibling = invalidReward({
       code: 'rewardBagEntryUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: target,
       evidence: {
@@ -417,21 +406,18 @@ describe('contextual option projection', () => {
     });
     const bag = invalidReward({
       code: 'rewardBagEntryUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: target,
       evidence: {},
     });
     const store = invalidReward({
       code: 'baseRewardStoreUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: target,
       evidence: {},
     });
     const sourceSibling = invalidReward({
       code: 'rewardSourceUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: target,
       evidence: {
@@ -451,14 +437,12 @@ describe('contextual option projection', () => {
     });
     const devotionPair = invalidReward({
       code: 'rewardSourceUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: target,
       evidence: { chosenSource: 'ApolloUpgrade', spurnedSource: 'AresUpgrade' },
     });
     const boonSource = invalidReward({
       code: 'rewardSourceUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: target,
       evidence: { source: 'ApolloUpgrade' },

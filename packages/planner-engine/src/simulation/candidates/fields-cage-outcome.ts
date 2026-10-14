@@ -107,7 +107,6 @@ export function evaluateFieldsCageOutcomeCandidate(
     : Object.freeze([
         Object.freeze({
           code: 'fieldsCageOutcomeUnavailable' as const,
-          severity: 'error' as const,
           phase: 'roomGeneration' as const,
           origin: query.decision,
           evidence: Object.freeze({

@@ -28,7 +28,6 @@ function finding(origin: SemanticAddress): SemanticFinding {
     evidence: Object.freeze({}),
     origin,
     phase: 'completeness',
-    severity: 'error',
   });
 }
 

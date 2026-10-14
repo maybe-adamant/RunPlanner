@@ -585,7 +585,6 @@ describe('structured workspace overlay contract', () => {
         'offer1',
       ),
       phase: 'rewardGeneration',
-      severity: 'error',
     } as const satisfies SemanticFinding;
     const malformed: ProjectEvaluation = {
       ...evaluation,
@@ -940,7 +939,6 @@ describe('structured workspace overlay contract', () => {
         'sideDoor1',
       ),
       phase: 'rewardGeneration',
-      severity: 'error',
     } as const satisfies SemanticFinding;
     const malformed: ProjectEvaluation = {
       ...evaluation,

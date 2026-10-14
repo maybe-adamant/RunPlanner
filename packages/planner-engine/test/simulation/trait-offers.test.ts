@@ -1082,7 +1082,6 @@ describe('reached trait offer chronology', () => {
 
     expect(f.findings).toContainEqual({
       code: 'traitOfferGenerationUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: traitAddress,
       evidence: { acquisitionRole: 'source', lifecyclePoint: 'roomRewardPickup' },

@@ -31,14 +31,12 @@ const first: SemanticFinding = {
   origin: owner,
   evidence: {},
   phase: 'rewardGeneration',
-  severity: 'error',
 };
 const second: SemanticFinding = {
   code: 'rewardAcquisitionUnavailable',
   origin: owner,
   evidence: {},
   phase: 'rewardGeneration',
-  severity: 'error',
 };
 
 function Control({ group = false }: { readonly group?: boolean }) {

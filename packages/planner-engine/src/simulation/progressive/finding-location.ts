@@ -894,7 +894,7 @@ export function firstUnsupportedFinding(
   const located: LocatedFinding[] = [];
   for (const entry of findingRegions) {
     const finding = entry.finding;
-    if (finding.severity !== 'error' || !include(finding)) continue;
+    if (!include(finding)) continue;
     const location = locateFinding(
       prefix,
       finding,
@@ -904,12 +904,9 @@ export function firstUnsupportedFinding(
       entry.repairOwner,
     );
     if (location === undefined) {
-      if (finding.severity === 'error') {
-        throw new Error(
-          `finding ${finding.code} at ${semanticAddressKey(finding.origin)} has no atomic region`,
-        );
-      }
-      continue;
+      throw new Error(
+        `finding ${finding.code} at ${semanticAddressKey(finding.origin)} has no atomic region`,
+      );
     }
     if (location.regionKey !== excludedRegionKey) located.push(location);
   }
@@ -932,12 +929,9 @@ export function findingsAtRegion(
       entry.aggregate,
     );
     if (location === undefined) {
-      if (finding.severity === 'error') {
-        throw new Error(
-          `finding ${finding.code} at ${semanticAddressKey(finding.origin)} has no atomic region`,
-        );
-      }
-      continue;
+      throw new Error(
+        `finding ${finding.code} at ${semanticAddressKey(finding.origin)} has no atomic region`,
+      );
     }
     if (location.regionKey === regionKey) findings.push(finding);
   }

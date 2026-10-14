@@ -166,7 +166,6 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: owner,
       phase: 'rewardGeneration',
-      severity: 'error',
     } as const satisfies SemanticFinding;
 
     expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(
@@ -185,7 +184,6 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: phase,
       phase: 'encounterResolution',
-      severity: 'error',
     } as const satisfies SemanticFinding;
 
     expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(
@@ -210,7 +208,6 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: set,
       phase: 'rewardGeneration',
-      severity: 'error',
     } as const satisfies SemanticFinding;
     const focusByOwner = new Map([[semanticAddressKey(set), exact]]);
 
@@ -232,7 +229,6 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: createGorgonPhaseAddress(phase),
       phase: 'rewardGeneration',
-      severity: 'error',
     } as const satisfies SemanticFinding;
     const exact = destination({
       focusAddress: phase,
@@ -254,7 +250,6 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: result,
       phase: 'completeness',
-      severity: 'error',
     } as const satisfies SemanticFinding;
     const exact = destination({
       focusAddress: selection,
@@ -286,7 +281,6 @@ describe('fine-grained finding routing', () => {
       evidence: {},
       origin: hub,
       phase: 'completeness',
-      severity: 'error',
     } as const satisfies SemanticFinding;
 
     expect(() => registerWorkspaceFindingDestinations([finding], new Map(), route)).toThrow(

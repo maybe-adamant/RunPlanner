@@ -41,7 +41,6 @@ export type FindingChronology =
 export function findingIdentityKey(finding: SemanticFinding): string {
   return JSON.stringify([
     finding.code,
-    finding.severity,
     finding.phase,
     semanticAddressKey(finding.origin),
     sortFindingEvidence(finding.evidence),

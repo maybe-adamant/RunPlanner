@@ -16,11 +16,7 @@ export function createAssessmentIssue(
   findings: readonly SemanticFinding[],
 ): AssessmentIssue {
   const reasons = Object.freeze([
-    ...new Map(
-      findings
-        .filter((finding) => finding.severity === 'error')
-        .map((finding) => [findingIdentityKey(finding), finding]),
-    ).values(),
+    ...new Map(findings.map((finding) => [findingIdentityKey(finding), finding])).values(),
   ]);
   if (reasons.length === 0) throw new Error('assessment issue requires a blocking reason');
   return Object.freeze({

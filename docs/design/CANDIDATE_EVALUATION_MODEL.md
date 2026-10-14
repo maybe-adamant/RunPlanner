@@ -207,8 +207,8 @@ The evaluator locates the first region from its existing materialization,
 generation, reward, encounter, and lifecycle chronology. Aggregate evaluators
 attach an internal atomic-region key while producing their findings; the
 shared locator does not infer grouping from finding codes or rendered UI
-sections. Every error finding in that first region is retained, and
-later-region findings are withheld. Warnings do not establish the horizon.
+sections. Every finding in that first region is retained, and later-region
+findings are withheld.
 Exact finding identity and deduplication belong to the selected evaluator, not
 the candidate session.
 

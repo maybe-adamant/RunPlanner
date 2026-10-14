@@ -17,7 +17,6 @@ export function rewardFinding(
 ): SemanticFinding {
   return Object.freeze({
     code,
-    severity: 'error',
     phase: 'rewardGeneration',
     origin,
     evidence: Object.freeze(evidence),

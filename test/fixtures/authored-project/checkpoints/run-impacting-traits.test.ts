@@ -307,7 +307,6 @@ describe('run-impacting trait checkpoint workflows', () => {
     expect(simulateProjectAssembly(catalog, reloaded).evaluation.findings).toEqual([
       {
         code: 'naturalSelectionResultUnavailable',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: {
           kind: 'naturalSelectionResult',

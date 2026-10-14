@@ -359,7 +359,6 @@ describe('Hub fountain settlement', () => {
     expect(n.authoring).toBe('incomplete');
     expect(n.findings).toContainEqual({
       code: 'hubVisitOrderIncomplete',
-      severity: 'error',
       phase: expect.any(String),
       origin: fountain,
       evidence: { actualCount: 6, requiredCount: 6, fountainUsed: false },

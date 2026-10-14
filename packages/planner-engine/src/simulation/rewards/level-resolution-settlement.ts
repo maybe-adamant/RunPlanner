@@ -135,7 +135,6 @@ export function settleReachedLevelResolution(
         localFindings,
         Object.freeze({
           code: codeByFinding[finding],
-          severity: 'error',
           phase: 'rewardGeneration',
           origin: evaluation.address,
           evidence: Object.freeze({

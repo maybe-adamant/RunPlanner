@@ -73,7 +73,6 @@ function finding(
 ): SemanticFinding {
   return Object.freeze({
     code,
-    severity: 'error',
     phase: 'completeness',
     origin,
     evidence: Object.freeze(evidence),

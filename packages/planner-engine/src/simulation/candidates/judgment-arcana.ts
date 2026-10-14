@@ -44,7 +44,6 @@ export function evaluateJudgmentArcanaCandidate(
   const finding = (code: SemanticFinding['code'], evidence: Record<string, string | number>) =>
     Object.freeze({
       code,
-      severity: 'error' as const,
       phase: 'rewardGeneration' as const,
       origin: query.judgment,
       evidence: Object.freeze(evidence),

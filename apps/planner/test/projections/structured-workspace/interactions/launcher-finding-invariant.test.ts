@@ -96,10 +96,7 @@ function repairingTraitOffer(owner: SemanticAddress): SemanticAddress | undefine
  */
 function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly string[] {
   const { interactions } = services.structuredWorkspace.project(assembly);
-  const owners = [
-    ...assembly.evaluation.findings.filter((finding) => finding.severity === 'error'),
-    ...(assembly.evaluation.issue?.reasons ?? []),
-  ];
+  const owners = [...assembly.evaluation.findings, ...(assembly.evaluation.issue?.reasons ?? [])];
   const disabled: string[] = [];
   for (const finding of owners) {
     const owner = finding.origin;
