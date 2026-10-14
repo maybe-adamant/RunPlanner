@@ -604,21 +604,25 @@ outside supported topology.
 `F_PostBoss01` uses `Story_Chronos_01`; this does not classify its optional
 Chronos presentation as a required interaction.
 
-The rack is optional and independent of exit readiness. It can retain the
-current keepsake or replace it once. There is no source barrier ordering rack
-and fountain: replacing before the fountain changes what Aromatic Phial sees,
-while replacing after the fountain cannot affect that already-resolved use.
+The rack is optional and independent of exit readiness: `GiftRack` declares no
+`BlockExitUntilUsed` and never enters `MapState.RoomRequiredObjects`. It can
+retain the current keepsake or replace it once. There is no source barrier
+ordering the rack against the fountain or the Well/Shrine contacts: replacing
+before the fountain changes what Aromatic Phial sees, while replacing after the
+fountain cannot affect that already-resolved use. The Well and Shrine become
+usable only in `DoUnlockRoomExits` (`ReadyToUse`), so the fountain alone gates
+them.
 After the required fountain resolves, the Cleanup boundary opens exits and
 optional Well/Shrine contacts can be ordered before the selected exit. A
 truthful nonfinal Postboss sequence is therefore:
 
 ```text
 enter with Boss keepsake
-  -> optional keepsake replacement on either side of fountain use
   -> use the required fountain
   -> Cleanup · Doors open
   -> optional Well or Shrine contact
   -> enter the selected next biome
+(optional keepsake replacement at any point before the exit)
 ```
 
 The exact chronology and required-object barrier are one room-action owner;
@@ -629,7 +633,7 @@ Schema 68 carries this source order through one occurrence-owned
 `roomActions.order`: ordinary Reprieves carry required reward and
 `useFountain`, while reached Postboss occurrences carry required `useFountain`
 and an optional `interactKeepsakeRack` when replacement is selected. The rack
-may rank before or after the fountain. Route-position Postboss features stay
+may rank anywhere around the fountain and purchases and never holds the doors. Route-position Postboss features stay
 active wherever the route supplies a Postboss, and H
 Echo Bridge plus persistent N Hub remain outside the ordinary one-visit
 fountain set.

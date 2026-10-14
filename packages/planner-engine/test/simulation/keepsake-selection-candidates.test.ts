@@ -276,6 +276,65 @@ describe('keepsake selection candidates', () => {
     expect(keepsakesAfter(reordered, 'F')?.currentKey).toBe('ForceZeusBoonKeepsake');
   });
 
+  it('resolves a Well purchase ranked before the rack ahead of the replacement', () => {
+    const completion = postbossOccurrence(createBiomeAddress('Underworld', 'F'));
+    let project = createGoldenFGHProject();
+    for (const command of [
+      { kind: 'SetStygianWellInteraction', occurrence: completion, interacted: true },
+      ...(
+        [
+          ['healing', 'ArmorBoostStore'],
+          ['secondLeft', 'RandomStoreItem'],
+          ['secondRight', 'MetaCurrencyRange'],
+        ] as const
+      ).map(([slotKey, itemKey]) => ({
+        kind: 'ReplaceStygianWellOffer' as const,
+        occurrence: completion,
+        slotKey,
+        itemKey,
+      })),
+      {
+        kind: 'SetStygianWellPurchase',
+        occurrence: completion,
+        generationKey: 'initial:healing',
+        purchased: true,
+      },
+      {
+        kind: 'ReplacePostbossKeepsake',
+        selection: fPostboss,
+        keepsakeKey: 'ForceZeusBoonKeepsake',
+      },
+    ] as const)
+      project = applyProjectCommand(project, catalog, command);
+    expect(
+      project.route.biomes[0]?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([
+      { kind: 'useFountain' },
+      { kind: 'purchaseStygianWellOffer', generationKey: 'initial:healing' },
+      { kind: 'interactKeepsakeRack' },
+    ]);
+    const f = simulateProjectAssembly(catalog, project).evaluation.route?.biomes.find(
+      (biome) => biome.biomeKey === 'F',
+    );
+    if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
+      throw new Error('expected reached F biome');
+    expect(
+      f.history.events
+        .filter(
+          (event) =>
+            (event.kind === 'fountainUsed' ||
+              event.kind === 'wellPurchase' ||
+              event.kind === 'keepsakeRackUsed') &&
+            event.origin.kind === 'occurrence' &&
+            event.origin.occurrenceId === completion.occurrenceId,
+        )
+        .map((event) => event.kind),
+    ).toEqual(['fountainUsed', 'wellPurchase', 'keepsakeRackUsed']);
+    expect(keepsakesAfter(project, 'F')?.currentKey).toBe('ForceZeusBoonKeepsake');
+  });
+
   it('reports a persisted no-return selection without inventing a transition', () => {
     let project = withPomResult(
       applyProjectCommand(createGoldenFGHProject(), catalog, {

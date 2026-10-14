@@ -298,7 +298,8 @@ have no Postboss occurrence; physical biome identity alone does not determine
 finality.
 
 Every structural Postboss state defaults to a `useFountain` action. Adding a
-replacement atomically adds the required `interactKeepsakeRack` action. Changing
+replacement atomically appends the `interactKeepsakeRack` action, whose membership
+only the keepsake selection commands change. Changing
 its key preserves the ranked action and dormant keepsake-specific equip detail;
 deleting it removes the leaf, action, and all leaf-owned detail. The action
 order is the sole chronology owner, and the Postboss occurrence owns its

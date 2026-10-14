@@ -425,6 +425,7 @@ function roomActionsForOccurrence(
         row.reference.kind === 'purchaseStygianWellOffer' ||
         row.reference.kind === 'purchaseHermesShrineOffer' ||
         row.reference.kind === 'sellPurgingPoolTrait' ||
+        row.reference.kind === 'interactKeepsakeRack' ||
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
           row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY);

@@ -153,9 +153,11 @@ after Encounter ended and before Cleanup.
 
 The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions
--> Doors open`: `Use fountain` is required and a replacement's
-`Choose keepsake` rack action is required when a replacement is selected. The rack may be ordered before or
-after the fountain; Cleanup follows the last required action. The occurrence
+-> Doors open`: `Use fountain` is required and a selected replacement adds the
+`Choose keepsake` rack action. The rack is not a required room object: it may be
+ordered anywhere, before or after the fountain and the Well or Shrine purchases,
+and its window follows that position. Cleanup follows the fountain, and the
+purchases follow Cleanup. The occurrence
 lifecycle still runs its noncombat entry sequence after `roomEntered`
 and before the first ranked player action, but those internal boundaries are
 not rendered as encounter rows. The action roster and exact occurrence owner
@@ -303,7 +305,8 @@ assembler and no second order authority.
 
 Insert and move proposals retain all typed dependency and fixed-window blockers
 from their existing order assessment, including the affected action and its
-prerequisite or conflicting action windows. The application labels this evidence
+prerequisite or conflicting action windows; an action marked
+`windowFollowsOrder` (the Postboss rack) never takes part in window crossing. The application labels this evidence
 for placement explanations; it neither infers legality nor attributes an existing
 blocker to the proposed action. Authorable proposals, canonical required restores,
 and removals carry no blocker evidence.
@@ -540,8 +543,8 @@ is threaded into the already-generated picked target's preparation.
 
 `Postboss action`
 : A ranked action owned by a fixed Postboss occurrence. `Use fountain` is
-required; `Choose keepsake` is the required rack interaction created by a
-replacement. Its position determines which equipped keepsake and fountain
+required; `Choose keepsake` is the optional, never door-locking rack interaction
+created by a replacement. Its position determines which equipped keepsake and fountain
 effects later actions observe.
 
 ## Ownership

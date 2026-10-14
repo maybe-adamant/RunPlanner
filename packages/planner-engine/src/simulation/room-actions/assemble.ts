@@ -115,7 +115,7 @@ function assessOrder(
   }
   const ranked = order.flatMap((reference) => {
     const entry = active.get(roomActionKey(reference));
-    return entry === undefined ? [] : [entry];
+    return entry === undefined || entry.windowFollowsOrder === true ? [] : [entry];
   });
   for (let index = 1; index < ranked.length; index += 1) {
     const left = ranked[index - 1]!;
@@ -230,7 +230,7 @@ export function assembleRoomActionRoster(options: {
   const authoredKeys = new Set(options.order.map(roomActionKey));
   for (const row of rows) {
     if (row.stale) {
-      if (purchaseOwnedByFeature(row.reference)) continue;
+      if (participationOwnedByFeature(row.reference)) continue;
       const fromIndex = options.order.findIndex(
         (reference) => roomActionKey(reference) === row.key,
       );
@@ -247,7 +247,7 @@ export function assembleRoomActionRoster(options: {
       continue;
     }
     if (row.rank !== null && row.participation === 'optional') {
-      if (purchaseOwnedByFeature(row.reference)) continue;
+      if (participationOwnedByFeature(row.reference)) continue;
       const fromIndex = row.rank - 1;
       proposals.push(
         frozen({
@@ -260,7 +260,7 @@ export function assembleRoomActionRoster(options: {
         }),
       );
     }
-    if (!authoredKeys.has(row.key)) {
+    if (!authoredKeys.has(row.key) && !participationOwnedByFeature(row.reference)) {
       const canonicalRequired =
         row.participation === 'required'
           ? options.canonicalRequiredInsertions?.find(
@@ -533,11 +533,12 @@ export function assessRoomActionPlacements(
   });
 }
 
-/** Shop, Shrine and Well purchase rows change only through their feature's purchase command. */
-function purchaseOwnedByFeature(reference: RoomActionReference): boolean {
+/** Shop, Shrine and Well purchases and the Postboss rack change only through their feature's command. */
+function participationOwnedByFeature(reference: RoomActionReference): boolean {
   return (
     reference.kind === 'interactShopOffer' ||
     reference.kind === 'purchaseHermesShrineOffer' ||
-    reference.kind === 'purchaseStygianWellOffer'
+    reference.kind === 'purchaseStygianWellOffer' ||
+    reference.kind === 'interactKeepsakeRack'
   );
 }

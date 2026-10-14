@@ -83,6 +83,8 @@ export interface RoomActionContribution {
   readonly participation: RoomActionParticipation;
   readonly window: RoomActionWindow;
   readonly dependencies: readonly RoomActionDependency[];
+  /** Usable throughout the visit: the window follows the authored rank and never crosses another. */
+  readonly windowFollowsOrder?: true;
 }
 
 export interface RoomActionCheckpointContribution {
@@ -303,8 +305,27 @@ function baseContribution(
         'required',
         frozen({ kind: 'standard', phase: 'afterCombat' }),
       );
+    case 'interactKeepsakeRack': {
+      // The rack is not a required room object: it neither holds the doors nor waits for them.
+      const order = occurrence.roomActions.order;
+      const fountainIndex = order.findIndex((candidate) => candidate.kind === 'useFountain');
+      const afterDoors =
+        fountainIndex >= 0 &&
+        order.findIndex((candidate) => candidate.kind === 'interactKeepsakeRack') > fountainIndex;
+      return frozen({
+        ...contribution(
+          biome,
+          occurrence,
+          reference,
+          'optional',
+          afterDoors
+            ? frozen({ kind: 'postOutgoing' })
+            : frozen({ kind: 'standard', phase: 'afterCombat' }),
+        ),
+        windowFollowsOrder: true as const,
+      });
+    }
     case 'interactEris':
-    case 'interactKeepsakeRack':
       return contribution(
         biome,
         occurrence,
