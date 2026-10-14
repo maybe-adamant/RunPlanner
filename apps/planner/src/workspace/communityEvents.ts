@@ -9,8 +9,12 @@ import type {
   CommunityEventHost,
   EventSlotClearing,
 } from '../persistence/communityEventHost';
-import type { GamePlanPublication } from '../persistence/gameModuleHost';
-import { describePublicationBlocker } from '../projections/gamePanel';
+import type {
+  GameActiveSlotNumber,
+  GameActiveSlotSetting,
+  GamePlanPublication,
+} from '../persistence/gameModuleHost';
+import { describeActiveSlotSetting, describePublicationBlocker } from '../projections/gamePanel';
 import { projectGameSlotSummary } from '../projections/gameSlotSummary';
 import {
   compileEventPlan,
@@ -68,6 +72,13 @@ export interface CommunityEventController {
   dismiss(): void;
   /** Downloads the active event's project and opens it as an unsaved copy. */
   openProject(): Promise<ProjectOperationResult>;
+  /**
+   * Makes the event slot the one the game module plays next, then re-reads the game status.
+   * Resolves why it did not take effect, or null when it did.
+   */
+  playEvent(): Promise<string | null>;
+  /** Stops the sync scheduled for the active event's end. */
+  dispose(): void;
   getSnapshot(): EventNotice;
   subscribe(listener: () => void): () => void;
   readonly development: EventDevelopmentOperations | undefined;
@@ -79,8 +90,10 @@ interface CreateCommunityEventControllerOptions {
   readonly development?: CommunityEventDevelopmentHost;
   readonly dismissals: EventDismissalPreference;
   readonly openProjectCopy: (json: string) => Promise<ProjectOperationResult>;
+  /** Makes a slot active through the game host's one active-slot write. */
+  readonly setActiveSlot: (slot: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
   /** Re-reads the game status after the event slot or active slot changed. */
-  readonly onSlotsChanged?: () => void;
+  readonly onSlotsChanged?: () => Promise<unknown> | void;
   readonly currentAssembly: () => ProjectEvaluationAssembly | undefined;
   readonly currentProject: () => ProjectDocument | undefined;
   readonly bundledBuildId: () => Promise<string>;
@@ -92,6 +105,11 @@ type SyncResult =
   | { readonly kind: 'cleared'; readonly clearing: EventSlotClearing };
 
 const NO_NOTICE: EventNotice = Object.freeze({ kind: 'none' });
+const EVENT_SLOT: GameActiveSlotNumber = 0;
+/** The sync at an event's end waits this long past it, so the host's clock agrees it ended. */
+const END_SYNC_MARGIN_MS = 5_000;
+/** The longest delay a timer can hold; a later end is checked again then. */
+const MAX_TIMER_MS = 2 ** 31 - 1;
 
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -126,6 +144,8 @@ export function createCommunityEventController(
   let notice: EventNotice = NO_NOTICE;
   let active: CommunityEvent | null = null;
   let inFlight: { readonly run: Promise<SyncResult>; readonly retryFailed: boolean } | null = null;
+  let endTimer: ReturnType<typeof setTimeout> | null = null;
+  let disposed = false;
   const listeners = new Set<() => void>();
   const publish = (next: EventNotice) => {
     notice = Object.freeze(next);
@@ -137,6 +157,7 @@ export function createCommunityEventController(
     if (snapshot.active !== null) {
       const { event, planJson } = snapshot.active;
       active = event;
+      scheduleEndSync(event);
       // The summary describes this plan with the catalog's labels, as a send does; the host
       // writes only the plan the fingerprint names.
       const plan = decodeExecutionPlan(JSON.parse(planJson));
@@ -150,6 +171,7 @@ export function createCommunityEventController(
       return { kind: 'published', publication };
     }
     active = null;
+    scheduleEndSync(null);
     // Without verified event data the host keeps the event slot until its own event ends.
     const clearing = await options.host.clearEvent();
     if (clearing.activeSlotMoved) {
@@ -164,6 +186,24 @@ export function createCommunityEventController(
     if (clearing.status === 'cleared' || clearing.activeSlotMoved) options.onSlotsChanged?.();
     return { kind: 'cleared', clearing };
   };
+  // While an event is active, one sync runs just after it ends so the event slot is cleared.
+  function scheduleEndSync(event: CommunityEvent | null): void {
+    if (endTimer !== null) clearTimeout(endTimer);
+    endTimer = null;
+    if (disposed) return;
+    const remaining = event === null ? Number.NaN : Date.parse(event.endsAt) - now().getTime();
+    if (!(remaining > 0)) return;
+    const delay = remaining + END_SYNC_MARGIN_MS;
+    endTimer = setTimeout(
+      () => {
+        endTimer = null;
+        sync(false).catch(() => {
+          // A failed sync leaves the notice as it was; the next sync retries.
+        });
+      },
+      Math.min(delay, MAX_TIMER_MS),
+    );
+  }
   const start = (retryFailed: boolean, after: Promise<unknown>): Promise<SyncResult> => {
     const run = after
       .catch(() => undefined)
@@ -216,6 +256,25 @@ export function createCommunityEventController(
       } catch (error) {
         return { operation: 'openCopy', status: 'failure', message: errorText(error) };
       }
+    },
+    playEvent: async (): Promise<string | null> => {
+      let problem: string | null;
+      try {
+        problem = describeActiveSlotSetting(await options.setActiveSlot(EVENT_SLOT));
+      } catch (error) {
+        problem = errorText(error);
+      }
+      try {
+        await options.onSlotsChanged?.();
+      } catch {
+        // The header indicator reports a failed status read.
+      }
+      return problem;
+    },
+    dispose: () => {
+      disposed = true;
+      if (endTimer !== null) clearTimeout(endTimer);
+      endTimer = null;
     },
     getSnapshot: () => notice,
     subscribe: (listener: () => void) => {

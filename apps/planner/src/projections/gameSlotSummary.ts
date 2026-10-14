@@ -48,6 +48,29 @@ function sharedAspectName(catalog: Catalog, shortName: string): boolean {
   );
 }
 
+/**
+ * A plan's name in the in-game slot picker, such as "Circe - Surface". It names the weapon too
+ * when several aspects share the short name, and only the weapon without an aspect.
+ */
+export function slotPickerLabel(
+  catalog: Catalog,
+  weaponKey: string | null,
+  aspectKey: string | null,
+  routeKey: string,
+): string {
+  const aspectLabel = ownEntry(catalog.aspects.byKey, aspectKey)?.label;
+  const route = ownEntry(catalog.routes.byKey, routeKey)?.label ?? routeKey;
+  const shortName =
+    aspectLabel === undefined
+      ? weaponKey === null
+        ? 'Unknown'
+        : (ownEntry(catalog.weapons.byKey, weaponKey)?.shortLabel ?? weaponKey)
+      : sharedAspectName(catalog, aspectShortLabel(aspectLabel))
+        ? slotAspectLabel(catalog, weaponKey, aspectKey)
+        : aspectShortLabel(aspectLabel);
+  return `${shortName} - ${route}`;
+}
+
 /** The compiled plan fields a slot summary reads. */
 export type GameSlotSummaryPlan = Pick<
   ExecutionPlan,
@@ -64,22 +87,13 @@ export function projectGameSlotSummary(
   sentAt: Date,
 ): GamePlanSlotSummary {
   const { weaponKey, aspectKey = null, fear } = plan.startingLoadout;
-  const aspectLabel = ownEntry(catalog.aspects.byKey, aspectKey)?.label;
   const route = ownEntry(catalog.routes.byKey, plan.routeKey)?.label ?? plan.routeKey;
   const terminal = plan.extent.terminalBiomeKey;
   const keepsakeKey = plan.startingKeepsake.keepsakeKey;
   const start = plan.startState;
   const aspect = slotAspectLabel(catalog, weaponKey, aspectKey);
-  // The picker names the weapon too when several aspects share the short name, and only
-  // the weapon without an aspect.
-  const shortName =
-    aspectLabel === undefined
-      ? (ownEntry(catalog.weapons.byKey, weaponKey)?.shortLabel ?? weaponKey)
-      : sharedAspectName(catalog, aspectShortLabel(aspectLabel))
-        ? aspect
-        : aspectShortLabel(aspectLabel);
   return {
-    label: `${shortName} - ${route}`,
+    label: slotPickerLabel(catalog, weaponKey, aspectKey, plan.routeKey),
     ...(plan.displayName === undefined ? {} : { planName: plan.displayName }),
     sentAt: sentAt.toISOString(),
     aspect,

@@ -200,11 +200,11 @@ export function createApplication(options: CreateApplicationOptions = {}) {
             dismiss: (eventId) => void dismissed.add(eventId),
           },
           openProjectCopy: (json) => projectOperations.openProjectCopy(json),
-          onSlotsChanged: () => {
+          setActiveSlot: (slot) => gameModuleHost.setActiveSlot(slot),
+          onSlotsChanged: () =>
             gameStatus?.refresh().catch(() => {
               // The header indicator reports a failed status read.
-            });
-          },
+            }),
           currentProject: () => selectPresentProject(store.getState()),
           currentAssembly: () => {
             const workspace = store.getState().projectWorkspace;
@@ -240,6 +240,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     dispose(): void {
       editorSessionReconciliation.dispose();
       autosaveCoordinator?.dispose();
+      communityEvents?.dispose();
     },
   };
 }
