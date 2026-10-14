@@ -219,7 +219,7 @@ describe('trait rarity and elements', () => {
     );
   });
 
-  it('scales Word of Greater Girth by acquisition ordinal only from an entered-biome menu', () => {
+  it('scales Circe health and familiar values by acquisition ordinal only from an entered-biome menu', () => {
     expect(catalog.traits.byKey.CirceEnlargeTrait!.maxStatEffect).toEqual({
       kind: 'multiplier',
       maxHealth: [1.15, 1.15, 1.2, 1.3],
@@ -252,6 +252,10 @@ describe('trait rarity and elements', () => {
         return rest;
       }),
     ).toThrow(/an acquisition-ordinal value requires an acquisitionOrdinalMenu giver/);
+    expect(catalog.traits.byKey.DoubleFamiliarTrait!.maxStatEffect).toEqual({
+      kind: 'familiarStackMultiplier',
+      multiplier: [2, 2, 3, 3],
+    });
     expect(() => withCirce((raw) => raw, [1.15, 1.2, 1.3])).toThrow(
       /must declare four acquisition ordinals/,
     );

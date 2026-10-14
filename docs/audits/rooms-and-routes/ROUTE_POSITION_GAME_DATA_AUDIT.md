@@ -92,6 +92,7 @@ tray's Epic auto-pin (`TraitTrayLogic.lua:800`), nothing rarity-gated.
 | Icarus Protective Coating armor           | 100 / 100 / 100 / 140      |
 | Arachne Onyx Dress armor                  | 60 / 80 / 100 / 140        |
 | Circe Word of Greater Girth health        | ×1.15 / 1.15 / 1.20 / 1.30 |
+| Circe Primal Psychic Connection stacks    | ×2 / ×2 / ×3 / ×3          |
 
 Sources: `TraitData_Narcissus.lua`, `TraitData_Circe.lua`,
 `TraitData_Icarus.lua`, `TraitData_Arachne.lua`, and their acquire functions

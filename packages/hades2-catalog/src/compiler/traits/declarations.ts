@@ -245,6 +245,14 @@ function normalizeTraitArmor(
   });
 }
 
+function normalizeOrdinalMultiplier(raw: unknown, path: string): TraitAcquisitionOrdinalValues {
+  const values = requireArray(raw, path);
+  if (values.length !== 4) fail(path, 'must declare four acquisition ordinals');
+  return Object.freeze(
+    values.map((value, index) => requirePositiveInteger(value as number, `${path}[${index}]`)),
+  ) as unknown as TraitAcquisitionOrdinalValues;
+}
+
 function normalizeMaxStatEffect(
   raw: RawTraitMaxStatEffect,
   equippedRarities: readonly TraitRarity[],
@@ -299,7 +307,7 @@ function normalizeMaxStatEffect(
       exact(['kind', 'multiplier']);
       return Object.freeze({
         kind: raw.kind,
-        multiplier: requirePositiveInteger(raw.multiplier, `${path}.multiplier`),
+        multiplier: normalizeOrdinalMultiplier(raw.multiplier, `${path}.multiplier`),
       });
     default:
       fail(`${path}.kind`, `unknown max-stat effect ${String((raw as { kind?: unknown }).kind)}`);
