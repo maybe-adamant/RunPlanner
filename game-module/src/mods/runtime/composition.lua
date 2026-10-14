@@ -22,13 +22,9 @@ function composition.bind(root, moduleVersion, buildId)
     local generatedEncounter = import("mods/room/timeline/encounters/generated.lua").create()
     local loadoutHooks = import("mods/loadout/hooks.lua")
     local acquisitionHooks = import("mods/room/timeline/acquisitions/hooks.lua")
-    local loadoutRuntime = {
-        inbox = inbox,
-        session = session,
-        activePlanSlot = function()
-            return (activeSlotFile.read())
-        end,
-    }
+    -- The module's Enabled toggle, known once attach receives the module.
+    local moduleEnabled = nil
+    local function disabled() return moduleEnabled ~= nil and not moduleEnabled() end
 
     local bound = {
         inboxInspection = {
@@ -46,7 +42,9 @@ function composition.bind(root, moduleVersion, buildId)
     }
 
     -- Read-only inspection of the admitted session, independent of inbox previews.
+    -- A disabled module shows no session.
     function bound.sessionInspection()
+        if disabled() then return { state = "inactive", reason = "disabled" } end
         local snapshot = session.status(executionState)
         local routeState = executionState.route
         snapshot.plan = executionState.plan
@@ -60,7 +58,7 @@ function composition.bind(root, moduleVersion, buildId)
     end
 
     function bound.roomGuideInspection()
-        if executionState.state ~= "synchronized" then return nil end
+        if disabled() or executionState.state ~= "synchronized" then return nil end
         local active = room.guide(executionState)
         local currentRun = _G.CurrentRun
         local navigation = route.guideNavigation(executionState.route,
@@ -98,7 +96,28 @@ function composition.bind(root, moduleVersion, buildId)
         local interactionHooks = import("mods/room/timeline/interactions/hooks.lua")
         local transformationHooks = import("mods/room/timeline/transformations/hooks.lua")
 
-        local function getState() return executionState end
+        moduleEnabled = function() return module.isEnabled() == true end
+        -- Every hook reads the session here: a live session found while the
+        -- module is disabled is abandoned for the rest of the run.
+        local function getState()
+            if executionState.plan ~= nil and executionState.reason ~= "disabled" and disabled() then
+                session.abandon(executionState)
+                if rom and rom.log and rom.log.info then
+                    rom.log.info("[RunPlanner] session abandoned: module disabled slot="
+                        .. tostring(executionState.planSlot) .. " fingerprint="
+                        .. tostring(executionState.plan.planFingerprint))
+                end
+            end
+            return executionState
+        end
+        local loadoutRuntime = {
+            inbox = inbox,
+            session = session,
+            activePlanSlot = function()
+                return (activeSlotFile.read())
+            end,
+            enabled = moduleEnabled,
+        }
         local function diagnosticValue(value, ancestors)
             if type(value) == "number" then return string.format("%.17g", value) end
             if type(value) ~= "table" then return tostring(value) end
@@ -262,8 +281,12 @@ function composition.bind(root, moduleVersion, buildId)
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
         featureInventory.attach(module, session, getState, report, room, route)
         interactionHooks.attach(module, session, getState, report, room, route)
-        if highlights and module.overlays then
-            module.overlays.onCommit(function(_, runtime) highlights.refresh(runtime, getState(runtime)) end)
+        -- A commit that turns the module off ends a live session at once.
+        if module.overlays then
+            module.overlays.onCommit(function(_, runtime)
+                local state = getState(runtime)
+                if highlights then highlights.refresh(runtime, state) end
+            end)
         end
     end
 

@@ -109,6 +109,15 @@ function runtime.beginNewRun(state)
     return reset(state)
 end
 
+-- The player turned the module off: execution goes passive for the rest of
+-- the run and never resumes. The plan stays only for inspection.
+function runtime.abandon(state)
+    if state.room ~= nil then room.dispose(state) end
+    state.aetos = nil
+    state.practiceStart = nil
+    state.state, state.reason = "inactive", "disabled"
+end
+
 -- A run loaded into a fresh process is never re-attached; it continues
 -- unsteered. The installed loadout and its restore still follow the saved run.
 function runtime.resumeUnsteered(state)

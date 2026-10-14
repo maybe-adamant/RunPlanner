@@ -98,7 +98,7 @@ local function attach(plan)
     local inbox = { load = function() return true, plan end, status = function() return {} end }
     local hexTree = { attach = function() end, prepare = function() end, clear = function() end }
     local scope = loadoutHooks.attach(module, {
-        inbox = inbox, session = session, activePlanSlot = function() return 1 end,
+        inbox = inbox, session = session, activePlanSlot = function() return 1 end, enabled = function() return true end,
     }, function() return state end, function() end, roomCoordinator, hexTree)
     _G.import = priorImport
     return state, callbacks, scope

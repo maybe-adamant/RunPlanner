@@ -434,6 +434,8 @@ function TestStatusUi.testHeaderStates()
         { synchronized(plan, 25, { reason = "configured-prefix-complete" }), "Plan complete - Staff practice" },
         { { state = "inactive", reason = "resumed-unsteered" },
             "Not steering", "Resumed after a reload; this run isn't steered." },
+        { synchronized(plan, 3, { state = "inactive", reason = "disabled" }),
+            "Not steering", "Run Planner was turned off during this run." },
     }
     for _, case in ipairs(cases) do
         local h = harness({ snapshot = case[1], tab = "none", entries = { [2] = entry() } })
@@ -457,6 +459,11 @@ function TestStatusUi.testCurrentRunShowsPlanProgressAndTheNextRoom()
 
     h.snapshot = synchronized(plan, 25, { state = "inactive", reason = "configured-prefix-complete" })
     lu.assertStrContains(h.draw(), "Staff practice - all 25 planned rooms done. The game continues on its own.")
+
+    h.snapshot = synchronized(plan, 3, { state = "inactive", reason = "disabled" })
+    text = h.draw()
+    lu.assertStrContains(text, "No plan is running. The next run will use Slot 1 (empty).")
+    lu.assertNotStrContains(text, "Room 3")
 end
 
 function TestStatusUi.testPracticeProgressCountsFromTheStartRoom()

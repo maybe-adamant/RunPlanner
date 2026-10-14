@@ -174,7 +174,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
     _G.import = freshImport
     _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
 
-    freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({})
+    freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({ isEnabled = function() return true end })
 
     lu.assertEquals(#logs, 2)
     lu.assertStrContains(logs[1], "first-mismatch checkpoint=room-exit-conformance:traitInventory")
@@ -230,7 +230,7 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
     _G.import = freshImport
     _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
     local ok, errorValue = pcall(function()
-        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({})
+        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({ isEnabled = function() return true end })
     end)
     _G.import, _G.rom = priorImport, priorRom
 
@@ -309,7 +309,7 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
     _G.import = freshImport
     _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
 
-    freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({})
+    freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test").attach({ isEnabled = function() return true end })
 
     lu.assertEquals(#logs, 1)
     lu.assertStrContains(logs[1], "diagnostic occurrence=fields")
@@ -366,7 +366,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
     _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
     local ok, errorValue = pcall(function()
         freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test", "1.2.3",
-            "0123456789abcdef").attach({})
+            "0123456789abcdef").attach({ isEnabled = function() return true end })
     end)
     _G.import, _G.rom = priorImport, priorRom
 
@@ -599,7 +599,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
     lu.assertEquals(snapshot.state, "faulted")
     lu.assertIs(snapshot.issue, state.firstFault)
     lu.assertEquals(snapshot.checkpoint, "test-contact")
-    runtime.attach({})
+    runtime.attach({ isEnabled = function() return true end })
     lu.assertTrue(rawequal(attached.route, route))
     lu.assertTrue(rawequal(attached.room, room))
 
@@ -639,7 +639,7 @@ function TestRuntimeComposition.testAdmissionReadsTheActiveSlotFileEachTime()
     end
     _G.import = freshImport
     _G.rom = { path = { combine = function(base, name) return base .. "/" .. name end }, log = { info = function() end } }
-    freshImport("mods/runtime/composition.lua").bind(root).attach({})
+    freshImport("mods/runtime/composition.lua").bind(root).attach({ isEnabled = function() return true end })
 
     local read = loadoutRuntime.activePlanSlot
     lu.assertEquals(read({}), 1)
@@ -668,7 +668,7 @@ function TestRuntimeComposition.testRuntimeCompositionInstallsSupportedHookGroup
     _G.import = function(path)
         return require((path:gsub("%.lua$", ""):gsub("/", ".")))
     end
-    loadoutHooks.attach(module, { inbox = {}, session = session, activePlanSlot = function() return 1 end },
+    loadoutHooks.attach(module, { inbox = {}, session = session, activePlanSlot = function() return 1 end, enabled = function() return true end },
         getState, report, session, hexTree)
     _G.import = priorImport
     acquisitions.attach(module, session, getState, report, session, hexTree)
@@ -714,7 +714,7 @@ function TestRuntimeComposition.testKeepsakeAdaptersAreInstalledOnceAtTheirCarri
     _G.import = function(path)
         return require((path:gsub("%.lua$", ""):gsub("/", ".")))
     end
-    loadoutHooks.attach(module, { inbox = {}, session = session, activePlanSlot = function() return 1 end },
+    loadoutHooks.attach(module, { inbox = {}, session = session, activePlanSlot = function() return 1 end, enabled = function() return true end },
         function() end, function() end, session, hexTree)
     _G.import = priorImport
     encounterHooks.attach(module, session, function() end, function() end, session)
@@ -845,6 +845,72 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
     runtimeSession.beginNewRun(state)
     lu.assertNil(state.admittedNativeRun)
     lu.assertIs(drop(), victim.MoneyDropOnDeath)
+    _G.import = priorImport
+    restore()
+end
+
+function TestRuntimeComposition.testDisablingMidRunDropsThePlanForTheRestOfTheRun()
+    local runtimeSession = require('mods.runtime.session')
+    local modifierHooks = require('mods.run_modifiers.hooks')
+    local admitted = { Hero = { ObjectId = 1 }, CurrentRoom = { Encounter = { MoneyDropStore = 2 } } }
+    local victim = { ObjectId = 2, DamageType = 'Enemy', AddToEnemyTeam = true, MoneyDropOnDeath = { Chance = 0.2 } }
+    local state = runtimeSession.create()
+    local plan = { kind = 'ready', occurrences = {}, selectedOccurrenceIds = {}, occurrencesById = {},
+        runModifiers = { enemyGoldDropChance = 80 }, planFingerprint = 'feedface' }
+    local module, _, callbacks = capture()
+    local commits, refreshed = {}, {}
+    module.overlays = { onCommit = function(callback) commits[#commits + 1] = callback end }
+    local highlights = { attach = function() end, refresh = function(_, value) refreshed[#refreshed + 1] = value.state end }
+    local logs = {}
+    local restore = nativeGame.install({ CurrentRun = admitted, CurrentHubRoom = false, SessionMapState = {},
+        ActiveEnemies = { [2] = victim }, Kill = function() end, CheckMoneyDrop = function() end,
+        rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } } })
+    local priorImport = _G.import
+    _G.import = function(path)
+        if path == 'mods/runtime/session.lua' then
+            return setmetatable({ create = function() return state end }, { __index = runtimeSession })
+        end
+        if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
+        if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
+        if path == 'mods/host/inbox.lua' then return { create = function() return {} end } end
+        if path == 'mods/spells/hex_tree.lua' then return { create = function() return { attach = function() end } end } end
+        if path == 'mods/room/timeline/encounters/thessaly.lua' then return { create = shipCombatStub } end
+        if path == 'mods/room/timeline/encounters/generated.lua' then return { create = generatedEncounterStub } end
+        if path == 'mods/loadout/hooks.lua' then return { attach = function()
+            assert(runtimeSession.start(state, { load = function() return true, plan end }, 'synchronized', 3))
+            return {}
+        end } end
+        return { attach = function() return {} end }
+    end
+    local bound = assert(loadfile('src/mods/runtime/composition.lua'))().bind('/tmp/run-planner-enabled-test')
+    bound.attach(module, highlights)
+    local function drop()
+        return callbacks.Kill(nil, {}, function(v)
+            return callbacks.CheckMoneyDrop(nil, {}, function(_, data) return data end, v, v.MoneyDropOnDeath, admitted.Hero)
+        end, victim, { AttackerTable = admitted.Hero })
+    end
+    lu.assertEquals(drop().Chance, 0.8)
+    logs = {}
+
+    -- Presentation shows nothing while disabled.
+    module.enabled = false
+    lu.assertEquals(bound.sessionInspection(), { state = 'inactive', reason = 'disabled' })
+    lu.assertNil(bound.roomGuideInspection())
+    -- The commit that turns the module off ends the session and clears the highlights.
+    commits[1](nil, {})
+    lu.assertEquals(state.state, 'inactive')
+    lu.assertEquals(state.reason, 'disabled')
+    lu.assertEquals(refreshed[#refreshed], 'inactive')
+    lu.assertIs(drop(), victim.MoneyDropOnDeath)
+    lu.assertEquals(#logs, 1)
+    lu.assertStrContains(logs[1], 'session abandoned: module disabled slot=3 fingerprint=feedface')
+
+    -- Re-enabling mid-run never resumes the plan.
+    module.enabled = true
+    lu.assertIs(drop(), victim.MoneyDropOnDeath)
+    local snapshot = bound.sessionInspection()
+    lu.assertEquals({ snapshot.state, snapshot.reason }, { 'inactive', 'disabled' })
+    lu.assertEquals(#logs, 1)
     _G.import = priorImport
     restore()
 end

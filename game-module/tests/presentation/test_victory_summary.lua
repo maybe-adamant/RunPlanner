@@ -30,6 +30,10 @@ end
 function TestVictorySummary.testRowsNameThePlanAndItsOutcome()
     lu.assertEquals(victorySummary.rows(nil), {})
     lu.assertEquals(victorySummary.rows({ state = "inactive", reason = "not-started" }), {})
+    -- A run whose plan was dropped by turning the module off has no summary.
+    lu.assertEquals(victorySummary.rows({ state = "inactive", reason = "disabled" }), {})
+    lu.assertEquals(victorySummary.rows({ state = "inactive", reason = "disabled", slot = 2, plan = plan(),
+        index = 3, current = plan().occurrencesById.c }), {})
     local named = plan("Golden run")
     lu.assertEquals(victorySummary.rows({ state = "synchronized", reason = "ready", slot = 2, plan = named,
         index = 3, current = named.occurrencesById.c }),
