@@ -65,6 +65,17 @@ function TestSlotOverview.testEntriesAreDecodedAndMarkedAgainstTheModuleBuild()
     end
 end
 
+function TestSlotOverview.testUnchangedOverviewBytesKeepTheirEntryTables()
+    local files = { ["slots.runplanner.json"] = overview('"3":' .. ENTRY) }
+    local overviewStore = store(files)
+    local first = overviewStore.read()
+    lu.assertIs(overviewStore.read()[3], first[3])
+    files["slots.runplanner.json"] = overview('"4":' .. ENTRY)
+    local changed = overviewStore.read()
+    lu.assertNil(changed[3])
+    lu.assertTrue(changed[4].matchesBuild)
+end
+
 function TestSlotOverview.testInvalidFilesAndEntriesAreIgnored()
     for _, raw in ipairs({
         "not json",

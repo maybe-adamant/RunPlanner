@@ -199,6 +199,23 @@ end
 
 local EVENT = { id = "2026-w42-staff", title = "Week 42: Staff sprint", endsAt = "2026-10-19T00:00:00Z" }
 
+function TestStatusUi.testPickerMarksSlotsSentForAnotherBuildAsOutdated()
+    local h = harness({
+        slot = 3, present = { [0] = true },
+        entries = {
+            [0] = entry({ event = EVENT, matchesBuild = false }),
+            [3] = entry({ label = "Circe - Surface", matchesBuild = false }),
+            [4] = entry({ label = "Circe - Surface" }),
+        },
+    })
+    local text = h.draw()
+    lu.assertEquals(h.dropdown.opts.displayValues[0], "Event: Week 42: Staff sprint (outdated)")
+    lu.assertEquals(h.dropdown.opts.displayValues[3], "Slot 3 (Circe - Surface) (outdated)")
+    lu.assertEquals(h.dropdown.opts.displayValues[4], "Slot 4 (Circe - Surface)")
+    lu.assertStrContains(text, "Made for another Run Planner version - resend from the app or update the mod")
+    lu.assertEquals(h.inbox.loads, {})
+end
+
 function TestStatusUi.testTheEventSlotIsListedFirstOnlyWhileItHoldsAFileOrIsActive()
     local h = harness({ slot = 2, present = { [2] = true } })
     h.draw()
@@ -213,7 +230,7 @@ function TestStatusUi.testTheEventSlotIsListedFirstOnlyWhileItHoldsAFileOrIsActi
     lu.assertEquals(h.dropdown.opts.displayValues[0], "Event: Week 42: Staff sprint (Circe - Surface)")
     h.draw(0)
     lu.assertEquals(h.file.writes, { 0 })
-    lu.assertEquals(h.inbox.loads[#h.inbox.loads], 0)
+    lu.assertEquals(h.inbox.loads, {})
 
     -- An active event slot whose file is gone stays listed so the picker shows it.
     h = harness({ slot = 0 })
@@ -223,40 +240,93 @@ function TestStatusUi.testTheEventSlotIsListedFirstOnlyWhileItHoldsAFileOrIsActi
     lu.assertStrContains(text, "No event right now.")
 end
 
-function TestStatusUi.testShownSlotLoadsOnceAndAPickWritesTheFileAndLoadsIt()
+local function reopen(h) h.now = h.now + statusUi.REOPEN_GAP_SECONDS + 0.1 end
+
+function TestStatusUi.testDrawingAndPickingNeverLoadAndLoadDecodesTheShownSlot()
     local plan = publishedPlan()
     local h = harness({ slot = 2, slots = { [2] = { plan = plan }, [5] = { plan = plan } } })
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2 })
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2 })
-    lu.assertEquals(h.file.writes, {})
+    for _ = 1, 120 do
+        h.draw()
+        h.now = h.now + 1 / 60
+    end
+    lu.assertEquals(h.inbox.loads, {})
     h.draw(5)
     lu.assertEquals(h.file.writes, { 5 })
     lu.assertEquals(h.field.value, 5)
-    lu.assertEquals(h.inbox.loads, { 2, 5 })
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2, 5 })
+    lu.assertEquals(h.inbox.loads, {})
     h.draw(nil, "run_planner_reload")
-    lu.assertEquals(h.inbox.loads, { 2, 5, 5 })
+    lu.assertEquals(h.inbox.loads, { 5 })
+    h.draw()
+    reopen(h)
+    h.draw()
+    lu.assertEquals(h.inbox.loads, { 5 })
 end
 
-function TestStatusUi.testOutsideChangesRefreshTheViewAtMostOncePerIntervalAndLoadTheNewSlot()
+function TestStatusUi.testTheViewIsReadWhenTheWindowOpensAndAfterItsOwnWrite()
     local h = harness({ slot = 2, slots = { [2] = { plan = publishedPlan() } } })
     for _ = 1, 600 do
         h.draw()
         h.now = h.now + 1 / 60
     end
-    lu.assertTrue(h.file.reads <= 11 and h.file.reads >= 9, "reads=" .. h.file.reads)
-    lu.assertTrue(h.overview.reads <= 11 and h.overview.reads >= 9, "reads=" .. h.overview.reads)
-    lu.assertEquals(h.inbox.loads, { 2 })
+    lu.assertEquals(h.file.reads, 1)
+    lu.assertEquals(h.overview.reads, 1)
     h.file.slot = 4
     h.field.value = 1
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
+    h.draw()
+    lu.assertEquals(h.field.value, 2)
+    lu.assertEquals(h.file.reads, 1)
+    reopen(h)
     h.draw()
     lu.assertEquals(h.field.value, 4)
-    lu.assertEquals(h.inbox.loads, { 2, 4 })
-    lu.assertEquals(h.file.writes, {})
+    lu.assertEquals(h.file.reads, 2)
+    lu.assertEquals(h.overview.reads, 2)
+    h.draw(6)
+    lu.assertEquals(h.file.reads, 3)
+    lu.assertEquals(h.overview.reads, 2)
+    h.draw(nil, "run_planner_reload")
+    lu.assertEquals(h.file.reads, 4)
+    lu.assertEquals(h.overview.reads, 3)
+    lu.assertEquals(h.inbox.loads, { 6 })
+    lu.assertEquals(h.file.writes, { 6 })
+end
+
+-- Real stores over counted file opens: frames between openings touch no file.
+function TestStatusUi.testFramesOpenNoFilesUntilTheWindowReopens()
+    local path = { combine = function(root, name) return root .. "/" .. name end }
+    local contents = {
+        ["active-slot.json"] = '{"format":"run-planner-active-slot","formatVersion":1,"slot":2}',
+        ["slots.runplanner.json"] = '{"format":"run-planner-slot-overview","formatVersion":1,"slots":{"2":'
+            .. '{"label":"Melinoe - Underworld","sentAt":"2026-10-12T10:00:00.000Z","aspect":"Melinoe (Staff)",'
+            .. '"route":"Underworld","endBiome":"Oceanus","startingFear":8,"buildId":"' .. BUILD
+            .. '","fingerprint":"06bef552"}}}',
+        ["slot-2.runplanner.json"] = "{}",
+    }
+    local opens = 0
+    local files = {
+        open = function(name)
+            opens = opens + 1
+            local content = contents[name:match("[^/]+$")]
+            if content == nil then return nil, name .. ": No such file or directory", 2 end
+            return { read = function() return content end, close = function() return true end }
+        end,
+    }
+    local h = harness({
+        file = require("mods.host.active_slot").create("config", path, { files = files, log = function() end }),
+        overview = require("mods.presentation.slot_overview").create("config", path, BUILD, { files = files }),
+    })
+    local text = h.draw()
+    lu.assertStrContains(text, "Route:\nUnderworld -> Oceanus")
+    local perOpening = opens
+    lu.assertTrue(perOpening > 0)
+    for _ = 1, 600 do
+        h.now = h.now + 1 / 60
+        h.draw()
+    end
+    lu.assertEquals(opens, perOpening)
+    reopen(h)
+    h.draw()
+    lu.assertEquals(opens, 2 * perOpening)
+    lu.assertEquals(h.inbox.loads, {})
 end
 
 function TestStatusUi.testFailedPickShowsWhatTheFileNowHolds()
@@ -298,7 +368,8 @@ function TestStatusUi.testDetailsFollowTheLoadedPlanWhenTheEntryDescribesAnother
         slot = 4, slots = { [4] = { plan = publishedPlan() } },
         entries = { [4] = entry({ fingerprint = "ffffffff", planName = "Old plan" }) },
     })
-    local text = h.draw()
+    lu.assertStrContains(h.draw(), "Plan:\nOld plan")
+    local text = h.draw(nil, "run_planner_reload")
     lu.assertNotStrContains(text, "Old plan")
     lu.assertNotStrContains(text, "Sent:")
     lu.assertStrContains(text, "Aspect:\nAspect of Melinoe (Witch's Staff)")
@@ -320,10 +391,16 @@ function TestStatusUi.testSlotStatusesForEmptyStaleAndUnreadableSlots()
     lu.assertStrContains(text, "Plan:\nStaff practice")
     lu.assertStrContains(text, "Made for another Run Planner version - resend from the app or update the mod")
 
+    -- A slot file the overview does not describe is decoded only on Load.
     h = harness({ slot = 2, slots = { [2] = { error = "malformed-plan" } }, present = { [2] = true } })
     text = h.draw()
+    lu.assertStrContains(text, "No overview - Load to inspect")
+    lu.assertNotStrContains(text, "Status:")
+    lu.assertEquals(h.inbox.loads, {})
+    text = h.draw(nil, "run_planner_reload")
     lu.assertStrContains(text, "Status:\nThis slot can't be read")
     lu.assertNotStrContains(text, "Nothing sent")
+    lu.assertNotStrContains(text, "No overview")
 end
 
 local function synchronized(plan, index, fields)
@@ -481,7 +558,7 @@ function TestStatusUi.testDiagnosticsTabAppearsOnlyInDebugMode()
         issue = { checkpoint = "test-contact", expected = { count = 4 }, observed = { count = 3 } },
     })
     local h = harness({ snapshot = snapshot, slots = { [1] = { error = "stale-slot" } } })
-    h.draw()
+    h.draw(nil, "run_planner_reload")
     h.tab = "Diagnostics"
     h.draw()
     lu.assertEquals(h.tabs, { "Plan", "Current Run" })
@@ -497,39 +574,34 @@ function TestStatusUi.testDiagnosticsTabAppearsOnlyInDebugMode()
     lu.assertStrContains(text, "count: 4")
 end
 
-function TestStatusUi.testPlannerChangesToTheShownSlotReloadItOnce()
-    local plan = publishedPlan()
+function TestStatusUi.testPlannerChangesToTheShownSlotShowWhenTheWindowReopens()
     local h = harness({ slot = 2 })
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2 })
     lu.assertStrContains(h.draw(), "Nothing sent to this slot yet.")
     -- First send to the empty slot.
-    h.inbox.slots[2] = { plan = plan }
-    h.overview.entries[2], h.overview.present[2] = entry(), true
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
-    lu.assertStrContains(h.draw(), "Status:\nReady")
-    lu.assertEquals(h.inbox.loads, { 2, 2 })
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2, 2 })
-    -- A different plan resent to the slot.
+    h.inbox.slots[2] = { plan = publishedPlan() }
+    h.overview.entries, h.overview.present = { [2] = entry() }, { [2] = true }
+    h.now = h.now + 0.1
+    lu.assertStrContains(h.draw(), "Nothing sent to this slot yet.")
+    reopen(h)
+    local text = h.draw()
+    lu.assertStrContains(text, "Plan:\nStaff practice")
+    lu.assertStrContains(text, "Status:\nReady")
+    h.draw(nil, "run_planner_reload")
+    lu.assertEquals(h.inbox.loads, { 2 })
+    -- A different plan resent to the slot: the overview describes it again.
     h.overview.entries[2] = entry({ fingerprint = "11111111", planName = "Resent" })
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2, 2, 2 })
-    -- The same plan resent for the installed build after being stale.
-    h.overview.entries[2] = entry({ fingerprint = "11111111", buildId = string.rep("c", 64) })
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
-    h.draw()
-    lu.assertEquals(h.inbox.loads, { 2, 2, 2, 2 })
-    -- An unreadable file without an entry loads once, not every refresh.
+    reopen(h)
+    lu.assertStrContains(h.draw(), "Plan:\nResent")
+    -- Resent for another build.
+    h.overview.entries[2] = entry({ fingerprint = "11111111", matchesBuild = false })
+    reopen(h)
+    lu.assertStrContains(h.draw(), "Made for another Run Planner version")
+    -- An unreadable file without an entry waits for Load.
     h.inbox.slots[2] = { error = "malformed-plan" }
     h.overview.entries[2] = nil
-    for _ = 1, 3 do
-        h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
-        h.draw()
-    end
-    lu.assertEquals(h.inbox.loads, { 2, 2, 2, 2, 2 })
+    reopen(h)
+    lu.assertStrContains(h.draw(), "No overview - Load to inspect")
+    lu.assertEquals(h.inbox.loads, { 2 })
 end
 
 function TestStatusUi.testFailedSaveStaysUntilTheFileHoldsTheRequestedSlot()
@@ -542,10 +614,10 @@ function TestStatusUi.testFailedSaveStaysUntilTheFileHoldsTheRequestedSlot()
     end
     lu.assertStrContains(h.draw(6), "Could not save the active slot.")
     lu.assertEquals(h.field.value, 3)
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
+    reopen(h)
     lu.assertStrContains(h.draw(), "Could not save the active slot.")
     h.file.slot = 6
-    h.now = h.now + statusUi.ACTIVE_SLOT_REFRESH_SECONDS
+    reopen(h)
     lu.assertNotStrContains(h.draw(), "Could not save the active slot.")
 end
 
@@ -630,7 +702,7 @@ function TestStatusUi:testEveryDrawnTextIsAscii()
         for _, slots in ipairs({ { [2] = { plan = plan } }, { [2] = { error = "stale-slot" } } }) do
             local h = harness({ slot = 2, slots = slots, entries = { [2] = accented, [3] = entry() },
                 present = { [2] = true }, snapshot = case[2], tab = "Plan", debug = true })
-            h.draw()
+            h.draw(nil, "run_planner_reload")
             h.tab = case[1]
             h.draw()
             for _, text in ipairs(h.drawn) do

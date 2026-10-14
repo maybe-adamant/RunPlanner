@@ -73,10 +73,13 @@ authored save schema:
   markers through the instance it is given. Presentation imports only other
   presentation modules, the JSON codec, the inbox's slot-file names and the
   build-covered hook boundary `mods/host/presentation_hooks.lua`, and writes
-  no session, route, room, inbox, `CurrentRun` or game global state. Its one
-  write is the status window's slot picker, a player action: it writes
-  `active-slot.json` and loads the picked slot through the active-slot and
-  inbox capabilities `main.lua` injects. Presentation registers native hooks
+  no session, route, room, inbox, `CurrentRun` or game global state. Its
+  player actions are the status window's slot picker, which writes
+  `active-slot.json`, and **Load**, which decodes the shown slot, through the
+  active-slot and inbox capabilities `main.lua` injects. Otherwise the window
+  never decodes a plan: it describes slots from the slot overview and reads
+  the overview and active slot when it opens, on **Load** and after its own
+  write. Presentation registers native hooks
   and overlay callbacks, and exposes entry points to execution, only through
   the hook boundary. It always runs native base with its original arguments
   and returns base's results unchanged, except the allowlisted map sub-icon
