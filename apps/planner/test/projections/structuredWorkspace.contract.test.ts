@@ -395,8 +395,6 @@ function withoutStructuralInteraction(
       return { ...interactions, rooms: without(interactions.rooms) };
     case 'start':
       return { ...interactions, starts: without(interactions.starts) };
-    case 'takeoverBatch':
-      return { ...interactions, takeoverBatches: without(interactions.takeoverBatches) };
     case 'topologyRemoval':
       return { ...interactions, topologyRemovals: without(interactions.topologyRemovals) };
     case 'zagreusSpawn':
@@ -2121,7 +2119,6 @@ describe('structured workspace overlay contract', () => {
         'hubActionOrder',
         'roomPicker',
         'start',
-        'takeoverBatch',
         'topologyRemoval',
         'zagreusSpawn',
       ].sort(),

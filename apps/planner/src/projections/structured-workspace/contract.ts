@@ -56,8 +56,6 @@ export type {
   WorkspaceHubActionOrderInteraction,
   WorkspaceHubActionOrderProposal,
   WorkspaceStartInteraction,
-  WorkspaceTakeoverBatchInteraction,
-  WorkspaceTakeoverRepairInteraction,
   WorkspaceTopologyRemovalInteraction,
 } from './contracts/structure';
 export type {
@@ -160,7 +158,6 @@ import type {
   WorkspaceHubSlotInteraction,
   WorkspaceHubActionOrderInteraction,
   WorkspaceStartInteraction,
-  WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
 } from './contracts/structure';
 import type {
@@ -401,7 +398,6 @@ export interface WorkspaceInteractionCatalog {
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
-  readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
 }
 

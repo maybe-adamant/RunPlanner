@@ -24,7 +24,6 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
-  loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNProject,
   loadSurfaceNOPQProject,
   nBiome,
@@ -176,7 +175,6 @@ describe('workspace candidate interaction families', () => {
 
     expect(interaction.owner).toEqual(target);
     expect(interaction.decisionOwner).toEqual(owner);
-    expect(interactions.takeoverBatches.get(semanticAddressKey(owner))).toBeUndefined();
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
 
@@ -191,34 +189,6 @@ describe('workspace candidate interaction families', () => {
     events.length = 0;
     expect(interaction.load()).toBe(model);
     expect(events).toEqual([]);
-  });
-
-  it('does not publish takeover controls for an existing normal decision', () => {
-    const services = createStructuredWorkspaceTestServices();
-    const biome = createBiomeAddress('Underworld', 'F');
-    const occurrenceId = createOccurrenceId('candidate-interaction-existing-takeover-start');
-    const owner = createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId });
-    const started = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'candidate-interaction-existing-takeover',
-        routeKey: 'Underworld',
-        configuredBiomeCount: 1,
-      }),
-      catalog,
-      {
-        kind: 'CreateStart',
-        biome,
-        gameName: 'F_Opening01',
-        occurrenceId,
-      },
-    );
-    const project = applyProjectCommand(started, catalog, { kind: 'CreateBatch', decision: owner });
-    const interactions = services.structuredWorkspace.project(
-      simulateProjectAssembly(catalog, project),
-    ).interactions;
-    const takeover = interactions.takeoverBatches.get(semanticAddressKey(owner));
-
-    expect(takeover).toBeUndefined();
   });
 
   it('loads every family from its addressed domain without reacquiring project evaluation', async () => {
@@ -275,37 +245,6 @@ describe('workspace candidate interaction families', () => {
       expect(events).toHaveLength(0);
       expect(projectEvaluationCount, `${family} repeat load reacquired project evaluation`).toBe(2);
     }
-  });
-
-  it('retains only authored takeover repair as a standalone action', () => {
-    const services = createStructuredWorkspaceTestServices();
-    const hubHandoffProject = loadSurfaceNCompleteHubFrontierProject();
-    const hubHandoffInteractions = services.structuredWorkspace.project(
-      simulateProjectAssembly(catalog, hubHandoffProject),
-    ).interactions;
-    const hubHandoffOwner = createExitDecisionAddress(nBiome, {
-      kind: 'hubDecision',
-      decisionKey: 'hub',
-    });
-    const hubHandoff = hubHandoffInteractions.takeoverBatches.get(
-      semanticAddressKey(hubHandoffOwner),
-    );
-    expect(hubHandoff).toBeUndefined();
-
-    const repairProject = createGoldenFGHIProject();
-    const repairInteractions = services.structuredWorkspace.project(
-      simulateProjectAssembly(catalog, repairProject),
-    ).interactions;
-    const repair = [...repairInteractions.takeoverBatches.values()].find(
-      (interaction) => interaction.presentation === 'repair',
-    );
-    if (repair?.presentation !== 'repair') {
-      throw new Error('F/G/H/I takeover repair capability is missing');
-    }
-    expect(repair.action).toBe('reconcile');
-    expect('load' in repair).toBe(false);
-    expect(typeof repair.intent).toBe('function');
-    expect(repair.owner.biomeKey).toBe(goldenFBiome.biomeKey);
   });
 
   it('does not construct a command for an unavailable direct takeover choice', () => {

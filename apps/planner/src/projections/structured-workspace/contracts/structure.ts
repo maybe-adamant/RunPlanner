@@ -22,7 +22,6 @@ import type {
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalBatch, ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
-import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 
 import type {
@@ -102,9 +101,16 @@ export type WorkspaceMissingTargetAuthoring =
   | { readonly kind: 'awaitingBatchRewardStore' }
   | { readonly kind: 'awaitingFieldsCageOutcome' };
 
+/**
+ * `effect` says whether the repair removes unavailable doors or adds missing
+ * ones. `markOwner` is present when the repair carries the batch's finding mark.
+ */
 export type WorkspaceBatchRepairIntent = WorkspaceCommandIntent<
   Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>
->;
+> & {
+  readonly effect: 'removeUnavailable' | 'addMissing';
+  readonly markOwner?: ExitDecisionAddress;
+};
 
 export interface WorkspaceMissingPhysicalTarget {
   readonly authoring: WorkspaceMissingTargetAuthoring;
@@ -215,8 +221,6 @@ export interface WorkspaceOrdinaryBatchNode extends WorkspaceBatchNodeBase {
 export interface WorkspaceTakeoverBatchNode extends WorkspaceBatchNodeBase {
   readonly kind: 'takeoverBatch';
   readonly targetInteraction: 'readOnly';
-  /** Absent for the completed-Hub exit, which is fixed with its Hub. */
-  readonly takeoverInteractionKey?: string;
 }
 
 export interface WorkspaceMixedBatchNode extends WorkspaceBatchNodeBase {
@@ -767,19 +771,3 @@ export interface WorkspaceHubActionOrderInteraction {
   readonly selectedActions: readonly HubAction[];
   readonly selectedHubSlotKeys: readonly string[];
 }
-
-interface WorkspaceTakeoverBatchInteractionBase {
-  readonly key: string;
-  readonly owner: ExitDecisionAddress;
-}
-
-export interface WorkspaceTakeoverRepairInteraction extends WorkspaceTakeoverBatchInteractionBase {
-  readonly action: 'reconcile';
-  readonly intent: () => WorkspaceTakeoverCommandIntent;
-  readonly label: string;
-  readonly presentation: 'repair';
-}
-
-export type WorkspaceTakeoverBatchInteraction = WorkspaceTakeoverRepairInteraction;
-
-type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;

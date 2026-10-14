@@ -66,7 +66,8 @@ room replacement may retain structurally represented targets whose keys are no
 longer supplied by the new room. Those targets are context-invalid rather than
 silently deleted. `ReconcileBatchExitCapacity` is the explicit topology-removal
 repair: it removes unavailable targets and their downstream subtree, then
-normalizes selection from the retained keys.
+normalizes selection from the retained keys. A takeover batch repairs through
+the same command as described under [Preboss batches](#preboss-batches).
 
 When a progressively authored width-one target already owns the next decision,
 adding another declared physical target promotes the derived continuation to an
@@ -117,18 +118,30 @@ set. The first target owns the Preboss Shop state. Later targets own complete
 free offers only when `remainingOffers` is a counted binding; a width-one or
 `none` policy has no later offer.
 
-The command reconciles existing targets by physical exit key, not a supplied
-occurrence-ID order. A retained key keeps its occurrence ID and compatible
-room-local state. New keys require new IDs. A caller may not move an existing
-target ID to another physical door. Takeover shape, selection, and downstream
-cleanup are atomic through `CreateTakeoverBatch`,
-`ReplaceWithTakeoverBatch`, and `ReconcileTakeoverBatch`.
+`CreateTakeoverBatch` and `ReplaceWithTakeoverBatch` create the whole shape,
+selection, and downstream cleanup atomically. They reconcile existing targets
+by physical exit key, not a supplied occurrence-ID order: a retained key keeps
+its occurrence ID, and a caller may not move an existing target ID to another
+physical door.
 
-If a source is replaced by a narrower declaration, prior ordered normal keys
-remain structurally represented until `ReconcileTakeoverBatch` performs the
-same atomic repair. It retains matching physical keys, removes unavailable
-peers and descendants, and recalculates the selected Shop's entry state. It
-does not permit a single takeover target to be edited in isolation.
+A source replacement, Anomaly revert, or decode can leave a takeover batch
+wider or narrower than its source's declared doors. The prior targets remain
+structurally represented until `ReconcileBatchExitCapacity` repairs the whole
+batch. The repair is minimal: surviving targets keep their occurrence, Shop
+purchases, completion chain, and boss-door store. A missing declared door gains
+a default Preboss offer whose occurrence ID the engine derives as
+`<source occurrence ID>:<exit key>`, so a door removed and added again keeps
+its identity. An undeclared door is removed with its downstream topology. The
+selection follows ordinary capacity repair: a width-one result with no
+additional exits is derived,
+otherwise a surviving selected door stays selected (a derived width-one
+selection becomes explicit `exit1`) and a removed one becomes unresolved; a
+newly selected door gains its completion chain. Every automatic narrowing of a
+takeover batch, such as an Anomaly switch, uses the same removal. A `none`
+policy Preboss fills a single door only, so its batch has no repair when the
+source declares more; the out-of-depth source carries its own
+`targetRoomUnavailable` finding. A single takeover target is never edited in
+isolation.
 
 A `retainNormalPeers` Preboss is different: it is an ordinary target beside
 ordinary peers. Its selected declaration starts completion; unselected peers

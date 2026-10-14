@@ -25,7 +25,6 @@ import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceStartInteractionRequirement,
-  WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from '@planner/projections/structured-workspace/interactions/interaction-requirements';
 import {
@@ -33,7 +32,6 @@ import {
   appendUniqueHubInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
-  appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
 } from '@planner/projections/structured-workspace/interactions/interaction-requirements';
 import type { WorkspaceNode } from '@planner/projections/structured-workspace/contracts/structure';
@@ -170,22 +168,6 @@ function startInteractionRequirement(): WorkspaceStartInteractionRequirement {
   });
 }
 
-function takeoverInteractionRequirement(): WorkspaceTakeoverInteractionRequirement {
-  const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
-    kind: 'occurrence',
-    occurrenceId: createOccurrenceId('duplicate-takeover-interaction'),
-  });
-  return Object.freeze({
-    action: 'reconcile' as const,
-    existingTargets: Object.freeze([]),
-    gameName: 'F_PreBoss01',
-    kind: 'takeoverBatch' as const,
-    owner,
-    presentation: 'repair' as const,
-    requiredExitKeys: Object.freeze(['exit1']),
-  });
-}
-
 describe('structured workspace assembly products', () => {
   it('rejects duplicate structural node keys while composing semantic families', () => {
     const node = completionNode('duplicate-node');
@@ -304,19 +286,6 @@ describe('structured workspace assembly products', () => {
     expect(requirements.get(identity)).toBe(requirement);
     expect(() => appendUniqueStartInteractionRequirements(requirements, [requirement])).toThrow(
       `${identity} has multiple projected start interaction requirements`,
-    );
-  });
-
-  it('rejects duplicate takeover requirements by kind and decision owner', () => {
-    const requirement = takeoverInteractionRequirement();
-    const identity = `takeoverBatch:${semanticAddressKey(requirement.owner)}`;
-    const requirements = new Map<string, WorkspaceTakeoverInteractionRequirement>();
-
-    appendUniqueTakeoverInteractionRequirements(requirements, [requirement]);
-
-    expect(requirements.get(identity)).toBe(requirement);
-    expect(() => appendUniqueTakeoverInteractionRequirements(requirements, [requirement])).toThrow(
-      `${identity} has multiple projected takeover interaction requirements`,
     );
   });
 });

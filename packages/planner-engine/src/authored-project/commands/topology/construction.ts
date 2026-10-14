@@ -12,16 +12,29 @@ import type {
 } from '../../model';
 import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import { sourceOfferPointStoreKey } from '../../batchState';
-import { isHostRouteDetourRoom } from '../../topology/query';
+import { declaredPhysicalExitKeys, isHostRouteDetourRoom } from '../../topology/query';
 import { sameExitDecisionSource } from '../../topology/source-identity';
 import { failCommand, requireOccurrence, withBiome, type LocatedBiome } from '../contract';
-import type { TopologyCommand } from '../types';
-import { exitKeysForTopologySource } from '../topology-reconciliation';
+import type { RouteDetourCommand, TopologyCommand } from '../types';
 
 export function sourceFromAddress(source: ExitDecisionSourceAddress): ExitDecisionSource {
   return source.kind === 'occurrence'
     ? Object.freeze({ kind: 'occurrence', occurrenceId: source.occurrenceId })
     : Object.freeze({ kind: 'hubDecision', decisionKey: source.decisionKey });
+}
+
+export function exitKeysForTopologySource(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  source: ExitDecisionSource,
+  command: TopologyCommand | RouteDetourCommand,
+): readonly string[] {
+  const declared = declaredPhysicalExitKeys(catalog, located.layout, topology, source);
+  if (declared === undefined) {
+    failCommand(command, `${source.kind} source has no declaration-owned physical exits`);
+  }
+  return declared;
 }
 
 export function exitKeysForSource(
@@ -119,7 +132,7 @@ export function appendOccurrence(
 export function expectedPrebossRole(
   room: RoomDeclaration,
   index: number,
-  command: TopologyCommand,
+  command: TopologyCommand | RouteDetourCommand,
 ): RoomOccurrenceRole {
   if (room.kind !== 'Preboss' || room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') {
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);

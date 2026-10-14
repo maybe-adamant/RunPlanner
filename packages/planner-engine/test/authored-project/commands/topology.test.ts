@@ -1272,10 +1272,8 @@ describe('authored-project commands and topology', () => {
     ).toThrow(ProjectCommandContractError);
     expect(() =>
       applyProjectCommand(project, catalog, {
-        kind: 'ReconcileTakeoverBatch',
+        kind: 'ReconcileBatchExitCapacity',
         decision: handoff,
-        gameName: 'N_PreBoss01',
-        targetOccurrenceIds: { preboss: prebossId },
       }),
     ).toThrow(ProjectCommandContractError);
     project = applyProjectCommand(project, catalog, { kind: 'RemoveHubDecision', hub });
@@ -1943,81 +1941,6 @@ describe('authored-project commands and topology', () => {
     expect(
       fTopology(selected).occurrences.map((occurrence) => occurrence.occurrenceId),
     ).not.toContain('capacity-exit2');
-  });
-
-  it('retains takeover targets by declaration exit key rather than caller-supplied ID order', () => {
-    let project = applyProjectCommand(gProject(), catalog, {
-      kind: 'CreateStart',
-      biome: gBiome,
-      occurrenceId: createOccurrenceId('g-intro'),
-    });
-    const introDecision = createExitDecisionAddress(gBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('g-intro'),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateBatch',
-      decision: introDecision,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(gBiome, introDecision.source),
-      storeKey: 'RunProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(gBiome, introDecision.source, 'exit1'),
-      occurrenceId: createOccurrenceId('g-combat'),
-      gameName: 'G_Combat02',
-    });
-    const combatDecision = createExitDecisionAddress(gBiome, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('g-combat'),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'CreateTakeoverBatch',
-      decision: combatDecision,
-      gameName: 'G_PreBoss01',
-      targetOccurrenceIds: {
-        exit1: createOccurrenceId('g-shop'),
-        exit2: createOccurrenceId('g-free-left'),
-        exit3: createOccurrenceId('g-free-right'),
-      },
-    });
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReconcileTakeoverBatch',
-        decision: combatDecision,
-        gameName: 'G_PreBoss01',
-        targetOccurrenceIds: {
-          exit1: createOccurrenceId('g-shop'),
-          exit2: createOccurrenceId('g-free-right'),
-          exit3: createOccurrenceId('g-free-left'),
-        },
-      }),
-    ).toThrow(ProjectCommandContractError);
-
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(gBiome, createOccurrenceId('g-combat')),
-      gameName: 'G_MiniBoss02',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReconcileTakeoverBatch',
-      decision: combatDecision,
-      gameName: 'G_PreBoss01',
-      targetOccurrenceIds: { exit1: createOccurrenceId('g-shop') },
-    });
-    const repaired = project.route?.biomes[1]?.topology?.decisions.find(
-      (decision) =>
-        decision.kind === 'exit' &&
-        decision.source.kind === 'occurrence' &&
-        decision.source.occurrenceId === 'g-combat',
-    );
-    expect(repaired).toMatchObject({
-      normal: { targets: [{ exitKey: 'exit1', occurrenceId: 'g-shop' }] },
-      selection: { kind: 'derived' },
-    });
   });
 
   it.each(['exit1', 'exit2'] as const)(

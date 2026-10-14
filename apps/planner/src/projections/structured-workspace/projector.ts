@@ -63,13 +63,11 @@ import {
   appendUniqueHubInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
-  appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
   type WorkspaceBatchInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
-  type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
 } from './interactions/interaction-requirements';
 import {
@@ -143,10 +141,6 @@ function projectBiome(
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
-  readonly takeoverInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceTakeoverInteractionRequirement
-  >;
   readonly topologyRemovalInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -177,7 +171,6 @@ function projectBiome(
     rewardControls: semantic.rewardControls,
     runStateLaunchers,
     startInteractionRequirements: semantic.startInteractionRequirements,
-    takeoverInteractionRequirements: semantic.takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements: semantic.topologyRemovalInteractionRequirements,
   });
 }
@@ -218,10 +211,6 @@ export function createStructuredWorkspaceProjection(
         WorkspaceTopologyRemovalInteractionRequirement
       >();
       const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
-      const takeoverInteractionRequirements = new Map<
-        string,
-        WorkspaceTakeoverInteractionRequirement
-      >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const traitControls = new Map<string, WorkspaceTraitOfferControl>();
@@ -459,10 +448,6 @@ export function createStructuredWorkspaceProjection(
         appendUniqueStartInteractionRequirements(
           startInteractionRequirements,
           projected.startInteractionRequirements.values(),
-        );
-        appendUniqueTakeoverInteractionRequirements(
-          takeoverInteractionRequirements,
-          projected.takeoverInteractionRequirements.values(),
         );
         appendUniqueRoomControls(roomControls, projected.roomControls.values());
         appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
@@ -784,7 +769,6 @@ export function createStructuredWorkspaceProjection(
         roomControls,
         services,
         startInteractionRequirements,
-        takeoverInteractionRequirements,
         topologyRemovalInteractionRequirements,
       });
       registerWorkspaceFindingDestinations(evaluation.findings, focusByOwner, route);

@@ -37,10 +37,8 @@ import {
 } from './contract';
 import { replaceOccurrence } from './occurrence/mutation';
 import { reconcileNormalTargetEntryStates } from './selection-state';
-import {
-  exitKeysForTopologySource,
-  reconcileExitDecisionToDeclaredCapacity,
-} from './topology-reconciliation';
+import { reconcileExitDecisionToDeclaredCapacity } from './topology-reconciliation';
+import { exitKeysForTopologySource } from './topology/construction';
 import type { RouteDetourCommand } from './types';
 
 function replaceDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {

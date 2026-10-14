@@ -63,13 +63,11 @@ import {
   appendUniqueHubInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
-  appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
   type WorkspaceBatchInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
-  type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
 } from '../interactions/interaction-requirements';
 import {
@@ -131,10 +129,6 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
   readonly status: WorkspaceStatus;
   readonly structuralNodes: readonly WorkspaceNode[];
-  readonly takeoverInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceTakeoverInteractionRequirement
-  >;
   readonly topologyRemovalInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -513,13 +507,9 @@ export function assembleWorkspaceBiomeSemantics(
     WorkspaceTopologyRemovalInteractionRequirement
   >();
   const startInteractionRequirements = new Map<string, WorkspaceStartInteractionRequirement>();
-  const takeoverInteractionRequirements = new Map<
-    string,
-    WorkspaceTakeoverInteractionRequirement
-  >();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
-  const topologyInteractions = assembleWorkspaceTopologyInteractions({ catalog, source });
+  const topologyInteractions = assembleWorkspaceTopologyInteractions({ source });
   const frontier = authoringFrontier(source, markerDestinations);
   const nextHubVisitIndex = frontier?.kind === 'hubVisit' ? frontier.owner.visitIndex : undefined;
   const fields = projectBiomeFields(biome, markerDestinations, plan, layout);
@@ -975,10 +965,6 @@ export function assembleWorkspaceBiomeSemantics(
     startInteractionRequirements,
     topologyInteractions.startInteractionRequirements,
   );
-  appendUniqueTakeoverInteractionRequirements(
-    takeoverInteractionRequirements,
-    topologyInteractions.takeoverInteractionRequirements,
-  );
   const biomeMarker = markerDestinations.marker(biome, `biome:${biome.routeKey}:${plan.biomeKey}`);
   const runStateLaunchers = new Map<string, WorkspaceRunStateLauncher>();
   const appendRunStateLauncher = (launcher: WorkspaceRunStateLauncher): void => {
@@ -1019,7 +1005,6 @@ export function assembleWorkspaceBiomeSemantics(
     startInteractionRequirements,
     status: statusFor(evaluation),
     structuralNodes,
-    takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements,
   });
 }

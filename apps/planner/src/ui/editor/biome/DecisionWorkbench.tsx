@@ -16,7 +16,6 @@ import {
   type WorkspaceTakeoverBatchNode,
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
-  type WorkspaceTakeoverRepairInteraction,
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -172,22 +171,26 @@ function doorKicker(index: number, exitTypeLabel: string | undefined): string {
   return exitTypeLabel === undefined ? `Door ${index}` : `Door ${index} · ${exitTypeLabel}`;
 }
 
+/** The repair's projected effect names and styles it; a projected mark owner carries the batch's mark. */
 function ExactRepairAction({
   intent,
 }: {
   readonly intent: WorkspaceBatchRepairIntent | undefined;
 }) {
+  const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
+  const adds = intent?.effect === 'addMissing';
   return (
     <button
-      className="danger-action"
+      {...(intent?.markOwner === undefined ? {} : findingTarget(intent.markOwner))}
+      className={adds ? 'secondary-action' : 'danger-action'}
       {...(intent === undefined ? {} : { 'data-command': intent.command.kind })}
       disabled={intent === undefined}
       onClick={() => intent === undefined || executeIntent(intent)}
       {...hintProps(intent === undefined ? 'No unavailable doors to remove.' : undefined)}
       type="button"
     >
-      Remove unavailable doors
+      {adds ? 'Add missing Preboss doors' : 'Remove unavailable doors'}
     </button>
   );
 }
@@ -469,35 +472,6 @@ function AdditionalExitCard({
   );
 }
 
-function TakeoverRepairAction({
-  interaction,
-  repairNeeded,
-}: {
-  readonly interaction: WorkspaceTakeoverRepairInteraction;
-  readonly repairNeeded: boolean;
-}) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  return (
-    <section
-      className="workbench-action-row"
-      data-action={interaction.action}
-      data-presentation={interaction.presentation}
-    >
-      <button
-        {...(repairNeeded ? findingTarget(interaction.owner) : {})}
-        className="secondary-action"
-        disabled={!repairNeeded}
-        onClick={() => executeIntent(interaction.intent())}
-        {...hintProps(repairNeeded ? undefined : 'No missing or unavailable Preboss doors to fix.')}
-        type="button"
-      >
-        Fix Preboss doors
-      </button>
-    </section>
-  );
-}
-
 function batchContinuationHint(node: BatchNode): string {
   const doorSelected =
     node.targets.some((target) => target.selected) ||
@@ -663,14 +637,6 @@ export function BatchWorkbench({
   readonly node: BatchNode;
 }) {
   const findingAnchor = useFindingAnchor();
-  const takeover =
-    node.kind === 'takeoverBatch' && node.takeoverInteractionKey !== undefined
-      ? requireWorkspaceInteraction(interactions.takeoverBatches, node.takeoverInteractionKey)
-      : undefined;
-  const takeoverRepairNeeded =
-    takeover?.presentation === 'repair' &&
-    (node.targets.some((target) => target.physicalState === 'unavailable') ||
-      node.missingTargets.length > 0);
   const removal =
     node.persistence === 'authored' && node.source.kind === 'occurrence'
       ? requireWorkspaceInteraction(
@@ -691,7 +657,7 @@ export function BatchWorkbench({
       className="decision-card biome-batch-workbench"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
-      {...(takeoverRepairNeeded ? {} : findingAnchor(node.owner))}
+      {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
       tabIndex={-1}
     >
       <header className="decision-heading">
@@ -735,9 +701,6 @@ export function BatchWorkbench({
           ),
         )}
       </div>
-      {takeover === undefined ? null : (
-        <TakeoverRepairAction interaction={takeover} repairNeeded={takeoverRepairNeeded} />
-      )}
       <div className="workbench-action-row">
         <ExactRepairAction intent={node.repairIntent} />
         <SelectedContinuationAction

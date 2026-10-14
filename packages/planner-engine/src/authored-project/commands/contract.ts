@@ -85,7 +85,6 @@ function commandContractAddress(
     case 'InitializeExitDecision':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
-    case 'ReconcileTakeoverBatch':
     case 'ReconcileBatchExitCapacity':
     case 'RemoveExitDecision':
     case 'ReplaceWithHubDecision':

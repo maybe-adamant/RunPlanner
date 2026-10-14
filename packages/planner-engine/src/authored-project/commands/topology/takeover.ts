@@ -1,35 +1,42 @@
 import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
 import { createInitialBatchRewardStore } from '../../batchState';
-import type { ExitDecisionSourceAddress } from '../../addresses';
+import { createOccurrenceId, type ExitDecisionSourceAddress } from '../../addresses';
 import type {
   BiomeTopology,
   ExitDecision,
   ExitSelection,
+  ExitTargetReference,
   FixedRoomLink,
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
 } from '../../model';
 import { fixedCompletionOccurrenceId, fixedRoomLink } from '../../fixed-room-links';
-import type { RoomOccurrenceRole } from '../../room-state/declaration';
 import { resolveCompletionBoss } from '../../completion-boss';
 import {
   additionalExitsForDecision,
+  batchTakesOverNormalDoors,
   bossDeclarationTakesAuthoredRewardStore,
   bossDoorRewardStoreKeysForLayout,
   exitDecisionForSource,
   normalDecisionProgressionForLayout,
   selectedExitKey,
+  selectedExitTarget,
+  takeoverPrebossDeclarationForBatch,
+  takeoverPrebossFillsDeclaredExits,
 } from '../../topology/query';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../../topology/impact';
 import { sameExitDecisionSource } from '../../topology/source-identity';
 import { failCommand, requireRoom, requireTopology, type LocatedBiome } from '../contract';
-import type { TopologyCommand } from '../types';
+import type { RouteDetourCommand, TopologyCommand } from '../types';
+import { reconcileNormalTargetEntryStates } from '../selection-state';
 import {
   sourceFromAddress,
   exitKeysForSource,
+  exitKeysForTopologySource,
   sourceRoom,
   appendDecision,
+  replaceDecision,
   resolvedStoreKey,
   expectedPrebossRole,
   updateTopology,
@@ -74,24 +81,12 @@ function prebossFreeRewardStore(
   return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? incomingStore;
 }
 
-function compatiblePrebossOccurrence(
-  occurrence: RoomOccurrence,
-  room: RoomDeclaration,
-  role: RoomOccurrenceRole,
-  entryActive: boolean,
-): boolean {
-  if (occurrence.gameName !== room.gameName) return false;
-  if (role !== 'prebossShop') return occurrence.state.kind === 'freeReward';
-  return occurrence.state.kind === 'shop' && (occurrence.state.shop !== undefined) === entryActive;
-}
-
 function completionChainForSelection(
   catalog: Catalog,
   located: LocatedBiome,
   topology: BiomeTopology,
   prebossOccurrenceId: OccurrenceId,
-  command: TopologyCommand,
-  preservedBossStoreKey?: string,
+  command: TopologyCommand | RouteDetourCommand,
 ): BiomeTopology {
   const preboss = topology.occurrences.find(
     (occurrence) => occurrence.occurrenceId === prebossOccurrenceId,
@@ -105,9 +100,9 @@ function completionChainForSelection(
   // stays legal and must not be silently discarded — but whether the door takes
   // a store at all is the NEW boss declaration's call, so the preserved key is
   // re-checked against it below before it is written back.
-  const preservedStoreKey =
-    topology.fixedRoomLinks.find((link) => link.sourceOccurrenceId === prebossOccurrenceId)
-      ?.rewardStoreKey ?? preservedBossStoreKey;
+  const preservedStoreKey = topology.fixedRoomLinks.find(
+    (link) => link.sourceOccurrenceId === prebossOccurrenceId,
+  )?.rewardStoreKey;
   if (
     topology.fixedRoomLinks.some(
       (link) =>
@@ -269,7 +264,7 @@ export function reconcileCompletionChain(
   topology: BiomeTopology,
   previousPrebossOccurrenceId: OccurrenceId | undefined,
   nextPrebossOccurrenceId: OccurrenceId | undefined,
-  command: TopologyCommand,
+  command: TopologyCommand | RouteDetourCommand,
 ): BiomeTopology {
   if (previousPrebossOccurrenceId === nextPrebossOccurrenceId) {
     if (nextPrebossOccurrenceId === undefined) return topology;
@@ -371,7 +366,7 @@ export function replaceTakeoverBatch(
   located: LocatedBiome,
   command: Extract<
     TopologyCommand,
-    { readonly kind: 'CreateTakeoverBatch' | 'ReplaceWithTakeoverBatch' | 'ReconcileTakeoverBatch' }
+    { readonly kind: 'CreateTakeoverBatch' | 'ReplaceWithTakeoverBatch' }
   >,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
@@ -389,6 +384,8 @@ export function replaceTakeoverBatch(
     (existing === undefined || existing.normal.kind !== 'batch')
   )
     failCommand(command, 'normal-door batch does not exist');
+  if (existing !== undefined && batchTakesOverNormalDoors(catalog, topology, existing))
+    failCommand(command, 'a takeover batch repairs through ReconcileBatchExitCapacity');
   const room = requireRoom(catalog, command.gameName, located.layout.biomeKey, command);
   if (room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors')
     failCommand(command, `${room.gameName} is not a takeover Preboss declaration`);
@@ -410,30 +407,7 @@ export function replaceTakeoverBatch(
     failCommand(command, 'takeover target occurrence IDs must be unique');
   if (room.prebossBatchPolicy.remainingOffers.kind === 'none' && ids.length !== 1)
     failCommand(command, `${room.gameName} cannot fill remaining normal exits`);
-  if (
-    existing?.normal.kind === 'batch' &&
-    existing.normal.targets.length === exitKeys.length &&
-    existing.normal.targets.every(
-      (target, index) =>
-        target.exitKey === exitKeys[index] &&
-        target.occurrenceId === ids[index] &&
-        topology.occurrences.find((occurrence) => occurrence.occurrenceId === target.occurrenceId)
-          ?.gameName === room.gameName,
-    )
-  ) {
-    return document;
-  }
   const oldTargets = existing?.normal.kind === 'batch' ? existing.normal.targets : [];
-  // The batch is torn down and rebuilt, so the authored boss-door store is read
-  // before the old completion chain is removed and handed back to the rebuild.
-  // A Preboss that survives the replacement keeps the store the user chose.
-  const bossStoreKeyByPreboss = new Map(
-    topology.fixedRoomLinks.flatMap((link) =>
-      link.rewardStoreKey === undefined
-        ? []
-        : [[link.sourceOccurrenceId, link.rewardStoreKey] as const],
-    ),
-  );
   const occurrencesById = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence]),
   );
@@ -462,7 +436,7 @@ export function replaceTakeoverBatch(
     if (oldTarget !== undefined && target.occurrenceId !== oldTarget.occurrenceId) {
       failCommand(
         command,
-        `takeover repair must retain ${target.exitKey} occurrence ${oldTarget.occurrenceId}`,
+        `takeover replacement must retain ${target.exitKey} occurrence ${oldTarget.occurrenceId}`,
       );
     }
     if (oldTarget === undefined && occurrencesById.has(target.occurrenceId)) {
@@ -491,25 +465,21 @@ export function replaceTakeoverBatch(
     selection,
   });
   const selectedTakeoverExitKey = selectedExitKey(decision);
+  // Replaced targets were ordinary rooms, so every takeover target starts from its default.
   const replacements = targets.map((target, index): RoomOccurrence => {
-    const oldTarget = oldTargetByExitKey.get(target.exitKey);
     const role = expectedPrebossRole(room, index, command);
-    const old = oldTarget === undefined ? undefined : occurrencesById.get(oldTarget.occurrenceId);
-    const entryActive = target.exitKey === selectedTakeoverExitKey;
-    return old !== undefined && compatiblePrebossOccurrence(old, room, role, entryActive)
-      ? old
-      : defaultOccurrence(
-          catalog,
-          room,
-          located.routeKey,
-          target.occurrenceId,
-          role,
-          entryActive,
-          role === 'prebossFreeReward'
-            ? prebossFreeRewardStore(room, sourceIncomingStore(topology, command.decision.source))
-            : undefined,
-          located.loadout,
-        );
+    return defaultOccurrence(
+      catalog,
+      room,
+      located.routeKey,
+      target.occurrenceId,
+      role,
+      target.exitKey === selectedTakeoverExitKey,
+      role === 'prebossFreeReward'
+        ? prebossFreeRewardStore(room, sourceIncomingStore(topology, command.decision.source))
+        : undefined,
+      located.loadout,
+    );
   });
   const withoutOld =
     existing === undefined
@@ -524,22 +494,13 @@ export function replaceTakeoverBatch(
             ),
           ),
         });
-  let next = Object.freeze({
-    ...withoutOld,
-    occurrences: Object.freeze([
-      ...retainedOccurrences,
-      ...replacements.filter(
-        (replacement) =>
-          !retainedOccurrences.some(
-            (occurrence) => occurrence.occurrenceId === replacement.occurrenceId,
-          ),
-      ),
-    ]),
-  });
-  for (const oldTarget of oldTargets) {
-    next = removeCompletionChainForSelection(next, oldTarget.occurrenceId);
-  }
-  const withDecision = appendDecision(next, decision);
+  const withDecision = appendDecision(
+    Object.freeze({
+      ...withoutOld,
+      occurrences: Object.freeze([...retainedOccurrences, ...replacements]),
+    }),
+    decision,
+  );
   const selectedTarget =
     selectedTakeoverExitKey === undefined
       ? undefined
@@ -558,8 +519,151 @@ export function replaceTakeoverBatch(
           withDecision,
           selectedRoom.occurrenceId,
           command,
-          bossStoreKeyByPreboss.get(selectedRoom.occurrenceId),
         )
       : withDecision,
+  );
+}
+
+/** A takeover door appended by exit repair; a door removed and re-added reuses it. */
+function takeoverTargetOccurrenceId(
+  sourceOccurrenceId: OccurrenceId,
+  exitKey: string,
+): OccurrenceId {
+  return createOccurrenceId(`${sourceOccurrenceId}:${exitKey}`);
+}
+
+/**
+ * `removeUndeclared` drops doors the source no longer declares;
+ * `matchDeclared` also appends a default Preboss offer for each missing door.
+ */
+export type TakeoverExitReconciliation = 'removeUndeclared' | 'matchDeclared';
+
+/**
+ * Brings a takeover batch to its source's declared doors. Surviving doors keep
+ * their occurrence, room-local state and completion chain; a removed door
+ * takes its downstream topology with it. A removed selection falls back as
+ * ordinary capacity repair does, and a newly selected door gains its chain.
+ */
+export function reconcileTakeoverBatchExits(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  decision: ExitDecision,
+  reconciliation: TakeoverExitReconciliation,
+  command: TopologyCommand | RouteDetourCommand,
+): BiomeTopology {
+  const source = decision.source;
+  if (source.kind !== 'occurrence') {
+    failCommand(command, 'the completed-Hub exit is created and removed only with its Hub');
+  }
+  const room = takeoverPrebossDeclarationForBatch(catalog, topology, decision);
+  if (room?.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') {
+    failCommand(command, 'normal-door batch is not a takeover batch');
+  }
+  const declared = exitKeysForTopologySource(catalog, located, topology, source, command);
+  const declaredKeys = new Set(declared);
+  const removedIds = new Set(
+    decision.normal.targets
+      .filter((target) => !declaredKeys.has(target.exitKey))
+      .map((target) => target.occurrenceId),
+  );
+  const authoredKeys = new Set(decision.normal.targets.map((target) => target.exitKey));
+  const missing =
+    reconciliation === 'matchDeclared'
+      ? declared.filter((exitKey) => !authoredKeys.has(exitKey))
+      : [];
+  if (
+    reconciliation === 'matchDeclared' &&
+    !takeoverPrebossFillsDeclaredExits(room, declared.length)
+  ) {
+    failCommand(command, `${room.gameName} cannot fill remaining normal exits`);
+  }
+  if (removedIds.size === 0 && missing.length === 0) return topology;
+
+  const withoutRemoved =
+    removedIds.size === 0
+      ? topology
+      : applyTopologyRemovalImpact(topology, describeTopologyRemovalImpact(topology, removedIds));
+  const takenIds = new Set(withoutRemoved.occurrences.map((occurrence) => occurrence.occurrenceId));
+  const appended = missing.map((exitKey): ExitTargetReference => {
+    const occurrenceId = takeoverTargetOccurrenceId(source.occurrenceId, exitKey);
+    if (
+      [
+        occurrenceId,
+        fixedCompletionOccurrenceId(occurrenceId, 'boss'),
+        fixedCompletionOccurrenceId(occurrenceId, 'postboss'),
+      ].some((id) => takenIds.has(id))
+    ) {
+      failCommand(command, `occurrence ${occurrenceId} is already structurally owned`);
+    }
+    return Object.freeze({ exitKey, occurrenceId });
+  });
+  // Declared exits are contiguous exit1..N, so a survivor keeps its index and
+  // therefore its Shop or free-offer role.
+  const targets = Object.freeze(
+    declared.flatMap((exitKey) => {
+      const target =
+        decision.normal.targets.find((candidate) => candidate.exitKey === exitKey) ??
+        appended.find((candidate) => candidate.exitKey === exitKey);
+      return target === undefined ? [] : [target];
+    }),
+  );
+
+  const previousSelected = selectedExitTarget(decision);
+  const survivingSelected = targets.find(
+    (target) => target.occurrenceId === previousSelected?.occurrenceId,
+  );
+  const additionalExits = additionalExitsForDecision(withoutRemoved, decision);
+  const existingSelection = decision.selection;
+  const selection: ExitSelection =
+    targets.length === 1 && additionalExits.length === 0
+      ? Object.freeze({ kind: 'derived' })
+      : existingSelection.kind !== 'additional' && survivingSelected !== undefined
+        ? Object.freeze({ kind: 'normal', exitKey: survivingSelected.exitKey })
+        : existingSelection.kind === 'additional' &&
+            additionalExits.some((exit) => exit.key === existingSelection.additionalExitKey)
+          ? existingSelection
+          : Object.freeze({ kind: 'unresolved' });
+  const nextDecision: ExitDecision = Object.freeze({
+    ...decision,
+    normal: Object.freeze({ ...decision.normal, targets }),
+    selection,
+  });
+  const nextSelectedExitKey = selectedExitKey(nextDecision);
+  const incomingStore = sourceIncomingStore(withoutRemoved, source);
+  const appendedOccurrences = appended.map((target) => {
+    const role = expectedPrebossRole(room, targets.indexOf(target), command);
+    return defaultOccurrence(
+      catalog,
+      room,
+      located.routeKey,
+      target.occurrenceId,
+      role,
+      target.exitKey === nextSelectedExitKey,
+      role === 'prebossFreeReward' ? prebossFreeRewardStore(room, incomingStore) : undefined,
+      located.loadout,
+    );
+  });
+  const withTargets = replaceDecision(
+    Object.freeze({
+      ...withoutRemoved,
+      occurrences: Object.freeze([...withoutRemoved.occurrences, ...appendedOccurrences]),
+    }),
+    nextDecision,
+  );
+  return reconcileCompletionChain(
+    catalog,
+    located,
+    reconcileNormalTargetEntryStates(
+      catalog,
+      located,
+      withTargets,
+      nextDecision,
+      nextSelectedExitKey,
+      command,
+    ),
+    previousSelected?.occurrenceId,
+    selectedExitTarget(nextDecision)?.occurrenceId,
+    command,
   );
 }

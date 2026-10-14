@@ -36,8 +36,6 @@ function expectedStructuralInteraction(
       return interactions.rooms.get(key);
     case 'start':
       return interactions.starts.get(key);
-    case 'takeoverBatch':
-      return interactions.takeoverBatches.get(key);
     case 'topologyRemoval':
       return interactions.topologyRemovals.get(key);
     case 'zagreusSpawn':
@@ -162,14 +160,6 @@ function assertRenderedNodeControls(
           node.fieldsCageOutcome.focusKey,
           node.owner,
           `Fields cage outcome ${node.fieldsCageOutcome.focusKey}`,
-        );
-      }
-      if (node.kind === 'takeoverBatch' && node.takeoverInteractionKey !== undefined) {
-        assertExactObservedInteraction(
-          interactions.takeoverBatches.get(node.takeoverInteractionKey),
-          node.takeoverInteractionKey,
-          node.owner,
-          `takeover batch ${node.takeoverInteractionKey}`,
         );
       }
       if (node.zagreusContract !== undefined) {

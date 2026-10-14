@@ -329,23 +329,6 @@ export interface WorkspaceStartInteractionRequirement {
   readonly owner: BiomeAddress;
 }
 
-/**
- * Production requirement for an authored takeover repair. Generated Preboss
- * selection is bound by the empty decision's explicit Door 1 Room control.
- */
-export interface WorkspaceTakeoverInteractionRequirement {
-  readonly action: 'reconcile';
-  readonly existingTargets: readonly {
-    readonly exitKey: string;
-    readonly occurrenceId: OccurrenceId;
-  }[];
-  readonly gameName: string;
-  readonly kind: 'takeoverBatch';
-  readonly owner: ExitDecisionAddress;
-  readonly presentation: 'repair';
-  readonly requiredExitKeys: readonly string[];
-}
-
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -367,12 +350,6 @@ function topologyRemovalInteractionRequirementKey(
 }
 
 function startInteractionRequirementKey(requirement: WorkspaceStartInteractionRequirement): string {
-  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
-}
-
-export function workspaceTakeoverInteractionRequirementKey(
-  requirement: WorkspaceTakeoverInteractionRequirement,
-): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 
@@ -445,21 +422,6 @@ export function appendUniqueStartInteractionRequirements(
     if (requirementsByIdentity.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has multiple projected start interaction requirements`,
-      );
-    }
-    requirementsByIdentity.set(key, requirement);
-  }
-}
-
-export function appendUniqueTakeoverInteractionRequirements(
-  requirementsByIdentity: Map<string, WorkspaceTakeoverInteractionRequirement>,
-  requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
-): void {
-  for (const requirement of requirements) {
-    const key = workspaceTakeoverInteractionRequirementKey(requirement);
-    if (requirementsByIdentity.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected takeover interaction requirements`,
       );
     }
     requirementsByIdentity.set(key, requirement);

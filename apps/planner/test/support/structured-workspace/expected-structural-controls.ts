@@ -39,7 +39,6 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'hubActionOrder'
   | 'roomPicker'
   | 'start'
-  | 'takeoverBatch'
   | 'topologyRemoval'
   | 'zagreusSpawn';
 
@@ -168,13 +167,6 @@ export function expectedWorkspaceStructuralControls(
     if (selected !== undefined) activeOccurrenceIds.add(selected.occurrenceId);
   }
   const decisionsByOwner = authoredDecisionIndex(biome, decisions);
-  const takeoverOwners = new Set<string>();
-  const addTakeover = (owner: ExitDecisionAddress): void => {
-    const key = workspaceTestOwnerKey(owner);
-    if (takeoverOwners.has(key)) return;
-    takeoverOwners.add(key);
-    add('takeoverBatch', key, owner);
-  };
 
   add('topologyRemoval', workspaceTestOwnerKey(biome), biome);
   if (layout.start.kind === 'authoredChoice') {
@@ -240,14 +232,7 @@ export function expectedWorkspaceStructuralControls(
     ) {
       add('fieldsCageOutcome', ownerKey, owner);
     }
-    if (takeover) {
-      if (
-        decision.source.kind === 'occurrence' &&
-        declaredPhysicalExits(catalog, layout, topology, decision.source) !== undefined
-      ) {
-        addTakeover(owner);
-      }
-    } else if (decision.source.kind === 'occurrence') {
+    if (!takeover && decision.source.kind === 'occurrence') {
       const physical = declaredPhysicalExits(catalog, layout, topology, decision.source);
       if (physical !== undefined) {
         const targets = new Set(decision.normal.targets.map((target) => target.exitKey));

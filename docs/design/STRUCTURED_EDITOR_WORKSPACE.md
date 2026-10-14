@@ -911,6 +911,13 @@ Retained-overflow and Preboss repairs remain explicit:
 5. reconcile immediately when the user invokes that explicit action;
 6. rely on the existing Undo/Redo history controls for recovery when needed.
 
+An ordinary and a takeover batch share one exact repair slot bound to
+`ReconcileBatchExitCapacity`. The projected repair names its effect: removing
+unavailable doors (a danger action) or adding missing Preboss doors. A takeover
+batch offers it whenever the engine can match the batch to its source's
+declared doors, and its repair carries the batch's finding mark, including that
+of a missing door, which has no row of its own.
+
 Action labels invoke semantic commands; they do not calculate deletion scope
 or repair the project themselves. Persistent deletion-scope copy belongs only
 on a concrete action whose user research requires it. The application-wide

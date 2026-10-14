@@ -6,12 +6,12 @@ import type {
 
 import type { OccurrenceIdFactory } from './occurrenceIds';
 
-export type TakeoverBatchAction = 'create' | 'replace' | 'reconcile';
+export type TakeoverBatchAction = 'create' | 'replace';
 
 export type TakeoverBatchCommand = Extract<
   ProjectCommand,
   {
-    readonly kind: 'CreateTakeoverBatch' | 'ReplaceWithTakeoverBatch' | 'ReconcileTakeoverBatch';
+    readonly kind: 'CreateTakeoverBatch' | 'ReplaceWithTakeoverBatch';
   }
 >;
 
@@ -19,7 +19,6 @@ interface TakeoverBatchCommandInput {
   readonly action: TakeoverBatchAction;
   readonly allocateOccurrenceId: OccurrenceIdFactory;
   readonly decision: ExitDecisionAddress;
-  readonly existingTargetOccurrenceIds: ReadonlyMap<string, OccurrenceId>;
   readonly gameName: string;
   readonly requiredExitKeys: readonly string[];
 }
@@ -31,10 +30,6 @@ type CreateTakeoverBatchCommand = Extract<
 type ReplaceWithTakeoverBatchCommand = Extract<
   TakeoverBatchCommand,
   { readonly kind: 'ReplaceWithTakeoverBatch' }
->;
-type ReconcileTakeoverBatchCommand = Extract<
-  TakeoverBatchCommand,
-  { readonly kind: 'ReconcileTakeoverBatch' }
 >;
 
 /**
@@ -49,14 +44,10 @@ export function createTakeoverBatchCommand(
 export function createTakeoverBatchCommand(
   input: TakeoverBatchCommandInput & { readonly action: 'replace' },
 ): ReplaceWithTakeoverBatchCommand;
-export function createTakeoverBatchCommand(
-  input: TakeoverBatchCommandInput & { readonly action: 'reconcile' },
-): ReconcileTakeoverBatchCommand;
 export function createTakeoverBatchCommand({
   action,
   allocateOccurrenceId,
   decision,
-  existingTargetOccurrenceIds,
   gameName,
   requiredExitKeys,
 }: TakeoverBatchCommandInput): TakeoverBatchCommand {
@@ -68,8 +59,7 @@ export function createTakeoverBatchCommand({
     if (targetOccurrenceIds[exitKey] !== undefined) {
       throw new Error(`A takeover batch cannot repeat physical exit ${exitKey}.`);
     }
-    targetOccurrenceIds[exitKey] =
-      existingTargetOccurrenceIds.get(exitKey) ?? allocateOccurrenceId();
+    targetOccurrenceIds[exitKey] = allocateOccurrenceId();
   }
   switch (action) {
     case 'create':
@@ -82,13 +72,6 @@ export function createTakeoverBatchCommand({
     case 'replace':
       return Object.freeze({
         kind: 'ReplaceWithTakeoverBatch' as const,
-        decision,
-        gameName,
-        targetOccurrenceIds: Object.freeze(targetOccurrenceIds),
-      });
-    case 'reconcile':
-      return Object.freeze({
-        kind: 'ReconcileTakeoverBatch' as const,
         decision,
         gameName,
         targetOccurrenceIds: Object.freeze(targetOccurrenceIds),

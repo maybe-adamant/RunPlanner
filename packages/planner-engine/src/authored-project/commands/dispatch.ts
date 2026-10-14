@@ -156,7 +156,6 @@ function applyUnchecked(
     case 'CreateTarget':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
-    case 'ReconcileTakeoverBatch':
     case 'ReconcileBatchExitCapacity':
     case 'ReplaceWithHubDecision':
     case 'RemoveHubDecision':

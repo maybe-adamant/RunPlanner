@@ -23,7 +23,6 @@ import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceStartInteractionRequirement,
-  WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
 import {
@@ -97,10 +96,6 @@ export interface WorkspaceInteractionBindingInput {
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly services: StructuredWorkspaceContextualServices;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
-  readonly takeoverInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceTakeoverInteractionRequirement
-  >;
   readonly topologyRemovalInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -130,7 +125,6 @@ export function bindWorkspaceInteractions(
     roomControls,
     services,
     startInteractionRequirements,
-    takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements,
   } = input;
   const candidates = services.candidateSessions.bind(assembly);
@@ -161,7 +155,6 @@ export function bindWorkspaceInteractions(
     project: assembly.project,
     roomControls,
     startInteractionRequirements: startInteractionRequirements.values(),
-    takeoverInteractionRequirements: takeoverInteractionRequirements.values(),
     topologyRemovalInteractionRequirements: topologyRemovalInteractionRequirements.values(),
   });
   const child: WorkspaceRewardChildInteractionCatalog = bindRewardChildInteractions({

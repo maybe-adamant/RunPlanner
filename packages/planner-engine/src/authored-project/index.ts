@@ -323,6 +323,7 @@ export {
   isHostRouteDetourRoom,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
+  takeoverBatchExitRepairAvailable,
   normalDecisionProgressionForLayout,
   bossDoorRewardStoreKeysForLayout,
   bossDoorRewardStorePolicyForLayout,

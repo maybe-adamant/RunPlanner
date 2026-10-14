@@ -1935,7 +1935,14 @@ describe('DecisionWorkbench', () => {
       'G',
       subjectForOwner(retainedOwner),
     );
-    await retained.user.click(screen.getByRole('button', { name: 'Fix Preboss doors' }));
+    const retainedRepair = screen.getByRole('button', { name: 'Remove unavailable doors' });
+    expect(retainedRepair.dataset.command).toBe('ReconcileBatchExitCapacity');
+    expect(retainedRepair.classList.contains('danger-action')).toBe(true);
+    await retained.user.click(retainedRepair);
+    expect(
+      (screen.getByRole('button', { name: 'Remove unavailable doors' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
     expect(
       workspaceBiome(retained.application, 'Underworld', 'G').nodes.find(
         (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),
@@ -1946,7 +1953,7 @@ describe('DecisionWorkbench', () => {
     const expandedProject = applyProjectCommand(complete, catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenGBiome, takeover.occurrenceId),
-      gameName: 'G_Combat02',
+      gameName: 'G_Combat03',
     });
     const expanded = renderDecisionWorkbench(
       expandedProject,
@@ -1954,8 +1961,10 @@ describe('DecisionWorkbench', () => {
       'G',
       subjectForOwner(retainedOwner),
     );
-    expect(screen.queryByText('Fix Preboss doors to restore the missing doors.')).toBeNull();
-    await expanded.user.click(screen.getByRole('button', { name: 'Fix Preboss doors' }));
+    const expandedRepair = screen.getByRole('button', { name: 'Add missing Preboss doors' });
+    expect(expandedRepair.classList.contains('secondary-action')).toBe(true);
+    expect(expandedRepair.dataset.hasFindings).toBe('true');
+    await expanded.user.click(expandedRepair);
     expect(
       workspaceBiome(expanded.application, 'Underworld', 'G').nodes.find(
         (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),

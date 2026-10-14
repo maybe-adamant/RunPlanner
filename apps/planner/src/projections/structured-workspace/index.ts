@@ -131,8 +131,6 @@ export type {
   WorkspaceRoomInteraction,
   WorkspaceBossDoorRewardStoreControl,
   WorkspaceRoomSummary,
-  WorkspaceTakeoverBatchInteraction,
-  WorkspaceTakeoverRepairInteraction,
   WorkspaceTopologyRemovalInteraction,
   WorkspaceZagreusContractControl,
   WorkspaceZagreusContractInteraction,

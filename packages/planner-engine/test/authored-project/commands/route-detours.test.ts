@@ -258,6 +258,73 @@ describe('authored-project route detour commands', () => {
     ).toEqual(anomalyOutgoing);
   });
 
+  it('gives the remaining Preboss Shop its completion chain when an Anomaly narrows a takeover', () => {
+    const intro = createOccurrenceId('detour-takeover-intro');
+    const target = createOccurrenceId('detour-takeover-source');
+    const prebossShop = createOccurrenceId('detour-takeover-shop');
+    const prebossFree = createOccurrenceId('detour-takeover-free');
+    const source = { kind: 'occurrence' as const, occurrenceId: intro };
+    const targetSource = { kind: 'occurrence' as const, occurrenceId: target };
+    let project = applyProjectCommand(gProject(), catalog, {
+      kind: 'CreateStart',
+      biome: gBiome,
+      occurrenceId: intro,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(gBiome, source),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(gBiome, source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+      occurrenceId: target,
+      gameName: 'G_Combat04',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTakeoverBatch',
+      decision: createExitDecisionAddress(gBiome, targetSource),
+      gameName: 'G_PreBoss01',
+      targetOccurrenceIds: { exit1: prebossShop, exit2: prebossFree },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(gBiome, targetSource),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+
+    const switched = applyProjectCommand(project, catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+    });
+    const topology = biomeTopology(switched, 'Underworld', 'G');
+    expect(
+      topology.decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === target,
+      ),
+    ).toMatchObject({
+      normal: { targets: [{ exitKey: 'exit1', occurrenceId: prebossShop }] },
+      selection: { kind: 'derived' },
+    });
+    expect(topology.fixedRoomLinks).toEqual([
+      { sourceOccurrenceId: prebossShop, targetOccurrenceId: `${prebossShop}:boss` },
+      { sourceOccurrenceId: `${prebossShop}:boss`, targetOccurrenceId: `${prebossShop}:postboss` },
+    ]);
+    expect(
+      topology.occurrences.some((occurrence) => occurrence.occurrenceId.startsWith(prebossFree)),
+    ).toBe(false);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(switched)), catalog)).toEqual(
+      switched,
+    );
+  });
+
   it('reanchors one preserved continuation between a normal G target and an Anomaly target', () => {
     const intro = createOccurrenceId('anomaly-reanchor-intro');
     const fork = createOccurrenceId('anomaly-reanchor-fork');
