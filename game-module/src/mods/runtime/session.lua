@@ -41,6 +41,7 @@ function runtime.status(state)
 end
 
 function runtime.mismatch(state, checkpoint, expected, observed)
+    if state.abandoned then return nil end
     state.aetos = nil
     if type(checkpoint) == "table" and checkpoint.outcome == "fault" then
         return runtime.fault(state, checkpoint, expected, observed)
@@ -54,6 +55,7 @@ end
 -- run diverged.  They make enforcement passive just like a mismatch so hooks
 -- can still call native code, but retain a separate reporting product.
 function runtime.fault(state, errorValue, expected, observed)
+    if state.abandoned then return nil end
     state.aetos = nil
     if state.firstMismatch ~= nil then return nil, state.firstMismatch end
     if state.firstFault == nil then
@@ -100,6 +102,7 @@ local function reset(state)
     state.loggedMismatch = nil
     state.loggedAdmission = nil
     state.practiceStart = nil
+    state.abandoned = nil
     state.diagnostics = {}
     state.reason = "not-started"
     return state
@@ -109,13 +112,25 @@ function runtime.beginNewRun(state)
     return reset(state)
 end
 
+-- Whether execution can still change this run: a starting or synchronized
+-- session, or a completed prefix whose run modifiers act until the run ends.
+function runtime.steering(state)
+    if state.abandoned then return false end
+    if state.state == "starting" or state.state == "synchronized" then return true end
+    return state.state == "inactive" and state.reason == "configured-prefix-complete"
+        and state.admittedNativeRun ~= nil and state.admittedNativeRun == _G.CurrentRun and not _G.CurrentHubRoom
+end
+
 -- The player turned the module off: execution goes passive for the rest of
--- the run and never resumes. The plan stays only for inspection.
+-- the run and never resumes, and later faults and mismatches are ignored. A
+-- completed prefix keeps its outcome; only its run modifiers stop.
 function runtime.abandon(state)
     if state.room ~= nil then room.dispose(state) end
     state.aetos = nil
     state.practiceStart = nil
-    state.state, state.reason = "inactive", "disabled"
+    state.abandoned = true
+    state.state = "inactive"
+    if state.reason ~= "configured-prefix-complete" then state.reason = "disabled" end
 end
 
 -- A run loaded into a fresh process is never re-attached; it continues

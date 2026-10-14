@@ -21,9 +21,11 @@ Opening, or at a biome's Preboss or Boss. No other mid-run attachment, edited-pl
 recovery after a mismatch is supported.
 
 The module's ModpackLib **Enabled** toggle gates admission: a run started while
-it is off admits no plan and stays native. Turning it off mid-run abandons the
-live session for the rest of that run, never resumed by turning it back on, and
-hides the room guide, planned-choice markers and victory summary. Effects bound
+it is off admits no plan and stays native. Turning it off mid-run abandons a session
+that can still steer (starting, synchronized, or a completed prefix whose run
+modifiers still act) for the rest of that run, never resumed by turning it back
+on; a desynchronized, faulted or completed run keeps its outcome. While it is
+off the room guide, planned-choice markers and victory summary are hidden. Effects bound
 to an already installed run, such as the profile restore, installed ranks and a
 Practice run's history exclusion, still follow that run.
 

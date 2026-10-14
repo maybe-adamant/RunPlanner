@@ -78,7 +78,7 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
             } end }
         end
         if path == "mods/runtime/session.lua" then
-            return { create = function() return state end,
+            return { create = function() return state end, steering = function() return false end,
                 status = function() return { state = state.state, reason = state.reason } end }
         end
         if path == "mods/route/session.lua" then return actual("mods.route.session") end
@@ -154,7 +154,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
             end }
         end
         if path == "mods/runtime/session.lua" then
-            return { create = function() return state end,
+            return { create = function() return state end, steering = function() return false end,
                 status = function() return { state = state.state, reason = state.reason } end }
         end
         if path == "mods/spells/hex_tree.lua" then
@@ -214,7 +214,7 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
-            return { create = function() return state end,
+            return { create = function() return state end, steering = function() return false end,
                 status = function() return { state = state.state, reason = state.reason } end }
         end
         if path == "mods/room/timeline/encounters/thessaly.lua" then return { create = shipCombatStub } end
@@ -286,7 +286,7 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
             end }
         end
         if path == "mods/runtime/session.lua" then
-            return { create = function() return state end,
+            return { create = function() return state end, steering = function() return false end,
                 status = function() return { state = state.state, reason = state.reason } end }
         end
         if path == "mods/spells/hex_tree.lua" then
@@ -343,7 +343,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
         if path == "mods/runtime/session.lua" then
-            return { create = function() return state end,
+            return { create = function() return state end, steering = function() return false end,
                 status = function() return { state = state.state, reason = state.reason } end }
         end
         if path == "mods/room/timeline/encounters/thessaly.lua" then return { create = shipCombatStub } end
@@ -472,6 +472,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
         if path == "mods/runtime/session.lua" then
             return {
                 create = function() return {} end,
+                steering = function() return false end,
                 status = function() return { state = "inactive", reason = "test" } end,
             }
         end
@@ -553,6 +554,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
         if path == "mods/runtime/session.lua" then
             return {
                 create = function() return state end,
+                steering = function() return false end,
                 status = function() return require("mods.runtime.session").status(state) end,
             }
         end
@@ -849,26 +851,30 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
     restore()
 end
 
-function TestRuntimeComposition.testDisablingMidRunDropsThePlanForTheRestOfTheRun()
+-- An admitted synchronized run with the real session and run-modifier hooks.
+local function enabledToggleRun()
     local runtimeSession = require('mods.runtime.session')
     local modifierHooks = require('mods.run_modifiers.hooks')
     local admitted = { Hero = { ObjectId = 1 }, CurrentRoom = { Encounter = { MoneyDropStore = 2 } } }
     local victim = { ObjectId = 2, DamageType = 'Enemy', AddToEnemyTeam = true, MoneyDropOnDeath = { Chance = 0.2 } }
-    local state = runtimeSession.create()
+    local run = { session = runtimeSession, state = runtimeSession.create(), victim = victim, commits = {},
+        refreshed = {}, logs = {} }
     local plan = { kind = 'ready', occurrences = {}, selectedOccurrenceIds = {}, occurrencesById = {},
         runModifiers = { enemyGoldDropChance = 80 }, planFingerprint = 'feedface' }
     local module, _, callbacks = capture()
-    local commits, refreshed = {}, {}
-    module.overlays = { onCommit = function(callback) commits[#commits + 1] = callback end }
-    local highlights = { attach = function() end, refresh = function(_, value) refreshed[#refreshed + 1] = value.state end }
-    local logs = {}
+    run.module = module
+    module.overlays = { onCommit = function(callback) run.commits[#run.commits + 1] = callback end }
+    local highlights = {
+        attach = function() end,
+        refresh = function(_, value) run.refreshed[#run.refreshed + 1] = value.state end,
+    }
     local restore = nativeGame.install({ CurrentRun = admitted, CurrentHubRoom = false, SessionMapState = {},
         ActiveEnemies = { [2] = victim }, Kill = function() end, CheckMoneyDrop = function() end,
-        rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } } })
+        rom = { path = {}, log = { info = function(message) run.logs[#run.logs + 1] = message end } } })
     local priorImport = _G.import
     _G.import = function(path)
         if path == 'mods/runtime/session.lua' then
-            return setmetatable({ create = function() return state end }, { __index = runtimeSession })
+            return setmetatable({ create = function() return run.state end }, { __index = runtimeSession })
         end
         if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
         if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
@@ -877,40 +883,91 @@ function TestRuntimeComposition.testDisablingMidRunDropsThePlanForTheRestOfTheRu
         if path == 'mods/room/timeline/encounters/thessaly.lua' then return { create = shipCombatStub } end
         if path == 'mods/room/timeline/encounters/generated.lua' then return { create = generatedEncounterStub } end
         if path == 'mods/loadout/hooks.lua' then return { attach = function()
-            assert(runtimeSession.start(state, { load = function() return true, plan end }, 'synchronized', 3))
+            assert(runtimeSession.start(run.state, { load = function() return true, plan end }, 'synchronized', 3))
             return {}
         end } end
         return { attach = function() return {} end }
     end
-    local bound = assert(loadfile('src/mods/runtime/composition.lua'))().bind('/tmp/run-planner-enabled-test')
-    bound.attach(module, highlights)
-    local function drop()
+    run.bound = assert(loadfile('src/mods/runtime/composition.lua'))().bind('/tmp/run-planner-enabled-test')
+    run.bound.attach(module, highlights)
+    function run.drop()
         return callbacks.Kill(nil, {}, function(v)
             return callbacks.CheckMoneyDrop(nil, {}, function(_, data) return data end, v, v.MoneyDropOnDeath, admitted.Hero)
         end, victim, { AttackerTable = admitted.Hero })
     end
-    lu.assertEquals(drop().Chance, 0.8)
-    logs = {}
+    function run.finish()
+        _G.import = priorImport
+        restore()
+    end
+    lu.assertEquals(run.drop().Chance, 0.8)
+    run.logs = {}
+    return run
+end
 
+function TestRuntimeComposition.testDisablingMidRunDropsThePlanForTheRestOfTheRun()
+    local run = enabledToggleRun()
+    local state, bound = run.state, run.bound
     -- Presentation shows nothing while disabled.
-    module.enabled = false
+    run.module.enabled = false
     lu.assertEquals(bound.sessionInspection(), { state = 'inactive', reason = 'disabled' })
     lu.assertNil(bound.roomGuideInspection())
     -- The commit that turns the module off ends the session and clears the highlights.
-    commits[1](nil, {})
+    run.commits[1](nil, {})
     lu.assertEquals(state.state, 'inactive')
     lu.assertEquals(state.reason, 'disabled')
-    lu.assertEquals(refreshed[#refreshed], 'inactive')
-    lu.assertIs(drop(), victim.MoneyDropOnDeath)
-    lu.assertEquals(#logs, 1)
-    lu.assertStrContains(logs[1], 'session abandoned: module disabled slot=3 fingerprint=feedface')
+    lu.assertEquals(run.refreshed[#run.refreshed], 'inactive')
+    lu.assertIs(run.drop(), run.victim.MoneyDropOnDeath)
+    lu.assertEquals(#run.logs, 1)
+    lu.assertStrContains(run.logs[1], 'session abandoned: module disabled slot=3 fingerprint=feedface')
+    -- Later executor faults and mismatches leave the abandoned session as it is.
+    run.session.fault(state, 'late-contact', 'expected', 'observed')
+    run.session.mismatch(state, 'late-check', 'expected', 'observed')
+    lu.assertEquals({ state.state, state.reason }, { 'inactive', 'disabled' })
+    lu.assertNil(state.firstFault)
+    lu.assertNil(state.firstMismatch)
 
     -- Re-enabling mid-run never resumes the plan.
-    module.enabled = true
-    lu.assertIs(drop(), victim.MoneyDropOnDeath)
+    run.module.enabled = true
+    lu.assertIs(run.drop(), run.victim.MoneyDropOnDeath)
     local snapshot = bound.sessionInspection()
     lu.assertEquals({ snapshot.state, snapshot.reason }, { 'inactive', 'disabled' })
-    lu.assertEquals(#logs, 1)
-    _G.import = priorImport
-    restore()
+    lu.assertEquals(#run.logs, 1)
+    run.finish()
+end
+
+-- A toggle that reaches no commit, such as a profile import, is caught by the next hook.
+function TestRuntimeComposition.testAHookAbandonsTheSessionWithoutACommit()
+    local run = enabledToggleRun()
+    run.module.enabled = false
+    lu.assertIs(run.drop(), run.victim.MoneyDropOnDeath)
+    run.finish()
+end
+
+function TestRuntimeComposition.testDisablingKeepsTheOutcomeOfRunsThatNoLongerSteer()
+    local run = enabledToggleRun()
+    run.session.fault(run.state, 'test-fault', 'expected', 'observed')
+    run.module.enabled = false
+    run.commits[1](nil, {})
+    lu.assertEquals({ run.state.state, run.state.reason }, { 'faulted', 'executor-fault' })
+    run.finish()
+
+    -- A completed prefix keeps its outcome; only its run modifiers stop.
+    run = enabledToggleRun()
+    run.state.state, run.state.reason = 'inactive', 'configured-prefix-complete'
+    lu.assertEquals(run.drop().Chance, 0.8)
+    run.module.enabled = false
+    lu.assertIs(run.drop(), run.victim.MoneyDropOnDeath)
+    lu.assertEquals({ run.state.state, run.state.reason }, { 'inactive', 'configured-prefix-complete' })
+    lu.assertEquals(#run.logs, 1)
+    run.finish()
+
+    -- A completed prefix whose run has ended is left alone.
+    run = enabledToggleRun()
+    run.state.state, run.state.reason = 'inactive', 'configured-prefix-complete'
+    _G.CurrentRun = {}
+    run.module.enabled = false
+    run.commits[1](nil, {})
+    lu.assertNil(run.state.abandoned)
+    lu.assertEquals(#run.logs, 0)
+    run.finish()
 end

@@ -97,10 +97,10 @@ function composition.bind(root, moduleVersion, buildId)
         local transformationHooks = import("mods/room/timeline/transformations/hooks.lua")
 
         moduleEnabled = function() return module.isEnabled() == true end
-        -- Every hook reads the session here: a live session found while the
-        -- module is disabled is abandoned for the rest of the run.
+        -- Every hook reads the session here: a session that can still steer
+        -- while the module is disabled is abandoned for the rest of the run.
         local function getState()
-            if executionState.plan ~= nil and executionState.reason ~= "disabled" and disabled() then
+            if session.steering(executionState) and disabled() then
                 session.abandon(executionState)
                 if rom and rom.log and rom.log.info then
                     rom.log.info("[RunPlanner] session abandoned: module disabled slot="
