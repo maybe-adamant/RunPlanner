@@ -9,49 +9,54 @@ local function fail(message)
     return nil, message
 end
 
+-- The first non-whitespace index at or after index, or past the end.
 local function whitespace(source, index)
-    local nextIndex = index
-    while true do
-        local character = source:sub(nextIndex, nextIndex)
-        if character ~= " " and character ~= "\t" and character ~= "\r" and character ~= "\n" then
-            return nextIndex
-        end
-        nextIndex = nextIndex + 1
-    end
+    local found = source:find("[^ \t\r\n]", index)
+    if found ~= nil then return found end
+    return index > #source and index or #source + 1
 end
 
+local REPLACEMENTS = {
+    ['"'] = '"', ['\\'] = "\\", ['/'] = '/', b = "\b", f = "\f",
+    n = "\n", r = "\r", t = "\t",
+}
+-- A quote, a backslash or a control character ends a plain run of string bytes.
+local SPECIAL = '[%z\1-\31"\\]'
+
 local function decodeString(source, index)
-    local output = {}
+    local output, count = nil, 0
     local nextIndex = index + 1
-    while nextIndex <= #source do
-        local character = source:sub(nextIndex, nextIndex)
-        if character == '"' then return table.concat(output), nextIndex + 1 end
-        if character == "\\" then
-            local escaped = source:sub(nextIndex + 1, nextIndex + 1)
-            local replacements = {
-                ['"'] = '"', ['\\'] = "\\", ['/'] = '/', b = "\b", f = "\f",
-                n = "\n", r = "\r", t = "\t",
-            }
-            if escaped == "u" then
-                local digits = source:sub(nextIndex + 2, nextIndex + 5)
-                if not digits:match("^%x%x%x%x$") then return fail("invalid unicode escape") end
-                local code = tonumber(digits, 16)
-                if code > 127 then return fail("non-ascii unicode escapes are unsupported") end
-                output[#output + 1] = string.char(code)
-                nextIndex = nextIndex + 6
-            elseif replacements[escaped] ~= nil then
-                output[#output + 1] = replacements[escaped]
-                nextIndex = nextIndex + 2
-            else
-                return fail("invalid string escape")
-            end
+    while true do
+        local stop = source:find(SPECIAL, nextIndex)
+        if stop == nil then return fail("unterminated string") end
+        local character = source:sub(stop, stop)
+        if character ~= '"' and character ~= "\\" then return fail("unescaped control character") end
+        local run = source:sub(nextIndex, stop - 1)
+        if character == '"' then
+            if output == nil then return run, stop + 1 end
+            output[count + 1] = run
+            return table.concat(output), stop + 1
+        end
+        output = output or {}
+        count = count + 1
+        output[count] = run
+        local escaped = source:sub(stop + 1, stop + 1)
+        if escaped == "u" then
+            local digits = source:sub(stop + 2, stop + 5)
+            if not digits:match("^%x%x%x%x$") then return fail("invalid unicode escape") end
+            local code = tonumber(digits, 16)
+            if code > 127 then return fail("non-ascii unicode escapes are unsupported") end
+            count = count + 1
+            output[count] = string.char(code)
+            nextIndex = stop + 6
+        elseif REPLACEMENTS[escaped] ~= nil then
+            count = count + 1
+            output[count] = REPLACEMENTS[escaped]
+            nextIndex = stop + 2
         else
-            if character:byte() < 32 then return fail("unescaped control character") end
-            output[#output + 1] = character
-            nextIndex = nextIndex + 1
+            return fail("invalid string escape")
         end
     end
-    return fail("unterminated string")
 end
 
 local function decodeValue(source, index)
@@ -94,7 +99,7 @@ local function decodeValue(source, index)
             nextIndex = whitespace(source, nextIndex + 1)
         end
     end
-    local token = source:sub(index):match("^[%-%+%d%.eE]+")
+    local token = source:match("^[%-%+%d%.eE]+", index)
     if token ~= nil then
         local cursor = 1
         local function isDigit(digitCharacter)

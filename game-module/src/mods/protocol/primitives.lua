@@ -111,7 +111,10 @@ function primitives.roomRef(value, label)
     end
     return record
 end
+local HEX = {}
+for byte = 0, 255 do HEX[string.char(byte)] = string.format("%02x", byte) end
 local function utf8Hex(value)
+    if not value:find("[\128-\255]") then return (value:gsub(".", HEX)) end
     local bytes = {}
     local index = 1
     while index <= #value do
@@ -131,7 +134,7 @@ local function utf8Hex(value)
         assert(code >= minimum and code <= 1114111 and (code < 55296 or code > 57343),
             "fingerprint strings must contain Unicode scalar values")
         for offset = 0, length - 1 do
-            bytes[#bytes + 1] = string.format("%02x", value:byte(index + offset))
+            bytes[#bytes + 1] = HEX[value:sub(index + offset, index + offset)]
         end
         index = index + length
     end
