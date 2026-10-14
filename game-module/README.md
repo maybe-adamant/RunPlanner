@@ -18,9 +18,10 @@ instructions, see the
 ## How to use it
 
 1. In the app, send a plan to one of the twelve slots under **Plans in game**.
-2. In the game, open the **Run Planner** window from the ReturnOfModding menu
-   bar and pick that slot in **Plan for next run**.
-3. Start a new run and follow its choices. The mod gives the run your planned
+   Sending makes that slot the one the next run plays. To play another slot,
+   choose it in the app's Game panel under **Active plan**, or in the game's
+   **Run Planner** window (ReturnOfModding menu bar) under **Plan for next run**.
+2. Start a new run and follow its choices. The mod gives the run your planned
    loadout and puts your own back when the run ends.
 
 ## The Run Planner window

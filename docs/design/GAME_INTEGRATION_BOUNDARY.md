@@ -211,8 +211,8 @@ ModpackLib `.cfg`.
   `os.rename` cannot replace a file on Windows. A reader can briefly find the
   file missing, never partial.
 - A missing or invalid file means slot 1 to the module, which rewrites the file
-  only when the player picks a slot. The planner shows no active slot until
-  one is picked. The module logs one `[RunPlanner] active-slot` line per slot
+  only when the player picks a slot. The planner shows such a file as slot 1
+  too, without writing it. The module logs one `[RunPlanner] active-slot` line per slot
   it writes and one per change of invalid content it reads. Because a missing
   file already shows slot 1, the in-game picker saves slot 1 only after another
   slot was picked.
@@ -313,10 +313,11 @@ need not decode every plan to describe them:
 Slot 0 holds the community event plan. It is the same envelope, read and
 loaded by the module like any other slot, but it is read-only to the user:
 sending can never target it (the host refuses any send outside 1 through 12),
-and the Game panel shows it as an **Event** row above the twelve slots, with the
-event title in the Plan column and its end time beneath, the same Route, Ends,
-Aspect and Sent columns, and no send action. The row shows while the slot holds
-a file or is the active slot; its radio makes it active like any other slot.
+and the Game panel shows it as a read-only **Event** row above the twelve slots,
+with the event title in the Plan column and its end time beneath, the same
+Route, Ends, Aspect and Sent columns, and no send action. The row shows while
+the slot holds a file. **Active plan** offers it like any other slot, and the
+event notice's **Set as active** makes it active through the same host write.
 
 The application keeps slot 0 in step with the [event feed](#event-feed) without
 any user action: at start-up and whenever the Game panel opens it writes the
@@ -335,7 +336,10 @@ send (see [Publication preconditions](#publication-preconditions)):
   data (no feed fetched or cached this session), the host clears slot 0 only
   when its own overview entry names an event that has ended, and otherwise keeps
   it. When `active-slot.json` names slot 0, the host then makes slot 1 active,
-  since the slot played before the event may no longer hold its plan, and the
+  since the slot played before the event may no longer hold its plan. It reads
+  the file again just before that write and writes only while it still names
+  slot 0, so a slot picked meanwhile stands; the result reports a move only
+  when slot 1 was written. Then the
   application's notice says the event ended and the next run uses Slot 1, or,
   when slot 1 is empty, that the next run has no plan until a slot is chosen
   (the module then reports "Nothing was sent to this slot." and the run plays
@@ -430,13 +434,19 @@ event's project file is unchanged, checks the result with the host decoder
 (`events_ci check`), publishes only a changed feed, and verifies its signature
 with the release's event key before uploading. The `events` release is a
 pre-release. An event starts and ends by its own dates, since the app selects
-the active event by time.
+the active event by time. While the app runs, it syncs once more just after the
+active event's end, so an ended event slot is cleared without a restart.
 
 The notice area above the workspace shows one notice: an app update first,
-otherwise the event, `Event: <title> · ends <date>`, with **Details** (the
-description and rules), **Open project**, **Copy link** (the project URL) and
-**Dismiss**. A dismissal is remembered per event id in the browser profile; the
-event slot is still written.
+otherwise the event, `Event: <title> · ends <date>` (a long title truncated),
+with **Set as active**, **Details** (the whole title, the description and the
+rules, below the notice's first row), **Open project**, **Copy link** (the
+project URL; the button itself says Copied or Copy failed for two seconds) and
+**Dismiss**. **Set as active** makes the event slot active and reads the slot
+state the Game panel reads; while that state names the event slot and it holds
+a plan for the installed build, the same button reads **Active**, disabled and
+at the same width. A dismissal is remembered
+per event id in the browser profile; the event slot is still written.
 
 ### Publication preconditions
 
@@ -461,7 +471,9 @@ Only then does the host write `active-slot.json`; if only the activation fails,
 the send still succeeds, the plan
 stays, and the result carries the activation problem, which the planner shows
 as a notice rather than a failed send. Making a slot active without sending
-has the same target checks and requires the slot to hold a readable plan.
+needs only an established target whose slots can be read, so it works while
+the module or ModpackLib needs an update, and requires the slot to hold a plan
+for the installed module build.
 
 A sent plan's identity chain is the saved file, then the document's
 `projectId`, then the compiled `planFingerprint`. Its name is the saved file's
@@ -493,13 +505,19 @@ another build — send again"; it cannot be made active, and the header's quick
 send treats the open project's own stale slot like its present one. Host status
 also carries the bundled and installed `buildId` into bug reports.
 
-The Slot column is an **Active slot** radio group, with arrow-key choice, that
-shows `active-slot.json` as last read. No radio is selected while the file is
-missing or invalid; a file naming a slot without a readable plan shows that row
-selected, and such rows cannot be chosen. Picking a slot that holds a plan
-writes the file without resending. The group is unavailable while the write is
-pending, the slots are then re-read, and a failed write leaves a short notice
-and the selection unchanged. A successful send selects its slot.
+The table is an overview with send actions only. The slot the module plays next
+is chosen in **Active plan** at the top of the Game panel, shown whenever
+a game location is set and disabled while its slots cannot be read. It names
+slots as the in-game picker does (`Slot 2 (Circe - Surface)`,
+`Event: <title> (<label>)`), offers the event slot first and each plan slot
+holding a plan for the installed build, lists a slot holding another build's
+plan disabled as `(another build)`, and shows `active-slot.json` as
+last read: a missing or invalid file shows slot 1, and a file naming a slot
+without such a plan keeps that slot, labelled with what it holds
+(`Slot 4 (empty)`, `(unreadable)`, `(another build)`, `Event (none)`). Choosing
+writes the file without resending; the slots are then re-read, and a failed
+write leaves a short notice beside the choice and its value unchanged. A
+successful send makes its slot the value.
 
 A slot with the open project's `projectId` is marked **current** when its
 fingerprint matches the compiled plan and **older version** otherwise, by plain

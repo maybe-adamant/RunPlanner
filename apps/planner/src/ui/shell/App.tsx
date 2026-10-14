@@ -276,6 +276,7 @@ export function App({
         <NoticeArea
           communityEvents={communityEvents}
           confirmOpenProject={unsavedWork}
+          {...(gameStatus === undefined ? {} : { gameStatus })}
           installLabel={installLabel}
           releaseUpdates={releaseUpdates}
         />

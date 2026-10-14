@@ -9,6 +9,9 @@ import {
   projectGameIndicator,
   projectGamePlans,
   projectGameSendButton,
+  projectEventPlaysNext,
+  projectNextRun,
+  projectNextRunSlot,
   describeActiveSlotSetting,
   describeLastSendFailure,
   describeSent,
@@ -420,7 +423,6 @@ describe('Game panel projection', () => {
       summary: null,
       marker: 'current',
       action: { label: 'Replace', confirm: true },
-      active: { checked: false, intent: { kind: 'setActiveSlot', slot: 1 } },
     });
     expect(catalog.biomes.byKey.Q!.label).not.toBe('Q');
     expect(plans?.rows[1]).toMatchObject({
@@ -559,7 +561,6 @@ describe('Game panel projection', () => {
       summary: 'Sent by another build — send again',
       marker: null,
       action: { label: 'Replace', confirm: true },
-      active: { checked: false, intent: null },
     });
     expect(
       projectGameSendButton(status, { projectId: 'mine', eligible: true }, 2, 'clean', {
@@ -753,71 +754,142 @@ describe('Game panel projection', () => {
     expect(nowActive.description).toMatch(/; now active\.$/);
   });
 
-  it('selects the Active slot from the file and enables only slots that hold a plan', () => {
-    const present = { state: 'present', routeKey: 'Underworld', biomeKeys: ['F'] } as const;
-    const withFile = (activeSlot: GameActiveSlot) =>
+  it('offers every playable slot as the active plan and lists other builds’ plans disabled', () => {
+    const present = {
+      state: 'present',
+      routeKey: 'Underworld',
+      weaponKey: 'WeaponStaffSwing',
+    } as const;
+    const status = (activeSlot: GameActiveSlot, event = eventSlot()) =>
       gameModuleStatus({
         inspection: {
           planSlots: planSlots(
             planSlot(2, present),
             planSlot(3, { state: 'unreadable' }),
-            planSlot(5, present),
+            planSlot(4, { ...present, state: 'stale' }),
+            planSlot(5, { ...present, aspectKey: 'StaffClearCastAspect' }),
           ),
+          eventSlot: event,
           activeSlot,
         },
       });
-    const plans = (activeSlot: GameActiveSlot, activation?: GameActivationActivity) =>
-      projectGamePlans(
-        withFile(activeSlot),
-        { kind: 'noProject' },
-        'clean',
-        catalog,
-        0,
-        activation,
-      );
+    const choice = (activeSlot: GameActiveSlot, activation?: GameActivationActivity) =>
+      projectNextRun(status(activeSlot), catalog, activation);
+    const underworld = catalog.routes.byKey.Underworld!.label;
 
-    const selected = plans({ state: 'present', slot: 5 });
-    expect(selected?.activeSlot).toEqual({
-      label: 'Active slot',
-      selected: 5,
+    expect(choice({ state: 'present', slot: 5 })).toEqual({
+      label: 'Active plan',
+      available: true,
+      value: 5,
+      options: [
+        {
+          slot: 2,
+          label: `Slot 2 (Staff - ${underworld})`,
+          intent: { kind: 'setActiveSlot', slot: 2 },
+        },
+        // A plan sent for another module build is listed with why it cannot be chosen.
+        { slot: 4, label: 'Slot 4 (another build)', intent: null },
+        {
+          slot: 5,
+          label: `Slot 5 (Circe - ${underworld})`,
+          intent: { kind: 'setActiveSlot', slot: 5 },
+        },
+      ],
       pending: false,
       notice: null,
     });
-    expect(selected?.rows.map((row) => row.active)).toEqual([
-      { checked: false, intent: null },
-      { checked: false, intent: { kind: 'setActiveSlot', slot: 2 } },
-      { checked: false, intent: null },
-      { checked: false, intent: null },
-      { checked: true, intent: { kind: 'setActiveSlot', slot: 5 } },
-      ...Array(7).fill({ checked: false, intent: null }),
+    // A missing or invalid file plays slot 1, shown with what it holds.
+    for (const file of [{ state: 'missing' }, { state: 'invalid' }] as const) {
+      const fallback = choice(file);
+      expect(fallback.value).toBe(1);
+      expect(fallback.options[0]).toEqual({ slot: 1, label: 'Slot 1 (empty)', intent: null });
+      expect(projectNextRunSlot(status(file))).toBe(1);
+    }
+    // A file naming a slot without a playable plan keeps that value, labelled honestly.
+    expect(choice({ state: 'present', slot: 3 }).options.map((option) => option.label)).toEqual([
+      `Slot 2 (Staff - ${underworld})`,
+      'Slot 3 (unreadable)',
+      'Slot 4 (another build)',
+      `Slot 5 (Circe - ${underworld})`,
     ]);
-    // A file naming an empty slot still shows it; the radio stays disabled.
-    expect(plans({ state: 'present', slot: 1 })?.rows[0]?.active).toEqual({
-      checked: true,
+    expect(choice({ state: 'present', slot: 0 }).options[0]).toEqual({
+      slot: 0,
+      label: 'Event (none)',
       intent: null,
     });
-    for (const file of [{ state: 'missing' }, { state: 'invalid' }] as const) {
-      const none = plans(file);
-      expect(none?.activeSlot.selected).toBeNull();
-      expect(none?.rows.some((row) => row.active.checked)).toBe(false);
-    }
 
-    const pending = plans({ state: 'present', slot: 5 }, { kind: 'pending' });
-    expect(pending?.activeSlot.pending).toBe(true);
-    expect(pending?.rows.every((row) => row.active.intent === null)).toBe(true);
-    expect(pending?.activeSlot.selected).toBe(5);
-
-    const failed = plans({ state: 'present', slot: 5 }, { kind: 'failed', message: 'locked.' });
-    expect(failed?.activeSlot).toMatchObject({ selected: 5, notice: 'Not made active: locked.' });
-    expect(failed?.rows[1]?.active.intent).toEqual({ kind: 'setActiveSlot', slot: 2 });
+    expect(choice({ state: 'present', slot: 5 }, { kind: 'pending' }).pending).toBe(true);
+    expect(
+      choice({ state: 'present', slot: 5 }, { kind: 'failed', message: 'locked.' }).notice,
+    ).toBe('Not made active: locked.');
   });
 
-  it('shows the read-only event slot while it holds a file or is active', () => {
+  it('offers the event first while it holds a playable plan', () => {
+    const event = eventSlot({
+      state: 'present',
+      routeKey: 'Surface',
+      weaponKey: 'WeaponStaffSwing',
+      aspectKey: 'BaseStaffAspect',
+      event: {
+        id: '2026-w42-staff',
+        title: 'Week 42: Staff sprint',
+        endsAt: '2026-10-19T00:00:00Z',
+      },
+    });
+    const status = (slot: ReturnType<typeof eventSlot>) =>
+      gameModuleStatus({
+        inspection: { eventSlot: slot, activeSlot: { state: 'present', slot: 0 } },
+      });
+    const surface = catalog.routes.byKey.Surface!.label;
+    expect(projectNextRun(status(event), catalog).options).toEqual([
+      {
+        slot: 0,
+        label: `Event: Week 42: Staff sprint (Melinoë (Staff) - ${surface})`,
+        intent: { kind: 'setActiveSlot', slot: 0 },
+      },
+    ]);
+    expect(projectNextRun(status({ ...event, event: null }), catalog).options[0]?.label).toBe(
+      `Event (Melinoë (Staff) - ${surface})`,
+    );
+    expect(projectNextRunSlot(status(event))).toBe(0);
+    // The event plays next only while the file names it and it holds a playable plan.
+    expect(projectEventPlaysNext(status(event))).toBe(true);
+    expect(projectEventPlaysNext(status({ ...event, state: 'stale' }))).toBe(false);
+    expect(projectEventPlaysNext(status(eventSlot()))).toBe(false);
+    expect(projectEventPlaysNext(null)).toBe(false);
+    // Listed disabled while it holds another build's plan, and absent while empty.
+    const elsewhere = gameModuleStatus({
+      inspection: { eventSlot: { ...event, state: 'stale' }, activeSlot: { state: 'missing' } },
+    });
+    expect(projectNextRun(elsewhere, catalog).options).toEqual([
+      { slot: 0, label: 'Event (another build)', intent: null },
+      { slot: 1, label: 'Slot 1 (empty)', intent: null },
+    ]);
+  });
+
+  it('is available whenever the slots can be read, whatever the module needs', () => {
+    const update = gameModuleStatus({
+      publicationBlockers: [{ code: 'moduleMismatch', found: '0.0.9', required: '0.1.0' }],
+      inspection: { activeSlot: { state: 'present', slot: 2 } },
+    });
+    expect(projectNextRun(update, catalog)).toMatchObject({ available: true, value: 2 });
+    const unavailable = gameModuleStatus({
+      inspection: null,
+      publicationBlockers: [{ code: 'targetUnavailable', found: null, required: null }],
+    });
+    expect(projectNextRun(unavailable, catalog)).toMatchObject({
+      available: false,
+      value: null,
+      options: [],
+    });
+    expect(projectNextRunSlot(unavailable)).toBeNull();
+  });
+
+  it('shows the read-only event slot while it holds a file', () => {
     const now = Date.UTC(2026, 9, 12, 12);
     const plans = (
       slot: ReturnType<typeof eventSlot>,
       activeSlot: GameActiveSlot = { state: 'missing' },
-      activation?: GameActivationActivity,
     ) =>
       projectGamePlans(
         gameModuleStatus({ inspection: { eventSlot: slot, activeSlot } }),
@@ -825,15 +897,10 @@ describe('Game panel projection', () => {
         'clean',
         catalog,
         now,
-        activation,
       );
     expect(plans(eventSlot())?.event).toBeNull();
-    expect(plans(eventSlot(), { state: 'present', slot: 0 })?.event).toEqual({
-      state: 'empty',
-      columns: null,
-      summary: 'No event',
-      active: { checked: true, intent: null },
-    });
+    // An empty event slot has no row even while it is the active slot.
+    expect(plans(eventSlot(), { state: 'present', slot: 0 })?.event).toBeNull();
     const present = eventSlot({
       state: 'present',
       modifiedAtMs: now - 60 * 60_000,
@@ -863,14 +930,10 @@ describe('Game panel projection', () => {
         sent: expect.objectContaining({ ago: '1h ago' }),
       },
       summary: null,
-      active: { checked: false, intent: { kind: 'setActiveSlot', slot: 0 } },
     });
     // The event row has no send action; the twelve slots keep theirs.
     expect(plans(present)?.event).not.toHaveProperty('action');
     expect(plans(present)?.rows).toHaveLength(12);
-    expect(
-      plans(present, { state: 'present', slot: 0 }, { kind: 'pending' })?.event?.active,
-    ).toEqual({ checked: true, intent: null });
     expect(plans({ ...present, event: null })?.event?.columns).toMatchObject({
       title: null,
       eventEnds: null,
@@ -878,7 +941,6 @@ describe('Game panel projection', () => {
     expect(plans(eventSlot({ state: 'stale', routeKey: 'Surface' }))?.event).toMatchObject({
       columns: expect.anything(),
       summary: 'Made for another game module build',
-      active: { checked: false, intent: null },
     });
     expect(plans(eventSlot({ state: 'unreadable' }))?.event?.summary).toBe('Unreadable');
   });

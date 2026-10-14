@@ -10,9 +10,9 @@ use crate::game_module_install::{
 use crate::game_module_package::{ModulePackage, PackageSource};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
-    any_slot_file_name, empty_slot, encode_active_slot, encode_slot, inspect_all_slots, read_slot,
-    slot_file_name, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_PLAN_BYTES,
-    MODULE_CONFIG_DIRECTORY,
+    any_slot_file_name, empty_slot, encode_active_slot, encode_slot, inspect_active_slot,
+    inspect_all_slots, read_slot, slot_file_name, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE,
+    EVENT_SLOT, MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
 };
 use crate::slot_overview::{self, SentEntry, SlotEvent, SlotSummary, SLOT_OVERVIEW_FILE};
 
@@ -349,8 +349,9 @@ fn slot_name(slot_number: u8) -> String {
     }
 }
 
-/// Makes a slot that holds a readable plan active, the event slot included, under the same
-/// target checks as publishing.
+/// Makes a slot that holds a plan for the installed module build active, the event slot
+/// included, on any established target whose slots can be read, even while the module or
+/// ModpackLib needs an update.
 pub fn set_active_slot(
     config_dir: &Path,
     package: &ModulePackage,
@@ -359,15 +360,13 @@ pub fn set_active_slot(
     if let Err(message) = any_slot_file_name(slot_number) {
         return activation(ActivationStatus::InvalidSlot, message);
     }
-    let (target, inspection) = match ready_target(config_dir, package) {
-        Ok(ready) => ready,
-        Err(blockers) => {
-            return ActiveSlotSetting {
-                status: ActivationStatus::Blocked,
-                message: "The game target is not ready.".to_owned(),
-                blockers,
-            }
-        }
+    let (status, target) = status(config_dir, package);
+    let (Some(target), Some(inspection)) = (target, status.inspection) else {
+        return ActiveSlotSetting {
+            status: ActivationStatus::Blocked,
+            message: "The game target is not available.".to_owned(),
+            blockers: status.publication_blockers,
+        };
     };
     let slot = if slot_number == EVENT_SLOT {
         &inspection.event_slot.facts
@@ -580,13 +579,20 @@ pub fn clear_event(
         }
     };
     result.fallback_slot_has_plan = fallback_slot_has_plan;
-    if inspection.active_slot == (ActiveSlotFacts::Present { slot: EVENT_SLOT }) {
-        match write_active_slot(&target, 1) {
-            Ok(()) => result.active_slot_moved = true,
-            Err(problem) => result.activation_problem = Some(problem),
-        }
+    match hand_over_event_slot(&target) {
+        Ok(moved) => result.active_slot_moved = moved,
+        Err(problem) => result.activation_problem = Some(problem),
     }
     result
+}
+
+/// Makes slot 1 active only while the active slot file, read just before the write, still
+/// names the event slot, so a slot the player picked meanwhile stands.
+fn hand_over_event_slot(target: &ResolvedTarget) -> Result<bool, String> {
+    if inspect_active_slot(target) != (ActiveSlotFacts::Present { slot: EVENT_SLOT }) {
+        return Ok(false);
+    }
+    write_active_slot(target, 1).map(|()| true)
 }
 
 #[cfg(test)]
@@ -663,7 +669,7 @@ mod tests {
     const PRESENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","projectId":"p","planFingerprint":"f","routeKey":"Underworld","extent":{"biomeKeys":["F"]}}"#;
 
     #[test]
-    fn active_slot_is_set_only_on_a_ready_target_for_a_present_slot() {
+    fn active_slot_is_set_only_on_an_established_target_for_a_present_slot() {
         let temporary = TemporaryDirectory::new("active-set");
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
@@ -676,10 +682,16 @@ mod tests {
         assert_eq!(unset.status, ActivationStatus::Blocked);
         assert_eq!(unset.blockers[0].code, BlockerCode::NoTarget);
         remember_target(&config, &target).unwrap();
+        // A pending module update does not stop choosing among the installed build's plans.
         let newer = crate::game_module_install::test_support::package("1.3.0", "return 2");
         let mismatch = set_active_slot(&config, &newer, 2);
-        assert_eq!(mismatch.status, ActivationStatus::Blocked);
-        assert_eq!(mismatch.blockers[0].code, BlockerCode::ModuleMismatch);
+        assert_eq!(
+            mismatch.status,
+            ActivationStatus::Activated,
+            "{}",
+            mismatch.message
+        );
+        fs::remove_file(active_slot_path(&target)).unwrap();
         fs::write(safe_destination(&target, 3).unwrap(), "not a plan").unwrap();
         for slot in [1, 3] {
             let refused = set_active_slot(&config, &package, slot);
@@ -710,6 +722,53 @@ mod tests {
         assert!(
             names.iter().all(|name| !name.ends_with(".tmp")),
             "{names:?}"
+        );
+        // Under the relaxed target gate the slot must still hold the installed build's plan.
+        fs::write(
+            safe_destination(&target, 4).unwrap(),
+            encode_slot("another-build", PRESENT_PLAN),
+        )
+        .unwrap();
+        assert_eq!(
+            set_active_slot(&config, &package, 4).status,
+            ActivationStatus::NotPresent
+        );
+        crate::game_module_install::remove(&target, &package).unwrap();
+        let absent = set_active_slot(&config, &package, 2);
+        assert_eq!(
+            absent.status,
+            ActivationStatus::NotPresent,
+            "{}",
+            absent.message
+        );
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 2 }
+        );
+    }
+
+    #[test]
+    fn the_event_slot_hands_over_only_while_the_file_still_names_it() {
+        let temporary = TemporaryDirectory::new("hand-over");
+        let (target, _) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        assert_eq!(hand_over_event_slot(&target), Ok(false));
+        assert!(!active_slot_path(&target).exists());
+        // A slot picked after the event slot was read active stands.
+        fs::write(active_slot_path(&target), encode_active_slot(4).unwrap()).unwrap();
+        assert_eq!(hand_over_event_slot(&target), Ok(false));
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 4 }
+        );
+        fs::write(
+            active_slot_path(&target),
+            encode_active_slot(EVENT_SLOT).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(hand_over_event_slot(&target), Ok(true));
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 1 }
         );
     }
 

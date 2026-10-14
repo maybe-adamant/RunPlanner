@@ -25,13 +25,17 @@ live verification; the owner confirms or waives each check.
 ## App and game
 
 - [ ] Start the app: the notice reads `Event: <title> · ends <date>`, below any
-      app update notice. **Details** shows the description and rules;
-      **Copy link** copies the project URL.
+      app update notice. **Details** shows the description and rules below the
+      notice's first row; **Copy link** copies the project URL and reads Copied
+      briefly without moving the buttons.
+- [ ] **Set as active** makes the Event slot active: the button reads
+      **Active** and the Game panel's **Active plan** shows the event.
 - [ ] **Open project** opens the event's plan as an unsaved copy; with unsaved
       changes in the open project it asks first. The copy sent to a slot does
       not count as the event.
-- [ ] The Game panel shows the **Event** row above the twelve slots with the
-      title, end time, route and aspect, and no send action.
+- [ ] The Game panel shows the read-only **Event** row above the twelve slots
+      with the title, end time, route and aspect, and no send action.
+      **Active plan** lists `Event: <title> (<label>)` first.
 - [ ] In game, the **Plan** picker lists `Event: <title> (<label>)` first;
       details show the event and its end. Pick it and finish the run: Current
       Run reads `Event: <title>`, and the victory screen's first row reads
@@ -42,9 +46,9 @@ live verification; the owner confirms or waives each check.
 ## Ending, offline and integrity
 
 - [ ] With the Event slot active, let the event end (or publish an earlier end
-      date) and restart the app: slot 0 is cleared, slot 1 becomes active and
-      the notice says the event ended and what the next run uses. In game the
-      picker no longer lists the event.
+      date) with the app running: shortly after the end, slot 0 is cleared,
+      slot 1 becomes active and the notice says the event ended and what the
+      next run uses. In game the picker no longer lists the event.
 - [ ] Start the app offline after a successful fetch: the event stays until it
       ends. Start offline with no cached feed: the Event slot is kept until its
       own end time.

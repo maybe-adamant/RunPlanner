@@ -284,4 +284,107 @@ describe('community event controller', () => {
       kind: 'cancelled',
     });
   });
+
+  it('plays the event through the game host’s active slot write, then re-reads the status', async () => {
+    const { controller, game } = setup();
+    game.host.status.mockClear();
+    expect(await controller.playEvent()).toBeNull();
+    expect(game.host.setActiveSlot).toHaveBeenCalledWith(0);
+    expect(game.host.status).toHaveBeenCalledTimes(1);
+    game.host.setActiveSlot.mockResolvedValueOnce({
+      status: 'notPresent',
+      message: 'The event slot has no plan to make active.',
+      blockers: [],
+    });
+    expect(await controller.playEvent()).toBe('The event slot has no plan to make active.');
+  });
+
+  it('syncs once just after the active event ends, and not after disposal', async () => {
+    const json = planJson();
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'Date'],
+      now: Date.parse('2026-10-18T23:59:00Z'),
+    });
+    try {
+      const { application, controller, events } = setup();
+      const active = { active: eventPlan(json), source: 'network', problem: null } as const;
+      events.refreshFeed.mockResolvedValue(active);
+      await controller.sync();
+      expect(events.refreshFeed).toHaveBeenCalledTimes(1);
+
+      events.refreshFeed.mockResolvedValue({ active: null, source: 'network', problem: null });
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(2);
+      expect(events.clearEvent).toHaveBeenCalledTimes(1);
+      // Without an active event nothing is scheduled.
+      await vi.advanceTimersByTimeAsync(30 * 86_400_000);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(2);
+
+      const later = { ...active, active: eventPlan(json, { endsAt: '2026-11-25T00:00:00Z' }) };
+      events.refreshFeed.mockResolvedValue(later);
+      await controller.sync();
+      expect(events.refreshFeed).toHaveBeenCalledTimes(3);
+      application.dispose();
+      await vi.advanceTimersByTimeAsync(10 * 86_400_000);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('re-syncs an event ending beyond the longest timer early, then at its end', async () => {
+    const json = planJson();
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'Date'],
+      now: Date.parse('2026-10-01T00:00:00Z'),
+    });
+    try {
+      const { controller, events } = setup();
+      const far = eventPlan(json, { endsAt: '2026-11-10T00:00:00Z' });
+      events.refreshFeed.mockResolvedValue({ active: far, source: 'network', problem: null });
+      await controller.sync();
+      expect(events.refreshFeed).toHaveBeenCalledTimes(1);
+      // The longest timer runs out first; that sync schedules the rest.
+      await vi.advanceTimersByTimeAsync(2 ** 31 - 1);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(2);
+      events.refreshFeed.mockResolvedValue({ active: null, source: 'network', problem: null });
+      await vi.advanceTimersByTimeAsync(Date.parse('2026-11-10T00:00:00Z') - Date.now() - 1);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(5_001);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(3);
+      expect(events.clearEvent).toHaveBeenCalledTimes(1);
+      controller.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('arms no timer from a sync that finishes after disposal', async () => {
+    const json = planJson();
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'Date'],
+      now: Date.parse('2026-10-18T23:59:00Z'),
+    });
+    try {
+      const { controller, events } = setup();
+      let respond: (() => void) | undefined;
+      events.refreshFeed.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            respond = () => resolve({ active: eventPlan(json), source: 'network', problem: null });
+          }),
+      );
+      const running = controller.sync();
+      await vi.waitFor(() => expect(respond).toBeDefined());
+      controller.dispose();
+      respond?.();
+      await running;
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(events.refreshFeed).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
