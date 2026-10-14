@@ -289,7 +289,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     -- Every string the tab shows, computed before any ImGui call.
     local function runView(snapshot, planName)
         local plan = snapshot.plan
-        if plan == nil then
+        if plan == nil or snapshot.reason == "disabled" then
             return { lines = { "No plan is running. The next run will use " .. slotLabel(viewSlot) .. "." } }
         end
         local practice = presentation.practicePlace(plan)

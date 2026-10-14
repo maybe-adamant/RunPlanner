@@ -5,7 +5,8 @@ local hooks = {}
 function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
     assert(type(loadoutRuntime) == "table" and loadoutRuntime.inbox and loadoutRuntime.session
         and type(loadoutRuntime.session.beginNewRun) == "function"
-        and type(loadoutRuntime.activePlanSlot) == "function",
+        and type(loadoutRuntime.activePlanSlot) == "function"
+        and type(loadoutRuntime.enabled) == "function",
         "loadout runtime dependencies are required")
     assert(type(hexTree) == "table", "loadout Hex Tree instance is required")
     local nativeBindings = import("mods/native_bindings.lua")
@@ -99,7 +100,8 @@ function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         if startDepth <= 0 then return base(previousRun, args) end
         local state = getState(runtime)
         local run = _G.CurrentRun
-        if not state.initialized then
+        -- A run started while the module is disabled admits no plan and stays native.
+        if not state.initialized and loadoutRuntime.enabled() then
             session.start(state, loadoutRuntime.inbox, "starting", loadoutRuntime.activePlanSlot(runtime), {
                 -- StartNewGame passes no previous run (RunLogic.lua:321-322).
                 freshSave = previousRun == nil,

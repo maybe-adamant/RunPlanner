@@ -136,6 +136,9 @@ function presentation.header(snapshot, planName)
     if snapshot.reason == "admission-rejected" then
         return { text = "Plan not used", tone = "faulted", reason = mismatchText.admission(snapshot.issue) }
     end
+    if snapshot.reason == "disabled" then
+        return { text = "Not steering", tone = "inactive", reason = "Run Planner was turned off during this run." }
+    end
     if snapshot.reason == "resumed-unsteered" then
         return { text = "Not steering", tone = "inactive", reason = "Resumed after a reload; this run isn't steered." }
     end

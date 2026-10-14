@@ -21,7 +21,7 @@ local function expected(hex)
     }
 end
 
-local function captureLoadoutHooks(state, treeAdapter, loadoutAdapter)
+local function captureLoadoutHooks(state, treeAdapter, loadoutAdapter, enabled)
     local priorImport = _G.import
     _G.import = function(path)
         return require((path:gsub("%.lua$", ""):gsub("/", ".")))
@@ -34,6 +34,7 @@ local function captureLoadoutHooks(state, treeAdapter, loadoutAdapter)
             target.state, target.reason = "inactive", "not-started"
         end,
         start = function(target, _, phase)
+            target.started = (target.started or 0) + 1
             target.initialized = true
             target.state, target.reason = phase == "starting" and "starting" or "synchronized", "ready"
         end,
@@ -49,7 +50,8 @@ local function captureLoadoutHooks(state, treeAdapter, loadoutAdapter)
     loadoutAdapter = loadoutAdapter or loadoutHooks
     treeAdapter.attach(module)
     local scope = loadoutAdapter.attach(module,
-        { session = sessionAdapter, inbox = {}, activePlanSlot = function() return 1 end }, getState,
+        { session = sessionAdapter, inbox = {}, activePlanSlot = function() return 1 end,
+            enabled = enabled or function() return true end }, getState,
         function() end, sessionAdapter, treeAdapter)
     _G.import = priorImport
     return callbacks, scope
@@ -80,6 +82,25 @@ function TestLoadoutStart.testAdmittedRunSynchronizesWithoutLoadoutVerification(
     lu.assertEquals(stateDuringRoomChoice, "synchronized")
     lu.assertEquals(state.state, "synchronized")
     lu.assertNil(state.firstMismatch)
+end
+
+function TestLoadoutStart.testARunStartedWhileDisabledAdmitsNoPlan()
+    local priorRun = _G.CurrentRun
+    local state = { plan = expected(nil), initialized = false, state = "inactive" }
+    local callbacks = captureLoadoutHooks(state, nil, nil, function() return false end)
+    local equipped
+    callbacks.StartNewRun(nil, {}, function()
+        _G.CurrentRun = {}
+        callbacks.CreateNewHero(nil, {}, function() return { Weapons = {} } end, nil, {})
+        equipped = callbacks.EquipKeepsake(nil, {}, function(_, key) return key end, {}, "NativeKeepsake", {})
+        return true
+    end, nil, {})
+    _G.CurrentRun = priorRun
+    lu.assertNil(state.started)
+    lu.assertFalse(state.initialized)
+    lu.assertEquals(state.state, "inactive")
+    lu.assertEquals(state.reason, "not-started")
+    lu.assertEquals(equipped, "NativeKeepsake")
 end
 
 function TestLoadoutStart.testStrictProtocolRejectsDuplicateArcanaAndMissingSeleneHex()

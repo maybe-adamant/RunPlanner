@@ -20,6 +20,13 @@ admits at the start of a fresh run that the module installs at a later biome's
 Opening, or at a biome's Preboss or Boss. No other mid-run attachment, edited-plan repair, or
 recovery after a mismatch is supported.
 
+The module's ModpackLib **Enabled** toggle gates admission: a run started while
+it is off admits no plan and stays native. Turning it off mid-run abandons the
+live session for the rest of that run, never resumed by turning it back on, and
+hides the room guide, planned-choice markers and victory summary. Effects bound
+to an already installed run, such as the profile restore, installed ranks and a
+Practice run's history exclusion, still follow that run.
+
 The transport names the slots `slot-1.runplanner.json` through
 `slot-12.runplanner.json` under the Run Planner game module configuration directory,
 beside the read-only [event slot](#event-slot) `slot-0.runplanner.json`. The

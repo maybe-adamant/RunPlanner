@@ -49,3 +49,8 @@ each check.
 - [ ] The **Diagnostics** tab is absent until **Debug Mode** is ticked, then
       shows the slot file state, module build, catalog, project, fingerprint,
       any slot error and the raw expected and observed records.
+- [ ] Untick **Enabled** during a planned run: the room guide and planned-choice
+      markers disappear, the log shows `session abandoned: module disabled`,
+      and the run continues natively. Tick it again: the run stays unsteered
+      (header `Not steering`), and the next run uses the plan. Start a run with
+      **Enabled** unticked: no plan is admitted and the run is native.

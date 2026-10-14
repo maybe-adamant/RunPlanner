@@ -7,7 +7,11 @@ local M = {}
 
 function M.capture()
     local names, callbacks = {}, {}
-    return {
+    -- enabled is the module's Enabled toggle; tests may turn it off.
+    local module
+    module = {
+        enabled = true,
+        isEnabled = function() return module.enabled end,
         hooks = {
             wrap = function(name, id, callback)
                 names[name] = names[name] or {}
@@ -20,7 +24,8 @@ function M.capture()
                 end or callback
             end,
         },
-    }, names, callbacks
+    }
+    return module, names, callbacks
 end
 
 local fakePayloads = setmetatable({}, { __mode = "k" })

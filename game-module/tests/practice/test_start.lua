@@ -218,7 +218,7 @@ local function startRun(plan, world, startArgs)
     local function getState() return state end
     local hexTree = recordingHexTree(world.log)
     loadoutHooks.attach(module, {
-        inbox = inbox, session = session, activePlanSlot = function() return 1 end,
+        inbox = inbox, session = session, activePlanSlot = function() return 1 end, enabled = function() return true end,
     }, getState, function() end, roomCoordinator, hexTree)
     local scope = practiceHooks.attach(module, session, getState, function() end, hexTree)
     _G.import = priorImport
