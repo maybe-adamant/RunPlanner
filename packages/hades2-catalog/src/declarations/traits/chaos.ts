@@ -360,6 +360,8 @@ export const chaosBlessings = [
     },
   ),
 ] as const;
+// Chant inherits UnityTrait alongside ChaosBlessing, so native presents it as an Infusion.
+const chaosUnityTraitKeys: ReadonlySet<string> = new Set(['ChaosOmegaDamageBlessing']);
 export const chaosTraits: readonly RawTraitDeclaration[] = [...chaosCurses, ...chaosBlessings].map(
   (entry) => ({
     key: entry.key,
@@ -372,6 +374,7 @@ export const chaosTraits: readonly RawTraitDeclaration[] = [...chaosCurses, ...c
     blockStacking: false,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    ...(chaosUnityTraitKeys.has(entry.key) ? { unityTrait: true as const } : {}),
     selectedDisposition: { kind: 'noOp' },
   }),
 );

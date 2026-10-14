@@ -43,6 +43,7 @@ export function declaredChoicesPicker<T>(
     readonly key: string;
     readonly value: T;
     readonly label: string;
+    readonly ariaLabel?: string;
     readonly disabled?: boolean;
     readonly explanation?: string;
   }[],

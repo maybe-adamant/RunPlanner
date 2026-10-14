@@ -352,8 +352,19 @@ function effectBracket(state: RunStateEffectState): string {
     case 'bonus':
       return percentBracket(state.fraction, true);
     case 'elementCount':
-      return `(${state.element} ${state.count})`;
+      return `(${elementCountText(state)})`;
   }
+}
+
+function elementCountText(state: Extract<RunStateEffectState, { kind: 'elementCount' }>): string {
+  return `${state.element} ${state.count}`;
+}
+
+/** An Infusion's rarity carries no information, so its activation or element count replaces it. */
+function infusionRight(state: RunStateEffectState | undefined): string | undefined {
+  if (state?.kind === 'status') return statusLabels[state.status];
+  if (state?.kind === 'elementCount') return elementCountText(state);
+  return undefined;
 }
 
 function percentBracket(fraction: number, signed: boolean): string {
@@ -431,6 +442,10 @@ function traitRow(catalog: Catalog, snapshot: RunStateSnapshot, traitKey: string
   const equipped = snapshot.traits.equippedTraits[traitKey];
   if (equipped === undefined) return undefined;
   const state = snapshot.effects.traitStates[traitKey];
+  const infusionState =
+    catalog.traits.byKey[traitKey]?.unityTrait === true ? infusionRight(state) : undefined;
+  if (infusionState !== undefined)
+    return row(`trait:${traitKey}`, traitLabel(catalog, traitKey), { right: infusionState });
   const decay = equipped.roomDecay;
   return row(`trait:${traitKey}`, traitLabel(catalog, traitKey), {
     ...(state !== undefined

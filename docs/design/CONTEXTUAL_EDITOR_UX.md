@@ -117,7 +117,6 @@ one engine-published fact, never two:
   `The Centaur (4/5 rooms)`;
 - a current value shows that value: `Lion Fang (+25%)`, a decaying trait's
   `(60%)`;
-- an element-scaled Infusion shows its element's count: `Water Fitness (Water 4)`;
 - an on/off or one-use state reads `(Active)`, `(Inactive)`, `(Ready)`,
   `(Used)`, `(Pending)` or `(Consumed)`.
 
@@ -126,7 +125,10 @@ encounters, rooms, guardians, biomes or boons), singular for a count of one.
 The right column holds `Rarity · Lv. N` (each part only when it applies),
 `Rank II` for an upgraded Hammer, `Lv. N` for a Path of Stars talent, keepsake
 stars, an Arcana rank (`Rank I` to `Rank IV`, always shown) or vow rank, or a
-plain value; rarityless traits and Rank I Hammers leave it blank. Rows use catalog labels and never expose trait, giver, slot or store
+plain value; rarityless traits and Rank I Hammers leave it blank. An Infusion's
+rarity carries no information, so its right column shows `Active`, `Inactive`
+or its element count (`Water 4`) instead, with no bracket; Chant keeps its
+rarity. Rows use catalog labels and never expose trait, giver, slot or store
 keys or raw engine states. Source-only markers are omitted: a keepsake-granted
 Hammer is an ordinary Hammer row with its encounters left, and an Aspect,
 Arcana or rarity effect shows only its result.
@@ -583,8 +585,9 @@ trait-offer interaction. React passes the complete local outcome and focused
 option key to the bound interaction; it never constructs engine queries or
 evaluates trait rules.
 
-Infusion rows retain concrete rarity authoring but display `Infusion (C)`,
-`Infusion (R)`, or `Infusion (E)`; accessible option names spell out the tier.
+Infusion rows (the catalog's native `UnityTrait` members, including Chaos
+Chant) retain concrete rarity authoring but display `Infusion (C)`,
+`Infusion (R)`, and so on; accessible option names spell out the tier.
 Their effective-rarity summary displays `Infusion`. Common-only rows use the
 same fixed-value presentation. These labels never change stored values,
 candidate support, or the ability to repair an unavailable rarity.

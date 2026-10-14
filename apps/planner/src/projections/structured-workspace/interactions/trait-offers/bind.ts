@@ -121,6 +121,7 @@ export function bindTraitOfferInteractions(input: {
             declaration.rarityDomain.equippedRarities.length > 1
           );
         },
+        infusionFor: (traitKey: string) => catalog.traits.byKey[traitKey]?.unityTrait === true,
         ...(control.offer !== null &&
         (control.address.owner.kind === 'encounterPhase' ||
           control.address.owner.kind === 'gorgonPhase')

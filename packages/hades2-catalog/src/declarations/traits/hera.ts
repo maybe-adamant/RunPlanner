@@ -262,6 +262,8 @@ export const heraTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    // Source InheritFrom UnityTrait.
+    unityTrait: true,
     activationRequirement: {
       kind: 'elementMinimums',
       minimums: { Fire: 2, Earth: 2, Air: 2, Water: 2 },

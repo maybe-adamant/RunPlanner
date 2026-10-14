@@ -237,6 +237,8 @@ export const aphroditeTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    // Source InheritFrom UnityTrait.
+    unityTrait: true,
   },
   {
     key: 'RandomStatusBoon',

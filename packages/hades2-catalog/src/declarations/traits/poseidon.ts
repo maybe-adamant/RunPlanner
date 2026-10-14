@@ -256,6 +256,8 @@ export const poseidonTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    // Source InheritFrom UnityTrait.
+    unityTrait: true,
   },
   {
     key: 'AmplifyConeBoon',

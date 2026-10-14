@@ -41,25 +41,9 @@ describe('effective value list', () => {
 });
 
 describe('trait rarity presentation', () => {
-  it.each([
-    'ElementalUnifiedBoon',
-    'ElementalRarityUpgradeBoon',
-    'ElementalDamageBoon',
-    'ElementalOlympianDamageBoon',
-    'ElementalBaseDamageBoon',
-    'ElementalRallyBoon',
-    'ElementalDamageFloorBoon',
-    'ElementalDodgeBoon',
-    'ElementalDamageCapBoon',
-    'ElementalHealthBoon',
-  ])('presents %s as Infusion while retaining its concrete offer tier', (traitKey) => {
+  it('presents an infusion while retaining its concrete offer tier', () => {
     render(
-      <TraitOfferOption
-        {...baseProps}
-        traitKey={traitKey}
-        fixedRarity="Common"
-        effectiveRarity="Common"
-      />,
+      <TraitOfferOption {...baseProps} infusion fixedRarity="Common" effectiveRarity="Common" />,
     );
     expect(hintOf(screen.getByText('Infusion (C)'))).toBe('Infusion (Common)');
     expect(
@@ -83,7 +67,7 @@ describe('trait rarity presentation', () => {
     render(
       <TraitOfferOption
         {...baseProps}
-        traitKey="ElementalRarityUpgradeBoon"
+        infusion
         rarityValue="Common"
         effectiveRarity="Rare"
         onSelectRarity={onSelectRarity}
@@ -116,14 +100,7 @@ describe('trait rarity presentation', () => {
   it.each<TraitRarity>(['Rare', 'Duo', 'Legendary'])(
     'retains %s presentation outside infusions',
     (rarity) => {
-      render(
-        <TraitOfferOption
-          {...baseProps}
-          traitKey="ApolloWeaponBoon"
-          fixedRarity={rarity}
-          effectiveRarity={rarity}
-        />,
-      );
+      render(<TraitOfferOption {...baseProps} fixedRarity={rarity} effectiveRarity={rarity} />);
       expect(screen.getByLabelText('Option 1 fixed rarity').textContent).toBe(`Rarity${rarity}`);
       expect(
         within(screen.getByLabelText('Effective trait values')).getByText(rarity),

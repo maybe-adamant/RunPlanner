@@ -47,7 +47,7 @@ export function TraitOfferOption<TraitValue>({
   traitFindingMark,
   persephoneAriaLabel,
   traitLabel,
-  traitKey,
+  infusion = false,
   traitPicker,
 }: {
   readonly controlId: string;
@@ -82,11 +82,12 @@ export function TraitOfferOption<TraitValue>({
   readonly traitFindingMark?: FindingMarkProps;
   readonly persephoneAriaLabel?: string;
   readonly traitLabel?: string;
-  readonly traitKey?: string;
+  /** Native presents this trait's rarity as an Infusion. */
+  readonly infusion?: boolean;
   readonly traitPicker: ContextualPickerModel<TraitValue>;
 }) {
   const presentRarityItem = (item: ContextualPickerItem<TraitRarity>) => {
-    const presentation = traitRarityPresentation(traitKey, item.value);
+    const presentation = traitRarityPresentation(infusion, item.value);
     return presentation.label === item.value
       ? item
       : { ...item, label: presentation.label, ariaLabel: presentation.accessibleLabel };
@@ -105,7 +106,7 @@ export function TraitOfferOption<TraitValue>({
           })),
         };
   const fixedRarityPresentation =
-    fixedRarity === undefined ? undefined : traitRarityPresentation(traitKey, fixedRarity);
+    fixedRarity === undefined ? undefined : traitRarityPresentation(infusion, fixedRarity);
   return (
     <fieldset className="trait-offer-option trait-offer-ordinary-option">
       <legend>
@@ -144,7 +145,7 @@ export function TraitOfferOption<TraitValue>({
           placeholder="Choose a rarity"
           {...(rarityValue === undefined
             ? {}
-            : { triggerLabel: traitRarityPresentation(traitKey, rarityValue).label })}
+            : { triggerLabel: traitRarityPresentation(infusion, rarityValue).label })}
         />
       ) : fixedRarityPresentation === undefined ? null : (
         <div
@@ -183,7 +184,7 @@ export function TraitOfferOption<TraitValue>({
             {effectiveRarity === undefined ? (
               <span aria-label="Not applicable">—</span>
             ) : (
-              traitRarityPresentation(traitKey, effectiveRarity).effectiveLabel
+              traitRarityPresentation(infusion, effectiveRarity).effectiveLabel
             )}
           </dd>
           <dt>Effective level</dt>

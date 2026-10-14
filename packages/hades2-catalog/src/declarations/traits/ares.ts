@@ -231,6 +231,8 @@ export const aresTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    // Source InheritFrom UnityTrait.
+    unityTrait: true,
   },
   {
     key: 'DoubleBloodDropBoon',

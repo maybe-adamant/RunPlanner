@@ -195,6 +195,12 @@ there is no `DeriveValueFrom` link between them. A faithful game export must
 retain both processed multipliers even if the editor keeps the unreported one
 in an advanced or compact secondary control.
 
+Chant inherits `UnityTrait` ahead of `ChaosBlessing` (`TraitData_Chaos.lua`),
+so native treats it as an Infusion (`IsElementalTrait`, `CustomRarityName =
+"Boon_Infusion"`, the Unity frame), while its own `RarityLevels` keep real
+C/R/E/H values. The catalog declares it `unityTrait`; the editor presents its
+rarity as an Infusion tier.
+
 Celerity and Chant do have concrete numeric outcomes. Celerity's selected
 rarity fixes its move/Sprint values; Chant's selected rarity fixes its
 per-Aether value and current Aether fixes its total. Their declarations use
