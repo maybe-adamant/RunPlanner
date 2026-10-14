@@ -330,17 +330,20 @@ function effectiveRewardPool(
         : authoredBatchEnteredRewardStores(input.catalog, topology, decision);
   const selected = stores?.selected;
   if (selected === undefined) return undefined;
-  const roomLabel = requireWorkspaceRoom(input.catalog, selected.gameName).label;
+  const exitLabel =
+    selected.exit.kind === 'additional'
+      ? additionalExitTypeLabels[selected.exit.additionalExitKey]
+      : requireWorkspaceRoom(input.catalog, selected.gameName).label;
   switch (selected.entered.kind) {
     case 'unresolved':
       return undefined;
     case 'none':
-      return `Discarded by ${roomLabel}`;
+      return `Discarded by ${exitLabel}`;
     case 'store': {
       const { storeKey } = selected.entered;
       if (storeKey === carriedStoreKey) return undefined;
       const label = workspaceRewardStoreLabel(storeKey);
-      return selected.exit.kind === 'additional' ? `${label} · ${roomLabel}` : label;
+      return selected.exit.kind === 'additional' ? `${label} · ${exitLabel}` : label;
     }
   }
 }
