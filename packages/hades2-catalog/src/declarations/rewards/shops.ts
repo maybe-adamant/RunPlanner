@@ -305,7 +305,10 @@ export const shops = [
         key: 'Healing',
         offerCount: 1,
         options: [
-          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', ledger),
+          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', {
+            kind: 'consumable',
+            acquisitionGameName: 'ArmorBoostStore',
+          }),
           wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop', immediate),
           wellOption('HealDropRange', 'Life Essence', 'RoomRewardHealDrop', immediate),
           wellOption('EmptyMaxHealthShopItem', 'Centaur Soul', 'MaxHealthDrop', {

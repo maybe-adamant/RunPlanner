@@ -224,6 +224,7 @@ export function normalizeAcquisitions(
     'MinorTalentDrop',
     'ArmorBoost',
     'ArmorBigBoost',
+    'ArmorBoostStore',
     'LastStandDrop',
     'RoomRewardConsolationPrize',
     'GiftDrop',
@@ -394,6 +395,14 @@ export function normalizeAcquisitions(
               maxStatGrant: normalizeMaxStatGrant(
                 acquisition.maxStatGrant,
                 `acquisitions[${index}].maxStatGrant`,
+              ),
+            }),
+        ...(acquisition.armorGrant === undefined
+          ? {}
+          : {
+              armorGrant: requirePositiveInteger(
+                acquisition.armorGrant,
+                `acquisitions[${index}].armorGrant`,
               ),
             }),
         ...(acquisition.runProgressMaxStatGrant === undefined

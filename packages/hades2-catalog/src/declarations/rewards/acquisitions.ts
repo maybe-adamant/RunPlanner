@@ -55,6 +55,7 @@ const CAN_DUPLICATE = new Set<string>([
   'LastStandDrop',
   'LastStandShopItem',
   'EmptyMaxHealthShopItem',
+  'ArmorBoostStore',
   'GiftDrop',
   'MetaCurrencyDrop',
   'MetaCurrencyBigDrop',
@@ -313,12 +314,14 @@ const rawAcquisitions = [
     gameName: 'ArmorBoost',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    armorGrant: 20,
     goldConversionEligible: true,
   },
   {
     gameName: 'ArmorBigBoost',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    armorGrant: 40,
     goldConversionEligible: true,
   },
   {
@@ -365,6 +368,14 @@ const rawAcquisitions = [
   },
   // Stygian Well consumables, acquired under their own names when purchased.
   { gameName: 'LastStandShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  {
+    gameName: 'ArmorBoostStore',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    armorGrant: 20,
+    // Inherited from ArmorBoost; a Well purchase never reaches Time Piece.
+    goldConversionEligible: true,
+  },
   {
     gameName: 'EmptyMaxHealthShopItem',
     kind: 'consumable',

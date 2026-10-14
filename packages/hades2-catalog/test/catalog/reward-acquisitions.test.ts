@@ -164,6 +164,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         'AirBoost',
         'ArmorBigBoost',
         'ArmorBoost',
+        'ArmorBoostStore',
         'CardUpgradePointsDrop',
         'CharonPointsDrop',
         'Currency',
@@ -682,6 +683,26 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     ).toEqual([[], [], []]);
   });
 
+  it('normalizes each armor item amount (ConsumableData AddArmor)', () => {
+    expect(
+      Object.fromEntries(
+        rewardKernelCatalog.acquisitions.values
+          .filter((acquisition) => acquisition.armorGrant !== undefined)
+          .map((acquisition) => [acquisition.gameName, acquisition.armorGrant]),
+      ),
+    ).toEqual({ ArmorBoost: 20, ArmorBigBoost: 40, ArmorBoostStore: 20 });
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'ArmorBoost' ? { ...acquisition, armorGrant: 0 } : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow(/armorGrant/);
+  });
+
   it('keeps the exhaustive acquisition identity and projection registry exact', () => {
     const lootAndUse = rewardKernelCatalog.acquisitions.values
       .filter((entry) => entry.historyProjection === 'lootAndUse')
@@ -737,6 +758,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'StoreRewardRandomStack',
       'LastStandDrop',
       'LastStandShopItem',
+      'ArmorBoostStore',
       'EmptyMaxHealthShopItem',
       'ChaosWeaponUpgrade',
       'BlindBoxLoot',
@@ -756,7 +778,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(60);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(61);
   });
 
   it('rejects incomplete source contracts at catalog construction', () => {

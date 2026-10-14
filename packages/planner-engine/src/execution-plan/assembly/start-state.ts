@@ -400,6 +400,7 @@ export function executionStartState(
         ),
       ),
     }),
+    itemArmor: installation.itemArmor,
     stygianWell: Object.freeze({
       timedTraits: Object.freeze(
         installation.stygianWell.timedInstances.map(({ traitKey, clock, remainingUses }) =>

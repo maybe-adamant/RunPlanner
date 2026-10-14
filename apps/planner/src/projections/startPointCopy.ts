@@ -15,6 +15,7 @@ const FAMILY_LABELS: Readonly<Record<StartInstallationFamily, string>> = Object.
   arcana: 'Arcana',
   fear: 'Fear',
   maxStats: 'max Health or Magick',
+  itemArmor: 'armor',
   stygianWell: 'Well of Charon items',
   hermesDeliveries: 'Hermes deliveries',
   hex: 'Hex progress',

@@ -110,6 +110,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
         lifetimeGodPickupRecord: orderedRecord(history.lifetimeGodPickupRecord),
         resourceGains: orderedRecord(history.resourceGains),
         maxStatGains: history.maxStatGains,
+        itemArmor: history.itemArmor,
         lastRewardRecreation: history.lastRewardRecreation,
         traitFacts: history.traitFacts,
         lastDevotionDepth: history.lastDevotionDepth,

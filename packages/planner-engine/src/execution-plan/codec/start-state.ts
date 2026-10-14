@@ -447,6 +447,7 @@ export function startState(value: unknown): ExecutionStartState {
       'arcanaBarren',
       'disabledVows',
       'maxStats',
+      'itemArmor',
       'stygianWell',
       'hermesDeliveries',
       'rewardPriorities',
@@ -506,6 +507,7 @@ export function startState(value: unknown): ExecutionStartState {
     arcanaBarren: booleanValue(row.arcanaBarren, `${label}.arcanaBarren`),
     disabledVows: Object.freeze(stringArray(row.disabledVows, `${label}.disabledVows`)),
     maxStats: maxStats(row.maxStats, `${label}.maxStats`),
+    itemArmor: integer(row.itemArmor, `${label}.itemArmor`),
     stygianWell: well(row.stygianWell, `${label}.stygianWell`),
     hermesDeliveries: list(
       row.hermesDeliveries,

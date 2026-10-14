@@ -338,6 +338,16 @@ local function installHiddenGrants(start)
     end
 end
 
+-- Item armor is one hidden MinorArmorBoon, created as RoomLogic.AddArmor
+-- creates it; the start room's CostumeArmor setup sets its CurrentArmor.
+local function installItemArmor(start)
+    if start.itemArmor == 0 then return end
+    local data = processed("MinorArmorBoon")
+    data.SetupFunction.Args.BaseAmount = start.itemArmor
+    data.SetupFunction.Args.Silent = true
+    add(data)
+end
+
 local function installWell(start)
     local well, names = start.stygianWell, nativeBindings.conformance.stygianWellTraits
     for _, row in ipairs(well.timedTraits) do
@@ -455,6 +465,7 @@ function install.hero(start, context)
         installChaos(start)
         installKeepsakes(start)
         installHiddenGrants(start)
+        installItemArmor(start)
         installWell(start)
         installDeliveries(start)
         installHex(start, context.hexTree, context.diagnostic)

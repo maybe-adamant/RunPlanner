@@ -16,6 +16,7 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   applyConcreteAcquisition,
   consumeCountedOffer,
+  creditItemArmor,
   creditMaxStatGain,
   creditResourceGains,
   isOfferSupportedAtResolutionPoint,
@@ -523,16 +524,19 @@ export function applyProducerRoleHistory(
       branch.state.rewardHistory,
       acquisition.acquisition,
     );
-    const history = creditMaxStatGain(
-      collected.amounts === undefined
-        ? acquiredHistory
-        : creditResourceGains(acquiredHistory, collected.amounts),
-      resolveProducedMaxStatGrant(
-        catalog,
-        acquisition.acquisition.gameName,
-        incoming.producerLifecycleKey,
-        branch.state.reached.routePosition.routeKey,
+    const history = creditItemArmor(
+      creditMaxStatGain(
+        collected.amounts === undefined
+          ? acquiredHistory
+          : creditResourceGains(acquiredHistory, collected.amounts),
+        resolveProducedMaxStatGrant(
+          catalog,
+          acquisition.acquisition.gameName,
+          incoming.producerLifecycleKey,
+          branch.state.reached.routePosition.routeKey,
+        ),
       ),
+      concreteDeclaration?.armorGrant,
     );
     let acquisitionTraitHistory = materializedBranch.state.traitHistory;
     if (pickupEffect?.kind === 'anvilOfFates' && authoredAnvilResult?.kind === 'anvilOfFates') {

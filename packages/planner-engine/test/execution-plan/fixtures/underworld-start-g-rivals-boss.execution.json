@@ -384,6 +384,7 @@
       "maxMana": 265,
       "hiddenGrants": [{ "source": { "kind": "pickups" }, "maxHealth": 40, "maxMana": 75 }]
     },
+    "itemArmor": 0,
     "stygianWell": {
       "timedTraits": [],
       "sparkUses": 0,
@@ -4252,5 +4253,5 @@
       }
     }
   ],
-  "planFingerprint": "112a2a07"
+  "planFingerprint": "5cf357b4"
 }

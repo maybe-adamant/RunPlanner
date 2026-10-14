@@ -674,6 +674,7 @@ describe('keepsake normalization', () => {
         'StackUpgradeTriple',
         'ArmorBoost',
         'ArmorBigBoost',
+        'ArmorBoostStore',
         'LastStandDrop',
         'RoomRewardConsolationPrize',
         'GiftDrop',

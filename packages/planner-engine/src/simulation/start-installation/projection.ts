@@ -358,6 +358,7 @@ function families(
       effectiveRanks: fear.effectiveRanks,
     }),
     maxStats: maxStats(catalog, state),
+    itemArmor: state.rewardHistory.itemArmor,
     stygianWell: stygianWell(state),
     hermesDeliveries: sorted(
       Object.values(state.pendingHermesShrineDeliveries).map((delivery) =>
@@ -404,6 +405,7 @@ const FAMILY_ORDER: readonly StartInstallationFamily[] = Object.freeze([
   'arcana',
   'fear',
   'maxStats',
+  'itemArmor',
   'stygianWell',
   'hermesDeliveries',
   'hex',

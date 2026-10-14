@@ -129,6 +129,11 @@ local function nativeWorld(base, start)
                 data.PropertyChanges = { { LuaProperty = property, ChangeValue = 25 } }
             end
             if args.TraitName == "SpellPotionTrait" then data.MaxUses = 3 end
+            -- TraitData_Essence.MinorArmorBoon.
+            if args.TraitName == "MinorArmorBoon" then
+                data.CostumeTrait, data.Hidden = true, true
+                data.SetupFunction = { Name = "CostumeArmor", Args = { Source = "Essence", BaseAmount = 10 } }
+            end
             if args.TraitName:match("^Chaos") then
                 data.PropertyChanges, data.RarityBonus, data.AddOutgoingDamageModifiers = { {}, {} }, {}, {}
             end
@@ -354,6 +359,27 @@ function TestPracticeStart.testCollectedEssencesInstallAsHiddenEssenceTraits()
     lu.assertEquals(held("ElementalEssence"), 0)
     lu.assertEquals(readers.read("elementCounts", world.run),
         { Aether = 0, Earth = 1, Air = 0, Fire = 2, Water = 3 })
+end
+
+function TestPracticeStart.testItemArmorInstallsOneHiddenArmorTrait()
+    local plan = decode("surface-start-q-opening")
+    lu.assertEquals(plan.startState.itemArmor, 20)
+    local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+    startRun(plan, world, { StartingBiome = "F" })
+    local log = world.log
+    lu.assertTrue(position(log, "add:MinorArmorBoon:nil") < position(log, "rerollsAndDeathDefiance"))
+    local armor = world.hero.TraitDictionary.MinorArmorBoon
+    lu.assertEquals(#armor, 1)
+    -- The start room's CostumeArmor setup sets CurrentArmor from BaseAmount.
+    lu.assertEquals(armor[1].SetupFunction.Args, { Source = "Essence", BaseAmount = 20, Silent = true })
+    lu.assertNil(armor[1].CurrentArmor)
+
+    local none = decode("underworld-start-i-preboss")
+    lu.assertEquals(none.startState.itemArmor, 0)
+    local bare = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, none.startState)
+    startRun(none, bare, { StartingBiome = "F" })
+    lu.assertNil(bare.hero.TraitDictionary.MinorArmorBoon)
+    lu.assertNil(indexOf(bare.log, "add:MinorArmorBoon:nil"))
 end
 
 -- RunLogic.GetBiomeDepth: rooms since the last NextRoomSet, the current one

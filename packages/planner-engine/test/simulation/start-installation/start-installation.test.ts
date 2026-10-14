@@ -13,6 +13,7 @@ import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
 import {
   loadSurfaceNOPQProject,
   surfaceSeleneHexPathProject,
+  surfaceShrineDeliveriesProject,
 } from '@run-planner/test-fixtures/surface';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
@@ -175,6 +176,18 @@ describe('mid-run start installation', () => {
     ]);
   });
 
+  it('installs the item armor held at each start point', () => {
+    // An O Hermes delivery hands over one Armor before O's Preboss.
+    const shrine = evaluated(surfaceShrineDeliveriesProject());
+    expect(
+      (['opening', 'preboss', 'boss'] as const).map(
+        (kind) => shrine.installed({ biomeKey: 'O', kind }).itemArmor,
+      ),
+    ).toEqual([0, 20, 20]);
+    expect(shrine.installed({ biomeKey: 'P', kind: 'opening' }).itemArmor).toBe(20);
+    expect(golden.installed({ biomeKey: 'G', kind: 'opening' }).itemArmor).toBe(0);
+  });
+
   it('is unavailable where no mid-run start state exists', () => {
     expect(golden.install({ biomeKey: 'F', kind: 'opening' }).availability).toBe('unavailable');
     expect(golden.install({ biomeKey: 'F', kind: 'opening' })).toMatchObject({
@@ -251,6 +264,14 @@ describe('mid-run start installation', () => {
       expect(project([state!, other])).toEqual({
         availability: 'unavailable',
         reason: { kind: 'branchesDisagree', families: ['runRecords'] },
+      });
+    });
+
+    it('requires item armor to agree by branch', () => {
+      const other = withRewardHistory({ itemArmor: state!.rewardHistory.itemArmor + 20 });
+      expect(project([state!, other])).toEqual({
+        availability: 'unavailable',
+        reason: { kind: 'branchesDisagree', families: ['itemArmor'] },
       });
     });
 

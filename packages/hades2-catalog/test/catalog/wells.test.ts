@@ -124,7 +124,7 @@ describe('Stygian Well room facts', () => {
       ...(publishedEffect === undefined ? {} : { publishedEffect }),
     });
     expect(grants).toEqual({
-      ArmorBoostStore: { kind: 'ledger' },
+      ArmorBoostStore: { kind: 'consumable', acquisitionGameName: 'ArmorBoostStore' },
       DamageSelfDrop: { kind: 'immediate' },
       HealDropRange: { kind: 'immediate' },
       EmptyMaxHealthShopItem: {
