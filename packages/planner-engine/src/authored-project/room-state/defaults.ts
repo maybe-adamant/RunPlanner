@@ -42,14 +42,14 @@ function requireCountedStore(
 
 /**
  * A declaration-owned store narrows the set of defaults an occurrence may
- * use. A normal batch store is only the fallback for declarations that do
- * not impose either a forced or individual store.
+ * use: an individual store wins over a forced one, and a normal batch store is
+ * only the fallback for declarations that impose neither.
  */
 function defaultCountedStoreKey(
   room: RoomDeclaration,
   batchStoreKey: string | undefined,
 ): string | undefined {
-  return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
+  return room.individualRewardStoreKey ?? room.forcedRewardStoreKey ?? batchStoreKey;
 }
 
 function defaultShopState(

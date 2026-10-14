@@ -403,8 +403,8 @@ describe('counted reward authoring domains', () => {
       Object.freeze({
         ...sideRoom,
         incomingReward: fallbackBinding,
-        forcedRewardStoreKey: 'SubRoomRewardsHard',
-        individualRewardStoreKey: 'SubRoomRewards',
+        forcedRewardStoreKey: 'SubRoomRewards',
+        individualRewardStoreKey: 'SubRoomRewardsHard',
       }),
     );
     const fallbackLocal = resolveCountedRewardTypeDomain(
@@ -414,6 +414,7 @@ describe('counted reward authoring domains', () => {
       fallbackBinding,
       undefined,
     );
+    // The individual Hard store wins over the forced one, as at the door.
     expect(fallbackLocal).toContain('MaxHealthDrop');
     expect(fallbackLocal).not.toContain('MaxHealthDropSmall');
   });

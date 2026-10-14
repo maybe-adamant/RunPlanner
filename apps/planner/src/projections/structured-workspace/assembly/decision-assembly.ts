@@ -28,6 +28,8 @@ import type {
   FieldsBatchFacts,
 } from '@run-planner/engine/simulation';
 import {
+  authoredBatchEnteredRewardStores,
+  canonicalBatchEnteredRewardStores,
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,
   targetContinuation,
@@ -59,7 +61,7 @@ import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 import { projectWorkspaceDoorContract } from './door-contract';
 import type {
   WorkspaceBatchRepairIntent,
-  WorkspaceEffectiveRewardStore,
+  WorkspaceBatchRewardPool,
   WorkspaceFieldsBatchContext,
   WorkspaceInheritedRewardStore,
   WorkspaceMissingPhysicalTarget,
@@ -280,46 +282,13 @@ function fieldsContextForAuthoredBatch(
 }
 
 /**
- * The evaluated half: a forced room in the batch substituted its own store for
- * the authored one. This is the original product and stays the authority where
- * it applies, so the declaration-driven half never restates it.
- */
-function evaluatedEffectiveRewardStore(
-  decision: AuthoredBatchDecision,
-  evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
-): WorkspaceEffectiveRewardStore | undefined {
-  if (
-    decision.normal.rewardStore.kind !== 'authoredBaseStore' ||
-    decision.normal.rewardStore.baseRewardStoreKey === null
-  ) {
-    return undefined;
-  }
-  const resolvedStoreKey = evaluated?.batch.resolvedSharedRewardStoreKey;
-  if (
-    resolvedStoreKey === undefined ||
-    resolvedStoreKey === decision.normal.rewardStore.baseRewardStoreKey
-  ) {
-    return undefined;
-  }
-  return Object.freeze({
-    label: workspaceRewardStoreLabel(resolvedStoreKey),
-    storeKey: resolvedStoreKey,
-  });
-}
-
-/**
- * The ship-decided store row. A `sourceOfferPoint` batch carries no authored
- * store of its own: its ShipCombat source's last active reward wheel already
- * fixed the pool, so the row reports that resolution and links to the wheel.
- *
- * The value is the batch's, not the target's: it is what this decision carries,
- * whatever the room behind the door then does with it. The per-door disposition
- * line reports that separately.
+ * The ship-decided pool. A `sourceOfferPoint` batch carries no authored store:
+ * its ShipCombat source's last active reward wheel already fixed it, so the row
+ * reports that resolution and links to the wheel.
  */
 function inheritedRewardStoreForBatch(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: AuthoredBatchDecision,
-  targets: readonly WorkspacePhysicalTarget[],
 ): WorkspaceInheritedRewardStore | undefined {
   if (decision.normal.rewardStore.kind !== 'sourceOfferPoint') return undefined;
   const topology = input.source.plan.topology;
@@ -328,15 +297,7 @@ function inheritedRewardStoreForBatch(
   // The resolution already rejects a non-occurrence source; the check here only
   // narrows the type for the wheel address below.
   if (resolution === undefined || decision.source.kind !== 'occurrence') return undefined;
-  // At most one authored door: with siblings in the batch, a forced sibling
-  // rewrites the shared store for every non-forced door, so the seed alone
-  // would misreport. A batch with no authored door yet has no sibling to
-  // misreport against, and the value is the source's, so it reports at once:
-  // the batch rule is settled before any room is picked.
-  if (targets.length > 1) return undefined;
   return Object.freeze({
-    explanation:
-      'The ship combat before this door already rolled its reward pool, and this door keeps it.',
     label: workspaceRewardStoreLabel(resolution.storeKey),
     storeKey: resolution.storeKey,
     wheel: input.markerDestinations.marker(
@@ -349,86 +310,64 @@ function inheritedRewardStoreForBatch(
   });
 }
 
-/** The pool value this batch carries to its door, before the room acts on it. */
-function batchRewardStoreValue(
+/**
+ * What the selected exit counts for the store ratio, only where it differs from
+ * the pool the batch carries. The engine resolves the counted store; this only
+ * names it.
+ */
+function effectiveRewardPool(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: AuthoredBatchDecision,
+  evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
+  carriedStoreKey: string | undefined,
 ): string | undefined {
-  const rewardStore = decision.normal.rewardStore;
-  switch (rewardStore.kind) {
-    case 'none':
-      return undefined;
-    case 'authoredBaseStore':
-      return rewardStore.baseRewardStoreKey ?? undefined;
-    case 'sourceOfferPoint': {
-      const topology = input.source.plan.topology;
-      return topology === null
+  const topology = input.source.plan.topology;
+  const stores =
+    evaluated !== undefined
+      ? canonicalBatchEnteredRewardStores(input.catalog, evaluated.batch)
+      : topology === null
         ? undefined
-        : sourceOfferPointStoreResolution(topology, decision.source)?.storeKey;
+        : authoredBatchEnteredRewardStores(input.catalog, topology, decision);
+  const selected = stores?.selected;
+  if (selected === undefined) return undefined;
+  const roomLabel = requireWorkspaceRoom(input.catalog, selected.gameName).label;
+  switch (selected.entered.kind) {
+    case 'unresolved':
+      return undefined;
+    case 'none':
+      return `Discarded by ${roomLabel}`;
+    case 'store': {
+      const { storeKey } = selected.entered;
+      if (storeKey === carriedStoreKey) return undefined;
+      const label = workspaceRewardStoreLabel(storeKey);
+      return selected.exit.kind === 'additional' ? `${label} · ${roomLabel}` : label;
     }
   }
 }
 
 /**
- * A row appears only where the door deviates from the default of banking the
- * carried pool: a room whose `enteredRewardStoreHistory` is `none` never puts
- * it in the run ledger ("Discarded"), and a room pinning its own store replaces
- * the carried one before the entry is made (the store's label and value, the
- * same shape the evaluated substitution row uses). A room that simply banks the
- * pool — combat, Fountain, shop, fixed-reward story — gets no row: the value
- * surface above already names the pool, and silence is the unmarked case in
- * every biome. Pins are read in the order the store resolution applies them —
- * an individual store wins over a forced one (RoomLogic.lua:3951-3956).
- *
- * Scoped to a source that declares exactly one normal exit, so the batch has one
- * door by construction. With siblings, a forced door rewrites the shared store
- * for the doors after it and the evaluated substitution row owns that story.
+ * The batch's one pool row wherever the batch has a pool: the editable picker
+ * or the ship-decided value, beside what the selected exit counts.
  */
-function declaredEffectiveRewardStore(
-  input: WorkspaceDecisionAssemblyBaseInput,
-  decision: AuthoredBatchDecision,
-  targets: readonly WorkspacePhysicalTarget[],
-  physical: readonly DeclaredPhysicalExit[],
-): WorkspaceEffectiveRewardStore | undefined {
-  if (decision.normal.rewardStore.kind === 'none') return undefined;
-  if (physical.filter((exit) => exit.kind === 'normal').length !== 1) return undefined;
-  const target = targets.length === 1 ? targets[0] : undefined;
-  if (target === undefined) return undefined;
-  const carried = batchRewardStoreValue(input, decision);
-  if (carried === undefined) return undefined;
-  const room = requireWorkspaceRoom(input.catalog, target.room.gameName);
-  const store = (storeKey: string): WorkspaceEffectiveRewardStore =>
-    Object.freeze({ label: workspaceRewardStoreLabel(storeKey), storeKey });
-  // The count model decides discarded: a room whose entered-store history is
-  // `none` never puts the carried pool in the run ledger, whatever reward it
-  // hands out. (An incoming-reward test would misread rooms that count with no
-  // ordinary offer, such as bosses, and ledger-excluded rooms that still offer
-  // rewards, such as the N hub.)
-  if (room.enteredRewardStoreHistory.kind === 'none') {
-    return Object.freeze({ label: 'Discarded by this room' });
-  }
-  if (room.individualRewardStoreKey !== undefined) return store(room.individualRewardStoreKey);
-  if (room.forcedRewardStoreKey !== undefined) return store(room.forcedRewardStoreKey);
-  return undefined;
-}
-
-/**
- * One presentation for "what becomes of the pool at this door". The evaluated
- * substitution is the original product and wins where it applies; otherwise the
- * target's own declarations answer, so a door never carries two rows saying the
- * same thing in different words.
- */
-function effectiveRewardStoreForBatch(
+function rewardPoolForBatch(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: AuthoredBatchDecision,
   evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
-  targets: readonly WorkspacePhysicalTarget[],
-  physical: readonly DeclaredPhysicalExit[],
-): WorkspaceEffectiveRewardStore | undefined {
-  return (
-    evaluatedEffectiveRewardStore(decision, evaluated) ??
-    declaredEffectiveRewardStore(input, decision, targets, physical)
-  );
+  editable: boolean,
+): WorkspaceBatchRewardPool | undefined {
+  const inherited = inheritedRewardStoreForBatch(input, decision);
+  if (!editable && inherited === undefined) return undefined;
+  const rewardStore = decision.normal.rewardStore;
+  const carried =
+    inherited?.storeKey ??
+    (rewardStore.kind === 'authoredBaseStore'
+      ? (rewardStore.baseRewardStoreKey ?? undefined)
+      : undefined);
+  const effective = effectiveRewardPool(input, decision, evaluated, carried);
+  return Object.freeze({
+    ...(effective === undefined ? {} : { effective }),
+    ...(inherited === undefined ? {} : { inherited }),
+  });
 }
 
 function missingTargetPrerequisite(
@@ -1010,14 +949,7 @@ function assembleBatchDecision(
   const hasEditableAuthoredRewardStore =
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
-  const effectiveRewardStore = effectiveRewardStoreForBatch(
-    input,
-    decision,
-    evaluated,
-    targets,
-    physical,
-  );
-  const inheritedRewardStore = inheritedRewardStoreForBatch(input, decision, targets);
+  const rewardPool = rewardPoolForBatch(input, decision, evaluated, hasEditableAuthoredRewardStore);
   const zagreusAdditional = authoredAdditional.find(
     (additional) => additional.kind === 'zagreusContract',
   );
@@ -1124,10 +1056,8 @@ function assembleBatchDecision(
       : undefined;
   const base = {
     batchState: decision.normal.batchState,
-    ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
     ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
     ...(fields === undefined ? {} : { fields }),
-    ...(inheritedRewardStore === undefined ? {} : { inheritedRewardStore }),
     ...(zagreusContract === undefined
       ? {}
       : {
@@ -1170,6 +1100,7 @@ function assembleBatchDecision(
     owner,
     persistence: input.persistence,
     ...(repairIntent === undefined ? {} : { repairIntent }),
+    ...(rewardPool === undefined ? {} : { rewardPool }),
     ...(hasEditableAuthoredRewardStore
       ? {
           rewardStore: input.markerDestinations.marker(

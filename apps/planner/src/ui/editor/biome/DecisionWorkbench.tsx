@@ -8,6 +8,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
+  type WorkspaceBatchRewardPool,
   type WorkspaceInheritedRewardStore,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
@@ -30,7 +31,7 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
@@ -506,11 +507,8 @@ export function SelectedContinuationAction({
   );
 }
 
-/**
- * The ship-decided pool. Read-only by construction: the wheel that rolled it
- * owns the choice, so this row only reports it and navigates to that wheel.
- */
-function InheritedRewardStoreRow({
+/** The ship-decided pool: a fixed value at the picker's height, linking to its wheel. */
+function InheritedRewardStoreField({
   inherited,
   nodeKey,
 }: {
@@ -518,20 +516,55 @@ function InheritedRewardStoreRow({
   readonly nodeKey: string;
 }) {
   const dispatch = useAppDispatch();
+  const labelId = useId();
   return (
-    <div className="inherited-reward-store" role="status">
-      <span>Reward pool from ship</span>
-      <strong>{inherited.label}</strong>
-      <p className="door-information-note">{inherited.explanation}</p>
-      <button
-        className="semantic-focus-link"
-        data-workspace-node={inherited.wheel.focusKey}
-        id={`${nodeKey}-inherited-reward-store-wheel`}
-        onClick={() => dispatch(semanticOwnerFocused(inherited.wheel.address))}
-        type="button"
-      >
-        Open the deciding wheel
-      </button>
+    <div className="field-control field-control-inline batch-inherited-pool">
+      <span id={labelId}>Reward Pool</span>
+      <span aria-labelledby={labelId} className="batch-pool-value" role="group">
+        <strong>{inherited.label}</strong>
+        <span className="batch-pool-value-tag">from ship combat</span>
+        <button
+          className="semantic-focus-link"
+          data-workspace-node={inherited.wheel.focusKey}
+          id={`${nodeKey}-inherited-reward-store-wheel`}
+          onClick={() => dispatch(semanticOwnerFocused(inherited.wheel.address))}
+          type="button"
+        >
+          Open wheel
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/** The pool row: the batch's pool beside what the selected exit counts, both always in place. */
+function RewardPoolRow({
+  nodeKey,
+  pool,
+  picker,
+}: {
+  readonly nodeKey: string;
+  readonly pool: WorkspaceBatchRewardPool;
+  readonly picker: ReactNode;
+}) {
+  const effectiveLabelId = useId();
+  return (
+    <div className="batch-reward-pool">
+      {picker ??
+        (pool.inherited === undefined ? (
+          <div aria-hidden="true" className="field-control field-control-inline">
+            <span>Reward Pool</span>
+            <span className="batch-pool-value" />
+          </div>
+        ) : (
+          <InheritedRewardStoreField inherited={pool.inherited} nodeKey={nodeKey} />
+        ))}
+      <div className="field-control field-control-inline batch-effective-pool">
+        <span id={effectiveLabelId}>Effective Pool</span>
+        <span aria-labelledby={effectiveLabelId} className="batch-pool-value" role="status">
+          {pool.effective ?? ''}
+        </span>
+      </div>
     </div>
   );
 }
@@ -560,31 +593,22 @@ function BatchSettings({
         );
   return (
     <>
-      <div className="batch-controls">
-        {store === undefined ? null : (
-          <CandidatePicker
-            id={`${node.key}-reward-store`}
-            interaction={store}
-            label={node.rewardStoreLabel ?? 'Reward Pool'}
-            onReplace={(storeKey) => executeIntent(store.intentFor(storeKey))}
-            placeholder="Select pool"
-          />
-        )}
-      </div>
-      {store === undefined &&
-      node.inheritedRewardStore === undefined &&
-      node.effectiveRewardStore === undefined ? null : (
-        <div className="batch-pool-information">
-          {node.inheritedRewardStore === undefined ? null : (
-            <InheritedRewardStoreRow inherited={node.inheritedRewardStore} nodeKey={node.key} />
-          )}
-          {node.effectiveRewardStore === undefined ? null : (
-            <div className="effective-reward-store" role="status">
-              <span>Effective reward pool</span>
-              <strong>{node.effectiveRewardStore.label}</strong>
-            </div>
-          )}
-        </div>
+      {node.rewardPool === undefined ? null : (
+        <RewardPoolRow
+          nodeKey={node.key}
+          picker={
+            store === undefined ? undefined : (
+              <CandidatePicker
+                id={`${node.key}-reward-store`}
+                interaction={store}
+                label={node.rewardStoreLabel ?? 'Reward Pool'}
+                onReplace={(storeKey) => executeIntent(store.intentFor(storeKey))}
+                placeholder="Select pool"
+              />
+            )
+          }
+          pool={node.rewardPool}
+        />
       )}
       {fields === undefined && node.fields === undefined ? null : (
         <div className="fields-batch-editor">

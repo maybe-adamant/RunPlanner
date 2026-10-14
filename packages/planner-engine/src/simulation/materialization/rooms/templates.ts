@@ -110,7 +110,26 @@ export function resolvedStoreKey(
   room: RoomDeclaration,
   batchStoreKey: string | undefined,
 ): string | undefined {
-  return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? batchStoreKey;
+  return room.individualRewardStoreKey ?? room.forcedRewardStoreKey ?? batchStoreKey;
+}
+
+/** What entering a room records for the store ratio, given the store its door carried. */
+export type EnteredRewardStore =
+  | { readonly kind: 'store'; readonly storeKey: string }
+  | { readonly kind: 'none' }
+  | { readonly kind: 'unresolved' };
+
+export function enteredRewardStore(
+  room: RoomDeclaration,
+  batchStoreKey: string | undefined,
+): EnteredRewardStore {
+  const history = room.enteredRewardStoreHistory;
+  if (history.kind === 'none') return Object.freeze({ kind: 'none' });
+  const storeKey =
+    history.kind === 'fixed' ? history.storeKey : resolvedStoreKey(room, batchStoreKey);
+  return storeKey === undefined
+    ? Object.freeze({ kind: 'unresolved' })
+    : Object.freeze({ kind: 'store', storeKey });
 }
 
 /**

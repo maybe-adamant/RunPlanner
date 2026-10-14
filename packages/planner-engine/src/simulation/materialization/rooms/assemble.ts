@@ -30,7 +30,7 @@ import type { CanonicalAuthoredRoom } from '../model';
 import {
   authoredMaterializer,
   materializeRouteStartEntry,
-  resolvedStoreKey,
+  enteredRewardStore,
   type AuthoredRoomMaterializationContext,
   type MaterializedRoomLeaf,
 } from './templates';
@@ -175,13 +175,10 @@ export function materializeAuthoredRoom(
     leaf.incomingReward === undefined || !suppressesIncomingReward
       ? leaf.incomingReward
       : Object.freeze({ ...leaf.incomingReward, acquisitionEnabled: false });
+  const entered = enteredRewardStore(context.room, context.batchStoreKey);
   const enteredRewardStoreKey =
     resolvedEntry.enteredRewardStoreKey ??
-    (context.room.enteredRewardStoreHistory.kind === 'resolvedOffer'
-      ? resolvedStoreKey(context.room, context.batchStoreKey)
-      : context.room.enteredRewardStoreHistory.kind === 'fixed'
-        ? context.room.enteredRewardStoreHistory.storeKey
-        : undefined);
+    (entered.kind === 'store' ? entered.storeKey : undefined);
   const stygianWellOfferEffects =
     context.occurrence.stygianWell === undefined
       ? undefined

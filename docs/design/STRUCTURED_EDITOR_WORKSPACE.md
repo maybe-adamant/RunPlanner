@@ -647,10 +647,18 @@ therefore retains its reward editor and finding destination in the decision.
 Single-choice controls live on those cards, and the picked card receives the
 strongest emphasis because it is the authored selected route. Evaluated entry
 is shown separately when materialization has actually reached that room.
-For an authored RunProgress/MetaProgress decision, the batch control is labeled
-as the base reward pool. When a declaration-owned forced room changes the
-evaluated final shared pool, the decision also presents that effective pool and
-briefly identifies the forced-room override; React does not derive the result.
+A decision with a reward pool shows one pool row of two fixed-height halves.
+The left half is the Reward Pool: the editable picker for an authored
+RunProgress/MetaProgress batch, or, where an O ShipCombat wheel already decided
+the pool, a fixed value tagged as from ship combat with a link to that wheel.
+The right half is the Effective Pool: what the selected exit records for the
+store ratio, read from the engine's entered-store product for the batch. It is
+blank while no exit is selected or when the counted store equals the left
+half; otherwise it names the different store (a forced sibling's flip), the
+discarding room (`Discarded by <room>`) for a room that records no entered
+store, or an additional exit's own store with its room. Both halves keep their
+place while blank, may stack at narrow widths, and React derives none of the
+values. A decision without a pool renders no pool row.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
@@ -990,12 +998,11 @@ stays visible and editable with its finding. A finding never hides or disables
 its control, and the application never computes applicability itself.
 
 Information notes explain a rule or a result beneath their owning control:
-door pool results occupy a separate area below the editable pool control, and
-Fields, inherited-pool, and hidden-reward explanations share the
-`door-information-note` presentation. Candidate explanations stay inside the
-picker popover; the trigger retains its accessible description and invalid
-state without adding layout space. Placement and rejected-drag feedback float
-outside document flow.
+Fields and hidden-reward explanations share the `door-information-note`
+presentation; pool results live in the pool row's fixed Effective Pool half.
+Candidate explanations stay inside the picker popover; the trigger retains its
+accessible description and invalid state without adding layout space.
+Placement and rejected-drag feedback float outside document flow.
 
 ## Component Foundation
 

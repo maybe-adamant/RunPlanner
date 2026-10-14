@@ -78,7 +78,7 @@ function prebossFreeRewardStore(
   room: RoomDeclaration,
   incomingStore: string | undefined,
 ): string | undefined {
-  return room.forcedRewardStoreKey ?? room.individualRewardStoreKey ?? incomingStore;
+  return room.individualRewardStoreKey ?? room.forcedRewardStoreKey ?? incomingStore;
 }
 
 function completionChainForSelection(

@@ -38,7 +38,7 @@ reward type
 
 biome store-selection policy
   -> authored, source-offer-derived, or absent generated-batch base store
-      -> room forced/individual override
+      -> room individual/forced override
           -> resolved target store
 
 resolved target store + authored resolved reward offer
@@ -1214,6 +1214,14 @@ publishes the final shared store on the batch and records the resolved
 including fixed producers whose resolved store still contributes to later
 entered-room store-ratio history. A target with no producer and no resolved
 store emits no reward offer.
+
+The engine publishes what entering each exit of a batch records for the
+store ratio — a store, nothing, or not yet resolved — for every normal target
+and additional exit, and marks the selected one. It reads the authored batch
+through the same shared-store pass before evaluation, and the materialized
+rooms' entered stores after it. A normal door records its resolved target
+store under its room's `enteredRewardStoreHistory`; an additional exit records
+its own room's store, since that room receives no door store.
 
 No supported F/G room currently uses `IndividualRewardStore`; the normalized
 field is added only when a supported declaration needs it. The verified

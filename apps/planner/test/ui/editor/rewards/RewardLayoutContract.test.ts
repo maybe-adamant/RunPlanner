@@ -56,7 +56,7 @@ describe('Reward row layout', () => {
 
   it('keeps placement feedback out of flow and pool results separate from editable columns', () => {
     expect(cssBlock(workbenches, '.room-action-placement-notice')).toContain('position: fixed;');
-    expect(cssBlock(structure, '.batch-pool-information')).toContain('min-height: 2.5rem;');
+    expect(cssBlock(structure, '.batch-pool-value')).toContain('height: 36px;');
     expect(cssBlock(workbenches, '.effect-repair-action[data-inactive]')).toContain(
       'visibility: hidden;',
     );

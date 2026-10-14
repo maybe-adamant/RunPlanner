@@ -131,38 +131,27 @@ export interface WorkspaceFieldsBatchContext {
 }
 
 /**
- * What becomes of the pool this door carries — the one presentation for that
- * question. Usually a concrete store: the one a forced room substitutes for the
- * batch's own. Where the room takes the pool without naming a store, the label
- * says what it does with it instead and no `storeKey` accompanies it.
- */
-export interface WorkspaceEffectiveRewardStore {
-  readonly label: string;
-  /** Present only when the outcome is a concrete store. */
-  readonly storeKey?: string;
-}
-
-/**
- * A door whose store was already decided by its ShipCombat source's last
- * active reward wheel. Read-only: the wheel owns the choice, so this row
- * reports the resolved pool and links to the control that decides it.
+ * A batch store already decided by its ShipCombat source's last active reward
+ * wheel. Read-only: the wheel owns the choice, so the value links to it.
  */
 export interface WorkspaceInheritedRewardStore {
-  /** Short presentation copy for why this door carries no pool selector. */
-  readonly explanation: string;
   readonly label: string;
   readonly storeKey: string;
   /** Navigation to the owning wheel; the ship occurrence owns this marker. */
   readonly wheel: WorkspaceMarker;
 }
 
+/** The pool row of a batch that has a pool. */
+export interface WorkspaceBatchRewardPool {
+  /** What the selected exit counts, only where it differs from the carried pool. */
+  readonly effective?: string;
+  /** Present where the source's wheel decided the pool instead of the batch picker. */
+  readonly inherited?: WorkspaceInheritedRewardStore;
+}
+
 interface WorkspaceBatchNodeBase {
   readonly batchState: CanonicalBatch['batchState'] | AuthoredBatchState;
-  /** Present only when a forced room changes an evaluated authored base store. */
-  readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
-  /** Present only where the source's own wheel decided this batch's store. */
-  readonly inheritedRewardStore?: WorkspaceInheritedRewardStore;
   /** An authored additional exit is a sibling of normal targets, never a target row. */
   readonly chaos?: WorkspaceChaosExitControl;
   readonly zagreusContract?: WorkspaceZagreusContractControl;
@@ -173,6 +162,8 @@ interface WorkspaceBatchNodeBase {
   readonly owner: ExitDecisionAddress;
   readonly persistence: 'authored' | 'uncommitted';
   readonly repairIntent?: WorkspaceBatchRepairIntent;
+  /** Present wherever the batch carries a pool: an editable picker or a ship-decided value. */
+  readonly rewardPool?: WorkspaceBatchRewardPool;
   readonly rewardStore?: WorkspaceMarker;
   /** Projection-supplied label for the one editable batch store control. */
   readonly rewardStoreLabel?: string;

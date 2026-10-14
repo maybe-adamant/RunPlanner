@@ -11,6 +11,15 @@ export {
   type FieldsBatchFacts,
 } from './decision-facts';
 export { HubMaterializationContractError, materializeHubDecision } from './hub';
+export {
+  authoredBatchEnteredRewardStores,
+  BatchEnteredRewardStoreContractError,
+  canonicalBatchEnteredRewardStores,
+  type BatchEnteredRewardStores,
+  type BatchExitEnteredRewardStore,
+  type BatchExitKey,
+  type EnteredRewardStore,
+} from './entered-reward-stores';
 export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms/templates';
 export type {
   CanonicalAuthoredRoom,
