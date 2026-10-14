@@ -439,7 +439,7 @@ complete 25-name matrix.
 
 | Identity                                  | Exact game effect                                                        | Current planner disposition                                                 |
 | ----------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| `ArmorBoostStore`                         | Grants 20 armor                                                          | Ledger only; armor depleted by play                                         |
+| `ArmorBoostStore`                         | Grants 20 armor                                                          | Consumable record and item armor, kept under no damage                      |
 | `DamageSelfDrop`                          | Pays gold for 10-30 health damage                                        | Immediate; health/economy deferred                                          |
 | `HealDropRange`                           | Heals 21-39% maximum health                                              | Immediate; health deferred                                                  |
 | `EmptyMaxHealthShopItem`                  | Adds 25 maximum health without healing                                   | Consumable under its own name; health deferred                              |

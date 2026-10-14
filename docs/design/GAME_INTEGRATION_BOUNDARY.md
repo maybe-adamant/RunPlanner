@@ -794,7 +794,9 @@ state; assembly translates it, selecting and renaming fields. It carries:
   `PersistentDionysusSkipKeepsake` uses, and `traits`, exactly the keepsake
   traits the hero holds, each with its native rarity and counters
   (`RarityUpgradeData.Uses`, `BoonConversionUses`, `Uses`, `RemainingUses`,
-  the Bell and Fang multipliers, the Embryo's `CurrentRoom`). At most one row
+  the Bell and Fang multipliers, the Embryo's `CurrentRoom`, the Silken Sash's
+  `CurrentArmor`, which includes the start room's door gain because Practice
+  enters it without `LeaveRoom`). At most one row
   is `slotted`: the equipped keepsake, which the module equips natively with
   `ForceRarity` and without `FromLoot`. The others are held unslotted: a
   Permanent keepsake a swap kept (Discordant Bell, Jeweled Pom, and a Calling
@@ -814,6 +816,9 @@ state; assembly translates it, selecting and renaming fields. It carries:
   `RoomRewardMaxManaTrait` without a `Source`. Aspect, familiar, Arcana card,
   per-element, Chaos and Fight Fight Fight terms are re-derived from the
   installed traits. The expected maxima include every grant;
+- `itemArmor`: armor from armor items and from Silken Sash armor moved out by an
+  unequip or a Cherished Heirloom advance, which the module installs as one
+  hidden `MinorArmorBoon` with that `BaseAmount`, none at 0;
 - Well holdings and `WellShopPurchases`, pending Hermes deliveries, and the
   Spell (`hex.spellTraitName`) with its realised tree, invested nodes, talent
   points and closure. The module adds the Spell unless native `StartNewRun`
@@ -866,9 +871,10 @@ generated on the Boss's own `LeaveRoom`. Weather in F and N is absent on a
 Preboss or Boss start.
 
 Unknown state is not published and starts as a fresh install leaves it:
-timers, including the Expiring timer and Evade Evade Evade; armor, with Icarus
-armor boons intact; the Ghost Onion, Silver Wheel, Mist Veil and Hades
-lifesteal pools; spell charges, refilled including `BonusSpellUses`; rerolls;
+timers, including the Expiring timer and Evade Evade Evade; trait armor, which
+installed armor traits set full at their installed rarity (Dream NPC rarity is
+not yet carried, so a Dream-scaled Onyx or Protective installs at Common); the
+Ghost Onion, Silver Wheel, Mist Veil and Hades lifesteal pools; spell charges, refilled including `BonusSpellUses`; rerolls;
 Personal Loan gold; Last Gasp eligibility; and the last Challenge depth. Under
 the Boon Mana Reserve vow, installed boons hold no reserved Magick. Current
 health is set to the maximum. An Opening's weather is whatever the native
@@ -1254,8 +1260,8 @@ terminal and may release a local dependent; it does not attest that steering or
 the resulting state matched. A missing or different player acquisition does
 not become an adapter-local semantic comparison: durable modeled results are
 checked only by the sparse named room-exit conformance facts selected by the
-planner. Max health and Magick are modeled for Run State but not
-conformance-checked; other health, Magick, Gold, Armor, healing, and
+planner. Max health, Magick and lasting armor are modeled for Run State but not
+conformance-checked; other health, Magick, Gold, armor, healing, and
 meta-progression results are simulation-neutral. None has a blocking
 completion proof.
 Arachne's eight dresses and Icarus's Protective/Volatile Coating remain in

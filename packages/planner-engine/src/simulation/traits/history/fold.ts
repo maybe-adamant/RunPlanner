@@ -667,6 +667,7 @@ export function foldTraitHistoryEvents(
                 maxManaPerGrant: event.roomsPerUpgradeMaxMana,
               }),
             }),
+        ...(event.acquisitionArmor === undefined ? {} : { armor: event.acquisitionArmor }),
         ...(event.echoRepeatedKeepsakeKey === undefined
           ? {}
           : {

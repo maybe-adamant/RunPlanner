@@ -233,6 +233,13 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
                 <summary>Sources</summary>
                 <RunStateRows label="Maxima sources" rows={state.maxStats.sources} />
               </details>
+              <RunStateRows label="Armor" rows={state.armor.rows} />
+              {state.armor.sources.length === 0 ? null : (
+                <details className="run-state-max-stat-sources">
+                  <summary>Armor sources</summary>
+                  <RunStateRows label="Armor sources" rows={state.armor.sources} />
+                </details>
+              )}
             </section>
             <RunStateSections sections={state.overview} />
           </>

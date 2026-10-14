@@ -15,6 +15,7 @@ import type {
   RawMaxStatValue,
   RawTraitCatalogInput,
   RawTraitDeclaration,
+  RawTraitArmor,
   RawTraitMaxStatEffect,
 } from '../../declarations/traits/types';
 import {
@@ -159,6 +160,74 @@ function normalizeMaxStatValue(
   return Object.freeze(
     Object.fromEntries(rarities.map((rarity) => [rarity, scaled(rarity)])),
   ) as Readonly<Record<(typeof IN_RUN_RARITIES)[number], number>>;
+}
+
+/** Ranked armor scales to an integer per equipped rarity; rarityless armor resolves by ordinal. */
+function normalizeTraitArmor(
+  raw: RawTraitArmor,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): NonNullable<TraitDeclaration['armor']> {
+  requireObject(raw, path);
+  if (Object.keys(raw).some((key) => !['source', 'amount', 'levelBonuses'].includes(key)))
+    fail(path, 'has an unsupported key');
+  const source = requireNonEmpty(raw.source, `${path}.source`);
+  if (equippedRarities.length === 0) {
+    if (raw.levelBonuses !== undefined)
+      fail(`${path}.levelBonuses`, 'is declared only for ranked traits');
+    const amounts =
+      typeof raw.amount === 'number'
+        ? [raw.amount, raw.amount, raw.amount, raw.amount]
+        : requireArray(raw.amount, `${path}.amount`);
+    if (amounts.length !== 4) fail(`${path}.amount`, 'must declare four acquisition ordinals');
+    return Object.freeze({
+      source,
+      amount: Object.freeze({
+        kind: 'byAcquisitionOrdinal' as const,
+        byAcquisitionOrdinal: Object.freeze(
+          amounts.map((amount, index) =>
+            requirePositiveInteger(amount as number, `${path}.amount[${index}]`),
+          ),
+        ) as unknown as readonly [number, number, number, number],
+      }),
+    });
+  }
+  if (typeof raw.amount === 'number' || Array.isArray(raw.amount))
+    fail(`${path}.amount`, 'a ranked trait must scale by rarity');
+  const scaled = requireObject(raw.amount, `${path}.amount`);
+  const base = requirePositiveInteger(scaled.baseValue as number, `${path}.amount.baseValue`);
+  const scales = requireObject(scaled.rarityMultipliers, `${path}.amount.rarityMultipliers`);
+  const rarities = IN_RUN_RARITIES.filter((rarity) => equippedRarities.includes(rarity));
+  if (rarities.length !== equippedRarities.length || Object.keys(scales).length !== rarities.length)
+    fail(
+      `${path}.amount.rarityMultipliers`,
+      'must scale exactly this trait equipped ranked rarities',
+    );
+  const byRarity = Object.fromEntries(
+    rarities.map((rarity) => {
+      const multiplier = scales[rarity];
+      if (typeof multiplier !== 'number' || !(multiplier > 0))
+        fail(`${path}.amount.rarityMultipliers.${rarity}`, 'must be a positive multiplier');
+      const product = base * multiplier;
+      const rounded = Math.round(product);
+      if (Math.abs(product - rounded) > 1e-9)
+        fail(`${path}.amount.rarityMultipliers.${rarity}`, 'must scale to an integer');
+      return [rarity, rounded];
+    }),
+  ) as Readonly<Record<(typeof IN_RUN_RARITIES)[number], number>>;
+  const levelBonuses = Object.freeze(
+    requireArray(raw.levelBonuses ?? [], `${path}.levelBonuses`).map((bonus, index) =>
+      requirePositiveInteger(bonus as number, `${path}.levelBonuses[${index}]`),
+    ),
+  );
+  return Object.freeze({
+    source,
+    amount: Object.freeze({
+      kind: 'byRarity' as const,
+      byRarity: Object.freeze(byRarity),
+      levelBonuses,
+    }),
+  });
 }
 
 function normalizeMaxStatEffect(
@@ -791,6 +860,9 @@ export function normalizeTraits(
               `${path}.maxStatEffect`,
             ),
           }),
+      ...(trait.armor === undefined
+        ? {}
+        : { armor: normalizeTraitArmor(trait.armor, equippedRarities, `${path}.armor`) }),
       ...(trait.raisesAspectToPerfect === undefined
         ? {}
         : (trait.raisesAspectToPerfect as unknown) === true

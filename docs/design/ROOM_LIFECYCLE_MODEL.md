@@ -259,7 +259,10 @@ Every door use runs native `LeaveRoom`, so history records a `roomDeparted`
 for each first exit and for each departure from a restored room: the main room
 before each later side room and before the Hub return, and the Hub before each
 later visit and after the Handoff generation. The Hub's first departure also
-follows its fountain use rather than its `roomExited`.
+follows its fountain use rather than its `roomExited`. Each departure records
+its `destination`: a first-visit room, a restore, the next biome's first room,
+or the run end. A held Silken Sash gains its door armor only on a door into a
+room not visited before, which the run's first room and restores are not.
 The engine captures canonical Run State at every Hub departure, after any
 fountain use in that interval and before its departure clocks. These snapshots
 are execution conformance inputs, not additional Run State checkpoints, and

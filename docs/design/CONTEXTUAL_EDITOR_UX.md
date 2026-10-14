@@ -132,7 +132,8 @@ Hammer is an ordinary Hammer row with its encounters left, and an Aspect,
 Arcana or rarity effect shows only its result.
 
 Overview opens with the loadout (the aspect at Rank V, or VI once made Perfect,
-then the familiar), then Max Health and Max Magick with a Sources disclosure.
+then the familiar), then Max Health and Max Magick with a Sources disclosure,
+and Armor, assuming no damage, with its own sources when it has any.
 The Keepsake block follows: the equipped keepsake, then each still-running
 effect of it or of a kept keepsake. A forced-boon keepsake such as Cloud Bangle
 reads `(Ready)` until its forced Boon is delivered and `(Used)` after; Jeweled

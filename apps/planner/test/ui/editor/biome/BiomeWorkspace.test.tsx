@@ -675,6 +675,7 @@ describe('BiomeWorkspace', () => {
         .closest('.run-state-row')
         ?.querySelector('.run-state-row-right')?.textContent;
     expect(rowRight(overview, 'Max Health')).toMatch(/^\d+$/);
+    expect(rowRight(overview, 'Armor')).toMatch(/^\d+$/);
     expect(within(overview).getByRole('heading', { name: 'Keepsake' })).toBeTruthy();
     const traits = within(overview).getByRole('list', { name: 'Traits' });
     expect(rowRight(traits, 'Nova Strike')).toBe('Common · Lv. 2');

@@ -166,6 +166,27 @@ export type TraitMaxStatEffect =
   | { readonly kind: 'familiarStackMultiplier'; readonly multiplier: number };
 
 /**
+ * Lasting hero armor a held trait sets (`CostumeArmor`, `HephaestusArmor`),
+ * full under the no-damage assumption.
+ */
+export interface TraitArmor {
+  /** Native armor `Source`: only the first held trait of one source sets armor. */
+  readonly source: string;
+  readonly amount:
+    | {
+        readonly kind: 'byRarity';
+        readonly byRarity: Readonly<Record<InRunTraitRarity, number>>;
+        /** `AbsoluteStackValues`: unscaled armor per Pom level above 1; the last repeats. */
+        readonly levelBonuses: readonly number[];
+      }
+    /** Rarityless NPC traits; Dream menus grant the entered-biome rarity. */
+    | {
+        readonly kind: 'byAcquisitionOrdinal';
+        readonly byAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
+      };
+}
+
+/**
  * Source `ActivationRequirements` over element counts: the trait's effect
  * applies only while the requirement holds.
  */
@@ -333,6 +354,7 @@ export interface ResolvedTraitAcquisitionOrdinalEffect {
   readonly circeSelectionCount?: number;
   readonly roomDecayStartFraction?: number;
   readonly roomsPerUpgradeMaxMana?: number;
+  readonly armor?: number;
 }
 
 function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): number {
@@ -346,16 +368,24 @@ export function resolveTraitAcquisitionOrdinalEffect(
   disposition: TraitSelectedDisposition,
   ordinal: number,
   roomsPerUpgradeGrowth?: TraitDeclaration['roomsPerUpgradeGrowth'],
+  armor?: TraitDeclaration['armor'],
 ): ResolvedTraitAcquisitionOrdinalEffect {
   const resolved = resolveDispositionOrdinalEffect(disposition, ordinal);
-  return roomsPerUpgradeGrowth === undefined
+  return roomsPerUpgradeGrowth === undefined && armor?.amount.kind !== 'byAcquisitionOrdinal'
     ? resolved
     : Object.freeze({
         ...resolved,
-        roomsPerUpgradeMaxMana: ordinalValue(
-          roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal,
-          ordinal,
-        ),
+        ...(roomsPerUpgradeGrowth === undefined
+          ? {}
+          : {
+              roomsPerUpgradeMaxMana: ordinalValue(
+                roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal,
+                ordinal,
+              ),
+            }),
+        ...(armor?.amount.kind === 'byAcquisitionOrdinal'
+          ? { armor: ordinalValue(armor.amount.byAcquisitionOrdinal, ordinal) }
+          : {}),
       });
 }
 
@@ -619,6 +649,7 @@ export interface TraitDeclaration {
     readonly width: number;
   };
   readonly maxStatEffect?: TraitMaxStatEffect;
+  readonly armor?: TraitArmor;
   /** Acquiring it permanently re-adds the equipped aspect at Perfect (rank VI). */
   readonly raisesAspectToPerfect?: true;
   /** Its native offer requirement reads Death Defiance state, which the planner does not model. */

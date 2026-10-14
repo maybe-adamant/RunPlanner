@@ -9,13 +9,14 @@ const raritylessNpcTrait = {
   excludeFromRarityCount: false,
 } as const;
 
-/** Arachne's Story-room costume choices. Armor depletion is intentionally
- * collapsed: the selected costume remains in the equipped-trait ledger. */
+/** Arachne's Story-room costume choices. Armor is `CostumeArmor` `BaseAmount`,
+ * full under no damage; only Onyx's scales with the Dream menu rarity. */
 export const arachneTraits = [
   {
     key: 'AgilityCostume',
     label: 'Lavender Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 30 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -23,6 +24,7 @@ export const arachneTraits = [
     key: 'ManaCostume',
     label: 'Azure Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 40 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -30,6 +32,7 @@ export const arachneTraits = [
     key: 'VitalityCostume',
     label: 'Emerald Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 50 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -37,6 +40,8 @@ export const arachneTraits = [
     key: 'HighArmorCostume',
     label: 'Onyx Dress',
     ...raritylessNpcTrait,
+    // BaseValue 60 scaled by the Dream menu rarity: 80/60, 100/60, 140/60.
+    armor: { source: 'Robe', amount: [60, 80, 100, 140] },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -44,6 +49,7 @@ export const arachneTraits = [
     key: 'CastDamageCostume',
     label: 'Fuchsia Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 20 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -51,6 +57,7 @@ export const arachneTraits = [
     key: 'IncomeCostume',
     label: 'Gilded Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 10 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -58,6 +65,7 @@ export const arachneTraits = [
     key: 'SpellCostume',
     label: 'Moonlight Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 55 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -65,6 +73,7 @@ export const arachneTraits = [
     key: 'EscalatingCostume',
     label: 'Crimson Dress',
     ...raritylessNpcTrait,
+    armor: { source: 'Robe', amount: 5 },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

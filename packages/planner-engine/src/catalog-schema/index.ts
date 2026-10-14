@@ -48,6 +48,7 @@ export type {
   MaxStatKey,
   TraitMaxStatEffect,
   TraitMaxStatValue,
+  TraitArmor,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
   TraitActivationRequirement,

@@ -123,6 +123,11 @@ export const hephaestusTraits = [
   {
     key: 'HeavyArmorBoon',
     label: 'Heavy Metal',
+    // CostumeArmor BaseValue 50 by RarityLevels; BlockStacking, so no Pom levels.
+    armor: {
+      source: 'Tradeoff',
+      amount: { baseValue: 50, rarityMultipliers: { Common: 1, Rare: 1.5, Epic: 2, Heroic: 2.5 } },
+    },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],
@@ -138,6 +143,12 @@ export const hephaestusTraits = [
   {
     key: 'ArmorBoon',
     label: 'Trusty Shield',
+    // HephaestusArmor Amount BaseValue 10 by RarityLevels; AbsoluteStackValues 5/3/2/2.
+    armor: {
+      source: 'Renewable',
+      amount: { baseValue: 10, rarityMultipliers: { Common: 1, Rare: 1.5, Epic: 2, Heroic: 2.5 } },
+      levelBonuses: [5, 3, 2, 2],
+    },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],

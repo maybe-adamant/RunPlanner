@@ -173,3 +173,38 @@ Bounded approximations:
 - Familiars are assumed at the mature four stacks.
 - At acquisition `EchoIncreaseStats` adds its values directly before the next
   validation; the planner applies the validation formula throughout.
+
+## Lasting armor
+
+Every lasting armor source is a held trait with its own `CurrentArmor`.
+`CostumeArmor` (`CostumeLogic.lua:201-227`) finds the first held trait whose
+setup names its `Source`, sets `CurrentArmor` to `BaseAmount` only when it is
+nil, and adds it as a health buffer keyed by that trait's name
+(`AddHealthBuffer`, `CostumeLogic.lua:47-60`). Two held traits sharing a
+`Source` therefore give only the first one's armor.
+
+| Source                                           | `Source`    | Armor                                                                                                                                                           |
+| ------------------------------------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trusty Shield (`ArmorBoon`)                      | `Renewable` | `HephaestusArmor` `Amount` 10 × rarity (10/15/20/25), then `AbsoluteStackValues` +5, +3, +2, +2 and +2 per later Pom level, unscaled (`TraitLogic.lua:309-311`) |
+| Heavy Metal (`HeavyArmorBoon`)                   | `Tradeoff`  | 50 × rarity (50/75/100/125); `BlockStacking`                                                                                                                    |
+| Arachne dresses                                  | `Robe`      | Lavender 30, Fuchsia 20, Azure 40, Emerald 50, Gilded 10, Moonlight 55, Crimson 5; Onyx `BaseValue` 60 scales to 80/100/140                                     |
+| Icarus coatings                                  | `Icarus`    | Volatile 50 at every rarity; Protective `BaseValue` 100, 140 at Heroic only                                                                                     |
+| `ArmorBoost`, `ArmorBigBoost`, `ArmorBoostStore` | `Essence`   | 20, 40, 20, added by `AddArmor` to one hidden `MinorArmorBoon` (`RoomLogic.lua:2772-2793`)                                                                      |
+| Silken Sash (`ArmorGainKeepsake`)                | `Keepsake`  | 30 on equip; `DoorArmor` 2/3/4/6 by rank on each `LeaveRoom` into a first-visit room while the hero has armor                                                   |
+
+Trusty Shield renews each room. Dresses and coatings are Common outside Dream;
+Dream NPC menus set `RarityUpgradeOrder[EnteredBiomes]`
+([route position](../rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md#npc-acquisition-profiles)),
+which scales only Onyx and Protective. Unequipping the Sash moves its remaining
+armor into `MinorArmorBoon` (`KeepsakeLogic.lua:173-182`).
+
+Excluded as temporary or not hero armor: Security System, Selene Hex armor and
+the Axe armor-damage trait.
+
+The planner assumes no damage, so armor is never consumed. `deriveArmor` sums
+held trait armor at its rarity and Pom level (or acquisition ordinal for
+dresses and coatings), the item total and the held Sash's `CurrentArmor`, and
+Run State publishes it with its sources. Practice starts install the item total
+and the Sash's `CurrentArmor`; installed armor traits set their own at the
+rarity Practice installs, which does not yet carry Dream NPC rarity, so a
+Dream-scaled Onyx or Protective installs at Common.

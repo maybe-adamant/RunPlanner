@@ -127,6 +127,88 @@ describe('trait dispositions and requirements compiler owner', () => {
     ).toThrow('must declare four acquisition ordinals');
   });
 
+  it('declares lasting trait armor by rarity, Pom level and Dream acquisition ordinal', () => {
+    const byOrdinal = (amounts: readonly number[]) => ({
+      kind: 'byAcquisitionOrdinal',
+      byAcquisitionOrdinal: amounts,
+    });
+    const robe = (amount: number) => ({
+      source: 'Robe',
+      amount: byOrdinal([amount, amount, amount, amount]),
+    });
+    const rarity = (base: number) => ({
+      Common: base,
+      Rare: base * 1.5,
+      Epic: base * 2,
+      Heroic: base * 2.5,
+    });
+    expect(
+      Object.fromEntries(
+        catalog.traits.values
+          .filter((trait) => trait.armor !== undefined)
+          .map((trait) => [trait.key, trait.armor]),
+      ),
+    ).toEqual({
+      HeavyArmorBoon: {
+        source: 'Tradeoff',
+        amount: { kind: 'byRarity', byRarity: rarity(50), levelBonuses: [] },
+      },
+      ArmorBoon: {
+        source: 'Renewable',
+        amount: { kind: 'byRarity', byRarity: rarity(10), levelBonuses: [5, 3, 2, 2] },
+      },
+      AgilityCostume: robe(30),
+      ManaCostume: robe(40),
+      VitalityCostume: robe(50),
+      HighArmorCostume: { source: 'Robe', amount: byOrdinal([60, 80, 100, 140]) },
+      CastDamageCostume: robe(20),
+      IncomeCostume: robe(10),
+      SpellCostume: robe(55),
+      EscalatingCostume: robe(5),
+      BreakInvincibleArmorBoon: { source: 'Icarus', amount: byOrdinal([100, 100, 100, 140]) },
+      BreakExplosiveArmorBoon: { source: 'Icarus', amount: byOrdinal([50, 50, 50, 50]) },
+    });
+    expect(
+      [1, 2, 3, 4].map(
+        (ordinal) =>
+          resolveTraitAcquisitionOrdinalEffect(
+            { kind: 'equip' },
+            ordinal,
+            undefined,
+            catalog.traits.byKey.HighArmorCostume!.armor,
+          ).armor,
+      ),
+    ).toEqual([60, 80, 100, 140]);
+    const withArmor = (key: string, armor: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === key ? ({ ...trait, armor } as RawTraitDeclaration) : trait,
+          ),
+        },
+      });
+    expect(() => withArmor('ArmorBoon', { source: 'Renewable', amount: 10 })).toThrow(
+      'a ranked trait must scale by rarity',
+    );
+    expect(() =>
+      withArmor('ArmorBoon', {
+        source: 'Renewable',
+        amount: {
+          baseValue: 10,
+          rarityMultipliers: { Common: 1, Rare: 1.55, Epic: 2, Heroic: 2.5 },
+        },
+      }),
+    ).toThrow('must scale to an integer');
+    expect(() => withArmor('HighArmorCostume', { source: 'Robe', amount: [60, 80, 100] })).toThrow(
+      'must declare four acquisition ordinals',
+    );
+    expect(() =>
+      withArmor('HighArmorCostume', { source: 'Robe', amount: 60, levelBonuses: [1] }),
+    ).toThrow('is declared only for ranked traits');
+  });
+
   it('declares the Worry Free acquisition max-health roll per rarity', () => {
     expect(
       catalog.traits.values

@@ -1,6 +1,7 @@
 import type { Catalog, InRunTraitRarity, KeepsakeRank } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type {
+  Armor,
   DecisionRewardBagCount,
   MaxStatSource,
   MaxStats,
@@ -249,6 +250,33 @@ function maxStatsPresentation(
             }),
           ]),
     ]),
+  });
+}
+
+function armorPresentation(catalog: Catalog, armor: Armor): WorkspaceRunStatePresentation['armor'] {
+  return Object.freeze({
+    rows: Object.freeze([row('armor', 'Armor', { right: `${armor.armor}` })]),
+    sources: Object.freeze(
+      armor.sources.map(({ source, armor: amount }) => {
+        switch (source.kind) {
+          case 'items':
+            return row('items', 'Items', { right: `+${amount}` });
+          case 'trait':
+            return row(
+              `trait:${source.key}`,
+              catalog.traits.byKey[source.key]?.label ?? source.key,
+              {
+                right: `+${amount}`,
+              },
+            );
+          case 'keepsake':
+            return row(`keepsake:${source.key}`, keepsakeLabel(catalog, source.key), {
+              ...(source.origin === 'echo' ? { bracket: '(Gift Gift Gift)' } : {}),
+              right: `+${amount}`,
+            });
+        }
+      }),
+    ),
   });
 }
 
@@ -719,6 +747,7 @@ export function presentRunState(
     moment: `${momentLead} · ${biomeLabel(catalog, snapshot.biomeKey)}`,
     loadout: loadoutRows(catalog, snapshot),
     maxStats: maxStatsPresentation(catalog, snapshot.maxStats),
+    armor: armorPresentation(catalog, snapshot.armor),
     overview: overviewSections(catalog, snapshot),
     effects: effectSections(catalog, snapshot),
     keepsakes: keepsakeHistorySections(catalog, snapshot),
