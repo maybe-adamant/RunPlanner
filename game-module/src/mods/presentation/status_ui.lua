@@ -10,7 +10,8 @@ local ascii = type(import) == "function" and import("mods/presentation/ascii.lua
     or require("mods.presentation.ascii")
 
 local ui = {}
-ui.ACTIVE_SLOT_REFRESH_SECONDS = 1
+-- A draw after a longer pause is the window opening again.
+ui.REOPEN_GAP_SECONDS = 0.5
 
 local SLOT_VALUES = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 }
 -- The event slot is listed first while it holds a file or is the active slot.
@@ -26,36 +27,16 @@ local TONES = {
     faulted = { color = { 1, 0.6, 0.3, 1 } },
 }
 local STALE = "Made for another Run Planner version - resend from the app or update the mod"
+local NO_OVERVIEW = "No overview - Load to inspect"
+local LOAD_BUTTON = { id = "run_planner_reload" }
+local GUIDE_CHECKBOX = { id = "show_room_guide", label = "Show room guide" }
+local HIGHLIGHT_CHECKBOX = { id = "highlight_planned_choices", label = "Highlight planned choices" }
 
 local function safeText(value)
     local ok, text = pcall(function()
         return type(value) == "number" and string.format("%.17g", value) or tostring(value)
     end)
     return ok and text or "<unprintable>"
-end
-
--- Raw record tree. Children draw under pcall so every Push has its Pop.
-local function drawValues(imgui, label, value, ancestors)
-    if type(value) ~= "table" then
-        imgui.TextWrapped(label .. ": " .. safeText(value))
-        return
-    end
-    ancestors = ancestors or {}
-    if ancestors[value] then imgui.TextWrapped(label .. ": <cycle>"); return end
-    if not imgui.CollapsingHeader(label) then return end
-    ancestors[value] = true
-    imgui.PushID(label)
-    imgui.Indent()
-    pcall(function()
-        local keys = {}
-        for key in pairs(value) do keys[#keys + 1] = key end
-        table.sort(keys, function(a, b) return safeText(a) < safeText(b) end)
-        if #keys == 0 then imgui.TextWrapped("(empty)") end
-        for _, key in ipairs(keys) do drawValues(imgui, safeText(key), value[key], ancestors) end
-    end)
-    imgui.Unindent()
-    imgui.PopID()
-    ancestors[value] = nil
 end
 
 -- Display products of immutable records, cached by record identity.
@@ -72,6 +53,35 @@ local function memo(build)
     end
 end
 
+local sortedKeys = memo(function(value)
+    local keys = {}
+    for key in pairs(value) do keys[#keys + 1] = key end
+    table.sort(keys, function(a, b) return safeText(a) < safeText(b) end)
+    return keys
+end)
+
+-- Raw record tree. Children draw under pcall so every Push has its Pop.
+local function drawValues(imgui, label, value, ancestors)
+    if type(value) ~= "table" then
+        imgui.TextWrapped(label .. ": " .. safeText(value))
+        return
+    end
+    ancestors = ancestors or {}
+    if ancestors[value] then imgui.TextWrapped(label .. ": <cycle>"); return end
+    if not imgui.CollapsingHeader(label) then return end
+    ancestors[value] = true
+    imgui.PushID(label)
+    imgui.Indent()
+    pcall(function()
+        local keys = sortedKeys(value)
+        if #keys == 0 then imgui.TextWrapped("(empty)") end
+        for _, key in ipairs(keys) do drawValues(imgui, safeText(key), value[key], ancestors) end
+    end)
+    imgui.Unindent()
+    imgui.PopID()
+    ancestors[value] = nil
+end
+
 local function row(drawApi, label, value, style)
     local imgui = drawApi.imgui
     imgui.TextDisabled(label)
@@ -79,30 +89,40 @@ local function row(drawApi, label, value, style)
     if style then drawApi.widgets.text(value, style) else imgui.TextWrapped(value) end
 end
 
--- Every text the window hands ImGui passes through the ASCII fold.
-local function asciiDraw(drawApi)
-    local imgui, widgets = drawApi.imgui, drawApi.widgets
+-- Every text the window hands ImGui passes through the ASCII fold. Built once;
+-- each frame rebinds it to that frame's draw surface.
+local function asciiDraw()
+    local current
+    local foldedOpts = setmetatable({}, { __mode = "k" })
     local function folded(opts)
         if opts == nil or opts.label == nil then return opts end
-        local copy = {}
-        for key, value in pairs(opts) do copy[key] = value end
-        copy.label = ascii.fold(opts.label)
+        local copy = foldedOpts[opts]
+        if copy == nil then
+            copy = {}
+            for key, value in pairs(opts) do copy[key] = value end
+            copy.label = ascii.fold(opts.label)
+            foldedOpts[opts] = copy
+        end
         return copy
     end
-    return {
+    local drawApi = {
         imgui = setmetatable({
-            TextWrapped = function(text) return imgui.TextWrapped(ascii.fold(text)) end,
-            TextDisabled = function(text) return imgui.TextDisabled(ascii.fold(text)) end,
-            CollapsingHeader = function(label) return imgui.CollapsingHeader(ascii.fold(label)) end,
-            BeginTabItem = function(label) return imgui.BeginTabItem(ascii.fold(label)) end,
-        }, { __index = imgui }),
+            TextWrapped = function(text) return current.imgui.TextWrapped(ascii.fold(text)) end,
+            TextDisabled = function(text) return current.imgui.TextDisabled(ascii.fold(text)) end,
+            CollapsingHeader = function(label) return current.imgui.CollapsingHeader(ascii.fold(label)) end,
+            BeginTabItem = function(label) return current.imgui.BeginTabItem(ascii.fold(label)) end,
+        }, { __index = function(_, key) return current.imgui[key] end }),
         widgets = setmetatable({
-            text = function(text, style) return widgets.text(ascii.fold(text), style) end,
-            button = function(label, opts) return widgets.button(ascii.fold(label), opts) end,
-            checkbox = function(target, opts) return widgets.checkbox(target, folded(opts)) end,
-            dropdown = function(target, opts) return widgets.dropdown(target, folded(opts)) end,
-        }, { __index = widgets }),
+            text = function(text, style) return current.widgets.text(ascii.fold(text), style) end,
+            button = function(label, opts) return current.widgets.button(ascii.fold(label), opts) end,
+            checkbox = function(target, opts) return current.widgets.checkbox(target, folded(opts)) end,
+            dropdown = function(target, opts) return current.widgets.dropdown(target, folded(opts)) end,
+        }, { __index = function(_, key) return current.widgets[key] end }),
     }
+    return function(draw)
+        current = draw
+        return drawApi
+    end
 end
 
 function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
@@ -117,58 +137,82 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     clock = clock or os.clock
 
     -- The picker and slot descriptions are a view of active-slot.json and the
-    -- slot overview, reread at most once per interval while drawn.
-    local viewSlot, refreshedAt, failedSlot, loadedKey = nil, nil, nil, nil
-    local entries, present, labels, values = {}, {}, {}, SLOT_VALUES
+    -- slot overview, read when the window opens, on Load and after a pick.
+    -- Plans are decoded only by Load; drawing never reads a plan file.
+    local viewSlot, failedSlot, lastDrawAt = nil, nil, nil
+    local entries, present, values, keys, pickerOpts = {}, {}, SLOT_VALUES, {}, nil
+    -- Counts view reads and loads, so cached views know when to rebuild.
+    local generation = 0
+    -- The window's own Load result: { slot, key, plan, status }.
+    local inspection = nil
     local function slotLabel(slot)
         local entry = entries[slot]
         if slot == EVENT_SLOT then
             if not present[slot] then return "Event (none)" end
-            if entry and entry.event then return "Event: " .. entry.event.title .. " (" .. entry.label .. ")" end
+            if entry and entry.event then
+                return "Event: " .. entry.event.title .. " (" .. (entry.matchesBuild and entry.label or "outdated") .. ")"
+            end
             return "Event"
         end
-        if entry then return presentation.slotName(slot) .. " (" .. entry.label .. ")" end
+        -- An entry sent for another module build is marked; no plan is decoded to say so.
+        if entry then
+            return presentation.slotName(slot) .. " (" .. entry.label .. ")" .. (entry.matchesBuild and "" or " (outdated)")
+        end
         if present[slot] then return presentation.slotName(slot) end
         return presentation.slotName(slot) .. " (empty)"
     end
-    local function refreshView(force)
-        local now = clock()
-        if not force and refreshedAt ~= nil and now >= refreshedAt
-            and now - refreshedAt < ui.ACTIVE_SLOT_REFRESH_SECONDS then
-            return
-        end
+    local function relabel()
+        values = (present[EVENT_SLOT] or viewSlot == EVENT_SLOT) and WITH_EVENT_VALUES or SLOT_VALUES
+        local labels = {}
+        for _, slot in ipairs(values) do labels[slot] = ascii.fold(slotLabel(slot)) end
+        pickerOpts = { id = "active_plan_slot", label = "Plan for next run", values = values, displayValues = labels }
+        generation = generation + 1
+    end
+
+    local function readActiveSlot()
         local state
         viewSlot, state = activeSlotFile.read()
         if state == "present" and viewSlot == failedSlot then failedSlot = nil end
+    end
+
+    local function refreshView()
+        readActiveSlot()
         entries, present = slotOverview.read()
-        values = (present[EVENT_SLOT] or viewSlot == EVENT_SLOT) and WITH_EVENT_VALUES or SLOT_VALUES
-        labels = {}
-        for _, slot in ipairs(values) do labels[slot] = ascii.fold(slotLabel(slot)) end
-        refreshedAt = now
+        keys = {}
+        relabel()
     end
 
     -- What the planner last said about a slot: a send, resend or removal changes it.
     local function slotKey(slot)
-        local entry = entries[slot]
-        return tostring(slot) .. ":" .. (entry and entry.fingerprint .. ":" .. entry.buildId or "-")
-            .. ":" .. (present[slot] and "present" or "absent")
+        local key = keys[slot]
+        if key == nil then
+            local entry = entries[slot]
+            key = tostring(slot) .. ":" .. (entry and entry.fingerprint .. ":" .. entry.buildId or "-")
+                .. ":" .. (present[slot] and "present" or "absent")
+            keys[slot] = key
+        end
+        return key
     end
 
     local function loadSlot(slot)
-        loadedKey = slotKey(slot)
         inbox.load(slot)
         local status = inbox.status()
+        inspection = { slot = slot, key = slotKey(slot), plan = inbox.plan(), status = status }
+        generation = generation + 1
         if status.error and rom and rom.log and rom.log.info then
             rom.log.info("[RunPlanner] published-plan inspection failed code="
                 .. tostring(status.error.code) .. " reason=" .. tostring(status.error.message))
         end
     end
 
-    -- One read per slot shown, and again whenever the overview shows its file changed.
-    local function ensureLoaded(slot)
-        if inbox.activeSlot() ~= slot or inbox.status().file == "not-inspected" or loadedKey ~= slotKey(slot) then
-            loadSlot(slot)
+    -- The Load result while it still describes the shown slot as the overview last read it.
+    local function currentInspection()
+        local value = inspection
+        if value ~= nil and value.slot == viewSlot and value.key == slotKey(viewSlot)
+            and inbox.activeSlot() == viewSlot and inbox.plan() == value.plan then
+            return value
         end
+        return nil
     end
 
     local planDetails = memo(presentation.planDetails)
@@ -188,7 +232,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     end)
 
     local function slotStatus(status, plan, entry)
-        if status.error then
+        if status and status.error then
             if status.error.code == "stale-slot" then return STALE, TONES.faulted end
             return "This slot can't be read", TONES.faulted
         end
@@ -197,10 +241,15 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
     end
 
     local function drawDetails(drawApi)
-        local status, plan, entry = inbox.status(), inbox.plan(), entries[viewSlot]
-        if status.file == "not-published" or (entry == nil and plan == nil and not present[viewSlot]) then
+        local loaded, entry = currentInspection(), entries[viewSlot]
+        local status, plan = loaded and loaded.status, loaded and loaded.plan
+        if (status and status.file == "not-published") or (entry == nil and plan == nil and not present[viewSlot]) then
             drawApi.imgui.TextWrapped(viewSlot == EVENT_SLOT and "No event right now."
                 or "Nothing sent to this slot yet.")
+            return
+        end
+        if entry == nil and loaded == nil then
+            drawApi.imgui.TextWrapped(NO_OVERVIEW)
             return
         end
         local described = plan == nil and entry or presentation.entryFor(plan, entry)
@@ -218,33 +267,23 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         local highlightChoices = ctx.data.get("HighlightPlannedChoices")
         assert(highlightChoices ~= nil, "status UI HighlightPlannedChoices data field is required")
         if field:read() ~= viewSlot then field:write(viewSlot) end
-        local picked = drawApi.widgets.dropdown(field, {
-            id = "active_plan_slot",
-            label = "Plan for next run",
-            values = values,
-            displayValues = labels,
-        })
-        if picked then
+        if drawApi.widgets.dropdown(field, pickerOpts) then
             local requested = field:read()
             failedSlot = not activeSlotFile.write(requested) and requested or nil
-            refreshView(true)
+            readActiveSlot()
+            relabel()
             field:write(viewSlot)
-            loadSlot(viewSlot)
         end
         imgui.SameLine()
-        if drawApi.widgets.button("Reload", { id = "run_planner_reload" }) then
-            refreshView(true)
+        if drawApi.widgets.button("Load", LOAD_BUTTON) then
+            refreshView()
             loadSlot(viewSlot)
         end
         if failedSlot ~= nil then imgui.TextWrapped("Could not save the active slot.") end
-        ensureLoaded(viewSlot)
         drawDetails(drawApi)
         drawApi.widgets.separator()
-        drawApi.widgets.checkbox(showGuide, { id = "show_room_guide", label = "Show room guide" })
-        drawApi.widgets.checkbox(highlightChoices, {
-            id = "highlight_planned_choices",
-            label = "Highlight planned choices",
-        })
+        drawApi.widgets.checkbox(showGuide, GUIDE_CHECKBOX)
+        drawApi.widgets.checkbox(highlightChoices, HIGHLIGHT_CHECKBOX)
     end
 
     -- Every string the tab shows, computed before any ImGui call.
@@ -285,9 +324,32 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         return { lines = lines }
     end
 
-    local function drawRunTab(imgui, snapshot, planName)
-        local ok, view = pcall(runView, snapshot, planName)
-        if not ok then view = { lines = { "Run details are unavailable." } } end
+    -- Header and run text follow the session fields they read and the slot view.
+    local VIEW_FIELDS = { "plan", "state", "reason", "slot", "index", "current", "issue" }
+    local cached = { generation = -1 }
+    local function sessionView(snapshot)
+        local changed = cached.generation ~= generation or cached.viewSlot ~= viewSlot
+        for _, key in ipairs(VIEW_FIELDS) do
+            if cached[key] ~= snapshot[key] then changed = true end
+        end
+        if not changed then return cached end
+        cached = { generation = generation, viewSlot = viewSlot }
+        for _, key in ipairs(VIEW_FIELDS) do cached[key] = snapshot[key] end
+        local ok, planName, header = pcall(function()
+            local name = presentation.planName(snapshot.plan, entries[snapshot.slot], snapshot.slot)
+            return name, presentation.header(snapshot, name)
+        end)
+        if not ok then planName, header = presentation.slotName(snapshot.slot), { text = "Run Planner" } end
+        cached.planName, cached.header = planName, header
+        return cached
+    end
+
+    local function drawRunTab(imgui, snapshot, view)
+        if view.run == nil then
+            local ok, run = pcall(runView, snapshot, view.planName)
+            view.run = ok and run or { lines = { "Run details are unavailable." } }
+        end
+        view = view.run
         for _, line in ipairs(view.lines) do imgui.TextWrapped(line) end
         local mismatch = view.mismatch
         if mismatch and imgui.CollapsingHeader("More details") then
@@ -300,8 +362,18 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         end
     end
 
+    -- The inbox status as of the last view read, Load or inbox change.
+    local diagnostic = {}
+    local function inboxStatus()
+        local slot, plan = inbox.activeSlot(), inbox.plan()
+        if diagnostic.generation ~= generation or diagnostic.slot ~= slot or diagnostic.plan ~= plan then
+            diagnostic = { generation = generation, slot = slot, plan = plan, status = inbox.status() }
+        end
+        return diagnostic.status
+    end
+
     local function drawDiagnosticsTab(imgui, snapshot)
-        local status = inbox.status()
+        local status = inboxStatus()
         imgui.TextWrapped("Session: " .. tostring(snapshot.state) .. " / " .. tostring(snapshot.reason))
         if snapshot.checkpoint then imgui.TextWrapped("Checkpoint: " .. tostring(snapshot.checkpoint)) end
         imgui.TextWrapped("Slot " .. tostring(status.slot) .. " file: " .. tostring(status.file)
@@ -337,17 +409,17 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         end
     end
 
+    local bindDraw = asciiDraw()
     local function draw(_, ctx)
-        local drawApi = asciiDraw(ctx.draw)
+        local drawApi = bindDraw(ctx.draw)
         local imgui = drawApi.imgui
         assert(ctx.data and type(ctx.data.get) == "function", "status UI data dependency is required")
-        refreshView(false)
+        local now = clock()
+        if lastDrawAt == nil or now < lastDrawAt or now - lastDrawAt > ui.REOPEN_GAP_SECONDS then refreshView() end
+        lastDrawAt = now
         local snapshot = inspectSession()
-        local ok, planName, header = pcall(function()
-            local name = presentation.planName(snapshot.plan, entries[snapshot.slot], snapshot.slot)
-            return name, presentation.header(snapshot, name)
-        end)
-        if not ok then planName, header = presentation.slotName(snapshot.slot), { text = "Run Planner" } end
+        local view = sessionView(snapshot)
+        local header = view.header
         drawApi.widgets.text(header.text, TONES[header.tone])
         if header.reason then imgui.TextWrapped(header.reason) end
         if not imgui.BeginTabBar("run_planner_inspector") then return end
@@ -356,7 +428,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
             imgui.EndTabItem()
         end
         if imgui.BeginTabItem("Current Run") then
-            guarded("current run tab", drawRunTab, imgui, snapshot, planName)
+            guarded("current run tab", drawRunTab, imgui, snapshot, view)
             imgui.EndTabItem()
         end
         local debugMode = ctx.data.get("DebugMode")

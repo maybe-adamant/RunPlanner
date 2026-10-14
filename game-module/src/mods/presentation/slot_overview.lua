@@ -78,15 +78,21 @@ function overview.create(root, pathApi, buildId, options)
         return pathApi.combine(root, fileName)
     end
 
+    -- Unchanged overview bytes return the same entry tables, so display memos hold.
+    local lastRaw, lastEntries = nil, nil
     function store.read()
-        local entries = {}
+        local raw
         local file = files.open(path(overview.FILE_NAME), "rb")
         if file then
-            local raw = file:read(overview.MAX_BYTES + 1)
+            raw = file:read(overview.MAX_BYTES + 1)
             file:close()
-            entries = overview.decode(raw)
         end
-        for _, value in pairs(entries) do value.matchesBuild = buildId ~= nil and value.buildId == buildId end
+        local entries = lastEntries
+        if raw == nil or raw ~= lastRaw then
+            entries = raw ~= nil and overview.decode(raw) or {}
+            for _, value in pairs(entries) do value.matchesBuild = buildId ~= nil and value.buildId == buildId end
+            lastRaw, lastEntries = raw, entries
+        end
         local present = {}
         for slot = inbox.EVENT_SLOT, inbox.SLOT_COUNT do
             -- The event slot is always probed: only its file confirms that its entry's event is current.

@@ -59,8 +59,8 @@ local FORBIDDEN_RECEIVERS = {
 -- build-covered mods/host/presentation_hooks.lua (bound as `safeHooks`), which
 -- runs native base unchanged and contains presentation failures.
 local HOOK_REGISTRATIONS = { wrap = true, onCommit = true, onInterval = true, afterHook = true, override = true }
--- The status window's slot picker is a user action: it writes active-slot.json
--- and loads the picked slot through capabilities the composition root injects.
+-- The status window's slot picker and Load button are user actions: they write
+-- active-slot.json and load the shown slot through injected capabilities.
 local CAPABILITY_CALLS = {
     ["mods/presentation/status_ui.lua"] = { "activeSlotFile.write(", "inbox.load(", "field:write(" },
 }

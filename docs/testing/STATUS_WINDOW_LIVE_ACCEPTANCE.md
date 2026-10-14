@@ -16,13 +16,17 @@ each check.
       a second) and its details appear without pressing anything: Plan, Sent in
       local time, Aspect, Route `<route> -> <final biome>`, Keepsake, Fear,
       Practice when set, and `Status: Ready`. The unsent slot shows "Nothing
-      sent to this slot yet."
-- [ ] Resend a different plan to the shown slot while the window is open: within
-      a second the details follow the new plan without pressing anything. Send
-      to an empty slot while it is shown: it changes from "Nothing sent" to the
-      plan's details. **Reload** is only a fallback.
+      sent to this slot yet." A slot file copied in by hand shows
+      `No overview - Load to inspect` until **Load** is pressed.
+- [ ] With the window open, drawing never hitches, even with a large Surface
+      plan in the shown slot; only pressing **Load** may hitch once.
+- [ ] Resend a different plan to the shown slot, then close and reopen the
+      window: the details follow the new plan without pressing anything. Send
+      to an empty slot and reopen: it changes from "Nothing sent" to the
+      plan's details.
 - [ ] Install an older module build (or send from another planner build) so a
-      slot is stale: its Status reads the stale-version note. Starting a run
+      slot is stale: the picker marks it `(outdated)` and its Status reads the
+      stale-version note. Starting a run
       then shows `Plan not used` with the update-or-resend reason.
 - [ ] Before a run the header shows `No run` and **Current Run** says
       `No plan is running.` and names the next run's slot.
