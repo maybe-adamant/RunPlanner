@@ -58,6 +58,8 @@ export const medeaTraits = [
   {
     key: 'DeathDefianceRetaliateCurse',
     label: 'Malice in Kind',
+    // NPCData.lua: requires a held Last Stand.
+    offerDependsOnDeathDefiance: true,
     ...raritylessNpcTrait,
     linkedBoonRequirements: [],
     eligibilityRequirements: [],

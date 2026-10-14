@@ -796,6 +796,11 @@ export function normalizeTraits(
         : (trait.raisesAspectToPerfect as unknown) === true
           ? { raisesAspectToPerfect: true as const }
           : fail(`${path}.raisesAspectToPerfect`, 'must be true when declared')),
+      ...(trait.offerDependsOnDeathDefiance === undefined
+        ? {}
+        : (trait.offerDependsOnDeathDefiance as unknown) === true
+          ? { offerDependsOnDeathDefiance: true as const }
+          : fail(`${path}.offerDependsOnDeathDefiance`, 'must be true when declared')),
       selectedDisposition,
     });
   });

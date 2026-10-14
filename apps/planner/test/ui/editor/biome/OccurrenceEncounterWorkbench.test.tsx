@@ -1027,7 +1027,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Gorgon Amulet: Death Defiance',
+      name: 'Gorgon Amulet: no Death Defiance',
     }) as HTMLInputElement;
     expect(condition.disabled).toBe(false);
     expect(
@@ -1035,7 +1035,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         'checkbox',
       ),
     ).toBe(condition);
-    await view.user.click(screen.getByText('Gorgon Amulet: Death Defiance'));
+    await view.user.click(screen.getByText('Gorgon Amulet: no Death Defiance'));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Edit Trait · Choose trait' })).toBeTruthy();
     });
@@ -1085,7 +1085,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Gorgon Amulet: Death Defiance',
+      name: 'Gorgon Amulet: no Death Defiance',
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
@@ -1093,7 +1093,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
-      expect(screen.queryByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' })).toBeNull();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Gorgon Amulet: no Death Defiance' }),
+      ).toBeNull();
     });
     const updatedOccurrence = view.application.store
       .getState()
@@ -1120,13 +1122,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Gorgon Amulet: Death Defiance',
+      name: 'Gorgon Amulet: no Death Defiance',
     });
     expect(condition.getAttribute('data-has-findings')).toBe('true');
     expect(condition.getAttribute('aria-description')).toContain('Gorgon Amulet cannot trigger');
     await view.user.click(condition);
     await waitFor(() => {
-      expect(screen.queryByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' })).toBeNull();
+      expect(
+        screen.queryByRole('checkbox', { name: 'Gorgon Amulet: no Death Defiance' }),
+      ).toBeNull();
     });
     expect(screen.queryByText('Talk to Athena')).toBeNull();
     const updatedOccurrence = view.application.store
@@ -1243,7 +1247,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     }) as HTMLInputElement;
     expect(skip.disabled).toBe(false);
     expect(
-      within(events).getByRole('checkbox', { name: 'Gorgon Amulet: Death Defiance' }),
+      within(events).getByRole('checkbox', { name: 'Gorgon Amulet: no Death Defiance' }),
     ).toBeTruthy();
     await view.user.click(skip);
     await waitFor(() => {

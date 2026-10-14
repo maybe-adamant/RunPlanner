@@ -44,6 +44,8 @@ export const athenaTraits = [
   {
     key: 'DeathDefianceRefillBoon',
     label: 'Renewed Faith',
+    // TraitData_Athena.lua: requires a missing Last Stand.
+    offerDependsOnDeathDefiance: true,
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     linkedBoonRequirements: [],

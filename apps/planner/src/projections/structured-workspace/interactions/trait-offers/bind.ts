@@ -17,6 +17,7 @@ import { traitOfferCommandFor } from '../reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
 import { bindChaosOfferInteraction } from './chaos';
 import { projectMaxHealthRoll } from './max-health-roll';
+import { projectTraitOfferNotes } from './offer-notes';
 import { bindTraitOfferOptionDomain } from './option-domain';
 import { traitOfferLauncherPresentation } from '../launcher-presentation';
 
@@ -135,6 +136,7 @@ export function bindTraitOfferInteractions(input: {
         optionDomain,
         rejectedBlockDomain,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+        offerNotes: (value: AuthoredTraitOffer) => projectTraitOfferNotes(catalog, value),
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
           Object.freeze({
             command: Object.freeze({

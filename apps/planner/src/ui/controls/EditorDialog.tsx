@@ -118,11 +118,14 @@ export function EditorDialogFeedback({
   children,
   entries = [],
   name,
+  notes,
 }: {
   /** Owner-specific rows; when present they replace the empty state. */
   readonly children?: ReactNode;
   readonly entries?: readonly (readonly [key: string, message: string])[];
   readonly name: string;
+  /** Display-only notes after every finding; they never replace the empty state. */
+  readonly notes?: ReactNode;
 }) {
   return (
     <section aria-label={name} className="editor-dialog-feedback" role="status">
@@ -136,6 +139,7 @@ export function EditorDialogFeedback({
           {message}
         </p>
       ))}
+      {notes}
     </section>
   );
 }

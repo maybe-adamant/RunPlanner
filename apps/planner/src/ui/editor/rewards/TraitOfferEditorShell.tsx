@@ -172,6 +172,27 @@ export function TraitOfferEditorShell({
   const hasOptionFeedback = optionFeedback.some(
     (option) => option.reasons.length > 0 || option.replacement !== undefined,
   );
+  const optionFeedbackRows = optionFeedback.map((option, index) =>
+    option.reasons.length === 0 && option.replacement === undefined ? null : (
+      <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
+        <strong>Option {index + 1}</strong>
+        {option.reasons.length === 0 ? null : (
+          <ul className="trait-option-feedback" aria-label={`${OPTION_KEYS[index]} feedback`}>
+            {option.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        )}
+        {option.replacement === undefined ? null : (
+          <p className="trait-option-replacement">
+            Replaces {option.replacement.replacedTraitLabel} · {option.replacement.oldRarity} to{' '}
+            {option.replacement.requiredRarity}
+          </p>
+        )}
+      </div>
+    ),
+  );
+  const offerNotes = interaction.offerNotes(value);
   const feedbackSection = (
     <EditorDialogFeedback
       name="Offer feedback"
@@ -179,32 +200,14 @@ export function TraitOfferEditorShell({
         atRestEntries ??
         (offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries])
       }
+      notes={offerNotes.map((note) => (
+        <div className="trait-offer-note" key={note.traitKey}>
+          <strong>{note.title}</strong>
+          <p>{note.description}</p>
+        </div>
+      ))}
     >
-      {!hasOptionFeedback
-        ? undefined
-        : optionFeedback.map((option, index) =>
-            option.reasons.length === 0 && option.replacement === undefined ? null : (
-              <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
-                <strong>Option {index + 1}</strong>
-                {option.reasons.length === 0 ? null : (
-                  <ul
-                    className="trait-option-feedback"
-                    aria-label={`${OPTION_KEYS[index]} feedback`}
-                  >
-                    {option.reasons.map((reason) => (
-                      <li key={reason}>{reason}</li>
-                    ))}
-                  </ul>
-                )}
-                {option.replacement === undefined ? null : (
-                  <p className="trait-option-replacement">
-                    Replaces {option.replacement.replacedTraitLabel} ·{' '}
-                    {option.replacement.oldRarity} to {option.replacement.requiredRarity}
-                  </p>
-                )}
-              </div>
-            ),
-          )}
+      {hasOptionFeedback ? optionFeedbackRows : undefined}
     </EditorDialogFeedback>
   );
   const recoveryAction =

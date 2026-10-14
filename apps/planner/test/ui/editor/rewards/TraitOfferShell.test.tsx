@@ -188,7 +188,7 @@ describe('ordinary offer shell', () => {
     application.dispose();
   });
 
-  it('keeps a preferred Medea draft saveable without an obsolete condition control', async () => {
+  it('keeps a preferred Medea draft saveable and notes its Death Defiance offer condition', async () => {
     const application = createApplication();
     const project = loadSurfaceNStoryBoardProject();
     application.store.dispatch(authoredProjectReplaced(project));
@@ -223,6 +223,17 @@ describe('ordinary offer shell', () => {
     expect(
       (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
     ).toBe(false);
+    const region = screen.getByRole('status', { name: 'Offer feedback' });
+    const note = within(region)
+      .getByText("Malice in Kind's offer depends on Death Defiance")
+      .closest('.trait-offer-note');
+    expect(note).not.toBeNull();
+    expect(note?.textContent).toContain('Make sure you meet its offer condition.');
+    // A note is not a finding: the empty state stays and the note comes last.
+    expect(within(region).getByText('No current findings.')).toBeTruthy();
+    expect(region.lastElementChild).toBe(note);
+    expect(document.querySelector('[data-has-findings="true"]')).toBeNull();
+    expect(workspace.marker.findingCount).toBe(initialWorkspace.marker.findingCount);
     application.dispose();
   });
 

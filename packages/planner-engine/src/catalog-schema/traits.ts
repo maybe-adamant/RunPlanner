@@ -621,6 +621,8 @@ export interface TraitDeclaration {
   readonly maxStatEffect?: TraitMaxStatEffect;
   /** Acquiring it permanently re-adds the equipped aspect at Perfect (rank VI). */
   readonly raisesAspectToPerfect?: true;
+  /** Its native offer requirement reads Death Defiance state, which the planner does not model. */
+  readonly offerDependsOnDeathDefiance?: true;
 }
 
 /** The rarity controls a giver exposes while authoring a fresh offer. */

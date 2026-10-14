@@ -160,13 +160,13 @@ Path of Stars talents remain distinct equipped traits. In particular,
 `OlympianSpellCountBoon` depends on one of nine Olympian talent identities, not
 on a base Hex. Base-spell implementation must not synthesize those talents.
 Their generation and finite-capacity closure are now source-audited
-separately. Exact Olympian-node acquisition remains graph-local and is not
-simulated. Task Force requires at least one concrete Spell Drop to have settled,
-then trusts the exact authored result for the deeper node condition. If native
-eligibility rejects it, execution reports a mismatch. Aspect of Selene's starting Sky Fall alone does
-not qualify; the Aspect's later Spell Drop does. The aggregate layout model now
-derives the finite capacity and latched Talent Drop closure from the installed
-tree rather than retaining an always-false support baseline.
+separately. Task Force eligibility is modeled exactly from the invested God
+Sent Olympian node, as the
+[Hex talent layout audit](../loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md)
+records; Aspect of Selene's starting Sky Fall alone does not qualify. The
+aggregate layout model now derives the finite capacity and latched Talent Drop
+closure from the installed tree rather than retaining an always-false support
+baseline.
 
 ## Echo replay boundary
 

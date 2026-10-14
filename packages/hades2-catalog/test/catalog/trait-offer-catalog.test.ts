@@ -49,6 +49,40 @@ describe('trait offer-catalog compiler owner', () => {
     expect(() => createCatalog(mutated as never)).toThrow();
   });
 
+  it('declares exactly the offers whose native requirement reads Death Defiance state', () => {
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.offerDependsOnDeathDefiance === true)
+        .map((trait) => trait.key)
+        .sort(),
+    ).toEqual([
+      'DeathDefianceRefillBoon',
+      'DeathDefianceRetaliateCurse',
+      'EchoDeathDefianceRefill',
+      'HadesDeathDefianceDamageBoon',
+      'NarcissusH',
+    ]);
+    for (const traitKey of [
+      'FocusLastStandBoon',
+      'ChaosLastStandBlessing',
+      'TimeStopLastStandBoon',
+    ])
+      expect(catalog.traits.byKey[traitKey]).not.toHaveProperty('offerDependsOnDeathDefiance');
+  });
+
+  it('rejects a non-true Death Defiance offer dependency', () => {
+    const mutated = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'NarcissusH' ? { ...trait, offerDependsOnDeathDefiance: false } : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(mutated as never)).toThrow();
+  });
+
   it('normalizes one closed audited Olympian and Hermes boon-rarity base table', () => {
     expect(catalog.boonRarityBases.olympian).toEqual({
       Rare: 0.1,

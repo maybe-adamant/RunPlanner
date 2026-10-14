@@ -493,7 +493,7 @@ export function EncounterPhaseEvents({
           onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
-        <span>Gorgon Amulet: Death Defiance</span>
+        <span>Gorgon Amulet: no Death Defiance</span>
       </label>
     );
   const aetos = phase.aetos;

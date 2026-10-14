@@ -208,7 +208,7 @@ it.each([
 });
 
 it.each([
-  ['gorgon', 'Gorgon Amulet: Death Defiance'],
+  ['gorgon', 'Gorgon Amulet: no Death Defiance'],
   ['aetos', 'Aetos appearance'],
 ] as const)('navigates a P %s finding to its Timeline checkbox', async (kind, control) => {
   const fixture = reachedPOutdoorIcarusFixture();

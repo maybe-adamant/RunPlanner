@@ -594,6 +594,8 @@ export interface WorkspaceTraitOfferInteraction {
   ) => WorkspaceRejectedBlockDomain | undefined;
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
+  /** Display-only notes for listed traits whose offer condition the planner cannot check. */
+  readonly offerNotes: (value: AuthoredTraitOffer) => readonly WorkspaceTraitOfferNote[];
   readonly selectedIntent: (
     selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
   ) => WorkspacePayloadEditIntent<
@@ -618,6 +620,13 @@ export interface WorkspaceTraitOfferInteraction {
   readonly removeTraitOfferDraft?: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOffer | undefined;
+}
+
+/** A listed trait's offer condition the planner does not model; not a finding. */
+export interface WorkspaceTraitOfferNote {
+  readonly traitKey: string;
+  readonly title: string;
+  readonly description: string;
 }
 
 /** A max-health roll: the offset above the acquired rarity's minimum and its realized health. */

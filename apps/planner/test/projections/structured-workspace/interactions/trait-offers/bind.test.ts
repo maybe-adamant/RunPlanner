@@ -7,6 +7,11 @@ import { describe, expect, it, vi } from 'vitest';
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import {
+  loadSurfaceNStoryBoardProject,
+  nBiome,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
 import { createDefaultAuthoredHexTree, optionIndex } from '@run-planner/engine/authored-project';
 import { createStartingRewardAddress } from '@run-planner/engine/authored-project';
 import type {
@@ -414,6 +419,77 @@ describe('trait-offers/bind', () => {
       expect.arrayContaining([
         expect.objectContaining({ code: 'traitOfferGenerationUnavailable' }),
       ]),
+    );
+  });
+
+  it('notes each listed trait whose offer depends on Death Defiance without adding findings', () => {
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOccurrenceId('story') },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const medeaOffer = (
+      [first, second, third]: readonly [string, string, string],
+      selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
+    ): AuthoredTraitOfferTraits => ({
+      kind: 'traits',
+      giverKey: 'Medea',
+      options: [{ traitKey: first }, { traitKey: second }, { traitKey: third }],
+      selectedOptionKey,
+    });
+    const offered = medeaOffer(
+      ['ManaOverTimeCurse', 'MoneyOnDeathCurse', 'DeathDefianceRetaliateCurse'],
+      'option1',
+    );
+    const base = loadSurfaceNStoryBoardProject();
+    const project = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: offered,
+    });
+    const interaction = bind(project, 'Surface', 'N').interactions.traitOffers.get(
+      semanticAddressKey(trait),
+    );
+    if (interaction === undefined) throw new Error('Medea story offer interaction is missing');
+    const note = {
+      traitKey: 'DeathDefianceRetaliateCurse',
+      title: "Malice in Kind's offer depends on Death Defiance",
+      description: 'Make sure you meet its offer condition.',
+    };
+
+    expect(interaction.offerNotes(offered)).toEqual([note]);
+    expect(
+      interaction.offerNotes(
+        medeaOffer(
+          ['DeathDefianceRetaliateCurse', 'MoneyOnDeathCurse', 'ManaOverTimeCurse'],
+          'option1',
+        ),
+      ),
+    ).toEqual([note]);
+    expect(
+      interaction.offerNotes(
+        medeaOffer(['ManaOverTimeCurse', 'MoneyOnDeathCurse', 'SpawnDamageCurse'], 'option1'),
+      ),
+    ).toEqual([]);
+    expect(
+      interaction
+        .offerNotes({
+          kind: 'traits',
+          giverKey: 'Athena',
+          options: [
+            { traitKey: 'FocusLastStandBoon', rarity: 'Common' },
+            { traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' },
+            { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+        })
+        .map((entry) => entry.traitKey),
+    ).toEqual(['DeathDefianceRefillBoon']);
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual(
+      simulateProjectAssembly(catalog, base).evaluation.findings,
     );
   });
 
