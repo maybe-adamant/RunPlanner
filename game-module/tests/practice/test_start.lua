@@ -860,6 +860,32 @@ function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
     lu.assertEquals(world.gameState.TraitsTaken, { BaseStaffAspect = true })
 end
 
+-- The slotted Sash and Echo's unslotted copy both carry their CurrentArmor,
+-- which the start room's CostumeArmor keeps.
+function TestPracticeStart.testSilkenSashInstallsItsCurrentArmor()
+    for _, slotted in ipairs({ true, false }) do
+        local start = copy(decode("surface-start-q-opening").startState)
+        local row = { name = "ArmorGainKeepsake", rarity = slotted and "Epic" or "Common",
+            currentArmor = slotted and 46 or 32, slotted = slotted or nil }
+        local equipped = slotted and "ArmorGainKeepsake" or "ManaOverTimeRefundKeepsake"
+        start.keepsake.traits = slotted and { row }
+            or { { name = equipped, rarity = "Epic", slotted = true }, row }
+        local world = nativeWorld({ MaxHealth = 0, MaxMana = 0 })
+        local restore = nativeGame.install(world.bindings)
+        _G.CurrentRun = world.run
+        _G.EquipKeepsake(world.hero, equipped, { ForceRarity = "Epic" })
+        local ok, errorValue = pcall(install.hero, start, {
+            aspectKey = "BaseStaffAspect", hexTree = recordingHexTree(world.log), diagnostic = function() end,
+        })
+        restore()
+        assert(ok, errorValue)
+        local sash = world.hero.TraitDictionary.ArmorGainKeepsake
+        lu.assertEquals(#sash, 1)
+        lu.assertEquals(sash[1].CurrentArmor, row.currentArmor)
+        lu.assertEquals(sash[1].Slot, slotted and "Keepsake" or nil)
+    end
+end
+
 -- Barren unequips the Arcana after native Death Defiance and rerolls and
 -- before native starting gold, at either start point.
 function TestPracticeStart.testBarrenUnequipsArcanaBeforeNativeStartingGold()

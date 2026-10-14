@@ -21,7 +21,7 @@ import {
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
-import { recordLootTypeHistorySource } from '../../../reward-kernel';
+import { creditItemArmor, recordLootTypeHistorySource } from '../../../reward-kernel';
 import type { CanonicalResolvedIncomingReward } from '../../materialization';
 import { type SemanticFinding, type TraitFindingCode } from '../../model';
 import {
@@ -55,7 +55,7 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../../../authored-project/traits/state';
-import { advanceCurrentKeepsake } from '../../keepsakes/state';
+import { advanceCurrentKeepsake, silkenSashArmorTransferredOnAdvance } from '../../keepsakes/state';
 import { consumeConcaveStone, concaveStoneProcSupport } from '../../keepsakes/trait-effects';
 import type { RewardBranchState } from '../branch-primitives';
 import type { TraitOfferOptionLevelResolution } from '../../traits/offer-levels';
@@ -764,13 +764,21 @@ function settleSelectedOffer(
     sequence,
     ...(findingChronology === undefined ? {} : { findingChronology }),
   });
+  // Cherished Heirloom's unequip moves the slotted Sash's armor into MinorArmorBoon.
+  const rewardHistory =
+    selectedDisposition?.kind === 'advanceCurrentKeepsake'
+      ? creditItemArmor(
+          branch.state.rewardHistory,
+          silkenSashArmorTransferredOnAdvance(catalog, effectiveBranch.state.keepsakes),
+        )
+      : branch.state.rewardHistory;
   let settledBeforeChaos: RewardBranchState = Object.freeze({
     ...effectiveBranch,
     traitEvaluations,
     state: replaceSimulationTraitHistory(
       Object.freeze({
         ...effectiveBranch.state,
-        rewardHistory: branch.state.rewardHistory,
+        rewardHistory,
         keepsakes,
       }),
       selectedChildren.traitHistory,

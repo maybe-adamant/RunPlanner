@@ -166,6 +166,10 @@ function keepsakeCounters(
       return keepsake.lionFang === undefined
         ? {}
         : { currentKeepsakeDamageBonus: keepsake.lionFang.multiplier };
+    case 'silkenSash':
+      return keepsake.silkenSash === undefined
+        ? {}
+        : { currentArmor: keepsake.silkenSash.currentArmor };
     case 'gorgonAmulet':
       return keepsake.gorgon === undefined ? {} : { remainingUses: one(keepsake.gorgon.status) };
     case 'crystalFigurine':

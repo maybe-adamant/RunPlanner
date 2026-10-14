@@ -24,6 +24,7 @@ export interface RawKeepsakeDeclaration {
           | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'moonBeam'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'lionFang'; readonly schedule: 'oneShotAfterUnequipped' }
+          | { readonly kind: 'silkenSash'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'maxManaGrant'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'maxHealthCap'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
@@ -128,6 +129,11 @@ export interface RawKeepsakeDeclaration {
         readonly initialMultiplierByRank: KeepsakeRankProfile<number, number, number, number>;
         readonly decayPerEncounter: number;
         readonly expiredMultiplier: number;
+      }
+    | {
+        readonly kind: 'silkenSash';
+        readonly baseArmor: number;
+        readonly doorArmorByRank: KeepsakeRankProfile<number, number, number, number>;
       }
     | {
         readonly kind: 'maxManaGrant';

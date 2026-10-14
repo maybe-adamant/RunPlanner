@@ -1,4 +1,5 @@
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
+import { creditItemArmor } from '../../../../reward-kernel';
 import { routeHasKeepsakeRack } from '../../../../authored-project/route-profile';
 import type { Catalog } from '../../../../catalog-schema';
 import {
@@ -15,6 +16,7 @@ import {
   jeweledPomEffectForKey,
   keepsakeRankForEquip,
   keepsakeSelectionUnavailableReason,
+  silkenSashArmorTransferredOnReplacement,
 } from '../../../keepsakes/state';
 import {
   assessExperimentalHammerEquipResult,
@@ -173,9 +175,17 @@ export function applyKeepsakeRackUsedTransition(
         );
     const replacementSucceeded =
       before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;
+    // Unequipping the Sash moves its armor into MinorArmorBoon.
     const transitionedBranch = Object.freeze({
       ...branch,
-      state: Object.freeze({ ...branch.state, keepsakes: after }),
+      state: Object.freeze({
+        ...branch.state,
+        keepsakes: after,
+        rewardHistory: creditItemArmor(
+          branch.state.rewardHistory,
+          silkenSashArmorTransferredOnReplacement(before, after),
+        ),
+      }),
     });
     return Object.freeze({
       branch: replacementSucceeded

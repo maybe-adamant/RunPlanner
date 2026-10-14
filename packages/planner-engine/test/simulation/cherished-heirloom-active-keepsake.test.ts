@@ -134,6 +134,21 @@ describe('Cherished Heirloom active keepsake advance', () => {
     expect(acquired.state.keepsakes.fatedStatus).toBe(initial.fatedStatus);
   });
 
+  it('duplicates the slotted Sash: its armor moves to item armor and the re-equip keeps it', () => {
+    const initial = createKeepsakeState(catalog, 'ArmorGainKeepsake', arcanaFear);
+    const keepsakes = {
+      ...initial,
+      silkenSash: { origin: 'ordinary' as const, rank: 'Epic' as const, currentArmor: 42 },
+    };
+    const acquired = acquireCherished(branchWithKeepsakes(keepsakes));
+    expect(acquired.state.keepsakes.silkenSash).toEqual({
+      origin: 'ordinary',
+      rank: 'Heroic',
+      currentArmor: 42,
+    });
+    expect(acquired.state.rewardHistory.itemArmor).toBe(42);
+  });
+
   it.each([
     [0, false],
     [2, true],

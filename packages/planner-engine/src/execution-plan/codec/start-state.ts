@@ -194,6 +194,7 @@ function keepsakeTrait(value: unknown, label: string): ExecutionStartKeepsakeTra
       'currentKeepsakeDamageBonus',
       'escalatingKeepsakeValue',
       'currentRoom',
+      'currentArmor',
     ],
   );
   const count = (key: string) =>
@@ -211,6 +212,7 @@ function keepsakeTrait(value: unknown, label: string): ExecutionStartKeepsakeTra
     ...multiplier('currentKeepsakeDamageBonus'),
     ...multiplier('escalatingKeepsakeValue'),
     ...count('currentRoom'),
+    ...count('currentArmor'),
   });
 }
 

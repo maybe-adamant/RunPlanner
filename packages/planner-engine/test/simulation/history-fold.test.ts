@@ -401,7 +401,7 @@ function depthRoomEvents(room: DepthRoom): readonly UnsequencedHistoryEvent[] {
     { kind: 'roomCommitted', origin: roomOrigin, operationIndex: 3 },
     { kind: 'roomCountersAdvanced', origin: roomOrigin, operationIndex: 4, ...reset },
     { kind: 'roomExited', origin: roomOrigin, operationIndex: 5 },
-    { kind: 'roomDeparted', origin: roomOrigin },
+    { kind: 'roomDeparted', origin: roomOrigin, destination: 'newRoom' },
   ];
 }
 
@@ -503,7 +503,7 @@ describe('history fold biome depth cache', () => {
         after: createLocalVisitSlotAddress(biome, main.occurrenceId, 'side', 'slot'),
         restoreKind: 'parent',
       },
-      { kind: 'roomDeparted', origin: main, leavesRestoredRoom: true },
+      { kind: 'roomDeparted', origin: main, destination: 'newRoom', leavesRestoredRoom: true },
     ]);
     const history = foldBiomeHistoryPrefixEvents(events);
     const counters = (sequence: number) => history.viewsBySequence[sequence]!.ledgers.counters;
@@ -511,7 +511,10 @@ describe('history fold biome depth cache', () => {
     expect(counters(restored)).toMatchObject({ biomeDepthCache: 5, roomHistoryOrdinal: 5 });
     expect(counters(restored + 1)).toMatchObject({ biomeDepthCache: 6, roomHistoryOrdinal: 6 });
 
-    const unmarked = numbered([...events.slice(0, -1), { kind: 'roomDeparted', origin: main }]);
+    const unmarked = numbered([
+      ...events.slice(0, -1),
+      { kind: 'roomDeparted', origin: main, destination: 'newRoom' },
+    ]);
     expect(() => foldBiomeHistoryPrefixEvents(unmarked)).toThrow(HistoryFoldContractError);
   });
 });

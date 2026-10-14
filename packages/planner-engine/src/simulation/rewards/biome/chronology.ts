@@ -31,6 +31,7 @@ import type { HistoryEvent } from '../../history';
 import { walkHistoryEvent } from './chronology-seams';
 import { captureRunState, targetSlotHistory } from './chronology-run-state';
 import { applyRoomEntryEffects } from './lifecycle-transitions/room-entered';
+import { gainSilkenSashDoorArmor } from '../../keepsakes/state';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import {
   createChronologyWalkState,
@@ -138,6 +139,29 @@ function createWalkContext(
     ixionGeneratedChaosSourceOccurrenceIds,
     runStateDerivationCache: createRunStateDerivationCache(),
   });
+}
+
+/**
+ * A Dream run's first biome is entered through the native Dream_Intro door,
+ * whose LeaveRoom runs door effects into that first room (`EnterNextDreamBiome`).
+ */
+function enterThroughDreamIntroDoor(
+  context: ChronologyWalkContext,
+  walk: ChronologyWalkState,
+): ChronologyWalkState {
+  const { catalog, routePosition } = context;
+  if (!routePosition.isFirst || routePosition.routeKey !== 'Dream') return walk;
+  return withBranches(
+    walk,
+    Object.freeze(
+      walk.branches.map((branch) => {
+        const keepsakes = gainSilkenSashDoorArmor(catalog, branch.state.keepsakes);
+        return keepsakes === branch.state.keepsakes
+          ? branch
+          : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
+      }),
+    ),
+  );
 }
 
 /** Echo replays its captured keepsake at the biome start, before the first event. */
@@ -389,16 +413,19 @@ export function evaluateBiomeRewardChronology(
   let walk = replayEchoKeepsake(
     context,
     accumulator,
-    createChronologyWalkState(
-      initializeRewardBranches(
-        initialBranches,
-        initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
-        catalog,
-        routeLoadout.startingKeepsakeKey,
-        routeLoadout.keepsakeEquipResults,
-        snapshot.routeKey,
-        routeLoadout,
-        { routePosition, historyView: history.biomeStart },
+    enterThroughDreamIntroDoor(
+      context,
+      createChronologyWalkState(
+        initializeRewardBranches(
+          initialBranches,
+          initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
+          catalog,
+          routeLoadout.startingKeepsakeKey,
+          routeLoadout.keepsakeEquipResults,
+          snapshot.routeKey,
+          routeLoadout,
+          { routePosition, historyView: history.biomeStart },
+        ),
       ),
     ),
   );

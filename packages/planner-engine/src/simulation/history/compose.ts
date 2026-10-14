@@ -21,6 +21,7 @@ import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
   appendStandaloneRoomCreated,
   appendFixedRoomLinks,
+  biomeExitDestination,
   composeBiomeHistoryEnvelope,
   composeBiomeHistoryEnvelopeWithEncounterValidation,
   composeBiomeHistoryPrefix as composePrefixHistoryEnvelope,
@@ -37,6 +38,7 @@ import type {
   CanonicalBiomeHistory,
   HistoryStateView,
   RoomCreatedHistoryEvent,
+  RoomDepartureDestination,
 } from './model';
 
 export class BiomeHistoryCompositionContractError extends Error {
@@ -272,10 +274,12 @@ function appendDeparture(
   writer: HistorySegmentWriter,
   room: CanonicalLifecycleRoom,
   restored: boolean,
+  destination: RoomDepartureDestination,
 ): void {
   writer.append({
     kind: 'roomDeparted',
     origin: room.origin,
+    destination,
     ...(restored ? { leavesRestoredRoom: true as const } : {}),
   });
 }
@@ -290,22 +294,27 @@ function appendVisit(
   visit: CanonicalHubVisit,
   hub: CanonicalHubRoom,
 ): void {
+  // The main room's first exit leads to its first side room, or back to the Hub.
   appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
     outgoing(outgoingWriter) {
       appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
     },
+    departureDestination: visit.enteredLocalRooms.length > 0 ? 'newRoom' : 'restore',
   });
   for (const [index, local] of visit.enteredLocalRooms.entries()) {
     if (!local.entered || local.localVisit.generation !== 'generated') {
       fail(`Hub visit ${visit.visitIndex} enters an unavailable side room`);
     }
-    if (index > 0) appendDeparture(writer, visit.target.room, true);
-    appendCanonicalRoomLifecycle(writer, catalog, local, fail);
+    if (index > 0) appendDeparture(writer, visit.target.room, true, 'newRoom');
+    appendCanonicalRoomLifecycle(writer, catalog, local, fail, {
+      departureDestination: 'restore',
+    });
     const restore = visit.parentRestores[index];
     if (restore === undefined) fail(`Hub visit ${visit.visitIndex} has no parent restore`);
     appendRestore(writer, restore, visit.target.room, 'parent');
   }
-  if (visit.enteredLocalRooms.length > 0) appendDeparture(writer, visit.target.room, true);
+  if (visit.enteredLocalRooms.length > 0)
+    appendDeparture(writer, visit.target.room, true, 'restore');
   appendRestore(writer, visit.hubRestore, hub, 'hub');
 }
 
@@ -353,7 +362,7 @@ function appendHubDecision(
   appendFountainAfter(0);
   // Every visit ends by restoring the Hub; the first departure follows its commit.
   for (const [index, visit] of decision.visits.entries()) {
-    appendDeparture(writer, decision.room, index > 0);
+    appendDeparture(writer, decision.room, index > 0, 'newRoom');
     appendVisit(writer, catalog, visit, decision.room);
     appendFountainAfter(visit.visitIndex);
   }
@@ -363,7 +372,7 @@ function appendHubDecision(
     startIndex: decision.board.targets.length,
     count: generationCount,
   });
-  appendDeparture(writer, decision.room, decision.visits.length > 0);
+  appendDeparture(writer, decision.room, decision.visits.length > 0, 'newRoom');
   return selectedTarget(handoff).room;
 }
 
@@ -716,6 +725,7 @@ function composeBiomeHistoryPrefixResult(
           createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
           current,
           snapshot.fixedRoomLinks,
+          biomeExitDestination(routePosition),
           fail,
         );
         return;

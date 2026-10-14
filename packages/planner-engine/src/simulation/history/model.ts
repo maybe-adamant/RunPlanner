@@ -147,6 +147,13 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
 }
 
 /**
+ * Where a departure leads: a room not visited before, a restored parent or
+ * Hub, the next biome's first room, or nowhere because the run ends without a
+ * native LeaveRoom.
+ */
+export type RoomDepartureDestination = 'newRoom' | 'restore' | 'biomeExit' | 'runEnd';
+
+/**
  * One native LeaveRoom: a room's first exit and every later departure from a
  * restored parent or Hub. Room-departure clocks advance here; `roomExited`
  * remains the once-per-room closure.
@@ -154,6 +161,7 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
 export interface RoomDepartedHistoryEvent extends HistoryEventBase {
   readonly kind: 'roomDeparted';
   readonly origin: RoomHistoryOrigin;
+  readonly destination: RoomDepartureDestination;
   /** Leaving a restored room adds its room-history record; a first exit's commit already did. */
   readonly leavesRestoredRoom?: true;
 }

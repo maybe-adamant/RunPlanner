@@ -23,6 +23,7 @@ import type {
   HistoryEvent,
   HistoryStateView,
   BiomeHistoryPrefix,
+  RoomDepartureDestination,
 } from './model';
 import type { ResolvedEncounterPhase } from '../encounters/model';
 import { assessFigLeafSkip } from '../encounters/fig-leaf';
@@ -117,6 +118,8 @@ export interface RoomLifecycleCompositionOptions {
   readonly continueThroughPostOutgoingActions?: boolean;
   /** The persistent Hub departs after its fountain use; its caller appends each departure. */
   readonly deferDeparture?: boolean;
+  /** Where this room's first exit leads; ordinarily a room not visited before. */
+  readonly departureDestination?: RoomDepartureDestination;
 }
 
 interface BiomeHistoryEnvelopeOptions<
@@ -358,7 +361,11 @@ export function appendRoomLifecycle(
     options.beforeEvent?.(writer, event);
     appendLifecycleEvent(writer, event, fail);
     if (event.kind === 'roomExited' && options.deferDeparture !== true)
-      writer.append({ kind: 'roomDeparted', origin: room.origin });
+      writer.append({
+        kind: 'roomDeparted',
+        origin: room.origin,
+        destination: options.departureDestination ?? 'newRoom',
+      });
     options.afterEvent?.(writer, event);
     if (event.kind === 'outgoingGenerationCheckpoint') {
       reachedOutgoing = true;
@@ -485,12 +492,20 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   });
 }
 
+/** The final biome's last room ends the run without a native LeaveRoom. */
+export function biomeExitDestination(
+  routePosition: ResolvedRoutePosition,
+): RoomDepartureDestination {
+  return routePosition.isLast ? 'runEnd' : 'biomeExit';
+}
+
 export function appendFixedRoomLinks(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   biome: BiomeAddress,
   predecessor: CanonicalLifecycleRoom,
   fixedRoomLinks: readonly CanonicalFixedRoomLink[],
+  exitDestination: RoomDepartureDestination,
   fail: (detail: string) => never,
 ): void {
   if (
@@ -502,7 +517,7 @@ export function appendFixedRoomLinks(
   }
   if (predecessor.kind !== 'authored') fail('fixed completion links require an authored Preboss');
   let source = predecessor;
-  for (const link of fixedRoomLinks) {
+  for (const [index, link] of fixedRoomLinks.entries()) {
     if (link.source.occurrenceId !== source.origin.occurrenceId) {
       fail('fixed completion link does not follow its predecessor');
     }
@@ -520,7 +535,9 @@ export function appendFixedRoomLinks(
       return;
     }
     appendStandaloneRoomCreated(writer, link.target, 'layoutCompletion');
-    appendRoomLifecycle(writer, catalog, link.target, fail);
+    appendRoomLifecycle(writer, catalog, link.target, fail, {
+      departureDestination: index === fixedRoomLinks.length - 1 ? exitDestination : 'newRoom',
+    });
     source = link.target;
   }
 }
@@ -582,7 +599,16 @@ function composeBiomeHistoryEnvelopeResult<
     const entry = composeEntry(writer);
     const predecessor = composeBody(writer, entry);
     const completionPredecessor = composeCompletionPredecessor(writer, predecessor);
-    appendFixedRoomLinks(writer, catalog, biome, completionPredecessor, fixedRoomLinks, fail);
+    if (fixedRoomLinks.length === 0) fail(`${biomeKey} completes without its fixed rooms`);
+    appendFixedRoomLinks(
+      writer,
+      catalog,
+      biome,
+      completionPredecessor,
+      fixedRoomLinks,
+      biomeExitDestination(routePosition),
+      fail,
+    );
     appendEnvelope(builder, { kind: 'biomeCompleted', origin: biome });
     for (const effect of transitionEffects) {
       appendEnvelope(builder, {

@@ -49,6 +49,16 @@ const supportedEffects = [
     },
   },
   {
+    key: 'ArmorGainKeepsake',
+    profileKey: 'doorArmorByRank',
+    legacyField: 'armor',
+    effect: {
+      kind: 'silkenSash',
+      baseArmor: 30,
+      doorArmorByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 6 },
+    },
+  },
+  {
     key: 'FountainRarityKeepsake',
     profileKey: 'targetRarityLevelByRank',
     legacyField: 'rarity',
@@ -195,7 +205,7 @@ const ordinaryKeepsakeFacts = [
   ['ForceAresBoonKeepsake', 'Sword Hilt', 'opposing', 'olympianRewardPressure', 'everyBiome'],
   ['AthenaEncounterKeepsake', 'Gorgon Amulet', 'opposing', 'excluded', undefined],
   ['SkipEncounterKeepsake', 'Fig Leaf', 'neutral', 'figLeaf', 'oneShot'],
-  ['ArmorGainKeepsake', 'Silken Sash', 'neutral', 'modeledNeutral', 'noModeledEffect'],
+  ['ArmorGainKeepsake', 'Silken Sash', 'neutral', 'silkenSash', 'oneShotAfterUnequipped'],
   ['FountainRarityKeepsake', 'Aromatic Phial', 'neutral', 'excluded', undefined],
   ['UnpickedBoonKeepsake', 'Concave Stone', 'neutral', 'concaveStone', 'oneShot'],
   ['DecayingBoostKeepsake', 'Lion Fang', 'neutral', 'lionFang', 'oneShotAfterUnequipped'],
