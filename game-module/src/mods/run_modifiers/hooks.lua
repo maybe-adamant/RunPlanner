@@ -12,7 +12,7 @@ function modifiers.attach(module, session, getState, report)
         local run = _G.CurrentRun
         if not state or state.admittedNativeRun ~= run or not run or not run.Hero
             or run.Hero.IsDead or (_G.SessionMapState or {}).HandlingDeath or _G.CurrentHubRoom
-            or state.firstFault or state.firstMismatch or state.admissionError then return nil end
+            or state.firstFault or state.firstMismatch or state.admissionError or state.abandoned then return nil end
         if state.state ~= 'synchronized'
             and not (state.state == 'inactive' and state.reason == 'configured-prefix-complete') then return nil end
         return state.plan and state.plan.runModifiers
