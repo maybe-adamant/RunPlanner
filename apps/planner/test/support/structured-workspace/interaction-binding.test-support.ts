@@ -402,7 +402,6 @@ export function bind(
       ...(fountainRarityControls === undefined ? {} : { fountainRarityControls }),
       ...(transcendentEmbryoControls === undefined ? {} : { transcendentEmbryoControls }),
       startInteractionRequirements: assembly.startInteractionRequirements,
-      takeoverInteractionRequirements: assembly.takeoverInteractionRequirements,
       topologyRemovalInteractionRequirements: assembly.topologyRemovalInteractionRequirements,
     }),
   };

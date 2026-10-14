@@ -421,7 +421,7 @@ describe('authored-project room replacement commands', () => {
     );
   });
 
-  it('retains structurally representable takeover leaves until explicit reconciliation after replacement', () => {
+  it('retains structurally representable takeover leaves after a source replacement', () => {
     let takeover = applyProjectCommand(gProject(), catalog, {
       kind: 'CreateStart',
       biome: gBiome,
@@ -478,35 +478,6 @@ describe('authored-project room replacement commands', () => {
         occurrenceId: 'widening-shop',
         state: expect.objectContaining({ kind: 'shop', shop: expect.any(Object) }),
       }),
-    );
-    takeover = applyProjectCommand(takeover, catalog, {
-      kind: 'ReconcileTakeoverBatch',
-      decision: takeoverDecision,
-      gameName: 'G_PreBoss01',
-      targetOccurrenceIds: {
-        exit1: createOccurrenceId('widening-shop'),
-        exit2: createOccurrenceId('widening-free-2'),
-        exit3: createOccurrenceId('widening-free-3'),
-      },
-    });
-    const widenedTopology = takeover.route?.biomes[1]?.topology;
-    expect(widenedTopology?.occurrences).toContainEqual(
-      expect.objectContaining({
-        occurrenceId: 'widening-shop',
-        state: { kind: 'shop' },
-      }),
-    );
-    expect(widenedTopology?.occurrences).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          occurrenceId: 'widening-free-2',
-          state: expect.objectContaining({ kind: 'freeReward' }),
-        }),
-        expect.objectContaining({
-          occurrenceId: 'widening-free-3',
-          state: expect.objectContaining({ kind: 'freeReward' }),
-        }),
-      ]),
     );
   });
 

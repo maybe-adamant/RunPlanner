@@ -3,7 +3,6 @@ import type { BiomeTopology, ExitDecision, ExitSelection, ExitTargetReference } 
 import {
   additionalExitsForDecision,
   batchTakesOverNormalDoors,
-  declaredPhysicalExitKeys,
   exitDecisionForSource,
   selectedExitKey,
   selectedExitTarget,
@@ -12,21 +11,9 @@ import { sameExitDecisionSource } from '../topology/source-identity';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topology/impact';
 import { failCommand, type LocatedBiome } from './contract';
 import { reconcileNormalTargetEntryStates } from './selection-state';
+import { exitKeysForTopologySource } from './topology/construction';
+import { reconcileTakeoverBatchExits } from './topology/takeover';
 import type { RouteDetourCommand, TopologyCommand } from './types';
-
-export function exitKeysForTopologySource(
-  catalog: Catalog,
-  located: LocatedBiome,
-  topology: BiomeTopology,
-  source: ExitDecision['source'],
-  command: TopologyCommand | RouteDetourCommand,
-): readonly string[] {
-  const declared = declaredPhysicalExitKeys(catalog, located.layout, topology, source);
-  if (declared === undefined) {
-    failCommand(command, `${source.kind} source has no declaration-owned physical exits`);
-  }
-  return declared;
-}
 
 function replaceExitDecision(topology: BiomeTopology, replacement: ExitDecision): BiomeTopology {
   return Object.freeze({
@@ -127,7 +114,8 @@ function reconcileExitDecisionCapacity(
 
 /**
  * `rekey` keeps a selected continuation whose door the source lacks; `prune`
- * removes it with every other undeclared door.
+ * removes it with every other undeclared door. A takeover batch always drops
+ * its undeclared doors.
  */
 export type UndeclaredSelectedDoor = 'rekey' | 'prune';
 
@@ -139,12 +127,22 @@ export function reconcileExitDecisionToDeclaredCapacity(
   undeclaredSelectedDoor: UndeclaredSelectedDoor,
   command: TopologyCommand | RouteDetourCommand,
 ): BiomeTopology {
+  if (batchTakesOverNormalDoors(catalog, topology, decision)) {
+    return reconcileTakeoverBatchExits(
+      catalog,
+      located,
+      topology,
+      decision,
+      'removeUndeclared',
+      command,
+    );
+  }
   const allowed = exitKeysForTopologySource(catalog, located, topology, decision.source, command);
   const reconciled = reconcileExitDecisionCapacity(
     topology,
     decision,
     allowed,
-    undeclaredSelectedDoor === 'rekey' && !batchTakesOverNormalDoors(catalog, topology, decision),
+    undeclaredSelectedDoor === 'rekey',
   );
   const reconciledDecision = exitDecisionForSource(reconciled, decision.source);
   if (reconciledDecision === undefined) {

@@ -341,17 +341,54 @@ export function batchTakesOverNormalDoors(
   topology: BiomeTopology,
   decision: ExitDecision,
 ): boolean {
+  return takeoverPrebossDeclarationForBatch(catalog, topology, decision) !== undefined;
+}
+
+/** The takeover Preboss declaration that owns this batch's doors, if any. */
+export function takeoverPrebossDeclarationForBatch(
+  catalog: Catalog,
+  topology: BiomeTopology,
+  decision: ExitDecision,
+): RoomDeclaration | undefined {
+  for (const target of decision.normal.targets) {
+    const occurrence = topology.occurrences.find(
+      (candidate) => candidate.occurrenceId === target.occurrenceId,
+    );
+    const room = occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
+    if (room?.prebossBatchPolicy?.kind === 'takeOverNormalDoors') return room;
+  }
+  return undefined;
+}
+
+/** A Preboss without remaining offers takes over a single door only. */
+export function takeoverPrebossFillsDeclaredExits(
+  room: RoomDeclaration,
+  declaredExitCount: number,
+): boolean {
   return (
-    decision.normal.kind === 'batch' &&
-    decision.normal.targets.some((target) => {
-      const occurrence = topology.occurrences.find(
-        (candidate) => candidate.occurrenceId === target.occurrenceId,
-      );
-      return (
-        occurrence !== undefined &&
-        catalog.rooms.byKey[occurrence.gameName]?.prebossBatchPolicy?.kind === 'takeOverNormalDoors'
-      );
-    })
+    room.prebossBatchPolicy?.kind === 'takeOverNormalDoors' &&
+    (room.prebossBatchPolicy.remainingOffers.kind !== 'none' || declaredExitCount <= 1)
+  );
+}
+
+/**
+ * True when exit-capacity repair would change this takeover batch: its doors
+ * differ from the source's declared doors and the Preboss can fill them.
+ */
+export function takeoverBatchExitRepairAvailable(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  decision: ExitDecision,
+): boolean {
+  if (decision.source.kind !== 'occurrence') return false;
+  const room = takeoverPrebossDeclarationForBatch(catalog, topology, decision);
+  const declared = declaredPhysicalExitKeys(catalog, layout, topology, decision.source);
+  if (room === undefined || declared === undefined) return false;
+  if (!takeoverPrebossFillsDeclaredExits(room, declared.length)) return false;
+  const authored = decision.normal.targets.map((target) => target.exitKey);
+  return (
+    authored.length !== declared.length || authored.some((exitKey) => !declared.includes(exitKey))
   );
 }
 

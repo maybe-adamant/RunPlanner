@@ -91,10 +91,7 @@ describe('G generation and takeover', () => {
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(
-        goldenGBiome,
-        createOccurrenceId('golden-g-preboss-free-3'),
-      ),
+      reward: createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-b7-e1:exit3')),
       value: { rewardType: 'StackUpgrade' },
     });
     // Selecting exit2 moves the Preboss, so its boss door is a new authored

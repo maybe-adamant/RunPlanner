@@ -12,7 +12,6 @@ const {
   createOccurrenceId,
   createTargetAddress,
   semanticAddressKey,
-  loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
   nBiome,
   nOccurrenceIds,
@@ -52,18 +51,6 @@ describe('structured workspace interaction binding', () => {
       focus: { owner: hub, timing: 'after' },
     });
     expect(allocated).toHaveLength(1);
-
-    const handoffOwner = createExitDecisionAddress(nBiome, {
-      decisionKey: 'hub',
-      kind: 'hubDecision',
-    });
-    expect(
-      bind(
-        loadSurfaceNCompleteHubFrontierProject(),
-        'Surface',
-        'N',
-      ).interactions.takeoverBatches.get(semanticAddressKey(handoffOwner)),
-    ).toBeUndefined();
   });
 
   it('binds selected N natural Chaos to the same sole Hub Door 1 choice', () => {

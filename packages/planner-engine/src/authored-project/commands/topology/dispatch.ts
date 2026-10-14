@@ -36,7 +36,6 @@ export function applyTopologyCommand(
       return createTarget(document, catalog, located, command);
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
-    case 'ReconcileTakeoverBatch':
       return replaceTakeoverBatch(document, catalog, located, command);
     case 'ReconcileBatchExitCapacity':
       return reconcileBatchExitCapacity(document, catalog, located, command);

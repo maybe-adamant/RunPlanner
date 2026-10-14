@@ -291,20 +291,14 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
     });
     if (options.prebossSource === 'G_Combat14') {
       project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceWithTakeoverBatch',
+        kind: 'ReconcileBatchExitCapacity',
         decision: createExitDecisionAddress(goldenGBiome, source(sourceOccurrence)),
-        gameName: 'G_PreBoss01',
-        targetOccurrenceIds: {
-          exit1: createOccurrenceId('golden-g-preboss-shop'),
-          exit2: createOccurrenceId('golden-g-preboss-free-2'),
-          exit3: createOccurrenceId('golden-g-preboss-free-3'),
-        },
       });
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(
           goldenGBiome,
-          createOccurrenceId('golden-g-preboss-free-3'),
+          createOccurrenceId('golden-g-b7-e1:exit3'),
         ),
         value: { rewardType: 'HermesUpgrade' },
       });

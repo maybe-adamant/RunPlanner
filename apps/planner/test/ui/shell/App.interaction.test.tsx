@@ -2452,10 +2452,7 @@ describe('planner history interaction', () => {
     });
     project = applyProjectCommand(project, application.catalog, {
       kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(
-        goldenGBiome,
-        createOccurrenceId('golden-g-preboss-free-3'),
-      ),
+      reward: createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-b7-e1:exit3')),
       value: { rewardType: 'StackUpgrade' },
     });
     project = authorLegalTraitOffers(project);

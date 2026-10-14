@@ -2,7 +2,6 @@ import {
   createOccurrenceAddress,
   routeRoomDeclaration,
   semanticAddressKey,
-  type OccurrenceId,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -27,12 +26,10 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceRoomInteraction, WorkspaceRoomPickerControl } from '../contract';
 import type {
   WorkspaceStartInteraction,
-  WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
 } from '../contracts/structure';
 import type {
   WorkspaceStartInteractionRequirement,
-  WorkspaceTakeoverInteractionRequirement,
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
 import type { StructuredWorkspaceContextualServices } from '../contract';
@@ -129,53 +126,6 @@ function bindStartInteractions(
     starts.set(key, Object.freeze({ intent, picker, key, owner: requirement.owner }));
   }
   return starts;
-}
-
-function bindTakeoverBatchInteractions(
-  allocateOccurrenceId: OccurrenceIdFactory,
-  catalog: Catalog,
-  requirements: Iterable<WorkspaceTakeoverInteractionRequirement>,
-): ReadonlyMap<string, WorkspaceTakeoverBatchInteraction> {
-  const targetOccurrences = (
-    targets: readonly { readonly exitKey: string; readonly occurrenceId: OccurrenceId }[],
-  ): ReadonlyMap<string, OccurrenceId> =>
-    new Map(targets.map((target) => [target.exitKey, target.occurrenceId] as const));
-  const takeoverBatches = new Map<string, WorkspaceTakeoverBatchInteraction>();
-  for (const requirement of requirements) {
-    const key = semanticAddressKey(requirement.owner);
-    if (takeoverBatches.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple bound takeover batch interactions`,
-      );
-    }
-    const existingTargetOccurrenceIds = targetOccurrences(requirement.existingTargets);
-    takeoverBatches.set(
-      key,
-      Object.freeze({
-        action: 'reconcile' as const,
-        intent: () =>
-          Object.freeze({
-            command: createTakeoverBatchCommand({
-              action: 'reconcile',
-              allocateOccurrenceId,
-              decision: requirement.owner,
-              existingTargetOccurrenceIds,
-              gameName: requirement.gameName,
-              requiredExitKeys: requirement.requiredExitKeys,
-            }),
-            focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-          }),
-        key,
-        label: routeRoomDeclaration(
-          requireWorkspaceRoom(catalog, requirement.gameName),
-          requirement.owner.routeKey,
-        ).label,
-        owner: requirement.owner,
-        presentation: 'repair' as const,
-      }),
-    );
-  }
-  return takeoverBatches;
 }
 
 function candidateHasExecutableSupport(candidate: CandidateOptionProjection<unknown>): boolean {
@@ -290,7 +240,6 @@ function disableUnavailableDecisionEntryCandidates(
 export interface WorkspaceTopologyInteractionCatalog {
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
-  readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
 }
 
@@ -302,7 +251,6 @@ export function bindTopologyInteractions(input: {
   readonly project: ProjectEvaluationAssembly['project'];
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly startInteractionRequirements: Iterable<WorkspaceStartInteractionRequirement>;
-  readonly takeoverInteractionRequirements: Iterable<WorkspaceTakeoverInteractionRequirement>;
   readonly topologyRemovalInteractionRequirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>;
 }): WorkspaceTopologyInteractionCatalog {
   const {
@@ -313,7 +261,6 @@ export function bindTopologyInteractions(input: {
     project,
     roomControls,
     startInteractionRequirements,
-    takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements,
   } = input;
   const rooms = new Map<string, WorkspaceRoomInteraction>();
@@ -545,7 +492,6 @@ export function bindTopologyInteractions(input: {
             const sharedTakeoverInput = {
               allocateOccurrenceId,
               decision: control.decisionOwner,
-              existingTargetOccurrenceIds: new Map<string, OccurrenceId>(),
               gameName,
               requiredExitKeys: entry.candidate.evaluation.result.requiredExitKeys,
             };
@@ -664,11 +610,6 @@ export function bindTopologyInteractions(input: {
   return Object.freeze({
     rooms,
     starts: bindStartInteractions(catalog, allocateOccurrenceId, startInteractionRequirements),
-    takeoverBatches: bindTakeoverBatchInteractions(
-      allocateOccurrenceId,
-      catalog,
-      takeoverInteractionRequirements,
-    ),
     topologyRemovals: bindTopologyRemovalInteractions(topologyRemovalInteractionRequirements),
   });
 }

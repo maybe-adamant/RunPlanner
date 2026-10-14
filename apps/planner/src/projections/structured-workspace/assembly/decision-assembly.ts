@@ -12,12 +12,12 @@ import {
   uncommittedOrdinaryTargetAuthoringEligibility,
   normalDecisionProgressionForLayout,
   hubTerminalTakeoverForSource,
+  takeoverBatchExitRepairAvailable,
   selectedExitTarget,
   semanticAddressKey,
   type DeclaredPhysicalExit,
   type ExitDecision,
   type ExitDecisionAddress,
-  type OccurrenceId,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -37,7 +37,6 @@ import { requireWorkspaceRoom } from './catalog-room';
 import { olympusExitTypeLabel } from '@planner/projections/roomSelectorProjection';
 import {
   StructuredWorkspaceProjectionContractError,
-  workspaceInteractionKey,
   type WorkspaceRoomPickerControl,
 } from '../contract';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
@@ -171,15 +170,40 @@ function redirectDecisionFocus(
   markerDestinations.setRoomTab(markers, 'doors');
 }
 
-function batchRepairIntentForUnavailableTargets(
+/**
+ * Ordinary doors repair only when one is unavailable; a takeover batch repairs
+ * whenever the engine can match it to its source's declared doors, and that
+ * repair carries the batch's finding mark. Declared exits and authored targets
+ * are both exit1-prefixes, so a takeover is only ever too wide or too narrow;
+ * any unavailable door makes the repair a removal.
+ */
+function batchExitCapacityRepairIntent(
+  input: WorkspaceDecisionAssemblyBaseInput,
+  decision: AuthoredBatchDecision,
   owner: ExitDecisionAddress,
   kind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
-  roots: ReadonlySet<OccurrenceId>,
+  targets: readonly WorkspacePhysicalTarget[],
 ): WorkspaceBatchRepairIntent | undefined {
-  if (kind === 'takeoverBatch' || roots.size === 0) return undefined;
+  const unavailable = targets.some((target) => target.physicalState === 'unavailable');
+  const command = Object.freeze({ kind: 'ReconcileBatchExitCapacity' as const, decision: owner });
+  const focus = Object.freeze({ owner, timing: 'before' as const });
+  if (kind !== 'takeoverBatch') {
+    return unavailable
+      ? Object.freeze({ command, effect: 'removeUnavailable' as const, focus })
+      : undefined;
+  }
+  const topology = input.source.plan.topology;
+  if (
+    topology === null ||
+    !takeoverBatchExitRepairAvailable(input.catalog, input.source.layout, topology, decision)
+  ) {
+    return undefined;
+  }
   return Object.freeze({
-    command: Object.freeze({ kind: 'ReconcileBatchExitCapacity' as const, decision: owner }),
-    focus: Object.freeze({ owner, timing: 'before' as const }),
+    command,
+    effect: unavailable ? ('removeUnavailable' as const) : ('addMissing' as const),
+    focus,
+    markOwner: owner,
   });
 }
 
@@ -975,15 +999,7 @@ function assembleBatchDecision(
     targets,
     visibleMissingTargets,
   );
-  const repairIntent = batchRepairIntentForUnavailableTargets(
-    owner,
-    kind,
-    new Set(
-      targets
-        .filter((target) => target.physicalState === 'unavailable')
-        .map((target) => target.room.occurrenceId),
-    ),
-  );
+  const repairIntent = batchExitCapacityRepairIntent(input, decision, owner, kind, targets);
   const fieldsCageOutcome = fieldsBatchOwnsOutcome
     ? input.markerDestinations.marker(owner)
     : undefined;
@@ -1194,9 +1210,6 @@ function assembleBatchDecision(
           ...base,
           kind: 'takeoverBatch' as const,
           targetInteraction: 'readOnly' as const,
-          ...(completedHubExitStage
-            ? {}
-            : { takeoverInteractionKey: workspaceInteractionKey(owner) }),
         })
       : kind === 'mixedBatch'
         ? Object.freeze({
@@ -1210,6 +1223,12 @@ function assembleBatchDecision(
             targetInteraction: 'replaceable' as const,
           });
   redirectDecisionFocus(input.markerDestinations, batch);
+  // A takeover's missing doors have no row; their door-set repair carries the mark.
+  if (batch.repairIntent?.markOwner !== undefined) {
+    for (const missing of batch.missingTargets) {
+      input.markerDestinations.redirectTo(missing.marker, batch.marker, batch.key, batch.marker);
+    }
+  }
   // An impossible Anomaly is repaired by restoring its remembered room; navigation stays on the door.
   if (batch.source.kind !== 'hubDecision') {
     for (const target of batch.targets) {

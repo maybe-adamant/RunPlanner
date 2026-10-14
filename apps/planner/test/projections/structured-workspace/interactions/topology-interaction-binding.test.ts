@@ -22,7 +22,6 @@ const {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-  goldenGBiome,
   goldenHBiome,
   goldenIBiome,
   loadSurfaceNOPQProject,
@@ -584,88 +583,6 @@ describe('structured workspace interaction binding', () => {
       gameName: 'F_Combat02',
       kind: 'CreateTarget',
       target,
-    });
-  });
-
-  it('constructs takeover repair commands from bound existing target identities', () => {
-    const { assembly, interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');
-    const repair = [...interactions.takeoverBatches.values()].find(
-      (interaction) => interaction.presentation === 'repair',
-    );
-    if (repair?.presentation !== 'repair') throw new Error('F takeover repair binding is missing');
-    const requirement = [...assembly.takeoverInteractionRequirements.values()].find(
-      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(repair.owner),
-    );
-    if (requirement?.presentation !== 'repair') {
-      throw new Error('F takeover repair requirement is missing');
-    }
-
-    expect(repair.intent()).toEqual({
-      command: {
-        decision: repair.owner,
-        gameName: requirement.gameName,
-        kind: 'ReconcileTakeoverBatch',
-        targetOccurrenceIds: Object.fromEntries(
-          requirement.existingTargets.map((target) => [target.exitKey, target.occurrenceId]),
-        ),
-      },
-      focus: { owner: repair.owner, timing: 'before' },
-    });
-  });
-
-  it('retains a blocked takeover repair binding at its exact decision owner', () => {
-    const base = createGoldenFGHIProject();
-    const gPlan = base.route.biomes.find((candidate) => candidate.biomeKey === 'G');
-    const gTakeover = gPlan?.topology?.decisions.find(
-      (decision) =>
-        decision.kind === 'exit' &&
-        decision.normal.kind === 'batch' &&
-        decision.normal.targets.every(
-          (target) =>
-            gPlan.topology?.occurrences.find(
-              (occurrence) => occurrence.occurrenceId === target.occurrenceId,
-            )?.gameName === 'G_PreBoss01',
-        ),
-    );
-    if (gTakeover?.kind !== 'exit' || gTakeover.source.kind !== 'occurrence') {
-      throw new Error('G takeover source is missing');
-    }
-    const owner = createExitDecisionAddress(goldenGBiome, gTakeover.source);
-    let project = applyProjectCommand(base, catalog, {
-      gameName: 'G_MiniBoss02',
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(goldenGBiome, gTakeover.source.occurrenceId),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
-        kind: 'occurrence',
-        occurrenceId: goldenFStartId,
-      }),
-      storeKey: 'RunProgress',
-    });
-    const { assembly, interactions } = bind(project, 'Underworld', 'G');
-    const requirement = [...assembly.takeoverInteractionRequirements.values()].find(
-      (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
-    );
-    const interaction = interactions.takeoverBatches.get(semanticAddressKey(owner));
-    if (requirement?.presentation !== 'repair' || interaction?.presentation !== 'repair') {
-      throw new Error('blocked G takeover repair binding is missing');
-    }
-
-    expect(interaction).toMatchObject({ action: 'reconcile', owner, presentation: 'repair' });
-    expect(interaction.intent()).toEqual({
-      command: {
-        decision: owner,
-        gameName: requirement.gameName,
-        kind: 'ReconcileTakeoverBatch',
-        targetOccurrenceIds: Object.fromEntries(
-          requirement.existingTargets
-            .filter((target) => requirement.requiredExitKeys.includes(target.exitKey))
-            .map((target) => [target.exitKey, target.occurrenceId]),
-        ),
-      },
-      focus: { owner, timing: 'before' },
     });
   });
 });
