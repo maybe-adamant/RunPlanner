@@ -167,7 +167,11 @@ export type TraitMaxStatEffect =
       readonly amount: number;
     }
   /** `CircePetMultiplier`: multiplies the equipped familiar's stacks. */
-  | { readonly kind: 'familiarStackMultiplier'; readonly multiplier: number };
+  | {
+      readonly kind: 'familiarStackMultiplier';
+      /** By acquisition ordinal; each acquisition multiplies the stacks. */
+      readonly multiplier: TraitAcquisitionOrdinalValues;
+    };
 
 /**
  * Lasting hero armor a held trait sets (`CostumeArmor`, `HephaestusArmor`),

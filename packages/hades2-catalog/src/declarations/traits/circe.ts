@@ -51,8 +51,8 @@ export const circeTraits = [
     ...raritylessNpcTrait,
     key: 'DoubleFamiliarTrait',
     label: 'Primal Psychic Connection',
-    // CircePetMultiplier at Circe's fixed Common rarity: BonusMultiplier 1 adds the current stacks.
-    maxStatEffect: { kind: 'familiarStackMultiplier', multiplier: 2 },
+    // CircePetMultiplier adds BonusMultiplier (1 by RarityLevels 1, 1, 2, 2) times the stacks.
+    maxStatEffect: { kind: 'familiarStackMultiplier', multiplier: [2, 2, 3, 3] },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

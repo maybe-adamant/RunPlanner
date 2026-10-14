@@ -155,8 +155,12 @@ pre-acquisition state.
 `EquipFamiliar` runs at run start. `FamiliarShopData.lua` gives each of a
 familiar's three upgraded traits three levels, and each trait gains one stack per
 owned non-debug level (`GetFamiliarTraitStacks`); a mature save owns all of
-them, so the first trait has four stacks. Primal Psychic Connection is always offered at Common, whose
-`CircePetMultiplier` adds the current stacks once, doubling them.
+them, so the first trait has four stacks. Primal Psychic Connection's
+`CircePetMultiplier` adds `BonusMultiplier` times the current stacks
+(`EventLogic.lua:1431-1456`). `BonusMultiplier` is 1 scaled by `RarityLevels`
+1/1/2/2, so the stacks double at Common and Rare and triple at Epic and Heroic;
+the planner resolves ×2/×2/×3/×3 by acquisition ordinal, and Practice publishes
+the result as the familiar's stack multiplier.
 
 ## Planner disposition
 

@@ -3,10 +3,12 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
@@ -15,7 +17,10 @@ import {
   loadUnderworldFGHICheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  surfaceShrineDeliveriesProject,
+} from '@run-planner/test-fixtures/surface';
 import {
   simulateProject,
   simulateProjectAssembly,
@@ -309,6 +314,35 @@ describe('execution start state', () => {
     expect(npcRows(qOpeningWire, 'CirceShrinkTrait')).toEqual([
       { name: 'CirceShrinkTrait', acquisitionOrdinal: 2 },
     ]);
+  });
+
+  it('publishes a standard Circe Primal Psychic Connection in O as a doubled familiar', () => {
+    const o = createBiomeAddress('Surface', 'O');
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          o,
+          { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-o-story') },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Circe',
+        options: [
+          { traitKey: 'DoubleFamiliarTrait' },
+          { traitKey: 'CirceEnlargeTrait' },
+          { traitKey: 'HealAmplifyTrait' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const start = compile(withStartPoint(project, { biomeKey: 'P', point: 'opening' })).startState!;
+    expect(start.familiar).toEqual({ name: 'FrogFamiliar', stackMultiplier: 2 });
+    expect(start.traits).toContainEqual({ name: 'DoubleFamiliarTrait', acquisitionOrdinal: 2 });
   });
 
   it('round-trips and fingerprints the start state', () => {

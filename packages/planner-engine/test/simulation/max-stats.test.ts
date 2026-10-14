@@ -262,13 +262,43 @@ describe('max health and max Magick formula', () => {
     expect(maxima(state).maxHealth).toBe(1);
   });
 
-  it('stacks the mature familiar and doubles it after Primal Psychic Connection', () => {
+  it('stacks the mature familiar and multiplies it by Primal Psychic Connection’s ordinal', () => {
+    expect(catalog.traits.byKey.DoubleFamiliarTrait!.maxStatEffect).toEqual({
+      kind: 'familiarStackMultiplier',
+      multiplier: [2, 2, 3, 3],
+    });
+    const picked = (acquisitionOrdinal?: number) =>
+      traits([], {
+        events: Object.freeze([
+          Object.freeze({
+            kind: 'traitOffer' as const,
+            owner: createBiomeAddress('Surface', 'O'),
+            acquisitionRole: 'selection',
+            sequence: 0,
+            giverKey: 'Circe',
+            options: Object.freeze([
+              { traitKey: 'DoubleFamiliarTrait' },
+              { traitKey: 'CirceEnlargeTrait' },
+              { traitKey: 'HealAmplifyTrait' },
+            ]),
+            selectedOptionKey: 'option1' as const,
+            acquisitionPoint: 'test',
+            ...(acquisitionOrdinal === undefined ? {} : { acquisitionOrdinal }),
+          }),
+        ]) as unknown as TraitHistoryState['events'],
+      });
     const frinos = { ...NO_STAT_ASPECT, familiarKey: 'FrogFamiliar' };
     expect(maxima(neutralState(undefined, { loadout: frinos })).maxHealth).toBe(70);
-    const doubled = traits([], {
-      previouslyPickedTraitKeys: Object.freeze(['DoubleFamiliarTrait']),
-    });
-    expect(maxima(neutralState(doubled, { loadout: frinos })).maxHealth).toBe(110);
+    // Four mature stacks of 10 health, doubled through the third biome and tripled in the fourth.
+    expect(
+      [1, 2, 3, 4].map(
+        (ordinal) => maxima(neutralState(picked(ordinal), { loadout: frinos })).maxHealth,
+      ),
+    ).toEqual([110, 110, 150, 150]);
+    expect(() => maxima(neutralState(picked(), { loadout: frinos }))).toThrow(
+      /lacks its acquisition ordinal/,
+    );
+    const doubled = picked(2);
     const hecuba = { ...NO_STAT_ASPECT, familiarKey: 'HoundFamiliar' };
     expect(maxima(neutralState(undefined, { loadout: hecuba })).maxMana).toBe(110);
     expect(maxima(neutralState(doubled, { loadout: hecuba })).maxMana).toBe(170);

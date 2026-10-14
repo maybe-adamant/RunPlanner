@@ -254,7 +254,9 @@ export function normalizeGivers(
         ? [effect.maxHealth, effect.maxMana]
         : effect?.kind === 'manaToHealthConversion'
           ? [effect.fraction]
-          : [];
+          : effect?.kind === 'familiarStackMultiplier'
+            ? [effect.multiplier]
+            : [];
     if (scaled.some((value) => Array.isArray(value)) && !ordinalMenuTraitKeys.has(trait.key))
       fail(
         `traits.${trait.key}.maxStatEffect`,

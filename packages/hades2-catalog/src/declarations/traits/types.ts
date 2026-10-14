@@ -103,7 +103,10 @@ export type RawTraitMaxStatEffect =
       readonly stat: 'maxHealth' | 'maxMana';
       readonly amount: number;
     }
-  | { readonly kind: 'familiarStackMultiplier'; readonly multiplier: number };
+  | {
+      readonly kind: 'familiarStackMultiplier';
+      readonly multiplier: readonly [number, number, number, number];
+    };
 
 export interface RawRarityScaledValue {
   readonly baseValue: number;
