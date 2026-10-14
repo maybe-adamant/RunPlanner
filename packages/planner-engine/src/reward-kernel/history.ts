@@ -54,6 +54,7 @@ export function createRewardHistoryState(
     lifetimeGodPickupRecord: godRecord,
     resourceGains: EMPTY_RECORD,
     maxStatGains: NO_MAX_STAT_GAINS,
+    itemArmor: 0,
     traitFacts: Object.freeze({
       upgradableTraitCount: 0,
       elementCounts: EMPTY_RECORD,
@@ -133,6 +134,15 @@ export function creditMaxStatGain(
       [grant.stat]: history.maxStatGains[grant.stat] + grant.amount,
     }),
   });
+}
+
+/** Adds armor to the hero's item armor (native `MinorArmorBoon`). */
+export function creditItemArmor(
+  history: RewardHistoryState,
+  amount: number | undefined,
+): RewardHistoryState {
+  if (amount === undefined || amount === 0) return history;
+  return Object.freeze({ ...history, itemArmor: history.itemArmor + amount });
 }
 
 /** Records one source-resolved direct loot interaction without fabricating a pickup. */

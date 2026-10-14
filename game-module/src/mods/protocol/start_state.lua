@@ -230,8 +230,8 @@ local function shape(value)
     local row = exact(value, {
         "point", "biomeKey", "occurrenceId", "roomName", "gold", "biomeVisitOrder", "roomHistory",
         "encounterDepth", "aspectPerfect", "traits", "elementEssences", "chaosCurses", "chaosBlessings", "keepsake", "arcana",
-        "arcanaBarren", "disabledVows", "maxStats", "stygianWell", "hermesDeliveries", "rewardPriorities",
-        "useRecord", "lootTypeHistory", "consumableRecord", "rewardStores",
+        "arcanaBarren", "disabledVows", "maxStats", "itemArmor", "stygianWell", "hermesDeliveries",
+        "rewardPriorities", "useRecord", "lootTypeHistory", "consumableRecord", "rewardStores",
     }, { "lastDevotionDepth", "biome", "familiar", "hex" }, LABEL)
     check(row.point == "opening" or row.point == "preboss" or row.point == "boss", LABEL .. ".point is unsupported")
     one(row.biomeKey, biomes, LABEL .. ".biomeKey")
@@ -268,6 +268,7 @@ local function shape(value)
     bool(row.arcanaBarren, LABEL .. ".arcanaBarren")
     strings(row.disabledVows, LABEL .. ".disabledVows")
     maxStats(row.maxStats, LABEL .. ".maxStats")
+    int(row.itemArmor, LABEL .. ".itemArmor")
     well(row.stygianWell, LABEL .. ".stygianWell")
     list(row.hermesDeliveries, LABEL .. ".hermesDeliveries", function(entry, entryLabel)
         local delivery = exact(entry, { "rewardType", "remainingUses" }, {}, entryLabel)

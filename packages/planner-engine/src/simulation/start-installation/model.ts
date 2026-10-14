@@ -25,6 +25,7 @@ export type StartInstallationFamily =
   | 'arcana'
   | 'fear'
   | 'maxStats'
+  | 'itemArmor'
   | 'stygianWell'
   | 'hermesDeliveries'
   | 'hex'
@@ -274,6 +275,8 @@ export interface StartInstallation {
   readonly arcana: StartInstallationArcana;
   readonly fear: StartInstallationFear;
   readonly maxStats: StartMaxStats;
+  /** Armor held in the hidden `MinorArmorBoon`, installed whole. */
+  readonly itemArmor: number;
   readonly stygianWell: StartStygianWell;
   readonly hermesDeliveries: readonly StartHermesDelivery[];
   readonly hex: StartInstallationHex;

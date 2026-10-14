@@ -100,6 +100,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly resourceGrant?: ResourceAmounts;
   /** Source `AddMaxHealth`/`AddMaxMana`. */
   readonly maxStatGrant?: MaxStatGrant;
+  /** Source `AddArmor`: armor added to the hidden `MinorArmorBoon`. */
+  readonly armorGrant?: number;
   /**
    * Source `RunProgress.PropertyChanges`: replaces `maxStatGrant` when a
    * run-progress-eligible producer spawns it on a route with the unlock.
@@ -323,6 +325,11 @@ export interface RewardHistoryState {
   readonly resourceGains: ResourceAmounts;
   /** Flat maxima from collected pickups, including run-progress overrides; never debited. */
   readonly maxStatGains: MaxStatTotals;
+  /**
+   * Armor held in the hidden `MinorArmorBoon`: collected armor items and armor
+   * keepsake transfers move into it. Never debited.
+   */
+  readonly itemArmor: number;
   /** Latest actually-settled source whose effective LastRewardEligible value is true. */
   readonly lastRewardRecreation?: ConcreteAcquisitionDeclaration['lastRewardRecreation'];
   /** Canonical fold of the equipped-trait ledger; never incremented by loot projection. */

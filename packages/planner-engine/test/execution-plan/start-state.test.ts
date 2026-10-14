@@ -128,11 +128,15 @@ describe('execution start state', () => {
     // Collected essences become hidden essence traits; held traits carry their own elements.
     expect(installation.essences).toEqual({ Aether: 0, Earth: 1, Air: 0, Fire: 0, Water: 0 });
     expect(start.elementEssences).toEqual({ Fire: 0, Air: 0, Earth: 1, Water: 0 });
+    // An O Hermes delivery handed over one Armor.
+    expect(installation.itemArmor).toBe(20);
+    expect(start.itemArmor).toBe(20);
   });
 
   it('publishes the current biome state for a Preboss start', () => {
     const start = decodeExecutionPlan(iPrebossWire).startState!;
     expect(start).toMatchObject({
+      itemArmor: 0,
       point: 'preboss',
       roomName: 'I_PreBoss02',
       gold: 0,
@@ -288,6 +292,9 @@ describe('execution start state', () => {
           ],
         }),
     ],
+    ['missing item armor', (start) => delete start.itemArmor],
+    ['negative item armor', (start) => (start.itemArmor = -20)],
+    ['fractional item armor', (start) => (start.itemArmor = 2.5)],
     ['missing essence counts', (start) => delete start.elementEssences],
     [
       'an Aether essence',

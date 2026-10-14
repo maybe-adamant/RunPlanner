@@ -1266,6 +1266,8 @@ export interface ExecutionStartState {
     /** Recorded amounts no installed trait re-creates, installed as hidden traits. */
     readonly hiddenGrants: readonly ExecutionStartMaxStatGrant[];
   };
+  /** Armor held in one hidden `MinorArmorBoon` (its `BaseAmount`); none when 0. */
+  readonly itemArmor: number;
   readonly stygianWell: ExecutionStartWell;
   /** Pending `StorePendingDeliveryItem` traits. */
   readonly hermesDeliveries: readonly {

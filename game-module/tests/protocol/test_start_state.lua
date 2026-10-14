@@ -27,6 +27,7 @@ function TestStartState.testStartFixturesDecodeWithTheirStartPoint()
         { "opening", "Q", 120 })
     lu.assertEquals(opening.startState.biomeVisitOrder, { "N", "O", "P" })
     lu.assertEquals(opening.startState.elementEssences, { Fire = 0, Air = 0, Earth = 1, Water = 0 })
+    lu.assertEquals(opening.startState.itemArmor, 20)
     lu.assertNil(opening.startState.biome)
     local preboss = assert(protocol.decode(wire("underworld-start-i-preboss")))
     lu.assertEquals(preboss.startState.roomName, "I_PreBoss02")
@@ -69,6 +70,9 @@ function TestStartState.testStartStateShapeIsStrict()
                 '[{"name":"A","rarity":"Epic","slotted":true},{"name":"B","rarity":"Epic","slotted":true}]'))
         end, "more than one slotted" },
         { function(start) start.biome.clockwork.extra = 1 end, "unknown field" },
+        { function(start) start.itemArmor = nil end, "missing itemArmor" },
+        { function(start) start.itemArmor = -20 end, "itemArmor" },
+        { function(start) start.itemArmor = 2.5 end, "itemArmor" },
         { function(start) start.elementEssences = nil end, "missing elementEssences" },
         { function(start) start.elementEssences.Aether = 1 end, "unknown field" },
         { function(start) start.elementEssences.Fire = -1 end, "elementEssences.Fire" },

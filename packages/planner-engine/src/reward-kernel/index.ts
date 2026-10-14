@@ -23,6 +23,7 @@ export {
   createRewardHistoryState,
   factsWithHistory,
   resolveAcquisitionRole,
+  creditItemArmor,
   creditMaxStatGain,
   creditResourceGains,
   recordGodLootPickup,
