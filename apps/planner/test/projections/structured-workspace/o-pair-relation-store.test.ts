@@ -262,7 +262,7 @@ describe('O door-store pair relation', () => {
       additionalExitKey: 'zagreusContract',
     });
     expect(batchNode(project(differing), 'o-pair-relation-shop').rewardPool?.effective).toBe(
-      'Major Reward · Zagreus',
+      'Major Reward · Infernal Contract',
     );
 
     const door = selectAt(contractShop('RunProgress'), 'o-pair-relation-shop', {
