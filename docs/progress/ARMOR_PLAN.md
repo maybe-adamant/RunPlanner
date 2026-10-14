@@ -110,7 +110,11 @@ Model the hero's lasting armor under a no-damage assumption:
      keepsake audits that call armor or the Sash unmodelled
      (`ROOM_FEATURES_GAME_DATA_AUDIT.md`, `REWARDS_AND_ITEMS.md`,
      `KEEPSAKE_GAME_DATA_AUDIT.md`, `ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md`,
-     `CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md`), and the Run State design doc.
+     `CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md`,
+     `KEEPSAKES_LOADOUT_AND_ABILITIES.md`, whose "Simulation-neutral identity"
+     row lists the Sash), and the Run State design doc.
+     `KEEPSAKE_GAME_DATA_AUDIT.md`'s Sash row should say the gain is on doors
+     into first-visit rooms.
 
 ## Tests
 

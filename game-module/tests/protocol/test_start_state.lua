@@ -91,6 +91,20 @@ function TestStartState.testPrebossBiomeEncounterDepthIsOptional()
         "biomeEncounterDepth")
 end
 
+-- Silken Sash's CurrentArmor is a whole-number keepsake counter. A valid one
+-- passes the shape check, so only the stale fingerprint rejects it.
+function TestStartState.testSilkenSashCurrentArmorIsAKeepsakeCounter()
+    local function sash(currentArmor)
+        return function(start)
+            start.keepsake.traits = assert(json.decode(
+                '[{"name":"ArmorGainKeepsake","rarity":"Epic","slotted":true,"currentArmor":' .. currentArmor .. '}]'))
+        end
+    end
+    rejected("underworld-start-i-preboss", sash("46"), "fingerprint does not match")
+    rejected("underworld-start-i-preboss", sash("-1"), "currentArmor")
+    rejected("underworld-start-i-preboss", sash("2.5"), "currentArmor")
+end
+
 function TestStartState.testStartOccurrenceIsTheStartPointRoom()
     rejected("underworld-start-i-preboss", function(start) start.occurrenceId = "missing" end, "must be selected")
     rejected("underworld-start-i-preboss", function(start) start.roomName = "I_PreBoss01" end,

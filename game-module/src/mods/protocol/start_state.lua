@@ -108,7 +108,9 @@ local function chaosBlessing(value, label)
     trueFlag(row.fromChaosKeepsake, label .. ".fromChaosKeepsake")
 end
 
-local keepsakeCounts = { "remainingUses", "uses", "rarityUpgradeUses", "boonConversionUses", "currentRoom" }
+local keepsakeCounts = {
+    "remainingUses", "uses", "rarityUpgradeUses", "boonConversionUses", "currentRoom", "currentArmor",
+}
 local keepsakeMultipliers = { "currentKeepsakeDamageBonus", "escalatingKeepsakeValue" }
 
 -- One held keepsake trait: the slotted one, or one held unslotted.

@@ -221,6 +221,8 @@ local function keepsakeCounters(trait, row)
     if row.currentRoom ~= nil then trait.CurrentRoom = row.currentRoom end
     if row.currentKeepsakeDamageBonus ~= nil then trait.CurrentKeepsakeDamageBonus = row.currentKeepsakeDamageBonus end
     if row.escalatingKeepsakeValue ~= nil then trait.EscalatingKeepsakeValue = row.escalatingKeepsakeValue end
+    -- Silken Sash; the start room's CostumeArmor keeps an existing CurrentArmor.
+    if row.currentArmor ~= nil then trait.CurrentArmor = row.currentArmor end
 end
 
 local function installKeepsakes(start)

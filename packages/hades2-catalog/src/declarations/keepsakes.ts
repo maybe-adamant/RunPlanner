@@ -320,7 +320,13 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     fatedDisposition: 'neutral',
     echoGift: {
       availability: 'eligible',
-      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+      effect: { kind: 'silkenSash', schedule: 'oneShotAfterUnequipped' },
+    },
+    // CostumeArmor BaseAmount 30 at every rank; DoorArmor 2 scaled by rarity 1/1.5/2/3.
+    effect: {
+      kind: 'silkenSash',
+      baseArmor: 30,
+      doorArmorByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 6 },
     },
   },
   {

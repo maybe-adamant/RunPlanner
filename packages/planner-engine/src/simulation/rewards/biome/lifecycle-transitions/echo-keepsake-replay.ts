@@ -17,7 +17,11 @@ import {
   assessTranscendentEmbryoBlessing,
 } from '../../../keepsakes/trait-effects';
 import { applyEchoFigLeafReplay } from '../../../keepsakes/encounter-effects';
-import { applyEchoLionFangReplay, applyEchoMaxStatKeepsakeReplay } from '../../../keepsakes/state';
+import {
+  applyEchoLionFangReplay,
+  applyEchoMaxStatKeepsakeReplay,
+  applyEchoSilkenSashReplay,
+} from '../../../keepsakes/state';
 import {
   applyEchoCallingCardReplay,
   applyEchoTimePieceReplay,
@@ -395,6 +399,21 @@ export function applyEchoKeepsakeReplayTransition(
       branches = Object.freeze(
         branches.map((branch) => {
           const keepsakes = applyEchoLionFangReplay(
+            catalog,
+            branch.state.keepsakes,
+            giftState.capturedKeepsakeKey,
+          );
+          return keepsakes === branch.state.keepsakes
+            ? branch
+            : recordReplay(
+                Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) }),
+              );
+        }),
+      );
+    } else if (replayEffect.kind === 'silkenSash') {
+      branches = Object.freeze(
+        branches.map((branch) => {
+          const keepsakes = applyEchoSilkenSashReplay(
             catalog,
             branch.state.keepsakes,
             giftState.capturedKeepsakeKey,

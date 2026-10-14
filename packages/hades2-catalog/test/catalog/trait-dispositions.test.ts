@@ -46,6 +46,7 @@ const keepsakeEffectExecution = {
   moonBeam: 'native-authoritative/pass-through',
   discordantBell: 'intentionally out of execution scope',
   lionFang: 'intentionally out of execution scope',
+  silkenSash: 'intentionally out of execution scope',
   maxManaGrant: 'intentionally out of execution scope',
   maxHealthCap: 'intentionally out of execution scope',
 } as const satisfies Readonly<

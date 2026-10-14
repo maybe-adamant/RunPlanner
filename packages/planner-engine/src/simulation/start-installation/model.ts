@@ -137,6 +137,8 @@ export interface StartInstallationKeepsake {
   };
   readonly discordantBell?: KeepsakeState['discordantBell'];
   readonly lionFang?: KeepsakeState['lionFang'];
+  /** The held Sash's armor, including the door gain into the start room. */
+  readonly silkenSash?: KeepsakeState['silkenSash'];
   readonly maxHealthCap?: KeepsakeState['maxHealthCap'];
 }
 

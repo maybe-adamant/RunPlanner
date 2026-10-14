@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createRouteStartKeepsakeSelectionAddress,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
@@ -228,6 +232,27 @@ describe('execution start state', () => {
     expect(start.encounterDepth).toBe(installation.counters.routeEncounterDepth);
   });
 
+  it('publishes the Silken Sash armor on its keepsake row', () => {
+    const base = applyProjectCommand(loadUnderworldFGHICheckpoint(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'ArmorGainKeepsake',
+    });
+    const project = withStartPoint(base, { biomeKey: 'I', point: 'preboss' });
+    const result = startInstallationAt(catalog, project, simulateProject(catalog, project), {
+      biomeKey: 'I',
+      kind: 'preboss',
+    });
+    if (result.availability !== 'available') throw new Error('I preboss is unavailable');
+    const armor = result.installation.keepsake.silkenSash?.currentArmor;
+    expect(armor).toBeGreaterThan(30);
+    const plan = compile(project);
+    expect(plan.startState!.keepsake.traits).toEqual([
+      { name: 'ArmorGainKeepsake', rarity: 'Epic', slotted: true, currentArmor: armor },
+    ]);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
   it('round-trips and fingerprints the start state', () => {
     const plan = decodeExecutionPlan(iPrebossWire);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
@@ -295,6 +320,15 @@ describe('execution start state', () => {
     ['missing item armor', (start) => delete start.itemArmor],
     ['negative item armor', (start) => (start.itemArmor = -20)],
     ['fractional item armor', (start) => (start.itemArmor = 2.5)],
+    [
+      'a fractional Sash armor',
+      (start) =>
+        (start.keepsake = {
+          keepsakeCache: [],
+          blockedKeepsakes: [],
+          traits: [{ name: 'ArmorGainKeepsake', rarity: 'Epic', slotted: true, currentArmor: 2.5 }],
+        }),
+    ],
     ['missing essence counts', (start) => delete start.elementEssences],
     [
       'an Aether essence',

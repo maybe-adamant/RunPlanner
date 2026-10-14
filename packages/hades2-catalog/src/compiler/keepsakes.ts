@@ -23,6 +23,7 @@ const giftSchedulesByKind = {
   olympianRewardPressure: 'everyBiome',
   moonBeam: 'oneShotAfterUnequipped',
   lionFang: 'oneShotAfterUnequipped',
+  silkenSash: 'oneShotAfterUnequipped',
   maxManaGrant: 'oneShotAfterUnequipped',
   maxHealthCap: 'oneShotAfterUnequipped',
   modeledNeutral: 'noModeledEffect',
@@ -461,6 +462,17 @@ function normalizeEffect(
           `${path}.decayPerEncounter`,
         ),
         expiredMultiplier,
+      }) as KeepsakeDeclaration['effect'];
+    }
+    case 'silkenSash': {
+      requireExactObjectKeys(raw, path, ['kind', 'baseArmor', 'doorArmorByRank']);
+      return Object.freeze({
+        kind: raw.kind,
+        baseArmor: requirePositiveInteger(raw.baseArmor, `${path}.baseArmor`),
+        doorArmorByRank: normalizeNumericRankProfile(
+          raw.doorArmorByRank,
+          `${path}.doorArmorByRank`,
+        ),
       }) as KeepsakeDeclaration['effect'];
     }
     case 'maxManaGrant': {

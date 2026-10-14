@@ -72,6 +72,12 @@ export interface KeepsakeState {
     readonly multiplier: number;
     readonly expired: boolean;
   };
+  /** Silken Sash's own armor (native `CurrentArmor`) and the rank its door gain uses. */
+  readonly silkenSash?: {
+    readonly origin: 'ordinary' | 'echo';
+    readonly rank: KeepsakeRank;
+    readonly currentArmor: number;
+  };
   /** Max-Magick grants by keepsake, one per loot equip; they outlive the keepsake. */
   readonly maxManaGrants?: Readonly<Record<string, readonly number[]>>;
   /** White Antler's cap while held; absent once the ordinary keepsake is replaced. */
@@ -147,6 +153,7 @@ export function keepsakeRankForEquip(
     case 'moonBeam':
     case 'discordantBell':
     case 'lionFang':
+    case 'silkenSash':
     case 'maxManaGrant':
     case 'maxHealthCap':
       return 'Heroic';
@@ -285,6 +292,14 @@ export function advanceCurrentKeepsake(
               expired: false,
             }),
           });
+    case 'silkenSash':
+      // The re-equip restores CurrentArmor; later door gains use the advanced rank.
+      return state.silkenSash?.origin !== 'ordinary'
+        ? state
+        : Object.freeze({
+            ...state,
+            silkenSash: Object.freeze({ ...state.silkenSash, rank: advancedRank }),
+          });
     case 'maxManaGrant': {
       // Raises the equipped copy's grant; earlier grants keep their amounts.
       const grants = state.maxManaGrants?.[keepsake.key] ?? [];
@@ -309,6 +324,65 @@ export function advanceCurrentKeepsake(
       return exhaustive;
     }
   }
+}
+
+/**
+ * Armor Cherished Heirloom moves into `MinorArmorBoon`: its unequip transfers
+ * the slotted Sash's armor before the re-equip restores it (`KeepsakeLogic.lua:276-306`).
+ */
+export function silkenSashArmorTransferredOnAdvance(
+  catalog: Catalog,
+  state: KeepsakeState,
+): number {
+  const effect =
+    state.currentKey === null ? undefined : catalog.keepsakes.byKey[state.currentKey]?.effect;
+  return effect?.kind === 'silkenSash' && state.silkenSash?.origin === 'ordinary'
+    ? state.silkenSash.currentArmor
+    : 0;
+}
+
+/** Armor a rack swap moves into `MinorArmorBoon` when the ordinary Sash leaves. */
+export function silkenSashArmorTransferredOnReplacement(
+  before: KeepsakeState,
+  after: KeepsakeState,
+): number {
+  return before.silkenSash !== undefined && after.silkenSash === undefined
+    ? before.silkenSash.currentArmor
+    : 0;
+}
+
+/** `CheckDoorArmorTrait`: a held Sash gains its rank's DoorArmor on a door into a new room. */
+export function gainSilkenSashDoorArmor(catalog: Catalog, state: KeepsakeState): KeepsakeState {
+  const sash = state.silkenSash;
+  if (sash === undefined) return state;
+  const effect = keepsakeEffectByKind(catalog, 'silkenSash');
+  if (effect === undefined) throw new Error('Silken Sash state has no declared effect');
+  return Object.freeze({
+    ...state,
+    silkenSash: Object.freeze({
+      ...sash,
+      currentArmor: sash.currentArmor + effect.doorArmorByRank[sash.rank],
+    }),
+  });
+}
+
+/** Echo equips a Common Sash at biome start only while no Sash is held (`KeepsakeLogic.lua:116`). */
+export function applyEchoSilkenSashReplay(
+  catalog: Catalog,
+  state: KeepsakeState,
+  capturedKeepsakeKey: string,
+): KeepsakeState {
+  const effect = catalog.keepsakes.byKey[capturedKeepsakeKey]?.effect;
+  if (effect?.kind !== 'silkenSash') throw new Error('Echo Silken Sash replay has no armor data');
+  if (state.silkenSash !== undefined) return state;
+  return Object.freeze({
+    ...state,
+    silkenSash: Object.freeze({
+      origin: 'echo' as const,
+      rank: 'Common' as const,
+      currentArmor: effect.baseArmor,
+    }),
+  });
 }
 
 /** Bell growth and Fang decay at one qualifying encounter end. */
@@ -621,6 +695,15 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'silkenSash' && keepsake !== undefined
+      ? {
+          silkenSash: Object.freeze({
+            origin: 'ordinary' as const,
+            rank: keepsake.rank,
+            currentArmor: effect.baseArmor,
+          }),
+        }
+      : {}),
     ...(effect?.kind === 'maxManaGrant' && keepsake !== undefined
       ? {
           maxManaGrants: Object.freeze({
@@ -721,14 +804,22 @@ export function applyKeepsakeReplacement(
           return withoutFang;
         })()
       : stateWithoutSources;
-  const stateWithoutCap =
-    leavingEffect?.kind === 'maxHealthCap' && stateWithoutFang.maxHealthCap?.origin === 'ordinary'
+  const stateWithoutSash =
+    leavingEffect?.kind === 'silkenSash' && stateWithoutFang.silkenSash?.origin === 'ordinary'
       ? (() => {
-          const { maxHealthCap: _cap, ...withoutCap } = stateWithoutFang;
+          const { silkenSash: _sash, ...withoutSash } = stateWithoutFang;
+          void _sash;
+          return withoutSash;
+        })()
+      : stateWithoutFang;
+  const stateWithoutCap =
+    leavingEffect?.kind === 'maxHealthCap' && stateWithoutSash.maxHealthCap?.origin === 'ordinary'
+      ? (() => {
+          const { maxHealthCap: _cap, ...withoutCap } = stateWithoutSash;
           void _cap;
           return withoutCap;
         })()
-      : stateWithoutFang;
+      : stateWithoutSash;
   const withoutOrdinaryOlympian = stateWithoutCap.olympianSources.some(
     (source) => source.origin === 'ordinary',
   )
@@ -816,6 +907,15 @@ export function applyKeepsakeReplacement(
             origin: 'ordinary' as const,
             multiplier: selected.effect.initialMultiplierByRank[rank],
             expired: false,
+          }),
+        }
+      : {}),
+    ...(selected.effect?.kind === 'silkenSash' && state.silkenSash === undefined
+      ? {
+          silkenSash: Object.freeze({
+            origin: 'ordinary' as const,
+            rank,
+            currentArmor: selected.effect.baseArmor,
           }),
         }
       : {}),

@@ -1134,6 +1134,8 @@ export interface ExecutionStartKeepsakeTrait {
   readonly currentKeepsakeDamageBonus?: number;
   readonly escalatingKeepsakeValue?: number;
   readonly currentRoom?: number;
+  /** Silken Sash's native `CurrentArmor`. */
+  readonly currentArmor?: number;
 }
 
 export interface ExecutionStartKeepsake {

@@ -239,6 +239,7 @@ function keepsake(catalog: Catalog, state: SimulationState): StartInstallation['
         }),
     ...(value.discordantBell === undefined ? {} : { discordantBell: value.discordantBell }),
     ...(value.lionFang === undefined ? {} : { lionFang: value.lionFang }),
+    ...(value.silkenSash === undefined ? {} : { silkenSash: value.silkenSash }),
     ...(value.maxHealthCap === undefined ? {} : { maxHealthCap: value.maxHealthCap }),
   });
 }

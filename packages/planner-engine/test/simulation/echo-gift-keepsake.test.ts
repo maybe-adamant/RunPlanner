@@ -71,6 +71,7 @@ import { resolveRoutePosition } from '../../src/authored-project/route-context';
 import { traitFrontierState } from '../support/simulation-state';
 
 const giftTraitKey = 'EchoRepeatKeepsakeBoon';
+const sash = 'ArmorGainKeepsake';
 const giftIdentity = 'echo-gift-1';
 const giftOwner = createEncounterPhaseAddress(
   createBiomeAddress('Underworld', 'H'),
@@ -472,6 +473,33 @@ describe('Echo Gift Gift Gift', () => {
     const later = replayBiome([replayed]).simulation.branches[0]!;
     expect(replayCount(later)).toBe(1);
     expect(later.state.keepsakes.lionFang?.origin).toBe('echo');
+  });
+
+  it('replays a Common Silken Sash at 30 once no Sash is held, and holds it unslotted', () => {
+    const replayCount = (branch: { readonly state: RewardBranchState['state'] }) =>
+      branch.state.traitHistory.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount;
+    const held = replayBiome([branchWithGift(sash)]).simulation.branches[0]!;
+    expect(replayCount(held)).toBe(0);
+    expect(held.state.keepsakes.silkenSash).toMatchObject({ origin: 'ordinary' });
+
+    const arcanaFear = createArcanaFearState(catalog, route().value.loadout);
+    const swapped = applyKeepsakeReplacement(
+      catalog,
+      createKeepsakeState(catalog, sash, arcanaFear),
+      'GoldifyKeepsake',
+      arcanaFear,
+    );
+    const replayed = replayBiome([branchWithGift(sash, 'GoldifyKeepsake', { keepsakes: swapped })])
+      .simulation.branches[0]!;
+    expect(replayCount(replayed)).toBe(1);
+    expect(replayed.state.keepsakes.silkenSash).toEqual({
+      origin: 'echo',
+      rank: 'Common',
+      currentArmor: 30,
+    });
+    expect(replayBiome([replayed]).simulation.branches[0]!.state.keepsakes.silkenSash).toEqual(
+      replayed.state.keepsakes.silkenSash,
+    );
   });
 
   it('retains an eligible effect-neutral capture without inventing a replay mutation', () => {
