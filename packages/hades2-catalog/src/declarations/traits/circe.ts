@@ -23,7 +23,8 @@ export const circeTraits = [
     ...raritylessNpcTrait,
     key: 'CirceEnlargeTrait',
     label: 'Word of Greater Girth',
-    maxStatEffect: { kind: 'multiplier', maxHealth: 1.15 },
+    // MaxHealthMultiplier 1.15 by RarityLevels 1, 1, 1.20/1.15, 1.30/1.15.
+    maxStatEffect: { kind: 'multiplier', maxHealth: [1.15, 1.15, 1.2, 1.3] },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },
@@ -117,4 +118,6 @@ export const circeGiver = {
   priorityTraitKeys: [],
   traitKeys: circeTraits.map((trait) => trait.key),
   rarityPolicy: { kind: 'none' },
+  // EventLogic.CirceBlessingChoice.
+  acquisitionOrdinalMenu: true,
 } as const satisfies RawTraitGiverDeclaration;

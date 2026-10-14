@@ -538,7 +538,7 @@
       { "name": "HestiaManaBoon", "rarity": "Common", "stackNum": 1 },
       { "name": "HestiaSpecialBoon", "rarity": "Rare", "stackNum": 1 },
       { "name": "HestiaWeaponBoon", "rarity": "Rare", "stackNum": 2 },
-      { "name": "NarcissusA" },
+      { "name": "NarcissusA", "acquisitionOrdinal": 2 },
       { "name": "StaffDoubleAttackTrait" },
       { "name": "StaffLongAttackTrait" }
     ],
@@ -6197,5 +6197,5 @@
       }
     }
   ],
-  "planFingerprint": "2b4b3c02"
+  "planFingerprint": "8e49614f"
 }

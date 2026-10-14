@@ -156,4 +156,6 @@ export const narcissusGiver = {
   priorityTraitKeys: [],
   traitKeys: narcissusTraits.map((trait) => trait.key),
   rarityPolicy: { kind: 'none' },
+  // EventLogic.NarcissusBenefitChoice.
+  acquisitionOrdinalMenu: true,
 } as const satisfies RawTraitGiverDeclaration;

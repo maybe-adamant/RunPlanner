@@ -52,6 +52,7 @@ export function normalizeGivers(
       'rarityPolicy',
       'boonRarityRollOrder',
       'denialParticipates',
+      'acquisitionOrdinalMenu',
       'selectedOptionPathPointBonuses',
     ]);
     const unsupportedKey = Object.keys(giver).find((key) => !allowedKeys.has(key));
@@ -180,6 +181,13 @@ export function normalizeGivers(
       fail(`${path}.rarityPolicy`, 'no-rarity givers require only rarityless members');
     if (frozenRarityPolicy.kind !== 'none' && memberRarityKinds.some((kind) => kind === 'none'))
       fail(`${path}.rarityPolicy`, 'ranked giver policies cannot contain rarityless members');
+    if (
+      giver.acquisitionOrdinalMenu !== undefined &&
+      (giver.acquisitionOrdinalMenu !== true ||
+        providerKind !== 'npc' ||
+        frozenRarityPolicy.kind !== 'none')
+    )
+      fail(`${path}.acquisitionOrdinalMenu`, 'must be true on a rarityless NPC giver');
     if (providerKind === 'olympian') {
       if (priorityTraitKeys.length !== 5)
         fail(`${path}.priorityTraitKeys`, 'Olympian givers require exactly five priority traits');
@@ -219,6 +227,7 @@ export function normalizeGivers(
             ),
           }),
       ...(giver.denialParticipates === true ? { denialParticipates: true } : {}),
+      ...(giver.acquisitionOrdinalMenu === true ? { acquisitionOrdinalMenu: true as const } : {}),
       ...(giver.selectedOptionPathPointBonuses === undefined
         ? {}
         : {
@@ -233,6 +242,24 @@ export function normalizeGivers(
       giver.providerKind !== 'hermes'
     )
       fail(`givers.${giver.key}.denialParticipates`, 'requires an Olympian or Hermes giver');
+  }
+  // An ordinal-scaled value resolves from the ordinal only such a menu retains.
+  const ordinalMenuTraitKeys = new Set(
+    values.flatMap((giver) => (giver.acquisitionOrdinalMenu === true ? giver.traitKeys : [])),
+  );
+  for (const trait of traits.values) {
+    const effect = trait.maxStatEffect;
+    const scaled =
+      effect?.kind === 'multiplier'
+        ? [effect.maxHealth, effect.maxMana]
+        : effect?.kind === 'manaToHealthConversion'
+          ? [effect.fraction]
+          : [];
+    if (scaled.some((value) => Array.isArray(value)) && !ordinalMenuTraitKeys.has(trait.key))
+      fail(
+        `traits.${trait.key}.maxStatEffect`,
+        'an acquisition-ordinal value requires an acquisitionOrdinalMenu giver',
+      );
   }
   return createCollection(values, 'givers', (giver) => giver.key);
 }

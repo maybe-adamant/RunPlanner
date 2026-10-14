@@ -134,11 +134,6 @@ local function applyTraitFields(data, row)
     if row.selectedTrait then data.SelectedTrait = row.selectedTrait end
     if row.repeatedKeepsake then data.RepeatedKeepsake = row.repeatedKeepsake end
     if row.currentRoom then data.CurrentRoom = row.currentRoom end
-    if row.roomsPerUpgradeAmount or row.roomsPerUpgradeMaxMana then
-        data.RoomsPerUpgrade = data.RoomsPerUpgrade or {}
-        data.RoomsPerUpgrade.Amount = row.roomsPerUpgradeAmount or data.RoomsPerUpgrade.Amount
-        data.RoomsPerUpgrade.MaxMana = row.roomsPerUpgradeMaxMana or data.RoomsPerUpgrade.MaxMana
-    end
     if row.grantedTrait then
         -- PowersLogic.GiveRandomHadesBoonAndBoostBoons.
         data.GrantedTrait = true
@@ -166,9 +161,19 @@ local function applyTraitFields(data, row)
     end
 end
 
+-- Dream NPC menus set each option's rarity from the entered-biome count
+-- (EventLogic.lua EchoChoice and siblings); standard menus install at Common,
+-- whose values equal the mapped rarity's at their positions.
+local function menuRarity(row)
+    if row.acquisitionOrdinal == nil then return row.rarity end
+    local rarity = _G.TraitRarityData.RarityUpgradeOrder[row.acquisitionOrdinal]
+    if rarity == nil then fault("trait-ordinal", row.name .. ":" .. row.acquisitionOrdinal, "undeclared") end
+    return rarity
+end
+
 local function installTraits(start)
     for _, row in ipairs(start.traits) do
-        local data = processed(row.name, row.rarity, row.stackNum)
+        local data = processed(row.name, menuRarity(row), row.stackNum)
         applyTraitFields(data, row)
         add(data)
         if row.name == "FocusLastStandBoon" then

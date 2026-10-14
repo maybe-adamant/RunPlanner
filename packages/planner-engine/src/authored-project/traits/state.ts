@@ -222,6 +222,8 @@ export interface EquippedTrait {
   };
   /** Acquisition-time armor of an ordinal-scaled NPC trait. */
   readonly armor?: number;
+  /** Biome ordinal of a pick from a menu that scales by entered biomes. */
+  readonly acquisitionOrdinal?: number;
   /** Derived retained credit for a declaration-clocked generated-pickup producer. */
   readonly pickupProducerProgress?: number;
   /** Exact acquisition-time interval retained for an ordinal-scaled pickup producer. */

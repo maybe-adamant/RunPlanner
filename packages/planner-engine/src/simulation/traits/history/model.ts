@@ -41,6 +41,8 @@ export interface TraitOfferEvent {
   readonly roomsPerUpgradeMaxMana?: number;
   /** Acquisition-time armor of an ordinal-scaled NPC trait. */
   readonly acquisitionArmor?: number;
+  /** Biome ordinal of a pick from a menu that scales by entered biomes. */
+  readonly acquisitionOrdinal?: number;
 }
 
 export interface MaxStatAmounts {
@@ -72,6 +74,8 @@ export interface ConcaveStoneSecondaryEvent {
   readonly roomsPerUpgradeMaxMana?: number;
   /** Acquisition-time armor of an ordinal-scaled NPC trait. */
   readonly acquisitionArmor?: number;
+  /** Biome ordinal of a pick from a menu that scales by entered biomes. */
+  readonly acquisitionOrdinal?: number;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */

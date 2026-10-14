@@ -105,4 +105,6 @@ export const echoGiver = {
   priorityTraitKeys: [],
   traitKeys: echoTraits.map((trait) => trait.key),
   rarityPolicy: { kind: 'none' },
+  // EventLogic.EchoChoice.
+  acquisitionOrdinalMenu: true,
 } as const satisfies RawTraitGiverDeclaration;

@@ -142,4 +142,6 @@ export const icarusGiver = {
     'UpgradeHammerBoon',
   ],
   rarityPolicy: { kind: 'none' },
+  // EventLogic.IcarusBenefitChoice.
+  acquisitionOrdinalMenu: true,
 } as const satisfies RawTraitGiverDeclaration;

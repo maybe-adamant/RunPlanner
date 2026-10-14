@@ -6,6 +6,7 @@ import type {
   TraitDeclaration,
   TraitElement,
   TraitMaxStatEffect,
+  TraitAcquisitionOrdinalValues,
   TraitMaxStatValue,
   TraitRarity,
   TraitRequirementExpression,
@@ -116,6 +117,12 @@ function normalizeAcquisitionMaxHealthRoll(
   });
 }
 
+function isOrdinalMaxStatValue(
+  raw: RawMaxStatValue,
+): raw is readonly [number, number, number, number] {
+  return Array.isArray(raw);
+}
+
 function normalizeMaxStatValue(
   raw: RawMaxStatValue,
   equippedRarities: readonly TraitRarity[],
@@ -125,6 +132,14 @@ function normalizeMaxStatValue(
     if (equippedRarities.length > 0) fail(path, 'a ranked trait must scale by rarity');
     if (!Number.isFinite(raw) || !(raw > 0)) fail(path, 'must be a positive number');
     return raw;
+  }
+  if (isOrdinalMaxStatValue(raw)) {
+    if (equippedRarities.length > 0) fail(path, 'a ranked trait must scale by rarity');
+    if (raw.length !== 4) fail(path, 'must declare four acquisition ordinals');
+    for (const [index, entry] of raw.entries())
+      if (typeof entry !== 'number' || !Number.isFinite(entry) || !(entry > 0))
+        fail(`${path}[${index}]`, 'must be a positive number');
+    return Object.freeze([...raw]) as unknown as TraitAcquisitionOrdinalValues;
   }
   const value = requireObject(raw, path);
   if (

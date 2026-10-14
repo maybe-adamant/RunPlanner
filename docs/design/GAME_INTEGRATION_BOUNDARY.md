@@ -780,8 +780,13 @@ state; assembly translates it, selecting and renaming fields. It carries:
   (`Legendary` for a Rank II Hammer), `stackNum` and only the per-instance
   fields its skipped acquire would have written: `BlockInRunRarify`,
   `UpgradedTraitName`, `SelectedTrait`, `GrantedTrait`, `RepeatedKeepsake`,
-  `CurrentRoom` and the acquisition-time `RoomsPerUpgrade` values, the
-  `EchoIncreaseStats` fields, and an Experimental Hammer's remaining uses.
+  `CurrentRoom`, the `EchoIncreaseStats` fields, and an Experimental Hammer's
+  remaining uses. A trait picked from the Echo, Arachne, Narcissus, Medea,
+  Circe or Icarus menu carries its biome `acquisitionOrdinal` (1-4) instead of
+  a rarity; the module installs it at `RarityUpgradeOrder[acquisitionOrdinal]`,
+  as those menus set it on Dream runs, so native setup derives its
+  `RoomsPerUpgrade` values. Standard menus install at Common, whose values equal
+  the mapped rarity's at every standard position.
   Traits native `StartNewRun` installs from the loadout are omitted, and so is
   the Spell, which `hex` carries;
 - `elementEssences`: collected Essence pickups and resource points per base
@@ -872,8 +877,7 @@ Preboss or Boss start.
 
 Unknown state is not published and starts as a fresh install leaves it:
 timers, including the Expiring timer and Evade Evade Evade; trait armor, which
-installed armor traits set full at their installed rarity (Dream NPC rarity is
-not yet carried, so a Dream-scaled Onyx or Protective installs at Common); the
+installed armor traits set full at their installed rarity; the
 Ghost Onion, Silver Wheel, Mist Veil and Hades lifesteal pools; spell charges, refilled including `BonusSpellUses`; rerolls;
 Personal Loan gold; Last Gasp eligibility; and the last Challenge depth. Under
 the Boon Mana Reserve vow, installed boons hold no reserved Magick. Current

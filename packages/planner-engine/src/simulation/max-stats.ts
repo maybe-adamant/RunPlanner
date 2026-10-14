@@ -1,9 +1,11 @@
-import type {
-  Catalog,
-  InRunTraitRarity,
-  MaxStatKey,
-  TraitMaxStatValue,
-  TraitRarity,
+import type { EquippedTrait } from '../authored-project/traits/state';
+import {
+  acquisitionOrdinalValue,
+  type Catalog,
+  type InRunTraitRarity,
+  type MaxStatKey,
+  type TraitAcquisitionOrdinalValues,
+  type TraitMaxStatValue,
 } from '../catalog-schema';
 import type { SimulationState } from './state/model';
 import {
@@ -78,9 +80,20 @@ function round(value: number): number {
   return Math.floor(value + 0.5);
 }
 
-function valueAt(value: TraitMaxStatValue, rarity: TraitRarity | undefined): number | undefined {
+function valueAt(value: TraitMaxStatValue, equipped: EquippedTrait): number | undefined {
   if (typeof value === 'number') return value;
-  return rarity === undefined ? undefined : value[rarity as InRunTraitRarity];
+  if (Array.isArray(value)) {
+    if (equipped.acquisitionOrdinal === undefined)
+      throw new Error(`${equipped.traitKey} lacks its acquisition ordinal`);
+    return acquisitionOrdinalValue(
+      value as TraitAcquisitionOrdinalValues,
+      equipped.acquisitionOrdinal,
+    );
+  }
+  const { rarity } = equipped;
+  return rarity === undefined
+    ? undefined
+    : (value as Readonly<Record<InRunTraitRarity, number>>)[rarity as InRunTraitRarity];
 }
 
 /**
@@ -175,13 +188,12 @@ export function deriveMaxStats(catalog: Catalog, state: SimulationState): MaxSta
     switch (effect?.kind) {
       case 'multiplier':
         for (const stat of ['maxHealth', 'maxMana'] as const) {
-          const value =
-            effect[stat] === undefined ? undefined : valueAt(effect[stat], equipped.rarity);
+          const value = effect[stat] === undefined ? undefined : valueAt(effect[stat], equipped);
           if (value !== undefined) multipliers[stat] += value - 1;
         }
         break;
       case 'manaToHealthConversion':
-        conversion += valueAt(effect.fraction, equipped.rarity) ?? 0;
+        conversion += valueAt(effect.fraction, equipped) ?? 0;
         break;
       case 'perElement':
         add(source, effect.stat, effect.amount * traitHistory.elementCounts[effect.element]);

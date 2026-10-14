@@ -668,6 +668,9 @@ export function foldTraitHistoryEvents(
               }),
             }),
         ...(event.acquisitionArmor === undefined ? {} : { armor: event.acquisitionArmor }),
+        ...(event.acquisitionOrdinal === undefined
+          ? {}
+          : { acquisitionOrdinal: event.acquisitionOrdinal }),
         ...(event.echoRepeatedKeepsakeKey === undefined
           ? {}
           : {

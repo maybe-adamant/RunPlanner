@@ -304,8 +304,11 @@ function TestPracticeStart.testOpeningInstallsBeforeNativeRerollsAndRecordsBefor
     -- The slotted keepsake is equipped at its rank without its acquire effect.
     lu.assertEquals(log[1], "equip:ManaOverTimeRefundKeepsake:Epic:nil")
     local arcana, rerolls = position(log, "equipArcana"), position(log, "rerollsAndDeathDefiance")
+    local menuOrder = { "Common", "Rare", "Epic", "Heroic" }
     for _, row in ipairs(start.traits) do
-        local added = position(log, "add:" .. row.name .. ":" .. tostring(row.rarity))
+        -- Circe's O pick carries ordinal 2, which installs Rare.
+        local rarity = row.rarity or menuOrder[row.acquisitionOrdinal]
+        local added = position(log, "add:" .. row.name .. ":" .. tostring(rarity))
         lu.assertTrue(arcana < added and added < rerolls)
     end
     lu.assertTrue(position(log, "add:RoomRewardMaxHealthTrait:nil") < rerolls)
@@ -784,7 +787,8 @@ function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
         { name = "HeraWeaponBoon", rarity = "Epic", stackNum = 3, upgradedTraitName = "ZeusWeaponBoon" },
         { name = "StaffDoubleAttackTrait", rarity = "Legendary", durationHammerUses = 4 },
         { name = "FocusLastStandBoon", rarity = "Rare" },
-        { name = "IcarusSlotBoon", selectedTrait = "ApolloWeaponBoon", currentRoom = 2, roomsPerUpgradeAmount = 7 },
+        { name = "IcarusSlotBoon", selectedTrait = "ApolloWeaponBoon", currentRoom = 2, acquisitionOrdinal = 3 },
+        { name = "SupplyDropBoon", currentRoom = 4, acquisitionOrdinal = 4 },
         { name = "EchoLastRunBoon", echoIncreaseStats = {
             statMultiplier = 0.5, blockDecay = false, startMaxHealth = 100, startMaxMana = 80,
         } },
@@ -831,8 +835,10 @@ function TestPracticeStart.testInstallAppliesAcquireResultsWithoutAcquiring()
         { FunctionName = "HammerKeepsakeLostPresentation", FunctionArgs = "StaffDoubleAttackTrait" })
     lu.assertEquals({ trait("StaffDoubleAttackTrait").RemainingUses, trait("StaffDoubleAttackTrait").UsesAsEncounters },
         { 4, true })
-    lu.assertEquals({ trait("IcarusSlotBoon").SelectedTrait, trait("IcarusSlotBoon").CurrentRoom,
-        trait("IcarusSlotBoon").RoomsPerUpgrade.Amount }, { "ApolloWeaponBoon", 2, 7 })
+    -- An NPC menu pick installs at RarityUpgradeOrder[biome ordinal], as the menu sets it.
+    lu.assertEquals({ trait("IcarusSlotBoon").Rarity, trait("IcarusSlotBoon").SelectedTrait,
+        trait("IcarusSlotBoon").CurrentRoom }, { "Epic", "ApolloWeaponBoon", 2 })
+    lu.assertEquals({ trait("SupplyDropBoon").Rarity, trait("SupplyDropBoon").CurrentRoom }, { "Heroic", 4 })
     lu.assertEquals(trait("EchoLastRunBoon").PropertyChanges[2].ChangeValue, 50)
     local curse = trait("ChaosHealthCurse")
     lu.assertEquals({ curse.RemainingUses, curse.OnExpire.TraitData.Name }, { 3, "ChaosManaBlessing" })

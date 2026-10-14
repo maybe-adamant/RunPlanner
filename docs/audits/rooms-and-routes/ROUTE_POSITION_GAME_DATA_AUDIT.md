@@ -69,21 +69,29 @@ identifies the actual preceding room instead of guessing it from the next biome.
 `EventLogic.lua` assigns Dream NPC menu rarity using
 `RarityUpgradeOrder[EnteredBiomes]`. This is an internal scaling mechanism, not
 a new authorable rarity roll. The planner resolves the supported numeric
-effects by acquisition ordinal on both ordinary and Dream routes.
+effects by acquisition ordinal on both ordinary and Dream routes. Standard
+menus leave their traits Common; Narcissus in G, Circe in O, Icarus in O or P
+and Echo in H are flat from Common through the rarity their ordinal maps to.
+A Practice start carries the pick's ordinal, and the module installs the trait
+at `RarityUpgradeOrder[ordinal]` on every route, as the Dream menus do.
+Discrepancy: on a standard route Practice therefore tags such a trait Rare or
+Epic where native leaves it Common. Value-equal, it affects only the trait
+tray's Epic auto-pin (`TraitTrayLogic.lua:800`), nothing rarity-gated.
 
-| Effect                                    | Ordinals 1 / 2 / 3 / 4 |
-| ----------------------------------------- | ---------------------- |
-| Narcissus Pom, Magick and Life pickups    | 1 / 1 / 2 / 4          |
-| Narcissus elemental pickups               | 2 / 2 / 3 / 4          |
-| Narcissus Last Stand pickups              | 1 / 1 / 2 / 3          |
-| Narcissus Mystery Box                     | 1 / 1 / 1 / 1          |
-| Circe activation / Fear suppression       | 1 / 1 / 2 / 3          |
-| Circe Arcana promotion                    | 2 / 2 / 3 / 5          |
-| Icarus Ingenious Strike / Flourish levels | 3 / 3 / 3 / 5          |
-| Icarus Supply Chain interval              | 7 / 7 / 7 / 3          |
-| Icarus Latest Model targets               | 1 / 1 / 1 / 2          |
-| Icarus Protective Coating armor           | 100 / 100 / 100 / 140  |
-| Arachne Onyx Dress armor                  | 60 / 80 / 100 / 140    |
+| Effect                                    | Ordinals 1 / 2 / 3 / 4     |
+| ----------------------------------------- | -------------------------- |
+| Narcissus Pom, Magick and Life pickups    | 1 / 1 / 2 / 4              |
+| Narcissus elemental pickups               | 2 / 2 / 3 / 4              |
+| Narcissus Last Stand pickups              | 1 / 1 / 2 / 3              |
+| Narcissus Mystery Box                     | 1 / 1 / 1 / 1              |
+| Circe activation / Fear suppression       | 1 / 1 / 2 / 3              |
+| Circe Arcana promotion                    | 2 / 2 / 3 / 5              |
+| Icarus Ingenious Strike / Flourish levels | 3 / 3 / 3 / 5              |
+| Icarus Supply Chain interval              | 7 / 7 / 7 / 3              |
+| Icarus Latest Model targets               | 1 / 1 / 1 / 2              |
+| Icarus Protective Coating armor           | 100 / 100 / 100 / 140      |
+| Arachne Onyx Dress armor                  | 60 / 80 / 100 / 140        |
+| Circe Word of Greater Girth health        | ×1.15 / 1.15 / 1.20 / 1.30 |
 
 Sources: `TraitData_Narcissus.lua`, `TraitData_Circe.lua`,
 `TraitData_Icarus.lua`, `TraitData_Arachne.lua`, and their acquire functions
