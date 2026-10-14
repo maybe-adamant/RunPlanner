@@ -238,6 +238,8 @@ export const hephaestusTraits = [
     blockStacking: true,
     blockInRunRarify: true,
     excludeFromRarityCount: true,
+    // Source InheritFrom UnityTrait.
+    unityTrait: true,
   },
   {
     key: 'WeaponUpgradeBoon',

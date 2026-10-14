@@ -375,6 +375,7 @@ describe('resolution outcomes', () => {
                           },
                           effectiveLevelFor: () => 1,
                           traitLabel: (traitKey: string) => traitKey,
+                          infusionFor: () => false,
                           effectiveRarityFor: (option: AuthoredEchoLastRunBoonOption) =>
                             option.rarity,
                           maxHealthRollFor: () => undefined,

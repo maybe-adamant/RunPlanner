@@ -32,6 +32,8 @@ export interface RawTraitDeclaration {
   /** Native boss payout leaves this equipped instance present but no longer rarifiable. */
   readonly nonFinalBossRarityBlock?: true;
   readonly excludeFromRarityCount: boolean;
+  /** Source `InheritFrom UnityTrait`: native presents this trait as an Infusion. */
+  readonly unityTrait?: true;
   /** Source `ActivationRequirements` over element counts. */
   readonly activationRequirement?: TraitDeclaration['activationRequirement'];
   /** Source `ElementalMultipliers`. */

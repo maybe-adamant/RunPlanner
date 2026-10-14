@@ -119,6 +119,7 @@ function offer(): AuthoredChaosTraitOffer {
 function interaction(): WorkspaceChaosOfferInteraction {
   return {
     blessingLabel: (key) => key,
+    blessingInfusion: (key) => key === 'ChaosOmegaDamageBlessing',
     curseLabel: (key) => key,
     domainFor,
     startingDraft: offer,
@@ -282,5 +283,29 @@ describe('ChaosTraitOfferEditor', () => {
     expect(screen.getByRole('option', { name: 'Epic' })).toBeTruthy();
     await user.click(screen.getByRole('option', { name: 'Rare' }));
     expect(updates.at(-1)?.rarity).toBe('Rare');
+  });
+
+  it('presents Chant rarity as an Infusion with its full tier in the accessible label', async () => {
+    const user = userEvent.setup();
+    const updates: AuthoredChaosTraitOffer[] = [];
+    render(
+      <ChaosTraitOfferEditor
+        interaction={interaction()}
+        onUpdate={updates.push.bind(updates)}
+        value={Object.freeze({
+          ...offer(),
+          blessingKey: 'ChaosOmegaDamageBlessing',
+          rarity: 'Rare',
+        })}
+      />,
+    );
+    const select = screen.getByRole('button', { name: 'Chaos blessing rarity' });
+    expect(select.textContent).toContain('Infusion (R)');
+    await user.click(select);
+    expect(screen.getByRole('option', { name: 'Infusion (Epic)' }).textContent).toContain(
+      'Infusion (E)',
+    );
+    await user.click(screen.getByRole('option', { name: 'Infusion (Common)' }));
+    expect(updates.at(-1)?.rarity).toBe('Common');
   });
 });

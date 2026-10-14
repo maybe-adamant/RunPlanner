@@ -635,6 +635,8 @@ export interface TraitDeclaration {
   /** A qualifying non-final boss payout blocks this equipped instance from later rarification. */
   readonly nonFinalBossRarityBlock?: true;
   readonly excludeFromRarityCount: boolean;
+  /** Source `InheritFrom UnityTrait`: native presents this trait as an Infusion. */
+  readonly unityTrait?: true;
   readonly activationRequirement?: TraitActivationRequirement;
   /** Source `ElementalMultipliers`: the element whose current count scales this trait. */
   readonly elementalMultiplier?: TraitElement;

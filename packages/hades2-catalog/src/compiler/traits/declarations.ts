@@ -853,6 +853,11 @@ export function normalizeTraits(
         trait.excludeFromRarityCount,
         `${path}.excludeFromRarityCount`,
       ),
+      ...(trait.unityTrait === undefined
+        ? {}
+        : (trait.unityTrait as unknown) === true
+          ? { unityTrait: true as const }
+          : fail(`${path}.unityTrait`, 'must be true when declared')),
       ...(activationRequirement === undefined ? {} : { activationRequirement }),
       ...(elementalMultiplier === undefined ? {} : { elementalMultiplier }),
       ...(rarityFloorEffect === undefined ? {} : { rarityFloorEffect }),

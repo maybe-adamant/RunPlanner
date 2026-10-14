@@ -505,6 +505,8 @@ export interface WorkspaceEchoLastRunBoonDomain {
   ) => number | undefined;
   readonly labelFor: (identity: WorkspaceEchoLastRunBoonTraitIdentity) => string;
   readonly traitLabel: (traitKey: string) => string;
+  /** Native presents this trait's rarity as an Infusion. */
+  readonly infusionFor: (traitKey: string) => boolean;
   readonly summaryFor: (value: AuthoredEchoLastRunBoonOffer) => string;
   readonly rarityPickerFor: (
     identity: WorkspaceEchoLastRunBoonTraitIdentity,
@@ -581,6 +583,8 @@ export interface WorkspaceTraitOfferInteraction {
   readonly rarityEditable: boolean;
   /** Declaration-backed editability for the currently selected trait's rarity. */
   readonly rarityEditableFor: (traitKey: string) => boolean;
+  /** Native presents this trait's rarity as an Infusion. */
+  readonly infusionFor: (traitKey: string) => boolean;
   readonly resetIntent?: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ResetEncounterTraitOffer' }>
   >;
@@ -686,6 +690,8 @@ export interface WorkspaceChaosOfferDomain {
 
 export interface WorkspaceChaosOfferInteraction {
   readonly blessingLabel: (blessingKey: string) => string;
+  /** Native presents this blessing's rarity as an Infusion. */
+  readonly blessingInfusion: (blessingKey: string) => boolean;
   readonly curseLabel: (curseKey: string) => string;
   readonly domainFor: (value: AuthoredChaosTraitOffer) => WorkspaceChaosOfferDomain | undefined;
   readonly startingDraft: () => AuthoredChaosTraitOffer | undefined;

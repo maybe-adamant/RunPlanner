@@ -70,6 +70,40 @@ describe('trait offer-catalog compiler owner', () => {
       expect(catalog.traits.byKey[traitKey]).not.toHaveProperty('offerDependsOnDeathDefiance');
   });
 
+  it('declares exactly the native UnityTrait inheritors as Infusions', () => {
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.unityTrait === true)
+        .map((trait) => trait.key)
+        .sort(),
+    ).toEqual([
+      'ChaosOmegaDamageBlessing',
+      'ElementalBaseDamageBoon',
+      'ElementalDamageBoon',
+      'ElementalDamageCapBoon',
+      'ElementalDamageFloorBoon',
+      'ElementalDodgeBoon',
+      'ElementalHealthBoon',
+      'ElementalOlympianDamageBoon',
+      'ElementalRallyBoon',
+      'ElementalRarityUpgradeBoon',
+      'ElementalUnifiedBoon',
+    ]);
+  });
+
+  it('rejects a non-true UnityTrait declaration', () => {
+    const mutated = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'ElementalHealthBoon' ? { ...trait, unityTrait: false } : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(mutated as never)).toThrow();
+  });
+
   it('rejects a non-true Death Defiance offer dependency', () => {
     const mutated = {
       ...declarations,

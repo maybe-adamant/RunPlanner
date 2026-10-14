@@ -7,6 +7,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { ChaosBlessingValueFields } from './ChaosBlessingValueFields';
 import { SelectedOutcomeBlock } from './SelectedOutcomeBlock';
 import { ValueSlider } from './ValueSlider';
+import { traitRarityPresentation } from './traitRarityPresentation';
 import { reconcileChaosOperandValues } from './chaos-blessing-values';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -102,6 +103,7 @@ export function ChaosTraitOfferEditor({
   const rarityOptions = domain.rarities.includes(value.rarity)
     ? domain.rarities
     : [value.rarity, ...domain.rarities];
+  const blessingInfusion = interaction.blessingInfusion(value.blessingKey);
   const updateSelectedCurseValue = (operand: ChaosNumericOperand, nextValue: number): void => {
     onUpdate(
       Object.freeze({
@@ -204,12 +206,18 @@ export function ChaosTraitOfferEditor({
           layout="inline"
           placeholder="Choose a rarity"
           model={declaredChoicesPicker(
-            rarityOptions.map((rarity) => ({
-              key: rarity,
-              value: rarity,
-              label: rarity,
-              disabled: !domain.rarities.includes(rarity),
-            })),
+            rarityOptions.map((rarity) => {
+              const presentation = traitRarityPresentation(blessingInfusion, rarity);
+              return {
+                key: rarity,
+                value: rarity,
+                label: presentation.label,
+                ...(presentation.accessibleLabel === presentation.label
+                  ? {}
+                  : { ariaLabel: presentation.accessibleLabel }),
+                disabled: !domain.rarities.includes(rarity),
+              };
+            }),
             value.rarity,
           )}
           ariaLabel="Chaos blessing rarity"

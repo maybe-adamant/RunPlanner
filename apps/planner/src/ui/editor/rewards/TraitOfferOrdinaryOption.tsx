@@ -110,7 +110,7 @@ export function TraitOfferOrdinaryOption({
   return (
     <TraitOfferOption
       controlId={idPrefix}
-      traitKey={option.traitKey}
+      infusion={interaction.infusionFor(option.traitKey)}
       {...(effectiveLevel === undefined ? {} : { effectiveLevel })}
       {...(effectiveRarity === undefined ? {} : { effectiveRarity })}
       {...(!hasEditableRarity && option.rarity !== undefined ? { fixedRarity: option.rarity } : {})}

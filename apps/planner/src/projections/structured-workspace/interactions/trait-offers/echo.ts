@@ -224,6 +224,7 @@ export function bindEchoLastRunBoonInteraction(input: {
               ),
             labelFor: identityLabel,
             traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+            infusionFor: (traitKey: string) => catalog.traits.byKey[traitKey]?.unityTrait === true,
             summaryFor: (child: AuthoredEchoLastRunBoonOffer) => {
               const selected = child.options[optionIndex(child.selectedOptionKey)];
               if (selected === undefined) return 'Choice required';

@@ -118,6 +118,8 @@ export function bindChaosOfferInteraction(input: {
   return Object.freeze({
     blessingLabel: (blessingKey: string) =>
       catalog.chaos.blessings.byKey[blessingKey]?.label ?? blessingKey,
+    blessingInfusion: (blessingKey: string) =>
+      catalog.traits.byKey[blessingKey]?.unityTrait === true,
     curseLabel: (curseKey: string) => catalog.chaos.curses.byKey[curseKey]?.label ?? curseKey,
     domainFor: chaosDomainFor,
     startingDraft: chaosStartingDraft,
