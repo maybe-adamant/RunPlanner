@@ -88,7 +88,6 @@ export function applyEncounterStartedTransition(
           Object.freeze({
             finding: Object.freeze({
               code: 'figLeafSkipUnavailable',
-              severity: 'error',
               phase: 'encounterResolution',
               origin: figLeafOrigin,
               evidence: Object.freeze(

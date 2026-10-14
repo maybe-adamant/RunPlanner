@@ -45,7 +45,6 @@ export function evaluateFigurineArcanaCandidate(
   const finding = (code: SemanticFinding['code'], evidence: Record<string, string | number>) =>
     Object.freeze({
       code,
-      severity: 'error' as const,
       phase: 'rewardGeneration' as const,
       origin: query.figurine,
       evidence: Object.freeze(evidence),

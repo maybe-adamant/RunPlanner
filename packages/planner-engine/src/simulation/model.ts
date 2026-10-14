@@ -1,7 +1,5 @@
 import type { SemanticAddress } from '../authored-project/addresses';
 
-export type FindingSeverity = 'error' | 'warning';
-
 export type SimulationPhase =
   'completeness' | 'encounterResolution' | 'rewardGeneration' | 'roomGeneration';
 
@@ -163,7 +161,6 @@ export type FindingEvidence = Readonly<Record<string, FindingEvidenceValue>>;
 
 export interface SemanticFinding {
   readonly code: FindingCode;
-  readonly severity: FindingSeverity;
   readonly phase: SimulationPhase;
   readonly origin: SemanticAddress;
   readonly evidence: FindingEvidence;

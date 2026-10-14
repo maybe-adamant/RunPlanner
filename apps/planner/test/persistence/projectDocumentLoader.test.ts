@@ -644,13 +644,11 @@ describe('project document loader', () => {
     expect(evaluation.findings).toEqual([
       expect.objectContaining({
         code: 'rewardMissing',
-        severity: 'error',
         origin: createAcquisitionRoleAddress(duplicate, 'self'),
         evidence: { acquisitionRole: 'self', pickupEffect: 'anvilOfFates' },
       }),
       expect.objectContaining({
         code: 'rewardAcquisitionUnavailable',
-        severity: 'error',
         origin: duplicate,
         evidence: { rewardType: 'ChaosWeaponUpgrade', role: 'self', lifecyclePoint: 'purchase' },
       }),

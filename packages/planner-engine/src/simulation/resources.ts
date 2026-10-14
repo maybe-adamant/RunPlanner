@@ -66,7 +66,6 @@ export function resourcePlacementFindings(
       return [
         Object.freeze({
           code: 'resourcePlacementUnavailable' as const,
-          severity: 'error' as const,
           phase: 'roomGeneration' as const,
           origin: createRoomFeatureAddress(
             createOccurrenceAddress(

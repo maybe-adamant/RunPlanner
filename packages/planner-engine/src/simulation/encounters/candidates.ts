@@ -301,7 +301,6 @@ export function evaluateEncounterCandidatesInternal(
       findings.push(
         Object.freeze({
           code: 'aetosAppearanceUnavailable',
-          severity: 'error',
           phase: 'encounterResolution',
           origin: aetosOrigin,
           evidence: Object.freeze({

@@ -136,7 +136,6 @@ function lifecycleBlockFindings(
         ? [
             Object.freeze({
               code: 'roomActionOrderUnavailable',
-              severity: 'error',
               phase: 'encounterResolution',
               origin: blockedAt,
               evidence: Object.freeze({
@@ -159,7 +158,6 @@ function lifecycleBlockFindings(
   return Object.freeze([
     Object.freeze({
       code: 'roomActionPlacementRequired',
-      severity: 'error',
       phase: 'completeness',
       origin: blockedAt,
       evidence: Object.freeze({}),

@@ -62,7 +62,6 @@ export function fieldsOptionalRewardCountFindings(
   return Object.freeze([
     Object.freeze({
       code: 'fieldsOptionalCapacityUnavailable',
-      severity: 'error',
       phase: 'roomGeneration',
       origin: createRoomFeatureAddress(room.origin, { kind: 'fieldsOptionalRewardCount' }),
       evidence: Object.freeze({

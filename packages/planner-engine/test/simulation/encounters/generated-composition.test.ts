@@ -800,7 +800,6 @@ describe('generated wave budget allocations', () => {
     };
     const finding = {
       code: 'encounterCustomizationUnavailable',
-      severity: 'error',
       phase: 'encounterResolution',
       origin: phase,
       evidence: { beforeSequence: expect.any(Number), decisionKey: 'generatedComposition' },

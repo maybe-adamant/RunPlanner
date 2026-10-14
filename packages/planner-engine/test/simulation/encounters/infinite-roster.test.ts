@@ -211,7 +211,6 @@ describe('Anomaly infinite roster authoring', () => {
     });
     expect(rosterFindings(invalid)).toEqual([
       expect.objectContaining({
-        severity: 'error',
         origin: anomalyRosterPhase,
         evidence: expect.objectContaining({ decisionKey: 'infiniteRoster' }),
       }),

@@ -57,7 +57,6 @@ function combat10RewardFinding(): SemanticFinding {
   // this witness keeps the reconciliation assertion focused on this owner.
   return Object.freeze({
     code: 'rewardBagEntryUnavailable',
-    severity: 'error',
     phase: 'rewardGeneration',
     origin: combat10Reward,
     evidence: Object.freeze({ rewardType: 'WeaponUpgrade' }),

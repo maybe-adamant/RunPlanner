@@ -68,14 +68,12 @@ const firstReason: SemanticFinding = {
   evidence: {},
   origin: trait,
   phase: 'rewardGeneration',
-  severity: 'error',
 };
 const secondReason: SemanticFinding = {
   code: 'traitOfferGenerationUnavailable',
   evidence: {},
   origin: trait,
   phase: 'rewardGeneration',
-  severity: 'error',
 };
 const issue: AssessmentIssue = {
   kind: 'incomplete',

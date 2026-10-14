@@ -66,7 +66,6 @@ it('exports the installed ordinary Hex and reached P Path allocation, then reloa
   expect(editedAssembly.evaluation.findings).toEqual([
     {
       code: 'rewardBagEntryUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: reward,
       evidence: { rewardType: 'MaxManaDrop', storeKey: 'RunProgress' },

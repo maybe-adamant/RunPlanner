@@ -86,7 +86,6 @@ const biome = createBiomeAddress('Underworld', 'F');
 function finding(code: FindingCode, origin: SemanticAddress = biome): SemanticFinding {
   return {
     code,
-    severity: 'error',
     phase: 'completeness',
     origin,
     evidence: { internalGameName: 'F_Combat01' },
@@ -472,7 +471,6 @@ describe('Path of Stars screen finding copy', () => {
       origin,
       evidence: { count: 3, nodeKeys: [], violations },
       phase: 'rewardGeneration',
-      severity: 'error',
     }) as SemanticFinding;
 
   it('titles the most specific violation and adds a wrong count as its description', () => {
@@ -517,7 +515,6 @@ describe('timeline finding guidance', () => {
     checkpointUnavailable?: boolean,
   ): SemanticFinding => ({
     code: 'roomActionOrderUnavailable',
-    severity: 'error',
     phase: 'encounterResolution',
     origin,
     evidence: {
@@ -550,7 +547,6 @@ describe('timeline finding guidance', () => {
     expect(
       presentFinding({
         code: 'rewardSourceUnavailable',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin,
         evidence: { reason },
@@ -570,7 +566,7 @@ describe('outer finding collapse', () => {
     code: FindingCode,
     origin: SemanticAddress,
     evidence: Readonly<Record<string, FindingEvidenceValue>> = {},
-  ): SemanticFinding => ({ code, severity: 'error', phase: 'rewardGeneration', origin, evidence });
+  ): SemanticFinding => ({ code, phase: 'rewardGeneration', origin, evidence });
   const issueOf = (owner: SemanticAddress, reasons: readonly SemanticFinding[]) =>
     ({ kind: 'invalid', owner, regionKey: 'collapse', reasons }) as const satisfies AssessmentIssue;
   const byOrigin = (finding: SemanticFinding) => semanticAddressKey(finding.origin);
@@ -651,7 +647,6 @@ describe('grouped repair cards', () => {
   const pool = createRoomFeatureAddress(room, { kind: 'purgingPoolInventory' });
   const reason = (code: FindingCode, origin: SemanticAddress): SemanticFinding => ({
     code,
-    severity: 'error',
     phase: 'rewardGeneration',
     origin,
     evidence: {},

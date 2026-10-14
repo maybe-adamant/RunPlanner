@@ -413,7 +413,6 @@ export {
   type FindingCode,
   type FindingEvidence,
   type FindingEvidenceValue,
-  type FindingSeverity,
   type RoomGenerationFindingCode,
   type RewardGenerationFindingCode,
   type SemanticFinding,

@@ -60,7 +60,6 @@ export function createTraitChildFindingEntry(
   return Object.freeze({
     finding: Object.freeze({
       code,
-      severity: 'error',
       phase: 'rewardGeneration',
       origin,
       evidence: Object.freeze({

@@ -217,9 +217,9 @@ issue: its semantic repair owner, stable region identity, incomplete/invalid
 kind and nonempty collection of reasons. Valid and empty routes have none.
 Related reasons retain their exact child origins even when repair belongs to
 the containing offer. Exact duplicates collapse by semantic identity and
-evidence; warnings do not establish a block. Independent repairs sharing a
-checkpoint follow the engine's semantic ordering, never presentation order.
-An unlocatable error is a broken engine contract.
+evidence. Independent repairs sharing a checkpoint follow the engine's
+semantic ordering, never presentation order. An unlocatable finding is a broken
+engine contract.
 
 Detailed findings remain available to their owning repair, candidate and
 delivery-placement consumers. They are not a competing route-level agenda.
@@ -469,7 +469,8 @@ Aggregated diagnostic ranges are not authorization to merge semantic states.
 
 ## Findings and Repair
 
-Findings carry stable semantic origin, code, severity and typed evidence.
+Every finding is a simulation blocker; there is no severity. A finding
+carries a stable semantic origin, code and typed evidence.
 Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required

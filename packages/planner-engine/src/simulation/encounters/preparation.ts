@@ -238,7 +238,6 @@ function selectedEncounterFinding(
 ): SemanticFinding {
   return Object.freeze({
     code: 'encounterUnavailable',
-    severity: 'error',
     phase: 'encounterResolution',
     origin: support.origin,
     evidence: Object.freeze({
@@ -256,7 +255,6 @@ function slotActivationFinding(
 ): SemanticFinding {
   return Object.freeze({
     code: 'encounterSlotActivationUnavailable',
-    severity: 'error',
     phase: 'encounterResolution',
     origin,
     evidence: Object.freeze({ beforeSequence, slotKey }),
@@ -299,7 +297,6 @@ function customizationFinding(
 ): SemanticFinding {
   return Object.freeze({
     code: 'encounterCustomizationUnavailable',
-    severity: 'error',
     phase: 'encounterResolution',
     origin,
     evidence: Object.freeze({ beforeSequence, decisionKey }),
@@ -321,7 +318,6 @@ function appendCustomizationFindings(
       findings.push(
         Object.freeze({
           code: 'encounterIntroductionRequired',
-          severity: 'error',
           phase: 'encounterResolution',
           origin,
           evidence: Object.freeze({ beforeSequence, decisionKey: decision.key, ...requirement }),

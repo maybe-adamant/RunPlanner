@@ -647,7 +647,6 @@ describe('selected resource success legality', () => {
     expect(evaluated.findings).toContainEqual(
       expect.objectContaining({
         code: 'resourcePlacementUnavailable',
-        severity: 'error',
         origin: createRoomFeatureAddress(host.origin, { kind: 'resource', family: 'Pickaxe' }),
         evidence: expect.objectContaining({ family: 'Pickaxe' }),
       }),

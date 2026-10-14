@@ -129,7 +129,6 @@ describe('Arachne combat cocoon count', () => {
     });
     expect(cocoonFindings(decoded)).toEqual([
       expect.objectContaining({
-        severity: 'error',
         origin: fPhase,
         evidence: expect.objectContaining({ decisionKey: 'cocoonCount' }),
       }),

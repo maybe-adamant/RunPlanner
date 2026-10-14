@@ -148,7 +148,6 @@ export function applyGorgonStartedTransition(inputs: {
           Object.freeze({
             finding: Object.freeze({
               code: 'gorgonConditionUnavailable' as const,
-              severity: 'error' as const,
               phase: 'encounterResolution' as const,
               origin: gorgonOrigin,
               evidence: Object.freeze({}),

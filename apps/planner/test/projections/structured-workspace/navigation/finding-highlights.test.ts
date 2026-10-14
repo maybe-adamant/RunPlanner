@@ -40,28 +40,24 @@ it('groups exact, redirected child, and per-slot findings by the same completed 
       origin: reward,
       evidence: {},
       phase: 'rewardGeneration',
-      severity: 'error',
     },
     {
       code: 'rewardAcquisitionUnavailable',
       origin: child,
       evidence: {},
       phase: 'rewardGeneration',
-      severity: 'error',
     },
     {
       code: 'rewardAcquisitionUnavailable',
       origin: action,
       evidence: {},
       phase: 'rewardGeneration',
-      severity: 'error',
     },
     {
       code: 'stygianWellDuplicate',
       origin: wellSlot,
       evidence: {},
       phase: 'rewardGeneration',
-      severity: 'error',
     },
   ];
   const destinations = new Map<string, WorkspaceInspectorDestination>(
@@ -103,7 +99,6 @@ it('groups a finding at its marked control when that differs from its navigation
     origin: trait,
     evidence: {},
     phase: 'rewardGeneration',
-    severity: 'error',
   };
   const index = indexFindingsByRepairTarget(
     [finding],
@@ -141,7 +136,7 @@ it('marks grouped trait outcome and Boon Boon Boon findings on the row control t
     code: SemanticFinding['code'],
     origin: SemanticAddress,
     evidence: SemanticFinding['evidence'] = {},
-  ): SemanticFinding => ({ code, origin, evidence, phase: 'rewardGeneration', severity: 'error' });
+  ): SemanticFinding => ({ code, origin, evidence, phase: 'rewardGeneration' });
   const destinations = new Map<string, WorkspaceInspectorDestination>(
     [natural, fire, echo].map((address) => [
       semanticAddressKey(address),
@@ -207,8 +202,7 @@ it('marks each trait dialog finding on its own owner control, excluding other of
     code: string,
     origin: SemanticAddress,
     evidence: SemanticFinding['evidence'] = {},
-  ): SemanticFinding =>
-    ({ code, origin, evidence, phase: 'rewardGeneration', severity: 'error' }) as SemanticFinding;
+  ): SemanticFinding => ({ code, origin, evidence, phase: 'rewardGeneration' }) as SemanticFinding;
   const unavailable = finding('echoLastRunBoonOptionUnavailable', echo, {
     detail: 'Zeus:ZeusWeaponBoon:Common',
   });
@@ -261,7 +255,6 @@ it('marks a Path of Stars screen finding on its launcher, apart from the row pic
     origin: role,
     evidence: {},
     phase: 'rewardGeneration',
-    severity: 'error',
   });
   for (const code of ['hexActivationMissing', 'hexActivationUnavailable'] as const)
     expect(findingRepairTarget(finding(code), destinations)).toBe(

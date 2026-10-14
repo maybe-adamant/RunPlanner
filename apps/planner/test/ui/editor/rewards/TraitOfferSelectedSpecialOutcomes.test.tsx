@@ -192,7 +192,6 @@ describe('per-row outcome pickers', () => {
       origin: owner,
       evidence: {},
       phase: 'rewardGeneration' as const,
-      severity: 'error' as const,
     };
     function Marked() {
       const anchor = useFindingAnchor();

@@ -37,7 +37,6 @@ export function hexTreeFindings(
   return Object.freeze([
     Object.freeze({
       code: 'hexTalentTreeUnavailable',
-      severity: 'error',
       phase: 'rewardGeneration',
       origin: createHexTreeAddress(owner),
       evidence: Object.freeze({

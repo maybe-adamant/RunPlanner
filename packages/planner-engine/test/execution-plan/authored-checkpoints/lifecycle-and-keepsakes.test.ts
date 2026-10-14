@@ -105,7 +105,6 @@ it('exports reached Judgment and Crystal Figurine Boss outcomes, then retains th
     evidence: { required: 2, selected: 0 },
     origin: figurine,
     phase: 'rewardGeneration',
-    severity: 'error',
   });
   expect(undoProjectHistory(edited).present).toBe(saved);
 });
@@ -144,7 +143,6 @@ it('exports the reached Fig Leaf skip and reloads its addressed second-skip repa
       origin: createFigLeafPhaseAddress(later),
       evidence: { reason: 'alreadyUsed' },
       phase: 'encounterResolution',
-      severity: 'error',
     }),
   );
   expect(undoProjectHistory(edited).present).toBe(saved);

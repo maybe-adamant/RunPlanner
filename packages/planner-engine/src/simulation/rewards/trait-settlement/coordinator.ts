@@ -1656,7 +1656,6 @@ function traitFindingEmission(
   const origin = createTraitOfferAddress(owner, acquisitionRole);
   const value: SemanticFinding = Object.freeze({
     code,
-    severity: 'error',
     phase: 'rewardGeneration',
     origin,
     evidence: Object.freeze({

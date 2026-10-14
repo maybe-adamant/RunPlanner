@@ -788,7 +788,6 @@ function finding(
 ): SemanticFinding {
   return Object.freeze({
     code,
-    severity: 'error',
     phase: 'roomGeneration',
     origin,
     evidence: Object.freeze(evidence),

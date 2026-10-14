@@ -198,7 +198,6 @@ function evaluateRouteAssembly(
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultMissing',
-          severity: 'error',
           phase: 'rewardGeneration',
           origin: result,
           evidence: Object.freeze({ keepsakeKey: routeStartKeepsake.key }),
@@ -233,7 +232,6 @@ function evaluateRouteAssembly(
       findings.push(
         Object.freeze({
           code: 'keepsakeEquipResultUnavailable',
-          severity: 'error',
           phase: 'rewardGeneration',
           origin: result,
           evidence: Object.freeze({ keepsakeKey: routeStartKeepsake.key }),
@@ -275,7 +273,6 @@ function evaluateRouteAssembly(
     findings.push(
       Object.freeze({
         code: 'rewardMissing',
-        severity: 'error',
         phase: 'rewardGeneration',
         origin: startingReward,
         evidence: Object.freeze({ source: 'runStart' }),
