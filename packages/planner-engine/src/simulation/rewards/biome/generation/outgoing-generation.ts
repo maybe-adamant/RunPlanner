@@ -15,6 +15,7 @@ import type { OfferProcessingPeer } from '../../offer-generation';
 import { assessAuthoredBatchRewardStore } from '../reward-store-support';
 import { addRewardFinding, rewardFinding } from '../../findings';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
+import { resolvedStoreKey } from '../../../materialization/rooms/templates';
 import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import type { RunStateOwner } from '../../run-state';
 import {
@@ -80,10 +81,7 @@ function expectedTargetStores(
       const declaration = catalog.rooms.byKey[target.room.gameName]!;
       return Object.freeze({
         targetKey: semanticAddressKey(target.origin),
-        storeKey:
-          declaration.forcedRewardStoreKey ??
-          declaration.individualRewardStoreKey ??
-          finalSharedStoreKey,
+        storeKey: resolvedStoreKey(declaration, finalSharedStoreKey),
       });
     }),
   );

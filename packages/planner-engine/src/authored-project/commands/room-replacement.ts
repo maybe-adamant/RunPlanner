@@ -265,8 +265,8 @@ function occurrenceContext(
     const target = decision.normal.targets[targetIndex];
     const resolvedStoreKey =
       role === 'prebossFreeReward'
-        ? (room.forcedRewardStoreKey ??
-          room.individualRewardStoreKey ??
+        ? (room.individualRewardStoreKey ??
+          room.forcedRewardStoreKey ??
           incomingStore(topology, decision.source, command))
         : resolvedBatchStore(topology, decision, command);
     return Object.freeze({

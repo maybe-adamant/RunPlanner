@@ -16,6 +16,7 @@ import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/roo
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { CountedRewardBinding } from '../../reward-kernel';
 import { finalSharedBatchStoreKey, orderedTargets } from '../materialization/batch';
+import { resolvedStoreKey } from '../materialization/rooms/templates';
 import type { RewardProducerCandidateCapability } from './producer-frontiers';
 
 export type CountedRewardOwnerAddress =
@@ -130,7 +131,7 @@ function incomingStoreKey(
       decision.normal.targets.some((target) => target.occurrenceId === occurrence.occurrenceId),
   );
   if (creatingDecision?.normal.kind !== 'batch' || topology === null) {
-    return declaration.forcedRewardStoreKey ?? declaration.individualRewardStoreKey;
+    return resolvedStoreKey(declaration, undefined);
   }
   const occurrences = new Map(
     topology.occurrences.map((candidate) => [candidate.occurrenceId, candidate] as const),
@@ -141,7 +142,7 @@ function incomingStoreKey(
     orderedTargets(creatingDecision.normal.targets),
     batchDecisionStoreKey(plan, creatingDecision, owner),
   );
-  return declaration.forcedRewardStoreKey ?? declaration.individualRewardStoreKey ?? sharedStore;
+  return resolvedStoreKey(declaration, sharedStore);
 }
 
 function localStoreKey(

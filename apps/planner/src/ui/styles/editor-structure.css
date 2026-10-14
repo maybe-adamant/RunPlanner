@@ -703,40 +703,44 @@ select {
   border-bottom: 1px solid #34353e;
 }
 
-.batch-controls {
+.batch-reward-pool {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
   padding: 12px 14px 0;
 }
 
-.batch-controls:empty {
-  display: none;
-}
-
-.effective-reward-store,
-.inherited-reward-store {
-  padding: 8px 10px;
-  border: 1px solid #554866;
+/* Pool values take a picker's height so the row never moves as they change. */
+.batch-pool-value {
+  display: flex;
+  height: 36px;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  overflow: hidden;
+  border: 1px solid #353640;
   border-radius: 8px;
-  background: rgb(126 101 154 / 9%);
+  color: var(--text);
+  font-size: 0.95rem;
+  white-space: nowrap;
 }
 
-.effective-reward-store > span,
-.inherited-reward-store > span {
-  display: block;
-  color: #aaa5af;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.batch-pool-value:empty {
+  border-style: dashed;
 }
 
-.effective-reward-store > strong,
-.inherited-reward-store > strong {
-  display: block;
-  margin-top: 4px;
-  color: #eee7dc;
+.batch-pool-value > strong {
   font-weight: 600;
+}
+
+.batch-pool-value-tag {
+  color: #aaa5af;
+  font-size: 0.78rem;
+}
+
+.batch-pool-value > .semantic-focus-link {
+  margin-left: auto;
 }
 
 .decision-heading h3,
@@ -1013,24 +1017,6 @@ select {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
-}
-
-.batch-pool-information {
-  min-height: 2.5rem;
-  margin: 6px 14px 0;
-  display: grid;
-  gap: 6px;
-}
-
-.batch-pool-information > .effective-reward-store {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-}
-
-.batch-pool-information > .effective-reward-store > strong {
-  margin: 0;
 }
 
 /* A list without search holds focus itself; its highlighted item shows the position. */

@@ -1252,7 +1252,7 @@ describe('DecisionWorkbench', () => {
     const selector = screen.getByLabelText('Fields door roll');
     const fieldsEditor = selector.closest('.fields-batch-editor');
     expect(fieldsEditor).not.toBeNull();
-    expect(selector.closest('.batch-controls')).toBeNull();
+    expect(selector.closest('.batch-reward-pool')).toBeNull();
     expect(within(fieldsEditor as HTMLElement).getByText('Cages per combat room')).toBeTruthy();
     expect(within(fieldsEditor as HTMLElement).getByText('Prior Max outcomes')).toBeTruthy();
   });
@@ -1619,10 +1619,50 @@ describe('DecisionWorkbench', () => {
     renderStaticDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
 
     expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
-    const effectivePool = screen.getByRole('status');
-    expect(within(effectivePool).getByText('Effective reward pool')).toBeTruthy();
-    expect(within(effectivePool).getByText('Major Reward')).toBeTruthy();
-    expect(effectivePool.querySelector('p')).toBeNull();
+    expect(screen.getByRole('status', { name: 'Effective Pool' }).textContent).toBe('Major Reward');
+  });
+
+  it('keeps one fixed two-half pool row across editable, inherited and discarded pools', () => {
+    const fOwner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFStartId,
+    });
+    const shipOwner = (occurrenceId: (typeof oOccurrenceIds)[keyof typeof oOccurrenceIds]) =>
+      createExitDecisionAddress(oBiome, { kind: 'occurrence', occurrenceId });
+    const cases = [
+      () =>
+        renderStaticDecisionWorkbench(
+          createCompleteFGProject(),
+          'Underworld',
+          'F',
+          subjectForOwner(fOwner),
+        ),
+      () =>
+        renderStaticDecisionWorkbench(
+          loadSurfaceNOPQProject(),
+          'Surface',
+          'O',
+          subjectForOwner(shipOwner(oOccurrenceIds.combat01)),
+        ),
+      () =>
+        renderStaticDecisionWorkbench(
+          loadSurfaceNOPQProject(),
+          'Surface',
+          'O',
+          subjectForOwner(shipOwner(oOccurrenceIds.combat04)),
+        ),
+    ];
+    const effective: string[] = [];
+    for (const render of cases) {
+      const { container } = render();
+      const rows = container.querySelectorAll('.batch-reward-pool');
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.children).toHaveLength(2);
+      expect(rows[0]!.lastElementChild?.classList.contains('batch-effective-pool')).toBe(true);
+      effective.push(screen.getByRole('status', { name: 'Effective Pool' }).textContent ?? '');
+      cleanup();
+    }
+    expect(effective).toEqual(['', '', 'Discarded by Combat 07']);
   });
 
   it('states the batch pool before a room is picked on both kinds of O source', () => {
@@ -1643,9 +1683,10 @@ describe('DecisionWorkbench', () => {
     renderStaticDecisionWorkbench(ship.project, 'Surface', 'O', subjectForOwner(ship.decision));
     // The door is still waiting for its room; the pool already reads.
     expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Select/);
-    const inherited = screen.getByRole('status');
-    expect(within(inherited).getByText('Reward pool from ship')).toBeTruthy();
+    const inherited = screen.getByRole('group', { name: 'Reward Pool' });
     expect(within(inherited).getByText('Major Reward')).toBeTruthy();
+    expect(within(inherited).getByText('from ship combat')).toBeTruthy();
+    expect(within(inherited).getByRole('button', { name: 'Open wheel' })).toBeTruthy();
     cleanup();
 
     // An ordinary door publishes its pool picker just as early.
@@ -1668,7 +1709,8 @@ describe('DecisionWorkbench', () => {
     });
     renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(shipOwner));
 
-    expect(screen.queryByLabelText('Reward Pool')).toBeNull();
+    // The ship decided the pool: a fixed value under the same label, never a picker.
+    expect(screen.getByLabelText('Reward Pool').getAttribute('role')).toBe('group');
     cleanup();
 
     const ordinaryOwner = createExitDecisionAddress(oBiome, {

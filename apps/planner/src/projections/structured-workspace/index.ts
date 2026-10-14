@@ -34,6 +34,7 @@ export type {
   StructuredWorkspaceProjectionService,
   WorkspaceAuthoringFrontier,
   WorkspaceBatchRepairIntent,
+  WorkspaceBatchRewardPool,
   WorkspaceBiome,
   WorkspaceBiomeField,
   WorkspaceDoorContract,

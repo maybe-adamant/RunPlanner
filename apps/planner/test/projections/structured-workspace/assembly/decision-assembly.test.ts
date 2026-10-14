@@ -13,6 +13,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  authoredBatchEnteredRewardStores,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -322,7 +323,7 @@ describe('structured workspace decision assembly', () => {
     }
 
     expect(assembly.batch.fieldsCageOutcome).toBeDefined();
-    expect(assembly.batch.effectiveRewardStore).toBeUndefined();
+    expect(assembly.batch.rewardPool?.effective).toBeUndefined();
     expect(assembly.batch.fields).toMatchObject({
       cageOutcome: 'min',
       cageTargetCount: 1,
@@ -334,9 +335,14 @@ describe('structured workspace decision assembly', () => {
     ]);
   });
 
-  it('projects a forced final shared store separately from the authored base store', () => {
-    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
-    const decision = batchDecisionAt(source, goldenFOccurrenceId(4, 1));
+  it('names the store a forced sibling flips the selected door to, before and after evaluation', () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      gameName: 'F_Combat01',
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+    });
+    const source = biomeSource(project, 'Underworld', 'F');
+    const decision = batchDecisionAt(source, goldenFStartId);
     if (
       decision.normal.rewardStore.kind !== 'authoredBaseStore' ||
       decision.normal.rewardStore.baseRewardStoreKey !== 'MetaProgress'
@@ -344,32 +350,55 @@ describe('structured workspace decision assembly', () => {
       throw new Error('F reward-store fixture lost its authored Minor Reward batch');
     }
     const owner = createExitDecisionAddress(goldenFBiome, decision.source);
-    const evaluated = source.evaluatedBatch(owner);
-    if (evaluated === undefined) throw new Error('F reward-store fixture is not evaluated');
-    const overridden: WorkspaceEvaluatedBatchOverlay = Object.freeze({
-      ...evaluated,
-      batch: Object.freeze({
-        ...evaluated.batch,
-        resolvedSharedRewardStoreKey: 'RunProgress',
+    const evaluatedBatch = source.evaluatedBatch(owner);
+    expect(evaluatedBatch).toBeDefined();
+    for (const evaluated of [evaluatedBatch, undefined]) {
+      const kit = decisionKit(source);
+      const assembly = assembleWorkspaceDecision({
+        persistence: 'authored',
+        assembleOccurrence: kit.assembleOccurrence,
+        catalog,
+        decision,
+        ...(evaluated === undefined ? {} : { evaluated }),
+        kind: 'batch',
+        markerDestinations: kit.markers.emitter,
+        source,
+      });
+      if (assembly.kind !== 'batch') throw new Error('F reward-store decision is not a batch');
+      expect(assembly.batch.rewardPool).toEqual({ effective: 'Major Reward' });
+    }
+  });
+
+  it('leaves the effective pool blank while a selected plain door has no resolved store', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'F');
+    const authored = batchDecisionAt(source, goldenFStartId);
+    const decision = Object.freeze({
+      ...authored,
+      normal: Object.freeze({
+        ...authored.normal,
+        rewardStore: Object.freeze({
+          kind: 'authoredBaseStore' as const,
+          baseRewardStoreKey: null,
+        }),
       }),
     });
+    const topology = source.plan.topology;
+    if (topology === null) throw new Error('F fixture has no topology');
+    expect(authoredBatchEnteredRewardStores(catalog, topology, decision).selected?.entered).toEqual(
+      { kind: 'unresolved' },
+    );
     const kit = decisionKit(source);
     const assembly = assembleWorkspaceDecision({
       persistence: 'authored',
       assembleOccurrence: kit.assembleOccurrence,
       catalog,
       decision,
-      evaluated: overridden,
       kind: 'batch',
       markerDestinations: kit.markers.emitter,
       source,
     });
     if (assembly.kind !== 'batch') throw new Error('F reward-store decision is not a batch');
-
-    expect(assembly.batch.effectiveRewardStore).toEqual({
-      label: 'Major Reward',
-      storeKey: 'RunProgress',
-    });
+    expect(assembly.batch.rewardPool).toEqual({});
   });
 
   it('keeps authored-active Fields cages reachable beyond a clamped target overlay', () => {

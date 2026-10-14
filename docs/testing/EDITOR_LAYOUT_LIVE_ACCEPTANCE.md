@@ -9,8 +9,9 @@ wide (1920 px) window. Confirm or waive each item; retire confirmed items.
       picker, its clear action, and neighbouring controls keep their positions;
       only the disabled state and finding badge change.
 - [ ] Open a Door Exit tab with Fields cage order, an inherited ship pool, and
-      a hidden reward. The information notes sit beneath their owning controls
-      and wrap without moving the controls above them.
+      a hidden reward. The pool row keeps both halves at the picker's height
+      whether the Effective Pool is blank or filled, and the information notes
+      sit beneath their owning controls without moving the controls above them.
 - [ ] Drag a side room to a rejected position. The notice floats over the list
       without shifting it and dismisses cleanly.
 - [ ] Compare World Shop, Well and Shrine Travel Deal lines under their

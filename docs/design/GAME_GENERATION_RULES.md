@@ -173,8 +173,8 @@ counted, or selected by the takeover policy.
 Complete defaults are declaration-owned. An ordinary batch can provide an
 authored base store, derive its store from the source's active offer point, or
 provide none. A counted Preboss free offer resolves first from the Preboss
-declaration's forced or individual store, then only from a compatible incoming
-batch store. A forced `RunProgress` Preboss never inherits a parent
+declaration's individual or forced store, in that order, then only from a
+compatible incoming batch store. A forced `RunProgress` Preboss never inherits a parent
 `MetaProgress` choice. This makes H's no-store normal batches well-defined and
 keeps F/G/P preboss free offers on their authored RunProgress binding.
 
