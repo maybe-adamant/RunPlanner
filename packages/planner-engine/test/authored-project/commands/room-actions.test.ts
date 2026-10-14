@@ -36,6 +36,7 @@ import {
   roomActionDomainForOccurrence,
   roomActionKey,
   undoProjectHistory,
+  type ProjectCommand,
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
@@ -1446,7 +1447,7 @@ describe('room-action commands', () => {
     ).toEqual([{ kind: 'useFountain' }, rack]);
     expect(() =>
       applyProjectCommand(replaced, catalog, { kind: 'RemoveRoomAction', action }),
-    ).toThrow('active required room action cannot be removed');
+    ).toThrow('the keepsake rack uses RemovePostbossKeepsake');
 
     const history = applyProjectHistoryCommand(createProjectHistory(replaced), catalog, {
       kind: 'MoveRoomAction',
@@ -1491,5 +1492,133 @@ describe('room-action commands', () => {
       selection: createPostbossKeepsakeSelectionAddress(completion),
     });
     expect(noOpDelete).toBe(retainedAgain);
+  });
+
+  it('orders the Postboss rack freely around the fountain and Well purchases', () => {
+    const completion = createOccurrenceAddress(
+      biome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const rack = { kind: 'interactKeepsakeRack' as const };
+    const fountain = { kind: 'useFountain' as const };
+    const purchase: RoomActionReference = {
+      kind: 'purchaseStygianWellOffer',
+      generationKey: 'initial:healing',
+    };
+    let document = createGoldenFGHProject();
+    const commands: readonly ProjectCommand[] = [
+      { kind: 'SetStygianWellInteraction' as const, occurrence: completion, interacted: true },
+      {
+        kind: 'ReplaceStygianWellOffer' as const,
+        occurrence: completion,
+        slotKey: 'healing',
+        itemKey: 'ArmorBoostStore',
+      },
+      {
+        kind: 'SetStygianWellPurchase' as const,
+        occurrence: completion,
+        generationKey: 'initial:healing' as const,
+        purchased: true,
+      },
+      {
+        kind: 'ReplacePostbossKeepsake' as const,
+        selection: createPostbossKeepsakeSelectionAddress(completion),
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
+      },
+    ];
+    for (const command of commands) document = applyProjectCommand(document, catalog, command);
+    const roster = (order: readonly RoomActionReference[]) => {
+      const reordered = replaceTestRoomActionOrder(
+        document,
+        catalog,
+        biome,
+        completion.occurrenceId,
+        order,
+      );
+      const located = roomActionDomainForOccurrence(
+        reordered,
+        catalog,
+        biome,
+        completion.occurrenceId,
+      )!;
+      return assembleRoomActionRoster({
+        owner: completion,
+        order,
+        contributions: located.domain.contributions,
+        lifecycleStructure: located.domain.lifecycleStructure,
+      });
+    };
+    const rackAction = createRoomActionAddress(biome, completion.occurrenceId, roomActionKey(rack));
+
+    // The rack is not a required room object: the replacement lands after the purchase.
+    expect(
+      roomActionDomainForOccurrence(document, catalog, biome, completion.occurrenceId)?.occurrence
+        .roomActions.order,
+    ).toEqual([fountain, purchase, rack]);
+    for (const order of [
+      [rack, fountain, purchase],
+      [fountain, rack, purchase],
+      [fountain, purchase, rack],
+    ]) {
+      const assessed = roster(order);
+      expect(assessed.valid).toBe(true);
+      expect(assessed.rows.find((row) => row.key === roomActionKey(rack))?.participation).toBe(
+        'optional',
+      );
+      // Doors open once the fountain resolves, whatever the rack's position.
+      expect(
+        assessed.checkpoints.find((checkpoint) => checkpoint.checkpointKey === 'exitUsable')
+          ?.afterRank,
+      ).toBe(order.indexOf(fountain) + 1);
+    }
+    expect(
+      roster([rack, fountain, purchase]).rows.find((row) => row.key === roomActionKey(rack))
+        ?.window,
+    ).toEqual({ kind: 'standard', phase: 'afterCombat' });
+    expect(
+      roster([fountain, purchase, rack]).rows.find((row) => row.key === roomActionKey(rack))
+        ?.window,
+    ).toEqual({ kind: 'postOutgoing' });
+    // The Well still unlocks only with the doors.
+    expect(roster([purchase, fountain, rack]).valid).toBe(false);
+    expect(
+      roster([fountain, purchase, rack]).proposals.filter(
+        (proposal) =>
+          proposal.kind === 'move' &&
+          proposal.reference.kind === 'interactKeepsakeRack' &&
+          proposal.structurallyAuthorable,
+      ),
+    ).toHaveLength(2);
+    expect(
+      roster([fountain, purchase, rack]).proposals.some(
+        (proposal) => proposal.kind === 'remove' && proposal.reference.kind === rack.kind,
+      ),
+    ).toBe(false);
+    // Rack membership belongs to the keepsake selection, so no generic insert is offered.
+    const current = roomActionDomainForOccurrence(
+      document,
+      catalog,
+      biome,
+      completion.occurrenceId,
+    )!;
+    expect(
+      assembleRoomActionRoster({
+        owner: completion,
+        order: [fountain, purchase],
+        contributions: current.domain.contributions,
+        lifecycleStructure: current.domain.lifecycleStructure,
+      }).proposals.some(
+        (proposal) => proposal.kind === 'insert' && proposal.reference.kind === rack.kind,
+      ),
+    ).toBe(false);
+    expect(
+      applyProjectCommand(document, catalog, {
+        kind: 'MoveRoomAction',
+        action: rackAction,
+        toIndex: 0,
+      }).route?.biomes[0]?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([rack, fountain, purchase]);
   });
 });

@@ -162,6 +162,9 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
       }
+      if (command.reference.kind === 'interactKeepsakeRack') {
+        failCommand(command, 'the keepsake rack uses ReplacePostbossKeepsake');
+      }
       const key = roomActionKey(command.reference);
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');
@@ -227,6 +230,9 @@ export function applyRoomActionCommand(
       }
       if (order[existingIndex]?.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
+      }
+      if (order[existingIndex]?.kind === 'interactKeepsakeRack') {
+        failCommand(command, 'the keepsake rack uses RemovePostbossKeepsake');
       }
       if (
         occurrenceIsActive &&

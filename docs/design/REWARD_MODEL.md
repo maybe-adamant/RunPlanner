@@ -978,8 +978,9 @@ room-owned address. Later entry occurrences do not bind the starting offer.
 
 Fixed-linked Postboss settlement uses the ordinary occurrence-owned ranked Room
 Action product. Every declared Postboss fountain contributes required
-`useFountain`; `interactKeepsakeRack` is also required when a replacement is
-active. The rack action applies the selected keepsake and its immediate equip
+`useFountain`; an active replacement adds an optional ranked
+`interactKeepsakeRack` that never holds the doors and whose window follows its
+position. The rack action applies the selected keepsake and its immediate equip
 result at its ranked position, so `useFountain` observes either the carried
 Boss keepsake or the replacement according to the authored order. Absence of a
 replacement omits the rack participant. The route-position Postboss remains

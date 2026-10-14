@@ -2414,6 +2414,12 @@ describe('engine-owned F/G execution semantic product', () => {
       owner: reverseRack?.owner,
       afterOwner: reverseFountain?.owner,
     });
+    // The rack never holds the doors: after the fountain it is owed only before leaving.
+    expect(reverseRack?.window).toEqual({ kind: 'postOutgoing' });
+    expect(reversePostboss?.timeline.obligations).toContainEqual({
+      owner: reverseRack?.owner,
+      checkpoint: 'roomExit',
+    });
 
     const pool = productFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint()));
     expect(
