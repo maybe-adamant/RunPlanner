@@ -67,6 +67,8 @@ export interface RawTraitDeclaration {
   readonly maxStatEffect?: RawTraitMaxStatEffect;
   /** Source acquire (`WeaponUpgradeBoon`): re-adds the equipped aspect at Perfect. */
   readonly raisesAspectToPerfect?: true;
+  /** The native offer requirement reads Death Defiance (Last Stand) state, which is not modeled. */
+  readonly offerDependsOnDeathDefiance?: true;
 }
 
 /** A rarityless number, or a base scaled by `RarityLevels` (excess over one with `sourceIsMultiplier`). */

@@ -22,6 +22,8 @@ export const echoTraits = [
     ...raritylessEchoTrait,
     key: 'EchoDeathDefianceRefill',
     label: 'Survive Survive Survive',
+    // NPCData.lua: requires a missing Last Stand.
+    offerDependsOnDeathDefiance: true,
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
     selectedDisposition: { kind: 'echo', effect: 'survive' },

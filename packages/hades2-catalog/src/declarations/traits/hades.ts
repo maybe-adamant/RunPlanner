@@ -55,6 +55,8 @@ export const hadesTraits = [
     ...raritylessHadesTrait,
     key: 'HadesDeathDefianceDamageBoon',
     label: 'Last Gasp',
+    // TraitData_Hades.lua: requires DeathDefianceDamageBoonEligible.
+    offerDependsOnDeathDefiance: true,
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

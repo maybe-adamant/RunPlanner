@@ -715,3 +715,17 @@ button.hex-tree-node[data-has-findings='true'] {
   border-color: color-mix(in srgb, var(--border) 60%, transparent);
   color: color-mix(in srgb, var(--muted) 70%, transparent);
 }
+
+.trait-offer-note {
+  color: var(--attention);
+  display: grid;
+  font-size: 0.82rem;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trait-offer-note p {
+  color: var(--muted);
+  margin: 0;
+}

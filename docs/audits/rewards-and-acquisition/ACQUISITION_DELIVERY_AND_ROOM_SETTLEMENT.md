@@ -181,7 +181,7 @@ The currently modeled examples expose the boundary clearly:
 | `NarcissusE`    | `MetaCurrencyDrop`           | free Bones acquisition with Time Piece and Artificer                       |
 | `NarcissusE`    | `MaxHealthDrop`              | concrete acquisition/history                                               |
 | `NarcissusG`    | two `ElementalBoost` pickups | each creates one all-element contribution                                  |
-| `NarcissusH`    | `LastStandDrop`              | concrete acquisition/history under the local Death Defiance approximation  |
+| `NarcissusH`    | `LastStandDrop`              | concrete acquisition/history; Death Defiance counts are not modeled        |
 | `NarcissusI`    | `BlindBoxLoot`               | the box later resolves its hidden source and fresh trait offer             |
 
 The random-Pom target and Mystery Boon source/offer consequently belong to the

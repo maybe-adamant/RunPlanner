@@ -376,10 +376,10 @@ or intentionally deferred by the planner are:
   `TransformAphroditeTalent`, `LeapHephaestusTalent`, `LaserApolloTalent`,
   `SummonHeraTalent`, `TimeSlowDemeterTalent`, `PotionPoseidonTalent`, or
   `MoonBeamAresTalent` in the hero trait dictionary. The nine talent keys stay
-  native operands. The planner uses the accepted settled concrete Spell Drop
-  prefix; a starting Hex alone is not that evidence. The
-  [volatile eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md)
-  owns this bounded approximation.
+  native operands. The planner models the predicate exactly from the invested
+  God Sent Olympian node; the
+  [Hex talent layout audit](../loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md)
+  owns that model.
 
 `RetaliateInvulnerabilityBoon`, `FocusLastStandBoon`, `InvulnerabilityCastBoon`,
 and `ManaSpearBoon` declare no additional offer requirement in the installed
@@ -1066,15 +1066,15 @@ are source facts, not BBB bypass flags.
 
 The 19 eligibility-only owners inside BBB are:
 
-| Owners                                                          | Retained current-state condition                                                              |
-| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Ten Infusions                                                   | Exact element offer thresholds, including Proper's offer rather than activation threshold     |
-| `SorceryCritBoon`                                               | Native seven-Hex identity list, `TraitData_Artemis.lua:502`                                   |
-| `OlympianSpellCountBoon`                                        | Native nine invested talents, `TraitData_Athena.lua:505`; accepted concrete Spell Drop prefix |
-| `CommonGlobalDamageBoon`                                        | Zero Common god-boon count                                                                    |
-| `BoonGrowthBoon`                                                | Existing rarifiable-trait predicate                                                           |
-| `PlantHealthBoon`, `RoomRewardBonusBoon`, `MoneyMultiplierBoon` | Gift-block context                                                                            |
-| `CastProjectileBoon`, `CastLobBoon`                             | Cast-family exclusions                                                                        |
+| Owners                                                          | Retained current-state condition                                                                |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Ten Infusions                                                   | Exact element offer thresholds, including Proper's offer rather than activation threshold       |
+| `SorceryCritBoon`                                               | Native seven-Hex identity list, `TraitData_Artemis.lua:502`                                     |
+| `OlympianSpellCountBoon`                                        | Native nine invested talents, `TraitData_Athena.lua:505`; exact invested God Sent Olympian node |
+| `CommonGlobalDamageBoon`                                        | Zero Common god-boon count                                                                      |
+| `BoonGrowthBoon`                                                | Existing rarifiable-trait predicate                                                             |
+| `PlantHealthBoon`, `RoomRewardBonusBoon`, `MoneyMultiplierBoon` | Gift-block context                                                                              |
+| `CastProjectileBoon`, `CastLobBoon`                             | Cast-family exclusions                                                                          |
 
 The nine eligibility-only owners outside BBB are Icarus Attack/Special,
 Circe's Hex/Grasp/removable-Fear choices, `NarcissusA`, Hades Cast and the

@@ -400,10 +400,8 @@ The Planner models the predicate exactly: Task Force is eligible once the
 God Sent Olympian node is among the invested nodes the authored Path screens
 select, so the pair must have been inserted and that node invested before the
 Athena offer. A settled Spell Drop or Aspect of Selene's built-in Sky Fall does
-not qualify by itself. Live native ineligibility follows the
-[Volatile Offer Eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md).
-No Path talent needs to enter the simulated equipped-trait ledger to support
-Task Force.
+not qualify by itself. No Path talent needs to enter the simulated
+equipped-trait ledger to support Task Force.
 
 ## Full-tree closure, inspection, and committed delivery
 

@@ -3,7 +3,8 @@
 ## Purpose
 
 This audit records authored offer results whose live eligibility depends on
-combat or graph-local state that the Run Planner deliberately does not model.
+Death Defiance or other combat state that the Run Planner deliberately does not
+model.
 It owns the source predicates, the Gorgon Amulet exception, and the decision to
 publish one exact result without a runtime substitute.
 
@@ -17,8 +18,6 @@ publish one exact result without a runtime substitute.
   entry in `CurrentRun.Hero.LastStands`.
 - `TraitData_Athena.lua:282-314` — Renewed Faith requires
   `MissingLastStand` and the pre-first-meeting state.
-- `TraitData_Athena.lua:480-524` — Task Force requires at least one of the nine
-  Olympian Hex talents to be equipped.
 - `TraitData_Hades.lua:468-478`, `CombatLogic.lua:2204-2213`, and
   `PowersLogic.lua:4895-4907` — Last Gasp uses
   `CurrentRun.DeathDefianceDamageBoonEligible`, which a Last Stand or Jeweled
@@ -46,23 +45,26 @@ disposition.
 | Athena Renewed Faith                                    | a Last Stand is missing and Athena's first-meeting state permits the trait |
 | Medea Malice in Kind                                    | at least one Last Stand is held                                            |
 | Hades Last Gasp                                         | `DeathDefianceDamageBoonEligible` is true                                  |
-| Athena Task Force                                       | one of nine Olympian Hex talents is equipped                               |
 | Shop, Shrine, Well, Twist, and Nemesis Last Stand items | a Last Stand is missing at the applicable generation or purchase frontier  |
 
-A shared Death Defiance flag would collapse opposite and unrelated
-predicates. A Task Force flag would ask the author to reproduce the unmodeled
-Path of Stars graph and exact node-investment order. The planner instead
-enforces only Task Force's necessary modeled prefix: a concrete Spell Drop must
-have settled. Aspect of Selene's starting Sky Fall does not satisfy that prefix
-before the Aspect's first concrete Spell Drop.
+A shared Death Defiance input would collapse opposite and unrelated
+predicates. These predicates remain source evidence. They are not authored
+controls, simulator inputs, or executor-side eligibility rules.
 
-These predicates remain source evidence. They are not normalized catalog
-capabilities, authored controls, simulator inputs, or executor-side eligibility
-rules.
+The five trait results above (Life Savings, Survive Survive Survive, Renewed
+Faith, Malice in Kind, and Last Gasp) declare
+`offerDependsOnDeathDefiance` in the catalog. That flag states only that the
+native offer predicate reads Death Defiance state; it does not encode the
+predicate. While any of them is listed on an offer screen, selected or not, the
+trait offer editor shows a display-only note in its feedback area. The note is
+not a finding: it does not affect validity, publishing, finding order, or
+repair marks. The Shop, Shrine, Well, Twist, and Nemesis items carry no such
+note.
 
 ## Gorgon Amulet exception
 
-Gorgon Amulet's missing-Last-Stand predicate decides whether Athena appears at
+Gorgon Amulet's predicate, `TraitData_Keepsake.lua:2212-2221`, requires that no
+Last Stand is held (`#LastStands <= 0`). It decides whether Athena appears at
 a particular encounter phase and whether the pending keepsake use advances.
 When the predicate is false, no Athena interaction occurs and the use can reach
 a later phase. That is modeled lifecycle timing rather than an offer-only

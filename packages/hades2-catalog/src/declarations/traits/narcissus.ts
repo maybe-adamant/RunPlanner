@@ -121,6 +121,8 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusH',
     label: 'Life Savings',
+    // NPCData.lua: requires a missing Last Stand.
+    offerDependsOnDeathDefiance: true,
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
     selectedDisposition: {
