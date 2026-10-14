@@ -32,6 +32,9 @@ function TestStartState.testStartFixturesDecodeWithTheirStartPoint()
     local preboss = assert(protocol.decode(wire("underworld-start-i-preboss")))
     lu.assertEquals(preboss.startState.roomName, "I_PreBoss02")
     lu.assertEquals(preboss.startState.biome.clockwork.remainingClockworkGoals, 0)
+    for _, row in ipairs(preboss.startState.traits) do
+        if row.name == "NarcissusA" then lu.assertEquals(row, { name = "NarcissusA", acquisitionOrdinal = 2 }) end
+    end
     lu.assertEquals(opening.startState.keepsake.traits,
         { { name = "ManaOverTimeRefundKeepsake", rarity = "Epic", slotted = true } })
     local boss = assert(protocol.decode(wire("underworld-start-g-rivals-boss")))
@@ -59,6 +62,11 @@ function TestStartState.testStartStateShapeIsStrict()
         { function(start) start.traits[1].storedGold = 1 end, "unknown field" },
         { function(start) start.traits[2] = start.traits[1] end, "duplicate" },
         { function(start) start.traits[1].rarity = "Mythic" end, "rarity" },
+        { function(start) start.traits[1].acquisitionOrdinal = 2 end, "both rarity and acquisitionOrdinal" },
+        { function(start) start.traits[1].rarity, start.traits[1].acquisitionOrdinal = nil, 5 end,
+            "acquisitionOrdinal must be at most 4" },
+        { function(start) start.traits[1].rarity, start.traits[1].acquisitionOrdinal = nil, 0 end,
+            "acquisitionOrdinal must be an integer" },
         { function(start) start.maxStats.hiddenGrants[1].source = assert(json.decode('{"kind":"base"}')) end,
             "source is missing key" },
         { function(start) start.maxStats.hiddenGrants[1].source = assert(json.decode('{"kind":"aspect","key":"X"}')) end,

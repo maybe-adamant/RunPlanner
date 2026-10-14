@@ -82,9 +82,14 @@ export interface RawTraitArmor {
   readonly levelBonuses?: readonly number[];
 }
 
-/** A rarityless number, or a base scaled by `RarityLevels` (excess over one with `sourceIsMultiplier`). */
+/**
+ * A rarityless number, one per acquisition ordinal for an NPC menu trait, or a
+ * base scaled by `RarityLevels` (excess over one with `sourceIsMultiplier`).
+ */
 export type RawMaxStatValue =
-  number | (RawRarityScaledValue & { readonly sourceIsMultiplier?: true });
+  | number
+  | readonly [number, number, number, number]
+  | (RawRarityScaledValue & { readonly sourceIsMultiplier?: true });
 
 export type RawTraitMaxStatEffect =
   | {
@@ -147,6 +152,7 @@ export interface RawTraitGiverDeclaration {
     | { readonly kind: 'none' };
   readonly boonRarityRollOrder?: readonly TraitRarity[];
   readonly denialParticipates?: boolean;
+  readonly acquisitionOrdinalMenu?: true;
   readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
 }
 

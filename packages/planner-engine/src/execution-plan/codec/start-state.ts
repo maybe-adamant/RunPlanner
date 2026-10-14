@@ -89,8 +89,7 @@ function traitRow(value: unknown, label: string): ExecutionStartTrait {
       'grantedTrait',
       'repeatedKeepsake',
       'currentRoom',
-      'roomsPerUpgradeAmount',
-      'roomsPerUpgradeMaxMana',
+      'acquisitionOrdinal',
       'echoIncreaseStats',
       'durationHammerUses',
     ],
@@ -113,12 +112,13 @@ function traitRow(value: unknown, label: string): ExecutionStartTrait {
       stringValue(entry, `${label}.repeatedKeepsake`),
     ),
     ...optional('currentRoom', row.currentRoom, (entry) => integer(entry, `${label}.currentRoom`)),
-    ...optional('roomsPerUpgradeAmount', row.roomsPerUpgradeAmount, (entry) =>
-      integer(entry, `${label}.roomsPerUpgradeAmount`, 1),
-    ),
-    ...optional('roomsPerUpgradeMaxMana', row.roomsPerUpgradeMaxMana, (entry) =>
-      numberValue(entry, `${label}.roomsPerUpgradeMaxMana`),
-    ),
+    ...optional('acquisitionOrdinal', row.acquisitionOrdinal, (entry) => {
+      if (row.rarity !== undefined) fail(`${label} carries both rarity and acquisitionOrdinal`);
+      const ordinal = integer(entry, `${label}.acquisitionOrdinal`, 1);
+      if (ordinal > RARITY_UPGRADE_ORDER.length)
+        fail(`${label}.acquisitionOrdinal must be at most ${RARITY_UPGRADE_ORDER.length}`);
+      return ordinal;
+    }),
     ...optional('echoIncreaseStats', row.echoIncreaseStats, (entry) => {
       const stats = record(entry, `${label}.echoIncreaseStats`, [
         'statMultiplier',

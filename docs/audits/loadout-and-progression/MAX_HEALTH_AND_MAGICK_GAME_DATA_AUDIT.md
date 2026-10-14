@@ -63,7 +63,7 @@ H = max(1, H); an active White Antler sets H = 30
 | Multiplier or conversion | Value                                        | Source                                            |
 | ------------------------ | -------------------------------------------- | ------------------------------------------------- |
 | Spiritual Affirmation    | ×1.15 / 1.20 / 1.25 / 1.30 health and Magick | `HealthRewardBonusBoon`, `SourceIsMultiplier`     |
-| Word of Greater Girth    | ×1.15 health                                 | `CirceEnlargeTrait`                               |
+| Word of Greater Girth    | ×1.15 / 1.15 / 1.20 / 1.30 health by ordinal | `CirceEnlargeTrait`, `RarityLevels`               |
 | Uncanny Fortitude        | ceil(M) × 20 / 25 / 30 / 35% health          | `ManaToHealthBoon` `MaxManaToMaxHealthConversion` |
 
 `HealthRewardBonus` scales `AddMaxHealth` pickups in
@@ -205,6 +205,7 @@ The planner assumes no damage, so armor is never consumed. `deriveArmor` sums
 held trait armor at its rarity and Pom level (or acquisition ordinal for
 dresses and coatings), the item total and the held Sash's `CurrentArmor`, and
 Run State publishes it with its sources. Practice starts install the item total
-and the Sash's `CurrentArmor`; installed armor traits set their own at the
-rarity Practice installs, which does not yet carry Dream NPC rarity, so a
-Dream-scaled Onyx or Protective installs at Common.
+and the Sash's `CurrentArmor`; installed armor traits set their own. Practice
+installs an NPC menu trait at the native rarity mapped from its pick's biome
+ordinal, so Onyx, Protective and Word of Greater Girth's health multiplier match
+the planner's ordinal-resolved values.

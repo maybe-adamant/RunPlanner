@@ -142,8 +142,12 @@ export type TraitRarityDomain =
 
 export type TraitElement = 'Aether' | 'Earth' | 'Air' | 'Fire' | 'Water';
 
-/** One number for a rarityless trait, else one per equipped rarity. */
-export type TraitMaxStatValue = number | Readonly<Record<InRunTraitRarity, number>>;
+/**
+ * One number for a rarityless trait, one per acquisition ordinal for a
+ * rarityless NPC menu trait, else one per equipped rarity.
+ */
+export type TraitMaxStatValue =
+  number | TraitAcquisitionOrdinalValues | Readonly<Record<InRunTraitRarity, number>>;
 
 /** Source max-stat properties of an equipped trait beyond flat `PropertyChanges`. */
 export type TraitMaxStatEffect =
@@ -357,7 +361,10 @@ export interface ResolvedTraitAcquisitionOrdinalEffect {
   readonly armor?: number;
 }
 
-function ordinalValue(values: TraitAcquisitionOrdinalValues, ordinal: number): number {
+export function acquisitionOrdinalValue(
+  values: TraitAcquisitionOrdinalValues,
+  ordinal: number,
+): number {
   if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > values.length)
     throw new Error(`unsupported acquisition ordinal ${ordinal}`);
   return values[ordinal - 1]!;
@@ -378,13 +385,13 @@ export function resolveTraitAcquisitionOrdinalEffect(
         ...(roomsPerUpgradeGrowth === undefined
           ? {}
           : {
-              roomsPerUpgradeMaxMana: ordinalValue(
+              roomsPerUpgradeMaxMana: acquisitionOrdinalValue(
                 roomsPerUpgradeGrowth.maxManaByAcquisitionOrdinal,
                 ordinal,
               ),
             }),
         ...(armor?.amount.kind === 'byAcquisitionOrdinal'
-          ? { armor: ordinalValue(armor.amount.byAcquisitionOrdinal, ordinal) }
+          ? { armor: acquisitionOrdinalValue(armor.amount.byAcquisitionOrdinal, ordinal) }
           : {}),
       });
 }
@@ -396,17 +403,23 @@ function resolveDispositionOrdinalEffect(
   if (disposition.kind === 'circe')
     return Object.freeze({
       pickups: Object.freeze([]),
-      circeSelectionCount: ordinalValue(disposition.selectionCountByAcquisitionOrdinal, ordinal),
+      circeSelectionCount: acquisitionOrdinalValue(
+        disposition.selectionCountByAcquisitionOrdinal,
+        ordinal,
+      ),
     });
   if (disposition.kind === 'echo' && disposition.effect === 'roomDecay')
     return Object.freeze({
       pickups: Object.freeze([]),
-      roomDecayStartFraction: ordinalValue(disposition.startFractionByAcquisitionOrdinal, ordinal),
+      roomDecayStartFraction: acquisitionOrdinalValue(
+        disposition.startFractionByAcquisitionOrdinal,
+        ordinal,
+      ),
     });
   if (disposition.kind === 'upgradeOccupiedBoonSlot')
     return Object.freeze({
       pickups: Object.freeze([]),
-      levelCount: ordinalValue(disposition.levelCountByAcquisitionOrdinal, ordinal),
+      levelCount: acquisitionOrdinalValue(disposition.levelCountByAcquisitionOrdinal, ordinal),
     });
   if (disposition.kind !== 'producePickups') return Object.freeze({ pickups: Object.freeze([]) });
   if (!Number.isInteger(ordinal) || ordinal < 1 || ordinal > 4)
@@ -419,7 +432,12 @@ function resolveDispositionOrdinalEffect(
     pickups: Object.freeze(pickups),
     ...(disposition.clock === undefined
       ? {}
-      : { clockInterval: ordinalValue(disposition.clock.intervalByAcquisitionOrdinal, ordinal) }),
+      : {
+          clockInterval: acquisitionOrdinalValue(
+            disposition.clock.intervalByAcquisitionOrdinal,
+            ordinal,
+          ),
+        }),
   });
 }
 
@@ -677,6 +695,12 @@ export interface TraitGiverDeclaration {
   /** Closed source-menu participation normalized for Calling Card. */
   readonly callingCardMenu: boolean;
   readonly denialParticipates?: boolean;
+  /**
+   * On Dream runs its menu sets each option to `RarityUpgradeOrder[EnteredBiomes]`
+   * (EventLogic.lua); standard menus are Common, equal in value at their
+   * positions. An acquired trait retains its acquisition ordinal.
+   */
+  readonly acquisitionOrdinalMenu?: true;
   /** Ordered initial-spell button bonuses, owned by the SpellDrop giver. */
   readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
 }

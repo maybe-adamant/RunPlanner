@@ -2,11 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
+  createHubDecisionAddress,
+  createHubSlotAddress,
+  createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { loadDreamMixedHandoffCheckpoint } from '@run-planner/test-fixtures/checkpoints/dream';
-import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadNemesisTraitTradeCheckpoint,
+  loadUnderworldFGHICheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { surfaceShrineDeliveriesProject } from '@run-planner/test-fixtures/surface';
 import {
   simulateProject,
@@ -49,6 +57,31 @@ function failure(run: () => unknown): unknown {
 }
 
 type Wire = Record<string, unknown> & { startState: Record<string, unknown> };
+
+/** The Dream Q-F-N handoff with Medea's N Story visited in the third biome. */
+function dreamMedeaInThirdBiome(): ProjectDocument {
+  const n = createBiomeAddress('Dream', 'N');
+  let project = applyProjectCommand(loadDreamMixedHandoffCheckpoint(), catalog, {
+    kind: 'OpenHubSlot',
+    slot: createHubSlotAddress(n, 'hub', 'story'),
+    occurrenceId: createOccurrenceId('dream-n-story'),
+    localOccurrenceIdsBySlot: {},
+  });
+  const hub = project.route.biomes
+    .find((biome) => biome.biomeKey === 'N')!
+    .topology!.decisions.find((decision) => decision.kind === 'hub');
+  if (hub?.kind !== 'hub') throw new Error('Dream N has no Hub');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHubActionOrder',
+    hub: createHubDecisionAddress(n, 'hub'),
+    actions: hub.actions.map((action) =>
+      action.kind === 'roomVisit' && action.hubSlotKey === 'combat01'
+        ? { kind: 'roomVisit' as const, hubSlotKey: 'story' }
+        : action,
+    ),
+  });
+  return authorLegalTraitOffers(project);
+}
 const clone = (wire: unknown): Wire => structuredClone(wire) as Wire;
 
 describe('execution start state', () => {
@@ -253,6 +286,31 @@ describe('execution start state', () => {
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 
+  it('carries the biome ordinal of an NPC menu pick only', () => {
+    const medeaCurses = new Set(catalog.traitGivers.byKey.Medea!.traitKeys);
+    const dream = compile(
+      withStartPoint(dreamMedeaInThirdBiome(), { biomeKey: 'N', point: 'preboss' }),
+    ).startState!.traits;
+    expect(dream.filter((row) => medeaCurses.has(row.name))).toEqual([
+      { name: expect.any(String), acquisitionOrdinal: 3 },
+    ]);
+    // Boons, Hammers and Nemesis-traded loot carry no ordinal.
+    const nemesis = compile(
+      withStartPoint(loadNemesisTraitTradeCheckpoint(), { biomeKey: 'G', point: 'opening' }),
+    ).startState!.traits;
+    for (const row of [...dream, ...nemesis].filter((entry) => !medeaCurses.has(entry.name)))
+      expect(row).not.toHaveProperty('acquisitionOrdinal');
+    // Standard routes publish the real ordinal: Narcissus in G, Circe in O.
+    const npcRows = (wire: unknown, name: string) =>
+      decodeExecutionPlan(wire).startState!.traits.filter((row) => row.name === name);
+    expect(npcRows(iPrebossWire, 'NarcissusA')).toEqual([
+      { name: 'NarcissusA', acquisitionOrdinal: 2 },
+    ]);
+    expect(npcRows(qOpeningWire, 'CirceShrinkTrait')).toEqual([
+      { name: 'CirceShrinkTrait', acquisitionOrdinal: 2 },
+    ]);
+  });
+
   it('round-trips and fingerprints the start state', () => {
     const plan = decodeExecutionPlan(iPrebossWire);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
@@ -290,6 +348,18 @@ describe('execution start state', () => {
     ],
     ['an unknown trait field', (start) => (start.traits = [{ name: 'X', storedGold: 1 }])],
     ['a duplicate trait', (start) => (start.traits = [{ name: 'X' }, { name: 'X' }])],
+    [
+      'an acquisition ordinal past the fourth biome',
+      (start) => (start.traits = [{ name: 'NarcissusA', acquisitionOrdinal: 5 }]),
+    ],
+    [
+      'a zero acquisition ordinal',
+      (start) => (start.traits = [{ name: 'NarcissusA', acquisitionOrdinal: 0 }]),
+    ],
+    [
+      'an acquisition ordinal beside a rarity',
+      (start) => (start.traits = [{ name: 'NarcissusA', rarity: 'Rare', acquisitionOrdinal: 2 }]),
+    ],
     ['an unsupported rarity', (start) => (start.traits = [{ name: 'X', rarity: 'Mythic' }])],
     [
       'a re-derived max-stat source',

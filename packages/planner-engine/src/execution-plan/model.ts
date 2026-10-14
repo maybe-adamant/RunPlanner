@@ -1085,10 +1085,12 @@ export interface ExecutionStartTrait {
   readonly repeatedKeepsake?: string;
   /** Native `CurrentRoom` of a `RoomsPerUpgrade` trait, including Steady Growth. */
   readonly currentRoom?: number;
-  /** Native `RoomsPerUpgrade.Amount` fixed at acquisition. */
-  readonly roomsPerUpgradeAmount?: number;
-  /** Native `RoomsPerUpgrade.MaxMana` fixed at acquisition. */
-  readonly roomsPerUpgradeMaxMana?: number;
+  /**
+   * Biome ordinal (1-4) of a pick from an NPC menu that on Dream runs sets each
+   * option's rarity to `RarityUpgradeOrder[EnteredBiomes]`; the module installs
+   * it at that rarity on every route. Exclusive with `rarity`.
+   */
+  readonly acquisitionOrdinal?: number;
   /** `EchoIncreaseStats` fields (Fight Fight Fight). */
   readonly echoIncreaseStats?: {
     readonly statMultiplier: number;

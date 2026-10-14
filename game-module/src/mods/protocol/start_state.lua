@@ -7,6 +7,7 @@ local protocol = {}
 
 local LABEL = "execution plan.startState"
 local MAX_ROOM_HISTORY = 1024
+local MAX_ACQUISITION_ORDINAL = 4
 local biomes = { F = true, G = true, H = true, I = true, N = true, O = true, P = true, Q = true }
 local traitRarities = {
     Common = true, Rare = true, Epic = true, Heroic = true, Legendary = true, Duo = true,
@@ -60,8 +61,8 @@ end
 local function trait(value, label)
     local row = exact(value, { "name" }, {
         "rarity", "stackNum", "blockInRunRarify", "upgradedTraitName", "selectedTrait",
-        "grantedTrait", "repeatedKeepsake", "currentRoom", "roomsPerUpgradeAmount",
-        "roomsPerUpgradeMaxMana", "echoIncreaseStats", "durationHammerUses",
+        "grantedTrait", "repeatedKeepsake", "currentRoom", "acquisitionOrdinal", "echoIncreaseStats",
+        "durationHammerUses",
     }, label)
     str(row.name, label .. ".name")
     optional(row.rarity, function(entry, entryLabel) one(entry, traitRarities, entryLabel) end, label .. ".rarity")
@@ -72,9 +73,12 @@ local function trait(value, label)
     trueFlag(row.grantedTrait, label .. ".grantedTrait")
     optional(row.repeatedKeepsake, str, label .. ".repeatedKeepsake")
     optional(row.currentRoom, int, label .. ".currentRoom")
-    optional(row.roomsPerUpgradeAmount, function(entry, entryLabel) int(entry, entryLabel, 1) end,
-        label .. ".roomsPerUpgradeAmount")
-    optional(row.roomsPerUpgradeMaxMana, num, label .. ".roomsPerUpgradeMaxMana")
+    -- A biome ordinal indexes native RarityUpgradeOrder; it replaces rarity.
+    optional(row.acquisitionOrdinal, function(entry, entryLabel)
+        int(entry, entryLabel, 1)
+        check(entry <= MAX_ACQUISITION_ORDINAL, entryLabel .. " must be at most " .. MAX_ACQUISITION_ORDINAL)
+        check(row.rarity == nil, label .. " carries both rarity and acquisitionOrdinal")
+    end, label .. ".acquisitionOrdinal")
     optional(row.echoIncreaseStats, function(entry, entryLabel)
         local stats = exact(entry, { "statMultiplier", "blockDecay", "startMaxHealth", "startMaxMana" }, {},
             entryLabel)

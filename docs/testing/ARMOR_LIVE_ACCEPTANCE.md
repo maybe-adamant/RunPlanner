@@ -36,6 +36,8 @@ owner confirms or waives each check.
       held, the Armor row and its sources match the in-game armor.
 - [ ] On a Dream route, take Onyx Dress or Protective Coating from a later
       biome's menu. The in-game armor matches the planner's rarity-scaled
-      value (Onyx 80/100/140, Protective 140 in the fourth biome). At a
-      Practice start after that pick, the trait currently installs at its
-      Common armor (Onyx 60, Protective 100).
+      value (Onyx 80/100/140, Protective 140 in the fourth biome). A
+      Practice start after that pick shows the same armor.
+- [ ] On a Dream route, take Word of Greater Girth from Circe's menu in the
+      fourth biome. A Practice start after that pick passes the max-health
+      self-check (×1.30 health).

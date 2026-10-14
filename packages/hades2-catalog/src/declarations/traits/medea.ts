@@ -89,4 +89,6 @@ export const medeaGiver = {
     'NewStatusDamage',
   ],
   rarityPolicy: { kind: 'none' },
+  // EventLogic.MedeaCurseChoice.
+  acquisitionOrdinalMenu: true,
 } as const satisfies RawTraitGiverDeclaration;

@@ -803,6 +803,11 @@ export function recordReachedTraitOffer(
       : undefined;
   if (armor?.amount.kind === 'byAcquisitionOrdinal' && ordinalEffect?.armor === undefined)
     throw new Error(`${selectedTraitKey} declares ordinal armor but resolved none`);
+  // Dream NPC menus set RarityUpgradeOrder[EnteredBiomes]; standard positions equal Common.
+  const menuOrdinal =
+    catalog.traitGivers.byKey[evaluation.offer.giverKey]?.acquisitionOrdinalMenu === true
+      ? acquisitionOrdinal
+      : undefined;
   const roomDecayStartFraction = ordinalEffect?.roomDecayStartFraction;
   // EchoIncreaseStats snapshots the hero's current maxima on acquisition.
   const roomDecayStartMaxima =
@@ -868,6 +873,7 @@ export function recordReachedTraitOffer(
       ? {}
       : { roomsPerUpgradeMaxMana: ordinalEffect.roomsPerUpgradeMaxMana }),
     ...(ordinalEffect?.armor === undefined ? {} : { acquisitionArmor: ordinalEffect.armor }),
+    ...(menuOrdinal === undefined ? {} : { acquisitionOrdinal: menuOrdinal }),
   }) as TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =

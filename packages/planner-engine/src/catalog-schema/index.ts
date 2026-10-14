@@ -70,7 +70,7 @@ export type {
   HexTalentCandidateDeclaration,
   WeaponDeclaration,
 } from './traits';
-export { resolveTraitAcquisitionOrdinalEffect } from './traits';
+export { acquisitionOrdinalValue, resolveTraitAcquisitionOrdinalEffect } from './traits';
 import type {
   AspectDeclaration,
   TraitDeclaration,

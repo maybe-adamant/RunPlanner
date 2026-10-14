@@ -168,11 +168,26 @@ describe('max health and max Magick formula', () => {
 
   it('sums multipliers as one plus each excess and applies them to base and flat sources', () => {
     const state = neutralState(
-      traits([equipped('HealthRewardBonusBoon', 'Heroic'), equipped('CirceEnlargeTrait')]),
+      traits([
+        equipped('HealthRewardBonusBoon', 'Heroic'),
+        equipped('CirceEnlargeTrait', undefined, { acquisitionOrdinal: 1 }),
+      ]),
     );
     // Health 30 x (1 + 0.30 + 0.15); Magick 50 x 1.30.
     expect(maxima(state)).toEqual({ maxHealth: 44, maxMana: 65 });
     expect(deriveMaxStats(catalog, state).multipliers).toEqual({ maxHealth: 1.45, maxMana: 1.3 });
+  });
+
+  it('scales Word of Greater Girth by the biome ordinal of its Circe pick', () => {
+    const enlarge = (acquisitionOrdinal: number) =>
+      deriveMaxStats(
+        catalog,
+        neutralState(traits([equipped('CirceEnlargeTrait', undefined, { acquisitionOrdinal })])),
+      ).multipliers.maxHealth;
+    expect([1, 2, 3, 4].map(enlarge)).toEqual([1.15, 1.15, 1.2, 1.3]);
+    expect(() =>
+      deriveMaxStats(catalog, neutralState(traits([equipped('CirceEnlargeTrait')]))),
+    ).toThrow(/lacks its acquisition ordinal/);
   });
 
   it('converts ceil(max Magick) into health before the health multiplier', () => {

@@ -198,6 +198,65 @@ describe('trait rarity and elements', () => {
     }
   });
 
+  it('declares the entered-biome menu on exactly the six NPC menus that scale by it', () => {
+    expect(
+      catalog.traitGivers.values
+        .filter((giver) => giver.acquisitionOrdinalMenu === true)
+        .map((giver) => giver.key)
+        .sort(),
+    ).toEqual(['Arachne', 'Circe', 'Echo', 'Icarus', 'Medea', 'Narcissus']);
+    const withGiver = (giverKey: string, extra: object) => ({
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === giverKey ? ({ ...giver, ...extra } as RawTraitGiverDeclaration) : giver,
+        ),
+      },
+    });
+    expect(() => createCatalog(withGiver('Aphrodite', { acquisitionOrdinalMenu: true }))).toThrow(
+      /acquisitionOrdinalMenu: must be true on a rarityless NPC giver/,
+    );
+  });
+
+  it('scales Word of Greater Girth by acquisition ordinal only from an entered-biome menu', () => {
+    expect(catalog.traits.byKey.CirceEnlargeTrait!.maxStatEffect).toEqual({
+      kind: 'multiplier',
+      maxHealth: [1.15, 1.15, 1.2, 1.3],
+    });
+    const withCirce = (
+      giver: (raw: RawTraitGiverDeclaration) => RawTraitGiverDeclaration,
+      maxHealth: unknown = [1.15, 1.15, 1.2, 1.3],
+    ) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'CirceEnlargeTrait'
+              ? ({
+                  ...trait,
+                  maxStatEffect: { kind: 'multiplier', maxHealth },
+                } as RawTraitDeclaration)
+              : trait,
+          ),
+          givers: declarations.traitCatalog.givers.map((raw) =>
+            raw.key === 'Circe' ? giver(raw) : raw,
+          ),
+        },
+      });
+    expect(() =>
+      withCirce((raw) => {
+        const { acquisitionOrdinalMenu: _menu, ...rest } = raw;
+        void _menu;
+        return rest;
+      }),
+    ).toThrow(/an acquisition-ordinal value requires an acquisitionOrdinalMenu giver/);
+    expect(() => withCirce((raw) => raw, [1.15, 1.2, 1.3])).toThrow(
+      /must declare four acquisition ordinals/,
+    );
+  });
+
   it.each([
     [
       'moved to another core trait',

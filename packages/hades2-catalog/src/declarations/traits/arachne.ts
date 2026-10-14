@@ -95,4 +95,6 @@ export const arachneGiver = {
     'EscalatingCostume',
   ],
   rarityPolicy: { kind: 'none' },
+  // EventLogic.ArachneCostumeChoice.
+  acquisitionOrdinalMenu: true,
 } as const satisfies RawTraitGiverDeclaration;

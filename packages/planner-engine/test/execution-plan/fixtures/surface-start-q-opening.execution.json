@@ -592,7 +592,7 @@
       { "name": "AresSpecialBoon", "rarity": "Common", "stackNum": 1 },
       { "name": "AresSprintBoon", "rarity": "Common", "stackNum": 1 },
       { "name": "CastLobBoon", "rarity": "Common" },
-      { "name": "CirceShrinkTrait" },
+      { "name": "CirceShrinkTrait", "acquisitionOrdinal": 2 },
       { "name": "HephaestusCastBoon", "rarity": "Common", "stackNum": 1 },
       { "name": "HermesSpecialBoon", "rarity": "Common" },
       { "name": "RestockBoon", "rarity": "Epic" },
@@ -7687,5 +7687,5 @@
       }
     }
   ],
-  "planFingerprint": "4afbcb2c"
+  "planFingerprint": "50149599"
 }

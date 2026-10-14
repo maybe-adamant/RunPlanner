@@ -65,6 +65,8 @@ function traitRow(
 ): ExecutionStartTrait {
   const rarity: ExecutionTraitRarity | undefined =
     trait.hammerRank === 'RankII' ? 'Legendary' : trait.rarity;
+  if (rarity !== undefined && trait.acquisitionOrdinal !== undefined)
+    missing(`${trait.traitKey} carries both a rarity and an acquisition ordinal`);
   const decay = trait.roomDecay;
   if (decay !== undefined && decay.startMaxima === undefined)
     missing(`${trait.traitKey} lacks its acquisition maxima`);
@@ -87,12 +89,9 @@ function traitRow(
       ? {}
       : { repeatedKeepsake: trait.echoRepeatedKeepsakeKey }),
     ...(currentRoom === undefined ? {} : { currentRoom }),
-    ...(trait.pickupProducerInterval === undefined
+    ...(trait.acquisitionOrdinal === undefined
       ? {}
-      : { roomsPerUpgradeAmount: trait.pickupProducerInterval }),
-    ...(trait.roomsPerUpgradeGrowth === undefined
-      ? {}
-      : { roomsPerUpgradeMaxMana: trait.roomsPerUpgradeGrowth.maxManaPerGrant }),
+      : { acquisitionOrdinal: trait.acquisitionOrdinal }),
     ...(decay?.startMaxima === undefined
       ? {}
       : {
