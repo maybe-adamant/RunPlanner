@@ -27,6 +27,12 @@ import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
 import { profileSaveSucceeded } from '@planner/state/profileSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { hintOf } from '@planner-test/support/hints';
+import { encodeSlotSource } from '@planner/persistence/slotSource';
+import {
+  createProjectDocument,
+  encodeProjectDocument,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 
 const unset = (): GameModuleStatus =>
   gameModuleStatus({
@@ -824,6 +830,53 @@ describe('Game panel', () => {
       // The first save of a never-saved project keeps its identity.
       projectId: firstBiome().projectId,
     });
+  });
+
+  it('rebuilds outdated slots from their sources and reports each outcome', async () => {
+    const stale = {
+      state: 'stale',
+      routeKey: 'Underworld',
+      biomeKeys: ['F'],
+      modifiedAtMs: 1,
+    } as const;
+    const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(
+            planSlot(2, { ...stale, displayName: 'Opener', hasSource: true }),
+            planSlot(3, { ...stale, displayName: 'Broken', hasSource: true }),
+            planSlot(4, { ...stale, displayName: 'Old', hasSource: false }),
+          ),
+        },
+      }),
+    );
+    const source = (project: ProjectDocument) =>
+      encodeSlotSource({
+        internalRunModifiers: false,
+        projectJson: encodeProjectDocument(project),
+      });
+    game.sources.set(2, source(firstBiome()));
+    game.sources.set(
+      3,
+      source(
+        createProjectDocument(catalog, {
+          configuredBiomeCount: 1,
+          projectId: 'broken',
+          routeKey: 'Underworld',
+        }),
+      ),
+    );
+    const { dialog, user } = await openGame(game.host);
+
+    expect(within(dialog).getByText('Outdated — send again')).toBeTruthy();
+    await user.click(await within(dialog).findByRole('button', { name: 'Rebuild slots' }));
+
+    expect(
+      await within(dialog).findByText('Rebuilt 1 slot · couldn’t rebuild 1 slot'),
+    ).toBeTruthy();
+    expect(within(dialog).getByText(/should still build — create a bug report/)).toBeTruthy();
+    expect(game.rebuilt.map((entry) => entry.slotNumber)).toEqual([2]);
+    expect(game.host.setActiveSlot).not.toHaveBeenCalled();
   });
 
   it('explains that game management needs the desktop application', async () => {

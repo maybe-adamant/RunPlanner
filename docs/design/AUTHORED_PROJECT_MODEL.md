@@ -41,7 +41,8 @@ integer `schemaRevision` is the minor, read as 0 when absent.
 - **Minor bump.** A change can make a previously valid project invalid
   (tightened validity) or alters the compiled plan wire. It has no script and
   leaves the document unchanged; it is announced in the commit and change
-  summary and needs no approval.
+  summary and needs no approval. A catalog change that can invalidate a
+  previously valid project falls under this rule too.
 - **No bump** for module-only changes or planner changes that affect neither
   validity nor the wire.
 

@@ -48,6 +48,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
           ? {}
           : { communityEvents: application.communityEvents })}
         {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
+        {...(application.slotRebuild === undefined ? {} : { slotRebuild: application.slotRebuild })}
         projectOperations={application.projectOperations}
         selectStructuredWorkspace={application.selectStructuredWorkspace}
       />

@@ -443,6 +443,7 @@ describe('Game panel projection', () => {
         },
       },
       summary: null,
+      note: null,
       marker: 'current',
       action: { label: 'Replace', confirm: true },
     });
@@ -559,6 +560,54 @@ describe('Game panel projection', () => {
     expect(rows?.[2]?.columns?.aspect).toMatch(/^None \(/);
   });
 
+  it('offers Rebuild slots for an outdated slot with a source and notes each outcome', () => {
+    const stale = {
+      state: 'stale',
+      routeKey: 'Underworld',
+      biomeKeys: ['F'],
+      modifiedAtMs: 1,
+    } as const;
+    const status = gameModuleStatus({
+      inspection: {
+        planSlots: planSlots(
+          planSlot(2, { ...stale, hasSource: true }),
+          planSlot(3, { ...stale, hasSource: true }),
+          planSlot(4, { ...stale, hasSource: false }),
+          planSlot(5, { ...stale, hasSource: true }),
+        ),
+      },
+    });
+    const current = { kind: 'noProject' } as const;
+    const before = projectGamePlans(status, current, 'clean', catalog, 0);
+    expect(before?.rebuild).toEqual({ available: true, summary: null });
+    expect(before?.rows.slice(1, 4).map((row) => row.note)).toEqual([
+      'Outdated — rebuild slots',
+      'Outdated — rebuild slots',
+      'Outdated — send again',
+    ]);
+    const after = projectGamePlans(status, current, 'clean', catalog, 0, {
+      problem: null,
+      outcomes: [
+        { slot: 2, kind: 'failed', reason: 'Couldn’t rebuild after the update.' },
+        { slot: 3, kind: 'defect', reason: 'Create a bug report.', error: 'engine error' },
+        { slot: 4, kind: 'noSource' },
+        { slot: 5, kind: 'rebuilt' },
+      ],
+    });
+    expect(after?.rebuild.summary).toBe('Rebuilt 1 slot · couldn’t rebuild 2 slots');
+    expect(after?.rows.slice(1, 4).map((row) => row.note)).toEqual([
+      'Couldn’t rebuild after the update.',
+      'Create a bug report.',
+      'Outdated — send again',
+    ]);
+    const unsourced = gameModuleStatus({
+      inspection: { planSlots: planSlots(planSlot(4, { ...stale, hasSource: false })) },
+    });
+    expect(projectGamePlans(unsourced, current, 'clean', catalog, 0)?.rebuild.available).toBe(
+      false,
+    );
+  });
+
   it('asks for an outdated slot to be sent again', () => {
     const status = gameModuleStatus({
       inspection: {
@@ -579,7 +628,8 @@ describe('Game panel projection', () => {
       slot: 2,
       state: 'stale',
       columns: { route: 'Underworld', endsAt: 'Erebus', plan: null },
-      summary: 'Outdated — send again',
+      summary: null,
+      note: 'Outdated — send again',
       marker: null,
       action: { label: 'Replace', confirm: true },
     });

@@ -1047,6 +1047,21 @@
   color: #e8c27a;
 }
 
+.game-panel-slot-note {
+  display: block;
+  color: #e8c27a;
+  font-size: 0.9em;
+}
+
+.game-panel-rebuild {
+  margin-top: 8px;
+}
+
+.game-panel-rebuild-summary {
+  margin: 6px 0 0;
+  color: #aaa7af;
+}
+
 .game-panel-event-ends {
   display: block;
   color: #aaa7af;

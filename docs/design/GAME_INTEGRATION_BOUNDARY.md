@@ -198,6 +198,9 @@ Anything both the planner and the game module need lives in
   `slot-0.runplanner.json`, which only the planner writes, each the plan bytes
   as compiled, within 1 MiB. A slot holding the `run-planner-slot` envelope an
   earlier planner wrote is outdated;
+- beside each sendable slot, its planner-owned source
+  `slot-N.source.runplanner.json` (see [Slot rebuild](#slot-rebuild)), which
+  the module never reads; the event slot has none;
 - `active-slot.json`, the plan slot the module plays next, which both write;
 - `slots.runplanner.json`, the [slot overview](#slot-overview), which only the
   planner writes.
@@ -493,13 +496,13 @@ Before any write, the installed `execution-compatibility.json` must equal the
 outgoing plan header's `format`, `catalogVersion` and schema pair; otherwise
 the send asks to update the module. The slot is then written with the plan
 bytes unchanged. `mods.yml` is never edited, and under `config/` the planner writes only
-the shared folder described above. The slot and the overview change together:
-the host stages both complete files beside their destinations, with a copy of
-the slot's previous file, then replaces the slot and then the overview. If the
-overview cannot be replaced, the slot is restored from that copy (or removed
-when it had no file) and the send fails; no staged file remains either way.
-Clearing the event slot follows the same order with a removal in place of the
-slot write.
+the shared folder described above. The slot, its source and the overview
+change together: the host stages the complete files beside their destinations,
+with copies of the slot's and the source's previous files, then replaces the
+slot, then the source, then the overview. If a later file cannot be replaced,
+the earlier ones are restored from their copies (or removed when they had no
+file) and the send fails; no staged file remains either way. Clearing the event
+slot follows the same order with a removal in place of the slot write.
 Only then does the host write `active-slot.json`; if only the activation fails,
 the send still succeeds, the plan
 stays, and the result carries the activation problem, which the planner shows
@@ -507,6 +510,58 @@ as a notice rather than a failed send. Making a slot active without sending
 needs only an established target whose slots can be read, so it works while
 the module or ModpackLib needs an update, and requires the slot to hold a plan
 the installed module admits.
+
+### Slot rebuild
+
+Sending also stores the plan's source beside its slot,
+`slot-N.source.runplanner.json`:
+
+```json
+{
+  "format": "run-planner-slot-source",
+  "formatVersion": 1,
+  "displayName": "Surface Phial run",
+  "internalRunModifiers": false,
+  "project": <the saved project document>
+}
+```
+
+`displayName` is omitted for an unnamed plan, and `internalRunModifiers`
+records whether internal-stage run modifiers took part in the compile. The host
+writes it in the send's transaction, refuses one that is not of this format or
+exceeds 8 MiB, reads it back under the same link and bound rules, and reports
+whether each slot has one. A send never leaves another plan's source beside a
+slot.
+
+A slot is outdated when its plan names another catalog or schema pair than the
+installed module admits. After the planner installs or updates the module, and
+when the Game panel's **Rebuild slots** is pressed, the application rebuilds
+every outdated slot that has a source, provided nothing blocks sending:
+
+- It loads the source's project through the project loader, which migrates an
+  older major, and compiles it exactly as a public project sent would be, with
+  the stored name and with internal run modifiers only when they were stored
+  and this is a development build.
+- A plan that compiles is written again with its source, now holding the
+  document as loaded, and a summary whose sent time is the rebuild time. The
+  slot number is kept, and the active slot is never changed. The host writes a
+  rebuild only while the slot is still outdated, so a plan sent meanwhile
+  stands, and the application runs one rebuild at a time.
+- A source that cannot be read, or a rebuilt plan that cannot be written,
+  stays outdated with that reason.
+- A project saved under another schema pair that no longer builds stays
+  outdated; its row reads "Couldn’t rebuild after the update — open the project
+  and resend."
+- A project saved under this planner's schema pair that no longer builds breaks
+  the [same-version invariant](AUTHORED_PROJECT_MODEL.md#schema-change-approval):
+  it stays outdated, its row asks for a bug report, and the next bug report
+  carries the compiler's error.
+- A slot without a source, sent before slots kept one, stays outdated and reads
+  "Outdated — send again".
+
+**Rebuild slots** shows under the slot table while an outdated slot has a
+source, and the last rebuild's summary ("Rebuilt 2 slots · couldn’t rebuild 1
+slot") shows beneath it. Results last for the session.
 
 A sent plan's identity chain is the saved file, then the document's
 `projectId`, then the compiled `planFingerprint`. Its name is the saved file's

@@ -302,6 +302,7 @@ mod tests {
             display_name: None,
             weapon_key: None,
             aspect_key: None,
+            has_source: false,
         }
     }
 

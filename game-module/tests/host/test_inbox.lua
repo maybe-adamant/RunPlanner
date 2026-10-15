@@ -133,6 +133,19 @@ function TestInbox.testOnlyAPlanForThisCatalogAndSchemaPairIsAdmitted()
     removeDirectory(root)
 end
 
+function TestInbox.testThePlannersSlotSourceFileIsNeverRead()
+    local root = temporaryDirectory()
+    write(root .. "/slot-2.source.runplanner.json", slot())
+    local runtime = inbox.create(root, protocol.decode, pathApi)
+    lu.assertFalse(runtime.load(2))
+    lu.assertEquals(runtime.status().error.code, "not-published")
+    for slotNumber = inbox.EVENT_SLOT, inbox.SLOT_COUNT do
+        lu.assertNil(inbox.slotFileName(slotNumber):find("source", 1, true))
+    end
+    os.remove(root .. "/slot-2.source.runplanner.json")
+    removeDirectory(root)
+end
+
 function TestInbox.testTheEventSlotAndTwelveSlotsUseTheClosedFileMapping()
     lu.assertEquals(inbox.SLOT_COUNT, 12)
     lu.assertEquals(inbox.EVENT_SLOT, 0)

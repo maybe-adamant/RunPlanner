@@ -41,6 +41,7 @@ import type {
 import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { profileFileErrorReported } from '../state/profileSessionSlice';
+import { createSlotRebuildController } from '../workspace/slotRebuild';
 import { createDevelopmentBuildIdentity, type BuildIdentity } from './buildIdentity';
 
 export interface CreateApplicationOptions {
@@ -206,6 +207,18 @@ export function createApplication(options: CreateApplicationOptions = {}) {
               // The header indicator reports a failed status read.
             }),
         });
+  const slotRebuild =
+    gameModuleHost === undefined
+      ? undefined
+      : createSlotRebuildController({
+          catalog,
+          devBuild,
+          host: gameModuleHost,
+          onSlotsChanged: () =>
+            gameStatus?.refresh().catch(() => {
+              // The header indicator reports a failed status read.
+            }),
+        });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);
 
@@ -219,6 +232,9 @@ export function createApplication(options: CreateApplicationOptions = {}) {
             catalogVersion: catalogSummary.version,
             host: options.gameModuleHost,
             inspectCurrentGamePlan: () => projectOperations.inspectCurrentGamePlan(),
+            ...(slotRebuild === undefined
+              ? {}
+              : { slotRebuildReport: () => slotRebuild.getSnapshot() }),
             store,
           }),
     catalog,
@@ -227,6 +243,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     communityEvents,
     gameStatus,
     projectOperations,
+    slotRebuild,
     store,
     selectStructuredWorkspace,
     structuredWorkspace,

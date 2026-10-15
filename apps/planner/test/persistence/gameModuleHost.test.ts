@@ -29,7 +29,9 @@ describe('Tauri game module host adapter', () => {
       endBiome: 'Olympus',
       startingFear: 0,
     };
-    await host.publish(3, '{"format":"run-planner-execution"}', summary);
+    await host.publish(3, '{"format":"run-planner-execution"}', '{"source":1}', summary);
+    await host.readSlotSource(3);
+    await host.rebuildSlot(3, '{"format":"run-planner-execution"}', '{"source":1}', summary);
     await host.setActiveSlot(2);
     await host.setActiveSlot(0);
     await host.openExternalPage('https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/');
@@ -52,7 +54,22 @@ describe('Tauri game module host adapter', () => {
       ['game_module_remove'],
       [
         'game_plan_publish',
-        { slotNumber: 3, planJson: '{"format":"run-planner-execution"}', summary },
+        {
+          slotNumber: 3,
+          planJson: '{"format":"run-planner-execution"}',
+          sourceJson: '{"source":1}',
+          summary,
+        },
+      ],
+      ['game_slot_source_read', { slotNumber: 3 }],
+      [
+        'game_plan_rebuild',
+        {
+          slotNumber: 3,
+          planJson: '{"format":"run-planner-execution"}',
+          sourceJson: '{"source":1}',
+          summary,
+        },
       ],
       ['game_active_slot_set', { slotNumber: 2 }],
       ['game_active_slot_set', { slotNumber: 0 }],

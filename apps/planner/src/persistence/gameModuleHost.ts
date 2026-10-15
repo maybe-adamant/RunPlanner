@@ -102,6 +102,8 @@ export interface GamePlanSlot {
   readonly displayName: string | null;
   readonly weaponKey: string | null;
   readonly aspectKey: string | null;
+  /** A planner-owned source sits beside the slot, so it can be rebuilt. */
+  readonly hasSource: boolean;
 }
 
 /** The event the event slot's plan belongs to, as its slot overview entry names it. */
@@ -149,7 +151,7 @@ export interface GamePlanPublication {
 
 /**
  * A sent plan's display summary, which the host records in the slot overview
- * `slots.runplanner.json` beside the slots, with the slot's build and fingerprint.
+ * `slots.runplanner.json` beside the slots, with the plan's catalog, schema pair and fingerprint.
  */
 export interface GamePlanSlotSummary {
   /** Picker text, such as "Circe - Surface". */
@@ -203,14 +205,29 @@ export const GAME_EVENT_SLOT = 0;
 export type GameActiveSlotNumber = typeof GAME_EVENT_SLOT | GamePlanSlotNumber;
 
 export interface GamePlanPublisher {
+  /** Writes the plan, its source and its summary together, then makes the slot active. */
   readonly publish: (
     slotNumber: GamePlanSlotNumber,
     planJson: string,
+    sourceJson: string,
     summary: GamePlanSlotSummary,
   ) => Promise<GamePlanPublication>;
 }
 
-export interface GameModuleHost extends GamePlanPublisher {
+/** Reads and rewrites sent slots from their stored sources. */
+export interface GameSlotRebuildHost {
+  /** The slot's stored source, or null when it has none; rejects when it is invalid. */
+  readonly readSlotSource: (slotNumber: GamePlanSlotNumber) => Promise<string | null>;
+  /** Writes a rebuilt plan with its source and summary; the active slot is left as it is. */
+  readonly rebuildSlot: (
+    slotNumber: GamePlanSlotNumber,
+    planJson: string,
+    sourceJson: string,
+    summary: GamePlanSlotSummary,
+  ) => Promise<GamePlanPublication>;
+}
+
+export interface GameModuleHost extends GamePlanPublisher, GameSlotRebuildHost {
   readonly status: () => Promise<GameModuleStatus>;
   /** Opens a host-allowlisted page in the default browser. */
   readonly openExternalPage: (url: string) => Promise<void>;
@@ -272,10 +289,30 @@ export function createTauriGameModuleHost(
         overwriteConsent,
       }),
     remove: () => environment.invoke<GameModuleRemoveResult>('game_module_remove'),
-    publish: (slotNumber: GamePlanSlotNumber, planJson: string, summary: GamePlanSlotSummary) =>
+    publish: (
+      slotNumber: GamePlanSlotNumber,
+      planJson: string,
+      sourceJson: string,
+      summary: GamePlanSlotSummary,
+    ) =>
       environment.invoke<GamePlanPublication>('game_plan_publish', {
         slotNumber,
         planJson,
+        sourceJson,
+        summary,
+      }),
+    readSlotSource: (slotNumber: GamePlanSlotNumber) =>
+      environment.invoke<string | null>('game_slot_source_read', { slotNumber }),
+    rebuildSlot: (
+      slotNumber: GamePlanSlotNumber,
+      planJson: string,
+      sourceJson: string,
+      summary: GamePlanSlotSummary,
+    ) =>
+      environment.invoke<GamePlanPublication>('game_plan_rebuild', {
+        slotNumber,
+        planJson,
+        sourceJson,
         summary,
       }),
     setActiveSlot: (slotNumber: GameActiveSlotNumber) =>
