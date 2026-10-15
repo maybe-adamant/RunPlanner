@@ -18,12 +18,15 @@ describe('community event host adapters', () => {
       endBiome: 'Olympus',
       startingFear: 0,
     };
-    await host.refreshFeed(true, { oldest: 86, newest: 96 });
+    await host.refreshFeed(true, { oldest: 86, newest: 96, newestRevision: 0 });
     await host.publishEvent('2026-w42-staff', '{"projectId":"p"}', summary);
     await host.clearEvent();
     await host.downloadProject('2026-w42-staff');
     expect(invoke.mock.calls).toEqual([
-      ['event_feed_refresh', { retryFailed: true, projectSchemas: { oldest: 86, newest: 96 } }],
+      [
+        'event_feed_refresh',
+        { retryFailed: true, projectSchemas: { oldest: 86, newest: 96, newestRevision: 0 } },
+      ],
       ['game_event_publish', { eventId: '2026-w42-staff', planJson: '{"projectId":"p"}', summary }],
       ['game_event_clear'],
       ['event_project_download', { eventId: '2026-w42-staff' }],

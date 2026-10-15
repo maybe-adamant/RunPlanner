@@ -219,12 +219,14 @@ pub fn select_active(events: &[CommunityEvent], now: Instant) -> Option<&Communi
         .map(|(_, event)| event)
 }
 
-/// The authored project schemas this planner loads, inclusive; the planner supplies them.
+/// The authored project schemas this planner loads: majors `oldest` to `newest` inclusive,
+/// and within `newest` revisions up to `newest_revision`. The planner supplies them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ProjectSchemaRange {
     pub oldest: u32,
     pub newest: u32,
+    pub newest_revision: u32,
 }
 
 impl ProjectSchemaRange {
@@ -232,6 +234,8 @@ impl ProjectSchemaRange {
     /// downloaded.
     pub fn admits(&self, event: &CommunityEvent) -> bool {
         (self.oldest..=self.newest).contains(&event.project_schema_version)
+            && (event.project_schema_version < self.newest
+                || event.project_schema_revision <= self.newest_revision)
     }
 }
 
@@ -560,6 +564,8 @@ pub fn read_local_event(folder: &Path) -> Result<LocalEvent, String> {
     #[serde(rename_all = "camelCase")]
     struct Schema {
         schema_version: u32,
+        #[serde(default)]
+        schema_revision: u32,
     }
     let schema: Schema = serde_json::from_slice(&project)
         .map_err(|_| format!("{LOCAL_PROJECT_FILE} names no schemaVersion."))?;
@@ -573,6 +579,7 @@ pub fn read_local_event(folder: &Path) -> Result<LocalEvent, String> {
         ends_at: authored.ends_at,
         project_sha256: sha256_hex(&project),
         project_schema_version: schema.schema_version,
+        project_schema_revision: schema.schema_revision,
     };
     event.validate()?;
     let project_json =
@@ -764,11 +771,21 @@ mod tests {
         let range = ProjectSchemaRange {
             oldest: 86,
             newest: 96,
+            newest_revision: 1,
         };
         let mut event = decode_feed(SIGNED_FEED).unwrap().events.remove(0);
-        for (version, admitted) in [(85, false), (86, true), (96, true), (97, false)] {
+        for (version, revision, admitted) in [
+            (85, 0, false),
+            (86, 0, true),
+            (86, 5, true),
+            (96, 0, true),
+            (96, 1, true),
+            (96, 2, false),
+            (97, 0, false),
+        ] {
             event.project_schema_version = version;
-            assert_eq!(range.admits(&event), admitted, "{version}");
+            event.project_schema_revision = revision;
+            assert_eq!(range.admits(&event), admitted, "{version}.{revision}");
         }
     }
 

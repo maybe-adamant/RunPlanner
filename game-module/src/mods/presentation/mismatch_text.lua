@@ -317,9 +317,6 @@ function text.admission(issue)
         local code = type(issue.observed) == "table" and issue.observed.code or nil
         if code == "stale-slot" then return "Made for another Run Planner version - update the mod or resend." end
         if code == "not-published" then return "Nothing was sent to this slot." end
-        if code == "module-build-unknown" then
-            return "The Run Planner mod install is incomplete - reinstall it from the app."
-        end
         return "The plan in this slot can't be read - resend it from the app."
     end
     if checkpoint == "run-mode" then

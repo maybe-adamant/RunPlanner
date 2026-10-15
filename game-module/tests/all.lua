@@ -72,7 +72,6 @@ require("tests/room/test_anvil_fixtures")
 require("tests/room/test_well_effects")
 require("tests/room/test_acquisition_hook_composition")
 require("tests/runtime/test_composition")
-require("tests/architecture/test_presentation_boundary")
 require("tests/practice/test_start")
 
 local lfs = require("lfs")

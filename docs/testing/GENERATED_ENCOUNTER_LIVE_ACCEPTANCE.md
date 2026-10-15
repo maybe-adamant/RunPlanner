@@ -1,6 +1,6 @@
 # Generated encounter live acceptance
 
-Requires a plan published for the installed module build. Automated tests and source probes are not live
+Requires a plan published for the installed game module. Automated tests and source probes are not live
 verification; the owner confirms or waives each check.
 
 - [ ] Fresh profile, Fresh File route with uncustomized generated F combats at

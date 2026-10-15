@@ -1,16 +1,16 @@
 -- The module inbox owns transport for the fixed published plan slots: the
 -- planner's event slot 0 and the twelve sendable slots. It
 -- reads one bounded file only when the session explicitly asks for a new-run
--- plan or an inspection, and admits only a slot written for this module build.
+-- plan or an inspection, and admits only a plan made for this module's catalog
+-- and schema pair.
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
-local buildIdentity = type(import) == "function" and import("mods/host/build_identity.lua")
-    or require("mods.host.build_identity")
+local protocol = type(import) == "function" and import("mods/protocol/decoder.lua")
+    or require("mods.protocol.decoder")
 
 local inbox = {}
 inbox.MAX_BYTES = 1048576
-inbox.SLOT_FORMAT = "run-planner-slot"
-local PLAN_FORMAT = "run-planner-execution"
-local ENVELOPE_KEYS = { format = true, buildId = true, plan = true }
+-- The envelope earlier planners wrote around a plan.
+local LEGACY_SLOT_FORMAT = "run-planner-slot"
 inbox.SLOT_COUNT = 12
 -- The read-only slot the planner fills with the community event plan.
 inbox.EVENT_SLOT = 0
@@ -81,35 +81,26 @@ function inbox.readBinary(root, pathApi, slot)
     return content
 end
 
--- The plan inside an exact slot envelope naming this build, or a status code and reason.
-function inbox.unwrap(raw, buildId)
+-- The plan a slot holds when it names this module's catalog and schema pair, or a status
+-- code and reason.
+function inbox.admit(raw)
     local value, decodeError = json.decode(raw)
     if value == nil then return nil, "malformed-plan", "malformed-json: " .. tostring(decodeError) end
-    if json.isObject(value) and value.format == PLAN_FORMAT then
-        return nil, "stale-slot", "plan was sent before slots named a module build; send it again or restart the game"
+    if not json.isObject(value) then return nil, "malformed-plan", "slot must hold an execution plan" end
+    if value.format == LEGACY_SLOT_FORMAT then
+        return nil, "stale-slot", "plan was sent by an earlier Run Planner; send it again"
     end
-    if not json.isObject(value) or value.format ~= inbox.SLOT_FORMAT then
-        return nil, "malformed-plan", "slot must be a run-planner-slot envelope"
+    if value.format ~= protocol.FORMAT then
+        return nil, "malformed-plan", "slot must hold a run-planner-execution plan"
     end
-    for key in pairs(value) do
-        if not ENVELOPE_KEYS[key] then return nil, "malformed-plan", "unexpected slot key " .. tostring(key) end
+    if not protocol.matchesVersion(value) then
+        return nil, "stale-slot", "plan was made for another Run Planner version; send it again or update the mod"
     end
-    if type(value.buildId) ~= "string" or not json.isObject(value.plan) then
-        return nil, "malformed-plan", "slot envelope must carry a buildId and a plan"
-    end
-    if buildId == nil then
-        return nil, "module-build-unknown",
-            "the installed module has no build identity; install it from the planner's Game panel"
-    end
-    if value.buildId ~= buildId then
-        return nil, "stale-slot", "plan was sent for another module build; send it again or restart the game"
-    end
-    return value.plan
+    return value
 end
 
-function inbox.create(root, decode, pathApi, buildId)
+function inbox.create(root, decode, pathApi)
     if type(decode) ~= "function" then error("inbox decoder must be a function", 2) end
-    local build = buildIdentity.short(buildId)
     local state = {
         plan = nil,
         selectedSlot = 1,
@@ -118,7 +109,7 @@ function inbox.create(root, decode, pathApi, buildId)
             file = "not-inspected",
             inspection = "not-inspected",
             load = "idle",
-            build = build,
+            schema = protocol.versionLabel(),
             catalog = "unknown",
             fingerprint = nil,
             error = nil,
@@ -183,8 +174,8 @@ function inbox.create(root, decode, pathApi, buildId)
             state.status.error = { code = rejectCode, message = rejectMessage }
             return false, rejectCode
         end
-        local wire, unwrapCode, unwrapMessage = inbox.unwrap(raw, buildId)
-        if wire == nil then return rejected(unwrapCode, unwrapMessage) end
+        local wire, admitCode, admitMessage = inbox.admit(raw)
+        if wire == nil then return rejected(admitCode, admitMessage) end
         local decoded, decodeError = decode(wire)
         if decoded == nil then return rejected("malformed-plan", decodeError) end
         state.plan = decoded

@@ -5,14 +5,14 @@ use std::path::{Path, PathBuf};
 use crate::atomic_file;
 use crate::community_event::{parse_instant, Instant};
 use crate::game_module_install::{
-    installed_compatibility, status, InstalledModule, PublicationBlocker, TargetInspection,
+    installed_compatibility, status, PublicationBlocker, TargetInspection,
 };
-use crate::game_module_package::{ModulePackage, PackageSource};
+use crate::game_module_package::{ExecutionCompatibility, ModulePackage};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
-    any_slot_file_name, empty_slot, encode_active_slot, encode_slot, inspect_active_slot,
-    inspect_all_slots, read_slot, slot_file_name, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE,
-    EVENT_SLOT, MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
+    any_slot_file_name, empty_slot, encode_active_slot, inspect_active_slot, inspect_all_slots,
+    read_slot, slot_file_name, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT,
+    MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
 };
 use crate::slot_overview::{self, SentEntry, SlotEvent, SlotSummary, SLOT_OVERVIEW_FILE};
 
@@ -28,6 +28,19 @@ struct PlanIdentity {
 struct PlanHeader {
     format: String,
     catalog_version: String,
+    schema_version: u32,
+    schema_revision: u32,
+}
+
+impl PlanHeader {
+    fn compatibility(self) -> ExecutionCompatibility {
+        ExecutionCompatibility {
+            format: self.format,
+            catalog_version: self.catalog_version,
+            schema_version: self.schema_version,
+            schema_revision: self.schema_revision,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -160,63 +173,25 @@ fn shared_file_destination(
     Ok(destination)
 }
 
-/// The module build a slot must name: this app's package or, in a development build
-/// with a checkout install, the checkout as it is now.
-fn reference_build_id(package: &ModulePackage, module: &InstalledModule) -> Result<String, String> {
-    #[cfg(debug_assertions)]
-    if module.source == Some(PackageSource::Checkout) {
-        return crate::game_module_package::checkout_package().map(|checkout| checkout.build_id);
-    }
-    let _ = module;
-    Ok(package.build_id.clone())
-}
-
-/// Writes one slot of an already-established target whose module accepts the plan's header
-/// and is the reference build, as an envelope naming that build, together with the slot
-/// overview that records its entry.
-fn write_plan(
-    target: &ResolvedTarget,
-    module: &InstalledModule,
-    reference_build_id: &str,
-    plan_json: &str,
-    entry: SentEntry,
-) -> Result<(), String> {
+/// Writes one slot of an already-established target whose module admits the plan's
+/// format, catalog and schema pair, together with the slot overview that records its entry.
+fn write_plan(target: &ResolvedTarget, plan_json: &str, entry: SentEntry) -> Result<(), String> {
     any_slot_file_name(entry.slot)?;
-    let header: PlanHeader = serde_json::from_str(plan_json)
-        .map_err(|error| format!("Invalid execution plan header: {error}"))?;
-    let Some(installed) = installed_compatibility(target) else {
+    let header = serde_json::from_str::<PlanHeader>(plan_json)
+        .map_err(|error| format!("Invalid execution plan header: {error}"))?
+        .compatibility();
+    if installed_compatibility(target).as_ref() != Some(&header) {
         return Err(
-            "The installed game module has no build identity. Install it again from the Game panel."
+            "The game module was made for another Run Planner version. Update it from the Game panel."
                 .to_owned(),
         );
-    };
-    if installed.format != header.format || installed.catalog_version != header.catalog_version {
-        return Err(
-            "Run Planner versions are incompatible. Update the app and game module together."
-                .to_owned(),
-        );
-    }
-    if installed.build_id != reference_build_id {
-        return Err(if module.source == Some(PackageSource::Checkout) {
-            "The installed game module is older than the checkout. Install from checkout again."
-                .to_owned()
-        } else {
-            "The installed game module is not this app's build. Install it again from the Game panel."
-                .to_owned()
-        });
-    }
-    let envelope = encode_slot(&installed.build_id, plan_json);
-    if envelope.len() > MAX_PLAN_BYTES {
-        return Err(format!(
-            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
-        ));
     }
     let staged = stage_slot_and_overview(
         target,
-        Some(&installed.build_id),
+        Some(&header),
         entry.slot,
         SlotChange::Write {
-            envelope: envelope.as_bytes(),
+            plan: plan_json.as_bytes(),
             entry: Box::new(entry),
         },
     )?;
@@ -226,7 +201,7 @@ fn write_plan(
 /// What a staged send does to its slot.
 enum SlotChange<'a> {
     Write {
-        envelope: &'a [u8],
+        plan: &'a [u8],
         entry: Box<SentEntry>,
     },
     Remove,
@@ -245,18 +220,18 @@ struct StagedSend {
 
 fn stage_slot_and_overview(
     target: &ResolvedTarget,
-    build_id: Option<&str>,
+    installed: Option<&ExecutionCompatibility>,
     slot_number: u8,
     change: SlotChange,
 ) -> Result<StagedSend, String> {
     let slot_destination = safe_destination(target, slot_number)?;
     let overview_destination =
         shared_file_destination(target, SLOT_OVERVIEW_FILE, "slot overview")?;
-    let mut slots = inspect_all_slots(target, build_id);
+    let mut slots = inspect_all_slots(target, installed);
     let (slot, sent) = match change {
-        SlotChange::Write { envelope, entry } => {
-            let slot = atomic_file::stage(&slot_destination, envelope, "plan slot")?;
-            slots[usize::from(slot_number)] = read_slot(slot_number, slot.path(), build_id);
+        SlotChange::Write { plan, entry } => {
+            let slot = atomic_file::stage(&slot_destination, plan, "plan slot")?;
+            slots[usize::from(slot_number)] = read_slot(slot_number, slot.path(), installed);
             (Some(slot), Some(*entry))
         }
         SlotChange::Remove => {
@@ -349,7 +324,7 @@ fn slot_name(slot_number: u8) -> String {
     }
 }
 
-/// Makes a slot that holds a plan for the installed module build active, the event slot
+/// Makes a slot that holds a plan the installed module admits active, the event slot
 /// included, on any established target whose slots can be read, even while the module or
 /// ModpackLib needs an update.
 pub fn set_active_slot(
@@ -406,23 +381,19 @@ pub fn publish(
             "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
         ));
     }
-    let (target, inspection) = match ready_target(config_dir, package) {
-        Ok(ready) => ready,
+    let target = match ready_target(config_dir, package) {
+        Ok((target, _)) => target,
         Err(blockers) => return blocked("The game target is not ready for publication.", blockers),
     };
-    let written = reference_build_id(package, &inspection.module).and_then(|reference| {
-        write_plan(
-            &target,
-            &inspection.module,
-            &reference,
-            plan_json,
-            SentEntry {
-                slot: slot_number,
-                summary,
-                event: None,
-            },
-        )
-    });
+    let written = write_plan(
+        &target,
+        plan_json,
+        SentEntry {
+            slot: slot_number,
+            summary,
+            event: None,
+        },
+    );
     if let Err(message) = written {
         return native_write(message);
     }
@@ -439,7 +410,7 @@ pub fn publish(
 }
 
 /// Writes a community event's plan to the event slot with its overview entry, under the same
-/// target and build checks as publishing. The active slot is left as it is.
+/// target and compatibility checks as publishing. The active slot is left as it is.
 pub fn publish_event(
     config_dir: &Path,
     package: &ModulePackage,
@@ -477,19 +448,15 @@ pub fn publish_event(
         };
     }
     let title = event.title.clone();
-    let written = reference_build_id(package, &inspection.module).and_then(|reference| {
-        write_plan(
-            &target,
-            &inspection.module,
-            &reference,
-            plan_json,
-            SentEntry {
-                slot: EVENT_SLOT,
-                summary,
-                event: Some(event),
-            },
-        )
-    });
+    let written = write_plan(
+        &target,
+        plan_json,
+        SentEntry {
+            slot: EVENT_SLOT,
+            summary,
+            event: Some(event),
+        },
+    );
     match written {
         Ok(()) => GamePlanPublication {
             status: PublicationStatus::Published,
@@ -586,7 +553,7 @@ pub fn clear_event(
     } else {
         let cleared = stage_slot_and_overview(
             &target,
-            inspection.module.build_id.as_deref(),
+            inspection.module.compatibility.as_ref(),
             EVENT_SLOT,
             SlotChange::Remove,
         )
@@ -622,9 +589,10 @@ fn hand_over_event_slot(target: &ResolvedTarget) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game_module_install::test_support::package_from;
+    use crate::game_module_install::test_support::package_admitting;
     use crate::game_module_install::test_support::{modpack_lib, package, target};
     use crate::game_module_install::{inspect, install, BlockerCode, NativeSwap};
+    use crate::game_module_package::PackageSource;
     use crate::game_target::test_support::TemporaryDirectory;
     use crate::game_target::{remember_target, TargetKind};
     use crate::plan_slots::{inspect_active_slot, ActiveSlotFacts};
@@ -638,7 +606,7 @@ mod tests {
         }
     }
 
-    const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#;
+    const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":0}"#;
 
     fn ready_target(root: &Path, kind: TargetKind) -> (ResolvedTarget, ModulePackage) {
         let target = target(root, kind);
@@ -674,7 +642,7 @@ mod tests {
             );
             assert_eq!(
                 fs::read_to_string(safe_destination(&target, 12).unwrap()).unwrap(),
-                encode_slot(&package.build_id, PLAN)
+                PLAN
             );
             assert_eq!(published.activation_problem, None);
             assert_eq!(
@@ -690,23 +658,19 @@ mod tests {
             .with_file_name(ACTIVE_SLOT_FILE)
     }
 
-    const PRESENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","projectId":"p","planFingerprint":"f","routeKey":"Underworld","extent":{"biomeKeys":["F"]}}"#;
+    const PRESENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":0,"projectId":"p","planFingerprint":"f","routeKey":"Underworld","extent":{"biomeKeys":["F"]}}"#;
 
     #[test]
     fn active_slot_is_set_only_on_an_established_target_for_a_present_slot() {
         let temporary = TemporaryDirectory::new("active-set");
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
-        fs::write(
-            safe_destination(&target, 2).unwrap(),
-            encode_slot(&package.build_id, PRESENT_PLAN),
-        )
-        .unwrap();
+        fs::write(safe_destination(&target, 2).unwrap(), PRESENT_PLAN).unwrap();
         let unset = set_active_slot(&config, &package, 2);
         assert_eq!(unset.status, ActivationStatus::Blocked);
         assert_eq!(unset.blockers[0].code, BlockerCode::NoTarget);
         remember_target(&config, &target).unwrap();
-        // A pending module update does not stop choosing among the installed build's plans.
+        // A pending module update does not stop choosing among the plans the installed module admits.
         let newer = crate::game_module_install::test_support::package("1.3.0", "return 2");
         let mismatch = set_active_slot(&config, &newer, 2);
         assert_eq!(
@@ -747,10 +711,10 @@ mod tests {
             names.iter().all(|name| !name.ends_with(".tmp")),
             "{names:?}"
         );
-        // Under the relaxed target gate the slot must still hold the installed build's plan.
+        // Under the relaxed target gate the slot must still hold a plan the installed module admits.
         fs::write(
             safe_destination(&target, 4).unwrap(),
-            encode_slot("another-build", PRESENT_PLAN),
+            PRESENT_PLAN.replace(r#""schemaRevision":0"#, r#""schemaRevision":1"#),
         )
         .unwrap();
         assert_eq!(
@@ -825,17 +789,15 @@ mod tests {
         }
         let written = overview(&target);
         assert_eq!(written["format"], "run-planner-slot-overview");
-        assert_eq!(written["formatVersion"], 1);
+        assert_eq!(written["formatVersion"], 2);
         assert_eq!(written["slots"]["12"]["label"], "Momus - Underworld");
         assert_eq!(written["slots"]["12"]["fingerprint"], "g");
-        assert_eq!(written["slots"]["12"]["buildId"], package.build_id.as_str());
+        assert_eq!(written["slots"]["12"]["catalogVersion"], "test-catalog");
+        assert_eq!(written["slots"]["12"]["schemaVersion"], 96);
+        assert_eq!(written["slots"]["12"]["schemaRevision"], 0);
         assert_eq!(written["slots"]["1"]["startingFear"], 12);
         // A slot replaced or cleared outside the planner loses its entry at the next send.
-        fs::write(
-            safe_destination(&target, 1).unwrap(),
-            encode_slot(&package.build_id, &second),
-        )
-        .unwrap();
+        fs::write(safe_destination(&target, 1).unwrap(), &second).unwrap();
         fs::remove_file(safe_destination(&target, 5).unwrap()).unwrap();
         // A plan without a readable identity is written but has no entry.
         publish(&config, &package, 3, PLAN, summary("Unread"));
@@ -911,13 +873,12 @@ mod tests {
             .with_file_name(SLOT_OVERVIEW_FILE);
         let second = PRESENT_PLAN.replace(r#""f""#, r#""g""#);
         for (slot, existed) in [(1, true), (4, false)] {
-            let envelope = encode_slot(&package.build_id, &second);
             let staged = stage_slot_and_overview(
                 &target,
-                Some(&package.build_id),
+                Some(&package.compatibility),
                 slot,
                 SlotChange::Write {
-                    envelope: envelope.as_bytes(),
+                    plan: second.as_bytes(),
                     entry: Box::new(SentEntry {
                         slot,
                         summary: summary("Momus - Underworld"),
@@ -972,13 +933,9 @@ mod tests {
         );
         assert_eq!(
             fs::read_to_string(safe_destination(&target, 3).unwrap()).unwrap(),
-            encode_slot(&package.build_id, PLAN)
+            PLAN
         );
-        fs::write(
-            safe_destination(&target, 3).unwrap(),
-            encode_slot(&package.build_id, PRESENT_PLAN),
-        )
-        .unwrap();
+        fs::write(safe_destination(&target, 3).unwrap(), PRESENT_PLAN).unwrap();
         assert_eq!(
             set_active_slot(&config, &package, 3).status,
             ActivationStatus::NativeWrite
@@ -992,10 +949,24 @@ mod tests {
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Discovered);
         remember_target(&config, &target).unwrap();
         publish(&config, &package, 2, PLAN, summary("Circe - Surface"));
+        // A newer planner whose plans the installed module still admits may send to it, and
+        // offers its module as an update by manifest version.
         let newer = crate::game_module_install::test_support::package("1.3.0", "return 2");
+        assert_eq!(
+            publish(&config, &newer, 2, PLAN, summary("Circe - Surface")).status,
+            PublicationStatus::Published
+        );
+        assert!(inspect(&target, &newer).unwrap().install.update_available);
+        assert!(!inspect(&target, &package).unwrap().install.update_available);
+        let revised = package_admitting(
+            "1.3.0",
+            "return 2",
+            PackageSource::Bundled,
+            r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":1}"#,
+        );
         let mismatch = publish(
             &config,
-            &newer,
+            &revised,
             2,
             r#"{"other":true}"#,
             summary("Circe - Surface"),
@@ -1017,7 +988,7 @@ mod tests {
         assert_eq!(older.blockers[0].required.as_deref(), Some("4.2.0"));
         assert_eq!(
             fs::read_to_string(safe_destination(&target, 2).unwrap()).unwrap(),
-            encode_slot(&package.build_id, PLAN)
+            PLAN
         );
     }
 
@@ -1029,28 +1000,26 @@ mod tests {
         remember_target(&config, &target).unwrap();
         publish(&config, &package, 4, PLAN, summary("Circe - Surface"));
         for plan in [
-            r#"{"format":"run-planner-execution","catalogVersion":"other"}"#,
-            "{}",
+            PLAN.replace("test-catalog", "other"),
+            PLAN.replace(r#""schemaRevision":0"#, r#""schemaRevision":1"#),
+            PLAN.replace(r#","schemaVersion":96,"schemaRevision":0"#, ""),
+            "{}".to_owned(),
         ] {
-            assert_eq!(
-                publish(&config, &package, 4, plan, summary("Circe - Surface")).status,
-                PublicationStatus::NativeWrite
-            );
-        }
-        let oversized = format!("{}{}", &PLAN[..PLAN.len() - 1], " ".repeat(MAX_PLAN_BYTES));
-        // The bound covers the written envelope, not only the plan.
-        let envelope_overhead = encode_slot(&package.build_id, "").len();
-        let fills_the_envelope = format!(
-            "{}{}}}",
-            &PLAN[..PLAN.len() - 1],
-            " ".repeat(MAX_PLAN_BYTES - PLAN.len() - envelope_overhead + 1)
-        );
-        for plan in [oversized, fills_the_envelope] {
             assert_eq!(
                 publish(&config, &package, 4, &plan, summary("Circe - Surface")).status,
                 PublicationStatus::NativeWrite
             );
         }
+        let oversized = format!(
+            "{}{}}}",
+            &PLAN[..PLAN.len() - 1],
+            " ".repeat(MAX_PLAN_BYTES - PLAN.len() + 1)
+        );
+        assert_eq!(oversized.len(), MAX_PLAN_BYTES + 1);
+        assert_eq!(
+            publish(&config, &package, 4, &oversized, summary("Circe - Surface")).status,
+            PublicationStatus::NativeWrite
+        );
         for slot in [0, 13, u8::MAX] {
             assert_eq!(
                 publish(&config, &package, slot, PLAN, summary("Circe - Surface")).message,
@@ -1059,83 +1028,43 @@ mod tests {
         }
         assert_eq!(
             fs::read_to_string(safe_destination(&target, 4).unwrap()).unwrap(),
-            encode_slot(&package.build_id, PLAN)
+            PLAN
         );
     }
 
     #[test]
-    fn the_slot_envelope_names_the_installed_build_and_keeps_the_plan_bytes() {
-        let temporary = TemporaryDirectory::new("publish-envelope");
+    fn the_slot_keeps_the_plan_bytes_as_sent() {
+        let temporary = TemporaryDirectory::new("publish-bytes");
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
-        let plan = "{ \"catalogVersion\" : \"test-catalog\",\n  \"format\":\"run-planner-execution\",\"note\":\"é\\u00e9\" }";
+        let plan = "{ \"catalogVersion\" : \"test-catalog\",\n  \"format\":\"run-planner-execution\",\"schemaVersion\":96,\"schemaRevision\":0,\"note\":\"é\\u00e9\" }";
         assert_eq!(
             publish(&config, &package, 1, plan, summary("Circe - Surface")).status,
             PublicationStatus::Published
         );
-        let written = fs::read_to_string(safe_destination(&target, 1).unwrap()).unwrap();
-        let prefix = format!(
-            r#"{{"format":"run-planner-slot","buildId":"{}","plan":"#,
-            package.build_id
-        );
-        assert_eq!(written, format!("{prefix}{plan}}}"));
-        let envelope: serde_json::Value = serde_json::from_str(&written).unwrap();
         assert_eq!(
-            envelope["plan"],
-            serde_json::from_str::<serde_json::Value>(plan).unwrap()
+            fs::read_to_string(safe_destination(&target, 1).unwrap()).unwrap(),
+            plan
         );
     }
 
     #[test]
-    fn publication_refuses_a_module_that_is_not_the_reference_build() {
-        let temporary = TemporaryDirectory::new("publish-build");
-        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
-        let module = inspect(&target, &package).unwrap().module;
-        assert_eq!(module.build_id.as_deref(), Some(package.build_id.as_str()));
-        assert_eq!(
-            write_plan(&target, &module, "another-build", PLAN, sent(1)),
-            Err("The installed game module is not this app's build. Install it again from the Game panel.".to_owned())
-        );
+    fn publication_refuses_a_module_that_admits_another_plan_header() {
+        let temporary = TemporaryDirectory::new("publish-header");
+        let (target, _) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        let outdated = "The game module was made for another Run Planner version. Update it from the Game panel.".to_owned();
         let compatibility = crate::game_module_install::test_support::module_path(&target)
             .join("execution-compatibility.json");
-        fs::write(
-            &compatibility,
-            r#"{"format":"run-planner-execution","catalogVersion":"test-catalog"}"#,
-        )
-        .unwrap();
-        assert_eq!(
-            write_plan(&target, &module, &package.build_id, PLAN, sent(1)),
-            Err("The installed game module has no build identity. Install it again from the Game panel.".to_owned())
-        );
-        assert!(!safe_destination(&target, 1).unwrap().exists());
-    }
-
-    #[cfg(debug_assertions)]
-    #[test]
-    fn a_checkout_install_must_match_the_checkout_as_it_is_now() {
-        let temporary = TemporaryDirectory::new("publish-checkout");
-        let config = temporary.0.join("app-config");
-        let root = temporary.0.join("target");
-        let target = target(&root, TargetKind::Manual);
-        modpack_lib(&root, "4.2.0");
-        let bundled = package("1.2.0", "return 1");
-        let installed = package_from("1.2.0", "return 0", PackageSource::Checkout);
-        install(
-            &target,
-            &installed,
-            &root.join("backup"),
-            false,
-            &mut NativeSwap,
-        )
-        .unwrap();
-        remember_target(&config, &target).unwrap();
-        let refused = publish(&config, &bundled, 1, PLAN, summary("Circe - Surface"));
-        assert_eq!(refused.status, PublicationStatus::NativeWrite);
-        assert_eq!(
-            refused.message,
-            "The installed game module is older than the checkout. Install from checkout again."
-        );
+        for installed in [
+            r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":1}"#,
+            r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","buildId":"b"}"#,
+        ] {
+            fs::write(&compatibility, installed).unwrap();
+            assert_eq!(write_plan(&target, PLAN, sent(1)), Err(outdated.clone()));
+        }
+        fs::remove_file(&compatibility).unwrap();
+        assert_eq!(write_plan(&target, PLAN, sent(1)), Err(outdated));
         assert!(!safe_destination(&target, 1).unwrap().exists());
     }
 
@@ -1185,7 +1114,7 @@ mod tests {
         assert_eq!(fs::read_dir(outside).unwrap().count(), 0);
     }
 
-    const EVENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","projectId":"e","planFingerprint":"event-print","routeKey":"Surface","extent":{"biomeKeys":["N"]}}"#;
+    const EVENT_PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":0,"projectId":"e","planFingerprint":"event-print","routeKey":"Surface","extent":{"biomeKeys":["N"]}}"#;
 
     fn event_slot_path(target: &ResolvedTarget) -> PathBuf {
         safe_destination(target, EVENT_SLOT).unwrap()
@@ -1237,7 +1166,7 @@ mod tests {
         );
         assert_eq!(
             fs::read_to_string(event_slot_path(&target)).unwrap(),
-            encode_slot(&package.build_id, EVENT_PLAN)
+            EVENT_PLAN
         );
         let written = overview(&target);
         assert_eq!(
@@ -1483,7 +1412,6 @@ mod tests {
             summary("Circe - Surface"),
         );
         let previous_overview = fs::read(&overview_path).unwrap();
-        let envelope = encode_slot(&package.build_id, EVENT_PLAN);
         let event_entry = || SentEntry {
             slot: EVENT_SLOT,
             summary: summary("Circe - Surface"),
@@ -1491,10 +1419,10 @@ mod tests {
         };
         let staged = stage_slot_and_overview(
             &target,
-            Some(&package.build_id),
+            Some(&package.compatibility),
             EVENT_SLOT,
             SlotChange::Write {
-                envelope: envelope.as_bytes(),
+                plan: EVENT_PLAN.as_bytes(),
                 entry: Box::new(event_entry()),
             },
         )
@@ -1519,7 +1447,7 @@ mod tests {
         let previous_slot = fs::read(event_slot_path(&target)).unwrap();
         let staged = stage_slot_and_overview(
             &target,
-            Some(&package.build_id),
+            Some(&package.compatibility),
             EVENT_SLOT,
             SlotChange::Remove,
         )

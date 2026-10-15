@@ -603,7 +603,7 @@ describe('Game panel', () => {
     expect(disabled.getAttribute('title')).toBeNull();
   });
 
-  it('moves the active plan off an active event and shows why other builds’ plans are not offered', async () => {
+  it('moves the active plan off an active event and shows why outdated plans are not offered', async () => {
     const plan = (slot: GamePlanSlotNumber) =>
       planSlot(slot, {
         state: 'present',
@@ -634,7 +634,7 @@ describe('Game panel', () => {
     });
     await waitFor(() => expect(choice.value).toBe('0'));
     const stale = within(choice).getByRole<HTMLOptionElement>('option', {
-      name: 'Slot 4 (another build)',
+      name: 'Slot 4 (outdated)',
     });
     expect(stale.disabled).toBe(true);
     expect(

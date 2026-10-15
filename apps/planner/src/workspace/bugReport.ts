@@ -1,5 +1,6 @@
 import {
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -67,6 +68,7 @@ export function projectBugReportFacts(
     build: options.buildIdentity.build,
     commit: options.buildIdentity.commit ?? null,
     schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+    schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
     catalogVersion: options.catalogVersion,
     openPlan:
       selectPresentProject(state) === undefined

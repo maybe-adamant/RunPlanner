@@ -18,6 +18,7 @@ local roomGuide = require("mods.presentation.room_guide")
 local support = require("tests.harness.hook_composition")
 local activeSlotModule = require("mods.host.active_slot")
 local lfs = require("lfs")
+local protocol = require("mods.protocol.decoder")
 local capture, stub = support.capture, support.stub
 local attachFeatureHooks = support.attachFeatureHooks
 local navigationEntryStub = support.navigationEntryStub
@@ -68,7 +69,7 @@ function TestRuntimeComposition.testGuideInspectionProjectsActualRoomCompletionW
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
@@ -144,7 +145,7 @@ function TestRuntimeComposition.testFirstMismatchLogIncludesFullInventoryAndOccu
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
@@ -209,7 +210,7 @@ function TestRuntimeComposition.testFaultLogIncludesBindingContextAndEachStackLi
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
@@ -276,7 +277,7 @@ function TestRuntimeComposition.testFieldsDiagnosticLogsItsCompletedSnapshotWith
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
@@ -338,7 +339,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. path))() end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then return { create = function() return {} end } end
@@ -365,8 +366,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
     _G.import = freshImport
     _G.rom = { path = {}, log = { info = function(message) logs[#logs + 1] = message end } }
     local ok, errorValue = pcall(function()
-        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test", "1.2.3",
-            "0123456789abcdef").attach({ isEnabled = function() return true end })
+        freshImport("mods/runtime/composition.lua").bind("/tmp/run-planner-test", "1.2.3").attach({ isEnabled = function() return true end })
     end)
     _G.import, _G.rom = priorImport, priorRom
 
@@ -374,7 +374,7 @@ function TestRuntimeComposition.testAdmittedSessionAndEveryDiagnosticAreLoggedOn
     lu.assertEquals(#logs, 4)
     lu.assertEquals(logs[1], "[RunPlanner] session admitted slot=2 project=project-1"
         .. " name=\"Fast \\034Fields\\034\\010[RunPlanner] forged\""
-        .. " fingerprint=0a1b2c3d route=Underworld build=0123456789ab"
+        .. " fingerprint=0a1b2c3d route=Underworld schema=96.0"
         .. " catalog=0.55.0 module=1.2.3")
     lu.assertEquals(logs[2], "[RunPlanner] diagnostic occurrence=opening run-state {gold=3}")
     lu.assertEquals(logs[3], "[RunPlanner] diagnostic occurrence=fight encounter-composition {waves=2}")
@@ -452,7 +452,7 @@ function TestRuntimeComposition.testRuntimeCompositionSharesOneHexTreeAcrossLoad
     local function freshImport(path)
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
@@ -534,7 +534,7 @@ function TestRuntimeComposition.testCompositionPassesRouteAndRoomAuthoritiesToHo
             return assert(loadfile("src/" .. path))()
         end
         if path == "mods/protocol/json.lua" or path == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if path == "mods/host/active_slot.lua" then return { create = function() return {} end } end
         if path == "mods/host/inbox.lua" then
@@ -625,7 +625,7 @@ function TestRuntimeComposition.testAdmissionReadsTheActiveSlotFileEachTime()
         if importPath == "mods/runtime/composition.lua" then return assert(loadfile("src/" .. importPath))() end
         if importPath == "mods/host/active_slot.lua" then return activeSlotModule end
         if importPath == "mods/protocol/json.lua" or importPath == "mods/protocol/decoder.lua" then
-            return { decode = function(value) return value end }
+            return { decode = function(value) return value end, versionLabel = function() return "96.0" end }
         end
         if importPath == "mods/host/inbox.lua" then
             return { create = function() return { activeSlot = function() return 1 end } end }
@@ -813,6 +813,7 @@ function TestRuntimeComposition.testAdmittedModifierCompositionUsesFrozenRunAndP
             return setmetatable({ create = function() return state end }, { __index = runtimeSession })
         end
         if path == 'mods/run_modifiers/hooks.lua' then return modifierHooks end
+        if path == 'mods/protocol/decoder.lua' then return protocol end
         if path == 'mods/host/active_slot.lua' then return { create = function() return { read = function() return 1 end } end } end
         if path == 'mods/host/inbox.lua' then return { create = function() return {
             load = function() return true, preview end, plan = function() return preview end,

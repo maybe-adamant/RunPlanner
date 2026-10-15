@@ -145,7 +145,7 @@ export function createCommunityEventController(
 ): CommunityEventController {
   const now = options.now ?? (() => new Date());
   // The last compilation, by event, title (the plan's name), project hash and catalog; the
-  // bundled module build is fixed for the process, so a sync only compiles a changed event.
+  // schema pair is fixed for the process, so a sync only compiles a changed event.
   let compiled: { readonly key: string; readonly result: CompiledEvent } | null = null;
   const compile = (event: CommunityEvent, projectJson: string): CompiledEvent => {
     const key = JSON.stringify([

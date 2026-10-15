@@ -1,6 +1,6 @@
 # Armor live acceptance
 
-Use a matching current planner and installed game-module build. Take no damage
+Use a matching current planner and installed game module. Take no damage
 during these checks, since the planner assumes armor is never consumed.
 Compare the hero's armor bar with the planner's Run State Armor row at the
 same moment. Source probes and automated tests are not live verification; the

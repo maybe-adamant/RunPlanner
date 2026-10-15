@@ -4,6 +4,10 @@ import {
   type ExecutionRunModifiers,
 } from '../authored-project/run-modifiers';
 import {
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
+} from '../authored-project/model';
+import {
   EXECUTION_CATALOG_VERSION,
   EXECUTION_PLAN_FORMAT,
   type ExecutionPlan,
@@ -97,6 +101,8 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
     [
       'format',
       'catalogVersion',
+      'schemaVersion',
+      'schemaRevision',
       'projectId',
       'planFingerprint',
       'routeKey',
@@ -113,6 +119,11 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   if (record.format !== EXECUTION_PLAN_FORMAT) fail('execution plan.format is unsupported');
   if (record.catalogVersion !== EXECUTION_CATALOG_VERSION)
     fail('execution plan.catalogVersion is unsupported');
+  if (
+    record.schemaVersion !== PROJECT_DOCUMENT_SCHEMA_VERSION ||
+    record.schemaRevision !== PROJECT_DOCUMENT_SCHEMA_REVISION
+  )
+    fail('execution plan.schemaVersion and schemaRevision are unsupported');
   if (
     record.routeKey !== 'Underworld' &&
     record.routeKey !== 'FreshFile' &&
@@ -194,6 +205,8 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const plan = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
     catalogVersion: EXECUTION_CATALOG_VERSION,
+    schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+    schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
     projectId: stringValue(record.projectId, 'execution plan.projectId'),
     planFingerprint: stringValue(record.planFingerprint, 'execution plan.planFingerprint', 64),
     ...(record.displayName === undefined
@@ -220,6 +233,8 @@ export function decodeExecutionPlan(value: unknown): ExecutionPlan {
   const body = Object.freeze({
     format: plan.format,
     catalogVersion: plan.catalogVersion,
+    schemaVersion: plan.schemaVersion,
+    schemaRevision: plan.schemaRevision,
     projectId: plan.projectId,
     routeKey: plan.routeKey,
     startingLoadout: plan.startingLoadout,

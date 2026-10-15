@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import {
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
 } from '@run-planner/engine/authored-project';
 import { decodeExecutionPlan } from '@run-planner/engine/execution-plan';
@@ -53,7 +54,11 @@ function setup(options: { readonly devBuild?: boolean } = {}) {
 }
 
 const projectJson = encodeProjectDocument(createGoldenFGHProject());
-const SCHEMAS = { oldest: 86, newest: PROJECT_DOCUMENT_SCHEMA_VERSION };
+const SCHEMAS = {
+  oldest: 86,
+  newest: PROJECT_DOCUMENT_SCHEMA_VERSION,
+  newestRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
+};
 const feedWith = (
   active: ActiveCommunityEvent | null,
   source: EventFeedSnapshot['source'] = 'network',

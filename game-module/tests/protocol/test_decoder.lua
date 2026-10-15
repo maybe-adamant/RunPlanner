@@ -71,8 +71,37 @@ function TestProtocol.testPublishedCompatibilityMatchesDecoder()
     lu.assertEquals(assert(json.decode(contents)), {
         format = protocol.FORMAT,
         catalogVersion = protocol.CATALOG_VERSION,
+        schemaVersion = protocol.SCHEMA_VERSION,
+        schemaRevision = protocol.SCHEMA_REVISION,
     })
 end
+function TestProtocol.testEveryExecutionFixtureNamesTheDecoderSchemaPair()
+    local lfs = require("lfs")
+    local count = 0
+    for name in lfs.dir(fixtures.root) do
+        if name:match("%.execution%.json$") then
+            local file = assert(io.open(fixtures.path(name), "rb"))
+            local plan = assert(json.decode(file:read("*a")))
+            file:close()
+            lu.assertEquals({ plan.schemaVersion, plan.schemaRevision },
+                { protocol.SCHEMA_VERSION, protocol.SCHEMA_REVISION },
+                name .. " names another schema pair: update SCHEMA_VERSION and SCHEMA_REVISION in"
+                    .. " src/mods/protocol/decoder.lua and src/execution-compatibility.json together")
+            count = count + 1
+        end
+    end
+    lu.assertTrue(count > 0)
+end
+
+function TestProtocol.testAnotherSchemaPairNamesBothPairs()
+    local plan = assert(json.decode(fixtures.raw()))
+    plan.schemaRevision = protocol.SCHEMA_REVISION + 1
+    local decoded, message = protocol.decode(plan)
+    lu.assertNil(decoded)
+    lu.assertStrContains(message, "schema " .. protocol.SCHEMA_VERSION .. "." .. (protocol.SCHEMA_REVISION + 1))
+    lu.assertStrContains(message, "this module admits catalog " .. protocol.CATALOG_VERSION)
+end
+
 local root = fixtures.root
 
 function TestProtocol.testGeneratedEncounterRequiresACompleteProvenancedComposition()
@@ -466,7 +495,8 @@ end
 
 local function refreshFingerprint(plan)
     plan.planFingerprint = protocol.fingerprint({
-        format = plan.format, catalogVersion = plan.catalogVersion, projectId = plan.projectId,
+        format = plan.format, catalogVersion = plan.catalogVersion, schemaVersion = plan.schemaVersion,
+        schemaRevision = plan.schemaRevision, projectId = plan.projectId,
         routeKey = plan.routeKey, startingLoadout = plan.startingLoadout, runModifiers = plan.runModifiers,
         startingKeepsake = plan.startingKeepsake, extent = plan.extent,
         selectedOccurrenceIds = plan.selectedOccurrenceIds, resources = plan.resources,
@@ -557,6 +587,8 @@ local function minimalPlan(transactions)
     local plan = tagged({
         format = "run-planner-execution",
         catalogVersion = "0.55.0-anvil-of-fates",
+        schemaVersion = protocol.SCHEMA_VERSION,
+        schemaRevision = protocol.SCHEMA_REVISION,
         projectId = "test-project",
         planFingerprint = "00000000",
         routeKey = "Underworld",

@@ -1,6 +1,6 @@
 # Room guide live acceptance
 
-Requires a matching current planner and installed game-module build with
+Requires a matching current planner and installed game module with
 **Show room guide** enabled. Automated tests are not live verification; the
 owner confirms or waives each check.
 

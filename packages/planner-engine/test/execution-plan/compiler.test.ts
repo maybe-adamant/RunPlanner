@@ -26,6 +26,8 @@ import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
   clockedTraitGeneratedPickupEntryKey,
   createAdditionalExitAddress,
   createAcquisitionEntryAddress,
@@ -537,6 +539,8 @@ function refreshWireFingerprint(wire: Record<string, unknown>): void {
   wire.planFingerprint = fingerprint({
     format: expanded.format,
     catalogVersion: expanded.catalogVersion,
+    schemaVersion: expanded.schemaVersion,
+    schemaRevision: expanded.schemaRevision,
     projectId: expanded.projectId,
     routeKey: expanded.routeKey,
     startingLoadout: expanded.startingLoadout,
@@ -854,6 +858,31 @@ describe('execution-plan compiler and codec', () => {
     counters(wrong).biomeEncounterDepth = 'one';
     refreshWireFingerprint(wrong);
     expect(() => decodeExecutionPlan(wrong)).toThrow(/biomeEncounterDepth/);
+  });
+
+  it('carries the authored schema pair in the fingerprinted header and admits only its own', () => {
+    const plan = decodeExecutionPlan(fOpeningFixture);
+    expect([plan.schemaVersion, plan.schemaRevision]).toEqual([
+      PROJECT_DOCUMENT_SCHEMA_VERSION,
+      PROJECT_DOCUMENT_SCHEMA_REVISION,
+    ]);
+    for (const header of [
+      { schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION + 1 },
+      { schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION - 1 },
+    ]) {
+      const other = { ...(structuredClone(fOpeningFixture) as Record<string, unknown>), ...header };
+      refreshWireFingerprint(other);
+      expect(() => decodeExecutionPlan(other)).toThrow(/schemaVersion and schemaRevision/);
+    }
+    const missing = structuredClone(fOpeningFixture) as Record<string, unknown>;
+    delete missing.schemaRevision;
+    expect(() => decodeExecutionPlan(missing)).toThrow(/schemaRevision/);
+    const revised: Record<string, unknown> = {
+      ...(structuredClone(fOpeningFixture) as Record<string, unknown>),
+      schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION + 1,
+    };
+    refreshWireFingerprint(revised);
+    expect(revised.planFingerprint).not.toBe(plan.planFingerprint);
   });
 
   it('carries an optional display name outside the fingerprint', () => {

@@ -1,16 +1,18 @@
 -- The planner's advisory slot overview, slots.runplanner.json beside the plan
 -- slots, describes occupied slots for display. Entries are never trusted for
--- execution: only the one slot the inbox loads is checked against the build.
+-- execution: only the one slot the inbox loads is checked against the module's
+-- catalog and schema pair.
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
 local inbox = type(import) == "function" and import("mods/host/inbox.lua") or require("mods.host.inbox")
 
 local overview = {}
 overview.FILE_NAME = "slots.runplanner.json"
 overview.FORMAT = "run-planner-slot-overview"
-overview.FORMAT_VERSION = 1
+overview.FORMAT_VERSION = 2
 overview.MAX_BYTES = 65536
 
-local REQUIRED_TEXT = { "label", "sentAt", "aspect", "route", "endBiome", "buildId", "fingerprint" }
+local REQUIRED_TEXT = { "label", "sentAt", "aspect", "route", "endBiome", "catalogVersion", "fingerprint" }
+local REQUIRED_COUNTS = { "startingFear", "schemaVersion", "schemaRevision" }
 local OPTIONAL_TEXT = { "planName", "startingKeepsake", "practiceStart" }
 
 local function text(value)
@@ -33,9 +35,11 @@ local function entry(value, slot)
         if result[key] == nil then return nil end
     end
     for _, key in ipairs(OPTIONAL_TEXT) do result[key] = text(value[key]) end
-    local fear = value.startingFear
-    if type(fear) ~= "number" or fear < 0 or fear ~= math.floor(fear) then return nil end
-    result.startingFear = fear
+    for _, key in ipairs(REQUIRED_COUNTS) do
+        local count = value[key]
+        if type(count) ~= "number" or count < 0 or count ~= math.floor(count) then return nil end
+        result[key] = count
+    end
     if slot == inbox.EVENT_SLOT then result.event = event(value.event) end
     return result
 end
@@ -61,11 +65,12 @@ local function nativeFiles()
     return { open = io.open }
 end
 
--- files replaces io.open. read() returns the entries, each marked whether it
--- names this module build, and for each slot, the event slot included,
+-- matchesVersion(entry) says whether an entry names this module's catalog and schema pair.
+-- files replaces io.open. read() returns the entries, each marked with that answer, and for
+-- each slot, the event slot included,
 -- whether its plan file exists;
 -- existence is an open and close, never a read.
-function overview.create(root, pathApi, buildId, options)
+function overview.create(root, pathApi, matchesVersion, options)
     options = options or {}
     local files = options.files or nativeFiles()
     local store = {}
@@ -90,7 +95,7 @@ function overview.create(root, pathApi, buildId, options)
         local entries = lastEntries
         if raw == nil or raw ~= lastRaw then
             entries = raw ~= nil and overview.decode(raw) or {}
-            for _, value in pairs(entries) do value.matchesBuild = buildId ~= nil and value.buildId == buildId end
+            for _, value in pairs(entries) do value.matchesVersion = matchesVersion(value) == true end
             lastRaw, lastEntries = raw, entries
         end
         local present = {}

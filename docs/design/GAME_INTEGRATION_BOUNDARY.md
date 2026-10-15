@@ -52,49 +52,39 @@ version of its own. The Tauri-free `run-planner-game-host` crate
 compile time, so every build carries exactly one
 module and never downloads game packages.
 
-Compatibility has two parts, both independent of the release number and the
-authored save schema:
+A plan is admitted by its header, independent of the release number:
 
-- The plan header's `format` and `catalogVersion` must equal the module's
-  checked-in `execution-compatibility.json`, `{format, catalogVersion}`. The
-  module's tests keep that declaration aligned with its decoder and decode the
-  planner-engine execution fixtures in place.
-- The module **build identity** (`buildId`) is SHA-256 over the sorted
-  `path NUL sha256 LF` lines of the `src/` payload outside
-  `src/mods/presentation/`, after any development variant replaces its module;
-  the presentation layer, the manifest, icon, license and readme, and the
-  engine source, are outside it. Every file that decodes, steers, installs,
-  checks conformance or composes the runtime is inside it, so a wire change
-  always changes the strict Lua decoder and with it the build, while the
-  fixture-decode lane catches engine/module drift. Assembly (shared by the
-  embedded package and the development checkout install) computes it, ships
-  the whole payload including the presentation layer, and stamps the packaged
-  `execution-compatibility.json` as `{format, catalogVersion, buildId}`; a
-  checked-in `buildId` is refused. The plan wire and the execution fixtures
-  never carry a build identity.
-- The **presentation layer**, `src/mods/presentation/`, only draws and formats:
-  the status window and its slot overview reader, the room guide, the victory
-  summary and the planned-choice markers. Because it is outside the build
-  identity, it never decides execution. `src/main.lua` is the only execution
-  file that imports it; it builds and attaches each surface under pcall,
-  skipping a surface that fails, and hands presentation read-only inspections
-  of the session, inbox and route. Execution notifies the planned-choice
-  markers through the instance it is given. Presentation imports only other
-  presentation modules, the JSON codec, the inbox's slot-file names and the
-  build-covered hook boundary `mods/host/presentation_hooks.lua`, and writes
-  no session, route, room, inbox, `CurrentRun` or game global state. Its
-  player actions are the status window's slot picker, which writes
-  `active-slot.json`, and **Load**, which decodes the shown slot, through the
-  active-slot and inbox capabilities `main.lua` injects. Otherwise the window
-  never decodes a plan: it describes slots from the slot overview and reads
-  the overview and active slot when it opens, on **Load** and after its own
-  write. Presentation registers native hooks
-  and overlay callbacks, and exposes entry points to execution, only through
-  the hook boundary. It always runs native base with its original arguments
-  and returns base's results unchanged, except the allowlisted map sub-icon
-  decoration, and contains, logging once, any presentation failure. The
-  module's architecture test rejects direct writes, and writes through simple
-  local aliases, by static scan.
+- The plan header carries `format`, `catalogVersion` and the planner's authored
+  schema pair, `schemaVersion` and `schemaRevision`, all inside
+  `planFingerprint`. The module admits a plan only when all four equal its
+  checked-in `execution-compatibility.json`,
+  `{format, catalogVersion, schemaVersion, schemaRevision}`, which assembly
+  ships unchanged. The module's tests keep that file aligned with its decoder
+  and decode the planner-engine execution fixtures in place, so the decoder,
+  the file and the planner's
+  [schema pair](AUTHORED_PROJECT_MODEL.md#schema-change-approval) change
+  together. A module-only change keeps the pair, so plans already sent stay
+  admitted; a change to the plan wire or to plan validity bumps the pair, and
+  every plan sent under the previous pair is outdated.
+- The module's manifest version, the planner version stamped at assembly,
+  decides whether an update is offered; whether an install is current is
+  decided by its files (see below).
+- The **presentation layer**, `src/mods/presentation/`, holds the surfaces
+  that draw and format: the status window and its slot overview reader, the
+  room guide, the victory summary and the planned-choice markers. `src/main.lua`
+  wires each surface through `presentationSurface`, which logs and skips a
+  surface that fails to load or attach, and hands it the session, inbox and
+  route inspection views it reads; execution notifies the planned-choice
+  markers through the instance it is given. The status window's player actions
+  are its slot picker, which writes `active-slot.json`, and **Load**, which
+  decodes the shown slot, through the active-slot and inbox capabilities
+  `main.lua` injects. Otherwise the window never decodes a plan: it describes
+  slots from the slot overview and reads the overview and active slot when it
+  opens, on **Load** and after its own write. Surfaces register native hooks
+  and overlay callbacks through `mods/host/presentation_hooks.lua`, which runs
+  native base with its original arguments, returns base's results unchanged
+  except the allowlisted map sub-icon decoration, and contains, logging once,
+  any presentation failure.
 
 The game target is an application setting in the desktop configuration
 directory, never authored state or history. The Game panel's Game location
@@ -136,7 +126,8 @@ target's `config/` are never touched.
 
 Status is reported by the host and presented by the application:
 
-- the installed module against this build, by file hashes and version;
+- the installed module against this planner's module, by manifest version and
+  file hashes, and whether it admits this planner's plan header;
 - whether r2modman manages the module, read from `mods.yml` (not applicable
   when the target has no `mods.yml`);
 - ModpackLib, compatible when its version is at or above the module manifest's
@@ -168,11 +159,18 @@ identifies a planner install that r2modman does not manage (an unreadable
 `mods.yml` counts as possibly managed), and leaves
 `config/` plan slots and ModpackLib in place. Development builds also offer an
 install assembled at runtime from the local `game-module/` checkout through
-the same flow; such an install is publishable in development builds while its
-files match its record.
+the same flow; the checkout is only another install source.
 
-A planner update carries a new module, so the installed copy stops matching
-the build: status offers **Update** and sending stays blocked until it runs.
+The installed module is current when the planner installed it from the same
+source with exactly this planner's files and it is unmodified since; otherwise
+**Install** or **Update** replaces it, even at the same version. Sending needs
+only an installed compatibility file equal to this planner's module's. A
+planner update carries a new module: status offers **Update** while the
+installed module's manifest version is older or its files were modified since
+install, never to downgrade a newer module. Sending stays blocked only while
+the installed module admits another plan header, which a schema or catalog
+change causes; otherwise the older module still plays plans sent from this
+planner.
 The planner does not check whether the game is running.
 
 **Create bug report…** (Game panel and About, desktop only) saves one zip
@@ -197,9 +195,9 @@ Anything both the planner and the game module need lives in
 `config/adamantRunPlanner-Run_Planner/`, in a format they own together:
 
 - the twelve plan slots `slot-N.runplanner.json` and the event slot
-  `slot-0.runplanner.json`, which only the planner writes, each the envelope
-  `{"format":"run-planner-slot","buildId":"…","plan":<plan>}` with the plan
-  bytes unchanged and the whole file within 1 MiB;
+  `slot-0.runplanner.json`, which only the planner writes, each the plan bytes
+  as compiled, within 1 MiB. A slot holding the `run-planner-slot` envelope an
+  earlier planner wrote is outdated;
 - `active-slot.json`, the plan slot the module plays next, which both write;
 - `slots.runplanner.json`, the [slot overview](#slot-overview), which only the
   planner writes.
@@ -246,7 +244,7 @@ need not decode every plan to describe them:
 ```json
 {
   "format": "run-planner-slot-overview",
-  "formatVersion": 1,
+  "formatVersion": 2,
   "slots": {
     "3": {
       "label": "Circe - Surface",
@@ -258,7 +256,9 @@ need not decode every plan to describe them:
       "startingKeepsake": "Silver Wheel",
       "startingFear": 8,
       "practiceStart": "Thessaly · Boss",
-      "buildId": "…",
+      "catalogVersion": "…",
+      "schemaVersion": 96,
+      "schemaRevision": 0,
       "fingerprint": "…"
     },
     "0": {
@@ -269,7 +269,9 @@ need not decode every plan to describe them:
         "title": "Week 42: Staff sprint",
         "endsAt": "2026-10-19T00:00:00Z"
       },
-      "buildId": "…",
+      "catalogVersion": "…",
+      "schemaVersion": 96,
+      "schemaRevision": 0,
       "fingerprint": "…"
     }
   }
@@ -285,17 +287,18 @@ need not decode every plan to describe them:
   Oath shows, and `practiceStart` names a Practice mode start's biome and
   point. `planName`, `startingKeepsake` and `practiceStart` are omitted when
   the plan has none. The summary goes to the host with the send.
-- The host adds the slot's `buildId` and the plan's `planFingerprint` as
-  `fingerprint`, as read back from the staged slot file, and regenerates the
+- The host adds the plan's `catalogVersion`, schema pair and `planFingerprint`
+  as `fingerprint`, as read back from the staged slot file, and regenerates the
   whole file with every send (see
   [Publication preconditions](#publication-preconditions)). The overview is the
   only store of summaries: a slot keeps its entry only while its file still
-  holds that build and fingerprint, so a slot emptied, made unreadable or
-  replaced outside the planner loses its entry at the next send, and a slot
-  without a known summary (sent by an older planner, or a bare plan) has no
-  entry. A missing or invalid previous overview holds no entries.
+  holds that catalog, pair and fingerprint, so a slot emptied, made unreadable
+  or replaced outside the planner loses its entry at the next send, and a slot
+  without a known summary (sent by an earlier planner) has no entry. A missing
+  or invalid previous overview, or one of another format version, holds no
+  entries.
 - Entries are advisory, for listing and describing slots: a missing entry is
-  unknown, and the module checks `buildId` and `fingerprint` only against the
+  unknown, and the module checks the plan header and `fingerprint` only on the
   one slot it loads. An overview that would exceed 64 KiB fails the send.
 - The module reads the overview beside `active-slot.json`, at most once a
   second while its window is drawn and once when the victory screen opens. A
@@ -314,11 +317,11 @@ need not decode every plan to describe them:
   active without a file; its details add the event
   title and "Ends" with the end time in local time. Existence
   is checked by opening the file, never by reading it.
-- The shown slot is loaded once, and again whenever its entry's fingerprint or
-  build, or the existence of its file, changes. Its details come from its
-  entry. When the loaded plan's fingerprint differs from the entry, the details
-  come from the loaded plan instead. A slot that is not loaded is marked stale
-  when its entry names another build than the installed module.
+- The shown slot is loaded once, and again whenever its entry's fingerprint,
+  or the existence of its file, changes. Its details come from its entry. When
+  the loaded plan's fingerprint differs from the entry, the details come from
+  the loaded plan instead. A slot that is not loaded is marked outdated when
+  its entry names another catalog or schema pair than the module admits.
 
 ### Event slot
 
@@ -344,7 +347,7 @@ send (see [Publication preconditions](#publication-preconditions)):
   send's is: the host checks its header and that its `projectId` equals the
   verified project's, a consistency check against a plan compiled from
   something else, not an authentication, and the module decodes the whole plan.
-  It has the same target, compatibility and reference-build checks as a send,
+  It has the same target and compatibility checks as a send,
   and leaves a slot already holding that plan and event as it is. It never
   touches `active-slot.json`.
 - **Clear** removes slot 0 and its entry together (an entry left without its
@@ -374,7 +377,7 @@ loads an authored event folder, `event.json` with `project.runplanner.json` as
 the events repository holds them, into the host in place of the feed's event for
 the session: the host validates the metadata as a feed event's (the id must equal
 the folder name), takes the project URL beside the feed, the project's SHA-256
-and its `schemaVersion`, and holds the project as verified. The same schema gate,
+and its schema pair, and holds the project as verified. The same schema gate,
 compilation and write then apply, without a signature. Clear returns to the
 feed's event. The host registers the local-folder commands only in those builds
 (`debug_assertions`, or the `internal_features` cfg its build script sets from
@@ -402,10 +405,13 @@ on each side (`EVENTS_REPOSITORY` in the game host's `event_feed.rs` and in
 ```
 
 Each event is `id`, `title`, `description`, optional `rules`, `startsAt`,
-`endsAt`, `projectUrl`, `projectSha256` (lower-case hex) and
-`projectSchemaVersion`, the authored schema of the project file. The feed carries
-no compiled plans: the planner compiles each event itself, so an event plays on
-every module build. The signature is `tauri signer sign` output, a prehashed
+`endsAt`, `projectUrl`, `projectSha256` (lower-case hex),
+`projectSchemaVersion` and optional `projectSchemaRevision` (absent means 0),
+the authored schema pair of the project file. The builder writes the revision
+only when it is not 0, because planners before it refuse an event naming an
+unknown field. The feed carries no compiled plans: the planner compiles each
+event itself, so an event plays on every module that admits that planner's
+plans. The signature is `tauri signer sign` output, a prehashed
 minisign signature, made with a dedicated event key, not the updater key. The
 app embeds the event public key from `apps/planner/src-tauri/event-feed.pub` at
 compile time; while that file holds its checked-in placeholder, the host refuses
@@ -432,9 +438,10 @@ covers, must name `file:events.json`, and its `timestamp` orders feeds.
   keeps the feed already held or falls back to that copy, so a verified event
   stays offline until it ends; with neither, slot 0 is kept until its own event
   ends.
-- The application passes the project schemas its loader opens, from the loader
-  floor to the current authored schema. An active event whose
-  `projectSchemaVersion` lies outside them is not downloaded; the notice reads
+- The application passes the project schemas its loader opens: the majors from
+  the loader floor to the current one, and the current major's revision. An
+  active event whose major lies outside them, or whose revision of the current
+  major is newer, is not downloaded; the notice reads
   "Update the planner to play this event." Otherwise the host downloads the
   project file (at most 8 MiB, HTTPS only) from its verified `projectUrl`,
   refuses it unless its SHA-256 matches `projectSha256`, and holds the verified
@@ -471,8 +478,8 @@ rules, below the notice's first row), **Open project**, **Copy link** (the
 project URL; the button itself says Copied or Copy failed for two seconds) and
 **Dismiss**. **Set as active**, absent while the notice says why the event
 cannot be played, makes the event slot active and reads the slot state the Game
-panel reads; while that state names the event slot and it holds a plan for the
-installed build, the same button reads **Active**, disabled and at the same
+panel reads; while that state names the event slot and it holds a plan the
+installed module admits, the same button reads **Active**, disabled and at the same
 width. A dismissal is remembered
 per event id in the browser profile; the event slot is still written.
 
@@ -481,13 +488,11 @@ per event id in the browser profile; the event slot is still written.
 Sending a plan uses only the established target and performs no discovery.
 The host rechecks the target when publishing and refuses with the blocking
 reasons, including found and required versions, unless the installed module
-matches this build and ModpackLib is compatible. Before any write, the installed
-`execution-compatibility.json` must match the outgoing plan header's `format`
-and `catalogVersion`, and its `buildId` must equal the reference build: the
-embedded package, or, in a development build whose install record names a
-checkout install, the checkout freshly assembled at send time (a mismatch asks
-to **Install from checkout** again). The slot is then written as an envelope
-naming that build. `mods.yml` is never edited, and under `config/` the planner writes only
+admits the plan header of this planner's module and ModpackLib is compatible.
+Before any write, the installed `execution-compatibility.json` must equal the
+outgoing plan header's `format`, `catalogVersion` and schema pair; otherwise
+the send asks to update the module. The slot is then written with the plan
+bytes unchanged. `mods.yml` is never edited, and under `config/` the planner writes only
 the shared folder described above. The slot and the overview change together:
 the host stages both complete files beside their destinations, with a copy of
 the slot's previous file, then replaces the slot and then the overview. If the
@@ -501,7 +506,7 @@ stays, and the result carries the activation problem, which the planner shows
 as a notice rather than a failed send. Making a slot active without sending
 needs only an established target whose slots can be read, so it works while
 the module or ModpackLib needs an update, and requires the slot to hold a plan
-for the installed module build.
+the installed module admits.
 
 A sent plan's identity chain is the saved file, then the document's
 `projectId`, then the compiled `planFingerprint`. Its name is the saved file's
@@ -519,30 +524,30 @@ longer match it.
 Once the module is ready, the Game panel shows the twelve slots as a table: Slot,
 Plan, Route, Ends, Aspect and Sent. The host reads each slot under the same
 link and containment rules and the 1 MiB bound, and reports it as empty,
-present, stale or unreadable with its modified time, the envelope's `buildId`,
-and only existing wire fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
+present, stale or unreadable with its modified time and only existing wire
+fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
 `planFingerprint`. The application labels the route and final biome from the
 catalog, and the aspect as its name without "Aspect of" followed by the
 weapon's `shortLabel` ("Circe (Staff)"); a loadout without an aspect
 shows "None", and a plan without `displayName` shows _Unnamed_, Sent is a compact relative time with the exact local time as
 its title and description, and an unreadable slot shows only "Unreadable". A
-slot whose envelope names another build than the installed module, or a bare
-plan written before slots carried an envelope, is stale and shows only "Sent by
-another build — send again"; it cannot be made active, and the header's quick
-send treats the open project's own stale slot like its present one. Host status
-also carries the bundled and installed `buildId` into bug reports.
+slot whose plan names another catalog or schema pair than the installed module
+admits, or one an earlier planner wrote, is stale and shows only "Outdated —
+send again"; it cannot be made active, and the header's quick send treats the
+open project's own stale slot like its present one. Host status also carries
+the bundled and installed compatibility files into bug reports.
 
 The table is an overview with send actions only. The slot the module plays next
 is chosen in **Active plan** at the top of the Game panel, shown whenever
 a game location is set and disabled while its slots cannot be read. It names
 slots as the in-game picker does (`Slot 2 (Circe - Surface)`,
 `Event: <title> (<label>)`), offers the event slot first and each plan slot
-holding a plan for the installed build, lists a slot holding another build's
-plan disabled as `(another build)`, and shows `active-slot.json` as
+holding a plan the installed module admits, lists a slot holding an outdated
+plan disabled as `(outdated)`, and shows `active-slot.json` as
 last read: a missing or invalid file shows slot 1, and a file naming a slot
 without such a plan keeps that slot, labelled with what it holds
-(`Slot 4 (empty)`, `(unreadable)`, `(another build)`, `Event (none)`). Choosing
+(`Slot 4 (empty)`, `(unreadable)`, `(outdated)`, `Event (none)`). Choosing
 writes the file without resending; the slots are then re-read, and a failed
 write leaves a short notice beside the choice and its value unchanged. A
 successful send makes its slot the value.
@@ -1127,9 +1132,9 @@ seeds, plus applicable Fangs and Menace outcomes, an optional variable base roll
 and a required `expectedBudget`. That budget is the engine's exact final encounter
 budget from the same preparation assessment that derived the counts; neither the
 compiler nor the runtime recomputes it. The execution protocol requires it on
-every generated customization. Plans published for another module build are
-sent again from their authored projects; execution-only wire changes do not
-require an authored-project migration.
+every generated customization. A wire change bumps the schema revision, so
+plans sent before it are outdated and sent again from their authored projects;
+execution-only wire changes do not require an authored-project migration.
 
 An introduction's declared fixed first waves are published as `fixed` waves with
 their exact counts, so every generated customization covers all its waves. Native
@@ -1471,8 +1476,8 @@ weaker outcome into a mismatch merely because they can observe it.
 | Diagnostic          | A bounded actuator could not install or apply its intended steering.                                | Record bounded evidence, log it once, and continue native behavior without changing synchronization.         |
 | Execution mismatch  | A standard checkpoint or premature exact-owner action proves the remaining simulated prefix unsafe. | Preserve the first mismatch, stop later realization, and let the native game continue.                       |
 
-Each admitted session logs its slot, plan identity, the first 12 characters of
-the module build, catalog and module version once. The first execution mismatch reports the plan/catalog fingerprints, semantic
+Each admitted session logs its slot, plan identity, schema pair, catalog and
+module version once. The first execution mismatch reports the plan/catalog fingerprints, semantic
 owner, checkpoint, expected value, observed value, and bounded event context.
 The executor then becomes passive: the game continues natively, and no hooked
 game function returns early merely because the execution session
@@ -1516,8 +1521,8 @@ gameplay behavior.
 
 ## Compatibility, transport, and security
 
-The transport is canonical data-only JSON with a strict decoder, exact module
-build and catalog compatibility, bounded collections, closed unions, and no silent
+The transport is canonical data-only JSON with a strict decoder, exact schema
+pair and catalog compatibility, bounded collections, closed unions, and no silent
 coercion. It permits no dynamic evaluation, executable expressions, arbitrary
 paths or commands, or class reconstruction from untrusted names. Compression
 or an outer checksum is unnecessary unless later transport evidence justifies
@@ -1555,13 +1560,11 @@ admission. Only the loadout install's backup and installed ranks are saved with
 the run. A freshly loaded game never re-attaches to an existing run; for an
 installed run the status reports that it continues unsteered.
 
-The Run Planner game module reads its own `buildId` from its installed
-`execution-compatibility.json` at load. Before decoding, the inbox requires
-the exact slot envelope naming that build: another build or a bare plan is
-`stale-slot` (send the plan again), and a module without a readable build
-identity is `module-build-unknown` (install it from the Game panel). The
-decoder then verifies the plan's `format` and `catalogVersion` before a
-session opens. Runtime identifier existence and checkpoint contact are conformance
+Before decoding, the Run Planner game module's inbox requires a plan whose
+`catalogVersion` and schema pair equal the module's own: another catalog or
+pair, or an earlier planner's `run-planner-slot` envelope, is `stale-slot`
+(send the plan again or update the module). The decoder then verifies the whole
+header, `format` included, before a session opens. Runtime identifier existence and checkpoint contact are conformance
 checks, not permission to reproduce planner eligibility policy. Exact source
 binding and published prerequisite readiness are execution coordination, not
 eligibility inference.

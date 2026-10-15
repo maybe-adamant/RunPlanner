@@ -38,8 +38,10 @@ export interface EventFeedEntry extends AuthoredEventMetadata {
   readonly projectUrl: string;
   /** Lower-case hex SHA-256 of the project file published at `projectUrl`. */
   readonly projectSha256: string;
-  /** The authored project schema the project file is saved in. */
+  /** The authored project schema pair the project file is saved in. */
   readonly projectSchemaVersion: number;
+  /** Omitted at 0, since earlier planners refuse an event naming it. */
+  readonly projectSchemaRevision?: number;
 }
 
 /** Folders whose name starts with `_` are templates and never published. */
@@ -85,17 +87,23 @@ interface BuildOptions {
   readonly checkEnded?: boolean;
 }
 
-/** The `schemaVersion` the project file is saved in. */
-function projectSchemaVersion(projectJson: string): number {
+/** The `schemaVersion` and `schemaRevision` (absent means 0) the project file is saved in. */
+function projectSchema(projectJson: string): {
+  readonly version: number;
+  readonly revision: number;
+} {
   const value: unknown = JSON.parse(projectJson);
-  const version =
-    typeof value === 'object' && value !== null
-      ? (value as Record<string, unknown>).schemaVersion
-      : undefined;
+  const record =
+    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  const version = record.schemaVersion;
   if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
     throw new Error('project.runplanner.json names no schemaVersion.');
   }
-  return version;
+  const revision = record.schemaRevision ?? 0;
+  if (typeof revision !== 'number' || !Number.isInteger(revision) || revision < 0) {
+    throw new Error('project.runplanner.json has an invalid schemaRevision.');
+  }
+  return { version, revision };
 }
 
 async function buildEvent(
@@ -112,16 +120,17 @@ async function buildEvent(
   if (ended && options.checkEnded !== true) {
     return { summary: `${metadata.id}: ended, not published`, project };
   }
-  const schemaVersion = projectSchemaVersion(source.projectJson);
+  const schema = projectSchema(source.projectJson);
   compileEventProject(options.catalog, source.projectJson, metadata.title);
   if (ended) return { summary: `${metadata.id}: ended, valid, not published`, project };
   return {
-    summary: `${metadata.id}: ${metadata.startsAt} to ${metadata.endsAt}, schema ${schemaVersion}`,
+    summary: `${metadata.id}: ${metadata.startsAt} to ${metadata.endsAt}, schema ${schema.version}.${schema.revision}`,
     entry: {
       ...metadata,
       projectUrl: eventProjectUrl(metadata.id),
       projectSha256: await projectFileSha256(source.projectJson),
-      projectSchemaVersion: schemaVersion,
+      projectSchemaVersion: schema.version,
+      ...(schema.revision === 0 ? {} : { projectSchemaRevision: schema.revision }),
     },
     project,
   };

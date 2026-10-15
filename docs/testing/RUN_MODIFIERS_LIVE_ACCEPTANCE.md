@@ -1,6 +1,6 @@
 # Run modifier live acceptance
 
-Use a matching current planner and installed game-module build. Save and send a
+Use a matching current planner and installed game module. Save and send a
 valid short prefix with the desired Loadout settings before starting each run.
 Source probes and automated tests are not live verification; the owner
 confirms or waives each remaining check.

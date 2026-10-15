@@ -1,7 +1,7 @@
 # Victory summary live acceptance
 
 Requires ModpackLib 4.5.0 or later and a matching current planner and installed
-game-module build. The planner blocks sending on an older ModpackLib. Automated
+game module. The planner blocks sending on an older ModpackLib. Automated
 tests are not live verification; the owner confirms or waives each check.
 
 - [ ] Complete a fully planned run through the final boss with no mismatch. The

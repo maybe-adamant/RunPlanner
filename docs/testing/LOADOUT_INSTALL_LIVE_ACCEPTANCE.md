@@ -1,6 +1,6 @@
 # Loadout install live acceptance
 
-Use a matching current planner and installed game-module build. Before each
+Use a matching current planner and installed game module. Before each
 check, set the profile's loadout in the Crossroads to differ from the plan in
 every input: another weapon and Aspect, other Arcana with some Grasp left over,
 other Fear vows, another keepsake and another familiar (or none). Note the

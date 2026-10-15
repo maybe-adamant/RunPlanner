@@ -1,3 +1,7 @@
+import {
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
+} from '../authored-project/model';
 import { EXECUTION_PLAN_FORMAT, type ExecutionCompilerInput, type ExecutionPlan } from './model';
 
 import { fingerprint } from './fingerprint';
@@ -7,9 +11,14 @@ export function compileExecutionPlan({
   product,
   displayName,
 }: ExecutionCompilerInput): ExecutionPlan {
+  const { catalogVersion, ...rest } = product;
+  // The authored schema pair identifies the planner version that compiled the plan.
   const body = Object.freeze({
     format: EXECUTION_PLAN_FORMAT,
-    ...product,
+    catalogVersion,
+    schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+    schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION,
+    ...rest,
   });
   // The display name is presentation metadata, so it never changes the fingerprint.
   return Object.freeze({

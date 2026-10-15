@@ -67,7 +67,7 @@ describe('event feed builder', () => {
     ]);
     expect(built.summary).toEqual([
       '2026-w40: ended, not published',
-      `2026-w42: 2026-10-12T00:00:00Z to 2026-10-19T00:00:00Z, schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}`,
+      `2026-w42: 2026-10-12T00:00:00Z to 2026-10-19T00:00:00Z, schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.0`,
       expect.stringMatching(/^2026-w44: /),
       '_template: template, not published',
     ]);

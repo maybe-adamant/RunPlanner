@@ -302,9 +302,12 @@ function moduleSection(
   status: GameModuleStatus,
   inspection: GameTargetInspection,
 ): GameModuleSectionProduct {
-  // The planner's own step follows Rust's install action, shown only while the module blocks publishing.
+  // The planner's own step follows Rust's install action, shown while the module blocks
+  // publishing, is older than this planner's module, or was modified since install.
   const action = inspection.install.action;
-  const moduleStep = action !== 'current' && hasModuleBlocker(status);
+  const moduleStep =
+    action !== 'current' &&
+    (hasModuleBlocker(status) || inspection.install.updateAvailable || inspection.module.modified);
   const steps = instructionSteps(inspection, moduleStep);
   const instructed = steps.length > 0;
   if (moduleStep) {
@@ -519,12 +522,12 @@ export function gameSaveState(
   }
 }
 
-export type GamePlanSlotSummary = 'Empty' | 'Sent by another build — send again' | 'Unreadable';
+export type GamePlanSlotSummary = 'Empty' | 'Outdated — send again' | 'Unreadable';
 
 const SLOT_SUMMARIES: Readonly<Record<GamePlanSlot['state'], GamePlanSlotSummary | null>> = {
   empty: 'Empty',
   present: null,
-  stale: 'Sent by another build — send again',
+  stale: 'Outdated — send again',
   unreadable: 'Unreadable',
 };
 
@@ -552,7 +555,7 @@ export interface GameActiveSlotIntent {
   readonly slot: GameActiveSlotNumber;
 }
 
-export type GameEventSlotSummary = 'No event' | 'Made for another game module build' | 'Unreadable';
+export type GameEventSlotSummary = 'No event' | 'Outdated' | 'Unreadable';
 
 /** The read-only event slot: it is never sent to. */
 export interface GameEventSlotRow {
@@ -721,7 +724,7 @@ const EVENT_SLOT_SUMMARIES: Readonly<Record<GameEventSlot['state'], GameEventSlo
   {
     empty: 'No event',
     present: null,
-    stale: 'Made for another game module build',
+    stale: 'Outdated',
     unreadable: 'Unreadable',
   };
 
@@ -798,7 +801,7 @@ export function projectEventPlaysNext(status: GameModuleStatus | null): boolean 
 const UNPLAYABLE_SLOT_STATES: Readonly<Record<Exclude<GamePlanSlot['state'], 'present'>, string>> =
   {
     empty: 'empty',
-    stale: 'another build',
+    stale: 'outdated',
     unreadable: 'unreadable',
   };
 
@@ -827,7 +830,7 @@ function nextRunOption(slot: GamePlanSlot | GameEventSlot, catalog: Catalog): Ga
 
 /**
  * The "Active plan" choice. It offers every slot whose plan the installed module can play,
- * and lists a slot sent for another build disabled with that reason; the active slot is
+ * and lists an outdated slot disabled with that reason; the active slot is
  * always shown, labelled with what it holds when it is not playable.
  * It is available whenever the target's slots can be read, whatever the module's readiness.
  */

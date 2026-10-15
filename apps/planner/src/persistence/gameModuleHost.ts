@@ -67,7 +67,12 @@ export interface GameTargetInspection {
   };
   readonly missingDependencies: readonly { readonly name: string; readonly version: string }[];
   readonly coordinator: { readonly present: boolean; readonly managed: boolean };
-  readonly install: { readonly action: GameModuleInstallAction; readonly consentRequired: boolean };
+  readonly install: {
+    readonly action: GameModuleInstallAction;
+    readonly consentRequired: boolean;
+    /** The installed module's manifest version is older than this planner's module. */
+    readonly updateAvailable: boolean;
+  };
   readonly removable: boolean;
   /** A previous install left beside `plugins/` after a failed restore. */
   readonly strandedInstall: string | null;
@@ -86,11 +91,9 @@ export type GameActiveSlot =
 /** One plan slot, identified only by fields the execution-plan wire already carries. */
 export interface GamePlanSlot {
   readonly slot: GamePlanSlotNumber;
-  /** `stale`: a readable plan sent for another game module build. */
+  /** `stale`: a readable plan made for another catalog or schema pair than the module admits. */
   readonly state: 'empty' | 'present' | 'stale' | 'unreadable';
   readonly modifiedAtMs: number | null;
-  /** The module build the slot was sent for; null for a plan sent before slots named one. */
-  readonly buildId?: string | null;
   readonly routeKey: string | null;
   readonly biomeKeys: readonly string[];
   readonly planFingerprint: string | null;
@@ -118,8 +121,6 @@ export interface GameEventSlot extends Omit<GamePlanSlot, 'slot'> {
 /** Host-reported facts about the established game target. */
 export interface GameModuleStatus {
   readonly bundledVersion: string;
-  /** The module build this app ships, which selects an event's plan. */
-  readonly bundledBuildId: string;
   readonly developmentInstallAvailable: boolean;
   readonly target: GameTarget | null;
   readonly targetProblem: string | null;
