@@ -4,6 +4,7 @@ import type { ExecutionCompilerError } from '@run-planner/engine/execution-plan'
 import type { StartPointPublicationBlock } from '@run-planner/engine/execution-plan';
 import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
+import type { SlotRebuildReport } from '@planner/workspace/slotRebuild';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
 import { ownEntry, slotAspectLabel, slotPickerLabel } from '@planner/projections/gameSlotSummary';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
@@ -522,12 +523,13 @@ export function gameSaveState(
   }
 }
 
-export type GamePlanSlotSummary = 'Empty' | 'Outdated — send again' | 'Unreadable';
+export type GamePlanSlotSummary = 'Empty' | 'Unreadable';
 
 const SLOT_SUMMARIES: Readonly<Record<GamePlanSlot['state'], GamePlanSlotSummary | null>> = {
   empty: 'Empty',
   present: null,
-  stale: 'Outdated — send again',
+  // An outdated slot shows its plan's columns and says what it needs in its note.
+  stale: null,
   unreadable: 'Unreadable',
 };
 
@@ -546,6 +548,8 @@ export interface GamePlanSlotRow {
     readonly sent: GamePlanSentTime | null;
   } | null;
   readonly summary: GamePlanSlotSummary | null;
+  /** Why an outdated slot was not rebuilt, or what it needs. */
+  readonly note: string | null;
   readonly marker: 'current' | 'olderVersion' | null;
   readonly action: { readonly label: GamePlanSlotActionLabel; readonly confirm: boolean } | null;
 }
@@ -612,6 +616,8 @@ export interface GamePlanSentTime {
 export interface GamePlansProduct {
   /** Shown while the event slot holds a file. */
   readonly event: GameEventSlotRow | null;
+  /** **Rebuild slots**, offered while an outdated slot has a stored source. */
+  readonly rebuild: { readonly available: boolean; readonly summary: string | null };
   readonly rows: readonly GamePlanSlotRow[];
   /** Why the current project cannot be sent; send actions are absent while set. */
   readonly unavailableReason: string | null;
@@ -766,21 +772,53 @@ export function projectGamePlans(
   saveState: GameSaveState,
   catalog: Catalog,
   now: number,
+  rebuild: SlotRebuildReport | null = null,
 ): GamePlansProduct | null {
   if (!isReady(status) || status.inspection === null) return null;
   const reason = unavailableReason(current);
+  const slots = status.inspection.planSlots;
   return Object.freeze({
     unavailableReason: reason,
     event: eventSlotRow(status.inspection.eventSlot, catalog, now),
-    rows: status.inspection.planSlots.map((slot): GamePlanSlotRow => ({
+    rebuild: {
+      available: slots.some((slot) => slot.state === 'stale' && slot.hasSource),
+      summary: rebuildSummary(rebuild),
+    },
+    rows: slots.map((slot): GamePlanSlotRow => ({
       slot: slot.slot,
       state: slot.state,
       columns: slotColumns(slot, catalog, now),
       summary: SLOT_SUMMARIES[slot.state],
+      note: slotNote(slot, rebuild),
       marker: slotMarker(slot, current),
       action: reason === null ? slotAction(slot, saveState) : null,
     })),
   });
+}
+
+function rebuildSummary(report: SlotRebuildReport | null): string | null {
+  if (report === null) return null;
+  if (report.problem !== null) return `Slots not rebuilt: ${report.problem}`;
+  const rebuilt = report.outcomes.filter((outcome) => outcome.kind === 'rebuilt').length;
+  const failed = report.outcomes.filter(
+    (outcome) => outcome.kind === 'failed' || outcome.kind === 'defect',
+  ).length;
+  if (rebuilt === 0 && failed === 0) return null;
+  const slots = (count: number) => `${count} ${count === 1 ? 'slot' : 'slots'}`;
+  if (rebuilt === 0) return `Couldn’t rebuild ${slots(failed)}`;
+  return failed === 0
+    ? `Rebuilt ${slots(rebuilt)}`
+    : `Rebuilt ${slots(rebuilt)} · couldn’t rebuild ${slots(failed)}`;
+}
+
+// An outdated slot's note: its last rebuild failure, or what it needs.
+function slotNote(slot: GamePlanSlot, report: SlotRebuildReport | null): string | null {
+  if (slot.state !== 'stale') return null;
+  const outcome = report?.outcomes.find((entry) => entry.slot === slot.slot);
+  if (outcome !== undefined && (outcome.kind === 'failed' || outcome.kind === 'defect')) {
+    return outcome.reason;
+  }
+  return slot.hasSource ? 'Outdated — rebuild slots' : 'Outdated — send again';
 }
 
 /**

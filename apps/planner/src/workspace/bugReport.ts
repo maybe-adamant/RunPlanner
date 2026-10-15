@@ -14,6 +14,7 @@ import {
   type RootState,
 } from '../state/store';
 import type { CurrentGamePlan } from './projectOperations';
+import type { SlotRebuildReport } from './slotRebuild';
 
 export interface BugReportContents {
   readonly openPlan: boolean;
@@ -38,6 +39,8 @@ interface CreateBugReportOperationsOptions {
   readonly host: GameModuleHost;
   readonly inspectCurrentGamePlan: () => CurrentGamePlan;
   readonly now?: () => Date;
+  /** The last slot rebuild, whose same-version failures are defects worth reporting. */
+  readonly slotRebuildReport?: () => SlotRebuildReport | null;
   readonly store: PlannerStore;
 }
 
@@ -58,6 +61,7 @@ export function projectBugReportFacts(
     readonly buildIdentity: BuildIdentity;
     readonly catalogVersion: string;
     readonly currentGamePlan: CurrentGamePlan;
+    readonly slotRebuild?: SlotRebuildReport | null;
   },
 ): Readonly<Record<string, unknown>> {
   const failure = state.gameSendSession.lastFailure;
@@ -91,6 +95,9 @@ export function projectBugReportFacts(
             message: activationFailure.message,
             at: new Date(activationFailure.atMs).toISOString(),
           },
+    slotRebuildDefects: (options.slotRebuild?.outcomes ?? []).flatMap((outcome) =>
+      outcome.kind === 'defect' ? [{ slot: outcome.slot, error: outcome.error }] : [],
+    ),
     settlementFault:
       settlementFault === undefined
         ? null
@@ -111,6 +118,7 @@ export function createBugReportOperations(
           buildIdentity: options.buildIdentity,
           catalogVersion: options.catalogVersion,
           currentGamePlan: options.inspectCurrentGamePlan(),
+          slotRebuild: options.slotRebuildReport?.() ?? null,
         }),
         openPlan:
           contents.openPlan && project !== undefined ? encodeProjectDocument(project) : null,

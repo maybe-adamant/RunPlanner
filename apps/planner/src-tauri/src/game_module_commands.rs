@@ -183,6 +183,7 @@ pub(crate) fn game_plan_publish(
     app: tauri::AppHandle,
     slot_number: u8,
     plan_json: String,
+    source_json: String,
     summary: SlotSummary,
 ) -> Result<GamePlanPublication, String> {
     Ok(game_plan_publication::publish(
@@ -190,8 +191,35 @@ pub(crate) fn game_plan_publish(
         ModulePackage::bundled(),
         slot_number,
         &plan_json,
+        &source_json,
         summary,
     ))
+}
+
+#[tauri::command]
+pub(crate) fn game_plan_rebuild(
+    app: tauri::AppHandle,
+    slot_number: u8,
+    plan_json: String,
+    source_json: String,
+    summary: SlotSummary,
+) -> Result<GamePlanPublication, String> {
+    Ok(game_plan_publication::rebuild(
+        &config_dir(&app)?,
+        ModulePackage::bundled(),
+        slot_number,
+        &plan_json,
+        &source_json,
+        summary,
+    ))
+}
+
+#[tauri::command(async)]
+pub(crate) fn game_slot_source_read(
+    app: tauri::AppHandle,
+    slot_number: u8,
+) -> Result<Option<String>, String> {
+    game_plan_publication::slot_source(&config_dir(&app)?, ModulePackage::bundled(), slot_number)
 }
 
 #[tauri::command]

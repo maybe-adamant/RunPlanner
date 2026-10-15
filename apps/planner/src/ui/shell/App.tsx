@@ -33,6 +33,7 @@ import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdate
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
 import type { CommunityEventController } from '@planner/workspace/communityEvents';
+import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -62,6 +63,8 @@ interface AppProps {
   readonly gameStatus?: GameStatusController;
   readonly projectOperations: ProjectOperations;
   readonly releaseUpdates?: ReleaseUpdateController;
+  /** Present only in the desktop application. */
+  readonly slotRebuild?: SlotRebuildController;
   readonly selectStructuredWorkspace: (
     state: RootState,
   ) => StructuredWorkspaceProjection | undefined;
@@ -78,6 +81,7 @@ export function App({
   gameStatus,
   projectOperations,
   releaseUpdates,
+  slotRebuild,
   selectStructuredWorkspace,
 }: AppProps) {
   const scalePercent = useAppScale(appScalePreference);
@@ -297,6 +301,7 @@ export function App({
               gameButton.current?.focus();
             }}
             {...(showFindings === undefined ? {} : { onShowFindings: showFindings })}
+            {...(slotRebuild === undefined ? {} : { slotRebuild })}
             operations={projectOperations}
           />
         )}

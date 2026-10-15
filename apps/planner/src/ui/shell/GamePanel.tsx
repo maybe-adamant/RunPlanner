@@ -43,6 +43,7 @@ import type {
   EventDevelopmentOperations,
   EventSlotOutcome,
 } from '@planner/workspace/communityEvents';
+import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 import { BugReportDialog } from './BugReportDialog';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -541,6 +542,7 @@ function PlansSection({
   feedback,
   focusPlans,
   focusSlot,
+  onRebuild,
   onSend,
   onShowFindings,
   pending,
@@ -548,6 +550,8 @@ function PlansSection({
 }: {
   /** The development event slot actions; absent in release builds. */
   readonly eventActions: ReactNode;
+  /** Rebuilds outdated slots from their stored sources; absent outside the desktop application. */
+  readonly onRebuild: (() => void) | undefined;
   readonly focusPlans: boolean;
   readonly focusSlot: FocusRequest | null;
   readonly feedback: Feedback | null;
@@ -618,6 +622,9 @@ function PlansSection({
                         {row.marker === 'current' ? 'current' : 'older version'}
                       </span>
                     )}
+                    {row.note === null ? null : (
+                      <span className="game-panel-slot-note">{row.note}</span>
+                    )}
                   </td>
                   <td data-label="Route">{row.columns.route}</td>
                   <td data-label="Ends">{row.columns.endsAt}</td>
@@ -659,11 +666,31 @@ function PlansSection({
           ))}
         </tbody>
       </table>
+      {onRebuild === undefined || !plans.rebuild.available ? null : (
+        <div className="game-panel-rebuild">
+          <button
+            className="secondary-action action-compact"
+            disabled={pending}
+            onClick={onRebuild}
+            type="button"
+          >
+            Rebuild slots
+          </button>
+        </div>
+      )}
+      {plans.rebuild.summary === null ? null : (
+        <p className="game-panel-rebuild-summary" role="status">
+          {plans.rebuild.summary}
+        </p>
+      )}
       {eventActions}
       <FeedbackLine feedback={feedback} />
     </section>
   );
 }
+
+const noRebuildSubscription = () => () => {};
+const noRebuildReport = () => null;
 
 function GameSection({
   catalog,
@@ -672,6 +699,7 @@ function GameSection({
   gameStatus,
   onShowFindings,
   operations,
+  slotRebuild,
 }: {
   readonly catalog: Catalog;
   readonly communityEvents: CommunityEventController | undefined;
@@ -679,6 +707,7 @@ function GameSection({
   readonly gameStatus: GameStatusController;
   readonly onShowFindings: (() => void) | undefined;
   readonly operations: ProjectOperations;
+  readonly slotRebuild: SlotRebuildController | undefined;
 }) {
   const lastFailure = useAppSelector((state) => state.gameSendSession.lastFailure);
   const lastActivationFailure = useAppSelector(
@@ -695,6 +724,11 @@ function GameSection({
   );
   const status = snapshot.status;
   const setStatus = gameStatus.publish;
+  const rebuildReport = useSyncExternalStore(
+    slotRebuild?.subscribe ?? noRebuildSubscription,
+    slotRebuild?.getSnapshot ?? noRebuildReport,
+    slotRebuild?.getSnapshot ?? noRebuildReport,
+  );
   const [pending, setPending] = useState(true);
   const [plansFeedback, setPlansFeedback] = useState<Feedback | null>(null);
   const [replaceSlot, setReplaceSlot] = useState<GamePlanSlotNumber | null>(null);
@@ -755,6 +789,7 @@ function GameSection({
           saveState,
           catalog,
           snapshot.readAt,
+          rebuildReport,
         )
       : null;
   const nextRun =
@@ -873,6 +908,7 @@ function GameSection({
       setConfirmation(
         result.outcome === 'consentRequired' ? (checkout ? 'checkoutInstall' : 'install') : null,
       );
+      await slotRebuild?.afterInstall(result);
       return { tone: 'status', text: describeInstallOutcome(result.outcome) };
     });
   const requestInstall = (checkout: boolean) => {
@@ -1011,6 +1047,15 @@ function GameSection({
           feedback={plansFeedback}
           focusPlans={focusPlans}
           focusSlot={focusSlot}
+          onRebuild={
+            slotRebuild === undefined || status === null
+              ? undefined
+              : () =>
+                  void run(async () => {
+                    await slotRebuild.rebuild(status);
+                    return null;
+                  })
+          }
           onShowFindings={onShowFindings}
           onSend={(slot, confirm) => {
             if (confirm) setReplaceSlot(slot);
@@ -1096,6 +1141,7 @@ export function GamePanel({
   onClose,
   onShowFindings,
   operations,
+  slotRebuild,
 }: {
   /** Present only in the desktop application. */
   readonly bugReport?: BugReportOperations;
@@ -1109,6 +1155,8 @@ export function GamePanel({
   /** Present only when the evaluation has a finding to navigate to. */
   readonly onShowFindings?: () => void;
   readonly operations: ProjectOperations;
+  /** Present only in the desktop application. */
+  readonly slotRebuild?: SlotRebuildController;
 }) {
   const [reporting, setReporting] = useState(false);
   return (
@@ -1131,6 +1179,7 @@ export function GamePanel({
           gameStatus={gameStatus}
           onShowFindings={onShowFindings}
           operations={operations}
+          slotRebuild={slotRebuild}
         />
       )}
       <footer className="game-publication-actions">

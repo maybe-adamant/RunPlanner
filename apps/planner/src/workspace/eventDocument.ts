@@ -1,14 +1,10 @@
-import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
-  assembleExecutionProduct,
-  compileExecutionPlan,
   encodeExecutionPlan,
   EXECUTION_DISPLAY_NAME_MAX,
 } from '@run-planner/engine/execution-plan';
 
-import { loadProjectDocument } from '../persistence/projectDocumentLoader';
-import { assertPublicProjectAdmission } from './project-admission';
+import { compileProjectFile } from './projectFileCompilation';
 
 /** The fields an event's author writes in `event.json`; the host decodes and validates them. */
 export interface AuthoredEventMetadata {
@@ -105,22 +101,10 @@ function eventPlanDisplayName(title: string): string {
   return Array.from(title.trim()).slice(0, EXECUTION_DISPLAY_NAME_MAX).join('');
 }
 
-/**
- * Compiles an event's project file headlessly, as a public project opened and sent would be:
- * loaded, admitted, simulated and compiled through the same execution-plan assembly, with the
- * event's title as the plan's name.
- */
+/** Compiles an event's project file as a public project sent would be, named by its title. */
 export function compileEventProject(catalog: Catalog, projectJson: string, title: string): string {
-  const { project } = loadProjectDocument(projectJson, catalog);
-  assertPublicProjectAdmission(catalog, project);
   return encodeExecutionPlan(
-    compileExecutionPlan({
-      product: assembleExecutionProduct({
-        assembly: simulateProjectAssembly(catalog, project),
-        catalog,
-      }),
-      displayName: eventPlanDisplayName(title),
-    }),
+    compileProjectFile(catalog, projectJson, { displayName: eventPlanDisplayName(title) }).plan,
   );
 }
 

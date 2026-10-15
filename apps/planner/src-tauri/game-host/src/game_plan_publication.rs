@@ -11,8 +11,9 @@ use crate::game_module_package::{ExecutionCompatibility, ModulePackage};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
     any_slot_file_name, empty_slot, encode_active_slot, inspect_active_slot, inspect_all_slots,
-    read_slot, slot_file_name, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT,
-    MAX_PLAN_BYTES, MODULE_CONFIG_DIRECTORY,
+    read_slot, read_slot_source, slot_file_name, slot_source_file_name, valid_slot_source,
+    ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_PLAN_BYTES,
+    MAX_SLOT_SOURCE_BYTES, MODULE_CONFIG_DIRECTORY,
 };
 use crate::slot_overview::{self, SentEntry, SlotEvent, SlotSummary, SLOT_OVERVIEW_FILE};
 
@@ -174,8 +175,14 @@ fn shared_file_destination(
 }
 
 /// Writes one slot of an already-established target whose module admits the plan's
-/// format, catalog and schema pair, together with the slot overview that records its entry.
-fn write_plan(target: &ResolvedTarget, plan_json: &str, entry: SentEntry) -> Result<(), String> {
+/// format, catalog and schema pair, together with its source, when it has one, and the slot
+/// overview that records its entry.
+fn write_plan(
+    target: &ResolvedTarget,
+    plan_json: &str,
+    source: Option<&str>,
+    entry: SentEntry,
+) -> Result<(), String> {
     any_slot_file_name(entry.slot)?;
     let header = serde_json::from_str::<PlanHeader>(plan_json)
         .map_err(|error| format!("Invalid execution plan header: {error}"))?
@@ -192,30 +199,84 @@ fn write_plan(target: &ResolvedTarget, plan_json: &str, entry: SentEntry) -> Res
         entry.slot,
         SlotChange::Write {
             plan: plan_json.as_bytes(),
+            source: source.map(str::as_bytes),
             entry: Box::new(entry),
         },
     )?;
     commit_slot_and_overview(staged)
 }
 
-/// What a staged send does to its slot.
+/// What a staged send does to its slot. A write without a source removes any source left
+/// beside the slot, so a source always describes the plan it sits beside.
 enum SlotChange<'a> {
     Write {
         plan: &'a [u8],
+        source: Option<&'a [u8]>,
         entry: Box<SentEntry>,
     },
     Remove,
 }
 
-/// A slot change and the overview regenerated with it, both staged in full, with a copy of
-/// the slot's previous file to restore if the overview cannot follow.
+/// One file of a staged change: its new content (`None` removes it) and a copy of its previous
+/// file (`None` when it had none) to restore if a later file cannot follow.
+struct StagedReplacement {
+    destination: PathBuf,
+    next: Option<atomic_file::StagedFile>,
+    previous: Option<atomic_file::StagedFile>,
+}
+
+impl StagedReplacement {
+    fn new(
+        destination: PathBuf,
+        next: Option<atomic_file::StagedFile>,
+        artifact: &str,
+    ) -> Result<Self, String> {
+        let previous = match fs::symlink_metadata(&destination) {
+            Ok(_) => Some(atomic_file::stage_copy(&destination, artifact)?),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(format!("could not inspect {artifact}: {error}")),
+        };
+        Ok(Self {
+            destination,
+            next,
+            previous,
+        })
+    }
+
+    /// Commits the change and returns the copy that restores the previous file.
+    fn commit(self) -> Result<Restore, String> {
+        match self.next {
+            Some(next) => next.commit()?,
+            None => remove_file(&self.destination)?,
+        }
+        Ok(Restore {
+            destination: self.destination,
+            previous: self.previous,
+        })
+    }
+}
+
+struct Restore {
+    destination: PathBuf,
+    previous: Option<atomic_file::StagedFile>,
+}
+
+impl Restore {
+    fn apply(self) -> Result<(), String> {
+        match self.previous {
+            Some(previous) => previous.commit(),
+            None => remove_file(&self.destination),
+        }
+    }
+}
+
+/// A slot change, the slot's source change and the overview regenerated with them, all staged
+/// in full.
 struct StagedSend {
-    /// `None` removes the slot's file.
-    slot: Option<atomic_file::StagedFile>,
+    slot: StagedReplacement,
+    /// Absent for the event slot, which has no source.
+    source: Option<StagedReplacement>,
     overview: atomic_file::StagedFile,
-    /// `None` when the slot had no file.
-    previous_slot: Option<atomic_file::StagedFile>,
-    slot_destination: PathBuf,
 }
 
 fn stage_slot_and_overview(
@@ -225,18 +286,36 @@ fn stage_slot_and_overview(
     change: SlotChange,
 ) -> Result<StagedSend, String> {
     let slot_destination = safe_destination(target, slot_number)?;
+    let source_destination = match slot_source_file_name(slot_number) {
+        Ok(name) => Some(shared_file_destination(target, &name, "slot source")?),
+        Err(_) => None,
+    };
     let overview_destination =
         shared_file_destination(target, SLOT_OVERVIEW_FILE, "slot overview")?;
     let mut slots = inspect_all_slots(target, installed);
-    let (slot, sent) = match change {
-        SlotChange::Write { plan, entry } => {
+    let (slot, source, sent) = match change {
+        SlotChange::Write {
+            plan,
+            source,
+            entry,
+        } => {
             let slot = atomic_file::stage(&slot_destination, plan, "plan slot")?;
             slots[usize::from(slot_number)] = read_slot(slot_number, slot.path(), installed);
-            (Some(slot), Some(*entry))
+            let source = match (&source_destination, source) {
+                (Some(destination), Some(bytes)) => {
+                    if !valid_slot_source(bytes) {
+                        return Err("Invalid slot source.".to_owned());
+                    }
+                    Some(atomic_file::stage(destination, bytes, "slot source")?)
+                }
+                (None, Some(_)) => return Err("The event slot keeps no source.".to_owned()),
+                (_, None) => None,
+            };
+            (Some(slot), source, Some(*entry))
         }
         SlotChange::Remove => {
             slots[usize::from(slot_number)] = empty_slot(slot_number);
-            (None, None)
+            (None, None, None)
         }
     };
     let overview = slot_overview::regenerate(
@@ -249,51 +328,57 @@ fn stage_slot_and_overview(
         slot_overview::encode_overview(&overview)?.as_bytes(),
         "slot overview",
     )?;
-    let previous_slot = match fs::symlink_metadata(&slot_destination) {
-        Ok(_) => Some(atomic_file::stage_copy(&slot_destination, "plan slot")?),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
-        Err(error) => return Err(format!("could not inspect plan slot: {error}")),
-    };
     Ok(StagedSend {
-        slot,
+        slot: StagedReplacement::new(slot_destination, slot, "plan slot")?,
+        source: source_destination
+            .map(|destination| StagedReplacement::new(destination, source, "slot source"))
+            .transpose()?,
         overview,
-        previous_slot,
-        slot_destination,
     })
 }
 
-fn remove_slot_file(destination: &Path) -> Result<(), String> {
+fn remove_file(destination: &Path) -> Result<(), String> {
     match fs::remove_file(destination) {
-        Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-            Err(format!("could not remove plan slot: {error}"))
-        }
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(format!(
+            "could not remove {}: {error}",
+            destination.display()
+        )),
         _ => Ok(()),
     }
 }
 
-/// Commits the slot change, then the overview; when the overview fails, the slot is restored
-/// to its previous file, or removed when it had none, and the send fails.
+/// Commits the slot change, then its source, then the overview; when a later file fails, the
+/// earlier ones are restored to their previous files, or removed when they had none.
 fn commit_slot_and_overview(staged: StagedSend) -> Result<(), String> {
     let StagedSend {
         slot,
+        source,
         overview,
-        previous_slot,
-        slot_destination,
     } = staged;
-    match slot {
-        Some(slot) => slot.commit()?,
-        None => remove_slot_file(&slot_destination)?,
-    }
-    let Err(problem) = overview.commit() else {
+    let mut committed = vec![slot.commit()?];
+    let problem = match source.map(StagedReplacement::commit).transpose() {
+        Err(problem) => Some(problem),
+        Ok(restore) => {
+            committed.extend(restore);
+            overview.commit().err()
+        }
+    };
+    let Some(problem) = problem else {
         return Ok(());
     };
-    let restored = match previous_slot {
-        Some(previous) => previous.commit(),
-        None => remove_slot_file(&slot_destination),
-    };
-    Err(match restored {
-        Ok(()) => format!("{problem}; the plan slot was left as it was."),
-        Err(restore) => format!("{problem}; restoring the plan slot also failed: {restore}"),
+    // Every restore is attempted, so one failure never leaves a later file unrestored.
+    let failures: Vec<String> = committed
+        .into_iter()
+        .rev()
+        .filter_map(|restore| restore.apply().err())
+        .collect();
+    Err(if failures.is_empty() {
+        format!("{problem}; the plan slot was left as it was.")
+    } else {
+        format!(
+            "{problem}; restoring the plan slot also failed: {}",
+            failures.join("; ")
+        )
     })
 }
 
@@ -364,39 +449,28 @@ pub fn set_active_slot(
 }
 
 /// Publishes to the remembered target only when its status has no blockers, writing the
-/// slot and the overview that records its summary together, then makes that slot active.
-/// The event slot is never a destination.
+/// slot, its source and the overview that records its summary together, then makes that slot
+/// active. The event slot is never a destination.
 pub fn publish(
     config_dir: &Path,
     package: &ModulePackage,
     slot_number: u8,
     plan_json: &str,
+    source_json: &str,
     summary: SlotSummary,
 ) -> GamePlanPublication {
-    if let Err(message) = slot_file_name(slot_number).and(summary.validate()) {
-        return native_write(message);
-    }
-    if plan_json.len() > MAX_PLAN_BYTES {
-        return native_write(format!(
-            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
-        ));
-    }
-    let target = match ready_target(config_dir, package) {
-        Ok((target, _)) => target,
-        Err(blockers) => return blocked("The game target is not ready for publication.", blockers),
-    };
-    let written = write_plan(
-        &target,
+    let target = match write_sendable_slot(
+        config_dir,
+        package,
+        slot_number,
         plan_json,
-        SentEntry {
-            slot: slot_number,
-            summary,
-            event: None,
-        },
-    );
-    if let Err(message) = written {
-        return native_write(message);
-    }
+        source_json,
+        summary,
+        false,
+    ) {
+        Ok(target) => target,
+        Err(failed) => return failed,
+    };
     let activation_problem = write_active_slot(&target, slot_number).err();
     GamePlanPublication {
         status: PublicationStatus::Published,
@@ -407,6 +481,103 @@ pub fn publish(
         blockers: Vec::new(),
         activation_problem,
     }
+}
+
+/// Rewrites a slot from its rebuilt plan and source under the same checks as publishing,
+/// leaving the active slot as it is. A slot no longer outdated, such as one sent again since,
+/// is left untouched.
+pub fn rebuild(
+    config_dir: &Path,
+    package: &ModulePackage,
+    slot_number: u8,
+    plan_json: &str,
+    source_json: &str,
+    summary: SlotSummary,
+) -> GamePlanPublication {
+    match write_sendable_slot(
+        config_dir,
+        package,
+        slot_number,
+        plan_json,
+        source_json,
+        summary,
+        true,
+    ) {
+        Ok(_) => GamePlanPublication {
+            status: PublicationStatus::Published,
+            message: format!("Rebuilt Slot {slot_number}."),
+            blockers: Vec::new(),
+            activation_problem: None,
+        },
+        Err(failed) => failed,
+    }
+}
+
+/// The stored source of a sendable slot on the established target, `None` when it has none.
+pub fn slot_source(
+    config_dir: &Path,
+    package: &ModulePackage,
+    slot_number: u8,
+) -> Result<Option<String>, String> {
+    let (_, target) = status(config_dir, package);
+    read_slot_source(
+        &target.ok_or("The game target is not available.")?,
+        slot_number,
+    )
+}
+
+fn write_sendable_slot(
+    config_dir: &Path,
+    package: &ModulePackage,
+    slot_number: u8,
+    plan_json: &str,
+    source_json: &str,
+    summary: SlotSummary,
+    only_if_outdated: bool,
+) -> Result<ResolvedTarget, GamePlanPublication> {
+    if let Err(message) = slot_file_name(slot_number).and(summary.validate()) {
+        return Err(native_write(message));
+    }
+    if plan_json.len() > MAX_PLAN_BYTES {
+        return Err(native_write(format!(
+            "Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."
+        )));
+    }
+    if !valid_slot_source(source_json.as_bytes()) {
+        return Err(native_write(format!(
+            "The slot source must be a valid source within {MAX_SLOT_SOURCE_BYTES} bytes."
+        )));
+    }
+    let target = match ready_target(config_dir, package) {
+        Ok((target, inspection)) => {
+            let outdated =
+                inspection.plan_slots[usize::from(slot_number - 1)].state == PlanSlotState::Stale;
+            if only_if_outdated && !outdated {
+                return Err(native_write(format!(
+                    "Slot {slot_number} is no longer outdated, so it was not rebuilt."
+                )));
+            }
+            target
+        }
+        Err(blockers) => {
+            return Err(blocked(
+                "The game target is not ready for publication.",
+                blockers,
+            ))
+        }
+    };
+    write_plan(
+        &target,
+        plan_json,
+        Some(source_json),
+        SentEntry {
+            slot: slot_number,
+            summary,
+            event: None,
+        },
+    )
+    .map_err(native_write)?;
+    Ok(target)
 }
 
 /// Writes a community event's plan to the event slot with its overview entry, under the same
@@ -451,6 +622,7 @@ pub fn publish_event(
     let written = write_plan(
         &target,
         plan_json,
+        None,
         SentEntry {
             slot: EVENT_SLOT,
             summary,
@@ -606,6 +778,8 @@ mod tests {
         }
     }
 
+    const SOURCE: &str = r#"{"format":"run-planner-slot-source","formatVersion":1,"internalRunModifiers":false,"project":{"projectId":"p"}}"#;
+
     const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":0}"#;
 
     fn ready_target(root: &Path, kind: TargetKind) -> (ResolvedTarget, ModulePackage) {
@@ -629,11 +803,25 @@ mod tests {
             let temporary = TemporaryDirectory::new("publish");
             let config = temporary.0.join("app-config");
             let (target, package) = ready_target(&temporary.0.join("target"), kind);
-            let blocked = publish(&config, &package, 1, PLAN, summary("Circe - Surface"));
+            let blocked = publish(
+                &config,
+                &package,
+                1,
+                PLAN,
+                SOURCE,
+                summary("Circe - Surface"),
+            );
             assert_eq!(blocked.status, PublicationStatus::Blocked);
             assert_eq!(blocked.blockers[0].code, BlockerCode::NoTarget);
             remember_target(&config, &target).unwrap();
-            let published = publish(&config, &package, 12, PLAN, summary("Circe - Surface"));
+            let published = publish(
+                &config,
+                &package,
+                12,
+                PLAN,
+                SOURCE,
+                summary("Circe - Surface"),
+            );
             assert_eq!(
                 published.status,
                 PublicationStatus::Published,
@@ -779,7 +967,7 @@ mod tests {
             (12, second.as_str(), "Momus - Underworld"),
             (5, PRESENT_PLAN, "Anubis - Surface"),
         ] {
-            let published = publish(&config, &package, slot, plan, summary(label));
+            let published = publish(&config, &package, slot, plan, SOURCE, summary(label));
             assert_eq!(
                 published.status,
                 PublicationStatus::Published,
@@ -800,7 +988,7 @@ mod tests {
         fs::write(safe_destination(&target, 1).unwrap(), &second).unwrap();
         fs::remove_file(safe_destination(&target, 5).unwrap()).unwrap();
         // A plan without a readable identity is written but has no entry.
-        publish(&config, &package, 3, PLAN, summary("Unread"));
+        publish(&config, &package, 3, PLAN, SOURCE, summary("Unread"));
         let regenerated = overview(&target);
         let slots = regenerated["slots"].as_object().unwrap();
         assert_eq!(slots.keys().collect::<Vec<_>>(), ["12"]);
@@ -829,7 +1017,7 @@ mod tests {
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
-        let refused = publish(&config, &package, 2, PRESENT_PLAN, summary(""));
+        let refused = publish(&config, &package, 2, PRESENT_PLAN, SOURCE, summary(""));
         assert_eq!(refused.status, PublicationStatus::NativeWrite);
         assert_eq!(refused.message, "Invalid plan slot summary.");
         assert!(!safe_destination(&target, 2).unwrap().exists());
@@ -844,6 +1032,7 @@ mod tests {
             &package,
             2,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         assert_eq!(blocked.status, PublicationStatus::NativeWrite);
@@ -851,6 +1040,71 @@ mod tests {
         assert!(!safe_destination(&target, 2).unwrap().exists());
         assert!(!active_slot_path(&target).exists());
         assert_eq!(config_files(&target), [SLOT_OVERVIEW_FILE]);
+    }
+
+    #[test]
+    fn a_send_writes_its_source_beside_the_slot_and_a_rebuild_keeps_the_active_slot() {
+        let temporary = TemporaryDirectory::new("publish-source");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        for invalid in [
+            "{}",
+            r#"{"format":"run-planner-slot-source","formatVersion":1}"#,
+        ] {
+            let refused = publish(&config, &package, 3, PRESENT_PLAN, invalid, summary("A"));
+            assert_eq!(refused.status, PublicationStatus::NativeWrite);
+            assert!(!safe_destination(&target, 3).unwrap().exists());
+        }
+        publish(&config, &package, 3, PRESENT_PLAN, SOURCE, summary("A"));
+        publish(&config, &package, 5, PRESENT_PLAN, SOURCE, summary("B"));
+        assert_eq!(
+            slot_source(&config, &package, 3).unwrap().as_deref(),
+            Some(SOURCE)
+        );
+        assert_eq!(slot_source(&config, &package, 4).unwrap(), None);
+        assert!(slot_source(&config, &package, EVENT_SLOT).is_err());
+        let inspection = crate::game_module_install::inspect(&target, &package).unwrap();
+        assert!(inspection.plan_slots[2].has_source);
+        assert!(!inspection.plan_slots[3].has_source);
+        assert!(!inspection.event_slot.facts.has_source);
+        let revised = SOURCE.replace(r#""p""#, r#""rebuilt""#);
+        // A slot the installed module admits, such as one sent again, is never rebuilt.
+        let current = rebuild(&config, &package, 3, PRESENT_PLAN, &revised, summary("A"));
+        assert_eq!(current.status, PublicationStatus::NativeWrite);
+        assert_eq!(
+            current.message,
+            "Slot 3 is no longer outdated, so it was not rebuilt."
+        );
+        assert_eq!(
+            slot_source(&config, &package, 3).unwrap().as_deref(),
+            Some(SOURCE)
+        );
+        fs::write(
+            safe_destination(&target, 3).unwrap(),
+            PRESENT_PLAN.replace(r#""schemaRevision":0"#, r#""schemaRevision":1"#),
+        )
+        .unwrap();
+        let rebuilt = rebuild(&config, &package, 3, PRESENT_PLAN, &revised, summary("A"));
+        assert_eq!(
+            rebuilt.status,
+            PublicationStatus::Published,
+            "{}",
+            rebuilt.message
+        );
+        assert_eq!(slot_source(&config, &package, 3).unwrap(), Some(revised));
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 5 }
+        );
+        fs::write(
+            safe_destination(&target, 3)
+                .unwrap()
+                .with_file_name("slot-3.source.runplanner.json"),
+            "{}",
+        )
+        .unwrap();
+        assert!(slot_source(&config, &package, 3).is_err());
     }
 
     #[test]
@@ -864,6 +1118,7 @@ mod tests {
             &package,
             1,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         let previous_slot = fs::read(safe_destination(&target, 1).unwrap()).unwrap();
@@ -872,6 +1127,7 @@ mod tests {
             .unwrap()
             .with_file_name(SLOT_OVERVIEW_FILE);
         let second = PRESENT_PLAN.replace(r#""f""#, r#""g""#);
+        let second_source = SOURCE.replace(r#""p""#, r#""q""#);
         for (slot, existed) in [(1, true), (4, false)] {
             let staged = stage_slot_and_overview(
                 &target,
@@ -879,6 +1135,7 @@ mod tests {
                 slot,
                 SlotChange::Write {
                     plan: second.as_bytes(),
+                    source: Some(second_source.as_bytes()),
                     entry: Box::new(SentEntry {
                         slot,
                         summary: summary("Momus - Underworld"),
@@ -905,6 +1162,10 @@ mod tests {
             previous_slot
         );
         assert_eq!(
+            read_slot_source(&target, 1).unwrap().as_deref(),
+            Some(SOURCE)
+        );
+        assert_eq!(
             inspect_active_slot(&target),
             ActiveSlotFacts::Present { slot: 1 }
         );
@@ -913,6 +1174,7 @@ mod tests {
             [
                 ACTIVE_SLOT_FILE,
                 "slot-1.runplanner.json",
+                "slot-1.source.runplanner.json",
                 SLOT_OVERVIEW_FILE
             ]
         );
@@ -925,7 +1187,14 @@ mod tests {
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
         fs::create_dir_all(active_slot_path(&target)).unwrap();
-        let published = publish(&config, &package, 3, PLAN, summary("Circe - Surface"));
+        let published = publish(
+            &config,
+            &package,
+            3,
+            PLAN,
+            SOURCE,
+            summary("Circe - Surface"),
+        );
         assert_eq!(published.status, PublicationStatus::Published);
         assert_eq!(
             published.activation_problem.as_deref(),
@@ -948,12 +1217,19 @@ mod tests {
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Discovered);
         remember_target(&config, &target).unwrap();
-        publish(&config, &package, 2, PLAN, summary("Circe - Surface"));
+        publish(
+            &config,
+            &package,
+            2,
+            PLAN,
+            SOURCE,
+            summary("Circe - Surface"),
+        );
         // A newer planner whose plans the installed module still admits may send to it, and
         // offers its module as an update by manifest version.
         let newer = crate::game_module_install::test_support::package("1.3.0", "return 2");
         assert_eq!(
-            publish(&config, &newer, 2, PLAN, summary("Circe - Surface")).status,
+            publish(&config, &newer, 2, PLAN, SOURCE, summary("Circe - Surface")).status,
             PublicationStatus::Published
         );
         assert!(inspect(&target, &newer).unwrap().install.update_available);
@@ -969,6 +1245,7 @@ mod tests {
             &revised,
             2,
             r#"{"other":true}"#,
+            SOURCE,
             summary("Circe - Surface"),
         );
         assert_eq!(mismatch.status, PublicationStatus::Blocked);
@@ -981,6 +1258,7 @@ mod tests {
             &package,
             2,
             r#"{"other":true}"#,
+            SOURCE,
             summary("Circe - Surface"),
         );
         assert_eq!(older.blockers[0].code, BlockerCode::ModpackLibOlder);
@@ -998,7 +1276,14 @@ mod tests {
         let config = temporary.0.join("app-config");
         let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
         remember_target(&config, &target).unwrap();
-        publish(&config, &package, 4, PLAN, summary("Circe - Surface"));
+        publish(
+            &config,
+            &package,
+            4,
+            PLAN,
+            SOURCE,
+            summary("Circe - Surface"),
+        );
         for plan in [
             PLAN.replace("test-catalog", "other"),
             PLAN.replace(r#""schemaRevision":0"#, r#""schemaRevision":1"#),
@@ -1006,7 +1291,15 @@ mod tests {
             "{}".to_owned(),
         ] {
             assert_eq!(
-                publish(&config, &package, 4, &plan, summary("Circe - Surface")).status,
+                publish(
+                    &config,
+                    &package,
+                    4,
+                    &plan,
+                    SOURCE,
+                    summary("Circe - Surface")
+                )
+                .status,
                 PublicationStatus::NativeWrite
             );
         }
@@ -1017,12 +1310,28 @@ mod tests {
         );
         assert_eq!(oversized.len(), MAX_PLAN_BYTES + 1);
         assert_eq!(
-            publish(&config, &package, 4, &oversized, summary("Circe - Surface")).status,
+            publish(
+                &config,
+                &package,
+                4,
+                &oversized,
+                SOURCE,
+                summary("Circe - Surface")
+            )
+            .status,
             PublicationStatus::NativeWrite
         );
         for slot in [0, 13, u8::MAX] {
             assert_eq!(
-                publish(&config, &package, slot, PLAN, summary("Circe - Surface")).message,
+                publish(
+                    &config,
+                    &package,
+                    slot,
+                    PLAN,
+                    SOURCE,
+                    summary("Circe - Surface")
+                )
+                .message,
                 format!("plan slot must be between 1 and 12 (got {slot})")
             );
         }
@@ -1040,7 +1349,15 @@ mod tests {
         remember_target(&config, &target).unwrap();
         let plan = "{ \"catalogVersion\" : \"test-catalog\",\n  \"format\":\"run-planner-execution\",\"schemaVersion\":96,\"schemaRevision\":0,\"note\":\"é\\u00e9\" }";
         assert_eq!(
-            publish(&config, &package, 1, plan, summary("Circe - Surface")).status,
+            publish(
+                &config,
+                &package,
+                1,
+                plan,
+                SOURCE,
+                summary("Circe - Surface")
+            )
+            .status,
             PublicationStatus::Published
         );
         assert_eq!(
@@ -1061,10 +1378,16 @@ mod tests {
             r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","buildId":"b"}"#,
         ] {
             fs::write(&compatibility, installed).unwrap();
-            assert_eq!(write_plan(&target, PLAN, sent(1)), Err(outdated.clone()));
+            assert_eq!(
+                write_plan(&target, PLAN, Some(SOURCE), sent(1)),
+                Err(outdated.clone())
+            );
         }
         fs::remove_file(&compatibility).unwrap();
-        assert_eq!(write_plan(&target, PLAN, sent(1)), Err(outdated));
+        assert_eq!(
+            write_plan(&target, PLAN, Some(SOURCE), sent(1)),
+            Err(outdated)
+        );
         assert!(!safe_destination(&target, 1).unwrap().exists());
     }
 
@@ -1139,6 +1462,7 @@ mod tests {
             &package,
             3,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         let written = publish_event(
@@ -1217,6 +1541,7 @@ mod tests {
             &package,
             4,
             PRESENT_PLAN,
+            SOURCE,
             summary("Momus - Underworld"),
         );
         assert_eq!(
@@ -1236,6 +1561,7 @@ mod tests {
             &package,
             EVENT_SLOT,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         assert_eq!(refused.status, PublicationStatus::NativeWrite);
@@ -1307,6 +1633,7 @@ mod tests {
             &package,
             2,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         publish_event(
@@ -1366,6 +1693,7 @@ mod tests {
             [
                 ACTIVE_SLOT_FILE,
                 "slot-2.runplanner.json",
+                "slot-2.source.runplanner.json",
                 SLOT_OVERVIEW_FILE
             ]
         );
@@ -1409,6 +1737,7 @@ mod tests {
             &package,
             1,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         let previous_overview = fs::read(&overview_path).unwrap();
@@ -1423,6 +1752,7 @@ mod tests {
             EVENT_SLOT,
             SlotChange::Write {
                 plan: EVENT_PLAN.as_bytes(),
+                source: None,
                 entry: Box::new(event_entry()),
             },
         )
@@ -1461,7 +1791,8 @@ mod tests {
             [
                 ACTIVE_SLOT_FILE,
                 "slot-0.runplanner.json",
-                "slot-1.runplanner.json"
+                "slot-1.runplanner.json",
+                "slot-1.source.runplanner.json"
             ]
         );
     }
@@ -1545,6 +1876,7 @@ mod tests {
             &package,
             1,
             PRESENT_PLAN,
+            SOURCE,
             summary("Circe - Surface"),
         );
         publish_event(

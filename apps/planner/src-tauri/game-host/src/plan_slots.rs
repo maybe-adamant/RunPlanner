@@ -32,6 +32,32 @@ const PLAN_SLOT_FILES: [&str; PLAN_SLOT_COUNT as usize + 1] = [
     "slot-12.runplanner.json",
 ];
 
+/// The planner-owned source a plan slot was compiled from, which the module never reads.
+pub const SLOT_SOURCE_FORMAT: &str = "run-planner-slot-source";
+pub const SLOT_SOURCE_FORMAT_VERSION: u8 = 1;
+/// Bounded as an event's project file is.
+pub const MAX_SLOT_SOURCE_BYTES: usize = crate::event_feed::MAX_EVENT_PROJECT_BYTES;
+
+/// The planner's source file beside a sendable slot: `slot-N.source.runplanner.json`.
+pub fn slot_source_file_name(slot_number: u8) -> Result<String, String> {
+    slot_file_name(slot_number).map(|_| format!("slot-{slot_number}.source.runplanner.json"))
+}
+
+/// Whether bytes are a bounded slot source: an object of this format and version holding a
+/// project object. Its options and project are the planner's to decode.
+pub fn valid_slot_source(bytes: &[u8]) -> bool {
+    if bytes.len() > MAX_SLOT_SOURCE_BYTES {
+        return false;
+    }
+    let Ok(Value::Object(record)) = serde_json::from_slice::<Value>(bytes) else {
+        return false;
+    };
+    record.get("format").and_then(Value::as_str) == Some(SLOT_SOURCE_FORMAT)
+        && record.get("formatVersion").and_then(Value::as_u64)
+            == Some(u64::from(SLOT_SOURCE_FORMAT_VERSION))
+        && record.get("project").is_some_and(Value::is_object)
+}
+
 /// The plan slot the game module plays next, written by both the planner and the module.
 pub const ACTIVE_SLOT_FILE: &str = "active-slot.json";
 pub const MAX_ACTIVE_SLOT_BYTES: usize = 1024;
@@ -84,6 +110,8 @@ pub struct PlanSlotFacts {
     pub display_name: Option<String>,
     pub weapon_key: Option<String>,
     pub aspect_key: Option<String>,
+    /// A source file sits beside the slot, so the planner can rebuild it.
+    pub has_source: bool,
 }
 
 #[derive(Deserialize)]
@@ -179,6 +207,7 @@ fn slot_facts(slot: u8, state: PlanSlotState, modified_at_ms: Option<u64>) -> Pl
         display_name: None,
         weapon_key: None,
         aspect_key: None,
+        has_source: false,
     }
 }
 
@@ -307,6 +336,7 @@ pub fn read_slot(
                 aspect_key: identity
                     .starting_loadout
                     .and_then(|loadout| loadout.aspect_key),
+                has_source: false,
             }
         }
         None => unreadable,
@@ -363,14 +393,57 @@ pub fn inspect_all_slots(
             .collect(),
         Ok(Some(directory)) => slots
             .map(|slot| {
-                read_slot(
+                let mut facts = read_slot(
                     slot,
                     &directory.join(PLAN_SLOT_FILES[usize::from(slot)]),
                     installed,
-                )
+                );
+                facts.has_source = slot_source_file_name(slot).is_ok_and(|name| {
+                    fs::symlink_metadata(directory.join(name)).is_ok_and(|metadata| {
+                        metadata.is_file() && metadata.len() <= MAX_SLOT_SOURCE_BYTES as u64
+                    })
+                });
+                facts
             })
             .collect(),
     }
+}
+
+/// The stored source of a sendable slot: `None` when it has none, and an error when the file
+/// is linked, oversized or not a valid source.
+pub fn read_slot_source(
+    target: &ResolvedTarget,
+    slot_number: u8,
+) -> Result<Option<String>, String> {
+    let name = slot_source_file_name(slot_number)?;
+    let Some(directory) = module_config_dir(target)? else {
+        return Ok(None);
+    };
+    let path = directory.join(name);
+    let metadata = match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("could not inspect the slot source: {error}")),
+        Ok(metadata) => metadata,
+    };
+    if metadata.file_type().is_symlink()
+        || !metadata.is_file()
+        || metadata.len() > MAX_SLOT_SOURCE_BYTES as u64
+    {
+        return Err("The slot source is not a bounded regular file.".to_owned());
+    }
+    let mut bytes = Vec::new();
+    fs::File::open(&path)
+        .and_then(|file| {
+            file.take(MAX_SLOT_SOURCE_BYTES as u64 + 1)
+                .read_to_end(&mut bytes)
+        })
+        .map_err(|error| format!("could not read the slot source: {error}"))?;
+    if !valid_slot_source(&bytes) {
+        return Err("The slot source is not a valid source file.".to_owned());
+    }
+    String::from_utf8(bytes)
+        .map(Some)
+        .map_err(|_| "The slot source is not text.".to_owned())
 }
 
 #[cfg(test)]
@@ -443,6 +516,7 @@ mod tests {
                 display_name: Some("Surface Phial run".to_owned()),
                 weapon_key: Some("WeaponStaffSwing".to_owned()),
                 aspect_key: Some("BaseStaffAspect".to_owned()),
+                has_source: false,
             }
         );
         assert!(slots[0].modified_at_ms.is_some());

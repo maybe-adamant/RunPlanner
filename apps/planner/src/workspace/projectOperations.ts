@@ -24,6 +24,7 @@ import {
 import type { GamePlanPublisher, GamePlanSlotNumber } from '../persistence/gameModuleHost';
 import { describePublicationBlocker } from '../projections/gamePanel';
 import { projectGameSlotSummary } from '../projections/gameSlotSummary';
+import { encodeSlotSource } from '../persistence/slotSource';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -264,17 +265,27 @@ export function createProjectOperations(
         const savedWorkspace = options.store.getState().projectWorkspace;
         if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
         const fileName = selectProfileSession(options.store.getState()).fileName;
+        const savedProject = selectPresentProject(options.store.getState());
+        if (savedProject === undefined) throw new Error('No project is open');
+        const displayName = fileName === null ? undefined : planDisplayName(fileName);
         const plan = compileExecutionPlan({
           product: assembleExecutionProduct({
             assembly: savedWorkspace.assembly,
             catalog: options.catalog,
             internalRunModifiers,
           }),
-          ...(fileName === null ? {} : { displayName: planDisplayName(fileName) }),
+          ...(displayName === undefined ? {} : { displayName }),
+        });
+        // The saved document and the options it compiled with, so the slot can be rebuilt.
+        const source = encodeSlotSource({
+          ...(displayName === undefined ? {} : { displayName }),
+          internalRunModifiers,
+          projectJson: encodeProjectDocument(savedProject),
         });
         const publication = await options.gamePlanPublisher.publish(
           slotNumber,
           encodeExecutionPlan(plan),
+          source,
           projectGameSlotSummary(plan, options.catalog, new Date()),
         );
         if (publication.status === 'published') {

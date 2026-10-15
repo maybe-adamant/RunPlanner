@@ -55,6 +55,7 @@ export function gameModuleStatus(
       displayName: null,
       weaponKey: null,
       aspectKey: null,
+      hasSource: false,
     })),
     eventSlot: eventSlot(),
     activeSlot: { state: 'missing' },
@@ -101,7 +102,14 @@ export function createFakeGameModuleHost(
   },
   activation: GameActiveSlotSetting = { status: 'activated', message: 'Active.', blockers: [] },
 ) {
-  const published: { slotNumber: number; json: string; summary: GamePlanSlotSummary }[] = [];
+  const published: {
+    slotNumber: number;
+    json: string;
+    sourceJson: string;
+    summary: GamePlanSlotSummary;
+  }[] = [];
+  const rebuilt: typeof published = [];
+  const sources = new Map<number, string>();
   const host = {
     status: vi.fn<GameModuleHost['status']>(() => Promise.resolve(status)),
     openExternalPage: vi.fn<GameModuleHost['openExternalPage']>(() => Promise.resolve()),
@@ -127,9 +135,18 @@ export function createFakeGameModuleHost(
     ),
     remove: vi.fn<GameModuleHost['remove']>(() => Promise.resolve({ outcome: 'removed', status })),
     setActiveSlot: vi.fn<GameModuleHost['setActiveSlot']>(() => Promise.resolve(activation)),
-    publish: vi.fn<GameModuleHost['publish']>((slotNumber, json, summary) => {
-      published.push({ slotNumber, json, summary });
+    publish: vi.fn<GameModuleHost['publish']>((slotNumber, json, sourceJson, summary) => {
+      published.push({ slotNumber, json, sourceJson, summary });
+      sources.set(slotNumber, sourceJson);
       return Promise.resolve(publication);
+    }),
+    readSlotSource: vi.fn<GameModuleHost['readSlotSource']>((slotNumber) =>
+      Promise.resolve(sources.get(slotNumber) ?? null),
+    ),
+    rebuildSlot: vi.fn<GameModuleHost['rebuildSlot']>((slotNumber, json, sourceJson, summary) => {
+      rebuilt.push({ slotNumber, json, sourceJson, summary });
+      sources.set(slotNumber, sourceJson);
+      return Promise.resolve({ ...publication, activationProblem: null });
     }),
     createBugReport: vi.fn<GameModuleHost['createBugReport']>((defaultFileName) =>
       Promise.resolve({
@@ -141,7 +158,7 @@ export function createFakeGameModuleHost(
     ),
     revealBugReport: vi.fn<GameModuleHost['revealBugReport']>(() => Promise.resolve()),
   } satisfies GameModuleHost;
-  return { host, published };
+  return { host, published, rebuilt, sources };
 }
 
 /** One plan slot as the host reports it; empty unless overridden. */
@@ -160,6 +177,7 @@ export function planSlot(
     displayName: null,
     weaponKey: null,
     aspectKey: null,
+    hasSource: false,
     ...overrides,
   };
 }

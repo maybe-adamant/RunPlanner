@@ -1,3 +1,4 @@
+import { decodeSlotSource } from '@planner/persistence/slotSource';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -341,6 +342,13 @@ describe('project profile operations', () => {
       sentAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
     });
     expect(publication.summary.label).toMatch(/ - Underworld$/);
+    // The source beside the slot is the saved document and the options it compiled with.
+    const source = decodeSlotSource(publication.sourceJson);
+    expect(typeof source.internalRunModifiers).toBe('boolean');
+    expect(JSON.parse(source.projectJson)).toEqual(
+      JSON.parse(selectExplicitProfileBaselineJson(beforePublication)!),
+    );
+    expect(source.displayName).toBe(JSON.parse(publication.json).displayName);
     // Sending records only UI-session state; authored state and history are untouched.
     expect(application.store.getState().gameSendSession.lastSentSlot).toBe(3);
     expect(application.store.getState().editorSession).toBe(beforePublication.editorSession);

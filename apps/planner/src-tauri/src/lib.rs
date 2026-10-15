@@ -18,6 +18,8 @@ pub fn run() {
             game_module_commands::game_module_install_from_checkout,
             game_module_commands::game_module_remove,
             game_module_commands::game_plan_publish,
+            game_module_commands::game_plan_rebuild,
+            game_module_commands::game_slot_source_read,
             game_module_commands::game_active_slot_set,
             community_events::event_feed_refresh,
             community_events::event_project_download,
