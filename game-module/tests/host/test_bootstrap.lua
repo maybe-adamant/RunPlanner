@@ -10,14 +10,21 @@ local function bootstrap(failing)
     local bridge = { renderWindow = function() end, addMenuBar = function() end }
     local module = {
         data = { define = function() end },
-        ui = { tab = function(draw) registered.tab = draw end },
+        ui = {
+            tab = function(draw) registered.tab = draw end,
+            tabs = function(tabs) registered.tabs = tabs end,
+            header = function(draw) registered.header = draw end,
+        },
         overlays = {
             order = { module = 30 },
             createLine = function() end, createTable = function() end,
             onCommit = function() end, onInterval = function() end,
         },
         fallbackUi = { attachGuiOnce = function(register) register(bridge) end },
+        -- Like Lib, activation requires exactly one of ui.tab and ui.tabs.
         activate = function()
+            assert((registered.tab ~= nil) ~= (registered.tabs ~= nil),
+                "module.ui.tab or module.ui.tabs must be declared before module.activate")
             lu.assertEquals(registered.window, bridge.renderWindow)
             lu.assertEquals(registered.menu, bridge.addMenuBar)
             registered.activated = true
@@ -34,7 +41,7 @@ local function bootstrap(failing)
         nextOccurrence = function() end,
         inboxInspection = {}, activeSlot = {},
     }
-    local drawTab = function() end
+    local window = { header = function() end, tabs = { { id = "plan", label = "Plan", draw = function() end } } }
     local imports = {
         ["mods/host/data.lua"] = { buildStorage = function() return {} end },
         ["mods/host/build_identity.lua"] = { read = function(pluginRoot, pathApi)
@@ -51,12 +58,14 @@ local function bootstrap(failing)
             lu.assertIs(pathApi, registered.pathApi)
             return slotOverview
         end },
-        ["mods/presentation/status_ui.lua"] = { bind = function(inbox, inspect, activeSlot, overview)
+        ["mods/presentation/status_ui.lua"] = { attach = function(target, inbox, inspect, activeSlot, overview)
+            lu.assertIs(target, module)
             lu.assertIs(inbox, runtime.inboxInspection)
             lu.assertIs(inspect, runtime.sessionInspection)
             lu.assertIs(activeSlot, runtime.activeSlot)
             lu.assertIs(overview, slotOverview)
-            return { drawTab = drawTab }
+            target.ui.header(window.header)
+            target.ui.tabs(window.tabs)
         end },
         ["mods/presentation/highlights/highlights.lua"] = { create = function(nextOccurrence)
             lu.assertIs(nextOccurrence, runtime.nextOccurrence)
@@ -106,7 +115,7 @@ local function bootstrap(failing)
         },
     }, { __index = _G })
     assert(loadfile("src/main.lua", "t", environment))()
-    registered.drawTab = drawTab
+    registered.statusWindow = window
     return registered
 end
 
@@ -115,7 +124,9 @@ function TestHostBootstrap.testInspectorAttachesStandaloneGuiBeforeActivation()
     lu.assertTrue(registered.activated)
     lu.assertTrue(registered.executionAttached)
     lu.assertIs(registered.highlights, registered.expectedHighlights)
-    lu.assertIs(registered.tab, registered.drawTab)
+    lu.assertIs(registered.header, registered.statusWindow.header)
+    lu.assertIs(registered.tabs, registered.statusWindow.tabs)
+    lu.assertNil(registered.tab)
     lu.assertTrue(registered.guide)
     lu.assertTrue(registered.victory)
     lu.assertEquals(registered.logs, {})
@@ -131,7 +142,10 @@ function TestHostBootstrap.testFailingPresentationSurfacesLeaveExecutionAttached
     lu.assertTrue(registered.activated)
     lu.assertTrue(registered.executionAttached)
     lu.assertNil(registered.highlights)
-    lu.assertNil(registered.tab)
+    -- The failed status window leaves an empty tab, so activation still succeeds.
+    lu.assertEquals(type(registered.tab), "function")
+    lu.assertNil(registered.tabs)
+    lu.assertNil(registered.header)
     lu.assertNil(registered.guide)
     lu.assertNil(registered.victory)
     lu.assertEquals(#registered.logs, 5)

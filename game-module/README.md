@@ -49,8 +49,8 @@ room; highlights mark the next planned exit or choice but never select it.
 After a victory, the victory screen shows the plan's name and `Complete`, or
 the room where the run went out of sync.
 
-With **Debug Mode** on, a **Diagnostics** tab shows the raw slot and run
-records.
+**Diagnostics** shows the raw slot and run records once **Debug Mode** is on
+in the **Advanced** tab.
 
 ## Feedback
 

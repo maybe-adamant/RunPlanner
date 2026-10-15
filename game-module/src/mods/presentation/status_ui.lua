@@ -28,6 +28,7 @@ local TONES = {
 }
 local STALE = "Made for another Run Planner version - resend from the app or update the mod"
 local NO_OVERVIEW = "No overview - Load to inspect"
+local DEBUG_HINT = "Turn on Debug Mode (Advanced tab) to see diagnostics."
 local LOAD_BUTTON = { id = "run_planner_reload" }
 local GUIDE_CHECKBOX = { id = "show_room_guide", label = "Show room guide" }
 local HIGHLIGHT_CHECKBOX = { id = "highlight_planned_choices", label = "Highlight planned choices" }
@@ -397,7 +398,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         end
     end
 
-    -- A failing tab body is logged once and its Begin still gets its End.
+    -- A failing tab body is logged once.
     local reported = {}
     local function guarded(name, body, ...)
         local ok, errorValue = pcall(body, ...)
@@ -409,36 +410,74 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         end
     end
 
+    -- The header starts each frame: it reads the session once and, after a
+    -- pause, the slot view. The tab drawn after it reuses that frame.
     local bindDraw = asciiDraw()
-    local function draw(_, ctx)
-        local drawApi = bindDraw(ctx.draw)
-        local imgui = drawApi.imgui
+    local frame = { snapshot = nil, view = nil }
+    local function beginFrame(ctx)
         assert(ctx.data and type(ctx.data.get) == "function", "status UI data dependency is required")
         local now = clock()
         if lastDrawAt == nil or now < lastDrawAt or now - lastDrawAt > ui.REOPEN_GAP_SECONDS then refreshView() end
         lastDrawAt = now
-        local snapshot = inspectSession()
-        local view = sessionView(snapshot)
-        local header = view.header
-        drawApi.widgets.text(header.text, TONES[header.tone])
-        if header.reason then imgui.TextWrapped(header.reason) end
-        if not imgui.BeginTabBar("run_planner_inspector") then return end
-        if imgui.BeginTabItem("Plan") then
-            guarded("plan tab", drawPlanTab, ctx, drawApi)
-            imgui.EndTabItem()
-        end
-        if imgui.BeginTabItem("Current Run") then
-            guarded("current run tab", drawRunTab, imgui, snapshot, view)
-            imgui.EndTabItem()
-        end
-        local debugMode = ctx.data.get("DebugMode")
-        if debugMode ~= nil and debugMode:read() == true and imgui.BeginTabItem("Diagnostics") then
-            guarded("diagnostics tab", drawDiagnosticsTab, imgui, snapshot)
-            imgui.EndTabItem()
-        end
-        imgui.EndTabBar()
+        frame.snapshot = inspectSession()
+        frame.view = sessionView(frame.snapshot)
+        return frame
     end
-    return { drawTab = draw }
+
+    local function drawHeader(_, ctx)
+        local current = beginFrame(ctx)
+        local drawApi = bindDraw(ctx.draw)
+        local header = current.view.header
+        drawApi.widgets.text(header.text, TONES[header.tone])
+        if header.reason then drawApi.imgui.TextWrapped(header.reason) end
+    end
+
+    local function tab(name, body)
+        return function(_, ctx)
+            local current = frame.snapshot ~= nil and frame or beginFrame(ctx)
+            guarded(name, body, ctx, bindDraw(ctx.draw), current)
+        end
+    end
+
+    local function debugMode(ctx)
+        local field = ctx.data.get("DebugMode")
+        return field ~= nil and field:read() == true
+    end
+
+    return {
+        header = drawHeader,
+        tabs = {
+            { id = "plan", label = "Plan", draw = tab("plan tab", function(ctx, drawApi)
+                drawPlanTab(ctx, drawApi)
+            end) },
+            { id = "current_run", label = "Current Run",
+                draw = tab("current run tab", function(_, drawApi, current)
+                    drawRunTab(drawApi.imgui, current.snapshot, current.view)
+                end),
+                state = function()
+                    local snapshot = frame.snapshot
+                    local stopped = snapshot ~= nil
+                        and (snapshot.state == "desynchronized" or snapshot.state == "faulted")
+                    return stopped and "attention" or nil
+                end },
+            { id = "diagnostics", label = "Diagnostics",
+                draw = tab("diagnostics tab", function(ctx, drawApi, current)
+                    if not debugMode(ctx) then
+                        drawApi.imgui.TextWrapped(DEBUG_HINT)
+                        return
+                    end
+                    drawDiagnosticsTab(drawApi.imgui, current.snapshot)
+                end),
+                state = function(_, ctx) return not debugMode(ctx) and "muted" or nil end },
+        },
+    }
+end
+
+-- Declares the window on the module: the session header and the three tabs.
+function ui.attach(module, ...)
+    local window = ui.bind(...)
+    module.ui.header(window.header)
+    module.ui.tabs(window.tabs)
 end
 
 return ui

@@ -48,11 +48,13 @@ local function initialize()
     })
     if not module then return end
     module.data.define(data.buildStorage())
-    presentationSurface("status window", function()
-        local ui = import("mods/presentation/status_ui.lua").bind(runtime.inboxInspection,
+    local statusWindow = presentationSurface("status window", function()
+        import("mods/presentation/status_ui.lua").attach(module, runtime.inboxInspection,
             runtime.sessionInspection, runtime.activeSlot, slotOverview)
-        module.ui.tab(ui.drawTab)
+        return true
     end)
+    -- Lib activates only with a declared tab, so a failed window leaves an empty one.
+    if not statusWindow then module.ui.tab(function() end) end
     presentationSurface("room guide", function()
         import("mods/presentation/room_guide.lua").attach(module, runtime.roomGuideInspection)
     end)

@@ -1520,13 +1520,14 @@ reads the active slot from `active-slot.json` (see
 [Shared configuration folder](#shared-configuration-folder)), displays the
 selected slot's bounded status, and loads and freezes that one slot only at the
 next new-run admission. Changing the active slot cannot
-hot-swap a live session. The module's window, drawn only as ModpackLib's
-standalone fallback window, keeps one status header above its tabs. **Plan**
+hot-swap a live session. The module's window uses ModpackLib's module frame:
+its status header sits above one tab bar of the module's tabs and Lib's
+**Advanced** tab. **Plan**
 picks the next run's slot and describes it from the slot overview. **Current Run** shows the frozen
 session's room progress, counted from a Practice start's room, and words its
 first mismatch from the record's checkpoint and expected and observed values;
-an unrecognized record is shown only as readable fields. **Diagnostics**,
-present only in the module's Debug Mode, shows the raw slot status, identities
+an unrecognized record is shown only as readable fields. **Diagnostics** is always listed but
+shows its contents only in the module's Debug Mode: the raw slot status, identities
 and records. The window draws ASCII only, because its ImGui font has no other
 glyphs: names from the overview, the plan or the game are shown with accented
 Latin letters folded to their base letters and common punctuation folded to
