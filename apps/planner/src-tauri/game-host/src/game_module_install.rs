@@ -52,8 +52,9 @@ pub struct InstalledModule {
     pub source: Option<PackageSource>,
     pub matches_bundled: bool,
     pub modified: bool,
-    /// From the installed compatibility file; absent when unreadable or unstamped.
-    pub build_id: Option<String>,
+    /// The plan header the installed module admits; absent when its file is missing or
+    /// malformed.
+    pub compatibility: Option<ExecutionCompatibility>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -119,6 +120,8 @@ pub enum InstallAction {
 pub struct InstallFacts {
     pub action: InstallAction,
     pub consent_required: bool,
+    /// The installed module's manifest version is older than this planner's module.
+    pub update_available: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -164,7 +167,7 @@ pub struct TargetInspection {
 #[serde(rename_all = "camelCase")]
 pub struct GameModuleStatus {
     pub bundled_version: String,
-    pub bundled_build_id: String,
+    pub bundled_compatibility: ExecutionCompatibility,
     pub development_install_available: bool,
     pub target: Option<GameTargetFacts>,
     pub target_problem: Option<String>,
@@ -321,10 +324,10 @@ fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledMo
             source: None,
             matches_bundled: false,
             modified: false,
-            build_id: None,
+            compatibility: None,
         };
     };
-    let build_id = read_compatibility(module).map(|compatibility| compatibility.build_id);
+    let compatibility = read_compatibility(module);
     let hashes = installed_hashes(module);
     let matches_bundled = hashes.as_ref() == Some(&package.hashes());
     match read_record(module) {
@@ -334,7 +337,7 @@ fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledMo
             version: Some(record.version),
             source: Some(record.source),
             matches_bundled,
-            build_id,
+            compatibility: compatibility.clone(),
         },
         None => InstalledModule {
             state: ModuleState::Unrecognized,
@@ -346,7 +349,7 @@ fn inspect_module(module: Option<&Path>, package: &ModulePackage) -> InstalledMo
             source: None,
             matches_bundled,
             modified: false,
-            build_id,
+            compatibility,
         },
     }
 }
@@ -520,11 +523,28 @@ fn consent_required(module: &InstalledModule, r2modman: &R2modmanFacts) -> bool 
     module.state != ModuleState::Absent && !planner_owns(module.state, r2modman.state)
 }
 
+// Current means this planner's exact files, unmodified, from the same source.
 fn is_current(module: &InstalledModule, package: &ModulePackage) -> bool {
     module.state == ModuleState::PlannerInstalled
         && module.matches_bundled
         && !module.modified
         && module.source == Some(package.source)
+}
+
+// An installed module older than this planner's, by manifest version; an unreadable version
+// counts as older, and a newer one is never offered a downgrade.
+fn update_available(module: &InstalledModule, package: &ModulePackage) -> bool {
+    if module.state == ModuleState::Absent {
+        return false;
+    }
+    match (
+        module.version.as_deref().and_then(parse_version),
+        parse_version(&package.version),
+    ) {
+        (Some(installed), Some(bundled)) => installed < bundled,
+        (None, _) => true,
+        (Some(_), None) => false,
+    }
 }
 
 fn profile_module(profile: &Path) -> ProfileModule {
@@ -608,9 +628,10 @@ pub fn inspect(
             InstallAction::Update
         },
         consent_required: consent_required(&module, &r2modman),
+        update_available: update_available(&module, package),
     };
     let removable = planner_owns(module.state, r2modman.state);
-    let mut plan_slots = inspect_all_slots(target, module.build_id.as_deref());
+    let mut plan_slots = inspect_all_slots(target, module.compatibility.as_ref());
     let event_slot = describe_event_slot(target, plan_slots.remove(0));
     Ok(TargetInspection {
         module,
@@ -630,18 +651,16 @@ pub fn inspect(
     })
 }
 
-fn module_publishable(module: &InstalledModule) -> bool {
-    module.matches_bundled
-        || (cfg!(debug_assertions)
-            && module.state == ModuleState::PlannerInstalled
-            && module.source == Some(PackageSource::Checkout)
-            && !module.modified)
+// A module admits this planner's plans when it names the same format, catalog and schema pair.
+fn module_publishable(module: &InstalledModule, package: &ModulePackage) -> bool {
+    module.compatibility.as_ref() == Some(&package.compatibility)
 }
 
 fn inspection_blockers(
     inspection: &TargetInspection,
-    bundled_version: &str,
+    package: &ModulePackage,
 ) -> Vec<PublicationBlocker> {
+    let bundled_version = package.version.as_str();
     let mut blockers = Vec::new();
     let module = &inspection.module;
     if module.state == ModuleState::Absent {
@@ -650,7 +669,7 @@ fn inspection_blockers(
             found: None,
             required: Some(bundled_version.to_owned()),
         });
-    } else if !module_publishable(module) {
+    } else if !module_publishable(module, package) {
         blockers.push(PublicationBlocker {
             code: BlockerCode::ModuleMismatch,
             found: module.version.clone(),
@@ -682,7 +701,7 @@ pub fn status(
 ) -> (GameModuleStatus, Option<ResolvedTarget>) {
     let mut status = GameModuleStatus {
         bundled_version: package.version.clone(),
-        bundled_build_id: package.build_id.clone(),
+        bundled_compatibility: package.compatibility.clone(),
         development_install_available: cfg!(debug_assertions),
         target: None,
         target_problem: None,
@@ -717,7 +736,7 @@ pub fn status(
         .and_then(|target| inspect(&target, package).map(|inspection| (target, inspection)));
     match resolved {
         Ok((target, inspection)) => {
-            status.publication_blockers = inspection_blockers(&inspection, &package.version);
+            status.publication_blockers = inspection_blockers(&inspection, package);
             status.inspection = Some(inspection);
             (status, Some(target))
         }
@@ -950,22 +969,28 @@ pub mod test_support {
     use crate::game_module_assembly::AssembledFile;
     use crate::game_target::{TargetKind, RETURN_OF_MODDING_DIRECTORY};
 
+    pub const TEST_COMPATIBILITY: &str = r#"{"format":"run-planner-execution","catalogVersion":"test-catalog","schemaVersion":96,"schemaRevision":0}"#;
+
     pub fn package(version: &str, main: &str) -> ModulePackage {
         package_from(version, main, PackageSource::Bundled)
     }
 
     pub fn package_from(version: &str, main: &str, source: PackageSource) -> ModulePackage {
+        package_admitting(version, main, source, TEST_COMPATIBILITY)
+    }
+
+    /// A package whose module admits the given compatibility file's plan header.
+    pub fn package_admitting(
+        version: &str,
+        main: &str,
+        source: PackageSource,
+        compatibility: &str,
+    ) -> ModulePackage {
         let manifest = format!(
             r#"{{"namespace":"adamantRunPlanner","name":"Run_Planner","version_number":"{version}","dependencies":["Hell2Modding-Hell2Modding-1.0.78","SGG_Modding-ModUtil-4.0.1","adamant-ModpackLib-4.2.0"],"FullName":"adamantRunPlanner-Run_Planner"}}"#
         );
         let files = [
-            (
-                COMPATIBILITY_FILE,
-                format!(
-                    r#"{{"format":"run-planner-execution","catalogVersion":"test-catalog","buildId":"{}"}}"#,
-                    sha256_hex(main.as_bytes())
-                ),
-            ),
+            (COMPATIBILITY_FILE, compatibility.to_owned()),
             ("main.lua", main.to_owned()),
             ("manifest.json", manifest),
             ("mods/runtime.lua", "return {}".to_owned()),
@@ -1045,6 +1070,55 @@ mod tests {
     }
 
     #[test]
+    fn a_checkout_of_the_same_version_with_other_files_installs_again() {
+        let temporary = TemporaryDirectory::new("checkout-reinstall");
+        let target = target(&temporary.0, TargetKind::Manual);
+        let first = package_from("1.2.0", "return 0", PackageSource::Checkout);
+        let backup = temporary.0.join("backup");
+        assert_eq!(
+            install(&target, &first, &backup, false, &mut NativeSwap).unwrap(),
+            InstallOutcome::Installed
+        );
+        assert_eq!(
+            install(&target, &first, &backup, false, &mut NativeSwap).unwrap(),
+            InstallOutcome::Unchanged
+        );
+        let edited = package_from("1.2.0", "return 1", PackageSource::Checkout);
+        let inspection = inspect(&target, &edited).unwrap();
+        assert_eq!(inspection.install.action, InstallAction::Update);
+        assert!(!inspection.install.update_available);
+        assert_eq!(
+            install(&target, &edited, &backup, false, &mut NativeSwap).unwrap(),
+            InstallOutcome::Installed
+        );
+        assert_eq!(
+            inspect(&target, &edited).unwrap().install.action,
+            InstallAction::Current
+        );
+    }
+
+    #[test]
+    fn an_update_is_offered_only_to_an_older_module_version() {
+        for (installed, offered) in [("1.1.9", true), ("1.2.0", false), ("1.10.0", false)] {
+            let temporary = TemporaryDirectory::new("update-offer");
+            let target = target(&temporary.0, TargetKind::Manual);
+            install(
+                &target,
+                &package(installed, "return 0"),
+                &temporary.0.join("backup"),
+                false,
+                &mut NativeSwap,
+            )
+            .unwrap();
+            let facts = inspect(&target, &package("1.2.0", "return 1"))
+                .unwrap()
+                .install;
+            assert_eq!(facts.update_available, offered, "{installed}");
+            assert_eq!(facts.action, InstallAction::Update, "{installed}");
+        }
+    }
+
+    #[test]
     fn modpack_lib_versions_are_reported_against_the_manifest_requirement_and_never_modified() {
         let package = package("1.2.0", "return 1");
         let cases = [
@@ -1071,7 +1145,7 @@ mod tests {
             assert_eq!(inspection.modpack_lib.state, expected, "{found:?}");
             assert_eq!(inspection.modpack_lib.required, "4.2.0");
             assert_eq!(inspection.modpack_lib.found.as_deref(), found);
-            let blockers = inspection_blockers(&inspection, &package.version);
+            let blockers = inspection_blockers(&inspection, &package);
             assert_eq!(
                 blockers
                     .iter()

@@ -201,6 +201,28 @@ describe('Game panel projection', () => {
     expect(checkout.steps).toEqual([]);
   });
 
+  it('offers an update for another module version even while it admits this planner’s plans', () => {
+    const older = moduleOf({
+      inspection: {
+        module: { version: '0.0.9' },
+        install: { action: 'update', consentRequired: false, updateAvailable: true },
+      },
+    });
+    expect(older.state).toBe('updateAvailable');
+    expect(older.steps.map((step) => step.text)).toEqual(['Update the game module']);
+  });
+
+  it('offers to reinstall a module modified since install at the same version', () => {
+    const modified = moduleOf({
+      inspection: {
+        module: { modified: true },
+        install: { action: 'update', consentRequired: false, updateAvailable: false },
+      },
+    });
+    expect(modified.state).toBe('updateAvailable');
+    expect(modified.steps.map((step) => step.text)).toEqual(['Update the game module']);
+  });
+
   it('uses the unreadable mod list wording distinctly from r2modman management', () => {
     const overrides: StatusOverrides = {
       inspection: {
@@ -537,13 +559,12 @@ describe('Game panel projection', () => {
     expect(rows?.[2]?.columns?.aspect).toMatch(/^None \(/);
   });
 
-  it('asks for a slot sent by another module build to be sent again', () => {
+  it('asks for an outdated slot to be sent again', () => {
     const status = gameModuleStatus({
       inspection: {
         planSlots: planSlots(
           planSlot(2, {
             state: 'stale',
-            buildId: 'another-build',
             modifiedAtMs: 1,
             routeKey: 'Underworld',
             biomeKeys: ['F'],
@@ -558,7 +579,7 @@ describe('Game panel projection', () => {
       slot: 2,
       state: 'stale',
       columns: { route: 'Underworld', endsAt: 'Erebus', plan: null },
-      summary: 'Sent by another build — send again',
+      summary: 'Outdated — send again',
       marker: null,
       action: { label: 'Replace', confirm: true },
     });
@@ -754,7 +775,7 @@ describe('Game panel projection', () => {
     expect(nowActive.description).toMatch(/; now active\.$/);
   });
 
-  it('offers every playable slot as the active plan and lists other builds’ plans disabled', () => {
+  it('offers every playable slot as the active plan and lists outdated plans disabled', () => {
     const present = {
       state: 'present',
       routeKey: 'Underworld',
@@ -787,8 +808,8 @@ describe('Game panel projection', () => {
           label: `Slot 2 (Staff - ${underworld})`,
           intent: { kind: 'setActiveSlot', slot: 2 },
         },
-        // A plan sent for another module build is listed with why it cannot be chosen.
-        { slot: 4, label: 'Slot 4 (another build)', intent: null },
+        // An outdated plan is listed with why it cannot be chosen.
+        { slot: 4, label: 'Slot 4 (outdated)', intent: null },
         {
           slot: 5,
           label: `Slot 5 (Circe - ${underworld})`,
@@ -809,7 +830,7 @@ describe('Game panel projection', () => {
     expect(choice({ state: 'present', slot: 3 }).options.map((option) => option.label)).toEqual([
       `Slot 2 (Staff - ${underworld})`,
       'Slot 3 (unreadable)',
-      'Slot 4 (another build)',
+      'Slot 4 (outdated)',
       `Slot 5 (Circe - ${underworld})`,
     ]);
     expect(choice({ state: 'present', slot: 0 }).options[0]).toEqual({
@@ -857,12 +878,12 @@ describe('Game panel projection', () => {
     expect(projectEventPlaysNext(status({ ...event, state: 'stale' }))).toBe(false);
     expect(projectEventPlaysNext(status(eventSlot()))).toBe(false);
     expect(projectEventPlaysNext(null)).toBe(false);
-    // Listed disabled while it holds another build's plan, and absent while empty.
+    // Listed disabled while it holds an outdated plan, and absent while empty.
     const elsewhere = gameModuleStatus({
       inspection: { eventSlot: { ...event, state: 'stale' }, activeSlot: { state: 'missing' } },
     });
     expect(projectNextRun(elsewhere, catalog).options).toEqual([
-      { slot: 0, label: 'Event (another build)', intent: null },
+      { slot: 0, label: 'Event (outdated)', intent: null },
       { slot: 1, label: 'Slot 1 (empty)', intent: null },
     ]);
   });
@@ -940,7 +961,7 @@ describe('Game panel projection', () => {
     });
     expect(plans(eventSlot({ state: 'stale', routeKey: 'Surface' }))?.event).toMatchObject({
       columns: expect.anything(),
-      summary: 'Made for another game module build',
+      summary: 'Outdated',
     });
     expect(plans(eventSlot({ state: 'unreadable' }))?.event?.summary).toBe('Unreadable');
   });

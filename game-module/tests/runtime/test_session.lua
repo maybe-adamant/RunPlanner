@@ -53,6 +53,8 @@ local function fingerprintBody(plan)
     return {
         format = plan.format,
         catalogVersion = plan.catalogVersion,
+        schemaVersion = plan.schemaVersion,
+        schemaRevision = plan.schemaRevision,
         projectId = plan.projectId,
         routeKey = plan.routeKey,
         startingLoadout = plan.startingLoadout,

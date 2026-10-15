@@ -12,8 +12,6 @@ pub const INSTALL_RECORD_FILE: &str = "run-planner-install.json";
 pub const COMPATIBILITY_FILE: &str = "execution-compatibility.json";
 const MANIFEST_TEMPLATE_FILE: &str = "manifest.template.json";
 const PAYLOAD_DIRECTORY: &str = "src";
-// Draw-only payload: shipped, but outside the build identity.
-pub const PRESENTATION_DIRECTORY: &str = "mods/presentation/";
 const OVERRIDDEN_MODULE_PATH: &str = "mods/room/timeline/acquisitions/traits/row_options.lua";
 pub const DEVELOPMENT_MODULE_FILE: &str = "variants/dev/row_options.lua";
 // r2modman flattens a Thunderstore package's root files and its `plugins/`
@@ -58,19 +56,15 @@ struct StampedManifest<'a> {
     full_name: &'a str,
 }
 
-#[derive(Deserialize)]
+/// The packaged `execution-compatibility.json`: the plan header the module admits, its
+/// format, catalog and the planner's authored schema pair.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-struct CheckedInCompatibility {
-    format: String,
-    catalog_version: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct StampedCompatibility<'a> {
-    format: &'a str,
-    catalog_version: &'a str,
-    build_id: &'a str,
+pub struct ExecutionCompatibility {
+    pub format: String,
+    pub catalog_version: String,
+    pub schema_version: u32,
+    pub schema_revision: u32,
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> String {
@@ -128,40 +122,10 @@ fn stamped_manifest(module_dir: &Path, version: &str) -> Result<Vec<u8>, String>
     Ok(manifest)
 }
 
-/// The module build identity: SHA-256 over the sorted `path NUL sha256 LF` lines of the
-/// checked-in `src/` payload outside the presentation directory.
-fn payload_build_id(payload: &BTreeMap<String, Vec<u8>>) -> String {
-    let mut lines = Vec::new();
-    for (path, bytes) in payload
-        .iter()
-        .filter(|(path, _)| !path.starts_with(PRESENTATION_DIRECTORY))
-    {
-        lines.extend_from_slice(path.as_bytes());
-        lines.push(0);
-        lines.extend_from_slice(sha256_hex(bytes).as_bytes());
-        lines.push(b'\n');
-    }
-    sha256_hex(&lines)
-}
-
-fn stamped_compatibility(checked_in: &[u8], build_id: &str) -> Result<Vec<u8>, String> {
-    let value: serde_json::Value = serde_json::from_slice(checked_in)
-        .map_err(|error| format!("{COMPATIBILITY_FILE} is malformed: {error}"))?;
-    if value.get("buildId").is_some() {
-        return Err(format!(
-            "{COMPATIBILITY_FILE} must not carry a buildId; assembly stamps it"
-        ));
-    }
-    let compatibility: CheckedInCompatibility = serde_json::from_value(value)
-        .map_err(|error| format!("{COMPATIBILITY_FILE} is malformed: {error}"))?;
-    let mut stamped = serde_json::to_vec_pretty(&StampedCompatibility {
-        format: &compatibility.format,
-        catalog_version: &compatibility.catalog_version,
-        build_id,
-    })
-    .map_err(|error| format!("could not encode {COMPATIBILITY_FILE}: {error}"))?;
-    stamped.push(b'\n');
-    Ok(stamped)
+fn check_compatibility(checked_in: &[u8]) -> Result<(), String> {
+    serde_json::from_slice::<ExecutionCompatibility>(checked_in)
+        .map(|_| ())
+        .map_err(|error| format!("{COMPATIBILITY_FILE} is malformed: {error}"))
 }
 
 fn collect_payload(
@@ -242,11 +206,9 @@ pub fn assemble(
         ))?;
         *module = read(&development_module)?;
     }
-    let build_id = payload_build_id(&payload);
-    let compatibility = payload.get_mut(COMPATIBILITY_FILE).ok_or(format!(
+    check_compatibility(payload.get(COMPATIBILITY_FILE).ok_or(format!(
         "the game module payload has no {COMPATIBILITY_FILE}"
-    ))?;
-    *compatibility = stamped_compatibility(compatibility, &build_id)?;
+    ))?)?;
     for (path, bytes) in payload {
         if files.insert(path.clone(), bytes).is_some() {
             return Err(format!("payload {path} collides with a package file"));

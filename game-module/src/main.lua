@@ -12,8 +12,8 @@ modutil = mods["SGG_Modding-ModUtil"]
 reload = mods["SGG_Modding-ReLoad"]
 lib = mods["adamant-ModpackLib"]
 
--- Presentation is outside the build identity, so a surface that fails to
--- load or attach is logged and skipped; execution attaches regardless.
+-- A presentation surface that fails to load or attach is logged and skipped;
+-- execution attaches regardless.
 local function presentationSurface(name, build)
     local ok, value = pcall(build)
     if ok then return value end
@@ -26,14 +26,13 @@ end
 local function initialize()
     import_as_fallback(rom.game)
     local data = import("mods/host/data.lua")
-    local buildId = import("mods/host/build_identity.lua").read(_PLUGIN.plugins_mod_folder_path, rom.path)
-    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version,
-        buildId)
+    local runtime = import("mods/runtime/composition.lua").bind(_PLUGIN.config_mod_folder_path, _PLUGIN.version)
+    local protocol = import("mods/protocol/decoder.lua")
     -- The only execution file that imports mods/presentation: presentation receives
     -- read-only views plus the status window's slot-picker capabilities.
     local slotOverview = presentationSurface("slot overview", function()
         return import("mods/presentation/slot_overview.lua").create(_PLUGIN.config_mod_folder_path, rom.path,
-            buildId)
+            protocol.matchesVersion)
     end)
     local highlights = presentationSurface("highlights", function()
         return import("mods/presentation/highlights/highlights.lua").create(runtime.nextOccurrence)

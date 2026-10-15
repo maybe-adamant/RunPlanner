@@ -41,7 +41,7 @@ export function gameModuleStatus(
     },
     missingDependencies: [],
     coordinator: { present: false, managed: false },
-    install: { action: 'current', consentRequired: false },
+    install: { action: 'current', consentRequired: false, updateAvailable: false },
     removable: true,
     strandedInstall: null,
     planSlots: GAME_PLAN_SLOT_NUMBERS.map((slot) => ({
@@ -77,7 +77,6 @@ export function gameModuleStatus(
         ) as unknown as GameTargetInspection);
   return {
     bundledVersion: '0.1.0',
-    bundledBuildId: 'test-build',
     developmentInstallAvailable: false,
     target: {
       path: '/profiles/h2-dev',

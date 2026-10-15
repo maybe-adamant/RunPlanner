@@ -1,6 +1,6 @@
 # Status window live acceptance
 
-Requires a current planner and a matching installed game-module build, with
+Requires a current planner and an installed game module of the same schema pair, with
 several slots sent (at least one named plan and one Practice start) and one
 slot never sent. Open the **Run Planner** window from the ReturnOfModding menu
 bar. Automated tests are not live verification; the owner confirms or waives
@@ -24,9 +24,9 @@ each check.
       window: the details follow the new plan without pressing anything. Send
       to an empty slot and reopen: it changes from "Nothing sent" to the
       plan's details.
-- [ ] Install an older module build (or send from another planner build) so a
-      slot is stale: the picker marks it `(outdated)` and its Status reads the
-      stale-version note. Starting a run
+- [ ] Install a module of another schema pair (or send from a planner of another
+      pair) so a slot is outdated: the picker marks it `(outdated)` and its Status
+      reads the stale-version note. Starting a run
       then shows `Plan not used` with the update-or-resend reason.
 - [ ] Before a run the header shows `No run` and **Current Run** says
       `No plan is running.` and names the next run's slot.
@@ -48,7 +48,7 @@ each check.
       `Resumed after a reload; this run isn't steered.`
 - [ ] The window shows the session header above one tab bar, **Plan |
       Current Run | Diagnostics | Advanced**. **Diagnostics** is greyed and
-      points to **Debug Mode** on **Advanced** until it is ticked, then shows the slot file state, module build, catalog, project, fingerprint,
+      points to **Debug Mode** on **Advanced** until it is ticked, then shows the slot file state, schema pair, catalog, project, fingerprint,
       any slot error and the raw expected and observed records.
 - [ ] Untick **Enabled** during a planned run: the room guide and planned-choice
       markers disappear, the log shows `session abandoned: module disabled`,

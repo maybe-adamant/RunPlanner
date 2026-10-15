@@ -21,6 +21,9 @@ struct EventEntry {
     project_url: String,
     project_sha256: String,
     project_schema_version: u32,
+    // Absent means 0; emitted only when not 0, since earlier planners refuse unknown fields.
+    #[serde(default)]
+    project_schema_revision: u32,
 }
 
 /// An event's metadata, as validated from its feed entry.
@@ -36,8 +39,9 @@ pub struct CommunityEvent {
     pub project_url: String,
     /// Lower-case hex SHA-256 of the project file at `project_url`.
     pub project_sha256: String,
-    /// The authored project schema the project file is saved in.
+    /// The authored project schema pair the project file is saved in.
     pub project_schema_version: u32,
+    pub project_schema_revision: u32,
 }
 
 /// Lower-case letters, digits and single inner hyphens, such as "2026-w42-staff".
@@ -234,6 +238,7 @@ pub fn decode_event(bytes: &[u8]) -> Result<CommunityEvent, String> {
         project_url: entry.project_url,
         project_sha256: entry.project_sha256,
         project_schema_version: entry.project_schema_version,
+        project_schema_revision: entry.project_schema_revision,
     };
     event.validate()?;
     Ok(event)
@@ -270,7 +275,18 @@ mod tests {
                 project_url: "https://example.org/e.runplanner.json".to_owned(),
                 project_sha256: PROJECT_HASH.to_owned(),
                 project_schema_version: 96,
+                project_schema_revision: 0,
             })
+        );
+        let revised = event_entry().replace(
+            r#""projectSchemaVersion":96"#,
+            r#""projectSchemaVersion":96,"projectSchemaRevision":2"#,
+        );
+        assert_eq!(
+            decode_event(revised.as_bytes())
+                .unwrap()
+                .project_schema_revision,
+            2
         );
         let with_rules = event_entry().replace(r#""startsAt""#, r#""rules":"Fear 8","startsAt""#);
         assert_eq!(
@@ -322,6 +338,10 @@ mod tests {
             (
                 r#""projectSchemaVersion":96"#,
                 r#""projectSchemaVersion":"96""#,
+            ),
+            (
+                r#""projectSchemaVersion":96"#,
+                r#""projectSchemaVersion":96,"projectSchemaRevision":-1"#,
             ),
         ] {
             let changed = base.replace(from, to);

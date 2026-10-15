@@ -5,6 +5,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
+use crate::game_module_package::ExecutionCompatibility;
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 
 /// Plan slots live under the module's own config folder name.
@@ -59,20 +60,22 @@ pub fn any_slot_file_name(slot_number: u8) -> Result<&'static str, String> {
 pub enum PlanSlotState {
     Empty,
     Present,
-    /// A readable plan written for another module build, or before slots named one.
+    /// A readable plan made for another catalog or schema pair than the installed module
+    /// admits, or written by an earlier planner.
     Stale,
     Unreadable,
 }
 
-/// One plan slot as found on disk, identified by its envelope and execution-plan wire fields.
+/// One plan slot as found on disk, identified by its execution-plan wire fields.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanSlotFacts {
     pub slot: u8,
     pub state: PlanSlotState,
     pub modified_at_ms: Option<u64>,
-    /// The module build the slot was written for; absent for a bare pre-envelope plan.
-    pub build_id: Option<String>,
+    /// The plan's header; absent for a plan written by an earlier planner.
+    #[serde(skip)]
+    pub compatibility: Option<ExecutionCompatibility>,
     pub route_key: Option<String>,
     pub biome_keys: Vec<String>,
     pub plan_fingerprint: Option<String>,
@@ -98,11 +101,17 @@ struct PlanExtent {
     biome_keys: Vec<String>,
 }
 
-// The subset of the execution-plan wire read for a slot summary.
+// The subset of the execution-plan wire read for a slot summary. Plans from earlier
+// planners lack the schema pair.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PlanIdentity {
     format: String,
+    catalog_version: String,
+    #[serde(default)]
+    schema_version: Option<u32>,
+    #[serde(default)]
+    schema_revision: Option<u32>,
     project_id: String,
     plan_fingerprint: String,
     route_key: String,
@@ -114,7 +123,8 @@ struct PlanIdentity {
 }
 
 const PLAN_FORMAT: &str = "run-planner-execution";
-pub const SLOT_FORMAT: &str = "run-planner-slot";
+// The envelope earlier planners wrote around a plan; such a slot is stale.
+const LEGACY_SLOT_FORMAT: &str = "run-planner-slot";
 
 #[derive(Deserialize)]
 struct SlotFormat {
@@ -122,40 +132,33 @@ struct SlotFormat {
 }
 
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
-struct SlotEnvelope {
-    format: String,
-    build_id: String,
+struct LegacySlot {
     plan: PlanIdentity,
 }
 
-/// The slot file the host writes: the module build it targets, then the plan bytes unchanged.
-pub fn encode_slot(build_id: &str, plan_json: &str) -> String {
-    format!(
-        r#"{{"format":"{SLOT_FORMAT}","buildId":{},"plan":{plan_json}}}"#,
-        json_string(build_id)
-    )
+impl PlanIdentity {
+    fn compatibility(&self) -> Option<ExecutionCompatibility> {
+        Some(ExecutionCompatibility {
+            format: self.format.clone(),
+            catalog_version: self.catalog_version.clone(),
+            schema_version: self.schema_version?,
+            schema_revision: self.schema_revision?,
+        })
+    }
 }
 
-fn json_string(value: &str) -> String {
-    serde_json::Value::String(value.to_owned()).to_string()
-}
-
-// A bare plan predates the envelope; it names no build.
-fn decode_slot(bytes: &[u8]) -> Option<(Option<String>, PlanIdentity)> {
-    match serde_json::from_slice::<SlotFormat>(bytes)
+// A slot holds the plan bytes as sent; the flag marks an earlier planner's envelope.
+fn decode_slot(bytes: &[u8]) -> Option<(bool, PlanIdentity)> {
+    let (legacy, identity) = match serde_json::from_slice::<SlotFormat>(bytes)
         .ok()?
         .format
         .as_str()
     {
-        SLOT_FORMAT => {
-            let envelope = serde_json::from_slice::<SlotEnvelope>(bytes).ok()?;
-            (envelope.format == SLOT_FORMAT && envelope.plan.format == PLAN_FORMAT)
-                .then_some((Some(envelope.build_id), envelope.plan))
-        }
-        PLAN_FORMAT => Some((None, serde_json::from_slice::<PlanIdentity>(bytes).ok()?)),
-        _ => None,
-    }
+        LEGACY_SLOT_FORMAT => (true, serde_json::from_slice::<LegacySlot>(bytes).ok()?.plan),
+        PLAN_FORMAT => (false, serde_json::from_slice::<PlanIdentity>(bytes).ok()?),
+        _ => return None,
+    };
+    (identity.format == PLAN_FORMAT).then_some((legacy, identity))
 }
 
 /// A slot with no file.
@@ -168,7 +171,7 @@ fn slot_facts(slot: u8, state: PlanSlotState, modified_at_ms: Option<u64>) -> Pl
         slot,
         state,
         modified_at_ms,
-        build_id: None,
+        compatibility: None,
         route_key: None,
         biome_keys: Vec::new(),
         plan_fingerprint: None,
@@ -250,7 +253,11 @@ fn present(path: &Path) -> Result<bool, String> {
 }
 
 /// Reads one slot file, which may be a staged copy, as the slot numbered `slot`.
-pub fn read_slot(slot: u8, path: &Path, installed_build_id: Option<&str>) -> PlanSlotFacts {
+pub fn read_slot(
+    slot: u8,
+    path: &Path,
+    installed: Option<&ExecutionCompatibility>,
+) -> PlanSlotFacts {
     let metadata = match fs::symlink_metadata(path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return slot_facts(slot, PlanSlotState::Empty, None)
@@ -277,28 +284,31 @@ pub fn read_slot(slot: u8, path: &Path, installed_build_id: Option<&str>) -> Pla
         return unreadable;
     }
     match decode_slot(&bytes) {
-        Some((build_id, identity)) => PlanSlotFacts {
-            slot,
-            state: if build_id.is_some() && build_id.as_deref() == installed_build_id {
-                PlanSlotState::Present
-            } else {
-                PlanSlotState::Stale
-            },
-            modified_at_ms,
-            build_id,
-            route_key: Some(identity.route_key),
-            biome_keys: identity.extent.biome_keys,
-            plan_fingerprint: Some(identity.plan_fingerprint),
-            project_id: Some(identity.project_id),
-            display_name: identity.display_name,
-            weapon_key: identity
-                .starting_loadout
-                .as_ref()
-                .map(|loadout| loadout.weapon_key.clone()),
-            aspect_key: identity
-                .starting_loadout
-                .and_then(|loadout| loadout.aspect_key),
-        },
+        Some((legacy, identity)) => {
+            let compatibility = (!legacy).then(|| identity.compatibility()).flatten();
+            PlanSlotFacts {
+                slot,
+                state: if compatibility.is_some() && compatibility.as_ref() == installed {
+                    PlanSlotState::Present
+                } else {
+                    PlanSlotState::Stale
+                },
+                modified_at_ms,
+                compatibility,
+                route_key: Some(identity.route_key),
+                biome_keys: identity.extent.biome_keys,
+                plan_fingerprint: Some(identity.plan_fingerprint),
+                project_id: Some(identity.project_id),
+                display_name: identity.display_name,
+                weapon_key: identity
+                    .starting_loadout
+                    .as_ref()
+                    .map(|loadout| loadout.weapon_key.clone()),
+                aspect_key: identity
+                    .starting_loadout
+                    .and_then(|loadout| loadout.aspect_key),
+            }
+        }
         None => unreadable,
     }
 }
@@ -338,10 +348,10 @@ pub fn inspect_active_slot(target: &ResolvedTarget) -> ActiveSlotFacts {
 }
 
 /// Reads every slot, the event slot through slot 12 and indexed by slot number, against the
-/// installed module build; an unsafe config folder makes every slot unreadable.
+/// plan header the installed module admits; an unsafe config folder makes every slot unreadable.
 pub fn inspect_all_slots(
     target: &ResolvedTarget,
-    installed_build_id: Option<&str>,
+    installed: Option<&ExecutionCompatibility>,
 ) -> Vec<PlanSlotFacts> {
     let slots = EVENT_SLOT..=PLAN_SLOT_COUNT;
     match module_config_dir(target) {
@@ -356,7 +366,7 @@ pub fn inspect_all_slots(
                 read_slot(
                     slot,
                     &directory.join(PLAN_SLOT_FILES[usize::from(slot)]),
-                    installed_build_id,
+                    installed,
                 )
             })
             .collect(),
@@ -370,8 +380,20 @@ mod tests {
     use crate::game_target::{resolve_target, TargetKind, RETURN_OF_MODDING_DIRECTORY};
 
     // The twelve sendable slots.
-    fn inspect_slots(target: &ResolvedTarget, build: Option<&str>) -> Vec<PlanSlotFacts> {
-        inspect_all_slots(target, build).split_off(1)
+    fn inspect_slots(
+        target: &ResolvedTarget,
+        installed: Option<&ExecutionCompatibility>,
+    ) -> Vec<PlanSlotFacts> {
+        inspect_all_slots(target, installed).split_off(1)
+    }
+
+    fn installed() -> ExecutionCompatibility {
+        ExecutionCompatibility {
+            format: "run-planner-execution".to_owned(),
+            catalog_version: "c".to_owned(),
+            schema_version: 96,
+            schema_revision: 0,
+        }
     }
 
     fn make_target(root: &Path) -> ResolvedTarget {
@@ -387,30 +409,25 @@ mod tests {
             .join(slot_file_name(slot).unwrap())
     }
 
-    const BUILD: &str = "build-1";
-
-    const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"c","projectId":"p","planFingerprint":"abc123","displayName":"Surface Phial run","routeKey":"Underworld","startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
+    const PLAN: &str = r#"{"format":"run-planner-execution","catalogVersion":"c","schemaVersion":96,"schemaRevision":0,"projectId":"p","planFingerprint":"abc123","displayName":"Surface Phial run","routeKey":"Underworld","startingLoadout":{"weaponKey":"WeaponStaffSwing","aspectKey":"BaseStaffAspect","arcana":[],"fear":{}},"extent":{"kind":"configuredPrefix","biomeKeys":["F","G"],"terminalBiomeKey":"G"}}"#;
 
     #[test]
     fn slots_report_empty_present_and_unreadable_without_failing_the_rest() {
         let temporary = TemporaryDirectory::new("slots");
         let target = make_target(&temporary.0);
-        assert!(inspect_slots(&target, Some(BUILD))
+        assert!(inspect_slots(&target, Some(&installed()))
             .iter()
             .all(|slot| slot.state == PlanSlotState::Empty));
         fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
-        fs::write(slot_path(&target, 1), encode_slot(BUILD, PLAN)).unwrap();
+        fs::write(slot_path(&target, 1), PLAN).unwrap();
         fs::write(slot_path(&target, 2), "not json").unwrap();
         fs::write(
             slot_path(&target, 3),
-            encode_slot(
-                BUILD,
-                &PLAN.replace("run-planner-execution", "authored-project"),
-            ),
+            PLAN.replace("run-planner-execution", "authored-project"),
         )
         .unwrap();
         fs::write(slot_path(&target, 4), vec![b' '; MAX_PLAN_BYTES + 1]).unwrap();
-        let slots = inspect_slots(&target, Some(BUILD));
+        let slots = inspect_slots(&target, Some(&installed()));
         assert_eq!(slots.len(), 12);
         assert_eq!(
             slots[0],
@@ -418,7 +435,7 @@ mod tests {
                 slot: 1,
                 state: PlanSlotState::Present,
                 modified_at_ms: slots[0].modified_at_ms,
-                build_id: Some(BUILD.to_owned()),
+                compatibility: Some(installed()),
                 route_key: Some("Underworld".to_owned()),
                 biome_keys: vec!["F".to_owned(), "G".to_owned()],
                 plan_fingerprint: Some("abc123".to_owned()),
@@ -440,13 +457,10 @@ mod tests {
         }
         fs::write(
             slot_path(&target, 5),
-            encode_slot(
-                BUILD,
-                &PLAN.replace(r#""displayName":"Surface Phial run","#, ""),
-            ),
+            PLAN.replace(r#""displayName":"Surface Phial run","#, ""),
         )
         .unwrap();
-        let legacy = &inspect_slots(&target, Some(BUILD))[4];
+        let legacy = &inspect_slots(&target, Some(&installed()))[4];
         assert_eq!(legacy.state, PlanSlotState::Present);
         assert_eq!(legacy.display_name, None);
         assert_eq!(legacy.aspect_key.as_deref(), Some("BaseStaffAspect"));
@@ -457,21 +471,18 @@ mod tests {
         assert!(!without_loadout.contains("startingLoadout"));
         fs::write(
             slot_path(&target, 5),
-            encode_slot(
-                BUILD,
-                &PLAN.replace(r#""aspectKey":"BaseStaffAspect","#, ""),
-            ),
+            PLAN.replace(r#""aspectKey":"BaseStaffAspect","#, ""),
         )
         .unwrap();
-        let without_aspect = &inspect_slots(&target, Some(BUILD))[4];
+        let without_aspect = &inspect_slots(&target, Some(&installed()))[4];
         assert_eq!(without_aspect.state, PlanSlotState::Present);
         assert_eq!(without_aspect.aspect_key, None);
         assert_eq!(
             without_aspect.weapon_key.as_deref(),
             Some("WeaponStaffSwing")
         );
-        fs::write(slot_path(&target, 5), encode_slot(BUILD, &without_loadout)).unwrap();
-        let unknown = &inspect_slots(&target, Some(BUILD))[4];
+        fs::write(slot_path(&target, 5), &without_loadout).unwrap();
+        let unknown = &inspect_slots(&target, Some(&installed()))[4];
         assert_eq!(unknown.state, PlanSlotState::Present);
         assert_eq!(unknown.aspect_key, None);
         assert_eq!(unknown.weapon_key, None);
@@ -492,12 +503,8 @@ mod tests {
         let target = make_target(&temporary.0);
         let directory = slot_path(&target, 1).parent().unwrap().to_owned();
         fs::create_dir_all(&directory).unwrap();
-        fs::write(
-            directory.join("slot-0.runplanner.json"),
-            encode_slot(BUILD, PLAN),
-        )
-        .unwrap();
-        let all = inspect_all_slots(&target, Some(BUILD));
+        fs::write(directory.join("slot-0.runplanner.json"), PLAN).unwrap();
+        let all = inspect_all_slots(&target, Some(&installed()));
         assert_eq!(all.len(), 13);
         assert_eq!((all[0].slot, all[0].state), (0, PlanSlotState::Present));
         assert!(all[1..]
@@ -508,30 +515,43 @@ mod tests {
     }
 
     #[test]
-    fn slots_for_another_build_or_without_an_envelope_are_stale() {
+    fn slots_for_another_catalog_or_schema_pair_or_an_earlier_envelope_are_stale() {
         let temporary = TemporaryDirectory::new("stale-slots");
         let target = make_target(&temporary.0);
         fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
-        fs::write(slot_path(&target, 1), encode_slot(BUILD, PLAN)).unwrap();
-        fs::write(slot_path(&target, 2), encode_slot("build-0", PLAN)).unwrap();
-        fs::write(slot_path(&target, 3), PLAN).unwrap();
-        let extra = encode_slot(BUILD, PLAN).replacen('{', r#"{"extra":1,"#, 1);
-        fs::write(slot_path(&target, 4), extra).unwrap();
-        let slots = inspect_slots(&target, Some(BUILD));
+        fs::write(slot_path(&target, 1), PLAN).unwrap();
+        fs::write(
+            slot_path(&target, 2),
+            PLAN.replace(r#""schemaRevision":0"#, r#""schemaRevision":1"#),
+        )
+        .unwrap();
+        fs::write(
+            slot_path(&target, 3),
+            PLAN.replace(r#""catalogVersion":"c""#, r#""catalogVersion":"d""#),
+        )
+        .unwrap();
+        fs::write(
+            slot_path(&target, 4),
+            PLAN.replace(r#""schemaVersion":96,"schemaRevision":0,"#, ""),
+        )
+        .unwrap();
+        fs::write(
+            slot_path(&target, 5),
+            format!(r#"{{"format":"run-planner-slot","buildId":"b","plan":{PLAN}}}"#),
+        )
+        .unwrap();
+        let slots = inspect_slots(&target, Some(&installed()));
         assert_eq!(slots[0].state, PlanSlotState::Present);
-        assert_eq!(slots[1].state, PlanSlotState::Stale);
-        assert_eq!(slots[1].build_id.as_deref(), Some("build-0"));
-        assert_eq!(slots[1].plan_fingerprint.as_deref(), Some("abc123"));
-        assert_eq!(slots[2].state, PlanSlotState::Stale);
-        assert_eq!(slots[2].build_id, None);
-        assert_eq!(slots[3].state, PlanSlotState::Unreadable);
-        assert!(inspect_slots(&target, None)[..3]
+        for slot in &slots[1..5] {
+            assert_eq!(slot.state, PlanSlotState::Stale, "slot {}", slot.slot);
+            assert_eq!(slot.plan_fingerprint.as_deref(), Some("abc123"));
+        }
+        assert_eq!(slots[1].compatibility.as_ref().unwrap().schema_revision, 1);
+        assert_eq!(slots[3].compatibility, None);
+        assert_eq!(slots[4].compatibility, None);
+        assert!(inspect_slots(&target, None)[..5]
             .iter()
             .all(|slot| slot.state == PlanSlotState::Stale));
-        assert_eq!(
-            encode_slot(BUILD, "{}"),
-            r#"{"format":"run-planner-slot","buildId":"build-1","plan":{}}"#
-        );
     }
 
     #[test]
@@ -622,7 +642,7 @@ mod tests {
         fs::create_dir_all(slot_path(&target, 1).parent().unwrap()).unwrap();
         symlink(&outside, slot_path(&target, 1)).unwrap();
         assert_eq!(
-            inspect_slots(&target, Some(BUILD))[0].state,
+            inspect_slots(&target, Some(&installed()))[0].state,
             PlanSlotState::Unreadable
         );
         let outside_active = temporary.0.join("outside-active.json");
@@ -645,7 +665,7 @@ mod tests {
         )
         .unwrap();
         symlink(&outside_config, other.rom.join(CONFIG_DIRECTORY)).unwrap();
-        assert!(inspect_slots(&other, Some(BUILD))
+        assert!(inspect_slots(&other, Some(&installed()))
             .iter()
             .all(|slot| slot.state == PlanSlotState::Unreadable));
         assert_eq!(inspect_active_slot(&other), ActiveSlotFacts::Invalid);

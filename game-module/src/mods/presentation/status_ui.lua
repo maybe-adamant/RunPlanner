@@ -151,13 +151,13 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         if slot == EVENT_SLOT then
             if not present[slot] then return "Event (none)" end
             if entry and entry.event then
-                return "Event: " .. entry.event.title .. " (" .. (entry.matchesBuild and entry.label or "outdated") .. ")"
+                return "Event: " .. entry.event.title .. " (" .. (entry.matchesVersion and entry.label or "outdated") .. ")"
             end
             return "Event"
         end
-        -- An entry sent for another module build is marked; no plan is decoded to say so.
+        -- An entry made for another catalog or schema pair is marked; no plan is decoded to say so.
         if entry then
-            return presentation.slotName(slot) .. " (" .. entry.label .. ")" .. (entry.matchesBuild and "" or " (outdated)")
+            return presentation.slotName(slot) .. " (" .. entry.label .. ")" .. (entry.matchesVersion and "" or " (outdated)")
         end
         if present[slot] then return presentation.slotName(slot) end
         return presentation.slotName(slot) .. " (empty)"
@@ -188,7 +188,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         local key = keys[slot]
         if key == nil then
             local entry = entries[slot]
-            key = tostring(slot) .. ":" .. (entry and entry.fingerprint .. ":" .. entry.buildId or "-")
+            key = tostring(slot) .. ":" .. (entry and entry.fingerprint or "-")
                 .. ":" .. (present[slot] and "present" or "absent")
             keys[slot] = key
         end
@@ -237,7 +237,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
             if status.error.code == "stale-slot" then return STALE, TONES.faulted end
             return "This slot can't be read", TONES.faulted
         end
-        if plan == nil and entry ~= nil and not entry.matchesBuild then return STALE, TONES.faulted end
+        if plan == nil and entry ~= nil and not entry.matchesVersion then return STALE, TONES.faulted end
         return "Ready", TONES.synchronized
     end
 
@@ -378,7 +378,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         imgui.TextWrapped("Session: " .. tostring(snapshot.state) .. " / " .. tostring(snapshot.reason))
         if snapshot.checkpoint then imgui.TextWrapped("Checkpoint: " .. tostring(snapshot.checkpoint)) end
         imgui.TextWrapped("Slot " .. tostring(status.slot) .. " file: " .. tostring(status.file)
-            .. " - Module build: " .. tostring(status.build) .. " - Catalog: " .. tostring(status.catalog))
+            .. " - Schema: " .. tostring(status.schema) .. " - Catalog: " .. tostring(status.catalog))
         if status.fingerprint then imgui.TextWrapped("Slot fingerprint: " .. tostring(status.fingerprint)) end
         if status.error then
             imgui.TextWrapped("Slot error: " .. tostring(status.error.code))

@@ -18,10 +18,25 @@ local startState = type(import) == "function" and import("mods/protocol/start_st
 local protocol = {
     FORMAT = "run-planner-execution",
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
+    -- The planner's authored schema pair; a plan made under another pair is outdated.
+    SCHEMA_VERSION = 96,
+    SCHEMA_REVISION = 0,
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
     fingerprint = p.fingerprint,
 }
+
+-- Whether a plan or slot overview entry names exactly this module's catalog and schema pair.
+function protocol.matchesVersion(header)
+    return type(header) == "table"
+        and header.catalogVersion == protocol.CATALOG_VERSION
+        and header.schemaVersion == protocol.SCHEMA_VERSION
+        and header.schemaRevision == protocol.SCHEMA_REVISION
+end
+
+function protocol.versionLabel()
+    return tostring(protocol.SCHEMA_VERSION) .. "." .. tostring(protocol.SCHEMA_REVISION)
+end
 
 local function extent(value)
     local record, errorMessage = p.exact(
@@ -107,6 +122,8 @@ local function fingerprintBody(plan, decodedOccurrences)
     return {
         format = plan.format,
         catalogVersion = plan.catalogVersion,
+        schemaVersion = plan.schemaVersion,
+        schemaRevision = plan.schemaRevision,
         projectId = plan.projectId,
         routeKey = plan.routeKey,
         startingLoadout = plan.startingLoadout,
@@ -158,7 +175,7 @@ function protocol.decode(value)
     local plan, errorMessage = p.exact(
         value,
         {
-            "format", "catalogVersion", "projectId", "planFingerprint",
+            "format", "catalogVersion", "schemaVersion", "schemaRevision", "projectId", "planFingerprint",
             "routeKey", "startingLoadout", "startingKeepsake", "extent", "selectedOccurrenceIds", "resources",
             "occurrences",
         },
@@ -166,9 +183,13 @@ function protocol.decode(value)
         "execution plan"
     )
     if not plan then return nil, errorMessage end
-    if plan.format ~= protocol.FORMAT
-        or plan.catalogVersion ~= protocol.CATALOG_VERSION
-        or (plan.routeKey ~= "Underworld" and plan.routeKey ~= "FreshFile"
+    if plan.format ~= protocol.FORMAT then return p.fail("execution plan has an unsupported format") end
+    if not protocol.matchesVersion(plan) then
+        return p.fail("execution plan names catalog " .. tostring(plan.catalogVersion) .. " schema "
+            .. tostring(plan.schemaVersion) .. "." .. tostring(plan.schemaRevision) .. "; this module admits catalog "
+            .. protocol.CATALOG_VERSION .. " schema " .. protocol.versionLabel())
+    end
+    if (plan.routeKey ~= "Underworld" and plan.routeKey ~= "FreshFile"
             and plan.routeKey ~= "Surface" and plan.routeKey ~= "Dream")
         or not p.str(plan.projectId, "execution plan.projectId")
         or type(plan.planFingerprint) ~= "string"

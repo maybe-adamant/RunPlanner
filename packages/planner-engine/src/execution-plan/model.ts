@@ -1297,6 +1297,9 @@ export interface ExecutionStartState {
 export interface ExecutionPlan {
   readonly format: typeof EXECUTION_PLAN_FORMAT;
   readonly catalogVersion: string;
+  /** The planner's authored schema pair at compile time; the module admits only its own. */
+  readonly schemaVersion: number;
+  readonly schemaRevision: number;
   readonly projectId: string;
   readonly planFingerprint: string;
   /** Presentation-only plan name (the saved file's name); outside the fingerprint. */

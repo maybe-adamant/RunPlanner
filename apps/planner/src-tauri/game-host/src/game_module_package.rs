@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
+pub use crate::game_module_assembly::ExecutionCompatibility;
 use crate::game_module_assembly::{AssembledFile, COMPATIBILITY_FILE, MANIFEST_FILE};
 
 pub struct BundledFile {
@@ -32,18 +33,8 @@ pub struct ModulePackage {
     pub source: PackageSource,
     pub files: Vec<PackageFile>,
     pub dependencies: Vec<String>,
-    /// The assembled payload's identity, stamped into its compatibility file.
-    pub build_id: String,
-}
-
-/// The packaged `execution-compatibility.json`: the plan header the module accepts and
-/// the module build that a plan slot must name.
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ExecutionCompatibility {
-    pub format: String,
-    pub catalog_version: String,
-    pub build_id: String,
+    /// The plan header this package's module admits.
+    pub compatibility: ExecutionCompatibility,
 }
 
 #[derive(Deserialize)]
@@ -69,15 +60,13 @@ impl ModulePackage {
             .find(|file| file.path == COMPATIBILITY_FILE)
             .ok_or("the game module package has no compatibility file")?;
         let compatibility: ExecutionCompatibility = serde_json::from_slice(&compatibility.bytes)
-            .map_err(|error| {
-                format!("the game module compatibility file is not build-stamped: {error}")
-            })?;
+            .map_err(|error| format!("the game module compatibility file is malformed: {error}"))?;
         Ok(Self {
             version: version.to_owned(),
             source,
             files,
             dependencies: manifest.dependencies,
-            build_id: compatibility.build_id,
+            compatibility,
         })
     }
 
@@ -161,19 +150,11 @@ mod tests {
         write(&root.join("src/mods/a.lua"), b"return 1\n");
         write(
             &root.join("src/execution-compatibility.json"),
-            br#"{"format":"run-planner-execution","catalogVersion":"c"}"#,
+            COMPATIBILITY,
         );
     }
 
-    fn build_id(root: &Path, version: &str) -> String {
-        ModulePackage::from_assembly(
-            version,
-            PackageSource::Checkout,
-            game_module_assembly::assemble(root, version, ModuleSelection::Release).unwrap(),
-        )
-        .unwrap()
-        .build_id
-    }
+    const COMPATIBILITY: &[u8] = br#"{"format":"run-planner-execution","catalogVersion":"c","schemaVersion":96,"schemaRevision":0}"#;
 
     #[test]
     fn assembly_is_deterministic_flattened_and_version_stamped() {
@@ -210,13 +191,15 @@ mod tests {
             .iter()
             .find(|file| file.path == "execution-compatibility.json")
             .unwrap();
+        assert_eq!(compatibility.bytes.as_ref(), COMPATIBILITY);
         assert_eq!(
-            serde_json::from_slice::<serde_json::Value>(&compatibility.bytes).unwrap(),
-            serde_json::json!({
-                "format": "run-planner-execution",
-                "catalogVersion": "c",
-                "buildId": package.build_id,
-            })
+            package.compatibility,
+            ExecutionCompatibility {
+                format: "run-planner-execution".to_owned(),
+                catalog_version: "c".to_owned(),
+                schema_version: 96,
+                schema_revision: 0,
+            }
         );
         assert!(game_module_assembly::assemble(&root, "2.3", ModuleSelection::Release).is_err());
         write(&root.join("src/LICENSE"), b"collision");
@@ -225,79 +208,25 @@ mod tests {
     }
 
     #[test]
-    fn the_build_id_covers_exactly_the_checked_in_payload() {
+    fn assembly_ships_only_a_complete_checked_in_compatibility_file() {
         let root =
-            std::env::temp_dir().join(format!("run-planner-build-id-{}", std::process::id()));
+            std::env::temp_dir().join(format!("run-planner-compatibility-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         module_checkout(&root);
-        let original = build_id(&root, "2.3.4");
-        assert_eq!(original.len(), 64);
-        assert_eq!(build_id(&root, "2.3.4"), original);
-        assert_eq!(build_id(&root, "9.0.0"), original);
-        write(&root.join("README.md"), b"edited");
-        write(&root.join("icon.png"), b"edited");
-        assert_eq!(build_id(&root, "2.3.4"), original);
-        write(&root.join("src/mods/a.lua"), b"return 2\n");
-        let edited = build_id(&root, "2.3.4");
-        assert_ne!(edited, original);
-        write(&root.join("src/mods/b.lua"), b"");
-        assert_ne!(build_id(&root, "2.3.4"), edited);
-        write(
-            &root.join("src/execution-compatibility.json"),
-            br#"{"format":"run-planner-execution","catalogVersion":"c","buildId":"x"}"#,
-        );
-        assert!(
-            game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release)
-                .err()
-                .unwrap()
-                .contains("must not carry a buildId")
-        );
+        for malformed in [
+            &br#"{"format":"run-planner-execution","catalogVersion":"c"}"#[..],
+            br#"{"format":"run-planner-execution","catalogVersion":"c","schemaVersion":96,"schemaRevision":0,"buildId":"x"}"#,
+        ] {
+            write(&root.join("src/execution-compatibility.json"), malformed);
+            assert!(
+                game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release)
+                    .err()
+                    .unwrap()
+                    .contains("execution-compatibility.json is malformed")
+            );
+        }
         fs::remove_file(root.join("src/execution-compatibility.json")).unwrap();
         assert!(game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).is_err());
-        fs::remove_dir_all(&root).unwrap();
-    }
-
-    #[test]
-    fn the_build_id_excludes_only_the_presentation_directory() {
-        let root =
-            std::env::temp_dir().join(format!("run-planner-presentation-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&root);
-        module_checkout(&root);
-        let presentation = format!(
-            "{}status_ui.lua",
-            game_module_assembly::PRESENTATION_DIRECTORY
-        );
-        write(&root.join("src").join(&presentation), b"return 'window'\n");
-        let original = build_id(&root, "2.3.4");
-        write(&root.join("src").join(&presentation), b"return 'redrawn'\n");
-        write(
-            &root.join("src/mods/presentation/overlays/guide.lua"),
-            b"return 'new'\n",
-        );
-        assert_eq!(build_id(&root, "2.3.4"), original);
-        let files =
-            game_module_assembly::assemble(&root, "2.3.4", ModuleSelection::Release).unwrap();
-        let shipped = |path: &str| {
-            files
-                .iter()
-                .find(|file| file.path == path)
-                .map(|file| file.bytes.clone())
-        };
-        assert_eq!(shipped(&presentation).unwrap(), b"return 'redrawn'\n");
-        assert_eq!(
-            shipped("mods/presentation/overlays/guide.lua").unwrap(),
-            b"return 'new'\n"
-        );
-        for (path, bytes) in [
-            ("src/mods/a.lua", &b"return 2\n"[..]),
-            ("src/mods/presentation.lua", b"return 'beside'\n"),
-            ("src/mods/presentation_extra/a.lua", b"return 'sibling'\n"),
-            ("src/main.lua", b"return false\n"),
-        ] {
-            let before = build_id(&root, "2.3.4");
-            write(&root.join(path), bytes);
-            assert_ne!(build_id(&root, "2.3.4"), before, "{path}");
-        }
         fs::remove_dir_all(&root).unwrap();
     }
 
@@ -316,15 +245,13 @@ mod tests {
                 .unwrap()
                 .bytes
                 .clone();
-            let package =
-                ModulePackage::from_assembly("2.3.4", PackageSource::Checkout, files).unwrap();
-            Ok::<_, String>((shipped, package.build_id))
+            Ok::<_, String>(shipped)
         };
-        let (release, release_id) = assembled(ModuleSelection::Release).unwrap();
+        let release = assembled(ModuleSelection::Release).unwrap();
         assert_eq!(release, b"return 'release'\n");
         assert_eq!(
             assembled(ModuleSelection::DevelopmentIfPresent).unwrap(),
-            (release, release_id.clone())
+            release
         );
         assert_eq!(
             assembled(ModuleSelection::DevelopmentRequired).unwrap_err(),
@@ -335,14 +262,13 @@ mod tests {
             &root.join(game_module_assembly::DEVELOPMENT_MODULE_FILE),
             b"return 'dev'\n",
         );
-        let (dev, dev_id) = assembled(ModuleSelection::DevelopmentIfPresent).unwrap();
+        let dev = assembled(ModuleSelection::DevelopmentIfPresent).unwrap();
         assert_eq!(dev, b"return 'dev'\n");
-        assert_ne!(dev_id, release_id);
         assert_eq!(
             assembled(ModuleSelection::DevelopmentRequired).unwrap(),
-            (dev, dev_id)
+            dev
         );
-        assert_eq!(assembled(ModuleSelection::Release).unwrap().1, release_id);
+        assert_eq!(assembled(ModuleSelection::Release).unwrap(), release);
         fs::remove_dir_all(&root).unwrap();
     }
 
@@ -385,8 +311,10 @@ mod tests {
             .dependencies
             .iter()
             .any(|dependency| dependency.starts_with("adamant-ModpackLib-")));
-        assert_eq!(package.build_id.len(), 64);
         #[cfg(debug_assertions)]
-        assert_eq!(checkout_package().unwrap().build_id, package.build_id);
+        assert_eq!(
+            checkout_package().unwrap().compatibility,
+            package.compatibility
+        );
     }
 }

@@ -31,6 +31,7 @@ local function bootstrap(failing)
         end,
     }
     local slotOverview, highlights = {}, {}
+    local protocol = { matchesVersion = function() return true end }
     local runtime = {
         attach = function(target, guidance)
             lu.assertIs(target, module)
@@ -44,17 +45,14 @@ local function bootstrap(failing)
     local window = { header = function() end, tabs = { { id = "plan", label = "Plan", draw = function() end } } }
     local imports = {
         ["mods/host/data.lua"] = { buildStorage = function() return {} end },
-        ["mods/host/build_identity.lua"] = { read = function(pluginRoot, pathApi)
-            lu.assertEquals(pluginRoot, "plugin-folder")
-            lu.assertIs(pathApi, registered.pathApi)
-            return "installed-build"
-        end },
-        ["mods/runtime/composition.lua"] = { bind = function(root, version, buildId)
-            lu.assertEquals({ root, version, buildId }, { "unused", "1.2.3", "installed-build" })
+        ["mods/runtime/composition.lua"] = { bind = function(root, version)
+            lu.assertEquals({ root, version }, { "unused", "1.2.3" })
             return runtime
         end },
-        ["mods/presentation/slot_overview.lua"] = { create = function(root, pathApi, buildId)
-            lu.assertEquals({ root, buildId }, { "unused", "installed-build" })
+        ["mods/protocol/decoder.lua"] = protocol,
+        ["mods/presentation/slot_overview.lua"] = { create = function(root, pathApi, matchesVersion)
+            lu.assertEquals(root, "unused")
+            lu.assertIs(matchesVersion, protocol.matchesVersion)
             lu.assertIs(pathApi, registered.pathApi)
             return slotOverview
         end },

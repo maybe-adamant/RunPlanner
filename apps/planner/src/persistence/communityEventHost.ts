@@ -19,8 +19,9 @@ export interface CommunityEvent {
   readonly projectUrl: string;
   /** Lower-case hex SHA-256 of the project file, which the host checks on download. */
   readonly projectSha256: string;
-  /** The authored project schema the project file is saved in. */
+  /** The authored project schema pair the project file is saved in. */
   readonly projectSchemaVersion: number;
+  readonly projectSchemaRevision: number;
 }
 
 /** The active event's project as the host holds it. */
@@ -37,10 +38,11 @@ export interface ActiveCommunityEvent {
   readonly project: ActiveEventProject;
 }
 
-/** The authored project schemas this planner loads, inclusive. */
+/** The project schema majors this planner loads, inclusive, and the newest major's revision. */
 export interface ProjectSchemaRange {
   readonly oldest: number;
   readonly newest: number;
+  readonly newestRevision: number;
 }
 
 export interface EventFeedSnapshot {

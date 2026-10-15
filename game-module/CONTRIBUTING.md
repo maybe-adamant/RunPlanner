@@ -30,28 +30,25 @@ and modeled traits or keepsakes. `src/mods/presentation/` holds everything that
 only draws or formats: the status window, slot overview reader, room guide,
 victory summary and planned-choice markers.
 
-The presentation layer is fenced because the build identity excludes it.
-`src/main.lua` is the only execution file that imports it; it attaches each
-surface under pcall and passes read-only inspections and, for the status
-window's slot picker, the active-slot write and inbox load capabilities.
-Presentation must not import execution modules other than the JSON codec, the
-inbox's slot-file names and `src/mods/host/presentation_hooks.lua`, and must
-not write session, route, room, inbox, `CurrentRun` or game global state.
-Anything that decides or changes execution stays outside it, even when it also
-draws. Presentation registers hooks and overlay callbacks only through
-`presentation_hooks.lua`, the build-covered hook boundary, so a presentation
-failure is logged and never reaches the native chain or execution.
-`tests/architecture/test_presentation_boundary.lua` rejects direct writes, and
-writes through simple local aliases, by static scan; see [Game integration](../docs/design/GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target).
+`src/main.lua` wires each presentation surface through `presentationSurface`,
+which logs and skips a surface that fails to load or attach, and passes the
+session, inbox and route inspection views it reads and, for the status window's
+slot picker, the active-slot write and inbox load capabilities. Surfaces
+register hooks and overlay callbacks through
+`src/mods/host/presentation_hooks.lua`, which contains and logs a presentation
+failure so it does not reach the native chain or execution; see [Game integration](../docs/design/GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target).
 
 The tests read the planner's execution fixtures in place from
 `packages/planner-engine/test/execution-plan/fixtures/`; there is no
 module-local copy.
 
 `manifest.template.json` is the source of the package manifest; the release
-build adds `version_number`. Assembly also stamps `buildId`, a hash of the
-`src/` payload outside `src/mods/presentation/`, into
-`execution-compatibility.json`; the checked-in file carries no `buildId`.
+build adds `version_number`. `src/execution-compatibility.json` names the plan
+header the module admits: the format, catalog and the planner's authored schema
+pair. It and the decoder's constants must change together with the planner's
+`PROJECT_DOCUMENT_SCHEMA_VERSION` and `PROJECT_DOCUMENT_SCHEMA_REVISION`; the
+fixture decode tests and the compatibility test hold them aligned. A
+module-only change keeps the pair, so sent plans stay valid.
 
 ## ModpackLib
 

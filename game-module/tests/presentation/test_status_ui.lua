@@ -7,7 +7,10 @@ local nativeGame = require("tests.harness.native_game")
 
 TestStatusUi = {}
 
-local BUILD = string.rep("a", 64)
+local function matchesVersion(entry)
+    local protocol = require("mods.protocol.decoder")
+    return protocol.matchesVersion(entry)
+end
 
 local function decodeFixture(name)
     local file = assert(io.open(fixtures.path(name), "rb"))
@@ -22,7 +25,8 @@ local function entry(fields)
     local value = {
         label = "Melinoe - Underworld", planName = "Staff practice", sentAt = "2026-10-12T10:00:00.000Z",
         aspect = "Melinoe (Staff)", route = "Underworld", endBiome = "Oceanus", startingFear = 8,
-        buildId = BUILD, fingerprint = "06bef552", matchesBuild = true,
+        catalogVersion = "0.55.0-anvil-of-fates", schemaVersion = 96, schemaRevision = 0,
+        fingerprint = "84e80e9a", matchesVersion = true,
     }
     for key, field in pairs(fields or {}) do value[key] = field end
     return value
@@ -48,7 +52,7 @@ local function fakeInbox(slots)
     function inbox.activeSlot() return current end
     function inbox.plan() return plan end
     function inbox.status()
-        local copy = { slot = current, build = BUILD:sub(1, 12), catalog = "unknown" }
+        local copy = { slot = current, schema = "96.0", catalog = "unknown" }
         for key, value in pairs(status) do copy[key] = value end
         return copy
     end
@@ -209,12 +213,12 @@ end
 
 local EVENT = { id = "2026-w42-staff", title = "Week 42: Staff sprint", endsAt = "2026-10-19T00:00:00Z" }
 
-function TestStatusUi.testPickerMarksSlotsSentForAnotherBuildAsOutdated()
+function TestStatusUi.testPickerMarksSlotsMadeForAnotherVersionAsOutdated()
     local h = harness({
         slot = 3, present = { [0] = true },
         entries = {
-            [0] = entry({ event = EVENT, matchesBuild = false }),
-            [3] = entry({ label = "Circe - Surface", matchesBuild = false }),
+            [0] = entry({ event = EVENT, matchesVersion = false }),
+            [3] = entry({ label = "Circe - Surface", matchesVersion = false }),
             [4] = entry({ label = "Circe - Surface" }),
         },
     })
@@ -305,10 +309,10 @@ function TestStatusUi.testFramesOpenNoFilesUntilTheWindowReopens()
     local path = { combine = function(root, name) return root .. "/" .. name end }
     local contents = {
         ["active-slot.json"] = '{"format":"run-planner-active-slot","formatVersion":1,"slot":2}',
-        ["slots.runplanner.json"] = '{"format":"run-planner-slot-overview","formatVersion":1,"slots":{"2":'
+        ["slots.runplanner.json"] = '{"format":"run-planner-slot-overview","formatVersion":2,"slots":{"2":'
             .. '{"label":"Melinoe - Underworld","sentAt":"2026-10-12T10:00:00.000Z","aspect":"Melinoe (Staff)",'
-            .. '"route":"Underworld","endBiome":"Oceanus","startingFear":8,"buildId":"' .. BUILD
-            .. '","fingerprint":"06bef552"}}}',
+            .. '"route":"Underworld","endBiome":"Oceanus","startingFear":8,"catalogVersion":"0.55.0-anvil-of-fates",'
+            .. '"schemaVersion":96,"schemaRevision":0,"fingerprint":"84e80e9a"}}}',
         ["slot-2.runplanner.json"] = "{}",
     }
     local opens = 0
@@ -322,7 +326,7 @@ function TestStatusUi.testFramesOpenNoFilesUntilTheWindowReopens()
     }
     local h = harness({
         file = require("mods.host.active_slot").create("config", path, { files = files, log = function() end }),
-        overview = require("mods.presentation.slot_overview").create("config", path, BUILD, { files = files }),
+        overview = require("mods.presentation.slot_overview").create("config", path, matchesVersion, { files = files }),
     })
     local text = h.draw()
     lu.assertStrContains(text, "Route:\nUnderworld -> Oceanus")
@@ -395,7 +399,7 @@ function TestStatusUi.testSlotStatusesForEmptyStaleAndUnreadableSlots()
     lu.assertNotStrContains(h.draw(), "Status:")
 
     h = harness({
-        slot = 2, slots = { [2] = { error = "stale-slot" } }, entries = { [2] = entry({ matchesBuild = false }) },
+        slot = 2, slots = { [2] = { error = "stale-slot" } }, entries = { [2] = entry({ matchesVersion = false }) },
     })
     local text = h.draw()
     lu.assertStrContains(text, "Plan:\nStaff practice")
@@ -598,7 +602,7 @@ function TestStatusUi.testDiagnosticsTabIsMutedUntilDebugMode()
     lu.assertEquals(h.states, { current_run = "attention" })
     lu.assertStrContains(text, "Session: desynchronized / first-mismatch")
     lu.assertStrContains(text, "Checkpoint: test-contact")
-    lu.assertStrContains(text, "Module build: aaaaaaaaaaaa")
+    lu.assertStrContains(text, "Schema: 96.0")
     lu.assertStrContains(text, "Slot error: stale-slot")
     lu.assertStrContains(text, "Running project: " .. plan.projectId)
     lu.assertStrContains(text, "Running fingerprint: " .. plan.planFingerprint)
@@ -623,8 +627,8 @@ function TestStatusUi.testPlannerChangesToTheShownSlotShowWhenTheWindowReopens()
     h.overview.entries[2] = entry({ fingerprint = "11111111", planName = "Resent" })
     reopen(h)
     lu.assertStrContains(h.draw(), "Plan:\nResent")
-    -- Resent for another build.
-    h.overview.entries[2] = entry({ fingerprint = "11111111", matchesBuild = false })
+    -- Resent for another version.
+    h.overview.entries[2] = entry({ fingerprint = "11111111", matchesVersion = false })
     reopen(h)
     lu.assertStrContains(h.draw(), "Made for another Run Planner version")
     -- An unreadable file without an entry waits for Load.

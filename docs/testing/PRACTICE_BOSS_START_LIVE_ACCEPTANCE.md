@@ -1,6 +1,6 @@
 # Practice Boss start live acceptance
 
-Use a matching current planner and installed game-module build. For each
+Use a matching current planner and installed game module. For each
 check, author a valid plan through the biome's Boss, choose that biome's
 **Boss** under Route › Practice mode, send it, and start a run. Source probes
 and automated tests are not live verification; the owner confirms or waives

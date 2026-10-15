@@ -22,6 +22,7 @@ export function communityEvent(overrides: Partial<CommunityEvent> = {}): Communi
       'https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/2026-w42-staff.runplanner.json',
     projectSha256: '5650824531e382c27c755760f7bc6db4c5b690a5df74dc9438e26995bf2f7fbf',
     projectSchemaVersion: 96,
+    projectSchemaRevision: 0,
     ...overrides,
   };
 }

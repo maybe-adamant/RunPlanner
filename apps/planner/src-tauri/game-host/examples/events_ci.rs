@@ -1,6 +1,5 @@
 //! Release and community event publishing support, run by CI against a planner checkout:
 //!
-//! - `build-id`: the module build this checkout embeds.
 //! - `check <feed>`: decodes a feed as the app does and fails if any event is refused.
 //! - `verify <feed> <signature> <public-key>`: verifies a signed feed and prints its signing time.
 
@@ -8,13 +7,11 @@ use std::fs;
 use std::process::ExitCode;
 
 use run_planner_game_host::event_feed;
-use run_planner_game_host::game_module_package::ModulePackage;
 
 fn run(arguments: &[String]) -> Result<String, String> {
     let read =
         |path: &String| fs::read(path).map_err(|error| format!("could not read {path}: {error}"));
     match arguments {
-        [command] if command == "build-id" => Ok(ModulePackage::bundled().build_id.clone()),
         [command, feed] if command == "check" => {
             let decoded = event_feed::decode_feed(&read(feed)?)?;
             if !decoded.refused.is_empty() {
@@ -31,10 +28,9 @@ fn run(arguments: &[String]) -> Result<String, String> {
             event_feed::verify_signature(&read(feed)?, &read(signature)?, public_key.trim())
                 .map(|signed_at| signed_at.to_string())
         }
-        _ => Err(
-            "usage: events_ci build-id | check <feed> | verify <feed> <signature> <public-key>"
-                .to_owned(),
-        ),
+        _ => {
+            Err("usage: events_ci check <feed> | verify <feed> <signature> <public-key>".to_owned())
+        }
     }
 }
 

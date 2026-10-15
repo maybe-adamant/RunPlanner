@@ -1,4 +1,4 @@
--- The build-covered hook boundary for the presentation layer: the only way it
+-- The hook boundary for the presentation layer: the only way it
 -- registers native hooks or overlay callbacks, or exposes entry points to
 -- execution. Native base always runs with its original arguments and returns
 -- its results unchanged, except the allowlisted map sub-icon decoration;
