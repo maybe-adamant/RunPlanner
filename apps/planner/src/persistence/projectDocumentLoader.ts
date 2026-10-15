@@ -1,5 +1,6 @@
 import {
   parseProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -108,6 +109,12 @@ export function loadProjectDocument(json: string, catalog: Catalog): LoadedProje
   }
 
   if (envelope.schemaVersion === PROJECT_DOCUMENT_SCHEMA_VERSION) {
+    const revision = (parsed as Record<string, unknown>).schemaRevision;
+    if (typeof revision === 'number' && revision > PROJECT_DOCUMENT_SCHEMA_REVISION) {
+      throw new Error(
+        `Project schema ${envelope.schemaVersion}.${revision} is newer than supported schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.${PROJECT_DOCUMENT_SCHEMA_REVISION}.`,
+      );
+    }
     return currentProject(json, catalog);
   }
 
@@ -122,8 +129,11 @@ export function loadProjectDocument(json: string, catalog: Catalog): LoadedProje
     );
   }
 
+  // Transitions run across majors only; an older major's revision does not carry forward.
+  const source: Record<string, unknown> = { ...(parsed as Record<string, unknown>) };
+  delete source.schemaRevision;
   const migrated = applyProjectDocumentTransitions({
-    document: parsed,
+    document: source,
     source: envelope,
     target: Object.freeze({
       catalogVersion: catalog.version,

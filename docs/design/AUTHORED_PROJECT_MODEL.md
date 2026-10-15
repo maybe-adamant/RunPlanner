@@ -31,10 +31,32 @@ tools remain documented in [`schema/README.md`](../../schema/README.md).
 
 ### Schema change approval
 
-The open-beta compatibility default is to preserve existing user saves. An
-authored-project schema bump requires explicit approval from the project owner
-before implementation. Approval to fix a bug, refactor code, or deliver a
-feature does not itself authorize a bump or a required user migration.
+The open-beta compatibility default is to preserve existing user saves. The
+document's version is a pair: `schemaVersion` is the major and the optional
+integer `schemaRevision` is the minor, read as 0 when absent.
+
+- **Major bump.** The authored shape changes and saved documents must be
+  transformed. It needs a transition script and explicit approval from the
+  project owner before implementation.
+- **Minor bump.** A change can make a previously valid project invalid
+  (tightened validity) or alters the compiled plan wire. It has no script and
+  leaves the document unchanged; it is announced in the commit and change
+  summary and needs no approval.
+- **No bump** for module-only changes or planner changes that affect neither
+  validity nor the wire.
+
+Same-version invariant: a project that compiled under a version still compiles
+under the same version. A failure is a defect, a missing bump; the corpus
+compile test (`planner-engine/test/equivalence/corpus-compiles.test.ts`) holds
+every checked-in project to it.
+
+The loader runs transitions across majors only. Within the current major it
+loads a document at the current or an earlier revision as is; a later revision,
+like a later major, is refused. Saving stamps the current major, and the
+current revision when it is not 0.
+
+Approval to fix a bug, refactor code, or deliver a feature does not itself
+authorize a major bump or a required user migration.
 
 First determine whether the existing persisted representation can safely carry
 the intended choice. Internal naming, editor presentation, and corrected
@@ -1243,6 +1265,7 @@ stable indented JSON with a trailing newline:
 ```ts
 interface ProjectDocument {
   schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;
+  schemaRevision?: number; // on disk only; absent means 0
   projectId: string;
   catalogVersion: string;
   route: AuthoredRoutePlan;

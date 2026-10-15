@@ -369,6 +369,7 @@ export {
   undoProjectHistory,
 } from './history';
 export {
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   NEMESIS_RANDOM_EVENT_FAMILIES,
   type AuthoredBiomePlan,
