@@ -2,3 +2,7 @@
 	path = external/adamant-ModpackLib
 	url = https://github.com/h2-modpack/adamant-ModpackLib.git
 	branch = main
+[submodule "external/RunPlanner-Events"]
+	path = external/RunPlanner-Events
+	url = https://github.com/maybe-adamant/RunPlanner-Events.git
+	branch = main
