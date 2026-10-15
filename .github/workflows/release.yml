@@ -139,7 +139,6 @@ jobs:
             echo "release/${LINUX_ARTIFACT}.AppImage"
             echo "release/${LINUX_ARTIFACT}.AppImage.sig"
             echo 'release/latest.json'
-            echo 'release/module-build.json'
             echo 'EOF'
           } >> "${GITHUB_OUTPUT}"
 

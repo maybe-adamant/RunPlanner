@@ -43,7 +43,6 @@ import type {
   EventDevelopmentOperations,
   EventSlotOutcome,
 } from '@planner/workspace/communityEvents';
-import { ExportEventDialog } from './ExportEventDialog';
 import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 import { BugReportDialog } from './BugReportDialog';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -507,12 +506,10 @@ function EventSlotRow({ row }: { readonly row: GameEventSlotRow }) {
 
 function EventSlotActions({
   onClear,
-  onExport,
   onImport,
   pending,
 }: {
   readonly onClear: () => void;
-  readonly onExport: () => void;
   readonly onImport: () => void;
   readonly pending: boolean;
 }) {
@@ -525,7 +522,7 @@ function EventSlotActions({
         onClick={onImport}
         type="button"
       >
-        Import event file…
+        Import event folder…
       </button>
       <button
         className="quiet-action action-compact"
@@ -534,15 +531,6 @@ function EventSlotActions({
         type="button"
       >
         Clear event
-      </button>
-      <button
-        aria-haspopup="dialog"
-        className="quiet-action action-compact"
-        disabled={pending}
-        onClick={onExport}
-        type="button"
-      >
-        Export event file…
       </button>
     </div>
   );
@@ -814,7 +802,6 @@ function GameSection({
   };
 
   const development = communityEvents?.development;
-  const [exportingEvent, setExportingEvent] = useState(false);
   // Opening the panel also brings the event slot up to date with the event feed.
   useEffect(() => {
     void communityEvents?.sync('panel');
@@ -1014,8 +1001,9 @@ function GameSection({
             development === undefined ? null : (
               <EventSlotActions
                 onClear={() => void changeEventSlot((operations) => operations.clearEvent())}
-                onExport={() => setExportingEvent(true)}
-                onImport={() => void changeEventSlot((operations) => operations.importEventFile())}
+                onImport={() =>
+                  void changeEventSlot((operations) => operations.importEventFolder())
+                }
                 pending={pending}
               />
             )
@@ -1030,12 +1018,6 @@ function GameSection({
           }}
           pending={pending}
           plans={plans}
-        />
-      )}
-      {exportingEvent && development !== undefined && (
-        <ExportEventDialog
-          onClose={() => setExportingEvent(false)}
-          onExport={(metadata) => development.exportEventFile(metadata)}
         />
       )}
       {replaceSlot !== null && (

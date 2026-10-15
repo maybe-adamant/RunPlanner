@@ -1,8 +1,7 @@
 //! Release and community event publishing support, run by CI against a planner checkout:
 //!
-//! - `build-id`: the module build this checkout embeds, as the app selects plans by.
-//! - `module-build`: `{"version","buildId"}` of that module, published with each release.
-//! - `check <feed> <build-id>`: decodes a feed as the app does and fails if any event is refused.
+//! - `build-id`: the module build this checkout embeds.
+//! - `check <feed>`: decodes a feed as the app does and fails if any event is refused.
 //! - `verify <feed> <signature> <public-key>`: verifies a signed feed and prints its signing time.
 
 use std::fs;
@@ -16,20 +15,15 @@ fn run(arguments: &[String]) -> Result<String, String> {
         |path: &String| fs::read(path).map_err(|error| format!("could not read {path}: {error}"));
     match arguments {
         [command] if command == "build-id" => Ok(ModulePackage::bundled().build_id.clone()),
-        [command] if command == "module-build" => {
-            let package = ModulePackage::bundled();
-            Ok(serde_json::json!({ "version": package.version, "buildId": package.build_id })
-                .to_string())
-        }
-        [command, feed, build_id] if command == "check" => {
-            let decoded = event_feed::decode_feed(&read(feed)?, build_id)?;
+        [command, feed] if command == "check" => {
+            let decoded = event_feed::decode_feed(&read(feed)?)?;
             if !decoded.refused.is_empty() {
                 return Err(format!("refused events:\n{}", decoded.refused.join("\n")));
             }
             Ok(decoded
                 .events
                 .iter()
-                .map(|plan| plan.event.id.as_str())
+                .map(|event| event.id.as_str())
                 .collect::<Vec<_>>()
                 .join("\n"))
         }
@@ -37,7 +31,10 @@ fn run(arguments: &[String]) -> Result<String, String> {
             event_feed::verify_signature(&read(feed)?, &read(signature)?, public_key.trim())
                 .map(|signed_at| signed_at.to_string())
         }
-        _ => Err("usage: events_ci build-id | module-build | check <feed> <build-id> | verify <feed> <signature> <public-key>".to_owned()),
+        _ => Err(
+            "usage: events_ci build-id | check <feed> | verify <feed> <signature> <public-key>"
+                .to_owned(),
+        ),
     }
 }
 

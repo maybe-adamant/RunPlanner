@@ -1,7 +1,7 @@
 # Community events live acceptance
 
 Requires a planner release that ships the real event public key
-(`apps/planner/src-tauri/event-feed.pub`) and `module-build.json`, the events
+(`apps/planner/src-tauri/event-feed.pub`) and reads feed version 2, the events
 repository (`maybe-adamant/RunPlanner-Events`) with its signing secrets, and a
 ready game target with that release's module installed. Automated tests are not
 live verification; the owner confirms or waives each check.
@@ -14,8 +14,8 @@ live verification; the owner confirms or waives each check.
 - [ ] In the events repository, open a pull request adding a test event whose
       window contains now (with a complete project). Its validation check
       passes. Before merging, dispatch **Publish events** on the pull request's
-      branch with dry run on: the summary lists the event with the release's
-      module build and nothing is uploaded. Merging publishes it.
+      branch with dry run on: the summary lists the event with its project
+      schema and nothing is uploaded. Merging publishes it.
 - [ ] After the merge (or a manual run with dry run off), the `events` release holds
       `events.json`, `events.json.sig` and `<id>.runplanner.json`, is marked
       pre-release, and the events repository's own latest release is not it.
@@ -30,6 +30,8 @@ live verification; the owner confirms or waives each check.
       briefly without moving the buttons.
 - [ ] **Set as active** makes the Event slot active: the button reads
       **Active** and the Game panel's **Active plan** shows the event.
+- [ ] The Event slot holds the event's plan, compiled by the app from the
+      event's project, without a feed republish for this planner release.
 - [ ] **Open project** opens the event's plan as an unsaved copy; with unsaved
       changes in the open project it asks first. The copy sent to a slot does
       not count as the event.
@@ -49,8 +51,18 @@ live verification; the owner confirms or waives each check.
       date) with the app running: shortly after the end, slot 0 is cleared,
       slot 1 becomes active and the notice says the event ended and what the
       next run uses. In game the picker no longer lists the event.
-- [ ] Start the app offline after a successful fetch: the event stays until it
-      ends. Start offline with no cached feed: the Event slot is kept until its
-      own end time.
+- [ ] Start the app offline after a successful fetch: the notice and the Event
+      slot stay until the event ends. Start offline with no cached feed: the
+      Event slot is kept until its own end time.
 - [ ] Replace the published `<id>.runplanner.json` with another file (keeping
-      the feed): **Open project** refuses it as not matching the event.
+      the feed): the Event slot is not rewritten and **Open project** refuses
+      it as not matching the event.
+- [ ] With the Event slot active, let an event end while the next event starts
+      at once with a project the planner cannot play (a newer
+      `projectSchemaVersion`, or its project file missing): slot 0 is cleared,
+      slot 1 becomes active and the notice says the event ended; the next sync
+      shows the new event's notice without **Set as active**.
+- [ ] Publish an event whose `projectSchemaVersion` is newer than the
+      installed planner's schema: the notice reads "Update the planner to play
+      this event." with no **Set as active**, and the Event slot is not
+      written.

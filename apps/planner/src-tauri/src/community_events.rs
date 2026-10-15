@@ -5,13 +5,16 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 
-use run_planner_game_host::community_event::{instant_from_unix, EventPlan, Instant};
+use run_planner_game_host::community_event::{instant_from_unix, CommunityEvent, Instant};
 use run_planner_game_host::event_feed::{
-    self, project_url, EventSession, FeedSource, VerifiedFeed, EVENT_FEED_SIGNATURE_URL,
-    EVENT_FEED_URL, MAX_EVENT_PROJECT_BYTES, MAX_FEED_BYTES, MAX_FEED_SIGNATURE_BYTES,
+    self, project_url, EventSession, FeedSource, ProjectSchemaRange, VerifiedFeed,
+    EVENT_FEED_SIGNATURE_URL, EVENT_FEED_URL, MAX_EVENT_PROJECT_BYTES, MAX_FEED_BYTES,
+    MAX_FEED_SIGNATURE_BYTES,
 };
 use run_planner_game_host::game_module_package::ModulePackage;
-use run_planner_game_host::game_plan_publication::{self, EventSlotClearing, GamePlanPublication};
+use run_planner_game_host::game_plan_publication::{
+    self, EventSlotClearing, EventSlotKeep, GamePlanPublication,
+};
 use run_planner_game_host::slot_overview::{SlotEvent, SlotSummary};
 
 use crate::game_module_commands::config_dir;
@@ -23,11 +26,29 @@ const FETCH_TIMEOUT: Duration = Duration::from_secs(20);
 #[derive(Default)]
 pub struct CommunityEvents(Mutex<EventSession>);
 
+/// The active event's project as this session holds it.
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ActiveEventProject {
+    /// Verified against the event's signed hash.
+    Verified { json: String },
+    /// Saved in a project schema this planner cannot load, so it was not downloaded.
+    UnsupportedSchema,
+    /// The download or its verification failed.
+    Unavailable { problem: String },
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveEvent {
+    event: CommunityEvent,
+    project: ActiveEventProject,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EventFeedSnapshot {
-    /// The active event with its plan for this app's module build.
-    active: Option<EventPlan>,
+    active: Option<ActiveEvent>,
     source: FeedSource,
     /// Why the last fetch failed, when it did.
     problem: Option<String>,
@@ -65,10 +86,10 @@ fn cache_directory(app: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("could not resolve application data directory: {error}"))
 }
 
-fn cached_feed(app: &AppHandle, key: &str, build_id: &str) -> Option<VerifiedFeed> {
+fn cached_feed(app: &AppHandle, key: &str) -> Option<VerifiedFeed> {
     cache_directory(app)
         .ok()
-        .and_then(|directory| event_feed::read_cached_feed(&directory, key, build_id).ok())
+        .and_then(|directory| event_feed::read_cached_feed(&directory, key).ok())
 }
 
 fn client() -> Result<reqwest::Client, String> {
@@ -111,13 +132,12 @@ async fn download(client: &reqwest::Client, url: &str, limit: usize) -> Result<V
 async fn fetch_feed(
     app: &AppHandle,
     key: &str,
-    build_id: &str,
     not_before: Option<u64>,
 ) -> Result<VerifiedFeed, String> {
     let client = client()?;
     let feed = download(&client, EVENT_FEED_URL, MAX_FEED_BYTES).await?;
     let signature = download(&client, EVENT_FEED_SIGNATURE_URL, MAX_FEED_SIGNATURE_BYTES).await?;
-    let verified = event_feed::verify_feed(&feed, &signature, key, build_id, not_before)?;
+    let verified = event_feed::verify_feed(&feed, &signature, key, not_before)?;
     // A feed that cannot be cached is still used for this session.
     if let Ok(directory) = cache_directory(app) {
         let _ = event_feed::cache_feed(&directory, &feed, &signature);
@@ -125,17 +145,33 @@ async fn fetch_feed(
     Ok(verified)
 }
 
+/// Downloads an event's project from beside the feed, verifies it against the signed hash and
+/// holds it for the session.
+async fn verified_project(
+    events: &State<'_, CommunityEvents>,
+    event: &CommunityEvent,
+) -> Result<String, String> {
+    if let Some(held) = session(events)?.held_project(event) {
+        return Ok(held.to_owned());
+    }
+    let url = project_url(event)?.to_owned();
+    let bytes = download(&client()?, &url, MAX_EVENT_PROJECT_BYTES).await?;
+    let json = event_feed::verify_project(event, bytes)?;
+    session(events)?.hold_project(event, json.clone(), now());
+    Ok(json)
+}
+
 /// Fetches the feed unless it was read within the refresh interval, or at once after a failed
 /// fetch when `retry_failed`; offline, the last verified feed stands. Returns the active event
-/// for this app's module build.
+/// with its verified project, which is downloaded only when `project_schemas` admits it.
 #[tauri::command]
 pub async fn event_feed_refresh(
     app: AppHandle,
     events: State<'_, CommunityEvents>,
     retry_failed: bool,
+    project_schemas: ProjectSchemaRange,
 ) -> Result<EventFeedSnapshot, String> {
     let started = std::time::Instant::now();
-    let build_id = ModulePackage::bundled().build_id.clone();
     let mut problem = None;
     let (fetch, held) = {
         let session = session(&events)?;
@@ -153,105 +189,125 @@ pub async fn event_feed_refresh(
                 problem: None,
             });
         };
-        let not_before =
-            held.or_else(|| cached_feed(&app, key, &build_id).map(|cached| cached.signed_at));
-        match fetch_feed(&app, key, &build_id, not_before).await {
+        // A cached feed that verifies sets the floor even when it no longer decodes.
+        let not_before = held.or_else(|| {
+            cache_directory(&app)
+                .ok()
+                .and_then(|directory| event_feed::cached_signed_at(&directory, key))
+        });
+        match fetch_feed(&app, key, not_before).await {
             Ok(verified) => session(&events)?.accept_fetched(verified, started),
             Err(message) => {
-                let cached = cached_feed(&app, key, &build_id);
+                let cached = cached_feed(&app, key);
                 session(&events)?.fetch_failed(|| cached, started);
                 problem = Some(message);
             }
         }
     }
-    let session = session(&events)?;
-    for refused in session.refused() {
-        eprintln!("[RunPlanner] community event refused: {refused}");
-    }
+    let (active, source) = {
+        let session = session(&events)?;
+        for refused in session.refused() {
+            eprintln!("[RunPlanner] community event refused: {refused}");
+        }
+        (session.active(now()).cloned(), session.source())
+    };
+    let active = match active {
+        None => None,
+        Some(event) => {
+            let project = if !project_schemas.admits(&event) {
+                ActiveEventProject::UnsupportedSchema
+            } else {
+                match verified_project(&events, &event).await {
+                    Ok(json) => ActiveEventProject::Verified { json },
+                    Err(problem) => ActiveEventProject::Unavailable { problem },
+                }
+            };
+            Some(ActiveEvent { event, project })
+        }
+    };
     Ok(EventFeedSnapshot {
-        active: session.active(now()).cloned(),
-        source: session.source(),
+        active,
+        source,
         problem,
     })
 }
 
-/// Writes the active verified event to the event slot. The caller names the event and the plan
-/// its summary describes, and supplies only that display summary; the plan and the event
-/// metadata written are the host's own.
+/// Writes a plan to the event slot, only for the active event whose project this session
+/// verified, with the host's own event metadata. The plan is trusted as a send's is; its
+/// `projectId` must match that project's.
 #[tauri::command]
 pub fn game_event_publish(
     app: AppHandle,
     events: State<'_, CommunityEvents>,
     event_id: String,
-    plan_fingerprint: String,
+    plan_json: String,
     summary: SlotSummary,
 ) -> Result<GamePlanPublication, String> {
-    let plan = session(&events)?
-        .active_named(&event_id, &plan_fingerprint, now())?
+    let event = session(&events)?
+        .publishable(&event_id, &plan_json, now())?
         .clone();
     Ok(game_plan_publication::publish_event(
         &config_dir(&app)?,
         ModulePackage::bundled(),
-        &plan.plan_json,
+        &plan_json,
         summary,
         SlotEvent {
-            id: plan.event.id,
-            title: plan.event.title,
-            ends_at: plan.event.ends_at,
+            id: event.id,
+            title: event.title,
+            ends_at: event.ends_at,
         },
     ))
 }
 
-/// Clears the event slot. Without verified event data, as an offline start may have, only an
-/// event slot whose own event ended is cleared.
+/// Clears the event slot, keeping it only while it holds the active event's plan. Without
+/// verified event data, as an offline start may have, only an event slot whose own event ended
+/// is cleared.
 #[tauri::command]
 pub fn game_event_clear(
     app: AppHandle,
     events: State<'_, CommunityEvents>,
 ) -> Result<EventSlotClearing, String> {
-    let ended_only_at = (!session(&events)?.has_verified_feed()).then(now);
+    let now = now();
+    let session = session(&events)?;
+    let active = session.active(now).map(|event| event.id.clone());
+    let keep = match (&active, session.has_verified_feed()) {
+        (_, false) => EventSlotKeep::UntilEnded(now),
+        (Some(id), true) => EventSlotKeep::Event(id),
+        (None, true) => EventSlotKeep::Nothing,
+    };
+    drop(session);
     Ok(game_plan_publication::clear_event(
         &config_dir(&app)?,
         ModulePackage::bundled(),
-        ended_only_at,
+        keep,
     ))
 }
 
-/// Downloads a verified event's project from beside the feed and checks it against the signed
-/// hash, as text for the planner to open.
+/// A verified event's project, checked against the signed hash, as text for the planner to
+/// open.
 #[tauri::command]
 pub async fn event_project_download(
     events: State<'_, CommunityEvents>,
     event_id: String,
 ) -> Result<String, String> {
-    let (plan, url) = {
-        let session = session(&events)?;
-        let plan = session
-            .named(&event_id)
-            .ok_or_else(|| format!("{event_id} is not a verified event."))?
-            .clone();
-        let url = project_url(&plan)?.to_owned();
-        (plan, url)
-    };
-    let bytes = download(&client()?, &url, MAX_EVENT_PROJECT_BYTES).await?;
-    event_feed::verify_project(&plan, &bytes)?;
-    String::from_utf8(bytes).map_err(|_| "The event project is not text.".to_owned())
+    let event = session(&events)?
+        .named(&event_id)
+        .ok_or_else(|| format!("{event_id} is not a verified event."))?
+        .clone();
+    verified_project(&events, &event).await
 }
 
-/// Development builds: loads a local event file in place of the feed's event.
+/// Development builds: loads a local event folder in place of the feed's event.
 #[cfg(any(debug_assertions, internal_features))]
 #[tauri::command]
-pub fn game_event_file_load(
+pub fn game_event_folder_load(
     events: State<'_, CommunityEvents>,
     path: String,
-) -> Result<EventPlan, String> {
-    let plan = run_planner_game_host::community_event::read_event_file(
-        std::path::Path::new(&path),
-        &ModulePackage::bundled().build_id,
-    )
-    .map_err(|error| error.to_string())?;
-    session(&events)?.set_local(plan.clone());
-    Ok(plan)
+) -> Result<CommunityEvent, String> {
+    let local = event_feed::read_local_event(std::path::Path::new(&path))?;
+    let event = local.event.clone();
+    session(&events)?.set_local(local);
+    Ok(event)
 }
 
 /// Development builds: returns to the feed's event.

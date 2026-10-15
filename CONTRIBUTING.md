@@ -169,10 +169,6 @@ published version identifies one build; choose a new version for a new build.
 Run `npm run check` locally on the commit being released before dispatching
 it; packaging does not repeat that repository gate.
 
-Each release also publishes `module-build.json`, `{"version", "buildId"}` of
-the game module it ships, written by the Linux build from the same Rust assembly
-the app embeds (`events_ci module-build`). The community event workflows read it.
-
 ### Community events
 
 Events live in the separate
@@ -181,10 +177,14 @@ repository, which validates pull requests and publishes the signed feed with its
 own workflows; this repository only reads the feed (see
 [Event feed](docs/design/GAME_INTEGRATION_BOUNDARY.md#event-feed)). Those
 workflows check out the latest planner release and call its single event
-builder, `npm run events:build` (`apps/planner/src/workspace/eventFeedBuilder.ts`
-over `eventDocument.ts`, the builder the development **Export event file…** also
-uses), and the `events_ci` example of the game host crate for the module build,
-host-side feed checks and signature verification.
+builder, `npm run events:build` (`apps/planner/src/workspace/eventFeedBuilder.ts`,
+which compiles every event's project through the same `eventDocument.ts` the
+app compiles events with), and the `events_ci` example of the game host crate
+for host-side feed checks and signature verification. The feed carries each
+event's project reference, not compiled plans, so a planner release needs no
+feed republish. A development build's **Import event folder…** plays a local
+event folder from that repository through the same checks, without a
+signature.
 
 The feed is signed with a dedicated event key, not the updater key. The app
 embeds its public key from `apps/planner/src-tauri/event-feed.pub`, which ships

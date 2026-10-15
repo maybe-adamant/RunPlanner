@@ -1,4 +1,4 @@
-import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assembleExecutionProduct,
@@ -7,11 +7,11 @@ import {
   EXECUTION_DISPLAY_NAME_MAX,
 } from '@run-planner/engine/execution-plan';
 
-/**
- * A community event document, `run-planner-event` version 1: the object a local event file
- * holds and the event feed lists. The host decodes and validates it; this builds it.
- */
-export interface EventDocumentMetadata {
+import { loadProjectDocument } from '../persistence/projectDocumentLoader';
+import { assertPublicProjectAdmission } from './project-admission';
+
+/** The fields an event's author writes in `event.json`; the host decodes and validates them. */
+export interface AuthoredEventMetadata {
   readonly id: string;
   readonly title: string;
   readonly description: string;
@@ -19,20 +19,12 @@ export interface EventDocumentMetadata {
   /** UTC ISO 8601, such as "2026-10-12T00:00:00Z". */
   readonly startsAt: string;
   readonly endsAt: string;
-  readonly projectUrl?: string;
-  /** Lower-case hex SHA-256 of the project file published at `projectUrl`. */
-  readonly projectSha256?: string;
 }
-
-/** The fields an event's author writes; the project's URL and hash follow from its file. */
-export type AuthoredEventMetadata = Omit<EventDocumentMetadata, 'projectUrl' | 'projectSha256'>;
 
 const EVENT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ISO_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?Z$/;
 const MAX_TITLE_CHARS = 80;
 const MAX_TEXT_CHARS = 2000;
-/** The host decoder's bound on one event document. */
-export const MAX_EVENT_DOCUMENT_BYTES = 4 * 1_048_576;
 
 // Unicode format characters (category Cf) and the line and paragraph separators, which the
 // host refuses in every event text.
@@ -108,52 +100,28 @@ export function eventMetadataProblem(metadata: AuthoredEventMetadata): string | 
   return null;
 }
 
-export const EVENT_DOCUMENT_FORMAT = 'run-planner-event';
-export const EVENT_DOCUMENT_FORMAT_VERSION = 1;
-
 /** The plan's display name for an event: its title, bounded as plan names are. */
-export function eventPlanDisplayName(title: string): string {
+function eventPlanDisplayName(title: string): string {
   return Array.from(title.trim()).slice(0, EXECUTION_DISPLAY_NAME_MAX).join('');
 }
 
 /**
- * Compiles an event's project through the same execution-plan assembly as a send. The plan
- * is named by the event's title.
+ * Compiles an event's project file headlessly, as a public project opened and sent would be:
+ * loaded, admitted, simulated and compiled through the same execution-plan assembly, with the
+ * event's title as the plan's name.
  */
-export function compileEventPlan(
-  catalog: Catalog,
-  assembly: ProjectEvaluationAssembly,
-  title: string,
-): string {
+export function compileEventProject(catalog: Catalog, projectJson: string, title: string): string {
+  const { project } = loadProjectDocument(projectJson, catalog);
+  assertPublicProjectAdmission(catalog, project);
   return encodeExecutionPlan(
     compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly, catalog }),
+      product: assembleExecutionProduct({
+        assembly: simulateProjectAssembly(catalog, project),
+        catalog,
+      }),
       displayName: eventPlanDisplayName(title),
     }),
   );
-}
-
-/** The event document with each build's plan embedded as encoded. */
-export function encodeEventDocument(
-  metadata: EventDocumentMetadata,
-  plans: Readonly<Record<string, string>>,
-): string {
-  if (Object.keys(plans).length === 0) throw new Error('An event needs a plan for a build.');
-  return JSON.stringify({
-    format: EVENT_DOCUMENT_FORMAT,
-    formatVersion: EVENT_DOCUMENT_FORMAT_VERSION,
-    id: metadata.id,
-    title: metadata.title,
-    description: metadata.description,
-    ...(metadata.rules === undefined ? {} : { rules: metadata.rules }),
-    startsAt: metadata.startsAt,
-    endsAt: metadata.endsAt,
-    ...(metadata.projectUrl === undefined ? {} : { projectUrl: metadata.projectUrl }),
-    ...(metadata.projectSha256 === undefined ? {} : { projectSha256: metadata.projectSha256 }),
-    plans: Object.fromEntries(
-      Object.entries(plans).map(([buildId, planJson]) => [buildId, JSON.parse(planJson)]),
-    ),
-  });
 }
 
 /** The repository whose `events` release publishes the feed; renaming it is this one edit. */

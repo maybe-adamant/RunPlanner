@@ -135,7 +135,6 @@ function ActiveEventNotice({
     }
   };
   const copyLink = async () => {
-    if (event.projectUrl === null) return;
     try {
       await globalThis.navigator.clipboard.writeText(event.projectUrl);
       setCopy('Copied');
@@ -149,17 +148,22 @@ function ActiveEventNotice({
       actions={
         <>
           {/* One element in both states, so focus stays when the event becomes the next run. */}
-          <button
-            aria-disabled={playsNext || playing || undefined}
-            aria-live="polite"
-            className={`secondary-action action-compact${playsNext ? ' event-notice-plays' : ''}`}
-            onClick={() => {
-              if (!playsNext && !playing) void play();
-            }}
-            type="button"
-          >
-            <StableLabel current={playsNext ? 'Active' : 'Set as active'} labels={ACTIVE_LABELS} />
-          </button>
+          {notice.problem === null ? (
+            <button
+              aria-disabled={playsNext || playing || undefined}
+              aria-live="polite"
+              className={`secondary-action action-compact${playsNext ? ' event-notice-plays' : ''}`}
+              onClick={() => {
+                if (!playsNext && !playing) void play();
+              }}
+              type="button"
+            >
+              <StableLabel
+                current={playsNext ? 'Active' : 'Set as active'}
+                labels={ACTIVE_LABELS}
+              />
+            </button>
+          ) : null}
           <button
             aria-controls={details ? detailsId : undefined}
             aria-expanded={details}
@@ -169,29 +173,25 @@ function ActiveEventNotice({
           >
             Details
           </button>
-          {event.projectUrl === null ? null : (
-            <>
-              <button
-                className="quiet-action action-compact"
-                disabled={pending}
-                onClick={() => {
-                  if (confirmOpenProject) setConfirming(true);
-                  else void openProject();
-                }}
-                type="button"
-              >
-                <StableLabel current={pending ? 'Opening…' : 'Open project'} labels={OPEN_LABELS} />
-              </button>
-              <button
-                aria-live="polite"
-                className="quiet-action action-compact"
-                onClick={() => void copyLink()}
-                type="button"
-              >
-                <StableLabel current={copy} labels={COPY_LABELS} />
-              </button>
-            </>
-          )}
+          <button
+            className="quiet-action action-compact"
+            disabled={pending}
+            onClick={() => {
+              if (confirmOpenProject) setConfirming(true);
+              else void openProject();
+            }}
+            type="button"
+          >
+            <StableLabel current={pending ? 'Opening…' : 'Open project'} labels={OPEN_LABELS} />
+          </button>
+          <button
+            aria-live="polite"
+            className="quiet-action action-compact"
+            onClick={() => void copyLink()}
+            type="button"
+          >
+            <StableLabel current={copy} labels={COPY_LABELS} />
+          </button>
           <button
             className="quiet-action action-compact"
             onClick={controller.dismiss}
@@ -210,6 +210,7 @@ function ActiveEventNotice({
           {event.rules === null ? null : <p>{event.rules}</p>}
         </div>
       )}
+      {notice.problem === null ? null : <p>{notice.problem}</p>}
       {message === null ? null : <p role="alert">{message}</p>}
       {confirming && (
         <ModalDialog

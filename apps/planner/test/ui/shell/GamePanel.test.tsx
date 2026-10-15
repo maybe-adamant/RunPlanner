@@ -680,7 +680,7 @@ describe('Game panel', () => {
     expect(within(row).getByText(/^Ends /)).toBeTruthy();
     expect(within(row).queryByRole('button')).toBeNull();
     expect(within(table).getAllByRole('button', { name: /\(slot \d+\)$/ })).toHaveLength(12);
-    expect(within(dialog).queryByRole('button', { name: 'Import event file…' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Import event folder…' })).toBeNull();
 
     const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
       name: 'Active plan',
@@ -703,28 +703,26 @@ describe('Game panel', () => {
       communityEventHost: events,
       devBuild: true,
     });
-    await vi.waitFor(() => expect(events.refreshFeed).toHaveBeenCalledWith(true));
-    const importButton = await within(dialog).findByRole('button', { name: 'Import event file…' });
+    await vi.waitFor(() =>
+      expect(events.refreshFeed).toHaveBeenCalledWith(true, expect.anything()),
+    );
+    const importButton = await within(dialog).findByRole('button', {
+      name: 'Import event folder…',
+    });
     expect(within(dialog).queryByRole('rowheader', { name: 'Event' })).toBeNull();
 
     await user.click(importButton);
-    expect(development.pickEventFile).toHaveBeenCalledTimes(1);
+    expect(development.pickEventFolder).toHaveBeenCalledTimes(1);
     expect(events.publishEvent).not.toHaveBeenCalled();
 
-    development.pickEventFile.mockResolvedValueOnce('/events/e.json');
+    development.pickEventFolder.mockResolvedValueOnce('/events/local-test');
     await user.click(importButton);
-    expect(await within(dialog).findByText('No event file.')).toBeTruthy();
+    expect(await within(dialog).findByText('No event folder.')).toBeTruthy();
 
     await user.click(within(dialog).getByRole('button', { name: 'Clear event' }));
     expect(await within(dialog).findByText('The event slot is empty.')).toBeTruthy();
     expect(development.clearLocalEvent).toHaveBeenCalledTimes(1);
-
-    await user.click(within(dialog).getByRole('button', { name: 'Export event file…' }));
-    const exporting = await screen.findByRole('dialog', { name: 'Export event file' });
-    await user.type(within(exporting).getByLabelText('Id'), 'local-test');
-    await user.click(within(exporting).getByRole('button', { name: 'Export…' }));
-    expect(await within(exporting).findByRole('alert')).toBeTruthy();
-    expect(development.saveEventFile).not.toHaveBeenCalled();
+    expect(within(dialog).queryByRole('button', { name: /Export event/ })).toBeNull();
   });
 
   it('offers no event actions in release builds', async () => {
@@ -734,7 +732,7 @@ describe('Game panel', () => {
       devBuild: false,
     });
     await within(dialog).findByRole('heading', { name: 'Game location' });
-    expect(within(dialog).queryByRole('button', { name: 'Import event file…' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'Import event folder…' })).toBeNull();
   });
 
   it('moves the next run with a send and reports a send it could not activate', async () => {

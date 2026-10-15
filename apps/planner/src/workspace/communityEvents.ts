@@ -1,9 +1,8 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { decodeExecutionPlan } from '@run-planner/engine/execution-plan';
-import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
-import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import { decodeExecutionPlan, type ExecutionPlan } from '@run-planner/engine/execution-plan';
 
 import type {
+  ActiveCommunityEvent,
   CommunityEvent,
   CommunityEventDevelopmentHost,
   CommunityEventHost,
@@ -14,25 +13,21 @@ import type {
   GameActiveSlotSetting,
   GamePlanPublication,
 } from '../persistence/gameModuleHost';
+import { LOADABLE_PROJECT_SCHEMAS } from '../persistence/projectDocumentLoader';
 import { describeActiveSlotSetting, describePublicationBlocker } from '../projections/gamePanel';
 import { projectGameSlotSummary } from '../projections/gameSlotSummary';
-import {
-  compileEventPlan,
-  encodeEventDocument,
-  eventMetadataProblem,
-  eventProjectUrl,
-  projectFileSha256,
-  type AuthoredEventMetadata,
-} from './eventDocument';
-
-/** What an event export asks for; the project's URL and hash follow from the open project. */
-export type EventExportMetadata = AuthoredEventMetadata;
+import { compileEventProject } from './eventDocument';
 import type { ProjectOperationResult } from './projectOperations';
 
 /** The notice area's community event entry. */
 export type EventNotice =
   | { readonly kind: 'none' }
-  | { readonly kind: 'active'; readonly event: CommunityEvent }
+  | {
+      readonly kind: 'active';
+      readonly event: CommunityEvent;
+      /** Why the event slot does not hold this event's plan; null when it does or will. */
+      readonly problem: string | null;
+    }
   /** The event slot was active when its event ended, so slot 1 now is. */
   | {
       readonly kind: 'ended';
@@ -51,23 +46,23 @@ export interface EventDismissalPreference {
   dismiss(eventId: string): void;
 }
 
-/** Development builds: fill the event slot from a local event file, or export one. */
+/**
+ * Development builds: fill the event slot from a local event folder, compiled as a feed event
+ * is, or return to the feed's event.
+ */
 export interface EventDevelopmentOperations {
-  importEventFile(): Promise<EventSlotOutcome>;
+  importEventFolder(): Promise<EventSlotOutcome>;
   clearEvent(): Promise<EventSlotOutcome>;
-  /**
-   * Exports the open project as an event document for this app's build, naming its project
-   * file beside the feed with the hash of the project as encoded now; that encoding is the file
-   * to publish.
-   */
-  exportEventFile(metadata: EventExportMetadata): Promise<EventSlotOutcome>;
 }
 
 /** A start-up read waits out the host's interval; opening the Game panel retries a failed fetch. */
 export type EventSyncTrigger = 'background' | 'panel';
 
 export interface CommunityEventController {
-  /** Reads the feed, then writes the active event to the event slot or clears it. */
+  /**
+   * Reads the feed, then compiles the active event's verified project and writes it to the
+   * event slot, or clears the slot when no event is active.
+   */
   sync(trigger?: EventSyncTrigger): Promise<void>;
   dismiss(): void;
   /** Downloads the active event's project and opens it as an unsaved copy. */
@@ -94,15 +89,23 @@ interface CreateCommunityEventControllerOptions {
   readonly setActiveSlot: (slot: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
   /** Re-reads the game status after the event slot or active slot changed. */
   readonly onSlotsChanged?: () => Promise<unknown> | void;
-  readonly currentAssembly: () => ProjectEvaluationAssembly | undefined;
-  readonly currentProject: () => ProjectDocument | undefined;
-  readonly bundledBuildId: () => Promise<string>;
   readonly now?: () => Date;
 }
 
 type SyncResult =
   | { readonly kind: 'published'; readonly publication: GamePlanPublication }
+  /** The active event's plan could not be written; the event slot is left as it is. */
+  | { readonly kind: 'unplayable'; readonly problem: string }
   | { readonly kind: 'cleared'; readonly clearing: EventSlotClearing };
+
+type CompiledEvent =
+  | { readonly kind: 'compiled'; readonly planJson: string; readonly plan: ExecutionPlan }
+  | { readonly kind: 'failed'; readonly problem: string };
+
+/** The notice for an event saved in a project schema this planner cannot load. */
+export const UNSUPPORTED_EVENT_SCHEMA = 'Update the planner to play this event.';
+/** The notice while the event's project cannot be downloaded and the event slot lacks its plan. */
+export const UNAVAILABLE_EVENT_PROJECT = 'This event’s project could not be downloaded.';
 
 const NO_NOTICE: EventNotice = Object.freeze({ kind: 'none' });
 const EVENT_SLOT: GameActiveSlotNumber = 0;
@@ -141,6 +144,48 @@ export function createCommunityEventController(
   options: CreateCommunityEventControllerOptions,
 ): CommunityEventController {
   const now = options.now ?? (() => new Date());
+  // The last compilation, by event, title (the plan's name), project hash and catalog; the
+  // bundled module build is fixed for the process, so a sync only compiles a changed event.
+  let compiled: { readonly key: string; readonly result: CompiledEvent } | null = null;
+  const compile = (event: CommunityEvent, projectJson: string): CompiledEvent => {
+    const key = JSON.stringify([
+      event.id,
+      event.title,
+      event.projectSha256,
+      options.catalog.version,
+    ]);
+    if (compiled?.key !== key) {
+      let result: CompiledEvent;
+      try {
+        const planJson = compileEventProject(options.catalog, projectJson, event.title);
+        result = { kind: 'compiled', planJson, plan: decodeExecutionPlan(JSON.parse(planJson)) };
+      } catch (error) {
+        result = {
+          kind: 'failed',
+          problem: `This event’s plan could not be built: ${errorText(error)}`,
+        };
+      }
+      compiled = { key, result };
+    }
+    return compiled.result;
+  };
+  // A compiled plan, or why the event cannot be played and whether the notice says so; an
+  // unavailable project is retried at the next sync.
+  const playable = ({
+    event,
+    project,
+  }: ActiveCommunityEvent): CompiledEvent & { readonly shown?: boolean } => {
+    switch (project.kind) {
+      case 'unsupportedSchema':
+        return { kind: 'failed', problem: UNSUPPORTED_EVENT_SCHEMA, shown: true };
+      case 'unavailable':
+        return { kind: 'failed', problem: project.problem, shown: false };
+      case 'verified': {
+        const result = compile(event, project.json);
+        return result.kind === 'failed' ? { ...result, shown: true } : result;
+      }
+    }
+  };
   let notice: EventNotice = NO_NOTICE;
   let active: CommunityEvent | null = null;
   let inFlight: { readonly run: Promise<SyncResult>; readonly retryFailed: boolean } | null = null;
@@ -153,20 +198,45 @@ export function createCommunityEventController(
   };
 
   const runSync = async (retryFailed: boolean): Promise<SyncResult> => {
-    const snapshot = await options.host.refreshFeed(retryFailed);
+    const snapshot = await options.host.refreshFeed(retryFailed, LOADABLE_PROJECT_SCHEMAS);
     if (snapshot.active !== null) {
-      const { event, planJson } = snapshot.active;
+      const { event } = snapshot.active;
       active = event;
       scheduleEndSync(event);
-      // The summary describes this plan with the catalog's labels, as a send does; the host
-      // writes only the plan the fingerprint names.
-      const plan = decodeExecutionPlan(JSON.parse(planJson));
+      const result = playable(snapshot.active);
+      const noticeOf = (problem: string | null): EventNotice =>
+        options.dismissals.isDismissed(event.id) ? NO_NOTICE : { kind: 'active', event, problem };
+      if (result.kind === 'failed') {
+        // The event slot keeps only this event's own plan; another event's plan is cleared.
+        const clearing = await options.host.clearEvent();
+        if (clearing.activeSlotMoved) {
+          publish({
+            kind: 'ended',
+            title: clearing.clearedEvent?.title ?? null,
+            fallbackSlotHasPlan: clearing.fallbackSlotHasPlan,
+          });
+        } else {
+          const holdsEvent = clearing.status === 'kept';
+          publish(
+            noticeOf(
+              result.shown === true
+                ? result.problem
+                : holdsEvent
+                  ? null
+                  : UNAVAILABLE_EVENT_PROJECT,
+            ),
+          );
+        }
+        if (clearing.status === 'cleared' || clearing.activeSlotMoved) options.onSlotsChanged?.();
+        return { kind: 'unplayable', problem: result.problem };
+      }
+      // The summary describes this plan with the catalog's labels, as a send does.
       const publication = await options.host.publishEvent(
         event.id,
-        plan.planFingerprint,
-        projectGameSlotSummary(plan, options.catalog, now()),
+        result.planJson,
+        projectGameSlotSummary(result.plan, options.catalog, now()),
       );
-      publish(options.dismissals.isDismissed(event.id) ? NO_NOTICE : { kind: 'active', event });
+      publish(noticeOf(null));
       options.onSlotsChanged?.();
       return { kind: 'published', publication };
     }
@@ -227,7 +297,9 @@ export function createCommunityEventController(
     const problem =
       result.kind === 'published'
         ? publicationProblem(result.publication)
-        : clearingProblem(result.clearing);
+        : result.kind === 'unplayable'
+          ? result.problem
+          : clearingProblem(result.clearing);
     return problem === null
       ? { kind: 'done', message: done(result) }
       : { kind: 'failed', message: problem };
@@ -285,11 +357,11 @@ export function createCommunityEventController(
       development === undefined
         ? undefined
         : Object.freeze({
-            importEventFile: async (): Promise<EventSlotOutcome> => {
+            importEventFolder: async (): Promise<EventSlotOutcome> => {
               try {
-                const path = await development.pickEventFile();
+                const path = await development.pickEventFolder();
                 if (path === null) return { kind: 'cancelled' };
-                await development.loadEventFile(path);
+                await development.loadEventFolder(path);
                 return await outcomeOf((result) =>
                   result.kind === 'published' ? result.publication.message : 'No event.',
                 );
@@ -303,37 +375,10 @@ export function createCommunityEventController(
                 return await outcomeOf((result) =>
                   result.kind === 'published'
                     ? `The feed's event is back: ${result.publication.message}`
-                    : result.clearing.message,
+                    : result.kind === 'cleared'
+                      ? result.clearing.message
+                      : 'No event.',
                 );
-              } catch (error) {
-                return { kind: 'failed', message: errorText(error) };
-              }
-            },
-            exportEventFile: async (metadata: EventExportMetadata): Promise<EventSlotOutcome> => {
-              try {
-                const problem = eventMetadataProblem(metadata);
-                if (problem !== null) return { kind: 'failed', message: problem };
-                const assembly = options.currentAssembly();
-                const project = options.currentProject();
-                if (assembly === undefined || project === undefined) {
-                  return { kind: 'failed', message: 'Open a project to export it as an event.' };
-                }
-                const projectSha256 = await projectFileSha256(encodeProjectDocument(project));
-                const document = {
-                  ...metadata,
-                  projectUrl: eventProjectUrl(metadata.id),
-                  projectSha256,
-                };
-                const json = encodeEventDocument(document, {
-                  [await options.bundledBuildId()]: compileEventPlan(
-                    options.catalog,
-                    assembly,
-                    metadata.title,
-                  ),
-                });
-                return (await development.saveEventFile(`${metadata.id}.event.json`, json))
-                  ? { kind: 'done', message: `Exported ${metadata.id}.` }
-                  : { kind: 'cancelled' };
               } catch (error) {
                 return { kind: 'failed', message: errorText(error) };
               }
