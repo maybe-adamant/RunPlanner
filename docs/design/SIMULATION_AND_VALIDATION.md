@@ -176,6 +176,10 @@ and selected children require their own choices. Dormant retained values do not
 create findings. An empty optional purchase order is complete, while a missing
 required action remains a repairable incomplete state.
 
+A change that can make a previously valid project invalid or incomplete is a
+tightened validity and needs a minor schema bump
+([Schema change approval](AUTHORED_PROJECT_MODEL.md#schema-change-approval)).
+
 ### Authoring readiness
 
 The exact assessment stop and the authoring lock are not the same point.

@@ -5,6 +5,7 @@ import {
   createDefaultAuthoredHexTree,
   decodeProjectDocument,
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   type OccurrenceId,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
@@ -92,6 +93,15 @@ const codecRejections: readonly {
   { name: 'a null root', mutate: () => null },
   { name: 'an array root', mutate: () => [] },
   { name: 'a schema-47 document', mutate: (document) => ({ ...document, schemaVersion: 47 }) },
+  {
+    name: 'a revision newer than the current one',
+    mutate: (document) => ({
+      ...document,
+      schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION + 1,
+    }),
+  },
+  { name: 'a fractional revision', mutate: (document) => ({ ...document, schemaRevision: 0.5 }) },
+  { name: 'a negative revision', mutate: (document) => ({ ...document, schemaRevision: -1 }) },
   { name: 'a blank project ID', mutate: (document) => ({ ...document, projectId: ' ' }) },
   { name: 'a legacy project name', mutate: (document) => ({ ...document, name: 'Legacy' }) },
   {
@@ -182,6 +192,18 @@ const codecRejections: readonly {
 ];
 
 describe('project document codec', () => {
+  it('reads an absent revision as 0 and stamps the current revision on encode', () => {
+    const encoded = encodedFStart();
+    expect('schemaRevision' in encoded).toBe(PROJECT_DOCUMENT_SCHEMA_REVISION !== 0);
+    const decoded = decodeProjectDocument(encoded, catalog);
+    for (let revision = 0; revision <= PROJECT_DOCUMENT_SCHEMA_REVISION; revision += 1) {
+      expect(decodeProjectDocument({ ...encoded, schemaRevision: revision }, catalog)).toEqual(
+        decoded,
+      );
+    }
+    expect(JSON.parse(encodeProjectDocument(decoded))).toEqual(encoded);
+  });
+
   it('round-trips the exact closed room-action reference union', () => {
     const encoded = encodedFStart();
     firstOccurrence(encoded).roomActions = { order: roomActionReferences };

@@ -6,6 +6,7 @@ import { decodeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
 import {
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,
   type AuthoredRoutePlan,
@@ -16,6 +17,7 @@ import {
   expectExactKeys,
   expectRecord,
   expectNonBlankString,
+  expectNonNegativeInteger,
   expectString,
   failProjectDocument as fail,
 } from './validation';
@@ -349,13 +351,27 @@ function decodeRoutePlan(
 
 export function decodeProjectDocument(value: unknown, catalog: Catalog): ProjectDocument {
   const document = expectRecord(value, '$');
-  expectExactKeys(document, ['schemaVersion', 'projectId', 'catalogVersion', 'route'], '$');
+  expectExactKeys(
+    document,
+    ['schemaVersion', 'schemaRevision', 'projectId', 'catalogVersion', 'route'],
+    '$',
+  );
 
   if (document.schemaVersion !== PROJECT_DOCUMENT_SCHEMA_VERSION) {
     fail(
       '$.schemaVersion',
       `expected ${PROJECT_DOCUMENT_SCHEMA_VERSION}, received ${String(document.schemaVersion)}`,
     );
+  }
+  // An absent revision is 0; an earlier revision of the current major loads as is.
+  if (document.schemaRevision !== undefined) {
+    const revision = expectNonNegativeInteger(document.schemaRevision, '$.schemaRevision');
+    if (revision > PROJECT_DOCUMENT_SCHEMA_REVISION) {
+      fail(
+        '$.schemaRevision',
+        `expected at most ${PROJECT_DOCUMENT_SCHEMA_REVISION}, received ${revision}`,
+      );
+    }
   }
 
   const projectId = expectNonBlankString(document.projectId, '$.projectId');
@@ -393,6 +409,12 @@ export function parseProjectDocument(json: string, catalog: Catalog): ProjectDoc
   return reconciled === decoded ? decoded : decodeProjectDocument(reconciled, catalog);
 }
 
+/** Stamps the current major and, when not 0, the current revision. */
 export function encodeProjectDocument(document: ProjectDocument): string {
-  return `${JSON.stringify(document, null, 2)}\n`;
+  const { schemaVersion, ...rest } = document;
+  const stamped =
+    PROJECT_DOCUMENT_SCHEMA_REVISION === 0
+      ? document
+      : { schemaVersion, schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION, ...rest };
+  return `${JSON.stringify(stamped, null, 2)}\n`;
 }

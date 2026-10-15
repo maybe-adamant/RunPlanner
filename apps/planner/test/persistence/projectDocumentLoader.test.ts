@@ -9,6 +9,7 @@ import {
   createProjectDocument,
   encodeProjectDocument,
   parseProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -45,6 +46,23 @@ describe('project document loader', () => {
       migrationProvenance: [],
       project,
     });
+  });
+
+  it('loads an earlier or current revision of the current major as is', () => {
+    for (let revision = 0; revision <= PROJECT_DOCUMENT_SCHEMA_REVISION; revision += 1) {
+      const json = JSON.stringify({ ...project, schemaRevision: revision });
+      expect(loadProjectDocument(json, catalog)).toEqual({ migrationProvenance: [], project });
+    }
+  });
+
+  it('runs transitions across majors without carrying an older major revision forward', () => {
+    const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+    legacy.schemaVersion = 95;
+    legacy.schemaRevision = PROJECT_DOCUMENT_SCHEMA_REVISION + 3;
+
+    const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
+    expect(loaded.migrationProvenance).toHaveLength(1);
+    expect(loaded.project).toEqual(project);
   });
 
   it('migrates a schema-87 Hub to fountain use before its retained visits', () => {
@@ -452,6 +470,11 @@ describe('project document loader', () => {
       'future schema',
       JSON.stringify({ ...project, schemaVersion: 97 }),
       /newer than supported schema 96/,
+    ],
+    [
+      'future revision of the current major',
+      JSON.stringify({ ...project, schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION + 1 }),
+      /newer than supported schema 96\.\d+/,
     ],
     [
       'mismatched current catalog',
