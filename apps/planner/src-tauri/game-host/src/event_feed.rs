@@ -9,7 +9,9 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::atomic_file;
-use crate::community_event::{decode_event, EventDecodeError, EventPlan, Instant};
+use crate::community_event::{
+    decode_event, valid_event_id, CommunityEvent, Instant, MAX_EVENT_BYTES,
+};
 
 // The repository whose `events` release publishes the feed; renaming it is this one edit.
 macro_rules! events_repository {
@@ -42,7 +44,7 @@ pub const EVENT_PUBLIC_KEY_PLACEHOLDER: &str =
 /// The signed file name the signature's trusted comment must name.
 pub const EVENT_FEED_FILE_NAME: &str = "events.json";
 pub const EVENT_FEED_FORMAT: &str = "run-planner-event-feed";
-pub const EVENT_FEED_FORMAT_VERSION: u8 = 1;
+pub const EVENT_FEED_FORMAT_VERSION: u8 = 2;
 pub const MAX_FEED_BYTES: usize = 16 * 1_048_576;
 pub const MAX_FEED_SIGNATURE_BYTES: usize = 4096;
 pub const MAX_FEED_EVENTS: usize = 32;
@@ -60,10 +62,10 @@ struct FeedDocument<'a> {
     events: Vec<&'a RawValue>,
 }
 
-/// The events a verified feed offers this module build, and why any listed event was refused.
+/// The events a verified feed lists, and why any listed event was refused.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct DecodedFeed {
-    pub events: Vec<EventPlan>,
+    pub events: Vec<CommunityEvent>,
     pub refused: Vec<String>,
 }
 
@@ -133,10 +135,9 @@ pub fn project_url_for(id: &str) -> String {
     format!("{EVENT_PROJECT_URL_PREFIX}{id}.runplanner.json")
 }
 
-/// Decodes a verified feed for `build_id`. A malformed feed is refused whole; within it, an
-/// invalid event, one without its own project file and hash, or a repeated id is refused
-/// alone, and a valid event without a plan for this build is skipped.
-pub fn decode_feed(bytes: &[u8], build_id: &str) -> Result<DecodedFeed, String> {
+/// Decodes a verified feed. A malformed feed is refused whole; within it, an invalid event, one
+/// whose project is not its own file beside the feed, or a repeated id is refused alone.
+pub fn decode_feed(bytes: &[u8]) -> Result<DecodedFeed, String> {
     if bytes.len() > MAX_FEED_BYTES {
         return Err(format!(
             "The event feed exceeds the {MAX_FEED_BYTES}-byte limit."
@@ -158,23 +159,22 @@ pub fn decode_feed(bytes: &[u8], build_id: &str) -> Result<DecodedFeed, String> 
     let mut decoded = DecodedFeed::default();
     let mut ids = BTreeSet::new();
     for raw in document.events {
-        match decode_event(raw.get().as_bytes(), build_id) {
-            Ok(plan) => {
-                let id = plan.event.id.clone();
-                if project_url(&plan).is_err() || plan.event.project_sha256.is_none() {
+        match decode_event(raw.get().as_bytes()) {
+            Ok(event) => {
+                let id = event.id.clone();
+                if project_url(&event).is_err() {
                     decoded.refused.push(format!(
-                        "{id}: the project must be published beside the feed with its hash."
+                        "{id}: the project must be published beside the feed."
                     ));
                 } else if !ids.insert(id.clone()) {
                     decoded
                         .refused
                         .push(format!("{id}: listed more than once."));
                 } else {
-                    decoded.events.push(plan);
+                    decoded.events.push(event);
                 }
             }
-            Err(EventDecodeError::NoPlanForBuild) => {}
-            Err(EventDecodeError::Invalid(message)) => decoded.refused.push(message),
+            Err(message) => decoded.refused.push(message),
         }
     }
     Ok(decoded)
@@ -186,7 +186,6 @@ pub fn verify_feed(
     feed: &[u8],
     signature: &[u8],
     public_key: &str,
-    build_id: &str,
     not_before: Option<u64>,
 ) -> Result<VerifiedFeed, String> {
     let signed_at = verify_signature(feed, signature, public_key)?;
@@ -194,30 +193,46 @@ pub fn verify_feed(
         return Err("The event feed is older than the one already verified.".to_owned());
     }
     Ok(VerifiedFeed {
-        feed: decode_feed(feed, build_id)?,
+        feed: decode_feed(feed)?,
         signed_at,
     })
 }
 
-fn window(plan: &EventPlan) -> Option<(Instant, Instant)> {
+fn window(event: &CommunityEvent) -> Option<(Instant, Instant)> {
     use crate::community_event::parse_instant;
     Some((
-        parse_instant(&plan.event.starts_at)?,
-        parse_instant(&plan.event.ends_at)?,
+        parse_instant(&event.starts_at)?,
+        parse_instant(&event.ends_at)?,
     ))
 }
 
 /// The one active event: its window contains `now`; of several, the latest start wins, then
 /// the greatest id.
-pub fn select_active(events: &[EventPlan], now: Instant) -> Option<&EventPlan> {
+pub fn select_active(events: &[CommunityEvent], now: Instant) -> Option<&CommunityEvent> {
     events
         .iter()
-        .filter_map(|plan| {
-            let (starts, ends) = window(plan)?;
-            (starts <= now && now < ends).then_some((starts, plan))
+        .filter_map(|event| {
+            let (starts, ends) = window(event)?;
+            (starts <= now && now < ends).then_some((starts, event))
         })
-        .max_by(|(a, left), (b, right)| a.cmp(b).then(left.event.id.cmp(&right.event.id)))
-        .map(|(_, plan)| plan)
+        .max_by(|(a, left), (b, right)| a.cmp(b).then(left.id.cmp(&right.id)))
+        .map(|(_, event)| event)
+}
+
+/// The authored project schemas this planner loads, inclusive; the planner supplies them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct ProjectSchemaRange {
+    pub oldest: u32,
+    pub newest: u32,
+}
+
+impl ProjectSchemaRange {
+    /// Whether this planner can load an event's project; an event outside the range is not
+    /// downloaded.
+    pub fn admits(&self, event: &CommunityEvent) -> bool {
+        (self.oldest..=self.newest).contains(&event.project_schema_version)
+    }
 }
 
 /// Keeps a verified feed and its signature together, in one atomically replaced file.
@@ -252,12 +267,8 @@ fn read_bounded(path: &Path, limit: usize) -> Option<Vec<u8>> {
     (bytes.len() <= limit).then_some(bytes)
 }
 
-/// The cached feed, verified again, since application data is not trusted more than the network.
-pub fn read_cached_feed(
-    directory: &Path,
-    public_key: &str,
-    build_id: &str,
-) -> Result<VerifiedFeed, String> {
+// The cached signature line and feed bytes, unverified.
+fn read_cached_parts(directory: &Path) -> Result<(Vec<u8>, usize), String> {
     let bytes = read_bounded(
         &directory.join(CACHED_FEED_FILE),
         MAX_FEED_SIGNATURE_BYTES + 1 + MAX_FEED_BYTES,
@@ -267,29 +278,47 @@ pub fn read_cached_feed(
         .iter()
         .position(|&byte| byte == b'\n')
         .ok_or_else(|| "The cached event feed is malformed.".to_owned())?;
-    verify_feed(
-        &bytes[split + 1..],
-        &bytes[..split],
-        public_key,
-        build_id,
-        None,
-    )
+    Ok((bytes, split))
 }
 
-/// Checks a downloaded project file against its event's signed hash.
-pub fn verify_project(plan: &EventPlan, bytes: &[u8]) -> Result<(), String> {
-    let expected = plan
-        .event
-        .project_sha256
-        .as_deref()
-        .ok_or_else(|| "This event's project has no hash.".to_owned())?;
-    let actual: String = Sha256::digest(bytes)
+/// The cached feed, verified again, since application data is not trusted more than the network.
+pub fn read_cached_feed(directory: &Path, public_key: &str) -> Result<VerifiedFeed, String> {
+    let (bytes, split) = read_cached_parts(directory)?;
+    verify_feed(&bytes[split + 1..], &bytes[..split], public_key, None)
+}
+
+/// When the cached feed was signed, once its signature verifies, even when it no longer
+/// decodes (an older format): a fetched feed must not predate it.
+pub fn cached_signed_at(directory: &Path, public_key: &str) -> Option<u64> {
+    let (bytes, split) = read_cached_parts(directory).ok()?;
+    verify_signature(&bytes[split + 1..], &bytes[..split], public_key).ok()
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
         .iter()
         .map(|byte| format!("{byte:02x}"))
-        .collect();
-    (actual == expected)
-        .then_some(())
-        .ok_or_else(|| "The downloaded project does not match the event.".to_owned())
+        .collect()
+}
+
+/// Checks a downloaded project file against its event's signed hash, as text.
+pub fn verify_project(event: &CommunityEvent, bytes: Vec<u8>) -> Result<String, String> {
+    if sha256_hex(&bytes) != event.project_sha256 {
+        return Err("The downloaded project does not match the event.".to_owned());
+    }
+    String::from_utf8(bytes).map_err(|_| "The event project is not text.".to_owned())
+}
+
+/// The `projectId` a project file or an execution plan names at its top level.
+pub fn project_id_of(json: &str) -> Option<String> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Identity {
+        project_id: String,
+    }
+    serde_json::from_str::<Identity>(json)
+        .ok()
+        .map(|identity| identity.project_id)
 }
 
 /// How long a successful feed read stands before the next background fetch.
@@ -307,8 +336,16 @@ pub enum FeedSource {
     Disabled,
 }
 
-/// The host's verified events for this session. Only an event this session holds can be
-/// written to the event slot: callers name it by id and never supply its plan or metadata.
+/// A project file verified against its event's hash, held for the session.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct HeldProject {
+    event_id: String,
+    sha256: String,
+    json: String,
+}
+
+/// The host's verified events for this session. The event slot is written only for the active
+/// event whose project this session verified, with the host's own event metadata.
 #[derive(Debug)]
 pub struct EventSession {
     feed: Option<DecodedFeed>,
@@ -316,8 +353,9 @@ pub struct EventSession {
     source: FeedSource,
     checked_at: Option<std::time::Instant>,
     last_failed: bool,
-    /// A development event file, which takes the place of the feed's event.
-    local: Option<EventPlan>,
+    /// A development event, which takes the place of the feed's event.
+    local: Option<CommunityEvent>,
+    project: Option<HeldProject>,
 }
 
 impl Default for EventSession {
@@ -329,6 +367,7 @@ impl Default for EventSession {
             checked_at: None,
             last_failed: false,
             local: None,
+            project: None,
         }
     }
 }
@@ -379,6 +418,7 @@ impl EventSession {
         self.signed_at = None;
         self.source = FeedSource::Disabled;
         self.local = None;
+        self.project = None;
     }
 
     pub fn source(&self) -> FeedSource {
@@ -396,8 +436,10 @@ impl EventSession {
             .map_or(&[], |feed| feed.refused.as_slice())
     }
 
-    pub fn set_local(&mut self, plan: EventPlan) {
-        self.local = Some(plan);
+    /// A development event with its project, in place of the feed's event.
+    pub fn set_local(&mut self, local: LocalEvent) {
+        self.keep_project(&local.event, local.project_json);
+        self.local = Some(local.event);
     }
 
     pub fn clear_local(&mut self) {
@@ -405,7 +447,7 @@ impl EventSession {
     }
 
     /// The development event when one is loaded, else the feed's active event at `now`.
-    pub fn active(&self, now: Instant) -> Option<&EventPlan> {
+    pub fn active(&self, now: Instant) -> Option<&CommunityEvent> {
         self.local.as_ref().or_else(|| {
             self.feed
                 .as_ref()
@@ -413,54 +455,138 @@ impl EventSession {
         })
     }
 
-    /// The active event, only when it is the one named, with the plan named by fingerprint.
-    pub fn active_named(
-        &self,
-        id: &str,
-        plan_fingerprint: &str,
-        now: Instant,
-    ) -> Result<&EventPlan, String> {
-        let plan = self
-            .active(now)
-            .filter(|plan| plan.event.id == id)
-            .ok_or_else(|| format!("{id} is not the active event."))?;
-        (plan_fingerprint_of(&plan.plan_json).as_deref() == Some(plan_fingerprint))
-            .then_some(plan)
-            .ok_or_else(|| format!("{id} has another plan now."))
-    }
-
-    /// Any verified event by id, for downloading its project.
-    pub fn named(&self, id: &str) -> Option<&EventPlan> {
+    /// Any verified event by id, for opening its project.
+    pub fn named(&self, id: &str) -> Option<&CommunityEvent> {
         self.local
             .iter()
             .chain(self.feed.iter().flat_map(|feed| feed.events.iter()))
-            .find(|plan| plan.event.id == id)
+            .find(|event| event.id == id)
     }
-}
 
-/// The `planFingerprint` a plan's JSON names.
-pub fn plan_fingerprint_of(plan_json: &str) -> Option<String> {
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Identity {
-        plan_fingerprint: String,
+    /// Keeps a project already verified against `event`'s hash, only while `event` is the
+    /// active event, so opening another event's project never replaces it.
+    pub fn hold_project(&mut self, event: &CommunityEvent, json: String, now: Instant) {
+        if self.active(now) == Some(event) {
+            self.keep_project(event, json);
+        }
     }
-    serde_json::from_str::<Identity>(plan_json)
-        .ok()
-        .map(|identity| identity.plan_fingerprint)
+
+    fn keep_project(&mut self, event: &CommunityEvent, json: String) {
+        self.project = Some(HeldProject {
+            event_id: event.id.clone(),
+            sha256: event.project_sha256.clone(),
+            json,
+        });
+    }
+
+    /// The project held for `event`, when this session verified it.
+    pub fn held_project(&self, event: &CommunityEvent) -> Option<&str> {
+        self.project
+            .as_ref()
+            .filter(|held| held.event_id == event.id && held.sha256 == event.project_sha256)
+            .map(|held| held.json.as_str())
+    }
+
+    /// The event a plan may be written to the event slot for: the active event named, whose
+    /// project this session verified. The plan is trusted as a send's is; its `projectId` must
+    /// match that project's, a consistency check against a plan compiled from something else,
+    /// not an authentication. The module decodes the whole plan.
+    pub fn publishable(
+        &self,
+        id: &str,
+        plan_json: &str,
+        now: Instant,
+    ) -> Result<&CommunityEvent, String> {
+        let event = self
+            .active(now)
+            .filter(|event| event.id == id)
+            .ok_or_else(|| format!("{id} is not the active event."))?;
+        let project = self
+            .held_project(event)
+            .ok_or_else(|| format!("{id} has no verified project."))?;
+        let plan_project =
+            project_id_of(plan_json).ok_or_else(|| "The event plan is invalid.".to_owned())?;
+        (project_id_of(project).as_deref() == Some(plan_project.as_str()))
+            .then_some(event)
+            .ok_or_else(|| format!("The plan is not compiled from {id}'s project."))
+    }
 }
 
 /// The project URL of an event, only when it is exactly the event's own file beside the feed.
-pub fn project_url(plan: &EventPlan) -> Result<&str, String> {
-    plan.event
-        .project_url
-        .as_deref()
-        .filter(|url| *url == project_url_for(&plan.event.id))
+pub fn project_url(event: &CommunityEvent) -> Result<&str, String> {
+    Some(event.project_url.as_str())
+        .filter(|url| *url == project_url_for(&event.id))
         .ok_or_else(|| "This event has no project published beside the feed.".to_owned())
+}
+
+/// A development event: a local folder's `event.json` and `project.runplanner.json`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LocalEvent {
+    pub event: CommunityEvent,
+    pub project_json: String,
+}
+
+pub const LOCAL_EVENT_FILE: &str = "event.json";
+pub const LOCAL_PROJECT_FILE: &str = "project.runplanner.json";
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct AuthoredEvent {
+    id: String,
+    title: String,
+    description: String,
+    #[serde(default)]
+    rules: Option<String>,
+    starts_at: String,
+    ends_at: String,
+}
+
+/// Reads an authored event folder as the feed would list it: the project URL is its own file
+/// beside the feed, and the hash and schema are the project file's.
+pub fn read_local_event(folder: &Path) -> Result<LocalEvent, String> {
+    let read = |name: &str, limit: usize| {
+        read_bounded(&folder.join(name), limit)
+            .ok_or_else(|| format!("Could not read {name} within {limit} bytes as a regular file."))
+    };
+    let authored: AuthoredEvent = serde_json::from_slice(&read(LOCAL_EVENT_FILE, MAX_EVENT_BYTES)?)
+        .map_err(|error| format!("Invalid {LOCAL_EVENT_FILE}: {error}"))?;
+    if !valid_event_id(&authored.id)
+        || folder.file_name().and_then(|name| name.to_str()) != Some(authored.id.as_str())
+    {
+        return Err("An event's id must be valid and equal its folder name.".to_owned());
+    }
+    let project = read(LOCAL_PROJECT_FILE, MAX_EVENT_PROJECT_BYTES)?;
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Schema {
+        schema_version: u32,
+    }
+    let schema: Schema = serde_json::from_slice(&project)
+        .map_err(|_| format!("{LOCAL_PROJECT_FILE} names no schemaVersion."))?;
+    let event = CommunityEvent {
+        project_url: project_url_for(&authored.id),
+        id: authored.id,
+        title: authored.title,
+        description: authored.description,
+        rules: authored.rules,
+        starts_at: authored.starts_at,
+        ends_at: authored.ends_at,
+        project_sha256: sha256_hex(&project),
+        project_schema_version: schema.schema_version,
+    };
+    event.validate()?;
+    let project_json =
+        String::from_utf8(project).map_err(|_| format!("{LOCAL_PROJECT_FILE} is not text."))?;
+    Ok(LocalEvent {
+        event,
+        project_json,
+    })
 }
 
 #[cfg(test)]
 pub mod test_support {
+    // Signed by `tauri signer sign` with a throwaway key made for these fixtures; its private
+    // half is not kept.
     pub const TEST_PUBLIC_KEY: &str = include_str!("../tests/fixtures/event-feed/test-key.pub");
     pub const SIGNED_FEED: &[u8] = include_bytes!("../tests/fixtures/event-feed/events.json");
     pub const FEED_SIGNATURE: &[u8] =
@@ -468,10 +594,16 @@ pub mod test_support {
     /// A signature of the same bytes whose trusted comment names `other.json`.
     pub const OTHER_FILE_SIGNATURE: &[u8] =
         include_bytes!("../tests/fixtures/event-feed/events.json.other-name.sig");
-    pub const FEED_SIGNED_AT: u64 = 1_791_832_588;
-    pub const FEED_BUILD: &str = "test-build";
+    pub const FEED_SIGNED_AT: u64 = 1_792_091_486;
+    /// A version 1 feed, which carried compiled plans, signed by the same key.
+    pub const V1_FEED: &[u8] = include_bytes!("../tests/fixtures/event-feed/events-v1.json");
+    pub const V1_FEED_SIGNATURE: &[u8] =
+        include_bytes!("../tests/fixtures/event-feed/events-v1.json.sig");
+    pub const V1_FEED_SIGNED_AT: u64 = 1_792_093_061;
     /// The project file whose hash the signed fixture names.
-    pub const PROJECT_BYTES: &[u8] = b"event project bytes";
+    pub const PROJECT_BYTES: &[u8] = br#"{"schemaVersion":96,"projectId":"event-project"}"#;
+    pub const PROJECT_HASH: &str =
+        "cb81f8d0a1b589a99debe12a363d0e482d3349b96e10526b7ed6e9a5dc0dd7a4";
 }
 
 #[cfg(test)]
@@ -479,12 +611,11 @@ mod tests {
     use super::test_support::*;
     use super::*;
     use crate::community_event::parse_instant;
-    use crate::community_event::test_support::EVENT_PLAN;
     use crate::game_target::test_support::TemporaryDirectory;
 
     // A real minisign key (the app updater's) that did not sign the test fixture.
     const OTHER_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOTZDOEExM0I5OUYyN0UKUldSKzhwazdvY2lXN2MzMVNGR1pQQWFGOTV2V1l5dEg5Yis1dzRYTDk2VWFldFdweER3Z3huRjcK";
-    const HASH: &str = "5650824531e382c27c755760f7bc6db4c5b690a5df74dc9438e26995bf2f7fbf";
+    const PLAN: &str = r#"{"format":"run-planner-execution","projectId":"event-project","planFingerprint":"event-print"}"#;
 
     #[test]
     fn the_placeholder_public_key_is_never_used() {
@@ -529,23 +660,18 @@ mod tests {
         ] {
             assert!(verify_signature(SIGNED_FEED, signature, TEST_PUBLIC_KEY).is_err());
         }
-        let verified = verify_feed(
-            SIGNED_FEED,
-            FEED_SIGNATURE,
-            TEST_PUBLIC_KEY,
-            FEED_BUILD,
-            None,
-        )
-        .unwrap();
+        let verified = verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).unwrap();
         assert_eq!(verified.signed_at, FEED_SIGNED_AT);
-        assert_eq!(verified.feed.events[0].event.id, "2026-w42-staff");
+        let event = &verified.feed.events[0];
+        assert_eq!(event.id, "2026-w42-staff");
+        assert_eq!(event.project_sha256, PROJECT_HASH);
+        assert_eq!(event.project_schema_version, 96);
         // A feed signed before the one already verified is a replay.
         assert_eq!(
             verify_feed(
                 SIGNED_FEED,
                 FEED_SIGNATURE,
                 TEST_PUBLIC_KEY,
-                FEED_BUILD,
                 Some(FEED_SIGNED_AT + 1)
             ),
             Err("The event feed is older than the one already verified.".to_owned())
@@ -554,157 +680,117 @@ mod tests {
             SIGNED_FEED,
             FEED_SIGNATURE,
             TEST_PUBLIC_KEY,
-            FEED_BUILD,
             Some(FEED_SIGNED_AT)
         )
         .is_ok());
     }
 
-    fn event(id: &str, starts: &str, ends: &str, build: &str, url: &str) -> String {
+    fn event(id: &str, starts: &str, ends: &str, url: &str) -> String {
         format!(
-            r#"{{"format":"run-planner-event","formatVersion":1,"id":"{id}","title":"Title {id}","description":"d","startsAt":"{starts}","endsAt":"{ends}","projectUrl":"{url}","projectSha256":"{HASH}","plans":{{"{build}":{EVENT_PLAN}}}}}"#
+            r#"{{"id":"{id}","title":"Title {id}","description":"d","startsAt":"{starts}","endsAt":"{ends}","projectUrl":"{url}","projectSha256":"{PROJECT_HASH}","projectSchemaVersion":96}}"#
         )
     }
 
     fn feed(events: &[String]) -> String {
         format!(
-            r#"{{"format":"run-planner-event-feed","formatVersion":1,"events":[{}]}}"#,
+            r#"{{"format":"run-planner-event-feed","formatVersion":2,"events":[{}]}}"#,
             events.join(",")
         )
     }
 
     #[test]
-    fn invalid_events_are_refused_alone_and_events_for_other_builds_skipped() {
-        let week = |id: &str, build: &str, url: &str| {
-            event(
-                id,
-                "2026-10-12T00:00:00Z",
-                "2026-10-19T00:00:00Z",
-                build,
-                url,
-            )
-        };
+    fn invalid_events_are_refused_alone_and_a_malformed_feed_whole() {
+        let week =
+            |id: &str, url: &str| event(id, "2026-10-12T00:00:00Z", "2026-10-19T00:00:00Z", url);
         let prefix = EVENT_PROJECT_URL_PREFIX;
         let decoded = decode_feed(
             feed(&[
-                week("kept", "b1", &project_url_for("kept")),
-                week("other-build", "b0", &project_url_for("other-build")),
-                week("Bad Id", "b1", &project_url_for("bad")),
-                week("elsewhere", "b1", "https://example.org/e.runplanner.json"),
-                week("nested", "b1", &format!("{prefix}a/nested.runplanner.json")),
-                week("borrowed", "b1", &project_url_for("kept")),
+                week("kept", &project_url_for("kept")),
+                week("Bad Id", &project_url_for("bad")),
+                week("elsewhere", "https://example.org/e.runplanner.json"),
+                week("nested", &format!("{prefix}a/nested.runplanner.json")),
+                week("borrowed", &project_url_for("kept")),
                 week(
                     "dotted",
-                    "b1",
                     &format!("{prefix}%2e%2e%2Fdotted.runplanner.json"),
                 ),
-                week(
-                    "slashed",
-                    "b1",
-                    &format!("{prefix}..\\\\slashed.runplanner.json"),
+                week("slashed", &format!("{prefix}..\\\\slashed.runplanner.json")),
+                week("queried", &format!("{}?x=1", project_url_for("queried"))),
+                week("kept", &project_url_for("kept")),
+                week("no-url", "").replace(r#","projectUrl":"""#, ""),
+                week("no-hash", &project_url_for("no-hash"))
+                    .replace(&format!(r#","projectSha256":"{PROJECT_HASH}""#), ""),
+                week("no-schema", &project_url_for("no-schema"))
+                    .replace(r#","projectSchemaVersion":96"#, ""),
+                week("with-plans", &project_url_for("with-plans")).replace(
+                    r#""projectSchemaVersion""#,
+                    r#""plans":{},"projectSchemaVersion""#,
                 ),
-                week(
-                    "queried",
-                    "b1",
-                    &format!("{}?x=1", project_url_for("queried")),
-                ),
-                week("kept", "b1", &project_url_for("kept")),
-                week("no-url", "b1", "").replace(r#","projectUrl":"""#, ""),
-                week("no-hash", "b1", &project_url_for("no-hash"))
-                    .replace(&format!(r#","projectSha256":"{HASH}""#), ""),
             ])
             .as_bytes(),
-            "b1",
         )
         .unwrap();
         assert_eq!(
             decoded
                 .events
                 .iter()
-                .map(|plan| plan.event.id.as_str())
+                .map(|event| event.id.as_str())
                 .collect::<Vec<_>>(),
             ["kept"]
         );
-        assert_eq!(decoded.refused.len(), 10, "{:?}", decoded.refused);
+        assert_eq!(decoded.refused.len(), 12, "{:?}", decoded.refused);
         assert!(decoded
             .refused
             .contains(&"kept: listed more than once.".to_owned()));
         for invalid in [
             "not json".to_owned(),
             feed(&[]).replace("run-planner-event-feed", "run-planner-event"),
-            feed(&[]).replace(r#""formatVersion":1"#, r#""formatVersion":2"#),
+            // A version 1 feed, which carried compiled plans, is refused.
+            feed(&[]).replace(r#""formatVersion":2"#, r#""formatVersion":1"#),
+            feed(&[]).replace(r#""formatVersion":2"#, r#""formatVersion":3"#),
             feed(&[]).replace(r#""events""#, r#""extra":1,"events""#),
-            feed(&vec![
-                week("x", "b1", &project_url_for("x"));
-                MAX_FEED_EVENTS + 1
-            ]),
+            feed(&vec![week("x", &project_url_for("x")); MAX_FEED_EVENTS + 1]),
         ] {
-            assert!(
-                decode_feed(invalid.as_bytes(), "b1").is_err(),
-                "{invalid:.80}"
-            );
+            assert!(decode_feed(invalid.as_bytes()).is_err(), "{invalid:.80}");
         }
         assert_eq!(
-            decode_feed(feed(&[]).as_bytes(), "b1"),
+            decode_feed(feed(&[]).as_bytes()),
             Ok(DecodedFeed::default())
         );
     }
 
     #[test]
+    fn an_event_outside_the_planners_project_schemas_is_not_playable() {
+        let range = ProjectSchemaRange {
+            oldest: 86,
+            newest: 96,
+        };
+        let mut event = decode_feed(SIGNED_FEED).unwrap().events.remove(0);
+        for (version, admitted) in [(85, false), (86, true), (96, true), (97, false)] {
+            event.project_schema_version = version;
+            assert_eq!(range.admits(&event), admitted, "{version}");
+        }
+    }
+
+    #[test]
     fn the_active_event_is_the_latest_started_whose_window_holds_now() {
-        let at_url = |id: &str| project_url_for(id);
+        let entry =
+            |id: &str, starts: &str, ends: &str| event(id, starts, ends, &project_url_for(id));
         let events = decode_feed(
             feed(&[
-                event(
-                    "past",
-                    "2026-10-01T00:00:00Z",
-                    "2026-10-08T00:00:00Z",
-                    "b",
-                    &at_url("past"),
-                ),
-                event(
-                    "early",
-                    "2026-10-10T00:00:00Z",
-                    "2026-10-20T00:00:00Z",
-                    "b",
-                    &at_url("early"),
-                ),
-                event(
-                    "late",
-                    "2026-10-12T00:00:00Z",
-                    "2026-10-19T00:00:00Z",
-                    "b",
-                    &at_url("late"),
-                ),
-                event(
-                    "same-a",
-                    "2026-10-26T00:00:00Z",
-                    "2026-11-02T00:00:00Z",
-                    "b",
-                    &at_url("same-a"),
-                ),
-                event(
-                    "same-b",
-                    "2026-10-26T00:00:00Z",
-                    "2026-11-02T00:00:00Z",
-                    "b",
-                    &at_url("same-b"),
-                ),
-                event(
-                    "next",
-                    "2026-10-19T00:00:00Z",
-                    "2026-10-26T00:00:00Z",
-                    "b",
-                    &at_url("next"),
-                ),
+                entry("past", "2026-10-01T00:00:00Z", "2026-10-08T00:00:00Z"),
+                entry("early", "2026-10-10T00:00:00Z", "2026-10-20T00:00:00Z"),
+                entry("late", "2026-10-12T00:00:00Z", "2026-10-19T00:00:00Z"),
+                entry("same-a", "2026-10-26T00:00:00Z", "2026-11-02T00:00:00Z"),
+                entry("same-b", "2026-10-26T00:00:00Z", "2026-11-02T00:00:00Z"),
+                entry("next", "2026-10-19T00:00:00Z", "2026-10-26T00:00:00Z"),
             ])
             .as_bytes(),
-            "b",
         )
         .unwrap()
         .events;
         let at = |text: &str| parse_instant(text).unwrap();
-        let active = |now: &str| select_active(&events, at(now)).map(|plan| plan.event.id.as_str());
+        let active = |now: &str| select_active(&events, at(now)).map(|event| event.id.as_str());
         assert_eq!(active("2026-10-09T00:00:00Z"), None);
         assert_eq!(active("2026-10-11T00:00:00Z"), Some("early"));
         assert_eq!(active("2026-10-12T00:00:00Z"), Some("late"));
@@ -719,9 +805,9 @@ mod tests {
     fn the_cached_feed_is_one_file_verified_again_when_read() {
         let temporary = TemporaryDirectory::new("event-feed-cache");
         let directory = temporary.0.join("event-feed");
-        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY, FEED_BUILD).is_err());
+        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
         cache_feed(&directory, SIGNED_FEED, FEED_SIGNATURE).unwrap();
-        let cached = read_cached_feed(&directory, TEST_PUBLIC_KEY, FEED_BUILD).unwrap();
+        let cached = read_cached_feed(&directory, TEST_PUBLIC_KEY).unwrap();
         assert_eq!(cached.signed_at, FEED_SIGNED_AT);
         assert_eq!(cached.feed.events.len(), 1);
         let path = directory.join(CACHED_FEED_FILE);
@@ -729,98 +815,170 @@ mod tests {
         let last = tampered.len() - 2;
         tampered[last] ^= 1;
         fs::write(&path, tampered).unwrap();
-        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY, FEED_BUILD).is_err());
+        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
         // A signature that does not belong to the cached feed reads as no cache.
         let mut mismatched = OTHER_FILE_SIGNATURE.to_vec();
         mismatched.push(b'\n');
         mismatched.extend_from_slice(SIGNED_FEED);
         fs::write(&path, mismatched).unwrap();
-        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY, FEED_BUILD).is_err());
+        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
         fs::write(&path, SIGNED_FEED).unwrap();
-        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY, FEED_BUILD).is_err());
+        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
+        assert_eq!(cached_signed_at(&directory, TEST_PUBLIC_KEY), None);
+    }
+
+    #[test]
+    fn a_cached_feed_of_an_older_format_still_sets_the_replay_floor() {
+        let temporary = TemporaryDirectory::new("event-feed-cache-v1");
+        let directory = temporary.0.join("event-feed");
+        assert_eq!(cached_signed_at(&directory, TEST_PUBLIC_KEY), None);
+        cache_feed(&directory, V1_FEED, V1_FEED_SIGNATURE).unwrap();
+        assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
+        assert_eq!(
+            cached_signed_at(&directory, TEST_PUBLIC_KEY),
+            Some(V1_FEED_SIGNED_AT)
+        );
+        assert_eq!(cached_signed_at(&directory, OTHER_PUBLIC_KEY), None);
+        // The current fixture was signed before that cached feed, so it reads as a replay.
+        assert!(verify_feed(
+            SIGNED_FEED,
+            FEED_SIGNATURE,
+            TEST_PUBLIC_KEY,
+            cached_signed_at(&directory, TEST_PUBLIC_KEY)
+        )
+        .is_err());
     }
 
     #[test]
     fn a_downloaded_project_must_match_its_signed_hash() {
-        let verified = verify_feed(
-            SIGNED_FEED,
-            FEED_SIGNATURE,
-            TEST_PUBLIC_KEY,
-            FEED_BUILD,
-            None,
-        )
-        .unwrap();
-        let plan = &verified.feed.events[0];
+        let verified = verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).unwrap();
+        let event = &verified.feed.events[0];
         assert_eq!(
-            project_url(plan),
+            project_url(event),
             Ok("https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/2026-w42-staff.runplanner.json")
         );
-        assert_eq!(verify_project(plan, PROJECT_BYTES), Ok(()));
         assert_eq!(
-            verify_project(plan, b"other bytes"),
+            verify_project(event, PROJECT_BYTES.to_vec()).as_deref(),
+            Ok(std::str::from_utf8(PROJECT_BYTES).unwrap())
+        );
+        assert_eq!(
+            verify_project(event, b"other bytes".to_vec()),
             Err("The downloaded project does not match the event.".to_owned())
         );
-        let mut unhashed = plan.clone();
-        unhashed.event.project_sha256 = None;
-        assert!(verify_project(&unhashed, PROJECT_BYTES).is_err());
     }
 
     fn session_with_feed(now: std::time::Instant) -> EventSession {
         let mut session = EventSession::default();
         session.accept_fetched(
-            verify_feed(
-                SIGNED_FEED,
-                FEED_SIGNATURE,
-                TEST_PUBLIC_KEY,
-                FEED_BUILD,
-                None,
-            )
-            .unwrap(),
+            verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).unwrap(),
             now,
         );
         session
     }
 
     #[test]
-    fn only_the_active_verified_event_and_its_plan_can_be_named_for_the_event_slot() {
+    fn only_a_plan_of_the_active_events_verified_project_can_be_written() {
         let now = std::time::Instant::now();
         let during = parse_instant("2026-10-14T00:00:00Z").unwrap();
         let after = parse_instant("2026-10-20T00:00:00Z").unwrap();
+        let id = "2026-w42-staff";
         let empty = EventSession::default();
         assert!(empty.needs_fetch(now, false));
         assert!(!empty.has_verified_feed());
-        assert!(empty
-            .active_named("2026-w42-staff", "event-print", during)
-            .is_err());
+        assert!(empty.publishable(id, PLAN, during).is_err());
         let mut session = session_with_feed(now);
         assert_eq!(session.source(), FeedSource::Network);
         assert_eq!(session.signed_at(), Some(FEED_SIGNED_AT));
         assert!(session.has_verified_feed());
         assert!(!session.needs_fetch(now, true));
         assert!(session.needs_fetch(now + FEED_REFRESH_INTERVAL, false));
-        assert!(session
-            .active_named("2026-w42-staff", "event-print", during)
-            .is_ok());
         assert_eq!(
-            session.active_named("2026-w42-staff", "other-print", during),
-            Err("2026-w42-staff has another plan now.".to_owned())
+            session.publishable(id, PLAN, during).err(),
+            Some(format!("{id} has no verified project."))
         );
-        assert!(session
-            .active_named("other", "event-print", during)
-            .is_err());
+        let event = session.active(during).unwrap().clone();
+        assert_eq!(session.held_project(&event), None);
+        let project = verify_project(&event, PROJECT_BYTES.to_vec()).unwrap();
+        // Only the active event's project is held.
+        session.hold_project(&event, project.clone(), after);
+        assert_eq!(session.held_project(&event), None);
+        session.hold_project(&event, project, during);
+        assert!(session.held_project(&event).is_some());
+        assert_eq!(session.publishable(id, PLAN, during), Ok(&event));
         assert_eq!(
-            session.active_named("2026-w42-staff", "event-print", after),
-            Err("2026-w42-staff is not the active event.".to_owned())
+            session.publishable(id, PLAN, after).err(),
+            Some(format!("{id} is not the active event."))
         );
-        assert!(session.named("2026-w42-staff").is_some());
+        assert!(session.publishable("other", PLAN, during).is_err());
+        for undecodable in ["not json", "[]", r#"{"projectId":7}"#, "{}"] {
+            assert_eq!(
+                session.publishable(id, undecodable, during).err(),
+                Some("The event plan is invalid.".to_owned()),
+                "{undecodable}"
+            );
+        }
+        assert_eq!(
+            session
+                .publishable(id, &PLAN.replace("event-project", "other-project"), during)
+                .err(),
+            Some(format!("The plan is not compiled from {id}'s project."))
+        );
+        // A project held for another hash of the event is not its verified project.
+        let mut republished = event.clone();
+        republished.project_sha256 = "0".repeat(64);
+        assert_eq!(session.held_project(&republished), None);
+        assert!(session.named(id).is_some());
+    }
 
-        // A development event takes the feed's place until cleared.
-        let mut local = session.named("2026-w42-staff").unwrap().clone();
-        local.event.id = "local-test".to_owned();
-        session.set_local(local);
-        assert_eq!(session.active(after).unwrap().event.id, "local-test");
+    #[test]
+    fn a_development_event_takes_the_feeds_place_with_its_project_until_cleared() {
+        let temporary = TemporaryDirectory::new("local-event");
+        let folder = temporary.0.join("local-test");
+        fs::create_dir_all(&folder).unwrap();
+        fs::write(
+            folder.join(LOCAL_EVENT_FILE),
+            r#"{"id":"local-test","title":"Local","description":"d","rules":"r","startsAt":"2026-10-12T00:00:00Z","endsAt":"2026-10-19T00:00:00Z"}"#,
+        )
+        .unwrap();
+        fs::write(folder.join(LOCAL_PROJECT_FILE), PROJECT_BYTES).unwrap();
+        let local = read_local_event(&folder).unwrap();
+        assert_eq!(local.event.project_url, project_url_for("local-test"));
+        assert_eq!(local.event.project_sha256, PROJECT_HASH);
+        assert_eq!(local.event.project_schema_version, 96);
+        assert_eq!(local.event.rules.as_deref(), Some("r"));
+
+        let after = parse_instant("2026-10-20T00:00:00Z").unwrap();
+        let mut session = session_with_feed(std::time::Instant::now());
+        session.set_local(local.clone());
+        assert_eq!(session.active(after), Some(&local.event));
+        assert!(session.publishable("local-test", PLAN, after).is_ok());
         session.clear_local();
         assert!(session.active(after).is_none());
+
+        let renamed = temporary.0.join("renamed");
+        fs::rename(&folder, &renamed).unwrap();
+        assert!(read_local_event(&renamed).is_err());
+        fs::rename(&renamed, &folder).unwrap();
+        for (file, contents) in [
+            (LOCAL_PROJECT_FILE, r#"{"projectId":"event-project"}"#),
+            (
+                LOCAL_EVENT_FILE,
+                r#"{"id":"local-test","title":"Local","description":"d","startsAt":"2026-10-12T00:00:00Z","endsAt":"2026-10-19T00:00:00Z","projectSha256":"x"}"#,
+            ),
+        ] {
+            let original = fs::read(folder.join(file)).unwrap();
+            fs::write(folder.join(file), contents).unwrap();
+            assert!(read_local_event(&folder).is_err(), "{file}");
+            fs::write(folder.join(file), original).unwrap();
+        }
+        #[cfg(unix)]
+        {
+            let project = folder.join(LOCAL_PROJECT_FILE);
+            let elsewhere = temporary.0.join("project.json");
+            fs::rename(&project, &elsewhere).unwrap();
+            std::os::unix::fs::symlink(&elsewhere, &project).unwrap();
+            assert!(read_local_event(&folder).is_err());
+        }
     }
 
     #[test]
@@ -828,16 +986,7 @@ mod tests {
         let now = std::time::Instant::now();
         let mut session = EventSession::default();
         session.fetch_failed(
-            || {
-                verify_feed(
-                    SIGNED_FEED,
-                    FEED_SIGNATURE,
-                    TEST_PUBLIC_KEY,
-                    FEED_BUILD,
-                    None,
-                )
-                .ok()
-            },
+            || verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).ok(),
             now,
         );
         assert_eq!(session.source(), FeedSource::Cache);

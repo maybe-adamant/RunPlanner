@@ -24,7 +24,7 @@ pub fn run() {
             community_events::game_event_publish,
             community_events::game_event_clear,
             #[cfg(any(debug_assertions, internal_features))]
-            community_events::game_event_file_load,
+            community_events::game_event_folder_load,
             #[cfg(any(debug_assertions, internal_features))]
             community_events::game_event_local_clear,
             bug_report_commands::bug_report_create,

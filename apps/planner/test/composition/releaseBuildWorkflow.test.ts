@@ -105,7 +105,6 @@ describe('desktop release build metadata', () => {
       'release/${LINUX_ARTIFACT}.AppImage',
       'release/${LINUX_ARTIFACT}.AppImage.sig',
       'release/latest.json',
-      'release/module-build.json',
     ]) {
       expect(listed).toContain(asset);
     }
@@ -202,24 +201,11 @@ describe('desktop release build metadata', () => {
     expect(job(workflow, 'release')).not.toContain('secrets.');
   });
 
-  it('publishes the module build the release ships, from the Rust assembly, without the key', () => {
+  it('publishes no module build record', () => {
     const { linux } = builds();
-    const stage = step(linux, 'Stage AppImage');
-    const record = step(linux, 'Record module build');
-    const upload = step(linux, 'Upload workflow artifact');
-    expect(record.start).toBeGreaterThan(stage.start);
-    expect(upload.start).toBeGreaterThan(record.start);
-    expect(stage.text).toContain('echo "module_build=${staging}/module-build.json"');
-    expect(record.text).toContain(
-      '-p run-planner-game-host --example events_ci -- module-build > "${MODULE_BUILD}"',
-    );
-    expect(record.text).toContain('cargo run --release --locked');
-    expect(record.text).toContain(
-      'RUN_PLANNER_RELEASE_VERSION: ${{ steps.release.outputs.release_version }}',
-    );
-    expect(record.text).toContain('(.buildId | test("^[0-9a-f]{64}$"))');
-    expect(record.text).not.toContain('TAURI_SIGNING_PRIVATE_KEY');
-    expect(upload.text).toContain('${{ steps.package.outputs.module_build }}');
+    expect(linux).not.toContain('module-build');
+    expect(linux).not.toContain('module_build');
+    expect(release()).not.toContain('module-build.json');
   });
 
   it('builds only the AppImage on the oldest runner and verifies, signs and launch-tests it', () => {

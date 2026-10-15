@@ -38,7 +38,7 @@ import type {
   CommunityEventDevelopmentHost,
   CommunityEventHost,
 } from '../persistence/communityEventHost';
-import { createPlannerStore, selectPresentProject } from '../state/store';
+import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
 import { profileFileErrorReported } from '../state/profileSessionSlice';
 import { createDevelopmentBuildIdentity, type BuildIdentity } from './buildIdentity';
@@ -191,7 +191,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       : createCommunityEventController({
           catalog,
           host: options.communityEventHost,
-          // Filling the event slot from a local event file is a development action.
+          // Filling the event slot from a local event folder is a development action.
           ...(devBuild && options.communityEventDevelopmentHost !== undefined
             ? { development: options.communityEventDevelopmentHost }
             : {}),
@@ -205,12 +205,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
             gameStatus?.refresh().catch(() => {
               // The header indicator reports a failed status read.
             }),
-          currentProject: () => selectPresentProject(store.getState()),
-          currentAssembly: () => {
-            const workspace = store.getState().projectWorkspace;
-            return workspace.kind === 'openProject' ? workspace.assembly : undefined;
-          },
-          bundledBuildId: async () => (await gameModuleHost.status()).bundledBuildId,
         });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);

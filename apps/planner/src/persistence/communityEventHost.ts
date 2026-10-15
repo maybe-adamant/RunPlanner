@@ -1,6 +1,5 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
-import { open, save } from '@tauri-apps/plugin-dialog';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { open } from '@tauri-apps/plugin-dialog';
 
 import type {
   GameEventSummary,
@@ -17,20 +16,36 @@ export interface CommunityEvent {
   readonly rules: string | null;
   readonly startsAt: string;
   readonly endsAt: string;
-  readonly projectUrl: string | null;
+  readonly projectUrl: string;
   /** Lower-case hex SHA-256 of the project file, which the host checks on download. */
-  readonly projectSha256: string | null;
+  readonly projectSha256: string;
+  /** The authored project schema the project file is saved in. */
+  readonly projectSchemaVersion: number;
 }
 
-/** An event and its execution plan for this app's game module build, as published. */
-export interface CommunityEventPlan {
+/** The active event's project as the host holds it. */
+export type ActiveEventProject =
+  /** The project file's text, verified against the event's signed hash. */
+  | { readonly kind: 'verified'; readonly json: string }
+  /** Saved in a project schema this planner cannot load, so it was not downloaded. */
+  | { readonly kind: 'unsupportedSchema' }
+  /** The download or its verification failed. */
+  | { readonly kind: 'unavailable'; readonly problem: string };
+
+export interface ActiveCommunityEvent {
   readonly event: CommunityEvent;
-  readonly planJson: string;
+  readonly project: ActiveEventProject;
+}
+
+/** The authored project schemas this planner loads, inclusive. */
+export interface ProjectSchemaRange {
+  readonly oldest: number;
+  readonly newest: number;
 }
 
 export interface EventFeedSnapshot {
-  /** The active event for this app's game module build, or null when there is none. */
-  readonly active: CommunityEventPlan | null;
+  /** The active event, or null when there is none. */
+  readonly active: ActiveCommunityEvent | null;
   /**
    * Where the verified events came from; `cache` is the last verified feed, kept offline, and
    * `disabled` means no event key is installed, so there are no events.
@@ -61,42 +76,47 @@ export interface EventSlotClearing {
 export interface CommunityEventHost {
   /**
    * Fetches the feed unless it was read recently, or at once after a failed fetch when
-   * `retryFailed`; offline, the last verified feed stands.
+   * `retryFailed`; offline, the last verified feed stands. The active event's project is
+   * downloaded and verified only when `projectSchemas` admits it.
    */
-  readonly refreshFeed: (retryFailed: boolean) => Promise<EventFeedSnapshot>;
+  readonly refreshFeed: (
+    retryFailed: boolean,
+    projectSchemas: ProjectSchemaRange,
+  ) => Promise<EventFeedSnapshot>;
   /**
-   * Writes the active verified event to the event slot. Only the display summary is supplied;
-   * the host refuses when its active event or plan is not the one named.
+   * Writes a plan to the event slot for the active event. The host refuses a plan not compiled
+   * from the project it verified for that event, and writes its own event metadata.
    */
   readonly publishEvent: (
     eventId: string,
-    planFingerprint: string,
+    planJson: string,
     summary: GamePlanSlotSummary,
   ) => Promise<GamePlanPublication>;
   /** Removes the event slot's plan and entry; an active event slot hands over to slot 1. */
   readonly clearEvent: () => Promise<EventSlotClearing>;
-  /** Downloads a verified event's project file as text. */
+  /** A verified event's project file as text. */
   readonly downloadProject: (eventId: string) => Promise<string>;
 }
 
-/** Development builds only: a local event file in place of the feed's event, and export. */
+/**
+ * Development builds only: a local event folder, `event.json` with `project.runplanner.json`,
+ * in place of the feed's event.
+ */
 export interface CommunityEventDevelopmentHost {
-  /** Resolves null when the file picker is cancelled. */
-  readonly pickEventFile: () => Promise<string | null>;
-  readonly loadEventFile: (path: string) => Promise<CommunityEventPlan>;
+  /** Resolves null when the folder picker is cancelled. */
+  readonly pickEventFolder: () => Promise<string | null>;
+  readonly loadEventFolder: (path: string) => Promise<CommunityEvent>;
   readonly clearLocalEvent: () => Promise<void>;
-  /** Asks where to save; resolves false when cancelled. */
-  readonly saveEventFile: (defaultFileName: string, json: string) => Promise<boolean>;
 }
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 
 export function createTauriCommunityEventHost(invoke: Invoke = tauriInvoke): CommunityEventHost {
   return Object.freeze({
-    refreshFeed: (retryFailed: boolean) =>
-      invoke<EventFeedSnapshot>('event_feed_refresh', { retryFailed }),
-    publishEvent: (eventId: string, planFingerprint: string, summary: GamePlanSlotSummary) =>
-      invoke<GamePlanPublication>('game_event_publish', { eventId, planFingerprint, summary }),
+    refreshFeed: (retryFailed: boolean, projectSchemas: ProjectSchemaRange) =>
+      invoke<EventFeedSnapshot>('event_feed_refresh', { retryFailed, projectSchemas }),
+    publishEvent: (eventId: string, planJson: string, summary: GamePlanSlotSummary) =>
+      invoke<GamePlanPublication>('game_event_publish', { eventId, planJson, summary }),
     clearEvent: () => invoke<EventSlotClearing>('game_event_clear'),
     downloadProject: (eventId: string) => invoke<string>('event_project_download', { eventId }),
   });
@@ -104,39 +124,21 @@ export function createTauriCommunityEventHost(invoke: Invoke = tauriInvoke): Com
 
 export interface TauriCommunityEventDevelopmentEnvironment {
   readonly invoke: Invoke;
-  readonly chooseEventFile: () => Promise<string | null>;
-  readonly chooseSavePath: (defaultFileName: string) => Promise<string | null>;
-  readonly writeTextFile: (path: string, contents: string) => Promise<void>;
+  readonly chooseEventFolder: () => Promise<string | null>;
 }
-
-const EVENT_FILE_FILTER = { extensions: ['json'], name: 'Run Planner event' };
 
 export function createTauriCommunityEventDevelopmentHost(
   environment: TauriCommunityEventDevelopmentEnvironment = {
     invoke: tauriInvoke,
-    chooseEventFile: () =>
-      open({
-        directory: false,
-        filters: [EVENT_FILE_FILTER],
-        multiple: false,
-        title: 'Import Event File',
-      }),
-    chooseSavePath: (defaultPath: string) =>
-      save({ defaultPath, filters: [EVENT_FILE_FILTER], title: 'Export Event File' }),
-    writeTextFile,
+    chooseEventFolder: () =>
+      open({ directory: true, multiple: false, title: 'Import Event Folder' }),
   },
 ): CommunityEventDevelopmentHost {
   return Object.freeze({
-    pickEventFile: () => environment.chooseEventFile(),
-    loadEventFile: (path: string) =>
-      environment.invoke<CommunityEventPlan>('game_event_file_load', { path }),
+    pickEventFolder: () => environment.chooseEventFolder(),
+    loadEventFolder: (path: string) =>
+      environment.invoke<CommunityEvent>('game_event_folder_load', { path }),
     clearLocalEvent: () => environment.invoke<void>('game_event_local_clear'),
-    saveEventFile: async (defaultFileName: string, json: string) => {
-      const path = await environment.chooseSavePath(defaultFileName);
-      if (path === null) return false;
-      await environment.writeTextFile(path, json);
-      return true;
-    },
   });
 }
 

@@ -17,6 +17,12 @@ import { migrateProjectDocument as migrate95To96 } from './project-95-to-96.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
+/** The project schemas this loader opens, inclusive. */
+export const LOADABLE_PROJECT_SCHEMAS = Object.freeze({
+  oldest: PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR,
+  newest: PROJECT_DOCUMENT_SCHEMA_VERSION,
+});
+
 export interface ProjectDocumentIdentity {
   readonly catalogVersion: string;
   readonly schemaVersion: number;

@@ -8,7 +8,7 @@ import { createGameStatusController } from '@planner/persistence/gameModuleHost'
 import { createReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { CommunityEventController, EventNotice } from '@planner/workspace/communityEvents';
 import { NoticeArea } from '@planner/ui/shell/NoticeArea';
-import { eventPlan } from '@planner-test/fixtures/communityEventHost';
+import { communityEvent } from '@planner-test/fixtures/communityEventHost';
 import {
   createFakeGameModuleHost,
   eventSlot,
@@ -46,7 +46,7 @@ function eventController(initial: EventNotice) {
   return controller;
 }
 
-const { event } = eventPlan('{}');
+const event = communityEvent();
 
 describe('Notice area', () => {
   it('shows an available app update before the event notice', async () => {
@@ -62,7 +62,7 @@ describe('Notice area', () => {
     const user = userEvent.setup();
     render(
       <NoticeArea
-        communityEvents={eventController({ kind: 'active', event })}
+        communityEvents={eventController({ kind: 'active', event, problem: null })}
         installLabel="Install and restart"
         releaseUpdates={releaseUpdates}
       />,
@@ -76,7 +76,7 @@ describe('Notice area', () => {
   });
 
   it('shows details, opens the project, copies its link and dismisses', async () => {
-    const controller = eventController({ kind: 'active', event });
+    const controller = eventController({ kind: 'active', event, problem: null });
     const user = userEvent.setup();
     render(
       <NoticeArea
@@ -163,8 +163,26 @@ describe('Notice area', () => {
     expect(screen.getByText('The next run has no plan until you choose a slot.')).toBeTruthy();
   });
 
+  it('says why the event cannot be played and offers no Set as active', () => {
+    render(
+      <NoticeArea
+        communityEvents={eventController({
+          kind: 'active',
+          event,
+          problem: 'Update the planner to play this event.',
+        })}
+        installLabel="Install and restart"
+        releaseUpdates={undefined}
+      />,
+    );
+    const notice = screen.getByRole('complementary', { name: 'Community event' });
+    expect(within(notice).getByText('Update the planner to play this event.')).toBeTruthy();
+    expect(within(notice).queryByRole('button', { name: 'Set as active' })).toBeNull();
+    expect(within(notice).getByRole('button', { name: 'Open project' })).toBeTruthy();
+  });
+
   it('asks before an event project replaces unsaved work', async () => {
-    const controller = eventController({ kind: 'active', event });
+    const controller = eventController({ kind: 'active', event, problem: null });
     const user = userEvent.setup();
     render(
       <NoticeArea
@@ -196,6 +214,7 @@ describe('Notice area', () => {
         communityEvents={eventController({
           kind: 'active',
           event: { ...event, title: 'x'.repeat(80) },
+          problem: null,
         })}
         installLabel="Install and restart"
         releaseUpdates={undefined}
@@ -234,7 +253,7 @@ describe('Notice area', () => {
   it('sets the event as active through the controller and then says it is active', async () => {
     const game = createFakeGameModuleHost();
     const gameStatus = createGameStatusController(game.host);
-    const controller = eventController({ kind: 'active', event });
+    const controller = eventController({ kind: 'active', event, problem: null });
     const user = userEvent.setup();
     const eventHeld = (activeSlot: GameActiveSlot) =>
       gameModuleStatus({

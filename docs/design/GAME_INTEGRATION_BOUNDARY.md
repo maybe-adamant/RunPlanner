@@ -337,15 +337,21 @@ active event, or clears slot 0 when there is none. Only two host operations
 change it, each through the same staged slot-and-overview transaction as a
 send (see [Publication preconditions](#publication-preconditions)):
 
-- **Write** takes only an event id and the display summary. The host writes its
-  own verified plan and `event` metadata, and only for the event that is active
-  now; the application cannot supply plan bytes or event metadata. It has the
-  same target, compatibility and reference-build checks as a send, and leaves a
-  slot already holding that plan and event as it is. It never touches
-  `active-slot.json`.
+- **Write** takes an event id, a plan and its display summary. The host writes
+  slot 0 only for the event that is active now and only when this session
+  verified that event's project, with its own `event` metadata (id, title and
+  end); the application cannot supply event metadata. The plan is trusted as a
+  send's is: the host checks its header and that its `projectId` equals the
+  verified project's, a consistency check against a plan compiled from
+  something else, not an authentication, and the module decodes the whole plan.
+  It has the same target, compatibility and reference-build checks as a send,
+  and leaves a slot already holding that plan and event as it is. It never
+  touches `active-slot.json`.
 - **Clear** removes slot 0 and its entry together (an entry left without its
-  file included) and needs only an established target. Without verified event
-  data (no feed fetched or cached this session), the host clears slot 0 only
+  file included) and needs only an established target. While an event is active
+  whose plan the application did not write, the host keeps slot 0 only when its
+  overview entry names that event, so an earlier event's plan never outlasts its
+  event. Without verified event data (no feed fetched or cached this session), the host clears slot 0 only
   when its own overview entry names an event that has ended, and otherwise keeps
   it. When `active-slot.json` names slot 0, the host then makes slot 1 active,
   since the slot played before the event may no longer hold its plan. It reads
@@ -363,13 +369,14 @@ letters, digits and inner hyphens within 64 characters, a non-blank single-line
 `YYYY-MM-DDTHH:MM:SS[.fraction]Z`.
 
 Development builds (and release builds made with `VITE_INTERNAL_FEATURES=1`)
-offer **Import event file…**, **Clear event** and **Export event file…** under
-Plans in game. Import loads a local event document into the host in place of
-the feed's event for the session, so the same write applies; Clear returns to
-the feed's event. Export compiles the open project, through the same
-execution-plan assembly as a send, into an event document for the bundled
-build, naming the project's file beside the feed and the SHA-256 of the project
-as encoded at export, which is the file to publish. The host registers the local-file commands only in those builds
+offer **Import event folder…** and **Clear event** under Plans in game. Import
+loads an authored event folder, `event.json` with `project.runplanner.json` as
+the events repository holds them, into the host in place of the feed's event for
+the session: the host validates the metadata as a feed event's (the id must equal
+the folder name), takes the project URL beside the feed, the project's SHA-256
+and its `schemaVersion`, and holds the project as verified. The same schema gate,
+compilation and write then apply, without a signature. Clear returns to the
+feed's event. The host registers the local-folder commands only in those builds
 (`debug_assertions`, or the `internal_features` cfg its build script sets from
 `VITE_INTERNAL_FEATURES=1`).
 
@@ -391,31 +398,30 @@ on each side (`EVENTS_REPOSITORY` in the game host's `event_feed.rs` and in
 (`https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/`):
 
 ```json
-{ "format": "run-planner-event-feed", "formatVersion": 1, "events": [<event document>] }
+{ "format": "run-planner-event-feed", "formatVersion": 2, "events": [<event>] }
 ```
 
-Each event document is `run-planner-event` version 1: `id`, `title`,
-`description`, optional `rules`, `startsAt`, `endsAt`, `projectUrl`,
-`projectSha256` (lower-case hex) and `plans` keyed by module build id. The
-signature is `tauri signer sign` output, a prehashed minisign signature, made
-with a dedicated event key, not the updater key. The app embeds the event public
-key from `apps/planner/src-tauri/event-feed.pub` at compile time; while that file
-holds its checked-in placeholder, the host refuses to verify any feed and events
-stay off. The trusted comment, which the signature covers, must name
-`file:events.json`, and its `timestamp` orders feeds.
+Each event is `id`, `title`, `description`, optional `rules`, `startsAt`,
+`endsAt`, `projectUrl`, `projectSha256` (lower-case hex) and
+`projectSchemaVersion`, the authored schema of the project file. The feed carries
+no compiled plans: the planner compiles each event itself, so an event plays on
+every module build. The signature is `tauri signer sign` output, a prehashed
+minisign signature, made with a dedicated event key, not the updater key. The
+app embeds the event public key from `apps/planner/src-tauri/event-feed.pub` at
+compile time; while that file holds its checked-in placeholder, the host refuses
+to verify any feed and events stay off. The trusted comment, which the signature
+covers, must name `file:events.json`, and its `timestamp` orders feeds.
 
 - The host downloads the feed (at most 16 MiB) and signature (at most 4 KiB)
   over HTTPS only, verifies the signature before decoding, and decodes strictly.
-  A malformed feed, one listing more than 32 events, a bad signature, or a feed
-  signed earlier than the newest feed already verified (in this session or in
-  the cache) is refused whole. Within it, an invalid event, one whose
-  `projectUrl` is not exactly
-  `https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/<id>.runplanner.json`
-  or that has no `projectSha256`, or a repeated id is refused alone and logged;
-  a valid event without a plan for the bundled build is skipped.
+  A malformed feed, one of another format version, one listing more than 32
+  events, a bad signature, or a feed signed earlier than the newest feed already
+  verified (in this session or in the cache) is refused whole. Within it, an
+  invalid event, one whose `projectUrl` is not exactly
+  `https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/<id>.runplanner.json`,
+  or a repeated id is refused alone and logged.
 - Text fields are bounded, with no control or Unicode format characters, and
-  times are UTC instants; an event must end after it starts. Plans keep their
-  bytes, and a build id may appear once.
+  times are UTC instants; an event must end after it starts.
 - The active event is the one whose window (`startsAt` inclusive, `endsAt`
   exclusive) contains now; of several, the latest start wins, then the greater
   id. There is at most one.
@@ -426,27 +432,36 @@ stay off. The trusted comment, which the signature covers, must name
   keeps the feed already held or falls back to that copy, so a verified event
   stays offline until it ends; with neither, slot 0 is kept until its own event
   ends.
-- The application computes the display summary from the plan the host returned
-  and names that plan's fingerprint when writing; the host refuses the write if
-  its active event or plan has changed since.
-- **Open project** downloads the event's project file (at most 8 MiB, HTTPS
-  only) from its verified `projectUrl`, refuses it unless its SHA-256 matches
-  `projectSha256`, and opens it as a new, never-saved copy with its own
+- The application passes the project schemas its loader opens, from the loader
+  floor to the current authored schema. An active event whose
+  `projectSchemaVersion` lies outside them is not downloaded; the notice reads
+  "Update the planner to play this event." Otherwise the host downloads the
+  project file (at most 8 MiB, HTTPS only) from its verified `projectUrl`,
+  refuses it unless its SHA-256 matches `projectSha256`, and holds the verified
+  text for the session.
+- The application compiles the verified project headlessly, as a public project
+  opened and sent would be (loaded, admitted, simulated and compiled), with the
+  event title as the plan's name, and remembers the plan by event id, title,
+  project hash and catalog version. It computes the display summary from that
+  plan and asks the host to write it. When the plan cannot be written (an
+  unloadable schema, a project that does not compile, or one that could not be
+  downloaded), the application clears slot 0, which the host keeps only while
+  it holds this event's plan; a cleared active slot hands over to slot 1 with
+  the ended notice. The notice says why the event cannot be played, except while
+  slot 0 still holds this event's plan and only the download failed; a later
+  sync retries the download.
+- **Open project** opens the event's verified project file, downloaded as above
+  when the session does not hold it (the session holds only the active event's), as a new, never-saved copy with its own
   `projectId`, so a copy sent to a slot is not the event's plan. When the open
   project has unsaved changes, the planner asks before replacing it.
 
-Publishing is the events repository's workflow. Each planner release publishes
-`module-build.json`, `{"version", "buildId"}` of the game module it ships, from
-the same Rust assembly the app embeds. The workflow reads it from the latest
-planner release, checks out that release, and compiles every event that has not
-ended with that release's own builder (`npm run events:build`, over the same
-`eventDocument.ts` as the development export), so plans match what the release
-accepts. It keeps the plans the published feed carries for older builds while an
-event's project file is unchanged, checks the result with the host decoder
-(`events_ci check`), publishes only a changed feed, and verifies its signature
-with the release's event key before uploading. The `events` release is a
-pre-release. An event starts and ends by its own dates, since the app selects
-the active event by time. While the app runs, it syncs once more just after the
+Publishing is the events repository's workflow. It builds the feed with the
+planner's builder (`npm run events:build`), which compiles every event's project
+as the planner does, only to refuse one that would not play, checks the result
+with the host decoder (`events_ci check`), publishes only a changed feed, and
+verifies its signature with the event key before uploading. The `events`
+release is a pre-release. An event starts and ends by its own dates, since the
+app selects the active event by time. While the app runs, it syncs once more just after the
 active event's end, so an ended event slot is cleared without a restart.
 
 The notice area above the workspace shows one notice: an app update first,
@@ -454,10 +469,11 @@ otherwise the event, `Event: <title> · ends <date>` (a long title truncated),
 with **Set as active**, **Details** (the whole title, the description and the
 rules, below the notice's first row), **Open project**, **Copy link** (the
 project URL; the button itself says Copied or Copy failed for two seconds) and
-**Dismiss**. **Set as active** makes the event slot active and reads the slot
-state the Game panel reads; while that state names the event slot and it holds
-a plan for the installed build, the same button reads **Active**, disabled and
-at the same width. A dismissal is remembered
+**Dismiss**. **Set as active**, absent while the notice says why the event
+cannot be played, makes the event slot active and reads the slot state the Game
+panel reads; while that state names the event slot and it holds a plan for the
+installed build, the same button reads **Active**, disabled and at the same
+width. A dismissal is remembered
 per event id in the browser profile; the event slot is still written.
 
 ### Publication preconditions

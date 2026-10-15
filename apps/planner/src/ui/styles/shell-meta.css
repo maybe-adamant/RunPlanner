@@ -236,13 +236,3 @@
 .about-popover-arrow {
   fill: #41424c;
 }
-
-.export-event-fields {
-  display: grid;
-  gap: 8px;
-}
-
-.export-event-fields label {
-  display: grid;
-  gap: 4px;
-}
