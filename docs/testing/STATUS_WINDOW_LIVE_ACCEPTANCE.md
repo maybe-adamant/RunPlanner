@@ -46,8 +46,9 @@ each check.
       room, and **Current Run** says all planned rooms are done.
 - [ ] Save & Quit mid-run and continue: the header shows `Not steering` with
       `Resumed after a reload; this run isn't steered.`
-- [ ] The **Diagnostics** tab is absent until **Debug Mode** is ticked, then
-      shows the slot file state, module build, catalog, project, fingerprint,
+- [ ] The window shows the session header above one tab bar, **Plan |
+      Current Run | Diagnostics | Advanced**. **Diagnostics** is greyed and
+      points to **Debug Mode** on **Advanced** until it is ticked, then shows the slot file state, module build, catalog, project, fingerprint,
       any slot error and the raw expected and observed records.
 - [ ] Untick **Enabled** during a planned run: the room guide and planned-choice
       markers disappear, the log shows `session abandoned: module disabled`,

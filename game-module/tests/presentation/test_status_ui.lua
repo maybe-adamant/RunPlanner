@@ -76,7 +76,9 @@ local function viewField(value)
     return field
 end
 
--- A window drawn once per call; picks and buttons are queued for the next draw.
+-- A window drawn once per call as Lib's module frame draws it: the header, then
+-- each tab's label and state, then the active tab. Picks and buttons are queued
+-- for the next draw.
 local function harness(options)
     options = options or {}
     local h = {
@@ -87,7 +89,9 @@ local function harness(options)
         tab = options.tab or "Plan", debug = options.debug == true,
         field = viewField(1), picks = {}, presses = {}, now = 0,
     }
-    local ui = statusUi.bind(h.inbox, function() return h.snapshot end, h.file, h.overview,
+    h.inspections = 0
+    local ui = statusUi.bind(h.inbox, function() h.inspections = h.inspections + 1; return h.snapshot end, h.file,
+        h.overview,
         function() return h.now end)
     local lines, tabs, dropdown, checkboxes
     h.drawn = {}
@@ -143,7 +147,13 @@ local function harness(options)
         h.open = { bar = 0, tab = 0, id = 0, indent = 0 }
         if pick then h.picks[#h.picks + 1] = pick end
         if press then h.presses[#h.presses + 1] = press end
-        ui.drawTab(nil, ctx)
+        ui.header(nil, ctx)
+        h.states = {}
+        for _, entry in ipairs(ui.tabs) do
+            tabs[#tabs + 1] = seen(entry.label)
+            h.states[entry.id] = entry.state and entry.state(nil, ctx) or nil
+            if entry.label == h.tab then entry.draw(nil, ctx) end
+        end
         h.lines, h.tabs, h.dropdown, h.checkboxes = lines, tabs, dropdown, checkboxes
         h.guide, h.highlight = guide, highlight
         return table.concat(lines, "\n")
@@ -410,6 +420,17 @@ local function synchronized(plan, index, fields)
     return snapshot
 end
 
+function TestStatusUi.testTheHeaderAndTheShownTabShareOneSessionReadPerFrame()
+    local h = harness({ tab = "Current Run", snapshot = synchronized(publishedPlan(), 2) })
+    for _ = 1, 30 do
+        h.draw()
+        h.now = h.now + 1 / 60
+    end
+    lu.assertEquals(h.inspections, 30)
+    lu.assertEquals(h.overview.reads, 1)
+    lu.assertEquals(h.inbox.loads, {})
+end
+
 function TestStatusUi.testHeaderStates()
     local plan = publishedPlan()
     local named = publishedPlan()
@@ -558,7 +579,7 @@ function TestStatusUi.testMismatchesAreDescribedInPlainWords()
     lu.assertNotStrContains(text, "4.0999999")
 end
 
-function TestStatusUi.testDiagnosticsTabAppearsOnlyInDebugMode()
+function TestStatusUi.testDiagnosticsTabIsMutedUntilDebugMode()
     local plan = publishedPlan()
     local snapshot = synchronized(plan, 3, {
         state = "desynchronized", reason = "first-mismatch", checkpoint = "test-contact",
@@ -566,12 +587,15 @@ function TestStatusUi.testDiagnosticsTabAppearsOnlyInDebugMode()
     })
     local h = harness({ snapshot = snapshot, slots = { [1] = { error = "stale-slot" } } })
     h.draw(nil, "run_planner_reload")
+    lu.assertEquals(h.tabs, { "Plan", "Current Run", "Diagnostics" })
+    lu.assertEquals(h.states, { current_run = "attention", diagnostics = "muted" })
     h.tab = "Diagnostics"
-    h.draw()
-    lu.assertEquals(h.tabs, { "Plan", "Current Run" })
+    local hint = h.draw()
+    lu.assertStrContains(hint, "Turn on Debug Mode (Advanced tab) to see diagnostics.")
+    lu.assertNotStrContains(hint, "Session:")
     h.debug = true
     local text = h.draw()
-    lu.assertEquals(h.tabs, { "Plan", "Current Run", "Diagnostics" })
+    lu.assertEquals(h.states, { current_run = "attention" })
     lu.assertStrContains(text, "Session: desynchronized / first-mismatch")
     lu.assertStrContains(text, "Checkpoint: test-contact")
     lu.assertStrContains(text, "Module build: aaaaaaaaaaaa")
