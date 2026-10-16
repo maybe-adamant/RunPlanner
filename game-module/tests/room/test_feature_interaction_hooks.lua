@@ -571,7 +571,7 @@ function TestFeatureInteractionHooks.testPurchasedMysteryBoonCompletesAfterItsTr
     local active = assert(roomCoordinatorModule.enter(state, occurrence))
     assert(roomCoordinatorModule.window(state, "postOutgoing"))
     local box = { Name = "BlindBoxLoot" }
-    local loot = { Name = "HeraUpgrade", GodLoot = true }
+    local loot = { Name = "HeraUpgrade", GodLoot = true, UpgradeOptions = {} }
     lu.assertNil(roomCoordinatorModule.bound(state, active, box))
     local session = {
         current = roomCoordinatorModule.current,
