@@ -413,6 +413,7 @@ export function createChronologyAccumulator(
   const bossArcanaOutcomes = new Map<string, BossArcanaOutcome>();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
+  const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
   const transcendentEmbryoCandidateContexts = new Map<
     string,
     ReachedTranscendentEmbryoThreshold[]
@@ -432,6 +433,16 @@ export function createChronologyAccumulator(
           included: current.included || included,
         }),
       );
+  }
+
+  /** A Steady Growth promotion belongs to its room's latest reached automatic outcome. */
+  function steadyGrowthTimelineOwner(occurrence: SemanticAddress): SemanticAddress {
+    const outcome = latestSteadyGrowthOutcomes.get(semanticAddressKey(occurrence));
+    if (outcome === undefined)
+      throw new BiomeRewardSimulationContractError(
+        `Steady Growth promotion ${semanticAddressKey(occurrence)} has no reached outcome`,
+      );
+    return outcome;
   }
 
   function recordTimelineDependency(owner: SemanticAddress, afterOwner: SemanticAddress): void {
@@ -515,11 +526,13 @@ export function createChronologyAccumulator(
       for (const mutation of frontier.priorTraitMutations ?? [])
         recordTimelineDependency(
           consumerOwner,
-          traitMutationTimelineOwner(
-            mutation.owner,
-            mutation.acquisitionRole,
-            acquisitionConversionContexts,
-          ),
+          mutation.acquisitionRole === 'steadyGrowth'
+            ? steadyGrowthTimelineOwner(mutation.owner)
+            : traitMutationTimelineOwner(
+                mutation.owner,
+                mutation.acquisitionRole,
+                acquisitionConversionContexts,
+              ),
         );
       const producer = frontier.source.producer;
       if (producer === undefined) continue;
@@ -808,6 +821,7 @@ export function createChronologyAccumulator(
         for (const { address, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
           steadyGrowthOutcomeAddresses.set(key, address);
+          latestSteadyGrowthOutcomes.set(semanticAddressKey(address.owner), address);
           const current = steadyGrowthCandidateContexts.get(key) ?? [];
           current.push(threshold);
           steadyGrowthCandidateContexts.set(key, current);

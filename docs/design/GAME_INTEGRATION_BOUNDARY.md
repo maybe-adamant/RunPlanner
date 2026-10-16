@@ -261,7 +261,7 @@ need not decode every plan to describe them:
       "practiceStart": "Thessaly · Boss",
       "catalogVersion": "…",
       "schemaVersion": 96,
-      "schemaRevision": 0,
+      "schemaRevision": 1,
       "fingerprint": "…"
     },
     "0": {
@@ -274,7 +274,7 @@ need not decode every plan to describe them:
       },
       "catalogVersion": "…",
       "schemaVersion": 96,
-      "schemaRevision": 0,
+      "schemaRevision": 1,
       "fingerprint": "…"
     }
   }
@@ -1266,6 +1266,32 @@ its published prerequisites complete, the runtime records the generic
 `transaction-prerequisite` mismatch and becomes passive while still invoking
 the native action. This protects DAG order without turning transaction
 completion into semantic result verification.
+
+Trait screen dependencies keep the order the simulation settled a room's trait
+screens in (role-settled acquisitions, NPC and Gorgon trait offers, Pom level
+screens):
+
+- **Chain.** Each screen follows the latest earlier trait mutation in its room
+  that a room action or automatic effect owns. Chaos clocks, Concave Stone
+  residuals, direct grants, resource grants, Experimental Hammer expiry, room
+  decay and Echo Gold consumption settle natively or inside another contact and
+  never anchor the chain. Steady Growth anchors at its automatic outcome.
+- **Fences.** A Fountain (or Phial) use or Keepsake Rack change follows the
+  latest screen ranked before it in the room, and the earliest screen ranked
+  after it follows the fence, unless published edges already imply it. Pool
+  sales, Eris and Shrine purchases also change trait outcomes but have no
+  transaction, so their order against a screen is unenforced. A Well opens only
+  once exits unlock, after every exit-blocking loot, so its purchases are not
+  fences.
+- **Native order.** An after-combat reward spawns before its encounter's end
+  effects, which re-roll spawned loot, so its edge to Steady Growth or the
+  Transcendent Embryo is not published; nor is Devotion's spurned boon after the
+  chosen one that starts its trial.
+- **Classification.** A published edge joins two transactions of the room. An
+  endpoint without one is a room action the game performs or skips natively, an
+  untransacted fence, the unranked Travel Deal refill Well purchase, or an owner
+  in another room, on the Hub board or at the route or biome start; any other
+  endpoint is an `executionCoverageMissing` compile error.
 
 Mystery boxes are the one interchangeable carrier: native unwrap builds the
 same loot for every box and the module forces the god. A bound box keeps only

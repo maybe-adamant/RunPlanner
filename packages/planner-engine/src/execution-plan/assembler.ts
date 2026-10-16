@@ -29,6 +29,7 @@ import { executionRoomOwnerKey } from './assembly/support';
 import { executionOccurrence } from './assembly/occurrence';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
+import { roomTimelineDependencies } from './assembly/timeline-dependencies';
 import { executionStartingLoadout } from './assembly/loadout';
 import { assembleRoomExitConformance } from './assembly/diagnostics';
 import { semanticAddressKey } from '../authored-project/addresses';
@@ -175,12 +176,11 @@ export function assembleExecutionProduct({
       nodes: Object.freeze(
         allFacts.nodes.filter((node) => transactionOwners.has(semanticAddressKey(node.owner))),
       ),
-      dependencies: Object.freeze(
-        allFacts.dependencies.filter(
-          (dependency) =>
-            transactionOwners.has(semanticAddressKey(dependency.owner)) &&
-            transactionOwners.has(semanticAddressKey(dependency.afterOwner)),
-        ),
+      dependencies: roomTimelineDependencies(
+        room,
+        allFacts,
+        transactions,
+        biome.snapshot.entryRoom.occurrenceId,
       ),
     });
     const nodes = new Map(

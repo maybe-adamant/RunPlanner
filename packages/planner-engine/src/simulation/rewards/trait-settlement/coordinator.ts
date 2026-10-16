@@ -74,7 +74,7 @@ import {
 } from './encounter-child-settlement';
 import { addRewardFinding } from '../findings';
 import { settleReachedLevelResolution } from '../level-resolution-settlement';
-import { isTraitOfferMutationEvent } from '../../traits/history/fold';
+import { traitMutationChainRole } from '../../traits/history/fold';
 import type { ReachedLevelResolutionEvaluation, ReachedTraitOfferEvaluation } from '../../traits';
 
 export interface ReachedTraitChildCheckpoint {
@@ -1098,7 +1098,9 @@ export function applyTraitOfferForAcquisition(
       : [...branch.state.traitHistory.events]
           .reverse()
           .find(
-            (event) => isTraitOfferMutationEvent(event) && sameTraitOccurrence(event.owner, owner),
+            (event) =>
+              traitMutationChainRole(event) === 'chained' &&
+              sameTraitOccurrence(event.owner, owner),
           );
   const priorTraitMutations =
     priorMutation === undefined

@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "surface-2",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -3099,12 +3099,7 @@
             "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"acquisitionRole\",\"Surface\",\"O\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"spurnedSource\"]",
-            "afterOwner": "[\"acquisitionRole\",\"Surface\",\"O\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"chosenSource\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": []
       },
       "roomGuide": [
@@ -3842,5 +3837,5 @@
       }
     }
   ],
-  "planFingerprint": "a41a6034"
+  "planFingerprint": "f0d4e8a6"
 }

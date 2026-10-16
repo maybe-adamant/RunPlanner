@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -2690,12 +2690,7 @@
             "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"acquisitionRole\",\"Surface\",\"N\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"self\"]",
-            "afterOwner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": [
           {
             "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]",
@@ -4042,12 +4037,7 @@
             "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"acquisitionRole\",\"Surface\",\"O\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"spurnedSource\"]",
-            "afterOwner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": [
           {
             "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]",
@@ -5794,12 +5784,7 @@
             "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"acquisitionRole\",\"Surface\",\"P\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"self\"]",
-            "afterOwner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": [
           {
             "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]",
@@ -8485,5 +8470,5 @@
       }
     }
   ],
-  "planFingerprint": "9a3d82c2"
+  "planFingerprint": "4550afd0"
 }

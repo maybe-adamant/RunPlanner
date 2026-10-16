@@ -53,6 +53,7 @@ import {
   surfaceShrineDeliveriesProject,
   surfaceShrineRushedUnrankedProject,
   surfaceTravelDealRefillAnvilProject,
+  surfaceTraitFencesProject,
   typhonCustomizationProject,
 } from '@run-planner/test-fixtures/surface';
 
@@ -89,6 +90,7 @@ import surfaceScheduledLifecycleFixture from '../fixtures/surface-scheduled-life
 import surfaceShrineDeliveriesFixture from '../fixtures/surface-shrine-deliveries.execution.json';
 import surfaceShrineRushedUnrankedFixture from '../fixtures/surface-shrine-rushed-unranked.execution.json';
 import surfaceTravelDealRefillAnvilFixture from '../fixtures/surface-travel-deal-refill-anvil.execution.json';
+import surfaceTraitFencesFixture from '../fixtures/surface-trait-fences.execution.json';
 import underworldArachneCocoonsFixture from '../fixtures/underworld-arachne-cocoons.execution.json';
 import underworldFGHFixture from '../fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from '../fixtures/underworld-fghi.execution.json';
@@ -284,6 +286,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'surface-travel-deal-refill-anvil',
     project: surfaceTravelDealRefillAnvilProject,
     wire: surfaceTravelDealRefillAnvilFixture,
+  },
+  {
+    name: 'surface-trait-fences',
+    project: surfaceTraitFencesProject,
+    wire: surfaceTraitFencesFixture,
   },
   {
     name: 'dream-o-skipped-ship',

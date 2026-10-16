@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
@@ -59,6 +60,9 @@ describe('event feed builder', () => {
         'https://github.com/maybe-adamant/RunPlanner-Events/releases/download/events/2026-w42.runplanner.json',
       projectSha256: createHash('sha256').update(projectJson).digest('hex'),
       projectSchemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+      ...(PROJECT_DOCUMENT_SCHEMA_REVISION === 0
+        ? {}
+        : { projectSchemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION }),
     });
     expect(Object.keys(feed.events[1]!)).not.toContain('rules');
     expect(built.projects).toEqual([
@@ -67,7 +71,7 @@ describe('event feed builder', () => {
     ]);
     expect(built.summary).toEqual([
       '2026-w40: ended, not published',
-      `2026-w42: 2026-10-12T00:00:00Z to 2026-10-19T00:00:00Z, schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.0`,
+      `2026-w42: 2026-10-12T00:00:00Z to 2026-10-19T00:00:00Z, schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.${PROJECT_DOCUMENT_SCHEMA_REVISION}`,
       expect.stringMatching(/^2026-w44: /),
       '_template: template, not published',
     ]);

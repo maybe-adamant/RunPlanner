@@ -18,28 +18,54 @@ import {
   nextRarity,
 } from './upgrades';
 
-export function isTraitOfferMutationEvent(event: TraitHistoryEvent): boolean {
+/**
+ * How a later trait screen's chain treats one history event: a mutation owned by a room
+ * action or automatic effect, one the game settles natively or inside another contact, or none.
+ */
+export type TraitMutationChainRole = 'chained' | 'native' | 'none';
+
+export function traitMutationChainRole(event: TraitHistoryEvent): TraitMutationChainRole {
   switch (event.kind) {
     case 'traitOffer':
-    case 'concaveStoneSecondary':
     case 'levelMutation':
     case 'rarityMutation':
-    case 'elementContribution':
-    case 'directTraitGrant':
-    case 'traitRemoval':
     case 'anvilTransformation':
     case 'chaosPair':
     case 'directChaosBlessing':
     case 'directChaosBlessingRemoval':
+      return 'chained';
+    // A residual or direct grant settles inside the acquisition whose screen precedes it,
+    // and a Chaos clock matures at its native counter.
+    case 'concaveStoneSecondary':
+    case 'directTraitGrant':
     case 'chaosClock':
-      return true;
+      return 'native';
+    case 'elementContribution':
+      // A resource grant lands at room exit, after every screen of its room.
+      return event.acquisitionRole.startsWith('resource:') ? 'native' : 'chained';
+    case 'traitRemoval':
+      switch (event.acquisitionRole) {
+        // Expiry runs in the encounter's end effects, decay at room departure, and
+        // Echo Gold is consumed inside its source Shop purchase.
+        case 'experimentalHammerExpiry':
+        case 'roomDecay':
+        case 'echoShopDuplicateConsumed':
+          return 'native';
+        case 'purgingPoolSale':
+        case 'nemesisTraitTrade':
+        case 'jeweledPomCleanup':
+          return 'chained';
+        default:
+          // A Ransom removal belongs to its acquisition's screen.
+          return 'chained';
+      }
     case 'steadyGrowthProgress':
     case 'roomsPerUpgradeGrowthProgress':
     case 'pickupProducerProgress':
     case 'roomDecayProgress':
     case 'echoKeepsakeReplay':
     case 'rarityBlock':
-      return false;
+      return 'none';
   }
 }
 
