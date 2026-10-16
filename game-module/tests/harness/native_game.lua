@@ -27,6 +27,10 @@ function nativeGame.alwaysEligible()
     return true
 end
 
+function nativeGame.alwaysHeld()
+    return true
+end
+
 function nativeGame.currentUpgradeableTraits()
     local result = {}
     for _, trait in ipairs(_G.CurrentRun and _G.CurrentRun.Hero and _G.CurrentRun.Hero.Traits or {}) do

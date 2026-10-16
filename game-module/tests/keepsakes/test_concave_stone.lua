@@ -199,3 +199,65 @@ function TestConcaveStone.testNativeErrorClearsItsScopeWithoutCompletingC1()
     lu.assertEquals(completed(), 0)
     lu.assertFalse(callbacks.RandomChance(nil, {}, function() return false end, 1, {}))
 end
+
+function TestConcaveStone.testUnplannedProcIsAMismatchAtTheResidualSelection()
+    local callbacks, _, _, mismatches = support.attached(concaveOffer(nil))
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    local nestedRan = false
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+        local stone = callbacks.HasHeroTraitValue(nil, {}, function()
+            return { Uses = 1, DoubleBoonChance = 0.75 }
+        end, "DoubleBoonChance")
+        lu.assertTrue(callbacks.RandomChance(nil, {}, function() return true end, stone.DoubleBoonChance, {}))
+        callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+            nestedRan = true
+            return true
+        end, {}, { LootData = loot, Data = { Name = "Residual" } }, { DoubleBoonChance = true })
+        return true
+    end, {}, { LootData = loot, Data = { Name = "Primary" } }, {})
+    lu.assertTrue(nestedRan)
+    lu.assertEquals(mismatches(), { {
+        checkpoint = "concave-stone-unplanned", expected = "no Concave Stone proc", observed = "Residual",
+    } })
+end
+
+local function procNatively(callbacks, loot, outerKey, residualKey)
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function()
+        local stone = callbacks.HasHeroTraitValue(nil, {}, function()
+            return { Uses = 1, DoubleBoonChance = 0.75 }
+        end, "DoubleBoonChance")
+        callbacks.RandomChance(nil, {}, function() return true end, stone.DoubleBoonChance, {})
+        callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end,
+            {}, { LootData = loot, Data = { Name = residualKey } }, { DoubleBoonChance = true })
+        return true
+    end, {}, { LootData = loot, Data = { Name = outerKey } }, {})
+end
+
+local function pickedUp(offer)
+    local callbacks, _, completed, mismatches = support.attached(offer)
+    local loot = { GodLoot = true, Name = "ApolloUpgrade" }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.HandleLootPickup(nil, {}, function() return true end, {}, loot, {})
+    return callbacks, loot, completed, mismatches
+end
+
+function TestConcaveStone.testExcludedPlannedResidualIsItsOwnMismatch()
+    local callbacks, loot, _, mismatches = pickedUp(concaveOffer({ kind = "proc", optionKey = "option2" }))
+    selectConcave(callbacks, loot, { { LootData = loot, Data = { Name = "Other" } } })
+    lu.assertEquals(mismatches()[1], {
+        checkpoint = "concave-stone-residual-excluded", expected = "Residual", observed = "not offered",
+    })
+    for _, item in ipairs(mismatches()) do lu.assertNotEquals(item.checkpoint, "concave-stone-unplanned") end
+end
+
+function TestConcaveStone.testOffPlanOuterSelectionIsNotBlamedOnTheStone()
+    local callbacks, loot, _, mismatches = pickedUp(concaveOffer(nil))
+    procNatively(callbacks, loot, "Other", "Residual")
+    lu.assertEquals(mismatches(), {})
+end

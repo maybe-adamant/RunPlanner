@@ -194,6 +194,24 @@ local function physicalIndex(loot, key)
     return nil
 end
 
+-- Native blocks a random row when the loot allows fewer choices than it has
+-- rows; the plan models that block only as its rejected row. A native call
+-- failure returns nil plus its error.
+function ordinary.blockedRowConflict(payload, loot)
+    local offer = ordinary.offer(payload)
+    if offer == nil or type(_G.CalcNumLootChoices) ~= "function" then return nil end
+    local rows = offer.kind == "fallbackGold" and 1 or #(offer.options or {})
+    local ok, choices = pcall(_G.CalcNumLootChoices, loot)
+    local planned = offer.rejected ~= nil and offer.kind ~= "fallbackGold"
+    if not ok or type(choices) ~= "number" then return nil, tostring(choices) end
+    local blocks = rows > choices
+    if blocks == planned then return nil end
+    return {
+        expected = planned and "blocked row" or "no blocked row",
+        observed = blocks and "blocked row" or "no blocked row",
+    }
+end
+
 function ordinary.alignRejected(payload, screen, loot)
     local offer = ordinary.offer(payload)
     if offer == nil or offer.kind == "fallbackGold" or offer.rejected == nil

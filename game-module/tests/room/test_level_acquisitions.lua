@@ -10,6 +10,7 @@ TestLevelAcquisitions = {}
 function TestLevelAcquisitions:setUp()
     self.restoreNative = nativeGame.install({
         GetAllUpgradeableGodTraits = nativeGame.currentUpgradeableTraits,
+        HeroHasTrait = nativeGame.alwaysHeld,
     })
 end
 
@@ -55,6 +56,9 @@ local function harness(row, native, isBound, installSeaStar, levelAdapter, seaSt
         end,
         diagnostic = function(_, checkpoint, observed)
             mismatches[#mismatches + 1] = { checkpoint, observed }
+        end,
+        fault = function(_, errorValue)
+            mismatches[#mismatches + 1] = { errorValue.outcome, errorValue.checkpoint, errorValue.expected }
         end,
         complete = function(_, value)
             completions[#completions + 1] = { handle = value }
@@ -129,6 +133,54 @@ function TestLevelAcquisitions.testVisibleFatedBonusScopeClearsAfterNativeScreen
     lu.assertStrContains(message, "native level screen failure")
     lu.assertEquals(callbacks.GetTotalHeroTraitValue(nil, {}, function() return 1 end,
         "FatedPomLevelBonus", {}), 1)
+end
+
+function TestLevelAcquisitions.testUnheldOfferedTargetIsAMismatchBeforeNativeReroll()
+    local row = levelRow("StackUpgrade", 1, "Target")
+    row.detail.levelResolution.offeredTargets = { "Target", "Other" }
+    local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeRow" } } }
+    local callbacks, _, _, _, _, completions, mismatches = harness(row, loot)
+    local priorHeld = _G.HeroHasTrait
+    _G.HeroHasTrait = function(name) return name == "Target" end
+    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
+    _G.HeroHasTrait = priorHeld
+    lu.assertEquals(mismatches, { { "level-offer-held", "Other", "not held" } })
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "NativeRow" } })
+    lu.assertNil(loot.StackOnly)
+    lu.assertEquals(#completions, 0)
+end
+
+function TestLevelAcquisitions.testHeldTraitFailureIsANativeFaultNotAMismatch()
+    local row = levelRow("StackUpgrade", 1, "Target")
+    row.detail.levelResolution.offeredTargets = { "Target" }
+    local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeRow" } } }
+    local callbacks, _, _, _, _, completions, mismatches = harness(row, loot)
+    local priorHeld = _G.HeroHasTrait
+    _G.HeroHasTrait = function() error("native failure") end
+    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
+    _G.HeroHasTrait = priorHeld
+    lu.assertEquals(mismatches, { { "fault", "native-api", "HeroHasTrait" } })
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "NativeRow" } })
+    lu.assertEquals(#completions, 0)
+end
+
+function TestLevelAcquisitions.testRerollWithAnUnheldTargetStaysNative()
+    local row = levelRow("StackUpgrade", 1, "Target")
+    row.detail.levelResolution.offeredTargets = { "Target", "Other" }
+    local loot = { Name = "StackUpgrade", UpgradeOptions = {} }
+    local callbacks, _, _, _, _, _, mismatches = harness(row, loot)
+    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
+    local priorHeld = _G.HeroHasTrait
+    _G.HeroHasTrait = function() return false end
+    callbacks.CreateBoonLootButtons(nil, {}, function(_, value)
+        value.UpgradeOptions = { { ItemName = "NativeReroll" } }
+    end, {}, loot, true, {})
+    _G.HeroHasTrait = priorHeld
+    lu.assertEquals(mismatches, {})
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "NativeReroll")
 end
 
 function TestLevelAcquisitions.testNativeRerollIsNotReSteeredAfterInitialVisibleRows()

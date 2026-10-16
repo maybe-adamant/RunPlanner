@@ -39,6 +39,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
     local naturalSelectionPending = {}
     local activeNaturalDistribution = nil
     local targetedAcquisitionPending = {}
+    local offPlanOuter = nil
     local concaveStone = concaveStoneModule.create({
         module = module, session = session, getState = getState, room = room, ordinary = ordinary,
     })
@@ -435,6 +436,20 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local completeAfterInstall = false
         -- A native reroll intentionally abandons the frozen initial offer.
         if ordinary.isCarrier(loot, offer) and reroll ~= true then
+            local conflict, nativeError = ordinary.blockedRowConflict(payload, loot)
+            if nativeError ~= nil then
+                session.fault(state, {
+                    outcome = "fault", checkpoint = "native-api", expected = "CalcNumLootChoices",
+                    observed = nativeError,
+                })
+                report(runtime)
+                return base(screen, loot, reroll, args)
+            end
+            if conflict ~= nil then
+                session.mismatch(state, "trait-offer-blocked-row", conflict.expected, conflict.observed)
+                report(runtime)
+                return base(screen, loot, reroll, args)
+            end
             if ordinary.install(payload, loot, rowOptions) ~= true then
                 diagnostic(state, "trait-offer-install", "published native rows", nativeName(loot))
             end
@@ -478,6 +493,14 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         if nested then
             local stone = concaveStone.active()
             local valid, pending = concaveStone.validateResidual(state)
+            local planned = valid == nil and handle ~= nil and offPlanOuter ~= loot
+                and type(room.peek) == "function" and room.peek(state, handle) or nil
+            if ordinary.isCarrier(loot, ordinary.offer(planned)) and ordinary.concaveStoneResult(planned) == nil then
+                -- The planned selection has no Concave Stone result, so any proc is unplanned.
+                session.mismatch(state, "concave-stone-unplanned", "no Concave Stone proc", selected)
+                report(runtime)
+                return base(screen, button, args)
+            end
             if valid == nil or not valid then return base(screen, button, args) end
             local pendingForSelection, naturalSelectionForSelection,
                 targetedAcquisitionForSelection = consequenceScopes(
@@ -507,13 +530,17 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         end
 
         if not ordinary.isCarrier(loot, offer) or ordinary.selectedKey(payload) ~= selected then
-            local result
+            local priorOffPlan = offPlanOuter
+            if ordinary.isCarrier(loot, offer) then offPlanOuter = loot end
+            local ok, result
             if ordinary.isCarrier(loot, offer) and isAcquisition(payload) then
-                result = seaStar.call(seaStarScope, function() return base(screen, button, args) end,
+                ok, result = pcall(seaStar.call, seaStarScope, function() return base(screen, button, args) end,
                     diagnostic)
             else
-                result = base(screen, button, args)
+                ok, result = pcall(base, screen, button, args)
             end
+            offPlanOuter = priorOffPlan
+            if not ok then error(result, 0) end
             if ordinary.isCarrier(loot, offer) then
                 if isAcquisition(payload) then
                     seaStar.requireConsumed(seaStarScope, diagnostic)
