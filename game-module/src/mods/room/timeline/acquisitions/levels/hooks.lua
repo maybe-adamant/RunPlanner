@@ -48,6 +48,18 @@ function levels.prepareVisible(row, loot)
     return true
 end
 
+-- Native Pom rows re-roll unless every offered trait is held. A native call
+-- failure returns nil plus its error.
+function levels.unheldTarget(row)
+    local effect = resolution(row)
+    for _, target in ipairs(effect and effect.offeredTargets or {}) do
+        local ok, held = pcall(_G.HeroHasTrait, target)
+        if not ok then return nil, tostring(held) end
+        if not held then return target end
+    end
+    return nil
+end
+
 local function markedArguments(source, args)
     if type(source) == "table" and source.__runPlannerTimelineHandle ~= nil then return source end
     if type(args) == "table" and args.__runPlannerTimelineHandle ~= nil then return args end
@@ -165,6 +177,20 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
             return base(screen, loot, reroll, args)
         end
         local initial = reroll ~= true
+        local unheld, nativeError
+        if initial then unheld, nativeError = levels.unheldTarget(payload) end
+        if nativeError ~= nil then
+            session.fault(state, {
+                outcome = "fault", checkpoint = "native-api", expected = "HeroHasTrait", observed = nativeError,
+            })
+            report(runtime)
+            return base(screen, loot, reroll, args)
+        end
+        if unheld ~= nil then
+            session.mismatch(state, "level-offer-held", unheld, "not held")
+            report(runtime)
+            return base(screen, loot, reroll, args)
+        end
         local installed = not initial or levels.prepareVisible(payload, loot)
         if not installed then
             session.diagnostic(state, "level-offer-install", {

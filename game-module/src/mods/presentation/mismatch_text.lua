@@ -110,6 +110,10 @@ local INVENTORY = {
     ["well-refill-slot"] = "Stygian Well", ["shrine-inventory-offer"] = "Hermes shrine",
     ["shrine-refill-inventory"] = "Hermes shrine", ["purging-pool-inventory"] = "Purging Pool",
 }
+local TRAIT_CHOICE = {
+    ["npc-trait-offer"] = true, ["npc-trait-requirements"] = true, ["trait-offer-blocked-row"] = true,
+    ["level-offer-held"] = true, ["concave-stone-unplanned"] = true, ["concave-stone-residual-excluded"] = true,
+}
 local LIFECYCLE = {
     roomEntered = "entering the room", exitUsable = "when the exits opened",
     roomExit = "leaving the room", outgoingGeneration = "when the doors appeared",
@@ -132,6 +136,7 @@ function text.checkpoint(issue)
     if checkpoint == "transaction-prerequisite" then return "planned order" end
     if DOOR_KINDS[checkpoint] or checkpoint:match("^ephyra") then return "when the doors appeared" end
     if checkpoint == "incomingReward" then return "room reward" end
+    if TRAIT_CHOICE[checkpoint] then return "a trait choice" end
     if checkpoint == "encounter" or checkpoint == "encounterCount" then return "encounter" end
     if INVENTORY[checkpoint] then return INVENTORY[checkpoint] .. " stock" end
     return "a plan check"
@@ -274,6 +279,21 @@ function text.difference(issue)
     end
     if checkpoint == "transaction-prerequisite" then
         return "a planned step happened before the step it depends on"
+    end
+    if checkpoint == "npc-trait-offer" then return "the game offered different rows than the plan" end
+    if checkpoint == "npc-trait-requirements" then
+        return "planned " .. text.name(expected) .. " wasn't eligible to be offered"
+    end
+    if checkpoint == "trait-offer-blocked-row" then
+        return expected == "blocked row" and "the plan rejected a row the game didn't lock"
+            or "the game locked a row the plan didn't reject"
+    end
+    if checkpoint == "level-offer-held" then
+        return "planned Pom target " .. text.name(expected) .. " isn't held, so the game re-rolled the rows"
+    end
+    if checkpoint == "concave-stone-unplanned" then return "Concave Stone gave an unplanned second boon" end
+    if checkpoint == "concave-stone-residual-excluded" then
+        return "Concave Stone's planned " .. text.name(expected) .. " wasn't offered"
     end
     if checkpoint == "target" then
         local planned, found = scalar(expected), scalar(observed)

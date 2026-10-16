@@ -43,13 +43,46 @@ function npc.attach(module, session, getState, report, room, highlights, rowOpti
         return adapter.applyNpcTraitOffer(scope.payload, args, rowOptions)
     end
 
-    local function reportUnavailable(scope)
-        session.diagnostic(scope.state, "npc-trait-offer", {
-            expected = "published " ..
-                tostring(scope.payload and scope.payload.transaction.resolution.offer.giver) ..
-                " trait offer", observed = nil,
-        })
+    local rarityScope
+
+    local function plannedKeys(scope)
+        local keys = {}
+        local offer = scope.payload.transaction.resolution.offer
+        for index, option in ipairs(offer.options or {}) do keys[index] = option.key end
+        return keys
     end
+
+    local function nativeKeys(options)
+        local keys = {}
+        for _, option in ipairs(type(options) == "table" and options or {}) do
+            if type(option) == "table" then keys[#keys + 1] = option.ItemName end
+        end
+        return keys
+    end
+
+    local function reportUnavailable(scope, options)
+        session.mismatch(scope.state, "npc-trait-offer", plannedKeys(scope), nativeKeys(options))
+    end
+
+    -- Native NPC choices drop any option whose GameStateRequirements fail.
+    -- A native call failure returns nil plus its error.
+    local function ineligibleRow(source, options)
+        for _, option in ipairs(options) do
+            local requirements = option.GameStateRequirements
+            if requirements ~= nil then
+                local ok, eligible = pcall(_G.IsGameStateEligible, source, requirements)
+                if not ok then return nil, tostring(eligible) end
+                if eligible ~= true then return option.ItemName end
+            end
+        end
+        return nil
+    end
+
+    -- Native NPC choices may swap a non-Common row after a failed rarity roll.
+    module.hooks.wrap("PassRarityCheck", "run-planner-npc-rarity", function(_, _, base, rarityName)
+        if rarityScope ~= nil and rarityScope.forceRarity then return true end
+        return base(rarityName)
+    end)
 
     local function attachChoice(functionName, giver)
         module.hooks.wrap(functionName, "run-planner-npc-entry", function(_, runtime, base, source,
@@ -62,18 +95,40 @@ function npc.attach(module, session, getState, report, room, highlights, rowOpti
             local invocationArgs = args
             if current ~= nil and resolution and resolution.kind == "traitOffer"
                 and resolution.offer.giver == giver then
-                invocationArgs = copyInvocationArgs(args)
+                local installed = copyInvocationArgs(args)
                 local scope = {
                     state = state, current = current, handle = handle, payload = payload,
                 }
-                if installInput(scope, invocationArgs) then
-                    scope.steered = true
+                if not installInput(scope, installed) then
+                    reportUnavailable(scope, args and args.UpgradeOptions)
                 else
-                    reportUnavailable(scope)
+                    local ineligible, nativeError = ineligibleRow(source, installed.UpgradeOptions)
+                    if nativeError ~= nil then
+                        session.fault(state, {
+                            outcome = "fault", checkpoint = "native-api", expected = "IsGameStateEligible",
+                            observed = nativeError,
+                        })
+                    elseif ineligible ~= nil then
+                        session.mismatch(state, "npc-trait-requirements", ineligible, "native-ineligible")
+                    else
+                        scope.steered = true
+                        invocationArgs = installed
+                        choices[source] = scope
+                    end
                 end
-                choices[source] = scope
             end
-            local result = base(source, invocationArgs, screen)
+            local scope = invocationArgs ~= args and choices[source] or nil
+            local priorRarity = rarityScope
+            if scope ~= nil then
+                scope.forceRarity = true
+                rarityScope = scope
+            end
+            local ok, result = pcall(base, source, invocationArgs, screen)
+            if scope ~= nil then
+                scope.forceRarity = false
+                if rarityScope == scope then rarityScope = priorRarity end
+            end
+            if not ok then error(result, 0) end
             report(runtime)
             return result
         end)
@@ -89,12 +144,14 @@ function npc.attach(module, session, getState, report, room, highlights, rowOpti
     module.hooks.wrap("OpenUpgradeChoiceMenu", "run-planner-npc-menu", function(_, runtime, base, source, args)
         local scope = choices[source]
         if scope ~= nil then
+            -- Native rarity re-picks finish before the menu opens.
+            scope.forceRarity = false
             -- Native selection may reorder the three rows. Reapply the same
             -- authored set at the shared menu contact after native preparation.
             if not adapter.applyNpcTraitOffer(scope.payload, source, rowOptions) then
-                reportUnavailable(scope)
-            else
-                scope.steered = true
+                reportUnavailable(scope, source and source.UpgradeOptions)
+                choices[source] = nil
+                scope = nil
             end
         end
         local expected = adapter.expectedTrait(scope and scope.payload)

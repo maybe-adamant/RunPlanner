@@ -873,3 +873,107 @@ function TestOrdinaryTraits.testDeferredInstallLeavesNativeRowsForThePickupStub(
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
     lu.assertEquals(loot.UpgradeOptions[1].StackNum, 4)
 end
+
+local function openCursedScreen(offer, choices, carrier, reroll)
+    carrier = carrier or { GodLoot = true, Name = "ApolloUpgrade" }
+    local priorChoices = _G.CalcNumLootChoices
+    _G.CalcNumLootChoices = type(choices) == "function" and choices
+        or function(value) return value.GodLoot and choices or 3 end
+    local callbacks, _, completed, mismatches = attached(offer, nil, carrier.Name)
+    local loot = { UpgradeOptions = { { ItemName = "Native" } } }
+    for key, value in pairs(carrier) do loot[key] = value end
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, reroll == true, {})
+    _G.CalcNumLootChoices = priorChoices
+    return loot, completed(), mismatches()
+end
+
+-- CalcNumLootChoices with the fewer-choices curse live.
+local function cursedChoices(value)
+    if (value.GodLoot or value.TreatAsGodLootByShops) and not value.IgnoreRestrictBoonChoices then return 2 end
+    return 3
+end
+
+local function threeRows(rejected)
+    return {
+        kind = "traits", selected = "option1", rejected = rejected, options = {
+            { key = "ApolloAttack" }, { key = "ApolloCast" }, { key = "ApolloSpecial" },
+        },
+    }
+end
+
+function TestOrdinaryTraits.testNativeBlockedRowWithoutPlannedRejectionIsAMismatch()
+    local loot, completed, mismatches = openCursedScreen(threeRows(nil), 2)
+    lu.assertEquals(mismatches, { {
+        checkpoint = "trait-offer-blocked-row", expected = "no blocked row", observed = "blocked row",
+    } })
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+    lu.assertEquals(completed, 0)
+end
+
+function TestOrdinaryTraits.testPlannedRejectionWithoutNativeBlockIsAMismatch()
+    local loot, completed, mismatches = openCursedScreen(threeRows("option2"), 3)
+    lu.assertEquals(mismatches, { {
+        checkpoint = "trait-offer-blocked-row", expected = "blocked row", observed = "no blocked row",
+    } })
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+    lu.assertEquals(completed, 0)
+end
+
+function TestOrdinaryTraits.testNativeBlockCountMatchingThePlanInstallsRows()
+    for _, case in ipairs({ { rejected = "option2", choices = 2 }, { choices = 3 } }) do
+        local loot, completed, mismatches = openCursedScreen(threeRows(case.rejected), case.choices)
+        lu.assertEquals(mismatches, {})
+        lu.assertEquals(loot.UpgradeOptions[2].ItemName, "ApolloCast")
+        lu.assertEquals(completed, 1)
+    end
+end
+
+function TestOrdinaryTraits.testCursedCarrierWitnessesFollowTheNativeChoiceCount()
+    for _, case in ipairs({
+        { carrier = { Name = "HermesUpgrade", TreatAsGodLootByShops = true }, rejected = "option2" },
+        { carrier = { Name = "WeaponUpgrade" } },
+    }) do
+        local offer = threeRows(case.rejected)
+        local loot, completed, mismatches = openCursedScreen(offer, cursedChoices, case.carrier)
+        lu.assertEquals(mismatches, {}, case.carrier.Name)
+        lu.assertEquals(loot.UpgradeOptions[2].ItemName, "ApolloCast", case.carrier.Name)
+        lu.assertEquals(completed, 1, case.carrier.Name)
+    end
+    local _, _, mismatches = openCursedScreen(threeRows(nil), cursedChoices,
+        { Name = "HermesUpgrade", TreatAsGodLootByShops = true })
+    lu.assertEquals(mismatches[1].checkpoint, "trait-offer-blocked-row")
+end
+
+function TestOrdinaryTraits.testCursedFallbackGoldHasNoBlockedRow()
+    local loot, completed, mismatches = openCursedScreen({ kind = "fallbackGold", giver = "Apollo" }, cursedChoices)
+    lu.assertEquals(mismatches, {})
+    lu.assertEquals(loot.UpgradeOptions, { { Type = "Trait", ItemName = "FallbackGold", Rarity = "Common" } })
+    lu.assertEquals(completed, 1)
+end
+
+function TestOrdinaryTraits.testRerollSkipsTheBlockedRowCheck()
+    local loot, _, mismatches = openCursedScreen(threeRows(nil), 2, nil, true)
+    lu.assertEquals(mismatches, {})
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+end
+
+function TestOrdinaryTraits.testChoiceCountFailureIsANativeFaultNotAMismatch()
+    local loot, completed, mismatches = openCursedScreen(threeRows(nil), function() error("native failure") end)
+    lu.assertEquals(#mismatches, 1)
+    lu.assertEquals(mismatches[1].outcome, "fault")
+    lu.assertEquals(mismatches[1].checkpoint, "native-api")
+    lu.assertEquals(mismatches[1].expected, "CalcNumLootChoices")
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+    lu.assertEquals(completed, 0)
+end
+
+function TestOrdinaryTraits.testCursedEncounterCarrierFollowsTheNativeChoiceCount()
+    local priorChoices = _G.CalcNumLootChoices
+    _G.CalcNumLootChoices = cursedChoices
+    encounterLootUsesTheOrdinaryOfferLifecycle("Artemis", "NPC_Artemis_Field_01",
+        { "SupportingFireBoon", "FocusCritBoon", "DashOmegaBuffBoon" })
+    _G.CalcNumLootChoices = priorChoices
+end

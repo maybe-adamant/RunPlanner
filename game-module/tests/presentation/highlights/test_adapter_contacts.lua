@@ -19,6 +19,7 @@ function TestHighlightAdapterContacts:setUp()
         CurrentRun = { Hero = { Traits = { { Name = "Target" }, { Name = "Other" } } } },
         TraitData = nativeGame.anyTraitDeclarations(),
         IsTraitEligible = nativeGame.alwaysEligible,
+        HeroHasTrait = nativeGame.alwaysHeld,
         GetAllUpgradeableGodTraits = nativeGame.currentUpgradeableTraits,
         CreateScreenComponent = function()
             self.nextId = self.nextId + 1

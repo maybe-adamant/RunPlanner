@@ -51,7 +51,7 @@ function stoneModule.create(options)
         if not sawButton then return base(candidates, rng) end
         if selected == nil then
             discard(pending)
-            options.session.diagnostic(state, "concave-stone-residual", "native-ineligible")
+            options.session.mismatch(state, "concave-stone-residual-excluded", expectedKey, "not offered")
             return base(candidates, rng)
         end
         pending.residualButton = selected

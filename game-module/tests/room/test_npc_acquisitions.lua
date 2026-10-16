@@ -14,6 +14,7 @@ TestNpcAcquisitions = {}
 function TestNpcAcquisitions:setUp()
     self.restoreNative = nativeGame.install({
         TraitData = nativeGame.anyTraitDeclarations(),
+        IsGameStateEligible = nativeGame.alwaysEligible,
     })
 end
 
@@ -75,6 +76,9 @@ local function harness(giver, _, options)
         end,
         diagnostic = function(_, checkpoint, observed)
             mismatches[#mismatches + 1] = { checkpoint = checkpoint, observed = observed }
+        end,
+        fault = function(_, errorValue)
+            mismatches[#mismatches + 1] = errorValue
         end,
         complete = function(_, currentHandle)
             completions[#completions + 1] = { handle = currentHandle }
@@ -960,4 +964,167 @@ function TestNpcAcquisitions.testOtherEchoChoicesRemainNativeAuthoritative()
         lu.assertEquals(#mismatches, 0, selected)
         lu.assertEquals(#completions, 1, selected)
     end
+end
+
+local function rarityRows(giver, selected)
+    return { UpgradeOptions = {
+        { ItemName = giver .. "One", Rarity = "Rare" },
+        { ItemName = selected, Rarity = "Epic" },
+        { ItemName = giver .. "Three" },
+    } }
+end
+
+function TestNpcAcquisitions.testSteeredNpcChoicePassesEveryNativeRarityCheck()
+    for _, choice in ipairs({
+        { giver = "Arachne", callback = "ArachneCostumeChoice" },
+        { giver = "Narcissus", callback = "NarcissusBenefitChoice" },
+        { giver = "Medea", callback = "MedeaCurseChoice" },
+        { giver = "Circe", callback = "CirceBlessingChoice" },
+        { giver = "Icarus", callback = "IcarusBenefitChoice" },
+    }) do
+        local selected = choice.giver .. "Two"
+        local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(
+            choice.giver, selected, { offer = offer(choice.giver, selected) })
+        local passed
+        runMenu(callbacks, choice.callback, source, rarityRows(choice.giver, selected), selected, nil, nil,
+            function()
+                passed = callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic")
+            end)
+        lu.assertTrue(passed, choice.giver)
+        lu.assertFalse(callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic"))
+        finish()
+        lu.assertEquals(#mismatches, 0, choice.giver)
+        lu.assertEquals(#completions, 1, choice.giver)
+    end
+end
+
+function TestNpcAcquisitions.testRarityScopeClearsAfterNativeChoiceError()
+    local selected = "MedeaTwo"
+    local callbacks, source, _, _, _, _, _, _, _, _, finish = harness(
+        "Medea", selected, { offer = offer("Medea", selected) })
+    local ok = pcall(callbacks.MedeaCurseChoice, nil, {}, function()
+        error("native choice failure")
+    end, source, rarityRows("Medea", selected), { Source = source })
+    finish()
+    lu.assertFalse(ok)
+    lu.assertFalse(callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic"))
+end
+
+function TestNpcAcquisitions.testUnplannedNpcChoiceKeepsNativeRarityCheck()
+    local callbacks = harness("Medea", "MedeaTwo", { offer = { kind = "fallbackGold", giver = "Narcissus" } })
+    local passed
+    callbacks.MedeaCurseChoice(nil, {}, function()
+        passed = callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic")
+    end, {}, rarityRows("Medea", "MedeaTwo"), {})
+    lu.assertFalse(passed)
+end
+
+function TestNpcAcquisitions.testIneligiblePlannedNpcRowIsAMismatchAtChoiceEntry()
+    local selected = "NarcissusTwo"
+    local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(
+        "Narcissus", selected, { offer = offer("Narcissus", selected) })
+    local priorEligible = _G.IsGameStateEligible
+    _G.IsGameStateEligible = function(_, requirements) return requirements[1] ~= "unmet" end
+    local args = { UpgradeOptions = {
+        { ItemName = "NarcissusThree", GameStateRequirements = { "unmet" } },
+        { ItemName = "NarcissusOne", GameStateRequirements = { "met" } },
+        { ItemName = selected },
+    } }
+    local nativeArgs, passed
+    callbacks.NarcissusBenefitChoice(nil, {}, function(_, invocationArgs)
+        nativeArgs = invocationArgs
+        passed = callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic")
+    end, source, args, { Source = source })
+    _G.IsGameStateEligible = priorEligible
+    finish()
+    lu.assertEquals(mismatches, { {
+        checkpoint = "npc-trait-requirements", expected = "NarcissusThree", observed = "native-ineligible",
+    } })
+    lu.assertTrue(rawequal(nativeArgs, args))
+    lu.assertFalse(passed)
+    lu.assertEquals(#completions, 0)
+end
+
+function TestNpcAcquisitions.testNativeMenuWithoutPlannedRowsIsAMismatch()
+    local selected = "IcarusTwo"
+    local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(
+        "Icarus", selected, { offer = offer("Icarus", selected) })
+    local args = { UpgradeOptions = {
+        { ItemName = "IcarusOne" }, { ItemName = selected }, { ItemName = "IcarusThree" },
+    } }
+    callbacks.IcarusBenefitChoice(nil, {}, function(nativeSource, nativeArgs)
+        nativeSource.UpgradeOptions = { { ItemName = "IcarusOne" }, { ItemName = "IcarusFour" } }
+        return callbacks.OpenUpgradeChoiceMenu(nil, {}, function(openSource)
+            return callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end,
+                { Source = openSource }, { Data = { Name = "IcarusFour" } }, {})
+        end, nativeSource, nativeArgs)
+    end, source, args, { Source = source })
+    finish()
+    lu.assertEquals(mismatches, { {
+        checkpoint = "npc-trait-offer",
+        expected = { "IcarusOne", selected, "IcarusThree" }, observed = { "IcarusOne", "IcarusFour" },
+    } })
+    lu.assertEquals(#completions, 0)
+end
+
+function TestNpcAcquisitions.testRarityForceEndsWhenTheMenuOpens()
+    local selected = "CirceTwo"
+    local callbacks, source, _, _, _, _, _, _, _, _, finish = harness(
+        "Circe", selected, { offer = offer("Circe", selected) })
+    local beforeMenu, inMenu
+    runMenu(callbacks, "CirceBlessingChoice", source, rarityRows("Circe", selected), selected, function()
+        inMenu = callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic")
+    end, nil, function()
+        beforeMenu = callbacks.PassRarityCheck(nil, {}, function() return false end, "Epic")
+    end)
+    finish()
+    lu.assertTrue(beforeMenu)
+    lu.assertFalse(inMenu)
+end
+
+function TestNpcAcquisitions.testMetPlannedNpcRequirementsKeepTheSteeredOffer()
+    local selected = "ArachneTwo"
+    local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(
+        "Arachne", selected, { offer = offer("Arachne", selected) })
+    local checked = {}
+    local priorEligible = _G.IsGameStateEligible
+    _G.IsGameStateEligible = function(_, requirements)
+        checked[#checked + 1] = requirements[1]
+        return true
+    end
+    local args = { UpgradeOptions = {
+        { ItemName = "ArachneOne", GameStateRequirements = { "one" } },
+        { ItemName = selected, GameStateRequirements = { "two" } },
+        { ItemName = "ArachneThree" },
+    } }
+    runMenu(callbacks, "ArachneCostumeChoice", source, args, selected)
+    _G.IsGameStateEligible = priorEligible
+    finish()
+    lu.assertEquals(checked, { "one", "two" })
+    lu.assertEquals(#mismatches, 0)
+    lu.assertEquals(#completions, 1)
+end
+
+function TestNpcAcquisitions.testRequirementCheckFailureIsANativeFaultNotAMismatch()
+    local selected = "NarcissusTwo"
+    local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(
+        "Narcissus", selected, { offer = offer("Narcissus", selected) })
+    local priorEligible = _G.IsGameStateEligible
+    _G.IsGameStateEligible = function() error("native failure") end
+    local args = { UpgradeOptions = {
+        { ItemName = "NarcissusOne", GameStateRequirements = { "any" } },
+        { ItemName = selected }, { ItemName = "NarcissusThree" },
+    } }
+    local nativeArgs
+    callbacks.NarcissusBenefitChoice(nil, {}, function(_, invocationArgs)
+        nativeArgs = invocationArgs
+    end, source, args, { Source = source })
+    _G.IsGameStateEligible = priorEligible
+    finish()
+    lu.assertEquals(#mismatches, 1)
+    lu.assertEquals(mismatches[1].outcome, "fault")
+    lu.assertEquals(mismatches[1].checkpoint, "native-api")
+    lu.assertEquals(mismatches[1].expected, "IsGameStateEligible")
+    lu.assertTrue(rawequal(nativeArgs, args))
+    lu.assertEquals(#completions, 0)
 end

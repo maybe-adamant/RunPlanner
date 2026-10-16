@@ -21,6 +21,7 @@ function TestAcquisitionHookComposition:setUp()
     self.restoreNative = nativeGame.install({
         TraitData = nativeGame.anyTraitDeclarations(),
         IsTraitEligible = nativeGame.alwaysEligible,
+        IsGameStateEligible = nativeGame.alwaysEligible,
         GetAllUpgradeableGodTraits = nativeGame.currentUpgradeableTraits,
     })
 end
