@@ -7,6 +7,7 @@ import {
   createTraitAcquisitionTargetAddress,
   createAllTogetherSetAddress,
   createNaturalSelectionResultAddress,
+  discoverAuthoredTraitCarrierChildren,
   semanticAddressKey,
   type AuthoredTraitOfferTraits,
   type OneToEight,
@@ -830,6 +831,82 @@ describe('Concave Stone candidate capability', () => {
     if (capability === undefined) throw new Error('missing retained Stone candidate capability');
     expect(capability.concaveStone(offer({ kind: 'proc', optionKey: 'option2' }))).toMatchObject([
       { procSupport: 0, residualOptionKeys: [], resultSupport: 'impossible', supported: false },
+    ]);
+  });
+});
+
+describe('Concave Stone giver eligibility', () => {
+  function hadesOffer(
+    result?: AuthoredTraitOfferTraits['concaveStoneResult'],
+  ): AuthoredTraitOfferTraits {
+    return Object.freeze({
+      kind: 'traits',
+      giverKey: 'Hades',
+      options: [
+        { traitKey: 'HadesLifestealBoon' },
+        { traitKey: 'HadesCastProjectileBoon' },
+        { traitKey: 'HadesPreDamageBoon' },
+      ] as const,
+      selectedOptionKey: 'option1',
+      ...(result === undefined ? {} : { concaveStoneResult: result }),
+    });
+  }
+
+  it('never procs on Hades while a Heroic Stone still forces a proc on an Olympian', () => {
+    expect(settle(offer(), 'Heroic').blockedChild?.address).toEqual(trait);
+    const proc = settle(offer({ kind: 'proc', optionKey: 'option2' }), 'Heroic');
+    expect(proc.findingEntries).toEqual([]);
+    expect(proc.branch.state.keepsakes.stone).toMatchObject({ status: 'consumed' });
+
+    const hades = settle(hadesOffer(), 'Heroic');
+    expect(hades.blockedChild).toBeUndefined();
+    expect(hades.findingEntries).toEqual([]);
+    expect(hades.branch.state.keepsakes.stone).toMatchObject({ status: 'pending' });
+    expect(hades.branch.traitEvaluations?.at(-1)?.offer).not.toHaveProperty('concaveStoneResult');
+    expect(
+      hades.branch.state.traitHistory?.events.some(
+        (event) => event.kind === 'concaveStoneSecondary',
+      ),
+    ).toBe(false);
+    expect(
+      discoverAuthoredTraitCarrierChildren(catalog, trait, hadesOffer()).map((child) => child.kind),
+    ).not.toContain('concaveStone');
+  });
+
+  it('retains a Hades Stone proc as an unavailable repairable child', () => {
+    const stale = hadesOffer({ kind: 'proc', optionKey: 'option2' });
+    const settled = settle(stale, 'Heroic');
+    expect(settled.findingEntries).toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({ code: 'concaveStoneResultUnavailable' }),
+      }),
+    );
+    expect(settled.branch.state.keepsakes.stone).toMatchObject({ status: 'pending' });
+    expect(
+      discoverAuthoredTraitCarrierChildren(catalog, trait, stale).map((child) => child.kind),
+    ).toContain('concaveStone');
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      openTimeTraitOfferContexts(
+        new Map([
+          [
+            semanticAddressKey(trait),
+            [
+              {
+                state: traitFrontierState(createTraitHistoryState(), {
+                  keepsakes: branchWithStone('Heroic').state.keepsakes,
+                }),
+                source: {},
+              },
+            ],
+          ],
+        ]),
+      ),
+    ).at(trait);
+    if (capability === undefined) throw new Error('missing Hades Stone candidate capability');
+    expect(capability.concaveStone(hadesOffer())).toEqual([]);
+    expect(capability.concaveStone(stale)).toMatchObject([
+      { procSupport: 0, required: false, resultSupport: 'impossible', supported: false },
     ]);
   });
 });

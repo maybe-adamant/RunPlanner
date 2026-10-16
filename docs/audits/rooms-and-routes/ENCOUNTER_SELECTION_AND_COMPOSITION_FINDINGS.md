@@ -661,7 +661,7 @@ random event in that biome.
 | Gold trade     | one eligible health, magick, Pom, or Hammer item plus an inclusive rolled Gold price                | accept or decline; insufficient Gold disables accept                       | required on accept; absent on decline                                                               |
 | damage trade   | one eligible health, magick, Pom, Gold, or `TalentDrop` item plus an inclusive rolled damage amount | accept or decline; the source deals pure damage before creating the reward | required on surviving accept; absent on decline or death                                            |
 | trait trade    | one eligible equipped god trait, preferring Common when any exist                                   | accept or decline                                                          | removes that exact trait and creates required `RoomMoneyTripleDrop` on accept; no change on decline |
-| damage contest | success or failure, then one eligible result from the corresponding pool                            | deal damage after starting the five-second contest                         | optional                                                                                            |
+| damage contest | success or failure, then one eligible result from the corresponding pool                            | deal damage after starting the five-second contest                         | required for a `StackUpgrade` success; otherwise optional                                           |
 
 The free-item pool includes `LastStandDrop` only while `MissingLastStand` is
 true. It has no accept/decline step.
@@ -707,7 +707,11 @@ timer and result resolve. Thus the Nemesis contact is required even when its
 generated item is optional.
 
 Accepted trades add their generated result to `RoomRequiredObjects`. Free-item
-and damage-contest results do not, so those pickups remain optional. Generated
+and damage-contest consumables do not, so those pickups remain optional. A
+contest `StackUpgrade` is loot: `NPCRewardDrop` creates it through `CreateLoot`
+(`InteractLogic.lua:490–491`), which registers it in `RoomRequiredObjects`
+unless `DoesNotBlockExit` is set (`RoomLogic.lua:2276–2278`), so that Pom is a
+required pickup. Generated
 consumables use the ordinary pickup path with `NPCDrop = true`; that flag
 disables the usual Money/health reward multipliers but does not create a
 Nemesis-specific acquisition lifecycle.

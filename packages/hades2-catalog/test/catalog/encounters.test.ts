@@ -1664,7 +1664,7 @@ describe('encounter envelope catalog', () => {
         ],
         failureResultRewardType: 'RoomRewardConsolationPrize',
         response: 'none',
-        pickupRequired: false,
+        requiredResultRewardTypes: ['StackUpgrade'],
       },
       hOptionalCapacityReservation: 1,
     });
@@ -1698,7 +1698,7 @@ describe('encounter envelope catalog', () => {
           ],
           failureResultRewardType: 'RoomRewardConsolationPrize',
           response: 'none',
-          pickupRequired: false,
+          requiredResultRewardTypes: ['StackUpgrade'],
         },
       },
       requirements: {
@@ -1843,6 +1843,13 @@ describe('encounter envelope catalog', () => {
           ),
         })),
       );
+    for (const requiredResultRewardTypes of [[], ['TalentDrop'], undefined])
+      expect(() =>
+        mutatePolicy((policy) => ({
+          ...policy,
+          damageContest: { ...policy.damageContest, requiredResultRewardTypes },
+        })),
+      ).toThrow(CatalogContractError);
     expect(() =>
       mutatePolicy((policy) => ({
         ...policy,

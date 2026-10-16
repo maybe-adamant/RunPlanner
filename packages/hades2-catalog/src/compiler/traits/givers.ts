@@ -46,6 +46,7 @@ export function normalizeGivers(
       'label',
       'providerKind',
       'shopAwareGodTrait',
+      'blocksConcaveStone',
       'callingCardMenu',
       'traitKeys',
       'priorityTraitKeys',
@@ -63,6 +64,11 @@ export function normalizeGivers(
       requireBoolean(giver.shopAwareGodTrait, `${path}.shopAwareGodTrait`);
     if (giver.callingCardMenu !== undefined)
       requireBoolean(giver.callingCardMenu, `${path}.callingCardMenu`);
+    if (
+      giver.blocksConcaveStone !== undefined &&
+      (giver.blocksConcaveStone !== true || giver.shopAwareGodTrait !== true)
+    )
+      fail(`${path}.blocksConcaveStone`, 'must be true on a shop-aware god-trait giver');
     if (giver.selectedOptionPathPointBonuses !== undefined) {
       if (
         giver.key !== 'SpellDrop' ||
@@ -214,6 +220,7 @@ export function normalizeGivers(
       label: requireNonEmpty(giver.label, `${path}.label`),
       providerKind,
       shopAwareGodTrait: giver.shopAwareGodTrait === true,
+      ...(giver.blocksConcaveStone === true ? { blocksConcaveStone: true as const } : {}),
       callingCardMenu: giver.callingCardMenu === true,
       traitKeys,
       priorityTraitKeys,

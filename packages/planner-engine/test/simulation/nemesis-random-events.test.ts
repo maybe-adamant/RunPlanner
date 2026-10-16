@@ -646,6 +646,48 @@ describe('Nemesis random events', () => {
     expect(withTrade('accept')).toEqual([undefined]);
   });
 
+  it('requires a contest Pom pickup while consumable contest results stay optional', () => {
+    const result = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    };
+    const contest = (rewardType: string) => {
+      const project = replaceNemesisRandomEventInteraction(
+        selectEvent(),
+        createNemesisRandomEventAddress(phase),
+        { kind: 'damageContest', result: 'success' },
+        { rewardType },
+      );
+      const selected = occurrence(project);
+      const contribution = assembleRoomActionDomain({
+        routePosition: ordinaryPositionFor(catalog, goldenFBiome),
+        catalog,
+        biome: goldenFBiome,
+        occurrence: selected,
+      }).contributions.find(
+        (entry) =>
+          entry.kind === 'action' && roomActionKey(entry.reference) === roomActionKey(result),
+      );
+      return { project, selected, contribution };
+    };
+    const pom = contest('StackUpgrade');
+    expect(pom.contribution).toMatchObject({ participation: 'required' });
+    expect(pom.selected.roomActions.order).toContainEqual(result);
+    const action = createRoomActionAddress(
+      goldenFBiome,
+      pom.selected.occurrenceId,
+      roomActionKey(result),
+    );
+    expect(() =>
+      applyProjectCommand(pom.project, catalog, { kind: 'RemoveRoomAction', action }),
+    ).toThrow(/required room action cannot be removed/);
+
+    const talent = contest('TalentDrop');
+    expect(talent.contribution).toMatchObject({ participation: 'optional' });
+    expect(talent.selected.roomActions.order).not.toContainEqual(result);
+  });
+
   it('places the H event beside four optionals when the room has spare physical capacity', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
     const owner = createOccurrenceAddress(goldenHBiome, occurrenceId);

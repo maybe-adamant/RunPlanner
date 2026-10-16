@@ -675,7 +675,9 @@ function nemesisPickupProducers(
               ? policy.traitTrade.pickupRequiredOnAccept
               : outcome.kind === 'freeItem'
                 ? policy.freeItem.pickupRequired
-                : policy.damageContest.pickupRequired);
+                : (policy.damageContest.requiredResultRewardTypes as readonly string[]).includes(
+                    result?.offer.rewardType ?? '',
+                  ));
       return [
         Object.freeze({
           producerLifecycleKey: 'NemesisEventPickup',
