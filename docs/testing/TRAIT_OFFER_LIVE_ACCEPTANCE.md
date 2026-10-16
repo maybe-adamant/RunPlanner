@@ -50,3 +50,16 @@ Chaos blessing that adds rarity bonus. Either works for items that name one.
       options reflect the state after the Echo screen closed. Planner:
       evaluates it against that post-screen state. No engine test covers this
       path; it is confirmed live only.
+
+## Planned encounter offers
+
+Unlike the items above, this check runs a published plan that installs the
+observed screen.
+
+- [ ] **Encounter giver uses.** Setup: a plan taking a boon from Athena,
+      Artemis or Dionysus while Yarn of the Fates or Chaos's Ordinary curse
+      has uses left, and a second plan taking Hades's field boon under the
+      same item. Action: take each planned boon and leave the room. Native:
+      the god's screen spends one Yarn or Ordinary use when it closes;
+      Hades's screen spends neither. The status window stays synchronized
+      past room exit, with no Stygian Well or Chaos mismatch.

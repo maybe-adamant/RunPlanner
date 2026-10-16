@@ -122,7 +122,7 @@ function TestOrdinaryTraits.testEncounterLootCarriersMatchOnlyTheirPublishedGive
     end
 end
 
-local function encounterLootUsesTheOrdinaryOfferLifecycle(giver, name, keys)
+local function attachEncounterOffer(giver, keys)
     local callbacks = {}
     local module = { hooks = { wrap = function(name, _, callback) callbacks[name] = callback end } }
     local state = { state = "synchronized" }
@@ -165,6 +165,11 @@ local function encounterLootUsesTheOrdinaryOfferLifecycle(giver, name, keys)
     }
     hooks.attach(module, session, function() return state end, function() end, room, seaStar, nil,
         rowOptions)
+    return callbacks, function() return completed end, mismatches
+end
+
+local function encounterLootUsesTheOrdinaryOfferLifecycle(giver, name, keys)
+    local callbacks, completed, mismatches = attachEncounterOffer(giver, keys)
     local loot = {
         Name = name,
         UpgradeOptions = {
@@ -184,7 +189,7 @@ local function encounterLootUsesTheOrdinaryOfferLifecycle(giver, name, keys)
         return callbacks.HandleUpgradeChoiceSelection(nil, {}, function() return true end,
             {}, { LootData = nativeLoot, Data = { Name = keys[2] } }, {})
     end, {}, loot, {})
-    lu.assertEquals(completed, 1)
+    lu.assertEquals(completed(), 1)
     lu.assertEquals(mismatches, {})
 end
 
@@ -196,6 +201,98 @@ end
 function TestOrdinaryTraits.testUnboundAthenaUsesTheOrdinaryOfferLifecycle()
     encounterLootUsesTheOrdinaryOfferLifecycle("Athena", "NPC_Athena_01",
         { "InvulnerabilityCastBoon", "RetaliateInvulnerabilityBoon", "FocusLastStandBoon" })
+end
+
+-- TraitLogic.SetTraitsOnLoot's sticky loot flags (Ordinary curse via IsRarityForcedCommon).
+local function nativeRoll(rolls, ordinaryCurse)
+    return function(loot, args)
+        rolls[#rolls + 1] = { loot = loot, args = args }
+        if ordinaryCurse and (loot.GodLoot or loot.TreatAsGodLootByShops) and not loot.BlockForceCommon then
+            loot.ForceCommon = true
+        elseif not loot.IgnoreTempRarityBonus then
+            loot.RarityBoosted = true
+        end
+        loot.UpgradeOptions = {
+            { Type = "Trait", ItemName = "NativeA", Rarity = "Rare" },
+            { Type = "Trait", ItemName = "NativeB", Rarity = "Common" },
+            { Type = "Trait", ItemName = "NativeC", Rarity = "Common" },
+        }
+    end
+end
+
+-- UpgradeChoiceLogic.CloseUpgradeChoiceScreen's curse and rarity-bonus use consumption.
+local function nativeCloseUses(loot)
+    local uses = {}
+    if loot.ForceCommon and not loot.ForceCommonWithoutCurse then uses[#uses + 1] = "ForceCommon" end
+    if loot.RarityBoosted and not loot.ForceCommonWithoutCurse then uses[#uses + 1] = "RarityBonus" end
+    return uses
+end
+
+local athenaKeys = { "InvulnerabilityCastBoon", "RetaliateInvulnerabilityBoon", "FocusLastStandBoon" }
+
+local function openUnrolledEncounterScreen(giver, loot, ordinaryCurse)
+    local rolls = {}
+    local restore = nativeGame.install({ SetTraitsOnLoot = nativeRoll(rolls, ordinaryCurse) })
+    local callbacks = attachEncounterOffer(giver, athenaKeys)
+    local rowsAtButtons
+    callbacks.HandleLootPickup(nil, {}, function(_, nativeLoot)
+        callbacks.CreateBoonLootButtons(nil, {}, function(_, installed)
+            rowsAtButtons = installed.UpgradeOptions
+        end, {}, nativeLoot, false, {})
+    end, {}, loot, {})
+    restore()
+    return rolls, rowsAtButtons
+end
+
+function TestOrdinaryTraits.testUnrolledEncounterGiverTakesTheNativeRarityBoostUnderPlannedRows()
+    local loot = { Name = "NPC_Athena_01", TreatAsGodLootByShops = true }
+    local rolls, rows = openUnrolledEncounterScreen("Athena", loot)
+    lu.assertEquals(#rolls, 1)
+    lu.assertTrue(rawequal(rolls[1].loot, loot))
+    lu.assertNil(rolls[1].args)
+    lu.assertEquals(rows, {
+        { Type = "Trait", ItemName = athenaKeys[1], Rarity = "Common" },
+        { Type = "Trait", ItemName = athenaKeys[2], Rarity = "Epic" },
+        { Type = "Trait", ItemName = athenaKeys[3], Rarity = "Common" },
+    })
+    lu.assertEquals(nativeCloseUses(loot), { "RarityBonus" })
+end
+
+function TestOrdinaryTraits.testUnrolledEncounterGiverTakesTheNativeOrdinaryCurse()
+    local loot = { Name = "NPC_Athena_01", TreatAsGodLootByShops = true }
+    local rolls, rows = openUnrolledEncounterScreen("Athena", loot, true)
+    lu.assertEquals(#rolls, 1)
+    lu.assertEquals(rows[2].ItemName, athenaKeys[2])
+    lu.assertEquals(nativeCloseUses(loot), { "ForceCommon" })
+end
+
+function TestOrdinaryTraits.testHadesEncounterRollKeepsItsNativeExemptions()
+    local loot = {
+        Name = "NPC_Hades_Field_01", TreatAsGodLootByShops = true, IgnoreRestrictBoonChoices = true,
+        IgnoreTempRarityBonus = true, BlockForceCommon = true,
+    }
+    local rolls, rows = openUnrolledEncounterScreen("Hades", loot, true)
+    lu.assertEquals(#rolls, 1)
+    lu.assertEquals(rows[1].ItemName, athenaKeys[1])
+    lu.assertEquals(nativeCloseUses(loot), {})
+end
+
+function TestOrdinaryTraits.testSpawnRolledGodLootIsNotRerolled()
+    local rolls = {}
+    local restore = nativeGame.install({ SetTraitsOnLoot = nativeRoll(rolls) })
+    local callbacks = attached()
+    local loot = {
+        GodLoot = true, Name = "ApolloUpgrade", RarityBoosted = true,
+        UpgradeOptions = { { Type = "Trait", ItemName = "NativeA", Rarity = "Epic" } },
+    }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+    restore()
+    lu.assertEquals(rolls, {})
+    lu.assertEquals(loot.UpgradeOptions, { { Type = "Trait", ItemName = "ApolloAttack", Rarity = "Rare" } })
+    lu.assertEquals(nativeCloseUses(loot), { "RarityBonus" })
 end
 
 function TestOrdinaryTraits.testAthenaClaimRequiresDependenciesButNotItsAuthoredWindow()

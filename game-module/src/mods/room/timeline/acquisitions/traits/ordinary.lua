@@ -157,6 +157,9 @@ end
 function ordinary.install(payload, loot, rowOptions)
     local offer = ordinary.offer(payload)
     if offer == nil or type(loot) ~= "table" then return false end
+    -- Encounter givers are never rolled at spawn; the native roll sets the
+    -- loot's rarity, Ordinary and swap flags that the screen close consumes.
+    if loot.UpgradeOptions == nil then _G.SetTraitsOnLoot(loot) end
     if offer.kind == "fallbackGold" then
         loot.UpgradeOptions = { { Type = "Trait", ItemName = "FallbackGold", Rarity = "Common" } }
         return true

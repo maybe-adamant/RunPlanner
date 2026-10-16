@@ -270,7 +270,7 @@ local function mysteryBoonAcquisition(deliveryBinding)
     local state = { state = "synchronized", plan = plan, room = room }
     local active = assert(roomCoordinatorModule.enter(state, occurrence))
     local box = { Name = "BlindBoxLoot" }
-    local loot = { Name = "HeraUpgrade", GodLoot = true }
+    local loot = { Name = "HeraUpgrade", GodLoot = true, UpgradeOptions = {} }
     local completions = {}
     local session = {
         current = roomCoordinatorModule.current,

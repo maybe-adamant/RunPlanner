@@ -227,7 +227,8 @@ local function pooledRoom(specs)
         local loot
         callbacks.UnwrapRandomLoot(nil, {}, function()
             loot = callbacks.GiveLoot(nil, {}, function(args)
-                return { Name = args.ForceLootName or "ZeusUpgrade", GodLoot = true, forced = args.ForceLootName }
+                return { Name = args.ForceLootName or "ZeusUpgrade", GodLoot = true, forced = args.ForceLootName,
+                    UpgradeOptions = {} }
             end, {})
         end, box)
         return loot
