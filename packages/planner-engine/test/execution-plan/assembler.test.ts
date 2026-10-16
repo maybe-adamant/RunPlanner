@@ -1342,6 +1342,7 @@ describe('engine-owned F/G execution semantic product', () => {
         },
       ],
       selected: 'option2',
+      expectation: { rarityFloor: false },
     });
   });
 
@@ -1821,7 +1822,7 @@ describe('engine-owned F/G execution semantic product', () => {
     }
   });
 
-  it('binds a same-Shop Pom mutation dependency to its purchase transaction', () => {
+  it('binds a same-Shop Pom to its purchase without ordering a later boon after it', () => {
     const shop = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-b5-e1'));
     const minor = createShopOfferAddress(goldenGBiome, shop.occurrenceId, 'Minor');
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
@@ -1856,7 +1857,8 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     expect(minorPurchase).toBeDefined();
     expect(boonPurchase).toBeDefined();
-    expect(occurrence?.timeline.dependencies).toContainEqual({
+    // A Pom is no giver's screen, so the later boon screen is not ordered after it.
+    expect(occurrence?.timeline.dependencies).not.toContainEqual({
       owner: boonPurchase?.owner,
       afterOwner: minorPurchase?.owner,
     });
@@ -2666,8 +2668,8 @@ describe('engine-owned F/G execution semantic product', () => {
   });
 
   it('retains acquisition dependencies while omitting both owners from obligations', () => {
-    // Fields cage screens in one room stay chained.
-    const product = productFor(createGoldenFGHProject());
+    // Same-giver Shop boon screens in one room stay chained.
+    const product = productFor(surfaceQShopCorrelationProject());
     const occurrence = product.occurrences.find((entry) =>
       entry.timeline.dependencies.some((dependency) => {
         const byOwner = new Map(

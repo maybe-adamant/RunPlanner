@@ -407,6 +407,12 @@ export function consumeConcaveStone(state: KeepsakeState): KeepsakeState {
   return Object.freeze({ ...state, stone: Object.freeze({ ...stone, status: 'consumed' }) });
 }
 
+/** Concave Stone's remaining native `Uses`; absent without a Stone source. */
+export function concaveStoneRemainingUses(state: KeepsakeState): 0 | 1 | undefined {
+  if (state.stone === undefined) return undefined;
+  return state.stone.status === 'pending' ? 1 : 0;
+}
+
 export function concaveStoneProcSupport(
   catalog: Catalog,
   state: KeepsakeState,

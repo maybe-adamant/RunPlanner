@@ -8,6 +8,7 @@ import type {
   ExecutionLevelResolution,
   ExecutionReward,
   ExecutionTraitOffer,
+  ExecutionTraitScreenExpectation,
 } from '../model';
 import {
   MAX_OWNER_STRING,
@@ -107,13 +108,68 @@ export function reward(value: unknown, label: string): ExecutionReward {
   });
 }
 
+const TRAIT_SCREEN_EXPECTATION_KEYS = [
+  'hymnUses',
+  'yarnUses',
+  'consumesHymn',
+  'consumesYarn',
+  'consumesOrdinary',
+  'concaveStone',
+  'rarifyUses',
+] as const;
+
+/** One nonempty expectation block restricted to the fields its screen reads. */
+function screenExpectation(
+  value: unknown,
+  label: string,
+  keys: readonly (keyof ExecutionTraitScreenExpectation)[],
+): ExecutionTraitScreenExpectation {
+  const record = object(value, label);
+  exact(record, [], keys, label);
+  if (Object.keys(record).length === 0) fail(`${label} must not be empty`);
+  const uses = (key: 'hymnUses' | 'yarnUses' | 'rarifyUses') =>
+    record[key] === undefined ? {} : { [key]: integer(record[key], `${label}.${key}`) };
+  const flag = (key: 'consumesHymn' | 'consumesYarn' | 'consumesOrdinary' | 'rarityFloor') =>
+    record[key] === undefined ? {} : { [key]: booleanValue(record[key], `${label}.${key}`) };
+  return Object.freeze({
+    ...uses('hymnUses'),
+    ...uses('yarnUses'),
+    ...flag('consumesHymn'),
+    ...flag('consumesYarn'),
+    ...flag('consumesOrdinary'),
+    ...(record.concaveStone === undefined
+      ? {}
+      : {
+          concaveStone: (() => {
+            const stone = object(record.concaveStone, `${label}.concaveStone`);
+            exact(stone, ['uses', 'giverProcs'], [], `${label}.concaveStone`);
+            return Object.freeze({
+              uses: integer(stone.uses, `${label}.concaveStone.uses`),
+              giverProcs: booleanValue(stone.giverProcs, `${label}.concaveStone.giverProcs`),
+            });
+          })(),
+        }),
+    ...uses('rarifyUses'),
+    ...flag('rarityFloor'),
+  });
+}
+
 export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   const record = object(value, label);
   if (record.kind === 'fallbackGold') {
-    exact(record, ['kind', 'giver'], [], label);
+    exact(record, ['kind', 'giver'], ['expectation'], label);
     return Object.freeze({
       kind: 'fallbackGold',
       giver: stringValue(record.giver, `${label}.giver`),
+      ...(record.expectation === undefined
+        ? {}
+        : {
+            expectation: screenExpectation(
+              record.expectation,
+              `${label}.expectation`,
+              TRAIT_SCREEN_EXPECTATION_KEYS,
+            ),
+          }),
     });
   }
   if (record.kind === 'chaos') {
@@ -163,7 +219,12 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
     });
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
-  exact(record, ['kind', 'giver', 'options', 'selected'], ['rejected', 'hexTree'], label);
+  exact(
+    record,
+    ['kind', 'giver', 'options', 'selected'],
+    ['rejected', 'hexTree', 'expectation'],
+    label,
+  );
   const hexTree = (value: unknown, treeLabel: string): ExecutionHexTree => {
     const tree = object(value, treeLabel);
     exact(tree, ['layoutKey', 'nodes'], ['godSent'], treeLabel);
@@ -366,7 +427,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
             echoLastRunBoon: (() => {
               const nestedLabel = `${label}.options[${index}].echoLastRunBoon`;
               const nested = object(option.echoLastRunBoon, nestedLabel);
-              exact(nested, ['options', 'selected'], [], nestedLabel);
+              exact(nested, ['options', 'selected'], ['expectation'], nestedLabel);
               const nestedOptions = array(nested.options, `${nestedLabel}.options`, 3).map(
                 (entry, nestedIndex) => {
                   const rowLabel = `${nestedLabel}.options[${nestedIndex}]`;
@@ -447,6 +508,15 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               return Object.freeze({
                 options: Object.freeze(nestedOptions),
                 selected: nestedSelected as 'option1' | 'option2' | 'option3',
+                ...(nested.expectation === undefined
+                  ? {}
+                  : {
+                      expectation: screenExpectation(
+                        nested.expectation,
+                        `${nestedLabel}.expectation`,
+                        ['rarityFloor'],
+                      ),
+                    }),
               });
             })(),
           }),
@@ -568,6 +638,15 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               fail(`${label}.rejected is not a valid option`);
             return rejected as 'option1' | 'option2' | 'option3';
           })(),
+        }),
+    ...(record.expectation === undefined
+      ? {}
+      : {
+          expectation: screenExpectation(
+            record.expectation,
+            `${label}.expectation`,
+            TRAIT_SCREEN_EXPECTATION_KEYS,
+          ),
         }),
   });
 }

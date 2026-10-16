@@ -28,6 +28,7 @@ export {
   type ExecutionLevelResolution,
   type ExecutionHexTree,
   type ExecutionTraitOffer,
+  type ExecutionTraitScreenExpectation,
   type ExecutionTraitOptionKey,
   type ExecutionTraitSlot,
   type ExecutionWellGenerationKey,

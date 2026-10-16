@@ -58,7 +58,7 @@ publishes that state, and the module checks native agrees.
   - rarify charges.
 
   Each field is present only where the screen can read it. The exact native
-  field for each is pinned in gate 1.
+  field for each is pinned during implementation.
 
 - **Module comparisons at screen open**, after the native roll and before rows
   are forced:
@@ -87,30 +87,23 @@ publishes that state, and the module checks native agrees.
 
 ## Gates
 
-1. **Shadow.**
-   - Planner: publish the expectation block, with codec, Lua decoder and
-     fixtures. Add witnesses for the Hymn, Yarn, Ordinary, Stone, rarify,
-     rejected and Echo last-run shapes.
-   - Module: the comparisons and legality checks as diagnostics only. The
-     existing prerequisite edges stay enforced.
-   - A Debug Mode setting that downgrades `transaction-prerequisite` mismatches
-     to diagnostics, so misorders can be played deliberately.
-   - The Debug Mode Diagnostics tab lists the session's diagnostics.
-   - Minor bump: `schemaRevision` 1, unreleased.
-2. **Live evaluation (owner).**
-   - In-order runs raise no check diagnostics.
-   - Deliberate misorders of interacting pairs raise the expected check at the
-     first out-of-order screen.
-   - Independent pairs raise nothing.
-3. **Cutover.**
-   - The check diagnostics become mismatches.
-   - The planner publishes only the kept edges; `priorTraitMutations` and the
-     chain edge are deleted.
-   - The Debug Mode relaxer is removed.
-   - Fixtures and the equivalence baseline are regenerated.
+The direction is judged on merit in live play; if it fails, it is cheap to
+remove. There is no shadow phase and no debug tooling.
+
+1. **Implementation.**
+   - Planner:
+     - publish the expectation block, with spend facts from the coordinator's
+       own consumption rules and uses as of when the screen opens;
+     - a trait screen chains only to earlier mutations from the same giver;
+     - the Fountain and Rack fences and the explicit classification stay.
+   - Module: the comparisons and legality checks raise mismatches. A native
+     call error is a `native-api` fault.
+   - Fixtures and the equivalence baseline are regenerated, under
+     `schemaRevision` 1.
+2. **Closure.**
    - Docs are promoted (`GAME_INTEGRATION_BOUNDARY.md`,
-     `SIMULATION_AND_VALIDATION.md`), a live checklist is added, and this plan
-     is retired.
+     `SIMULATION_AND_VALIDATION.md`).
+   - A live checklist is added, and this plan is retired.
    - `trait-order-b` is deleted.
 
 ## Tests
@@ -118,7 +111,7 @@ publishes that state, and the module checks native agrees.
 - **Engine:** an expectation-block matrix per effect at the assembly owner,
   covering present, absent and spent; codec round-trips.
 - **Module:** each comparison's agreeing and disagreeing cases, legality per
-  helper, and that shadow mode never changes session state.
+  helper.
 - **Fixtures:** the new shapes decode in Lua.
 
 ## Residual exposure

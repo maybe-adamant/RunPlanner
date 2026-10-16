@@ -571,7 +571,14 @@
                     { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -995,7 +1002,14 @@
                     { "key": "AresSpecialBoon", "rarity": "Rare", "effectiveLevel": 1 },
                     { "key": "AresManaBoon", "rarity": "Rare", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -2265,7 +2279,14 @@
                     { "key": "HeraSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HeraCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -2684,7 +2705,14 @@
                     { "key": "HermesSpecialBoon", "rarity": "Common" },
                     { "key": "HermesCastDiscountBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -2985,7 +3013,14 @@
                     { "key": "ZeusSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3815,7 +3850,14 @@
                     { "key": "HermesCastDiscountBoon", "rarity": "Common" },
                     { "key": "SprintShieldBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3975,7 +4017,14 @@
                     { "key": "HeraCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HeraSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4278,7 +4327,14 @@
                     { "key": "AresCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4441,7 +4497,14 @@
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -5277,5 +5340,5 @@
       }
     }
   ],
-  "planFingerprint": "ac0926de"
+  "planFingerprint": "4aaa609e"
 }

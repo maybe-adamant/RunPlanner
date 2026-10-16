@@ -419,7 +419,7 @@ function TestRouteRoomSessions.testPickupDiscoveryDoesNotRequireAuthoredEncounte
     lu.assertNotNil(timeline.claimReady(freshRoom, {}, {}, function() return true end))
 end
 
-function TestRouteRoomSessions.testRealFieldsRewardsCanBeCollectedAfterBothCagesWithDagOrderingIntact()
+function TestRouteRoomSessions.testRealFieldsRewardsCanBeCollectedAfterBothCagesInEitherGiverOrder()
     local json = require("mods.protocol.json")
     local protocol = require("mods.protocol.decoder")
     local ordinary = require("mods.room.timeline.acquisitions.traits.ordinary")
@@ -440,15 +440,15 @@ function TestRouteRoomSessions.testRealFieldsRewardsCanBeCollectedAfterBothCages
     lu.assertEquals(timeline.activePhase(port, "encounterEnd"), "Cage01")
     lu.assertTrue(timeline.open(port, "afterCombat"))
     lu.assertNil(timeline.activePhase(port, "encounterEnd"))
-    lu.assertNil(claim("HermesUpgrade")) -- Its planned Hammer dependency is still required.
-    local hammer, hammerPayload = claim("WeaponUpgrade")
-    lu.assertNotNil(hammer)
-    lu.assertNotNil(ordinary.offer(hammerPayload))
-    lu.assertTrue(timeline.complete(port, hammer))
+    -- Screens from different givers carry no order between them.
     local hermes, hermesPayload = claim("HermesUpgrade")
     lu.assertNotNil(hermes)
     lu.assertNotNil(ordinary.offer(hermesPayload))
     lu.assertTrue(timeline.complete(port, hermes))
+    local hammer, hammerPayload = claim("WeaponUpgrade")
+    lu.assertNotNil(hammer)
+    lu.assertNotNil(ordinary.offer(hammerPayload))
+    lu.assertTrue(timeline.complete(port, hammer))
     lu.assertNil(claim("WeaponUpgrade"))
     lu.assertNil(claim("HermesUpgrade"))
     lu.assertNil(port.firstMismatch)

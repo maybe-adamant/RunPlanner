@@ -154,12 +154,16 @@ function ordinary.isNull(value)
     return json.isNull(value)
 end
 
+-- Encounter givers are never rolled at spawn; the native roll sets the
+-- loot's rarity, Ordinary and swap flags that the screen close consumes.
+function ordinary.ensureRolled(loot)
+    if type(loot) == "table" and loot.UpgradeOptions == nil then _G.SetTraitsOnLoot(loot) end
+end
+
 function ordinary.install(payload, loot, rowOptions)
     local offer = ordinary.offer(payload)
     if offer == nil or type(loot) ~= "table" then return false end
-    -- Encounter givers are never rolled at spawn; the native roll sets the
-    -- loot's rarity, Ordinary and swap flags that the screen close consumes.
-    if loot.UpgradeOptions == nil then _G.SetTraitsOnLoot(loot) end
+    ordinary.ensureRolled(loot)
     if offer.kind == "fallbackGold" then
         loot.UpgradeOptions = { { Type = "Trait", ItemName = "FallbackGold", Rarity = "Common" } }
         return true

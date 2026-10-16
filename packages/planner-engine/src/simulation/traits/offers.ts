@@ -317,6 +317,8 @@ export interface ReachedTraitOfferEvaluation {
   /** Non-generation screen rules, including Rejected on ordinary god offers. */
   readonly composition: TraitOfferCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
+  /** One-use spends recorded by acquisition settlement when the screen closed. */
+  readonly screenSpend?: TraitScreenSpend;
   /** Spell tree as settled at this offer, before later biome mutations. */
   readonly settledHexTree?: {
     readonly spellTraitKey: string;
@@ -388,8 +390,27 @@ export function traitOfferGenerationLegal(
   );
 }
 
+/** The one-use effects a settled screen spent when it closed. */
+export interface TraitScreenSpend {
+  readonly hymn: boolean;
+  readonly yarn: boolean;
+  readonly ordinary: boolean;
+}
+
+/** Order-sensitive state one trait screen reads when it opens, as the planner holds it. */
+export interface TraitScreenExpectation {
+  readonly hymnUses?: number;
+  readonly yarnUses?: number;
+  readonly consumesHymn?: boolean;
+  readonly consumesYarn?: boolean;
+  readonly consumesOrdinary?: boolean;
+  readonly concaveStone?: { readonly uses: number; readonly giverProcs: boolean };
+  readonly rarifyUses?: number;
+}
+
 /** Execution input retained only after one authored offer is selected. */
 export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAssessment {
+  readonly screenExpectation?: TraitScreenExpectation;
   readonly baseRarities: readonly (TraitRarity | undefined)[];
   /** Native-order random Arcana draw, resolved from the exact pre-offer state. */
   readonly orderedCirceActivationKeys?: readonly string[];
@@ -400,6 +421,8 @@ export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAsse
       readonly lootHistorySource?: string;
     })[];
     readonly selectedOptionKey: import('../../authored-project/traits/state').TraitOptionKey;
+    /** Whether Proper Upbringing's floor is active when the nested menu opens. */
+    readonly rarityFloor: boolean;
   };
 }
 

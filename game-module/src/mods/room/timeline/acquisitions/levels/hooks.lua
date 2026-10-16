@@ -4,6 +4,9 @@
 local levels = {}
 local levelCarrier = type(import) == "function" and import("mods/room/timeline/acquisitions/levels/carrier.lua")
     or require("mods.room.timeline.acquisitions.levels.carrier")
+local screenChecks = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/screen_checks.lua")
+    or require("mods.room.timeline.acquisitions.traits.screen_checks")
 
 function levels.isVisibleCarrier(value)
     return levelCarrier.isVisible(value)
@@ -188,6 +191,11 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
         end
         if unheld ~= nil then
             session.mismatch(state, "level-offer-held", unheld, "not held")
+            report(runtime)
+            return base(screen, loot, reroll, args)
+        end
+        -- The native level count is checked before the published count replaces it.
+        if initial and screenChecks.report(session, state, screenChecks.pomLevel(resolution(payload), loot)) then
             report(runtime)
             return base(screen, loot, reroll, args)
         end

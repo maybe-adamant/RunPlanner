@@ -92,6 +92,25 @@ export function consumeTimePieceCharge(state: KeepsakeState): KeepsakeState {
   return Object.freeze({ ...state, timePiece: Object.freeze({ remainingCharges: remaining - 1 }) });
 }
 
+/**
+ * Rarify uses this giver's menu reads at open: a live matching Olympian source
+ * first, then Calling Card (spendable only while Fated), as offer actions resolve.
+ */
+export function rarificationUsesForGiver(
+  catalog: Catalog,
+  state: KeepsakeState,
+  giverKey: string,
+): number | undefined {
+  const providerSources = state.olympianSources.filter((source) => source.providerKey === giverKey);
+  if (providerSources.some((source) => source.remainingRarificationUses === 1)) return 1;
+  if (
+    catalog.traitGivers.byKey[giverKey]?.callingCardMenu === true &&
+    state.callingCard !== undefined
+  )
+    return state.fatedStatus === 'Fated' ? state.callingCard.remainingCharges : 0;
+  return providerSources.length > 0 ? 0 : undefined;
+}
+
 /** Replays the persisted row ledger once for every consumer of an offer. */
 export function evaluateCallingCardOffer(
   catalog: Catalog,

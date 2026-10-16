@@ -4,6 +4,9 @@
 -- completes after those rows and their values have been installed.
 local nativeChaos = type(import) == "function" and import("mods/traits/chaos.lua")
     or require("mods.traits.chaos")
+local screenChecks = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/screen_checks.lua")
+    or require("mods.room.timeline.acquisitions.traits.screen_checks")
 
 local chaosOffer = {}
 
@@ -143,6 +146,11 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         screen, loot, reroll, args)
         local scope = screens[loot]
         if scope == nil or reroll == true then return base(screen, loot, reroll, args) end
+        if screenChecks.report(session, scope.state, screenChecks.chaosRows(scope.offer)) then
+            screens[loot] = nil
+            report(runtime)
+            return base(screen, loot, reroll, args)
+        end
         scope.inCreation = true
         local ok, result = pcall(base, screen, loot, reroll, args)
         scope.inCreation = false

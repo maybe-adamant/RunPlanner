@@ -361,7 +361,14 @@
                     { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -783,7 +790,14 @@
                     { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ZeusSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1478,7 +1492,14 @@
                     { "key": "HeraSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HeraManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3327,7 +3348,14 @@
                     { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "FireballManaSpecialBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3544,7 +3572,14 @@
                     { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3904,5 +3939,5 @@
       }
     }
   ],
-  "planFingerprint": "0dfe3cb0"
+  "planFingerprint": "de9f063a"
 }

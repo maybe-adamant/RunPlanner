@@ -4,6 +4,9 @@
 -- Native drop production and other selected-trait effects remain pass-through.
 local adapter = type(import) == "function" and import("mods/room/timeline/acquisitions/npc/trait_offer.lua")
     or require("mods.room.timeline.acquisitions.npc.trait_offer")
+local screenChecks = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/screen_checks.lua")
+    or require("mods.room.timeline.acquisitions.traits.screen_checks")
 
 local npc = {}
 
@@ -99,6 +102,11 @@ function npc.attach(module, session, getState, report, room, highlights, rowOpti
                 local scope = {
                     state = state, current = current, handle = handle, payload = payload,
                 }
+                if screenChecks.report(session, state,
+                    screenChecks.expectation(resolution.offer.expectation, source)) then
+                    report(runtime)
+                    return base(source, args, screen)
+                end
                 if not installInput(scope, installed) then
                     reportUnavailable(scope, args and args.UpgradeOptions)
                 else

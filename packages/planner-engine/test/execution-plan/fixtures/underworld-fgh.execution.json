@@ -441,7 +441,14 @@
                     { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -863,7 +870,14 @@
                     { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ZeusSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1546,7 +1560,14 @@
                     { "key": "HeraSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HeraManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3384,7 +3405,14 @@
                     { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "FireballManaSpecialBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3601,7 +3629,14 @@
                     { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "CastProjectileBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4376,19 +4411,21 @@
                     { "key": "HermesSpecialBoon", "rarity": "Common" },
                     { "key": "HermesCastDiscountBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
             "window": { "kind": "encounterEnd", "phaseKey": "Cage01" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"localReward\",\"Underworld\",\"H\",\"golden-h-combat09\",\"cages\",\"cage1\"]",
-            "afterOwner": "[\"localReward\",\"Underworld\",\"H\",\"golden-h-combat09\",\"cages\",\"cage2\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": []
       },
       "roomGuide": [
@@ -4616,7 +4653,14 @@
                     { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "OmegaZeroBurnBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4868,7 +4912,14 @@
                     { "key": "HestiaSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "OmegaZeroBurnBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4915,7 +4966,14 @@
                     { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloRetaliateBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option3"
+                  "selected": "option3",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4947,12 +5005,7 @@
             "window": { "kind": "encounterEnd", "phaseKey": "Cage01" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"localReward\",\"Underworld\",\"H\",\"golden-h-combat05\",\"cages\",\"cage2\"]",
-            "afterOwner": "[\"localReward\",\"Underworld\",\"H\",\"golden-h-combat05\",\"cages\",\"cage3\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": []
       },
       "roomGuide": [
@@ -5369,5 +5422,5 @@
       }
     }
   ],
-  "planFingerprint": "6b1b86a0"
+  "planFingerprint": "a44a83e8"
 }

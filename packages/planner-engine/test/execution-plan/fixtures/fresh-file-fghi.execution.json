@@ -689,7 +689,14 @@
                     { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1195,7 +1202,14 @@
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3618,7 +3632,14 @@
                     { "key": "PoseidonSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "PoseidonManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3849,7 +3870,14 @@
                       "effectiveLevel": 1
                     }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4651,7 +4679,14 @@
                     },
                     { "key": "RoomRewardBonusBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -5051,7 +5086,14 @@
                     { "key": "RoomRewardBonusBoon", "rarity": "Common" },
                     { "key": "FocusDamageShaveBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -6154,5 +6196,5 @@
       }
     }
   ],
-  "planFingerprint": "086d88e4"
+  "planFingerprint": "fd04ca88"
 }

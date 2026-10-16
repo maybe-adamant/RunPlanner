@@ -493,7 +493,14 @@
                     { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -915,7 +922,14 @@
                     { "key": "ZeusCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ZeusSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1598,7 +1612,14 @@
                     { "key": "HeraSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HeraManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1915,7 +1936,14 @@
                     { "key": "HermesWeaponBoon", "rarity": "Rare" },
                     { "key": "SprintShieldBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3675,7 +3703,14 @@
                     { "key": "HestiaSprintBoon", "rarity": "Rare", "effectiveLevel": 1 },
                     { "key": "HestiaManaBoon", "rarity": "Rare", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 1,
+                    "consumesHymn": false,
+                    "consumesYarn": true,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -4255,5 +4290,5 @@
       }
     }
   ],
-  "planFingerprint": "5bf9acf1"
+  "planFingerprint": "155620b8"
 }

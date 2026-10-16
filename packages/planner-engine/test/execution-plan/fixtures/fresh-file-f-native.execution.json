@@ -415,7 +415,14 @@
                     { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloManaBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -861,7 +868,14 @@
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -2166,5 +2180,5 @@
       }
     }
   ],
-  "planFingerprint": "0dbcbd7b"
+  "planFingerprint": "831341ad"
 }

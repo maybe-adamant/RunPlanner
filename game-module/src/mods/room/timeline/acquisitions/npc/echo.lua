@@ -2,6 +2,9 @@
 -- volatile results persist beyond that outer selection: the nested prior-run
 -- Boon menu and Pom's greatest-level target.
 local json = type(import) == "function" and import("mods/protocol/json.lua") or require("mods.protocol.json")
+local screenChecks = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/screen_checks.lua")
+    or require("mods.room.timeline.acquisitions.traits.screen_checks")
 
 local echo = {}
 
@@ -101,6 +104,10 @@ function echo.attach(module, session, report, npcScope, traitScopes, highlights,
             session.diagnostic(scope.state, "echo-last-run-availability", {
                 expected = "authored native rows", observed = nil,
             })
+            return base(source, args)
+        end
+        if screenChecks.report(session, scope.state, screenChecks.echoLastRunRows(offer)) then
+            report(runtime)
             return base(source, args)
         end
         source.UpgradeOptions = {}

@@ -102,7 +102,7 @@ function TestLevelAcquisitions.testVisibleCountsOneTwoThreeAndNativeFatedBonusIs
     for _, count in ipairs({ 1, 2, 3 }) do
         local row = levelRow("StackUpgrade", count, "Target")
         row.detail.levelResolution.offeredTargets = { "Target", "Other" }
-        local loot = { Name = "StackUpgrade", UpgradeOptions = {} }
+        local loot = { Name = "StackUpgrade", UpgradeOptions = {}, StackNum = count - 1 }
         local callbacks = harness(row, loot)
         callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
         callbacks.CreateBoonLootButtons(nil, {}, function(_, value)

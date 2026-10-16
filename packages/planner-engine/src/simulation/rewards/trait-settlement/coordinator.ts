@@ -46,6 +46,7 @@ import {
   resolveTraitOfferSource,
   traitOfferGenerationLegal,
   type TraitHistoryState,
+  type TraitScreenSpend,
 } from '../../traits';
 import type {
   EchoLastRunBoonOutcome,
@@ -78,7 +79,7 @@ import {
 } from './encounter-child-settlement';
 import { addRewardFinding } from '../findings';
 import { settleReachedLevelResolution } from '../level-resolution-settlement';
-import { traitMutationChainRole } from '../../traits/history/fold';
+import { traitMutationChainRole, traitMutationGiver } from '../../traits/history/fold';
 import type { ReachedLevelResolutionEvaluation, ReachedTraitOfferEvaluation } from '../../traits';
 
 export interface ReachedTraitChildCheckpoint {
@@ -1106,6 +1107,7 @@ export function applyTraitOfferForAcquisition(
           .find(
             (event) =>
               traitMutationChainRole(event) === 'chained' &&
+              traitMutationGiver(event) === authored.giverKey &&
               sameTraitOccurrence(event.owner, owner),
           );
   const priorTraitMutations =
@@ -1132,29 +1134,70 @@ export function applyTraitOfferForAcquisition(
     limitedSwapUses(branch.state) > 0 &&
     traitOfferGenerationLegal(evaluation) &&
     evaluation.assessments.some((assessment) => assessment.replacementTransition !== undefined);
-  if (!consumesYarn && !consumesHymn)
-    return complete({
-      ...settlement,
-      ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
-    });
+  const tagged = withScreenSpend(branch, settlement.branch, {
+    hymn: consumesHymn,
+    yarn: consumesYarn,
+    ordinary: ordinarySpent(branch.state.traitHistory, settlement.branch.state.traitHistory),
+  });
+  const spentBranch =
+    !consumesYarn && !consumesHymn
+      ? tagged
+      : Object.freeze({
+          ...tagged,
+          state: Object.freeze({
+            ...tagged.state,
+            stygianWell: Object.freeze({
+              ...tagged.state.stygianWell,
+              ...(consumesYarn
+                ? { yarnUses: Math.max(0, tagged.state.stygianWell.yarnUses - 1) }
+                : {}),
+              ...(consumesHymn
+                ? { hymnUses: Math.max(0, tagged.state.stygianWell.hymnUses - 1) }
+                : {}),
+            }),
+          }),
+        });
+  const blockedChild = settlement.blockedChild;
   return complete({
     ...settlement,
     ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
-    branch: Object.freeze({
-      ...settlement.branch,
-      state: Object.freeze({
-        ...settlement.branch.state,
-        stygianWell: Object.freeze({
-          ...settlement.branch.state.stygianWell,
-          ...(consumesYarn
-            ? { yarnUses: Math.max(0, settlement.branch.state.stygianWell.yarnUses - 1) }
-            : {}),
-          ...(consumesHymn
-            ? { hymnUses: Math.max(0, settlement.branch.state.stygianWell.hymnUses - 1) }
-            : {}),
-        }),
-      }),
-    }),
+    branch: spentBranch,
+    ...(blockedChild === undefined || blockedChild.branch !== settlement.branch
+      ? {}
+      : { blockedChild: Object.freeze({ ...blockedChild, branch: tagged }) }),
+  });
+}
+
+/** Whether this screen used one Ordinary curse use, read from the settled history. */
+function ordinarySpent(before: TraitHistoryState, after: TraitHistoryState): boolean {
+  return before.activeChaosCurses.some(
+    (curse) =>
+      curse.semanticTag === 'Ordinary' &&
+      !after.activeChaosCurses.some(
+        (later) =>
+          later.acquisitionIdentity === curse.acquisitionIdentity &&
+          later.remaining === curse.remaining,
+      ),
+  );
+}
+
+/** Records this screen's one-use spends on the evaluation it appended. */
+function withScreenSpend(
+  reached: RewardBranchState,
+  settled: RewardBranchState,
+  screenSpend: TraitScreenSpend,
+): RewardBranchState {
+  const index = reached.traitEvaluations?.length ?? 0;
+  const evaluations = settled.traitEvaluations;
+  const evaluation = evaluations?.[index];
+  if (evaluations === undefined || evaluation === undefined) return settled;
+  return Object.freeze({
+    ...settled,
+    traitEvaluations: Object.freeze(
+      evaluations.map((entry, entryIndex) =>
+        entryIndex === index ? Object.freeze({ ...evaluation, screenSpend }) : entry,
+      ),
+    ),
   });
 }
 
