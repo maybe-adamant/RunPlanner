@@ -19,7 +19,7 @@ function TestHighlightAdapterContacts:setUp()
         CurrentRun = { Hero = { Traits = { { Name = "Target" }, { Name = "Other" } } } },
         TraitData = nativeGame.anyTraitDeclarations(),
         IsTraitEligible = nativeGame.alwaysEligible,
-        HeroHasTrait = nativeGame.alwaysHeld,
+        HeroHasTrait = function(name) return name == "Target" or name == "Other" end,
         GetAllUpgradeableGodTraits = nativeGame.currentUpgradeableTraits,
         CreateScreenComponent = function()
             self.nextId = self.nextId + 1
@@ -57,6 +57,7 @@ local function harness(payload, source, install)
     local session = {
         complete = function() completed = completed + 1 end,
         diagnostic = function(_, checkpoint) error("unexpected diagnostic: " .. checkpoint) end,
+        mismatch = function(_, checkpoint) error("unexpected mismatch: " .. checkpoint) end,
     }
     local getState = function() return state end
     local report = function() guide.refresh(runtime, state) end
@@ -90,7 +91,7 @@ end
 
 local function offer(giver, selected)
     return { kind = "traits", giver = giver, selected = "option2",
-        options = { { key = "Other", rarity = "Common" }, { key = selected or "Target", rarity = "Rare" } } }
+        options = { { key = "Unheld", rarity = "Common" }, { key = selected or "Fresh", rarity = "Rare" } } }
 end
 
 function TestHighlightAdapterContacts:testOrdinaryHammerAndFallbackRemainMarkedAfterCompletion()
@@ -174,8 +175,8 @@ function TestHighlightAdapterContacts:testNpcAndNestedEchoBindDuringVoidNativeMe
     local authored = offer("Echo", "EchoLastRunBoon")
     authored.options[2].echoLastRunBoon = {
         selected = "option2", options = {
-            { giver = "Hera", key = "Other", rarity = "Common" },
-            { giver = "Zeus", key = "Target", rarity = "Rare" },
+            { giver = "Hera", key = "Unheld", rarity = "Common" },
+            { giver = "Zeus", key = "Fresh", rarity = "Rare" },
         },
     }
     local h = harness({ transaction = { kind = "encounterInteraction",
@@ -205,7 +206,7 @@ function TestHighlightAdapterContacts:testNpcAndNestedEchoBindDuringVoidNativeMe
             end, screen, { Data = { Name = "EchoLastRunBoon" } }, {})
             -- Native OpenUpgradeChoiceMenu returns nil, not the constructed screen.
         end, source, {})
-    end, source, { UpgradeOptions = { { ItemName = "Other" }, { ItemName = "EchoLastRunBoon" } } }, {})
+    end, source, { UpgradeOptions = { { ItemName = "Unheld" }, { ItemName = "EchoLastRunBoon" } } }, {})
     lu.assertEquals(h.completed(), 0) -- The real nested acquisition, not guidance, owns completion.
     local unrelated = { Source = {}, Components = {}, UpgradeButtons = {} }
     h.call("CreateBoonLootButtons", function() end, unrelated, {}, false, {})

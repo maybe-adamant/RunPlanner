@@ -113,6 +113,21 @@ local INVENTORY = {
 local TRAIT_CHOICE = {
     ["npc-trait-offer"] = true, ["npc-trait-requirements"] = true, ["trait-offer-blocked-row"] = true,
     ["level-offer-held"] = true, ["concave-stone-unplanned"] = true, ["concave-stone-residual-excluded"] = true,
+    ["trait-screen-row"] = true,
+}
+-- What a trait screen found different when it opened.
+local TRAIT_SCREEN = {
+    ["trait-screen-hymn"] = "Sacrificial Hymn has a different number of uses than planned",
+    ["trait-screen-yarn"] = "Yarn has a different number of uses than planned",
+    ["trait-screen-hymn-spend"] = "this screen uses Sacrificial Hymn differently than planned",
+    ["trait-screen-yarn-spend"] = "this screen uses Yarn differently than planned",
+    ["trait-screen-ordinary-spend"] = "the Ordinary curse applies to this screen differently than planned",
+    ["trait-screen-concave-stone"] = "Concave Stone has a different number of uses than planned",
+    ["trait-screen-concave-stone-giver"] = "Concave Stone can't trigger on this screen as planned",
+    ["trait-screen-rarify"] = "a different number of rarity upgrades is available than planned",
+    ["trait-screen-rarity-floor"] = "Proper Upbringing's rarity floor differs from the plan",
+    ["trait-screen-exchange-level"] = "an exchange row has a different level than planned",
+    ["trait-screen-pom-level"] = "the Pom grants a different number of levels than planned",
 }
 local LIFECYCLE = {
     roomEntered = "entering the room", exitUsable = "when the exits opened",
@@ -136,7 +151,7 @@ function text.checkpoint(issue)
     if checkpoint == "transaction-prerequisite" then return "planned order" end
     if DOOR_KINDS[checkpoint] or checkpoint:match("^ephyra") then return "when the doors appeared" end
     if checkpoint == "incomingReward" then return "room reward" end
-    if TRAIT_CHOICE[checkpoint] then return "a trait choice" end
+    if TRAIT_CHOICE[checkpoint] or TRAIT_SCREEN[checkpoint] then return "a trait choice" end
     if checkpoint == "encounter" or checkpoint == "encounterCount" then return "encounter" end
     if INVENTORY[checkpoint] then return INVENTORY[checkpoint] .. " stock" end
     return "a plan check"
@@ -291,6 +306,10 @@ function text.difference(issue)
     if checkpoint == "level-offer-held" then
         return "planned Pom target " .. text.name(expected) .. " isn't held, so the game re-rolled the rows"
     end
+    if checkpoint == "trait-screen-row" then
+        return "planned " .. text.name(expected) .. " can't be offered now"
+    end
+    if TRAIT_SCREEN[checkpoint] then return TRAIT_SCREEN[checkpoint] end
     if checkpoint == "concave-stone-unplanned" then return "Concave Stone gave an unplanned second boon" end
     if checkpoint == "concave-stone-residual-excluded" then
         return "Concave Stone's planned " .. text.name(expected) .. " wasn't offered"

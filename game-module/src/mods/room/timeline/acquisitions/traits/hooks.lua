@@ -7,6 +7,9 @@ local chaosOffer = type(import) == "function"
     or require("mods.room.timeline.acquisitions.traits.chaos_offer")
 local concaveStoneModule = type(import) == "function" and import("mods/keepsakes/concave_stone.lua")
     or require("mods.keepsakes.concave_stone")
+local screenChecks = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/screen_checks.lua")
+    or require("mods.room.timeline.acquisitions.traits.screen_checks")
 
 local hooks = {}
 
@@ -40,6 +43,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
     local activeNaturalDistribution = nil
     local targetedAcquisitionPending = {}
     local offPlanOuter = nil
+    local checkedScreens = setmetatable({}, { __mode = "k" })
     local concaveStone = concaveStoneModule.create({
         module = module, session = session, getState = getState, room = room, ordinary = ordinary,
     })
@@ -449,6 +453,15 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
                 session.mismatch(state, "trait-offer-blocked-row", conflict.expected, conflict.observed)
                 report(runtime)
                 return base(screen, loot, reroll, args)
+            end
+            -- Screen checks read the native roll before the published rows replace it.
+            if not checkedScreens[loot] then
+                checkedScreens[loot] = true
+                ordinary.ensureRolled(loot)
+                if screenChecks.report(session, state, screenChecks.ordinaryScreen(offer, loot)) then
+                    report(runtime)
+                    return base(screen, loot, reroll, args)
+                end
             end
             if ordinary.install(payload, loot, rowOptions) ~= true then
                 diagnostic(state, "trait-offer-install", "published native rows", nativeName(loot))

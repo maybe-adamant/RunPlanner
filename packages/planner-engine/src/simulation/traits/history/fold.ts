@@ -69,6 +69,18 @@ export function traitMutationChainRole(event: TraitHistoryEvent): TraitMutationC
   }
 }
 
+/** The giver whose screen made a mutation; a later screen chains only to its own giver. */
+export function traitMutationGiver(event: TraitHistoryEvent): string | undefined {
+  switch (event.kind) {
+    case 'traitOffer':
+      return event.giverKey;
+    case 'chaosPair':
+      return event.offer.giverKey;
+    default:
+      return undefined;
+  }
+}
+
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
 const BASE_ELEMENTS: readonly TraitElement[] = Object.freeze(['Earth', 'Air', 'Fire', 'Water']);
 

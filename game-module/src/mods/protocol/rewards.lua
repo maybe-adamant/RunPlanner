@@ -123,13 +123,50 @@ local function circeResolution(value, label)
     return p.fail(label .. ".kind is unsupported")
 end
 
+local SCREEN_EXPECTATION_KEYS = {
+    "hymnUses", "yarnUses", "consumesHymn", "consumesYarn", "consumesOrdinary", "concaveStone", "rarifyUses",
+}
+
+-- A nonempty expectation block limited to the fields its screen reads.
+local function screenExpectation(value, label, keys)
+    local record, errorMessage = p.exact(value, {}, keys, label)
+    if not record then return nil, errorMessage end
+    if next(record) == nil then return p.fail(label .. " must not be empty") end
+    for _, key in ipairs({ "hymnUses", "yarnUses", "rarifyUses" }) do
+        if record[key] ~= nil and not p.int(record[key], label .. "." .. key, 0) then
+            return p.fail(label .. " has invalid " .. key)
+        end
+    end
+    for _, key in ipairs({ "consumesHymn", "consumesYarn", "consumesOrdinary", "rarityFloor" }) do
+        if record[key] ~= nil and not p.bool(record[key], label .. "." .. key) then
+            return p.fail(label .. " has invalid " .. key)
+        end
+    end
+    if record.concaveStone ~= nil then
+        local stone, stoneError = p.exact(record.concaveStone, { "uses", "giverProcs" }, {},
+            label .. ".concaveStone")
+        if not stone then return nil, stoneError end
+        if not p.int(stone.uses, label .. ".concaveStone.uses", 0)
+            or not p.bool(stone.giverProcs, label .. ".concaveStone.giverProcs") then
+            return p.fail(label .. " has invalid Concave Stone state")
+        end
+    end
+    return record
+end
+rewards.screenExpectation = screenExpectation
+
 local function hexTree(value, label)
     return p.hexTree(value, label, { "layoutKey", "nodes" })
 end
 
 local function echoLastRunBoon(value, label)
-    local record, errorMessage = p.exact(value, { "options", "selected" }, {}, label)
+    local record, errorMessage = p.exact(value, { "options", "selected" }, { "expectation" }, label)
     if not record then return nil, errorMessage end
+    if record.expectation ~= nil then
+        local _, expectationError = screenExpectation(record.expectation, label .. ".expectation",
+            { "rarityFloor" })
+        if expectationError then return nil, expectationError end
+    end
     local options, optionsError = p.arr(record.options, label .. ".options", 3)
     if not options then return nil, optionsError end
     if #options == 0 then return p.fail(label .. ".options must contain one to three options") end
@@ -177,9 +214,14 @@ function rewards.traitOffer(value, label)
     local record, errorMessage = p.obj(value, label)
     if not record then return nil, errorMessage end
     if record.kind == "fallbackGold" then
-        local row, rowError = p.exact(record, { "kind", "giver" }, {}, label)
+        local row, rowError = p.exact(record, { "kind", "giver" }, { "expectation" }, label)
         if not row then return nil, rowError end
         if not p.str(row.giver, label .. ".giver") then return p.fail(label .. " has invalid giver") end
+        if row.expectation ~= nil then
+            local _, expectationError = screenExpectation(row.expectation, label .. ".expectation",
+                SCREEN_EXPECTATION_KEYS)
+            if expectationError then return nil, expectationError end
+        end
         return row
     end
     if record.kind == "chaos" then
@@ -223,10 +265,15 @@ function rewards.traitOffer(value, label)
     local row, rowError = p.exact(
         record,
         { "kind", "giver", "options", "selected" },
-        { "rejected", "hexTree" },
+        { "rejected", "hexTree", "expectation" },
         label
     )
     if not row then return nil, rowError end
+    if row.expectation ~= nil then
+        local _, expectationError = screenExpectation(row.expectation, label .. ".expectation",
+            SCREEN_EXPECTATION_KEYS)
+        if expectationError then return nil, expectationError end
+    end
     if row.kind ~= "traits" or not p.str(row.giver, label .. ".giver")
         or not p.one(row.selected, optionKeys, label .. ".selected") then
         return p.fail(label .. " is a malformed trait offer")

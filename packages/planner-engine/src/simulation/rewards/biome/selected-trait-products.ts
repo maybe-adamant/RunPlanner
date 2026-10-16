@@ -19,6 +19,7 @@ import type {
 } from '../../traits';
 import { echoLastRunBoonOutcomes, traitOfferAssessmentIdentity } from '../../traits';
 import { orderRandomArcanaSelection } from '../../arcana-fear';
+import { traitScreenExpectation } from '../trait-settlement/screen-expectation';
 
 export interface SelectedTraitOfferProducts {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
@@ -123,6 +124,11 @@ export function selectedTraitOfferProducts(
                 ),
                 baseRarities: trace.baseRarities,
                 ...(() => {
+                  const screenExpectation =
+                    catalog === undefined ? undefined : traitScreenExpectation(catalog, trace);
+                  return screenExpectation === undefined ? {} : { screenExpectation };
+                })(),
+                ...(() => {
                   if (trace.offer.kind !== 'traits' || catalog === undefined) return {};
                   const selected =
                     trace.offer.options[Number(trace.offer.selectedOptionKey.slice(-1)) - 1];
@@ -182,6 +188,7 @@ export function selectedTraitOfferProducts(
                     effectiveEchoLastRunBoon: Object.freeze({
                       options,
                       selectedOptionKey: child.selectedOptionKey,
+                      rarityFloor: trace.state.traitHistory.properUpbringingActive === true,
                     }),
                   };
                 })(),

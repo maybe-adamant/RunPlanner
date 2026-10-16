@@ -445,7 +445,8 @@ function TestOrdinaryTraits.testRerollDoesNotReinstallFrozenOffer()
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "Native")
 end
 
-function TestOrdinaryTraits.testPublishedRowsInstallWithoutRepeatingNativeEligibilityPolicy()
+-- A published row native would not offer stops the plan before its rows install.
+function TestOrdinaryTraits.testAnIneligiblePublishedRowStopsThePlanAtItsScreen()
     local originalTraitData, originalEligible = _G.TraitData, _G.IsTraitEligible
     _G.TraitData = { ApolloAttack = {} }
     _G.IsTraitEligible = function() return false end
@@ -459,11 +460,11 @@ function TestOrdinaryTraits.testPublishedRowsInstallWithoutRepeatingNativeEligib
         return created
     end, {}, {})
     callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
-    lu.assertEquals(loot.UpgradeOptions, {
-        { Type = "Trait", ItemName = "ApolloAttack", Rarity = "Rare" },
+    lu.assertEquals(loot.UpgradeOptions, {})
+    lu.assertEquals(completed(), 0)
+    lu.assertEquals(mismatches(), {
+        { checkpoint = "trait-screen-row", expected = "ApolloAttack", observed = "IsTraitEligible" },
     })
-    lu.assertEquals(completed(), 1)
-    lu.assertEquals(mismatches(), {})
     _G.TraitData, _G.IsTraitEligible = originalTraitData, originalEligible
 end
 

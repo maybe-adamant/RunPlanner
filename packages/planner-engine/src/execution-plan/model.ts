@@ -300,6 +300,29 @@ export interface ExecutionHexTree {
   };
 }
 
+/**
+ * Order-sensitive state the planner expects a trait screen to read when it
+ * opens, each field present only on screens that read it.
+ */
+export interface ExecutionTraitScreenExpectation {
+  /** Remaining `Uses` of the `ForceSwaps` (Sacrificial Hymn) trait. */
+  readonly hymnUses?: number;
+  /** Total `RemainingUses` of Yarn (`TemporaryBoonRarityTrait`, `RarityBonus`). */
+  readonly yarnUses?: number;
+  /** Closing the screen spends one Hymn use (loot `UseSwapTrait`). */
+  readonly consumesHymn?: boolean;
+  /** Closing the screen spends one Yarn use (loot `RarityBoosted`). */
+  readonly consumesYarn?: boolean;
+  /** Closing the screen spends one Ordinary (`ChaosCommonCurse`) use. */
+  readonly consumesOrdinary?: boolean;
+  /** Concave Stone `DoubleBoonChance` trait `Uses` and whether this loot can proc it. */
+  readonly concaveStone?: { readonly uses: number; readonly giverProcs: boolean };
+  /** `RarityUpgradeData.Uses` of the rarify source this menu reads. */
+  readonly rarifyUses?: number;
+  /** Echo last-run menu: `ElementalRarityUpgradeBoon` is `Activated`. */
+  readonly rarityFloor?: boolean;
+}
+
 /** Echo's exact native Boon Boon Boon menu beneath one selected outer row. */
 export interface ExecutionEchoLastRunBoonOffer {
   readonly options: readonly {
@@ -313,12 +336,14 @@ export interface ExecutionEchoLastRunBoonOffer {
     readonly allTogetherResult?: ExecutionAllTogetherResult;
   }[];
   readonly selected: ExecutionTraitOptionKey;
+  readonly expectation?: ExecutionTraitScreenExpectation;
 }
 
 export type ExecutionTraitOffer =
   | {
       readonly kind: 'fallbackGold';
       readonly giver: string;
+      readonly expectation?: ExecutionTraitScreenExpectation;
     }
   | {
       readonly kind: 'traits';
@@ -358,6 +383,7 @@ export type ExecutionTraitOffer =
       readonly rejected?: ExecutionTraitOptionKey;
       /** Present only for a selected ordinary SpellDrop offer. */
       readonly hexTree?: ExecutionHexTree;
+      readonly expectation?: ExecutionTraitScreenExpectation;
     }
   | {
       readonly kind: 'chaos';

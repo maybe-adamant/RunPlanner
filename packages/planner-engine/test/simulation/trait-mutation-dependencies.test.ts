@@ -30,8 +30,8 @@ const hermes: AuthoredTraitOffer = Object.freeze({
   selectedOptionKey: 'option1',
 }) as AuthoredTraitOffer;
 
-/** A branch whose history holds one boon acquired from `boonOwner`. */
-function afterBoonFrom(boonOwner: TraitOfferOwnerAddress): RewardBranchState {
+/** A branch whose history holds one boon acquired from `boonOwner`'s `giverKey` screen. */
+function afterBoonFrom(boonOwner: TraitOfferOwnerAddress, giverKey = 'Hermes'): RewardBranchState {
   const base = initializeTestRewardBranches()[0]! as RewardBranchState;
   const history = foldTraitHistoryEvents(catalog, [
     Object.freeze({
@@ -39,7 +39,7 @@ function afterBoonFrom(boonOwner: TraitOfferOwnerAddress): RewardBranchState {
       owner: boonOwner,
       acquisitionRole: 'source',
       sequence: 1,
-      giverKey: 'Apollo',
+      giverKey,
       options: Object.freeze([
         { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
         { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
@@ -79,11 +79,16 @@ function deliveryDependencies(branch: RewardBranchState) {
 }
 
 describe('trait mutation timeline dependencies', () => {
-  it('orders an entry pickup after the latest boon settled in its room', () => {
+  it('orders an entry pickup after the latest same-giver boon settled in its room', () => {
     const boon = createIncomingRewardAddress(createBiomeAddress('Underworld', 'H'), occurrenceId);
     expect(deliveryDependencies(afterBoonFrom(boon))).toEqual([
       { owner: boon, acquisitionRole: 'source' },
     ]);
+  });
+
+  it('orders no screen after an earlier screen from another giver', () => {
+    const boon = createIncomingRewardAddress(createBiomeAddress('Underworld', 'H'), occurrenceId);
+    expect(deliveryDependencies(afterBoonFrom(boon, 'Apollo'))).toBeUndefined();
   });
 
   it('adds no dependency when the room has no earlier mutation', () => {

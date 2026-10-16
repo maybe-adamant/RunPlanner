@@ -361,7 +361,14 @@
                     { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -851,7 +858,14 @@
                     { "key": "AresCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1033,7 +1047,14 @@
                     { "key": "HermesSpecialBoon", "rarity": "Common" },
                     { "key": "HermesCastDiscountBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1376,7 +1397,14 @@
                     { "key": "HephaestusSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HephaestusManaBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1770,7 +1798,14 @@
                     { "key": "AresManaBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresExCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -2031,7 +2066,14 @@
                     { "key": "ApolloRetaliateBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "PerfectDamageBonusBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3055,7 +3097,14 @@
                     { "key": "RendBloodDropBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresStatusDoubleDamageBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3092,7 +3141,14 @@
                     { "key": "HeavyArmorBoon", "rarity": "Common" },
                     { "key": "ArmorBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3837,5 +3893,5 @@
       }
     }
   ],
-  "planFingerprint": "f0d4e8a6"
+  "planFingerprint": "957cf60c"
 }

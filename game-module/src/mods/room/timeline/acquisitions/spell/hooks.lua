@@ -1,5 +1,8 @@
 -- SpellDrop owns its native screen and delegates only tree construction.
 local hooks = {}
+local screenChecks = type(import) == "function"
+        and import("mods/room/timeline/acquisitions/traits/screen_checks.lua")
+    or require("mods.room.timeline.acquisitions.traits.screen_checks")
 local function detail(payload) return type(payload) == "table" and payload.detail or nil end
 local function offerFor(payload)
     local offer = detail(payload) and detail(payload).traitOffer
@@ -79,6 +82,10 @@ function hooks.attach(module, session, getState, report, room, tree, highlights)
         local names, missing = spellNames(scope.offer)
         if not names then
             diagnosticFor(scope.state)("spell-offer-install", missing, "unknown-spell")
+            return base(screen)
+        end
+        if screenChecks.report(session, scope.state, screenChecks.spellRows(names, screen)) then
+            report(runtime)
             return base(screen)
         end
         local prior = offerScope

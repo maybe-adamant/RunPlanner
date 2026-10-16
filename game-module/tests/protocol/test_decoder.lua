@@ -280,6 +280,39 @@ function TestProtocol.testSpellOfferWireRequiresCompleteTreeAndThreeOptions()
     lu.assertNil(rewards.traitOffer(foreign, "spell"))
 end
 
+function TestProtocol.testTraitScreenExpectationShapesDecodeStrictly()
+    local function offer(expectation)
+        return assert(json.decode('{"kind":"traits","giver":"Zeus","selected":"option1","rejected":"option2",'
+            .. '"options":[{"key":"one"},{"key":"two"},{"key":"three"}],"expectation":' .. expectation .. '}'))
+    end
+    for _, expectation in ipairs({
+        '{"hymnUses":1,"yarnUses":0,"consumesHymn":true,"consumesYarn":false,"consumesOrdinary":false}',
+        '{"yarnUses":2,"consumesOrdinary":true}',
+        '{"concaveStone":{"uses":0,"giverProcs":false}}',
+        '{"rarifyUses":3}',
+    }) do
+        lu.assertNotNil(rewards.traitOffer(offer(expectation), "offer"), expectation)
+    end
+    for _, expectation in ipairs({
+        '{}', '{"rarityFloor":true}', '{"hymnUses":-1}', '{"yarnUses":1.5}', '{"consumesYarn":1}',
+        '{"rarityBoosted":true}',
+        '{"concaveStone":{"uses":1}}', '{"concaveStone":{"uses":1,"giverProcs":true,"extra":1}}',
+        '{"rarifyUses":"1"}', '{"unknown":true}',
+    }) do
+        lu.assertNil(rewards.traitOffer(offer(expectation), "offer"), expectation)
+    end
+    local gold = assert(json.decode('{"kind":"fallbackGold","giver":"Zeus","expectation":{"hymnUses":0}}'))
+    lu.assertNotNil(rewards.traitOffer(gold, "gold"))
+    local function echo(expectation)
+        return assert(json.decode('{"kind":"traits","giver":"Echo","selected":"option1","options":[{"key":'
+            .. '"EchoLastRunBoon","echoLastRunBoon":{"options":[{"giver":"Zeus","key":"ZeusWeaponBoon",'
+            .. '"rarity":"Rare"}],"selected":"option1","expectation":' .. expectation .. '}}]}'))
+    end
+    lu.assertNotNil(rewards.traitOffer(echo('{"rarityFloor":true}'), "echo"))
+    lu.assertNil(rewards.traitOffer(echo('{"hymnUses":0}'), "echo"))
+    lu.assertNil(rewards.traitOffer(echo('{}'), "echo"))
+end
+
 local function decode(name)
     local file = assert(io.open(root .. name .. ".execution.json", "rb"))
     local value = assert(json.decode(file:read("*a")))

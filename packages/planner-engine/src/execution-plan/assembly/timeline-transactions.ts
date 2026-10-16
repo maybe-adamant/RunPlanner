@@ -23,7 +23,7 @@ import {
   appendTranscendentEmbryoTimelineEffects,
 } from '../../simulation/room-actions';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
-import { agreement, executionRoomOwnerKey } from './support';
+import { agreement, executionRoomOwnerKey, stableJson } from './support';
 import { assembleLifecycleWindow } from './lifecycle';
 import {
   executionKeepsakeEquipResults,
@@ -36,7 +36,38 @@ import type {
   ExecutionLevelResolution,
   ExecutionTimelineTransaction,
   ExecutionTraitOffer,
+  ExecutionTraitScreenExpectation,
 } from '../model';
+
+const SCREEN_EXPECTATION_KEYS = [
+  'hymnUses',
+  'yarnUses',
+  'consumesHymn',
+  'consumesYarn',
+  'consumesOrdinary',
+  'concaveStone',
+  'rarifyUses',
+  'rarityFloor',
+] as const satisfies readonly (keyof ExecutionTraitScreenExpectation)[];
+
+/** The expectation fields every reached branch agrees on; a divergent field is not published. */
+function agreedScreenExpectation(
+  values: readonly (ExecutionTraitScreenExpectation | undefined)[],
+): ExecutionTraitScreenExpectation | undefined {
+  const agreed: Record<string, unknown> = {};
+  for (const key of SCREEN_EXPECTATION_KEYS) {
+    const fieldValues = values.map((value) => value?.[key]);
+    const first = fieldValues[0];
+    if (
+      first !== undefined &&
+      fieldValues.every((value) => value !== undefined && stableJson(value) === stableJson(first))
+    )
+      agreed[key] = typeof first === 'object' ? Object.freeze({ ...first }) : first;
+  }
+  return Object.keys(agreed).length === 0
+    ? undefined
+    : (Object.freeze(agreed) as ExecutionTraitScreenExpectation);
+}
 
 /** Build typed execution transactions directly from lifecycle actions and outcomes. */
 /** The Anvil results of the reward behind one acquisition source, wherever the room stores it. */
@@ -90,8 +121,15 @@ export function executionTimelineTransactions(
       );
     const selected = matches[0];
     if (selected === undefined) return undefined;
+    const expectation = agreedScreenExpectation(
+      selected.branches.map((branch) => branch.screenExpectation),
+    );
     if (selected.offer.kind === 'fallbackGold')
-      return Object.freeze({ kind: 'fallbackGold' as const, giver: selected.offer.giverKey });
+      return Object.freeze({
+        kind: 'fallbackGold' as const,
+        giver: selected.offer.giverKey,
+        ...(expectation === undefined ? {} : { expectation }),
+      });
     if (selected.offer.kind === 'chaos')
       return Object.freeze({
         kind: 'chaos' as const,
@@ -199,10 +237,27 @@ export function executionTimelineTransactions(
     const echoLastRunBoon =
       selected.offer.giverKey === 'Echo' && selectedOption?.traitKey === 'EchoLastRunBoon'
         ? agreement(
-            selected.branches.map((branch) => branch.effectiveEchoLastRunBoon),
+            selected.branches.map((branch) =>
+              branch.effectiveEchoLastRunBoon === undefined
+                ? undefined
+                : {
+                    options: branch.effectiveEchoLastRunBoon.options,
+                    selectedOptionKey: branch.effectiveEchoLastRunBoon.selectedOptionKey,
+                  },
+            ),
             `Echo last-run boon ${semanticAddressKey(selected.address)}`,
           )
         : undefined;
+    const echoLastRunExpectation =
+      echoLastRunBoon === undefined
+        ? undefined
+        : agreedScreenExpectation(
+            selected.branches.map((branch) =>
+              branch.effectiveEchoLastRunBoon === undefined
+                ? undefined
+                : { rarityFloor: branch.effectiveEchoLastRunBoon.rarityFloor },
+            ),
+          );
     const publishedHexTree =
       selected.offer.giverKey !== 'SpellDrop' || selected.offer.hexTree === undefined
         ? undefined
@@ -347,6 +402,9 @@ export function executionTimelineTransactions(
                       ),
                     ),
                     selected: echoLastRunBoon.selectedOptionKey,
+                    ...(echoLastRunExpectation === undefined
+                      ? {}
+                      : { expectation: echoLastRunExpectation }),
                   }),
                 }),
           });
@@ -357,6 +415,7 @@ export function executionTimelineTransactions(
         ? {}
         : { rejected: selected.offer.rejectedOptionKey }),
       ...(publishedHexTree === undefined ? {} : { hexTree: publishedHexTree }),
+      ...(expectation === undefined ? {} : { expectation }),
     });
   };
   const levelResolution = (

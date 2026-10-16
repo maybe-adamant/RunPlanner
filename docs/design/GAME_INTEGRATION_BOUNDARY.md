@@ -1271,11 +1271,12 @@ Trait screen dependencies keep the order the simulation settled a room's trait
 screens in (role-settled acquisitions, NPC and Gorgon trait offers, Pom level
 screens):
 
-- **Chain.** Each screen follows the latest earlier trait mutation in its room
-  that a room action or automatic effect owns. Chaos clocks, Concave Stone
-  residuals, direct grants, resource grants, Experimental Hammer expiry, room
-  decay and Echo Gold consumption settle natively or inside another contact and
-  never anchor the chain. Steady Growth anchors at its automatic outcome.
+- **Chain.** Each screen follows the latest earlier screen in its room from the
+  same giver. Screens from different givers are not ordered against each other:
+  a misorder fails only where it changes a screen, at that screen (see below).
+  Chaos clocks, Concave Stone residuals, direct grants, resource grants,
+  Experimental Hammer expiry, room decay and Echo Gold consumption settle
+  natively or inside another contact and never anchor the chain.
 - **Fences.** A Fountain (or Phial) use or Keepsake Rack change follows the
   latest screen ranked before it in the room, and the earliest screen ranked
   after it follows the fence, unless published edges already imply it. Pool
@@ -1292,6 +1293,20 @@ screens):
   untransacted fence, the unranked Travel Deal refill Well purchase, or an owner
   in another room, on the Hub board or at the route or biome start; any other
   endpoint is an `executionCoverageMissing` compile error.
+- **Screen checks.** Each published trait screen carries an `expectation` of the
+  order-sensitive state it reads when it opens: the remaining Sacrificial Hymn
+  and Yarn uses and whether closing it spends Hymn, Yarn or an Ordinary curse use
+  (god screens), Concave Stone uses and whether its giver can proc them, the
+  rarify uses its menu reads, and, for Echo's last-run menu, whether Proper
+  Upbringing's floor is active. Fields appear only on screens that read them.
+  When the screen opens, before its rows are forced, the module compares each
+  field with live trait uses and the loot's native flags (`UseSwapTrait`,
+  `RarityBoosted`, `ForceCommon`, `ForceCommonWithoutCurse`), compares an
+  exchange row's level and a Pom's level count with native, and checks every
+  row through native helpers (`IsTraitEligible` without `ChanceToPlay`,
+  `HasTraitRequirements`, `HeroHasTrait`, `HeroSlotFilled`, `GetUpgradedRarity`,
+  and the Spell and Echo last-run filters). A difference is a `trait-screen-*`
+  mismatch at that screen; a native error is a `native-api` fault.
 
 Mystery boxes are the one interchangeable carrier: native unwrap builds the
 same loot for every box and the module forces the god. A bound box keeps only
@@ -1400,10 +1415,9 @@ Arachne's eight dresses and Icarus's Protective/Volatile Coating remain in
 planner history but are excluded from trait presence and absence checks at room
 exit: native armor depletion can remove them, and their survival is not a
 prerequisite for modeled outcomes. This is not a blanket exclusion of
-armor-related boons, keepsakes, or other NPC traits. The executor trusts planner
-eligibility and does not preflight exact trait rows through `IsTraitEligible`,
-duo requirements, replacement constraints, or a second offer-legality policy
-before forcing them.
+armor-related boons, keepsakes, or other NPC traits. Beyond the trait screen
+checks above, the executor trusts planner eligibility and does not apply a
+second offer-legality policy before forcing rows.
 
 A selected Spell Drop's `hexTree`, and Aspect of Selene's
 `startingLoadout.startingHex`, carry the layout and `nodes`: the authored talent

@@ -518,8 +518,16 @@ The three direct run-consequential identities are:
   this audit does not duplicate its room-by-room SecretPoint matrix.
 - **Yarn of Ariadne** (`TemporaryBoonRarityTrait`) contributes the declared
   rarity bonuses to the next eligible God-loot offer that does not ignore
-  temporary rarity. One use is consumed when that choice screen closes, not
-  merely when an offer is generated. The complete rarity ledger remains in
+  temporary rarity. One use is consumed when that choice screen closes
+  (`RarityBoosted` without `ForceCommonWithoutCurse`,
+  `UpgradeChoiceLogic.lua:1127-1129`), not merely when an offer is generated.
+  `GodLootOnly` also admits loot treated as god loot by shops, so the Artemis,
+  Athena (Gorgon included, unless its rarity bonus exceeds one level) and
+  Dionysus encounter screens spend a use, and an Ordinary curse use, like an
+  Olympian screen. Hades sets `IgnoreTempRarityBonus` and `BlockForceCommon`
+  (`NPCData_Hades.lua:17-21`), so his screen spends neither. None of these
+  encounter loots has priority upgrades, so none spends Sacrificial Hymn. The
+  complete rarity ledger remains in
   `../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md`.
 - **Sacrificial Hymn** (`LimitedSwapTraitDrop`) creates one
   `LimitedSwapBonusTrait` use with `ExchangeLevelBonus = 2`. The next eligible

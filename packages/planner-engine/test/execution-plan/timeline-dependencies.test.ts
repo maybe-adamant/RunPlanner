@@ -392,13 +392,10 @@ describe('published trait screen dependencies', () => {
     ]);
   });
 
-  it('keeps automatic outcome and Devotion edges in the facts but not in the plan', () => {
+  it("publishes no edge after an automatic outcome or Devotion's chosen boon", () => {
     const { assembly, product } = fixture('surface-scheduled-lifecycle');
     const facts = assembly.evaluation.route.biomes.flatMap((entry) =>
       'rewards' in entry ? entry.rewards.timelineFacts.dependencies : [],
-    );
-    expect(facts.map(({ afterOwner }) => afterOwner.kind)).toEqual(
-      expect.arrayContaining(['transcendentEmbryoOutcome']),
     );
     expect(facts.filter(({ afterOwner }) => afterOwner.kind === 'occurrence')).toEqual([]);
     const automatic = new Set(

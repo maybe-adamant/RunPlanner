@@ -576,7 +576,14 @@
                     { "key": "ApolloSpecialBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "ApolloCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1066,7 +1073,14 @@
                     { "key": "AresCastBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresSprintBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1248,7 +1262,14 @@
                     { "key": "HermesWeaponBoon", "rarity": "Rare" },
                     { "key": "SprintShieldBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1591,7 +1612,14 @@
                     { "key": "HephaestusSprintBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "HephaestusManaBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -1985,7 +2013,14 @@
                     { "key": "AresManaBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresExCastBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -2333,7 +2368,14 @@
                     { "key": "ApolloRetaliateBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "PerfectDamageBonusBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3794,7 +3836,14 @@
                     { "key": "RendBloodDropBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "AresStatusDoubleDamageBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -3831,7 +3880,14 @@
                     { "key": "HeavyArmorBoon", "rarity": "Common" },
                     { "key": "ArmorBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -5013,7 +5069,14 @@
                     { "key": "HermesCastDiscountBoon", "rarity": "Common" },
                     { "key": "SprintShieldBoon", "rarity": "Common" }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -5187,7 +5250,14 @@
                     { "key": "BoltRetaliateBoon", "rarity": "Common", "effectiveLevel": 1 },
                     { "key": "CastAnywhereBoon", "rarity": "Common", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -5489,7 +5559,14 @@
                   { "key": "HiddenMaxHealthBoon", "rarity": "Common" },
                   { "key": "FirstHangoverBoon", "rarity": "Common" }
                 ],
-                "selected": "option1"
+                "selected": "option1",
+                "expectation": {
+                  "hymnUses": 0,
+                  "yarnUses": 0,
+                  "consumesHymn": false,
+                  "consumesYarn": false,
+                  "consumesOrdinary": false
+                }
               }
             },
             "window": { "kind": "standard", "phase": "afterCombat" }
@@ -6354,7 +6431,14 @@
                     { "key": "AresStatusDoubleDamageBoon", "rarity": "Rare", "effectiveLevel": 1 },
                     { "key": "BloodDropRevengeBoon", "rarity": "Rare", "effectiveLevel": 1 }
                   ],
-                  "selected": "option1"
+                  "selected": "option1",
+                  "expectation": {
+                    "hymnUses": 0,
+                    "yarnUses": 0,
+                    "consumesHymn": false,
+                    "consumesYarn": false,
+                    "consumesOrdinary": false
+                  }
                 }
               }
             ],
@@ -7495,5 +7579,5 @@
       }
     }
   ],
-  "planFingerprint": "d438cd86"
+  "planFingerprint": "98f1aa88"
 }

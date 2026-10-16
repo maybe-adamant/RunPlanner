@@ -449,7 +449,7 @@ function concaveStoneNaturalSelectionProjection() {
   });
 }
 
-function echoCarrierProjection(echoLastRunBoon: AuthoredEchoLastRunBoonOffer) {
+function echoCarrierProjection(echoLastRunBoon: AuthoredEchoLastRunBoonOffer, rarityFloor = false) {
   const assembly = simulateProjectAssembly(
     catalog,
     authorLegalTraitOffers(createCompleteFGProject()),
@@ -486,7 +486,10 @@ function echoCarrierProjection(echoLastRunBoon: AuthoredEchoLastRunBoonOffer) {
                 offer,
                 branches: Object.freeze(
                   candidate.branches.map((branch) =>
-                    Object.freeze({ ...branch, effectiveEchoLastRunBoon: echoLastRunBoon }),
+                    Object.freeze({
+                      ...branch,
+                      effectiveEchoLastRunBoon: Object.freeze({ ...echoLastRunBoon, rarityFloor }),
+                    }),
                   ),
                 ),
               })
@@ -1478,6 +1481,156 @@ describe('execution-plan compiler and codec', () => {
       if (offer === undefined) throw new Error('Echo carrier offer is missing');
       expect(offer.options[0]?.echoLastRunBoon?.options[0]).toMatchObject(expected);
     }
+  });
+
+  it('publishes the Echo last-run menu rarity floor beside its nested rows', () => {
+    const child: AuthoredEchoLastRunBoonOffer = Object.freeze({
+      options: Object.freeze([
+        Object.freeze({ giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Rare' }),
+      ]) as AuthoredEchoLastRunBoonOffer['options'],
+      selectedOptionKey: 'option1',
+    });
+    for (const rarityFloor of [true, false]) {
+      const biome = echoCarrierProjection(child, rarityFloor);
+      const offer = orderedExecutionRooms([biome])
+        .flatMap((room) =>
+          executionTimelineTransactions(
+            room,
+            biome,
+            mergePlannerTimelineFacts(
+              room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+              biome.rewards.timelineFacts,
+            ),
+          ),
+        )
+        .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+        .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+        .find((candidate) => candidate.giver === 'Echo');
+      expect(offer?.options[0]?.echoLastRunBoon?.expectation).toEqual({ rarityFloor });
+    }
+  });
+
+  it('publishes only the screen expectation fields every reached branch agrees on', () => {
+    const assembly = simulateProjectAssembly(
+      catalog,
+      authorLegalTraitOffers(createCompleteFGProject()),
+    );
+    const biome = assembly.evaluation.route.biomes[0];
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid')
+      throw new Error('fixture lacks a complete-valid execution biome');
+    const source = biome.rewards.selectedTraitOffers.find(
+      (candidate) => candidate.offer.kind === 'traits',
+    );
+    const branch = source?.branches[0];
+    if (source === undefined || branch === undefined)
+      throw new Error('fixture lacks an ordinary selected trait offer');
+    const shared = {
+      hymnUses: 1,
+      consumesOrdinary: false,
+      concaveStone: { uses: 1, giverProcs: true },
+      rarifyUses: 2,
+    };
+    const projected = Object.freeze({
+      ...biome,
+      rewards: Object.freeze({
+        ...biome.rewards,
+        selectedTraitOffers: Object.freeze(
+          biome.rewards.selectedTraitOffers.map((candidate) =>
+            candidate === source
+              ? Object.freeze({
+                  ...candidate,
+                  branches: Object.freeze([
+                    Object.freeze({
+                      ...branch,
+                      screenExpectation: { ...shared, yarnUses: 1, consumesYarn: true },
+                    }),
+                    Object.freeze({
+                      ...branch,
+                      screenExpectation: { ...shared, yarnUses: 0, consumesYarn: true },
+                    }),
+                  ]),
+                })
+              : candidate,
+          ),
+        ),
+      }),
+    });
+    const offer = orderedExecutionRooms([projected])
+      .flatMap((room) =>
+        executionTimelineTransactions(
+          room,
+          projected,
+          mergePlannerTimelineFacts(
+            room.roomActionRoster.timelineFacts ?? EMPTY_PLANNER_TIMELINE_FACTS,
+            projected.rewards.timelineFacts,
+          ),
+        ),
+      )
+      .flatMap((transaction) => (transaction.kind === 'acquisition' ? transaction.roles : []))
+      .flatMap((role) => (role.traitOffer?.kind === 'traits' ? [role.traitOffer] : []))
+      .find((candidate) => candidate.expectation?.rarifyUses === 2);
+    expect(offer?.expectation).toEqual({ ...shared, consumesYarn: true });
+  });
+
+  it('decodes screen expectation blocks strictly by the screen that reads them', () => {
+    const expectation = {
+      hymnUses: 1,
+      yarnUses: 2,
+      consumesHymn: true,
+      consumesYarn: false,
+      consumesOrdinary: true,
+      concaveStone: { uses: 0, giverProcs: false },
+      rarifyUses: 1,
+    };
+    const traits = {
+      kind: 'traits',
+      giver: 'Zeus',
+      options: [{ key: 'ZeusWeaponBoon', rarity: 'Common' }],
+      selected: 'option1',
+      rejected: 'option1',
+      expectation,
+    };
+    expect(decodeExecutionTraitOffer(traits, 'offer')).toEqual(traits);
+    const gold = { kind: 'fallbackGold', giver: 'Zeus', expectation: { hymnUses: 0 } };
+    expect(decodeExecutionTraitOffer(gold, 'offer')).toEqual(gold);
+    const echo = {
+      kind: 'traits',
+      giver: 'Echo',
+      options: [
+        {
+          key: 'EchoLastRunBoon',
+          echoLastRunBoon: {
+            options: [{ giver: 'Zeus', key: 'ZeusWeaponBoon', rarity: 'Rare' }],
+            selected: 'option1',
+            expectation: { rarityFloor: true },
+          },
+        },
+      ],
+      selected: 'option1',
+    };
+    expect(decodeExecutionTraitOffer(echo, 'offer')).toEqual(echo);
+    for (const malformed of [
+      { ...traits, expectation: {} },
+      { ...traits, expectation: { rarityFloor: true } },
+      { ...traits, expectation: { hymnUses: -1 } },
+      { ...traits, expectation: { yarnUses: 1.5 } },
+      { ...traits, expectation: { consumesYarn: 1 } },
+      { ...traits, expectation: { concaveStone: { uses: 1 } } },
+      {
+        ...echo,
+        options: [
+          {
+            key: 'EchoLastRunBoon',
+            echoLastRunBoon: {
+              options: [{ giver: 'Zeus', key: 'ZeusWeaponBoon', rarity: 'Rare' }],
+              selected: 'option1',
+              expectation: { hymnUses: 0 },
+            },
+          },
+        ],
+      },
+    ])
+      expect(() => decodeExecutionTraitOffer(malformed, 'offer')).toThrow(ExecutionPlanCodecError);
   });
 
   it('rejects malformed install ranks before fingerprint validation', () => {
