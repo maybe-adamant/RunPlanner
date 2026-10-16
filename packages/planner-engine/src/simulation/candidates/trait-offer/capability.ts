@@ -3,7 +3,10 @@ import {
   type LevelResolutionAddress,
   type TraitOfferAddress,
 } from '../../../authored-project/addresses';
-import { resolveTraitAcquisitionOrdinalEffect } from '../../../catalog-schema';
+import {
+  concaveStoneProcGiver,
+  resolveTraitAcquisitionOrdinalEffect,
+} from '../../../catalog-schema';
 import type {
   BoonRarityRollOrder,
   BoonRarityValues,
@@ -743,7 +746,8 @@ export function createTraitOfferCandidateArtifacts(
           Object.freeze(
             branchContexts.flatMap((context) => {
               if (value.kind !== 'traits') return [];
-              if (catalog.traitGivers.byKey[value.giverKey]?.shopAwareGodTrait !== true) return [];
+              const procGiver = concaveStoneProcGiver(catalog.traitGivers.byKey[value.giverKey]);
+              if (!procGiver && value.concaveStoneResult === undefined) return [];
               const base = assessTraitOfferBeforeRarification(
                 catalog,
                 value,
@@ -771,7 +775,9 @@ export function createTraitOfferCandidateArtifacts(
                   : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
               if (disposition?.kind === 'advanceCurrentKeepsake')
                 keepsakes = advanceCurrentKeepsake(catalog, keepsakes, disposition.rankBonus);
-              const procSupport = concaveStoneProcSupport(catalog, keepsakes);
+              const procSupport = procGiver
+                ? concaveStoneProcSupport(catalog, keepsakes)
+                : undefined;
               const result = value.concaveStoneResult;
               // An authored Stone result remains a repairable child even after
               // its source disappears. Do not erase the invalid authored fact.

@@ -7,7 +7,11 @@ import {
   type TraitOfferContextTransition,
 } from '../../state/pending-trait-offers';
 import type { SimulationState } from '../../state/model';
-import type { Catalog, TraitSelectedDisposition } from '../../../catalog-schema';
+import {
+  concaveStoneProcGiver,
+  type Catalog,
+  type TraitSelectedDisposition,
+} from '../../../catalog-schema';
 import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
 import {
   createCirceResolutionAddress,
@@ -551,7 +555,7 @@ function evaluateAuthoredOffer(
           ...(branch.traitEvaluations ?? []),
           evaluation.offer.kind === 'traits' &&
           evaluation.offer.concaveStoneResult === undefined &&
-          catalog.traitGivers.byKey[evaluation.offer.giverKey]?.shopAwareGodTrait === true &&
+          concaveStoneProcGiver(catalog.traitGivers.byKey[evaluation.offer.giverKey]) &&
           concaveStoneProcSupport(catalog, effectiveBranch.state.keepsakes) !== undefined
             ? Object.freeze({
                 ...evaluation,
@@ -1020,7 +1024,9 @@ function applyTraitOfferForAcquisitionInternal(
     blocked.address === undefined &&
     authored?.kind === 'traits' &&
     effectiveAuthored.kind === 'traits' &&
-    catalog.traitGivers.byKey[effectiveAuthored.giverKey]?.shopAwareGodTrait === true
+    // A retained result on a giver that cannot proc stays a repairable child.
+    (concaveStoneProcGiver(catalog.traitGivers.byKey[effectiveAuthored.giverKey]) ||
+      authored.concaveStoneResult !== undefined)
   ) {
     const stone = settleConcaveStoneSecondary(
       inputs,

@@ -350,7 +350,11 @@ describe('timeline action labels', () => {
 describe('structured workspace actions assembly', () => {
   it.each([
     [{ kind: 'freeItem' }, { rewardType: 'ArmorBoost' }, 'Collect Armor'],
-    [{ kind: 'damageContest', result: 'success' }, { rewardType: 'StackUpgrade' }, 'Collect Pom'],
+    [
+      { kind: 'damageContest', result: 'success' },
+      { rewardType: 'MaxHealthDrop' },
+      'Collect Max Health',
+    ],
     [
       { kind: 'damageContest', result: 'failure' },
       { rewardType: 'RoomRewardConsolationPrize' },
@@ -411,6 +415,37 @@ describe('structured workspace actions assembly', () => {
       expect(row?.rewardPayload?.control.offer).toEqual(reward);
     },
   );
+
+  it('places a contest Pom as a required row rather than an optional pickup', () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = replaceNemesisRandomEventInteraction(
+      applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'NemesisRandomEvent',
+      }),
+      createNemesisRandomEventAddress(phase),
+      { kind: 'damageContest', result: 'success' },
+      { rewardType: 'StackUpgrade' },
+    );
+    const key = roomActionKey({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    });
+    const actions = assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room
+      .roomActions;
+    expect(actions?.optionalRows.some((row) => row.key === key)).toBe(false);
+    expect(actions?.rows.find((row) => row.key === key)).toMatchObject({
+      label: 'Collect Pom',
+      participation: 'required',
+    });
+  });
 
   it('projects two matured clocked trait pickups through the existing optional-action surface', () => {
     const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);

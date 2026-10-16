@@ -326,7 +326,7 @@ export function normalizeEncounterDefinitions(
                   'successResultRewardTypes',
                   'failureResultRewardType',
                   'response',
-                  'pickupRequired',
+                  'requiredResultRewardTypes',
                 ],
                 `${path}.nemesisRandomEvent.damageContest`,
               );
@@ -458,7 +458,9 @@ export function normalizeEncounterDefinitions(
               const contest = policy.damageContest;
               if (
                 contest.response !== 'none' ||
-                contest.pickupRequired !== false ||
+                !Array.isArray(contest.requiredResultRewardTypes) ||
+                contest.requiredResultRewardTypes.length !== 1 ||
+                contest.requiredResultRewardTypes[0] !== 'StackUpgrade' ||
                 contest.failureResultRewardType !== 'RoomRewardConsolationPrize'
               )
                 fail(
@@ -515,7 +517,7 @@ export function normalizeEncounterDefinitions(
                   ],
                   failureResultRewardType: 'RoomRewardConsolationPrize' as const,
                   response: 'none' as const,
-                  pickupRequired: false as const,
+                  requiredResultRewardTypes: Object.freeze(['StackUpgrade'] as const),
                 }),
                 hOptionalCapacityReservation: 1 as const,
               });

@@ -70,7 +70,11 @@ export type {
   HexTalentCandidateDeclaration,
   WeaponDeclaration,
 } from './traits';
-export { acquisitionOrdinalValue, resolveTraitAcquisitionOrdinalEffect } from './traits';
+export {
+  acquisitionOrdinalValue,
+  concaveStoneProcGiver,
+  resolveTraitAcquisitionOrdinalEffect,
+} from './traits';
 import type {
   AspectDeclaration,
   TraitDeclaration,
@@ -550,7 +554,8 @@ export interface EncounterDefinition {
       ];
       readonly failureResultRewardType: 'RoomRewardConsolationPrize';
       readonly response: 'none';
-      readonly pickupRequired: false;
+      /** Only LootData results drop through `CreateLoot`, which gates the exit. */
+      readonly requiredResultRewardTypes: readonly ['StackUpgrade'];
     };
     readonly hOptionalCapacityReservation: 1;
   };

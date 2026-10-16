@@ -297,7 +297,7 @@ export const fEncounterDefinitions = [
         ],
         failureResultRewardType: 'RoomRewardConsolationPrize',
         response: 'none',
-        pickupRequired: false,
+        requiredResultRewardTypes: ['StackUpgrade'],
       },
       hOptionalCapacityReservation: 1,
     },

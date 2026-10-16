@@ -38,6 +38,34 @@ describe('trait declarations and giver compiler owners', () => {
       'Zeus',
     ]);
   });
+  it('declares Hades as the only giver blocking Concave Stone', () => {
+    expect(
+      catalog.traitGivers.values
+        .filter((giver) => giver.blocksConcaveStone)
+        .map((giver) => giver.key),
+    ).toEqual(['Hades']);
+    expect(catalog.traitGivers.byKey.Hades).toMatchObject({
+      shopAwareGodTrait: true,
+      blocksConcaveStone: true,
+    });
+    expect(catalog.traitGivers.byKey.Athena).not.toHaveProperty('blocksConcaveStone');
+  });
+
+  it('rejects a Concave Stone block that is not true on a shop-aware God-trait giver', () => {
+    const mutate = (giverKey: string, blocksConcaveStone: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: declarations.traitCatalog.givers.map((giver) =>
+            giver.key === giverKey ? ({ ...giver, blocksConcaveStone } as never) : giver,
+          ),
+        },
+      });
+    expect(() => mutate('Hades', false)).toThrow(/blocksConcaveStone/);
+    expect(() => mutate('Arachne', true)).toThrow(/blocksConcaveStone.*shop-aware/);
+  });
+
   it('declares the exact three traits blocked after any prior pickup', () => {
     expect(
       catalog.traits.values

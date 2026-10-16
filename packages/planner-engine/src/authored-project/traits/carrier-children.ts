@@ -1,4 +1,4 @@
-import type { Catalog } from '../../catalog-schema';
+import { concaveStoneProcGiver, type Catalog } from '../../catalog-schema';
 import {
   createAllTogetherSetAddress,
   createCirceResolutionAddress,
@@ -426,7 +426,7 @@ export function discoverAuthoredTraitCarrierChildren(
     );
   }
   if (
-    catalog.traitGivers.byKey[offer.giverKey]?.shopAwareGodTrait === true ||
+    concaveStoneProcGiver(catalog.traitGivers.byKey[offer.giverKey]) ||
     offer.concaveStoneResult !== undefined
   ) {
     children.push(

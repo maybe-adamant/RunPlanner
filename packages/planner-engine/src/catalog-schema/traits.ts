@@ -365,6 +365,11 @@ export interface ResolvedTraitAcquisitionOrdinalEffect {
   readonly armor?: number;
 }
 
+/** Native Stone procs on `GodLoot or TreatAsGodLootByShops` loot without `BlockDoubleBoon`. */
+export function concaveStoneProcGiver(giver: TraitGiverDeclaration | undefined): boolean {
+  return giver?.shopAwareGodTrait === true && giver.blocksConcaveStone !== true;
+}
+
 export function acquisitionOrdinalValue(
   values: TraitAcquisitionOrdinalValues,
   ordinal: number,
@@ -692,6 +697,8 @@ export interface TraitGiverDeclaration {
   readonly providerKind: TraitProviderKind;
   /** Exact `IsGodTrait(_, { ForShop = true })` giver membership; not provider-kind inference. */
   readonly shopAwareGodTrait: boolean;
+  /** Source `BlockDoubleBoon`: this giver's screens never proc Concave Stone. */
+  readonly blocksConcaveStone?: true;
   readonly traitKeys: readonly string[];
   /** Source-declared priority/core traits used by first Olympian offers. */
   readonly priorityTraitKeys: readonly string[];

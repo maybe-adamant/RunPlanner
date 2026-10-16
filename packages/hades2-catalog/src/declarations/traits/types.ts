@@ -148,6 +148,8 @@ export interface RawTraitGiverDeclaration {
   readonly label: string;
   readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell' | 'chaos';
   readonly shopAwareGodTrait?: boolean;
+  /** Source `BlockDoubleBoon`; NPCData_Hades.lua declares it only on Hades. */
+  readonly blocksConcaveStone?: true;
   readonly callingCardMenu?: boolean;
   readonly traitKeys: readonly string[];
   readonly priorityTraitKeys: readonly string[];

@@ -1,4 +1,4 @@
-import type { Catalog } from '../../../catalog-schema';
+import { concaveStoneProcGiver, type Catalog } from '../../../catalog-schema';
 import {
   createTraitOfferAddress,
   type TraitOfferOwnerAddress,
@@ -47,7 +47,9 @@ export function prepareConcaveStoneSecondary(
   sequence: number,
   findingChronology?: FindingChronology,
 ): ConcaveStoneSecondarySettlement {
-  const support = concaveStoneProcSupport(catalog, branch.state.keepsakes);
+  const support = concaveStoneProcGiver(catalog.traitGivers.byKey[effectiveAuthored.giverKey])
+    ? concaveStoneProcSupport(catalog, branch.state.keepsakes)
+    : undefined;
   const result = authored.concaveStoneResult;
   const traitAddress = owner === undefined ? undefined : createTraitOfferAddress(owner, role);
   const findings: TraitChildFindingEntry[] = [];
