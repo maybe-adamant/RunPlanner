@@ -7,6 +7,7 @@ import {
   createRouteAddress,
   createProjectDocument,
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_REVISION,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -977,6 +978,7 @@ describe('project profile operations', () => {
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBe(savedJson);
     expect(Object.keys(JSON.parse(savedJson))).toEqual([
       'schemaVersion',
+      ...(PROJECT_DOCUMENT_SCHEMA_REVISION === 0 ? [] : ['schemaRevision']),
       'projectId',
       'catalogVersion',
       'route',

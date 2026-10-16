@@ -2666,7 +2666,8 @@ describe('engine-owned F/G execution semantic product', () => {
   });
 
   it('retains acquisition dependencies while omitting both owners from obligations', () => {
-    const product = productFor(loadSurfaceNOProject());
+    // Fields cage screens in one room stay chained.
+    const product = productFor(createGoldenFGHProject());
     const occurrence = product.occurrences.find((entry) =>
       entry.timeline.dependencies.some((dependency) => {
         const byOwner = new Map(

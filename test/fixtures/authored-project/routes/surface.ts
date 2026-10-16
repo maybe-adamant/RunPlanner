@@ -17,6 +17,7 @@ import {
   createRouteAddress,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createPostbossKeepsakeSelectionAddress,
   createAcquisitionRoleAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
@@ -1058,4 +1059,49 @@ export function createTwoStaleSurfaceHermesDeliveryPlacements() {
     entryKey,
     secondEntryKey,
   };
+}
+
+/**
+ * Complete N/O route whose O Reprieve uses its Fountain beside its boon, and
+ * whose O Postboss changes keepsake and uses its Fountain around a rushed
+ * Shrine Hermes boon taken in the same room.
+ */
+export function surfaceTraitFencesProject(): ProjectDocument {
+  const postboss = createOccurrenceAddress(
+    oBiome,
+    createOccurrenceId('surface-o-preboss:postboss'),
+  );
+  let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    kind: 'ReplaceOccurrenceRoom',
+    occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
+    gameName: 'O_Reprieve01',
+  });
+  const reprieveReward = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: reprieveReward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplacePostbossKeepsake',
+    selection: createPostbossKeepsakeSelectionAddress(postboss),
+    keepsakeKey: 'BlockDeathKeepsake',
+  });
+  for (const [slotKey, rewardType] of [
+    ['first', 'HealBigDrop'],
+    ['secondLeft', 'ShopHermesUpgrade'],
+    ['secondRight', 'MaxManaDrop'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: postboss,
+      slotKey,
+      value: { rewardType },
+    });
+  }
+  project = purchaseTestHermesShrineOffer(project, catalog, postboss, 'initial:secondLeft', {
+    delay: 2,
+    rushed: true,
+  });
+  return authorLegalTraitOffers(placeDueHermesShrineDeliveries(authorLegalTraitOffers(project)));
 }

@@ -786,3 +786,50 @@ function TestRouteRoomSessions.testRouteAdvancesBetweenRoomEntryCheckpoints()
     lu.assertEquals(state.index, 2)
     lu.assertNotNil(route.enter(state, "two", "F_Next"))
 end
+
+local function traitFenceRoom(occurrenceId)
+    local json = require("mods.protocol.json")
+    local protocol = require("mods.protocol.decoder")
+    local file = assert(io.open(fixtures.path("surface-trait-fences.execution.json"), "rb"))
+    local raw = file:read("*a")
+    file:close()
+    local plan = assert(protocol.decode(assert(json.decode(raw))))
+    local entry = assert(plan.occurrencesById[occurrenceId])
+    local owners = {}
+    for owner, transaction in pairs(entry.transactionsByOwner) do owners[transaction.kind] = owner end
+    local session = room.new(entry, assert(bindings.index(entry)))
+    local function complete(owner)
+        local handle = assert(room.resolve(session, bindings.resolve, { kind = "owner", owner = owner }))
+        return room.complete(session, handle)
+    end
+    return session, owners, complete
+end
+
+function TestRouteRoomSessions.testTraitScreensWaitForThePostbossFountainAndRack()
+    local session, owners, complete = traitFenceRoom("surface-o-preboss:postboss")
+    lu.assertNil(complete(owners.acquisition))
+    lu.assertEquals(session.firstMismatch.checkpoint, "transaction-prerequisite")
+    lu.assertEquals(session.firstMismatch.observed, owners.acquisition)
+    lu.assertTrue(session.firstMismatch.expected == owners.fountainUse
+        or session.firstMismatch.expected == owners.keepsakeChange)
+
+    local racked, rackOwners, completeRacked = traitFenceRoom("surface-o-preboss:postboss")
+    lu.assertTrue(completeRacked(rackOwners.fountainUse))
+    lu.assertNil(completeRacked(rackOwners.acquisition))
+    lu.assertEquals(racked.firstMismatch.checkpoint, "transaction-prerequisite")
+    lu.assertEquals(racked.firstMismatch.expected, rackOwners.keepsakeChange)
+
+    local ordered, orderedOwners, completeOrdered = traitFenceRoom("surface-o-preboss:postboss")
+    for _, kind in ipairs({ "fountainUse", "keepsakeChange", "acquisition" }) do
+        lu.assertTrue(completeOrdered(orderedOwners[kind]))
+    end
+    lu.assertNil(ordered.firstMismatch)
+end
+
+function TestRouteRoomSessions.testReprieveFountainWaitsForTheBoonBeforeIt()
+    local session, owners, complete = traitFenceRoom("surface-o-devotion")
+    lu.assertNil(complete(owners.fountainUse))
+    lu.assertEquals(session.firstMismatch.checkpoint, "transaction-prerequisite")
+    lu.assertEquals(session.firstMismatch.expected, owners.acquisition)
+    lu.assertEquals(session.firstMismatch.observed, owners.fountainUse)
+end
