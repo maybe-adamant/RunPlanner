@@ -135,6 +135,11 @@ function room.claimReady(session, contact, native, compatible)
     end
     return handle, payload
 end
+function room.nextPooledOwner(session, carrierHandle, carrierName)
+    if session.closed or session.firstMismatch ~= nil or session.firstFault ~= nil then return nil end
+    local inner = innerFor(session)
+    return inner and timeline.nextPooledOwner(inner, carrierHandle, carrierName) or nil
+end
 function room.complete(session, handle)
     if session.closed then return fault(session, "room-session", "open session", "closed") end
     return delegate(session, "complete", handle)
