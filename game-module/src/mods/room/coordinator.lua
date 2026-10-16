@@ -428,6 +428,11 @@ function coordinator.claimReady(state, context, contact, native, compatible)
     return handle, payload
 end
 
+function coordinator.nextPooledOwner(state, context, carrierHandle, carrierName)
+    local owner = bindingContext(state, context)
+    return owner and session.nextPooledOwner(owner, carrierHandle, carrierName) or nil
+end
+
 function coordinator.begin(state, handle)
     local active = coordinator.current(state)
     if active == nil then

@@ -12,6 +12,8 @@ local safeHooks = type(import) == "function" and import("mods/host/presentation_
     or require("mods.host.presentation_hooks")
 local names = type(import) == "function" and import("mods/presentation/names.lua")
     or require("mods.presentation.names")
+local mysteryPool = type(import) == "function" and import("mods/room/timeline/acquisitions/mystery/pool.lua")
+    or require("mods.room.timeline.acquisitions.mystery.pool")
 local roomName, displayName, roomOccupants = names.room, names.display, names.occupants
 
 -- UTF-8 character count; continuation bytes do not start a character.
@@ -140,6 +142,11 @@ local function instruction(description, occurrence, transaction)
         for _, role in ipairs(transaction.roles or {}) do
             if role.disposition == "artificer" then return "Artificer: " .. rewardName(reward) end
         end
+        -- Pooled Mystery gods follow plan order whichever box is opened, so
+        -- the row names its god rather than its carrier.
+        local _, hidden = mysteryPool.roles(transaction)
+        local god = hidden and sourceName(hidden.gameName) or nil
+        if god then return "Mystery: " .. god end
     end
     if kind == "collectRequiredReward" then return "Boss reward" end
     if kind == "completeFieldsCage" then
@@ -165,13 +172,10 @@ local function instruction(description, occurrence, transaction)
     if kind == "interactShopOffer" then
         if description.conversion == "anvilOfFates" then return "Anvil of Fates" end
         local offer = shopOffer(occurrence, description.offerKey)
-        -- The acquisition owns the resolved Mystery Boon god; the inventory
-        -- can still describe only its box carrier.
         local target = reward or offer or { rewardType = description.rewardType }
         local boosted = offer ~= nil and offer.optionKey == "BoostedRandomLoot"
         if description.conversion == "timePiece" then return "Time Piece: " .. rewardName(target, boosted) end
         local god = sourceName(target.source)
-        if god and isMystery(target) then return "Shop: Mystery " .. god end
         if god and boosted then return "Shop: Boosted " .. god end
         return "Shop: " .. rewardName(target, boosted)
     end

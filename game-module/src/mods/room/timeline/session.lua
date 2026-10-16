@@ -52,6 +52,7 @@ function timeline.new(occurrence, index)
         obligations = obligations,
         transactionOrder = transactionOrder,
         completedOwners = {},
+        begunOwners = {},
         claimedOwners = {},
         claimedHandles = {},
         capabilities = lifecycle.new(),
@@ -211,6 +212,43 @@ function timeline.claimReady(session, contact, native, compatible)
     return nil
 end
 
+local function boundCarrier(session, owner, gameName)
+    for native, handle in pairs(session.nativeHandles) do
+        local name = type(native) == "table" and (native.Name or native.ItemName or native.LootName) or nil
+        if name == gameName and session.handles[handle].transaction.owner == owner then return true end
+    end
+    return false
+end
+
+-- Interchangeable carriers serve their pool in plan order: the first unbegun
+-- pool owner whose own carrier is bound here and whose prerequisites are
+-- complete. Without one, the carrier keeps its own owner; if that owner was
+-- already served, the next unbegun pool owner takes it and fails its order.
+-- `carrierName(transaction)` names a pool member's carrier, or nil.
+function timeline.nextPooledOwner(session, carrierHandle, carrierName)
+    if session.closed or terminal(session) ~= nil then return nil end
+    local carrier = session.handles[carrierHandle]
+    if carrier == nil then return nil end
+    local own = carrier.transaction.owner
+    if carrierName(carrier.transaction) == nil then return own end
+    local fallback
+    for _, row in ipairs(session.transactionOrder or {}) do
+        local owner = row.transaction.owner
+        local name = carrierName(row.transaction)
+        if name ~= nil and not session.begunOwners[owner] and not session.completedOwners[owner]
+            and boundCarrier(session, owner, name) then
+            local ready = true
+            for prerequisite in pairs(session.prerequisites[owner] or {}) do
+                if not session.completedOwners[prerequisite] then ready = false; break end
+            end
+            if ready then return owner end
+            fallback = fallback or owner
+        end
+    end
+    if (session.begunOwners[own] or session.completedOwners[own]) and fallback ~= nil then return fallback end
+    return own
+end
+
 function timeline.open(session, window)
     if session.closed then return fault(session, "room-session", "open session", "closed") end
     if terminal(session) ~= nil then return nil, terminal(session) end
@@ -254,6 +292,7 @@ function timeline.begin(session, handle)
     if session.completedOwners[owner] then return nil, "completed" end
     local ok, beginError = beginOwner(session, owner)
     if not ok then return nil, beginError end
+    session.begunOwners[owner] = true
     return bindings.payload(row)
 end
 
@@ -313,6 +352,7 @@ end
 function timeline.close(session)
     session.closed = true
     session.completedOwners = {}
+    session.begunOwners = {}
     session.claimedOwners = {}
     session.claimedHandles = {}
     session.capabilities = {}

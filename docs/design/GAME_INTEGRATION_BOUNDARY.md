@@ -1267,6 +1267,20 @@ its published prerequisites complete, the runtime records the generic
 the native action. This protects DAG order without turning transaction
 completion into semantic result verification.
 
+Mystery boxes are the one interchangeable carrier: native unwrap builds the
+same loot for every box and the module forces the god. A bound box keeps only
+its native binding to its own transaction (purchase, pickup, delivery, refill).
+Its hidden god acquisition goes to the first pooled transaction in plan order:
+box and hidden-god roles both `normal`, own box bound in this room, not yet
+begun or complete, and whose prerequisites are complete. Each transaction
+completes when its god is picked, from whichever box served it. With no ready
+pooled member the box keeps its own owner, so a true misorder still records
+`transaction-prerequisite`; when that owner is already begun or complete, the
+next unbegun pooled member takes the box and records the same mismatch.
+Conversion dispositions and unbound boxes keep their existing paths. Only the
+native "From the Contract" voice line can follow the physical box rather than
+the planned god.
+
 Native hooks and conformance checkpoints are deliberately different concepts.
 Encounter start/end, cleanup, screen construction, and similar callbacks may
 schedule a realization or identify the lifecycle window in which a semantic

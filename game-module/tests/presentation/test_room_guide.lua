@@ -65,7 +65,6 @@ end
 
 function TestRoomGuide.testShopLabelsUseResolvedGodWithoutDuplicatingCarrierName()
     for _, case in ipairs({
-        { "BlindBoxLoot", "DemeterUpgrade", "RandomLootGiftItem", "Shop: Mystery Demeter" },
         { "RandomLoot", "HeraUpgrade", "BoostedRandomLoot", "Shop: Boosted Hera" },
         { "StackUpgradeBig", nil, "StackUpgradeBig", "Shop: Pom x2" },
     }) do
@@ -83,6 +82,44 @@ function TestRoomGuide.testShopLabelsUseResolvedGodWithoutDuplicatingCarrierName
         { offerKey = "slot", rewardType = "StackUpgrade" },
     } } }
     lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Time Piece: Pom")
+end
+
+local function mysteryTransaction(god, disposition)
+    return { kind = "acquisition", reward = { rewardType = "BlindBoxLoot", source = god }, roles = {
+        { role = "box", lifecyclePoint = "purchase", gameName = "BlindBoxLoot",
+            disposition = disposition or "normal" },
+        { role = "hiddenSource", lifecyclePoint = "afterUnwrap", gameName = god, disposition = "normal" },
+    } }
+end
+
+function TestRoomGuide.testPooledMysteryRowsNameTheirGodInPlanOrderWithoutCarrier()
+    local mystery = { rewardType = "BlindBoxLoot" }
+    local rows = {
+        row("interactAcquisitionEntry", "contract", { reward = mystery }),
+        row("interactShopOffer", "shop", { offerKey = "slot", rewardType = "BlindBoxLoot" }),
+        row("interactShopOffer", "plain", { offerKey = "pom", rewardType = "StackUpgradeBig" }),
+    }
+    local snapshot = room(rows)
+    snapshot.occurrence.overview = { shop = { offers = {
+        { offerKey = "slot", optionKey = "BlindBoxLoot", rewardType = "BlindBoxLoot" },
+        { offerKey = "pom", optionKey = "StackUpgradeBig", rewardType = "StackUpgradeBig" },
+    } } }
+    snapshot.occurrence.transactionsByOwner = {
+        contract = mysteryTransaction("PoseidonUpgrade"), shop = mysteryTransaction("HeraUpgrade"),
+        plain = { kind = "acquisition", reward = { rewardType = "StackUpgradeBig" }, roles = {} },
+    }
+    lu.assertEquals(guide.project(snapshot).rows, {
+        { instruction = "Mystery: Poseidon" }, { instruction = "Mystery: Hera" },
+        { instruction = "Shop: Pom x2" },
+    })
+    -- Completion is keyed by owner, so whichever box served Poseidon retires its row.
+    snapshot.isCompleted = function(owner) return owner == "contract" end
+    lu.assertEquals(guide.project(snapshot).rows, {
+        { instruction = "Mystery: Hera" }, { instruction = "Shop: Pom x2" },
+    })
+    snapshot.isCompleted = function() return false end
+    snapshot.occurrence.transactionsByOwner.contract = mysteryTransaction("PoseidonUpgrade", "artificer")
+    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Artificer: Mystery Boon")
 end
 
 function TestRoomGuide.testNativeMarkupIsRemovedFromRowsAndNavigation()
@@ -600,7 +637,7 @@ function TestRoomGuide.testEveryTemplateAtItsLongestInstantiationFits()
         { rewards, { "Collect %s", "Shop: %s", "Shrine: %s", "Rush: %s", "Delivery: %s", "Wheel: %s",
             "Cage 3: %s", "Next: %s", "Room 23: %s" } },
         { boons, { "Time Piece: %s" } },
-        { { "Hephaestus", "Aphrodite" }, { "Shop: Mystery %s", "Shop: Boosted %s" } },
+        { { "Hephaestus", "Aphrodite" }, { "Mystery: %s", "Shop: Boosted %s" } },
         { { "Path of Stars", "Nectar", "Bones", "Big Bones", "Ashes", "Big Ashes", "Psyche" },
             { "Artificer: %s" } },
         { { "Affirmation", "Hostile Env.", "Shameless Attitude", "Glorious Disaster" }, { "Sell: %s" } },

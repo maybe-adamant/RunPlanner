@@ -1,6 +1,9 @@
 -- Producer-agnostic execution boundary for Mystery Box acquisitions. Native
 -- unwrap and trait effects remain authoritative; this adapter claims at the
 -- native unwrap, forces the published provider, and retains one owner handle.
+local pool = type(import) == "function" and import("mods/room/timeline/acquisitions/mystery/pool.lua")
+    or require("mods.room.timeline.acquisitions.mystery.pool")
+
 local mystery = {}
 
 local function copy(value)
@@ -44,6 +47,24 @@ function mystery.attach(module, session, getState, report, room)
         }
     end
 
+    local function pooledBox(transaction)
+        local box = pool.roles(transaction)
+        return box and box.gameName or nil
+    end
+
+    -- A bound box keeps its own transaction; its god serves the plan-ordered pool.
+    local function poolTarget(scope)
+        local owner = room.nextPooledOwner(scope.state, scope.current, scope.handle, pooledBox)
+        if owner == nil or owner == scope.payload.transaction.owner then return scope end
+        local handle = room.resolve(scope.state, scope.current, { kind = "owner", owner = owner })
+        if handle == nil then return scope end
+        session.diagnostic(scope.state, "mystery-pool", {
+            boxOwner = scope.payload.transaction.owner, servedOwner = owner,
+        })
+        scope.handle = handle
+        return scope
+    end
+
     local function boxRole(transaction, contact)
         if type(transaction) ~= "table" then return nil end
         for _, role in ipairs(transaction.roles or {}) do
@@ -57,6 +78,7 @@ function mystery.attach(module, session, getState, report, room)
     module.hooks.wrap("UnwrapRandomLoot", "run-planner-mystery-unwrap", function(_, runtime, base, source)
         local state = getState(runtime)
         local scope = boundScope(state, source)
+        if scope ~= nil then scope = poolTarget(scope) end
         if scope == nil and nativeName(source) == "BlindBoxLoot" then
             local current = room.current(state)
             local handle, payload = room.claimReady(state, current, {
