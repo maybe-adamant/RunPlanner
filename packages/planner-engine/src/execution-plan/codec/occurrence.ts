@@ -472,6 +472,12 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     'pathOfStars',
     'forfeit',
     'stygianWell',
+    'keepsakes',
+    'equipment',
+    'arcana',
+    'vows',
+    'chaosValues',
+    'hexNodes',
   ]);
   const conformanceFacts =
     conformance === undefined

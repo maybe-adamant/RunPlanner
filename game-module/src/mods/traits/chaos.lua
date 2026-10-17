@@ -191,6 +191,10 @@ function chaos.blessingValues(data, blessingKey)
     return blessingValues(data, blessingKey)
 end
 
+function chaos.curseValues(data, curseKey)
+    return curseValues(data, curseKey)
+end
+
 function chaos.clock(data)
     if data.UsesAsEncounters then return "encounters" end
     if data.UsesAsRooms then return "locations" end

@@ -38,7 +38,6 @@ import {
   reachedOfferForOrigin,
 } from '../../offer-generation';
 import { advanceArcanaRoomEntry, consumeRoomRewardForfeit } from '../../../arcana-fear';
-import { hasActiveChaosSemanticTag } from '../../../traits';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
@@ -102,11 +101,7 @@ export function applyRoomEntryEffects(
   let next: readonly RewardBranchState[] = Object.freeze(
     advanceRewardBranches(branches, event.sequence).map((branch) => {
       const cleared = clearOfferedRewardTypes(branch.state);
-      const arcanaFear = advanceArcanaRoomEntry(
-        catalog,
-        cleared.arcanaFear,
-        hasActiveChaosSemanticTag(cleared.traitHistory, 'Barren'),
-      );
+      const arcanaFear = advanceArcanaRoomEntry(catalog, cleared.arcanaFear);
       return Object.freeze({
         ...branch,
         state:

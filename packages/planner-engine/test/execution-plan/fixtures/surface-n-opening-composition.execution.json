@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "surface-1",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -437,7 +437,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -447,6 +452,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2189,7 +2195,8 @@
         "facts": [
           { "kind": "elementCounts" },
           { "kind": "traitInventory" },
-          { "kind": "pathOfStars" }
+          { "kind": "pathOfStars" },
+          { "kind": "hexNodes" }
         ]
       },
       "diagnostics": {
@@ -2248,6 +2255,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 0,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "CooldownDamageTalent",
+                "1:4": "ChargeRegenTalent",
+                "2:2": "LaserDamageTalent",
+                "2:4": "LaserDefenseTalent",
+                "3:1": "CooldownDamageTalent",
+                "3:2": "LaserDamageTalent",
+                "3:3": "LaserDefenseTalent",
+                "3:4": "CooldownDamageTalent",
+                "3:5": "LaserDamageTalent",
+                "3:6": "LaserDefenseTalent",
+                "4:1": "LaserAoETalent",
+                "4:3": "CooldownDamageTalent",
+                "4:5": "LaserStartAoETalent",
+                "5:2": "LaserDamageTalent",
+                "5:4": "LaserDefenseTalent",
+                "6:3": "LaserTripleTalent"
+              },
+              "investedNodes": []
             }
           }
         }
@@ -2594,5 +2622,5 @@
       }
     }
   ],
-  "planFingerprint": "1f7be7df"
+  "planFingerprint": "0f0bb6b9"
 }

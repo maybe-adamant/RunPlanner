@@ -4,7 +4,7 @@ import { artificerStatus } from '../arcana-fear';
 import { stygianWellChargeItemKey } from '../commerce/stygian-well';
 import { keepsakeRankForEquip } from '../keepsakes/state';
 import type { SimulationState } from '../state/model';
-import { aspectIsPerfect } from '../traits/equipment-upgrades';
+import { aspectIsPerfect, familiarStackMultiplier } from '../traits/equipment-upgrades';
 import {
   echoShopDuplicateStatus,
   steadyGrowthInterval,
@@ -67,6 +67,8 @@ export interface RunStateEffects {
   /** The equipped aspect at the planner's rank V, or rank VI once made Perfect. */
   readonly aspect?: { readonly aspectKey: string; readonly rank: 5 | 6 };
   readonly familiarKey?: string;
+  /** Circe's stack multiplier on the equipped familiar; 1 without one. */
+  readonly familiarStackMultiplier?: number;
   readonly keepsakes: readonly RunStateKeepsakeEffect[];
   /**
    * One entry per entered biome: the keepsake equipped there, followed by any
@@ -452,7 +454,12 @@ export function deriveRunStateEffects(catalog: Catalog, state: SimulationState):
             rank: aspectIsPerfect(catalog, state.traitHistory) ? (6 as const) : (5 as const),
           }),
         }),
-    ...(familiarKey === null ? {} : { familiarKey }),
+    ...(familiarKey === null
+      ? {}
+      : {
+          familiarKey,
+          familiarStackMultiplier: familiarStackMultiplier(catalog, state.traitHistory),
+        }),
     keepsakes: keepsakeEffects(catalog, state),
     traitStates: traitStates(catalog, state),
     traitEntries: traitEntries(catalog, state),

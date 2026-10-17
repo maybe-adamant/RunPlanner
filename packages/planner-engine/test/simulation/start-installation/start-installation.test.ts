@@ -431,19 +431,22 @@ describe('mid-run start installation', () => {
       ]);
     });
 
-    it('holds Echo’s Common copy once replayed, but not a spent Figurine', () => {
+    it('holds Echo’s recorded Common copy, but not a spent Figurine', () => {
       expect(
-        installed({ currentKey: 'BonusMoneyKeepsake' }, { captured: wheel, replays: 1 }).keepsake
-          .held,
+        installed({ currentKey: 'BonusMoneyKeepsake', echoCopyKey: wheel }).keepsake.held,
       ).toContainEqual({ key: wheel, rank: 'Common', slotted: false });
+      expect(
+        installed(
+          { currentKey: 'BonusMoneyKeepsake' },
+          { captured: wheel, replays: 1 },
+        ).keepsake.held.map((row) => row.key),
+      ).toEqual(['BonusMoneyKeepsake']);
       const figurine = 'BossMetaUpgradeKeepsake';
-      const spent = installed(
-        {
-          currentKey: 'BonusMoneyKeepsake',
-          figurine: { origin: 'echo', status: 'consumed', rarity: 'Common' },
-        },
-        { captured: figurine, replays: 2 },
-      );
+      const spent = installed({
+        currentKey: 'BonusMoneyKeepsake',
+        echoCopyKey: figurine,
+        figurine: { origin: 'echo', status: 'consumed', rarity: 'Common' },
+      });
       expect(spent.keepsake.held.map((row) => row.key)).toEqual(['BonusMoneyKeepsake']);
     });
 

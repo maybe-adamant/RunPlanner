@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "surface-3",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -635,7 +635,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -645,6 +650,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2383,7 +2389,8 @@
         "facts": [
           { "kind": "elementCounts" },
           { "kind": "traitInventory" },
-          { "kind": "pathOfStars" }
+          { "kind": "pathOfStars" },
+          { "kind": "hexNodes" }
         ]
       },
       "diagnostics": {
@@ -2442,6 +2449,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 0,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "PreChargeTalent",
+                "1:4": "ChargeRegenTalent",
+                "2:2": "TimeSlowAmountTalent",
+                "2:4": "CooldownDefenseTalent",
+                "3:1": "PreChargeTalent",
+                "3:2": "TimeSlowAmountTalent",
+                "3:3": "CooldownDefenseTalent",
+                "3:4": "TimeSlowAmountTalent",
+                "3:5": "CooldownDefenseTalent",
+                "3:6": "TimeSlowAmountTalent",
+                "4:1": "TimeSlowDestroyProjectilesTalent",
+                "4:3": "CooldownDefenseTalent",
+                "4:5": "TimeSlowSpeedTalent",
+                "5:2": "TimeSlowAmountTalent",
+                "5:4": "CooldownDefenseTalent",
+                "6:3": "TimeSlowCritTalent"
+              },
+              "investedNodes": []
             }
           }
         }
@@ -5798,5 +5826,5 @@
       }
     }
   ],
-  "planFingerprint": "b7bf0e76"
+  "planFingerprint": "4aefc731"
 }

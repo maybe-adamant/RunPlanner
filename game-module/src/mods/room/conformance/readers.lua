@@ -13,6 +13,7 @@ local supported = {
     traitInventory = true, elementCounts = true,
     steadyGrowth = true, chaos = true, keepsakeEffects = true,
     rewardPriorities = true, pathOfStars = true, forfeit = true, stygianWell = true,
+    keepsakes = true, equipment = true, arcana = true, vows = true, chaosValues = true, hexNodes = true,
 }
 
 local function traitKey(value)
@@ -102,6 +103,154 @@ local function activeChaos(run)
         end
     end
     return { active = active, matured = matured }
+end
+
+local function chaosValues(run)
+    local active, matured = {}, {}
+    for _, trait in pairs(traits(run) or {}) do
+        if type(trait) == "table" and type(trait.Name) == "string" then
+            if trait.Name:match("^Chaos.*Curse$") then
+                local blessing = trait.OnExpire and trait.OnExpire.TraitData
+                if type(blessing) == "table" then
+                    active[#active + 1] = {
+                        curseKey = trait.Name, curseValues = chaos.curseValues(trait, trait.Name),
+                        blessingValues = chaos.blessingValues(blessing, blessing.Name),
+                    }
+                end
+            elseif trait.Name:match("^Chaos.*Blessing$") then
+                matured[#matured + 1] = {
+                    blessingKey = trait.Name, blessingValues = chaos.blessingValues(trait, trait.Name),
+                }
+            end
+        end
+    end
+    return { active = active, matured = matured }
+end
+
+-- Every held keepsake trait (declared Slot Keepsake); unslotted ones lose their Slot.
+local function keepsakeRanks(run)
+    local rows, declared = {}, _G.TraitData or {}
+    for _, trait in pairs(traits(run) or {}) do
+        local key = traitKey(trait)
+        local data = type(key) == "string" and declared[key] or nil
+        if type(trait) == "table" and type(data) == "table" and data.Slot == "Keepsake" then
+            rows[#rows + 1] = { name = key, rarity = trait.Rarity, slotted = trait.Slot == "Keepsake" }
+        end
+    end
+    table.sort(rows, function(left, right) return left.name < right.name end)
+    return rows
+end
+
+-- Circe multiplies each familiar trait's stacks plus its CirceBonusStacks
+-- (EventLogic.CircePetMultiplier), so that ratio is the applied multiplier.
+local function familiarMultiplier(run)
+    local multiplier, cat
+    for _, trait in pairs(traits(run) or {}) do
+        if type(trait) == "table" and trait.FamiliarTrait then
+            if trait.FamiliarLastStandHealAmount ~= nil then
+                cat = trait.ReportedFamiliarLastStandAmount or 1
+            else
+                local bonus = trait.CirceBonusStacks or 0
+                local value = ((trait.StackNum or 1) + bonus) / (_G.GetFamiliarTraitStacks(trait.Name) + bonus)
+                if multiplier ~= nil and math.abs(multiplier - value) > 1e-9 then return "inconsistent" end
+                multiplier = value
+            end
+        end
+    end
+    return multiplier or cat
+end
+
+local function equipment(run, gameState, expected)
+    local result = {}
+    local aspect = type(expected) == "table" and expected.aspect or nil
+    if type(aspect) == "table" then
+        local trait = findTrait(run, aspect.key)
+        result.aspect = { key = aspect.key, rarity = type(trait) == "table" and trait.Rarity or nil }
+    end
+    local name = type(gameState) == "table" and gameState.EquippedFamiliar or nil
+    if name ~= nil then result.familiar = { name = name, stackMultiplier = familiarMultiplier(run) } end
+    return result
+end
+
+-- Equipped cards with their held trait; The Artificer's charges are its trait's
+-- MetaConversionUses and the run's spent MetaConversionUses.
+local function arcana(run, gameState, expected)
+    local cards, states = {}, type(gameState) == "table" and gameState.MetaUpgradeState or {}
+    local temporary = type(run) == "table" and run.TemporaryMetaUpgrades or {}
+    local declared = _G.MetaUpgradeCardData or {}
+    for key, state in pairs(states or {}) do
+        local card = declared[key]
+        if type(card) == "table" and type(state) == "table" and state.Equipped then
+            local trait = card.TraitName and findTrait(run, card.TraitName) or nil
+            cards[#cards + 1] = {
+                key = key, temporary = (temporary or {})[key] == true, held = trait ~= nil,
+                rarity = type(trait) == "table" and trait.Rarity or nil,
+            }
+        end
+    end
+    table.sort(cards, function(left, right) return left.key < right.key end)
+    local result = { cards = cards }
+    local planned = type(expected) == "table" and expected.artificer or nil
+    if type(planned) == "table" then
+        result.artificer = { usedCount = type(run) == "table" and run.MetaConversionUses or 0 }
+        if planned.remainingCount ~= nil then
+            local remaining = 0
+            for _, trait in pairs(traits(run) or {}) do
+                if type(trait) == "table" and type(trait.MetaConversionUses) == "number" then
+                    remaining = remaining + trait.MetaConversionUses
+                end
+            end
+            result.artificer.remainingCount = remaining
+        end
+    end
+    return result
+end
+
+local function vows(run, gameState, expected)
+    local native = type(gameState) == "table" and gameState.ShrineUpgrades or {}
+    local configured, effective = {}, {}
+    for key in pairs(type(expected) == "table" and expected.configuredRanks or {}) do
+        configured[key] = native[key] or 0
+    end
+    for key in pairs(type(expected) == "table" and expected.effectiveRanks or {}) do
+        effective[key] = _G.GetNumShrineUpgrades(key)
+    end
+    -- An unplanned ranked vow stays visible so equality rejects it.
+    for key, rank in pairs(native) do
+        if type(rank) == "number" and rank > 0 then
+            if configured[key] == nil then configured[key] = rank end
+            if effective[key] == nil then effective[key] = _G.GetNumShrineUpgrades(key) end
+        end
+    end
+    return {
+        configuredRanks = configured, effectiveRanks = effective,
+        disabledKeys = enabledKeys(type(run) == "table" and run.ShrineUpgradesDisabled or nil),
+        bannedTraitKeys = enabledKeys(type(run) == "table" and run.BannedTraits or nil),
+    }
+end
+
+local function olympian(node)
+    local pool = type(node.Pool) == "table" and node.Pool or {}
+    return pool.OlympianSpell ~= nil or pool.OlympianCount ~= nil
+end
+
+-- The realised talent on every non-Olympian node and every invested node, by `depth:slot`.
+local function hexNodes(run)
+    local hero = type(run) == "table" and run.Hero or nil
+    local spell = type(hero) == "table" and hero.SlottedSpell or nil
+    local talents = type(spell) == "table" and spell.Talents or nil
+    local nodes, invested = {}, {}
+    for depth, column in ipairs(type(talents) == "table" and talents or {}) do
+        for slot, node in pairs(column) do
+            if type(node) == "table" then
+                local key = depth .. ":" .. tostring(slot)
+                if not olympian(node) and type(node.Name) == "string" then nodes[key] = node.Name end
+                if node.Invested == true then invested[#invested + 1] = key end
+            end
+        end
+    end
+    table.sort(invested)
+    return { nodes = nodes, investedNodes = invested }
 end
 
 local function forfeit(run)
@@ -222,6 +371,12 @@ function readers.read(kind, run, gameState, expected)
     if kind == "pathOfStars" then return pathOfStars(run, expected) end
     if kind == "forfeit" then return forfeit(run) end
     if kind == "stygianWell" then return stygianWell(run) end
+    if kind == "keepsakes" then return keepsakeRanks(run) end
+    if kind == "equipment" then return equipment(run, gameState, expected) end
+    if kind == "arcana" then return arcana(run, gameState, expected) end
+    if kind == "vows" then return vows(run, gameState, expected) end
+    if kind == "chaosValues" then return chaosValues(run) end
+    if kind == "hexNodes" then return hexNodes(run) end
     return nil
 end
 

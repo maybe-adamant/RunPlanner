@@ -92,8 +92,8 @@ snap sets it. If no check reads it, it stays live.
   `run-state-conformance.ts`.
 
 - **Wire.** `execution-plan/model.ts`, `codec/diagnostics.ts` and
-  `assembly/diagnostics.ts`. The modelled-trait universe is a plan-level field
-  built from the catalog's in-run trait keys.
+  `assembly/diagnostics.ts`. The modelled-trait universe is not on the wire: it
+  ships with the module as a generated Lua file (gate 2).
 - **Module:**
   - decoding: `protocol/diagnostics.lua` and `protocol/conformance.lua`;
   - readers: `room/conformance/readers.lua` and `keepsakes/conformance.lua`;
@@ -120,9 +120,9 @@ One commit. A minor bump: announce it in the commit, no approval needed.
      origin, vows, Forfeit, the Denial banned list, Artificer charges and the
      other used or charge counts the readers compare.
    - e. **Chaos:** curse and blessing values and the remaining clock.
-   - f. **Exact reward-store contents** where they are exact across branches;
-     otherwise omitted (decision 2).
-   - d. **Once per plan:** the modelled-trait key list.
+
+   The modelled-trait list and the reward-store contents move to gate 2.
+
 2. **Engine: new room-exit fact kinds** for keepsake rank, equipment, Arcana
    and vow exactness, Chaos values and Hex node identity. Path of Stars node
    identity becomes binding: `plannedHexNodeKeys` stops being highlight-only
@@ -146,6 +146,15 @@ One commit. A minor bump: announce it in the commit, no approval needed.
 ### 2. Snap apply and probe
 
 One commit, for the shipped part only.
+
+0. **Inputs snap needs that gate 1 does not publish:**
+   - **Modelled traits:** a generated Lua file next to
+     `execution-compatibility.json`, holding its `catalogVersion`, with a drift
+     test against the catalog. It lists only the traits the snap trait step
+     owns: no Arcana cards, Chaos, costumes or `EchoRepeatKeepsakeBoon`.
+   - **Exact reward stores** in the frames: a store exact across branches is
+     published, an untouched store at its initial counts; a store that differs
+     by branch is omitted.
 
 1. **`snap/apply.lua` `apply(occurrence, frame, plan)`.** It runs in the
    `StartRoom` wrap before `base`, in this order:
@@ -239,9 +248,9 @@ One commit.
 ## Primary tests
 
 - **Engine:** the frame-field and fact-kind matrix at
-  `assembly/diagnostics.ts` and `run-state-conformance.ts`, covering present,
-  absent and branch-inexact stores; codec round-trips; a Hex node-identity
-  mismatch.
+  `assembly/diagnostics.ts` and `run-state-conformance.ts`; codec round-trips;
+  a Hex node-identity mismatch. Gate 2: present, untouched and branch-inexact
+  stores, and the modelled-traits drift test.
 - **Module:**
   - decoder and reader cases per new field (`tests/protocol`,
     `tests/room/test_conformance_readers.lua`);
@@ -291,8 +300,9 @@ One commit.
 
 1. **Event runs** are not special: snap behaves the same on every slot.
 2. **Reward stores that differ by branch:** contents are published only where
-   exact across branches, as the Practice start state does. Elsewhere snap
-   leaves the store live, and the existing door proofs decide.
+   exact across branches; an untouched store is published at its initial
+   counts. Elsewhere snap leaves the store live, and the existing door proofs
+   decide.
 3. **Run records** stay live. If the probe shows a door or reward proof
    reading them, they join the frame before gate 3.
 4. **"Same mismatch"** for the loop guard means the same checkpoint at the

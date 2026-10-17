@@ -35,7 +35,6 @@ import type { SemanticAddress } from '../../../authored-project/addresses';
 import type { ProducerLifecyclePointKey } from '../../../reward-kernel';
 import { artificerStatus } from '../../arcana-fear';
 import type { FindingEvidence } from '../../model';
-import { hasActiveChaosSemanticTag } from '../../traits';
 import type { AcquisitionSettlementRole } from './contracts';
 
 export function hasArtificerUse(
@@ -155,7 +154,10 @@ export function assessArtificerConversion(
   const artificerConversionEligible =
     catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]
       ?.artificerConversionEligible === true;
-  const status = hasActiveChaosSemanticTag(branch.state.traitHistory, 'Barren')
+  // The Artificer converts only while Barren has not unequipped its card.
+  const status = branch.state.arcanaFear.arcana.active.some(
+    (card) => card.unequipped === true && card.key === 'MetaToRunUpgrade',
+  )
     ? undefined
     : artificerStatus(catalog, branch.state.arcanaFear);
   const evidence = Object.freeze({

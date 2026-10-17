@@ -363,8 +363,8 @@ describe('Echo Gift Gift Gift', () => {
   it.each([0, 2])(
     'applies Fig Leaf max(existing, 1) once from an existing count of %i',
     (remainingUses) => {
-      const keepsakes = retainedKeepsakeState('SkipEncounterKeepsake');
-      const initial = branchWithGift('SkipEncounterKeepsake', 'SkipEncounterKeepsake', {
+      const keepsakes = retainedKeepsakeState('SkipEncounterKeepsake', 'BonusMoneyKeepsake');
+      const initial = branchWithGift('SkipEncounterKeepsake', 'BonusMoneyKeepsake', {
         keepsakes: {
           ...keepsakes,
           figLeaf: { remainingUses, activatedThisBiome: true },
@@ -509,6 +509,38 @@ describe('Echo Gift Gift Gift', () => {
     expect(result.state.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'ManaOverTimeRefundKeepsake',
       echoKeepsakeReplayCount: 0,
+    });
+  });
+
+  describe('records the Common copy only when the captured keepsake is not held', () => {
+    const replayed = (captured: string, current: string) =>
+      replayBiome([branchWithGift(captured, current)]).simulation.branches[0]!;
+
+    it.each(['ReincarnationKeepsake', 'BonusMoneyKeepsake', 'SkipEncounterKeepsake'])(
+      'copies %s once after a swap and never while it is held',
+      (captured) => {
+        expect(replayed(captured, captured).state.keepsakes.echoCopyKey).toBeUndefined();
+        expect(
+          replayed(captured, captured).state.traitHistory.equippedTraits[giftTraitKey]
+            ?.echoKeepsakeReplayCount,
+        ).toBe(0);
+        const once = replayed(captured, 'BlockDeathKeepsake');
+        expect(once.state.keepsakes.echoCopyKey).toBe(captured);
+        const twice = replayBiome([once]).simulation.branches[0]!;
+        expect(twice.state.traitHistory.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(
+          1,
+        );
+      },
+    );
+
+    it.each([
+      ['RarifyKeepsake', 'callingCard'],
+      ['GoldifyKeepsake', 'timePiece'],
+    ] as const)('adds %s charges without a copy while it is held', (key, ledger) => {
+      const held = replayed(key, key);
+      expect(held.state.keepsakes.echoCopyKey).toBeUndefined();
+      expect(held.state.keepsakes[ledger]?.remainingCharges).toBeGreaterThan(0);
+      expect(replayed(key, 'BlockDeathKeepsake').state.keepsakes.echoCopyKey).toBe(key);
     });
   });
 

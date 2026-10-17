@@ -104,6 +104,12 @@ const executionDispositions = {
     pathOfStars: 'covered',
     forfeit: 'covered',
     stygianWell: 'covered',
+    keepsakes: 'covered',
+    equipment: 'covered',
+    arcana: 'covered',
+    vows: 'covered',
+    chaosValues: 'covered',
+    hexNodes: 'covered',
   } satisfies Record<ExecutionRoomExitConformanceFactKind, ExecutionDisposition>,
 } as const;
 

@@ -59,6 +59,8 @@ export interface ActiveArcanaState {
   readonly key: string;
   readonly origin: ArcanaActivationOrigin;
   readonly rarity: InRunTraitRarity;
+  /** Barren removed this equipped card's trait (PowersLogic.RemoveArcana). */
+  readonly unequipped?: true;
 }
 export interface CurrentArcanaCard {
   readonly key: string;
@@ -183,6 +185,30 @@ export function consumeArtificerUse(
 export type CirceResolutionEffect = 'activateArcana' | 'promoteArcana' | 'disableFear';
 
 export const TEMPORARY_ARCANA_RARITY = 'Epic' as const;
+
+/**
+ * Barren's acquisition removes every equipped card's trait; its expiry re-adds
+ * each at its installed rank, Epic (TraitLogic.lua:1321-1327). Cards drawn
+ * during Barren stay held at their own rarity.
+ */
+export function reconcileBarrenArcana(
+  state: ArcanaFearState,
+  barrenBefore: boolean,
+  barrenAfter: boolean,
+): ArcanaFearState {
+  if (barrenBefore === barrenAfter) return state;
+  const active = state.arcana.active.map((card) =>
+    barrenAfter
+      ? Object.freeze({ ...card, unequipped: true as const })
+      : card.unequipped === true
+        ? Object.freeze({ key: card.key, origin: card.origin, rarity: TEMPORARY_ARCANA_RARITY })
+        : card,
+  );
+  return Object.freeze({
+    ...state,
+    arcana: Object.freeze({ ...state.arcana, active: Object.freeze(active) }),
+  });
+}
 export const PROMOTED_ARCANA_RARITY = 'Heroic' as const;
 
 /** Complete declaration-independent target product for one selected Circe effect. */
@@ -419,11 +445,7 @@ export function createArcanaFearState(
  * One native room start; restores do not count. While Arcana are removed
  * (Barren) nothing counts, and the re-equipped card starts a fresh cycle.
  */
-export function advanceArcanaRoomEntry(
-  catalog: Catalog,
-  state: ArcanaFearState,
-  arcanaRemoved: boolean,
-): ArcanaFearState {
+export function advanceArcanaRoomEntry(catalog: Catalog, state: ArcanaFearState): ArcanaFearState {
   const growing = state.arcana.active.filter(
     (card) => catalog.arcanaCards.byKey[card.key]?.roomEntryStatGrowth !== undefined,
   );
@@ -439,7 +461,7 @@ export function advanceArcanaRoomEntry(
       maxHealthGranted: 0,
       maxManaGranted: 0,
     };
-    if (arcanaRemoved) {
+    if (card.unequipped === true) {
       roomEntryGrowth[card.key] = Object.freeze({ ...current, progress: 0 });
       continue;
     }

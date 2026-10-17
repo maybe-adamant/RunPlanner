@@ -10,7 +10,7 @@ import type { RunModifiersRecord } from './run-modifiers';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 96 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 1;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 2;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {

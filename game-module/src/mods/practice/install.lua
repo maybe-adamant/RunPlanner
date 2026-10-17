@@ -508,12 +508,14 @@ local function rewardStores(start)
     end
 end
 
--- Barren holds the Arcana unequipped. Removed after native Death Defiance and
--- rerolls and before native StartNewRun credits starting gold
--- (RunLogic.lua:489-514), at either start point.
+-- Barren holds each card it unequipped without its trait. Removed after native
+-- Death Defiance and rerolls and before native StartNewRun credits starting
+-- gold (RunLogic.lua:489-514), at either start point.
 function install.barren(start)
-    -- PowersLogic.RemoveArcana.
-    if start.arcanaBarren then _G.UnequipMetaUpgrades(nil, hero()) end
+    for _, card in ipairs(start.arcana) do
+        -- PowersLogic.RemoveArcana.
+        if card.unequipped then _G.RemoveWeaponTrait(_G.MetaUpgradeCardData[card.name].TraitName) end
+    end
 end
 
 -- Run-wide records: an Opening's after native InitializeRewardStores and before
@@ -528,6 +530,8 @@ function install.records(start)
     run.KeepsakeCache = copy(start.keepsake.keepsakeCache)
     run.BlockedKeepsakes = copy(start.keepsake.blockedKeepsakes)
     run.WellShopPurchases = copy(start.stygianWell.wellShopPurchases)
+    run.BannedTraits = {}
+    for _, name in ipairs(start.bannedTraits) do run.BannedTraits[name] = true end
     if start.hex ~= nil then run.NumTalentPoints = start.hex.talentPoints end
     rewardStores(start)
 end

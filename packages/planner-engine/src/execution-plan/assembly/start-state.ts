@@ -192,7 +192,8 @@ function keepsakeCounters(
   }
 }
 
-function keepsakeState(
+/** The held keepsake traits in native terms, shared by the start state and Run State frames. */
+export function keepsakeState(
   catalog: Catalog,
   keepsake: StartInstallation['keepsake'],
 ): ExecutionStartState['keepsake'] {
@@ -385,6 +386,7 @@ export function executionStartState(
           name: card.key,
           rarity: card.rarity,
           ...(temporaryCards.has(card.key) ? { temporary: true as const } : {}),
+          ...(card.unequipped === true ? { unequipped: true as const } : {}),
           ...(growth === undefined ? {} : { currentRoom: growth.progress }),
           ...(card.key === artificerCard && arcana.artificer !== undefined
             ? { metaConversionUses: arcana.artificer.remainingCount }
@@ -392,7 +394,6 @@ export function executionStartState(
         });
       }),
     ),
-    arcanaBarren: arcana.barrenActive,
     disabledVows: installation.fear.disabledVowKeys,
     maxStats: Object.freeze({
       maxHealth: maxStats.maxHealth,
@@ -429,6 +430,7 @@ export function executionStartState(
     useRecord: installation.runRecords.useRecord,
     lootTypeHistory: installation.runRecords.lootTypeHistory,
     consumableRecord: installation.runRecords.consumableRecord,
+    bannedTraits: installation.runRecords.bannedTraitKeys,
     rewardStores: Object.freeze(
       installation.rewardStores.stores.map(({ storeKey, remainingEntryCounts }) =>
         Object.freeze({ name: storeKey, remainingEntryCounts }),

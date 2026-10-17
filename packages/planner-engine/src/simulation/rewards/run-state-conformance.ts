@@ -3,8 +3,10 @@ import {
   semanticAddressKey,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
+import type { Catalog } from '../../catalog-schema';
 import type { RunStateSnapshot } from './run-state';
 import type { KeepsakeState } from '../keepsakes/state';
+import { projectStartKeepsake } from '../start-installation/projection';
 
 export interface PendingKeepsakeEffects {
   readonly olympianSources: KeepsakeState['olympianSources'];
@@ -45,7 +47,13 @@ export type RoomExitConformanceFactKind =
   | 'rewardPriorities'
   | 'pathOfStars'
   | 'forfeit'
-  | 'stygianWell';
+  | 'stygianWell'
+  | 'keepsakes'
+  | 'equipment'
+  | 'arcana'
+  | 'vows'
+  | 'chaosValues'
+  | 'hexNodes';
 
 export interface RoomExitConformanceDelta {
   readonly occurrenceId: string;
@@ -95,6 +103,33 @@ function modeledTraitInventory(
   );
 }
 
+/** Held keepsakes by key with rank and slot, as installed. */
+export function heldKeepsakeRanks(catalog: Catalog, snapshot: RunStateSnapshot) {
+  return projectStartKeepsake(catalog, {
+    keepsakes: snapshot.keepsakes,
+    traitHistory: { equippedTraits: snapshot.traits.equippedTraits },
+  }).held;
+}
+
+function chaosValues(snapshot: RunStateSnapshot) {
+  return {
+    active: snapshot.traits.chaos.active.map(({ curseKey, curseValues, blessingValues }) => ({
+      curseKey,
+      curseValues,
+      blessingValues,
+    })),
+    matured: snapshot.traits.chaos.matured.map(({ blessingKey, blessingValues }) => ({
+      blessingKey,
+      blessingValues,
+    })),
+  };
+}
+
+function vows(snapshot: RunStateSnapshot) {
+  const { configuredRanks, effectiveRanks, disabledVowKeys } = snapshot.arcanaFear.fear;
+  return [configuredRanks, effectiveRanks, disabledVowKeys, snapshot.traits.bannedTraitKeys];
+}
+
 function snapshotFor(
   snapshots: ReadonlyMap<string, RunStateSnapshot>,
   occurrence: OccurrenceAddress,
@@ -111,6 +146,7 @@ function snapshotFor(
  * it never inspects action or effect semantics.
  */
 export function deriveRoomExitConformanceDeltas(
+  catalog: Catalog,
   occurrences: readonly OccurrenceAddress[],
   snapshots: ReadonlyMap<string, RunStateSnapshot>,
 ): ReadonlyMap<string, RoomExitConformanceDelta> {
@@ -165,6 +201,24 @@ export function deriveRoomExitConformanceDeltas(
     add('pathOfStars', baseline.hexObserver, currentExit.hexObserver);
     add('forfeit', baseline.forfeitStatus, currentExit.forfeitStatus);
     add('stygianWell', baseline.stygianWellLegality, currentExit.stygianWellLegality);
+    add('keepsakes', heldKeepsakeRanks(catalog, baseline), heldKeepsakeRanks(catalog, currentExit));
+    add(
+      'equipment',
+      [baseline.effects.aspect, baseline.effects.familiarStackMultiplier],
+      [currentExit.effects.aspect, currentExit.effects.familiarStackMultiplier],
+    );
+    add(
+      'arcana',
+      [baseline.arcanaFear.arcana.active, baseline.artificer],
+      [currentExit.arcanaFear.arcana.active, currentExit.artificer],
+    );
+    add('vows', vows(baseline), vows(currentExit));
+    add('chaosValues', chaosValues(baseline), chaosValues(currentExit));
+    add(
+      'hexNodes',
+      [baseline.hexProgress.tree?.nodes, baseline.hexProgress.investedNodeKeys],
+      [currentExit.hexProgress.tree?.nodes, currentExit.hexProgress.investedNodeKeys],
+    );
     if (facts.length > 0)
       result.set(
         occurrence.occurrenceId,

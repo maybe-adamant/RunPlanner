@@ -1,5 +1,7 @@
 local p = type(import) == "function" and import("mods/protocol/primitives.lua")
     or require("mods.protocol.primitives")
+local startState = type(import) == "function" and import("mods/protocol/start_state.lua")
+    or require("mods.protocol.start_state")
 
 local diagnostics = {}
 local elementKeys = { "Aether", "Earth", "Air", "Fire", "Water" }
@@ -14,8 +16,10 @@ local sections = {
     "forfeit",
     "chaos",
     "keepsakes",
+    "equipment",
     "rewardPriorities",
     "hexProgress",
+    "hexNodes",
     "artificer",
     "retainedEffects",
 }
@@ -191,12 +195,13 @@ local function validateArcana(value, label)
     for index, valueRow in ipairs(rows) do
         local row, rowError = p.exact(
             valueRow,
-            { "key", "origin", "rarity" },
+            { "key", "origin", "rarity", "held" },
             {},
             label .. ".active[" .. index .. "]"
         )
         if not row then return nil, rowError end
         if not p.str(row.key, label .. ".key")
+            or not p.bool(row.held, label .. ".held")
             or not p.one(row.origin, { manual = true, automatic = true, temporary = true }, label)
             or not p.one(row.rarity, rarities, label) then
             return p.fail(label .. " has invalid active Arcana")
@@ -228,7 +233,7 @@ local function validateChaos(value, label)
     for index, valueRow in ipairs(active) do
         local row, rowError = p.exact(
             valueRow,
-            { "curseKey", "blessingKey", "rarity", "clock", "remaining" },
+            { "curseKey", "blessingKey", "rarity", "clock", "remaining", "curseValues", "blessingValues" },
             {},
             label .. ".active[" .. index .. "]"
         )
@@ -241,7 +246,9 @@ local function validateChaos(value, label)
                 locations = true,
                 godBoonScreens = true,
             }, label .. ".clock")
-            or not p.int(row.remaining, label .. ".remaining", 0) then
+            or not p.int(row.remaining, label .. ".remaining", 0)
+            or not p.recordNumbers(row.curseValues, label .. ".curseValues")
+            or not p.recordNumbers(row.blessingValues, label .. ".blessingValues") then
             return p.fail(label .. " has invalid active Chaos outcome")
         end
     end
@@ -250,13 +257,14 @@ local function validateChaos(value, label)
     for index, valueRow in ipairs(matured) do
         local row, rowError = p.exact(
             valueRow,
-            { "blessingKey", "rarity" },
+            { "blessingKey", "rarity", "blessingValues" },
             {},
             label .. ".matured[" .. index .. "]"
         )
         if not row then return nil, rowError end
         if not p.str(row.blessingKey, label .. ".blessingKey")
-            or not p.str(row.rarity, label .. ".rarity") then
+            or not p.str(row.rarity, label .. ".rarity")
+            or not p.recordNumbers(row.blessingValues, label .. ".blessingValues") then
             return p.fail(label .. " has invalid matured Chaos outcome")
         end
     end
@@ -266,7 +274,7 @@ end
 local function validateKeepsakes(value, label)
     local record, errorMessage = p.exact(
         value,
-        { "usedKeys", "blockedKeys", "fatedStatus" },
+        { "usedKeys", "blockedKeys", "fatedStatus", "held" },
         { "currentKey" },
         label
     )
@@ -275,9 +283,48 @@ local function validateKeepsakes(value, label)
         or not p.one(record.fatedStatus, { Unknown = true, Fated = true, Unfated = true }, label) then
         return p.fail(label .. " has invalid Keepsake state")
     end
+    local _, heldError = startState.keepsakeTraits(record.held, label .. ".held", true)
+    if heldError then return nil, heldError end
     local _, usedError = validateStringList(record.usedKeys, label .. ".usedKeys")
     if usedError then return nil, usedError end
     return validateStringList(record.blockedKeys, label .. ".blockedKeys")
+end
+
+local function validateEquipment(value, label)
+    local record, errorMessage = p.exact(value, {}, { "aspect", "familiar" }, label)
+    if not record then return nil, errorMessage end
+    if record.aspect ~= nil then
+        local aspect, aspectError = p.exact(record.aspect, { "key", "rarity" }, {}, label .. ".aspect")
+        if not aspect then return nil, aspectError end
+        if not p.str(aspect.key, label .. ".aspect.key")
+            or not p.one(aspect.rarity, { Legendary = true, Perfect = true }, label .. ".aspect.rarity") then
+            return p.fail(label .. " has invalid aspect")
+        end
+    end
+    if record.familiar ~= nil then
+        local familiar, familiarError = p.exact(record.familiar, { "name", "stackMultiplier" }, {},
+            label .. ".familiar")
+        if not familiar then return nil, familiarError end
+        if not p.str(familiar.name, label .. ".familiar.name")
+            or not p.int(familiar.stackMultiplier, label .. ".familiar.stackMultiplier", 1) then
+            return p.fail(label .. " has invalid familiar")
+        end
+    end
+    return true
+end
+
+local function validateHexNodes(value, label)
+    local record, errorMessage = p.exact(value, { "nodes", "investedNodes" }, {}, label)
+    if not record then return nil, errorMessage end
+    local nodes, nodesError = p.obj(record.nodes, label .. ".nodes")
+    if not nodes then return nil, nodesError end
+    for key, talent in pairs(nodes) do
+        if type(key) ~= "string" or not key:match("^[1-9]%d*:%d+$")
+            or not p.str(talent, label .. ".nodes." .. tostring(key)) then
+            return p.fail(label .. " has invalid node " .. tostring(key))
+        end
+    end
+    return startState.investedNodes(record.investedNodes, label .. ".investedNodes")
 end
 
 local function validateHex(value, label)
@@ -577,8 +624,10 @@ local validators = {
     vows = validateVows,
     chaos = validateChaos,
     keepsakes = validateKeepsakes,
+    equipment = validateEquipment,
     rewardPriorities = validateStringList,
     hexProgress = validateHex,
+    hexNodes = validateHexNodes,
     retainedEffects = validateRetainedEffects,
 }
 
@@ -588,10 +637,10 @@ local function validateSection(section, value, label)
     end
     if section == "artificer" then
         if p.json.isNull(value) then return true end
-        local record, errorMessage = p.exact(value, { "usedCount", "remainingCount" }, {}, label)
+        local record, errorMessage = p.exact(value, { "usedCount" }, { "remainingCount" }, label)
         if not record then return nil, errorMessage end
         if not p.int(record.usedCount, label .. ".usedCount", 0)
-            or not p.int(record.remainingCount, label .. ".remainingCount", 0) then
+            or (record.remainingCount ~= nil and not p.int(record.remainingCount, label .. ".remainingCount", 0)) then
             return p.fail(label .. " has invalid Artificer state")
         end
         return true

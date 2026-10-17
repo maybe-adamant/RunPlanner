@@ -12,11 +12,18 @@ import type {
   ExecutionRoomExitConformance,
   ExecutionRunStateCount,
   ExecutionRunStateDiagnostic,
+  ExecutionStartKeepsakeTrait,
 } from '../model';
 import {
   pendingKeepsakeEffects,
   type RoomExitConformanceDelta,
 } from '../../simulation/rewards/run-state-conformance';
+import { projectStartKeepsake } from '../../simulation/start-installation/projection';
+import {
+  MATURE_ASPECT_RARITY,
+  PERFECT_ASPECT_RARITY,
+} from '../../simulation/traits/equipment-upgrades';
+import { keepsakeState } from './start-state';
 
 function executionCount(value: ExecutionRunStateCount): ExecutionRunStateCount {
   return value.kind === 'exact'
@@ -45,10 +52,23 @@ function executionPendingKeepsakeEffects(
   });
 }
 
+/** Bell, Fang and Silken Sash values stay live; no check reads them. */
+function heldKeepsake(
+  row: ExecutionStartKeepsakeTrait,
+): ExecutionRunStateDiagnostic['keepsakes']['held'][number] {
+  const { escalatingKeepsakeValue, currentKeepsakeDamageBonus, currentArmor, ...held } = row;
+  void escalatingKeepsakeValue;
+  void currentKeepsakeDamageBonus;
+  void currentArmor;
+  return Object.freeze(held);
+}
+
 function assembleRunStateDiagnostic(
+  catalog: Catalog,
   snapshot: RunStateSnapshot | undefined,
 ): ExecutionRunStateDiagnostic | undefined {
   if (snapshot === undefined) return undefined;
+  const { aspect, familiarKey, familiarStackMultiplier } = snapshot.effects;
   return Object.freeze({
     owner: semanticAddressKey(snapshot.owner),
     checkpoint: snapshot.checkpoint === 'roomEntered' ? 'roomEntered' : 'beforeRoomExit',
@@ -99,7 +119,12 @@ function assembleRunStateDiagnostic(
     arcana: Object.freeze({
       active: Object.freeze(
         snapshot.arcanaFear.arcana.active.map((card) =>
-          Object.freeze({ key: card.key, origin: card.origin, rarity: card.rarity }),
+          Object.freeze({
+            key: card.key,
+            origin: card.origin,
+            rarity: card.rarity,
+            held: card.unequipped !== true,
+          }),
         ),
       ),
     }),
@@ -118,6 +143,8 @@ function assembleRunStateDiagnostic(
             rarity: entry.rarity,
             clock: entry.clock,
             remaining: entry.remaining,
+            curseValues: entry.curseValues,
+            blessingValues: entry.blessingValues,
           }),
         ),
       ),
@@ -126,6 +153,7 @@ function assembleRunStateDiagnostic(
           Object.freeze({
             blessingKey: entry.blessingKey,
             rarity: entry.rarity,
+            blessingValues: entry.blessingValues,
           }),
         ),
       ),
@@ -137,6 +165,33 @@ function assembleRunStateDiagnostic(
       usedKeys: Object.freeze(snapshot.keepsakes.history.map((entry) => entry.key)),
       blockedKeys: Object.freeze([...snapshot.keepsakes.removedKeys]),
       fatedStatus: snapshot.keepsakes.fatedStatus,
+      held: Object.freeze(
+        keepsakeState(
+          catalog,
+          projectStartKeepsake(catalog, {
+            keepsakes: snapshot.keepsakes,
+            traitHistory: { equippedTraits: snapshot.traits.equippedTraits },
+          }),
+        ).traits.map(heldKeepsake),
+      ),
+    }),
+    equipment: Object.freeze({
+      ...(aspect === undefined
+        ? {}
+        : {
+            aspect: Object.freeze({
+              key: aspect.aspectKey,
+              rarity: aspect.rank === 6 ? PERFECT_ASPECT_RARITY : MATURE_ASPECT_RARITY,
+            }),
+          }),
+      ...(familiarKey === undefined || familiarStackMultiplier === undefined
+        ? {}
+        : {
+            familiar: Object.freeze({
+              name: familiarKey,
+              stackMultiplier: familiarStackMultiplier,
+            }),
+          }),
     }),
     rewardPriorities: Object.freeze([...snapshot.rewardPriorities]),
     hexProgress: Object.freeze({
@@ -152,7 +207,20 @@ function assembleRunStateDiagnostic(
       investedPathPoints: snapshot.hexObserver.investedPathPoints,
       olympianTalentInvested: snapshot.hexObserver.olympianTalentInvested,
     }),
-    artificer: snapshot.artificer === undefined ? null : Object.freeze({ ...snapshot.artificer }),
+    hexNodes: Object.freeze({
+      nodes: snapshot.hexProgress.tree?.nodes ?? Object.freeze({}),
+      investedNodes: snapshot.hexProgress.investedNodeKeys,
+    }),
+    artificer:
+      snapshot.artificer === undefined
+        ? null
+        : Object.freeze(
+            snapshot.arcanaFear.arcana.active.some(
+              (card) => card.unequipped === true && card.key === 'MetaToRunUpgrade',
+            )
+              ? { usedCount: snapshot.artificer.usedCount }
+              : { ...snapshot.artificer },
+          ),
     retainedEffects: Object.freeze({
       echoShopDuplicateStatus: snapshot.traits.echoShopDuplicateStatus ?? null,
       keepsakes: executionPendingKeepsakeEffects(snapshot),
@@ -188,16 +256,19 @@ function assembleRunStateDiagnostic(
 
 /** Assemble the diagnostic-only entry/exit observations for one entered room. */
 export function assembleOccurrenceDiagnostics(
+  catalog: Catalog,
   room: CanonicalAuthoredRoom,
   snapshots: ReadonlyMap<string, RunStateSnapshot>,
 ): ExecutionOccurrence['diagnostics'] | undefined {
   if (!room.entered) return undefined;
   const roomEntered = assembleRunStateDiagnostic(
+    catalog,
     snapshots.get(
       semanticAddressKey(createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' })),
     ),
   );
   const beforeRoomExit = assembleRunStateDiagnostic(
+    catalog,
     snapshots.get(
       semanticAddressKey(
         createRoomRunStateCheckpointAddress(room.origin, { kind: 'beforeRoomExit' }),

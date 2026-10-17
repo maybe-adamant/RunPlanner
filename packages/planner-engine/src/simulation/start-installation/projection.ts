@@ -2,11 +2,10 @@ import type { OccurrenceAddress } from '../../authored-project/addresses';
 import type { Catalog, KeepsakeRank } from '../../catalog-schema';
 import { createRewardBagState } from '../../reward-kernel';
 import { artificerStatus } from '../arcana-fear';
-import { keepsakeRankForEquip } from '../keepsakes/state';
+import { heldEchoCopyKey, keepsakeRankForEquip } from '../keepsakes/state';
 import { deriveMaxStatGrants, deriveMaxStats } from '../max-stats';
 import type { SimulationState } from '../state/model';
 import { aspectIsPerfect, familiarStackMultiplier } from '../traits/equipment-upgrades';
-import { hasActiveChaosSemanticTag } from '../traits/offers';
 import type {
   StartBiomeRecords,
   StartHeldKeepsake,
@@ -146,7 +145,10 @@ const KEEPSAKE_RANKS: readonly KeepsakeRank[] = ['Common', 'Rare', 'Epic', 'Hero
  * biome-start replay equips a Common copy only while the keepsake is not held
  * (`RoomLogic.lua:1218-1242`), and a spent unslotted Figurine is removed.
  */
-function heldKeepsakes(catalog: Catalog, state: SimulationState): readonly StartHeldKeepsake[] {
+function heldKeepsakes(
+  catalog: Catalog,
+  state: KeepsakeProjectionInput,
+): readonly StartHeldKeepsake[] {
   const value = state.keepsakes;
   const rows = new Map<string, StartHeldKeepsake>();
   const hold = (key: string, rank: KeepsakeRank, slotted: boolean) => {
@@ -174,18 +176,21 @@ function heldKeepsakes(catalog: Catalog, state: SimulationState): readonly Start
     hold(key, rank, false);
   }
   for (const retained of value.retained ?? []) hold(retained.key, retained.rank, false);
-  const gift = state.traitHistory.equippedTraits.EchoRepeatKeepsakeBoon;
-  const captured = gift?.echoRepeatedKeepsakeKey;
-  if (captured !== undefined && (gift?.echoKeepsakeReplayCount ?? 0) > 0) {
-    const spentFigurine =
-      catalog.keepsakes.byKey[captured]?.effect?.kind === 'crystalFigurine' &&
-      !(value.figurine?.origin === 'echo' && value.figurine.status === 'pending');
-    if (!spentFigurine) hold(captured, 'Common', false);
-  }
+  const echoCopy = heldEchoCopyKey(catalog, value);
+  if (echoCopy !== undefined) hold(echoCopy, 'Common', false);
   return sorted([...rows.values()], (row) => row.key);
 }
 
-function keepsake(catalog: Catalog, state: SimulationState): StartInstallation['keepsake'] {
+/** The keepsake state as installed, from the keepsake ledger and the equipped traits. */
+export interface KeepsakeProjectionInput {
+  readonly keepsakes: SimulationState['keepsakes'];
+  readonly traitHistory: Pick<SimulationState['traitHistory'], 'equippedTraits'>;
+}
+
+export function projectStartKeepsake(
+  catalog: Catalog,
+  state: KeepsakeProjectionInput,
+): StartInstallation['keepsake'] {
   const value = state.keepsakes;
   return Object.freeze({
     currentKey: value.currentKey,
@@ -254,7 +259,6 @@ function arcana(catalog: Catalog, state: SimulationState): StartInstallation['ar
       : {
           artificer: Object.freeze({ usedCount: status.spent, remainingCount: status.remaining }),
         }),
-    barrenActive: hasActiveChaosSemanticTag(state.traitHistory, 'Barren'),
   });
 }
 
@@ -351,7 +355,7 @@ function families(
     traits: traits(state),
     essences: state.traitHistory.essenceElements,
     chaos: chaos(state),
-    keepsake: keepsake(catalog, state),
+    keepsake: projectStartKeepsake(catalog, state),
     arcana: arcana(catalog, state),
     fear: Object.freeze({
       configuredRanks: fear.configuredRanks,
@@ -391,6 +395,7 @@ function families(
       useRecord: state.rewardHistory.useRecord,
       lootTypeHistory: state.rewardHistory.lootTypeHistory,
       consumableRecord: state.rewardHistory.consumableRecord,
+      bannedTraitKeys: sorted(state.traitHistory.bannedTraitKeys),
     }),
     biomeRecords: biomeRecords(state, kind === 'opening' ? 'postReset' : 'current'),
     counters: counters(state, kind),

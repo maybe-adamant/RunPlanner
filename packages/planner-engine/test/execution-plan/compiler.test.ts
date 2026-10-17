@@ -3042,9 +3042,9 @@ describe('execution-plan compiler and codec', () => {
       ),
     );
     expect(diagnosticFrames[0]).toMatchObject({ frame: 0 });
-    expect(Object.keys((diagnosticFrames[0]!.replace ?? {}) as object)).toHaveLength(13);
+    expect(Object.keys((diagnosticFrames[0]!.replace ?? {}) as object)).toHaveLength(15);
     expect(
-      diagnosticFrames.some((frame) => Object.keys((frame.replace ?? {}) as object).length < 13),
+      diagnosticFrames.some((frame) => Object.keys((frame.replace ?? {}) as object).length < 15),
     ).toBe(true);
     expect(encoded.length).toBeLessThan(JSON.stringify(plan).length * 0.75);
     expect(decodeExecutionPlan(wire)).toEqual(plan);

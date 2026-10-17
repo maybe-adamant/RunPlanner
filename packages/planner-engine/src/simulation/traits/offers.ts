@@ -157,14 +157,10 @@ function arcanaAndFavorBoonRarityContributions(
   state: SimulationState,
 ): readonly import('../../catalog-schema').BoonRarityContribution[] {
   const history = state.traitHistory;
-  const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
   const arcana = state.arcanaFear.arcana.active.flatMap((active) => {
     const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
-    // Barren suppresses every currently declared rarity contribution, not a
-    // hand-maintained card-name list. The Arcana state itself is untouched,
-    // so the independently-derived ledger restores it on maturation.
-    if (barrenActive && table !== undefined) return [];
-    if (table === undefined) return [];
+    // A card Barren unequipped contributes nothing until its trait returns.
+    if (table === undefined || active.unequipped === true) return [];
     const rarity = active.rarity;
     return rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Heroic'
       ? [table[rarity]]

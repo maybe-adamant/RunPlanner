@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -471,9 +471,9 @@
             },
             "arcana": {
               "active": [
-                { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic" },
-                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic" },
-                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic" }
+                { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic", "held": true },
+                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic", "held": true },
+                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic", "held": true }
               ]
             },
             "vows": {
@@ -523,7 +523,19 @@
               "currentKey": "BossMetaUpgradeKeepsake",
               "usedKeys": ["BossMetaUpgradeKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "BossMetaUpgradeKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "remainingUses": 1
+                }
+              ]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -533,6 +545,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2421,7 +2434,7 @@
         "zagreusContractPresent": false
       },
       "roomExitConformance": {
-        "facts": [{ "kind": "elementCounts" }, { "kind": "keepsakeEffects" }]
+        "facts": [{ "kind": "elementCounts" }, { "kind": "keepsakeEffects" }, { "kind": "arcana" }]
       },
       "diagnostics": {
         "roomEntered": {
@@ -2443,16 +2456,40 @@
             },
             "arcana": {
               "active": [
-                { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic" },
-                { "key": "HealthRegen", "origin": "temporary", "rarity": "Epic" },
-                { "key": "LowManaDamageBonus", "origin": "temporary", "rarity": "Epic" },
-                { "key": "CastCount", "origin": "temporary", "rarity": "Epic" },
-                { "key": "SorceryRegenUpgrade", "origin": "temporary", "rarity": "Epic" },
-                { "key": "CastBuff", "origin": "temporary", "rarity": "Epic" },
-                { "key": "BonusHealth", "origin": "temporary", "rarity": "Epic" },
-                { "key": "BonusDodge", "origin": "temporary", "rarity": "Epic" },
-                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic" },
-                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic" }
+                { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic", "held": true },
+                { "key": "HealthRegen", "origin": "temporary", "rarity": "Epic", "held": true },
+                {
+                  "key": "LowManaDamageBonus",
+                  "origin": "temporary",
+                  "rarity": "Epic",
+                  "held": true
+                },
+                { "key": "CastCount", "origin": "temporary", "rarity": "Epic", "held": true },
+                {
+                  "key": "SorceryRegenUpgrade",
+                  "origin": "temporary",
+                  "rarity": "Epic",
+                  "held": true
+                },
+                { "key": "CastBuff", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "BonusHealth", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "BonusDodge", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic", "held": true },
+                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic", "held": true }
+              ]
+            },
+            "keepsakes": {
+              "currentKey": "BossMetaUpgradeKeepsake",
+              "usedKeys": ["BossMetaUpgradeKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "BossMetaUpgradeKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "remainingUses": 0
+                }
               ]
             },
             "retainedEffects": {
@@ -3938,7 +3975,7 @@
         },
         "zagreusContractPresent": false
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }] },
+      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }, { "kind": "arcana" }] },
       "diagnostics": {
         "roomEntered": {
           "frame": 46,
@@ -3959,21 +3996,36 @@
             },
             "arcana": {
               "active": [
-                { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic" },
-                { "key": "HealthRegen", "origin": "temporary", "rarity": "Epic" },
-                { "key": "LowManaDamageBonus", "origin": "temporary", "rarity": "Epic" },
-                { "key": "CastCount", "origin": "temporary", "rarity": "Epic" },
-                { "key": "SorceryRegenUpgrade", "origin": "temporary", "rarity": "Epic" },
-                { "key": "CastBuff", "origin": "temporary", "rarity": "Epic" },
-                { "key": "BonusHealth", "origin": "temporary", "rarity": "Epic" },
-                { "key": "BonusDodge", "origin": "temporary", "rarity": "Epic" },
-                { "key": "ManaOverTime", "origin": "temporary", "rarity": "Epic" },
-                { "key": "MagicCrit", "origin": "temporary", "rarity": "Epic" },
-                { "key": "SprintShield", "origin": "temporary", "rarity": "Epic" },
-                { "key": "LastStand", "origin": "temporary", "rarity": "Epic" },
-                { "key": "MaxHealthPerRoom", "origin": "temporary", "rarity": "Epic" },
-                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic" },
-                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic" }
+                { "key": "ChanneledCast", "origin": "manual", "rarity": "Epic", "held": true },
+                { "key": "HealthRegen", "origin": "temporary", "rarity": "Epic", "held": true },
+                {
+                  "key": "LowManaDamageBonus",
+                  "origin": "temporary",
+                  "rarity": "Epic",
+                  "held": true
+                },
+                { "key": "CastCount", "origin": "temporary", "rarity": "Epic", "held": true },
+                {
+                  "key": "SorceryRegenUpgrade",
+                  "origin": "temporary",
+                  "rarity": "Epic",
+                  "held": true
+                },
+                { "key": "CastBuff", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "BonusHealth", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "BonusDodge", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "ManaOverTime", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "MagicCrit", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "SprintShield", "origin": "temporary", "rarity": "Epic", "held": true },
+                { "key": "LastStand", "origin": "temporary", "rarity": "Epic", "held": true },
+                {
+                  "key": "MaxHealthPerRoom",
+                  "origin": "temporary",
+                  "rarity": "Epic",
+                  "held": true
+                },
+                { "key": "BonusRarity", "origin": "automatic", "rarity": "Epic", "held": true },
+                { "key": "CardDraw", "origin": "automatic", "rarity": "Epic", "held": true }
               ]
             }
           }
@@ -4055,5 +4107,5 @@
       }
     }
   ],
-  "planFingerprint": "1aaabae3"
+  "planFingerprint": "95c3660f"
 }

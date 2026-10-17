@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -513,7 +513,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -523,6 +528,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2780,7 +2786,9 @@
         ],
         "resolvedSharedRewardStoreKey": "MetaProgress"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }, { "kind": "chaos" }] },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "chaos" }, { "kind": "chaosValues" }]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 30,
@@ -2820,7 +2828,9 @@
                   "blessingKey": "ChaosWeaponBlessing",
                   "rarity": "Common",
                   "clock": "encounters",
-                  "remaining": 3
+                  "remaining": 3,
+                  "curseValues": {},
+                  "blessingValues": { "damageBonus": 0.2 }
                 }
               ],
               "matured": []
@@ -2971,7 +2981,9 @@
                   "blessingKey": "ChaosWeaponBlessing",
                   "rarity": "Common",
                   "clock": "encounters",
-                  "remaining": 2
+                  "remaining": 2,
+                  "curseValues": {},
+                  "blessingValues": { "damageBonus": 0.2 }
                 }
               ],
               "matured": []
@@ -3135,7 +3147,9 @@
                   "blessingKey": "ChaosWeaponBlessing",
                   "rarity": "Common",
                   "clock": "encounters",
-                  "remaining": 1
+                  "remaining": 1,
+                  "curseValues": {},
+                  "blessingValues": { "damageBonus": 0.2 }
                 }
               ],
               "matured": []
@@ -3283,7 +3297,9 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }, { "kind": "chaos" }] },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "chaos" }, { "kind": "chaosValues" }]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 36,
@@ -3318,7 +3334,13 @@
             ],
             "chaos": {
               "active": [],
-              "matured": [{ "blessingKey": "ChaosWeaponBlessing", "rarity": "Common" }]
+              "matured": [
+                {
+                  "blessingKey": "ChaosWeaponBlessing",
+                  "rarity": "Common",
+                  "blessingValues": { "damageBonus": 0.2 }
+                }
+              ]
             }
           }
         }
@@ -4089,5 +4111,5 @@
       }
     }
   ],
-  "planFingerprint": "46af1a38"
+  "planFingerprint": "6dc14d97"
 }

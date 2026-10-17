@@ -1,4 +1,5 @@
 import { ordinaryPositionFor } from '../support/route-position';
+import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
@@ -1501,7 +1502,7 @@ describe('Chaos paired-trait history', () => {
     ).toHaveLength(1);
   });
 
-  it('suppresses and restores Artificer without mutating Arcana or Chaos history', () => {
+  it('suppresses Artificer while Barren unequips it and restores it at expiry', () => {
     const loadout = createDefaultRouteLoadout(catalog);
     const arcanaFear = createArcanaFearState(catalog, {
       ...loadout,
@@ -1511,11 +1512,7 @@ describe('Chaos paired-trait history', () => {
     const base = initializeTestRewardBranches(arcanaFear)[0]!;
     const branch = Object.freeze({
       ...base,
-      state: Object.freeze({
-        ...base.state,
-        rewardHistory: attachTraitHistory(base.state.rewardHistory, barrenHistory),
-        traitHistory: barrenHistory,
-      }),
+      state: replaceSimulationTraitHistory(base.state, barrenHistory),
     });
     const source = Object.freeze({
       origin: rewardOwner,
@@ -1529,7 +1526,6 @@ describe('Chaos paired-trait history', () => {
       supported: false,
       evidence: { artificerCapacity: 0, artificerRemaining: 0 },
     });
-    expect(branch.state.arcanaFear).toBe(arcanaFear);
     expect(branch.state.traitHistory).toBe(barrenHistory);
 
     const matureHistory = [6, 7, 8].reduce(
@@ -1537,18 +1533,14 @@ describe('Chaos paired-trait history', () => {
       barrenHistory,
     );
     const restored = Object.freeze({
-      ...base,
-      state: Object.freeze({
-        ...base.state,
-        rewardHistory: attachTraitHistory(base.state.rewardHistory, matureHistory),
-        traitHistory: matureHistory,
-      }),
+      ...branch,
+      state: replaceSimulationTraitHistory(branch.state, matureHistory),
     });
     expect(assessArtificerConversion(catalog, restored, source, resolution)).toMatchObject({
       supported: true,
       evidence: { artificerCapacity: 3, artificerRemaining: 3 },
     });
-    expect(restored.state.arcanaFear).toBe(arcanaFear);
+    expect(restored.state.arcanaFear.arcana.active).toEqual(arcanaFear.arcana.active);
   });
 
   it('consumes Ordinary and Rejected after each eligible Hermes screen, including valid fallback Gold', () => {
