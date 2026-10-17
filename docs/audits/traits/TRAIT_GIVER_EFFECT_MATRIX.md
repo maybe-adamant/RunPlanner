@@ -155,8 +155,8 @@ another screen closes first.
 | Gorgon                    | Modelled: lowest reachable rarity for all rows; `suppressTemporaryBoonRarity` above rank I (`gorgon-started.ts`).                                                                                                                                                                                                                                                                                                                                                                                     |
 | Hades                     | Modelled exclusions: `rarityPolicy: none` removes Ordinary, Rejected and Yarn; `blocksConcaveStone`; no `callingCardMenu`. Hades rarity is intentionally out of scope.                                                                                                                                                                                                                                                                                                                                |
 | Bespoke NPC menus         | Modelled as `acquisitionOrdinalMenu` givers with no screen effects. NPC rarity is the biome ordinal by design; `PassRarityCheck` weighting is out of scope.                                                                                                                                                                                                                                                                                                                                           |
-| Echo last-run boon (BBB)  | Modelled as an authored one-row direct acquisition (`echoLastRunBoonOutcomes`, `applyEchoLastRunBoonForAcquisition`): no Rarify, no Yarn/Hymn spend, stack boosts suppressed. See discrepancy 3.                                                                                                                                                                                                                                                                                                      |
-| Echo `LastReward` copy    | Modelled as the provider's screen except stack boosts. See discrepancy 2.                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Echo last-run boon (BBB)  | Modelled as an authored one-row direct acquisition (`echoLastRunBoonOutcomes`, `applyEchoLastRunBoonForAcquisition`) whose screen source is Echo: no Rarify, Yarn, Hymn, Stone or Ordinary/Rejected use; stack boosts suppressed; the screen expectation publishes only `rarityFloor`.                                                                                                                                                                                                                |
+| Echo `LastReward` copy    | Modelled as the provider's own screen, including the stack-boost level roll.                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Shop and mystery box      | Modelled: `shopOffer` origin with the exact item override.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Devotion                  | Modelled through `devotionNoDuo`; the unread exchange restriction is correctly absent.                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Selene, Path of Stars     | Modelled as a spell giver; the screen expectation omits Stone.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -164,28 +164,25 @@ another screen closes first.
 
 ## Discrepancies
 
-1. **Concave Stone excludes the Rejected row.** `concaveStoneResidualOptionKeys`
-   (`simulation/keepsakes/trait-effects.ts`) drops `rejectedOptionKey`.
-   Native residuals exclude only exchange rows (UCL:1002–1012), and the locked
-   button remains in `screen.UpgradeButtons`, so Stone can grant it.
-2. **Echo `LastReward` suppresses stack boosts.** The coordinator sets
-   `stackBoostsSuppressed` for producer `EchoLastReward`
-   (`trait-settlement/coordinator.ts`). Native `EchoLastReward` (EvL:1537–1560)
+None open. Resolved:
+
+1. **Concave Stone and the Rejected row.** Native residuals exclude only
+   exchange rows (UCL:1002–1012), and the locked button remains in
+   `screen.UpgradeButtons`, so Stone can grant it.
+   `concaveStoneResidualOptionKeys` now keeps the Rejected row.
+2. **Echo `LastReward` stack boosts.** Native `EchoLastReward` (EvL:1537–1560)
    recreates `LootData[LastReward.Name]`, which has no `IgnoreStackBoost`; that
    flag belongs to `NPC_Echo_01` (`NPCData_Echo.lua:25`) and reaches only
-   Echo's own menus. The Persephone audit's "Echo-owned recreated screen"
-   statement shares the error.
-3. **BBB spends Chaos screen clocks.** The direct BBB settlement calls
-   `consumeChaosGodScreen` with the row's Olympian or shop-aware giver, which
-   advances Ordinary and Rejected. Native BBB's source is a copy of
-   `NPC_Echo_01`, so neither use is spent (UCL:1124–1133). Its trace also
-   reaches `traitScreenExpectation` with that giver, which can publish Yarn,
-   Hymn and Stone expectations that a native Echo screen cannot have.
+   Echo's own menus. The copy no longer suppresses stack boosts.
+3. **BBB Chaos screen uses.** Native BBB's source is a copy of `NPC_Echo_01`,
+   so neither Ordinary nor Rejected is spent (UCL:1124–1133). The direct BBB
+   settlement now reads Echo as its screen source for curse uses and Stone,
+   and its nested trace is not published as a screen expectation.
 
 ## Uncertainties
 
-- Discrepancies 1 and 3 are established from source and planner code, not
-  live play or a planner test.
+- The resolved discrepancies 1 and 3 are established from source, not live
+  play.
 - The lost `BlockRarities` on rebuild matters only if another upgrade screen
   closes in the room before a Devotion loot is opened. No such route was
   identified.
