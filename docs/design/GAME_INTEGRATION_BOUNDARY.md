@@ -1267,20 +1267,20 @@ its published prerequisites complete, the runtime records the generic
 the native action. This protects DAG order without turning transaction
 completion into semantic result verification.
 
-Trait screen dependencies keep the order the simulation settled a room's trait
-screens in (role-settled acquisitions, NPC and Gorgon trait offers, Pom level
+Trait screen dependencies keep only the order a misorder could not detect at a
+screen (role-settled acquisitions, NPC and Gorgon trait offers, Pom level
 screens):
 
 - **Chain.** Each screen follows the latest earlier screen in its room from the
-  same giver. Screens from different givers are not ordered against each other:
-  a misorder fails only where it changes a screen, at that screen (see below).
-  Chaos clocks, Concave Stone residuals, direct grants, resource grants,
-  Experimental Hammer expiry, room decay and Echo Gold consumption settle
-  natively or inside another contact and never anchor the chain.
-- **Fences.** A Fountain (or Phial) use or Keepsake Rack change follows the
-  latest screen ranked before it in the room, and the earliest screen ranked
-  after it follows the fence, unless published edges already imply it. Pool
-  sales, Eris and Shrine purchases also change trait outcomes but have no
+  same giver. Screens from different givers are not ordered against each other;
+  the screen checks below catch a misorder that changes a screen. Chaos clocks,
+  Concave Stone residuals, direct grants, resource grants, Experimental Hammer
+  expiry, room decay and Echo Gold consumption never anchor the chain.
+- **Fences.** A Keepsake Rack change, and a Fountain use whose Aromatic Phial
+  upgrades a trait, follow the latest screen ranked before them in the room, and
+  the earliest screen ranked after them follows the fence, unless published
+  edges already imply it. A plain Fountain only heals and is no fence. Pool
+  sales, Eris and Shrine purchases change trait outcomes but have no
   transaction, so their order against a screen is unenforced. A Well opens only
   once exits unlock, after every exit-blocking loot, so its purchases are not
   fences.
@@ -1293,20 +1293,26 @@ screens):
   untransacted fence, the unranked Travel Deal refill Well purchase, or an owner
   in another room, on the Hub board or at the route or biome start; any other
   endpoint is an `executionCoverageMissing` compile error.
-- **Screen checks.** Each published trait screen carries an `expectation` of the
-  order-sensitive state it reads when it opens: the remaining Sacrificial Hymn
-  and Yarn uses and whether closing it spends Hymn, Yarn or an Ordinary curse use
-  (god screens), Concave Stone uses and whether its giver can proc them, the
-  rarify uses its menu reads, and, for Echo's last-run menu, whether Proper
-  Upbringing's floor is active. Fields appear only on screens that read them.
-  When the screen opens, before its rows are forced, the module compares each
-  field with live trait uses and the loot's native flags (`UseSwapTrait`,
-  `RarityBoosted`, `ForceCommon`, `ForceCommonWithoutCurse`), compares an
-  exchange row's level and a Pom's level count with native, and checks every
-  row through native helpers (`IsTraitEligible` without `ChanceToPlay`,
-  `HasTraitRequirements`, `HeroHasTrait`, `HeroSlotFilled`, `GetUpgradedRarity`,
-  and the Spell and Echo last-run filters). A difference is a `trait-screen-*`
-  mismatch at that screen; a native error is a `native-api` fault.
+- **Screen checks.** Each published trait screen (traits, Gold fallback, and
+  Echo's last-run menu) carries an `expectation` of the order-sensitive state it
+  reads, each field present only where the screen reads it:
+  - god screens: remaining Sacrificial Hymn and Yarn uses when it opens, and
+    whether closing it spends Hymn, Yarn or an Ordinary curse use;
+  - Concave Stone uses and whether this giver can proc them;
+  - the rarify uses its menu reads;
+  - Echo's last-run menu: whether Proper Upbringing's floor is active.
+
+  When the screen opens, after the native roll and before rows are forced, the
+  module compares live uses with the published ones and each spend with the
+  loot's native close condition: `UseSwapTrait` with Hymn held, `RarityBoosted`
+  without `ForceCommonWithoutCurse` with Yarn held, and `ForceCommon` without
+  `ForceCommonWithoutCurse` with the Ordinary curse held (loot flags only ever
+  turn on). It compares an exchange row's level and a Pom's level count with
+  native, and checks every row through native helpers: `IsTraitEligible` and
+  `IsGameStateEligible` without `ChanceToPlay`, `HasTraitRequirements`,
+  `HeroHasTrait`, `HeroSlotFilled`, `GetUpgradedRarity`, and the Spell and Echo
+  last-run filters. The first difference is a `trait-screen-*` mismatch at that
+  screen and the screen stays native; a native error is a `native-api` fault.
 
 Mystery boxes are the one interchangeable carrier: native unwrap builds the
 same loot for every box and the module forces the god. A bound box keeps only

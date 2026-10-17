@@ -3126,12 +3126,7 @@
             "window": { "kind": "standard", "phase": "afterCombat" }
           }
         ],
-        "dependencies": [
-          {
-            "owner": "[\"roomAction\",\"Surface\",\"O\",\"surface-o-devotion\",\"[\\\"useFountain\\\"]\"]",
-            "afterOwner": "[\"acquisitionRole\",\"Surface\",\"O\",\"[\\\"incomingReward\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"source\"]"
-          }
-        ],
+        "dependencies": [],
         "obligations": [
           {
             "owner": "[\"roomAction\",\"Surface\",\"O\",\"surface-o-devotion\",\"[\\\"useFountain\\\"]\"]",
@@ -3740,10 +3735,6 @@
         "dependencies": [
           {
             "owner": "[\"acquisitionEntry\",\"Surface\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Surface\\\",\\\"O\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"surface-o-preboss:postboss\\\\\\\"]\\\",\\\"hermesShrineDelivery\\\"]\",\"hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-preboss%3Apostboss%22%2C%22initial%3AsecondLeft%22%5D\"]",
-            "afterOwner": "[\"roomAction\",\"Surface\",\"O\",\"surface-o-preboss:postboss\",\"[\\\"useFountain\\\"]\"]"
-          },
-          {
-            "owner": "[\"acquisitionEntry\",\"Surface\",\"O\",\"[\\\"acquisitionSite\\\",\\\"Surface\\\",\\\"O\\\",\\\"[\\\\\\\"occurrence\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"O\\\\\\\",\\\\\\\"surface-o-preboss:postboss\\\\\\\"]\\\",\\\"hermesShrineDelivery\\\"]\",\"hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-preboss%3Apostboss%22%2C%22initial%3AsecondLeft%22%5D\"]",
             "afterOwner": "[\"roomAction\",\"Surface\",\"O\",\"surface-o-preboss:postboss\",\"[\\\"interactKeepsakeRack\\\"]\"]"
           }
         ],
@@ -3979,5 +3970,5 @@
       }
     }
   ],
-  "planFingerprint": "2d0eddd3"
+  "planFingerprint": "30864e54"
 }

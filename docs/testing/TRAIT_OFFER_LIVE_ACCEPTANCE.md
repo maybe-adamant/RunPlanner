@@ -57,9 +57,22 @@ Unlike the items above, this check runs a published plan that installs the
 observed screen.
 
 - [ ] **Encounter giver uses.** Setup: a plan taking a boon from Athena,
-      Artemis or Dionysus while Yarn of the Fates or Chaos's Ordinary curse
-      has uses left, and a second plan taking Hades's field boon under the
-      same item. Action: take each planned boon and leave the room. Native:
-      the god's screen spends one Yarn or Ordinary use when it closes;
-      Hades's screen spends neither. The status window stays synchronized
-      past room exit, with no Stygian Well or Chaos mismatch.
+      Artemis or Dionysus while Chaos's Ordinary curse has uses left, and a
+      second plan taking Hades's field boon while Yarn of the Fates or the
+      Ordinary curse has uses left. Action: take each planned boon and leave
+      the room. Native: the god's screen spends one Ordinary use when it
+      closes; Hades's screen spends neither. The status window stays
+      synchronized past room exit, with no Stygian Well or Chaos mismatch.
+
+## Planned Fountain fences
+
+These checks also run a published plan.
+
+- [ ] **Phial Fountain fence.** Setup: a plan with Aromatic Phial equipped
+      whose room takes a boon after the Fountain that upgrades a trait.
+      Action: take the boon before using the Fountain. Native: the status
+      window reports the planned-order mismatch at the boon.
+- [ ] **Plain Fountain.** Setup: the same room and plan without Aromatic
+      Phial, so the Fountain only heals. Action: take the boon before using
+      the Fountain. Native: the status window stays synchronized through room
+      exit.

@@ -447,6 +447,16 @@ and Concave Stone residuals return complete products to their coordinator.
 Structural child discovery and alternative probes do not become another
 selected-acquisition history.
 
+Acquisition settlement (`trait-settlement/coordinator.ts`) records on each
+screen's evaluation the one-use effects it spent when the screen closed (Hymn,
+Yarn, an Ordinary curse use) and orders the screen only after the latest
+earlier screen in its room from the same giver. `trait-settlement/screen-expectation.ts`
+joins those spends with the uses, Concave Stone and rarify state held when the
+screen opens into the screen's expectation; execution publication copies the
+fields every reached branch agrees on and never derives a spend again. Their
+primary tests are `screen-expectation.test.ts` and `screen-spend.test.ts` under
+`test/simulation/rewards/trait-settlement/`.
+
 Candidate artifacts capture branch-local context before selected settlement
 and before equivalent post-states merge. A target cannot borrow its eligibility
 from one branch and its prerequisite from another. An invalid selected child

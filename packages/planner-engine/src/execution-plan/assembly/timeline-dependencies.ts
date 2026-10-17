@@ -16,11 +16,21 @@ import type {
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import type { ExecutionTimelineTransaction } from '../model';
 
-/** Actions that change trait outcomes without a screen and publish a transaction. */
-const transactedTraitFenceKinds: ReadonlySet<RoomActionReference['kind']> = new Set([
-  'useFountain',
-  'interactKeepsakeRack',
-]);
+/**
+ * A transacted action that changes trait outcomes without a screen: the Keepsake
+ * Rack, or a Fountain whose Aromatic Phial upgrades a trait. A plain Fountain only heals.
+ */
+function isTransactedTraitFence(
+  kind: RoomActionReference['kind'],
+  transaction: ExecutionTimelineTransaction,
+): boolean {
+  if (kind === 'interactKeepsakeRack') return true;
+  return (
+    kind === 'useFountain' &&
+    transaction.kind === 'fountainUse' &&
+    transaction.aromaticPhialTarget !== undefined
+  );
+}
 
 /** Actions that change trait outcomes natively without a transaction; their order is unenforced. */
 const untransactedTraitFenceKinds: ReadonlySet<RoomActionReference['kind']> = new Set([
@@ -187,7 +197,9 @@ export function traitFenceDependencies(
   );
   return Object.freeze(
     ranked
-      .filter((row) => transactedTraitFenceKinds.has(row.reference.kind))
+      .filter((row) =>
+        isTransactedTraitFence(row.reference.kind, byOwner.get(semanticAddressKey(row.owner))!),
+      )
       .flatMap((fence) => {
         const before = screens.filter((screen) => screen.rank! < fence.rank!).at(-1);
         const after = screens.find((screen) => screen.rank! > fence.rank!);
