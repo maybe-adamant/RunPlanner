@@ -131,7 +131,7 @@ function room.claimReady(session, contact, native, compatible)
     local handle, payload, errorValue = timeline.claimReady(
         innerFor(session), contact, native, compatible)
     if handle == nil and errorValue ~= nil then
-        return failure(session, errorValue)
+        return nil, nil, select(2, failure(session, errorValue))
     end
     return handle, payload
 end

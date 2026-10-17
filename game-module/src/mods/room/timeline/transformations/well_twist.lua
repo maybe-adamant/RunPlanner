@@ -9,7 +9,6 @@ function twist.scope(state, handle, transaction)
         state = state,
         handle = handle,
         target = transaction.transformation.resultItemKey,
-        awarded = false,
         unavailable = false,
     }
 end
@@ -19,7 +18,9 @@ function twist.attachSelectionHooks(module, session, report, currentScope)
         local scope = currentScope()
         local ok, result = pcall(base, ...)
         if not ok then error(result, 0) end
-        if scope ~= nil then scope.awarded = result ~= false end
+        -- Native use still waits before checking exits; completing at award
+        -- keeps a fast room exit from settling ahead of the Twist.
+        if scope ~= nil and result ~= false then session.complete(scope.state, scope.handle) end
         report(runtime)
         return result
     end)

@@ -45,10 +45,10 @@ function use.attach(module, session, getState, report, room)
         local payload = handle and room.peek(state, handle) or nil
         -- Claim transformation readiness at use so its accepted presentation
         -- can begin the same owner. Selector scopes still arm only after that
-        -- native acceptance contact.
+        -- native acceptance contact, which also owns out-of-order mismatches.
         if handle == nil then
             handle, payload = room.claimReady(state, current,
-                { kind = "transformation", gameName = name(item) }, item, transformation)
+                { kind = "transformation", gameName = name(item), probe = true }, item, transformation)
         end
         if handle ~= nil and outcome(payload and payload.transaction, { gameName = name(item) }) == nil then
             return base(item, args, user)
@@ -63,8 +63,7 @@ function use.attach(module, session, getState, report, room)
         if active[item] == scope then active[item] = nil end
         if not ok then error(result, 0) end
         if scope.accepted and result ~= false then
-            if transformed or scope.twistScope and scope.twistScope.awarded
-                or scope.payload and scope.payload.transaction.kind == "itemEffect" then
+            if transformed or scope.payload and scope.payload.transaction.kind == "itemEffect" then
                 session.complete(state, scope.handle)
             end
             report(runtime)

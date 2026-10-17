@@ -31,7 +31,7 @@ function attach.attach(module, session, getState, report, room, route)
         setShrine = function(value) scope.shrineRefill = value end,
     }
     shrineRefill.attach(module, getState, report, room, refillScopes)
-    wellRefill.attach(module, getState, report, room, refillScopes)
+    wellRefill.attach(module, session, getState, report, room, refillScopes)
 end
 
 return attach

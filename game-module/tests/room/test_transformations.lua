@@ -527,7 +527,7 @@ function TestTransformations.testAnvilOutcomeSteersAllThreeSelectionsAndComplete
     lu.assertEquals(mismatches, {})
 end
 
-function TestTransformations.testWellTwistOutcomeSteersNativeAwardAndCompletesAfterUse()
+function TestTransformations.testWellTwistCompletesOnAwardBeforeTheNativeExitWait()
     local callbacks, completions, mismatches, begins = outcomeHarness({
         kind = "transformation",
         transformation = {
@@ -541,9 +541,11 @@ function TestTransformations.testWellTwistOutcomeSteersNativeAwardAndCompletesAf
         callbacks.ConsumableUsedPresentation(nil, {}, function() return true end, {}, native, {})
         callbacks.AwardRandomStoreItem(nil, {}, function(values)
             selected = callbacks.GetRandomValue(nil, {}, function(pool) return pool[1] end, values, {})
+            lu.assertEquals(completions(), 0)
             return selected
         end, { { Name = "Other" }, { Name = "HealDropRange" } }, {})
-        lu.assertEquals(completions(), 0)
+        -- Native UseConsumableItem now waits before CheckRoomExitsReady.
+        lu.assertEquals(completions(), 1)
         return true
     end, item, {}, {})
     lu.assertEquals(selected.Name, "HealDropRange")

@@ -172,13 +172,15 @@ end
 -- Claim one ready action in published transaction order.  The caller owns
 -- structural contact semantics and native availability; published placement
 -- windows do not constrain discovery. Returning a role table supplies the payload
--- detail that the claimed native carrier will consume.
+-- detail that the claimed native carrier will consume. A compatible owner still
+-- awaiting prerequisites is begun out of order unless `contact.probe` is set.
 function timeline.claimReady(session, contact, native, compatible)
     if session.closed or terminal(session) ~= nil then return nil end
     if type(native) == "table" and native.__runPlannerWorldShop == true then return nil end
     if type(compatible) ~= "function" then
-        return fault(session, "timeline-claim", "compatibility predicate", compatible)
+        return nil, nil, select(2, fault(session, "timeline-claim", "compatibility predicate", compatible))
     end
+    local blocked, missing
     for _, row in ipairs(session.transactionOrder or {}) do
         local transaction = row.transaction
         local owner = transaction.owner
@@ -187,27 +189,32 @@ function timeline.claimReady(session, contact, native, compatible)
             if session.handles[handle].transaction.owner == owner then boundOwner = true; break end
         end
         if not session.completedOwners[owner] and not session.claimedOwners[owner] and not boundOwner then
-            local ready = true
+            local pending
             for prerequisite in pairs(session.prerequisites[owner] or {}) do
-                if not session.completedOwners[prerequisite] then ready = false; break end
+                if not session.completedOwners[prerequisite] then pending = prerequisite; break end
             end
-            if ready then
-                local detail = compatible(transaction, contact)
-                -- Nested results are reached through their exact producer
-                -- binding, never by an unrelated matching pickup.
-                local nested = type(detail) == "table" and detail.lifecyclePoint == "afterUnwrap"
-                if detail ~= nil and detail ~= false and not nested then
+            local detail = compatible(transaction, contact)
+            -- Nested results are reached through their exact producer
+            -- binding, never by an unrelated matching pickup.
+            local nested = type(detail) == "table" and detail.lifecyclePoint == "afterUnwrap"
+            if detail ~= nil and detail ~= false and not nested then
+                if pending == nil then
                     if detail == true then detail = nil end
                     local claimedRow = { transaction = transaction, detail = detail, claimed = true }
                     local handle = handleFor(session, claimedRow)
                     local bound, errorValue = timeline.bind(session, handle, native)
-                    if bound == nil then return nil, errorValue end
+                    if bound == nil then return nil, nil, errorValue end
                     session.claimedOwners[owner] = true
                     session.claimedHandles[owner] = handle
                     return handle, bindings.payload(claimedRow)
                 end
+                if blocked == nil then blocked, missing = owner, pending end
             end
         end
+    end
+    if blocked ~= nil and not (type(contact) == "table" and contact.probe)
+        and session.nativeHandles[native] == nil then
+        return nil, nil, select(2, mismatch(session, "transaction-prerequisite", missing, blocked))
     end
     return nil
 end

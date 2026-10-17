@@ -252,6 +252,35 @@ function TestLevelAcquisitions.testUnboundVisiblePomClaimsAtAcceptedPickup()
     lu.assertEquals(begins(), 1)
 end
 
+function TestLevelAcquisitions.testClaimedPomTakenBeforeItsFountainIsAnOrderMismatch()
+    local coordinator = require("mods.room.coordinator")
+    local pom = levelRow("StackUpgrade", 1, "Target").transaction
+    pom.window = { kind = "standard", phase = "afterCombat" }
+    local fountain = { owner = "fountain", kind = "acquisition",
+        window = { kind = "standard", phase = "afterCombat" }, roles = {} }
+    local occurrence = {
+        id = "room", gameName = "F_Combat01", overview = {},
+        transactionsByOwner = { fountain = fountain, level = pom },
+        timeline = { transactions = { fountain, pom }, obligations = {},
+            dependencies = { { owner = "level", afterOwner = "fountain" } } },
+    }
+    local plan = { occurrencesById = { room = occurrence } }
+    local mismatches = {}
+    local state = { state = "synchronized", plan = plan }
+    state.room = coordinator.new(plan, function(errorValue) mismatches[#mismatches + 1] = errorValue end)
+    assert(coordinator.enter(state, occurrence))
+    local module, callbacks = capture()
+    levels.attach(module, { complete = coordinator.complete }, function() return state end,
+        function() end, coordinator, seaStar)
+    local nativeCalls = 0
+    callbacks.HandleLootPickup(nil, {}, function() nativeCalls = nativeCalls + 1 end, {},
+        { Name = "StackUpgrade", UpgradeOptions = {} }, {})
+    lu.assertEquals(nativeCalls, 1)
+    lu.assertEquals(#mismatches, 1)
+    lu.assertEquals({ mismatches[1].checkpoint, mismatches[1].expected, mismatches[1].observed },
+        { "transaction-prerequisite", "fountain", "level" })
+end
+
 local function directFixture(selected, count, isBound, installSeaStar, name)
     name = name or "GiftDrop"
     local item = { Name = name, UseFunctionArgs = { Thread = false, NumTraits = 1, NumStacks = 9 } }
