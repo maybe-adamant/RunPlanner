@@ -4,7 +4,7 @@ local poolInventory = type(import) == "function"
     or require("mods.room.features.inventory.purging_pool")
 local hooks = {}
 
-function hooks.attach(module, session, getState, report, room)
+function hooks.attach(module, session, getState, report, room, highlights)
     local openings = setmetatable({}, { __mode = "k" })
     local function currentThread() return coroutine.running() or hooks end
     module.hooks.wrap("OpenSellTraitMenu", "run-planner-pool-open", function(_, runtime, base, ...)
@@ -26,7 +26,7 @@ function hooks.attach(module, session, getState, report, room)
         if not results[1] then error(results[2], 0) end
         return table.unpack(results, 2, results.n)
     end)
-    module.hooks.wrap("CreateSellButtons", "run-planner-pool-inventory", function(_, runtime, base, ...)
+    module.hooks.wrap("CreateSellButtons", "run-planner-pool-inventory", function(_, runtime, base, screen, ...)
         local thread = currentThread()
         local opening = openings[thread]
         -- Consume before rendering: rerolls rebuild buttons within the same open menu.
@@ -46,7 +46,9 @@ function hooks.attach(module, session, getState, report, room)
             end
             report(runtime)
         end
-        return base(...)
+        local results = table.pack(base(screen, ...))
+        if highlights then highlights.store(runtime, getState(runtime), screen, "pool") end
+        return table.unpack(results, 1, results.n)
     end)
 end
 
