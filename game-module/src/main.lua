@@ -35,7 +35,7 @@ local function initialize()
             protocol.matchesVersion)
     end)
     local highlights = presentationSurface("highlights", function()
-        return import("mods/presentation/highlights/highlights.lua").create(runtime.nextOccurrence)
+        return import("mods/presentation/highlights/highlights.lua").create(runtime.nextOccurrence, runtime.roomGuideInspection)
     end)
     local module = lib.createModule({
         pluginGuid = _PLUGIN.guid,

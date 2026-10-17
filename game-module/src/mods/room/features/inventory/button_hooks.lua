@@ -76,12 +76,13 @@ local function deliveryDelayChoices(active, options, room, state)
     return choices
 end
 
-function hooks.attach(module, _, getState, report, room, route)
-    module.hooks.wrap("CreateStoreButtons", "run-planner-store-button-bindings", function(_, _, base, screen,
+function hooks.attach(module, _, getState, report, room, route, highlights)
+    module.hooks.wrap("CreateStoreButtons", "run-planner-store-button-bindings", function(_, runtime, base, screen,
         instant)
         local bindings = capture()
         local result = base(screen, instant)
         restore(bindings, screen)
+        if highlights then highlights.store(runtime, getState(runtime), screen, "well") end
         return result
     end)
 
@@ -104,6 +105,7 @@ function hooks.attach(module, _, getState, report, room, route)
         delayScope = priorDelayScope
         if not results[1] then error(results[2], 0) end
         restore(bindings, screen)
+        if highlights then highlights.store(runtime, state, screen, "shrine") end
         report(runtime)
         return unpackValues(results, 2, results.n)
     end)

@@ -6,12 +6,16 @@ local screen = type(import) == "function" and import("mods/presentation/highligh
     or require("mods.presentation.highlights.choice_screen")
 local pathNodes = type(import) == "function" and import("mods/presentation/highlights/path_nodes.lua")
     or require("mods.presentation.highlights.path_nodes")
+local storeScreens = type(import) == "function" and import("mods/presentation/highlights/store_screens.lua")
+    or require("mods.presentation.highlights.store_screens")
 local safeHooks = type(import) == "function" and import("mods/host/presentation_hooks.lua")
     or require("mods.host.presentation_hooks")
 local highlights = {}
 
-function highlights.create(nextOccurrence)
+-- `roomGuide` is the read-only room guide inspection (occurrence, completion, Shrine progress).
+function highlights.create(nextOccurrence, roomGuide)
     local doors, choices, path = world.create(nextOccurrence), screen.create(), pathNodes.create()
+    local stores = storeScreens.create(roomGuide or function() return nil end)
     local entries = {
         doors = doors.doors,
         hub = doors.hub,
@@ -20,6 +24,8 @@ function highlights.create(nextOccurrence)
         retireWorld = doors.retire,
         screen = choices.present,
         bindSource = choices.bindSource,
+        -- A Well, Shrine or Pool menu whose rows are built and bound.
+        store = stores.present,
         -- `depth:slot` node keys of the Path screen now open, or nil to clear.
         pathNodes = path.plan,
     }
@@ -30,10 +36,12 @@ function highlights.create(nextOccurrence)
     function entries.refresh(runtime, state)
         doors.refresh(runtime, state)
         choices.refresh(runtime, state)
+        stores.refresh(runtime, state)
         path.refreshOpen(enabled(runtime, state))
     end
     function entries.attach(module, getState)
         choices.attach(module, getState)
+        stores.attach(module, getState)
         safeHooks.wrap(module, "UpdateTalentButtons", "run-planner-path-planned-nodes", {
             after = function(runtime, talentScreen)
                 path.refresh(talentScreen, enabled(runtime, getState(runtime)))
@@ -57,6 +65,7 @@ function highlights.create(nextOccurrence)
             before = function()
                 mapOpen = false
                 doors.clear()
+                stores.clear()
             end,
         })
         safeHooks.wrap(module, "StartRoom", "run-planner-highlight-room-start", {
@@ -64,6 +73,7 @@ function highlights.create(nextOccurrence)
                 mapOpen = false
                 doors.clear()
                 choices.clear()
+                stores.clear()
             end,
         })
     end

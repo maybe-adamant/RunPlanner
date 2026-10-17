@@ -20,11 +20,11 @@ local wellRefill = type(import) == "function"
     or require("mods.room.features.inventory.well_refill")
 local attach = {}
 
-function attach.attach(module, session, getState, report, room, route)
+function attach.attach(module, session, getState, report, room, route, highlights)
     local scope = { worldShopRefills = setmetatable({}, { __mode = "k" }) }
     inventoryHooks.attach(module, session, getState, report, room, route, scope)
-    buttonHooks.attach(module, session, getState, report, room, route)
-    poolHooks.attach(module, session, getState, report, room)
+    buttonHooks.attach(module, session, getState, report, room, route, highlights)
+    poolHooks.attach(module, session, getState, report, room, highlights)
     worldItemHooks.attach(module, session, getState, report, room, route, scope)
     local refillScopes = {
         setWell = function(value) scope.wellRefill = value end,

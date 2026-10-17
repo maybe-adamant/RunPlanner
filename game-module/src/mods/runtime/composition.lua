@@ -278,7 +278,7 @@ function composition.bind(root, moduleVersion)
         roomHooks.attach(module, session, getState, report, route, room, featureScope, navigation,
             loadoutScope, practiceScope)
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
-        featureInventory.attach(module, session, getState, report, room, route)
+        featureInventory.attach(module, session, getState, report, room, route, highlights)
         interactionHooks.attach(module, session, getState, report, room, route)
         -- A commit that turns the module off ends a live session at once.
         if module.overlays then
