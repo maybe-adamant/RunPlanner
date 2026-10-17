@@ -129,6 +129,7 @@ const base: RunStateSnapshot = {
     targetMetaRewardsRatio: 0.3,
   },
   bags: [],
+  rewardStores: [],
 };
 
 function present(patch: Partial<RunStateSnapshot> = {}) {

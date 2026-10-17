@@ -12,8 +12,15 @@ pub const INSTALL_RECORD_FILE: &str = "run-planner-install.json";
 pub const COMPATIBILITY_FILE: &str = "execution-compatibility.json";
 const MANIFEST_TEMPLATE_FILE: &str = "manifest.template.json";
 const PAYLOAD_DIRECTORY: &str = "src";
-const OVERRIDDEN_MODULE_PATH: &str = "mods/room/timeline/acquisitions/traits/row_options.lua";
-pub const DEVELOPMENT_MODULE_FILE: &str = "variants/dev/row_options.lua";
+/// Each payload module a development build replaces, with its replacement under the
+/// gitignored `variants/dev/`; a release always ships the payload's own file.
+pub const DEVELOPMENT_OVERRIDES: [(&str, &str); 2] = [
+    (
+        "mods/room/timeline/acquisitions/traits/row_options.lua",
+        "variants/dev/row_options.lua",
+    ),
+    ("mods/snap/probe.lua", "variants/dev/snap_probe.lua"),
+];
 // r2modman flattens a Thunderstore package's root files and its `plugins/`
 // payload into one `ReturnOfModding/plugins/<FullName>/` folder.
 const PACKAGE_ROOT_FILES: [&str; 3] = ["icon.png", "LICENSE", "README.md"];
@@ -189,22 +196,24 @@ pub fn assemble(
     if !payload.contains_key("main.lua") {
         return Err("the game module payload has no main.lua".to_owned());
     }
-    let development_module = module_dir.join(DEVELOPMENT_MODULE_FILE);
-    let use_development_module = match selection {
-        ModuleSelection::Release => false,
-        ModuleSelection::DevelopmentIfPresent => development_module.exists(),
-        ModuleSelection::DevelopmentRequired if development_module.exists() => true,
-        ModuleSelection::DevelopmentRequired => {
-            return Err(
-                "VITE_INTERNAL_FEATURES=1 requires the development module variant".to_owned(),
-            )
+    for (overridden, development) in DEVELOPMENT_OVERRIDES {
+        let development_module = module_dir.join(development);
+        let use_development_module = match selection {
+            ModuleSelection::Release => false,
+            ModuleSelection::DevelopmentIfPresent => development_module.exists(),
+            ModuleSelection::DevelopmentRequired if development_module.exists() => true,
+            ModuleSelection::DevelopmentRequired => {
+                return Err(
+                    "VITE_INTERNAL_FEATURES=1 requires the development module variant".to_owned(),
+                )
+            }
+        };
+        if use_development_module {
+            let module = payload
+                .get_mut(overridden)
+                .ok_or(format!("the game module payload has no {overridden}"))?;
+            *module = read(&development_module)?;
         }
-    };
-    if use_development_module {
-        let module = payload.get_mut(OVERRIDDEN_MODULE_PATH).ok_or(format!(
-            "the game module payload has no {OVERRIDDEN_MODULE_PATH}"
-        ))?;
-        *module = read(&development_module)?;
     }
     check_compatibility(payload.get(COMPATIBILITY_FILE).ok_or(format!(
         "the game module payload has no {COMPATIBILITY_FILE}"

@@ -607,6 +607,31 @@
               "olympianTalentInvested": false
             },
             "hexNodes": { "nodes": {}, "investedNodes": [] },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -795,7 +820,32 @@
               "godRarityCounts": { "Common": 1 },
               "upgradableCount": 1,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -946,6 +996,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -1106,6 +1181,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -1322,7 +1422,32 @@
               "godRarityCounts": { "Common": 2 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -1500,6 +1625,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -1630,6 +1780,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -1808,6 +1983,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -1984,6 +2184,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -2186,7 +2411,32 @@
               "godRarityCounts": { "Common": 2 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -2362,6 +2612,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -2740,7 +3015,32 @@
               "godRarityCounts": { "Common": 2 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -2868,6 +3168,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -3038,6 +3363,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -3230,6 +3580,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -3429,6 +3804,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 1, 1, 0, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -3562,6 +3962,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 1, 1, 0, 2, 2, 2, 2, 2, 2, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -3766,7 +4191,32 @@
               "godRarityCounts": { "Common": 3 },
               "upgradableCount": 3,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 0, 1, 0, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3993,7 +4443,32 @@
               "godRarityCounts": { "Common": 4 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -4315,6 +4790,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 0, 0, 0, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -4573,6 +5073,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -4866,7 +5391,32 @@
               "godRarityCounts": { "Common": 5 },
               "upgradableCount": 5,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 1, 1, 1, 3, 3, 3, 3, 3, 3, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -5034,6 +5584,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 1, 1, 0, 3, 3, 3, 3, 3, 3, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -5211,7 +5786,32 @@
               "godRarityCounts": { "Common": 6 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 1, 0, 0, 3, 3, 3, 3, 3, 3, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -5589,6 +6189,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 8 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 1, 0, 0, 3, 3, 3, 3, 3, 3, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [0, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -5712,6 +6337,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 7 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 1, 0, 0, 3, 3, 3, 3, 3, 3, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [0, 0, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -6052,6 +6702,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 1, 0, 0, 3, 3, 3, 3, 3, 3, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [3, 2, 2, 3, 2, 2, 2, 2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 3, 3]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [0, 0, 1, 1, 1, 1, 1, 1, 0] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         }
@@ -6203,5 +6878,5 @@
       }
     }
   ],
-  "planFingerprint": "ba5a10bb"
+  "planFingerprint": "5d2e089b"
 }

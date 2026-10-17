@@ -368,12 +368,15 @@ function protocol.decode(value, plan, occurrencesById)
     end)
 end
 
--- Held keepsake rows and node keys, shared with the Run State frames.
+-- Held keepsake rows, node keys and store contents, shared with the Run State frames.
 function protocol.keepsakeTraits(value, label, frame)
     return guarded(function() keepsakeTraits(value, label, frame) return true end)
 end
 function protocol.investedNodes(value, label)
     return guarded(function() investedNodes(value, label) return true end)
+end
+function protocol.rewardStores(value, label)
+    return guarded(function() rewardStores(value, label) return true end)
 end
 
 

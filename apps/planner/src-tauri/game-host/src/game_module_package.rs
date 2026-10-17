@@ -231,24 +231,31 @@ mod tests {
     }
 
     #[test]
-    fn module_selection_replaces_the_release_module_when_development_is_selected() {
+    fn module_selection_replaces_the_release_modules_when_development_is_selected() {
         let root = std::env::temp_dir().join(format!("run-planner-variant-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         module_checkout(&root);
-        let module = "mods/room/timeline/acquisitions/traits/row_options.lua";
-        write(&root.join("src").join(module), b"return 'release'\n");
+        for (module, _) in game_module_assembly::DEVELOPMENT_OVERRIDES {
+            write(&root.join("src").join(module), b"return 'release'\n");
+        }
         let assembled = |selection| {
             let files = game_module_assembly::assemble(&root, "2.3.4", selection)?;
-            let shipped = files
-                .iter()
-                .find(|file| file.path == module)
-                .unwrap()
-                .bytes
-                .clone();
-            Ok::<_, String>(shipped)
+            Ok::<_, String>(
+                game_module_assembly::DEVELOPMENT_OVERRIDES
+                    .iter()
+                    .map(|(module, _)| {
+                        files
+                            .iter()
+                            .find(|file| file.path == *module)
+                            .unwrap()
+                            .bytes
+                            .clone()
+                    })
+                    .collect::<Vec<_>>(),
+            )
         };
         let release = assembled(ModuleSelection::Release).unwrap();
-        assert_eq!(release, b"return 'release'\n");
+        assert!(release.iter().all(|bytes| bytes == b"return 'release'\n"));
         assert_eq!(
             assembled(ModuleSelection::DevelopmentIfPresent).unwrap(),
             release
@@ -258,12 +265,11 @@ mod tests {
             "VITE_INTERNAL_FEATURES=1 requires the development module variant"
         );
 
-        write(
-            &root.join(game_module_assembly::DEVELOPMENT_MODULE_FILE),
-            b"return 'dev'\n",
-        );
+        for (_, development) in game_module_assembly::DEVELOPMENT_OVERRIDES {
+            write(&root.join(development), b"return 'dev'\n");
+        }
         let dev = assembled(ModuleSelection::DevelopmentIfPresent).unwrap();
-        assert_eq!(dev, b"return 'dev'\n");
+        assert!(dev.iter().all(|bytes| bytes == b"return 'dev'\n"));
         assert_eq!(
             assembled(ModuleSelection::DevelopmentRequired).unwrap(),
             dev

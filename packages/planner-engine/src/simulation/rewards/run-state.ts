@@ -37,6 +37,8 @@ import { deriveArmor, type Armor } from '../armor';
 import { deriveMaxStats, type MaxStats } from '../max-stats';
 import { hexOlympianTalentInvested } from '../hex-progress';
 import { deriveRunStateEffects, type RunStateEffects } from './run-state-effects';
+import { exactRewardStoreContents } from '../start-installation/projection';
+import type { StartRewardStores } from '../start-installation/model';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
@@ -176,6 +178,8 @@ export interface RunStateSnapshot {
   readonly effects: RunStateEffects;
   readonly rewardStoreController: RunStateRewardStoreController;
   readonly bags: readonly DecisionRewardBagState[];
+  /** Store contents exact across every branch, untouched ones at initial counts. */
+  readonly rewardStores: StartRewardStores['stores'];
 }
 
 export function forfeitStatus(
@@ -835,6 +839,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         : { targetMetaRewardsRatio }),
     }),
     bags,
+    rewardStores: exactRewardStoreContents(context.catalog, context.states),
   });
 }
 

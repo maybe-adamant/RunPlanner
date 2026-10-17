@@ -57,6 +57,7 @@
     "test:fixtures:check": "vitest run --config vitest.fixtures.config.ts",
     "test:equivalence": "vitest run --config vitest.equivalence.config.ts",
     "fixtures:execution": "node scripts/regenerate-execution-fixtures.mjs",
+    "fixtures:modeled-traits": "node scripts/regenerate-modeled-traits.mjs",
     "fixtures:checkpoints:regenerate": "node scripts/regenerate-authored-checkpoints.mjs",
     "fixtures:checkpoints": "node scripts/repair-reward-store-checkpoints.mjs",
     "test:schema:split": "node --test schema/split-project-72-to-73.test.js",

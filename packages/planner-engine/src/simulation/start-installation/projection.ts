@@ -422,18 +422,29 @@ const FAMILY_ORDER: readonly StartInstallationFamily[] = Object.freeze([
 ]);
 
 /** Reward stores exact across branches; a store no branch has drawn from stays native-fresh. */
-function rewardStores(catalog: Catalog, states: readonly SimulationState[]): StartRewardStores {
+/** Store contents exact across branches, an untouched store at its initial counts. */
+export function exactRewardStoreContents(
+  catalog: Catalog,
+  states: readonly Pick<SimulationState, 'bags' | 'reached'>[],
+): StartRewardStores['stores'] {
   const routeKey = states[0]!.reached.routePosition.routeKey;
   const stores: StartRewardStores['stores'][number][] = [];
   for (const store of catalog.rewards.stores.values) {
-    if (states.every((state) => state.bags[store.key] === undefined)) continue;
     const initial = createRewardBagState(store, routeKey).remainingEntryCounts;
     const counts = states.map((state) => state.bags[store.key]?.remainingEntryCounts ?? initial);
     const first = counts[0]!;
     if (counts.every((entry) => stable(entry) === stable(first)))
       stores.push(Object.freeze({ storeKey: store.key, remainingEntryCounts: first }));
   }
-  return Object.freeze({ stores: Object.freeze(stores) });
+  return Object.freeze(stores);
+}
+
+/** A start leaves a store no branch has drawn from native-fresh. */
+function rewardStores(catalog: Catalog, states: readonly SimulationState[]): StartRewardStores {
+  const drawn = exactRewardStoreContents(catalog, states).filter((store) =>
+    states.some((state) => state.bags[store.storeKey] !== undefined),
+  );
+  return Object.freeze({ stores: Object.freeze(drawn) });
 }
 
 /**
