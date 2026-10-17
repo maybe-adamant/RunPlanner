@@ -805,31 +805,23 @@ local function traitFenceRoom(occurrenceId)
     return session, owners, complete
 end
 
-function TestRouteRoomSessions.testTraitScreensWaitForThePostbossFountainAndRack()
+function TestRouteRoomSessions.testTraitScreensWaitForThePostbossRackButNotAPlainFountain()
     local session, owners, complete = traitFenceRoom("surface-o-preboss:postboss")
     lu.assertNil(complete(owners.acquisition))
     lu.assertEquals(session.firstMismatch.checkpoint, "transaction-prerequisite")
+    lu.assertEquals(session.firstMismatch.expected, owners.keepsakeChange)
     lu.assertEquals(session.firstMismatch.observed, owners.acquisition)
-    lu.assertTrue(session.firstMismatch.expected == owners.fountainUse
-        or session.firstMismatch.expected == owners.keepsakeChange)
 
     local racked, rackOwners, completeRacked = traitFenceRoom("surface-o-preboss:postboss")
+    lu.assertTrue(completeRacked(rackOwners.keepsakeChange))
+    lu.assertTrue(completeRacked(rackOwners.acquisition))
     lu.assertTrue(completeRacked(rackOwners.fountainUse))
-    lu.assertNil(completeRacked(rackOwners.acquisition))
-    lu.assertEquals(racked.firstMismatch.checkpoint, "transaction-prerequisite")
-    lu.assertEquals(racked.firstMismatch.expected, rackOwners.keepsakeChange)
-
-    local ordered, orderedOwners, completeOrdered = traitFenceRoom("surface-o-preboss:postboss")
-    for _, kind in ipairs({ "fountainUse", "keepsakeChange", "acquisition" }) do
-        lu.assertTrue(completeOrdered(orderedOwners[kind]))
-    end
-    lu.assertNil(ordered.firstMismatch)
+    lu.assertNil(racked.firstMismatch)
 end
 
-function TestRouteRoomSessions.testReprieveFountainWaitsForTheBoonBeforeIt()
+function TestRouteRoomSessions.testAPlainReprieveFountainIsNotOrderedAgainstItsBoon()
     local session, owners, complete = traitFenceRoom("surface-o-devotion")
-    lu.assertNil(complete(owners.fountainUse))
-    lu.assertEquals(session.firstMismatch.checkpoint, "transaction-prerequisite")
-    lu.assertEquals(session.firstMismatch.expected, owners.acquisition)
-    lu.assertEquals(session.firstMismatch.observed, owners.fountainUse)
+    lu.assertTrue(complete(owners.fountainUse))
+    lu.assertTrue(complete(owners.acquisition))
+    lu.assertNil(session.firstMismatch)
 end

@@ -57,7 +57,7 @@ const structure: RoomLifecycleStructure = {
   ],
 };
 
-type Kind = 'screen' | 'pickup' | 'native' | RoomActionReference['kind'];
+type Kind = 'screen' | 'pickup' | 'native' | 'phialFountain' | RoomActionReference['kind'];
 
 interface Action {
   readonly key: string;
@@ -81,7 +81,9 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
               ? 'interactIncomingReward'
               : action.kind === 'native'
                 ? 'completeFieldsCage'
-                : action.kind,
+                : action.kind === 'phialFountain'
+                  ? 'useFountain'
+                  : action.kind,
         },
         key: action.key,
         owner: ownerOf(action),
@@ -105,8 +107,16 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
           window,
         } as unknown as ExecutionTimelineTransaction,
       ];
-    if (action.kind === 'useFountain')
-      return [{ kind: 'fountainUse', owner: key, interactionKey: 'fountain', window }];
+    if (action.kind === 'useFountain' || action.kind === 'phialFountain')
+      return [
+        {
+          kind: 'fountainUse',
+          owner: key,
+          interactionKey: 'fountain',
+          window,
+          ...(action.kind === 'phialFountain' ? { aromaticPhialTarget: 'ZeusWeaponBoon' } : {}),
+        } as unknown as ExecutionTimelineTransaction,
+      ];
     if (action.kind === 'interactKeepsakeRack')
       return [{ kind: 'keepsakeChange', owner: key, keepsakeKey: 'Keepsake', window }];
     if (action.kind === 'purchaseStygianWellOffer')
@@ -146,7 +156,7 @@ function room(actions: readonly Action[], automatic: readonly SemanticAddress[] 
 const edge = (from: string, after: string) => ({ owner: owner(from), afterOwner: owner(after) });
 
 describe('trait fence dependencies', () => {
-  it.each(['useFountain', 'interactKeepsakeRack'] as const)(
+  it.each(['phialFountain', 'interactKeepsakeRack'] as const)(
     'orders a %s after the latest screen ranked before it and before the earliest after it',
     (kind) => {
       const { room: fenceRoom, transactions } = room([
@@ -176,8 +186,9 @@ describe('trait fence dependencies', () => {
     ]);
   });
 
-  it('publishes no fence edge for a Well purchase or an untransacted fence', () => {
+  it('publishes no fence edge for a plain Fountain, a Well purchase or an untransacted fence', () => {
     for (const kind of [
+      'useFountain',
       'purchaseStygianWellOffer',
       'sellPurgingPoolTrait',
       'interactEris',
@@ -195,7 +206,7 @@ describe('trait fence dependencies', () => {
   it('adds a fence edge only when the published edges do not already imply it', () => {
     const { room: fenceRoom, transactions } = room([
       { key: 'before', kind: 'screen' },
-      { key: 'fence', kind: 'useFountain' },
+      { key: 'fence', kind: 'phialFountain' },
       { key: 'after', kind: 'screen' },
     ]);
     const facts = {
@@ -376,20 +387,22 @@ describe('published trait screen dependencies', () => {
     kind: ExecutionTimelineTransaction['kind'],
   ) => entry.timeline.transactions.find((transaction) => transaction.kind === kind)?.owner;
 
-  it('fences the Postboss rack and Fountain and the Reprieve Fountain against their screens', () => {
+  it('fences the Postboss rack against its screens but never a plain Fountain', () => {
     const { product } = fixture('surface-trait-fences');
     const postboss = occurrenceNamed(product, 'O_PostBoss01');
     const delivery = ownerOf(postboss, 'acquisition');
-    expect(postboss.timeline.dependencies).toEqual(
-      expect.arrayContaining([
-        { owner: delivery, afterOwner: ownerOf(postboss, 'fountainUse') },
-        { owner: delivery, afterOwner: ownerOf(postboss, 'keepsakeChange') },
-      ]),
-    );
+    const fountain = ownerOf(postboss, 'fountainUse');
+    expect(postboss.timeline.dependencies).toContainEqual({
+      owner: delivery,
+      afterOwner: ownerOf(postboss, 'keepsakeChange'),
+    });
+    expect(
+      postboss.timeline.dependencies.filter(
+        (dependency) => dependency.owner === fountain || dependency.afterOwner === fountain,
+      ),
+    ).toEqual([]);
     const reprieve = occurrenceNamed(product, 'O_Reprieve01');
-    expect(reprieve.timeline.dependencies).toEqual([
-      { owner: ownerOf(reprieve, 'fountainUse'), afterOwner: ownerOf(reprieve, 'acquisition') },
-    ]);
+    expect(reprieve.timeline.dependencies).toEqual([]);
   });
 
   it("publishes no edge after an automatic outcome or Devotion's chosen boon", () => {

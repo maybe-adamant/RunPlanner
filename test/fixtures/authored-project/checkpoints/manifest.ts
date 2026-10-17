@@ -205,6 +205,27 @@ export const checkpointManifest = Object.freeze([
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
+    id: 'underworld-f-trait-order-checks',
+    file: 'underworld-f-trait-order-checks.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F'],
+    scenario:
+      'Same-giver Preboss Hera box and refill, Devotion swap, Artemis with Yarn, Hymn spend and Reprieve Fountain',
+    schemaVersion: 96,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'user-authored F live trait-order test project',
+  },
+  {
+    id: 'underworld-f-duo-exchange-order',
+    file: 'underworld-f-duo-exchange-order.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F'],
+    scenario: 'Apollo exchange removing Born Gain before a Hera Sun Worshiper box',
+    schemaVersion: 96,
+    catalogVersion: '0.55.0-anvil-of-fates',
+    provenance: 'user-authored F live Duo prerequisite order test project',
+  },
+  {
     id: 'surface-n',
     file: 'surface-n.runplanner.json',
     route: 'Surface',
