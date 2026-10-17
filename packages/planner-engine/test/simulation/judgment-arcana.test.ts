@@ -25,6 +25,7 @@ import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { reconcileBarrenArcana } from '../../src/simulation/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { evaluateJudgmentArcanaCandidate } from '../../src/simulation/candidates/judgment-arcana';
@@ -382,6 +383,18 @@ describe('Judgment fixed Boss lifecycle', () => {
       'ScreenReroll',
       'TradeOff',
     ]);
+    // The Judgment check precedes the Figurine draw, so a drawn Judgment waits for the next Boss.
+    const drawnJudgment = evaluateNBossLifecycle(
+      figurineState,
+      inactive(['CardDraw'], 5),
+      undefined,
+      ['CardDraw', 'ScreenReroll'],
+      figurineKeepsake,
+    );
+    expect(drawnJudgment.simulation.validity).toBe('valid');
+    expect(
+      drawnJudgment.simulation.bossArcanaOutcomes.map((outcome) => outcome.arcanaKeys),
+    ).toEqual([['CardDraw', 'ScreenReroll']]);
   });
 
   it('applies Judgment at Boss defeated before generic encounter completion', () => {
@@ -426,7 +439,7 @@ describe('Judgment fixed Boss lifecycle', () => {
     });
   });
 
-  it('keeps final-use Barren active through Boss-defeated Judgment, then matures it at end effects', () => {
+  it('skips a Judgment Barren unequipped but fires one drawn during Barren, then matures Barren', () => {
     const evaluated = evaluatedBiome(simulateProject(catalog, loadSurfaceNOProject()), 'N');
     const bossEvents = evaluated.history.events.filter(
       (event) =>
@@ -530,11 +543,34 @@ describe('Judgment fixed Boss lifecycle', () => {
         }),
       ),
     ]);
-    const result = evaluateNBossLifecycle(seeded.state, inactive(['CardDraw'], 5), barren);
+    const activations = (state: typeof seeded.state) =>
+      evaluateNBossLifecycle(
+        state,
+        inactive(['CardDraw'], 5),
+        barren,
+      ).simulation.branches[0]?.state.arcanaFear.events.filter(
+        (event) => event.kind === 'temporaryArcanaActivated',
+      );
+    // Barren's acquire removed the held Judgment's trait.
+    expect(activations(reconcileBarrenArcana(seeded.state, false, true))).toHaveLength(1);
+    const drawnDuringBarren = activateTemporaryArcana(
+      catalog,
+      reconcileBarrenArcana(
+        createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+        false,
+        true,
+      ),
+      ['CardDraw'],
+      { owner: n, sequence: 1 },
+    );
+    if (!drawnDuringBarren.legal) throw new Error('Judgment drawn during Barren must be legal');
+    expect(activations(drawnDuringBarren.state)).toHaveLength(2);
+    const result = evaluateNBossLifecycle(
+      reconcileBarrenArcana(seeded.state, false, true),
+      inactive(['CardDraw'], 5),
+      barren,
+    );
     const branch = result.simulation.branches[0];
-    expect(
-      branch?.state.arcanaFear.events.filter((event) => event.kind === 'temporaryArcanaActivated'),
-    ).toHaveLength(1);
     expect(branch?.state.traitHistory?.activeChaosCurses).toHaveLength(0);
     expect(branch?.state.traitHistory?.maturedChaosBlessings).toContainEqual(
       expect.objectContaining({ acquisitionIdentity: 'barren-final-boss-use' }),

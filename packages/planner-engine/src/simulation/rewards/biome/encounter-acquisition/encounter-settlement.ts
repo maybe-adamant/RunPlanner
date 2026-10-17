@@ -38,7 +38,6 @@ import { expireMaxHealthCapAtBoss, refreshKeepsakeFatedStatus } from '../../../k
 import { consumeFigurine } from '../../../keepsakes/trait-effects';
 import {
   foldTraitHistoryEvents,
-  hasActiveChaosSemanticTag,
   settleNonFinalBossRarityBlocks,
   traitOfferGenerationLegal,
 } from '../../../traits';
@@ -384,15 +383,12 @@ export function applyEncounterSettlementTransition(inputs: {
   if (nonFinalBossDefeated) {
     const owner = createJudgmentArcanaAddress(room.origin, event.phaseKey);
     const figurineOwner = createFigurineArcanaAddress(room.origin, event.phaseKey);
-    const judgmentBranches = branches.filter(
-      (branch) => !hasActiveChaosSemanticTag(branch.state.traitHistory, 'Barren'),
-    );
-    const frontier = arcanaFrontier(judgmentBranches);
-    const first = judgmentBranches[0]?.state.arcanaFear;
+    const frontier = arcanaFrontier(branches);
+    const first = branches[0]?.state.arcanaFear;
     const requiredCount =
       frontier === undefined || first === undefined
         ? undefined
-        : judgmentRequiredCount(catalog, first, judgmentBranches[0]?.state.keepsakes.fatedStatus);
+        : judgmentRequiredCount(catalog, first, branches[0]?.state.keepsakes.fatedStatus);
     const judgmentCandidate =
       requiredCount === undefined || first === undefined
         ? undefined
@@ -404,14 +400,12 @@ export function applyEncounterSettlementTransition(inputs: {
             inactiveArcanaKeys: randomArcanaDrawKeys(
               catalog,
               first,
-              judgmentBranches[0]?.state.keepsakes.fatedStatus,
+              branches[0]?.state.keepsakes.fatedStatus,
             ),
           });
     const judgmentSelected = room.encounters.judgmentArcanaKeysByPhase?.[event.phaseKey] ?? [];
     branches = Object.freeze(
       branches.flatMap((branch) => {
-        if (hasActiveChaosSemanticTag(branch.state.traitHistory, 'Barren'))
-          return [advanceRewardBranches([branch], event.sequence)[0]!];
         const required = judgmentRequiredCount(
           catalog,
           branch.state.arcanaFear,

@@ -361,8 +361,9 @@ export function judgmentRequiredCount(
   state: ArcanaFearState,
   fatedStatus: 'Unknown' | 'Fated' | 'Unfated' = 'Unknown',
 ): number | undefined {
+  // Judgment fires only while its trait is held; Barren's removal is one-time (PowersLogic.lua:4836).
   const judgment = state.arcana.active.find((card) => card.key === 'CardDraw');
-  if (judgment === undefined) return undefined;
+  if (judgment === undefined || judgment.unequipped === true) return undefined;
   const count =
     catalog.arcanaCards.byKey[judgment.key]?.postBossActivationCounts?.[judgment.rarity];
   return count === undefined
