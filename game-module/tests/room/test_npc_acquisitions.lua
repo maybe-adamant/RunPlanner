@@ -1105,6 +1105,31 @@ function TestNpcAcquisitions.testMetPlannedNpcRequirementsKeepTheSteeredOffer()
     lu.assertEquals(#completions, 1)
 end
 
+function TestNpcAcquisitions.testPlannedNpcRequirementCheckNeverRollsChanceToPlay()
+    local selected = "ArachneTwo"
+    local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(
+        "Arachne", selected, { offer = offer("Arachne", selected) })
+    local rolled = false
+    local priorEligible = _G.IsGameStateEligible
+    _G.IsGameStateEligible = function(_, requirements)
+        if requirements.ChanceToPlay ~= nil then rolled = true end
+        return true
+    end
+    local requirements = { ChanceToPlay = 0.1, NamedRequirements = { "two" } }
+    local args = { UpgradeOptions = {
+        { ItemName = "ArachneOne" },
+        { ItemName = selected, GameStateRequirements = requirements },
+        { ItemName = "ArachneThree" },
+    } }
+    runMenu(callbacks, "ArachneCostumeChoice", source, args, selected)
+    _G.IsGameStateEligible = priorEligible
+    finish()
+    lu.assertFalse(rolled)
+    lu.assertEquals(requirements.ChanceToPlay, 0.1)
+    lu.assertEquals(#mismatches, 0)
+    lu.assertEquals(#completions, 1)
+end
+
 function TestNpcAcquisitions.testRequirementCheckFailureIsANativeFaultNotAMismatch()
     local selected = "NarcissusTwo"
     local callbacks, source, _, _, _, _, _, _, mismatches, completions, finish = harness(

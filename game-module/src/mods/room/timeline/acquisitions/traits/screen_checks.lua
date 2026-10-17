@@ -291,6 +291,20 @@ function checks.echoLastRunRows(nested)
     return problems
 end
 
+-- Native NPC choices drop any option whose GameStateRequirements fail. Returns
+-- the first ineligible row, or nil plus the error when the native call fails.
+function checks.npcRows(options, source)
+    for _, option in ipairs(options) do
+        local requirements = option.GameStateRequirements
+        if requirements ~= nil then
+            local ok, met = pcall(_G.IsGameStateEligible, source, withoutChance(requirements))
+            if not ok then return nil, tostring(met) end
+            if met ~= true then return option.ItemName end
+        end
+    end
+    return nil
+end
+
 -- The first finding stops the plan: a native error is an executor fault, any
 -- other difference a mismatch. Returns whether one was raised.
 function checks.report(session, state, problems)
