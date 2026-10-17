@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "execution-dream-q-f-n-h",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -461,7 +461,6 @@
       "traits": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
     },
     "arcana": [],
-    "arcanaBarren": false,
     "disabledVows": [],
     "maxStats": {
       "maxHealth": 130,
@@ -509,6 +508,7 @@
       "MetaCardPointsCommonBigDrop": 2,
       "MaxManaDrop": 1
     },
+    "bannedTraits": [],
     "rewardStores": [
       {
         "name": "RunProgress",
@@ -722,7 +722,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -732,6 +737,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -5340,5 +5346,5 @@
       }
     }
   ],
-  "planFingerprint": "4aaa609e"
+  "planFingerprint": "de87ef67"
 }

@@ -10,6 +10,8 @@ type PickedTraits = Pick<TraitHistoryState, 'previouslyPickedTraitKeys'>;
 
 /** The planner assumes a mature file: every Aspect at rank V, the native `Legendary` level. */
 export const MATURE_ASPECT_RARITY = 'Legendary';
+/** Premium Service's rank VI, native `Perfect` in `WeaponRarityUpgradeOrder`. */
+export const PERFECT_ASPECT_RARITY = 'Perfect';
 
 /** A picked trait (Premium Service) permanently raised the equipped aspect to Perfect. */
 export function aspectIsPerfect(catalog: Catalog, history: PickedTraits): boolean {

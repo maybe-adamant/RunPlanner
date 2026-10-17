@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -751,7 +751,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "SuitHexAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -762,6 +767,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 0,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "ChargeRegenTalent",
+                "1:4": "MoonBeamVulnerabilityTalent",
+                "2:2": "MoonBeamDamageTalent",
+                "2:4": "MoonBeamCountTalent",
+                "3:1": "MoonBeamVulnerabilityTalent",
+                "3:2": "MoonBeamDamageTalent",
+                "3:3": "MoonBeamCountTalent",
+                "3:4": "MoonBeamVulnerabilityTalent",
+                "3:5": "MoonBeamDamageTalent",
+                "3:6": "MoonBeamCountTalent",
+                "4:1": "MoonBeamConsecutiveDamageTalent",
+                "4:3": "MoonBeamVulnerabilityTalent",
+                "4:5": "MoonBeamDefenseTalent",
+                "5:2": "MoonBeamDamageTalent",
+                "5:4": "MoonBeamCountTalent",
+                "6:3": "MoonBeamTargetTalent"
+              },
+              "investedNodes": []
             },
             "artificer": null,
             "retainedEffects": {
@@ -2495,7 +2521,9 @@
         "owner": "[\"occurrence\",\"Surface\",\"N\",\"surface-n-combat09\"]",
         "kind": "terminal"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }, { "kind": "pathOfStars" }] },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "pathOfStars" }, { "kind": "hexNodes" }]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 22,
@@ -2529,6 +2557,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 3,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "ChargeRegenTalent",
+                "1:4": "MoonBeamVulnerabilityTalent",
+                "2:2": "MoonBeamDamageTalent",
+                "2:4": "MoonBeamCountTalent",
+                "3:1": "MoonBeamVulnerabilityTalent",
+                "3:2": "MoonBeamDamageTalent",
+                "3:3": "MoonBeamCountTalent",
+                "3:4": "MoonBeamVulnerabilityTalent",
+                "3:5": "MoonBeamDamageTalent",
+                "3:6": "MoonBeamCountTalent",
+                "4:1": "MoonBeamConsecutiveDamageTalent",
+                "4:3": "MoonBeamVulnerabilityTalent",
+                "4:5": "MoonBeamDefenseTalent",
+                "5:2": "MoonBeamDamageTalent",
+                "5:4": "MoonBeamCountTalent",
+                "6:3": "MoonBeamTargetTalent"
+              },
+              "investedNodes": ["1:2", "1:4", "2:2"]
             }
           }
         }
@@ -4587,7 +4636,9 @@
         ],
         "resolvedSharedRewardStoreKey": "RunProgress"
       },
-      "roomExitConformance": { "facts": [{ "kind": "elementCounts" }, { "kind": "pathOfStars" }] },
+      "roomExitConformance": {
+        "facts": [{ "kind": "elementCounts" }, { "kind": "pathOfStars" }, { "kind": "hexNodes" }]
+      },
       "diagnostics": {
         "roomEntered": {
           "frame": 54,
@@ -4628,6 +4679,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 6,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "ChargeRegenTalent",
+                "1:4": "MoonBeamVulnerabilityTalent",
+                "2:2": "MoonBeamDamageTalent",
+                "2:4": "MoonBeamCountTalent",
+                "3:1": "MoonBeamVulnerabilityTalent",
+                "3:2": "MoonBeamDamageTalent",
+                "3:3": "MoonBeamCountTalent",
+                "3:4": "MoonBeamVulnerabilityTalent",
+                "3:5": "MoonBeamDamageTalent",
+                "3:6": "MoonBeamCountTalent",
+                "4:1": "MoonBeamConsecutiveDamageTalent",
+                "4:3": "MoonBeamVulnerabilityTalent",
+                "4:5": "MoonBeamDefenseTalent",
+                "5:2": "MoonBeamDamageTalent",
+                "5:4": "MoonBeamCountTalent",
+                "6:3": "MoonBeamTargetTalent"
+              },
+              "investedNodes": ["1:2", "1:4", "2:2", "2:4", "3:1", "3:2"]
             }
           }
         }
@@ -6645,5 +6717,5 @@
       }
     }
   ],
-  "planFingerprint": "a632cf14"
+  "planFingerprint": "0b0b3214"
 }

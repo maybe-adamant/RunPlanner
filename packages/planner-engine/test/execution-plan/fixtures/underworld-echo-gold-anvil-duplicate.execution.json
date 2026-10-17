@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
   "startingLoadout": {
@@ -677,7 +677,19 @@
               "currentKey": "GoldifyKeepsake",
               "usedKeys": ["GoldifyKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Fated"
+              "fatedStatus": "Fated",
+              "held": [
+                {
+                  "name": "GoldifyKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "boonConversionUses": 4
+                }
+              ]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -687,6 +699,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -6021,5 +6034,5 @@
       }
     }
   ],
-  "planFingerprint": "35da8409"
+  "planFingerprint": "64a0b6a8"
 }

@@ -21,6 +21,7 @@ import {
   applyEchoLionFangReplay,
   applyEchoMaxStatKeepsakeReplay,
   applyEchoSilkenSashReplay,
+  keepsakeHeld,
 } from '../../../keepsakes/state';
 import {
   applyEchoCallingCardReplay,
@@ -127,8 +128,23 @@ export function applyEchoKeepsakeReplayTransition(
       throw new BiomeRewardSimulationContractError(
         'Echo Experimental Hammer replay frontier has divergent current keepsakes',
       );
+    // A held keepsake gets no copy; a held Permanent Calling Card or Time Piece
+    // gets Common charges instead (RoomLogic.lua:1218-1242).
+    const permanent = replayEffect.kind === 'callingCard' || replayEffect.kind === 'timePiece';
+    const held = (branch: RewardBranchState) =>
+      keepsakeHeld(catalog, branch.state.keepsakes, giftState.capturedKeepsakeKey);
     const recordReplay = (branch: RewardBranchState): RewardBranchState => {
       const before = branch.state.traitHistory;
+      const state =
+        permanent && held(branch)
+          ? branch.state
+          : Object.freeze({
+              ...branch.state,
+              keepsakes: Object.freeze({
+                ...branch.state.keepsakes,
+                echoCopyKey: giftState.capturedKeepsakeKey,
+              }),
+            });
       const traitHistory = foldTraitHistoryEvents(catalog, [
         ...before.events,
         Object.freeze({
@@ -144,10 +160,16 @@ export function applyEchoKeepsakeReplayTransition(
       ]);
       return Object.freeze({
         ...branch,
-        state: replaceSimulationTraitHistory(branch.state, traitHistory),
+        state: replaceSimulationTraitHistory(state, traitHistory),
       });
     };
-    if (replayEffect.kind === 'figLeaf' && giftState.replayCount === 0) {
+    const startBranches = branches;
+    branches = Object.freeze(permanent ? startBranches : startBranches.filter((b) => !held(b)));
+    if (branches.length === 0) {
+      branches = startBranches;
+    } else if (replayEffect.kind === 'modeledNeutral') {
+      branches = Object.freeze(branches.map(recordReplay));
+    } else if (replayEffect.kind === 'figLeaf' && giftState.replayCount === 0) {
       branches = Object.freeze(
         branches.map((branch) =>
           recordReplay(
@@ -465,6 +487,16 @@ export function applyEchoKeepsakeReplayTransition(
           ),
         ),
       );
+    }
+    if (branches !== startBranches) {
+      const replayedBranches = branches;
+      let next = 0;
+      const merged = startBranches.map((branch) =>
+        permanent || !held(branch) ? replayedBranches[next++]! : branch,
+      );
+      branches = merged.every((branch, index) => branch === startBranches[index])
+        ? startBranches
+        : Object.freeze(merged);
     }
   }
   return Object.freeze({

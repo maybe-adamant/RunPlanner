@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -729,7 +729,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -739,6 +744,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2477,7 +2483,8 @@
         "facts": [
           { "kind": "elementCounts" },
           { "kind": "traitInventory" },
-          { "kind": "pathOfStars" }
+          { "kind": "pathOfStars" },
+          { "kind": "hexNodes" }
         ]
       },
       "diagnostics": {
@@ -2536,6 +2543,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 0,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "PotionManaRestoreTalent",
+                "1:4": "PotionUsesTalent",
+                "2:2": "HealAmountTalent",
+                "2:4": "CurrencyUseTalent",
+                "3:1": "PotionManaRestoreTalent",
+                "3:2": "PotionUsesTalent",
+                "3:3": "HealAmountTalent",
+                "3:4": "CurrencyUseTalent",
+                "3:5": "PotionManaRestoreTalent",
+                "3:6": "PotionUsesTalent",
+                "4:1": "DamageBuffTalent",
+                "4:3": "HealAmountTalent",
+                "4:5": "ShieldTalent",
+                "5:2": "CurrencyUseTalent",
+                "5:4": "PotionManaRestoreTalent",
+                "6:3": "ClearCastTalent"
+              },
+              "investedNodes": []
             }
           }
         }
@@ -6865,5 +6893,5 @@
       }
     }
   ],
-  "planFingerprint": "f6b80c6a"
+  "planFingerprint": "10da3873"
 }

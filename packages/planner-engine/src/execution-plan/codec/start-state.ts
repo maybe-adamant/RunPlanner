@@ -180,7 +180,10 @@ function chaosBlessing(value: unknown, label: string): ExecutionStartChaosBlessi
   });
 }
 
-function keepsakeTrait(value: unknown, label: string): ExecutionStartKeepsakeTrait {
+/** Bell, Fang and Silken Sash values, installed at a start but never framed. */
+const KEEPSAKE_VALUES = ['currentKeepsakeDamageBonus', 'escalatingKeepsakeValue', 'currentArmor'];
+
+function keepsakeTrait(value: unknown, label: string, frame: boolean): ExecutionStartKeepsakeTrait {
   const row = record(
     value,
     label,
@@ -191,10 +194,8 @@ function keepsakeTrait(value: unknown, label: string): ExecutionStartKeepsakeTra
       'uses',
       'rarityUpgradeUses',
       'boonConversionUses',
-      'currentKeepsakeDamageBonus',
-      'escalatingKeepsakeValue',
       'currentRoom',
-      'currentArmor',
+      ...(frame ? [] : KEEPSAKE_VALUES),
     ],
   );
   const count = (key: string) =>
@@ -216,6 +217,46 @@ function keepsakeTrait(value: unknown, label: string): ExecutionStartKeepsakeTra
   });
 }
 
+/** Held keepsake traits, shared with the Run State frames, which omit the keepsake values. */
+export function keepsakeTraits(
+  value: unknown,
+  label: string,
+  frame = false,
+): readonly ExecutionStartKeepsakeTrait[] {
+  const traits = Object.freeze(
+    array(value, label).map((entry, index) => keepsakeTrait(entry, `${label}[${index}]`, frame)),
+  );
+  uniqueNames(traits, label);
+  if (traits.filter((trait) => trait.slotted === true).length > 1)
+    fail(`${label} holds more than one slotted keepsake`);
+  return traits;
+}
+
+/** Distinct `depth:slot` node keys in order, shared with the Run State frames. */
+export function investedNodeKeys(value: unknown, label: string): readonly string[] {
+  const nodes = stringArray(value, label);
+  if (
+    new Set(nodes).size !== nodes.length ||
+    nodes.some((node) => !/^[1-9][0-9]*:[0-9]+$/.test(node))
+  )
+    fail(`${label} must be distinct node keys`);
+  return Object.freeze(nodes);
+}
+
+function rewardStoreRows(value: unknown, label: string): ExecutionStartState['rewardStores'] {
+  return list(value, label, (entry, entryLabel) => {
+    const store = record(entry, entryLabel, ['name', 'remainingEntryCounts']);
+    return Object.freeze({
+      name: stringValue(store.name, `${entryLabel}.name`),
+      remainingEntryCounts: Object.freeze(
+        array(store.remainingEntryCounts, `${entryLabel}.remainingEntryCounts`).map(
+          (count, index) => integer(count, `${entryLabel}.remainingEntryCounts[${index}]`),
+        ),
+      ),
+    });
+  });
+}
+
 function keepsake(value: unknown, label: string): ExecutionStartKeepsake {
   const row = record(
     value,
@@ -223,18 +264,10 @@ function keepsake(value: unknown, label: string): ExecutionStartKeepsake {
     ['keepsakeCache', 'blockedKeepsakes', 'traits'],
     ['persistentDionysusSkip'],
   );
-  const traits = Object.freeze(
-    array(row.traits, `${label}.traits`).map((entry, index) =>
-      keepsakeTrait(entry, `${label}.traits[${index}]`),
-    ),
-  );
-  uniqueNames(traits, `${label}.traits`);
-  if (traits.filter((trait) => trait.slotted === true).length > 1)
-    fail(`${label}.traits holds more than one slotted keepsake`);
   return Object.freeze({
     keepsakeCache: Object.freeze(stringArray(row.keepsakeCache, `${label}.keepsakeCache`)),
     blockedKeepsakes: Object.freeze(stringArray(row.blockedKeepsakes, `${label}.blockedKeepsakes`)),
-    traits,
+    traits: keepsakeTraits(row.traits, `${label}.traits`),
     ...optional('persistentDionysusSkip', row.persistentDionysusSkip, (entry) => {
       const skip = record(entry, `${label}.persistentDionysusSkip`, ['remainingUses']);
       return Object.freeze({
@@ -249,12 +282,13 @@ function arcanaCard(value: unknown, label: string): ExecutionStartArcanaCard {
     value,
     label,
     ['name', 'rarity'],
-    ['temporary', 'currentRoom', 'metaConversionUses'],
+    ['temporary', 'unequipped', 'currentRoom', 'metaConversionUses'],
   );
   return Object.freeze({
     name: stringValue(row.name, `${label}.name`),
     rarity: oneOf<ExecutionKeepsakeRarity>(row.rarity, RARITY_UPGRADE_ORDER, `${label}.rarity`),
     ...flag('temporary', row.temporary, `${label}.temporary`),
+    ...flag('unequipped', row.unequipped, `${label}.unequipped`),
     ...optional('currentRoom', row.currentRoom, (entry) => integer(entry, `${label}.currentRoom`)),
     ...optional('metaConversionUses', row.metaConversionUses, (entry) =>
       integer(entry, `${label}.metaConversionUses`),
@@ -342,12 +376,7 @@ function hex(value: unknown, label: string): ExecutionStartHex {
     ['spellTraitName', 'investedNodes', 'talentPoints', 'allSpellInvested'],
     ['tree'],
   );
-  const investedNodes = stringArray(row.investedNodes, `${label}.investedNodes`);
-  if (
-    new Set(investedNodes).size !== investedNodes.length ||
-    investedNodes.some((node) => !/^[1-9][0-9]*:[0-9]+$/.test(node))
-  )
-    fail(`${label}.investedNodes must be distinct node keys`);
+  const investedNodes = investedNodeKeys(row.investedNodes, `${label}.investedNodes`);
   return Object.freeze({
     spellTraitName: stringValue(row.spellTraitName, `${label}.spellTraitName`),
     ...optional('tree', row.tree, (entry) => {
@@ -360,7 +389,7 @@ function hex(value: unknown, label: string): ExecutionStartHex {
         ...(godSent === undefined ? {} : { godSent }),
       });
     }),
-    investedNodes: Object.freeze(investedNodes),
+    investedNodes,
     talentPoints: integer(row.talentPoints, `${label}.talentPoints`),
     allSpellInvested: booleanValue(row.allSpellInvested, `${label}.allSpellInvested`),
   });
@@ -446,7 +475,6 @@ export function startState(value: unknown): ExecutionStartState {
       'chaosBlessings',
       'keepsake',
       'arcana',
-      'arcanaBarren',
       'disabledVows',
       'maxStats',
       'itemArmor',
@@ -456,6 +484,7 @@ export function startState(value: unknown): ExecutionStartState {
       'useRecord',
       'lootTypeHistory',
       'consumableRecord',
+      'bannedTraits',
       'rewardStores',
     ],
     ['lastDevotionDepth', 'biome', 'familiar', 'hex'],
@@ -506,7 +535,6 @@ export function startState(value: unknown): ExecutionStartState {
     chaosBlessings: list(row.chaosBlessings, `${label}.chaosBlessings`, chaosBlessing),
     keepsake: keepsake(row.keepsake, `${label}.keepsake`),
     arcana,
-    arcanaBarren: booleanValue(row.arcanaBarren, `${label}.arcanaBarren`),
     disabledVows: Object.freeze(stringArray(row.disabledVows, `${label}.disabledVows`)),
     maxStats: maxStats(row.maxStats, `${label}.maxStats`),
     itemArmor: integer(row.itemArmor, `${label}.itemArmor`),
@@ -527,16 +555,7 @@ export function startState(value: unknown): ExecutionStartState {
     useRecord: numberRecord(row.useRecord, `${label}.useRecord`),
     lootTypeHistory: numberRecord(row.lootTypeHistory, `${label}.lootTypeHistory`),
     consumableRecord: numberRecord(row.consumableRecord, `${label}.consumableRecord`),
-    rewardStores: list(row.rewardStores, `${label}.rewardStores`, (entry, entryLabel) => {
-      const store = record(entry, entryLabel, ['name', 'remainingEntryCounts']);
-      return Object.freeze({
-        name: stringValue(store.name, `${entryLabel}.name`),
-        remainingEntryCounts: Object.freeze(
-          array(store.remainingEntryCounts, `${entryLabel}.remainingEntryCounts`).map(
-            (count, index) => integer(count, `${entryLabel}.remainingEntryCounts[${index}]`),
-          ),
-        ),
-      });
-    }),
+    bannedTraits: Object.freeze(stringArray(row.bannedTraits, `${label}.bannedTraits`)),
+    rewardStores: rewardStoreRows(row.rewardStores, `${label}.rewardStores`),
   });
 }

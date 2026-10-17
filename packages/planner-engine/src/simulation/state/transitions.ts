@@ -3,19 +3,26 @@ import type { TraitHistoryState } from '../traits';
 import type { HistoryStateView } from '../history';
 import type { ResolvedRoutePosition } from '../../authored-project/route-context';
 import type { SimulationState } from './model';
+import { reconcileBarrenArcana } from '../arcana-fear';
 
-/** Publishes trait history and the reward kernel's derived facts as one state transition. */
+/** Publishes trait history, the reward kernel's derived facts and Barren's Arcana effect as one transition. */
 export function replaceSimulationTraitHistory(
   state: SimulationState,
   traitHistory: TraitHistoryState,
 ): SimulationState {
-  return traitHistory === state.traitHistory
-    ? state
-    : Object.freeze({
-        ...state,
-        traitHistory,
-        rewardHistory: attachTraitHistory(state.rewardHistory, traitHistory),
-      });
+  if (traitHistory === state.traitHistory) return state;
+  const barren = (history: TraitHistoryState) =>
+    history.activeChaosCurses.some((curse) => curse.semanticTag === 'Barren');
+  return Object.freeze({
+    ...state,
+    traitHistory,
+    rewardHistory: attachTraitHistory(state.rewardHistory, traitHistory),
+    arcanaFear: reconcileBarrenArcana(
+      state.arcanaFear,
+      barren(state.traitHistory),
+      barren(traitHistory),
+    ),
+  });
 }
 
 export function reachSimulationHistory(

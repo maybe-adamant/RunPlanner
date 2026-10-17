@@ -28,7 +28,14 @@ local function admissionFixture()
                 { traitKey = "HammerTrait", rarity = "Legendary", level = 2, hammerRank = "RankII" },
             },
             elements = { Aether = 0, Earth = 2, Air = 0, Fire = 0, Water = 0 },
+            bannedTraitKeys = {},
         },
+        arcana = { active = {} },
+        vows = { configuredRanks = {}, effectiveRanks = {}, disabledKeys = {} },
+        keepsakes = { held = {} },
+        equipment = {},
+        hexNodes = { nodes = {}, investedNodes = {} },
+        artificer = json.null,
         chaos = { active = {}, matured = {} },
         retainedEffects = {
             steadyGrowth = {},
@@ -77,6 +84,12 @@ function TestConformanceReaders.testSupportBoundaryIsExactlyTheReachedFGFactSet(
         pathOfStars = true,
         forfeit = true,
         stygianWell = true,
+        keepsakes = true,
+        equipment = true,
+        arcana = true,
+        vows = true,
+        chaosValues = true,
+        hexNodes = true,
     }
     for kind in pairs(active) do lu.assertTrue(readers.supports(kind), kind) end
     for _, kind in ipairs({ "echoShopDuplicate", "hermesShrineDeliveries" }) do
@@ -162,7 +175,9 @@ function TestConformanceReaders.testEmbryoOperandRoundTripsAtRoomExitAndStartRoo
             Name = "RandomBlessingKeepsake", Rarity = "Epic", CurrentRoom = 0,
         })
         table.insert(_G.CurrentRun.Hero.Traits, blessing)
-        occurrence.diagnostics.roomEntered.chaos.matured = { { blessingKey = key, rarity = "Epic" } }
+        occurrence.diagnostics.roomEntered.chaos.matured = {
+            { blessingKey = key, rarity = "Epic", blessingValues = { [operand] = value } },
+        }
         occurrence.roomExitConformance = { facts = { { kind = "keepsakeEffects" } } }
         occurrence.conformanceExpected = { keepsakeEffects = expected }
         local function read(kind, factExpected)
@@ -253,6 +268,7 @@ function TestConformanceReaders.testStartRoomSelfCheckDispatchesEveryNamedFamily
     for _, kind in ipairs({
         "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
         "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
+        "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes",
     }) do
         lu.assertEquals(calls[kind], 1, kind)
     end
@@ -699,4 +715,166 @@ function TestConformanceReaders.testKeepsakeReaderUsesNativeOlympianSourceCharge
     run.Hero.Traits[1].RarityUpgradeData = nil
     local malformed = readers.read("keepsakeEffects", run, nil, expected).olympianSources[1]
     lu.assertEquals(malformed.maximumSourceRarityLevel, 0)
+end
+
+-- Proves one named fact against a beforeRoomExit frame and the given native state.
+local function proveExact(kind, exit, run, gameState)
+    local record = assert(json.decode('{"facts":[{"kind":"' .. kind .. '"}]}'))
+    local expected = assert(protocolConformance.resolve(record, { beforeRoomExit = exit }, "conformance"))
+    return proof.prove({ roomExitConformance = record, conformanceExpected = expected },
+        function(factKind, factExpected) return readers.read(factKind, run, gameState, factExpected) end)
+end
+
+local function assertMismatch(kind, ok, mismatch)
+    lu.assertNil(ok)
+    lu.assertEquals(mismatch.checkpoint, "room-exit-conformance:" .. kind)
+end
+
+function TestConformanceReaders.testKeepsakeRanksProveEveryHeldKeepsakeAndItsSlot()
+    local restore = nativeGame.install({
+        TraitData = { GiftA = { Slot = "Keepsake" }, GiftB = { Slot = "Keepsake" }, Boon = {} },
+    })
+    local exit = { keepsakes = { held = {
+        { name = "GiftB", rarity = "Heroic", slotted = true, uses = 1 },
+        { name = "GiftA", rarity = "Common" },
+    } } }
+    local run = { Hero = { Traits = {
+        { Name = "GiftA", Rarity = "Common" }, { Name = "Boon", Rarity = "Rare" },
+        { Name = "GiftB", Rarity = "Heroic", Slot = "Keepsake" },
+    } } }
+    lu.assertTrue(proveExact("keepsakes", exit, run))
+    run.Hero.Traits[3].Rarity = "Epic"
+    assertMismatch("keepsakes", proveExact("keepsakes", exit, run))
+    run.Hero.Traits[3].Rarity = "Heroic"
+    run.Hero.Traits[1].Slot = "Keepsake"
+    assertMismatch("keepsakes", proveExact("keepsakes", exit, run))
+    table.remove(run.Hero.Traits, 1)
+    assertMismatch("keepsakes", proveExact("keepsakes", exit, run))
+    restore()
+end
+
+function TestConformanceReaders.testEquipmentProvesAspectRarityAndCirceFamiliarMultiplier()
+    local restore = nativeGame.install({ GetFamiliarTraitStacks = function() return 3 end })
+    local exit = { equipment = {
+        aspect = { key = "BaseStaffAspect", rarity = "Perfect" },
+        familiar = { name = "PolecatFamiliar", stackMultiplier = 2 },
+    } }
+    -- (3 + 2) * 2 - 2 stacks after one doubling with two Circe bonus stacks.
+    local familiar = { Name = "DodgeFamiliar", FamiliarTrait = true, CirceBonusStacks = 2, StackNum = 8 }
+    local run = { Hero = { Traits = { { Name = "BaseStaffAspect", Rarity = "Perfect" }, familiar } } }
+    local gameState = { EquippedFamiliar = "PolecatFamiliar" }
+    lu.assertTrue(proveExact("equipment", exit, run, gameState))
+    familiar.StackNum = 3
+    assertMismatch("equipment", proveExact("equipment", exit, run, gameState))
+    familiar.StackNum = 8
+    run.Hero.Traits[1].Rarity = "Legendary"
+    assertMismatch("equipment", proveExact("equipment", exit, run, gameState))
+    restore()
+end
+
+function TestConformanceReaders.testEquipmentFallsBackToTheCatAndRejectsAnUnplannedFamiliar()
+    local cat = { Name = "LastStandFamiliar", FamiliarTrait = true, FamiliarLastStandHealAmount = 10 }
+    local run = { Hero = { Traits = { cat } } }
+    local gameState = { EquippedFamiliar = "CatFamiliar" }
+    local exit = { equipment = { familiar = { name = "CatFamiliar", stackMultiplier = 1 } } }
+    lu.assertTrue(proveExact("equipment", exit, run, gameState))
+    cat.ReportedFamiliarLastStandAmount = 2
+    assertMismatch("equipment", proveExact("equipment", exit, run, gameState))
+    exit.equipment.familiar.stackMultiplier = 2
+    lu.assertTrue(proveExact("equipment", exit, run, gameState))
+    -- No familiar is planned, but one is equipped.
+    assertMismatch("equipment", proveExact("equipment", { equipment = {} }, run, gameState))
+end
+
+function TestConformanceReaders.testArcanaProvesEquippedCardsBarrenAndArtificerCharges()
+    local restore = nativeGame.install({
+        MetaUpgradeCardData = { CardA = { TraitName = "CardATrait" }, Artificer = { TraitName = "ArtTrait" } },
+    })
+    local exit = {
+        arcana = { active = {
+            { key = "CardA", origin = "temporary", rarity = "Rare", held = true },
+            { key = "Artificer", origin = "manual", rarity = "Epic", held = true },
+        } },
+        artificer = { usedCount = 1, remainingCount = 2 },
+    }
+    local gameState = { MetaUpgradeState = {
+        CardA = { Equipped = true }, Artificer = { Equipped = true }, Other = { Equipped = false },
+    } }
+    local run = {
+        TemporaryMetaUpgrades = { CardA = true }, MetaConversionUses = 1,
+        Hero = { Traits = {
+            { Name = "CardATrait", Rarity = "Rare" },
+            { Name = "ArtTrait", Rarity = "Epic", MetaConversionUses = 2 },
+        } },
+    }
+    lu.assertTrue(proveExact("arcana", exit, run, gameState))
+    run.MetaConversionUses = 2
+    assertMismatch("arcana", proveExact("arcana", exit, run, gameState))
+    run.MetaConversionUses = 1
+    run.TemporaryMetaUpgrades = {}
+    assertMismatch("arcana", proveExact("arcana", exit, run, gameState))
+    -- Barren unequipped The Artificer; a card drawn during Barren stays held.
+    run.TemporaryMetaUpgrades = { CardA = true }
+    exit.arcana.active[2].held = false
+    exit.artificer = { usedCount = 1 }
+    assertMismatch("arcana", proveExact("arcana", exit, run, gameState))
+    table.remove(run.Hero.Traits, 2)
+    lu.assertTrue(proveExact("arcana", exit, run, gameState))
+    run.Hero.Traits = {}
+    assertMismatch("arcana", proveExact("arcana", exit, run, gameState))
+    restore()
+end
+
+function TestConformanceReaders.testVowsProveRanksDisabledVowsAndDenialBans()
+    local gameState = { ShrineUpgrades = { A = 2, B = 1, C = 0 } }
+    local run = { ShrineUpgradesDisabled = { B = true }, BannedTraits = { Y = true, Z = true } }
+    local restore = nativeGame.install({ GetNumShrineUpgrades = function(key)
+        return run.ShrineUpgradesDisabled[key] and 0 or (gameState.ShrineUpgrades[key] or 0)
+    end })
+    local exit = {
+        vows = { configuredRanks = { A = 2, B = 1 }, effectiveRanks = { A = 2, B = 0 }, disabledKeys = { "B" } },
+        traits = { bannedTraitKeys = { "Z", "Y" } },
+    }
+    lu.assertTrue(proveExact("vows", exit, run, gameState))
+    run.BannedTraits.X = true
+    assertMismatch("vows", proveExact("vows", exit, run, gameState))
+    run.BannedTraits.X = nil
+    gameState.ShrineUpgrades.C = 1
+    assertMismatch("vows", proveExact("vows", exit, run, gameState))
+    restore()
+end
+
+function TestConformanceReaders.testChaosValuesProveCurseAndBlessingOperands()
+    local curse = {
+        Name = "ChaosHealthCurse", PropertyChanges = { { ChangeValue = -20 } },
+        OnExpire = { TraitData = { Name = "ChaosHealthBlessing", PropertyChanges = { { ChangeValue = 30 } } } },
+    }
+    local run = { Hero = { Traits = { curse, { Name = "ChaosMoneyBlessing", MoneyMultiplier = 1.4 } } } }
+    local exit = { chaos = {
+        active = { {
+            curseKey = "ChaosHealthCurse", blessingKey = "ChaosHealthBlessing", rarity = "Rare",
+            clock = "encounters", remaining = 2,
+            curseValues = { healthPenalty = -20 }, blessingValues = { health = 30 },
+        } },
+        matured = { { blessingKey = "ChaosMoneyBlessing", rarity = "Epic", blessingValues = { moneyBonus = 0.4 } } },
+    } }
+    lu.assertTrue(proveExact("chaosValues", exit, run))
+    curse.PropertyChanges[1].ChangeValue = -25
+    assertMismatch("chaosValues", proveExact("chaosValues", exit, run))
+end
+
+function TestConformanceReaders.testHexNodesProveRealisedTalentsAndInvestment()
+    local talents = {
+        { { Name = "TalentA", Invested = true } },
+        { { Name = "TalentB" }, { Name = "OlympianX", Pool = { OlympianSpell = true }, Invested = true } },
+    }
+    local run = { Hero = { SlottedSpell = { Talents = talents } } }
+    local exit = { hexNodes = {
+        nodes = { ["1:1"] = "TalentA", ["2:1"] = "TalentB" }, investedNodes = { "2:2", "1:1" },
+    } }
+    lu.assertTrue(proveExact("hexNodes", exit, run))
+    talents[2][1].Name = "TalentC"
+    assertMismatch("hexNodes", proveExact("hexNodes", exit, run))
+    talents[2][1].Name, talents[2][1].Invested = "TalentB", true
+    assertMismatch("hexNodes", proveExact("hexNodes", exit, run))
 end

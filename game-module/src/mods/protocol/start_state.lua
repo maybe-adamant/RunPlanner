@@ -116,12 +116,18 @@ local keepsakeCounts = {
     "remainingUses", "uses", "rarityUpgradeUses", "boonConversionUses", "currentRoom", "currentArmor",
 }
 local keepsakeMultipliers = { "currentKeepsakeDamageBonus", "escalatingKeepsakeValue" }
+-- Bell, Fang and Silken Sash values, installed at a start but never framed.
+local keepsakeValues = { currentArmor = true, currentKeepsakeDamageBonus = true, escalatingKeepsakeValue = true }
 
 -- One held keepsake trait: the slotted one, or one held unslotted.
-local function keepsakeTrait(value, label)
+local function keepsakeTrait(value, label, frame)
     local optionalKeys = { "slotted" }
-    for _, key in ipairs(keepsakeCounts) do optionalKeys[#optionalKeys + 1] = key end
-    for _, key in ipairs(keepsakeMultipliers) do optionalKeys[#optionalKeys + 1] = key end
+    for _, key in ipairs(keepsakeCounts) do
+        if not (frame and keepsakeValues[key]) then optionalKeys[#optionalKeys + 1] = key end
+    end
+    for _, key in ipairs(keepsakeMultipliers) do
+        if not frame then optionalKeys[#optionalKeys + 1] = key end
+    end
     local row = exact(value, { "name", "rarity" }, optionalKeys, label)
     str(row.name, label .. ".name")
     one(row.rarity, keepsakeRarities, label .. ".rarity")
@@ -134,28 +140,34 @@ local function keepsakeTrait(value, label)
     end
 end
 
+local function keepsakeTraits(value, label, frame)
+    list(value, label, function(entry, entryLabel) keepsakeTrait(entry, entryLabel, frame) end)
+    uniqueNames(value, label)
+    local slotted = 0
+    for _, held in ipairs(value) do
+        if held.slotted then slotted = slotted + 1 end
+    end
+    check(slotted <= 1, label .. " holds more than one slotted keepsake")
+end
+
 local function keepsake(value, label)
     local row = exact(value, { "keepsakeCache", "blockedKeepsakes", "traits" },
         { "persistentDionysusSkip" }, label)
     strings(row.keepsakeCache, label .. ".keepsakeCache")
     strings(row.blockedKeepsakes, label .. ".blockedKeepsakes")
-    list(row.traits, label .. ".traits", keepsakeTrait)
-    uniqueNames(row.traits, label .. ".traits")
-    local slotted = 0
-    for _, held in ipairs(row.traits) do
-        if held.slotted then slotted = slotted + 1 end
-    end
-    check(slotted <= 1, label .. ".traits holds more than one slotted keepsake")
+    keepsakeTraits(row.traits, label .. ".traits")
     optional(row.persistentDionysusSkip, function(entry, entryLabel)
         int(exact(entry, { "remainingUses" }, {}, entryLabel).remainingUses, entryLabel .. ".remainingUses")
     end, label .. ".persistentDionysusSkip")
 end
 
 local function arcanaCard(value, label)
-    local row = exact(value, { "name", "rarity" }, { "temporary", "currentRoom", "metaConversionUses" }, label)
+    local row = exact(value, { "name", "rarity" },
+        { "temporary", "unequipped", "currentRoom", "metaConversionUses" }, label)
     str(row.name, label .. ".name")
     one(row.rarity, keepsakeRarities, label .. ".rarity")
     trueFlag(row.temporary, label .. ".temporary")
+    trueFlag(row.unequipped, label .. ".unequipped")
     optional(row.currentRoom, int, label .. ".currentRoom")
     optional(row.metaConversionUses, int, label .. ".metaConversionUses")
 end
@@ -198,6 +210,23 @@ local function well(value, label)
     for key, count in pairs(row.wellShopPurchases) do int(count, label .. ".wellShopPurchases." .. key, 1) end
 end
 
+local function investedNodes(value, label)
+    strings(value, label)
+    local seen = {}
+    for _, node in ipairs(value) do
+        check(node:match("^[1-9]%d*:%d+$") and not seen[node], label .. " must be distinct node keys")
+        seen[node] = true
+    end
+end
+
+local function rewardStores(value, label)
+    list(value, label, function(entry, entryLabel)
+        local store = exact(entry, { "name", "remainingEntryCounts" }, {}, entryLabel)
+        str(store.name, entryLabel .. ".name")
+        list(store.remainingEntryCounts, entryLabel .. ".remainingEntryCounts", int)
+    end)
+end
+
 local function hex(value, label)
     local row = exact(value, { "spellTraitName", "investedNodes", "talentPoints", "allSpellInvested" },
         { "tree" }, label)
@@ -206,12 +235,7 @@ local function hex(value, label)
         local _, treeError = p.hexTree(entry, entryLabel, { "layoutKey", "nodes" })
         check(treeError == nil, tostring(treeError))
     end, label .. ".tree")
-    strings(row.investedNodes, label .. ".investedNodes")
-    local seen = {}
-    for _, node in ipairs(row.investedNodes) do
-        check(node:match("^[1-9]%d*:%d+$") and not seen[node], label .. ".investedNodes must be distinct node keys")
-        seen[node] = true
-    end
+    investedNodes(row.investedNodes, label .. ".investedNodes")
     int(row.talentPoints, label .. ".talentPoints")
     bool(row.allSpellInvested, label .. ".allSpellInvested")
 end
@@ -236,8 +260,8 @@ local function shape(value)
     local row = exact(value, {
         "point", "biomeKey", "occurrenceId", "roomName", "gold", "biomeVisitOrder", "roomHistory",
         "encounterDepth", "aspectPerfect", "traits", "elementEssences", "chaosCurses", "chaosBlessings", "keepsake", "arcana",
-        "arcanaBarren", "disabledVows", "maxStats", "itemArmor", "stygianWell", "hermesDeliveries",
-        "rewardPriorities", "useRecord", "lootTypeHistory", "consumableRecord", "rewardStores",
+        "disabledVows", "maxStats", "itemArmor", "stygianWell", "hermesDeliveries",
+        "rewardPriorities", "useRecord", "lootTypeHistory", "consumableRecord", "bannedTraits", "rewardStores",
     }, { "lastDevotionDepth", "biome", "familiar", "hex" }, LABEL)
     check(row.point == "opening" or row.point == "preboss" or row.point == "boss", LABEL .. ".point is unsupported")
     one(row.biomeKey, biomes, LABEL .. ".biomeKey")
@@ -271,7 +295,6 @@ local function shape(value)
     keepsake(row.keepsake, LABEL .. ".keepsake")
     list(row.arcana, LABEL .. ".arcana", arcanaCard)
     uniqueNames(row.arcana, LABEL .. ".arcana")
-    bool(row.arcanaBarren, LABEL .. ".arcanaBarren")
     strings(row.disabledVows, LABEL .. ".disabledVows")
     maxStats(row.maxStats, LABEL .. ".maxStats")
     int(row.itemArmor, LABEL .. ".itemArmor")
@@ -286,11 +309,8 @@ local function shape(value)
     numbers(row.useRecord, LABEL .. ".useRecord")
     numbers(row.lootTypeHistory, LABEL .. ".lootTypeHistory")
     numbers(row.consumableRecord, LABEL .. ".consumableRecord")
-    list(row.rewardStores, LABEL .. ".rewardStores", function(entry, entryLabel)
-        local store = exact(entry, { "name", "remainingEntryCounts" }, {}, entryLabel)
-        str(store.name, entryLabel .. ".name")
-        list(store.remainingEntryCounts, entryLabel .. ".remainingEntryCounts", int)
-    end)
+    strings(row.bannedTraits, LABEL .. ".bannedTraits")
+    rewardStores(row.rewardStores, LABEL .. ".rewardStores")
     return row
 end
 
@@ -333,15 +353,28 @@ local function references(start, plan, occurrencesById)
         LABEL .. ".biome.clockwork is present exactly for an I Preboss")
 end
 
-function protocol.decode(value, plan, occurrencesById)
-    local ok, result = pcall(function()
-        local start = shape(value)
-        references(start, plan, occurrencesById)
-        return start
-    end)
+local function guarded(decode)
+    local ok, result = pcall(decode)
     if ok then return result end
     if type(result) == "table" and result.startStateError then return nil, result.startStateError end
     error(result, 0)
 end
+
+function protocol.decode(value, plan, occurrencesById)
+    return guarded(function()
+        local start = shape(value)
+        references(start, plan, occurrencesById)
+        return start
+    end)
+end
+
+-- Held keepsake rows and node keys, shared with the Run State frames.
+function protocol.keepsakeTraits(value, label, frame)
+    return guarded(function() keepsakeTraits(value, label, frame) return true end)
+end
+function protocol.investedNodes(value, label)
+    return guarded(function() investedNodes(value, label) return true end)
+end
+
 
 return protocol

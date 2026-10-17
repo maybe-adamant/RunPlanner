@@ -223,7 +223,7 @@ function TestProtocol.testConformanceResolverProjectsNamedFactsAndRejectsUnknown
             "keepsakes": {"currentKey":"Keepsake"},
             "stygianWell": {"sparkUses":1,"yarnUses":2}
         },
-        "chaos": {"active":[]},
+        "chaos": {"active":[],"matured":[]},
         "rewardPriorities": ["boon"],
         "hexProgress": {"investedPathPoints":2},
         "forfeit": "inactive"
@@ -2275,4 +2275,29 @@ function TestProtocol.testPathScreenRolesCarryTheirPlannedNodesStrictly()
     lu.assertNil(rewards.acquisitionRole(role, "role"))
     role.plannedHexNodeKeys = "1:2"
     lu.assertNil(rewards.acquisitionRole(role, "role"))
+end
+
+function TestProtocol.testExactFrameSectionsDecodeStrictly()
+    local function rejects(pattern, mutate)
+        local plan = fixtures.decode()
+        mutate(plan, plan.occurrences[1].diagnostics.roomEntered.replace)
+        local decoded, errorMessage = protocol.decode(plan)
+        lu.assertNil(decoded)
+        lu.assertStrContains(errorMessage, pattern)
+    end
+    lu.assertNotNil(protocol.decode(fixtures.decode()))
+    rejects("barren", function(_, frame) frame.arcana.barren = false end)
+    rejects("invalid node", function(_, frame) frame.hexNodes.nodes = assert(json.decode('{"0:1":"Talent"}')) end)
+    rejects("distinct node keys", function(_, frame)
+        frame.hexNodes.investedNodes = assert(json.decode('["1:1","1:1"]'))
+    end)
+    rejects("more than one slotted", function(_, frame)
+        frame.keepsakes.held = assert(json.decode(
+            '[{"name":"A","rarity":"Epic","slotted":true},{"name":"B","rarity":"Epic","slotted":true}]'))
+    end)
+    rejects("aspect", function(_, frame) frame.equipment.aspect.rarity = "Epic" end)
+    rejects("escalatingKeepsakeValue", function(_, frame)
+        frame.keepsakes.held = assert(json.decode('[{"name":"A","rarity":"Epic","escalatingKeepsakeValue":1}]'))
+    end)
+    rejects("rewardStores", function(_, frame) frame.rewardStores = assert(json.decode("[]")) end)
 end

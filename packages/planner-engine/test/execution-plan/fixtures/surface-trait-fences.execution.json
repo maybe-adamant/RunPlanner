@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "surface-2",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -514,7 +514,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -524,6 +529,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2262,7 +2268,8 @@
         "facts": [
           { "kind": "elementCounts" },
           { "kind": "traitInventory" },
-          { "kind": "pathOfStars" }
+          { "kind": "pathOfStars" },
+          { "kind": "hexNodes" }
         ]
       },
       "diagnostics": {
@@ -2321,6 +2328,27 @@
               "bankedPathPoints": 0,
               "investedPathPoints": 0,
               "olympianTalentInvested": false
+            },
+            "hexNodes": {
+              "nodes": {
+                "1:2": "CooldownDamageTalent",
+                "1:4": "ChargeRegenTalent",
+                "2:2": "PreChargeTalent",
+                "2:4": "SummonDamageTalent",
+                "3:1": "CooldownDamageTalent",
+                "3:2": "PreChargeTalent",
+                "3:3": "SummonDamageTalent",
+                "3:4": "CooldownDamageTalent",
+                "3:5": "SummonDamageTalent",
+                "3:6": "CooldownDamageTalent",
+                "4:1": "SummonSpeedTalent",
+                "4:3": "SummonDamageTalent",
+                "4:5": "SummonTeleportTalent",
+                "5:2": "CooldownDamageTalent",
+                "5:4": "SummonDamageTalent",
+                "6:3": "SummonDamageSplitTalent"
+              },
+              "investedNodes": []
             }
           }
         }
@@ -3786,7 +3814,11 @@
         "kind": "terminal"
       },
       "roomExitConformance": {
-        "facts": [{ "kind": "elementCounts" }, { "kind": "traitInventory" }]
+        "facts": [
+          { "kind": "elementCounts" },
+          { "kind": "traitInventory" },
+          { "kind": "keepsakes" }
+        ]
       },
       "diagnostics": {
         "roomEntered": {
@@ -3842,7 +3874,8 @@
               "currentKey": "BlockDeathKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake", "BlockDeathKeepsake"],
               "blockedKeys": ["ManaOverTimeRefundKeepsake"],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "BlockDeathKeepsake", "rarity": "Epic", "slotted": true }]
             }
           }
         }
@@ -3970,5 +4003,5 @@
       }
     }
   ],
-  "planFingerprint": "30864e54"
+  "planFingerprint": "ef2572ef"
 }

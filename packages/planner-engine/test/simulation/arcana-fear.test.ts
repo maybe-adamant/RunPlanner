@@ -20,6 +20,7 @@ import {
   advanceArcanaRoomEntry,
   circeResolutionDomain,
   judgmentRequiredCount,
+  reconcileBarrenArcana,
 } from '../../src/simulation/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
@@ -365,10 +366,9 @@ describe('The Centaur room-entry cycle', () => {
     return activated.state;
   };
   const enter = (state: ReturnType<typeof withCentaur>, count: number, removed = false) => {
-    let next = state;
-    for (let index = 0; index < count; index += 1)
-      next = advanceArcanaRoomEntry(catalog, next, removed);
-    return next;
+    let next = removed ? reconcileBarrenArcana(state, false, true) : state;
+    for (let index = 0; index < count; index += 1) next = advanceArcanaRoomEntry(catalog, next);
+    return removed ? reconcileBarrenArcana(next, true, false) : next;
   };
 
   it('grants at every fifth room start and restarts the cycle', () => {
@@ -390,7 +390,7 @@ describe('The Centaur room-entry cycle', () => {
       counted(1, 1),
     ]);
     const none = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
-    expect(advanceArcanaRoomEntry(catalog, none, false)).toBe(none);
+    expect(advanceArcanaRoomEntry(catalog, none)).toBe(none);
   });
 
   it('restarts on Lapis promotion and while Barren removes the Arcana, keeping grants', () => {
@@ -416,5 +416,49 @@ describe('The Centaur room-entry cycle', () => {
       progress: 1,
       ...epicGrant,
     });
+  });
+});
+
+describe('Barren on equipped Arcana', () => {
+  const owner = createBiomeAddress('Underworld', 'F');
+  it('unequips the held cards, keeps a card drawn during Barren, and re-adds the rest at Epic', () => {
+    const drawn = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      ['MetaToRunUpgrade'],
+      { owner, sequence: 1 },
+    );
+    if (!drawn.legal) throw new Error('The Artificer must activate');
+    const promoted = promoteArcana(catalog, drawn.state, ['MetaToRunUpgrade'], {
+      owner,
+      sequence: 2,
+    });
+    if (!promoted.legal) throw new Error('The Artificer must promote');
+    const heroicCapacity = artificerStatus(catalog, promoted.state)!.capacity;
+    const barren = reconcileBarrenArcana(promoted.state, false, true);
+    expect(barren.arcana.active.every((card) => card.unequipped === true)).toBe(true);
+    // A Crystal Figurine draw during Barren is held at its own rarity.
+    const figurine = activateTemporaryArcana(
+      catalog,
+      barren,
+      ['MaxHealthPerRoom'],
+      { owner, sequence: 3 },
+      'Heroic',
+    );
+    if (!figurine.legal) throw new Error('The Centaur must activate');
+    const expired = reconcileBarrenArcana(figurine.state, true, false);
+    const card = (key: string) => expired.arcana.active.find((entry) => entry.key === key);
+    expect(card('MaxHealthPerRoom')).toEqual({
+      key: 'MaxHealthPerRoom',
+      origin: 'temporary',
+      rarity: 'Heroic',
+    });
+    expect(card('MetaToRunUpgrade')).toEqual({
+      key: 'MetaToRunUpgrade',
+      origin: 'temporary',
+      rarity: 'Epic',
+    });
+    expect(expired.arcana.active.some((entry) => entry.unequipped === true)).toBe(false);
+    expect(artificerStatus(catalog, expired)!.capacity).toBeLessThan(heroicCapacity);
   });
 });

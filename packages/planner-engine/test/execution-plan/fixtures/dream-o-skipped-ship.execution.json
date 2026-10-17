@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "dream-o-skipped-ship",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -352,7 +352,12 @@
               "currentKey": "ManaOverTimeRefundKeepsake",
               "usedKeys": ["ManaOverTimeRefundKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [{ "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -362,6 +367,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -1385,5 +1391,5 @@
       }
     }
   ],
-  "planFingerprint": "9fc5e3fa"
+  "planFingerprint": "81c7f6cb"
 }

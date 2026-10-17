@@ -89,6 +89,8 @@ export interface ExecutionRunStateDiagnostic {
       readonly key: string;
       readonly origin: 'manual' | 'automatic' | 'temporary';
       readonly rarity: 'Common' | 'Rare' | 'Epic' | 'Heroic';
+      /** False while Barren holds this equipped card's trait unequipped. */
+      readonly held: boolean;
     }[];
   };
   readonly vows: {
@@ -104,8 +106,14 @@ export interface ExecutionRunStateDiagnostic {
       readonly rarity: string;
       readonly clock: 'encounters' | 'locations' | 'godBoonScreens';
       readonly remaining: number;
+      readonly curseValues: Readonly<Record<string, number>>;
+      readonly blessingValues: Readonly<Record<string, number>>;
     }[];
-    readonly matured: readonly { readonly blessingKey: string; readonly rarity: string }[];
+    readonly matured: readonly {
+      readonly blessingKey: string;
+      readonly rarity: string;
+      readonly blessingValues: Readonly<Record<string, number>>;
+    }[];
   };
   readonly keepsakes: {
     /** Omitted when no keepsake is equipped. */
@@ -113,6 +121,16 @@ export interface ExecutionRunStateDiagnostic {
     readonly usedKeys: readonly string[];
     readonly blockedKeys: readonly string[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
+    /** Every held keepsake trait with its rank, slot and charge counters. */
+    readonly held: readonly Omit<
+      ExecutionStartKeepsakeTrait,
+      'escalatingKeepsakeValue' | 'currentKeepsakeDamageBonus' | 'currentArmor'
+    >[];
+  };
+  readonly equipment: {
+    /** Omitted for an aspectless run. */
+    readonly aspect?: { readonly key: string; readonly rarity: 'Legendary' | 'Perfect' };
+    readonly familiar?: { readonly name: string; readonly stackMultiplier: number };
   };
   readonly rewardPriorities: readonly string[];
   readonly hexProgress: {
@@ -124,7 +142,14 @@ export interface ExecutionRunStateDiagnostic {
     readonly investedPathPoints: number;
     readonly olympianTalentInvested: boolean;
   };
-  readonly artificer: { readonly usedCount: number; readonly remainingCount: number } | null;
+  readonly hexNodes: {
+    /** The held tree's realised talents, empty before a Hex is held. */
+    readonly nodes: ExecutionHexTreeNodes;
+    /** Invested node keys (`depth:slot`) in investment order. */
+    readonly investedNodes: readonly string[];
+  };
+  /** `remainingCount` is omitted while Barren holds The Artificer unequipped. */
+  readonly artificer: { readonly usedCount: number; readonly remainingCount?: number } | null;
   readonly retainedEffects: {
     readonly echoShopDuplicateStatus: 'pending' | 'consumed' | null;
     readonly keepsakes: ExecutionPendingKeepsakeEffects;
@@ -444,7 +469,7 @@ export interface ExecutionAcquisitionRole {
   readonly settlement?: { readonly site: string; readonly entry: string };
   readonly traitOffer?: ExecutionTraitOffer;
   readonly levelResolution?: ExecutionLevelResolution;
-  /** Nodes this role's writable Path screen plans to invest; highlighted, not enforced. */
+  /** Nodes this role's writable Path screen plans to invest; room exit proves the investment. */
   readonly plannedHexNodeKeys?: readonly string[];
 }
 
@@ -1182,6 +1207,8 @@ export interface ExecutionStartArcanaCard {
   readonly rarity: ExecutionKeepsakeRarity;
   /** Listed in native `CurrentRun.TemporaryMetaUpgrades`. */
   readonly temporary?: true;
+  /** Barren holds this equipped card's trait unequipped. */
+  readonly unequipped?: true;
   /** Native `CurrentRoom` of a room-growth card (The Centaur). */
   readonly currentRoom?: number;
   /** Native `MetaConversionUses` (The Artificer). */
@@ -1285,8 +1312,6 @@ export interface ExecutionStartState {
   readonly chaosBlessings: readonly ExecutionStartChaosBlessing[];
   readonly keepsake: ExecutionStartKeepsake;
   readonly arcana: readonly ExecutionStartArcanaCard[];
-  /** A Barren curse holds the Arcana unequipped. */
-  readonly arcanaBarren: boolean;
   /** Native `ShrineUpgradesDisabled`: vows Circe disabled. */
   readonly disabledVows: readonly string[];
   readonly maxStats: {
@@ -1310,6 +1335,8 @@ export interface ExecutionStartState {
   readonly useRecord: Readonly<Record<string, number>>;
   readonly lootTypeHistory: Readonly<Record<string, number>>;
   readonly consumableRecord: Readonly<Record<string, number>>;
+  /** Native `CurrentRun.BannedTraits`. */
+  readonly bannedTraits: readonly string[];
   /**
    * Native `RewardStores` exact across every planned branch, as remaining
    * counts aligned with `RewardStoreData[name]`; other stores stay native.

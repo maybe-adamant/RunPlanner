@@ -40,7 +40,7 @@ export function executionOccurrence(
   const publishedHub =
     hub === undefined ? undefined : hubOverview(hub, hubExit, biome.rewards.hubDepartures);
   const publishedLocalSlots = localSlots === undefined ? undefined : localSlotsOverview(localSlots);
-  const diagnostics = assembleOccurrenceDiagnostics(room, snapshots);
+  const diagnostics = assembleOccurrenceDiagnostics(catalog, room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);
   return Object.freeze({
     id: room.occurrenceId,

@@ -196,9 +196,19 @@ describe('decision run-state snapshots', () => {
           equippedTraits: {},
           echoShopDuplicateStatus: undefined,
           steadyGrowth: {},
-          chaos: {},
+          chaos: { active: [], matured: [] },
+          bannedTraitKeys: [],
         },
+        arcanaFear: {
+          arcana: { active: [] },
+          fear: { configuredRanks: {}, effectiveRanks: {}, disabledVowKeys: [] },
+        },
+        effects: {},
+        hexProgress: { investedNodeKeys: [] },
         keepsakes: {
+          currentKey: null,
+          history: [],
+          removedKeys: [],
           olympianSources: [],
           jeweledPom: undefined,
           experimentalHammers: [],
@@ -220,6 +230,7 @@ describe('decision run-state snapshots', () => {
     const entered = snapshot('roomEntered', before);
     const exited = snapshot('beforeRoomExit', after);
     const deltas = deriveRoomExitConformanceDeltas(
+      catalog,
       [occurrence],
       new Map([
         [semanticAddressKey(entered.owner), entered],
@@ -318,6 +329,7 @@ describe('decision run-state snapshots', () => {
     expect(exited.traits.echoShopDuplicateStatus).toBe('consumed');
     expect(exited.stygianWell.sparkUses).toBe(1);
     const deltas = deriveRoomExitConformanceDeltas(
+      catalog,
       [occurrence],
       new Map([
         [semanticAddressKey(entered.owner), entered],
@@ -329,6 +341,151 @@ describe('decision run-state snapshots', () => {
       { kind: 'keepsakeEffects' },
       { kind: 'stygianWell' },
     ]);
+  });
+
+  describe('exact frame facts', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('run-state-exact-frames'),
+    );
+    const historyView = {
+      sequence: 1,
+      ledgers: {
+        roomCreations: [],
+        roomAppearances: [],
+        encounterRecords: [],
+        encounterStarts: [],
+        encounterCompletions: [],
+        enteredRewardStores: [],
+        requiredObjectSpawns: [],
+        requiredObjectCompletions: [],
+        roomRestores: [],
+        counters: {
+          biomeDepthCache: 1,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 1,
+        },
+      },
+    };
+    type State = ReturnType<typeof initializeTestRewardBranches>[number]['state'];
+    const base = initializeTestRewardBranches()[0]!;
+    const snapshot = (
+      checkpoint: 'roomEntered' | 'beforeRoomExit',
+      ...states: readonly State[]
+    ): RunStateSnapshot =>
+      createRunState({
+        catalog,
+        layout: fLayout,
+        owner: createRoomRunStateCheckpointAddress(occurrence, { kind: checkpoint }),
+        states: reachedTestStates(
+          states.map((state) => Object.freeze({ ...base, state })),
+          historyView,
+        ),
+        rewardFacts: () => requirementFacts(0),
+      })!;
+    const facts = (after: State, before: State = base.state) => {
+      const entered = snapshot('roomEntered', before);
+      const exited = snapshot('beforeRoomExit', after);
+      return deriveRoomExitConformanceDeltas(
+        catalog,
+        [occurrence],
+        new Map([
+          [semanticAddressKey(entered.owner), entered],
+          [semanticAddressKey(exited.owner), exited],
+        ]),
+      )
+        .get(occurrence.occurrenceId)
+        ?.facts.map((fact) => fact.kind);
+    };
+    const premiumService = catalog.traits.values.find(
+      (trait) => trait.raisesAspectToPerfect === true,
+    )!.key;
+    const tree = (talent: string) =>
+      Object.freeze({ layoutKey: 'Lung' as const, nodes: Object.freeze({ '1:1': talent }) });
+
+    it.each<{ readonly kind: string; readonly after: (state: State) => State }>([
+      {
+        kind: 'keepsakes',
+        after: (state) => ({
+          ...state,
+          keepsakes: {
+            ...state.keepsakes,
+            currentKey: state.keepsakes.currentKey === null ? 'ManaOverTimeRefundKeepsake' : null,
+          },
+        }),
+      },
+      {
+        kind: 'equipment',
+        after: (state) => ({
+          ...state,
+          traitHistory: {
+            ...state.traitHistory,
+            previouslyPickedTraitKeys: [premiumService],
+          },
+        }),
+      },
+      {
+        kind: 'arcana',
+        after: (state) => ({
+          ...state,
+          arcanaFear: {
+            ...state.arcanaFear,
+            arcana: {
+              ...state.arcanaFear.arcana,
+              active: [
+                ...state.arcanaFear.arcana.active,
+                { key: 'StartingGold', origin: 'temporary', rarity: 'Rare' },
+              ],
+            },
+          },
+        }),
+      },
+      {
+        kind: 'vows',
+        after: (state) => ({
+          ...state,
+          traitHistory: { ...state.traitHistory, bannedTraitKeys: ['ZeusWeaponBoon'] },
+        }),
+      },
+    ])('publishes $kind when only its exact state changes', ({ kind, after }) => {
+      expect(facts(after(base.state))).toEqual(['elementCounts', kind]);
+    });
+
+    it('publishes hexNodes when a node of the same layout differs', () => {
+      const held = (talent: string): State => ({
+        ...base.state,
+        hexProgress: { ...base.state.hexProgress, tree: tree(talent) },
+      });
+      expect(facts(held('PolymorphZeusTalent'), held('PolymorphSandwichTalent'))).toEqual([
+        'elementCounts',
+        'hexNodes',
+      ]);
+    });
+
+    it('publishes chaosValues beside chaos when a held curse rolled differently', () => {
+      const cursed = (healthPenalty: number): State => ({
+        ...base.state,
+        traitHistory: {
+          ...base.state.traitHistory,
+          activeChaosCurses: [
+            {
+              acquisitionIdentity: 'chaos',
+              owner: occurrence,
+              curseKey: 'ChaosHealthCurse',
+              duration: 3,
+              remaining: 3,
+              clock: 'encounters',
+              curseValues: { healthPenalty },
+              blessingKey: 'ChaosHealthBlessing',
+              rarity: 'Rare',
+              blessingValues: { health: 30 },
+            },
+          ],
+        },
+      });
+      expect(facts(cursed(-20), cursed(-15))).toEqual(['elementCounts', 'chaos', 'chaosValues']);
+    });
   });
 
   it('keeps facts-derived caches local to one exact checkpoint context', () => {

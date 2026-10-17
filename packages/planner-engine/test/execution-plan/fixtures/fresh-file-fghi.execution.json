@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "fresh-route",
   "routeKey": "FreshFile",
   "startingLoadout": {
@@ -591,7 +591,13 @@
             },
             "forfeit": "inactive",
             "chaos": { "active": [], "matured": [] },
-            "keepsakes": { "usedKeys": [], "blockedKeys": [], "fatedStatus": "Unknown" },
+            "keepsakes": {
+              "usedKeys": [],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": []
+            },
+            "equipment": {},
             "rewardPriorities": [],
             "hexProgress": {
               "talentKeys": [],
@@ -600,6 +606,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -6196,5 +6203,5 @@
       }
     }
   ],
-  "planFingerprint": "fd04ca88"
+  "planFingerprint": "ba5a10bb"
 }

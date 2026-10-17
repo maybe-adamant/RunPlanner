@@ -89,7 +89,10 @@ import { executionTimelineTransactions } from '../../src/execution-plan/assembly
 import { traitOffer as decodeExecutionTraitOffer } from '../../src/execution-plan/codec/rewards';
 import { overview as decodeExecutionOverview } from '../../src/execution-plan/codec/overview';
 import { transaction as decodeExecutionTransaction } from '../../src/execution-plan/codec/timeline';
-import type { ExecutionTimelineTransaction } from '../../src/execution-plan/model';
+import type {
+  ExecutionRunStateDiagnostic,
+  ExecutionTimelineTransaction,
+} from '../../src/execution-plan/model';
 import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
@@ -2059,11 +2062,27 @@ describe('engine-owned F/G execution semantic product', () => {
     expect(state.keepsakes.discordantBell!.multiplier).toBeGreaterThan(1);
     expect(state.keepsakes.lionFang!.multiplier).toBeLessThan(1.5);
     expect(state.arcanaFear.arcana.roomEntryGrowth?.MaxHealthPerRoom?.grants).toBeGreaterThan(0);
+    // Stripping the Bell's effect also drops its unslotted retention: identity, not a value.
+    const frame = (state: ExecutionRunStateDiagnostic | undefined) =>
+      state === undefined
+        ? undefined
+        : {
+            ...state,
+            keepsakes: {
+              ...state.keepsakes,
+              held: state.keepsakes.held.filter(
+                (row) => row.slotted === true || row.name !== 'EscalatingKeepsake',
+              ),
+            },
+          };
     const observed = (product: ReturnType<typeof productFor>) =>
       product.occurrences.map((occurrence) => ({
         id: occurrence.id,
         conformance: occurrence.roomExitConformance,
-        diagnostics: occurrence.diagnostics,
+        diagnostics: {
+          roomEntered: frame(occurrence.diagnostics?.roomEntered),
+          beforeRoomExit: frame(occurrence.diagnostics?.beforeRoomExit),
+        },
       }));
     const unchanged = (candidate: typeof project) =>
       expect(
@@ -2324,7 +2343,7 @@ describe('engine-owned F/G execution semantic product', () => {
     const retainedChaos = postboss?.diagnostics?.roomEntered?.chaos;
     expect(retainedChaos).toEqual({
       active: [],
-      matured: [{ blessingKey: 'ChaosElementalBlessing', rarity: 'Epic' }],
+      matured: [{ blessingKey: 'ChaosElementalBlessing', rarity: 'Epic', blessingValues: {} }],
     });
     expect(postboss?.diagnostics?.beforeRoomExit?.chaos).toEqual(retainedChaos);
     expect(

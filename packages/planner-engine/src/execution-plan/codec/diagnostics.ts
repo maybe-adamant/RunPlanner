@@ -17,6 +17,8 @@ import {
   stableJson,
   type Dict,
 } from './primitives';
+import { hexTreeNodes } from './rewards';
+import { investedNodeKeys, keepsakeTraits } from './start-state';
 
 const traitElements = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 
@@ -46,8 +48,10 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       'forfeit',
       'chaos',
       'keepsakes',
+      'equipment',
       'rewardPriorities',
       'hexProgress',
+      'hexNodes',
       'artificer',
       'retainedEffects',
     ],
@@ -102,7 +106,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
   exact(arcana, ['active'], [], `${label}.arcana`);
   const activeArcana = array(arcana.active, `${label}.arcana.active`).map((entry, index) => {
     const row = object(entry, `${label}.arcana.active[${index}]`);
-    exact(row, ['key', 'origin', 'rarity'], [], `${label}.arcana.active[${index}]`);
+    exact(row, ['key', 'origin', 'rarity', 'held'], [], `${label}.arcana.active[${index}]`);
     if (
       !['manual', 'automatic', 'temporary'].includes(row.origin as string) ||
       !RARITY_UPGRADE_ORDER.includes(row.rarity as string)
@@ -112,6 +116,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       key: stringValue(row.key, `${label}.arcana.active[${index}].key`),
       origin: row.origin as 'manual' | 'automatic' | 'temporary',
       rarity: row.rarity as 'Common' | 'Rare' | 'Epic' | 'Heroic',
+      held: booleanValue(row.held, `${label}.arcana.active[${index}].held`),
     });
   });
   const vows = object(record.vows, `${label}.vows`);
@@ -122,7 +127,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
     const row = object(entry, `${label}.chaos.active[${index}]`);
     exact(
       row,
-      ['curseKey', 'blessingKey', 'rarity', 'clock', 'remaining'],
+      ['curseKey', 'blessingKey', 'rarity', 'clock', 'remaining', 'curseValues', 'blessingValues'],
       [],
       `${label}.chaos.active[${index}]`,
     );
@@ -134,25 +139,53 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       rarity: stringValue(row.rarity, `${label}.chaos.active[${index}].rarity`),
       clock: row.clock as 'encounters' | 'locations' | 'godBoonScreens',
       remaining: integer(row.remaining, `${label}.chaos.active[${index}].remaining`),
+      curseValues: numberRecord(row.curseValues, `${label}.chaos.active[${index}].curseValues`),
+      blessingValues: numberRecord(
+        row.blessingValues,
+        `${label}.chaos.active[${index}].blessingValues`,
+      ),
     });
   });
   const matured = array(chaos.matured, `${label}.chaos.matured`).map((entry, index) => {
     const row = object(entry, `${label}.chaos.matured[${index}]`);
-    exact(row, ['blessingKey', 'rarity'], [], `${label}.chaos.matured[${index}]`);
+    exact(row, ['blessingKey', 'rarity', 'blessingValues'], [], `${label}.chaos.matured[${index}]`);
     return Object.freeze({
       blessingKey: stringValue(row.blessingKey, `${label}.chaos.matured[${index}].blessingKey`),
       rarity: stringValue(row.rarity, `${label}.chaos.matured[${index}].rarity`),
+      blessingValues: numberRecord(
+        row.blessingValues,
+        `${label}.chaos.matured[${index}].blessingValues`,
+      ),
     });
   });
   const keepsakes = object(record.keepsakes, `${label}.keepsakes`);
   exact(
     keepsakes,
-    ['usedKeys', 'blockedKeys', 'fatedStatus'],
+    ['usedKeys', 'blockedKeys', 'fatedStatus', 'held'],
     ['currentKey'],
     `${label}.keepsakes`,
   );
   if (!['Unknown', 'Fated', 'Unfated'].includes(keepsakes.fatedStatus as string))
     fail(`${label}.keepsakes.fatedStatus is unsupported`);
+  const equipment = object(record.equipment, `${label}.equipment`);
+  exact(equipment, [], ['aspect', 'familiar'], `${label}.equipment`);
+  const aspect =
+    equipment.aspect === undefined
+      ? undefined
+      : object(equipment.aspect, `${label}.equipment.aspect`);
+  if (aspect !== undefined) {
+    exact(aspect, ['key', 'rarity'], [], `${label}.equipment.aspect`);
+    if (aspect.rarity !== 'Legendary' && aspect.rarity !== 'Perfect')
+      fail(`${label}.equipment.aspect.rarity is unsupported`);
+  }
+  const familiar =
+    equipment.familiar === undefined
+      ? undefined
+      : object(equipment.familiar, `${label}.equipment.familiar`);
+  if (familiar !== undefined)
+    exact(familiar, ['name', 'stackMultiplier'], [], `${label}.equipment.familiar`);
+  const hexNodes = object(record.hexNodes, `${label}.hexNodes`);
+  exact(hexNodes, ['nodes', 'investedNodes'], [], `${label}.hexNodes`);
   const hex = object(record.hexProgress, `${label}.hexProgress`);
   exact(
     hex,
@@ -162,8 +195,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
   );
   const artificer =
     record.artificer === null ? null : object(record.artificer, `${label}.artificer`);
-  if (artificer !== null)
-    exact(artificer, ['usedCount', 'remainingCount'], [], `${label}.artificer`);
+  if (artificer !== null) exact(artificer, ['usedCount'], ['remainingCount'], `${label}.artificer`);
   const retained = object(record.retainedEffects, `${label}.retainedEffects`);
   exact(
     retained,
@@ -534,6 +566,29 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
         stringArray(keepsakes.blockedKeys, `${label}.keepsakes.blockedKeys`),
       ),
       fatedStatus: keepsakes.fatedStatus as 'Unknown' | 'Fated' | 'Unfated',
+      held: keepsakeTraits(keepsakes.held, `${label}.keepsakes.held`, true),
+    }),
+    equipment: Object.freeze({
+      ...(aspect === undefined
+        ? {}
+        : {
+            aspect: Object.freeze({
+              key: stringValue(aspect.key, `${label}.equipment.aspect.key`),
+              rarity: aspect.rarity as 'Legendary' | 'Perfect',
+            }),
+          }),
+      ...(familiar === undefined
+        ? {}
+        : {
+            familiar: Object.freeze({
+              name: stringValue(familiar.name, `${label}.equipment.familiar.name`),
+              stackMultiplier: integer(
+                familiar.stackMultiplier,
+                `${label}.equipment.familiar.stackMultiplier`,
+                1,
+              ),
+            }),
+          }),
     }),
     rewardPriorities: Object.freeze(
       stringArray(record.rewardPriorities, `${label}.rewardPriorities`),
@@ -557,12 +612,26 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
         `${label}.hexProgress.olympianTalentInvested`,
       ),
     }),
+    hexNodes: Object.freeze({
+      nodes:
+        Object.keys(object(hexNodes.nodes, `${label}.hexNodes.nodes`)).length === 0
+          ? Object.freeze({})
+          : hexTreeNodes(hexNodes.nodes, `${label}.hexNodes.nodes`),
+      investedNodes: investedNodeKeys(hexNodes.investedNodes, `${label}.hexNodes.investedNodes`),
+    }),
     artificer:
       artificer === null
         ? null
         : Object.freeze({
             usedCount: integer(artificer.usedCount, `${label}.artificer.usedCount`),
-            remainingCount: integer(artificer.remainingCount, `${label}.artificer.remainingCount`),
+            ...(artificer.remainingCount === undefined
+              ? {}
+              : {
+                  remainingCount: integer(
+                    artificer.remainingCount,
+                    `${label}.artificer.remainingCount`,
+                  ),
+                }),
           }),
     retainedEffects: Object.freeze({
       echoShopDuplicateStatus: retained.echoShopDuplicateStatus as 'pending' | 'consumed' | null,
@@ -606,8 +675,10 @@ export const diagnosticSections = [
   'forfeit',
   'chaos',
   'keepsakes',
+  'equipment',
   'rewardPriorities',
   'hexProgress',
+  'hexNodes',
   'artificer',
   'retainedEffects',
 ] as const;

@@ -9,10 +9,6 @@ local proof = type(import) == "function" and import("mods/room/conformance/proof
     or require("mods.room.conformance.proof")
 
 local admission = {}
-local families = {
-    "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
-    "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
-}
 
 function admission.verify(occurrence)
     local expected, projectionError = conformance.admissionExpected(
@@ -21,7 +17,7 @@ function admission.verify(occurrence)
     if not expected then return nil, projectionError end
 
     local currentRun, gameState = _G.CurrentRun, _G.GameState
-    for _, kind in ipairs(families) do
+    for _, kind in ipairs(conformance.admissionKinds) do
         local observed = readers.read(kind, currentRun, gameState, expected[kind])
         local compare = kind == "keepsakeEffects" and proof.compareKeepsakes or proof.compare
         local ok, mismatch = compare(

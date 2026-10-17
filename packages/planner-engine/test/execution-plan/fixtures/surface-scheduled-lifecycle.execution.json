@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 96,
-  "schemaRevision": 1,
+  "schemaRevision": 2,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -739,13 +739,31 @@
             "forfeit": "inactive",
             "chaos": {
               "active": [],
-              "matured": [{ "blessingKey": "ChaosWeaponBlessing", "rarity": "Epic" }]
+              "matured": [
+                {
+                  "blessingKey": "ChaosWeaponBlessing",
+                  "rarity": "Epic",
+                  "blessingValues": { "damageBonus": 0.7 }
+                }
+              ]
             },
             "keepsakes": {
               "currentKey": "RandomBlessingKeepsake",
               "usedKeys": ["RandomBlessingKeepsake"],
               "blockedKeys": [],
-              "fatedStatus": "Unknown"
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 0
+                }
+              ]
+            },
+            "equipment": {
+              "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+              "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
             },
             "rewardPriorities": [],
             "hexProgress": {
@@ -755,6 +773,7 @@
               "investedPathPoints": 0,
               "olympianTalentInvested": false
             },
+            "hexNodes": { "nodes": {}, "investedNodes": [] },
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -845,6 +864,20 @@
               "godRarityCounts": { "Common": 1 },
               "upgradableCount": 1,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 1
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -1223,6 +1256,20 @@
               "upgradableCount": 2,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 2
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -1468,6 +1515,20 @@
               "godRarityCounts": { "Common": 3 },
               "upgradableCount": 2,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 3
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -1845,6 +1906,20 @@
               "upgradableCount": 3,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 4
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -2022,6 +2097,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 5
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -2317,6 +2406,20 @@
               "godRarityCounts": { "Common": 5 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 6
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2626,6 +2729,20 @@
               "upgradableCount": 4,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 7
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -2764,7 +2881,8 @@
           { "kind": "traitInventory" },
           { "kind": "steadyGrowth" },
           { "kind": "chaos" },
-          { "kind": "keepsakeEffects" }
+          { "kind": "keepsakeEffects" },
+          { "kind": "chaosValues" }
         ]
       },
       "diagnostics": {
@@ -2817,7 +2935,23 @@
             },
             "chaos": {
               "active": [],
-              "matured": [{ "blessingKey": "ChaosElementalBlessing", "rarity": "Epic" }]
+              "matured": [
+                { "blessingKey": "ChaosElementalBlessing", "rarity": "Epic", "blessingValues": {} }
+              ]
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 0
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -2982,6 +3116,20 @@
               "biomeEncounterDepth": 8,
               "routeEncounterDepth": 8,
               "roomHistoryOrdinal": 25
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 1
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -3491,6 +3639,20 @@
               "upgradableCount": 4,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 3
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -3675,6 +3837,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 5
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -3934,6 +4110,20 @@
               "godRarityCounts": { "Epic": 2, "Common": 4 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 7
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -4200,6 +4390,20 @@
               "godRarityCounts": { "Epic": 2, "Common": 6 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 0
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -4541,6 +4745,20 @@
               "upgradableCount": 6,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 2
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -4748,6 +4966,20 @@
               "godRarityCounts": { "Heroic": 1, "Common": 6, "Epic": 1 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 3
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -5071,6 +5303,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 4
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -5352,6 +5598,20 @@
               "upgradableCount": 6,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 5
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -5520,6 +5780,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 6
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -5735,6 +6009,20 @@
               "godRarityCounts": { "Heroic": 1, "Rare": 1, "Common": 5, "Epic": 1 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 7
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -5971,6 +6259,20 @@
               "upgradableCount": 6,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 0
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6198,6 +6500,20 @@
               "upgradableCount": 6,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 1
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6370,6 +6686,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 2
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6749,6 +7079,20 @@
               "upgradableCount": 6,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 3
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6909,6 +7253,20 @@
               "biomeEncounterDepth": 7,
               "routeEncounterDepth": 19,
               "roomHistoryOrdinal": 47
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 4
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -7149,6 +7507,20 @@
               "routeEncounterDepth": 20,
               "roomHistoryOrdinal": 50
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 5
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -7278,6 +7650,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 4 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 6
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -7489,6 +7875,20 @@
               "upgradableCount": 6,
               "bannedTraitKeys": []
             },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 7
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -7597,6 +7997,20 @@
               "biomeEncounterDepth": 5,
               "routeEncounterDepth": 23,
               "roomHistoryOrdinal": 53
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 0
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -7725,6 +8139,20 @@
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 2 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
             ],
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 1
+                }
+              ]
+            },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -7902,6 +8330,20 @@
               "godRarityCounts": { "Heroic": 2, "Epic": 2, "Common": 6 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 2
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -8120,6 +8562,20 @@
               "godRarityCounts": { "Heroic": 3, "Common": 6, "Epic": 1 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
+            },
+            "keepsakes": {
+              "currentKey": "RandomBlessingKeepsake",
+              "usedKeys": ["RandomBlessingKeepsake"],
+              "blockedKeys": [],
+              "fatedStatus": "Unknown",
+              "held": [
+                {
+                  "name": "RandomBlessingKeepsake",
+                  "rarity": "Epic",
+                  "slotted": true,
+                  "currentRoom": 3
+                }
+              ]
             },
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -8554,5 +9010,5 @@
       }
     }
   ],
-  "planFingerprint": "669ae204"
+  "planFingerprint": "b911edb1"
 }

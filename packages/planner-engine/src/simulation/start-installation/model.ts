@@ -148,8 +148,6 @@ export interface StartInstallationArcana {
   /** Room-entry stat cycles (The Centaur's tick), by card key. */
   readonly roomEntryGrowth: Readonly<Record<string, ArcanaRoomEntryGrowth>>;
   readonly artificer?: { readonly usedCount: number; readonly remainingCount: number };
-  /** A Barren curse holds the Arcana unequipped. */
-  readonly barrenActive: boolean;
 }
 
 export interface StartInstallationFear {
@@ -180,11 +178,13 @@ export type StartInstallationHex = Pick<
   readonly talentPoints: number;
 };
 
-/** Run-wide reward records (`UseRecord`, `LootTypeHistory`, `ConsumableRecord`). */
+/** Run-wide records (`UseRecord`, `LootTypeHistory`, `ConsumableRecord`, `BannedTraits`). */
 export interface StartRunRecords {
   readonly useRecord: Readonly<Record<string, number>>;
   readonly lootTypeHistory: Readonly<Record<string, number>>;
   readonly consumableRecord: Readonly<Record<string, number>>;
+  /** Traits Denial banned (`BannedTraits`). */
+  readonly bannedTraitKeys: readonly string[];
 }
 
 /** Biome-local records: after the native biome-start reset at an Opening, current mid-biome. */

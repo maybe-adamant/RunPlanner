@@ -293,6 +293,7 @@ end
 function TestPracticeStart.testOpeningInstallsBeforeNativeRerollsAndRecordsBeforeTheStartRoom()
     local plan = decode("surface-start-q-opening")
     local start = plan.startState
+    start.bannedTraits = { "ZeusWeaponBoon" }
     local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, start)
     local state, _, created = startRun(plan, world, { StartingBiome = "F" })
     local log = world.log
@@ -339,6 +340,7 @@ function TestPracticeStart.testOpeningInstallsBeforeNativeRerollsAndRecordsBefor
     lu.assertEquals(run.UseRecord, start.useRecord)
     lu.assertEquals(run.ConsumableRecord, start.consumableRecord)
     lu.assertEquals(run.KeepsakeCache, { "ManaOverTimeRefundKeepsake" })
+    lu.assertEquals(run.BannedTraits, { ZeusWeaponBoon = true })
     lu.assertEquals(run.NumTalentPoints, 0)
     lu.assertEquals(#run.RewardStores.RunProgress, 14)
     lu.assertEquals(run.RewardStores.RunProgress[1], { Name = "RunProgress5" })
@@ -892,22 +894,25 @@ function TestPracticeStart.testSilkenSashInstallsItsCurrentArmor()
     end
 end
 
--- Barren unequips the Arcana after native Death Defiance and rerolls and
--- before native starting gold, at either start point.
-function TestPracticeStart.testBarrenUnequipsArcanaBeforeNativeStartingGold()
+-- Barren unequips each card it holds unequipped, after native Death Defiance
+-- and rerolls and before native starting gold, at either start point.
+function TestPracticeStart.testBarrenUnequipsItsArcanaBeforeNativeStartingGold()
     for _, name in ipairs({ "surface-start-q-opening", "underworld-start-i-preboss" }) do
         local plan = copy(decode(name))
-        plan.startState.arcanaBarren = true
+        plan.startState.arcana = {
+            { name = "Centaur", rarity = "Epic", temporary = true, unequipped = true },
+            { name = "Strength", rarity = "Heroic", temporary = true },
+        }
         local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+        world.bindings.MetaUpgradeCardData = { Centaur = { TraitName = "ChamberHealthMetaUpgrade" },
+            Strength = { TraitName = "HealthMetaUpgrade" } }
         local state = startRun(plan, world, { StartingBiome = "F" })
         local log = world.log
         lu.assertEquals(state.state, "synchronized")
-        local unequip = position(log, "unequipArcana")
+        local unequip = position(log, "remove:ChamberHealthMetaUpgrade")
         lu.assertTrue(position(log, "initializeRewardStores") < unequip)
         lu.assertTrue(unequip < position(log, "createRoom"))
-        local count = 0
-        for _, entry in ipairs(log) do if entry == "unequipArcana" then count = count + 1 end end
-        lu.assertEquals(count, 1)
+        lu.assertNil(indexOf(log, "remove:HealthMetaUpgrade"))
     end
 end
 

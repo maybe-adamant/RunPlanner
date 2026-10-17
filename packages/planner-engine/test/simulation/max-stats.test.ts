@@ -634,12 +634,12 @@ describe('max stats on an authored route', () => {
     );
     expect(rooms.length).toBeGreaterThan(0);
     const occurrences = rooms.map((room) => room.origin);
-    expect(deriveRoomExitConformanceDeltas(occurrences, altered)).toEqual(
-      deriveRoomExitConformanceDeltas(occurrences, snapshots),
+    expect(deriveRoomExitConformanceDeltas(catalog, occurrences, altered)).toEqual(
+      deriveRoomExitConformanceDeltas(catalog, occurrences, snapshots),
     );
     for (const room of rooms)
-      expect(assembleOccurrenceDiagnostics(room, altered)).toEqual(
-        assembleOccurrenceDiagnostics(room, snapshots),
+      expect(assembleOccurrenceDiagnostics(catalog, room, altered)).toEqual(
+        assembleOccurrenceDiagnostics(catalog, room, snapshots),
       );
   });
 });

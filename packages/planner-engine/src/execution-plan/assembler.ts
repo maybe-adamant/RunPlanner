@@ -152,6 +152,7 @@ export function assembleExecutionProduct({
   );
   const roomById = new Map(rooms.map((room) => [room.occurrenceId, room] as const));
   const roomExitConformance = deriveRoomExitConformanceDeltas(
+    catalog,
     selectedOccurrenceIds.flatMap((id) => {
       const room = roomById.get(id);
       return room === undefined ? [] : [room.origin];

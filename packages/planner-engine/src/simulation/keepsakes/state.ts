@@ -91,6 +91,8 @@ export interface KeepsakeState {
    * it left with. Bell and Pom are always kept; their ledgers carry them.
    */
   readonly retained?: readonly { readonly key: string; readonly rank: KeepsakeRank }[];
+  /** Echo's unslotted Common copy, equipped at a biome start that found the captured keepsake unheld. */
+  readonly echoCopyKey?: string;
 }
 
 export interface OlympianProviderSource {
@@ -111,8 +113,30 @@ export interface FigLeafStateValue {
 export type GorgonLifecycleStatus = 'pending' | 'consumed' | 'expired';
 export type GorgonRarityLevel = 1 | 2 | 3 | 4;
 
+/** Echo's copy stays held until a spent Crystal Figurine copy expires. */
+export function heldEchoCopyKey(catalog: Catalog, state: KeepsakeState): string | undefined {
+  const key = state.echoCopyKey;
+  if (key === undefined) return undefined;
+  const spentFigurine =
+    catalog.keepsakes.byKey[key]?.effect?.kind === 'crystalFigurine' &&
+    !(state.figurine?.origin === 'echo' && state.figurine.status === 'pending');
+  return spentFigurine ? undefined : key;
+}
+
+/** Whether the hero holds the keepsake slotted, retained unslotted or as Echo's copy. */
+export function keepsakeHeld(catalog: Catalog, state: KeepsakeState, key: string): boolean {
+  return (
+    state.currentKey === key ||
+    (state.retained ?? []).some((entry) => entry.key === key) ||
+    heldEchoCopyKey(catalog, state) === key
+  );
+}
+
 /** Declaration-owned rank bonus derived only from canonical equipped-trait history. */
-export function activeKeepsakeRankBonus(catalog: Catalog, traitHistory: TraitHistoryState): 0 | 1 {
+export function activeKeepsakeRankBonus(
+  catalog: Catalog,
+  traitHistory: Pick<TraitHistoryState, 'equippedTraits'>,
+): 0 | 1 {
   for (const equipped of Object.values(traitHistory.equippedTraits)) {
     const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
     if (disposition?.kind === 'advanceCurrentKeepsake') return disposition.rankBonus;
@@ -124,7 +148,7 @@ export function activeKeepsakeRankBonus(catalog: Catalog, traitHistory: TraitHis
 export function keepsakeRankForEquip(
   catalog: Catalog,
   key: string,
-  traitHistory: TraitHistoryState,
+  traitHistory: Pick<TraitHistoryState, 'equippedTraits'>,
 ): KeepsakeRank {
   const keepsake = catalog.keepsakes.byKey[key];
   if (keepsake === undefined || activeKeepsakeRankBonus(catalog, traitHistory) === 0)

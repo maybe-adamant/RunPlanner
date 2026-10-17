@@ -52,21 +52,121 @@ local function traitInventoryExpected(frames)
     return { present = present, absent = absent }
 end
 
+-- The value at a path of nested frame fields, or nil when any is absent.
+local function field(state, ...)
+    local value = state
+    for _, key in ipairs({ ... }) do
+        if type(value) ~= "table" then return nil end
+        value = value[key]
+    end
+    return value
+end
+
+local function sorted(values, key)
+    if type(values) ~= "table" then return nil end
+    local result = {}
+    for index, value in ipairs(values) do result[index] = value end
+    table.sort(result, key and function(left, right) return left[key] < right[key] end or nil)
+    return result
+end
+
+local function chaosKeys(state)
+    local chaos = field(state, "chaos")
+    if type(chaos) ~= "table" then return nil end
+    local active, matured = {}, {}
+    for index, row in ipairs(chaos.active or {}) do
+        active[index] = {
+            curseKey = row.curseKey, blessingKey = row.blessingKey, rarity = row.rarity,
+            clock = row.clock, remaining = row.remaining,
+        }
+    end
+    for index, row in ipairs(chaos.matured or {}) do
+        matured[index] = { blessingKey = row.blessingKey, rarity = row.rarity }
+    end
+    return { active = active, matured = matured }
+end
+
+local function chaosValues(state)
+    local chaos = field(state, "chaos")
+    if type(chaos) ~= "table" then return nil end
+    local active, matured = {}, {}
+    for index, row in ipairs(chaos.active or {}) do
+        active[index] = {
+            curseKey = row.curseKey, curseValues = row.curseValues, blessingValues = row.blessingValues,
+        }
+    end
+    for index, row in ipairs(chaos.matured or {}) do
+        matured[index] = { blessingKey = row.blessingKey, blessingValues = row.blessingValues }
+    end
+    return { active = active, matured = matured }
+end
+
+-- Held keepsakes by name with rank and slot; counters are proved by keepsakeEffects.
+local function keepsakeRanks(state)
+    local held = field(state, "keepsakes", "held")
+    if type(held) ~= "table" then return nil end
+    local rows = {}
+    for index, row in ipairs(held) do
+        rows[index] = { name = row.name, rarity = row.rarity, slotted = row.slotted == true }
+    end
+    return sorted(rows, "name")
+end
+
+-- A card Barren holds unequipped has no trait, so its rarity is not observable.
+local function arcana(state)
+    local active, artificer = field(state, "arcana", "active"), field(state, "artificer")
+    if type(active) ~= "table" or artificer == nil then return nil end
+    local cards = {}
+    for index, card in ipairs(active) do
+        cards[index] = {
+            key = card.key, temporary = card.origin == "temporary", held = card.held,
+            rarity = card.held and card.rarity or nil,
+        }
+    end
+    local result = { cards = sorted(cards, "key") }
+    if not p.json.isNull(artificer) then
+        result.artificer = { usedCount = artificer.usedCount, remainingCount = artificer.remainingCount }
+    end
+    return result
+end
+
+local function vows(state)
+    local ranks, banned = field(state, "vows"), field(state, "traits", "bannedTraitKeys")
+    if type(ranks) ~= "table" or type(banned) ~= "table" then return nil end
+    return {
+        configuredRanks = ranks.configuredRanks, effectiveRanks = ranks.effectiveRanks,
+        disabledKeys = sorted(ranks.disabledKeys), bannedTraitKeys = sorted(banned),
+    }
+end
+
+local function hexNodes(state)
+    local nodes = field(state, "hexNodes")
+    if type(nodes) ~= "table" then return nil end
+    return { nodes = nodes.nodes, investedNodes = sorted(nodes.investedNodes) }
+end
+
 local readers = {
-    elementCounts = function(state) return state.traits.elements end,
-    steadyGrowth = function(state) return state.retainedEffects.steadyGrowth end,
-    chaos = function(state) return state.chaos end,
-    keepsakeEffects = function(state) return state.retainedEffects.keepsakes end,
-    rewardPriorities = function(state) return state.rewardPriorities end,
-    pathOfStars = function(state) return state.hexProgress end,
-    forfeit = function(state) return state.forfeit end,
-    stygianWell = function(state) return state.retainedEffects.stygianWell end,
+    elementCounts = function(state) return field(state, "traits", "elements") end,
+    steadyGrowth = function(state) return field(state, "retainedEffects", "steadyGrowth") end,
+    chaos = chaosKeys,
+    keepsakeEffects = function(state) return field(state, "retainedEffects", "keepsakes") end,
+    rewardPriorities = function(state) return field(state, "rewardPriorities") end,
+    pathOfStars = function(state) return field(state, "hexProgress") end,
+    forfeit = function(state) return field(state, "forfeit") end,
+    stygianWell = function(state) return field(state, "retainedEffects", "stygianWell") end,
+    keepsakes = keepsakeRanks,
+    equipment = function(state) return field(state, "equipment") end,
+    arcana = arcana,
+    vows = vows,
+    chaosValues = chaosValues,
+    hexNodes = hexNodes,
     traitInventory = traitInventoryExpected,
 }
 
-local admissionKinds = {
+conformance.admissionKinds = {
     "traitInventory", "elementCounts", "steadyGrowth", "chaos", "keepsakeEffects",
     "rewardPriorities", "pathOfStars", "forfeit", "stygianWell",
+    "keepsakes", "equipment", "arcana", "vows", "chaosValues", "hexNodes",
 }
 
 local function traitInventoryEntryExpected(entry)
@@ -84,23 +184,7 @@ end
 
 local function admissionStateValue(entry, kind)
     if kind == "traitInventory" then return traitInventoryEntryExpected(entry) end
-    if kind == "elementCounts" then
-        return entry and entry.traits and entry.traits.elements
-    end
-    if kind == "steadyGrowth" then
-        return entry and entry.retainedEffects and entry.retainedEffects.steadyGrowth
-    end
-    if kind == "chaos" then return entry and entry.chaos end
-    if kind == "keepsakeEffects" then
-        return entry and entry.retainedEffects and entry.retainedEffects.keepsakes
-    end
-    if kind == "rewardPriorities" then return entry and entry.rewardPriorities end
-    if kind == "pathOfStars" then return entry and entry.hexProgress end
-    if kind == "forfeit" then return entry and entry.forfeit end
-    if kind == "stygianWell" then
-        return entry and entry.retainedEffects and entry.retainedEffects.stygianWell
-    end
-    return nil
+    return readers[kind](entry)
 end
 
 -- A Hub departure frame names its modeled traits only; none are proved absent.
@@ -112,7 +196,7 @@ function conformance.admissionExpected(value)
     local entry = value and value.roomEntered or value
     if type(entry) ~= "table" then return nil, "start room self-check requires roomEntered diagnostics" end
     local expected = {}
-    for _, kind in ipairs(admissionKinds) do
+    for _, kind in ipairs(conformance.admissionKinds) do
         local projected = admissionStateValue(entry, kind)
         if projected == nil then
             return nil, "start room self-check requires roomEntered " .. kind
