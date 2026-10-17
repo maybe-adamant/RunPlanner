@@ -1264,8 +1264,11 @@ bind to its published owner rather than to another transaction with a similar
 god, reward, or item payload. If the player consumes that exact action before
 its published prerequisites complete, the runtime records the generic
 `transaction-prerequisite` mismatch and becomes passive while still invoking
-the native action. This protects DAG order without turning transaction
-completion into semantic result verification.
+the native action. An unbound carrier claimed at its accepted contact follows
+the same rule: with no ready compatible owner, a compatible owner still awaiting
+prerequisites is that mismatch rather than an unsteered native action. This
+protects DAG order without turning transaction completion into semantic result
+verification.
 
 Trait screen dependencies keep only the order a misorder could not detect at a
 screen (role-settled acquisitions, NPC and Gorgon trait offers, Pom level
@@ -1351,7 +1354,7 @@ executor fault; it is not converted into ineligibility, a default value, or a
 plan mismatch. Protected calls are used only as exception-safe cleanup around
 temporary forcing scopes, and they restore that scope before immediately
 rethrowing the original error.
-When a standard checkpoint fails, or an exact-bound irreversible action begins
+When a standard checkpoint fails, or a bound or claimed irreversible action begins
 before its published prerequisites, the runtime records the mismatch and stops
 planner realization. It must still invoke the native operation and must not
 prevent player input, room creation, or traversal. An ordinary steering failure

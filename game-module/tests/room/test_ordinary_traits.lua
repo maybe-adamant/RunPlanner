@@ -302,19 +302,26 @@ function TestOrdinaryTraits.testAthenaClaimRequiresDependenciesButNotItsAuthored
         window = { kind = "encounterEnd", phaseKey = "Cage02" },
         resolution = { kind = "traitOffer", offer = { giver = "Athena", kind = "traits", options = {} } },
     }
-    local active = timeline.new({
-        transactionsByOwner = { athena = transaction },
-        timeline = { transactions = { transaction },
-            dependencies = { { owner = "athena", afterOwner = "earlier" } }, obligations = {} },
-    })
+    local function session()
+        return timeline.new({
+            transactionsByOwner = { athena = transaction },
+            timeline = { transactions = { transaction },
+                dependencies = { { owner = "athena", afterOwner = "earlier" } }, obligations = {} },
+        })
+    end
     local native = { Name = "NPC_Athena_01" }
     local contact = { kind = "encounterTraitOffer", gameName = native.Name }
-    local function claim()
+    local function claim(active)
         return timeline.claimReady(active, contact, native, ordinary.encounterTraitOffer)
     end
-    lu.assertNil(claim())
+    local early = session()
+    lu.assertNil(claim(early))
+    lu.assertEquals(early.firstMismatch, {
+        checkpoint = "transaction-prerequisite", expected = "earlier", observed = "athena",
+    })
+    local active = session()
     active.completedOwners.earlier = true
-    local handle = claim()
+    local handle = claim(active)
     lu.assertNotNil(handle)
     lu.assertEquals(timeline.bound(active, native), handle)
 end

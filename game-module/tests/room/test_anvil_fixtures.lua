@@ -127,7 +127,8 @@ function TestAnvilFixtures.testTravelDealRefillAnvilSteersAfterItsRealization()
     lu.assertNil(roomSession.resolve(session, bindings.resolve,
         { kind = "generation", generationKey = "travelDealRefill" }))
     local refillItem = { Name = "ChaosWeaponUpgrade" }
-    lu.assertNil(roomSession.claimReady(session, { kind = "transformation", gameName = refillItem.Name },
+    lu.assertNil(roomSession.claimReady(session,
+        { kind = "transformation", gameName = refillItem.Name, probe = true },
         refillItem, function(transaction) return transaction.kind == "transformation" or nil end))
     lu.assertTrue(roomSession.complete(session,
         assert(roomSession.resolve(session, bindings.resolve, { kind = "travelDealRefill", carrier = "worldShop" }))))
@@ -135,6 +136,37 @@ function TestAnvilFixtures.testTravelDealRefillAnvilSteersAfterItsRealization()
     lu.assertEquals(useAnvil(callbacks, refillItem, pool), expected(anvils[1]))
     lu.assertTrue(roomSession.isCompleted(session, anvils[1].owner))
     lu.assertTrue(roomSession.checkpoint(session, "roomExit"))
+    lu.assertNil(session.firstMismatch)
+    lu.assertNil(session.firstFault)
+    lu.assertEquals(diagnostics, {})
+end
+
+-- Any consumable transformation, Anvil or Twist, shares this accepted-use claim.
+function TestAnvilFixtures.testTransformationUsedBeforeItsRefillRealizationIsAnOrderMismatch()
+    local occurrence = loadOccurrence("surface-travel-deal-refill-anvil", "surface-q-preboss")
+    local anvil = anvilResults(occurrence)[1]
+    local session, callbacks, diagnostics = harness(occurrence)
+    local refill = assert(roomSession.resolve(session, bindings.resolve,
+        { kind = "travelDealRefill", carrier = "worldShop" }))
+    local refillOwner = roomSession.describeHandle(session, refill).owner
+    local pool = { "Other", "StaffDoubleAttackTrait", "StaffLongAttackTrait", "StaffJumpSpecialTrait" }
+    lu.assertEquals(useAnvil(callbacks, { Name = "ChaosWeaponUpgrade" }, pool), { "Other", "Other", "Other" })
+    lu.assertEquals(session.firstMismatch, {
+        checkpoint = "transaction-prerequisite", expected = refillOwner, observed = anvil.owner,
+    })
+    lu.assertFalse(roomSession.isCompleted(session, anvil.owner))
+    lu.assertEquals(diagnostics, {})
+end
+
+function TestAnvilFixtures.testRejectedUseOfABlockedTransformationRaisesNothing()
+    local occurrence = loadOccurrence("surface-travel-deal-refill-anvil", "surface-q-preboss")
+    local session, callbacks, diagnostics = harness(occurrence)
+    local item = { Name = "ChaosWeaponUpgrade" }
+    callbacks.UseConsumableItem(nil, {}, function(native)
+        callbacks.ConsumableUsedPresentation(nil, {}, function() return false end, {}, native, {})
+        return false
+    end, item, {}, {})
+    lu.assertNil(roomSession.bound(session, item))
     lu.assertNil(session.firstMismatch)
     lu.assertNil(session.firstFault)
     lu.assertEquals(diagnostics, {})

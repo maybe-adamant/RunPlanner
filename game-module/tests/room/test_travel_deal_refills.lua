@@ -288,6 +288,27 @@ function TestTravelDealRefills.testWellRefillUsesPublishedSourceAndCompletesAfte
     lu.assertEquals(diagnostics, {})
 end
 
+function TestTravelDealRefills.testWellFirstPurchaseOfAnotherSourceIsDiagnosedOnce()
+    local callbacks, refill, diagnostics, begins = harness("stygianWell")
+    local priorRun = _G.CurrentRun
+    _G.CurrentRun = { CurrentRoom = {} }
+    local function purchase(generationKey, accepted)
+        callbacks.HandleStorePurchase(nil, {}, function()
+            if accepted then _G.CurrentRun.CurrentRoom.FirstPurchase = true end
+            return true
+        end, {}, { Index = 1, Data = { Name = "Other", __runPlannerGenerationKey = generationKey } }, {})
+    end
+    purchase("initial:firstLeft", false)
+    lu.assertEquals(diagnostics, {})
+    purchase("initial:firstLeft", true)
+    purchase("initial:firstLeft", true)
+    _G.CurrentRun = priorRun
+    lu.assertEquals(diagnostics, { { checkpoint = "well-refill-source", observed = {
+        expected = refill.source.generationKey, observed = "initial:firstLeft",
+    } } })
+    lu.assertEquals(begins(), 0)
+end
+
 function TestTravelDealRefills.testWellRefillGeneratesOneItemWithMatchingNativePoolCounts()
     for _, item in ipairs({
         { name = "TemporaryImprovedExTrait", type = "Trait", healingCount = 0 },

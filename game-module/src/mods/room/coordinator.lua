@@ -421,9 +421,12 @@ function coordinator.claimReady(state, context, contact, native, compatible)
     -- outside a room or outlive the room in which their use began.
     if owner == nil then return nil end
     local handle, payload, errorValue = session.claimReady(owner, contact, native, compatible)
-    if handle == nil and errorValue ~= nil then
-        return bindingFailure(state, errorValue,
-            { operation = "claimReady", context = owner, contact = contact, native = native })
+    if handle == nil then
+        if errorValue ~= nil then
+            bindingFailure(state, errorValue,
+                { operation = "claimReady", context = owner, contact = contact, native = native })
+        end
+        return nil
     end
     return handle, payload
 end

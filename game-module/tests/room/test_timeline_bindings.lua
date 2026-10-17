@@ -16,19 +16,68 @@ function TestTimelineBindings.testNativePickupsRespectTheCompleteDependencyChain
         timeline = { transactions = transactions, obligations = {}, dependencies = {
             { owner = "two", afterOwner = "one" }, { owner = "three", afterOwner = "two" },
         } } })
-    local function claim(owner)
-        return timelineSession.claimReady(session, { owner = owner }, {}, function(row, contact)
+    local function claim(owner, probe)
+        return timelineSession.claimReady(session, { owner = owner, probe = probe }, {}, function(row, contact)
             return row.owner == contact.owner
         end)
     end
-    lu.assertNil(claim("three"))
-    lu.assertNil(claim("two"))
+    lu.assertNil(claim("three", true))
+    lu.assertNil(claim("two", true))
     lu.assertTrue(timelineSession.complete(session, assert(claim("one"))))
-    lu.assertNil(claim("three"))
+    lu.assertNil(claim("three", true))
     local second = assert(claim("two"))
-    lu.assertNil(claim("three"))
+    lu.assertNil(claim("three", true))
     lu.assertTrue(timelineSession.complete(session, second))
     lu.assertNotNil(claim("three"))
+    lu.assertNil(session.firstMismatch)
+end
+
+local function fencedSession(order)
+    local byOwner, transactions = {}, {}
+    for _, owner in ipairs(order) do
+        local row = { owner = owner, kind = "acquisition", window = { kind = "standard", phase = "afterCombat" } }
+        transactions[#transactions + 1], byOwner[owner] = row, row
+    end
+    return timelineSession.new({ transactionsByOwner = byOwner, timeline = { transactions = transactions,
+        obligations = {}, dependencies = { { owner = "fenced", afterOwner = "fountain" } } } })
+end
+
+local function claimFenced(session, native, probe, owners)
+    return timelineSession.claimReady(session, { probe = probe }, native, function(row)
+        return (owners or { fenced = true })[row.owner] or nil
+    end)
+end
+
+function TestTimelineBindings.testBlockedClaimIsTheSamePrerequisiteMismatchAsAnExactBegin()
+    local claimed = fencedSession({ "fountain", "fenced" })
+    local handle, payload, errorValue = claimFenced(claimed, {})
+    lu.assertNil(handle)
+    lu.assertNil(payload)
+    local exact = fencedSession({ "fountain", "fenced" })
+    lu.assertNil(timelineSession.begin(exact,
+        assert(timelineSession.resolve(exact, function(index) return index.owner.fenced end, {}))))
+    lu.assertEquals(claimed.firstMismatch, {
+        checkpoint = "transaction-prerequisite", expected = "fountain", observed = "fenced",
+    })
+    lu.assertEquals(errorValue, claimed.firstMismatch)
+    lu.assertEquals(exact.firstMismatch, claimed.firstMismatch)
+end
+
+function TestTimelineBindings.testReadyCompatibleClaimWinsOverAnEarlierBlockedOwner()
+    local session = fencedSession({ "fountain", "fenced", "ready" })
+    local handle, payload = claimFenced(session, {}, nil, { fenced = true, ready = true })
+    lu.assertNotNil(handle)
+    lu.assertEquals(payload.transaction.owner, "ready")
+    lu.assertNil(session.firstMismatch)
+end
+
+function TestTimelineBindings.testProbeAndAlreadyBoundCarriersNeverRaiseForABlockedOwner()
+    local session = fencedSession({ "fountain", "fenced" })
+    lu.assertNil(claimFenced(session, {}, true))
+    local native = {}
+    lu.assertNotNil(timelineSession.bind(session,
+        assert(timelineSession.resolve(session, function(index) return index.owner.fountain end, {})), native))
+    lu.assertNil(claimFenced(session, native))
     lu.assertNil(session.firstMismatch)
 end
 

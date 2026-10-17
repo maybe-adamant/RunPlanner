@@ -12,7 +12,7 @@ local function buttonIndex(button, item)
     return nil
 end
 
-function refill.attach(module, getState, report, room, refillScopes)
+function refill.attach(module, session, getState, report, room, refillScopes)
     module.hooks.wrap("HandleStorePurchase", "run-planner-well-refill", function(_, runtime, base,
         screen, button, args)
         local state = getState(runtime)
@@ -24,13 +24,22 @@ function refill.attach(module, getState, report, room, refillScopes)
         local item = type(button) == "table" and (button.Data or button) or nil
         local generationKey = type(item) == "table" and item.__runPlannerGenerationKey or nil
         local scope = { nativeOnly = true }
-        if expected ~= nil and generationKey == expected.source.generationKey then
+        local matched = expected ~= nil and generationKey == expected.source.generationKey
+        if matched then
             scope = { kind = "well", refill = expected, handle = handle, slotIndex = buttonIndex(button, item) }
         end
+        local nativeRoom = _G.CurrentRun and _G.CurrentRun.CurrentRoom
+        local firstPending = nativeRoom ~= nil and not nativeRoom.FirstPurchase
         refillScopes.setWell(scope)
         local ok, result = pcall(base, screen, button, args)
         refillScopes.setWell(nil)
         if not ok then error(result, 0) end
+        -- Travel Deal replaces only the room's first accepted purchase.
+        if expected ~= nil and not matched and firstPending and nativeRoom.FirstPurchase then
+            session.diagnostic(state, "well-refill-source", {
+                expected = expected.source.generationKey, observed = generationKey or "unpublished",
+            })
+        end
         report(runtime)
         return result
     end)
