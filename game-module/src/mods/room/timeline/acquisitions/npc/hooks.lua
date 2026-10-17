@@ -67,20 +67,6 @@ function npc.attach(module, session, getState, report, room, highlights, rowOpti
         session.mismatch(scope.state, "npc-trait-offer", plannedKeys(scope), nativeKeys(options))
     end
 
-    -- Native NPC choices drop any option whose GameStateRequirements fail.
-    -- A native call failure returns nil plus its error.
-    local function ineligibleRow(source, options)
-        for _, option in ipairs(options) do
-            local requirements = option.GameStateRequirements
-            if requirements ~= nil then
-                local ok, eligible = pcall(_G.IsGameStateEligible, source, requirements)
-                if not ok then return nil, tostring(eligible) end
-                if eligible ~= true then return option.ItemName end
-            end
-        end
-        return nil
-    end
-
     -- Native NPC choices may swap a non-Common row after a failed rarity roll.
     module.hooks.wrap("PassRarityCheck", "run-planner-npc-rarity", function(_, _, base, rarityName)
         if rarityScope ~= nil and rarityScope.forceRarity then return true end
@@ -110,7 +96,7 @@ function npc.attach(module, session, getState, report, room, highlights, rowOpti
                 if not installInput(scope, installed) then
                     reportUnavailable(scope, args and args.UpgradeOptions)
                 else
-                    local ineligible, nativeError = ineligibleRow(source, installed.UpgradeOptions)
+                    local ineligible, nativeError = screenChecks.npcRows(installed.UpgradeOptions, source)
                     if nativeError ~= nil then
                         session.fault(state, {
                             outcome = "fault", checkpoint = "native-api", expected = "IsGameStateEligible",
