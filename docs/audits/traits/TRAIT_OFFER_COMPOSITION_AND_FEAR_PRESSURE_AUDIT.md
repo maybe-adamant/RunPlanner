@@ -16,6 +16,8 @@ Related authorities:
   candidates.
 - [Rarity effects](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md): source overrides,
   chance arithmetic and later equipped mutations.
+- [Trait giver effect matrix](TRAIT_GIVER_EFFECT_MATRIX.md): which one-use
+  and screen-wide effects apply to each giver.
 - [Reward model](../../design/REWARD_MODEL.md#trait-bearing-reward-leaves):
   planner assessment and chronological settlement.
 

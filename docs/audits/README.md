@@ -59,6 +59,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Selene spells](traits/SELENE_SPELL_GAME_DATA_AUDIT.md) — Spell and Hex declarations, drops, and equipment facts.
 - [Initial trait offers and Fear pressure](traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md) — Native seeding, bucket draws, rescue, Denial and Forfeit.
 - [Trait offer pools and dependencies](traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md) — Provider pools, dependencies, fallback relationships, and offer eligibility.
+- [Trait giver effect matrix](traits/TRAIT_GIVER_EFFECT_MATRIX.md) — Which loot flags, one-use effects, rarity inputs, level rolls and rerolls apply to each trait-screen giver.
 
 ### Loadout and progression
 
