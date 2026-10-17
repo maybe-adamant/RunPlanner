@@ -19,6 +19,7 @@ import {
   type TraitOfferEvent,
 } from '@run-planner/engine/simulation';
 
+import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { applyTraitOfferForAcquisition } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -354,7 +355,7 @@ describe('Persephone effective offer levels', () => {
     expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
   });
 
-  it('suppresses both boosts through the Echo last-reward producer lifecycle', () => {
+  it('rolls both fresh boosts on the Echo last-reward copy, a fresh provider loot', () => {
     const settled = applyTraitOfferForAcquisition(
       catalog,
       pomBranch(),
@@ -369,7 +370,81 @@ describe('Persephone effective offer levels', () => {
       'traitAcquired',
       1,
     );
-    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(1);
+    expect(settled.branch.state.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(10);
+  });
+
+  it('settles the Echo last-reward copy as its provider screen for Yarn and Rejected', () => {
+    const curse = catalog.chaos.curses.byKey.ChaosRestrictBoonCurse;
+    const blessing = catalog.chaos.blessings.byKey.ChaosElementalBlessing;
+    if (curse === undefined || blessing === undefined) throw new Error('missing Rejected data');
+    const curseOption = { curseKey: curse.key, requirementCount: curse.duration.minimum };
+    const chaos = normalizeAuthoredChaosTraitOffer(catalog, {
+      kind: 'chaos',
+      giverKey: 'Chaos',
+      curseOptions: [curseOption, curseOption, curseOption],
+      selectedOptionKey: 'option1',
+      selectedCurseValues: Object.freeze(
+        Object.fromEntries(curse.operands.map((operand) => [operand.key, operand.minimum])),
+      ),
+      blessingKey: blessing.key,
+      rarity: 'Common',
+      blessingValues: Object.freeze(
+        Object.fromEntries(
+          blessing.operands.map((operand) => [
+            operand.key,
+            operand.byRarity?.Common?.minimum ?? operand.minimum,
+          ]),
+        ),
+      ),
+    });
+    const history = foldTraitHistoryEvents(catalog, [
+      {
+        kind: 'chaosPair' as const,
+        owner,
+        acquisitionRole: 'chaos',
+        sequence: 0,
+        acquisitionPoint: 'test',
+        acquisitionIdentity: 'chaos:0',
+        offer: chaos,
+      },
+    ]);
+    const base = pomBranch(3, history);
+    const branch = Object.freeze({
+      ...base,
+      state: Object.freeze({
+        ...base.state,
+        stygianWell: Object.freeze({ ...base.state.stygianWell, yarnUses: 1 }),
+      }),
+    });
+    const settle = (producerLifecycleKey: string) =>
+      applyTraitOfferForAcquisition(
+        catalog,
+        branch,
+        {
+          origin: owner,
+          producerLifecycleKey,
+          producerKind: 'freeReward',
+          traitOffersByAcquisitionRole: Object.freeze({
+            self: Object.freeze({
+              ...offer(5),
+              options: offer(5).options.map((option) =>
+                Object.freeze({ ...option, rarity: 'Rare' as const }),
+              ) as unknown as AuthoredTraitOfferTraits['options'],
+              rejectedOptionKey: 'option3' as const,
+            }),
+          }),
+          traitContext: Object.freeze({}),
+        },
+        'self',
+        'traitAcquired',
+        1,
+      );
+    const copy = settle('EchoLastReward').branch.state;
+    const ordinary = settle('RoomReward').branch.state;
+    expect(copy.stygianWell.yarnUses).toBe(0);
+    expect(copy.traitHistory.activeChaosCurses).not.toEqual(history.activeChaosCurses);
+    expect(copy.traitHistory.activeChaosCurses).toEqual(ordinary.traitHistory.activeChaosCurses);
+    expect(copy.traitHistory.equippedTraits.ApolloWeaponBoon?.level).toBe(10);
   });
 
   it('keeps an ordinary core-god Shop purchase eligible for both fresh boosts', () => {

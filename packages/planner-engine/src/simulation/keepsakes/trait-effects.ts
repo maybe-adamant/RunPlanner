@@ -423,7 +423,7 @@ export function concaveStoneProcSupport(
   return effect?.procSupportByRank[source.rank];
 }
 
-/** Original generated rows which Stone may select after the primary row. */
+/** Original generated rows Stone may select after the primary row; a Rejected-locked row stays eligible. */
 export function concaveStoneResidualOptionKeys(
   offer: AuthoredTraitOfferTraits,
   replacementOptionKeys: readonly TraitOptionKey[] = [],
@@ -434,7 +434,6 @@ export function concaveStoneResidualOptionKeys(
       (key) =>
         optionIndex(key) < offer.options.length &&
         key !== offer.selectedOptionKey &&
-        key !== offer.rejectedOptionKey &&
         !replacements.has(key),
     ),
   );

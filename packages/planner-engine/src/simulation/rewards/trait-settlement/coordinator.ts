@@ -95,7 +95,8 @@ export interface ReachedTraitOfferCandidateContact {
 
 type TraitOfferAcquisitionMode =
   | { readonly kind: 'ordinary' }
-  | { readonly kind: 'direct' }
+  /** A nested row whose native screen source is its host menu, such as Echo. */
+  | { readonly kind: 'direct'; readonly screenGiverKey: string }
   | {
       readonly kind: 'frozenConcaveStoneSecondary';
       readonly levelResolution?: TraitOfferOptionLevelResolution;
@@ -155,13 +156,18 @@ export function publishTraitOfferScreenCompletion(
   return state === branch.state ? branch : Object.freeze({ ...branch, state });
 }
 
+/** The giver whose screen flags decide curse uses and Concave Stone. */
+function screenGiverKey(mode: TraitOfferAcquisitionMode, offer: AuthoredTraitOffer): string {
+  return mode.kind === 'direct' ? mode.screenGiverKey : offer.giverKey;
+}
+
 function consumeChaosGodScreen(
   catalog: Catalog,
   branch: RewardBranchState,
   sequence: number,
-  offer: AuthoredTraitOffer | undefined,
+  giverKey: string | undefined,
 ): RewardBranchState {
-  if (offer === undefined || !isChaosGodScreenGiver(catalog, offer.giverKey)) return branch;
+  if (giverKey === undefined || !isChaosGodScreenGiver(catalog, giverKey)) return branch;
   const before = branch.state.traitHistory;
   const traitHistory = advanceChaosClock(catalog, before, sequence, 'godBoonScreens');
   return traitHistory === before
@@ -556,7 +562,9 @@ function evaluateAuthoredOffer(
           ...(branch.traitEvaluations ?? []),
           evaluation.offer.kind === 'traits' &&
           evaluation.offer.concaveStoneResult === undefined &&
-          concaveStoneProcGiver(catalog.traitGivers.byKey[evaluation.offer.giverKey]) &&
+          concaveStoneProcGiver(
+            catalog.traitGivers.byKey[screenGiverKey(mode, evaluation.offer)],
+          ) &&
           concaveStoneProcSupport(catalog, effectiveBranch.state.keepsakes) !== undefined
             ? Object.freeze({
                 ...evaluation,
@@ -696,7 +704,7 @@ function settleUnappliedOffer(
       catalog,
       branchAfterOffer,
       sequence,
-      legal ? effectiveAuthored : undefined,
+      legal ? screenGiverKey(mode, effectiveAuthored) : undefined,
     ),
     ...(candidateContact === undefined ? {} : { candidateContact }),
     ...(completion === undefined ? {} : { completion }),
@@ -822,7 +830,12 @@ function settleSelectedOffer(
     settledBranch:
       mode.kind === 'frozenConcaveStoneSecondary'
         ? settledAfterKeepsakeAdvance
-        : consumeChaosGodScreen(catalog, settledAfterKeepsakeAdvance, sequence, effectiveAuthored),
+        : consumeChaosGodScreen(
+            catalog,
+            settledAfterKeepsakeAdvance,
+            sequence,
+            screenGiverKey(mode, effectiveAuthored),
+          ),
     selected,
     traitAddress,
     childCandidateContext,
@@ -960,9 +973,8 @@ function applyTraitOfferForAcquisitionInternal(
   const before = branch.state.traitHistory;
   const sourceTraitContext: TraitOfferSourceContext = Object.freeze({
     ...(reward.traitContext ?? {}),
-    ...(reward.producerLifecycleKey === 'EchoLastReward' || role === 'echoLastRunSelection'
-      ? { stackBoostsSuppressed: true as const }
-      : {}),
+    // Echo's own menus carry `IgnoreStackBoost`; its LastReward copy is a fresh provider loot.
+    ...(role === 'echoLastRunSelection' ? { stackBoostsSuppressed: true as const } : {}),
   });
   if (authored === null) {
     const missing = settleMissingOffer(inputs, branch, generation, sourceTraitContext);
@@ -1026,7 +1038,9 @@ function applyTraitOfferForAcquisitionInternal(
     authored?.kind === 'traits' &&
     effectiveAuthored.kind === 'traits' &&
     // A retained result on a giver that cannot proc stays a repairable child.
-    (concaveStoneProcGiver(catalog.traitGivers.byKey[effectiveAuthored.giverKey]) ||
+    (concaveStoneProcGiver(
+      catalog.traitGivers.byKey[screenGiverKey(inputs.mode, effectiveAuthored)],
+    ) ||
       authored.concaveStoneResult !== undefined)
   ) {
     const stone = settleConcaveStoneSecondary(
@@ -1205,6 +1219,7 @@ function applyEchoLastRunBoonForAcquisition(
   catalog: Catalog,
   branch: RewardBranchState,
   address: EchoLastRunBoonAddress,
+  screenGiverKey: string,
   offer: AuthoredTraitOfferTraits,
   outcome: EchoLastRunBoonOutcome,
   context: TraitOfferSourceContext,
@@ -1224,7 +1239,7 @@ function applyEchoLastRunBoonForAcquisition(
     lifecyclePoint,
     sequence,
     findingChronology,
-    Object.freeze({ mode: Object.freeze({ kind: 'direct' }) }),
+    Object.freeze({ mode: Object.freeze({ kind: 'direct' as const, screenGiverKey }) }),
     Object.freeze({ address, outcome }),
   );
   const settlement = settlementOf(product);
@@ -1439,6 +1454,7 @@ function settleEchoLastRunBoon(
     catalog,
     sourceApplied,
     address,
+    offer.giverKey,
     nestedOffer,
     outcome,
     Object.freeze({

@@ -65,9 +65,12 @@ traits, and Story traits do not qualify. An ordinary core-god Shop purchase
 still uses its normal god-loot screen and qualifies; purchase provenance does
 not suppress this offer-construction effect.
 
-Echo's loot declaration sets `IgnoreStackBoost`, so an Echo-owned recreated
-screen does not receive the Aspect or Jeweled Pom stack boost even when its
-nested identity is otherwise a core-god trait.
+Echo's NPC declaration sets `IgnoreStackBoost` (`NPCData_Echo.lua:25`), so
+Echo's own menus, including the last-run boon menu, receive neither the Aspect
+nor the Jeweled Pom stack boost even when a nested row is a core-god trait.
+Reward Reward Reward is different: `EchoLastReward` (`EventLogic.lua:1537–1560`)
+calls `CreateLoot` for `CurrentRun.LastReward.Name`, a fresh instance of the
+provider's own loot without that flag, so its rows roll both boosts normally.
 
 ### Premium Service
 

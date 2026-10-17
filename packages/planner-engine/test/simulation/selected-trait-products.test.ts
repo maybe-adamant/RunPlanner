@@ -13,8 +13,10 @@ import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/s
 import {
   attachTraitHistory,
   createTraitHistoryState,
+  foldTraitHistoryEvents,
   type ReachedLevelResolutionEvaluation,
 } from '../../src/simulation/traits';
+import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits/state';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranchesForRoute as initializeRewardBranches,
@@ -74,6 +76,101 @@ describe('selected trait products', () => {
       selectedTraitOfferProducts([settled], Object.freeze([]), catalog).selectedTraitOffers[0]
         ?.branches[0]?.effectiveEchoLastRunBoon?.options[0]?.rarity,
     ).toBe('Rare');
+  });
+
+  it('settles Echo last-run boon rows on the Echo screen without curse or Yarn effects', () => {
+    const origin = createIncomingRewardAddress(
+      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
+      createOccurrenceId('echo'),
+    );
+    const chaosPair = (curseKey: string, sequence: number) => {
+      const curse = catalog.chaos.curses.byKey[curseKey]!;
+      const blessing = catalog.chaos.blessings.byKey.ChaosElementalBlessing!;
+      const curseOption = { curseKey, requirementCount: curse.duration.minimum };
+      return Object.freeze({
+        kind: 'chaosPair' as const,
+        owner: origin,
+        acquisitionRole: `chaos${sequence}`,
+        sequence,
+        acquisitionPoint: 'test',
+        acquisitionIdentity: `chaos:${sequence}`,
+        offer: normalizeAuthoredChaosTraitOffer(catalog, {
+          kind: 'chaos',
+          giverKey: 'Chaos',
+          curseOptions: [curseOption, curseOption, curseOption],
+          selectedOptionKey: 'option1',
+          selectedCurseValues: Object.fromEntries(
+            curse.operands.map((operand) => [operand.key, operand.minimum]),
+          ),
+          blessingKey: blessing.key,
+          rarity: 'Common',
+          blessingValues: Object.fromEntries(
+            blessing.operands.map((operand) => [
+              operand.key,
+              operand.byRarity?.Common?.minimum ?? operand.minimum,
+            ]),
+          ),
+        }),
+      });
+    };
+    const history = foldTraitHistoryEvents(catalog, [
+      chaosPair('ChaosRestrictBoonCurse', 0),
+      chaosPair('ChaosCommonCurse', 1),
+    ]);
+    const initial = initializeRewardBranches(
+      undefined,
+      createTestArcanaFearState(),
+      catalog,
+      'ManaOverTimeRefundKeepsake',
+    )[0]!;
+    const branch = Object.freeze({
+      ...initial,
+      state: Object.freeze({
+        ...initial.state,
+        rewardHistory: attachTraitHistory(initial.state.rewardHistory, history),
+        traitHistory: history,
+        stygianWell: Object.freeze({ ...initial.state.stygianWell, yarnUses: 1 }),
+      }),
+    });
+    const offer = {
+      kind: 'traits' as const,
+      giverKey: 'Echo',
+      options: [
+        {
+          traitKey: 'EchoLastRunBoon',
+          echoLastRunBoon: {
+            options: [
+              {
+                giverKey: 'Aphrodite',
+                traitKey: 'HighHealthOffenseBoon',
+                rarity: 'Common' as const,
+              },
+            ] as const,
+            selectedOptionKey: 'option1' as const,
+          },
+        },
+        { traitKey: 'DiminishingDodgeBoon' },
+        { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: [] as const,
+    };
+    const settlement = settleEncounterTraitOffer(catalog, branch, origin, offer, 2, 'pickup');
+    expect(settlement.findingEntries).toEqual([]);
+    const settled = settlement.branch;
+
+    expect(settled.state.traitHistory.equippedTraits.HighHealthOffenseBoon).toBeDefined();
+    expect(settled.state.traitHistory.activeChaosCurses).toEqual(history.activeChaosCurses);
+    expect(settled.state.stygianWell.yarnUses).toBe(1);
+    const published = selectedTraitOfferProducts(
+      [settled],
+      Object.freeze([]),
+      catalog,
+    ).selectedTraitOffers;
+    expect(published.map((entry) => entry.offer.giverKey)).toEqual(['Echo']);
+    const published0 = published[0]?.branches[0];
+    expect(published0?.screenExpectation).toBeUndefined();
+    expect(published0?.effectiveEchoLastRunBoon?.rarityFloor).toBe(false);
   });
 
   it('retains absent Spell God Sent evidence when a later same-biome keepsake adds it', () => {

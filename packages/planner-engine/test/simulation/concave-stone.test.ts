@@ -205,8 +205,11 @@ describe('Concave Stone declaration and source ledger', () => {
     ).toBe(25);
   });
 
-  it('keeps only original unpicked non-replacement rows in the residual domain', () => {
-    expect(concaveStoneResidualOptionKeys(offer(undefined, 'option2'))).toEqual(['option3']);
+  it('keeps original unpicked non-replacement rows, including the Rejected row, as residuals', () => {
+    expect(concaveStoneResidualOptionKeys(offer(undefined, 'option2'))).toEqual([
+      'option2',
+      'option3',
+    ]);
     expect(concaveStoneResidualOptionKeys(offer(), ['option2'])).toEqual(['option3']);
     expect(concaveStoneResidualOptionKeys(offer())).toEqual(['option2', 'option3']);
   });
@@ -645,6 +648,17 @@ describe('Concave Stone trait settlement', () => {
     expect(
       applyEchoConcaveStoneReplay(catalog, proc.branch.state.keepsakes, 'UnpickedBoonKeepsake'),
     ).toBe(proc.branch.state.keepsakes);
+  });
+
+  it('grants the Rejected-locked row as the residual', () => {
+    const result = settle(
+      offer({ kind: 'proc', optionKey: 'option3' }, 'option3'),
+      'Common',
+      {},
+      rejectedChaosHistory(),
+    );
+    expect(result.blockedChild).toBeUndefined();
+    expect(result.branch.state.traitHistory?.equippedTraits.ApolloCastBoon).toBeDefined();
   });
 
   it('acquires the frozen row without replaying active Chaos composition', () => {
