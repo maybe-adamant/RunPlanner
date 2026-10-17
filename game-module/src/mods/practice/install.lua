@@ -410,18 +410,23 @@ end
 
 -- The Spell as SpellScreenLogic installs it, then each invested talent as the
 -- talent screen does without FromLoot (TalentScreenLogic.lua:525-534).
+function install.slotSpell(hex, hexTree, diagnostic)
+    if not _G.HeroHasTrait(hex.spellTraitName) then add(processed(hex.spellTraitName)) end
+    local name = spellName(hex.spellTraitName)
+    local function create() return _G.CreateTalentTree(_G.SpellData[name]) end
+    local talents = hex.tree and hexTree.realize(hex.tree, hex.spellTraitName, diagnostic, create) or create()
+    local spell = _G.DeepCopyTable(_G.SpellData[name])
+    spell.Talents = _G.DeepCopyTable(talents)
+    hero().SlottedSpell = spell
+    return spell
+end
+
 local function installHex(start, hexTree, diagnostic)
     local hex = start.hex
     if hex == nil then return end
     local spell = hero().SlottedSpell
     if not (type(spell) == "table" and spell.TraitName == hex.spellTraitName) then
-        if not _G.HeroHasTrait(hex.spellTraitName) then add(processed(hex.spellTraitName)) end
-        local name = spellName(hex.spellTraitName)
-        local function create() return _G.CreateTalentTree(_G.SpellData[name]) end
-        local talents = hex.tree and hexTree.realize(hex.tree, hex.spellTraitName, diagnostic, create) or create()
-        spell = _G.DeepCopyTable(_G.SpellData[name])
-        spell.Talents = _G.DeepCopyTable(talents)
-        hero().SlottedSpell = spell
+        spell = install.slotSpell(hex, hexTree, diagnostic)
     end
     for _, key in ipairs(hex.investedNodes) do
         local depth, slot = key:match("^(%d+):(%d+)$")
@@ -457,14 +462,27 @@ local presentation = { "MaxHealthIncreaseText", "BonusHealthAndManaPresentation"
 -- The hero's state, after native StartNewRun equipped the keepsake, familiar,
 -- aspect and Arcana and before it counts rerolls and Death Defiance
 -- (RunLogic.lua:478-497), so both include the installed traits.
-function install.hero(start, context)
+-- Runs a hero write without max-stat presentation or new TraitsTaken records.
+function install.quietly(action)
     local taken, silenced = {}, {}
     for key, value in pairs(_G.GameState.TraitsTaken or {}) do taken[key] = value end
     for _, name in ipairs(presentation) do
         silenced[name] = game[name]
         game[name] = function() end
     end
-    local ok, result = pcall(function()
+    local ok, result = pcall(action)
+    for _, name in ipairs(presentation) do game[name] = silenced[name] end
+    if _G.GameState.TraitsTaken ~= nil then
+        for key in pairs(_G.GameState.TraitsTaken) do
+            if taken[key] == nil then _G.GameState.TraitsTaken[key] = nil end
+        end
+    end
+    if not ok then error(result, 0) end
+    return result
+end
+
+function install.hero(start, context)
+    install.quietly(function()
         installArcana(start)
         installEquipment(start, context.aspectKey)
         installTraits(start)
@@ -479,13 +497,6 @@ function install.hero(start, context)
         refillSpell(start)
         _G.UpdateHeroTraitDictionary()
     end)
-    for _, name in ipairs(presentation) do game[name] = silenced[name] end
-    if _G.GameState.TraitsTaken ~= nil then
-        for key in pairs(_G.GameState.TraitsTaken) do
-            if taken[key] == nil then _G.GameState.TraitsTaken[key] = nil end
-        end
-    end
-    if not ok then error(result, 0) end
 end
 
 local function rewardStores(start)
@@ -507,6 +518,11 @@ local function rewardStores(start)
         _G.CurrentRun.RewardStores[store.name] = entries
     end
 end
+
+-- The writers snap shares, each taking the start-state shape of its family.
+install.processed, install.add, install.keepsakeCounters = processed, add, keepsakeCounters
+install.chaos, install.well, install.deliveries = installChaos, installWell, installDeliveries
+install.rewardStores = rewardStores
 
 -- Barren holds each card it unequipped without its trait. Removed after native
 -- Death Defiance and rerolls and before native StartNewRun credits starting

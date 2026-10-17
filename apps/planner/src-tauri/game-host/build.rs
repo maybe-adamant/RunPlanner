@@ -62,9 +62,11 @@ fn embed_game_module() {
     }
     // Watch the nearest existing ancestor so the file appearing later also reruns;
     // a missing watched path would rerun every build.
-    let development_module = module_dir.join(game_module_assembly::DEVELOPMENT_MODULE_FILE);
-    if let Some(watched) = development_module.ancestors().find(|path| path.exists()) {
-        println!("cargo:rerun-if-changed={}", watched.display());
+    for (_, development) in game_module_assembly::DEVELOPMENT_OVERRIDES {
+        let development_module = module_dir.join(development);
+        if let Some(watched) = development_module.ancestors().find(|path| path.exists()) {
+            println!("cargo:rerun-if-changed={}", watched.display());
+        }
     }
     let version = planner_version(&manifest_dir);
     let files = game_module_assembly::assemble(&module_dir, &version, module_selection())

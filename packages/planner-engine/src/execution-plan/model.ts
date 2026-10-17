@@ -148,6 +148,15 @@ export interface ExecutionRunStateDiagnostic {
     /** Invested node keys (`depth:slot`) in investment order. */
     readonly investedNodes: readonly string[];
   };
+  /**
+   * Native `RewardStores` exact across every planned branch, as remaining counts
+   * aligned with `RewardStoreData[name]`, untouched ones at initial counts; a
+   * store that differs by branch is omitted.
+   */
+  readonly rewardStores: readonly {
+    readonly name: string;
+    readonly remainingEntryCounts: readonly number[];
+  }[];
   /** `remainingCount` is omitted while Barren holds The Artificer unequipped. */
   readonly artificer: { readonly usedCount: number; readonly remainingCount?: number } | null;
   readonly retainedEffects: {

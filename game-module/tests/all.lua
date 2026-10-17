@@ -75,6 +75,7 @@ require("tests/room/test_well_effects")
 require("tests/room/test_acquisition_hook_composition")
 require("tests/runtime/test_composition")
 require("tests/practice/test_start")
+require("tests/snap/test_apply")
 
 local lfs = require("lfs")
 local variantTests = {}

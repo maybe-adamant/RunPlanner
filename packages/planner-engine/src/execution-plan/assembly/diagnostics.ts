@@ -207,6 +207,11 @@ function assembleRunStateDiagnostic(
       investedPathPoints: snapshot.hexObserver.investedPathPoints,
       olympianTalentInvested: snapshot.hexObserver.olympianTalentInvested,
     }),
+    rewardStores: Object.freeze(
+      snapshot.rewardStores.map(({ storeKey, remainingEntryCounts }) =>
+        Object.freeze({ name: storeKey, remainingEntryCounts }),
+      ),
+    ),
     hexNodes: Object.freeze({
       nodes: snapshot.hexProgress.tree?.nodes ?? Object.freeze({}),
       investedNodes: snapshot.hexProgress.investedNodeKeys,

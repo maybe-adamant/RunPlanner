@@ -18,7 +18,7 @@ import {
   type Dict,
 } from './primitives';
 import { hexTreeNodes } from './rewards';
-import { investedNodeKeys, keepsakeTraits } from './start-state';
+import { investedNodeKeys, keepsakeTraits, rewardStoreRows } from './start-state';
 
 const traitElements = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 
@@ -52,6 +52,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
       'rewardPriorities',
       'hexProgress',
       'hexNodes',
+      'rewardStores',
       'artificer',
       'retainedEffects',
     ],
@@ -619,6 +620,7 @@ export function runState(value: unknown, label: string): ExecutionRunStateDiagno
           : hexTreeNodes(hexNodes.nodes, `${label}.hexNodes.nodes`),
       investedNodes: investedNodeKeys(hexNodes.investedNodes, `${label}.hexNodes.investedNodes`),
     }),
+    rewardStores: rewardStoreRows(record.rewardStores, `${label}.rewardStores`),
     artificer:
       artificer === null
         ? null
@@ -679,6 +681,7 @@ export const diagnosticSections = [
   'rewardPriorities',
   'hexProgress',
   'hexNodes',
+  'rewardStores',
   'artificer',
   'retainedEffects',
 ] as const;

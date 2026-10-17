@@ -774,6 +774,31 @@
               "olympianTalentInvested": false
             },
             "hexNodes": { "nodes": {}, "investedNodes": [] },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "artificer": null,
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
@@ -879,6 +904,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -1469,6 +1519,31 @@
               { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
               { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
             ]
           }
         },
@@ -1530,6 +1605,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -2111,6 +2211,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -2421,6 +2546,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -3653,6 +3803,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -3851,6 +4026,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -4125,6 +4325,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -4759,6 +4984,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -5317,6 +5567,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -5612,6 +5887,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -5794,6 +6094,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6024,6 +6349,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6273,6 +6623,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6514,6 +6889,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 1, 1, 0, 1, 1, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6700,6 +7100,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 1, 0, 1, 0, 1, 1, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -6890,7 +7315,32 @@
               "godRarityCounts": { "Heroic": 1, "Common": 7, "Epic": 2 },
               "upgradableCount": 6,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 0, 0, 0, 1, 0, 1, 0, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -7093,6 +7543,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -7664,6 +8139,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [0, 0, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -8153,6 +8653,31 @@
                 }
               ]
             },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [0, 0, 0, 0, 1, 0, 1, 0, 2, 0, 1, 2, 2, 2, 1, 1, 1, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [0, 0, 1, 0, 1, 0] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ],
             "retainedEffects": {
               "echoShopDuplicateStatus": null,
               "keepsakes": {
@@ -9010,5 +9535,5 @@
       }
     }
   ],
-  "planFingerprint": "b911edb1"
+  "planFingerprint": "d4fdf0ce"
 }

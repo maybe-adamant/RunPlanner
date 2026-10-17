@@ -20,6 +20,7 @@ local sections = {
     "rewardPriorities",
     "hexProgress",
     "hexNodes",
+    "rewardStores",
     "artificer",
     "retainedEffects",
 }
@@ -628,6 +629,7 @@ local validators = {
     rewardPriorities = validateStringList,
     hexProgress = validateHex,
     hexNodes = validateHexNodes,
+    rewardStores = startState.rewardStores,
     retainedEffects = validateRetainedEffects,
 }
 

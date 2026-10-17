@@ -243,7 +243,11 @@ export function investedNodeKeys(value: unknown, label: string): readonly string
   return Object.freeze(nodes);
 }
 
-function rewardStoreRows(value: unknown, label: string): ExecutionStartState['rewardStores'] {
+/** Exact reward-store contents, shared with the Run State frames. */
+export function rewardStoreRows(
+  value: unknown,
+  label: string,
+): ExecutionStartState['rewardStores'] {
   return list(value, label, (entry, entryLabel) => {
     const store = record(entry, entryLabel, ['name', 'remainingEntryCounts']);
     return Object.freeze({

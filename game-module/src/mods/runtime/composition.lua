@@ -280,6 +280,8 @@ function composition.bind(root, moduleVersion)
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
         featureInventory.attach(module, session, getState, report, room, route, highlights)
         interactionHooks.attach(module, session, getState, report, room, route)
+        -- Inert in release builds; a development build arms a snap from the menu bar.
+        import("mods/snap/probe.lua").attach(module, { state = getState, hexTree = hexTree })
         -- A commit that turns the module off ends a live session at once.
         if module.overlays then
             module.overlays.onCommit(function(_, runtime)

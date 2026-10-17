@@ -2299,5 +2299,5 @@ function TestProtocol.testExactFrameSectionsDecodeStrictly()
     rejects("escalatingKeepsakeValue", function(_, frame)
         frame.keepsakes.held = assert(json.decode('[{"name":"A","rarity":"Epic","escalatingKeepsakeValue":1}]'))
     end)
-    rejects("rewardStores", function(_, frame) frame.rewardStores = assert(json.decode("[]")) end)
+    rejects("remainingEntryCounts", function(_, frame) frame.rewardStores[1].remainingEntryCounts = nil end)
 end
