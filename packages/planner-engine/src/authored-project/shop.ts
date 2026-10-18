@@ -1,5 +1,6 @@
 import type { Catalog } from '../catalog-schema';
-import type { ShopProfileDeclaration } from '../reward-kernel/model';
+import type { ShopOptionSelection, ShopProfileDeclaration } from '../reward-kernel/model';
+import { locallyValidRewardOffers } from '../reward-kernel';
 import type { ResolvedRewardOffer } from '../reward-kernel';
 import type { AuthoredRewardState, RoomOccurrence, ShopOfferState, ShopState } from './model';
 import type { AcquisitionSiteAddress } from './addresses';
@@ -59,6 +60,26 @@ export function shopSlotProfile(
       ? catalog.rooms.byKey[roomGameName]?.infernalContractReward?.generationProfileKey
       : hostProfileKey;
   return profileKey === undefined ? undefined : catalog.rewards.shops.byKey[profileKey];
+}
+
+/** Every declared option and locally valid offer one Shop slot can author. */
+export function shopOfferOptionValues(
+  catalog: Catalog,
+  roomGameName: string,
+  hostProfileKey: string,
+  offerKey: string,
+): readonly ShopOptionSelection[] {
+  const profile = shopSlotProfile(catalog, roomGameName, hostProfileKey, offerKey);
+  const slot = profile?.slots.byKey[offerKey];
+  const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
+  if (group === undefined) return Object.freeze([]);
+  return Object.freeze(
+    group.options.values.flatMap((option) =>
+      locallyValidRewardOffers(catalog.rewards, option.rewardType).map((offer) =>
+        Object.freeze({ optionKey: option.key, offer }),
+      ),
+    ),
+  );
 }
 
 export function echoShopDuplicateOffer(

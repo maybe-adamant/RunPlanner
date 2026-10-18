@@ -103,6 +103,13 @@ export type ProjectStateCommand =
       readonly kind: 'ReplaceBiomeField';
       readonly field: BiomeFieldAddress;
       readonly value: AuthoredFieldValue;
+    }
+  | {
+      /** Replaces every configured biome plan and the run-start reward they settle. */
+      readonly kind: 'ReplaceRouteBiomes';
+      readonly route: RouteAddress;
+      readonly startingReward: ResolvedRewardOffer | null;
+      readonly biomes: readonly import('../model').AuthoredBiomePlan[];
     };
 
 export type ResourcePlacementCommand = {

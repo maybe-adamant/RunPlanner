@@ -573,6 +573,42 @@ export function uncommittedOrdinaryTargetAuthoringEligibility(
   return ordinaryTargetAuthoringEligibility(catalog, layout, provisionalTopology, target, gameName);
 }
 
+/**
+ * Rooms whose `CreateTarget` can succeed at one physical target, authored or
+ * still uncommitted, without consulting evaluation coverage.
+ */
+export function ordinaryTargetGameNames(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  target: TargetAddress,
+  persistence: 'authored' | 'uncommitted',
+): readonly string[] {
+  const eligibility =
+    persistence === 'authored'
+      ? ordinaryTargetAuthoringEligibility
+      : uncommittedOrdinaryTargetAuthoringEligibility;
+  return Object.freeze(
+    catalog.rooms.values.flatMap((room) =>
+      eligibility(catalog, layout, topology, target, room.gameName).kind === 'authorable'
+        ? [room.gameName]
+        : [],
+    ),
+  );
+}
+
+/** The biome's Preboss rooms that take over a whole normal-door batch. */
+export function takeoverPrebossGameNames(catalog: Catalog, biomeKey: string): readonly string[] {
+  return Object.freeze(
+    catalog.rooms.values
+      .filter(
+        (room) =>
+          room.roomSetKey === biomeKey && room.prebossBatchPolicy?.kind === 'takeOverNormalDoors',
+      )
+      .map((room) => room.gameName),
+  );
+}
+
 /** Returns the optional authored exit decision owned by one exact source. */
 export function exitDecisionForSource(
   topology: Pick<BiomeTopology, 'decisions'>,

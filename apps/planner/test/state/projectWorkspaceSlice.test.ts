@@ -151,6 +151,27 @@ describe('project workspace application state', () => {
     expect(store.getState().projectWorkspace).toBe(exactWorkspace);
   });
 
+  it('replaces every biome plan in one undoable edit', () => {
+    const { store } = createStore();
+    const before = presentProject(store);
+    const generated = createCompleteFGProject();
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceRouteBiomes',
+        route: createRouteAddress('Underworld'),
+        startingReward: generated.route.loadout.startingReward,
+        biomes: generated.route.biomes,
+      }),
+    );
+    expect(presentProject(store).route.biomes).toEqual(generated.route.biomes);
+    expect(presentProject(store).route.loadout).toEqual({
+      ...before.route.loadout,
+      startingReward: generated.route.loadout.startingReward,
+    });
+    store.dispatch(authoredProjectUndoRequested());
+    expect(presentProject(store)).toBe(before);
+  });
+
   it('atomically boots one empty authored history and its exact evaluation', () => {
     const { assembleProjectEvaluation, store } = createStore();
     const state = store.getState();

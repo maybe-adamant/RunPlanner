@@ -8,8 +8,8 @@ import {
   createRewardWheelAddress,
   createTargetAddress,
   sourceOfferPointStoreResolution,
-  ordinaryTargetAuthoringEligibility,
-  uncommittedOrdinaryTargetAuthoringEligibility,
+  ordinaryTargetGameNames,
+  takeoverPrebossGameNames,
   normalDecisionProgressionForLayout,
   hubTerminalTakeoverForSource,
   takeoverBatchExitRepairAvailable,
@@ -18,7 +18,6 @@ import {
   type DeclaredPhysicalExit,
   type ExitDecision,
   type ExitDecisionAddress,
-  type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -395,42 +394,6 @@ function missingTargetPrerequisite(
   return undefined;
 }
 
-/**
- * Candidate evaluation can be unavailable behind a retained prefix. This
- * engine-owned static domain keeps that authored-first allowance precise: it
- * permits only ordinary rooms whose exact `CreateTarget` command can succeed
- * at this physical target, without consulting evaluation coverage.
- */
-function ordinaryTargetGameNames(
-  input: WorkspaceDecisionAssemblyBaseInput,
-  persistence: 'authored' | 'uncommitted',
-  target: TargetAddress,
-): readonly string[] {
-  const topology = input.source.plan.topology;
-  if (topology === null) return Object.freeze([]);
-  return Object.freeze(
-    input.catalog.rooms.values.flatMap((room) => {
-      const eligibility =
-        persistence === 'authored'
-          ? ordinaryTargetAuthoringEligibility(
-              input.catalog,
-              input.source.layout,
-              topology,
-              target,
-              room.gameName,
-            )
-          : uncommittedOrdinaryTargetAuthoringEligibility(
-              input.catalog,
-              input.source.layout,
-              topology,
-              target,
-              room.gameName,
-            );
-      return eligibility.kind === 'authorable' ? [room.gameName] : [];
-    }),
-  );
-}
-
 function rawBatchKind(
   input: WorkspaceDecisionAssemblyBaseInput,
   decision: AuthoredBatchDecision,
@@ -456,14 +419,6 @@ function rawBatchTopologyState(
     semanticAddressKey(evaluation.frontier) === semanticAddressKey(owner)
     ? 'partial'
     : 'retained';
-}
-
-function takeoverGameNames(catalog: Catalog, biomeKey: string): readonly string[] {
-  return Object.freeze(
-    catalog.rooms.values
-      .filter((room) => room.roomSetKey === biomeKey && workspaceRoomTakesOverNormalDoors(room))
-      .map((room) => room.gameName),
-  );
 }
 
 function projectAuthoredTargetWithOverlay(
@@ -669,11 +624,20 @@ function roomControlsForBatch(
           decisionOwner,
           kind: 'decisionEntryRoomPicker' as const,
           ordinaryTargetAuthoring: missing.authoring,
-          ordinaryTargetGameNames: ordinaryTargetGameNames(input, input.persistence, address),
+          ordinaryTargetGameNames:
+            input.source.plan.topology === null
+              ? Object.freeze([])
+              : ordinaryTargetGameNames(
+                  input.catalog,
+                  input.source.layout,
+                  input.source.plan.topology,
+                  address,
+                  input.persistence,
+                ),
           persistence: input.persistence,
           takeoverGameNames:
             input.source.layout.progression.kind === 'generated'
-              ? takeoverGameNames(input.catalog, input.source.plan.biomeKey)
+              ? takeoverPrebossGameNames(input.catalog, input.source.plan.biomeKey)
               : Object.freeze([]),
         }),
       );
