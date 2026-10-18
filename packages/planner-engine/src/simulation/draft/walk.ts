@@ -30,6 +30,7 @@ import {
   type HubDecision,
   type HubDecisionAddress,
   type OccurrenceId,
+  ProjectCommandContractError,
   type ProjectCommand,
   type ProjectDocument,
   type RoomOccurrence,
@@ -37,6 +38,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
 } from '../../authored-project';
+import { hermesShrineInitialSlotKey } from '../../authored-project/model';
 import { exitDecisionForSource } from '../../authored-project/topology/query';
 import { createDefaultAuthoredHexTree } from '../../authored-project/traits/hex-tree';
 import { biomeStartRoomGameNames, resolveBiomeStart } from '../../authored-project/route-profile';
@@ -62,7 +64,7 @@ import {
   draftHalfTarget,
   draftSupply,
   acquiredGods,
-  heldFromGiver,
+  heldSupply,
   latestRunState,
   type DraftSupply,
 } from './report';
@@ -117,7 +119,7 @@ export class DraftWalk {
     start: ProjectEvaluationAssembly,
     readonly spec: DraftSpec,
     readonly rng: DraftRng,
-    private readonly schedule?: DraftGodSchedule,
+    private readonly schedule: DraftGodSchedule,
   ) {
     this.assembly = start;
     this.worldGivers = new Set(draftWorldGiverKeys(catalog, start.project.route, spec.world));
@@ -169,17 +171,23 @@ export class DraftWalk {
 
   /** Applies a command through edit settlement; false when the command authority refuses it. */
   apply(command: ProjectCommand): boolean {
+    let settled: ReturnType<typeof settleProjectEdit>;
+    let evaluated = false;
     try {
-      applyProjectCommand(this.project, this.catalog, command);
-    } catch {
-      return false;
+      settled = settleProjectEdit({
+        catalog: this.catalog,
+        before: this.assembly,
+        command,
+        evaluate: (project) => {
+          evaluated = true;
+          return simulateProjectAssembly(this.catalog, project);
+        },
+      });
+    } catch (error) {
+      // A refusal before anything is evaluated is the command's own; later ones are engine defects.
+      if (error instanceof ProjectCommandContractError && !evaluated) return false;
+      throw error;
     }
-    const settled = settleProjectEdit({
-      catalog: this.catalog,
-      before: this.assembly,
-      command,
-      evaluate: (project) => simulateProjectAssembly(this.catalog, project),
-    });
     if (settled.assembly.project === this.project) return false;
     this.assembly = settled.assembly;
     this.session = undefined;
@@ -229,8 +237,8 @@ export class DraftWalk {
     return {
       equippedTraitKeys: Object.keys(snapshot?.traits.equippedTraits ?? {}),
       godKeys: acquiredGods(this.catalog, snapshot),
-      hammers: heldFromGiver(this.catalog, snapshot, 'WeaponUpgrade'),
-      hermes: heldFromGiver(this.catalog, snapshot, 'Hermes'),
+      hammers: heldSupply(this.catalog, snapshot, 'hammer'),
+      hermes: heldSupply(this.catalog, snapshot, 'hermes'),
     };
   }
 
@@ -242,6 +250,7 @@ export class DraftWalk {
 
   /** Olympian sources outside the world are never chosen; Anvil and Story rewards are filtered. */
   private offerWeight(offer: ResolvedRewardOffer): number {
+    // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.
     if (offer.rewardType === 'ChaosWeaponUpgrade') return 0;
     const progress = this.progress();
     const wanted = this.wantedBasket(progress);
@@ -263,7 +272,7 @@ export class DraftWalk {
         !progress.godKeys.includes(giver.key);
       return needed ? 30 : 4;
     }
-    const supply = draftSupply(offer.rewardType);
+    const supply = draftSupply(this.catalog, offer);
     if (supply !== undefined) {
       const held = supply === 'hermes' ? progress.hermes : progress.hammers;
       const halfTarget = draftHalfTarget(this.biomeIndex, this.project.route.biomes.length);
@@ -278,7 +287,7 @@ export class DraftWalk {
     offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
     value: ResolvedRewardOffer,
   ): void {
-    const supply = draftSupply(value.rewardType);
+    const supply = draftSupply(this.catalog, value);
     if (supply === undefined) return;
     const progress = this.progress();
     const held = supply === 'hermes' ? progress.hermes : progress.hammers;
@@ -291,7 +300,7 @@ export class DraftWalk {
   private noteSupply(offers: readonly ResolvedRewardOffer[]): void {
     for (const offer of offers) {
       if (this.offerWeight(offer) <= 0) continue;
-      const supply = draftSupply(offer.rewardType);
+      const supply = draftSupply(this.catalog, offer);
       if (supply !== undefined) this.legalSupply.add(supply);
     }
   }
@@ -299,7 +308,7 @@ export class DraftWalk {
   /** Gods with a scheduled first room or basket trait due by this biome and not yet held. */
   private dueGods(progress: DraftProgress): ReadonlySet<string> {
     const due = new Set<string>();
-    for (const biome of this.schedule?.byBiome.slice(0, this.biomeIndex + 1) ?? []) {
+    for (const biome of this.schedule.byBiome.slice(0, this.biomeIndex + 1)) {
       for (const god of biome.godKeys) if (!progress.godKeys.includes(god)) due.add(god);
       for (const traitKey of biome.traitKeys)
         if (!progress.equippedTraitKeys.includes(traitKey))
@@ -750,9 +759,13 @@ export class DraftWalk {
     feature: Extract<SemanticAddress, { readonly kind: 'roomFeature' }>,
   ): boolean {
     if (feature.target.kind !== 'hermesShrineOffer') return false;
-    const slotKey = feature.target.generationKey.replace('initial:', '');
-    if (slotKey !== 'first' && slotKey !== 'secondLeft' && slotKey !== 'secondRight') return false;
-    const profile = this.catalog.rewards.shops.byKey.SurfaceShop;
+    const slotKey = hermesShrineInitialSlotKey(feature.target.generationKey);
+    const room =
+      this.catalog.rooms.byKey[
+        this.occurrence(feature.biomeKey, feature.occurrenceId)?.gameName ?? ''
+      ];
+    const profile = this.catalog.rewards.shops.byKey[room?.surfaceShop?.profileKey ?? ''];
+    if (slotKey === undefined || profile === undefined) return false;
     const group = profile?.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? ''];
     const occurrence = createOccurrenceAddress(
       createBiomeAddress(feature.routeKey, feature.biomeKey),
@@ -845,11 +858,10 @@ export class DraftWalk {
     const topology = this.project.route.biomes.find(
       (b) => b.biomeKey === selection.biomeKey,
     )?.topology;
-    const decision = topology?.decisions.find(
-      (candidate) =>
-        candidate.kind === 'exit' &&
-        JSON.stringify(candidate.source) === JSON.stringify(selection.source),
-    );
+    const decision =
+      topology === undefined || topology === null
+        ? undefined
+        : exitDecisionForSource(topology, selection.source);
     if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') return false;
     const targets = decision.normal.targets;
     const ordered = this.weighted(targets, (target) => {

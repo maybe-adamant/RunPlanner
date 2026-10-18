@@ -6,7 +6,6 @@ import type {
 } from '../../authored-project/model';
 import { createProjectDocument } from '../../authored-project/defaults';
 import { decodeProjectDocument } from '../../authored-project/codec';
-import { ProjectDocumentContractError } from '../../authored-project/validation';
 
 /** The project's route and itinerary, which a draft never changes. */
 export type DraftRoute = Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'>;
@@ -39,12 +38,6 @@ export interface DraftSpec {
   /** One entry per Postboss rack between biomes, in order; null keeps the held keepsake. */
   readonly rackKeepsakeKeys: readonly (string | null)[];
 }
-
-export type DraftRefusal =
-  | { readonly kind: 'freshFileRoute' }
-  /** The project codec rejects the loadout. */
-  | { readonly kind: 'invalidLoadout'; readonly path: string; readonly detail: string }
-  | { readonly kind: 'godStartingKeepsake'; readonly keepsakeKey: string };
 
 export interface DraftKeepsakeOptions {
   /** Legal keepsakes for each rack slot, in route order. */
@@ -109,27 +102,6 @@ export function draftLoadoutProject(
     },
     catalog,
   );
-}
-
-/** Reasons the base project cannot be drafted with this loadout. */
-export function draftRefusals(
-  catalog: Catalog,
-  base: ProjectDocument,
-  loadout: DraftLoadout,
-): readonly DraftRefusal[] {
-  const refusals: DraftRefusal[] = [];
-  if (catalog.routes.byKey[base.route.routeKey]?.initialProfile.kind === 'freshFile')
-    refusals.push({ kind: 'freshFileRoute' });
-  else
-    try {
-      draftLoadoutProject(catalog, base, loadout);
-    } catch (error) {
-      if (!(error instanceof ProjectDocumentContractError)) throw error;
-      refusals.push({ kind: 'invalidLoadout', path: error.path, detail: error.detail });
-    }
-  if (forcesGod(catalog, loadout.startingKeepsakeKey))
-    refusals.push({ kind: 'godStartingKeepsake', keepsakeKey: loadout.startingKeepsakeKey });
-  return Object.freeze(refusals);
 }
 
 /** A rack follows every biome's Postboss except the last. */

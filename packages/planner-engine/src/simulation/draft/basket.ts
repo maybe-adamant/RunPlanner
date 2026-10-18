@@ -125,7 +125,10 @@ function assessTrait(
   });
 }
 
-/** Native run caps: two Hammers and two Hermes boons from rooms, one Hex. */
+/**
+ * Native run caps: two Hammers (HammerLootRequirements' early and late gates), two
+ * Hermes boons from rooms and one Hex; the catalog encodes them only as offer requirements.
+ */
 const PROVIDER_CAPS: Readonly<Record<string, number>> = { hammer: 2, hermes: 2, spell: 1 };
 /** Planner limit on one god's own traits, Legendary included; a Duo counts for neither god. */
 const OLYMPIAN_CAP = 5;

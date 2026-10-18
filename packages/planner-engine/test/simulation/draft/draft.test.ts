@@ -28,13 +28,19 @@ const underworld = route('Underworld', ['F', 'G', 'H', 'I']);
 const surface = route('Surface', ['N', 'O', 'P', 'Q']);
 const dream = route('Dream', ['H', 'F', 'N', 'I']);
 
-function refusals(frame: DraftRoute & DraftLoadout) {
+function refusals(frame: DraftRoute & DraftLoadout, draft: Partial<DraftSpec> = {}) {
   const base = createProjectDocument(catalog, {
     projectId: 'draft',
     routeKey: frame.routeKey,
     itineraryBiomeKeys: frame.itineraryBiomeKeys,
   });
-  return draftRefusals(catalog, base, frame);
+  return draftRefusals(catalog, base, {
+    loadout: frame,
+    world: { godKeys: ['Zeus', 'Apollo'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    basketTraitKeys: [],
+    rackKeepsakeKeys: frame.itineraryBiomeKeys.slice(1).map(() => null),
+    ...draft,
+  });
 }
 
 const emptyWorld: DraftWorld = { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBiome: {} };
@@ -199,6 +205,18 @@ describe('draft basket legality', () => {
     }
   });
 
+  it('counts a Legendary toward its god, and a held Duo toward neither', () => {
+    const zeusCores = ['ZeusWeaponBoon', 'ZeusSpecialBoon', 'ZeusCastBoon', 'ZeusSprintBoon'];
+    const zeusCap = { kind: 'cap', giverKey: 'Zeus', cap: 5 };
+    expect(
+      assessment(underworld, spec([...zeusCores, 'SpawnKillBoon']), 'ZeusManaBoon').refusals,
+    ).toContainEqual(zeusCap);
+    expect(
+      assessment(underworld, spec([...zeusCores, 'ApolloSecondStageCastBoon']), 'ZeusManaBoon')
+        .refusals,
+    ).not.toContainEqual(zeusCap);
+  });
+
   it('does not count a Duo toward either god', () => {
     const zeusCores = [
       'ZeusWeaponBoon',
@@ -264,6 +282,53 @@ describe('draft keepsakes and route', () => {
       manualArcanaKeys: catalog.arcanaCards.values.map((card) => card.key),
     });
     expect(refusals(overGrasp)).toEqual([expect.objectContaining({ kind: 'invalidLoadout' })]);
+  });
+
+  it('refuses god, unknown and miscounted rack keepsakes', () => {
+    expect(
+      refusals(underworld, {
+        rackKeepsakeKeys: ['ForcePoseidonBoonKeepsake', 'MissingKeepsake', null],
+      }),
+    ).toEqual([
+      {
+        kind: 'rackKeepsake',
+        index: 0,
+        keepsakeKey: 'ForcePoseidonBoonKeepsake',
+        reason: 'forcesGod',
+      },
+      { kind: 'rackKeepsake', index: 1, keepsakeKey: 'MissingKeepsake', reason: 'unknown' },
+    ]);
+    expect(refusals(underworld, { rackKeepsakeKeys: [null] })).toEqual([
+      { kind: 'rackSlotCount', slotCount: 3 },
+    ]);
+  });
+
+  it('refuses an invalid world', () => {
+    expect(
+      refusals(underworld, {
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Hera', 'Ares', 'Artemis'],
+          storyNpcByBiome: { F: 'Medea' },
+          fieldNpcsByBiome: { G: ['Heracles'] },
+        },
+      }),
+    ).toEqual([
+      { kind: 'tooManyGods', maxGods: 4 },
+      { kind: 'notAGod', godKey: 'Artemis' },
+      { kind: 'storyNpc', biomeKey: 'F', npcKey: 'Medea' },
+      { kind: 'fieldNpc', biomeKey: 'G', npcKey: 'Heracles' },
+    ]);
+  });
+
+  it('refuses basket traits the static legality rejects', () => {
+    expect(
+      refusals(underworld, { basketTraitKeys: ['ZeusWeaponBoon', 'ApolloWeaponBoon', 'Missing'] }),
+    ).toEqual([{ kind: 'unknownTrait', traitKey: 'Missing' }]);
+    expect(
+      refusals(underworld, {
+        basketTraitKeys: ['ZeusWeaponBoon', 'ApolloWeaponBoon', 'HeraWeaponBoon'],
+      }).map((refusal) => refusal.kind === 'basketTrait' && refusal.traitKey),
+    ).toEqual(['ZeusWeaponBoon', 'ApolloWeaponBoon', 'HeraWeaponBoon']);
   });
 
   it('refuses a god starting keepsake and the FreshFile route', () => {

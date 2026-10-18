@@ -11,26 +11,28 @@ import {
   acquiredGods,
   draftHalfTarget,
   draftReport,
-  heldFromGiver,
+  heldSupply,
   latestRunState,
   type DraftReport,
   type DraftSupply,
 } from './report';
-import { draftLoadoutProject, draftRefusals, type DraftRefusal, type DraftSpec } from './spec';
+import { draftRefusals, type DraftRefusal } from './refusals';
+import { draftLoadoutProject, type DraftSpec } from './spec';
 import { createDraftRng, DraftWalk } from './walk';
 
+/** Attempt counts alone bound the search, so a seed drafts the same route on any machine. */
 export interface DraftBudget {
-  /** Wall-clock budget for the whole draft; at least one attempt runs per biome. */
-  readonly milliseconds: number;
-  /** Attempts per biome, keeping the best by target coverage. */
+  /** Attempts per biome once one has succeeded, keeping the best by target coverage. */
   readonly attemptsPerBiome: number;
+  /** Dead-end attempts a biome may take before any succeeds; then the draft fails. */
+  readonly maxFailedAttemptsPerBiome: number;
   /** Decisions one biome attempt may take before it is abandoned. */
   readonly maxStepsPerBiome: number;
 }
 
 export const DEFAULT_DRAFT_BUDGET: DraftBudget = Object.freeze({
-  milliseconds: 60_000,
   attemptsPerBiome: 4,
+  maxFailedAttemptsPerBiome: 16,
   maxStepsPerBiome: 600,
 });
 
@@ -60,8 +62,8 @@ function halfSupply(
   const snapshot = latestRunState(walk.assembly);
   const target = draftHalfTarget(biomeIndex, biomeCount);
   return [
-    { supply: 'hermes', met: heldFromGiver(catalog, snapshot, 'Hermes') >= target },
-    { supply: 'hammer', met: heldFromGiver(catalog, snapshot, 'WeaponUpgrade') >= target },
+    { supply: 'hermes', met: heldSupply(catalog, snapshot, 'hermes') >= target },
+    { supply: 'hammer', met: heldSupply(catalog, snapshot, 'hammer') >= target },
   ];
 }
 
@@ -98,9 +100,8 @@ export function draftProject(
   seed: number,
   budget: DraftBudget = DEFAULT_DRAFT_BUDGET,
 ): DraftResult {
-  const refusals = draftRefusals(catalog, base, spec.loadout);
+  const refusals = draftRefusals(catalog, base, spec);
   if (refusals.length > 0) return Object.freeze({ kind: 'refused', refusals });
-  const deadline = Date.now() + budget.milliseconds;
   let current: ProjectEvaluationAssembly = simulateProjectAssembly(
     catalog,
     draftLoadoutProject(catalog, base, spec.loadout),
@@ -110,14 +111,19 @@ export function draftProject(
     catalog,
     current.project.route,
     spec,
-    createDraftRng(attemptSeed(seed, biomeKeys.length, budget.attemptsPerBiome)),
+    createDraftRng((seed * 2_654_435_761) >>> 0),
   );
   let attempts = 0;
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best: { assembly: ProjectEvaluationAssembly; score: number } | undefined;
     const reasons: string[] = [];
-    for (let attempt = 0; attempt < budget.attemptsPerBiome; attempt += 1) {
-      if (attempt > 0 && Date.now() > deadline) break;
+    for (
+      let attempt = 0;
+      best === undefined
+        ? reasons.length < budget.maxFailedAttemptsPerBiome
+        : attempt < budget.attemptsPerBiome;
+      attempt += 1
+    ) {
       attempts += 1;
       const walk = new DraftWalk(
         catalog,
