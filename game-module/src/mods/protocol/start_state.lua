@@ -225,6 +225,7 @@ local function rewardStores(value, label)
         str(store.name, entryLabel .. ".name")
         list(store.remainingEntryCounts, entryLabel .. ".remainingEntryCounts", int)
     end)
+    uniqueNames(value, label)
 end
 
 local function hex(value, label)

@@ -248,7 +248,7 @@ export function rewardStoreRows(
   value: unknown,
   label: string,
 ): ExecutionStartState['rewardStores'] {
-  return list(value, label, (entry, entryLabel) => {
+  const stores = list(value, label, (entry, entryLabel) => {
     const store = record(entry, entryLabel, ['name', 'remainingEntryCounts']);
     return Object.freeze({
       name: stringValue(store.name, `${entryLabel}.name`),
@@ -259,6 +259,8 @@ export function rewardStoreRows(
       ),
     });
   });
+  uniqueNames(stores, label);
+  return stores;
 }
 
 function keepsake(value: unknown, label: string): ExecutionStartKeepsake {

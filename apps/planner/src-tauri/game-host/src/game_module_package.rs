@@ -262,7 +262,7 @@ mod tests {
         );
         assert_eq!(
             assembled(ModuleSelection::DevelopmentRequired).unwrap_err(),
-            "VITE_INTERNAL_FEATURES=1 requires the development module variant"
+            "VITE_INTERNAL_FEATURES=1 requires the development module variant variants/dev/row_options.lua"
         );
 
         for (_, development) in game_module_assembly::DEVELOPMENT_OVERRIDES {

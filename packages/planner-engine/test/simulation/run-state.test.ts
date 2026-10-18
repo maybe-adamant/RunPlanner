@@ -1,3 +1,4 @@
+import { createRewardBagState } from '../../src/reward-kernel';
 import { catalog } from '@run-planner/hades2-catalog';
 import { simulateProject, type RunStateSnapshot } from '@run-planner/engine/simulation';
 import {
@@ -461,6 +462,29 @@ describe('decision run-state snapshots', () => {
         'elementCounts',
         'hexNodes',
       ]);
+    });
+
+    it('publishes reward stores exact across branches, untouched ones at initial counts', () => {
+      const store = catalog.rewards.stores.values[0]!;
+      const initial = createRewardBagState(store, 'Underworld').remainingEntryCounts;
+      const drawn = (count: number): State => ({
+        ...base.state,
+        bags: {
+          ...base.state.bags,
+          [store.key]: {
+            ...(base.state.bags[store.key] ?? {}),
+            remainingEntryCounts: store.entries.map((_, index) => (index === 0 ? count : 1)),
+          },
+        } as State['bags'],
+      });
+      const counts = (snapshot: RunStateSnapshot) =>
+        snapshot.rewardStores.find((row) => row.storeKey === store.key)?.remainingEntryCounts;
+      expect(counts(snapshot('roomEntered', base.state))).toEqual(initial);
+      expect(counts(snapshot('roomEntered', drawn(0), drawn(0)))?.[0]).toBe(0);
+      expect(counts(snapshot('roomEntered', drawn(0), drawn(1)))).toBeUndefined();
+      expect(snapshot('roomEntered', drawn(0), drawn(1)).rewardStores.length).toBe(
+        catalog.rewards.stores.values.length - 1,
+      );
     });
 
     it('publishes chaosValues beside chaos when a held curse rolled differently', () => {

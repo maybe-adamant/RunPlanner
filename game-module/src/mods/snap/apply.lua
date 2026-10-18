@@ -58,6 +58,28 @@ local function traits()
 end
 
 local function remove(trait) _G.RemoveTraitData(hero(), trait, REMOVE) end
+
+-- Per-instance fields a re-add keeps: PersistentTraitKeys (TraitLogic.lua:2543-2560)
+-- and the acquisition fields frames do not carry.
+local INSTANCE_KEYS = { "BlockInRunRarify", "SelectedTrait", "RepeatedKeepsake", "GrantedTrait" }
+local ECHO_STAT_KEYS = { "StartMaxHealth", "StartMaxMana", "StatMultiplier", "BlockDecay", "Decay", "PropertyChanges" }
+
+local function carried(trait)
+    local fields = {}
+    if trait == nil then return fields end
+    for _, list in ipairs({ _G.PersistentTraitKeys, INSTANCE_KEYS }) do
+        for _, key in ipairs(list) do fields[key] = copy(trait[key]) end
+    end
+    if trait.StatMultiplier ~= nil then
+        for _, key in ipairs(ECHO_STAT_KEYS) do fields[key] = copy(trait[key]) end
+    end
+    return fields
+end
+
+local function carry(fields, data)
+    for key, value in pairs(fields) do data[key] = value end
+    return data
+end
 local function removeAll(name) for _, trait in ipairs(each(name)) do remove(trait) end end
 local function set(list)
     local result = {}
@@ -88,7 +110,10 @@ local function keepsakes(frame)
     for _, trait in ipairs(hero().Traits) do
         if trait.Slot == "Keepsake" then slotted = trait end
     end
+    local kept = {}
     if slotted and (slottedRow == nil or slotted.Name ~= slottedRow.name or slotted.Rarity ~= slottedRow.rarity) then
+        -- A rank change keeps the instance's fields, such as the Silken Sash's armor.
+        if slottedRow and slotted.Name == slottedRow.name then kept = carried(slotted) end
         _G.UnequipKeepsake(hero(), slotted.Name)
         slotted = nil
     end
@@ -100,7 +125,12 @@ local function keepsakes(frame)
         end
     end
     if slottedRow and slotted == nil then
-        _G.EquipKeepsake(hero(), slottedRow.name, practice.keepsakeEquipArgs({}, slottedRow))
+        local args = practice.keepsakeEquipArgs({ SkipNewTraitHighlight = true, SkipQuestStatusCheck = true }, slottedRow)
+        _G.EquipKeepsake(hero(), slottedRow.name, args)
+        local equipped = find(slottedRow.name)
+        if equipped then carry(kept, equipped) end
+        -- KeepsakeLogic.lua:1307-1308: the rack records the slotted keepsake.
+        _G.GameState.LastAwardTrait = slottedRow.name
     end
     for _, row in ipairs(rows) do
         if not row.slotted and find(row.name) == nil then
@@ -122,8 +152,9 @@ local function equipment(frame, expected)
     local aspect = frame.equipment.aspect
     local trait = aspect and find(aspect.key)
     if aspect and (trait == nil or trait.Rarity ~= aspect.rarity) then
+        local fields = carried(trait)
         if trait then remove(trait) end
-        practice.add(practice.processed(aspect.key, aspect.rarity))
+        practice.add(carry(fields, practice.processed(aspect.key, aspect.rarity)))
     end
     local familiar = frame.equipment.familiar
     if familiar == nil or matches(expected, "equipment") then return end
@@ -136,8 +167,9 @@ local function equipment(frame, expected)
                 local bonus = current.CirceBonusStacks or 0
                 local stacks = (_G.GetFamiliarTraitStacks(current.Name) + bonus) * multiplier - bonus
                 if current.StackNum ~= stacks then
+                    local fields = carried(current)
                     remove(current)
-                    practice.add(practice.processed(current.Name, nil, stacks))
+                    practice.add(carry(fields, practice.processed(current.Name, nil, stacks)))
                 end
             end
         end
@@ -228,7 +260,7 @@ end
 local function rowRarity(row) return row.hammerRank == "RankII" and "Legendary" or row.rarity end
 
 -- Modelled traits: exact matches stay, extras go, a wrong level or rarity is a
--- remove plus a re-add carrying PersistentTraitKeys (TraitLogic.lua:2543-2560).
+-- remove plus a re-add carrying the instance's fields.
 local function modeled(frame)
     local disposable, planned = nativeBindings.conformance.disposableTraits, {}
     for _, row in ipairs(frame.traits.equipped) do
@@ -244,12 +276,9 @@ local function modeled(frame)
             elseif traitMatches(trait, row) then
                 kept[name] = true
             else
-                local persistent = {}
-                for _, key in ipairs(_G.PersistentTraitKeys) do persistent[key] = trait[key] end
+                local fields = carried(trait)
                 remove(trait)
-                local data = practice.processed(name, rowRarity(row), row.level)
-                for key, value in pairs(persistent) do data[key] = value end
-                practice.add(data)
+                practice.add(carry(fields, practice.processed(name, rowRarity(row), row.level)))
                 kept[name] = true
             end
         end
@@ -311,6 +340,8 @@ local function wellFamily(frame, expected)
     table.sort(live)
     if table.concat(planned, ",") ~= table.concat(live, ",") then
         removeAll("StorePendingDeliveryItem")
+        -- Native never clears PendingSpellDrop, and a stale one blocks Selene (RequirementsData.lua:1349).
+        run().PendingSpellDrop = false
         practice.deliveries({ hermesDeliveries = frame.retainedEffects.hermesShrineDeliveries })
     end
 end
@@ -337,6 +368,26 @@ local function ledgers(frame)
     run().RewardPriorities = copy(frame.rewardPriorities)
 end
 
+local function olympian(node)
+    return type(node.Pool) == "table" and (node.Pool.OlympianSpell ~= nil or node.Pool.OlympianCount ~= nil)
+end
+
+-- Whether the live tree realises exactly the planned non-Olympian node talents.
+local function sameTree(spell, planned)
+    local seen = 0
+    for depth, column in ipairs(spell.Talents or {}) do
+        for slot, node in pairs(column) do
+            if type(node) == "table" and not olympian(node) then
+                if planned[depth .. ":" .. tostring(slot)] ~= node.Name then return false end
+                seen = seen + 1
+            end
+        end
+    end
+    local count = 0
+    for _ in pairs(planned) do count = count + 1 end
+    return seen == count
+end
+
 local function stripSpell(spell)
     for _, column in ipairs(spell.Talents or {}) do
         for _, node in pairs(column) do
@@ -352,10 +403,13 @@ end
 local function hex(frame, context)
     local progress, nodes = frame.hexProgress, frame.hexNodes
     local spell = hero().SlottedSpell
-    if type(spell) == "table" and spell.TraitName ~= progress.spellTraitKey then
+    if type(spell) == "table"
+        and (spell.TraitName ~= progress.spellTraitKey or not sameTree(spell, nodes.nodes)) then
         stripSpell(spell)
         spell = nil
     end
+    run().NumTalentPoints = progress.bankedPathPoints
+    run().InvestedTalentPoints = #nodes.investedNodes
     if progress.spellTraitKey == nil then return end
     if type(spell) ~= "table" then
         local talents = progress.talentKeys
@@ -366,7 +420,7 @@ local function hex(frame, context)
         spell = practice.slotSpell({ spellTraitName = progress.spellTraitKey, tree = tree },
             context.hexTree, context.diagnostic)
     end
-    local invested, stacks, rarity = set(nodes.investedNodes), {}, {}
+    local invested, stacks, rarity, duo = set(nodes.investedNodes), {}, {}, nil
     for depth, column in ipairs(spell.Talents) do
         for slot, node in pairs(column) do
             if type(node) == "table" and node.Name then
@@ -376,21 +430,20 @@ local function hex(frame, context)
                 if wanted then
                     rarity[node.Name] = rarity[node.Name] or node.Rarity
                     local declaration = _G.TraitData[node.Name]
-                    if declaration and declaration.IsDuoBoon then spell.ObtainedDuoTalent = true end
+                    if declaration and declaration.IsDuoBoon then duo = true end
                 end
             end
         end
     end
+    spell.ObtainedDuoTalent = duo
     for name, count in pairs(stacks) do
         local held = find(name) and _G.GetTraitCount(hero(), { Name = name }) or 0
         if held ~= count then
+            local fields = carried(find(name))
             removeAll(name)
-            if count > 0 then practice.add(practice.processed(name, rarity[name], count)) end
+            if count > 0 then practice.add(carry(fields, practice.processed(name, rarity[name], count))) end
         end
     end
-    run().NumTalentPoints = progress.bankedPathPoints
-    run().InvestedTalentPoints = #nodes.investedNodes
-    run().AllSpellInvestedCache = progress.closed
     _G.UpdateTalentPointInvestedCache()
 end
 
@@ -422,16 +475,57 @@ local function essences(frame)
     _G.UpdateHeroTraitDictionary()
 end
 
+local function fault(checkpoint, expected, observed)
+    return nil, { outcome = "fault", checkpoint = "snap:" .. checkpoint, expected = expected, observed = observed }
+end
+
+-- Every native declaration and capability the writes need, checked before the first one.
+local function validate(frame, context)
+    for _, store in ipairs(frame.rewardStores) do
+        local declared = _G.RewardStoreData[store.name]
+        if type(declared) ~= "table" or #declared ~= #store.remainingEntryCounts then
+            return fault("reward-store", store.name, type(declared) == "table" and #declared or "undeclared")
+        end
+    end
+    local names = {}
+    for _, row in ipairs(frame.traits.equipped) do
+        if universe[row.traitKey] then names[#names + 1] = row.traitKey end
+    end
+    for _, row in ipairs(frame.keepsakes.held) do names[#names + 1] = row.name end
+    for _, row in ipairs(frame.chaos.active) do
+        names[#names + 1], names[#names + 2] = row.curseKey, row.blessingKey
+    end
+    for _, row in ipairs(frame.chaos.matured) do names[#names + 1] = row.blessingKey end
+    if frame.equipment.aspect then names[#names + 1] = frame.equipment.aspect.key end
+    for _, row in ipairs(frame.arcana.active) do
+        local card = _G.MetaUpgradeCardData[row.key]
+        if type(card) ~= "table" or card.TraitName == nil then return fault("arcana", row.key, "undeclared") end
+        names[#names + 1] = card.TraitName
+    end
+    for _, name in ipairs(names) do
+        if type(_G.TraitData[name]) ~= "table" then return fault("trait", name, "undeclared") end
+    end
+    local spell, progress = hero().SlottedSpell, frame.hexProgress
+    local slotting = progress.spellTraitKey ~= nil and next(frame.hexNodes.nodes) ~= nil
+        and not (type(spell) == "table" and spell.TraitName == progress.spellTraitKey
+            and sameTree(spell, frame.hexNodes.nodes))
+    if slotting and (context == nil or context.hexTree == nil) then
+        return fault("hex-tree", progress.spellTraitKey, "no Hex-tree realization")
+    end
+    return true
+end
+
 -- Snaps the hero to the occurrence's roomEntered frame and proves it with the
--- Practice start check, returning that result.
+-- Practice start check, returning that result; an invalid frame touches nothing.
 function snap.apply(occurrence, frame, _, context)
+    local valid, failure = validate(frame, context)
+    if not valid then return nil, failure end
     local expected = assert(conformance.admissionExpected(occurrence.diagnostics))
     local unit = hero()
     local captured = { health = unit.Health, lastStands = copy(unit.LastStands), maxLastStands = unit.MaxLastStands }
     practice.quietly(function()
         keepsakes(frame)
         equipment(frame, expected)
-        unit.LastStands, unit.MaxLastStands = captured.lastStands, captured.maxLastStands
         arcana(frame)
         vows(frame)
         modeled(frame)
@@ -443,6 +537,8 @@ function snap.apply(occurrence, frame, _, context)
         essences(frame)
         _G.ValidateMaxHealth(true)
         _G.ValidateMaxMana()
+        -- Equips and blessings add Death Defiance (TraitLogic.lua:893-895); the captured state is kept.
+        unit.LastStands, unit.MaxLastStands = captured.lastStands, captured.maxLastStands
     end)
     unit.Health = math.min(captured.health, unit.MaxHealth)
     return admission.verify(occurrence)
