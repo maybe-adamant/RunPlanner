@@ -350,6 +350,8 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
     end)
 
     return {
+        plannedRoom = doors.plannedRoom,
+        doorTargets = doors.targets,
         bindAdditionalRoom = doors.bindAdditional,
         applyZagreusContractPresence = doors.applyZagreusContractPresence,
         realizeIncomingReward = rewards.realize,

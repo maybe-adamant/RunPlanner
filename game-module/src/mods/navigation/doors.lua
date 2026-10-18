@@ -206,6 +206,46 @@ function doors.bindAdditional(nativeRoom, additional)
     return nativeRoom
 end
 
+-- The planned room behind one published door target: its declaration with the
+-- occurrence identity, Zagreus Contract presence, reward and cages stamped.
+local function plannedRoom(target, game, occurrencesById)
+    local declaration = game and game.RoomData and game.RoomData[target.room.gameName]
+    local room = copy(declaration or { GenusName = target.room.gameName })
+    room.GenusName = target.room.gameName
+    room.Name = target.room.gameName
+    room.__runPlannerExecutionRoomId = target.room.id
+    markZagreusContractPresence(room, target)
+    if not preservesNativeRequiredReward(target, occurrencesById) then
+        room.RewardType = target.reward and target.reward.rewardType or nil
+        room.ChosenRewardType = nil
+        room.ForceLootName = target.reward and target.reward.source or nil
+    end
+    if target.reward and target.reward.spurnedSource then
+        room.Encounter = room.Encounter or {}
+        room.Encounter.LootAName = target.reward.source
+        room.Encounter.LootBName = target.reward.spurnedSource
+    end
+    if target.cageRewards ~= nil then
+        room.CageRewards = {}
+        for cageIndex, cageReward in ipairs(target.cageRewards) do
+            room.CageRewards[cageIndex] = { RewardType = cageReward.rewardType, ForceLootName = cageReward.source }
+        end
+    end
+    return room
+end
+
+-- The planned room for the occurrence at `index`, as the planned room before it
+-- offers it through its door; nil when no published door leads there.
+function doors.plannedRoom(plan, index, game)
+    local source = plan.occurrencesById[plan.selectedOccurrenceIds[index - 1]]
+    local id = plan.selectedOccurrenceIds[index]
+    if source == nil or source.doors == nil or source.doors.kind == "terminal" then return nil end
+    for _, target in ipairs(publishedTargets(source.doors, plan.occurrencesById)) do
+        if target.room.id == id then return plannedRoom(target, game, plan.occurrencesById) end
+    end
+    return nil
+end
+
 -- Replace only the semantic rows.  Existing native-only door fields are
 -- retained by index, while route target/reward/provider facts are stamped.
 function doors.realize(occurrence, nativeDoors, game, occurrencesById)
@@ -214,33 +254,10 @@ function doors.realize(occurrence, nativeDoors, game, occurrencesById)
     local targets = publishedTargets(expected, occurrencesById)
     local rows = {}
     for index, target in ipairs(targets) do
-        local row = nativeDoors and nativeDoors[index] or {}
-        local realized = copy(row)
-        local declaration = game and game.RoomData and game.RoomData[target.room.gameName]
-        realized.Room = copy(declaration or { GenusName = target.room.gameName })
-        realized.Room.GenusName = target.room.gameName
-        realized.Room.Name = target.room.gameName
-        realized.Room.__runPlannerExecutionRoomId = target.room.id
-        markZagreusContractPresence(realized.Room, target)
+        local realized = copy(nativeDoors and nativeDoors[index] or {})
+        realized.Room = plannedRoom(target, game, occurrencesById)
         if not preservesNativeRequiredReward(target, occurrencesById) then
-            realized.RewardType = target.reward and target.reward.rewardType or nil
-            realized.Room.RewardType = realized.RewardType
-            realized.Room.ChosenRewardType = nil
-            realized.Room.ForceLootName = target.reward and target.reward.source or nil
-        end
-        if target.reward and target.reward.spurnedSource then
-            realized.Room.Encounter = realized.Room.Encounter or {}
-            realized.Room.Encounter.LootAName = target.reward.source
-            realized.Room.Encounter.LootBName = target.reward.spurnedSource
-        end
-        if target.cageRewards ~= nil then
-            realized.Room.CageRewards = {}
-            for cageIndex, cageReward in ipairs(target.cageRewards) do
-                realized.Room.CageRewards[cageIndex] = {
-                    RewardType = cageReward.rewardType,
-                    ForceLootName = cageReward.source,
-                }
-            end
+            realized.RewardType = realized.Room.RewardType
         end
         realized.__runPlannerExecutionDoorTarget = target.room.id
         rows[index] = realized

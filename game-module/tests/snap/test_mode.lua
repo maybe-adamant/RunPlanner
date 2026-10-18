@@ -8,6 +8,7 @@ local roomHooks = require("mods.room.hooks")
 local mode = require("mods.snap.mode")
 local presentation = require("mods.presentation.run_presentation")
 local victorySummary = require("mods.presentation.victory_summary")
+local doors = require("mods.navigation.doors")
 
 TestSnapMode = {}
 
@@ -58,6 +59,7 @@ local function attached(state, snapOn, apply, rewardProof)
         close = function() end,
     }
     local navigation = {
+        doorTargets = doors.targets, plannedRoom = doors.plannedRoom,
         realizeIncomingReward = function(_, data) return data end,
         proveIncomingReward = rewardProof or function() return true end,
         proveOutgoingDoors = function() return true end,
@@ -74,7 +76,7 @@ local function attached(state, snapOn, apply, rewardProof)
         })
     local runtime = { data = { read = function(alias) return alias == "SnapMode" and snapOn end } }
     local restore = nativeGame.install({
-        game = { CreateRoom = function(data)
+        game = { RoomData = { F_B = { Name = "F_B" } }, CreateRoom = function(data)
             log.created[#log.created + 1] = data
             return { Name = data.Name, __runPlannerExecutionRoomId = data.__runPlannerExecutionRoomId }
         end },
@@ -106,13 +108,41 @@ end
 function TestSnapMode.testKeepsADoorThatAlreadyLeadsToThePlannedRoom()
     local state = desynchronized(1)
     local leave, _, log, restore = attached(state, true)
-    local door = { Room = { Name = "F_B" } }
+    local door = { Room = { Name = "F_B", __runPlannerExecutionRoomId = "b" } }
     leave("F_A", door)
     restore()
-    lu.assertEquals(door.Room.__runPlannerExecutionRoomId, "b")
+    lu.assertEquals(door.Room, { Name = "F_B", __runPlannerExecutionRoomId = "b" })
     lu.assertEquals(log.created, {})
     lu.assertEquals({ state.state, state.reason, state.route.index }, { "synchronized", "snap-pending", 2 })
     lu.assertEquals(state.snapPending.mismatch.checkpoint, "room-exit-conformance:traitInventory")
+end
+
+function TestSnapMode.testRebuildsADoorRoomOfTheSameNameMadeForAnotherOccurrence()
+    local state = desynchronized(1)
+    local leave, _, log, restore = attached(state, true)
+    local door = { Room = { Name = "F_B", __runPlannerExecutionRoomId = "other-f-b" } }
+    leave("F_A", door)
+    restore()
+    lu.assertEquals(#log.created, 1)
+    lu.assertEquals(door.Room.__runPlannerExecutionRoomId, "b")
+end
+
+function TestSnapMode.testBuildsThePlannedDoorRoomWithItsZagreusContract()
+    local state = desynchronized(2)
+    state.plan.occurrencesById.a.doors = { kind = "batch", targets = { {
+        room = { id = "b", gameName = "F_B" }, reward = { rewardType = "Boon", source = "ZeusUpgrade" },
+        zagreusContractPresent = true,
+    } } }
+    state.plan.occurrencesById.b.doors = { kind = "batch", targets = { {
+        room = { id = "c", gameName = "F_C" }, reward = { rewardType = "MaxHealthDrop" },
+        zagreusContractPresent = true,
+    } } }
+    local leave, _, log, restore = attached(state, true)
+    leave("F_B", { Room = { Name = "F_X" } })
+    restore()
+    local data = log.created[1]
+    lu.assertEquals({ data.Name, data.__runPlannerExecutionRoomId, data.RewardType,
+        data.__runPlannerExecutionZagreusContractPresent }, { "F_C", "c", "MaxHealthDrop", true })
 end
 
 function TestSnapMode.testBuildsThePlannedRoomWhenTheDoorLeadsElsewhere()
