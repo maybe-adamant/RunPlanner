@@ -27,8 +27,12 @@ export interface DraftPrerequisites {
   readonly needs: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>;
   /** Whether the trait's held-trait and element requirements all hold. */
   ready(traitKey: string, held: DraftHeldTraits): boolean;
-  /** Wanted basket traits that some unmet need of another wanted trait could use. */
-  waitedOn(wanted: readonly string[], held: DraftHeldTraits): ReadonlySet<string>;
+  /** Wanted basket traits that some unmet need of a waiting trait, by default any wanted one, could use. */
+  waitedOn(
+    wanted: readonly string[],
+    held: DraftHeldTraits,
+    waiting?: readonly string[],
+  ): ReadonlySet<string>;
 }
 
 /** Held-trait and element requirements from both requirement lists, through `all`. */
@@ -125,9 +129,9 @@ export function createDraftPrerequisites(
     needs: new Map([...unmet].map(([key, needs]) => [key, needs.map((need) => need.options)])),
     ready: (traitKey: string, held: DraftHeldTraits) =>
       leavesOf(traitKey).every((leaf) => leafHeld(leaf, held)),
-    waitedOn: (wanted: readonly string[], held: DraftHeldTraits) => {
+    waitedOn: (wanted: readonly string[], held: DraftHeldTraits, waiting = wanted) => {
       const waited = new Set<string>();
-      for (const traitKey of wanted)
+      for (const traitKey of waiting)
         for (const need of unmet.get(traitKey) ?? [])
           if (!leafHeld(need.leaf, held))
             for (const option of need.options)

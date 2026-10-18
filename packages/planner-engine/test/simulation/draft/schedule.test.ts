@@ -95,6 +95,34 @@ describe('draft god schedule', () => {
     it('moves the prerequisite that unlocks the most traits to the first biome', () => {
       for (const seed of seeds) expect(dueBiomes(seed)('ZeusWeaponBoon')).toBe(0);
     });
+
+    it("makes an NPC trait's prerequisite due by the NPC's biome", () => {
+      // Ingenious Strike needs a god Attack; on these seeds the Duos' prerequisites would push it to P.
+      const icarus: DraftSpec = {
+        ...spec,
+        world: {
+          godKeys: ['Zeus', 'Hera', 'Demeter', 'Ares'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: { O: ['Icarus'] },
+        },
+        basketTraitKeys: [
+          'HeraCastBoon',
+          'DemeterSpecialBoon',
+          'ZeusSprintBoon',
+          'AresManaBoon',
+          'AresWeaponBoon',
+          'BloodDropRevengeBoon',
+          'KeepsakeLevelBoon',
+          'RootStrikeBoon',
+          'BloodRetentionBoon',
+          'FocusAttackDamageTrait',
+        ],
+      };
+      for (const seed of [2, 3]) {
+        const { byBiome } = draftGodSchedule(catalog, surface, icarus, createDraftRng(seed));
+        expect(byBiome.findIndex((biome) => biome.traitKeys.includes('AresWeaponBoon'))).toBe(1);
+      }
+    });
   });
 
   describe('Hermes and element due biomes', () => {
