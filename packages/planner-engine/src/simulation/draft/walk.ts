@@ -56,7 +56,15 @@ import {
 } from '../evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
-import { DRAFT_HAMMER_TARGET, DRAFT_HERMES_TARGET, heldFromGiver, latestRunState } from './report';
+import {
+  DRAFT_HAMMER_TARGET,
+  DRAFT_HERMES_TARGET,
+  draftHalfTarget,
+  draftSupply,
+  heldFromGiver,
+  latestRunState,
+  type DraftSupply,
+} from './report';
 import type { SemanticFinding } from '../model';
 import type { DraftSpec } from './spec';
 import { draftWorldGiverKeys } from './world';
@@ -95,6 +103,10 @@ export class DraftWalk {
   private nextOccurrence = 0;
   steps = 0;
   failure: string | undefined;
+  /** The biome being walked. */
+  biomeIndex = 0;
+  /** Hermes and Hammer rewards some decision in this walk could legally take. */
+  readonly legalSupply = new Set<DraftSupply>();
 
   constructor(
     readonly catalog: Catalog,
@@ -125,6 +137,7 @@ export class DraftWalk {
    * False at a dead end or the step limit; the route then stays incomplete.
    */
   runBiome(biomeIndex: number, maxSteps: number): boolean {
+    this.biomeIndex = biomeIndex;
     while (this.steps < maxSteps) {
       if (this.issueBiomeIndex() > biomeIndex) {
         if (biomeIndex < this.project.route.biomes.length - 1) this.equipRack(biomeIndex);
@@ -240,11 +253,36 @@ export class DraftWalk {
       if (!this.worldGivers.has(giver.key)) return 0;
       return wanted.some((key) => giver.traitKeys.includes(key)) ? 30 : 4;
     }
-    if (offer.rewardType === 'WeaponUpgrade')
-      return progress.hammers < DRAFT_HAMMER_TARGET ? 25 : 0.2;
-    if (offer.rewardType === 'HermesUpgrade')
-      return progress.hermes < DRAFT_HERMES_TARGET ? 25 : 0.2;
+    const supply = draftSupply(offer.rewardType);
+    if (supply !== undefined) {
+      const held = supply === 'hermes' ? progress.hermes : progress.hammers;
+      const halfTarget = draftHalfTarget(this.biomeIndex, this.project.route.biomes.length);
+      const runTarget = supply === 'hermes' ? DRAFT_HERMES_TARGET : DRAFT_HAMMER_TARGET;
+      return held < halfTarget ? 25 : held < runTarget ? 3 : 0.2;
+    }
     return 1;
+  }
+
+  /** Buys a Shop Hermes or Hammer the half still needs; a purchase the engine refuses is undone. */
+  private buyWantedSupply(
+    offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
+    value: ResolvedRewardOffer,
+  ): void {
+    const supply = draftSupply(value.rewardType);
+    if (supply === undefined) return;
+    const progress = this.progress();
+    const held = supply === 'hermes' ? progress.hermes : progress.hammers;
+    if (held >= draftHalfTarget(this.biomeIndex, this.project.route.biomes.length)) return;
+    if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
+    if (this.assembly.evaluation.issue?.kind === 'invalid')
+      this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
+  }
+
+  private noteSupply(offers: readonly ResolvedRewardOffer[]): void {
+    for (const offer of offers) {
+      const supply = draftSupply(offer.rewardType);
+      if (supply !== undefined && this.offerWeight(offer) > 0) this.legalSupply.add(supply);
+    }
   }
 
   private roomWeight(gameName: string, biomeKey: string): number {
@@ -836,8 +874,12 @@ export class DraftWalk {
           evaluation.result.findings.length === 0
         );
       });
+      this.noteSupply(values.map((value) => value.offer));
       for (const value of this.weighted(values, (v) => this.offerWeight(v.offer)))
-        if (this.apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) return true;
+        if (this.apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
+          this.buyWantedSupply(origin, value.offer);
+          return true;
+        }
       return false;
     }
     if (origin.kind === 'rewardWheelOffer') {
@@ -904,6 +946,7 @@ export class DraftWalk {
           evaluation.result.findings.length === 0
         );
       });
+    this.noteSupply(legal);
     for (const offer of this.weighted(legal, (o) => this.offerWeight(o)))
       if (this.apply(command(offer))) return true;
     return false;
