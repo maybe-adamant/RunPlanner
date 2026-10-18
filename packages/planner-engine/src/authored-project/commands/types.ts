@@ -105,7 +105,7 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     }
   | {
-      /** Replaces the loadout and biome plans; route, itinerary and run modifiers stay. */
+      /** Replaces the loadout and every itinerary biome's plan; route, itinerary and run modifiers stay. */
       readonly kind: 'ReplaceRoute';
       readonly route: RouteAddress;
       readonly loadout: Omit<import('../model').RouteLoadout, 'runModifiers'>;

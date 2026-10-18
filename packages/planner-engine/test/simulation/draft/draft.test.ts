@@ -215,6 +215,22 @@ describe('draft basket legality', () => {
     expect(duo.refusals.some((refusal) => refusal.kind === 'cap')).toBe(false);
   });
 
+  it('caps the basket at fifteen god traits, leaving Hermes outside the total', () => {
+    const godKeys = ['Zeus', 'Apollo', 'Hestia', 'Aphrodite'];
+    const own = (giverKey: string) =>
+      catalog.traitGivers.byKey[giverKey]!.traitKeys.filter(
+        (key) => catalog.traitGivers.values.filter((g) => g.traitKeys.includes(key)).length === 1,
+      );
+    const held = godKeys.slice(0, 3).flatMap((key) => own(key).slice(0, 5));
+    const draft = spec(held, { godKeys });
+    const totalCap = { kind: 'totalCap', cap: 15 };
+    expect(assessment(underworld, draft, own('Aphrodite')[0]!).refusals).toContainEqual(totalCap);
+    expect(
+      assessment(underworld, spec(held.slice(1), { godKeys }), own('Aphrodite')[0]!).refusals,
+    ).not.toContainEqual(totalCap);
+    expect(assessment(underworld, draft, 'HermesWeaponBoon').refusals).not.toContainEqual(totalCap);
+  });
+
   it('refuses a trait whose giver is outside the world', () => {
     expect(assessment(underworld, spec(['HeraWeaponBoon']), 'HeraWeaponBoon').refusals).toEqual([
       { kind: 'giverNotInWorld' },

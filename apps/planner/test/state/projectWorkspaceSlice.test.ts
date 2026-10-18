@@ -55,6 +55,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { nBiome, nLocalOccurrenceId, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNShrineSideRoomDeliveryCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -154,7 +155,7 @@ describe('project workspace application state', () => {
   it('replaces the route plan in one undoable edit', () => {
     const { store } = createStore();
     const before = presentProject(store);
-    const generated = createCompleteFGProject();
+    const generated = loadUnderworldFGHICheckpoint();
     store.dispatch(
       authoredProjectCommandDispatched({
         kind: 'ReplaceRoute',

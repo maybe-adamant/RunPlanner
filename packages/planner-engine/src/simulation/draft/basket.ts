@@ -21,6 +21,8 @@ export type DraftTraitRefusal =
   | { readonly kind: 'wrongHammerLoadout' }
   /** The basket already holds this giver's limit. */
   | { readonly kind: 'cap'; readonly giverKey: string; readonly cap: number }
+  /** The basket already holds the planner limit of god traits, Duos included. */
+  | { readonly kind: 'totalCap'; readonly cap: number }
   | {
       readonly kind: 'requirement';
       readonly code: TraitFindingCode;
@@ -91,6 +93,11 @@ function assessTrait(
     const held = others.filter((key) => cappedGiver(catalog, key)?.giverKey === capped.giverKey);
     if (held.length >= capped.cap) refusals.push({ kind: 'cap', ...capped });
   }
+  if (
+    isGodTrait(catalog, traitKey) &&
+    others.filter((key) => isGodTrait(catalog, key)).length >= OLYMPIAN_TOTAL_CAP
+  )
+    refusals.push({ kind: 'totalCap', cap: OLYMPIAN_TOTAL_CAP });
   const hammer = trait.hammerCompatibility;
   if (
     hammer !== undefined &&
@@ -119,6 +126,14 @@ function assessTrait(
 const PROVIDER_CAPS: Readonly<Record<string, number>> = { hammer: 2, hermes: 2, spell: 1 };
 /** Planner limit on one god's own traits, Legendary included; a Duo counts for neither god. */
 const OLYMPIAN_CAP = 5;
+/** Planner limit on god traits across the whole pool. */
+const OLYMPIAN_TOTAL_CAP = 15;
+
+function isGodTrait(catalog: Catalog, traitKey: string): boolean {
+  return catalog.traitGivers.values.some(
+    (giver) => giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey),
+  );
+}
 
 function cappedGiver(
   catalog: Catalog,

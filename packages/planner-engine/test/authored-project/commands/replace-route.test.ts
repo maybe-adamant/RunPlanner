@@ -11,9 +11,9 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNResourcesCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
 function cleared(project: ProjectDocument): ProjectDocument {
   return project.route.biomes.reduce(
@@ -51,7 +51,7 @@ function withStartPoint(project: ProjectDocument, biomeKey: string): ProjectDocu
 
 describe('ReplaceRoute', () => {
   it('installs a generated route through edit settlement', () => {
-    const source = loadUnderworldFGHCheckpoint();
+    const source = loadUnderworldFGHICheckpoint();
     const target = cleared(source);
     const command = replaceWith(target, source);
     const settled = settleProjectEdit({
@@ -72,9 +72,13 @@ describe('ReplaceRoute', () => {
   });
 
   it('resets the route resource placements', () => {
-    const source = loadSurfaceNResourcesCheckpoint();
-    expect(Object.values(source.route.resourcePlacements).some(Boolean)).toBe(true);
-    const replaced = applyProjectCommand(source, catalog, replaceWith(source, source));
+    const placed = loadSurfaceNResourcesCheckpoint();
+    expect(Object.values(placed.route.resourcePlacements).some(Boolean)).toBe(true);
+    const replaced = applyProjectCommand(
+      placed,
+      catalog,
+      replaceWith(placed, loadSurfaceNOPQProject()),
+    );
     expect(replaced.route.resourcePlacements).toEqual({
       Pickaxe: null,
       Exorcism: null,
@@ -84,22 +88,25 @@ describe('ReplaceRoute', () => {
   });
 
   it('carries the run modifiers and refuses another route', () => {
-    const source = loadUnderworldFGHCheckpoint();
+    const source = loadUnderworldFGHICheckpoint();
     const practice = withStartPoint(source, 'G');
     const replaced = applyProjectCommand(practice, catalog, replaceWith(practice, source));
     expect(replaced.route.loadout.runModifiers).toEqual({
       startPoint: { biomeKey: 'G', point: 'opening' },
     });
-    const surface = loadSurfaceNOProject();
+    const surface = loadSurfaceNOPQProject();
     expect(() => applyProjectCommand(source, catalog, replaceWith(surface, surface))).toThrow(
       ProjectCommandContractError,
     );
   });
 
-  it('refuses biomes out of itinerary order and a disallowed starting reward', () => {
-    const source = loadUnderworldFGHCheckpoint();
-    const [f, g] = source.route.biomes;
-    for (const biomes of [[g!, f!], [g!]])
+  it('refuses a partial or reordered itinerary and a disallowed starting reward', () => {
+    const source = loadUnderworldFGHICheckpoint();
+    const [f, g, h, i] = source.route.biomes;
+    for (const biomes of [
+      [g!, f!, h!, i!],
+      [f!, g!, h!],
+    ])
       expect(() =>
         applyProjectCommand(source, catalog, replaceWith(source, source, biomes)),
       ).toThrow(ProjectCommandContractError);
@@ -113,11 +120,11 @@ describe('ReplaceRoute', () => {
   });
 
   it('refuses a plan the strict project decode rejects', () => {
-    const source = loadUnderworldFGHCheckpoint();
-    const [f] = source.route.biomes;
+    const source = loadUnderworldFGHICheckpoint();
+    const [f, ...rest] = source.route.biomes;
     const broken = { ...f!, state: { ...f!.state, unknownField: true } };
     expect(() =>
-      applyProjectCommand(source, catalog, replaceWith(source, source, [broken])),
+      applyProjectCommand(source, catalog, replaceWith(source, source, [broken, ...rest])),
     ).toThrow(ProjectCommandContractError);
   });
 });
