@@ -52,6 +52,7 @@ function routeWorkspaceMarkup(
     <Provider store={application.store}>
       <RouteWorkspace
         catalog={application.catalog}
+        draftRun={application.draftRun}
         feedback={feedback}
         interactions={workspace.interactions}
         navigation={navigation}

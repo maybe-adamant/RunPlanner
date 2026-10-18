@@ -39,6 +39,7 @@ function appMarkup(application: ReturnType<typeof createApplication>): string {
       <App
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
+        draftRun={application.draftRun}
         buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
         projectOperations={application.projectOperations}

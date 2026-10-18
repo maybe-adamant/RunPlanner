@@ -47,6 +47,7 @@ export type ArcanaActivationAddress = JudgmentArcanaAddress | FigurineArcanaAddr
 /** A panel selection for the one route in the open project. */
 export type RoutePanel =
   | { readonly kind: 'route' }
+  | { readonly kind: 'draft' }
   | { readonly kind: 'loadout' }
   | { readonly kind: 'modifiers' }
   | { readonly kind: 'npcIndex' }

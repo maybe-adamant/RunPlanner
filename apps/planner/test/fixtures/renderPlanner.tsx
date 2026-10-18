@@ -41,6 +41,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
       <App
         catalog={application.catalog}
         catalogSummary={application.catalogSummary}
+        draftRun={application.draftRun}
         buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
         {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}

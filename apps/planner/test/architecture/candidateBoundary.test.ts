@@ -39,6 +39,7 @@ describe('candidate application boundary', () => {
       'catalogSummary',
       'communityEvents',
       'dispose',
+      'draftRun',
       'editorNavigation',
       'gameStatus',
       'projectOperations',
