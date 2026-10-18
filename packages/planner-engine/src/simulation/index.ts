@@ -608,6 +608,7 @@ export {
   type DraftKeepsakeOptions,
   type DraftLoadout,
   type DraftRefusal,
+  type DraftRoute,
   type DraftSpec,
   type DraftWorld,
 } from './draft/spec';

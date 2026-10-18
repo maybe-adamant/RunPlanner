@@ -105,15 +105,11 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     }
   | {
-      /** Replaces the route plan; run modifiers carry over from the current loadout. */
+      /** Replaces the loadout and biome plans; route, itinerary and run modifiers stay. */
       readonly kind: 'ReplaceRoute';
       readonly route: RouteAddress;
-      readonly plan: {
-        readonly routeKey: string;
-        readonly itineraryBiomeKeys: readonly string[];
-        readonly loadout: Omit<import('../model').RouteLoadout, 'runModifiers'>;
-        readonly biomes: readonly import('../model').AuthoredBiomePlan[];
-      };
+      readonly loadout: Omit<import('../model').RouteLoadout, 'runModifiers'>;
+      readonly biomes: readonly import('../model').AuthoredBiomePlan[];
     };
 
 export type ResourcePlacementCommand = {

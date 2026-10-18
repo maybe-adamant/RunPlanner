@@ -159,12 +159,8 @@ describe('project workspace application state', () => {
       authoredProjectCommandDispatched({
         kind: 'ReplaceRoute',
         route: createRouteAddress('Underworld'),
-        plan: {
-          routeKey: generated.route.routeKey,
-          itineraryBiomeKeys: generated.route.itineraryBiomeKeys,
-          loadout: generated.route.loadout,
-          biomes: generated.route.biomes,
-        },
+        loadout: generated.route.loadout,
+        biomes: generated.route.biomes,
       }),
     );
     expect(presentProject(store).route.biomes).toEqual(generated.route.biomes);

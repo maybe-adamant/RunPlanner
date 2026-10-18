@@ -20,7 +20,7 @@ import { reconcileReplacementRoomState } from '../room-state/replacement';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
-import type { ProjectDocument, RouteLoadout } from '../model';
+import type { ProjectDocument } from '../model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../defaults';
 
 import { failCommand, locateBiome, withBiome } from './contract';
@@ -61,60 +61,40 @@ function isSeleneAspect(catalog: Catalog, aspectKey: string | null): boolean {
   );
 }
 
-/**
- * Placements name hosts in the replaced biomes, so they reset; a carried
- * Practice start outside the new itinerary falls back to the native run start.
- */
+/** Placements name hosts in the replaced biomes, so they reset. */
 function replaceRoute(
   document: ProjectDocument,
   catalog: Catalog,
   command: Extract<ProjectStateCommand, { readonly kind: 'ReplaceRoute' }>,
 ): ProjectDocument {
-  if (document.route.routeKey !== command.route.routeKey)
+  const route = document.route;
+  if (route.routeKey !== command.route.routeKey)
     failCommand(command, `project is missing route ${command.route.routeKey}`);
-  const { plan } = command;
-  if (plan.biomes.length > plan.itineraryBiomeKeys.length)
-    failCommand(command, `exceeds the ${plan.itineraryBiomeKeys.length}-biome itinerary`);
-  plan.biomes.forEach((biome, index) => {
-    if (biome.biomeKey !== plan.itineraryBiomeKeys[index])
-      failCommand(command, `biome ${index} must be ${plan.itineraryBiomeKeys[index]}`);
+  if (command.biomes.length > route.itineraryBiomeKeys.length)
+    failCommand(command, `exceeds the ${route.itineraryBiomeKeys.length}-biome itinerary`);
+  command.biomes.forEach((biome, index) => {
+    if (biome.biomeKey !== route.itineraryBiomeKeys[index])
+      failCommand(command, `biome ${index} must be ${route.itineraryBiomeKeys[index]}`);
   });
-  const startingReward = plan.loadout.startingReward;
+  const startingReward = command.loadout.startingReward;
   if (
     startingReward !== null &&
     !catalog.runStartReward.incomingReward.allowedRewardTypes.includes(startingReward.rewardType)
   )
     failCommand(command, 'reward is not allowed by the run-start binding');
-  const carried = document.route.loadout.runModifiers;
-  const startPoint = carried?.startPoint;
-  const runModifiers =
-    startPoint !== undefined &&
-    startPoint !== null &&
-    typeof startPoint === 'object' &&
-    !plan.itineraryBiomeKeys.includes(startPoint.biomeKey)
-      ? withoutStartPoint(carried!)
-      : carried;
+  const runModifiers = route.loadout.runModifiers;
   return Object.freeze({
     ...document,
     route: Object.freeze({
-      routeKey: plan.routeKey,
-      itineraryBiomeKeys: Object.freeze([...plan.itineraryBiomeKeys]),
+      ...route,
       loadout: Object.freeze({
-        ...plan.loadout,
+        ...command.loadout,
         ...(runModifiers === undefined ? {} : { runModifiers }),
       }),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
-      biomes: Object.freeze([...plan.biomes]),
+      biomes: Object.freeze([...command.biomes]),
     }),
   });
-}
-
-function withoutStartPoint(
-  runModifiers: NonNullable<RouteLoadout['runModifiers']>,
-): RouteLoadout['runModifiers'] {
-  const rest = { ...runModifiers };
-  delete rest.startPoint;
-  return Object.keys(rest).length === 0 ? undefined : Object.freeze(rest);
 }
 
 function configureRoutePrefix(

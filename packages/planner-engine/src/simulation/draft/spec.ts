@@ -1,13 +1,18 @@
 import type { Catalog } from '../../catalog-schema';
-import type { ProjectDocument, RouteLoadout } from '../../authored-project/model';
+import type {
+  AuthoredRoutePlan,
+  ProjectDocument,
+  RouteLoadout,
+} from '../../authored-project/model';
 import { createProjectDocument } from '../../authored-project/defaults';
 import { decodeProjectDocument } from '../../authored-project/codec';
 import { ProjectDocumentContractError } from '../../authored-project/validation';
 
+/** The project's route and itinerary, which a draft never changes. */
+export type DraftRoute = Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'>;
+
 /** The loadout a draft sets; the starting reward and keepsake equip results are generated. */
 export interface DraftLoadout {
-  readonly routeKey: string;
-  readonly itineraryBiomeKeys: readonly string[];
   readonly weaponKey: string;
   readonly aspectKey: string;
   readonly familiarKey: string;
@@ -68,32 +73,49 @@ export function draftRouteLoadout(loadout: DraftLoadout): RouteLoadout {
   });
 }
 
-/** A strictly decoded project with every itinerary biome configured and no topology. */
+/**
+ * The base project's route with the draft loadout, every itinerary biome
+ * configured and no topology, strictly decoded. Run modifiers carry over.
+ */
 export function draftLoadoutProject(
   catalog: Catalog,
+  base: ProjectDocument,
   loadout: DraftLoadout,
-  projectId: string,
 ): ProjectDocument {
   const project = createProjectDocument(catalog, {
-    projectId,
-    routeKey: loadout.routeKey,
-    itineraryBiomeKeys: loadout.itineraryBiomeKeys,
-    configuredBiomeCount: loadout.itineraryBiomeKeys.length,
+    projectId: base.projectId,
+    routeKey: base.route.routeKey,
+    itineraryBiomeKeys: base.route.itineraryBiomeKeys,
+    configuredBiomeCount: base.route.itineraryBiomeKeys.length,
   });
+  const runModifiers = base.route.loadout.runModifiers;
   return decodeProjectDocument(
-    { ...project, route: { ...project.route, loadout: draftRouteLoadout(loadout) } },
+    {
+      ...project,
+      route: {
+        ...project.route,
+        loadout: {
+          ...draftRouteLoadout(loadout),
+          ...(runModifiers === undefined ? {} : { runModifiers }),
+        },
+      },
+    },
     catalog,
   );
 }
 
-/** Reasons the loadout cannot be drafted at all. */
-export function draftRefusals(catalog: Catalog, loadout: DraftLoadout): readonly DraftRefusal[] {
+/** Reasons the base project cannot be drafted with this loadout. */
+export function draftRefusals(
+  catalog: Catalog,
+  base: ProjectDocument,
+  loadout: DraftLoadout,
+): readonly DraftRefusal[] {
   const refusals: DraftRefusal[] = [];
-  if (catalog.routes.byKey[loadout.routeKey]?.initialProfile.kind === 'freshFile')
+  if (catalog.routes.byKey[base.route.routeKey]?.initialProfile.kind === 'freshFile')
     refusals.push({ kind: 'freshFileRoute' });
   else
     try {
-      draftLoadoutProject(catalog, loadout, 'draft');
+      draftLoadoutProject(catalog, base, loadout);
     } catch (error) {
       if (!(error instanceof ProjectDocumentContractError)) throw error;
       refusals.push({ kind: 'invalidLoadout', path: error.path, detail: error.detail });
@@ -104,16 +126,13 @@ export function draftRefusals(catalog: Catalog, loadout: DraftLoadout): readonly
 }
 
 /** A rack follows every biome's Postboss except the last. */
-export function draftKeepsakeOptions(
-  catalog: Catalog,
-  loadout: DraftLoadout,
-): DraftKeepsakeOptions {
+export function draftKeepsakeOptions(catalog: Catalog, route: DraftRoute): DraftKeepsakeOptions {
   const keepsakeKeys = Object.freeze(
     catalog.keepsakes.values.map((k) => k.key).filter((key) => !forcesGod(catalog, key)),
   );
   return Object.freeze({
     rackSlots: Object.freeze(
-      loadout.itineraryBiomeKeys
+      route.itineraryBiomeKeys
         .slice(0, -1)
         .map((afterBiomeKey) => Object.freeze({ afterBiomeKey, keepsakeKeys })),
     ),
