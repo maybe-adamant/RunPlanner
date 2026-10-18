@@ -17,7 +17,9 @@ export type DraftRunState =
   | { readonly kind: 'failed'; readonly biomeKey: string; readonly reasons: readonly string[] }
   | { readonly kind: 'refused'; readonly refusals: readonly DraftRefusal[] }
   /** The project changed while drafting, so the result was not applied. */
-  | { readonly kind: 'superseded' };
+  | { readonly kind: 'superseded' }
+  /** The search stopped without a result, or its result could not be applied. */
+  | { readonly kind: 'error'; readonly message: string };
 
 /** The in-memory draft spec beyond the loadout; never saved and never in authored history. */
 export interface DraftSessionState {
@@ -25,8 +27,8 @@ export interface DraftSessionState {
   readonly storyNpcByBiome: Readonly<Record<string, string>>;
   readonly fieldNpcsByBiome: Readonly<Record<string, readonly string[]>>;
   readonly basketTraitKeys: readonly string[];
-  /** Rack keepsake by slot index; a missing or null entry keeps the held keepsake. */
-  readonly rackKeepsakeKeys: readonly (string | null)[];
+  /** Rack keepsake by the biome its rack follows; a missing entry keeps the held keepsake. */
+  readonly rackKeepsakeByBiome: Readonly<Record<string, string>>;
   readonly seed: number;
   readonly run: DraftRunState;
 }
@@ -41,7 +43,7 @@ function initialState(seed: number): DraftSessionState {
     storyNpcByBiome: {},
     fieldNpcsByBiome: {},
     basketTraitKeys: [],
-    rackKeepsakeKeys: [],
+    rackKeepsakeByBiome: {},
     seed,
     run: { kind: 'idle' },
   };
@@ -72,12 +74,11 @@ const draftSessionSlice = createSlice({
     },
     draftRackKeepsakeReplaced(
       state,
-      action: PayloadAction<{ index: number; keepsakeKey: string | null }>,
+      action: PayloadAction<{ afterBiomeKey: string; keepsakeKey: string | null }>,
     ) {
-      const racks = [...state.rackKeepsakeKeys];
-      while (racks.length <= action.payload.index) racks.push(null);
-      racks[action.payload.index] = action.payload.keepsakeKey;
-      state.rackKeepsakeKeys = racks;
+      const { afterBiomeKey, keepsakeKey } = action.payload;
+      if (keepsakeKey === null) delete state.rackKeepsakeByBiome[afterBiomeKey];
+      else state.rackKeepsakeByBiome[afterBiomeKey] = keepsakeKey;
     },
     draftRunStarted(state, action: PayloadAction<{ seed: number; startedAt: number }>) {
       state.seed = action.payload.seed;
@@ -86,7 +87,8 @@ const draftSessionSlice = createSlice({
     draftRunSettled(state, action: PayloadAction<Exclude<DraftRunState, { kind: 'running' }>>) {
       return { ...state, run: action.payload };
     },
-    draftRunCancelled(state) {
+    /** Cancelling, or an outcome the project has since moved past. */
+    draftRunCleared(state) {
       state.run = { kind: 'idle' };
     },
   },
@@ -100,7 +102,7 @@ export const {
   draftRackKeepsakeReplaced,
   draftRunStarted,
   draftRunSettled,
-  draftRunCancelled,
+  draftRunCleared,
 } = draftSessionSlice.actions;
 
 /** A different project starts from an empty spec. */

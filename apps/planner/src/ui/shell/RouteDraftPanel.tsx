@@ -3,8 +3,10 @@ import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   draftRefusals,
+  type DraftNpcOption,
   type DraftRefusal,
   type DraftTargetResult,
+  type DraftWorldOptions,
 } from '@run-planner/engine/simulation';
 
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
@@ -50,7 +52,26 @@ function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): strin
   }
 }
 
-function targetLabel(catalog: Catalog, target: DraftTargetResult): string {
+/** An NPC's trait-giver label; NPCs that give no traits have no catalog label beyond their key. */
+function npcLabel(catalog: Catalog, npc: DraftNpcOption): string {
+  return (
+    (npc.giverKey === undefined ? undefined : catalog.traitGivers.byKey[npc.giverKey]?.label) ??
+    npc.npcKey
+  );
+}
+
+function providerLabel(catalog: Catalog, providerKind: string): string {
+  return (
+    catalog.traitGivers.values.find((giver) => giver.providerKind === providerKind)?.label ??
+    providerKind
+  );
+}
+
+function targetLabel(
+  catalog: Catalog,
+  worldOptions: DraftWorldOptions,
+  target: DraftTargetResult,
+): string {
   const biome = target.biomeKey === undefined ? '' : catalog.biomes.byKey[target.biomeKey]?.label;
   switch (target.kind) {
     case 'god':
@@ -58,12 +79,17 @@ function targetLabel(catalog: Catalog, target: DraftTargetResult): string {
     case 'basketTrait':
       return catalog.traits.byKey[target.key]?.label ?? target.key;
     case 'storyNpc':
-    case 'fieldNpc':
-      return `${target.key} (${biome})`;
+    case 'fieldNpc': {
+      const options = worldOptions.biomes.find((b) => b.biomeKey === target.biomeKey);
+      const npc = [options?.storyNpc, ...(options?.fieldNpcs ?? [])].find(
+        (candidate) => candidate?.npcKey === target.key,
+      );
+      return `${npc === undefined ? target.key : npcLabel(catalog, npc)} (${biome})`;
+    }
     case 'hammers':
-      return `${target.key} Hammers`;
+      return `${providerLabel(catalog, 'hammer')} ×${target.key}`;
     case 'hermes':
-      return `${target.key} Hermes boons`;
+      return `${providerLabel(catalog, 'hermes')} ×${target.key}`;
     case 'rackKeepsake':
       return `${catalog.keepsakes.byKey[target.key]?.label ?? target.key} after ${biome}`;
   }
@@ -82,9 +108,11 @@ function useElapsedSeconds(run: DraftRunState): number {
 function DraftOutcome({
   catalog,
   run,
+  worldOptions,
 }: {
   readonly catalog: Catalog;
   readonly run: DraftRunState;
+  readonly worldOptions: DraftWorldOptions;
 }) {
   switch (run.kind) {
     case 'idle':
@@ -96,6 +124,8 @@ function DraftOutcome({
       );
     case 'refused':
       return <p className="draft-outcome">This spec can't be drafted.</p>;
+    case 'error':
+      return <p className="draft-outcome">Drafting stopped unexpectedly.</p>;
     case 'failed':
       return (
         <p className="draft-outcome">
@@ -121,7 +151,16 @@ function DraftOutcome({
                   data-unmet
                   key={`${target.kind}:${target.biomeKey ?? ''}:${target.key}`}
                 >
-                  {targetLabel(catalog, target)}
+                  {targetLabel(catalog, worldOptions, target)}
+                </li>
+              ))}
+            </ul>
+          )}
+          {run.report.extras.length === 0 ? null : (
+            <ul aria-label="Extras" className="draft-chip-list">
+              {run.report.extras.map((extra) => (
+                <li className="draft-chip" data-unmet key={`${extra.kind}:${extra.key}`}>
+                  {catalog.traitGivers.byKey[extra.key]?.label ?? extra.key}
                 </li>
               ))}
             </ul>
@@ -132,7 +171,6 @@ function DraftOutcome({
   }
 }
 
-// Cap counts are not available yet; every count shows as a placeholder.
 const capCounts: DraftCapCounts = () => undefined;
 
 /** The panel summary: god boons, each bonus giver, then NPC traits. */
@@ -255,7 +293,7 @@ export function RouteDraftPanel({
                     <td>
                       {storyNpc === undefined ? null : (
                         <button
-                          aria-label={`${storyNpc.npcKey}, story room in ${label}`}
+                          aria-label={`${npcLabel(catalog, storyNpc)}, story room in ${label}`}
                           aria-pressed={
                             spec?.world.storyNpcByBiome[biome.biomeKey] === storyNpc.npcKey
                           }
@@ -270,7 +308,7 @@ export function RouteDraftPanel({
                           }
                           type="button"
                         >
-                          {storyNpc.npcKey}
+                          {npcLabel(catalog, storyNpc)}
                         </button>
                       )}
                     </td>
@@ -278,7 +316,7 @@ export function RouteDraftPanel({
                       <span className="draft-toggle-row">
                         {biome.fieldNpcs.map((npc) => (
                           <button
-                            aria-label={`${npc.npcKey} in ${label}`}
+                            aria-label={`${npcLabel(catalog, npc)} in ${label}`}
                             aria-pressed={
                               spec?.world.fieldNpcsByBiome[biome.biomeKey]?.includes(npc.npcKey) ===
                               true
@@ -295,7 +333,7 @@ export function RouteDraftPanel({
                             }
                             type="button"
                           >
-                            {npc.npcKey}
+                            {npcLabel(catalog, npc)}
                           </button>
                         ))}
                       </span>
@@ -335,7 +373,9 @@ export function RouteDraftPanel({
                     selected,
                   )}
                   onSelect={(keepsakeKey) =>
-                    dispatch(draftRackKeepsakeReplaced({ index, keepsakeKey }))
+                    dispatch(
+                      draftRackKeepsakeReplaced({ afterBiomeKey: slot.afterBiomeKey, keepsakeKey }),
+                    )
                   }
                   placeholder="Keep current"
                   triggerLabel={
@@ -369,7 +409,7 @@ export function RouteDraftPanel({
               {basketCaps(basket).map(({ key, label, cap }) => (
                 <li key={key}>
                   {label}
-                  <DraftCapCount cap={cap} counts={capCounts} label={label} />
+                  <DraftCapCount cap={cap} counts={capCounts} />
                 </li>
               ))}
             </ul>
@@ -408,9 +448,7 @@ export function RouteDraftPanel({
           <span className="draft-seed">Seed {running ? run.seed : session.seed}</span>
           {running ? (
             <>
-              <span aria-live="polite" className="draft-progress">
-                Drafting… {elapsed} s
-              </span>
+              <span className="draft-progress">Drafting… {elapsed} s</span>
               <button className="secondary-action" onClick={() => draftRun.cancel()} type="button">
                 Cancel
               </button>
@@ -442,7 +480,7 @@ export function RouteDraftPanel({
             </>
           )}
         </div>
-        <DraftOutcome catalog={catalog} run={run} />
+        <DraftOutcome catalog={catalog} run={run} worldOptions={worldOptions} />
       </div>
       {basketOpen && basket !== undefined ? (
         <DraftBasketDialog

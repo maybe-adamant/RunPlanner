@@ -59,7 +59,7 @@ function BasketSection({
     <section aria-label={section.label} className="draft-basket-section" data-level={level}>
       <Heading className="draft-section-heading">
         {section.label}
-        <DraftCapCount cap={section.cap} counts={counts} label={section.label} />
+        <DraftCapCount cap={section.cap} counts={counts} />
       </Heading>
       <BasketRows onToggle={onToggle} rows={section.rows} />
       {section.subsections.map((subsection) => (
@@ -107,7 +107,7 @@ export function DraftBasketDialog({
     <EditorDialog
       eyebrow="Draft"
       headerAction={
-        <nav aria-label="Basket givers" className="run-state-tabs draft-basket-tabs" role="tablist">
+        <div aria-label="Basket givers" className="run-state-tabs draft-basket-tabs" role="tablist">
           {tabs.map((tab, index) => (
             <button
               aria-controls="draft-basket-panel"
@@ -125,10 +125,10 @@ export function DraftBasketDialog({
               type="button"
             >
               {tab.label}
-              <DraftCapCount cap={tab.cap} counts={counts} label={tab.label} />
+              <DraftCapCount cap={tab.cap} counts={counts} />
             </button>
           ))}
-        </nav>
+        </div>
       }
       model={{ kind: 'live', onDone: onClose }}
       returnFocusId={returnFocusId}

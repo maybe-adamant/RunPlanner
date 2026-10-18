@@ -79,6 +79,8 @@ export function ProjectFindings({
   const dispatch = useAppDispatch();
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
   const selectedKey = selectedFinding === null ? null : selectedFinding.key;
+  // A running draft holds the workspace on the Draft panel.
+  const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
 
   if (issue === undefined) return null;
 
@@ -105,6 +107,7 @@ export function ProjectFindings({
         aria-current={selectedKey === issue.regionKey ? 'true' : undefined}
         className="assessment-issue-button"
         data-selected={selectedKey === issue.regionKey}
+        disabled={drafting}
         onClick={navigate}
         type="button"
       >
