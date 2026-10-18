@@ -92,16 +92,18 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
     Duos;
   - keepsakes: only the drafted rack keepsakes, equipped at their racks;
   - the Nemesis random-event family is never chosen; Nemesis combat is allowed.
-- **Soft targets, weighted and reported:**
-  - basket traits, selected whenever legal;
+- **Soft targets, weighted and reported:** basket traits and selected NPCs
+  only; anything else happens at random among legal options, and the pool
+  stays a hard filter, not a goal.
+  - basket traits, selected whenever legal; basket Hermes and Hammers split by
+    route half, and a basket Selene hex weights Selene rewards until held;
   - story NPC per biome: take its door when offered;
-  - field NPCs per biome, through encounter choice;
-  - Hammers and Hermes up to the native caps, split by route half.
+  - field NPCs per biome, through encounter choice.
 - **Slot ban:** a core slot holding a basket trait bans every other trait for
   that slot; a screen left with no allowed row ends the biome attempt.
 - **Capacity hint:** a per-biome table of measured god-boon room capacity
-  (one less per biome under Forfeit) spreads each pool god's first room over
-  the first half and the basket over the route, shuffled per seed. It biases
+  (one less per biome under Forfeit) spreads the basket over the route,
+  shuffled per seed. It biases
   offer weights and ranks attempts; it never forces a retry.
 - **Prerequisite order:** a basket trait that needs other traits held (Duos,
   Legendaries, Hermes traits such as Success Rate and Paid Dues) or an element
@@ -121,8 +123,8 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
   Best of N attempts ranked by target coverage; a biome with no successful
   attempt retries up to a separate cap. Attempt counts alone bound the search,
   so a seed gives the same draft on every machine.
-- The result always has zero findings. The report lists unmet targets and any
-  extras with reasons.
+- The result always has zero findings. The report lists the basket traits,
+  the selected NPCs and rack keepsakes, and any extras with reasons.
 
 ## Application
 

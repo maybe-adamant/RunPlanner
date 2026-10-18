@@ -59,20 +59,17 @@ import {
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
 import {
-  DRAFT_HAMMER_TARGET,
-  DRAFT_HERMES_TARGET,
   draftHalfTarget,
   draftHermesTraitKeys,
-  draftSupply,
+  draftProvider,
   acquiredGods,
-  heldSupply,
   latestRunState,
   type DraftSupply,
 } from './report';
 import type { SemanticFinding } from '../model';
 import { draftDenialActive, type DraftSpec } from './spec';
 import type { DraftGodSchedule } from './schedule';
-import { draftStartTraits } from './basket';
+import { DRAFT_PROVIDER_CAPS, draftStartTraits } from './basket';
 import {
   createDraftPrerequisites,
   type DraftHeldTraits,
@@ -98,7 +95,7 @@ export interface DraftProgress {
   readonly equippedTraitKeys: readonly string[];
   /** Pool gods whose boon has been picked up. */
   readonly godKeys: readonly string[];
-  readonly hammers: number;
+  /** Hermes boons held, basket or not; each spends one of the run's Hermes rooms. */
   readonly hermes: number;
   readonly held: DraftHeldTraits;
 }
@@ -106,6 +103,8 @@ export interface DraftProgress {
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 /** Replacement traits tried for one unselected row that needs no change. */
 const FILLER_DRAWS = 4;
+/** Offer weight of a giver whose basket trait is still wanted. */
+const WANTED_GIVER_WEIGHT = 30;
 
 /**
  * One finding-driven draft walk over a working project. Every value comes from
@@ -256,8 +255,7 @@ export class DraftWalk {
     return {
       equippedTraitKeys,
       godKeys: acquiredGods(this.catalog, snapshot),
-      hammers: heldSupply(this.catalog, snapshot, 'hammer'),
-      hermes: heldSupply(this.catalog, snapshot, 'hermes'),
+      hermes: equippedTraitKeys.filter((key) => this.hermesTraits.has(key)).length,
       held:
         snapshot === undefined
           ? this.start
@@ -280,10 +278,19 @@ export class DraftWalk {
     return this.prerequisites.ready(traitKey, progress.held);
   }
 
+  /** Basket traits a Hermes, Hammer or Selene giver offers. */
+  private basketOf(providerKind: DraftSupply | 'spell'): string[] {
+    return this.spec.basketTraitKeys.filter((key) =>
+      this.catalog.traitGivers.values.some(
+        (giver) => giver.providerKind === providerKind && giver.traitKeys.includes(key),
+      ),
+    );
+  }
+
   /** A wanted Hermes trait can be offered now and a Hermes room is left for it. */
   private hermesReady(progress: DraftProgress): boolean {
     return (
-      progress.hermes < DRAFT_HERMES_TARGET &&
+      progress.hermes < DRAFT_PROVIDER_CAPS.hermes! &&
       this.wantedHermes(progress).some((key) => this.ready(key, progress))
     );
   }
@@ -300,9 +307,35 @@ export class DraftWalk {
     const wanted = this.wantedHermes(progress);
     return (
       wanted.length > 0 &&
-      wanted.length >= DRAFT_HERMES_TARGET - progress.hermes &&
+      wanted.length >= DRAFT_PROVIDER_CAPS.hermes! - progress.hermes &&
       !wanted.some((key) => this.ready(key, progress))
     );
+  }
+
+  /** Basket traits of a supply held, against its half target. */
+  private supplyHalf(
+    supply: DraftSupply,
+    progress: DraftProgress,
+  ): { readonly held: number; readonly target: number } {
+    const basket = this.basketOf(supply);
+    return {
+      held: basket.filter((key) => progress.equippedTraitKeys.includes(key)).length,
+      target: draftHalfTarget(this.biomeIndex, this.project.route.biomes.length, basket.length),
+    };
+  }
+
+  /**
+   * How much a Hermes or Hammer reward helps the basket: 'now' below the half
+   * target or for a ready Hermes trait, 'later' past it, none without a ready wanted trait.
+   */
+  private supplyNeed(supply: DraftSupply, progress: DraftProgress): 'now' | 'later' | undefined {
+    if (supply === 'hermes') return this.hermesReady(progress) ? 'now' : undefined;
+    const wanted = this.basketOf(supply).filter(
+      (key) => !progress.equippedTraitKeys.includes(key) && this.ready(key, progress),
+    );
+    if (wanted.length === 0) return undefined;
+    const half = this.supplyHalf(supply, progress);
+    return half.held < half.target ? 'now' : 'later';
   }
 
   /** Olympian sources outside the world are never chosen; Anvil and Story rewards are filtered. */
@@ -323,41 +356,31 @@ export class DraftWalk {
     const giver = giverKey === undefined ? undefined : this.catalog.traitGivers.byKey[giverKey];
     if (giver?.providerKind === 'olympian') {
       if (!this.worldGivers.has(giver.key)) return 0;
-      const needed =
-        wanted.some((key) => giver.traitKeys.includes(key)) ||
-        !progress.godKeys.includes(giver.key);
-      const weight = this.dueGods(progress).has(giver.key) ? 60 : needed ? 30 : 4;
+      const needed = wanted.some((key) => giver.traitKeys.includes(key));
+      const weight = this.dueGods(progress).has(giver.key) ? 60 : needed ? WANTED_GIVER_WEIGHT : 4;
       const prerequisites = this.neededPrerequisites(progress);
       const unlocks = giver.traitKeys.some(
         (key) => prerequisites.has(key) && wanted.includes(key) && this.ready(key, progress),
       );
       return unlocks ? weight * 1.5 : weight;
     }
-    const supply = draftSupply(this.catalog, offer);
-    if (supply === 'hermes' && this.hermesReserved(progress)) return 0.2;
-    if (supply === 'hermes' && this.hermesReady(progress)) return 25;
-    if (supply !== undefined) {
-      const held = supply === 'hermes' ? progress.hermes : progress.hammers;
-      const halfTarget = draftHalfTarget(this.biomeIndex, this.project.route.biomes.length);
-      const runTarget = supply === 'hermes' ? DRAFT_HERMES_TARGET : DRAFT_HAMMER_TARGET;
-      return held < halfTarget ? 25 : held < runTarget ? 3 : 0.2;
-    }
-    return 1;
+    const provider = draftProvider(this.catalog, offer);
+    if (provider === 'spell')
+      return this.basketOf('spell').some((key) => wanted.includes(key)) ? WANTED_GIVER_WEIGHT : 1;
+    if (provider === undefined) return 1;
+    if (provider === 'hermes' && this.hermesReserved(progress)) return 0.2;
+    const need = this.supplyNeed(provider, progress);
+    return need === 'now' ? 25 : need === 'later' ? 3 : 1;
   }
 
-  /** Buys a Shop Hermes or Hammer the half or a ready basket trait needs; a refused purchase is undone. */
+  /** Buys a Shop Hermes or Hammer a ready basket trait needs now; a refused purchase is undone. */
   private buyWantedSupply(
     offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
     value: ResolvedRewardOffer,
   ): void {
-    const supply = draftSupply(this.catalog, value);
-    if (supply === undefined) return;
-    const progress = this.progress();
-    if (supply === 'hermes' && this.hermesReserved(progress)) return;
-    const held = supply === 'hermes' ? progress.hermes : progress.hammers;
-    const wanted = supply === 'hermes' && this.hermesReady(progress);
-    if (!wanted && held >= draftHalfTarget(this.biomeIndex, this.project.route.biomes.length))
-      return;
+    const supply = draftProvider(this.catalog, value);
+    if (supply === undefined || supply === 'spell') return;
+    if (this.supplyNeed(supply, this.progress()) !== 'now') return;
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
     if (this.assembly.evaluation.issue?.kind === 'invalid')
       this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
@@ -365,50 +388,64 @@ export class DraftWalk {
 
   /** Hermes held outside the basket beyond the rooms the basket leaves free. */
   wastedHermes(progress: DraftProgress = this.progress()): number {
-    const basket = this.spec.basketTraitKeys.filter((key) => this.hermesTraits.has(key));
+    const basket = this.basketOf('hermes');
     const outside = progress.equippedTraitKeys.filter(
       (key) => this.hermesTraits.has(key) && !basket.includes(key),
     ).length;
-    return Math.max(0, outside - Math.max(0, DRAFT_HERMES_TARGET - basket.length));
+    return Math.max(0, outside - Math.max(0, DRAFT_PROVIDER_CAPS.hermes! - basket.length));
   }
 
-  /** A Hermes reward is no legal supply while the basket reserves every Hermes room. */
+  /** A basket Hermes or Hammer reward some decision could take; none while the basket reserves every Hermes room. */
   private noteSupply(offers: readonly ResolvedRewardOffer[]): void {
     for (const offer of offers) {
       if (this.offerWeight(offer) <= 0) continue;
-      const supply = draftSupply(this.catalog, offer);
+      const supply = draftProvider(this.catalog, offer);
+      if (supply === undefined || supply === 'spell' || this.basketOf(supply).length === 0)
+        continue;
       if (supply === 'hermes' && this.hermesReserved()) continue;
-      if (supply !== undefined) this.legalSupply.add(supply);
+      this.legalSupply.add(supply);
     }
   }
 
   /**
-   * Whether each god and basket trait due by this biome is held; a due trait
-   * whose prerequisites are not held is not judged, as steering skips it too.
+   * Whether the basket's Hermes and Hammers meet this biome's half target;
+   * Hermes rooms the basket reserves for traits still waiting count as held.
+   */
+  halfSupply(): readonly { readonly supply: DraftSupply; readonly met: boolean }[] {
+    const progress = this.progress();
+    return (['hermes', 'hammer'] as const)
+      .filter((supply) => this.basketOf(supply).length > 0)
+      .map((supply) => {
+        const half = this.supplyHalf(supply, progress);
+        return {
+          supply,
+          met: half.held >= half.target || (supply === 'hermes' && this.hermesReserved(progress)),
+        };
+      });
+  }
+
+  /**
+   * Whether each basket trait due by this biome is held; a due trait whose
+   * prerequisites are not held is not judged, as steering skips it too.
    */
   scheduledTargets(): readonly boolean[] {
     const progress = this.progress();
-    const due = this.schedule.byBiome.slice(0, this.biomeIndex + 1);
-    return [
-      ...due.flatMap((biome) => biome.godKeys).map((god) => progress.godKeys.includes(god)),
-      ...due
-        .flatMap((biome) => biome.traitKeys)
-        .filter((key) => progress.equippedTraitKeys.includes(key) || this.ready(key, progress))
-        .map((key) => progress.equippedTraitKeys.includes(key)),
-    ];
+    return this.schedule.byBiome
+      .slice(0, this.biomeIndex + 1)
+      .flatMap((biome) => biome.traitKeys)
+      .filter((key) => progress.equippedTraitKeys.includes(key) || this.ready(key, progress))
+      .map((key) => progress.equippedTraitKeys.includes(key));
   }
 
-  /** Gods with a scheduled first room, or an offerable basket trait, due by this biome and not yet held. */
+  /** Gods with an offerable basket trait due by this biome and not yet held. */
   private dueGods(progress: DraftProgress): ReadonlySet<string> {
     const due = new Set<string>();
-    for (const biome of this.schedule.byBiome.slice(0, this.biomeIndex + 1)) {
-      for (const god of biome.godKeys) if (!progress.godKeys.includes(god)) due.add(god);
+    for (const biome of this.schedule.byBiome.slice(0, this.biomeIndex + 1))
       for (const traitKey of biome.traitKeys)
         if (!progress.equippedTraitKeys.includes(traitKey) && this.ready(traitKey, progress))
           for (const giver of this.catalog.traitGivers.values)
             if (giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
               due.add(giver.key);
-    }
     return due;
   }
 

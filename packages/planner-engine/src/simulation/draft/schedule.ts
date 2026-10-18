@@ -21,11 +21,10 @@ export const DRAFT_GOD_ROOM_CAPACITY: Readonly<Record<string, number>> = Object.
   Q: 2,
 });
 
-/** The pool gods to pick up and the basket god and Hermes traits to hold by the end of each biome. */
+/** The basket god and Hermes traits to hold by the end of each biome. */
 export interface DraftGodSchedule {
   readonly byBiome: readonly {
     readonly biomeKey: string;
-    readonly godKeys: readonly string[];
     readonly traitKeys: readonly string[];
   }[];
 }
@@ -50,8 +49,8 @@ function spread(
 }
 
 /**
- * Pool gods' first rooms fall in the first half and basket god traits spread by capacity,
- * Hermes traits one per half; no trait falls due before its prerequisites.
+ * Basket god traits spread by capacity, Hermes traits one per half; no trait
+ * falls due before its prerequisites.
  */
 export function draftGodSchedule(
   catalog: Catalog,
@@ -93,7 +92,6 @@ export function draftGodSchedule(
     [...interleaved, ...shuffle(godTraits.filter((key) => godsOf(key).length > 1))],
     needs,
   );
-  const godPlaces = spread(godKeys.length, firstHalf, capacity);
   const traitPlaces = spread(traitOrder.length, biomeKeys, capacity);
   const last = biomeKeys.length - 1;
   const due = new Map<string, number>();
@@ -111,19 +109,11 @@ export function draftGodSchedule(
     due.set(key, Math.max(half, previous, dueAfterNeeds(key)));
   });
   const scheduled = [...traitOrder, ...hermesTraits];
-  // A god's first room comes no later than its first due basket trait.
-  const godDue = godKeys.map((god, i) =>
-    Math.min(
-      godPlaces[i]!,
-      ...traitOrder.filter((key) => godsOf(key).includes(god)).map((key) => due.get(key)!),
-    ),
-  );
   return Object.freeze({
     byBiome: Object.freeze(
       biomeKeys.map((biomeKey, index) =>
         Object.freeze({
           biomeKey,
-          godKeys: Object.freeze(godKeys.filter((_, i) => godDue[i] === index)),
           traitKeys: Object.freeze(scheduled.filter((key) => due.get(key) === index)),
         }),
       ),
