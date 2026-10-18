@@ -1,5 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createBiomeAddress } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+} from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { expect, vi } from 'vitest';
 
@@ -27,7 +31,12 @@ type ChronologyArguments = Parameters<typeof rewardChronology.evaluateBiomeRewar
 export function observeNChronology(): ChronologyArguments {
   const observer = vi.spyOn(rewardChronology, 'evaluateBiomeRewardChronology');
   try {
-    simulateProjectAssembly(catalog, loadSurfaceNProject());
+    // A fresh decode shares no plan with a cached biome evaluation, so the walk runs.
+    const project = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(loadSurfaceNProject())) as unknown,
+      catalog,
+    );
+    simulateProjectAssembly(catalog, project);
     const call = observer.mock.calls.find(([, snapshot]) => snapshot.biomeKey === 'N');
     if (call === undefined) throw new Error('N reward walk was not evaluated');
     return call;

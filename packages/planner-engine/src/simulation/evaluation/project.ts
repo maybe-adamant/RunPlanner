@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { deriveNpcShoppingExecutionPolicy } from '../encounters/npc-shopping';
 import {
   createBiomeAddress,
+  createOccurrenceAddress,
   createRouteAddress,
   createKeepsakeEquipResultAddress,
   createStartingRewardAddress,
@@ -9,7 +10,12 @@ import {
   semanticAddressKey,
   type SemanticAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredRoutePlan, ProjectDocument } from '../../authored-project/model';
+import type {
+  AuthoredBiomePlan,
+  AuthoredRoutePlan,
+  ProjectDocument,
+  RouteLoadout,
+} from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
 import { routeBindsRunStartReward } from '../../authored-project/route-profile';
 import { forcedChaosOccurrenceKeysForRoute } from '../../authored-project/chaos-gate-reconciliation';
@@ -102,6 +108,50 @@ function normalizeAuthoringHorizonPredecessor(evaluation: ProjectBiomeEvaluation
   if (prefix !== undefined) return resolveAuthoringBoundary(prefix, input);
   if (input.kind === 'biome' || input.kind === 'biomeField') return input;
   return createBiomeAddress(evaluation.origin.routeKey, evaluation.origin.biomeKey);
+}
+
+type BiomeAssembly = ReturnType<typeof evaluateBiomeAssembly>;
+
+// Completed biomes by predecessor evaluation (the catalog for the first biome),
+// then plan, loadout and the route-wide inputs this biome reads.
+const biomeAssemblies = new WeakMap<
+  object,
+  WeakMap<AuthoredBiomePlan, WeakMap<RouteLoadout, Map<string, BiomeAssembly>>>
+>();
+
+function evaluateCachedBiomeAssembly(
+  catalog: Catalog,
+  routeKey: string,
+  plan: AuthoredBiomePlan,
+  predecessor: ProjectBiomeEvaluation | undefined,
+  context: Parameters<typeof evaluateBiomeAssembly>[3],
+): BiomeAssembly {
+  const biome = createBiomeAddress(routeKey, plan.biomeKey);
+  const forcedChaos = (plan.topology?.occurrences ?? [])
+    .map((occurrence) =>
+      semanticAddressKey(createOccurrenceAddress(biome, occurrence.occurrenceId)),
+    )
+    .filter((key) => context.forcedChaosOccurrenceKeys?.has(key) === true)
+    .sort();
+  const placements = Object.entries(context.resourcePlacements).filter(
+    ([, placement]) => placement?.biomeKey === plan.biomeKey,
+  );
+  const findings = (context.resourceFindings ?? []).filter(
+    (finding) => finding.origin.kind === 'roomFeature' && finding.origin.biomeKey === plan.biomeKey,
+  );
+  const key = JSON.stringify([context.routePosition, forcedChaos, placements, findings]);
+  const owner = predecessor ?? catalog;
+  let byPlan = biomeAssemblies.get(owner);
+  if (byPlan === undefined) biomeAssemblies.set(owner, (byPlan = new WeakMap()));
+  let byLoadout = byPlan.get(plan);
+  if (byLoadout === undefined) byPlan.set(plan, (byLoadout = new WeakMap()));
+  let byInputs = byLoadout.get(context.loadout);
+  if (byInputs === undefined) byLoadout.set(context.loadout, (byInputs = new Map()));
+  const cached = byInputs.get(key);
+  if (cached !== undefined) return cached;
+  const assembled = evaluateBiomeAssembly(catalog, routeKey, plan, context);
+  byInputs.set(key, assembled);
+  return assembled;
 }
 
 function evaluateRouteAssembly(
@@ -315,7 +365,7 @@ function evaluateRouteAssembly(
       resourceFindings,
       ...(seed === undefined ? {} : { seed }),
     });
-    const assembled = evaluateBiomeAssembly(catalog, route.routeKey, plan, context);
+    const assembled = evaluateCachedBiomeAssembly(catalog, route.routeKey, plan, previous, context);
     const evaluation = assembled.evaluation;
     evaluations.push(evaluation);
     candidateArtifacts.push(assembled.candidateArtifacts);
