@@ -1,9 +1,15 @@
 import type { Catalog } from '../../catalog-schema';
 import { draftStartTraits } from './basket';
-import { createDraftPrerequisites, prerequisiteDue, prerequisiteOrder } from './prerequisites';
+import {
+  createDraftPrerequisites,
+  prerequisiteDue,
+  prerequisiteOrder,
+  type DraftPrerequisiteNeed,
+} from './prerequisites';
 import { draftHermesTraitKeys } from './report';
 import { draftForfeitActive, type DraftRoute, type DraftSpec } from './spec';
 import type { DraftRng } from './walk';
+import { draftNpcGivers, draftNpcTraitBiomes } from './world';
 
 /**
  * Median world-god boon rooms one biome yields: ten seeds each of full
@@ -49,8 +55,66 @@ function spread(
 }
 
 /**
+ * Moves the god traits an NPC basket trait needs to fall due by that NPC's
+ * biome, into the latest such biome with spare capacity; each still waits on its own needs.
+ */
+function pullNpcPrerequisites(
+  catalog: Catalog,
+  route: DraftRoute,
+  spec: DraftSpec,
+  needs: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>,
+  due: Map<string, number>,
+  godTraits: readonly string[],
+  capacity: (biomeKey: string) => number,
+): void {
+  const last = route.itineraryBiomeKeys.length - 1;
+  const dueOf = (key: string) => due.get(key);
+  const npcBiomes = draftNpcTraitBiomes(
+    catalog,
+    draftNpcGivers(catalog, route, spec.world),
+    spec.basketTraitKeys,
+  );
+  const spareBiome = (latest: number) => {
+    for (let index = latest; index >= 0; index -= 1)
+      if (
+        godTraits.filter((key) => due.get(key) === index).length <
+        capacity(route.itineraryBiomeKeys[index]!)
+      )
+        return index;
+    return latest;
+  };
+  for (const [traitKey, npcBiome] of npcBiomes)
+    for (const need of needs.get(traitKey) ?? []) {
+      if (prerequisiteDue([need], dueOf, last) <= npcBiome) continue;
+      // The option that needs the fewest god traits moved; a later non-god member cannot move.
+      const pulls = need
+        .map((option) => {
+          const members = [...option.weights]
+            .filter(([key]) => godTraits.includes(key) || (due.get(key) ?? last + 1) <= npcBiome)
+            .sort(([a], [b]) => due.get(a)! - due.get(b)!);
+          const moved: string[] = [];
+          let sum = 0;
+          for (const [key, weight] of members) {
+            if (due.get(key)! > npcBiome) moved.push(key);
+            sum += weight;
+            if (sum >= option.needed) return moved;
+          }
+          return undefined;
+        })
+        .filter((moved) => moved !== undefined)
+        .sort((a, b) => a.length - b.length)[0];
+      for (const key of pulls ?? [])
+        due.set(
+          key,
+          Math.max(spareBiome(npcBiome), prerequisiteDue(needs.get(key) ?? [], dueOf, last)),
+        );
+    }
+}
+
+/**
  * Basket god traits spread by capacity, Hermes traits one per half; no trait
- * falls due before its prerequisites.
+ * falls due before its prerequisites, and an NPC basket trait's prerequisites
+ * fall due by its NPC's biome.
  */
 export function draftGodSchedule(
   catalog: Catalog,
@@ -108,6 +172,7 @@ export function draftGodSchedule(
     const previous = i === 0 ? 0 : due.get(hermesTraits[i - 1]!)!;
     due.set(key, Math.max(half, previous, dueAfterNeeds(key)));
   });
+  pullNpcPrerequisites(catalog, route, spec, needs, due, traitOrder, capacity);
   const scheduled = [...traitOrder, ...hermesTraits];
   return Object.freeze({
     byBiome: Object.freeze(

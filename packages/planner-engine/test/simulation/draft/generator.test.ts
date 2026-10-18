@@ -224,6 +224,35 @@ describe('draftProject', () => {
     });
   });
 
+  it("holds an NPC trait's prerequisite before meeting the NPC", () => {
+    // Ingenious Strike needs a god Attack before Icarus in O; Duo prerequisites crowd the Attack.
+    const icarus: DraftSpec = {
+      ...cases[1]!.spec,
+      world: { ...cases[1]!.spec.world, fieldNpcsByBiome: { O: ['Icarus'] } },
+      basketTraitKeys: [
+        'HeraCastBoon',
+        'DemeterSpecialBoon',
+        'ZeusSprintBoon',
+        'AresManaBoon',
+        'AresWeaponBoon',
+        'BloodDropRevengeBoon',
+        'KeepsakeLevelBoon',
+        'RootStrikeBoon',
+        'BloodRetentionBoon',
+        'FocusAttackDamageTrait',
+      ],
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const result = draftProject(catalog, cases[1]!.base, icarus, 1);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    for (const target of [
+      { kind: 'basketTrait', key: 'AresWeaponBoon' },
+      { kind: 'basketTrait', key: 'FocusAttackDamageTrait' },
+      { kind: 'fieldNpc', key: 'Icarus', biomeKey: 'O' },
+    ])
+      expect(result.report.targets).toContainEqual({ ...target, met: true });
+  });
+
   it('drafts the same route for the same seed', () => {
     const { base, spec } = cases[0]!;
     const first = draftProject(catalog, base, spec, 7);

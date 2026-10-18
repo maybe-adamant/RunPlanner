@@ -158,6 +158,51 @@ function npcOption(npcKey: string, definition: EncounterDefinition): DraftNpcOpt
   return Object.freeze({ npcKey, ...(giverKey === undefined ? {} : { giverKey }) });
 }
 
+export interface DraftNpcGiver {
+  readonly giverKey: string;
+  /** The itinerary index of the biome the NPC is selected in. */
+  readonly biomeIndex: number;
+  readonly story: boolean;
+}
+
+/** The selected trait-giving story and field NPCs, in itinerary order. */
+export function draftNpcGivers(
+  catalog: Catalog,
+  route: DraftRoute,
+  world: DraftWorld,
+): readonly DraftNpcGiver[] {
+  return draftWorldOptions(catalog, route).biomes.flatMap((biome, biomeIndex) => {
+    const story = biome.storyNpc;
+    const selected = world.fieldNpcsByBiome[biome.biomeKey] ?? [];
+    return [
+      ...(story !== undefined && world.storyNpcByBiome[biome.biomeKey] === story.npcKey
+        ? [{ npc: story, story: true }]
+        : []),
+      ...biome.fieldNpcs
+        .filter((npc) => selected.includes(npc.npcKey))
+        .map((npc) => ({ npc, story: false })),
+    ].flatMap(({ npc, story: isStory }) =>
+      npc.giverKey === undefined
+        ? []
+        : [Object.freeze({ giverKey: npc.giverKey, biomeIndex, story: isStory })],
+    );
+  });
+}
+
+/** Each basket trait a selected NPC gives, by the earliest biome index that NPC is met in. */
+export function draftNpcTraitBiomes(
+  catalog: Catalog,
+  givers: readonly DraftNpcGiver[],
+  traitKeys: readonly string[],
+): ReadonlyMap<string, number> {
+  const biomes = new Map<string, number>();
+  for (const giver of givers)
+    for (const traitKey of catalog.traitGivers.byKey[giver.giverKey]?.traitKeys ?? [])
+      if (traitKeys.includes(traitKey) && !biomes.has(traitKey))
+        biomes.set(traitKey, giver.biomeIndex);
+  return biomes;
+}
+
 /** Givers every world has: Hermes, Daedalus Hammers and Selene; Chaos is never drafted. */
 const ALWAYS_PRESENT_PROVIDER_KINDS: ReadonlySet<string> = new Set(['hermes', 'hammer', 'spell']);
 

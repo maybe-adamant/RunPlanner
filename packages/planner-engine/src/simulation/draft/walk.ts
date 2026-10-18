@@ -73,7 +73,12 @@ import {
   type DraftHeldTraits,
   type DraftPrerequisites,
 } from './prerequisites';
-import { draftWorldGiverKeys } from './world';
+import {
+  draftNpcGivers,
+  draftNpcTraitBiomes,
+  draftWorldGiverKeys,
+  type DraftNpcGiver,
+} from './world';
 
 /** A seeded xorshift stream; every random draft choice reads it. */
 export type DraftRng = () => number;
@@ -103,6 +108,8 @@ const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 const FILLER_DRAWS = 4;
 /** Offer weight of a giver whose basket trait is still wanted. */
 const WANTED_GIVER_WEIGHT = 30;
+/** Offer weight of a giver whose basket trait is due now. */
+const DUE_GIVER_WEIGHT = 60;
 
 /**
  * One finding-driven draft walk over a working project. Every value comes from
@@ -117,6 +124,9 @@ export class DraftWalk {
   private readonly start: DraftHeldTraits;
   private readonly hermesTraits: ReadonlySet<string>;
   private readonly denial: boolean;
+  private readonly npcGivers: readonly DraftNpcGiver[];
+  /** Basket NPC traits by the itinerary index of their NPC's biome. */
+  private readonly npcTraitBiomes: ReadonlyMap<string, number>;
   private nextOccurrence = 0;
   steps = 0;
   failure: string | undefined;
@@ -138,6 +148,8 @@ export class DraftWalk {
     this.prerequisites = createDraftPrerequisites(catalog, spec.basketTraitKeys, this.start);
     this.hermesTraits = draftHermesTraitKeys(catalog);
     this.denial = draftDenialActive(catalog, spec.loadout);
+    this.npcGivers = draftNpcGivers(catalog, start.project.route, spec.world);
+    this.npcTraitBiomes = draftNpcTraitBiomes(catalog, this.npcGivers, spec.basketTraitKeys);
   }
 
   get project(): ProjectDocument {
@@ -272,8 +284,44 @@ export class DraftWalk {
     return this.prerequisites.waitedOn(this.wantedBasket(progress), progress.held);
   }
 
+  /** Wanted basket traits a wanted NPC trait waits on while its NPC's biome is not yet past. */
+  private npcPrerequisites(progress: DraftProgress): ReadonlySet<string> {
+    const wanted = this.wantedBasket(progress);
+    const waiting = wanted.filter((key) => (this.npcTraitBiomes.get(key) ?? -1) >= this.biomeIndex);
+    return this.prerequisites.waitedOn(wanted, progress.held, waiting);
+  }
+
   private ready(traitKey: string, progress: DraftProgress): boolean {
     return this.prerequisites.ready(traitKey, progress.held);
+  }
+
+  /** A wanted basket trait of this giver cannot be offered yet. */
+  private npcWaiting(giverKey: string | undefined, progress: DraftProgress): boolean {
+    const traitKeys = this.catalog.traitGivers.byKey[giverKey ?? '']?.traitKeys ?? [];
+    return this.wantedBasket(progress).some(
+      (key) => traitKeys.includes(key) && !this.ready(key, progress),
+    );
+  }
+
+  /**
+   * Whether the biome likely has another room before its last forced depth;
+   * a cheap stand-in for a later chance to meet an NPC.
+   */
+  private laterRoomLikely(biomeKey: string): boolean {
+    let lastForced = 0;
+    for (const room of this.catalog.rooms.values)
+      if (
+        room.roomSetKey === biomeKey &&
+        room.force?.kind === 'depthWindow' &&
+        room.force.axis === 'biomeDepthCache'
+      )
+        lastForced = Math.max(lastForced, room.force.deadline);
+    const biome = this.assembly.evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
+    const depth =
+      biome !== undefined && 'history' in biome
+        ? biome.history.ledgers.roomAppearances.filter((a) => a.origin.biomeKey === biomeKey).length
+        : 0;
+    return depth + 1 < lastForced;
   }
 
   /** Basket traits a Hermes, Hammer or Selene giver offers. */
@@ -355,7 +403,11 @@ export class DraftWalk {
     if (giver?.providerKind === 'olympian') {
       if (!this.worldGivers.has(giver.key)) return 0;
       const needed = wanted.some((key) => giver.traitKeys.includes(key));
-      const weight = this.dueGods(progress).has(giver.key) ? 60 : needed ? WANTED_GIVER_WEIGHT : 4;
+      const weight = this.dueGods(progress).has(giver.key)
+        ? DUE_GIVER_WEIGHT
+        : needed
+          ? WANTED_GIVER_WEIGHT
+          : 4;
       const prerequisites = this.neededPrerequisites(progress);
       const unlocks = giver.traitKeys.some(
         (key) => prerequisites.has(key) && wanted.includes(key) && this.ready(key, progress),
@@ -363,8 +415,12 @@ export class DraftWalk {
       return unlocks ? weight * 1.5 : weight;
     }
     const provider = draftProvider(this.catalog, offer);
-    if (provider === 'spell')
-      return this.basketOf('spell').some((key) => wanted.includes(key)) ? WANTED_GIVER_WEIGHT : 1;
+    if (provider === 'spell') {
+      const spells = this.basketOf('spell').filter((key) => wanted.includes(key));
+      const npcPrerequisites = this.npcPrerequisites(progress);
+      if (spells.some((key) => npcPrerequisites.has(key))) return DUE_GIVER_WEIGHT;
+      return spells.length > 0 ? WANTED_GIVER_WEIGHT : 1;
+    }
     if (provider === undefined) return 1;
     if (provider === 'hermes' && this.hermesReserved(progress)) return 0.2;
     const need = this.supplyNeed(provider, progress);
@@ -435,22 +491,38 @@ export class DraftWalk {
       .map((key) => progress.equippedTraitKeys.includes(key));
   }
 
-  /** Gods with an offerable basket trait due by this biome and not yet held. */
+  /**
+   * Gods with an offerable basket trait not yet held that is due by this
+   * biome or that a wanted NPC trait waits on.
+   */
   private dueGods(progress: DraftProgress): ReadonlySet<string> {
     const due = new Set<string>();
-    for (const biome of this.schedule.byBiome.slice(0, this.biomeIndex + 1))
-      for (const traitKey of biome.traitKeys)
-        if (!progress.equippedTraitKeys.includes(traitKey) && this.ready(traitKey, progress))
-          for (const giver of this.catalog.traitGivers.values)
-            if (giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
-              due.add(giver.key);
+    const traitKeys = [
+      ...this.schedule.byBiome.slice(0, this.biomeIndex + 1).flatMap((biome) => biome.traitKeys),
+      ...this.npcPrerequisites(progress),
+    ];
+    for (const traitKey of traitKeys)
+      if (!progress.equippedTraitKeys.includes(traitKey) && this.ready(traitKey, progress))
+        for (const giver of this.catalog.traitGivers.values)
+          if (giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
+            due.add(giver.key);
     return due;
   }
 
-  private roomWeight(gameName: string, biomeKey: string): number {
+  /** A door placement waits on a story NPC whose wanted trait is not ready while a later room is likely. */
+  private roomWeight(gameName: string, biomeKey: string, placing = false): number {
     const room = this.catalog.rooms.byKey[gameName];
-    if (room?.kind === 'Story')
-      return this.spec.world.storyNpcByBiome[biomeKey] === undefined ? 0.5 : 200;
+    if (room?.kind === 'Story') {
+      if (this.spec.world.storyNpcByBiome[biomeKey] === undefined) return 0.5;
+      const biomeIndex = this.project.route.itineraryBiomeKeys.indexOf(biomeKey);
+      const giver = this.npcGivers.find((g) => g.story && g.biomeIndex === biomeIndex);
+      const waits =
+        placing &&
+        giver !== undefined &&
+        this.npcWaiting(giver.giverKey, this.progress()) &&
+        this.laterRoomLikely(biomeKey);
+      return waits ? 0.1 : 200;
+    }
     if (room?.kind === 'Shop') return 0.4;
     return 1;
   }
@@ -521,9 +593,20 @@ export class DraftWalk {
       );
       const npcFor = (key: string) =>
         this.catalog.encounterDefinitions.byKey[key]?.npcPresentationKey;
+      // A field NPC whose wanted trait is not ready yet waits for a likely later room.
+      const waits = (key: string) =>
+        this.npcWaiting(
+          this.catalog.encounterDefinitions.byKey[key]?.traitOfferProducer?.giverKey,
+          this.progress(),
+        ) && this.laterRoomLikely(biomeKey);
       const field = candidates.find((key) => {
         const npc = npcFor(key);
-        return npc !== undefined && wanted.includes(npc) && !this.metFieldNpc(biomeKey, npc);
+        return (
+          npc !== undefined &&
+          wanted.includes(npc) &&
+          !this.metFieldNpc(biomeKey, npc) &&
+          !waits(key)
+        );
       });
       const ordinary = candidates.filter((key) => npcFor(key) === undefined);
       const choice = field ?? (ordinary.length > 0 ? this.shuffle(ordinary)[0] : undefined);
@@ -733,7 +816,7 @@ export class DraftWalk {
     const TAKEOVER = '\u0000takeover';
     const choices = takeover === undefined ? legal : [...legal, TAKEOVER];
     for (const gameName of this.weighted(choices, (name) =>
-      name === TAKEOVER ? 0.5 : this.roomWeight(name, target.biomeKey),
+      name === TAKEOVER ? 0.5 : this.roomWeight(name, target.biomeKey, true),
     )) {
       if (gameName === TAKEOVER) {
         if (applyTakeover()) return true;

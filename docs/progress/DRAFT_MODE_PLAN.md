@@ -112,6 +112,7 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
   count (Infusions) falls due no earlier than the basket traits that meet it,
   or last when the basket cannot; traits that unlock others come first and are
   preferred on offer. Basket Hermes traits fall due one per route half.
+  Prerequisite ordering covers NPC basket traits against their NPC's biome.
 - **Hermes reservation:** while every free Hermes room is owed to basket
   Hermes traits that are not yet offerable, Hermes rewards are nearly never
   taken and the half target counts as held; an attempt that spends such a

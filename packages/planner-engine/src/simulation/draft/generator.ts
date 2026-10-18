@@ -11,6 +11,7 @@ import { draftReport, type DraftReport } from './report';
 import { draftRefusals, type DraftRefusal } from './refusals';
 import { draftLoadoutProject, type DraftSpec } from './spec';
 import { createDraftRng, DraftWalk } from './walk';
+import { draftNpcGivers, draftNpcTraitBiomes } from './world';
 
 /** Attempt counts alone bound the search, so a seed drafts the same route on any machine. */
 export interface DraftBudget {
@@ -73,9 +74,14 @@ export function draftProject(
     spec,
     createDraftRng((seed * 2_654_435_761) >>> 0),
   );
+  const npcTraitBiomes = draftNpcTraitBiomes(
+    catalog,
+    draftNpcGivers(catalog, current.project.route, spec.world),
+    spec.basketTraitKeys,
+  );
   let attempts = 0;
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
-    let best: { assembly: ProjectEvaluationAssembly; score: number } | undefined;
+    let best: { assembly: ProjectEvaluationAssembly; score: number; localMet: boolean } | undefined;
     const reasons: string[] = [];
     for (
       let attempt = 0;
@@ -104,8 +110,21 @@ export function draftProject(
         halves.filter((half) => half.met).length +
         scheduled.filter(Boolean).length -
         walk.wastedHermes();
-      if (best === undefined || score > best.score) best = { assembly: walk.assembly, score };
-      const localMet = report.targets.every((target) => target.biomeKey !== biomeKey || target.met);
+      // An NPC basket trait is this biome's own target, like its NPC.
+      const localMet = report.targets.every(
+        (target) =>
+          target.met ||
+          (target.kind === 'basketTrait'
+            ? npcTraitBiomes.get(target.key) !== biomeIndex
+            : target.biomeKey !== biomeKey),
+      );
+      // On a tie, an attempt that meets this biome's own targets wins.
+      if (
+        best === undefined ||
+        score > best.score ||
+        (score === best.score && localMet && !best.localMet)
+      )
+        best = { assembly: walk.assembly, score, localMet };
       // An unmet half target ends the biome only when no decision could take it here.
       if (localMet && halves.every((half) => half.met || !walk.legalSupply.has(half.supply))) break;
     }
