@@ -17,8 +17,8 @@ except a Fresh File route runs on the plan's
 [installed starting loadout](#loadout-install). One bounded mid-run
 attachment exists: a plan with a [Practice mode start](#practice-mode-start)
 admits at the start of a fresh run that the module installs at a later biome's
-Opening, or at a biome's Preboss or Boss. No other mid-run attachment, edited-plan repair, or
-recovery after a mismatch is supported.
+Opening, or at a biome's Preboss or Boss. No other mid-run attachment or edited-plan repair is
+supported; the only recovery after a mismatch is opt-in [snap mode](#snap-mode).
 
 The module's ModpackLib **Enabled** toggle gates admission: a run started while
 it is off admits no plan and stays native. Turning it off mid-run abandons a session
@@ -71,7 +71,10 @@ A plan is admitted by its header, independent of the release number:
   decided by its files (see below).
 - The **presentation layer**, `src/mods/presentation/`, holds the surfaces
   that draw and format: the status window and its slot overview reader, the
-  room guide, the victory summary and the planned-choice markers. `src/main.lua`
+  room guide, the victory summary and the planned-choice markers. A Well,
+  Hermes Shrine or Purging Pool screen marks only its next planned purchase,
+  rush or sale in authored order, since a room's first purchase can trigger a
+  Travel Deal refill. `src/main.lua`
   wires each surface through `presentationSurface`, which logs and skips a
   surface that fails to load or attach, and hands it the session, inbox and
   route inspection views it reads; execution notifies the planned-choice
@@ -894,13 +897,11 @@ state; assembly translates it, selecting and renaming fields. It carries:
   `ForceRarity` and without `FromLoot`. The others are held unslotted: a
   Permanent keepsake a swap kept (Discordant Bell, Jeweled Pom, and a Calling
   Card or Time Piece that left with uses, `KeepsakeLogic.lua:190-227`), and
-  Echo's copy, which is Common (`RoomLogic.lua:1218-1242`). A replaced or
-  spent keepsake that native removed has no row. Echo copies of keepsakes the
-  planner treats as neutral are not tracked;
+  Echo's Common copy. A replaced or spent keepsake that native removed has no
+  row;
 - active Arcana at their current rarity, with `TemporaryMetaUpgrades`,
-  Centaur `CurrentRoom` and Artificer `MetaConversionUses`, whether Barren
-  holds them unequipped, and the vows Circe disabled
-  (`ShrineUpgradesDisabled`);
+  Centaur `CurrentRoom` and Artificer `MetaConversionUses`, each card Barren
+  holds unequipped, and the vows Circe disabled (`ShrineUpgradesDisabled`);
 - `maxStats`: the expected maxima for the self-check, and `hiddenGrants`, the
   recorded amounts no installed trait re-creates, each tagged with its source:
   lumped pickups, trait acquisition rolls and `RoomsPerUpgrade` grants (Traces
@@ -916,9 +917,9 @@ state; assembly translates it, selecting and renaming fields. It carries:
   Spell (`hex.spellTraitName`) with its realised tree, invested nodes, talent
   points and closure. The module adds the Spell unless native `StartNewRun`
   already installed it from the aspect;
-- `RewardPriorities`, `UseRecord`, `LootTypeHistory`, `ConsumableRecord`, and
-  the `RewardStores` exact across every planned branch, as counts aligned with
-  `RewardStoreData`.
+- `RewardPriorities`, `UseRecord`, `LootTypeHistory`, `ConsumableRecord`,
+  Denial's `BannedTraits`, and the `RewardStores` drawn from and exact across
+  every planned branch, as counts aligned with `RewardStoreData`.
 
 Every Silver Wheel max-Magick grant is a hidden grant except the slotted
 Wheel's own, which is created natively: the module equips the current keepsake
@@ -999,7 +1000,7 @@ The module installs inside native `StartNewRun`, on top of the
 [installed loadout](#loadout-install): the slotted keepsake at its
 `EquipKeepsake`; the hero's state when
 `EquipMetaUpgrades` returns; when `InitializeRewardStores` returns, an
-Opening's records and, at either point, Barren's removal of the Arcana, after
+Opening's records and, at either point, Barren's removal of each card it holds, after
 native Death Defiance and rerolls and before native starting gold; and, after
 `StartNewRun` returns with the start room created, a Preboss's or Boss's
 records, `biome` section and Tight Deadline allowance, a Preboss's shop, then
@@ -1021,6 +1022,35 @@ room-exit facts. The run's lifecycle is native except that the module removes
 the run from `RunHistory` before native `EndRun` strips the history by each
 run's distance from the end, and sets `PrevRun` to the last recorded run as a
 reload would; clear-time and depth records still write.
+
+### Snap mode
+
+The ModpackLib option **Snap back to the plan** (`SnapMode`, off by default,
+persisted and hashed like the other gameplay options) returns a run to its plan
+after a mismatch. Off, a desynchronized run is unchanged.
+
+- **Steering.** At the next `LeaveRoom` of a desynchronized run, after every
+  ordinary check, the route cursor exits and its next occurrence becomes the
+  target. The session resumes there (a fresh cursor and room coordinator, as a
+  Practice start resumes) before native `LeaveRoom` runs, so the next room's
+  encounter and reward are steered. The chosen door's room is kept only when it
+  was prepared for that occurrence; otherwise `doors.plannedRoom` builds the
+  room the planned door would have offered, with its reward, cages and Zagreus
+  Contract presence, and `CreateRoom` replaces `door.Room`.
+- **Snap.** At that room's `StartRoom`, before native setup binds a fresh hero
+  unit, `snap/apply.lua` writes only the differences from the room's
+  `roomEntered` frame through the Practice writers, then runs the Practice start
+  check. Health is clamped, Death Defiance and armor stay live, and only the
+  traits in the generated `modeled_traits.lua` are restored.
+- **Stop.** Snapping stops for the run only when a snap fails in its own room:
+  `apply` faults (the session faults), verify fails, or that room's entry proofs
+  mismatch inside the same `StartRoom` (`snap-loop`). Any later mismatch snaps
+  again at the next transition.
+- **Declined.** Hubs and Ephyra's board (hub visits, side rooms, handoffs),
+  biome edges including Dream transitions, a target without a `roomEntered`
+  frame, and a reloaded run stay passive.
+- **Integrity.** The status window and the victory summary count the snaps, on
+  every slot.
 
 ### Content fingerprint
 
@@ -1374,7 +1404,7 @@ The conformance surface is bounded to:
 | Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                                                      |
 | Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
 | Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing generation                                         |
-| Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence                             |
+| Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence, Hex node identity included |
 | Hub departure                 | the full modeled trait inventory published in `hub.departures` for that completed-visit count, on every departure                                                  |
 
 The published `exitUsable` deadline is checked at actual room closure, before
@@ -1435,11 +1465,12 @@ planner models it. The executor forces the layout, lets native
 `CreateTalentTree` make every draw, then writes each published node's talent
 over the native result with its kind's rarity (Keystone Rare, Legendary Epic,
 repeatable Common); the God Sent nodes stay native. A node the native tree lacks
-or does not publish is a diagnostic. Node identities are not conformance facts;
-`pathOfStars` keeps the God Sent pair, closure, the point counts and whether
-the God Sent Olympian talent is invested, Task Force's prerequisite. Each Path
-screen role carries `plannedHexNodeKeys`; the executor marks those nodes on the
-native talent screen as guidance and never enforces them.
+or does not publish is a diagnostic. `pathOfStars` keeps the God Sent pair,
+closure, the point counts and whether the God Sent Olympian talent is
+invested, Task Force's prerequisite. Node identity is binding through
+`hexNodes`: every realised non-Olympian talent and the set of invested nodes.
+Each Path screen role carries `plannedHexNodeKeys`; the executor marks those
+nodes on the native talent screen, and room exit proves the investment.
 
 `startingLoadout` publishes, in native terms, the run-start configuration the
 module installs. The planner assumes a mature file, so it publishes ranks
@@ -1534,13 +1565,24 @@ only its destination, preserving native gate creation, destination-room choice,
 health cost and Ixion consumption. An unavailable point produces a diagnostic
 and leaves the native destination unchanged, not a placement-only mismatch.
 
-Complete Run State snapshots are diagnostic-only at the published room-entered
-and before-room-exit checkpoints. They may expose counters, ranged reward-bag
-counts, acquired traits, and retained effects for later adjudication (an
-absent `biomeEncounterDepth` counter is native `BiomeEncounterDepth` unset),
-but a difference in that diagnostic frame never blocks execution by itself. The
-planner separately publishes the sparse named facts that changed during the
-room. Only a mismatch in one of those named conformance facts, a required
+Complete Run State snapshots are published at the room-entered and
+before-room-exit checkpoints. Besides counters, ranged reward-bag counts and
+retained effects (an absent `biomeEncounterDepth` counter is native
+`BiomeEncounterDepth` unset), each frame carries every hero fact a check reads,
+exactly: the traits; every held keepsake with its rank, slot and charge counters
+(not the Bell, Fang or Sash values); the aspect rarity and familiar stack
+multiplier; each active Arcana card with rarity, origin and whether Barren
+holds it unequipped; the vows, Forfeit, the Denial ban list and Artificer
+charges; Chaos curses and blessings with their values and clocks; the Hex tree
+and invested nodes; and each reward store's contents where they agree across
+branches, an untouched store at its initial counts. A difference in a frame
+never blocks execution by itself. The planner separately publishes the sparse
+named facts that changed during the room; besides trait inventory, elements,
+Steady Growth, Chaos, keepsake effects, reward priorities, Path of Stars,
+Forfeit and the Well, they are `keepsakes` (held keepsakes by rank and slot),
+`equipment`, `arcana` (cards, Barren holding, Artificer charges), `vows` (ranks,
+disabled vows, Denial bans), `chaosValues` and `hexNodes`. A Practice start
+checks every family against its start room's `roomEntered` frame. Only a mismatch in one of those named conformance facts, a required
 Timeline obligation, or another explicit structural/transaction comparison
 stops further planner enforcement. The native contact still completes and the
 Executor never chooses a substitute room, reward, or action.

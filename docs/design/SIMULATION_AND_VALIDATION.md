@@ -313,7 +313,11 @@ owners spawn records; the transitions owning each native contact return the
 union member. The [Reward Model](REWARD_MODEL.md#generation-time-offer-context)
 owns the policy.
 Transitions return a new state while retaining unchanged substates; replacing
-trait history also updates the reward kernel's derived trait facts atomically.
+trait history also updates the reward kernel's derived trait facts and, when
+Barren starts or ends, the per-card Arcana it unequips or re-adds at Epic
+(`reconcileBarrenArcana`), atomically. Echo's Common keepsake copy is a
+keepsake-ledger fact (`echoCopyKey`) recorded at the biome start that found
+the captured keepsake unheld.
 Catalog declarations remain separate from acquired instances and their clocks.
 
 Eligibility consumes the exact reached state plus explicit operation context:
@@ -638,6 +642,14 @@ Availability and its reasons are
 [authored-model policy](AUTHORED_PROJECT_MODEL.md#route-loadout); the published
 form is the execution plan's
 [`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start).
+
+The same projection owns the held-keepsake rows (`projectStartKeepsake`) and
+exact store contents (`exactRewardStoreContents`) that every Run State
+snapshot, and so every execution frame, carries. `run-state-conformance.ts`
+owns the room-exit fact kinds over those snapshots, with its matrix in
+`test/simulation/run-state.test.ts`. `execution-plan/modeled-traits.ts`
+owns the traits snap restores; its drift test generates the module's
+`modeled_traits.lua`.
 
 ## Extension and Verification
 

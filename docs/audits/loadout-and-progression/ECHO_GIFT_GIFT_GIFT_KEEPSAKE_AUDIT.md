@@ -124,7 +124,11 @@ created again.
 
 `EquipKeepsake` returns without doing anything when the target trait is already
 present. Consequently the source loop executes every biome, but an individual
-biome-start transition may be a no-op.
+biome-start transition may be a no-op. A Common copy therefore exists only from
+a biome start that found the captured keepsake unheld, for every capturable
+kind including the planner's neutral ones; a held Calling Card or Time Piece
+gains charges instead. The planner records the copy in the keepsake ledger
+when it is made.
 
 ## Two Independent Declaration Axes
 

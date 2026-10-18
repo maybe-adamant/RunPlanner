@@ -398,10 +398,16 @@ Five source effects intersect current planner authority:
    option of a three-option screen unselectable. The authored trait-offer contract must retain that
    blocked option because it is still seen and can be consumed by Vow of
    Denial's unpicked-trait ban.
-4. **Barren** removes active Arcana until maturity and restores them on
-   expiration. The required supported consequences are that Artificer uses are
-   unavailable and Judgment does not trigger while Barren is active; this does
-   not authorize a new matrix of unrelated Arcana effects.
+4. **Barren** is a one-time removal: its acquire runs `RemoveArcana`
+   (`PowersLogic.lua:4836`), unequipping every Equipped card's trait. A card
+   drawn later (Crystal Figurine, Circe) is held and works, Judgment included
+   (`EncounterLogic.lua:1643` reads `PostBossCards` from held traits, before the
+   Figurine draw at `:1647`). On expiry `EquipMetaUpgrades` re-adds each
+   Equipped card not held at its installed rank, so a Circe- or
+   Figurine-raised rarity reverts, and The Artificer's remaining charges become
+   its capacity less `CurrentRun.MetaConversionUses` (`TraitLogic.lua:1321-1327`).
+   The planner models this per card; it does not authorize a matrix of
+   unrelated Arcana effects.
 5. **Favor** contributes its exact processed rarity bonuses to the ordered
    rarity-chance ledger. Guaranteed later checks can suppress Common; complete
    support still depends on the provider's generation and rescue stages.
@@ -470,8 +476,8 @@ Creation adds elements on maturation; Ordinary constrains fresh god-offer
 rarity and makes the ordinary replacement roll impossible while replacement
 rows forced by Hymn or offer shortage retain their promoted rarity; Rejected
 retains the blocked option and Vow of Denial contact;
-Barren temporarily suppresses Arcana consequences including Artificer and
-Judgment; and Favor contributes to the offer-local rarity ledger. Separately,
+Barren suppresses the consequences of the cards it unequipped, Artificer and
+Judgment included; and Favor contributes to the offer-local rarity ledger. Separately,
 Denial folds the two exact unselected Chaos curse identities into later curse
 eligibility without treating their blessings as offered or banned traits.
 
