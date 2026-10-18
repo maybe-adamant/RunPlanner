@@ -1,5 +1,10 @@
 import { biomes } from './biomes';
-import { encounterDefinitions, encounterEnvelopes, encounterSets } from './encounters';
+import {
+  encounterDefinitions,
+  encounterEnvelopes,
+  encounterSets,
+  fieldNpcEncounterKeys,
+} from './encounters';
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { roomLifecycleProfiles } from './lifecycles';
@@ -61,6 +66,7 @@ export const declarations = {
   encounterEnvelopes,
   encounterDefinitions,
   encounterSets,
+  fieldNpcEncounterKeys,
   roomLifecycleProfiles,
   exitCompatibilityPolicies,
   exitTypes,

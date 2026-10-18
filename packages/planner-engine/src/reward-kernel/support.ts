@@ -9,7 +9,8 @@ import type {
   RewardPeerContext,
 } from './model';
 
-const ORDINARY_SOURCE_CAP = 4;
+/** `HeroData.MaxGodsPerRun`: the distinct gods a run can pick up. */
+export const ORDINARY_SOURCE_CAP = 4;
 
 function payloadSources(payload: RewardPayload): readonly string[] {
   return payload.kind === 'BoonSource'

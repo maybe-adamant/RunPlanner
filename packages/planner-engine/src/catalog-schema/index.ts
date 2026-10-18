@@ -1376,6 +1376,8 @@ export interface Catalog {
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;
   readonly encounterSets: CatalogCollection<EncounterSet>;
+  /** Source `NoRecentFieldNPCEncounter`: the encounters that host a field NPC. */
+  readonly fieldNpcEncounterKeys: readonly string[];
   readonly roomLifecycleProfiles: CatalogCollection<RoomLifecycleProfile>;
   readonly exitCompatibilityPolicies: CatalogCollection<ExitCompatibilityPolicy>;
   readonly exitTypes: CatalogCollection<ExitTypeDeclaration>;
