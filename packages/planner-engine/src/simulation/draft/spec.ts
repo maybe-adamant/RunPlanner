@@ -74,8 +74,9 @@ export function draftRouteLoadout(loadout: DraftLoadout): RouteLoadout {
 }
 
 /**
- * The base project's route with the draft loadout, every itinerary biome
- * configured and no topology, strictly decoded. Run modifiers carry over.
+ * The base project's route with the draft loadout and no topology, strictly
+ * decoded: its configured biomes, or the whole itinerary when none are.
+ * Run modifiers carry over.
  */
 export function draftLoadoutProject(
   catalog: Catalog,
@@ -86,7 +87,7 @@ export function draftLoadoutProject(
     projectId: base.projectId,
     routeKey: base.route.routeKey,
     itineraryBiomeKeys: base.route.itineraryBiomeKeys,
-    configuredBiomeCount: base.route.itineraryBiomeKeys.length,
+    configuredBiomeCount: base.route.biomes.length || base.route.itineraryBiomeKeys.length,
   });
   const runModifiers = base.route.loadout.runModifiers;
   return decodeProjectDocument(
