@@ -13,7 +13,6 @@ import {
   createRoomActionAddress,
   hubTerminalTakeoverForSource,
   ordinaryTargetGameNames,
-  parseEchoLastRewardPickupEntryKey,
   roomActionDomainForOccurrence,
   roomActionKey,
   scheduleRequiredRoomActions,
@@ -52,7 +51,6 @@ import { settleProjectEdit } from '../edit-settlement';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   countedRewardTypeDomain,
-  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
@@ -69,7 +67,7 @@ import {
 import type { SemanticFinding } from '../model';
 import { draftDenialActive, type DraftSpec } from './spec';
 import type { DraftGodSchedule } from './schedule';
-import { DRAFT_PROVIDER_CAPS, draftStartTraits } from './basket';
+import { DRAFT_PROVIDER_CAPS, draftIllegalTrait, draftStartTraits } from './basket';
 import {
   createDraftPrerequisites,
   type DraftHeldTraits,
@@ -1124,37 +1122,6 @@ export class DraftWalk {
 
   // --- Trait offers --------------------------------------------------------
 
-  /** Wraps an edit owned by an Echo replay entry, as the editor does. */
-  private echoWrapped(
-    owner: SemanticAddress,
-    edit: Extract<
-      ProjectCommand,
-      { readonly kind: 'ReplaceTraitOffer' | 'ReplaceLevelResolution' }
-    >,
-  ): ProjectCommand {
-    if (
-      owner.kind === 'acquisitionEntry' &&
-      parseEchoLastRewardPickupEntryKey(owner.entryKey) !== undefined
-    ) {
-      const replay = derivedAcquisitionEntriesForProjectEvaluationAssembly(
-        this.assembly,
-        owner.site,
-      ).find(
-        (entry) =>
-          entry.kind === 'echoLastReward' &&
-          semanticAddressKey(entry.address) === semanticAddressKey(owner),
-      );
-      if (replay !== undefined && 'fixedReward' in replay && replay.fixedReward !== undefined)
-        return {
-          kind: 'EditEchoReplay',
-          entry: owner,
-          sourceOffer: replay.fixedReward.offer,
-          edit,
-        };
-    }
-    return edit;
-  }
-
   private offerSupported(trait: TraitOfferAddress, value: AuthoredTraitOffer): boolean {
     const evaluation = this.evaluate({ kind: 'traitOffer', trait, value });
     return (
@@ -1164,13 +1131,13 @@ export class DraftWalk {
     );
   }
 
-  /** Never an exchange row or a trait-removing Duo. */
+  /** Never an exchange row, a trait-removing Duo or a draft-illegal trait. */
   private monotonicSelection(trait: TraitOfferAddress, value: AuthoredTraitOfferTraits): boolean {
     const index = OPTION_KEYS.indexOf(value.selectedOptionKey);
     const selected = value.options[index];
     if (selected === undefined) return false;
-    if (this.catalog.traits.byKey[selected.traitKey]?.selectedDisposition.kind === 'ransom')
-      return false;
+    const declaration = this.catalog.traits.byKey[selected.traitKey];
+    if (declaration === undefined || draftIllegalTrait(declaration)) return false;
     const evaluation = this.evaluate({ kind: 'traitOffer', trait, value });
     return (
       evaluation.kind === 'traitOffer' &&
@@ -1199,8 +1166,11 @@ export class DraftWalk {
   }
 
   private authorTraitOffer(trait: TraitOfferAddress): boolean {
-    const command = (value: AuthoredTraitOffer) =>
-      this.echoWrapped(trait.owner, { kind: 'ReplaceTraitOffer', trait, value });
+    const command = (value: AuthoredTraitOffer): ProjectCommand => ({
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value,
+    });
     for (const giver of this.shuffle(this.catalog.traitGivers.values)) {
       if (giver.providerKind === 'olympian' && !this.worldGivers.has(giver.key)) continue;
       const draft = this.candidates().traitOfferStartingOutcome(trait, giver.key);
@@ -1538,13 +1508,11 @@ export class DraftWalk {
               } as const);
         if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
         if (
-          this.apply(
-            this.echoWrapped(levelResolution.owner, {
-              kind: 'ReplaceLevelResolution',
-              levelResolution,
-              value,
-            }),
-          )
+          this.apply({
+            kind: 'ReplaceLevelResolution',
+            levelResolution,
+            value,
+          })
         )
           return true;
       }

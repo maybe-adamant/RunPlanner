@@ -17,8 +17,9 @@ then edits by hand.
   god (`ForceBoonName`) are all author choices that can bring in an outside
   god.
 - **Hammers:** at most 2 per run from rooms and shops; the second only from the
-  third biome. **Hermes:** at most 1 per biome and 2 per run from rooms. No
-  minimum for either.
+  third biome. An Echo replay or a duplicated shop Hammer can add a third,
+  which drafting avoids by banning those Echo choices. **Hermes:** at most 1
+  per biome and 2 per run from rooms. No minimum for either.
 - **Story rooms** (one per biome, none in Q): Arachne F, Narcissus G, Echo H
   (Bridge, always forced), Hades I, Medea N, Circe O, Dionysus P. Each is
   created at most once per run when offered on a door, so taking another door
@@ -65,7 +66,7 @@ step comes before the loadout and sets it.
     Arcana, Fear, Hex);
   - draft-illegal traits from the catalog: the Chaos Anvil
     (`ChaosWeaponUpgrade`) and the Hera and Zeus sacrifice Duos (Queen's and
-    King's Ransom).
+    King's Ransom), plus the draft-policy Echo bans below.
   - caps: Hammers 2, Hermes 2, one Selene hex; at most 5 traits per pool god,
     4 under Vow of Denial (Legendaries count toward their god, Duos do not); at most 12 pool-god
     traits in total, 8 when Vow of Forfeit is active; one trait per selected
@@ -88,8 +89,9 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
   - god pool: every god-choosing site (doors, shop, mystery box, Echo) stays
     in the pool until the cap holds it;
   - monotonic acquisition: never Purging Pool sales, Wells, exchange rows,
-    Nemesis trades, trait-removing Chaos, the Chaos Anvil or the sacrifice
-    Duos;
+    Nemesis trades, trait-removing Chaos, the Chaos Anvil, the sacrifice Duos,
+    or the Echo choices that replay or duplicate acquisitions (Reward Reward
+    Reward, Gift Gift Gift, Gold Gold Gold);
   - keepsakes: only the drafted rack keepsakes, equipped at their racks;
   - the Nemesis random-event family is never chosen; Nemesis combat is allowed.
 - **Soft targets, weighted and reported:** basket traits and selected NPCs

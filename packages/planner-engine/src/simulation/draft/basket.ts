@@ -22,7 +22,7 @@ import { draftWorldGiverKeys } from './world';
 
 export type DraftTraitRefusal =
   | { readonly kind: 'giverNotInWorld' }
-  /** Removes held traits, so a monotonic draft never takes it. */
+  /** Removes held traits or replays acquisitions, so a draft never takes it. */
   | { readonly kind: 'draftIllegal' }
   | { readonly kind: 'slotTaken'; readonly slot: TraitEquipmentSlot; readonly traitKey: string }
   | { readonly kind: 'wrongHammerLoadout' }
@@ -162,7 +162,7 @@ function assessTrait(
   const deferred = new Set<string>();
   if (!worldGivers.some((giver) => catalog.traitGivers.byKey[giver]!.traitKeys.includes(traitKey)))
     refusals.push({ kind: 'giverNotInWorld' });
-  if (trait.selectedDisposition.kind === 'ransom') refusals.push({ kind: 'draftIllegal' });
+  if (draftIllegalTrait(trait)) refusals.push({ kind: 'draftIllegal' });
   const slot = trait.equipmentSlot;
   const slotHolder =
     slot === undefined
@@ -205,6 +205,20 @@ function assessTrait(
     refusals: Object.freeze(refusals),
     checkedDuringSearch: Object.freeze([...deferred]),
   });
+}
+
+/** Echo choices that replay or duplicate acquisitions, so they can break the draft's caps. */
+const DRAFT_ILLEGAL_ECHO_TRAIT_KEYS: ReadonlySet<string> = new Set([
+  'EchoLastReward',
+  'EchoRepeatKeepsakeBoon',
+  'EchoDoubleShop',
+]);
+
+/** A trait a draft never selects: a Ransom exchange or a replaying Echo choice. */
+export function draftIllegalTrait(trait: TraitDeclaration): boolean {
+  return (
+    trait.selectedDisposition.kind === 'ransom' || DRAFT_ILLEGAL_ECHO_TRAIT_KEYS.has(trait.key)
+  );
 }
 
 /**
