@@ -10,7 +10,10 @@ import {
   validateEncounterSetClosure,
   validateNemesisRandomEventContract,
 } from './encounters/closure';
-import { normalizeEncounterDefinitions } from './encounters/definitions';
+import {
+  normalizeEncounterDefinitions,
+  normalizeFieldNpcEncounterKeys,
+} from './encounters/definitions';
 import { normalizeEncounterEnvelopes } from './encounters/envelopes';
 import { normalizeEncounterSets } from './encounters/sets';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
@@ -98,6 +101,10 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
   validateEncounterSetClosure(encounterSets, encounterDefinitions, rewards);
   validateNemesisRandomEventContract(encounterDefinitions, encounterSets, rewards);
+  const fieldNpcEncounterKeys = normalizeFieldNpcEncounterKeys(
+    input.fieldNpcEncounterKeys,
+    encounterDefinitions,
+  );
   const roomLifecycleProfiles = normalizeRoomLifecycleProfiles(
     input.roomLifecycleProfiles,
     encounterEnvelopes,
@@ -158,6 +165,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterEnvelopes,
     encounterDefinitions,
     encounterSets,
+    fieldNpcEncounterKeys,
     roomLifecycleProfiles,
     exitCompatibilityPolicies,
     exitTypes,

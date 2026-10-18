@@ -593,3 +593,17 @@ export function normalizeEncounterDefinitions(
   );
   return definitions;
 }
+
+/** The field-NPC spacing set: every key names a declared encounter, once. */
+export function normalizeFieldNpcEncounterKeys(
+  rawKeys: readonly string[],
+  definitions: CatalogCollection<EncounterDefinition>,
+): readonly string[] {
+  rawKeys.forEach((key, index) => {
+    if (definitions.byKey[key] === undefined)
+      fail(`fieldNpcEncounterKeys[${index}]`, `unknown encounter definition ${key}`);
+    if (rawKeys.indexOf(key) !== index)
+      fail(`fieldNpcEncounterKeys[${index}]`, `duplicate encounter definition ${key}`);
+  });
+  return Object.freeze([...rawKeys]);
+}

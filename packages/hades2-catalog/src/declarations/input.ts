@@ -33,6 +33,8 @@ export interface RawCatalogInput {
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];
   readonly encounterSets: readonly RawEncounterSetDeclaration[];
+  /** RequirementsData.lua `NoRecentFieldNPCEncounter`: the field-NPC spacing set. */
+  readonly fieldNpcEncounterKeys: readonly string[];
   readonly roomLifecycleProfiles: readonly RawRoomLifecycleProfileDeclaration[];
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly RawExitTypeDeclaration[];

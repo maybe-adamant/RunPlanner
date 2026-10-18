@@ -1958,3 +1958,20 @@ describe('encounter envelope catalog', () => {
     expect(() => createCatalog(extra)).toThrow(CatalogContractError);
   });
 });
+
+describe('field NPC encounters', () => {
+  it('normalizes the native field-NPC spacing set, which leaves out Arachne cocoons', () => {
+    const catalog = createCatalog(declarations);
+    expect(catalog.fieldNpcEncounterKeys).toContain('NemesisCombatH');
+    expect(catalog.fieldNpcEncounterKeys).toContain('AthenaCombatP');
+    expect(catalog.fieldNpcEncounterKeys).not.toContain('ArachneCombatF');
+  });
+
+  it('rejects an unknown or repeated field-NPC encounter key', () => {
+    for (const keys of [['MissingCombat'], ['NemesisCombatF', 'NemesisCombatF']]) {
+      expect(() => createCatalog({ ...input(), fieldNpcEncounterKeys: keys })).toThrow(
+        CatalogContractError,
+      );
+    }
+  });
+});

@@ -11,6 +11,7 @@ import { pEncounterDefinitions } from './p_definitions';
 import { pEncounterSets } from './p_sets';
 import { qEncounterDefinitions, qEncounterSets } from './q';
 import {
+  supportedFieldNpcEncounterKeys,
   sharedEncounterDefinitions,
   sharedEncounterEnvelopes,
   sharedEncounterSets,
@@ -44,3 +45,5 @@ export const encounterSets = [
   ...pEncounterSets,
   ...qEncounterSets,
 ] as const;
+
+export const fieldNpcEncounterKeys = supportedFieldNpcEncounterKeys;

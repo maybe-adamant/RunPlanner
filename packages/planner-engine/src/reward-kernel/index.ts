@@ -48,6 +48,7 @@ export {
   eligibleOrdinarySourceGameNames,
   isOrdinarySourcePolicy,
   locallyValidRewardOffers,
+  ORDINARY_SOURCE_CAP,
   ordinarySourceGameNames,
   supportedPayloads,
 } from './support';
