@@ -6,7 +6,14 @@ import {
 } from '../../authored-project';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
-import { draftReport, type DraftReport } from './report';
+import {
+  draftHalfTarget,
+  draftReport,
+  heldFromGiver,
+  latestRunState,
+  type DraftReport,
+  type DraftSupply,
+} from './report';
 import { draftLoadoutProject, draftRefusals, type DraftRefusal, type DraftSpec } from './spec';
 import { createDraftRng, DraftWalk } from './walk';
 
@@ -41,6 +48,21 @@ export type DraftResult =
       readonly attempts: number;
     };
 
+/** Whether the walk holds its half's Hermes and Hammer target after this biome. */
+function halfSupply(
+  catalog: Catalog,
+  walk: DraftWalk,
+  biomeIndex: number,
+  biomeCount: number,
+): readonly { readonly supply: DraftSupply; readonly met: boolean }[] {
+  const snapshot = latestRunState(walk.assembly);
+  const target = draftHalfTarget(biomeIndex, biomeCount);
+  return [
+    { supply: 'hermes', met: heldFromGiver(catalog, snapshot, 'Hermes') >= target },
+    { supply: 'hammer', met: heldFromGiver(catalog, snapshot, 'WeaponUpgrade') >= target },
+  ];
+}
+
 function attemptSeed(seed: number, biomeIndex: number, attempt: number): number {
   return (seed * 1_000_003 + biomeIndex * 7_919 + attempt * 104_729) >>> 0;
 }
@@ -67,7 +89,7 @@ export function draftProject(
   const biomeKeys = current.project.route.biomes.map((biome) => biome.biomeKey);
   let attempts = 0;
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
-    let best: { assembly: ProjectEvaluationAssembly; report: DraftReport } | undefined;
+    let best: { assembly: ProjectEvaluationAssembly; score: number } | undefined;
     const reasons: string[] = [];
     for (let attempt = 0; attempt < budget.attemptsPerBiome; attempt += 1) {
       if (attempt > 0 && Date.now() > deadline) break;
@@ -83,9 +105,12 @@ export function draftProject(
         continue;
       }
       const report = draftReport(catalog, spec, walk.assembly);
-      if (best === undefined || report.met > best.report.met)
-        best = { assembly: walk.assembly, report };
-      if (report.targets.every((target) => target.biomeKey !== biomeKey || target.met)) break;
+      const halves = halfSupply(catalog, walk, biomeIndex, biomeKeys.length);
+      const score = report.met + halves.filter((half) => half.met).length;
+      if (best === undefined || score > best.score) best = { assembly: walk.assembly, score };
+      const localMet = report.targets.every((target) => target.biomeKey !== biomeKey || target.met);
+      // An unmet half target ends the biome only when no decision could take it here.
+      if (localMet && halves.every((half) => half.met || !walk.legalSupply.has(half.supply))) break;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
     current = best.assembly;

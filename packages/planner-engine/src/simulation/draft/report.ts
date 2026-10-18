@@ -29,6 +29,23 @@ export interface DraftReport {
 export const DRAFT_HAMMER_TARGET = 2;
 export const DRAFT_HERMES_TARGET = 2;
 
+export type DraftSupply = 'hermes' | 'hammer';
+
+/** Room and shop rewards that grant a Hermes boon or a Daedalus Hammer. */
+export function draftSupply(rewardType: string): DraftSupply | undefined {
+  if (rewardType === 'HermesUpgrade' || rewardType === 'ShopHermesUpgrade') return 'hermes';
+  if (rewardType === 'WeaponUpgrade' || rewardType === 'WeaponUpgradeDrop') return 'hammer';
+  return undefined;
+}
+
+/**
+ * Hermes and Hammers held by the end of a biome's half: one after the first
+ * ceil(n/2) biomes, two after the rest, matching the native late-Hammer gate.
+ */
+export function draftHalfTarget(biomeIndex: number, biomeCount: number): number {
+  return biomeIndex < Math.ceil(biomeCount / 2) ? 1 : 2;
+}
+
 /** The latest Run State snapshot the evaluation published. */
 export function latestRunState(assembly: ProjectEvaluationAssembly): RunStateSnapshot | undefined {
   let latest: RunStateSnapshot | undefined;
