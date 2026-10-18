@@ -5,8 +5,7 @@ import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
 import type { DraftSpec } from './spec';
 
-export type DraftTargetKind =
-  'god' | 'basketTrait' | 'storyNpc' | 'fieldNpc' | 'hammers' | 'hermes' | 'rackKeepsake';
+export type DraftTargetKind = 'basketTrait' | 'storyNpc' | 'fieldNpc' | 'rackKeepsake';
 
 export interface DraftTargetResult {
   readonly kind: DraftTargetKind;
@@ -27,10 +26,6 @@ export interface DraftReport {
   readonly met: number;
 }
 
-/** Hammers and Hermes the search aims for: the native per-run room caps. */
-export const DRAFT_HAMMER_TARGET = 2;
-export const DRAFT_HERMES_TARGET = 2;
-
 export type DraftSupply = 'hermes' | 'hammer';
 
 /** Every trait a Hermes giver offers. */
@@ -42,25 +37,24 @@ export function draftHermesTraitKeys(catalog: Catalog): ReadonlySet<string> {
   );
 }
 
-/** Rewards whose acquisition role resolves to a Hermes or Daedalus Hammer giver. */
-export function draftSupply(catalog: Catalog, offer: ResolvedRewardOffer): DraftSupply | undefined {
+/** Rewards whose acquisition role resolves to a Hermes, Daedalus Hammer or Selene giver. */
+export function draftProvider(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): DraftSupply | 'spell' | undefined {
   const roles = catalog.rewards.rewardTypes.byKey[offer.rewardType]?.acquisitionRoles.values ?? [];
   for (const role of roles) {
     const giverKey = traitGiverForAcquisitionRole(catalog, offer, role.key);
     const kind =
       giverKey === undefined ? undefined : catalog.traitGivers.byKey[giverKey]?.providerKind;
-    if (kind === 'hermes') return 'hermes';
-    if (kind === 'hammer') return 'hammer';
+    if (kind === 'hermes' || kind === 'hammer' || kind === 'spell') return kind;
   }
   return undefined;
 }
 
-/**
- * Hermes and Hammers held by the end of a biome's half: one after the first
- * ceil(n/2) biomes, two after the rest, matching the native late-Hammer gate.
- */
-export function draftHalfTarget(biomeIndex: number, biomeCount: number): number {
-  return biomeIndex < Math.ceil(biomeCount / 2) ? 1 : 2;
+/** Basket traits of a supply to hold by the end of a biome's half: half of them, rounded up, then all. */
+export function draftHalfTarget(biomeIndex: number, biomeCount: number, target: number): number {
+  return biomeIndex < Math.ceil(biomeCount / 2) ? Math.ceil(target / 2) : target;
 }
 
 /** The latest Run State snapshot the evaluation published. */
@@ -73,30 +67,6 @@ export function latestRunState(assembly: ProjectEvaluationAssembly): RunStateSna
         latest = snapshot;
   }
   return latest;
-}
-
-/**
- * Hermes boons held, or Hammers taken from rewards: a Hammer the Experimental
- * Hammer keepsake rolled does not count.
- */
-export function heldSupply(
-  catalog: Catalog,
-  snapshot: RunStateSnapshot | undefined,
-  supply: DraftSupply,
-): number {
-  const providerKind = supply === 'hermes' ? 'hermes' : 'hammer';
-  const keepsakeHammers = new Set(
-    (snapshot?.keepsakes.experimentalHammers ?? [])
-      .filter((hammer) => hammer.active)
-      .map((hammer) => hammer.traitKey),
-  );
-  return Object.keys(snapshot?.traits.equippedTraits ?? {}).filter(
-    (key) =>
-      !keepsakeHammers.has(key) &&
-      catalog.traitGivers.values.some(
-        (giver) => giver.providerKind === providerKind && giver.traitKeys.includes(key),
-      ),
-  ).length;
 }
 
 /** Gods whose boon the run has picked up by this snapshot. */
@@ -139,8 +109,6 @@ export function draftReport(
   }
   const configured = assembly.project.route.biomes.map((biome) => biome.biomeKey);
   const targets: DraftTargetResult[] = [];
-  for (const godKey of spec.world.godKeys)
-    targets.push({ kind: 'god', key: godKey, met: gods.has(godKey) });
   for (const traitKey of spec.basketTraitKeys)
     targets.push({ kind: 'basketTrait', key: traitKey, met: equipped.includes(traitKey) });
   for (const [biomeKey, npc] of Object.entries(spec.world.storyNpcByBiome))
@@ -162,16 +130,6 @@ export function draftReport(
           biomeKey,
           met: npcs.get(biomeKey)?.has(npc) === true,
         });
-  targets.push({
-    kind: 'hammers',
-    key: String(DRAFT_HAMMER_TARGET),
-    met: heldSupply(catalog, snapshot, 'hammer') >= DRAFT_HAMMER_TARGET,
-  });
-  targets.push({
-    kind: 'hermes',
-    key: String(DRAFT_HERMES_TARGET),
-    met: heldSupply(catalog, snapshot, 'hermes') >= DRAFT_HERMES_TARGET,
-  });
   spec.rackKeepsakeKeys.forEach((keepsakeKey, index) => {
     const plan = assembly.project.route.biomes[index];
     if (keepsakeKey === null || plan === undefined || index >= configured.length - 1) return;

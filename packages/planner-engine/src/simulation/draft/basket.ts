@@ -129,7 +129,9 @@ function basketCaps(
       catalog.traitGivers.values.flatMap((giver) => {
         const kind = giver.providerKind;
         if (kind !== 'hammer' && kind !== 'hermes' && kind !== 'spell') return [];
-        return [Object.freeze({ ...usage(giver.key, PROVIDER_CAPS[kind]!), providerKind: kind })];
+        return [
+          Object.freeze({ ...usage(giver.key, DRAFT_PROVIDER_CAPS[kind]!), providerKind: kind }),
+        ];
       }),
     ),
     npcs: Object.freeze(npcs),
@@ -209,7 +211,11 @@ function assessTrait(
  * Native run caps: two Hammers (HammerLootRequirements' early and late gates), two
  * Hermes boons from rooms and one Hex; the catalog encodes them only as offer requirements.
  */
-const PROVIDER_CAPS: Readonly<Record<string, number>> = { hammer: 2, hermes: 2, spell: 1 };
+export const DRAFT_PROVIDER_CAPS: Readonly<Record<string, number>> = {
+  hammer: 2,
+  hermes: 2,
+  spell: 1,
+};
 /**
  * Planner limit on one god's own traits, Legendary included; a Duo counts for neither god.
  * Denial bans offered rows that are not taken, so it leaves room for one fewer.
@@ -249,7 +255,7 @@ function cappedGiver(
       ? olympianCap(catalog, spec)
       : isNpcGiver(giver)
         ? NPC_CAP
-        : PROVIDER_CAPS[giver.providerKind];
+        : DRAFT_PROVIDER_CAPS[giver.providerKind];
   return cap === undefined ? undefined : { giverKey: giver.key, cap };
 }
 

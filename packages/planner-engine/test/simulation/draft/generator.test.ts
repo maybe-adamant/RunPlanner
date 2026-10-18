@@ -76,7 +76,7 @@ const cases: readonly { name: string; base: ProjectDocument; spec: DraftSpec }[]
 
 describe('draftProject', () => {
   for (const { name, base, spec } of cases)
-    it(`drafts a zero-finding ${name} route that meets its story, field, rack and Hermes targets`, () => {
+    it(`drafts a zero-finding ${name} route that meets its story, field and rack targets`, () => {
       const result = draftProject(catalog, base, spec, 1);
       if (result.kind !== 'drafted') throw new Error(`${name} draft ${result.kind}`);
       const drafted = simulateProjectAssembly(
@@ -94,9 +94,6 @@ describe('draftProject', () => {
         )
           expect(target).toMatchObject({ met: true });
       expect(result.report.extras).toEqual([]);
-      expect(result.report.targets).toContainEqual(
-        expect.objectContaining({ kind: 'hermes', met: true }),
-      );
       expect(result.command.loadout).toMatchObject({
         weaponKey: spec.loadout.weaponKey,
         startingKeepsakeKey: spec.loadout.startingKeepsakeKey,

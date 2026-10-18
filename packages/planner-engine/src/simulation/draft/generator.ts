@@ -7,14 +7,7 @@ import {
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
 import { draftGodSchedule } from './schedule';
-import {
-  draftHalfTarget,
-  draftReport,
-  heldSupply,
-  latestRunState,
-  type DraftReport,
-  type DraftSupply,
-} from './report';
+import { draftReport, type DraftReport } from './report';
 import { draftRefusals, type DraftRefusal } from './refusals';
 import { draftLoadoutProject, type DraftSpec } from './spec';
 import { createDraftRng, DraftWalk } from './walk';
@@ -50,27 +43,6 @@ export type DraftResult =
       readonly report: DraftReport;
       readonly attempts: number;
     };
-
-/**
- * Whether the walk holds its half's Hermes and Hammer target after this biome;
- * Hermes rooms the basket reserves for traits still waiting count as held.
- */
-function halfSupply(
-  catalog: Catalog,
-  walk: DraftWalk,
-  biomeIndex: number,
-  biomeCount: number,
-): readonly { readonly supply: DraftSupply; readonly met: boolean }[] {
-  const snapshot = latestRunState(walk.assembly);
-  const target = draftHalfTarget(biomeIndex, biomeCount);
-  return [
-    {
-      supply: 'hermes',
-      met: heldSupply(catalog, snapshot, 'hermes') >= target || walk.hermesReserved(),
-    },
-    { supply: 'hammer', met: heldSupply(catalog, snapshot, 'hammer') >= target },
-  ];
-}
 
 function attemptSeed(seed: number, biomeIndex: number, attempt: number): number {
   return (seed * 1_000_003 + biomeIndex * 7_919 + attempt * 104_729) >>> 0;
@@ -125,7 +97,7 @@ export function draftProject(
         continue;
       }
       const report = draftReport(catalog, spec, walk.assembly);
-      const halves = halfSupply(catalog, walk, biomeIndex, biomeKeys.length);
+      const halves = walk.halfSupply();
       const scheduled = walk.scheduledTargets();
       const score =
         report.met +

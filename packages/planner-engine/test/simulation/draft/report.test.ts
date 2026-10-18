@@ -23,4 +23,19 @@ describe('draft report', () => {
       met: false,
     });
   });
+
+  it('sets no target for pool gods, Hermes or Hammers outside the basket', () => {
+    const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+    void _startingReward;
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Hera'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketTraitKeys: [],
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const project = loadUnderworldFGHICheckpoint();
+    expect(draftReport(catalog, spec, simulateProjectAssembly(catalog, project)).targets).toEqual(
+      [],
+    );
+  });
 });

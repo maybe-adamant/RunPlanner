@@ -22,14 +22,8 @@ const spec: DraftSpec = {
 };
 
 describe('draft god schedule', () => {
-  it('places first rooms in the first half and spreads traits by capacity', () => {
+  it('spreads basket traits by capacity', () => {
     const { byBiome } = draftGodSchedule(catalog, surface, spec, createDraftRng(1));
-    expect(
-      byBiome
-        .slice(0, 2)
-        .flatMap((biome) => biome.godKeys)
-        .sort(),
-    ).toEqual([...spec.world.godKeys].sort());
     expect(byBiome.flatMap((biome) => biome.traitKeys).sort()).toEqual(
       [...spec.basketTraitKeys].sort(),
     );
@@ -42,7 +36,7 @@ describe('draft god schedule', () => {
       loadout: { ...loadout, fearRanks: { ...loadout.fearRanks, BoonSkipShrineUpgrade: 1 } },
     };
     const o = draftGodSchedule(catalog, surface, forfeit, createDraftRng(1)).byBiome[1]!;
-    expect(o).toMatchObject({ godKeys: [], traitKeys: [] });
+    expect(o).toMatchObject({ traitKeys: [] });
   });
 
   it('varies with the seed', () => {

@@ -55,13 +55,6 @@ function npcLabel(catalog: Catalog, npc: DraftNpcOption): string {
   );
 }
 
-function providerLabel(catalog: Catalog, providerKind: string): string {
-  return (
-    catalog.traitGivers.values.find((giver) => giver.providerKind === providerKind)?.label ??
-    providerKind
-  );
-}
-
 function targetLabel(
   catalog: Catalog,
   worldOptions: DraftWorldOptions,
@@ -69,8 +62,6 @@ function targetLabel(
 ): string {
   const biome = target.biomeKey === undefined ? '' : catalog.biomes.byKey[target.biomeKey]?.label;
   switch (target.kind) {
-    case 'god':
-      return catalog.traitGivers.byKey[target.key]?.label ?? target.key;
     case 'basketTrait':
       return catalog.traits.byKey[target.key]?.label ?? target.key;
     case 'storyNpc':
@@ -81,10 +72,6 @@ function targetLabel(
       );
       return `${npc === undefined ? target.key : npcLabel(catalog, npc)} (${biome})`;
     }
-    case 'hammers':
-      return `${providerLabel(catalog, 'hammer')} ×${target.key}`;
-    case 'hermes':
-      return `${providerLabel(catalog, 'hermes')} ×${target.key}`;
     case 'rackKeepsake':
       return `${catalog.keepsakes.byKey[target.key]?.label ?? target.key} after ${biome}`;
   }
