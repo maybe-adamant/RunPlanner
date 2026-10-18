@@ -25,7 +25,7 @@ it('drafts a zero-finding route as one undoable edit', async () => {
   const { user } = renderPlannerForInteraction({ application });
   await user.click(screen.getByRole('button', { name: 'Draft' }));
   const gods = screen.getByRole('group', { name: 'Gods' });
-  for (const god of ['Zeus', 'Hera'])
+  for (const god of ['Zeus', 'Hera', 'Apollo'])
     await user.click(within(gods).getByRole('button', { name: god }));
   await user.click(screen.getByRole('button', { name: 'Edit basket' }));
   await user.click(

@@ -5,6 +5,9 @@ import { assessDraftBasket, type DraftTraitRefusal } from './basket';
 import { draftKeepsakeOptions, draftLoadoutProject, forcesGod, type DraftSpec } from './spec';
 import { draftRepeatedFieldNpcs, draftWorldOptions } from './world';
 
+/** Devotion trials need two gods other than Ares, so fewer pool gods can dead-end a forced screen. */
+const MIN_DRAFT_GODS = 3;
+
 export type DraftRefusal =
   | { readonly kind: 'freshFileRoute' }
   /** The project codec rejects the loadout. */
@@ -17,6 +20,7 @@ export type DraftRefusal =
       readonly keepsakeKey: string;
       readonly reason: 'forcesGod' | 'unknown';
     }
+  | { readonly kind: 'tooFewGods'; readonly minGods: number }
   | { readonly kind: 'tooManyGods'; readonly maxGods: number }
   | { readonly kind: 'notAGod'; readonly godKey: string }
   | { readonly kind: 'storyNpc'; readonly biomeKey: string; readonly npcKey: string }
@@ -74,6 +78,8 @@ export function draftRefusals(
     refusals.push(refusal);
     worldValid = false;
   };
+  if (world.godKeys.length < MIN_DRAFT_GODS)
+    refuse({ kind: 'tooFewGods', minGods: MIN_DRAFT_GODS });
   if (world.godKeys.length > options.maxGods)
     refuse({ kind: 'tooManyGods', maxGods: options.maxGods });
   for (const godKey of world.godKeys)
