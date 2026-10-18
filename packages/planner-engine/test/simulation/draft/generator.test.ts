@@ -4,6 +4,7 @@ import { applyProjectCommand, type ProjectDocument } from '../../../src/authored
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
+import { latestRunState } from '../../../src/simulation/draft/report';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -94,6 +95,17 @@ describe('draftProject', () => {
         startingKeepsakeKey: spec.loadout.startingKeepsakeKey,
       });
     });
+
+  it('takes the basket Attack and keeps every other Attack out of the run', () => {
+    const { base, spec } = cases[0]!;
+    const result = draftProject(catalog, base, spec, 2);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const equipped = Object.keys(
+      latestRunState(simulateProjectAssembly(catalog, result.project))?.traits.equippedTraits ?? {},
+    );
+    const attacks = equipped.filter((key) => catalog.traits.byKey[key]?.equipmentSlot === 'Melee');
+    expect(attacks).toEqual(['ZeusWeaponBoon']);
+  });
 
   it('drafts the same route for the same seed', () => {
     const { base, spec } = cases[0]!;

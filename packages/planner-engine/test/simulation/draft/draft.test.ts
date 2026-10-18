@@ -215,20 +215,33 @@ describe('draft basket legality', () => {
     expect(duo.refusals.some((refusal) => refusal.kind === 'cap')).toBe(false);
   });
 
-  it('caps the basket at fifteen god traits, leaving Hermes outside the total', () => {
+  it('caps the basket at twelve god traits, eight under Forfeit, leaving Hermes outside', () => {
     const godKeys = ['Zeus', 'Apollo', 'Hestia', 'Aphrodite'];
     const own = (giverKey: string) =>
       catalog.traitGivers.byKey[giverKey]!.traitKeys.filter(
         (key) => catalog.traitGivers.values.filter((g) => g.traitKeys.includes(key)).length === 1,
       );
-    const held = godKeys.slice(0, 3).flatMap((key) => own(key).slice(0, 5));
-    const draft = spec(held, { godKeys });
-    const totalCap = { kind: 'totalCap', cap: 15 };
-    expect(assessment(underworld, draft, own('Aphrodite')[0]!).refusals).toContainEqual(totalCap);
+    const next = own('Aphrodite')[0]!;
+    const twelve = godKeys.slice(0, 3).flatMap((key) => own(key).slice(0, 4));
+    const capped = (cap: number) => ({ kind: 'totalCap', cap });
+    expect(assessment(underworld, spec(twelve, { godKeys }), next).refusals).toContainEqual(
+      capped(12),
+    );
     expect(
-      assessment(underworld, spec(held.slice(1), { godKeys }), own('Aphrodite')[0]!).refusals,
-    ).not.toContainEqual(totalCap);
-    expect(assessment(underworld, draft, 'HermesWeaponBoon').refusals).not.toContainEqual(totalCap);
+      assessment(underworld, spec(twelve.slice(1), { godKeys }), next).refusals,
+    ).not.toContainEqual(capped(12));
+    expect(
+      assessment(underworld, spec(twelve, { godKeys }), 'HermesWeaponBoon').refusals,
+    ).not.toContainEqual(capped(12));
+    const forfeit = {
+      ...underworld,
+      fearRanks: { ...underworld.fearRanks, BoonSkipShrineUpgrade: 1 },
+    };
+    const eight = twelve.slice(0, 8);
+    expect(assessment(forfeit, spec(eight, { godKeys }), next).refusals).toContainEqual(capped(8));
+    expect(
+      assessment(forfeit, spec(eight.slice(1), { godKeys }), next).refusals,
+    ).not.toContainEqual(capped(8));
   });
 
   it('refuses a trait whose giver is outside the world', () => {

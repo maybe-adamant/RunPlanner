@@ -69,6 +69,17 @@ export function heldFromGiver(
     .length;
 }
 
+/** Gods whose boon the run has picked up by this snapshot. */
+export function acquiredGods(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot | undefined,
+): readonly string[] {
+  return (snapshot?.godPool.acquiredSourceKeys ?? []).flatMap((source) => {
+    const giver = catalog.traitGiverByAcquisitionGameName[source];
+    return giver === undefined ? [] : [giver];
+  });
+}
+
 /** Which targets the evaluated plan meets, read from its history and Run State. */
 export function draftReport(
   catalog: Catalog,
@@ -77,12 +88,7 @@ export function draftReport(
 ): DraftReport {
   const snapshot = latestRunState(assembly);
   const equipped = Object.keys(snapshot?.traits.equippedTraits ?? {});
-  const gods = new Set(
-    (snapshot?.godPool.acquiredSourceKeys ?? []).flatMap((source) => {
-      const giver = catalog.traitGiverByAcquisitionGameName[source];
-      return giver === undefined ? [] : [giver];
-    }),
-  );
+  const gods = new Set(acquiredGods(catalog, snapshot));
   const rooms = new Map<string, Set<string>>();
   const npcs = new Map<string, Set<string>>();
   for (const biome of assembly.evaluation.route.biomes) {

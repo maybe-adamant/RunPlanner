@@ -54,6 +54,13 @@ export interface DraftKeepsakeOptions {
   }[];
 }
 
+/** Vow of Forfeit: an active vow that substitutes one boon room per biome. */
+export function draftForfeitActive(catalog: Catalog, loadout: DraftLoadout): boolean {
+  return catalog.fearVows.values.some(
+    (vow) => vow.effect?.kind === 'substituteRoomReward' && (loadout.fearRanks[vow.key] ?? 0) > 0,
+  );
+}
+
 /** Keepsakes that force a god's boon (`ForceBoonName`) bring an outside god in. */
 export function forcesGod(catalog: Catalog, keepsakeKey: string): boolean {
   return catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'olympianRewardPressure';
