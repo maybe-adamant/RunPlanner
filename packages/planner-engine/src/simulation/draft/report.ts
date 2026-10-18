@@ -33,6 +33,15 @@ export const DRAFT_HERMES_TARGET = 2;
 
 export type DraftSupply = 'hermes' | 'hammer';
 
+/** Every trait a Hermes giver offers. */
+export function draftHermesTraitKeys(catalog: Catalog): ReadonlySet<string> {
+  return new Set(
+    catalog.traitGivers.values
+      .filter((giver) => giver.providerKind === 'hermes')
+      .flatMap((giver) => giver.traitKeys),
+  );
+}
+
 /** Rewards whose acquisition role resolves to a Hermes or Daedalus Hammer giver. */
 export function draftSupply(catalog: Catalog, offer: ResolvedRewardOffer): DraftSupply | undefined {
   const roles = catalog.rewards.rewardTypes.byKey[offer.rewardType]?.acquisitionRoles.values ?? [];

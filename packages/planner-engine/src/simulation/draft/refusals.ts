@@ -3,7 +3,7 @@ import type { ProjectDocument } from '../../authored-project/model';
 import { ProjectDocumentContractError } from '../../authored-project/validation';
 import { assessDraftBasket, type DraftTraitRefusal } from './basket';
 import { draftKeepsakeOptions, draftLoadoutProject, forcesGod, type DraftSpec } from './spec';
-import { draftWorldOptions } from './world';
+import { draftRepeatedFieldNpcs, draftWorldOptions } from './world';
 
 export type DraftRefusal =
   | { readonly kind: 'freshFileRoute' }
@@ -21,6 +21,12 @@ export type DraftRefusal =
   | { readonly kind: 'notAGod'; readonly godKey: string }
   | { readonly kind: 'storyNpc'; readonly biomeKey: string; readonly npcKey: string }
   | { readonly kind: 'fieldNpc'; readonly biomeKey: string; readonly npcKey: string }
+  /** A once-per-run field NPC selected in several biomes. */
+  | {
+      readonly kind: 'repeatedFieldNpc';
+      readonly npcKey: string;
+      readonly biomeKeys: readonly string[];
+    }
   | { readonly kind: 'unknownTrait'; readonly traitKey: string }
   | {
       readonly kind: 'basketTrait';
@@ -81,6 +87,8 @@ export function draftRefusals(
       if (!hosted.some((npc) => npc.npcKey === npcKey))
         refuse({ kind: 'fieldNpc', biomeKey, npcKey });
   }
+  for (const repeated of draftRepeatedFieldNpcs(catalog, options, world))
+    refuse({ kind: 'repeatedFieldNpc', ...repeated });
 
   const unknown = spec.basketTraitKeys.filter((key) => catalog.traits.byKey[key] === undefined);
   for (const traitKey of unknown) refusals.push({ kind: 'unknownTrait', traitKey });

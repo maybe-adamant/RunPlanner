@@ -62,6 +62,7 @@ import {
   DRAFT_HAMMER_TARGET,
   DRAFT_HERMES_TARGET,
   draftHalfTarget,
+  draftHermesTraitKeys,
   draftSupply,
   acquiredGods,
   heldSupply,
@@ -69,8 +70,14 @@ import {
   type DraftSupply,
 } from './report';
 import type { SemanticFinding } from '../model';
-import type { DraftSpec } from './spec';
+import { draftDenialActive, type DraftSpec } from './spec';
 import type { DraftGodSchedule } from './schedule';
+import { draftStartTraits } from './basket';
+import {
+  createDraftPrerequisites,
+  type DraftHeldTraits,
+  type DraftPrerequisites,
+} from './prerequisites';
 import { draftWorldGiverKeys } from './world';
 
 /** A seeded xorshift stream; every random draft choice reads it. */
@@ -93,9 +100,12 @@ export interface DraftProgress {
   readonly godKeys: readonly string[];
   readonly hammers: number;
   readonly hermes: number;
+  readonly held: DraftHeldTraits;
 }
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
+/** Replacement traits tried for one unselected row that needs no change. */
+const FILLER_DRAWS = 4;
 
 /**
  * One finding-driven draft walk over a working project. Every value comes from
@@ -106,6 +116,10 @@ export class DraftWalk {
   private session: ProjectCandidateSession | undefined;
   private readonly hooked = new Set<string>();
   private readonly worldGivers: ReadonlySet<string>;
+  private readonly prerequisites: DraftPrerequisites;
+  private readonly start: DraftHeldTraits;
+  private readonly hermesTraits: ReadonlySet<string>;
+  private readonly denial: boolean;
   private nextOccurrence = 0;
   steps = 0;
   failure: string | undefined;
@@ -123,6 +137,10 @@ export class DraftWalk {
   ) {
     this.assembly = start;
     this.worldGivers = new Set(draftWorldGiverKeys(catalog, start.project.route, spec.world));
+    this.start = draftStartTraits(catalog, start.project.route, spec.loadout);
+    this.prerequisites = createDraftPrerequisites(catalog, spec.basketTraitKeys, this.start);
+    this.hermesTraits = draftHermesTraitKeys(catalog);
+    this.denial = draftDenialActive(catalog, spec.loadout);
   }
 
   get project(): ProjectDocument {
@@ -234,11 +252,16 @@ export class DraftWalk {
 
   progress(): DraftProgress {
     const snapshot = latestRunState(this.assembly);
+    const equippedTraitKeys = Object.keys(snapshot?.traits.equippedTraits ?? {});
     return {
-      equippedTraitKeys: Object.keys(snapshot?.traits.equippedTraits ?? {}),
+      equippedTraitKeys,
       godKeys: acquiredGods(this.catalog, snapshot),
       hammers: heldSupply(this.catalog, snapshot, 'hammer'),
       hermes: heldSupply(this.catalog, snapshot, 'hermes'),
+      held:
+        snapshot === undefined
+          ? this.start
+          : { traitKeys: new Set(equippedTraitKeys), elementCounts: snapshot.traits.elementCounts },
     };
   }
 
@@ -246,6 +269,40 @@ export class DraftWalk {
 
   private wantedBasket(progress: DraftProgress): string[] {
     return this.spec.basketTraitKeys.filter((key) => !progress.equippedTraitKeys.includes(key));
+  }
+
+  /** Wanted basket traits another wanted basket trait still waits on. */
+  private neededPrerequisites(progress: DraftProgress): ReadonlySet<string> {
+    return this.prerequisites.waitedOn(this.wantedBasket(progress), progress.held);
+  }
+
+  private ready(traitKey: string, progress: DraftProgress): boolean {
+    return this.prerequisites.ready(traitKey, progress.held);
+  }
+
+  /** A wanted Hermes trait can be offered now and a Hermes room is left for it. */
+  private hermesReady(progress: DraftProgress): boolean {
+    return (
+      progress.hermes < DRAFT_HERMES_TARGET &&
+      this.wantedHermes(progress).some((key) => this.ready(key, progress))
+    );
+  }
+
+  private wantedHermes(progress: DraftProgress): string[] {
+    return this.wantedBasket(progress).filter((key) => this.hermesTraits.has(key));
+  }
+
+  /**
+   * Every remaining Hermes room is owed to a wanted Hermes trait and none can
+   * be offered yet, so a Hermes reward now would spend a slot on another trait.
+   */
+  hermesReserved(progress: DraftProgress = this.progress()): boolean {
+    const wanted = this.wantedHermes(progress);
+    return (
+      wanted.length > 0 &&
+      wanted.length >= DRAFT_HERMES_TARGET - progress.hermes &&
+      !wanted.some((key) => this.ready(key, progress))
+    );
   }
 
   /** Olympian sources outside the world are never chosen; Anvil and Story rewards are filtered. */
@@ -266,13 +323,19 @@ export class DraftWalk {
     const giver = giverKey === undefined ? undefined : this.catalog.traitGivers.byKey[giverKey];
     if (giver?.providerKind === 'olympian') {
       if (!this.worldGivers.has(giver.key)) return 0;
-      if (this.dueGods(progress).has(giver.key)) return 60;
       const needed =
         wanted.some((key) => giver.traitKeys.includes(key)) ||
         !progress.godKeys.includes(giver.key);
-      return needed ? 30 : 4;
+      const weight = this.dueGods(progress).has(giver.key) ? 60 : needed ? 30 : 4;
+      const prerequisites = this.neededPrerequisites(progress);
+      const unlocks = giver.traitKeys.some(
+        (key) => prerequisites.has(key) && wanted.includes(key) && this.ready(key, progress),
+      );
+      return unlocks ? weight * 1.5 : weight;
     }
     const supply = draftSupply(this.catalog, offer);
+    if (supply === 'hermes' && this.hermesReserved(progress)) return 0.2;
+    if (supply === 'hermes' && this.hermesReady(progress)) return 25;
     if (supply !== undefined) {
       const held = supply === 'hermes' ? progress.hermes : progress.hammers;
       const halfTarget = draftHalfTarget(this.biomeIndex, this.project.route.biomes.length);
@@ -282,7 +345,7 @@ export class DraftWalk {
     return 1;
   }
 
-  /** Buys a Shop Hermes or Hammer the half still needs; a purchase the engine refuses is undone. */
+  /** Buys a Shop Hermes or Hammer the half or a ready basket trait needs; a refused purchase is undone. */
   private buyWantedSupply(
     offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
     value: ResolvedRewardOffer,
@@ -290,28 +353,58 @@ export class DraftWalk {
     const supply = draftSupply(this.catalog, value);
     if (supply === undefined) return;
     const progress = this.progress();
+    if (supply === 'hermes' && this.hermesReserved(progress)) return;
     const held = supply === 'hermes' ? progress.hermes : progress.hammers;
-    if (held >= draftHalfTarget(this.biomeIndex, this.project.route.biomes.length)) return;
+    const wanted = supply === 'hermes' && this.hermesReady(progress);
+    if (!wanted && held >= draftHalfTarget(this.biomeIndex, this.project.route.biomes.length))
+      return;
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
     if (this.assembly.evaluation.issue?.kind === 'invalid')
       this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
   }
 
+  /** Hermes held outside the basket beyond the rooms the basket leaves free. */
+  wastedHermes(progress: DraftProgress = this.progress()): number {
+    const basket = this.spec.basketTraitKeys.filter((key) => this.hermesTraits.has(key));
+    const outside = progress.equippedTraitKeys.filter(
+      (key) => this.hermesTraits.has(key) && !basket.includes(key),
+    ).length;
+    return Math.max(0, outside - Math.max(0, DRAFT_HERMES_TARGET - basket.length));
+  }
+
+  /** A Hermes reward is no legal supply while the basket reserves every Hermes room. */
   private noteSupply(offers: readonly ResolvedRewardOffer[]): void {
     for (const offer of offers) {
       if (this.offerWeight(offer) <= 0) continue;
       const supply = draftSupply(this.catalog, offer);
+      if (supply === 'hermes' && this.hermesReserved()) continue;
       if (supply !== undefined) this.legalSupply.add(supply);
     }
   }
 
-  /** Gods with a scheduled first room or basket trait due by this biome and not yet held. */
+  /**
+   * Whether each god and basket trait due by this biome is held; a due trait
+   * whose prerequisites are not held is not judged, as steering skips it too.
+   */
+  scheduledTargets(): readonly boolean[] {
+    const progress = this.progress();
+    const due = this.schedule.byBiome.slice(0, this.biomeIndex + 1);
+    return [
+      ...due.flatMap((biome) => biome.godKeys).map((god) => progress.godKeys.includes(god)),
+      ...due
+        .flatMap((biome) => biome.traitKeys)
+        .filter((key) => progress.equippedTraitKeys.includes(key) || this.ready(key, progress))
+        .map((key) => progress.equippedTraitKeys.includes(key)),
+    ];
+  }
+
+  /** Gods with a scheduled first room, or an offerable basket trait, due by this biome and not yet held. */
   private dueGods(progress: DraftProgress): ReadonlySet<string> {
     const due = new Set<string>();
     for (const biome of this.schedule.byBiome.slice(0, this.biomeIndex + 1)) {
       for (const god of biome.godKeys) if (!progress.godKeys.includes(god)) due.add(god);
       for (const traitKey of biome.traitKeys)
-        if (!progress.equippedTraitKeys.includes(traitKey))
+        if (!progress.equippedTraitKeys.includes(traitKey) && this.ready(traitKey, progress))
           for (const giver of this.catalog.traitGivers.values)
             if (giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
               due.add(giver.key);
@@ -1084,12 +1177,73 @@ export class DraftWalk {
         this.failure = `${banned ? 'slotBan' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`;
         return false;
       }
-      for (const value of values) if (this.apply(command(value))) return true;
+      for (const value of values)
+        if (
+          (value.kind === 'traits' && this.apply(command(this.randomFiller(trait, value)))) ||
+          this.apply(command(value))
+        )
+          return true;
     }
     return false;
   }
 
-  /** Wanted basket placements first, then every other legal row in random order. */
+  /**
+   * The unselected rows redrawn at random among supported ones. Under Denial,
+   * which bans them, they keep clear of wanted basket traits unless nothing else fits.
+   */
+  private randomFiller(
+    trait: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ): AuthoredTraitOfferTraits {
+    const giver = this.catalog.traitGivers.byKey[value.giverKey];
+    if (giver === undefined) return value;
+    const avoided = new Set(
+      this.denial && giver.denialParticipates === true ? this.wantedBasket(this.progress()) : [],
+    );
+    const selected = OPTION_KEYS.indexOf(value.selectedOptionKey);
+    let current = value;
+    for (const index of this.shuffle([...value.options.keys()])) {
+      if (index === selected) continue;
+      const row = current.options[index]!;
+      const offered = new Set(current.options.map((option) => option.traitKey));
+      const pool = this.shuffle(giver.traitKeys).filter(
+        (key) => !offered.has(key) && !avoided.has(key),
+      );
+      // A row already clear of the reserve is redrawn only from a few draws.
+      for (const traitKey of pool.slice(
+        0,
+        avoided.has(row.traitKey) ? pool.length : FILLER_DRAWS,
+      )) {
+        const declaration = this.catalog.traits.byKey[traitKey];
+        const rarities =
+          declaration?.rarityDomain.kind === 'ranked'
+            ? [
+                ...(row.rarity === undefined ? [] : [row.rarity]),
+                ...this.shuffle(declaration.rarityDomain.freshOfferRarities).filter(
+                  (rarity) => rarity !== row.rarity,
+                ),
+              ]
+            : [undefined];
+        const candidate = rarities
+          .map((rarity) => {
+            const options = [...current.options];
+            options[index] = rarity === undefined ? { traitKey } : { traitKey, rarity };
+            return {
+              ...current,
+              options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+            } as AuthoredTraitOfferTraits;
+          })
+          .find((offer) => this.offerSupported(trait, offer));
+        if (candidate !== undefined) {
+          current = candidate;
+          break;
+        }
+      }
+    }
+    return current;
+  }
+
+  /** Wanted basket placements first, prerequisites leading, then every other legal row in random order. */
   private steerTraitOffer(
     trait: TraitOfferAddress,
     draft: AuthoredTraitOfferTraits,
@@ -1116,8 +1270,17 @@ export class DraftWalk {
       this.monotonicSelection(trait, candidate);
     const indexes = [...draft.options.keys()];
     const giverTraits = this.catalog.traitGivers.byKey[draft.giverKey]?.traitKeys ?? [];
+    const progress = this.progress();
+    const prerequisites = this.neededPrerequisites(progress);
+    // Prerequisites of other wanted traits first, so waiting traits clear soonest; under
+    // Denial a wanted trait already offered comes first, since leaving it would ban it.
+    const offered = (key: string) =>
+      Number(this.denial && draft.options.some((option) => option.traitKey === key));
     const wanted = this.shuffle(
-      this.wantedBasket(this.progress()).filter((key) => giverTraits.includes(key)),
+      this.wantedBasket(progress).filter((key) => giverTraits.includes(key)),
+    ).sort(
+      (a, b) =>
+        offered(b) - offered(a) || Number(prerequisites.has(b)) - Number(prerequisites.has(a)),
     );
     for (const traitKey of wanted) {
       const declaration = this.catalog.traits.byKey[traitKey];

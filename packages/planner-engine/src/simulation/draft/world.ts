@@ -1,4 +1,5 @@
 import type { Catalog, EncounterDefinition } from '../../catalog-schema';
+import type { RequirementExpression } from '../../requirements/model';
 import { ORDINARY_SOURCE_CAP } from '../../reward-kernel';
 import type { DraftRoute, DraftWorld } from './spec';
 
@@ -8,15 +9,22 @@ export interface DraftNpcOption {
   readonly giverKey?: string;
 }
 
+export interface DraftFieldNpcOption extends DraftNpcOption {
+  /** The NPC's field encounters this biome's rooms can host. */
+  readonly encounterKeys: readonly string[];
+}
+
 export interface DraftBiomeWorldOptions {
   readonly biomeKey: string;
   readonly storyNpc?: DraftNpcOption;
-  readonly fieldNpcs: readonly DraftNpcOption[];
+  readonly fieldNpcs: readonly DraftFieldNpcOption[];
 }
 
 export interface DraftWorldOptions {
   readonly maxGods: number;
   readonly godKeys: readonly string[];
+  /** Hermes, Daedalus Hammer and Selene givers, present in every world. */
+  readonly bonusGiverKeys: readonly string[];
   readonly biomes: readonly DraftBiomeWorldOptions[];
 }
 
@@ -27,6 +35,11 @@ export function draftWorldOptions(catalog: Catalog, route: DraftRoute): DraftWor
     godKeys: Object.freeze(
       catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian').map((g) => g.key),
     ),
+    bonusGiverKeys: Object.freeze(
+      catalog.traitGivers.values
+        .filter((g) => ALWAYS_PRESENT_PROVIDER_KINDS.has(g.providerKind))
+        .map((g) => g.key),
+    ),
     biomes: Object.freeze(
       route.itineraryBiomeKeys.map((biomeKey) => biomeWorldOptions(catalog, biomeKey)),
     ),
@@ -35,28 +48,97 @@ export function draftWorldOptions(catalog: Catalog, route: DraftRoute): DraftWor
 
 function biomeWorldOptions(catalog: Catalog, biomeKey: string): DraftBiomeWorldOptions {
   let storyNpc: DraftNpcOption | undefined;
-  const fieldNpcs = new Map<string, DraftNpcOption>();
   for (const room of catalog.rooms.values) {
-    if (room.roomSetKey !== biomeKey) continue;
-    for (const definition of roomEncounterDefinitions(catalog, room.encounterSlotBindings)) {
-      if (room.kind === 'Story' && definition.kind === 'story')
+    if (room.roomSetKey !== biomeKey || room.kind !== 'Story') continue;
+    for (const definition of roomEncounterDefinitions(catalog, room.encounterSlotBindings))
+      if (definition.kind === 'story')
         storyNpc ??= npcOption(definition.traitOfferProducer!.giverKey, definition);
-      else if (
-        definition.kind === 'combat' &&
-        definition.npcPresentationKey !== undefined &&
-        catalog.fieldNpcEncounterKeys.includes(definition.key)
-      )
-        fieldNpcs.set(
-          definition.npcPresentationKey,
-          npcOption(definition.npcPresentationKey, definition),
-        );
-    }
   }
   return Object.freeze({
     biomeKey,
     ...(storyNpc === undefined ? {} : { storyNpc }),
-    fieldNpcs: Object.freeze([...fieldNpcs.values()]),
+    fieldNpcs: Object.freeze(
+      [...biomeFieldNpcEncounters(catalog, biomeKey)].map(([npcKey, definitions]) =>
+        Object.freeze({
+          ...npcOption(npcKey, definitions[0]!),
+          encounterKeys: Object.freeze(definitions.map((definition) => definition.key)),
+        }),
+      ),
+    ),
   });
+}
+
+/** Each field NPC's encounters the biome's rooms can host. */
+function biomeFieldNpcEncounters(
+  catalog: Catalog,
+  biomeKey: string,
+): ReadonlyMap<string, readonly EncounterDefinition[]> {
+  const byNpc = new Map<string, EncounterDefinition[]>();
+  for (const room of catalog.rooms.values) {
+    if (room.roomSetKey !== biomeKey) continue;
+    for (const definition of roomEncounterDefinitions(catalog, room.encounterSlotBindings)) {
+      const npcKey = definition.npcPresentationKey;
+      if (
+        definition.kind !== 'combat' ||
+        npcKey === undefined ||
+        !catalog.fieldNpcEncounterKeys.includes(definition.key)
+      )
+        continue;
+      const definitions = byNpc.get(npcKey) ?? byNpc.set(npcKey, []).get(npcKey)!;
+      if (!definitions.includes(definition)) definitions.push(definition);
+    }
+  }
+  return byNpc;
+}
+
+/** Encounter keys whose earlier record on the route bars this encounter. */
+function routeExclusiveEncounterKeys(definition: EncounterDefinition): ReadonlySet<string> {
+  const keys = new Set<string>();
+  const visit = (requirement: RequirementExpression): void => {
+    if (requirement.kind === 'all') requirement.requirements.forEach(visit);
+    else if (
+      requirement.kind === 'encounterKeyCount' &&
+      requirement.scope === 'route' &&
+      requirement.range.max === 0
+    )
+      requirement.encounterKeys.forEach((key) => keys.add(key));
+  };
+  if (definition.requirements !== undefined) visit(definition.requirements);
+  return keys;
+}
+
+/**
+ * Field NPCs the world selects in more than one biome although meeting them
+ * in one biome bars their encounters in every other selected biome.
+ */
+export function draftRepeatedFieldNpcs(
+  catalog: Catalog,
+  options: DraftWorldOptions,
+  world: DraftWorld,
+): readonly { readonly npcKey: string; readonly biomeKeys: readonly string[] }[] {
+  const selections = new Map<string, string[]>();
+  for (const { biomeKey } of options.biomes)
+    for (const npcKey of world.fieldNpcsByBiome[biomeKey] ?? [])
+      (selections.get(npcKey) ?? selections.set(npcKey, []).get(npcKey)!).push(biomeKey);
+  const repeated: { readonly npcKey: string; readonly biomeKeys: readonly string[] }[] = [];
+  for (const [npcKey, biomeKeys] of selections) {
+    if (biomeKeys.length < 2) continue;
+    const all = biomeKeys.flatMap((biomeKey) =>
+      (
+        options.biomes
+          .find((biome) => biome.biomeKey === biomeKey)
+          ?.fieldNpcs.find((npc) => npc.npcKey === npcKey)?.encounterKeys ?? []
+      ).map((key) => catalog.encounterDefinitions.byKey[key]!),
+    );
+    const exclusive =
+      all.length > 0 &&
+      all.every((definition) => {
+        const barred = routeExclusiveEncounterKeys(definition);
+        return all.every((other) => barred.has(other.key));
+      });
+    if (exclusive) repeated.push(Object.freeze({ npcKey, biomeKeys: Object.freeze(biomeKeys) }));
+  }
+  return Object.freeze(repeated);
 }
 
 function roomEncounterDefinitions(
@@ -96,7 +178,6 @@ export function draftWorldGiverKeys(
       if (field.giverKey !== undefined && selected.includes(field.npcKey))
         givers.add(field.giverKey);
   }
-  for (const giver of catalog.traitGivers.values)
-    if (ALWAYS_PRESENT_PROVIDER_KINDS.has(giver.providerKind)) givers.add(giver.key);
+  for (const key of options.bonusGiverKeys) givers.add(key);
   return Object.freeze([...givers]);
 }

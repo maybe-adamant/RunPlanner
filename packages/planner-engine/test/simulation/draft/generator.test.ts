@@ -9,6 +9,9 @@ import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout
 import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
 import { latestRunState } from '../../../src/simulation/draft/report';
+import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
+import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
+import { createDraftRng, DraftWalk } from '../../../src/simulation/draft/walk';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -127,6 +130,55 @@ describe('draftProject', () => {
     const evaluation = simulateProjectAssembly(catalog, drafted).evaluation;
     expect(evaluation.status).toBe('valid');
     expect(evaluation.findings).toEqual([]);
+  });
+
+  describe('Hermes reserved for waiting basket traits', () => {
+    const { base, spec } = cases[0]!;
+    // Success Rate waits on an Artemis trait from G, and Paid Dues waits on Success Rate.
+    const waiting: DraftSpec = {
+      ...spec,
+      world: { ...spec.world, fieldNpcsByBiome: { G: ['Artemis'] } },
+      basketTraitKeys: ['CritBonusBoon', 'LuckyBoon', 'TimeStopLastStandBoon'],
+    };
+    const startWalk = (draft: DraftSpec) =>
+      new DraftWalk(
+        catalog,
+        simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, draft.loadout)),
+        draft,
+        createDraftRng(1),
+        draftGodSchedule(catalog, base.route, draft, createDraftRng(1)),
+      );
+
+    it('reserves Hermes only while every free Hermes room is owed to a waiting trait', () => {
+      expect(startWalk(waiting).hermesReserved()).toBe(true);
+      expect(
+        startWalk({ ...waiting, basketTraitKeys: ['CritBonusBoon', 'LuckyBoon'] }).hermesReserved(),
+      ).toBe(false);
+      expect(
+        startWalk({
+          ...waiting,
+          basketTraitKeys: ['HermesWeaponBoon', 'TimeStopLastStandBoon'],
+        }).hermesReserved(),
+      ).toBe(false);
+    });
+
+    it('drafts Success Rate after its late Artemis prerequisite and Paid Dues after it', () => {
+      const result = draftProject(catalog, base, waiting, 1);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      const assembly = simulateProjectAssembly(catalog, result.project);
+      expect(assembly.evaluation.status).toBe('valid');
+      expect(assembly.evaluation.findings).toEqual([]);
+      for (const traitKey of waiting.basketTraitKeys)
+        expect(result.report.targets).toContainEqual(
+          expect.objectContaining({ kind: 'basketTrait', key: traitKey, met: true }),
+        );
+      const hermes = catalog.traitGivers.byKey.Hermes!.traitKeys;
+      const equipped = Object.keys(latestRunState(assembly)?.traits.equippedTraits ?? {});
+      expect(equipped.filter((key) => hermes.includes(key)).sort()).toEqual([
+        'LuckyBoon',
+        'TimeStopLastStandBoon',
+      ]);
+    });
   });
 
   it('drafts the same route for the same seed', () => {

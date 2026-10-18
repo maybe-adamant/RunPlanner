@@ -1,4 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
+import { draftStartTraits } from './basket';
+import { createDraftPrerequisites, prerequisiteDue, prerequisiteOrder } from './prerequisites';
+import { draftHermesTraitKeys } from './report';
 import { draftForfeitActive, type DraftRoute, type DraftSpec } from './spec';
 import type { DraftRng } from './walk';
 
@@ -18,7 +21,7 @@ export const DRAFT_GOD_ROOM_CAPACITY: Readonly<Record<string, number>> = Object.
   Q: 2,
 });
 
-/** The pool gods to pick up and the basket god traits to hold by the end of each biome. */
+/** The pool gods to pick up and the basket god and Hermes traits to hold by the end of each biome. */
 export interface DraftGodSchedule {
   readonly byBiome: readonly {
     readonly biomeKey: string;
@@ -47,9 +50,8 @@ function spread(
 }
 
 /**
- * Each pool god's first room falls in the first half; basket god traits,
- * interleaved by god with Duos last, spread over the whole route. The seed
- * shuffles both orders so drafts vary; Forfeit takes one boon room from every biome.
+ * Pool gods' first rooms fall in the first half and basket god traits spread by capacity,
+ * Hermes traits one per half; no trait falls due before its prerequisites.
  */
 export function draftGodSchedule(
   catalog: Catalog,
@@ -82,19 +84,47 @@ export function draftGodSchedule(
   const interleaved: string[] = [];
   for (let round = 0; byGod.some((traits) => traits.length > round); round += 1)
     for (const traits of byGod) if (traits[round] !== undefined) interleaved.push(traits[round]!);
-  const traitOrder = [
-    ...interleaved,
-    ...shuffle(godTraits.filter((key) => godsOf(key).length > 1)),
-  ];
+  const { needs } = createDraftPrerequisites(
+    catalog,
+    spec.basketTraitKeys,
+    draftStartTraits(catalog, route, spec.loadout),
+  );
+  const traitOrder = prerequisiteOrder(
+    [...interleaved, ...shuffle(godTraits.filter((key) => godsOf(key).length > 1))],
+    needs,
+  );
   const godPlaces = spread(godKeys.length, firstHalf, capacity);
   const traitPlaces = spread(traitOrder.length, biomeKeys, capacity);
+  const last = biomeKeys.length - 1;
+  const due = new Map<string, number>();
+  const dueAfterNeeds = (key: string) =>
+    prerequisiteDue(needs.get(key) ?? [], (member) => due.get(member), last);
+  traitOrder.forEach((key, i) => due.set(key, Math.max(traitPlaces[i]!, dueAfterNeeds(key))));
+  const hermes = draftHermesTraitKeys(catalog);
+  const hermesTraits = prerequisiteOrder(
+    spec.basketTraitKeys.filter((key) => hermes.has(key)),
+    needs,
+  );
+  hermesTraits.forEach((key, i) => {
+    const half = i === 0 ? firstHalf.length - 1 : last;
+    const previous = i === 0 ? 0 : due.get(hermesTraits[i - 1]!)!;
+    due.set(key, Math.max(half, previous, dueAfterNeeds(key)));
+  });
+  const scheduled = [...traitOrder, ...hermesTraits];
+  // A god's first room comes no later than its first due basket trait.
+  const godDue = godKeys.map((god, i) =>
+    Math.min(
+      godPlaces[i]!,
+      ...traitOrder.filter((key) => godsOf(key).includes(god)).map((key) => due.get(key)!),
+    ),
+  );
   return Object.freeze({
     byBiome: Object.freeze(
       biomeKeys.map((biomeKey, index) =>
         Object.freeze({
           biomeKey,
-          godKeys: Object.freeze(godKeys.filter((_, i) => godPlaces[i] === index)),
-          traitKeys: Object.freeze(traitOrder.filter((_, i) => traitPlaces[i] === index)),
+          godKeys: Object.freeze(godKeys.filter((_, i) => godDue[i] === index)),
+          traitKeys: Object.freeze(scheduled.filter((key) => due.get(key) === index)),
         }),
       ),
     ),
