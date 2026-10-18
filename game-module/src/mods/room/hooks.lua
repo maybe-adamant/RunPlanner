@@ -23,20 +23,19 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         and type(loadoutScope.installedRun) == "function",
         "starting-room loadout scope is required")
     -- Snap mode steers a desynchronized run's next room to the planned next
-    -- occurrence: the door's own room when it is that room, else one built as
-    -- ChooseStartingRoom builds it. The session resynchronizes first so the
-    -- new room's encounter and reward are steered inside LeaveRoom.
+    -- occurrence: the door's own room when it was prepared for that occurrence,
+    -- else the room the planned door would have offered, built and created as
+    -- ChooseStartingRoom does. The session resynchronizes first so the new
+    -- room's encounter and reward are steered inside LeaveRoom.
     local function steerSnap(runtime, state, currentRun, door)
         if snapScope == nil or not snapScope.enabled(runtime) then return end
         local target, index = snapMode.target(state, roomName(currentRun and currentRun.CurrentRoom))
         if target == nil then return end
         if not session.beginSnap(state, index) then report(runtime); return end
         room.prepare(state, target)
-        if type(door) == "table" and roomName(door.Room) == target.gameName then
-            door.Room.__runPlannerExecutionRoomId = target.id
-        elseif state.state == "synchronized" then
+        if state.state == "synchronized" and not navigation.doorTargets(door, target.id) then
             local gameValue = _G.game or game
-            local data = room.realize(state, target, gameValue)
+            local data = navigation.plannedRoom(state.plan, index, gameValue) or room.realize(state, target, gameValue)
             if data ~= nil then data = navigation.realizeIncomingReward(target, data) end
             local createRoom = gameValue and gameValue.CreateRoom or _G.CreateRoom
             if type(data) == "table" and type(createRoom) == "function" and type(door) == "table" then

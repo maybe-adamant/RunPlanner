@@ -17,24 +17,25 @@ local function rowButtons(screen)
     return buttons
 end
 
+-- Only the next planned purchase in authored order: the room's first purchase
+-- can trigger a Travel Deal refill, so buying out of order desynchronizes.
 local function plannedKeys(guide, kind)
-    local keys = {}
     local occurrence = guide and guide.occurrence
     for _, row in ipairs(occurrence and occurrence.roomGuide or {}) do
         local description = row.description or {}
         local open = row.transactionOwner == nil or guide.isCompleted(row.transactionOwner) ~= true
         if kind == "well" and description.kind == "purchaseStygianWellOffer" and open then
-            keys[description.generationKey] = true
+            return { [description.generationKey] = true }
         elseif kind == "pool" and description.kind == "sellPurgingPoolTrait" and open then
-            keys[description.traitKey] = true
+            return { [description.traitKey] = true }
         elseif kind == "shrine" and description.kind == "purchaseHermesShrineOffer" then
             local progress = guide.shrineProgress(description.generationKey)
             if progress == "pending" or (progress == "purchased" and description.rushed == true) then
-                keys[description.generationKey] = true
+                return { [description.generationKey] = true }
             end
         end
     end
-    return keys
+    return {}
 end
 
 local function buttonKey(kind, button)

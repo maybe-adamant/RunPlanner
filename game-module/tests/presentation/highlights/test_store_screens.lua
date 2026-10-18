@@ -65,7 +65,7 @@ function TestStoreScreenGuidance:testWellMarksOnlyOpenPlannedRowsAtTheNativePinC
     lu.assertEquals(_G.GameState.StoreItemPins, {})
 end
 
-function TestStoreScreenGuidance:testWellPurchaseRetiresTheBoughtRowAndCloseRetiresTheRest()
+function TestStoreScreenGuidance:testWellMarksOnlyTheNextPlannedPurchaseThenTheOneAfterIt()
     self.rows[1] = guideRow("buy-left", { kind = "purchaseStygianWellOffer", generationKey = "initial:secondLeft" })
     self.rows[2] = guideRow("buy-right", { kind = "purchaseStygianWellOffer", generationKey = "initial:secondRight" })
     local screen = { Components = {
@@ -73,18 +73,19 @@ function TestStoreScreenGuidance:testWellPurchaseRetiresTheBoughtRowAndCloseReti
         PurchaseButton3 = wellButton(12, "initial:secondRight"),
     } }
     self.stores.present(self.runtime, self.state, screen, "well")
-    lu.assertEquals(#self.created, 2)
+    lu.assertEquals(#self.created, 1)
+    lu.assertEquals(self.attached[1].DestinationId, 11)
     self:call("HandleStorePurchase", function(currentScreen)
-        lu.assertEquals(#self.destroyed, 2)
+        lu.assertEquals(#self.destroyed, 1)
         currentScreen.Components.PurchaseButton2 = nil
         self.completed["buy-left"] = true
     end, screen, screen.Components.PurchaseButton2)
-    lu.assertEquals(self.attached[3].DestinationId, 12)
-    lu.assertEquals(#self.created, 3)
+    lu.assertEquals(self.attached[2].DestinationId, 12)
+    lu.assertEquals(#self.created, 2)
     self:call("CloseStoreScreen", function() end, screen)
-    lu.assertEquals(self.destroyed[3], 503)
+    lu.assertEquals(self.destroyed[2], 502)
     self.stores.refresh(self.runtime, self.state)
-    lu.assertEquals(#self.created, 3)
+    lu.assertEquals(#self.created, 2)
 end
 
 function TestStoreScreenGuidance:testWellRerollAwayFromThePlannedRowLeavesNoMarker()
@@ -104,7 +105,7 @@ local function shrineButton(id, key)
     return { Id = id, Data = { __runPlannerShrine = true, __runPlannerGenerationKey = key } }
 end
 
-function TestStoreScreenGuidance:testShrineKeepsAPlannedRushAndRetiresAnUnrushedPurchase()
+function TestStoreScreenGuidance:testShrineMarksTheNextPurchaseOrRushInPlannedOrder()
     self.rows[1] = { key = "a", description = { kind = "purchaseHermesShrineOffer",
         generationKey = "initial:first", rewardType = "Boon", rushed = true } }
     self.rows[2] = { key = "b", description = { kind = "purchaseHermesShrineOffer",
@@ -115,13 +116,19 @@ function TestStoreScreenGuidance:testShrineKeepsAPlannedRushAndRetiresAnUnrushed
         PurchaseButton3 = shrineButton(33, "initial:secondRight"),
     } }
     self.stores.present(self.runtime, self.state, screen, "shrine")
-    lu.assertEquals(#self.attached, 2)
-    for _, args in ipairs(self.attached) do lu.assertEquals({ args.OffsetX, args.OffsetY }, { -580, -75 }) end
-    for _, key in ipairs({ "initial:first", "initial:secondLeft" }) do
-        self:call("HandleSurfaceShopAction", function() self.progress[key] = "purchased" end, screen, {})
-    end
+    lu.assertEquals(#self.attached, 1)
+    lu.assertEquals({ self.attached[1].DestinationId, self.attached[1].OffsetX, self.attached[1].OffsetY },
+        { 31, -580, -75 })
+    -- The first purchase leaves its planned rush next.
+    self:call("HandleSurfaceShopAction", function() self.progress["initial:first"] = "purchased" end, screen, {})
     lu.assertNotNil(screen.Components.RunPlannerPlannedStoreMarker31)
     lu.assertNil(screen.Components.RunPlannerPlannedStoreMarker32)
+    self:call("HandleSurfaceShopAction", function() self.progress["initial:first"] = "rushed" end, screen, {})
+    lu.assertNil(screen.Components.RunPlannerPlannedStoreMarker31)
+    lu.assertNotNil(screen.Components.RunPlannerPlannedStoreMarker32)
+    self:call("HandleSurfaceShopAction", function() self.progress["initial:secondLeft"] = "purchased" end, screen, {})
+    lu.assertNil(screen.Components.RunPlannerPlannedStoreMarker32)
+    self.progress["initial:first"] = "purchased"
 
     local reopened = { Components = { PurchaseButton1 = shrineButton(41, "initial:first") } }
     self.stores.present(self.runtime, self.state, reopened, "shrine")
