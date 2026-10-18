@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
+import { createProjectDocument } from '../../../src/authored-project/defaults';
 import {
   assessDraftBasket,
   draftKeepsakeOptions,
@@ -8,6 +9,7 @@ import {
   draftWorldGiverKeys,
   draftWorldOptions,
   type DraftLoadout,
+  type DraftRoute,
   type DraftSpec,
   type DraftWorld,
 } from '../../../src/simulation';
@@ -16,7 +18,7 @@ function route(
   routeKey: string,
   itineraryBiomeKeys: readonly string[],
   overrides: Partial<DraftLoadout> = {},
-): DraftLoadout {
+): DraftRoute & DraftLoadout {
   const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
   void _startingReward;
   return { ...loadout, routeKey, itineraryBiomeKeys, ...overrides };
@@ -25,6 +27,15 @@ function route(
 const underworld = route('Underworld', ['F', 'G', 'H', 'I']);
 const surface = route('Surface', ['N', 'O', 'P', 'Q']);
 const dream = route('Dream', ['H', 'F', 'N', 'I']);
+
+function refusals(frame: DraftRoute & DraftLoadout) {
+  const base = createProjectDocument(catalog, {
+    projectId: 'draft',
+    routeKey: frame.routeKey,
+    itineraryBiomeKeys: frame.itineraryBiomeKeys,
+  });
+  return draftRefusals(catalog, base, frame);
+}
 
 const emptyWorld: DraftWorld = { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBiome: {} };
 
@@ -37,7 +48,7 @@ function spec(basketTraitKeys: readonly string[], world: Partial<DraftWorld> = {
   };
 }
 
-function biomeHosts(draftRoute: DraftLoadout) {
+function biomeHosts(draftRoute: DraftRoute) {
   return draftWorldOptions(catalog, draftRoute).biomes.map((biome) => ({
     biomeKey: biome.biomeKey,
     story: biome.storyNpc?.npcKey,
@@ -45,8 +56,8 @@ function biomeHosts(draftRoute: DraftLoadout) {
   }));
 }
 
-function assessment(loadout: DraftLoadout, draft: DraftSpec, traitKey: string) {
-  const result = assessDraftBasket(catalog, { ...draft, loadout }).traits.find(
+function assessment(frame: DraftRoute & DraftLoadout, draft: DraftSpec, traitKey: string) {
+  const result = assessDraftBasket(catalog, frame, { ...draft, loadout: frame }).traits.find(
     (trait) => trait.traitKey === traitKey,
   );
   if (result === undefined) throw new Error(`${traitKey} is not in the draft domain`);
@@ -223,20 +234,17 @@ describe('draft keepsakes and route', () => {
     const overGrasp = route('Underworld', ['F', 'G', 'H', 'I'], {
       manualArcanaKeys: catalog.arcanaCards.values.map((card) => card.key),
     });
-    expect(draftRefusals(catalog, overGrasp)).toEqual([
-      expect.objectContaining({ kind: 'invalidLoadout' }),
-    ]);
+    expect(refusals(overGrasp)).toEqual([expect.objectContaining({ kind: 'invalidLoadout' })]);
   });
 
   it('refuses a god starting keepsake and the FreshFile route', () => {
-    expect(draftRefusals(catalog, underworld)).toEqual([]);
+    expect(refusals(underworld)).toEqual([]);
     expect(
-      draftRefusals(
-        catalog,
+      refusals(
         route('Underworld', ['F', 'G', 'H', 'I'], { startingKeepsakeKey: 'ForceHeraBoonKeepsake' }),
       ),
     ).toEqual([{ kind: 'godStartingKeepsake', keepsakeKey: 'ForceHeraBoonKeepsake' }]);
-    expect(draftRefusals(catalog, route('FreshFile', ['F', 'G', 'H', 'I']))).toEqual([
+    expect(refusals(route('FreshFile', ['F', 'G', 'H', 'I']))).toEqual([
       { kind: 'freshFileRoute' },
     ]);
   });

@@ -36,12 +36,8 @@ function replaceWith(
   return {
     kind: 'ReplaceRoute',
     route: createRouteAddress(project.route.routeKey),
-    plan: {
-      routeKey: source.route.routeKey,
-      itineraryBiomeKeys: source.route.itineraryBiomeKeys,
-      loadout,
-      biomes,
-    },
+    loadout,
+    biomes,
   };
 }
 
@@ -87,25 +83,17 @@ describe('ReplaceRoute', () => {
     });
   });
 
-  it('switches route, carrying run modifiers and dropping a start outside the itinerary', () => {
-    const underworld = loadUnderworldFGHCheckpoint();
-    const surface = loadSurfaceNOProject();
-    const keeps = applyProjectCommand(
-      withStartPoint(underworld, 'G'),
-      catalog,
-      replaceWith(underworld, underworld),
-    );
-    expect(keeps.route.loadout.runModifiers).toEqual({
+  it('carries the run modifiers and refuses another route', () => {
+    const source = loadUnderworldFGHCheckpoint();
+    const practice = withStartPoint(source, 'G');
+    const replaced = applyProjectCommand(practice, catalog, replaceWith(practice, source));
+    expect(replaced.route.loadout.runModifiers).toEqual({
       startPoint: { biomeKey: 'G', point: 'opening' },
     });
-    const switched = applyProjectCommand(
-      withStartPoint(underworld, 'G'),
-      catalog,
-      replaceWith(underworld, surface),
+    const surface = loadSurfaceNOProject();
+    expect(() => applyProjectCommand(source, catalog, replaceWith(surface, surface))).toThrow(
+      ProjectCommandContractError,
     );
-    expect(switched.route.routeKey).toBe('Surface');
-    expect(switched.route.biomes).toEqual(surface.route.biomes);
-    expect(switched.route.loadout.runModifiers).toBeUndefined();
   });
 
   it('refuses biomes out of itinerary order and a disallowed starting reward', () => {
@@ -119,10 +107,7 @@ describe('ReplaceRoute', () => {
     expect(() =>
       applyProjectCommand(source, catalog, {
         ...command,
-        plan: {
-          ...command.plan,
-          loadout: { ...command.plan.loadout, startingReward: { rewardType: 'Story' } },
-        },
+        loadout: { ...command.loadout, startingReward: { rewardType: 'Story' } },
       }),
     ).toThrow(ProjectCommandContractError);
   });
