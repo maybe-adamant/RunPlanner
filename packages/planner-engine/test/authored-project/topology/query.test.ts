@@ -25,6 +25,8 @@ import {
   selectedExitKey,
   selectedExitTarget,
   selectedOrdinaryBatchIndex,
+  ordinaryTargetGameNames,
+  takeoverPrebossGameNames,
   uncommittedOrdinaryTargetAuthoringEligibility,
 } from '../../../src/authored-project/topology/query';
 import { nBiome, nProject } from '../support/configured-projects';
@@ -71,6 +73,31 @@ describe('authored topology queries', () => {
       ),
     ).toMatchObject({ kind: 'authorable', room: { gameName: 'N_PreHub01' } });
     expect(topology.decisions).toEqual([]);
+  });
+
+  it('lists the rooms an uncommitted first target can create, and nothing once authored', () => {
+    const startId = createOccurrenceId('target-domain-start');
+    const started = applyProjectCommand(nProject(), catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: startId,
+    });
+    const layout = catalog.biomeLayouts.byKey.N!;
+    const target = createTargetAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: startId },
+      'prehub',
+    );
+    const topology = topologyFor(started, 'N');
+    expect(ordinaryTargetGameNames(catalog, layout, topology, target, 'uncommitted')).toEqual([
+      'N_PreHub01',
+    ]);
+    expect(ordinaryTargetGameNames(catalog, layout, topology, target, 'authored')).toEqual([]);
+  });
+
+  it('lists the takeover Preboss rooms a biome declares', () => {
+    expect(takeoverPrebossGameNames(catalog, 'Q')).toEqual(['Q_PreBoss01']);
+    expect(takeoverPrebossGameNames(catalog, 'I')).toEqual([]);
   });
 
   it('keeps automatic special returns hidden while an entered Chaos return stays visible', () => {

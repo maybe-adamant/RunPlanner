@@ -38,7 +38,10 @@ import {
   type TraitOfferAddress,
   type AcquisitionRoleAddress,
 } from '@run-planner/engine/authored-project';
-import { traitGiverForAcquisitionRole } from '@run-planner/engine/authored-project';
+import {
+  countedRewardBinding,
+  traitGiverForAcquisitionRole,
+} from '@run-planner/engine/authored-project';
 import {
   isCombatBearingEncounterPhaseKind,
   type Catalog,
@@ -464,21 +467,14 @@ function incomingRewardBinding(
     { readonly kind: 'anomaly' | 'counted' | 'ephyraCombat' | 'freeReward' }
   >,
 ): CountedRewardBinding {
-  if (state.kind === 'freeReward') {
-    const policy = room.prebossBatchPolicy;
-    if (policy?.kind !== 'takeOverNormalDoors' || policy.remainingOffers.kind !== 'counted') {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${room.gameName} free Preboss reward has no declared counted binding`,
-      );
-    }
-    return policy.remainingOffers.reward;
-  }
-  if (room.incomingReward.kind !== 'countedChoice') {
+  const binding = countedRewardBinding(room, state.kind, { kind: 'incomingReward' });
+  if (binding === undefined)
     throw new StructuredWorkspaceProjectionContractError(
-      `${room.gameName} counted incoming reward has no declared binding`,
+      state.kind === 'freeReward'
+        ? `${room.gameName} free Preboss reward has no declared counted binding`
+        : `${room.gameName} counted incoming reward has no declared binding`,
     );
-  }
-  return room.incomingReward;
+  return binding;
 }
 
 export function controlsForOccurrence(

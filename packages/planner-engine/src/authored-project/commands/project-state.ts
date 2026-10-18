@@ -21,6 +21,7 @@ import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliat
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
 import type { ProjectDocument } from '../model';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../defaults';
 
 import { failCommand, locateBiome, withBiome } from './contract';
 import type { ProjectStateCommand } from './types';
@@ -58,6 +59,39 @@ function isSeleneAspect(catalog: Catalog, aspectKey: string | null): boolean {
     aspectKey !== null &&
     catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === 'SpellMoonBeamTrait'
   );
+}
+
+/** The rest of the loadout stays; placements name hosts in the replaced biomes, so they reset. */
+function replaceRouteBiomes(
+  document: ProjectDocument,
+  catalog: Catalog,
+  command: Extract<ProjectStateCommand, { readonly kind: 'ReplaceRouteBiomes' }>,
+): ProjectDocument {
+  const route = document.route;
+  if (route.routeKey !== command.route.routeKey)
+    failCommand(command, `project is missing route ${command.route.routeKey}`);
+  if (command.biomes.length > route.itineraryBiomeKeys.length)
+    failCommand(command, `exceeds the ${route.itineraryBiomeKeys.length}-biome itinerary`);
+  if (
+    command.startingReward !== null &&
+    !catalog.runStartReward.incomingReward.allowedRewardTypes.includes(
+      command.startingReward.rewardType,
+    )
+  )
+    failCommand(command, 'reward is not allowed by the run-start binding');
+  command.biomes.forEach((plan, index) => {
+    if (plan.biomeKey !== route.itineraryBiomeKeys[index])
+      failCommand(command, `biome ${index} must be ${route.itineraryBiomeKeys[index]}`);
+  });
+  return Object.freeze({
+    ...document,
+    route: Object.freeze({
+      ...route,
+      loadout: Object.freeze({ ...route.loadout, startingReward: command.startingReward }),
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
+      biomes: Object.freeze([...command.biomes]),
+    }),
+  });
 }
 
 function configureRoutePrefix(
@@ -271,6 +305,8 @@ export function applyProjectStateCommand(
     }
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
+    case 'ReplaceRouteBiomes':
+      return replaceRouteBiomes(document, catalog, command);
     case 'ReplaceRouteLoadout': {
       const { route } = routeForCommand(document, catalog, command);
       const weapon = catalog.weapons.byKey[command.weaponKey];

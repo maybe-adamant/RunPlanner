@@ -52,6 +52,7 @@ export {
   type ResolvedEntryRoom,
 } from './room-state/entry-resolution';
 export { routeStartIncomingReward } from './room-state/starting-reward';
+export { countedRewardBinding } from './room-state/reward-binding';
 export {
   authoredAcquisitionSources,
   authoredAcquisitionSourceAt,
@@ -304,6 +305,7 @@ export {
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   authoredShopOffer,
+  shopOfferOptionValues,
 } from './shop';
 export {
   applyProjectCommand,
@@ -334,6 +336,8 @@ export {
   additionalExitsForDecision,
   ordinaryTargetAuthoringEligibility,
   uncommittedOrdinaryTargetAuthoringEligibility,
+  ordinaryTargetGameNames,
+  takeoverPrebossGameNames,
   selectedExitKey,
   selectedAdditionalExit,
   selectedExitContinuation,
