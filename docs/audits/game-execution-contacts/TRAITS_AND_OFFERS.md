@@ -181,7 +181,15 @@ implementation.
 ## Re-creating held traits
 
 These facts govern installing a planned hero into a fresh run (the
-[Practice mode start](../../design/GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)).
+[Practice mode start](../../design/GAME_INTEGRATION_BOUNDARY.md#practice-mode-start))
+and rewriting a live one ([snap mode](../../design/GAME_INTEGRATION_BOUNDARY.md#snap-mode)).
+
+- Every map load builds a fresh hero unit: `RunStateInit` clears
+  `Hero.ObjectId` (`RunLogic.lua:433-435`) and `SetupHeroObject`
+  (`RoomLogic.lua:1652, 1720-1724`) re-equips weapons and reapplies each held
+  trait's property changes and setup. Before `base StartRoom` only Lua state
+  matters, and `DoPatches` already removes and re-adds traits there
+  (`PatchLogic.lua:1055-1302`).
 
 - There is no bulk restore. Save load deserializes `Hero` as is, and
   `RoomLogic.lua:SetupHeroObject` re-derives only engine properties. The Lua
@@ -211,6 +219,18 @@ These facts govern installing a planned hero into a fresh run (the
   charges; Chaos blessings add theirs on install. Athena's
   `FocusLastStandBoon` and Circe's familiar multiplier add theirs only
   through acquire functions.
+
+- `RemoveTraitData` (`TraitLogic.lua:1221-1366`) reverses membership, the
+  `MaxHealth`/`MaxMana` changes, modifiers, `WeaponDataOverride` and weapon and
+  projectile changes, then runs `OnExpire` unless `SkipExpire`: an expiring
+  curse grants its blessing, Barren re-equips the Arcana and a delivery spawns
+  its item. Acquire-time effects are not reversed.
+- `IncreaseTraitLevel` and the rarity upgrades run
+  `OnLevelOrRarityChangeFunctionName` (`TraitLogic.lua:2564-2565, 2664-2665,
+3032-3033`), which credit stacks, gold, armor and mana reserve. A level or
+  rarity correction is therefore a remove plus a re-add carrying
+  `PersistentTraitKeys` (`TraitData.lua:29-41`), as `IncreaseTraitLevel`
+  carries them (`:2543-2560`).
 
 ## Trait removal contacts
 

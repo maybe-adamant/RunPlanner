@@ -324,8 +324,11 @@ Talent names suppress their corresponding outgoing reward requirements. The
 live Hammer requirement still checks `WeaponUpgradeDrop`, but the Hammer group
 in the source is commented out and cannot produce that option. Pending SpellDrop sets
 `CurrentRun.PendingSpellDrop`, suppressing another SpellDrop until acquisition;
-the installed source does not clear the flag on delivery, and ordinary use
-records independently retain the exclusion.
+the installed source never clears the flag, and ordinary use records
+independently retain the exclusion. A stale true also blocks Aspect of Selene's
+requirement (`RequirementsData.lua:1349`) and later SpellDrop stock
+(`StoreData.lua:162, 297`), so rewriting pending deliveries resets it from the
+delivery rows.
 
 ### Purchase, delivery, and Travel Deal facts
 

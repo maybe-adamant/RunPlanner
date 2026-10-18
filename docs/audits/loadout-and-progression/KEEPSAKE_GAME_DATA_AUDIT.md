@@ -131,8 +131,11 @@ At a normal rack the player can:
 - retain the current keepsake by closing the rack without changing it; or
 - select one different, currently unblocked keepsake.
 
-After a change, the rack locks for that postboss room and appends the old key to
-`CurrentRun.BlockedKeepsakes`. The old keepsake is disabled in every later rack
+Equipping at the rack sets `GameState.LastAwardTrait` to the new key
+(`KeepsakeLogic.lua:1307-1308`), which Cherished Heirloom's advance, Gift Gift
+Gift's capture, the Lucid Gem HUD and death checks read; a snap that changes the
+slotted keepsake writes it the same way. After a change, the rack locks for that
+postboss room and appends the old key to `CurrentRun.BlockedKeepsakes`. The old keepsake is disabled in every later rack
 for the same run. Retaining a keepsake through several postboss frontiers does
 not block it.
 
