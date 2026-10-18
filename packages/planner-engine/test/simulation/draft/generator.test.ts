@@ -8,6 +8,7 @@ import {
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
+import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { latestRunState } from '../../../src/simulation/draft/report';
 import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
@@ -74,6 +75,20 @@ const cases: readonly { name: string; base: ProjectDocument; spec: DraftSpec }[]
   },
 ];
 
+/** The selected trait of every authored Echo choice screen. */
+function echoSelections(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(echoSelections);
+  if (typeof value !== 'object' || value === null) return [];
+  const record = value as Record<string, unknown>;
+  const options = record.options as readonly { readonly traitKey: string }[] | undefined;
+  const selected = /^option(\d)$/.exec(String(record.selectedOptionKey))?.[1];
+  const own =
+    record.giverKey === 'Echo' && options !== undefined && selected !== undefined
+      ? [options[Number(selected) - 1]!.traitKey]
+      : [];
+  return [...own, ...Object.values(record).flatMap(echoSelections)];
+}
+
 describe('draftProject', () => {
   for (const { name, base, spec } of cases)
     it(`drafts a zero-finding ${name} route that meets its story, field and rack targets`, () => {
@@ -109,6 +124,37 @@ describe('draftProject', () => {
     );
     const attacks = equipped.filter((key) => catalog.traits.byKey[key]?.equipmentSlot === 'Melee');
     expect(attacks).toEqual(['ZeusWeaponBoon']);
+  });
+
+  it('never selects an Echo choice that replays or duplicates acquisitions', () => {
+    // Walks F then H, ending at Echo's story room; unbanned, this seed takes EchoLastReward.
+    const { spec } = cases[2]!;
+    const base = createProjectDocument(catalog, {
+      projectId: 'e',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['F', 'H', 'N', 'I'],
+      configuredBiomeCount: 4,
+    });
+    const echoSpec: DraftSpec = {
+      ...spec,
+      world: { ...spec.world, storyNpcByBiome: { F: 'Arachne', H: 'Echo' }, fieldNpcsByBiome: {} },
+    };
+    const schedule = draftGodSchedule(catalog, base.route, echoSpec, createDraftRng(6));
+    let assembly = simulateProjectAssembly(
+      catalog,
+      draftLoadoutProject(catalog, base, echoSpec.loadout),
+    );
+    for (const biomeIndex of [0, 1]) {
+      const walk = new DraftWalk(catalog, assembly, echoSpec, createDraftRng(6), schedule);
+      expect(walk.runBiome(biomeIndex, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome)).toBe(true);
+      assembly = walk.assembly;
+    }
+    const echoChoices = echoSelections(assembly.project);
+    expect(echoChoices.length).toBeGreaterThan(0);
+    for (const traitKey of echoChoices)
+      expect(['EchoLastReward', 'EchoRepeatKeepsakeBoon', 'EchoDoubleShop']).not.toContain(
+        traitKey,
+      );
   });
 
   it('drafts a route with a Practice start and keeps the start point', () => {
