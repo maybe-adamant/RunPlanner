@@ -7,6 +7,16 @@ import {
   surfaceTravelDealRefillAnvilProject,
   surfaceTravelDealRefillAnvilResult,
 } from '@run-planner/test-fixtures/surface';
+import {
+  createEchoTalentDropReplayProject,
+  goldenHBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createOccurrenceId,
+  echoLastRewardPickupEntryKey,
+} from '@run-planner/engine/authored-project';
 
 const {
   bind,
@@ -325,4 +335,33 @@ describe('acquisition-conversion-interactions', () => {
       ).toBe(false);
     },
   );
+
+  it("seeds the Echo copy's Path screen edit as its first replay edit", () => {
+    const replayEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-bridge01')),
+        'roomExit',
+      ),
+      echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1'),
+    );
+    const screen = createAcquisitionRoleAddress(replayEntry, 'self');
+    const { interactions } = projectStructuredWorkspaceFixture(
+      createEchoTalentDropReplayProject(),
+    ).workspace;
+    const hexActivation = interactions.acquisitionConversions.get(
+      semanticAddressKey(screen),
+    )?.hexActivation;
+    expect(hexActivation?.contextReached).toBe(true);
+    const edit = {
+      kind: 'ReplaceHexActivation',
+      acquisition: screen,
+      value: { selectedNodeKeys: ['1:2'] },
+    };
+    expect(hexActivation?.intentFor(['1:2']).command).toEqual({
+      kind: 'EditEchoReplay',
+      entry: replayEntry,
+      sourceOffer: { rewardType: 'TalentDrop' },
+      edit,
+    });
+  });
 });

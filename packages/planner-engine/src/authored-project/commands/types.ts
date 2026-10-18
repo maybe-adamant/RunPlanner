@@ -656,16 +656,21 @@ export type HexActivationCommand = {
   readonly value: import('../model').AuthoredHexActivation;
 };
 
+/** Every outcome edit on one acquired reward: traits, levels, disposition and pickup effects. */
+export type AcquisitionOutcomeCommand =
+  | TraitOfferCommand
+  | LevelResolutionCommand
+  | AcquisitionDispositionCommand
+  | SeaStarResultCommand
+  | AnvilResultCommand
+  | HexActivationCommand;
+
 /** One first Echo outcome edit, atomically replacing a missing or stale replay payload. */
 export type EditEchoReplayCommand = {
   readonly kind: 'EditEchoReplay';
   readonly entry: AcquisitionEntryAddress;
   readonly sourceOffer: ResolvedRewardOffer;
-  readonly edit:
-    | TraitOfferCommand
-    | LevelResolutionCommand
-    | AcquisitionDispositionCommand
-    | SeaStarResultCommand;
+  readonly edit: AcquisitionOutcomeCommand;
 };
 
 /** One payload edit whose acquisition-entry default may not be persisted yet. */
@@ -701,12 +706,7 @@ export type ProjectCommand =
   | OccurrenceLeafCommand
   | FieldsSpatialCommand
   | AcquisitionSiteCommand
-  | TraitOfferCommand
-  | LevelResolutionCommand
-  | AcquisitionDispositionCommand
-  | SeaStarResultCommand
-  | AnvilResultCommand
-  | HexActivationCommand
+  | AcquisitionOutcomeCommand
   | EditEchoReplayCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<

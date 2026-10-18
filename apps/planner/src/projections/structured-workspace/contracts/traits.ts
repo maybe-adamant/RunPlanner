@@ -67,7 +67,9 @@ export interface WorkspaceAcquisitionConversionInteraction {
     readonly traitLabel: (traitKey: string) => string;
     readonly intentFor: (
       value: import('@run-planner/engine/authored-project').AuthoredAnvilResult,
-    ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' }>>;
+    ) => WorkspaceCommandIntent<
+      Extract<ProjectCommand, { readonly kind: 'ReplaceAnvilResult' | 'EditEchoReplay' }>
+    >;
   };
   /** Exact reward-owned Path screen editor, present for a Path screen role reached or authored. */
   readonly hexActivation?: WorkspaceHexActivationInteraction;
@@ -753,5 +755,7 @@ export interface WorkspaceHexActivationInteraction {
   readonly boardFor: (selection: readonly string[]) => WorkspaceHexActivationBoard | undefined;
   readonly intentFor: (
     selectedNodeKeys: readonly string[],
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceHexActivation' }>>;
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceHexActivation' | 'EditEchoReplay' }>
+  >;
 }

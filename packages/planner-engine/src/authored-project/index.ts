@@ -309,6 +309,7 @@ export {
   applyProjectCommand,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
+  type AcquisitionOutcomeCommand,
   type EncounterOccurrenceCommand,
   type ProjectCommand,
   ProjectCommandContractError,
