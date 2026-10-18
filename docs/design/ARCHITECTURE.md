@@ -112,7 +112,8 @@ Application-wide collaborators are created at the composition root and
 passed as narrow capabilities. A parameter object or factory is justified by
 a real product boundary, not merely a long signature. Do not introduce an
 ambient context, service locator, mutable service table or dependency-injection
-container.
+container. The draft worker (`apps/planner/src/workspace/draftWorker.ts`) is
+a second composition entry point and constructs its own catalog.
 
 The authored snapshot and its exact evaluation are published together.
 Undo/Redo may reuse an assembly for the identical immutable snapshot. It must

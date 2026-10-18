@@ -41,7 +41,7 @@ function open(routeKey = 'Underworld') {
       createProjectDocument(application.catalog, {
         projectId: 'run-plan',
         routeKey,
-        configuredBiomeCount: 0,
+        configuredBiomeCount: 1,
       }),
     ),
   );
@@ -216,6 +216,13 @@ describe('Draft panel', () => {
     expect(within(navigation()).getByRole('button', { name: 'Loadout' }).matches(':disabled')).toBe(
       true,
     );
+    // The findings banner would navigate away from the Draft panel.
+    const banner = () =>
+      document.querySelector('.project-findings .assessment-issue-button') as HTMLButtonElement;
+    expect(banner().disabled).toBe(true);
+    const panelBefore = application.store.getState().editorSession.activePanel;
+    fireEvent.click(banner());
+    expect(application.store.getState().editorSession.activePanel).toBe(panelBefore);
 
     const result: DraftResult = {
       kind: 'failed',
@@ -228,6 +235,15 @@ describe('Draft panel', () => {
       false,
     );
     expect(application.store.getState().draftSession.run.kind).toBe('failed');
+    expect(banner().disabled).toBe(false);
+  });
+
+  it('reports a stopped search apart from a failed draft', () => {
+    const { runs } = open();
+    fireEvent.click(draftButton());
+    act(() => runs[0]!.emit({ kind: 'error', message: 'worker crashed' }));
+    expect(screen.getByText('Drafting stopped unexpectedly.')).toBeTruthy();
+    expect(screen.queryByText(/^No plan found/)).toBeNull();
   });
 
   it('cancels a running draft', () => {

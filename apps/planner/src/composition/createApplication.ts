@@ -267,6 +267,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     startupReady,
     dispose(): void {
       editorSessionReconciliation.dispose();
+      draftRun.dispose();
       autosaveCoordinator?.dispose();
       communityEvents?.dispose();
     },

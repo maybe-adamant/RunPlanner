@@ -122,8 +122,10 @@ export function App({
   const activeWorkspaceRoute = workspace?.route;
   const showEntry = project === undefined || entryOpen;
   const repairIssue = evaluation?.route.issue;
+  // A running draft holds the workspace on the Draft panel.
+  const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
   const showFindings =
-    repairIssue === undefined || workspace === undefined
+    repairIssue === undefined || workspace === undefined || drafting
       ? undefined
       : () => {
           setGameOpen(null);

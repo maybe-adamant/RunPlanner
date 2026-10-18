@@ -4,9 +4,10 @@ import { draftRefusals, type DraftSpec } from '@run-planner/engine/simulation';
 
 import { projectDraftSpec } from '@planner/projections/draftSpec';
 import {
-  draftRunCancelled,
+  draftRunCleared,
   draftRunSettled,
   draftRunStarted,
+  type DraftRunState,
 } from '@planner/state/draftSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import type { PlannerStore } from '@planner/state/store';
@@ -109,8 +110,13 @@ export interface DraftRunController {
   /** Drafts with a new seed. */
   reroll(): void;
   cancel(): void;
+  dispose(): void;
 }
 
+/**
+ * Runs drafts against the present project and applies a drafted route as one
+ * ReplaceRoute. A replaced workspace cancels the run; a later edit clears the outcome.
+ */
 export function createDraftRunController({
   catalog,
   store,
@@ -125,49 +131,77 @@ export function createDraftRunController({
   readonly randomSeed: () => number;
 }): DraftRunController {
   let current: { handle?: DraftRunHandle } | undefined;
+  /** The project an outcome describes; editing past it clears the outcome. */
+  let settledProject: ProjectDocument | undefined;
+  let revision = store.getState().editorSession.workspaceReplacementRevision;
   const presentProject = () => {
     const workspace = store.getState().projectWorkspace;
     return workspace.kind === 'openProject' ? workspace.history.present : undefined;
   };
+  const stop = () => {
+    current?.handle?.cancel();
+    current = undefined;
+  };
+  const settle = (outcome: Exclude<DraftRunState, { readonly kind: 'idle' | 'running' }>) => {
+    current = undefined;
+    settledProject = presentProject();
+    store.dispatch(draftRunSettled(outcome));
+  };
+  const unsubscribe = store.subscribe(() => {
+    const state = store.getState();
+    if (state.editorSession.workspaceReplacementRevision !== revision) {
+      revision = state.editorSession.workspaceReplacementRevision;
+      stop();
+      settledProject = undefined;
+      return;
+    }
+    const run = state.draftSession.run.kind;
+    if (run === 'idle' || run === 'running' || settledProject === undefined) return;
+    if (presentProject() === settledProject) return;
+    settledProject = undefined;
+    store.dispatch(draftRunCleared());
+  });
   const start = (seed: number): void => {
     if (current !== undefined) return;
     const project = presentProject();
     if (project === undefined) return;
     const { spec } = projectDraftSpec(catalog, project, store.getState().draftSession);
     if (spec === undefined || draftRefusals(catalog, project, spec).length > 0) return;
+    settledProject = undefined;
     store.dispatch(draftRunStarted({ seed, startedAt: now() }));
     const run: { handle?: DraftRunHandle } = {};
     current = run;
     run.handle = runner.start({ project, spec, seed }, (event) => {
       if (current !== run) return;
       if (event.kind === 'error') {
-        current = undefined;
-        store.dispatch(draftRunSettled({ kind: 'failed', biomeKey: '', reasons: [event.message] }));
+        settle({ kind: 'error', message: event.message });
         return;
       }
-      current = undefined;
       if (presentProject() !== project) {
-        store.dispatch(draftRunSettled({ kind: 'superseded' }));
+        settle({ kind: 'superseded' });
         return;
       }
       const result = event.result;
       switch (result.kind) {
         case 'drafted':
-          store.dispatch(authoredProjectCommandDispatched(result.command));
-          store.dispatch(
-            draftRunSettled({
-              kind: 'drafted',
-              seed,
-              report: result.report,
-              attempts: result.attempts,
-            }),
-          );
+          try {
+            store.dispatch(authoredProjectCommandDispatched(result.command));
+          } catch (error) {
+            settle({
+              kind: 'error',
+              message: error instanceof Error ? error.message : String(error),
+            });
+            return;
+          }
+          if (presentProject() === project) {
+            settle({ kind: 'error', message: 'The drafted route was not applied.' });
+            return;
+          }
+          settle({ kind: 'drafted', seed, report: result.report, attempts: result.attempts });
           return;
         case 'failed':
-          store.dispatch(draftRunSettled(result));
-          return;
         case 'refused':
-          store.dispatch(draftRunSettled(result));
+          settle(result);
           return;
       }
     });
@@ -177,9 +211,12 @@ export function createDraftRunController({
     reroll: () => start(randomSeed()),
     cancel() {
       if (current === undefined) return;
-      current.handle?.cancel();
-      current = undefined;
-      store.dispatch(draftRunCancelled());
+      stop();
+      store.dispatch(draftRunCleared());
+    },
+    dispose() {
+      unsubscribe();
+      stop();
     },
   };
 }

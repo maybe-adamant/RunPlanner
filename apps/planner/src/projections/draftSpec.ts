@@ -71,9 +71,12 @@ export function projectDraftSpec(
         fieldNpcsByBiome,
       },
       basketTraitKeys: session.basketTraitKeys,
-      rackKeepsakeKeys: keepsakeOptions.rackSlots.map(
-        (_, index) => session.rackKeepsakeKeys[index] ?? null,
-      ),
+      rackKeepsakeKeys: keepsakeOptions.rackSlots.map((slot) => {
+        const keepsakeKey = session.rackKeepsakeByBiome[slot.afterBiomeKey];
+        return keepsakeKey !== undefined && slot.keepsakeKeys.includes(keepsakeKey)
+          ? keepsakeKey
+          : null;
+      }),
     }),
   });
 }
