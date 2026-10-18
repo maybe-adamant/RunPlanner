@@ -4,6 +4,8 @@ import {
   assessDraftBasket,
   draftKeepsakeOptions,
   draftWorldOptions,
+  type DraftCapUsage,
+  type DraftGiverCapUsage,
   type DraftKeepsakeOptions,
   type DraftSpec,
   type DraftTraitAssessment,
@@ -90,16 +92,10 @@ export interface DraftBasketRow {
   readonly hint?: string;
 }
 
-/** Which basket cap a header counts against; its numbers come from the engine. */
-export type DraftCapKey =
-  | { readonly kind: 'godTotal' }
-  | { readonly kind: 'giver'; readonly giverKey: string }
-  | { readonly kind: 'npcTotal' };
-
 export interface DraftBasketSection {
   readonly key: string;
   readonly label: string;
-  readonly cap?: DraftCapKey;
+  readonly cap?: DraftCapUsage;
   readonly rows: readonly DraftBasketRow[];
   readonly subsections: readonly DraftBasketSection[];
 }
@@ -107,7 +103,7 @@ export interface DraftBasketSection {
 export interface DraftBasketTab {
   readonly key: 'gods' | 'bonus' | 'npcs';
   readonly label: string;
-  readonly cap?: DraftCapKey;
+  readonly cap?: DraftCapUsage;
   readonly sections: readonly DraftBasketSection[];
 }
 
@@ -119,8 +115,17 @@ export interface DraftBasketChip {
   readonly hint?: string;
 }
 
+/** One cap on the panel's basket summary. */
+export interface DraftBasketSummaryCap {
+  readonly key: string;
+  readonly label: string;
+  readonly cap: DraftCapUsage;
+}
+
 export interface DraftBasketProjection {
   readonly tabs: readonly DraftBasketTab[];
+  /** God boons, each bonus giver, then NPC traits. */
+  readonly summary: readonly DraftBasketSummaryCap[];
   readonly chips: readonly DraftBasketChip[];
 }
 
@@ -209,7 +214,7 @@ export function projectDraftBasket(
     key: string,
     label: string,
     rows: readonly DraftBasketRow[],
-    cap?: DraftCapKey,
+    cap?: DraftCapUsage,
     subsections: readonly DraftBasketSection[] = [],
   ): DraftBasketSection =>
     Object.freeze({
@@ -219,14 +224,15 @@ export function projectDraftBasket(
       rows: Object.freeze([...rows]),
       subsections: Object.freeze([...subsections]),
     });
-  const giverSection = (giverKey: string, withCap: boolean): DraftBasketSection => {
+  const caps = assessment.caps;
+  const giverCap = (usages: readonly DraftGiverCapUsage[], giverKey: string) =>
+    usages.find((usage) => usage.giverKey === giverKey);
+  const giverSection = (
+    giverKey: string,
+    usages: readonly DraftGiverCapUsage[],
+  ): DraftBasketSection => {
     const giver = catalog.traitGivers.byKey[giverKey]!;
-    return section(
-      giverKey,
-      giver.label,
-      rowsOf(giver.traitKeys),
-      withCap ? { kind: 'giver', giverKey } : undefined,
-    );
+    return section(giverKey, giver.label, rowsOf(giver.traitKeys), giverCap(usages, giverKey));
   };
 
   const godSections = spec.world.godKeys.map((godKey) => {
@@ -236,7 +242,7 @@ export function projectDraftBasket(
       .map((key, index) => ({ key, index, order: godOrder(catalog, key) }))
       .sort((a, b) => a.order - b.order || a.index - b.index)
       .map((entry) => entry.key);
-    return section(godKey, giver.label, rowsOf(own), { kind: 'giver', giverKey: godKey });
+    return section(godKey, giver.label, rowsOf(own), giverCap(caps.poolGods, godKey));
   });
   const duoKeys = [
     ...new Set(
@@ -249,9 +255,9 @@ export function projectDraftBasket(
   ];
   const duos = rowsOf(duoKeys);
 
-  const bonus = catalog.traitGivers.values
-    .filter((giver) => ['hermes', 'hammer', 'spell'].includes(giver.providerKind))
-    .map((giver) => giverSection(giver.key, true));
+  const bonus = worldOptions.bonusGiverKeys.map((giverKey) =>
+    giverSection(giverKey, caps.providers),
+  );
 
   const story = new Set<string>();
   const field = new Set<string>();
@@ -278,7 +284,7 @@ export function projectDraftBasket(
             'Story',
             [],
             undefined,
-            [...story].map((k) => giverSection(k, false)),
+            [...story].map((k) => giverSection(k, caps.npcs)),
           ),
         ]),
     ...(field.size === 0
@@ -289,7 +295,7 @@ export function projectDraftBasket(
             'Field',
             [],
             undefined,
-            [...field].map((k) => giverSection(k, false)),
+            [...field].map((k) => giverSection(k, caps.npcs)),
           ),
         ]),
   ];
@@ -298,11 +304,11 @@ export function projectDraftBasket(
     {
       key: 'gods',
       label: 'Gods',
-      cap: { kind: 'godTotal' },
+      cap: caps.poolGodTotal,
       sections: [...godSections, ...(duos.length === 0 ? [] : [section('duos', 'Duos', duos)])],
     },
     { key: 'bonus', label: 'Bonus', sections: bonus },
-    { key: 'npcs', label: 'NPCs', cap: { kind: 'npcTotal' }, sections: npcSections },
+    { key: 'npcs', label: 'NPCs', cap: caps.npcTotal, sections: npcSections },
   ];
 
   const chips = spec.basketTraitKeys.map((traitKey) => {
@@ -315,5 +321,18 @@ export function projectDraftBasket(
       ...(hint === undefined ? {} : { hint }),
     });
   });
-  return Object.freeze({ tabs: Object.freeze(tabs.map((tab) => Object.freeze(tab))), chips });
+  const summary: DraftBasketSummaryCap[] = [
+    { key: 'gods', label: 'God boons', cap: caps.poolGodTotal },
+    ...caps.providers.map((usage) => ({
+      key: usage.giverKey,
+      label: catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey,
+      cap: usage,
+    })),
+    { key: 'npcs', label: 'NPCs', cap: caps.npcTotal },
+  ];
+  return Object.freeze({
+    tabs: Object.freeze(tabs.map((tab) => Object.freeze(tab))),
+    summary: Object.freeze(summary),
+    chips,
+  });
 }
