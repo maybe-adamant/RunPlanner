@@ -304,7 +304,7 @@ export function decodeRoomEncounterState(
                 `${path}.traitOffersByPhase.${phaseKey}.${encounterKey}`,
               );
       }
-      traitOffersByPhase[phaseKey] = phaseOffers;
+      traitOffersByPhase[phaseKey] = Object.freeze(phaseOffers);
     }
   }
   for (const binding of bindings.values()) {

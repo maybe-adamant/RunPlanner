@@ -27,6 +27,31 @@ import { decodeResolvedRewardOffer } from './room-state/decoding/reward-acquisit
 
 export { ProjectDocumentContractError } from './validation';
 
+// Frozen products this decoder built, with the inputs that determined them.
+const decodedProducts = new WeakMap<object, readonly unknown[]>();
+
+function attested(value: unknown, inputs: readonly unknown[]): boolean {
+  const recorded =
+    typeof value === 'object' && value !== null ? decodedProducts.get(value) : undefined;
+  return (
+    recorded !== undefined &&
+    recorded.length === inputs.length &&
+    recorded.every((input, index) => input === inputs[index])
+  );
+}
+
+/** An already-decoded product for the same inputs is returned as is. */
+function reuseDecoded<T extends object>(
+  value: unknown,
+  inputs: readonly unknown[],
+  decode: () => T,
+): T {
+  if (attested(value, inputs)) return value as T;
+  const decoded = decode();
+  decodedProducts.set(decoded, inputs);
+  return decoded;
+}
+
 function decodeBiomePlan(
   value: unknown,
   path: string,
@@ -163,10 +188,12 @@ function decodeRoutePlan(
   const startingReward =
     loadout.startingReward === null
       ? null
-      : decodeResolvedRewardOffer(
-          loadout.startingReward,
-          catalog,
-          `${path}.loadout.startingReward`,
+      : reuseDecoded(loadout.startingReward, [catalog], () =>
+          decodeResolvedRewardOffer(
+            loadout.startingReward,
+            catalog,
+            `${path}.loadout.startingReward`,
+          ),
         );
   if (
     startingReward !== null &&
@@ -275,16 +302,21 @@ function decodeRoutePlan(
     if (expectedBiomeKey === undefined) {
       fail(`${path}.biomes[${index}]`, 'has no matching route biome');
     }
-    return decodeBiomePlan(
+    return reuseDecoded(
       biome,
-      `${path}.biomes[${index}]`,
-      routeContext,
-      expectedBiomeKey,
-      catalog,
-      startingReward,
+      [catalog, startingReward, routeKey, JSON.stringify(itineraryBiomeKeys), expectedBiomeKey],
+      () =>
+        decodeBiomePlan(
+          biome,
+          `${path}.biomes[${index}]`,
+          routeContext,
+          expectedBiomeKey,
+          catalog,
+          startingReward,
+        ),
     );
   });
-  const resourcePlacements = Object.freeze(
+  const decodedResourcePlacements = Object.freeze(
     Object.fromEntries(
       (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
         const value = rawResources[family];
@@ -316,16 +348,15 @@ function decodeRoutePlan(
     ) as import('./model').ResourcePlacements,
   );
 
+  const resourcePlacements = reuseDecoded(rawResources, [catalog], () => decodedResourcePlacements);
+
   const runModifiers =
     'runModifiers' in loadout
       ? encodeRunModifiers(decodeRunModifiers(loadout.runModifiers, `${path}.loadout.runModifiers`))
       : undefined;
 
-  return Object.freeze({
-    routeKey,
-    itineraryBiomeKeys: Object.freeze(itineraryBiomeKeys),
-    resourcePlacements,
-    loadout: Object.freeze({
+  const decodedLoadout = reuseDecoded(loadout, [catalog, route], () =>
+    Object.freeze({
       weaponKey,
       aspectKey,
       startingReward,
@@ -345,8 +376,31 @@ function decodeRoutePlan(
           }),
       ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
     }),
+  );
+  const itinerary = reuseDecoded(plan.itineraryBiomeKeys, [catalog, route], () =>
+    Object.freeze(itineraryBiomeKeys),
+  );
+  const previous = attested(plan, [catalog, route])
+    ? (plan as unknown as AuthoredRoutePlan)
+    : undefined;
+  if (
+    previous !== undefined &&
+    previous.itineraryBiomeKeys === itinerary &&
+    previous.resourcePlacements === resourcePlacements &&
+    previous.loadout === decodedLoadout &&
+    previous.biomes.length === biomes.length &&
+    previous.biomes.every((biome, index) => biome === biomes[index])
+  )
+    return previous;
+  const decoded: AuthoredRoutePlan = Object.freeze({
+    routeKey,
+    itineraryBiomeKeys: itinerary,
+    resourcePlacements,
+    loadout: decodedLoadout,
     biomes: Object.freeze(biomes),
   });
+  decodedProducts.set(decoded, [catalog, route]);
+  return decoded;
 }
 
 export function decodeProjectDocument(value: unknown, catalog: Catalog): ProjectDocument {
