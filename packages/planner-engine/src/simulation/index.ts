@@ -615,12 +615,16 @@ export {
   draftWorldGiverKeys,
   draftWorldOptions,
   type DraftBiomeWorldOptions,
+  type DraftFieldNpcOption,
   type DraftNpcOption,
   type DraftWorldOptions,
 } from './draft/world';
 export {
   assessDraftBasket,
   type DraftBasketAssessment,
+  type DraftBasketCaps,
+  type DraftCapUsage,
+  type DraftGiverCapUsage,
   type DraftTraitAssessment,
   type DraftTraitRefusal,
 } from './draft/basket';

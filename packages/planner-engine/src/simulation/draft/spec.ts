@@ -54,6 +54,13 @@ export function draftForfeitActive(catalog: Catalog, loadout: DraftLoadout): boo
   );
 }
 
+/** Vow of Denial: an active vow that bans an offer's unselected rows. */
+export function draftDenialActive(catalog: Catalog, loadout: DraftLoadout): boolean {
+  return catalog.fearVows.values.some(
+    (vow) => vow.effect?.kind === 'banUnselectedTraits' && (loadout.fearRanks[vow.key] ?? 0) > 0,
+  );
+}
+
 /** Keepsakes that force a god's boon (`ForceBoonName`) bring an outside god in. */
 export function forcesGod(catalog: Catalog, keepsakeKey: string): boolean {
   return catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'olympianRewardPressure';

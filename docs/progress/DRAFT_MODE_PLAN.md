@@ -52,7 +52,10 @@ step comes before the loadout and sets it.
   similar) are random among legal values.
 - **World:** the god pool; one story NPC per biome; field NPCs per biome. The
   choices offered come from an engine query over catalog room and encounter
-  declarations for the itinerary's biomes.
+  declarations for the itinerary's biomes, which also lists the always-present
+  Hermes, Hammer and Selene givers (`bonusGiverKeys`). A field NPC whose
+  encounters bar each other route-wide (Artemis, Heracles, Icarus, Athena,
+  Nemesis) may be selected in only one biome.
 - **Basket:** traits from the selected givers that grant traits. Static
   engine legality over basket plus loadout:
   - prerequisite groups (Duos, Legendaries), and excluded-trait groups;
@@ -63,9 +66,12 @@ step comes before the loadout and sets it.
   - draft-illegal traits from the catalog: the Chaos Anvil
     (`ChaosWeaponUpgrade`) and the Hera and Zeus sacrifice Duos (Queen's and
     King's Ransom).
-  - caps: Hammers 2, Hermes 2, one Selene hex; at most 5 traits per pool god
-    (Legendaries count toward their god, Duos do not); at most 12 pool-god
-    traits in total, 8 when Vow of Forfeit is active.
+  - caps: Hammers 2, Hermes 2, one Selene hex; at most 5 traits per pool god,
+    4 under Vow of Denial (Legendaries count toward their god, Duos do not); at most 12 pool-god
+    traits in total, 8 when Vow of Forfeit is active; one trait per selected
+    trait-giving NPC.
+  - the basket assessment also returns each cap's count and limit as plain
+    data, so the application shows them without its own numbers.
 
   Conditions that depend on run context (Devotion no-Duo, gift-blocking rooms,
   rarity or level counts, Death Defiance, Echo dispositions) are checked by the
@@ -97,8 +103,19 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
   (one less per biome under Forfeit) spreads each pool god's first room over
   the first half and the basket over the route, shuffled per seed. It biases
   offer weights and ranks attempts; it never forces a retry.
+- **Prerequisite order:** a basket trait that needs other traits held (Duos,
+  Legendaries, Hermes traits such as Success Rate and Paid Dues) or an element
+  count (Infusions) falls due no earlier than the basket traits that meet it,
+  or last when the basket cannot; traits that unlock others come first and are
+  preferred on offer. Basket Hermes traits fall due one per route half.
+- **Hermes reservation:** while every free Hermes room is owed to basket
+  Hermes traits that are not yet offerable, Hermes rewards are nearly never
+  taken and the half target counts as held; an attempt that spends such a
+  room on another Hermes trait ranks lower.
 - Doors, rarity, encounters and other choices are random among legal options,
-  within the world.
+  within the world, including an offer's unselected rows. Under Vow of Denial,
+  which bans those rows, they avoid wanted basket traits unless nothing else
+  fits, and a wanted trait already offered is the one taken.
 - **Restarts per biome:** a dead end or a missed target retries only the
   current biome, reusing earlier biomes through the biome simulation cache.
   Best of N attempts ranked by target coverage; a biome with no successful

@@ -105,6 +105,14 @@ describe('draft world options', () => {
     expect(options.godKeys).not.toContain('Artemis');
   });
 
+  it('lists the Hermes, Hammer and Selene givers every world has', () => {
+    expect([...draftWorldOptions(catalog, underworld).bonusGiverKeys].sort()).toEqual([
+      'Hermes',
+      'SpellDrop',
+      'WeaponUpgrade',
+    ]);
+  });
+
   it('contributes the selected trait-giving NPCs and the always-present givers', () => {
     const givers = draftWorldGiverKeys(catalog, surface, {
       godKeys: ['Hera'],
@@ -205,6 +213,22 @@ describe('draft basket legality', () => {
     }
   });
 
+  it('caps each god at four under Denial, in the refusals and the caps product', () => {
+    const denial = {
+      ...underworld,
+      fearRanks: { ...underworld.fearRanks, BanUnpickedBoonsShrineUpgrade: 1 },
+    };
+    const zeus = ['ZeusWeaponBoon', 'ZeusSpecialBoon', 'ZeusCastBoon', 'ZeusSprintBoon'];
+    const capped = { kind: 'cap', giverKey: 'Zeus', cap: 4 };
+    expect(assessment(denial, spec(zeus), 'ZeusManaBoon').refusals).toContainEqual(capped);
+    expect(assessment(denial, spec(zeus.slice(1)), 'ZeusManaBoon').refusals).not.toContainEqual(
+      capped,
+    );
+    const { caps } = assessDraftBasket(catalog, denial, { ...spec(zeus), loadout: denial });
+    expect(caps.poolGods[0]).toEqual({ giverKey: 'Zeus', count: 4, cap: 4 });
+    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 12 });
+  });
+
   it('counts a Legendary toward its god, and a held Duo toward neither', () => {
     const zeusCores = ['ZeusWeaponBoon', 'ZeusSpecialBoon', 'ZeusCastBoon', 'ZeusSprintBoon'];
     const zeusCap = { kind: 'cap', giverKey: 'Zeus', cap: 5 };
@@ -267,6 +291,72 @@ describe('draft basket legality', () => {
       { kind: 'giverNotInWorld' },
     ]);
   });
+
+  it('caps each selected trait-giving NPC at one trait', () => {
+    const world = { storyNpcByBiome: { F: 'Arachne' }, fieldNpcsByBiome: { G: ['Artemis'] } };
+    const [first, second] = catalog.traitGivers.byKey.Arachne!.traitKeys;
+    const artemis = catalog.traitGivers.byKey.Artemis!.traitKeys.find(
+      (key) => assessment(underworld, spec([], world), key).selectable,
+    )!;
+    const capped = { kind: 'cap', giverKey: 'Arachne', cap: 1 };
+    expect(assessment(underworld, spec([first!], world), second!).refusals).toContainEqual(capped);
+    expect(assessment(underworld, spec([], world), second!).refusals).toEqual([]);
+    expect(assessment(underworld, spec([first!], world), artemis).selectable).toBe(true);
+  });
+});
+
+describe('draft basket caps', () => {
+  const world = {
+    godKeys: ['Zeus', 'Apollo', 'Hestia', 'Aphrodite'],
+    storyNpcByBiome: { F: 'Arachne', H: 'Echo' },
+    fieldNpcsByBiome: { F: ['Artemis', 'Nemesis'] },
+  };
+  const basket = [
+    'ZeusWeaponBoon',
+    'ZeusSpecialBoon',
+    'AphroditeManaBoon',
+    'SprintEchoBoon',
+    'HermesWeaponBoon',
+    'SpellMeteorTrait',
+    catalog.traitGivers.byKey.Arachne!.traitKeys[0]!,
+  ];
+
+  it('counts the basket against every cap of the world', () => {
+    const { caps } = assessDraftBasket(catalog, underworld, spec(basket, world));
+    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 12 });
+    expect(caps.poolGods).toEqual([
+      { giverKey: 'Zeus', count: 2, cap: 5 },
+      { giverKey: 'Apollo', count: 0, cap: 5 },
+      { giverKey: 'Hestia', count: 0, cap: 5 },
+      { giverKey: 'Aphrodite', count: 1, cap: 5 },
+    ]);
+    expect(caps.providers).toEqual(
+      expect.arrayContaining([
+        { giverKey: 'Hermes', providerKind: 'hermes', count: 1, cap: 2 },
+        { giverKey: 'WeaponUpgrade', providerKind: 'hammer', count: 0, cap: 2 },
+        { giverKey: 'SpellDrop', providerKind: 'spell', count: 1, cap: 1 },
+      ]),
+    );
+    expect(caps.providers).toHaveLength(3);
+    expect([...caps.npcs].sort((a, b) => a.giverKey.localeCompare(b.giverKey))).toEqual([
+      { giverKey: 'Arachne', count: 1, cap: 1 },
+      { giverKey: 'Artemis', count: 0, cap: 1 },
+      { giverKey: 'Echo', count: 0, cap: 1 },
+    ]);
+    expect(caps.npcTotal).toEqual({ count: 1, cap: 3 });
+  });
+
+  it('lowers the pool-god total to eight under Forfeit', () => {
+    const forfeit = {
+      ...underworld,
+      fearRanks: { ...underworld.fearRanks, BoonSkipShrineUpgrade: 1 },
+    };
+    const { caps } = assessDraftBasket(catalog, forfeit, {
+      ...spec(basket, world),
+      loadout: forfeit,
+    });
+    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 8 });
+  });
 });
 
 describe('draft keepsakes and route', () => {
@@ -318,6 +408,30 @@ describe('draft keepsakes and route', () => {
       { kind: 'storyNpc', biomeKey: 'F', npcKey: 'Medea' },
       { kind: 'fieldNpc', biomeKey: 'G', npcKey: 'Heracles' },
     ]);
+  });
+
+  it('refuses a once-per-run field NPC selected in more than one biome', () => {
+    const world = (fieldNpcsByBiome: DraftWorld['fieldNpcsByBiome']) => ({
+      world: { godKeys: ['Zeus'], storyNpcByBiome: {}, fieldNpcsByBiome },
+    });
+    expect(
+      refusals(underworld, world({ F: ['Artemis', 'Nemesis'], G: ['Artemis'], I: ['Nemesis'] })),
+    ).toEqual([
+      { kind: 'repeatedFieldNpc', npcKey: 'Artemis', biomeKeys: ['F', 'G'] },
+      { kind: 'repeatedFieldNpc', npcKey: 'Nemesis', biomeKeys: ['F', 'I'] },
+    ]);
+    expect(refusals(surface, world({ O: ['Icarus'], P: ['Icarus', 'Heracles'] }))).toEqual([
+      { kind: 'repeatedFieldNpc', npcKey: 'Icarus', biomeKeys: ['O', 'P'] },
+    ]);
+    expect(refusals(underworld, world({ F: ['Artemis'], I: ['Nemesis'] }))).toEqual([]);
+  });
+
+  it('counts a field NPC once toward the NPC caps however many biomes list it', () => {
+    const { caps } = assessDraftBasket(catalog, underworld, {
+      ...spec([], { fieldNpcsByBiome: { F: ['Artemis'], G: ['Artemis'] } }),
+    });
+    expect(caps.npcs).toEqual([{ giverKey: 'Artemis', count: 0, cap: 1 }]);
+    expect(caps.npcTotal).toEqual({ count: 0, cap: 1 });
   });
 
   it('refuses basket traits the static legality rejects', () => {

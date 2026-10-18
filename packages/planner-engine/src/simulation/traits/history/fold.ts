@@ -82,9 +82,19 @@ export function traitMutationGiver(event: TraitHistoryEvent): string | undefined
 }
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
-const BASE_ELEMENTS: readonly TraitElement[] = Object.freeze(['Earth', 'Air', 'Fire', 'Water']);
+export const BASE_TRAIT_ELEMENTS: readonly TraitElement[] = Object.freeze([
+  'Earth',
+  'Air',
+  'Fire',
+  'Water',
+]);
 
 type ElementTotals = Record<TraitElement, number>;
+
+/** The largest base-element count; Aether is not a base element. */
+export function highestBaseElementCount(elementCounts: Readonly<ElementTotals>): number {
+  return Math.max(...BASE_TRAIT_ELEMENTS.map((element) => elementCounts[element]));
+}
 
 function combinedElementFacts(
   fromTraits: ReturnType<typeof deriveFacts>,
@@ -103,7 +113,7 @@ function combinedElementFacts(
   return Object.freeze({
     ...fromTraits,
     elementCounts,
-    highestBaseElementCount: Math.max(...BASE_ELEMENTS.map((element) => elementCounts[element])),
+    highestBaseElementCount: highestBaseElementCount(elementCounts),
   });
 }
 

@@ -6,9 +6,8 @@ import {
 } from '../../authored-project';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
-import { draftGodSchedule, type DraftGodSchedule } from './schedule';
+import { draftGodSchedule } from './schedule';
 import {
-  acquiredGods,
   draftHalfTarget,
   draftReport,
   heldSupply,
@@ -52,7 +51,10 @@ export type DraftResult =
       readonly attempts: number;
     };
 
-/** Whether the walk holds its half's Hermes and Hammer target after this biome. */
+/**
+ * Whether the walk holds its half's Hermes and Hammer target after this biome;
+ * Hermes rooms the basket reserves for traits still waiting count as held.
+ */
 function halfSupply(
   catalog: Catalog,
   walk: DraftWalk,
@@ -62,25 +64,11 @@ function halfSupply(
   const snapshot = latestRunState(walk.assembly);
   const target = draftHalfTarget(biomeIndex, biomeCount);
   return [
-    { supply: 'hermes', met: heldSupply(catalog, snapshot, 'hermes') >= target },
+    {
+      supply: 'hermes',
+      met: heldSupply(catalog, snapshot, 'hermes') >= target || walk.hermesReserved(),
+    },
     { supply: 'hammer', met: heldSupply(catalog, snapshot, 'hammer') >= target },
-  ];
-}
-
-/** Whether the walk holds each god and basket god trait due by the end of this biome. */
-function scheduledGods(
-  catalog: Catalog,
-  schedule: DraftGodSchedule,
-  walk: DraftWalk,
-  biomeIndex: number,
-): readonly boolean[] {
-  const snapshot = latestRunState(walk.assembly);
-  const gods = acquiredGods(catalog, snapshot);
-  const equipped = Object.keys(snapshot?.traits.equippedTraits ?? {});
-  const due = schedule.byBiome.slice(0, biomeIndex + 1);
-  return [
-    ...due.flatMap((biome) => biome.godKeys).map((god) => gods.includes(god)),
-    ...due.flatMap((biome) => biome.traitKeys).map((traitKey) => equipped.includes(traitKey)),
   ];
 }
 
@@ -138,9 +126,12 @@ export function draftProject(
       }
       const report = draftReport(catalog, spec, walk.assembly);
       const halves = halfSupply(catalog, walk, biomeIndex, biomeKeys.length);
-      const scheduled = scheduledGods(catalog, schedule, walk, biomeIndex);
+      const scheduled = walk.scheduledTargets();
       const score =
-        report.met + halves.filter((half) => half.met).length + scheduled.filter(Boolean).length;
+        report.met +
+        halves.filter((half) => half.met).length +
+        scheduled.filter(Boolean).length -
+        walk.wastedHermes();
       if (best === undefined || score > best.score) best = { assembly: walk.assembly, score };
       const localMet = report.targets.every((target) => target.biomeKey !== biomeKey || target.met);
       // An unmet half target ends the biome only when no decision could take it here.
