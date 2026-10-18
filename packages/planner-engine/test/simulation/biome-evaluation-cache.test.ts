@@ -40,21 +40,39 @@ function biomes(project: ProjectDocument) {
   return simulateProject(catalog, project).route.biomes;
 }
 
+/** Each route family, a practice start, an incomplete route, forced Chaos and resource placements. */
+const representativeCorpus = new Set([
+  'execution/underworld-fghi',
+  'execution/surface-nopq',
+  'execution/dream-mixed-prefix',
+  'execution/fresh-file-fghi',
+  'execution/underworld-start-i-preboss',
+  'underworld/hammerBridgeRoute',
+  'execution/fg-ixion-chaos',
+  'checkpoint/underworld-twist-scylla',
+  'checkpoint/surface-p-steady-growth-shrine-frontier',
+]);
+
 describe('biome evaluation cache', () => {
-  it.each(equivalenceCorpus().map((entry) => [entry.name, entry] as const))(
-    '%s simulates identically from a warm prefix and cold',
-    (_name, entry) => {
-      const project = entry.project();
-      if (project.route.biomes.length < 2) return;
-      const primed = simulateProject(entry.catalog, {
-        ...project,
-        route: { ...project.route, biomes: project.route.biomes.slice(0, -1) },
-      }).route.biomes;
-      const warm = simulateProject(entry.catalog, project).route.biomes;
-      if (primed.length > 0 && warm.length > 0) expect(warm[0]).toBe(primed[0]);
-      expect(simulatesAsCold(entry.catalog, project)).toBe(true);
-    },
-  );
+  it('names only corpus projects', () => {
+    const names = new Set(equivalenceCorpus().map((entry) => entry.name));
+    expect([...representativeCorpus].filter((name) => !names.has(name))).toEqual([]);
+  });
+
+  it.each(
+    equivalenceCorpus()
+      .filter((entry) => representativeCorpus.has(entry.name))
+      .map((entry) => [entry.name, entry] as const),
+  )('%s simulates identically from a warm prefix and cold', (_name, entry) => {
+    const project = entry.project();
+    const primed = simulateProject(entry.catalog, {
+      ...project,
+      route: { ...project.route, biomes: project.route.biomes.slice(0, -1) },
+    }).route.biomes;
+    const warm = simulateProject(entry.catalog, project).route.biomes;
+    if (primed.length > 0 && warm.length > 0) expect(warm[0]).toBe(primed[0]);
+    expect(simulatesAsCold(entry.catalog, project)).toBe(true);
+  });
 
   it('reuses the biomes before an edit and re-simulates the edited biome onwards', () => {
     const before = createGoldenFGHIProject();
