@@ -8,7 +8,7 @@ import type {
 } from '@planner/projections/draftSpec';
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { hintProps } from '@planner/ui/controls/hint';
-import { DraftCapCount, type DraftCapCounts } from './DraftCapCount';
+import { DraftCapCount } from './DraftCapCount';
 
 function BasketRows({
   onToggle,
@@ -44,12 +44,10 @@ function BasketRows({
 }
 
 function BasketSection({
-  counts,
   level,
   onToggle,
   section,
 }: {
-  readonly counts: DraftCapCounts;
   readonly level: 3 | 4;
   readonly onToggle: (traitKey: string) => void;
   readonly section: DraftBasketSection;
@@ -59,17 +57,11 @@ function BasketSection({
     <section aria-label={section.label} className="draft-basket-section" data-level={level}>
       <Heading className="draft-section-heading">
         {section.label}
-        <DraftCapCount cap={section.cap} counts={counts} />
+        <DraftCapCount cap={section.cap} />
       </Heading>
       <BasketRows onToggle={onToggle} rows={section.rows} />
       {section.subsections.map((subsection) => (
-        <BasketSection
-          counts={counts}
-          key={subsection.key}
-          level={4}
-          onToggle={onToggle}
-          section={subsection}
-        />
+        <BasketSection key={subsection.key} level={4} onToggle={onToggle} section={subsection} />
       ))}
     </section>
   );
@@ -79,13 +71,11 @@ const tabId = (tab: DraftBasketTab['key']) => `draft-basket-tab-${tab}`;
 
 /** Basket traits in Gods, Bonus and NPC tabs; a refused trait stays listed but cannot be added. */
 export function DraftBasketDialog({
-  counts,
   onClose,
   onToggle,
   projection,
   returnFocusId,
 }: {
-  readonly counts: DraftCapCounts;
   readonly onClose: () => void;
   readonly onToggle: (traitKey: string) => void;
   readonly projection: DraftBasketProjection;
@@ -125,7 +115,7 @@ export function DraftBasketDialog({
               type="button"
             >
               {tab.label}
-              <DraftCapCount cap={tab.cap} counts={counts} />
+              <DraftCapCount cap={tab.cap} />
             </button>
           ))}
         </div>
@@ -148,13 +138,7 @@ export function DraftBasketDialog({
           </p>
         ) : (
           activeTab.sections.map((section) => (
-            <BasketSection
-              counts={counts}
-              key={section.key}
-              level={3}
-              onToggle={onToggle}
-              section={section}
-            />
+            <BasketSection key={section.key} level={3} onToggle={onToggle} section={section} />
           ))
         )}
       </div>

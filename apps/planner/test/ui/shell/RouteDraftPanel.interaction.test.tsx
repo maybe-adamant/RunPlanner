@@ -158,6 +158,14 @@ describe('Draft panel', () => {
     const zeusAttack = catalog.traits.byKey.ZeusWeaponBoon!.label;
     const heraAttack = catalog.traits.byKey.HeraWeaponBoon!.label;
     fireEvent.click(within(dialog).getByRole('button', { name: zeusAttack }));
+    // Counts come from the engine; the caps themselves are not asserted.
+    expect(within(dialog).getByRole('tab', { name: /^Gods/ }).textContent).toMatch(/^Gods1\/\d+$/);
+    expect(
+      within(within(dialog).getByRole('region', { name: 'Zeus' })).getByRole('heading').textContent,
+    ).toMatch(/^Zeus1\/\d+$/);
+    expect(
+      within(within(dialog).getByRole('region', { name: 'Hera' })).getByRole('heading').textContent,
+    ).toMatch(/^Hera0\/\d+$/);
     expect(
       within(dialog).getByRole('button', { name: zeusAttack }).getAttribute('aria-pressed'),
     ).toBe('true');

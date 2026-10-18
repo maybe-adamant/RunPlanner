@@ -10,12 +10,7 @@ import {
 } from '@run-planner/engine/simulation';
 
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import {
-  projectDraftBasket,
-  projectDraftSpec,
-  type DraftBasketProjection,
-  type DraftCapKey,
-} from '@planner/projections/draftSpec';
+import { projectDraftBasket, projectDraftSpec } from '@planner/projections/draftSpec';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -33,7 +28,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
 import type { DraftRunController } from '@planner/workspace/draftRun';
 import { DraftBasketDialog } from './DraftBasketDialog';
-import { DraftCapCount, type DraftCapCounts } from './DraftCapCount';
+import { DraftCapCount } from './DraftCapCount';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
 
 /** Why a draft cannot start, when nothing else on the panel already shows it. */
@@ -169,24 +164,6 @@ function DraftOutcome({
       );
     }
   }
-}
-
-const capCounts: DraftCapCounts = () => undefined;
-
-/** The panel summary: god boons, each bonus giver, then NPC traits. */
-function basketCaps(
-  basket: DraftBasketProjection,
-): readonly { readonly key: string; readonly label: string; readonly cap: DraftCapKey }[] {
-  const tab = (key: 'gods' | 'bonus' | 'npcs') => basket.tabs.find((t) => t.key === key);
-  return [
-    { key: 'gods', label: 'God boons', cap: { kind: 'godTotal' } },
-    ...(tab('bonus')?.sections ?? []).flatMap((section) =>
-      section.cap === undefined
-        ? []
-        : [{ key: section.key, label: section.label, cap: section.cap }],
-    ),
-    { key: 'npcs', label: 'NPCs', cap: { kind: 'npcTotal' } },
-  ];
 }
 
 /** Describes a world and basket; drafting fills the route's biomes and sets the loadout. */
@@ -406,10 +383,10 @@ export function RouteDraftPanel({
           </div>
           {basket === undefined ? null : (
             <ul aria-label="Basket caps" className="draft-cap-list">
-              {basketCaps(basket).map(({ key, label, cap }) => (
+              {basket.summary.map(({ key, label, cap }) => (
                 <li key={key}>
                   {label}
-                  <DraftCapCount cap={cap} counts={capCounts} />
+                  <DraftCapCount cap={cap} />
                 </li>
               ))}
             </ul>
@@ -484,7 +461,6 @@ export function RouteDraftPanel({
       </div>
       {basketOpen && basket !== undefined ? (
         <DraftBasketDialog
-          counts={capCounts}
           onClose={() => setBasketOpen(false)}
           onToggle={(traitKey) => dispatch(draftBasketTraitToggled(traitKey))}
           projection={basket}
