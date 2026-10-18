@@ -35,13 +35,13 @@ then edits by hand.
 An engine product held in application memory (not saved in v1). The draft
 step comes before the loadout and sets it.
 
-- **Loadout:** route, itinerary, weapon, aspect, familiar, Arcana, Fear and
-  starting keepsake, edited with the existing loadout controls and checked by
-  the engine's existing loadout and route-start rules. The FreshFile route is
-  excluded. Run modifiers and the Practice start point are not part of the
-  draft; they carry over from the current project. The starting reward is not
-  a spec field: the search chooses it like any other decision, toward the
-  targets.
+- **Loadout:** weapon, aspect, familiar, Arcana, Fear and starting keepsake,
+  edited with the existing loadout controls and checked by the engine's
+  existing loadout and route-start rules. The route and its itinerary are the
+  project's structure: the draft reads them and never changes them. The
+  FreshFile route is excluded. Run modifiers and the Practice start point carry
+  over from the current project. The starting reward is not a spec field: the
+  search chooses it like any other decision, toward the targets.
 - **Keepsakes:** the starting keepsake is a loadout field; the draft sets
   one keepsake per Postboss rack between biomes, in order (a four-biome route
   has three). An empty slot keeps the current keepsake. God keepsakes
@@ -104,7 +104,7 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
 - Accept runs the search in a worker with progress, then applies the result as
   one semantic command, `ReplaceRoute`:
   - replaces the loadout (with the generated starting reward) and each biome's
-    state, topology and Echo keepsake replays;
+    state, topology and Echo keepsake replays, keeping the route and itinerary;
   - resets the route's resource placements;
   - keeps the run modifiers and the Practice start point.
 
