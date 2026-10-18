@@ -36,7 +36,7 @@ function refusals(frame: DraftRoute & DraftLoadout, draft: Partial<DraftSpec> = 
   });
   return draftRefusals(catalog, base, {
     loadout: frame,
-    world: { godKeys: ['Zeus', 'Apollo'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
     basketTraitKeys: [],
     rackKeepsakeKeys: frame.itineraryBiomeKeys.slice(1).map(() => null),
     ...draft,
@@ -408,11 +408,15 @@ describe('draft keepsakes and route', () => {
       { kind: 'storyNpc', biomeKey: 'F', npcKey: 'Medea' },
       { kind: 'fieldNpc', biomeKey: 'G', npcKey: 'Heracles' },
     ]);
+    const gods = (godKeys: string[]) =>
+      refusals(underworld, { world: { godKeys, storyNpcByBiome: {}, fieldNpcsByBiome: {} } });
+    expect(gods(['Zeus', 'Apollo'])).toEqual([{ kind: 'tooFewGods', minGods: 3 }]);
+    expect(gods(['Zeus', 'Apollo', 'Hera'])).toEqual([]);
   });
 
   it('refuses a once-per-run field NPC selected in more than one biome', () => {
     const world = (fieldNpcsByBiome: DraftWorld['fieldNpcsByBiome']) => ({
-      world: { godKeys: ['Zeus'], storyNpcByBiome: {}, fieldNpcsByBiome },
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome },
     });
     expect(
       refusals(underworld, world({ F: ['Artemis', 'Nemesis'], G: ['Artemis'], I: ['Nemesis'] })),

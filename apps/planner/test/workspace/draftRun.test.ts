@@ -35,6 +35,11 @@ function createManualRunner() {
   return { runner, runs };
 }
 
+function chooseGods(application: ReturnType<typeof createApplication>) {
+  for (const godKey of ['Apollo', 'Hera', 'Hestia'])
+    application.store.dispatch(draftGodToggled(godKey));
+}
+
 function openUnderworld(runner: DraftRunner, seeds: readonly number[] = [7]) {
   const generated = loadUnderworldFGHICheckpoint();
   let seedIndex = 0;
@@ -49,6 +54,7 @@ function openUnderworld(runner: DraftRunner, seeds: readonly number[] = [7]) {
       route: { ...generated.route, biomes: [] },
     }),
   );
+  chooseGods(application);
   const draftedResult = (request: DraftRunRequest): DraftRunOutcome => {
     const { runModifiers: _runModifiers, ...loadout } = generated.route.loadout;
     void _runModifiers;
@@ -83,7 +89,7 @@ describe('draft run controller', () => {
     application.draftRun.draft();
     expect(run()).toMatchObject({ kind: 'running', seed: 7 });
     expect(runs).toHaveLength(1);
-    expect(runs[0]!.request.spec.world.godKeys).toEqual(['Zeus']);
+    expect(runs[0]!.request.spec.world.godKeys).toEqual(['Apollo', 'Hera', 'Hestia', 'Zeus']);
     expect(runs[0]!.request.project).toBe(before);
 
     runs[0]!.emit({ kind: 'settled', result: draftedResult(runs[0]!.request) });
@@ -152,6 +158,7 @@ describe('draft run controller', () => {
     runs[0]!.emit({ kind: 'settled', result: draftedResult(runs[0]!.request) });
     expect(history().present).toBe(opened);
     expect(history().past).toEqual([]);
+    chooseGods(application);
     application.draftRun.draft();
     expect(runs).toHaveLength(2);
   });

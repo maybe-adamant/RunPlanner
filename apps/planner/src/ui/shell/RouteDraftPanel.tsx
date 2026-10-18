@@ -39,6 +39,8 @@ function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): strin
       return `${catalog.keepsakes.byKey[refusal.keepsakeKey]?.label ?? refusal.keepsakeKey} brings in a god, so it can't start a draft.`;
     case 'invalidLoadout':
       return 'The loadout is not complete.';
+    case 'tooFewGods':
+      return `Choose at least ${refusal.minGods} gods.`;
     case 'basketTrait':
     case 'unknownTrait':
       return 'Remove the marked basket traits first.';

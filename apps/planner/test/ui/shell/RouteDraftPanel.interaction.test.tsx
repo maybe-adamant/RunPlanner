@@ -213,7 +213,10 @@ describe('Draft panel', () => {
 
   it('locks the panel and its navigation while drafting, then reports the targets', () => {
     const { application, runs } = open();
-    chooseGods(['Zeus']);
+    chooseGods(['Zeus', 'Apollo']);
+    expect(draftButton().getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(draftButton())).toBe('Choose at least 3 gods.');
+    chooseGods(['Hera']);
     fireEvent.click(draftButton());
     expect(runs).toHaveLength(1);
     expect(runs[0]!.request.seed).toBe(42);
@@ -248,6 +251,7 @@ describe('Draft panel', () => {
 
   it('reports a stopped search apart from a failed draft', () => {
     const { runs } = open();
+    chooseGods(['Zeus', 'Apollo', 'Hera']);
     fireEvent.click(draftButton());
     act(() => runs[0]!.emit({ kind: 'error', message: 'worker crashed' }));
     expect(screen.getByText('Drafting stopped unexpectedly.')).toBeTruthy();
@@ -256,6 +260,7 @@ describe('Draft panel', () => {
 
   it('cancels a running draft', () => {
     const { runs } = open();
+    chooseGods(['Zeus', 'Apollo', 'Hera']);
     fireEvent.click(draftButton());
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(runs[0]!.cancelled).toBe(true);
