@@ -10,7 +10,7 @@ import { replaceSimulationTraitHistory } from '../state/transitions';
 import { createTraitHistoryState } from '../traits/history/fold';
 import { checkRequirement } from '../traits/level-effects';
 import type { TraitFindingCode } from '../model';
-import type { DraftLoadout, DraftRoute, DraftSpec } from './spec';
+import { draftForfeitActive, type DraftLoadout, type DraftRoute, type DraftSpec } from './spec';
 import { draftWorldGiverKeys } from './world';
 
 export type DraftTraitRefusal =
@@ -93,11 +93,14 @@ function assessTrait(
     const held = others.filter((key) => cappedGiver(catalog, key)?.giverKey === capped.giverKey);
     if (held.length >= capped.cap) refusals.push({ kind: 'cap', ...capped });
   }
+  const totalCap = draftForfeitActive(catalog, spec.loadout)
+    ? FORFEIT_OLYMPIAN_TOTAL_CAP
+    : OLYMPIAN_TOTAL_CAP;
   if (
     isGodTrait(catalog, traitKey) &&
-    others.filter((key) => isGodTrait(catalog, key)).length >= OLYMPIAN_TOTAL_CAP
+    others.filter((key) => isGodTrait(catalog, key)).length >= totalCap
   )
-    refusals.push({ kind: 'totalCap', cap: OLYMPIAN_TOTAL_CAP });
+    refusals.push({ kind: 'totalCap', cap: totalCap });
   const hammer = trait.hammerCompatibility;
   if (
     hammer !== undefined &&
@@ -126,8 +129,9 @@ function assessTrait(
 const PROVIDER_CAPS: Readonly<Record<string, number>> = { hammer: 2, hermes: 2, spell: 1 };
 /** Planner limit on one god's own traits, Legendary included; a Duo counts for neither god. */
 const OLYMPIAN_CAP = 5;
-/** Planner limit on god traits across the whole pool. */
-const OLYMPIAN_TOTAL_CAP = 15;
+/** Planner limit on god traits across the whole pool; Forfeit's lost boon rooms lower it. */
+const OLYMPIAN_TOTAL_CAP = 12;
+const FORFEIT_OLYMPIAN_TOTAL_CAP = 8;
 
 function isGodTrait(catalog: Catalog, traitKey: string): boolean {
   return catalog.traitGivers.values.some(

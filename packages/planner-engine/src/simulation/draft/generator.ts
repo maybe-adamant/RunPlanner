@@ -6,7 +6,9 @@ import {
 } from '../../authored-project';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
+import { draftGodSchedule, type DraftGodSchedule } from './schedule';
 import {
+  acquiredGods,
   draftHalfTarget,
   draftReport,
   heldFromGiver,
@@ -63,6 +65,23 @@ function halfSupply(
   ];
 }
 
+/** Whether the walk holds each god and basket god trait due by the end of this biome. */
+function scheduledGods(
+  catalog: Catalog,
+  schedule: DraftGodSchedule,
+  walk: DraftWalk,
+  biomeIndex: number,
+): readonly boolean[] {
+  const snapshot = latestRunState(walk.assembly);
+  const gods = acquiredGods(catalog, snapshot);
+  const equipped = Object.keys(snapshot?.traits.equippedTraits ?? {});
+  const due = schedule.byBiome.slice(0, biomeIndex + 1);
+  return [
+    ...due.flatMap((biome) => biome.godKeys).map((god) => gods.includes(god)),
+    ...due.flatMap((biome) => biome.traitKeys).map((traitKey) => equipped.includes(traitKey)),
+  ];
+}
+
 function attemptSeed(seed: number, biomeIndex: number, attempt: number): number {
   return (seed * 1_000_003 + biomeIndex * 7_919 + attempt * 104_729) >>> 0;
 }
@@ -87,6 +106,12 @@ export function draftProject(
     draftLoadoutProject(catalog, base, spec.loadout),
   );
   const biomeKeys = current.project.route.biomes.map((biome) => biome.biomeKey);
+  const schedule = draftGodSchedule(
+    catalog,
+    current.project.route,
+    spec,
+    createDraftRng(attemptSeed(seed, biomeKeys.length, budget.attemptsPerBiome)),
+  );
   let attempts = 0;
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best: { assembly: ProjectEvaluationAssembly; score: number } | undefined;
@@ -99,6 +124,7 @@ export function draftProject(
         current,
         spec,
         createDraftRng(attemptSeed(seed, biomeIndex, attempt)),
+        schedule,
       );
       if (!walk.runBiome(biomeIndex, budget.maxStepsPerBiome)) {
         reasons.push(walk.failure ?? 'unknown');
@@ -106,7 +132,9 @@ export function draftProject(
       }
       const report = draftReport(catalog, spec, walk.assembly);
       const halves = halfSupply(catalog, walk, biomeIndex, biomeKeys.length);
-      const score = report.met + halves.filter((half) => half.met).length;
+      const scheduled = scheduledGods(catalog, schedule, walk, biomeIndex);
+      const score =
+        report.met + halves.filter((half) => half.met).length + scheduled.filter(Boolean).length;
       if (best === undefined || score > best.score) best = { assembly: walk.assembly, score };
       const localMet = report.targets.every((target) => target.biomeKey !== biomeKey || target.met);
       // An unmet half target ends the biome only when no decision could take it here.
