@@ -34,6 +34,7 @@ import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
 import type { CommunityEventController } from '@planner/workspace/communityEvents';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
+import type { DraftRunController } from '@planner/workspace/draftRun';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -57,6 +58,7 @@ interface AppProps {
   readonly buildIdentity: BuildIdentity;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
+  readonly draftRun: DraftRunController;
   readonly editorNavigation: EditorNavigation;
   /** Present only in the desktop application. */
   readonly communityEvents?: CommunityEventController;
@@ -76,6 +78,7 @@ export function App({
   buildIdentity,
   catalog,
   catalogSummary,
+  draftRun,
   editorNavigation,
   communityEvents,
   gameStatus,
@@ -315,6 +318,7 @@ export function App({
           activeWorkspaceRoute !== undefined && (
             <RouteWorkspace
               catalog={catalog}
+              draftRun={draftRun}
               feedback={activeRouteFeedback}
               interactions={workspace.interactions}
               navigation={activeRouteNavigation}

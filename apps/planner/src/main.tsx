@@ -19,6 +19,7 @@ import {
   createBrowserAutosaveScheduler,
 } from './persistence/browserAutosaveRecoveryAdapter';
 import { createApplication } from './composition/createApplication';
+import { createWorkerDraftRunner } from './workspace/draftRun';
 import './ui/styles.css';
 import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
@@ -87,6 +88,9 @@ const application = createApplication({
     setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
   }),
   buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
+  draftRunner: createWorkerDraftRunner(
+    () => new Worker(new URL('./workspace/draftWorker.ts', import.meta.url), { type: 'module' }),
+  ),
   profileFile,
   profileFileRestore: await profileFile.restoreActive(),
   ...(tauriHost
@@ -133,6 +137,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           buildIdentity={application.buildIdentity}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
+          draftRun={application.draftRun}
           editorNavigation={application.editorNavigation}
           {...(application.communityEvents === undefined
             ? {}

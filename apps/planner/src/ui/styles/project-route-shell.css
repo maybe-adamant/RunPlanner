@@ -1305,3 +1305,275 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 }
+
+.panel-navigation-fieldset {
+  display: contents;
+}
+
+.panel-navigation-fieldset:disabled .panel-navigation-item {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.draft-fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.draft-fieldset:disabled {
+  opacity: 0.6;
+}
+
+.draft-section {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #30313a;
+}
+
+.draft-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.draft-section-heading {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.draft-section-heading > span {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.draft-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.draft-toggle {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #3a3b45;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.draft-toggle:hover:not(:disabled, [aria-disabled='true']) {
+  border-color: var(--selection-accent);
+}
+
+.draft-toggle[aria-pressed='true'] {
+  border-color: var(--selection-accent);
+  background: color-mix(in srgb, var(--selection-accent) 18%, transparent);
+}
+
+.draft-toggle:disabled,
+.draft-toggle[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.draft-toggle[data-refused],
+.draft-chip[data-refused] {
+  border-color: var(--finding);
+}
+
+.draft-npc-table {
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+}
+
+.draft-npc-table th,
+.draft-npc-table td {
+  padding: 0.2rem 1.25rem 0.2rem 0;
+  text-align: start;
+  vertical-align: middle;
+}
+
+.draft-npc-table thead th {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.draft-npc-biome {
+  min-width: 7rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.draft-cap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  color: var(--muted);
+  list-style: none;
+}
+
+.draft-cap {
+  margin-left: 0.4rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.draft-cap[data-placeholder] {
+  color: var(--muted);
+}
+
+.draft-cap[data-full] {
+  color: var(--selection-accent);
+}
+
+.draft-basket[data-tab='npcs'] > .draft-basket-section + .draft-basket-section {
+  padding-top: 0.75rem;
+  border-top: 1px solid #30313a;
+}
+
+.draft-basket-section[data-level='4'] {
+  padding-left: 0.75rem;
+}
+
+.draft-basket-section[data-level='4'] > .draft-section-heading {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.draft-basket-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.draft-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draft-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.6rem;
+  border: 1px solid #3a3b45;
+  border-radius: 999px;
+}
+
+.draft-chip[data-unmet] {
+  padding-right: 0.6rem;
+  color: var(--muted);
+}
+
+.draft-chip-remove {
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.draft-chip-remove:hover {
+  color: var(--text);
+  background: #2b2c35;
+}
+
+.draft-actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #30313a;
+}
+
+.draft-warning {
+  margin: 0;
+  color: var(--attention);
+}
+
+.draft-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.draft-seed {
+  margin-right: auto;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-progress {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-outcome,
+.draft-report p {
+  margin: 0;
+}
+
+.draft-report {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.draft-basket {
+  display: grid;
+  gap: 1rem;
+}
+
+.draft-basket-section {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.run-state-tabs.draft-basket-tabs {
+  align-self: flex-end;
+  gap: 0.5rem;
+}
+
+.run-state-tabs.draft-basket-tabs > button {
+  padding: 8px 14px;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+/* One height for every tab, so switching tabs never moves the dialog. */
+.editor-dialog:has(.draft-basket) {
+  height: min(46rem, calc(100 * var(--app-vh) - 2rem));
+}
+
+/* Keeps the footer at the bottom of the fixed-height dialog. */
+.editor-dialog-body > .draft-basket {
+  flex-grow: 1;
+  align-content: start;
+}

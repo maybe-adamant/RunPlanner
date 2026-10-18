@@ -7,6 +7,7 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { useDispatch, useSelector } from 'react-redux';
 
+import { createDraftSessionReducer } from './draftSessionSlice';
 import { createEditorSessionReducer } from './editorSessionSlice';
 import { createGameSendSessionReducer } from './gameSendSessionSlice';
 import {
@@ -26,6 +27,8 @@ export interface CreatePlannerStoreOptions {
   readonly initialWorkspace?: PreparedProjectWorkspace;
   readonly initialProfileSession?: ProfileSessionState;
   readonly assembleProjectEvaluation: ProjectEvaluationAssembler;
+  /** The first draft seed. */
+  readonly draftSeed?: number;
 }
 
 export function createPlannerStore(options: CreatePlannerStoreOptions) {
@@ -45,6 +48,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
         options.initialProfileSession ?? createInitialProfileSessionState(),
       ),
       gameSendSession: createGameSendSessionReducer(),
+      draftSession: createDraftSessionReducer(options.draftSeed ?? 1),
     },
   });
 }
