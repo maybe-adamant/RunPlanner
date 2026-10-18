@@ -53,6 +53,7 @@ function composition.bind(root, moduleVersion)
         snapshot.lastExited = routeState and routeState.lastExitedOccurrence
         snapshot.restoredRoom = routeState and routeState.transparentNativeRoom
         snapshot.issue = executionState.firstMismatch or executionState.firstFault or executionState.admissionError
+        snapshot.snaps = executionState.snaps
         return snapshot
     end
 
@@ -276,12 +277,16 @@ function composition.bind(root, moduleVersion)
             transformationScope, shipCombat.rewardContext, generatedEncounter, highlights)
         if highlights then highlights.attach(module, getState) end
         roomHooks.attach(module, session, getState, report, route, room, featureScope, navigation,
-            loadoutScope, practiceScope)
+            loadoutScope, practiceScope, {
+                enabled = function(runtime)
+                    return runtime ~= nil and runtime.data ~= nil and runtime.data.read("SnapMode") == true
+                end,
+                apply = import("mods/snap/apply.lua").apply,
+                hexTree = hexTree,
+            })
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)
         featureInventory.attach(module, session, getState, report, room, route, highlights)
         interactionHooks.attach(module, session, getState, report, room, route)
-        -- Inert in release builds; a development build arms a snap from the menu bar.
-        import("mods/snap/probe.lua").attach(module, { state = getState, hexTree = hexTree })
         -- A commit that turns the module off ends a live session at once.
         if module.overlays then
             module.overlays.onCommit(function(_, runtime)

@@ -14,13 +14,10 @@ const MANIFEST_TEMPLATE_FILE: &str = "manifest.template.json";
 const PAYLOAD_DIRECTORY: &str = "src";
 /// Each payload module a development build replaces, with its replacement under the
 /// gitignored `variants/dev/`; a release always ships the payload's own file.
-pub const DEVELOPMENT_OVERRIDES: [(&str, &str); 2] = [
-    (
-        "mods/room/timeline/acquisitions/traits/row_options.lua",
-        "variants/dev/row_options.lua",
-    ),
-    ("mods/snap/probe.lua", "variants/dev/snap_probe.lua"),
-];
+pub const DEVELOPMENT_OVERRIDES: [(&str, &str); 1] = [(
+    "mods/room/timeline/acquisitions/traits/row_options.lua",
+    "variants/dev/row_options.lua",
+)];
 // r2modman flattens a Thunderstore package's root files and its `plugins/`
 // payload into one `ReturnOfModding/plugins/<FullName>/` folder.
 const PACKAGE_ROOT_FILES: [&str; 3] = ["icon.png", "LICENSE", "README.md"];

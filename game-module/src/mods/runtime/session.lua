@@ -103,6 +103,9 @@ local function reset(state)
     state.loggedAdmission = nil
     state.practiceStart = nil
     state.abandoned = nil
+    state.snaps = {}
+    state.snapPending = nil
+    state.snapDisabled = nil
     state.diagnostics = {}
     state.reason = "not-started"
     return state
@@ -185,18 +188,29 @@ function runtime.start(state, inbox, phase, activeSlot, context)
     end
     -- A Practice mode start begins at its start occurrence; earlier
     -- occurrences are never realized.
-    local routeState = route.new(plan)
+    local index
     if plan.startState ~= nil then
-        local index, routeError
         for candidate, id in ipairs(plan.selectedOccurrenceIds) do
             if id == plan.startState.occurrenceId then index = candidate break end
         end
-        routeState, routeError = route.newAt(plan, index)
-        if routeState == nil then return runtime.fault(state, routeError) end
     end
     state.plan = plan
     state.admittedNativeRun = _G.CurrentRun
     state.planSlot = activeSlot
+    local resumed, routeError = runtime.resumeAt(state, index)
+    if not resumed then return runtime.fault(state, routeError) end
+    state.state, state.reason = phase == "starting" and "starting" or "synchronized", "ready"
+    return true
+end
+
+-- A fresh route cursor at an occurrence index (the first when nil) and a fresh
+-- room coordinator, as a run or a Practice start begins.
+function runtime.resumeAt(state, index)
+    local plan = state.plan
+    local routeState, routeError = route.new(plan), nil
+    if index ~= nil then routeState, routeError = route.newAt(plan, index) end
+    if routeState == nil then return nil, routeError end
+    if state.room ~= nil then room.dispose(state) end
     state.route = routeState
     state.room = room.new(plan, function(errorValue, expected, observed)
         return runtime.mismatch(state, errorValue, expected, observed)
@@ -211,8 +225,44 @@ function runtime.start(state, inbox, phase, activeSlot, context)
             return conformance.read(kind, currentRun, gameState, expected)
         end,
     })
-    state.state, state.reason = phase == "starting" and "starting" or "synchronized", "ready"
     return true
+end
+
+-- Snap mode resumes at the planned next occurrence after a mismatch: steering
+-- the transition into it needs a synchronized session before the hero is snapped.
+function runtime.beginSnap(state, index)
+    local mismatch = state.firstMismatch
+    local resumed, routeError = runtime.resumeAt(state, index)
+    if not resumed then return runtime.fault(state, routeError) end
+    state.firstMismatch, state.loggedMismatch = nil, nil
+    state.snapPending = { occurrenceId = state.plan.selectedOccurrenceIds[index], index = index, mismatch = mismatch }
+    state.state, state.reason = "synchronized", "snap-pending"
+    return true
+end
+
+-- The hero now matches the occurrence's frame; the snap joins the run's record.
+function runtime.completeSnap(state)
+    local pending, snaps = state.snapPending, {}
+    for position, snap in ipairs(state.snaps or {}) do snaps[position] = snap end
+    snaps[#snaps + 1] = pending
+    state.snaps, state.snapPending, state.reason = snaps, nil, "ready"
+end
+
+-- A snap that cannot hold ends snap mode for the run; the session stays passive.
+function runtime.stopSnapping(state, failure)
+    state.snapPending, state.snapDisabled = nil, true
+    if failure ~= nil and failure.outcome == "fault" then
+        state.firstMismatch = nil
+        runtime.fault(state, failure)
+    elseif failure ~= nil then
+        if state.room ~= nil then room.dispose(state) end
+        state.firstMismatch = failure
+        state.state = "desynchronized"
+    end
+    if state.state == "desynchronized" then state.reason = "snap-loop" end
+    if state.route and state.firstMismatch and state.route.firstMismatch == nil then
+        state.route.firstMismatch = state.firstMismatch
+    end
 end
 
 function runtime.complete(state, handle)

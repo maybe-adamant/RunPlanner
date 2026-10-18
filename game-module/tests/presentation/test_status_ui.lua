@@ -135,12 +135,13 @@ local function harness(options)
         end,
         button = function(label, opts) seen(label); return table.remove(h.presses, 1) == opts.id end,
     }
-    local guide, highlight = viewField(false), viewField(false)
+    local guide, highlight, snap = viewField(false), viewField(false), viewField(false)
     local ctx = {
         data = { get = function(alias)
             if alias == "ActivePlanSlot" then return h.field end
             if alias == "ShowRoomGuide" then return guide end
             if alias == "HighlightPlannedChoices" then return highlight end
+            if alias == "SnapMode" then return snap end
             if alias == "DebugMode" then return viewField(h.debug) end
             error("unexpected alias " .. alias)
         end },
@@ -159,7 +160,7 @@ local function harness(options)
             if entry.label == h.tab then entry.draw(nil, ctx) end
         end
         h.lines, h.tabs, h.dropdown, h.checkboxes = lines, tabs, dropdown, checkboxes
-        h.guide, h.highlight = guide, highlight
+        h.guide, h.highlight, h.snap = guide, highlight, snap
         return table.concat(lines, "\n")
     end
     return h
@@ -182,7 +183,7 @@ end
 
 function TestStatusUi.testStorageIncludesTheViewSlotAndDefaultDisabledGuidanceSettings()
     local storage = hostData.buildStorage()
-    lu.assertEquals(#storage, 3)
+    lu.assertEquals(#storage, 4)
     lu.assertEquals(storage[1], {
         type = "int", alias = "ActivePlanSlot", default = 1, min = 0, max = 12, persist = false,
     })
@@ -190,6 +191,11 @@ function TestStatusUi.testStorageIncludesTheViewSlotAndDefaultDisabledGuidanceSe
     lu.assertFalse(storage[2].default)
     lu.assertEquals(storage[3].alias, "HighlightPlannedChoices")
     lu.assertFalse(storage[3].default)
+    -- Snap mode changes gameplay, so it is persisted and hashed like the guidance options.
+    lu.assertEquals(storage[4].alias, "SnapMode")
+    lu.assertFalse(storage[4].default)
+    lu.assertNil(storage[4].persist)
+    lu.assertNil(storage[4].hash)
     lu.assertNil(hostData.buildStatus)
 end
 
