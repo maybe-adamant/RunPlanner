@@ -1,6 +1,6 @@
 import type { Catalog, EncounterDefinition } from '../../catalog-schema';
 import { ORDINARY_SOURCE_CAP } from '../../reward-kernel';
-import type { DraftRoute, DraftWorld } from './spec';
+import type { DraftLoadout, DraftWorld } from './spec';
 
 export interface DraftNpcOption {
   readonly npcKey: string;
@@ -21,14 +21,14 @@ export interface DraftWorldOptions {
 }
 
 /** Story and field NPCs each itinerary biome's rooms can host, read from their encounter slots. */
-export function draftWorldOptions(catalog: Catalog, route: DraftRoute): DraftWorldOptions {
+export function draftWorldOptions(catalog: Catalog, loadout: DraftLoadout): DraftWorldOptions {
   return Object.freeze({
     maxGods: ORDINARY_SOURCE_CAP,
     godKeys: Object.freeze(
       catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian').map((g) => g.key),
     ),
     biomes: Object.freeze(
-      route.itineraryBiomeKeys.map((biomeKey) => biomeWorldOptions(catalog, biomeKey)),
+      loadout.itineraryBiomeKeys.map((biomeKey) => biomeWorldOptions(catalog, biomeKey)),
     ),
   });
 }
@@ -82,10 +82,10 @@ const ALWAYS_PRESENT_PROVIDER_KINDS: ReadonlySet<string> = new Set(['hermes', 'h
 /** Trait givers the world contributes: its gods, its trait-giving NPCs and the always-present givers. */
 export function draftWorldGiverKeys(
   catalog: Catalog,
-  route: DraftRoute,
+  loadout: DraftLoadout,
   world: DraftWorld,
 ): readonly string[] {
-  const options = draftWorldOptions(catalog, route);
+  const options = draftWorldOptions(catalog, loadout);
   const givers = new Set(world.godKeys);
   for (const biome of options.biomes) {
     const story = biome.storyNpc;

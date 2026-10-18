@@ -20,7 +20,7 @@ import { reconcileReplacementRoomState } from '../room-state/replacement';
 import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
-import type { ProjectDocument } from '../model';
+import type { ProjectDocument, RouteLoadout } from '../model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../defaults';
 
 import { failCommand, locateBiome, withBiome } from './contract';
@@ -61,37 +61,60 @@ function isSeleneAspect(catalog: Catalog, aspectKey: string | null): boolean {
   );
 }
 
-/** The rest of the loadout stays; placements name hosts in the replaced biomes, so they reset. */
-function replaceRouteBiomes(
+/**
+ * Placements name hosts in the replaced biomes, so they reset; a carried
+ * Practice start outside the new itinerary falls back to the native run start.
+ */
+function replaceRoute(
   document: ProjectDocument,
   catalog: Catalog,
-  command: Extract<ProjectStateCommand, { readonly kind: 'ReplaceRouteBiomes' }>,
+  command: Extract<ProjectStateCommand, { readonly kind: 'ReplaceRoute' }>,
 ): ProjectDocument {
-  const route = document.route;
-  if (route.routeKey !== command.route.routeKey)
+  if (document.route.routeKey !== command.route.routeKey)
     failCommand(command, `project is missing route ${command.route.routeKey}`);
-  if (command.biomes.length > route.itineraryBiomeKeys.length)
-    failCommand(command, `exceeds the ${route.itineraryBiomeKeys.length}-biome itinerary`);
+  const { plan } = command;
+  if (plan.biomes.length > plan.itineraryBiomeKeys.length)
+    failCommand(command, `exceeds the ${plan.itineraryBiomeKeys.length}-biome itinerary`);
+  plan.biomes.forEach((biome, index) => {
+    if (biome.biomeKey !== plan.itineraryBiomeKeys[index])
+      failCommand(command, `biome ${index} must be ${plan.itineraryBiomeKeys[index]}`);
+  });
+  const startingReward = plan.loadout.startingReward;
   if (
-    command.startingReward !== null &&
-    !catalog.runStartReward.incomingReward.allowedRewardTypes.includes(
-      command.startingReward.rewardType,
-    )
+    startingReward !== null &&
+    !catalog.runStartReward.incomingReward.allowedRewardTypes.includes(startingReward.rewardType)
   )
     failCommand(command, 'reward is not allowed by the run-start binding');
-  command.biomes.forEach((plan, index) => {
-    if (plan.biomeKey !== route.itineraryBiomeKeys[index])
-      failCommand(command, `biome ${index} must be ${route.itineraryBiomeKeys[index]}`);
-  });
+  const carried = document.route.loadout.runModifiers;
+  const startPoint = carried?.startPoint;
+  const runModifiers =
+    startPoint !== undefined &&
+    startPoint !== null &&
+    typeof startPoint === 'object' &&
+    !plan.itineraryBiomeKeys.includes(startPoint.biomeKey)
+      ? withoutStartPoint(carried!)
+      : carried;
   return Object.freeze({
     ...document,
     route: Object.freeze({
-      ...route,
-      loadout: Object.freeze({ ...route.loadout, startingReward: command.startingReward }),
+      routeKey: plan.routeKey,
+      itineraryBiomeKeys: Object.freeze([...plan.itineraryBiomeKeys]),
+      loadout: Object.freeze({
+        ...plan.loadout,
+        ...(runModifiers === undefined ? {} : { runModifiers }),
+      }),
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
-      biomes: Object.freeze([...command.biomes]),
+      biomes: Object.freeze([...plan.biomes]),
     }),
   });
+}
+
+function withoutStartPoint(
+  runModifiers: NonNullable<RouteLoadout['runModifiers']>,
+): RouteLoadout['runModifiers'] {
+  const rest = { ...runModifiers };
+  delete rest.startPoint;
+  return Object.keys(rest).length === 0 ? undefined : Object.freeze(rest);
 }
 
 function configureRoutePrefix(
@@ -305,8 +328,8 @@ export function applyProjectStateCommand(
     }
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
-    case 'ReplaceRouteBiomes':
-      return replaceRouteBiomes(document, catalog, command);
+    case 'ReplaceRoute':
+      return replaceRoute(document, catalog, command);
     case 'ReplaceRouteLoadout': {
       const { route } = routeForCommand(document, catalog, command);
       const weapon = catalog.weapons.byKey[command.weaponKey];
