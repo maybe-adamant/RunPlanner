@@ -8,6 +8,7 @@ import type {
 import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
+  type AcquisitionOutcomeCommand,
   type ProjectCommand,
   type JudgmentArcanaAddress,
   type FigurineArcanaAddress,
@@ -60,23 +61,9 @@ export interface WorkspaceRewardChildInteractionCatalog {
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
 }
 
-type EchoChildEdit = Extract<
-  ProjectCommand,
-  {
-    readonly kind:
-      | 'ReplaceTraitOffer'
-      | 'ResetEncounterTraitOffer'
-      | 'ReplaceGorgonAthenaOffer'
-      | 'ReplaceTraitSelection'
-      | 'ReplaceConcaveStoneResult'
-      | 'ReplaceLevelResolution'
-      | 'ReplaceAcquisitionDisposition'
-      | 'ReplaceSeaStarResult';
-  }
->;
-
 function withDerivedEchoSeed<
-  Edit extends EchoChildEdit | Extract<ProjectCommand, { readonly kind: 'EditEchoReplay' }>,
+  Edit extends
+    AcquisitionOutcomeCommand | Extract<ProjectCommand, { readonly kind: 'EditEchoReplay' }>,
 >(
   intent: WorkspaceCommandIntent<Edit>,
   owner: AcquisitionEntryAddress | undefined,
@@ -96,7 +83,7 @@ function withDerivedEchoSeed<
       kind: 'EditEchoReplay' as const,
       entry: seed.entry,
       sourceOffer: seed.offer,
-      edit: intent.command as EchoChildEdit,
+      edit: intent.command as AcquisitionOutcomeCommand,
     }),
   });
 }
@@ -261,6 +248,7 @@ export function bindRewardChildInteractions(input: {
     [...baseAcquisitionConversions].map(([key, interaction]) => {
       const owner = interaction.owner.owner;
       const entry = owner.kind === 'acquisitionEntry' ? owner : undefined;
+      const { anvil, hexActivation } = interaction;
       return [
         key,
         Object.freeze({
@@ -269,6 +257,28 @@ export function bindRewardChildInteractions(input: {
             withDerivedEchoSeed(interaction.intentFor(value), entry, replaySeeds),
           seaStarIntentFor: (procced: boolean) =>
             withDerivedEchoSeed(interaction.seaStarIntentFor(procced), entry, replaySeeds),
+          ...(anvil === undefined
+            ? {}
+            : {
+                anvil: Object.freeze({
+                  ...anvil,
+                  intentFor: (value: Parameters<typeof anvil.intentFor>[0]) =>
+                    withDerivedEchoSeed(anvil.intentFor(value), entry, replaySeeds),
+                }),
+              }),
+          ...(hexActivation === undefined
+            ? {}
+            : {
+                hexActivation: Object.freeze({
+                  ...hexActivation,
+                  intentFor: (selectedNodeKeys: readonly string[]) =>
+                    withDerivedEchoSeed(
+                      hexActivation.intentFor(selectedNodeKeys),
+                      entry,
+                      replaySeeds,
+                    ),
+                }),
+              }),
         }),
       ] as const;
     }),

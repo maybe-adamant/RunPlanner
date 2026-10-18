@@ -22,8 +22,13 @@ import {
   roomActionKey,
   echoLastRewardPickupEntryKey,
   traitGeneratedPickupSiteKey,
+  ProjectCommandContractError,
+  type AcquisitionRoleAddress,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
+  type LevelResolutionAddress,
+  type ProjectCommand,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import {
   recordLootTypeHistorySource,
@@ -31,13 +36,18 @@ import {
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
-import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
-import { describe, expect, it } from 'vitest';
+import {
+  createEchoTalentDropReplayProject,
+  createGoldenFGHProject,
+  goldenHBiome,
+} from '@run-planner/test-fixtures/underworld';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer/capability';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
@@ -279,6 +289,22 @@ function makeBridgeOutgoingEligible(project: ReturnType<typeof completeGoldenFGH
       },
     }),
   );
+}
+
+/** The first legal selection that spends a reached Path screen. */
+function firstPathSelection(
+  project: ReturnType<typeof createGoldenFGHProject>,
+  screen: ReturnType<typeof createAcquisitionRoleAddress>,
+): readonly string[] {
+  const capability = acquisitionConversionCandidateForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    screen,
+  )?.hexActivation;
+  if (capability === undefined) throw new Error('Path screen is not reached');
+  const selection: string[] = [];
+  while (selection.length < capability.count)
+    selection.push(capability.availableNodeKeys(selection)[0]!);
+  return selection;
 }
 
 function historyFromTraits(
@@ -2956,6 +2982,113 @@ describe('Echo Gate C Reward Reward Reward', () => {
       expect(acquisitions).toHaveLength(1);
       expect(acquisitions[0]!.historySequence).toBeLessThan(outgoing!.sequence);
     }
+  });
+
+  it('authors the Path screen of a Talent Drop copy through its first replay edit', () => {
+    const project = createEchoTalentDropReplayProject();
+    const replayEntry = echoReplayEntry();
+    const screen = createAcquisitionRoleAddress(replayEntry, 'self');
+    expect(simulateProjectAssembly(catalog, project).evaluation.findings).toEqual([
+      expect.objectContaining({ code: 'hexActivationMissing', origin: screen }),
+    ]);
+    const selectedNodeKeys = firstPathSelection(project, screen);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHexActivation',
+        acquisition: screen,
+        value: { selectedNodeKeys },
+      }),
+    ).toThrow(ProjectCommandContractError);
+    const authored = makeBridgeOutgoingEligible(
+      applyProjectCommand(project, catalog, {
+        kind: 'EditEchoReplay',
+        entry: replayEntry,
+        sourceOffer: { rewardType: 'TalentDrop' },
+        edit: { kind: 'ReplaceHexActivation', acquisition: screen, value: { selectedNodeKeys } },
+      }),
+    );
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(authored)), catalog)).toEqual(
+      authored,
+    );
+    const evaluation = simulateProjectAssembly(catalog, authored).evaluation;
+    expect(evaluation.status).toBe('valid');
+    expect(evaluation.findings).toEqual([]);
+  });
+
+  it('replaces a stale replayed Path selection when the last reward changes', () => {
+    const project = createEchoTalentDropReplayProject();
+    const replayEntry = echoReplayEntry();
+    const screen = createAcquisitionRoleAddress(replayEntry, 'self');
+    const authored = makeBridgeOutgoingEligible(
+      applyProjectCommand(project, catalog, {
+        kind: 'EditEchoReplay',
+        entry: replayEntry,
+        sourceOffer: { rewardType: 'TalentDrop' },
+        edit: {
+          kind: 'ReplaceHexActivation',
+          acquisition: screen,
+          value: { selectedNodeKeys: firstPathSelection(project, screen) },
+        },
+      }),
+    );
+    const hermesLast = editTestRoomActionOrder(
+      authored,
+      catalog,
+      createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat09')),
+      (order) => {
+        const cage1 = order.find(
+          (reference) =>
+            reference.kind === 'interactLocalReward' &&
+            reference.groupKey === 'cages' &&
+            reference.slotKey === 'cage1',
+        );
+        if (cage1 === undefined) throw new Error('Combat09 Cage 1 action is missing');
+        return [...order.filter((reference) => reference !== cage1), cage1];
+      },
+    );
+    const stale = simulateProjectAssembly(catalog, hermesLast);
+    const trait = createTraitOfferAddress(replayEntry, 'self');
+    expect(stale.evaluation.findings).toEqual([
+      expect.objectContaining({ code: 'traitOfferMissing', origin: trait }),
+    ]);
+    expect(
+      derivedAcquisitionEntriesForProjectEvaluationAssembly(stale, replayEntry.site).find(
+        (entry) => entry.kind === 'echoLastReward',
+      ),
+    ).toMatchObject({
+      fixedReward: { offer: { rewardType: 'HermesUpgrade' } },
+      retainedSourceMismatch: true,
+    });
+    const draft = createPreparedProjectCandidateSession(catalog, stale).traitOfferStartingOutcome(
+      trait,
+      'Hermes',
+    );
+    if (draft === undefined) throw new Error('Hermes replay offer is missing');
+    const replaced = applyProjectCommand(hermesLast, catalog, {
+      kind: 'EditEchoReplay',
+      entry: replayEntry,
+      sourceOffer: { rewardType: 'HermesUpgrade' },
+      edit: { kind: 'ReplaceTraitOffer', trait, value: draft },
+    });
+    const bridge = replaced.route.biomes
+      .find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const entry = bridge.acquisitionSites?.roomExit?.pickupEntries?.[echoReplayEntryKey];
+    expect(entry?.offer).toEqual({ rewardType: 'HermesUpgrade' });
+    expect(entry?.hexActivationsByAcquisitionRole).toBeUndefined();
+    expect(simulateProjectAssembly(catalog, replaced).evaluation.findings).toEqual([]);
+  });
+
+  it('wraps every acquisition outcome edit that addresses a reward role', () => {
+    type RoleOutcomeCommand = Extract<
+      ProjectCommand,
+      | { readonly trait: TraitOfferAddress }
+      | { readonly levelResolution: LevelResolutionAddress }
+      | { readonly acquisition: AcquisitionRoleAddress }
+    >;
+    expectTypeOf<
+      Extract<ProjectCommand, { readonly kind: 'EditEchoReplay' }>['edit']
+    >().toEqualTypeOf<RoleOutcomeCommand>();
   });
 });
 

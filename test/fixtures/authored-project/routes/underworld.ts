@@ -1,4 +1,5 @@
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -19,6 +20,7 @@ import {
   createIncomingRewardAddress,
   createJudgmentArcanaAddress,
   createLevelResolutionAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
@@ -41,6 +43,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   authorLegalTraitOffers,
+  editTestRoomActionOrder,
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from '../shared';
@@ -1407,6 +1410,93 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     trait: forcedTrait,
     value: traitDraft,
   });
+}
+
+/** Golden H whose Echo copies a last Talent Drop; the copy's Path screen is unauthored. */
+export function createEchoTalentDropReplayProject(): ProjectDocument {
+  const combat09 = createOccurrenceId('golden-h-combat09');
+  const cage = (occurrenceId: OccurrenceId, slotKey: string) =>
+    createLocalRewardAddress(goldenHBiome, occurrenceId, 'cages', slotKey);
+  const echoSelection = (firstTraitKey: string) =>
+    ({
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          goldenHBiome,
+          { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-h-bridge01') },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: firstTraitKey },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+          { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    }) as const;
+  let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: combat09,
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  project = applyProjectCommand(project, catalog, echoSelection('DiminishingDodgeBoon'));
+  // Moves the H Spell ahead of the Echo bridge, as the Talent Drop requires.
+  for (const [occurrenceId, slotKey, rewardType] of [
+    ['golden-h-combat02', 'cage1', 'SpellDrop'],
+    ['golden-h-combat03', 'cage2', 'RoomMoneyDrop'],
+  ] as const)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: cage(createOccurrenceId(occurrenceId), slotKey),
+      value: { rewardType },
+    });
+  project = authorLegalTraitOffers(project);
+  const talent = cage(combat09, 'cage2');
+  project = editTestRoomActionOrder(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: talent,
+      value: { rewardType: 'TalentDrop' },
+    }),
+    catalog,
+    createOccurrenceAddress(goldenHBiome, combat09),
+    (order) => {
+      const last = order.find(
+        (reference) =>
+          reference.kind === 'interactLocalReward' &&
+          reference.groupKey === 'cages' &&
+          reference.slotKey === 'cage2',
+      );
+      if (last === undefined) throw new Error('Combat09 Cage 2 action is missing');
+      return [...order.filter((reference) => reference !== last), last];
+    },
+  );
+  const screen = createAcquisitionRoleAddress(talent, 'self');
+  const capability = acquisitionConversionCandidateForProjectEvaluationAssembly(
+    simulateProjectAssembly(catalog, project),
+    screen,
+  )?.hexActivation;
+  if (capability === undefined) throw new Error('Talent Drop Path screen is not reached');
+  const selectedNodeKeys: string[] = [];
+  while (selectedNodeKeys.length < capability.count)
+    selectedNodeKeys.push(capability.availableNodeKeys(selectedNodeKeys)[0]!);
+  project = authorLegalTraitOffers(
+    applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHexActivation',
+      acquisition: screen,
+      value: { selectedNodeKeys },
+    }),
+  );
+  return applyProjectCommand(project, catalog, echoSelection('EchoLastReward'));
 }
 
 export const echoGoldIPrebossShopId = createOccurrenceId('golden-i-preboss');

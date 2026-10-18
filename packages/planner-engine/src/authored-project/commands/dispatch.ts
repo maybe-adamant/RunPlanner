@@ -98,13 +98,13 @@ function applyUnchecked(
           command.entry,
           'requires an Echo replay pickup entry',
         );
+      const edit = command.edit;
       const editOwner =
-        command.edit.kind === 'ReplaceLevelResolution'
-          ? command.edit.levelResolution.owner
-          : command.edit.kind === 'ReplaceAcquisitionDisposition' ||
-              command.edit.kind === 'ReplaceSeaStarResult'
-            ? command.edit.acquisition.owner
-            : command.edit.trait.owner;
+        'trait' in edit
+          ? edit.trait.owner
+          : 'levelResolution' in edit
+            ? edit.levelResolution.owner
+            : edit.acquisition.owner;
       if (
         editOwner.kind !== 'acquisitionEntry' ||
         semanticAddressKey(editOwner) !== semanticAddressKey(command.entry)
@@ -400,4 +400,9 @@ export {
   projectCommandAuthoringAddresses,
   ProjectCommandContractError,
 } from './contract';
-export type { EncounterOccurrenceCommand, ProjectCommand, RoomActionCommand } from './types';
+export type {
+  AcquisitionOutcomeCommand,
+  EncounterOccurrenceCommand,
+  ProjectCommand,
+  RoomActionCommand,
+} from './types';
