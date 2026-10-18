@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
-import { applyProjectCommand, type ProjectDocument } from '../../../src/authored-project';
+import {
+  applyProjectCommand,
+  createRouteAddress,
+  type ProjectDocument,
+} from '../../../src/authored-project';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
@@ -105,6 +109,24 @@ describe('draftProject', () => {
     );
     const attacks = equipped.filter((key) => catalog.traits.byKey[key]?.equipmentSlot === 'Melee');
     expect(attacks).toEqual(['ZeusWeaponBoon']);
+  });
+
+  it('drafts a route with a Practice start and keeps the start point', () => {
+    const { base, spec } = cases[0]!;
+    const practice = applyProjectCommand(base, catalog, {
+      kind: 'ReplaceRunModifiers',
+      route: createRouteAddress(base.route.routeKey),
+      value: { startPoint: { biomeKey: 'G', point: 'opening' } },
+    });
+    const result = draftProject(catalog, practice, spec, 1);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const drafted = applyProjectCommand(practice, catalog, result.command);
+    expect(drafted.route.loadout.runModifiers).toEqual({
+      startPoint: { biomeKey: 'G', point: 'opening' },
+    });
+    const evaluation = simulateProjectAssembly(catalog, drafted).evaluation;
+    expect(evaluation.status).toBe('valid');
+    expect(evaluation.findings).toEqual([]);
   });
 
   it('drafts the same route for the same seed', () => {

@@ -1,6 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../rewards';
+import type { ResolvedRewardOffer } from '../../reward-kernel';
+import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
 import type { DraftSpec } from './spec';
 
 export type DraftTargetKind =
@@ -31,10 +33,16 @@ export const DRAFT_HERMES_TARGET = 2;
 
 export type DraftSupply = 'hermes' | 'hammer';
 
-/** Room and shop rewards that grant a Hermes boon or a Daedalus Hammer. */
-export function draftSupply(rewardType: string): DraftSupply | undefined {
-  if (rewardType === 'HermesUpgrade' || rewardType === 'ShopHermesUpgrade') return 'hermes';
-  if (rewardType === 'WeaponUpgrade' || rewardType === 'WeaponUpgradeDrop') return 'hammer';
+/** Rewards whose acquisition role resolves to a Hermes or Daedalus Hammer giver. */
+export function draftSupply(catalog: Catalog, offer: ResolvedRewardOffer): DraftSupply | undefined {
+  const roles = catalog.rewards.rewardTypes.byKey[offer.rewardType]?.acquisitionRoles.values ?? [];
+  for (const role of roles) {
+    const giverKey = traitGiverForAcquisitionRole(catalog, offer, role.key);
+    const kind =
+      giverKey === undefined ? undefined : catalog.traitGivers.byKey[giverKey]?.providerKind;
+    if (kind === 'hermes') return 'hermes';
+    if (kind === 'hammer') return 'hammer';
+  }
   return undefined;
 }
 
@@ -58,15 +66,28 @@ export function latestRunState(assembly: ProjectEvaluationAssembly): RunStateSna
   return latest;
 }
 
-/** Trait keys equipped at the latest snapshot that one giver lists. */
-export function heldFromGiver(
+/**
+ * Hermes boons held, or Hammers taken from rewards: a Hammer the Experimental
+ * Hammer keepsake rolled does not count.
+ */
+export function heldSupply(
   catalog: Catalog,
   snapshot: RunStateSnapshot | undefined,
-  giverKey: string,
+  supply: DraftSupply,
 ): number {
-  const traitKeys = catalog.traitGivers.byKey[giverKey]?.traitKeys ?? [];
-  return Object.keys(snapshot?.traits.equippedTraits ?? {}).filter((key) => traitKeys.includes(key))
-    .length;
+  const providerKind = supply === 'hermes' ? 'hermes' : 'hammer';
+  const keepsakeHammers = new Set(
+    (snapshot?.keepsakes.experimentalHammers ?? [])
+      .filter((hammer) => hammer.active)
+      .map((hammer) => hammer.traitKey),
+  );
+  return Object.keys(snapshot?.traits.equippedTraits ?? {}).filter(
+    (key) =>
+      !keepsakeHammers.has(key) &&
+      catalog.traitGivers.values.some(
+        (giver) => giver.providerKind === providerKind && giver.traitKeys.includes(key),
+      ),
+  ).length;
 }
 
 /** Gods whose boon the run has picked up by this snapshot. */
@@ -135,12 +156,12 @@ export function draftReport(
   targets.push({
     kind: 'hammers',
     key: String(DRAFT_HAMMER_TARGET),
-    met: heldFromGiver(catalog, snapshot, 'WeaponUpgrade') >= DRAFT_HAMMER_TARGET,
+    met: heldSupply(catalog, snapshot, 'hammer') >= DRAFT_HAMMER_TARGET,
   });
   targets.push({
     kind: 'hermes',
     key: String(DRAFT_HERMES_TARGET),
-    met: heldFromGiver(catalog, snapshot, 'Hermes') >= DRAFT_HERMES_TARGET,
+    met: heldSupply(catalog, snapshot, 'hermes') >= DRAFT_HERMES_TARGET,
   });
   spec.rackKeepsakeKeys.forEach((keepsakeKey, index) => {
     const plan = assembly.project.route.biomes[index];
