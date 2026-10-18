@@ -1,4 +1,6 @@
 -- Route/room handshake and current-room lifecycle contacts.
+local snapMode = type(import) == "function" and import("mods/snap/mode.lua") or require("mods.snap.mode")
+
 local hooks = {}
 
 local function roomName(value)
@@ -12,13 +14,66 @@ local function reportOutcome(session, state, errorValue)
     return session.mismatch(state, errorValue)
 end
 
+-- snapScope: { enabled(runtime), apply, hexTree } for snap mode; nil leaves it off.
 function hooks.attach(module, session, getState, report, route, room, featureScope, navigation, loadoutScope,
-    practiceScope)
+    practiceScope, snapScope)
     assert(type(loadoutScope) == "table"
         and type(loadoutScope.synchronizeStartingRoom) == "function"
         and type(loadoutScope.startingRun) == "function"
         and type(loadoutScope.installedRun) == "function",
         "starting-room loadout scope is required")
+    -- Snap mode steers a desynchronized run's next room to the planned next
+    -- occurrence: the door's own room when it is that room, else one built as
+    -- ChooseStartingRoom builds it. The session resynchronizes first so the
+    -- new room's encounter and reward are steered inside LeaveRoom.
+    local function steerSnap(runtime, state, currentRun, door)
+        if snapScope == nil or not snapScope.enabled(runtime) then return end
+        local target, index = snapMode.target(state, roomName(currentRun and currentRun.CurrentRoom))
+        if target == nil then
+            if index == "loop" then session.stopSnapping(state); report(runtime) end
+            return
+        end
+        if not session.beginSnap(state, index) then report(runtime); return end
+        room.prepare(state, target)
+        if type(door) == "table" and roomName(door.Room) == target.gameName then
+            door.Room.__runPlannerExecutionRoomId = target.id
+        elseif state.state == "synchronized" then
+            local gameValue = _G.game or game
+            local data = room.realize(state, target, gameValue)
+            if data ~= nil then data = navigation.realizeIncomingReward(target, data) end
+            local createRoom = gameValue and gameValue.CreateRoom or _G.CreateRoom
+            if type(data) == "table" and type(createRoom) == "function" and type(door) == "table" then
+                door.Room = createRoom(data)
+            end
+        end
+        if state.state ~= "synchronized" then session.stopSnapping(state) end
+        report(runtime)
+    end
+
+    -- At the snapped room's StartRoom, before native setup binds the hero.
+    local function settleSnap(runtime, state, nativeRoom)
+        local pending = state.snapPending
+        local occurrence = state.plan.occurrencesById[pending.occurrenceId]
+        local ok, verified, failure = true, false, nil
+        if state.state == "synchronized" and roomName(nativeRoom) ~= occurrence.gameName then
+            failure = { checkpoint = "snap-room", expected = occurrence.gameName, observed = roomName(nativeRoom) }
+        elseif state.state == "synchronized" then
+            ok, verified, failure = pcall(snapScope.apply, occurrence, occurrence.diagnostics.roomEntered,
+                state.plan, {
+                    hexTree = snapScope.hexTree,
+                    diagnostic = function(checkpoint, expected, observed)
+                        session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
+                    end,
+                })
+            if not ok then
+                failure = { outcome = "fault", checkpoint = "snap-apply", expected = occurrence.id,
+                    observed = tostring(verified) }
+            end
+        end
+        if ok and verified then session.completeSnap(state) else session.stopSnapping(state, failure) end
+        report(runtime)
+    end
+
     module.hooks.wrap("ChooseStartingRoom", "run-planner-starting-room", function(_, runtime, base, currentRun,
         args)
         local state = getState(runtime)
@@ -124,6 +179,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         if nativeRoom == nil and type(liveRun) == "table" then nativeRoom = liveRun.CurrentRoom end
         -- A run loaded into a fresh process continues unsteered.
         if loadoutScope.installedRun(liveRun) then session.resumeUnsteered(state) end
+        if state.snapPending ~= nil then settleSnap(runtime, state, nativeRoom) end
         if state.state ~= "synchronized" then report(runtime); return base(currentRun, nativeRoom) end
         local expected = route.expected(state.route)
         local id = type(nativeRoom) == "table" and nativeRoom.__runPlannerExecutionRoomId or nil
@@ -178,7 +234,10 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
 
     module.hooks.wrap("LeaveRoom", "run-planner-room-exit", function(_, runtime, base, currentRun, door)
         local state = getState(runtime)
-        if state == nil or state.state ~= "synchronized" then return base(currentRun, door) end
+        if state == nil or state.state ~= "synchronized" then
+            if state ~= nil then steerSnap(runtime, state, currentRun, door) end
+            return base(currentRun, door)
+        end
         local nativeRoomName = roomName(currentRun and currentRun.CurrentRoom)
         if route.leaveTransparent and route.leaveTransparent(state.route, nativeRoomName) then
             if navigation.proveHubDeparture then
@@ -197,6 +256,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         if state.state == "synchronized" and route.expected(state.route) == nil then
             state.reason = "configured-prefix-complete"
         end
+        if state.state == "desynchronized" then steerSnap(runtime, state, currentRun, door) end
         local result = base(currentRun, door)
         report(runtime)
         return result

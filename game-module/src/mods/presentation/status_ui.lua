@@ -32,6 +32,7 @@ local DEBUG_HINT = "Turn on Debug Mode (Advanced tab) to see diagnostics."
 local LOAD_BUTTON = { id = "run_planner_reload" }
 local GUIDE_CHECKBOX = { id = "show_room_guide", label = "Show room guide" }
 local HIGHLIGHT_CHECKBOX = { id = "highlight_planned_choices", label = "Highlight planned choices" }
+local SNAP_CHECKBOX = { id = "snap_mode", label = "Snap back to the plan" }
 
 local function safeText(value)
     local ok, text = pcall(function()
@@ -267,6 +268,8 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         assert(showGuide ~= nil, "status UI ShowRoomGuide data field is required")
         local highlightChoices = ctx.data.get("HighlightPlannedChoices")
         assert(highlightChoices ~= nil, "status UI HighlightPlannedChoices data field is required")
+        local snapMode = ctx.data.get("SnapMode")
+        assert(snapMode ~= nil, "status UI SnapMode data field is required")
         if field:read() ~= viewSlot then field:write(viewSlot) end
         if drawApi.widgets.dropdown(field, pickerOpts) then
             local requested = field:read()
@@ -285,6 +288,7 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         drawApi.widgets.separator()
         drawApi.widgets.checkbox(showGuide, GUIDE_CHECKBOX)
         drawApi.widgets.checkbox(highlightChoices, HIGHLIGHT_CHECKBOX)
+        drawApi.widgets.checkbox(snapMode, SNAP_CHECKBOX)
     end
 
     -- Every string the tab shows, computed before any ImGui call.
@@ -298,8 +302,10 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         local lines = { (event and "Event: " .. event.title or presentation.title(planName, snapshot.slot))
             .. (practice and " - Practice from " .. practice or "") }
         local progress = presentation.progress(snapshot)
+        local snapped = presentation.snapped(snapshot)
         if presentation.isComplete(snapshot) then
             lines[2] = planName .. " - all " .. progress.total .. " planned rooms done. The game continues on its own."
+            lines[#lines + 1] = snapped
             return { lines = lines }
         end
         local count = "room " .. progress.room .. " of " .. progress.total
@@ -313,6 +319,10 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
                 lines[3] = "What differed: "
                     .. (mismatch and mismatch.difference and mismatch.difference .. "." or "See More details.")
             end
+            if snapshot.reason == "snap-loop" then
+                lines[#lines + 1] = "Snapping stopped: the snap did not hold."
+            end
+            lines[#lines + 1] = snapped
             return { lines = lines, mismatch = mismatch and mismatch.planned and mismatch or nil }
         end
         local occurrence = progress.occurrence
@@ -322,11 +332,12 @@ function ui.bind(inbox, inspectSession, activeSlotFile, slotOverview, clock)
         else
             lines[2] = "Room " .. progress.room .. " of " .. progress.total .. (room and " - " .. room or "")
         end
+        lines[#lines + 1] = snapped
         return { lines = lines }
     end
 
     -- Header and run text follow the session fields they read and the slot view.
-    local VIEW_FIELDS = { "plan", "state", "reason", "slot", "index", "current", "issue" }
+    local VIEW_FIELDS = { "plan", "state", "reason", "slot", "index", "current", "issue", "snaps" }
     local cached = { generation = -1 }
     local function sessionView(snapshot)
         local changed = cached.generation ~= generation or cached.viewSlot ~= viewSlot

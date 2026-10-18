@@ -109,6 +109,18 @@ function presentation.isComplete(snapshot)
     return snapshot.reason == "configured-prefix-complete"
 end
 
+-- How often snap mode returned the run to the plan, and where; nil before any snap.
+function presentation.snapped(snapshot)
+    local snaps = type(snapshot.snaps) == "table" and snapshot.snaps or {}
+    if #snaps == 0 then return nil end
+    local rooms = {}
+    for _, snap in ipairs(snaps) do
+        local occurrence = snapshot.plan and snapshot.plan.occurrencesById[snap.occurrenceId]
+        rooms[#rooms + 1] = occurrence and names.room(occurrence.gameName) or tostring(snap.occurrenceId)
+    end
+    return "Snapped back " .. #snaps .. (#snaps == 1 and " time" or " times") .. ": " .. table.concat(rooms, ", ")
+end
+
 -- The window header: a status line, an optional reason line and a tone.
 function presentation.header(snapshot, planName)
     local title = presentation.title(planName, snapshot.slot)

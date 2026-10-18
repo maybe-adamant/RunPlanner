@@ -68,8 +68,7 @@ snap sets it. If no check reads it, it stays live.
   of it is checked.
 - **Essences** are corrected from the published element totals. There are no
   essence counts.
-- **Run records** stay live unless the probe gate shows that a proof reads
-  them.
+- **Run records** stay live (decision 3).
 - **Snap targets only** an occurrence with a published `roomEntered` frame.
   Hubs, Ephyra, Dream biome transitions and other biome edges are deferred:
   snap declines there, and the session stays passive.
@@ -200,9 +199,11 @@ One commit, for the shipped part only.
      `BlockInRunRarify`, `SelectedTrait`, `RepeatedKeepsake`, `GrantedTrait`
      and Echo stat fields, but a trait newly added from the plan gets none of
      them, nor an NPC menu rarity: the frames do not carry them.
-2. **Probe.** A dev-only manual trigger, not shipped, calls `apply` at the
-   next room entry. Run the checklist below. Record the results in this plan.
-   They decide decision 3.
+2. **Probe.** A dev-only manual trigger, not shipped, called `apply` at the
+   next room entry. **Result:** a snap at F_Combat02 after a skipped Hammer
+   verified, and a wrong door logged "no planned occurrence" as expected. The
+   rest of the checklist below runs live under snap mode in gate 3, where
+   deliberate mispicks are practical. Snap mode retires the probe.
 3. **Acceptance:** module unit tests for `apply` against fake native
    functions, with representative cases per step; `npm run test:game-module`.
 
@@ -230,6 +231,11 @@ One commit.
    - set the state to `synchronized`;
    - record the snap `{ occurrenceId, mismatch }`;
    - clear `firstMismatch` and the route's mismatch.
+   - **Native order:** LeaveRoom chooses the next room's encounter and
+     CreateRoom its reward, both steered only while synchronized. So the
+     route and coordinator are rebuilt at the steering LeaveRoom (state
+     `synchronized`, reason `snap-pending`), and StartRoom applies the frame
+     and records the snap, or stops snapping.
 4. **Loop guard.** If the snap's verify fails, or the same mismatch checkpoint
    recurs at the snapped occurrence or the next one, the session goes passive
    with reason `snap-loop`, is reported, and never snaps again in this run.
@@ -264,7 +270,7 @@ One commit.
   - snap mode steering, resync and loop guard.
 - **Product witnesses:** the regenerated execution fixtures decode in Lua.
 
-## Probe checklist (gate 2)
+## Live checklist (gate 3, snap mode on)
 
 1. **Desync deliberately:**
    - a different god boon;
@@ -273,7 +279,7 @@ One commit.
    - a keepsake swap at a rack;
    - a different Path of Stars node.
 
-   Then fire the trigger and enter the planned next room.
+   Then leave the room: snap mode steers into the planned next room.
 
 2. **Check after the room starts:**
    - verify passes;
@@ -307,8 +313,9 @@ One commit.
    exact across branches; an untouched store is published at its initial
    counts. Elsewhere snap leaves the store live, and the existing door proofs
    decide.
-3. **Run records** stay live. If the probe shows a door or reward proof
-   reading them, they join the frame before gate 3.
+3. **Run records** stay live. Gate 3's live run settles it: a proof that
+   turns out to read them recurs at the snapped room, and the loop guard
+   stops snapping.
 4. **"Same mismatch"** for the loop guard means the same checkpoint at the
    snapped occurrence or the next one. A different mismatch later may snap
    again.

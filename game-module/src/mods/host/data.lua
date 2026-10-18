@@ -24,6 +24,13 @@ function data.buildStorage()
             tooltip = "Mark the next planned door or choice when it is available.",
             default = false,
         },
+        {
+            type = "bool",
+            alias = "SnapMode",
+            label = "Snap back to the plan",
+            tooltip = "After the run goes out of sync, take the next door back into the planned route and restore the planned build there.",
+            default = false,
+        },
     }
 end
 

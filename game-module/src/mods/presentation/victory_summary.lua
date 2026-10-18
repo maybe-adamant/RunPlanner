@@ -46,11 +46,14 @@ function victorySummary.rows(snapshot, entries, present)
     if result == nil then return {} end
     entries = type(entries) == "table" and entries or {}
     local event = presentation.runningEvent(snapshot.plan, entries, present)
-    return {
+    local rows = {
         { text = event and "Planned event - " .. event.title
             or "Planned run - " .. presentation.planName(snapshot.plan, entries[snapshot.slot], snapshot.slot) },
         { text = result },
     }
+    local snaps = type(snapshot.snaps) == "table" and #snapshot.snaps or 0
+    if snaps > 0 then rows[3] = { text = "Snapped back " .. snaps .. (snaps == 1 and " time" or " times") } end
+    return rows
 end
 
 function victorySummary.attach(module, inspect, slotOverview)
