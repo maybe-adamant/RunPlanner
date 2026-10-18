@@ -625,3 +625,16 @@ export {
   type DraftTraitAssessment,
   type DraftTraitRefusal,
 } from './draft/basket';
+export {
+  DEFAULT_DRAFT_BUDGET,
+  draftProject,
+  type DraftBudget,
+  type DraftResult,
+} from './draft/generator';
+export {
+  draftReport,
+  type DraftExtra,
+  type DraftReport,
+  type DraftTargetKind,
+  type DraftTargetResult,
+} from './draft/report';
