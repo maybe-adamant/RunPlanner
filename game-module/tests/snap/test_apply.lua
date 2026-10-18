@@ -66,15 +66,25 @@ local function world(traits)
         CurrentRun = run,
         GameState = { MetaUpgradeState = {}, TraitsTaken = {}, ShrineUpgrades = {} },
         game = {},
-        TraitData = setmetatable({ ReincarnationKeepsake = { Slot = "Keepsake" } },
+        TraitData = setmetatable({
+            ReincarnationKeepsake = { Slot = "Keepsake" }, ArmorGainKeepsake = { Slot = "Keepsake" },
+            RarifyKeepsake = { Slot = "Keepsake" }, ManaOverTimeRefundKeepsake = { Slot = "Keepsake" },
+            StorePendingDeliveryItem = { Name = "StorePendingDeliveryItem" },
+        },
             { __index = function() return {} end }),
         MetaUpgradeCardData = {}, MetaUpgradeData = {}, RewardStoreData = {},
-        PersistentTraitKeys = { "Uses", "RemainingUses" },
+        PersistentTraitKeys = { "Activated", "TraitListTextString", "SacrificedTraitName", "UpgradedTraitName",
+            "Uses", "RemainingUses", "ShrineManaReserve", "CurrentArmor", "RemainingBlocks", "StoredGold" },
         GetProcessedTraitData = function(args)
             return { Name = args.TraitName, Rarity = args.Rarity, StackNum = args.StackNum,
                 PropertyChanges = { {}, {} } }
         end,
         AddTraitToHero = function(args)
+            -- TraitLogic.AddTraitData runs a trait's AddLastStand whatever FromLoot says.
+            if args.TraitData.Name == "ChaosLastStandBlessing" then
+                table.insert(hero.LastStands, { Name = "ChaosLastStandBlessing" })
+                hero.MaxLastStands = hero.MaxLastStands + 1
+            end
             table.insert(hero.Traits, args.TraitData)
             log.added[#log.added + 1] = args.TraitData.Name
             return args.TraitData
@@ -83,12 +93,10 @@ local function world(traits)
         RemoveTrait = function(unit, name, args) removeData(unit, find(name), args) end,
         RemoveWeaponTrait = function(name) while find(name) do removeData(hero, find(name), {}) end end,
         IncreaseTraitLevel = function() error("snap never raises a level in place") end,
+        -- TraitLogic.GetTraitCount reads the first instance's StackNum.
         GetTraitCount = function(_, args)
-            local count = 0
-            for _, trait in ipairs(hero.Traits) do
-                if trait.Name == args.Name then count = count + (trait.StackNum or 1) end
-            end
-            return count
+            local trait = find(args.Name)
+            return trait and (trait.StackNum or 1) or 0
         end,
         HeroHasTrait = function(name) return find(name) ~= nil end,
         GetHeroTrait = find,
@@ -212,6 +220,7 @@ function TestSnapApply.testInvestsThePlannedNodesAndSetsTalentStacksByReadding()
     value.hexProgress.spellTraitKey = "SpellPotionTrait"
     value.hexProgress.bankedPathPoints = 1
     value.hexNodes.investedNodes = { "2:1", "2:2" }
+    value.hexNodes.nodes = { ["1:1"] = "TalentA", ["2:1"] = "TalentB", ["2:2"] = "TalentB" }
     lu.assertTrue(apply(value))
     local run = _G.CurrentRun
     restore()
@@ -264,4 +273,153 @@ end
 
 function TestSnapApply.testTheModelledTraitsMatchTheModuleCatalog()
     lu.assertEquals(require("modeled_traits").catalogVersion, require("mods.protocol.decoder").CATALOG_VERSION)
+end
+
+local function named(hero, name)
+    for _, trait in ipairs(hero.Traits) do if trait.Name == name then return trait end end
+end
+
+function TestSnapApply.testReaddsChaosWithItsValuesAndKeepsDeathDefianceAfterABlessingAddsOne()
+    local hero, log, restore = world({ { Name = "ChaosSpeedCurse", RemainingUses = 1, PropertyChanges = { {}, {} },
+        OnExpire = { TraitData = { Name = "ChaosManaBlessing", Rarity = "Rare", PropertyChanges = { {} } } } } })
+    local value = frame()
+    value.chaos.active = { {
+        curseKey = "ChaosHealthCurse", blessingKey = "ChaosHealthBlessing", rarity = "Epic",
+        clock = "encounters", remaining = 3, curseValues = { healthPenalty = -20 }, blessingValues = { health = 30 },
+    } }
+    value.chaos.matured = { { blessingKey = "ChaosLastStandBlessing", rarity = "Rare", blessingValues = {} } }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals(names(hero), { "ChaosHealthCurse", "ChaosLastStandBlessing" })
+    local curse = named(hero, "ChaosHealthCurse")
+    lu.assertEquals({ curse.RemainingUses, curse.PropertyChanges[1].ChangeValue }, { 3, -20 })
+    lu.assertEquals(curse.OnExpire.TraitData.PropertyChanges[1].ChangeValue, 30)
+    lu.assertTrue(log.removed[1].args.SkipExpire)
+    lu.assertEquals(hero.LastStands, { { Name = "LastStandSkelly" } })
+    lu.assertEquals(hero.MaxLastStands, 1)
+end
+
+function TestSnapApply.testRewritesWellChargesAndDeliveriesAndClearsAStalePendingSpellDrop()
+    local hero, _, restore = world({
+        { Name = "StorePendingDeliveryItem", ShopItemName = "SpellDrop", RemainingUses = 1 },
+    })
+    local run = _G.CurrentRun
+    run.PendingSpellDrop = true
+    local value = frame()
+    value.retainedEffects.stygianWell.sparkUses = 2
+    value.retainedEffects.hermesShrineDeliveries = { {
+        sourceKey = "s", sourceOccurrenceId = "o", generationKey = "initial:first", rewardType = "MaxManaDrop",
+        remainingUses = 2, rushed = false,
+    } }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertFalse(run.PendingSpellDrop)
+    lu.assertEquals(names(hero), { "StorePendingDeliveryItem", "TemporaryForcedSecretDoorTrait",
+        "TemporaryForcedSecretDoorTrait" })
+    lu.assertEquals({ named(hero, "StorePendingDeliveryItem").ShopItemName,
+        named(hero, "StorePendingDeliveryItem").RemainingUses }, { "MaxManaDrop", 2 })
+end
+
+function TestSnapApply.testReaddsAPerfectAspectAndCirceFamiliarStacks()
+    local hero, _, restore = world({
+        { Name = "BaseStaffAspect", Rarity = "Legendary" },
+        { Name = "DodgeFamiliar", FamiliarTrait = true, CirceBonusStacks = 2, StackNum = 3, RemainingBlocks = 2 },
+    })
+    _G.GameState.EquippedFamiliar = "PolecatFamiliar"
+    _G.GetFamiliarTraitStacks = function() return 3 end
+    local value = frame()
+    value.equipment = {
+        aspect = { key = "BaseStaffAspect", rarity = "Perfect" },
+        familiar = { name = "PolecatFamiliar", stackMultiplier = 2 },
+    }
+    lu.assertTrue(apply(value))
+    restore()
+    _G.GetFamiliarTraitStacks = nil
+    lu.assertEquals(named(hero, "BaseStaffAspect").Rarity, "Perfect")
+    lu.assertEquals({ named(hero, "DodgeFamiliar").StackNum, named(hero, "DodgeFamiliar").RemainingBlocks }, { 8, 2 })
+end
+
+function TestSnapApply.testWritesForfeitBansAndArtificerCharges()
+    local hero, _, restore = world({ { Name = "MetaToRunMetaUpgrade", Rarity = "Epic", MetaConversionUses = 3 } })
+    local run = _G.CurrentRun
+    _G.GetNumShrineUpgrades = function() return 1 end
+    local value = frame()
+    value.forfeit = "consumed"
+    value.traits.bannedTraitKeys = { "ZeusWeaponBoon" }
+    value.artificer = { usedCount = 1, remainingCount = 2 }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals({ run.BiomeBoonSkipCount, run.BannedTraits, run.MetaConversionUses },
+        { 1, { ZeusWeaponBoon = true }, 1 })
+    lu.assertEquals(hero.Traits[1].MetaConversionUses, 2)
+end
+
+function TestSnapApply.testReequipsARerankedKeepsakeKeepingItsArmorAndHoldsAPermanentOneUnslotted()
+    local hero, _, restore = world({
+        { Name = "ArmorGainKeepsake", Rarity = "Epic", Slot = "Keepsake", CurrentArmor = 7 },
+        { Name = "ManaOverTimeRefundKeepsake", Rarity = "Common" },
+    })
+    local gameState = _G.GameState
+    local value = frame()
+    value.keepsakes.held = {
+        { name = "ArmorGainKeepsake", rarity = "Heroic", slotted = true },
+        { name = "RarifyKeepsake", rarity = "Epic", rarityUpgradeUses = 2 },
+    }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals(names(hero), { "ArmorGainKeepsake", "RarifyKeepsake" })
+    local sash, card = named(hero, "ArmorGainKeepsake"), named(hero, "RarifyKeepsake")
+    lu.assertEquals({ sash.Rarity, sash.Slot, sash.CurrentArmor }, { "Heroic", "Keepsake", 7 })
+    lu.assertEquals({ card.Slot, card.RarityUpgradeData.Uses }, { nil, 2 })
+    lu.assertEquals(gameState.LastAwardTrait, "ArmorGainKeepsake")
+end
+
+function TestSnapApply.testWritesThePublishedRewardStores()
+    local _, _, restore = world({})
+    local run = _G.CurrentRun
+    _G.RewardStoreData = { RunProgress = { { Name = "A" }, { Name = "B" } } }
+    local value = frame()
+    value.rewardStores = { { name = "RunProgress", remainingEntryCounts = { 0, 2 } } }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertEquals(run.RewardStores.RunProgress, { { Name = "B" }, { Name = "B" } })
+end
+
+function TestSnapApply.testReslotsASpellWhoseRealisedTreeDiffers()
+    local hero, _, restore = world({ { Name = "SpellPotionTrait" }, { Name = "TalentA", StackNum = 1 } })
+    hero.SlottedSpell = { TraitName = "SpellPotionTrait", Talents = { { { Name = "TalentA", Invested = true } } } }
+    _G.SpellData = { PotionSpell = { TraitName = "SpellPotionTrait" } }
+    _G.DeepCopyTable = function(value) return value end
+    _G.CreateTalentTree = function() error("the planned tree is realised through hexTree") end
+    local realized
+    local hexTree = { realize = function(tree)
+        realized = tree
+        return { { { Name = "TalentZ", Rarity = "Rare" } } }
+    end }
+    local value = frame()
+    value.hexProgress.spellTraitKey, value.hexProgress.layoutKey = "SpellPotionTrait", "Lung"
+    value.hexNodes = { nodes = { ["1:1"] = "TalentZ" }, investedNodes = { "1:1" } }
+    lu.assertTrue(snap.apply({ diagnostics = { roomEntered = value } }, value, {}, { hexTree = hexTree }))
+    restore()
+    lu.assertEquals(realized.nodes, { ["1:1"] = "TalentZ" })
+    lu.assertEquals(names(hero), { "SpellPotionTrait", "TalentZ" })
+    lu.assertTrue(hero.SlottedSpell.Talents[1][1].Invested)
+end
+
+function TestSnapApply.testRejectsAnUndeclaredStoreOrMissingTreeBeforeAnyWrite()
+    local hero, log, restore = world({ { Name = "ZeusWeaponBoon", Rarity = "Common", StackNum = 1 } })
+    local value = frame()
+    value.rewardStores = { { name = "Missing", remainingEntryCounts = { 1 } } }
+    local ok, failure = apply(value)
+    lu.assertNil(ok)
+    lu.assertEquals({ failure.outcome, failure.checkpoint }, { "fault", "snap:reward-store" })
+    value.rewardStores = {}
+    value.hexProgress.spellTraitKey = "SpellPotionTrait"
+    value.hexNodes.nodes = { ["1:1"] = "TalentZ" }
+    ok, failure = apply(value)
+    restore()
+    lu.assertNil(ok)
+    lu.assertEquals(failure.checkpoint, "snap:hex-tree")
+    lu.assertEquals(names(hero), { "ZeusWeaponBoon" })
+    lu.assertEquals(log.removed, {})
 end

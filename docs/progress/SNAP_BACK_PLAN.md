@@ -196,6 +196,10 @@ One commit, for the shipped part only.
       removal needs it; Aether follows from the traits alone.
    8. Call `ValidateMaxHealth(true)` and `ValidateMaxMana()`, clamp `Health`,
       then run `admission.verify(occurrence)`. The result is returned.
+   - **Known gap:** a re-add keeps the live instance's `PersistentTraitKeys`,
+     `BlockInRunRarify`, `SelectedTrait`, `RepeatedKeepsake`, `GrantedTrait`
+     and Echo stat fields, but a trait newly added from the plan gets none of
+     them, nor an NPC menu rarity: the frames do not carry them.
 2. **Probe.** A dev-only manual trigger, not shipped, calls `apply` at the
    next room entry. Run the checklist below. Record the results in this plan.
    They decide decision 3.

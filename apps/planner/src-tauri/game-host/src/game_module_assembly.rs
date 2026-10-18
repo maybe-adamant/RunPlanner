@@ -203,9 +203,9 @@ pub fn assemble(
             ModuleSelection::DevelopmentIfPresent => development_module.exists(),
             ModuleSelection::DevelopmentRequired if development_module.exists() => true,
             ModuleSelection::DevelopmentRequired => {
-                return Err(
-                    "VITE_INTERNAL_FEATURES=1 requires the development module variant".to_owned(),
-                )
+                return Err(format!(
+                    "VITE_INTERNAL_FEATURES=1 requires the development module variant {development}"
+                ))
             }
         };
         if use_development_module {

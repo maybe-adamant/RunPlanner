@@ -2300,4 +2300,5 @@ function TestProtocol.testExactFrameSectionsDecodeStrictly()
         frame.keepsakes.held = assert(json.decode('[{"name":"A","rarity":"Epic","escalatingKeepsakeValue":1}]'))
     end)
     rejects("remainingEntryCounts", function(_, frame) frame.rewardStores[1].remainingEntryCounts = nil end)
+    rejects("duplicate name", function(_, frame) frame.rewardStores[2].name = frame.rewardStores[1].name end)
 end
