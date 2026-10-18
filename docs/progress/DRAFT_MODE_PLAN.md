@@ -32,13 +32,17 @@ then edits by hand.
 
 ## The draft spec
 
-An engine product, edited like the loadout and held in application memory
-(not saved in v1).
+An engine product held in application memory (not saved in v1). The draft
+step comes before the loadout and sets it.
 
-- **Loadout:** weapon, aspect, Arcana, Fear, route, itinerary, Practice start
-  point and starting keepsake: the project's existing loadout. The FreshFile
-  route is excluded.
-- **Keepsakes:** the starting keepsake comes from the loadout; the draft sets
+- **Loadout:** route, itinerary, weapon, aspect, familiar, Arcana, Fear and
+  starting keepsake, edited with the existing loadout controls and checked by
+  the engine's existing loadout and route-start rules. The FreshFile route is
+  excluded. Run modifiers and the Practice start point are not part of the
+  draft; they carry over from the current project. The starting reward is not
+  a spec field: the search chooses it like any other decision, toward the
+  targets.
+- **Keepsakes:** the starting keepsake is a loadout field; the draft sets
   one keepsake per Postboss rack between biomes, in order (a four-biome route
   has three). An empty slot keeps the current keepsake. God keepsakes
   (`Force*BoonKeepsake`) are banned in the slots and as the starting keepsake;
@@ -94,13 +98,15 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
 
 ## Application
 
-- A Draft section on the loadout screen edits the spec through the engine
-  queries.
+- A Draft step before the loadout screen edits the spec through the engine
+  queries, reusing the loadout controls. A project can be started by drafting
+  or by hand, and an existing project can be drafted again.
 - Accept runs the search in a worker with progress, then applies the result as
-  one new semantic command:
-  - replaces each biome's state, topology and Echo keepsake replays;
+  one semantic command, `ReplaceRoute`:
+  - replaces the loadout (with the generated starting reward) and each biome's
+    state, topology and Echo keepsake replays;
   - resets the route's resource placements;
-  - keeps the loadout, itinerary, Practice start point and run modifiers.
+  - keeps the run modifiers and the Practice start point.
 
   It is undoable through the existing snapshot history and never goes through
   the project-replaced action. A warning appears whenever any biome already
@@ -121,13 +127,15 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
      per biome, offers per reward binding); the finding-to-repair dispatch stays
      inside the generator, keyed on the repair owner's address kind; encounter
      choice at the frontier.
-   - The generator with per-biome restarts, the replace-biomes command with its
-     authoring address, and the report.
+   - Generalize the route replacement into `ReplaceRoute { loadout, biomes }`
+     and give the spec its loadout fields.
+   - The generator with per-biome restarts, its starting-reward choice, and the
+     report.
    - Tests: valid output, target coverage and the report over a small fixed set
      of specs per route; determinism per seed. Measure post-cache cost on
      Underworld, Surface and Dream to set the default budget.
    - Delete the untracked spike.
-3. **Application.** The Draft section, the worker run, the command with its
+3. **Application.** The Draft step before the loadout, the worker run, the command with its
    warning and Undo, reroll and the report. Interaction and product tests.
 4. **Closure.** Docs (`SIMULATION_AND_VALIDATION.md` ownership,
    `AUTHORED_PROJECT_MODEL.md` for the new command), live checklist, and
