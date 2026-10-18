@@ -325,8 +325,9 @@ Performance is measured separately with
 `npm run test:performance:compare`; `npm run test:performance:absolute` is
 reserved for an explicitly canonical environment. The snapshot covers the
 eight Underworld/Surface rebuild, cold-candidate, edit, and cached-Undo
-operations. Full rebuild uses one warmed application and project for one
-warmup plus three measured calls; each cold-candidate, edit, and cached-Undo
+operations. Full rebuild uses one warmed application and a freshly decoded
+copy of the project for one warmup plus three measured calls, so no cached
+biome is reused; each cold-candidate, edit, and cached-Undo
 sample uses a fresh prepared application and state, with medians reported. The
 generic comparison runs base and candidate sequentially on the same host,
 resolves dirty worktrees to `HEAD` and clean worktrees to `HEAD^` unless the

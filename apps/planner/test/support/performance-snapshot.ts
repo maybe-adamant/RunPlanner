@@ -3,6 +3,8 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createTargetAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -169,10 +171,17 @@ function runFullRebuildSamples(definition: RouteDefinition): {
   application.store.dispatch(authoredProjectReplaced(project));
   const baseline = currentWorkspace(application).assembly.evaluation;
   events.length = 0;
-  simulateProject(application.catalog, project);
+  // A fresh decode shares no biome plan with a cached simulation, so each rebuild is cold.
+  const freshProject = () =>
+    decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(project)) as unknown,
+      application.catalog,
+    );
+  simulateProject(application.catalog, freshProject());
   const rebuilds = Object.freeze(
     Array.from({ length: performanceSnapshotSampleCount }, () => {
-      const measured = measure(() => simulateProject(application.catalog, project));
+      const fresh = freshProject();
+      const measured = measure(() => simulateProject(application.catalog, fresh));
       return Object.freeze({
         ...measured,
         events: snapshotEvents(events),

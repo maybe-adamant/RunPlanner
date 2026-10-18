@@ -100,6 +100,19 @@ caching may reuse a complete assembly for the identical immutable project,
 including Undo/Redo. There is no semantic dependence on a background worker,
 incremental invalidation graph or mutable application singleton.
 
+Within the engine, the project decoder returns an already-decoded frozen biome
+plan, loadout, itinerary and route unchanged when their decode inputs (catalog,
+route, starting reward, biome position) are the same, so an edit keeps every
+untouched biome plan by identity. The route walk (`simulation/evaluation/project.ts`)
+then reuses a biome's complete frozen `{ evaluation, candidateArtifacts }` keyed by
+the predecessor biome's evaluation (the catalog for the first biome), the plan and
+loadout by identity, and the route position, the biome's own forced-Chaos keys and
+its slice of resource placements and findings by value. A changed input misses and
+every later biome then misses on its new predecessor, so nothing is invalidated;
+entries die with their weak keys. The Hub alternative and predecessor replay do
+not use it. `test/simulation/biome-evaluation-cache.test.ts` owns the cached
+versus cold witness and the reuse and miss cases.
+
 ## Authored State Is Not Evaluated Truth
 
 Commands answer whether a transition is structurally representable. They check
