@@ -151,23 +151,24 @@ describe('project workspace application state', () => {
     expect(store.getState().projectWorkspace).toBe(exactWorkspace);
   });
 
-  it('replaces every biome plan in one undoable edit', () => {
+  it('replaces the route plan in one undoable edit', () => {
     const { store } = createStore();
     const before = presentProject(store);
     const generated = createCompleteFGProject();
     store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'ReplaceRouteBiomes',
+        kind: 'ReplaceRoute',
         route: createRouteAddress('Underworld'),
-        startingReward: generated.route.loadout.startingReward,
-        biomes: generated.route.biomes,
+        plan: {
+          routeKey: generated.route.routeKey,
+          itineraryBiomeKeys: generated.route.itineraryBiomeKeys,
+          loadout: generated.route.loadout,
+          biomes: generated.route.biomes,
+        },
       }),
     );
     expect(presentProject(store).route.biomes).toEqual(generated.route.biomes);
-    expect(presentProject(store).route.loadout).toEqual({
-      ...before.route.loadout,
-      startingReward: generated.route.loadout.startingReward,
-    });
+    expect(presentProject(store).route.loadout).toEqual(generated.route.loadout);
     store.dispatch(authoredProjectUndoRequested());
     expect(presentProject(store)).toBe(before);
   });

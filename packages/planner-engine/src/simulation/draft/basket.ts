@@ -10,7 +10,7 @@ import { replaceSimulationTraitHistory } from '../state/transitions';
 import { createTraitHistoryState } from '../traits/history/fold';
 import { checkRequirement } from '../traits/level-effects';
 import type { TraitFindingCode } from '../model';
-import type { DraftRoute, DraftSpec } from './spec';
+import type { DraftLoadout, DraftSpec } from './spec';
 import { draftWorldGiverKeys } from './world';
 
 export type DraftTraitRefusal =
@@ -44,21 +44,17 @@ export interface DraftBasketAssessment {
 }
 
 /** Static legality of each world trait over the basket plus the project's loadout. */
-export function assessDraftBasket(
-  catalog: Catalog,
-  route: DraftRoute,
-  spec: DraftSpec,
-): DraftBasketAssessment {
-  const worldGivers = draftWorldGiverKeys(catalog, route, spec.world);
+export function assessDraftBasket(catalog: Catalog, spec: DraftSpec): DraftBasketAssessment {
+  const worldGivers = draftWorldGiverKeys(catalog, spec.loadout, spec.world);
   const traitKeys = new Set(
     worldGivers.flatMap((key) => catalog.traitGivers.byKey[key]!.traitKeys),
   );
   for (const key of spec.basketTraitKeys) traitKeys.add(key);
-  const routeStart = routeStartState(catalog, route);
+  const routeStart = routeStartState(catalog, spec.loadout);
   return Object.freeze({
     traits: Object.freeze(
       [...traitKeys].map((traitKey) =>
-        assessTrait(catalog, route, spec, worldGivers, routeStart, traitKey),
+        assessTrait(catalog, spec, worldGivers, routeStart, traitKey),
       ),
     ),
   });
@@ -66,7 +62,6 @@ export function assessDraftBasket(
 
 function assessTrait(
   catalog: Catalog,
-  route: DraftRoute,
   spec: DraftSpec,
   worldGivers: readonly string[],
   routeStart: SimulationState,
@@ -95,9 +90,8 @@ function assessTrait(
   const hammer = trait.hammerCompatibility;
   if (
     hammer !== undefined &&
-    (route.loadout.weaponKey !== hammer.weaponKey ||
-      route.loadout.aspectKey === null ||
-      !hammer.aspectKeys.includes(route.loadout.aspectKey))
+    (spec.loadout.weaponKey !== hammer.weaponKey ||
+      !hammer.aspectKeys.includes(spec.loadout.aspectKey))
   )
     refusals.push({ kind: 'wrongHammerLoadout' });
   const requirements = [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements];
@@ -173,14 +167,14 @@ function checkStatic(
 }
 
 /** The reached route-start snapshot of the loadout, before anything is acquired. */
-function routeStartState(catalog: Catalog, route: DraftRoute): SimulationState {
+function routeStartState(catalog: Catalog, loadout: DraftLoadout): SimulationState {
   return createInitialSimulationState(
     catalog,
-    route.loadout,
-    route.loadout.startingKeepsakeKey,
-    createArcanaFearState(catalog, route.loadout),
+    loadout,
+    loadout.startingKeepsakeKey,
+    createArcanaFearState(catalog, loadout),
     Object.freeze({
-      routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
+      routePosition: resolveRoutePosition(catalog, loadout, loadout.itineraryBiomeKeys[0]!),
       historyView: createRouteStartHistoryView(),
     }),
   );

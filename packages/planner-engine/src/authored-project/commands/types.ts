@@ -105,11 +105,15 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     }
   | {
-      /** Replaces every configured biome plan and the run-start reward they settle. */
-      readonly kind: 'ReplaceRouteBiomes';
+      /** Replaces the route plan; run modifiers carry over from the current loadout. */
+      readonly kind: 'ReplaceRoute';
       readonly route: RouteAddress;
-      readonly startingReward: ResolvedRewardOffer | null;
-      readonly biomes: readonly import('../model').AuthoredBiomePlan[];
+      readonly plan: {
+        readonly routeKey: string;
+        readonly itineraryBiomeKeys: readonly string[];
+        readonly loadout: Omit<import('../model').RouteLoadout, 'runModifiers'>;
+        readonly biomes: readonly import('../model').AuthoredBiomePlan[];
+      };
     };
 
 export type ResourcePlacementCommand = {

@@ -46,7 +46,7 @@ function commandContractAddress(
 ): SemanticAddress | AcquisitionSiteAddress {
   switch (command.kind) {
     case 'ConfigureRoutePrefix':
-    case 'ReplaceRouteBiomes':
+    case 'ReplaceRoute':
     case 'ReplaceRouteLoadout':
     case 'ReplaceFamiliar':
     case 'ReplaceAspectHexTree':

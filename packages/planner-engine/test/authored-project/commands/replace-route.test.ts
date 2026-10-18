@@ -13,6 +13,7 @@ import {
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { loadUnderworldFGHCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNResourcesCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 
 function cleared(project: ProjectDocument): ProjectDocument {
   return project.route.biomes.reduce(
@@ -25,17 +26,35 @@ function cleared(project: ProjectDocument): ProjectDocument {
   );
 }
 
-function replaceWith(project: ProjectDocument, source: ProjectDocument): ProjectCommand {
+function replaceWith(
+  project: ProjectDocument,
+  source: ProjectDocument,
+  biomes = source.route.biomes,
+): Extract<ProjectCommand, { readonly kind: 'ReplaceRoute' }> {
+  const { runModifiers: _runModifiers, ...loadout } = source.route.loadout;
+  void _runModifiers;
   return {
-    kind: 'ReplaceRouteBiomes',
+    kind: 'ReplaceRoute',
     route: createRouteAddress(project.route.routeKey),
-    startingReward: source.route.loadout.startingReward,
-    biomes: source.route.biomes,
+    plan: {
+      routeKey: source.route.routeKey,
+      itineraryBiomeKeys: source.route.itineraryBiomeKeys,
+      loadout,
+      biomes,
+    },
   };
 }
 
-describe('ReplaceRouteBiomes', () => {
-  it('installs generated biome plans through edit settlement and keeps the loadout', () => {
+function withStartPoint(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceRunModifiers',
+    route: createRouteAddress(project.route.routeKey),
+    value: { startPoint: { biomeKey, point: 'opening' } },
+  });
+}
+
+describe('ReplaceRoute', () => {
+  it('installs a generated route through edit settlement', () => {
     const source = loadUnderworldFGHCheckpoint();
     const target = cleared(source);
     const command = replaceWith(target, source);
@@ -47,10 +66,7 @@ describe('ReplaceRouteBiomes', () => {
     });
     expect(settled.fault).toBeUndefined();
     expect(settled.assembly.project.route.biomes).toEqual(source.route.biomes);
-    expect(settled.assembly.project.route.loadout).toEqual({
-      ...target.route.loadout,
-      startingReward: source.route.loadout.startingReward,
-    });
+    expect(settled.assembly.project.route.loadout).toEqual(source.route.loadout);
     expect(settled.assembly.evaluation.status).toBe(
       simulateProjectAssembly(catalog, source).evaluation.status,
     );
@@ -69,31 +85,45 @@ describe('ReplaceRouteBiomes', () => {
       Shovel: null,
       Fishing: null,
     });
-    expect(replaced.route.biomes).toEqual(source.route.biomes);
   });
 
-  it('refuses plans that are not an itinerary prefix in order', () => {
+  it('switches route, carrying run modifiers and dropping a start outside the itinerary', () => {
+    const underworld = loadUnderworldFGHCheckpoint();
+    const surface = loadSurfaceNOProject();
+    const keeps = applyProjectCommand(
+      withStartPoint(underworld, 'G'),
+      catalog,
+      replaceWith(underworld, underworld),
+    );
+    expect(keeps.route.loadout.runModifiers).toEqual({
+      startPoint: { biomeKey: 'G', point: 'opening' },
+    });
+    const switched = applyProjectCommand(
+      withStartPoint(underworld, 'G'),
+      catalog,
+      replaceWith(underworld, surface),
+    );
+    expect(switched.route.routeKey).toBe('Surface');
+    expect(switched.route.biomes).toEqual(surface.route.biomes);
+    expect(switched.route.loadout.runModifiers).toBeUndefined();
+  });
+
+  it('refuses biomes out of itinerary order and a disallowed starting reward', () => {
     const source = loadUnderworldFGHCheckpoint();
     const [f, g] = source.route.biomes;
-    const route = createRouteAddress(source.route.routeKey);
     for (const biomes of [[g!, f!], [g!]])
       expect(() =>
-        applyProjectCommand(source, catalog, {
-          kind: 'ReplaceRouteBiomes',
-          route,
-          startingReward: source.route.loadout.startingReward,
-          biomes,
-        }),
+        applyProjectCommand(source, catalog, replaceWith(source, source, biomes)),
       ).toThrow(ProjectCommandContractError);
-  });
-
-  it('refuses a starting reward the run-start binding does not allow', () => {
-    const source = loadUnderworldFGHCheckpoint();
+    const command = replaceWith(source, source);
     expect(() =>
       applyProjectCommand(source, catalog, {
-        ...replaceWith(source, source),
-        startingReward: { rewardType: 'Story' },
-      } as ProjectCommand),
+        ...command,
+        plan: {
+          ...command.plan,
+          loadout: { ...command.plan.loadout, startingReward: { rewardType: 'Story' } },
+        },
+      }),
     ).toThrow(ProjectCommandContractError);
   });
 
@@ -102,12 +132,7 @@ describe('ReplaceRouteBiomes', () => {
     const [f] = source.route.biomes;
     const broken = { ...f!, state: { ...f!.state, unknownField: true } };
     expect(() =>
-      applyProjectCommand(source, catalog, {
-        kind: 'ReplaceRouteBiomes',
-        route: createRouteAddress(source.route.routeKey),
-        startingReward: source.route.loadout.startingReward,
-        biomes: [broken],
-      }),
+      applyProjectCommand(source, catalog, replaceWith(source, source, [broken])),
     ).toThrow(ProjectCommandContractError);
   });
 });
