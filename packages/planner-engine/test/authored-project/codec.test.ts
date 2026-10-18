@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createExitSelectionAddress,
+  createOccurrenceId,
+  createStartingRewardAddress,
   createDefaultAuthoredHexTree,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -10,7 +15,10 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import { fixedRoomLink } from '../../src/authored-project/fixed-room-links';
-import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import {
+  createCompleteFGProject,
+  createGoldenFGHIProject,
+} from '@run-planner/test-fixtures/underworld';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 
 function encodedFStart(): Record<string, unknown> {
@@ -511,5 +519,95 @@ describe('project document codec', () => {
 
   it.each(codecRejections)('rejects %s', ({ mutate }) => {
     expect(() => decodeProjectDocument(mutate(encodedFStart()), catalog)).toThrow();
+  });
+});
+
+describe('identity-preserving decode', () => {
+  function editH(project: ReturnType<typeof createGoldenFGHIProject>) {
+    return applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(createBiomeAddress('Underworld', 'H'), {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+  }
+
+  it('keeps every untouched biome plan, the loadout and the itinerary on an edit', () => {
+    const before = createGoldenFGHIProject();
+    const after = editH(before);
+    const [f, g, h, i] = after.route.biomes;
+    expect(h).not.toBe(before.route.biomes[2]);
+    expect([f, g, i]).toEqual([
+      before.route.biomes[0],
+      before.route.biomes[1],
+      before.route.biomes[3],
+    ]);
+    expect(f).toBe(before.route.biomes[0]);
+    expect(g).toBe(before.route.biomes[1]);
+    expect(i).toBe(before.route.biomes[3]);
+    expect(after.route.loadout).toBe(before.route.loadout);
+    expect(after.route.itineraryBiomeKeys).toBe(before.route.itineraryBiomeKeys);
+    expect(after.route.resourcePlacements).toBe(before.route.resourcePlacements);
+  });
+
+  it('returns the decoded route itself when nothing in it changed', () => {
+    const project = createGoldenFGHIProject();
+    expect(decodeProjectDocument(project, catalog).route).toBe(project.route);
+  });
+
+  it('re-decodes every biome plan when the starting reward changes', () => {
+    const before = createGoldenFGHIProject();
+    const source =
+      before.route.loadout.startingReward?.payload?.kind === 'BoonSource' &&
+      before.route.loadout.startingReward.payload.source === 'ZeusUpgrade'
+        ? 'PoseidonUpgrade'
+        : 'ZeusUpgrade';
+    const after = applyProjectCommand(before, catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source } },
+    });
+    expect(after.route.loadout.startingReward).not.toEqual(before.route.loadout.startingReward);
+    for (const [index, plan] of after.route.biomes.entries())
+      expect(plan).not.toBe(before.route.biomes[index]);
+  });
+
+  it('fully validates a plan that was not produced by the decoder', () => {
+    const project = createGoldenFGHIProject();
+    const fromJson = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(project)) as unknown,
+      catalog,
+    );
+    expect(fromJson.route.biomes[0]).not.toBe(project.route.biomes[0]);
+    expect(fromJson.route.biomes[0]).toEqual(project.route.biomes[0]);
+    const [f, ...rest] = project.route.biomes;
+    const copied = { ...f!, state: { ...f!.state, unknownField: true } };
+    expect(() =>
+      decodeProjectDocument(
+        { ...project, route: { ...project.route, biomes: [copied, ...rest] } },
+        catalog,
+      ),
+    ).toThrow();
+  });
+
+  it('re-decodes plans for another catalog', () => {
+    const project = createGoldenFGHIProject();
+    const other = Object.freeze({ ...catalog });
+    const decoded = decodeProjectDocument(project, other);
+    expect(decoded.route.biomes[0]).not.toBe(project.route.biomes[0]);
+    expect(decoded.route.loadout).not.toBe(project.route.loadout);
+  });
+
+  it('decodes deeply frozen products', () => {
+    const unfrozen: string[] = [];
+    const visit = (value: unknown, path: string) => {
+      if (typeof value !== 'object' || value === null) return;
+      if (!Object.isFrozen(value)) unfrozen.push(path);
+      for (const [key, child] of Object.entries(value)) visit(child, `${path}.${key}`);
+    };
+    visit(createGoldenFGHIProject(), '$');
+    expect(unfrozen).toEqual([]);
   });
 });
