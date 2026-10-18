@@ -29,10 +29,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     local function steerSnap(runtime, state, currentRun, door)
         if snapScope == nil or not snapScope.enabled(runtime) then return end
         local target, index = snapMode.target(state, roomName(currentRun and currentRun.CurrentRoom))
-        if target == nil then
-            if index == "loop" then session.stopSnapping(state); report(runtime) end
-            return
-        end
+        if target == nil then return end
         if not session.beginSnap(state, index) then report(runtime); return end
         room.prepare(state, target)
         if type(door) == "table" and roomName(door.Room) == target.gameName then
@@ -179,7 +176,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         if nativeRoom == nil and type(liveRun) == "table" then nativeRoom = liveRun.CurrentRoom end
         -- A run loaded into a fresh process continues unsteered.
         if loadoutScope.installedRun(liveRun) then session.resumeUnsteered(state) end
-        if state.snapPending ~= nil then settleSnap(runtime, state, nativeRoom) end
+        local snapped = state.snapPending ~= nil
+        if snapped then settleSnap(runtime, state, nativeRoom) end
         if state.state ~= "synchronized" then report(runtime); return base(currentRun, nativeRoom) end
         local expected = route.expected(state.route)
         local id = type(nativeRoom) == "table" and nativeRoom.__runPlannerExecutionRoomId or nil
@@ -214,6 +212,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
                 offeredExitDoors = _G.MapState and _G.MapState.OfferedExitDoors,
             })
         end
+        -- A snapped room that fails its own entry proofs means the snap did not hold.
+        if snapped and state.state == "desynchronized" then session.stopSnapping(state) end
         report(runtime)
         return result
     end)

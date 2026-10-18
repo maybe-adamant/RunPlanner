@@ -236,9 +236,12 @@ One commit.
      route and coordinator are rebuilt at the steering LeaveRoom (state
      `synchronized`, reason `snap-pending`), and StartRoom applies the frame
      and records the snap, or stops snapping.
-4. **Loop guard.** If the snap's verify fails, or the same mismatch checkpoint
-   recurs at the snapped occurrence or the next one, the session goes passive
-   with reason `snap-loop`, is reported, and never snaps again in this run.
+4. **Loop guard.** Snapping stops for the run only when the snap fails by
+   itself: `apply` raises or returns a fault (faulted), verify fails right
+   after `apply`, or the snapped room's own entry mismatches in the same
+   StartRoom (incoming reward, entry proofs, entry encounters). The last two
+   go passive with reason `snap-loop` and are reported. A later mismatch is
+   ordinary play and snaps again at the next transition, without limit.
 5. **Integrity.** The snap count and history appear in the status window and
    the victory summary rows. Event runs are treated like any other run.
 6. **Acceptance:**
@@ -303,8 +306,10 @@ One commit.
    stale icons.
 8. **Run records:** play two more rooms. Does any door or reward proof
    mismatch on records or stores?
-9. **Persistence:** Save & Quit, then reload. Traits and maxima persist
-   through `DoPatches`.
+9. **Repeated mispicks:** mispick again in the snapped room or a later one;
+   each snaps again at the next door.
+10. **Persistence:** Save & Quit, then reload. Traits and maxima persist
+    through `DoPatches`.
 
 ## Decisions
 
@@ -314,11 +319,9 @@ One commit.
    counts. Elsewhere snap leaves the store live, and the existing door proofs
    decide.
 3. **Run records** stay live. Gate 3's live run settles it: a proof that
-   turns out to read them recurs at the snapped room, and the loop guard
-   stops snapping.
-4. **"Same mismatch"** for the loop guard means the same checkpoint at the
-   snapped occurrence or the next one. A different mismatch later may snap
-   again.
+   turns out to read them fails the snapped room's entry, and snapping stops.
+4. **A snap loop** is a snap failing by itself (gate 3 item 4), never a
+   repeated mismatch: every later mismatch snaps again.
 
 ## Non-goals
 

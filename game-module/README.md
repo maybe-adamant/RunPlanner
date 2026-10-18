@@ -49,8 +49,8 @@ room; highlights mark the next planned exit or choice but never select it.
 **Snap back to the plan**, also off by default, picks the plan up again after
 the run goes out of sync: leaving the room takes you into the planned next
 room and restores the planned build there. It doesn't apply in Ephyra, across
-biome changes, or after a reload, and stops for the run if the same check
-fails again. The window and the victory screen count the snaps.
+biome changes, or after a reload, and stops for the run if a snap fails to
+hold in the room it restored. The window and the victory screen count the snaps.
 
 After a victory, the victory screen shows the plan's name and `Complete`, or
 the room where the run went out of sync.

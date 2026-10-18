@@ -48,7 +48,7 @@ local function desynchronized(index, checkpoint)
 end
 
 -- Room hooks over stub room and navigation scopes, with snap mode on or off.
-local function attached(state, snapOn, apply)
+local function attached(state, snapOn, apply, rewardProof)
     local module, _, callbacks = support.capture()
     local log = { created = {} }
     local room = {
@@ -59,7 +59,7 @@ local function attached(state, snapOn, apply)
     }
     local navigation = {
         realizeIncomingReward = function(_, data) return data end,
-        proveIncomingReward = function() return true end,
+        proveIncomingReward = rewardProof or function() return true end,
         proveOutgoingDoors = function() return true end,
     }
     local loadoutScope = {
@@ -184,21 +184,29 @@ function TestSnapMode.testAnApplyFaultStopsSnappingAsAPlannerError()
     lu.assertEquals(state.firstFault.checkpoint, "snap-apply")
 end
 
-function TestSnapMode.testTheSameMismatchAtTheSnappedOrNextRoomIsALoop()
-    for _, index in ipairs({ 2, 3 }) do
-        local state = desynchronized(index, "room-exit-conformance:traitInventory")
-        state.snaps = { { occurrenceId = "b", index = 2,
-            mismatch = { checkpoint = "room-exit-conformance:traitInventory" } } }
-        local leave, _, _, restore = attached(state, true)
-        local door = { Room = { Name = "F_X" } }
-        leave(index == 2 and "F_B" or "F_C", door)
-        restore()
-        lu.assertEquals({ state.state, state.reason, state.snapDisabled }, { "desynchronized", "snap-loop", true })
-        lu.assertEquals(door.Room, { Name = "F_X" })
-    end
-    local other = desynchronized(2, "room-entry")
-    other.snaps = { { occurrenceId = "b", index = 2, mismatch = { checkpoint = "room-exit-conformance:chaos" } } }
-    lu.assertEquals(mode.target(other, "F_B").id, "c")
+function TestSnapMode.testConsecutiveMispicksOfTheSameKindEachSnap()
+    local state = desynchronized(1)
+    local leave, start, _, restore = attached(state, true)
+    leave("F_A", { Room = { Name = "F_B" } })
+    start({ Name = "F_B", __runPlannerExecutionRoomId = "b" })
+    session.mismatch(state, { checkpoint = "room-exit-conformance:traitInventory" })
+    leave("F_B", { Room = { Name = "F_X" } })
+    start({ Name = "F_C", __runPlannerExecutionRoomId = "c" })
+    restore()
+    lu.assertEquals({ state.state, state.reason }, { "synchronized", "ready" })
+    lu.assertEquals({ #state.snaps, state.snaps[1].occurrenceId, state.snaps[2].occurrenceId }, { 2, "b", "c" })
+end
+
+function TestSnapMode.testAnEntryMismatchInTheSnappedRoomStopsSnapping()
+    local state = desynchronized(1)
+    local leave, start, _, restore = attached(state, true, nil, function()
+        return nil, { checkpoint = "incoming-reward" }
+    end)
+    leave("F_A", { Room = { Name = "F_B" } })
+    start({ Name = "F_B", __runPlannerExecutionRoomId = "b" })
+    restore()
+    lu.assertEquals({ state.state, state.reason, state.snapDisabled }, { "desynchronized", "snap-loop", true })
+    lu.assertEquals(state.firstMismatch.checkpoint, "incoming-reward")
 end
 
 function TestSnapMode.testSnapsAppearInTheStatusWindowAndVictoryRows()
