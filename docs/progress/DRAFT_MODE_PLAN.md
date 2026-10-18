@@ -63,6 +63,9 @@ step comes before the loadout and sets it.
   - draft-illegal traits from the catalog: the Chaos Anvil
     (`ChaosWeaponUpgrade`) and the Hera and Zeus sacrifice Duos (Queen's and
     King's Ransom).
+  - caps: Hammers 2, Hermes 2, one Selene hex; at most 5 traits per pool god
+    (Legendaries count toward their god, Duos do not); at most 12 pool-god
+    traits in total, 8 when Vow of Forfeit is active.
 
   Conditions that depend on run context (Devotion no-Duo, gift-blocking rooms,
   rarity or level counts, Death Defiance, Echo dispositions) are checked by the
@@ -87,12 +90,20 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
   - basket traits, selected whenever legal;
   - story NPC per biome: take its door when offered;
   - field NPCs per biome, through encounter choice;
-  - Hammers and Hermes up to the native caps.
+  - Hammers and Hermes up to the native caps, split by route half.
+- **Slot ban:** a core slot holding a basket trait bans every other trait for
+  that slot; a screen left with no allowed row ends the biome attempt.
+- **Capacity hint:** a per-biome table of measured god-boon room capacity
+  (one less per biome under Forfeit) spreads each pool god's first room over
+  the first half and the basket over the route, shuffled per seed. It biases
+  offer weights and ranks attempts; it never forces a retry.
 - Doors, rarity, encounters and other choices are random among legal options,
   within the world.
 - **Restarts per biome:** a dead end or a missed target retries only the
   current biome, reusing earlier biomes through the biome simulation cache.
-  Best of N within a wall-time budget, ranked by target coverage.
+  Best of N attempts ranked by target coverage; a biome with no successful
+  attempt retries up to a separate cap. Attempt counts alone bound the search,
+  so a seed gives the same draft on every machine.
 - The result always has zero findings. The report lists unmet targets and any
   extras with reasons.
 
@@ -101,7 +112,8 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
 - A Draft step before the loadout screen edits the spec through the engine
   queries, reusing the loadout controls. A project can be started by drafting
   or by hand, and an existing project can be drafted again.
-- Accept runs the search in a worker with progress, then applies the result as
+- Accept runs the search in a worker with progress and cancellation, then
+  applies the result as
   one semantic command, `ReplaceRoute`:
   - replaces the loadout (with the generated starting reward) and each biome's
     state, topology and Echo keepsake replays, keeping the route and itinerary;
