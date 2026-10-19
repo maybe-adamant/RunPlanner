@@ -483,6 +483,9 @@ export function bindOccurrenceLocalInteractions(
           }
           if (phase.selectionEnabled && encounterKeys.length > 1) {
             let model: ContextualPickerModel<string> | undefined;
+            const definitionKeyFor = (encounterKey: string) =>
+              phase.candidateChoices.find((choice) => choice.value === encounterKey)
+                ?.nativeEncounterDefinitionKey ?? encounterKey;
             encounterPhases.set(
               key,
               Object.freeze({
@@ -503,12 +506,9 @@ export function bindOccurrenceLocalInteractions(
                     phase.selectedEncounterKey,
                     candidates.encounterPhases(phase.owner, encounterKeys),
                   )),
+                definitionKeyFor,
                 npcKeyFor: (encounterKey: string) =>
-                  encounterNpcKey(
-                    catalog,
-                    phase.candidateChoices.find((choice) => choice.value === encounterKey)
-                      ?.nativeEncounterDefinitionKey ?? encounterKey,
-                  ),
+                  encounterNpcKey(catalog, definitionKeyFor(encounterKey)),
                 owner: phase.owner,
                 ...(nemesisSelection === undefined ? {} : { nemesisEvent: nemesisSelection }),
                 selected: phase.selectedEncounterKey,

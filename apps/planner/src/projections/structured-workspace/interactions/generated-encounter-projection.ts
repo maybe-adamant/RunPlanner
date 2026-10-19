@@ -333,6 +333,7 @@ export function projectGeneratedEncounterAssessment(
                 const selected = authored?.menace?.find(
                   (entry) => entry.waveIndex === wave.waveIndex,
                 )?.conversions[source.sourceKey]?.targetKey;
+                const replacementKey = source.targetNativeId ?? selected;
                 const labelFor = (key: string) =>
                   generatedEnemyLabel(
                     fact?.kind === 'random'
@@ -342,6 +343,7 @@ export function projectGeneratedEncounterAssessment(
                 return [
                   source.sourceKey,
                   Object.freeze({
+                    ...(replacementKey === undefined ? {} : { replacementKey }),
                     replacementLabel:
                       source.targetNativeId === undefined
                         ? selected === undefined

@@ -6,11 +6,14 @@ import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockwo
 import { chaosArtwork } from '@planner/ui/artwork/chaos/chaosArtwork';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { elementArtwork } from '@planner/ui/artwork/elements/elementArtwork';
+import { enemyArtwork } from '@planner/ui/artwork/enemies/enemyArtwork';
+import { fangsPerkArtwork } from '@planner/ui/artwork/fangs/fangsPerkArtwork';
 import { hammerArtwork } from '@planner/ui/artwork/hammers/hammerArtwork';
 import { hermesBoonArtwork } from '@planner/ui/artwork/hermes/hermesBoonArtwork';
 import { hexLayoutArtwork } from '@planner/ui/artwork/hex-layouts/hexLayoutArtwork';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { hexSpellArtwork } from '@planner/ui/artwork/hex-spells/hexSpellArtwork';
+import { minibossArtwork } from '@planner/ui/artwork/minibosses/minibossArtwork';
 import { npcBoonArtwork } from '@planner/ui/artwork/npc-boons/npcBoonArtwork';
 import { noRewardArtwork } from '@planner/ui/artwork/no-reward/noRewardArtwork';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
@@ -59,6 +62,30 @@ const npcKeys = catalog.encounterDefinitions.values.flatMap((definition) => [
     : []),
 ]);
 
+const selections = catalog.encounterDefinitions.values.flatMap(
+  (definition) => definition.customization?.map((decision) => decision.selection) ?? [],
+);
+// Enemy keys cover every selectable identity and every Menace replacement target.
+const enemyKeys = selections.flatMap((selection): string[] => {
+  if (selection.kind === 'infiniteRoster') return selection.choices.map((choice) => choice.key);
+  if (selection.kind !== 'generated') return [];
+  return [
+    ...selection.choices,
+    ...selection.fixedEnemies,
+    ...(selection.fixedWaves ?? []).flat(),
+    ...(selection.generatedSeeds ?? []),
+  ].flatMap((choice) => [
+    choice.key,
+    ...(choice.menace?.kind === 'mapped' ? [choice.menace.targetNativeId] : []),
+    ...(choice.menace?.kind === 'random' ? choice.menace.targetNativeIds : []),
+  ]);
+});
+const fangsPerkKeys = selections.flatMap((selection) =>
+  selection.kind === 'generated' && selection.fangs !== undefined
+    ? Object.keys(selection.fangs.perks)
+    : [],
+);
+
 const roomShop = catalog.rewards.shops.values.find((s) => s.key === 'RoomShop');
 
 // Each record lists every catalog key in its category, with an icon or an explicit null.
@@ -92,6 +119,13 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
   ['no-reward', noRewardArtwork, catalog.biomes.values.map((b) => b.key)],
   ['bosses', bossArtwork, catalog.biomes.values.map((b) => b.key)],
   ['doors', doorArtwork, catalog.exitTypes.values.map((e) => e.key)],
+  ['enemies', enemyArtwork, enemyKeys],
+  [
+    'minibosses',
+    minibossArtwork,
+    catalog.encounterDefinitions.values.filter((d) => d.kind === 'miniboss').map((d) => d.key),
+  ],
+  ['fangs', fangsPerkArtwork, fangsPerkKeys],
 ];
 
 describe('artwork records', () => {
