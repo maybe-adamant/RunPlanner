@@ -268,8 +268,10 @@ export function projectTraitOfferFeedback(
 export interface RouteTraitOfferProjection {
   readonly address: TraitOfferAddress;
   readonly biomeKey: string;
+  readonly giverKey: string;
   readonly giverLabel: string;
   readonly locationLabel: string;
+  readonly selectedTraitKey: string;
   readonly selectedTraitLabel: string;
   readonly rarity?: string;
   readonly selectedReplacement?: TraitReplacementPresentation;
@@ -504,8 +506,10 @@ export function projectRouteTraitOffers(
       Object.freeze({
         address,
         biomeKey: address.biomeKey,
+        giverKey: giver.key,
         giverLabel: giver.label,
         locationLabel: ownerLocationForAddress(project, trace.address.owner),
+        selectedTraitKey: trait.key,
         selectedTraitLabel: trait.label,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
         ...(selectedReplacement === undefined

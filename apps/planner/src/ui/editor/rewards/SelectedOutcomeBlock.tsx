@@ -1,19 +1,26 @@
 import type { ReactNode } from 'react';
 
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+
 /** The one selected-outcome block: its trait in the heading, then one row per choice. */
 export function SelectedOutcomeBlock({
   children,
+  icon,
   name,
   traitLabel,
 }: {
   readonly children: ReactNode;
+  readonly icon: string | undefined;
   /** Accessible region name. */
   readonly name: string;
   readonly traitLabel: string;
 }) {
   return (
     <section aria-label={name} className="trait-selected-outcome">
-      <h3>Selected outcome · {traitLabel}</h3>
+      <h3 className="artwork-label">
+        <ArtworkIcon className="artwork-label-icon" source={icon} />
+        Selected outcome · {traitLabel}
+      </h3>
       {children}
     </section>
   );

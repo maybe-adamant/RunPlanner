@@ -13,6 +13,7 @@ import {
   type WorkspaceTraitCarrierChildInteraction,
   type WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
@@ -103,6 +104,10 @@ export function ConcaveStoneOutcomeEditor({
     authoredOptionIsResidual && authoredOption !== undefined
       ? traitLabel(authoredOption.traitKey)
       : undefined;
+  const optionIcon = (optionKey: TraitOptionKey | undefined) => {
+    const option = optionKey === undefined ? undefined : offer.options[optionIndex(optionKey)];
+    return option === undefined ? undefined : traitIcon(option.traitKey);
+  };
   const onToggle = (checked: boolean): void => {
     if (checked) {
       const optionKey = authoredOptionIsResidual ? authoredOptionKey : domain.residualOptionKeys[0];
@@ -135,7 +140,10 @@ export function ConcaveStoneOutcomeEditor({
         model={picker}
         onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
         placeholder="Choose an unpicked boon"
-        {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
+        itemIcon={(item) => optionIcon(item.value)}
+        {...(selectedLabel === undefined
+          ? {}
+          : { triggerLabel: selectedLabel, triggerIcon: optionIcon(authoredOptionKey) })}
       />
       {authoredResult === undefined || domain.resultSupport !== 'impossible' ? null : (
         <button

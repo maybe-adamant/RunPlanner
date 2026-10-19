@@ -92,6 +92,8 @@ export interface WorkspaceAcquisitionConversionInteraction {
 export interface WorkspaceLauncherPresentation {
   readonly label: string;
   readonly detail?: string;
+  /** The trait the label names, for its icon. */
+  readonly traitKey?: string;
 }
 
 export interface WorkspaceTraitOfferControl {

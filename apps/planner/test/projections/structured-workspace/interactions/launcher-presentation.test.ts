@@ -28,7 +28,11 @@ describe('launcher presentation', () => {
           { traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
         ],
       }),
-    ).toEqual({ label: 'Edit Trait · Nova Strike', detail: 'Apollo: Nova Strike · Rare' });
+    ).toEqual({
+      label: 'Edit Trait · Nova Strike',
+      detail: 'Apollo: Nova Strike · Rare',
+      traitKey: 'ApolloWeaponBoon',
+    });
     expect(
       traitOfferLauncherPresentation(catalog, giver('Apollo'), {
         kind: 'fallbackGold',
@@ -60,6 +64,7 @@ describe('launcher presentation', () => {
     expect(chaos).toEqual({
       label: `Edit Chaos · ${curse} → ${blessing}`,
       detail: `${curse} → ${blessing} · Common`,
+      traitKey: 'ChaosNoMoneyCurse',
     });
   });
 
@@ -70,7 +75,11 @@ describe('launcher presentation', () => {
     });
     expect(
       levelResolutionLauncherPresentation(catalog, random('ApolloWeaponBoon'), 2, false),
-    ).toEqual({ label: 'Edit Pom · Nova Strike +2', detail: 'Nova Strike gains 2 levels' });
+    ).toEqual({
+      label: 'Edit Pom · Nova Strike +2',
+      detail: 'Nova Strike gains 2 levels',
+      traitKey: 'ApolloWeaponBoon',
+    });
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, true).label).toBe(
       'Edit Pom · No eligible traits',
     );

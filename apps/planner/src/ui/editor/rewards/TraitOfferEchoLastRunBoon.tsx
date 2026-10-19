@@ -230,6 +230,7 @@ function EchoLastRunBoonChoiceEditor({
   const selectedPayload =
     !payloadPresent || selectedRow?.identity === undefined ? undefined : (
       <SelectedOutcomeBlock
+        icon={traitIcon(selectedRow.identity.traitKey)}
         name="Selected trait outcome"
         traitLabel={domain.labelFor(selectedRow.identity)}
       >

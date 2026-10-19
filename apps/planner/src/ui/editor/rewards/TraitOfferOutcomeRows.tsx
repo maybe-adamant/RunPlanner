@@ -7,6 +7,8 @@ import type {
   WorkspaceAllTogetherSetDomain,
   WorkspaceNaturalSelectionDomain,
 } from '@planner/projections/structured-workspace';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import type {
@@ -61,7 +63,13 @@ function AllTogetherSetRowPicker({
       model={loaded.result?.picker ?? emptyPicker}
       onSelect={onSelect}
       placeholder="Choose a grant"
-      {...(value === undefined ? {} : { triggerLabel: row.resultLabel(value) })}
+      itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
+      {...(value === undefined
+        ? {}
+        : {
+            triggerLabel: row.resultLabel(value),
+            ...(value === null ? {} : { triggerIcon: traitIcon(value) }),
+          })}
     />
   );
 }
@@ -205,7 +213,15 @@ export function NaturalSelectionOutcomeRows({
         if (row.forcedTraitKey !== undefined)
           return (
             <SelectedOutcomeRow key={position} label={label}>
-              <span aria-label={`Natural Selection ${label} core`} id={id}>
+              <span
+                aria-label={`Natural Selection ${label} core`}
+                className="artwork-label"
+                id={id}
+              >
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={traitIcon(row.forcedTraitKey)}
+                />
                 {traitLabel(row.forcedTraitKey)}
               </span>
             </SelectedOutcomeRow>
@@ -222,12 +238,13 @@ export function NaturalSelectionOutcomeRows({
             model={row.picker}
             onSelect={(traitKey: string) => choose(position, traitKey)}
             placeholder="Choose an eligible core trait"
+            itemIcon={(item) => traitIcon(item.value)}
             {...(row.requiresEarlierRow
               ? { disabledHint: `Choose the ${ordinal(position)} core first.` }
               : {})}
             {...(target === undefined || row.requiresEarlierRow
               ? {}
-              : { triggerLabel: traitLabel(target) })}
+              : { triggerLabel: traitLabel(target), triggerIcon: traitIcon(target) })}
           />
         );
       })}

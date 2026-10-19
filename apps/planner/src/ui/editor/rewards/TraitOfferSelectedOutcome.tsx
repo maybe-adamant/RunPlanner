@@ -14,6 +14,7 @@ import type {
   WorkspaceTraitCarrierChildInteraction,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
@@ -79,7 +80,10 @@ export function TraitAcquisitionTargetOutcome({
       model={domain.result?.targetPicker ?? emptyTargetPicker}
       onSelect={onSelect}
       placeholder="Choose an equipped trait"
-      {...(targetTraitKey === undefined ? {} : { triggerLabel: traitLabel(targetTraitKey) })}
+      itemIcon={(item) => traitIcon(item.value)}
+      {...(targetTraitKey === undefined
+        ? {}
+        : { triggerLabel: traitLabel(targetTraitKey), triggerIcon: traitIcon(targetTraitKey) })}
     />
   );
 }
@@ -169,9 +173,13 @@ function LatestModelTargetsOutcome({
             if (targets !== undefined) onUpdate(child.update(value, targets));
           }}
           placeholder="Choose a Rank I Hammer"
+          itemIcon={(item) => traitIcon(item.value)}
           {...(current[index] === undefined
             ? {}
-            : { triggerLabel: interaction.traitLabel(current[index]) })}
+            : {
+                triggerLabel: interaction.traitLabel(current[index]),
+                triggerIcon: traitIcon(current[index]),
+              })}
         />
       ))}
     </>
@@ -336,7 +344,11 @@ export function TraitOfferSelectedOutcome({
   const stoneHasOutcome = concaveStoneDomain.result !== undefined || retainedStoneUnassessed;
   if (!pickHasOutcome && !stoneHasOutcome) return null;
   const pickBlock = (
-    <SelectedOutcomeBlock name="Selected trait outcome" traitLabel={selectedTraitLabel}>
+    <SelectedOutcomeBlock
+      icon={traitIcon(option.traitKey)}
+      name="Selected trait outcome"
+      traitLabel={selectedTraitLabel}
+    >
       {maxHealthRoll === undefined ? null : (
         <MaxHealthRollRow
           ariaLabel={`${selectedTraitLabel} max health roll`}
@@ -401,8 +413,14 @@ export function TraitOfferSelectedOutcome({
               ? 'Choose target or no target'
               : 'Choose a greatest-level trait'
           }
+          itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
           {...('echoPomTarget' in option && option.echoPomTarget !== undefined
-            ? { triggerLabel: echoPomChild.targetLabel(option.echoPomTarget) }
+            ? {
+                triggerLabel: echoPomChild.targetLabel(option.echoPomTarget),
+                ...(option.echoPomTarget === null
+                  ? {}
+                  : { triggerIcon: traitIcon(option.echoPomTarget) }),
+              }
             : {})}
         />
       )}

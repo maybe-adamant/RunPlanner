@@ -25,6 +25,7 @@ import {
   levelResolutionDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import {
   EditorDialog,
@@ -103,7 +104,10 @@ export function RandomTraitTargetPicker({
       disabled={disabled}
       {...(disabledHint === undefined ? {} : { disabledHint })}
       placeholder={placeholder}
-      {...(selected === null ? {} : { triggerLabel: interaction.traitLabel(selected) })}
+      itemIcon={(item) => traitIcon(item.value)}
+      {...(selected === null
+        ? {}
+        : { triggerLabel: interaction.traitLabel(selected), triggerIcon: traitIcon(selected) })}
     />
   );
 }
@@ -301,7 +305,13 @@ export function PomResolutionEditor({
                   model={targetPicker(current)}
                   onSelect={(target) => updateChoiceSlot(index, target)}
                   placeholder="Choose a trait"
-                  {...(current === null ? {} : { triggerLabel: interaction.traitLabel(current) })}
+                  itemIcon={(item) => traitIcon(item.value)}
+                  {...(current === null
+                    ? {}
+                    : {
+                        triggerLabel: interaction.traitLabel(current),
+                        triggerIcon: traitIcon(current),
+                      })}
                 />
                 <label className="trait-option-selected">
                   <input

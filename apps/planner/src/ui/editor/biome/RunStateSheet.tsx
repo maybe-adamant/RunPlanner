@@ -1,5 +1,14 @@
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { elementArtwork } from '@planner/ui/artwork/elements/elementArtwork';
+import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
+import { arcanaArtwork } from '@planner/ui/controls/arcana-fear/arcanaArtwork';
+import { fearArtwork } from '@planner/ui/controls/arcana-fear/fearArtwork';
+import { aspectArtwork } from '@planner/ui/controls/aspects/aspectArtwork';
+import { familiarArtwork } from '@planner/ui/controls/familiars/familiarArtwork';
+import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
 import {
   useCallback,
   useEffect,
@@ -13,6 +22,7 @@ import type {
   WorkspaceRunStateBagSection,
   WorkspaceRunStateLauncher,
   WorkspaceRunStateRow,
+  WorkspaceRunStateRowSubject,
   WorkspaceRunStateSection,
 } from '@planner/projections/structured-workspace';
 import { runStateClosed, runStateOpened } from '@planner/state/editorSessionSlice';
@@ -41,6 +51,30 @@ export function RunStateLauncher({ launcher }: { readonly launcher: WorkspaceRun
   );
 }
 
+function subjectIcon(subject: WorkspaceRunStateRowSubject): string | undefined {
+  switch (subject.kind) {
+    case 'trait':
+    case 'chaosBlessing':
+      return traitIcon(subject.key);
+    case 'hexTalent':
+      return hexNodeArtwork[subject.key] ?? undefined;
+    case 'keepsake':
+      return keepsakeArtwork[subject.key];
+    case 'aspect':
+      return aspectArtwork[subject.key];
+    case 'familiar':
+      return familiarArtwork[subject.key];
+    case 'rewardType':
+      return rewardIcon(subject.key);
+    case 'wellItem':
+      return wellArtwork[subject.key] ?? undefined;
+    case 'arcanaCard':
+      return arcanaArtwork[subject.key];
+    case 'fearVow':
+      return fearArtwork[subject.key];
+  }
+}
+
 function BagSection({
   label,
   section,
@@ -57,6 +91,10 @@ function BagSection({
         section.entries.map((entry) => (
           <details key={`${entry.technicalKey}-${label}`}>
             <summary>
+              <ArtworkIcon
+                className="artwork-label-icon-small"
+                source={rewardIcon(entry.technicalKey)}
+              />{' '}
               {entry.label} <span className="run-state-count">{entry.count}</span>
             </summary>
             <code className="run-state-technical-key">{entry.technicalKey}</code>
@@ -112,6 +150,14 @@ function RunStateRows({
       {rows.map((row) => (
         <li className="run-state-row" key={row.key}>
           <span className="run-state-row-name">
+            {row.subject === undefined ? null : (
+              <>
+                <ArtworkIcon
+                  className="artwork-label-icon-small"
+                  source={subjectIcon(row.subject)}
+                />{' '}
+              </>
+            )}
             {row.elementCounts === undefined ? (
               row.name
             ) : (

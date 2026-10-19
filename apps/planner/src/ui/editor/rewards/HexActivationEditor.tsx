@@ -8,6 +8,8 @@ import type {
   WorkspaceHexActivationBoard,
   WorkspaceHexActivationInteraction,
 } from '@planner/projections/structured-workspace';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import {
   EditorDialog,
   EditorDialogDraftActions,
@@ -78,6 +80,10 @@ function HexActivationBoard({
                 tabIndex={0}
                 {...(node.hint === undefined ? {} : hintProps(node.hint))}
               >
+                <ArtworkIcon
+                  className="hex-tree-node-icon"
+                  source={hexNodeArtwork[node.talentKey] ?? undefined}
+                />
                 {node.talentLabel}
               </span>
             );
@@ -92,6 +98,10 @@ function HexActivationBoard({
               onClick={() => onSelect(toggled)}
               type="button"
             >
+              <ArtworkIcon
+                className="hex-tree-node-icon"
+                source={hexNodeArtwork[node.talentKey] ?? undefined}
+              />
               {node.talentLabel}
             </button>
           );

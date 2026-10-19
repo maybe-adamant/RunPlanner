@@ -27,6 +27,7 @@ export type {
   WorkspaceRunStateLauncher,
   WorkspaceRunStatePresentation,
   WorkspaceRunStateRow,
+  WorkspaceRunStateRowSubject,
   WorkspaceRunStateSection,
 } from './contracts/run-state';
 export type {

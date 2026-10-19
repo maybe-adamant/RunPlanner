@@ -19,6 +19,7 @@ import {
   anvilResultDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import {
   EditorDialog,
@@ -145,10 +146,14 @@ export function AnvilResultEditor({
             )
           }
           placeholder="Choose removed Hammer"
+          itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
           {...(draft.removedTraitKey === undefined
             ? {}
             : {
                 triggerLabel: anvilRemovedTraitLabel(draft.removedTraitKey, interaction.traitLabel),
+                ...(draft.removedTraitKey === null
+                  ? {}
+                  : { triggerIcon: traitIcon(draft.removedTraitKey) }),
               })}
         />
         <ContextualPicker
@@ -167,9 +172,13 @@ export function AnvilResultEditor({
             )
           }
           placeholder="Choose first Hammer"
+          itemIcon={(item) => traitIcon(item.value)}
           {...(draft.firstAddedTraitKey === undefined
             ? {}
-            : { triggerLabel: interaction.traitLabel(draft.firstAddedTraitKey) })}
+            : {
+                triggerLabel: interaction.traitLabel(draft.firstAddedTraitKey),
+                triggerIcon: traitIcon(draft.firstAddedTraitKey),
+              })}
         />
         <ContextualPicker
           ariaLabel="Added Hammer 2"
@@ -181,9 +190,13 @@ export function AnvilResultEditor({
             setDraft(Object.freeze({ ...draft, secondAddedTraitKey }))
           }
           placeholder="Choose second Hammer"
+          itemIcon={(item) => traitIcon(item.value)}
           {...(draft.secondAddedTraitKey === undefined
             ? {}
-            : { triggerLabel: interaction.traitLabel(draft.secondAddedTraitKey) })}
+            : {
+                triggerLabel: interaction.traitLabel(draft.secondAddedTraitKey),
+                triggerIcon: traitIcon(draft.secondAddedTraitKey),
+              })}
         />
       </div>
       <EditorDialogFeedback name="Anvil feedback" entries={feedbackEntries} />
