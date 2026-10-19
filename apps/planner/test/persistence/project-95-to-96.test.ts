@@ -23,6 +23,7 @@ import {
   OUTPUT_SCHEMA_VERSION,
   migrateProjectDocument,
 } from '@planner/persistence/project-95-to-96.js';
+import { migrateProjectDocument as migrate96To97 } from '@planner/persistence/project-96-to-97.js';
 
 type Encoded = {
   schemaVersion: number;
@@ -61,7 +62,10 @@ function withoutChain(project: ProjectDocument): Encoded {
 }
 
 function migrated(project: ProjectDocument): ProjectDocument {
-  return decodeProjectDocument(migrateProjectDocument(withoutChain(project)) as never, catalog);
+  return decodeProjectDocument(
+    migrate96To97(migrateProjectDocument(withoutChain(project))) as never,
+    catalog,
+  );
 }
 
 /** Dream N with a freshly created Hub, so its chain holds declaration defaults. */
@@ -182,9 +186,9 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
     source.schemaVersion = 95;
     const result = migrateProjectDocument(source) as Encoded;
     expect(result).toEqual({ ...source, schemaVersion: OUTPUT_SCHEMA_VERSION });
-    expect(encodeProjectDocument(decodeProjectDocument(result as never, catalog))).toBe(
-      encodeProjectDocument(project),
-    );
+    expect(
+      encodeProjectDocument(decodeProjectDocument(migrate96To97(result) as never, catalog)),
+    ).toBe(encodeProjectDocument(project));
   });
 
   it('rejects another source schema or catalog', () => {

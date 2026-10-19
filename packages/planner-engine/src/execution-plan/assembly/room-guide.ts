@@ -205,6 +205,9 @@ export function assembleExecutionRoomGuide(
   return Object.freeze(
     room.roomLifecycleTimeline.entries.flatMap((entry) => {
       if (entry.kind !== 'action') return [];
+      // An unchanged rack has nothing to guide.
+      if (entry.action.reference.kind === 'interactKeepsakeRack' && room.keepsakeRack === undefined)
+        return [];
       const owner = semanticAddressKey(entry.action.owner);
       const transaction = transactionsByOwner.get(owner);
       const convertedReward = timePiecedReward(entry.action.owner);

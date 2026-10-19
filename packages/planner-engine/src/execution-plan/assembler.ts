@@ -3,6 +3,7 @@ import {
   isRunModifierAuthored,
   routeRunModifiers,
   runModifierDeclaration,
+  type RunModifierKey,
 } from '../authored-project/run-modifiers';
 import { assertExactProjectEvaluationAssembly } from '../simulation/evaluation/project-evaluation-assembly';
 import type { RunStateSnapshot } from '../simulation/rewards/run-state';
@@ -294,20 +295,15 @@ export function assembleExecutionProduct({
     startingKeepsakeKey === null ? undefined : catalog.keepsakes.byKey[startingKeepsakeKey]?.rank;
   if (startingKeepsakeKey !== null && startingKeepsakeRarity === undefined)
     throw new CompilerError('executionCoverageMissing', `unknown keepsake ${startingKeepsakeKey}`);
-  const startPoint = isRunModifierAuthored(
-    runModifierDeclaration('startPoint'),
-    internalRunModifiers,
-  )
-    ? authoredStartPointEligibility(catalog, assembly.project, evaluation)
-    : undefined;
-  if (startPoint?.kind === 'ineligible')
+  const startPoint = authoredStartPointEligibility(catalog, assembly.project, evaluation);
+  if (startPoint.kind === 'ineligible')
     throw new CompilerError(
       'startPointIneligible',
       `start point is ${startPoint.reason.kind}`,
       startPoint.reason,
     );
   const startState =
-    startPoint?.kind === 'eligible'
+    startPoint.kind === 'eligible'
       ? executionStartState(
           catalog,
           routeKey,
@@ -318,8 +314,19 @@ export function assembleExecutionProduct({
           startingLoadout,
         )
       : undefined;
+  // An internal modifier publishes only where internal modifiers are enabled.
+  const authoredModifiers = routeRunModifiers(assembly.project.route.loadout);
   const publishedModifiers = executionRunModifiers(
-    routeRunModifiers(assembly.project.route.loadout),
+    Object.freeze(
+      Object.fromEntries(
+        Object.entries(authoredModifiers).filter(([key]) =>
+          isRunModifierAuthored(
+            runModifierDeclaration(key as RunModifierKey),
+            internalRunModifiers,
+          ),
+        ),
+      ),
+    ) as typeof authoredModifiers,
   );
   const product = Object.freeze({
     catalogVersion: evaluation.catalogVersion,

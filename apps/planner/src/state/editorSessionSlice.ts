@@ -49,7 +49,6 @@ export type RoutePanel =
   | { readonly kind: 'route' }
   | { readonly kind: 'draft' }
   | { readonly kind: 'loadout' }
-  | { readonly kind: 'modifiers' }
   | { readonly kind: 'npcIndex' }
   | { readonly kind: 'traits' }
   | { readonly kind: 'resources' }

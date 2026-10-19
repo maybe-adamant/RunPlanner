@@ -88,8 +88,8 @@ export function evaluateKeepsakeSelectionCandidate(
     result: Object.freeze({
       currentKey: capability.state.currentKey,
       options,
-      // An absent sparse rack leaf is a legal no-interaction state, not an
-      // invalid selected option. Only a persisted replacement is assessed.
+      // An unchanged rack is a legal no-op, not an invalid selected option.
+      // Only a persisted replacement is assessed.
       selectedPossible: authoredOption?.selectedPossible ?? true,
     }),
   });

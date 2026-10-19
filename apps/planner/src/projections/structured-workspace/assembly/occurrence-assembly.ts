@@ -497,12 +497,8 @@ export function assembleWorkspaceOccurrence(
         Object.freeze([]),
     });
   })();
-  const rackOnRoute = routeHasKeepsakeRack(room, input.biome.routeKey);
-  // A keepsake retained where the route lost its rack keeps a removal-only selection.
-  const rackRetainedOffRoute =
-    !rackOnRoute && room.hasKeepsakeRack && occurrence.keepsakeRack !== undefined;
   const keepsakeSelection =
-    !input.facts.detailsActive || (!rackOnRoute && !rackRetainedOffRoute)
+    !input.facts.detailsActive || !routeHasKeepsakeRack(room, input.biome.routeKey)
       ? undefined
       : (() => {
           const occurrenceAddress = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
@@ -514,15 +510,13 @@ export function assembleWorkspaceOccurrence(
           const heldKey =
             entered?.availability === 'available' ? entered.snapshot.keepsakes.currentKey : null;
           const held = heldKey === null ? undefined : input.catalog.keepsakes.byKey[heldKey];
+          const rackKey = occurrence.keepsakeRack?.keepsakeKey ?? null;
           const effect =
-            occurrence.keepsakeRack === undefined
-              ? undefined
-              : input.catalog.keepsakes.byKey[occurrence.keepsakeRack.keepsakeKey]?.effect;
-          const resultAddress = rackRetainedOffRoute
-            ? undefined
-            : effect?.kind === 'jeweledPom' ||
-                effect?.kind === 'experimentalHammer' ||
-                effect?.kind === 'transcendentEmbryo'
+            rackKey === null ? undefined : input.catalog.keepsakes.byKey[rackKey]?.effect;
+          const resultAddress =
+            effect?.kind === 'jeweledPom' ||
+            effect?.kind === 'experimentalHammer' ||
+            effect?.kind === 'transcendentEmbryo'
               ? createKeepsakeEquipResultAddress(address, effect.kind)
               : undefined;
           return Object.freeze({
@@ -539,12 +533,7 @@ export function assembleWorkspaceOccurrence(
             ...(held === undefined
               ? {}
               : { heldKeepsake: Object.freeze({ key: held.key, label: held.label }) }),
-            ...(occurrence.keepsakeRack === undefined
-              ? {}
-              : { selectedKeepsakeKey: occurrence.keepsakeRack.keepsakeKey }),
-            ...(rackRetainedOffRoute
-              ? { unavailableReason: 'rackUnavailableOnRoute' as const }
-              : {}),
+            ...(rackKey === null ? {} : { selectedKeepsakeKey: rackKey }),
           });
         })();
   const erisObservation =

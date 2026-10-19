@@ -751,6 +751,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
       case 'interactKeepsakeRack':
+        if (context.input.keepsakeRackReplaces !== true) return state;
         return appendEvent(state, operationContext, {
           kind: 'keepsakeRackUsed',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,

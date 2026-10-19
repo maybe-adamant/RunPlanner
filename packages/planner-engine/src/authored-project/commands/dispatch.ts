@@ -135,6 +135,8 @@ function applyUnchecked(
     case 'ReplaceStartingReward':
     case 'ReplaceAspectHexTree':
     case 'ReplaceRunModifiers':
+    case 'ReplacePracticeStart':
+    case 'ReplaceDraftSpec':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
     case 'ReplaceStartingKeepsake':
@@ -143,7 +145,6 @@ function applyUnchecked(
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);
     case 'ReplacePostbossKeepsake':
-    case 'RemovePostbossKeepsake':
       return applyKeepsakeCommand(document, catalog, command);
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':

@@ -639,9 +639,8 @@ export interface WorkspaceRoomSummary {
     readonly marker: WorkspaceMarker;
     /** The keepsake held arriving at the rack, when the room's Run State is known. */
     readonly heldKeepsake?: { readonly key: string; readonly label: string };
+    /** Absent while the rack leaves the held keepsake unchanged. */
     readonly selectedKeepsakeKey?: string;
-    /** A keepsake retained where the route has no rack; it can only be removed. */
-    readonly unavailableReason?: 'rackUnavailableOnRoute';
   };
   /** A declared Eris host on this route; spawning is the author's observation, fixed on entry. */
   readonly erisObservation?: {

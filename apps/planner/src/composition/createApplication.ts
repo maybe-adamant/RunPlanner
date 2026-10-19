@@ -69,7 +69,7 @@ export interface CreateApplicationOptions {
   readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
   /** Runs draft searches; defaults to the calling thread. */
   readonly draftRunner?: DraftRunner;
-  readonly draftSeed?: () => number;
+  readonly rerollSeed?: () => number;
 }
 
 export type ApplicationEvaluationEvent =
@@ -84,7 +84,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     throw new Error('Autosave recovery adapter and scheduler must be provided together');
   }
   const editorNavigation = createEditorNavigation(catalog);
-  const draftSeed = options.draftSeed ?? (() => Math.floor(Math.random() * 1_000_000));
+  const rerollSeed = options.rerollSeed ?? (() => Math.floor(Math.random() * 1_000_000));
   const evaluationCache = new WeakMap<
     ProjectDocument,
     ReturnType<typeof simulateProjectAssembly>
@@ -145,13 +145,12 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     assembleProjectEvaluation,
     initialProfileSession: startup.profileSession,
     ...(startup.preparedProject === undefined ? {} : { initialWorkspace: startup.preparedProject }),
-    draftSeed: draftSeed(),
   });
   const draftRun = createDraftRunController({
     catalog,
     store,
     runner: options.draftRunner ?? createInProcessDraftRunner(catalog),
-    randomSeed: draftSeed,
+    randomSeed: rerollSeed,
   });
   const editorSessionReconciliation = createEditorSessionReconciliationCoordinator({
     store,

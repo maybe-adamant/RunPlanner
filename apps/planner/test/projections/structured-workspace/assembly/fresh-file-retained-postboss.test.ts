@@ -6,25 +6,15 @@ import {
 } from '@run-planner/test-fixtures/fresh-file';
 import {
   assemble,
-  catalog,
   createGoldenFGHIProject,
   createOccurrenceId,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 
-const keepsakeKey = catalog.keepsakes.values[0]!.key;
 const postbossRoom = (project: Parameters<typeof assemble>[0]) =>
   assemble(project, 'FreshFile', 'F', freshFileFPostbossId).assembly.node.room;
 
 describe('Fresh File retained Postboss state', () => {
-  it('keeps a removal-only rack selection for a retained keepsake and none otherwise', () => {
-    const retained = postbossRoom(
-      withRetainedFreshFilePostboss(createFreshFileFProject(), { rackKeepsakeKey: keepsakeKey }),
-    );
-    expect(retained.keepsakeSelection).toMatchObject({
-      selectedKeepsakeKey: keepsakeKey,
-      unavailableReason: 'rackUnavailableOnRoute',
-    });
-    expect(retained.keepsakeSelection).not.toHaveProperty('equipResult');
+  it('offers no rack selection on Fresh File and one on a mature route', () => {
     expect(postbossRoom(createFreshFileFProject()).keepsakeSelection).toBeUndefined();
 
     const mature = assemble(

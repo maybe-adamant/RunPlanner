@@ -41,11 +41,22 @@ function replaceWith(
   };
 }
 
-function withStartPoint(project: ProjectDocument, biomeKey: string): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
+function withPractice(project: ProjectDocument, biomeKey: string): ProjectDocument {
+  const route = createRouteAddress(project.route.routeKey);
+  const practice = applyProjectCommand(project, catalog, {
+    kind: 'ReplacePracticeStart',
+    route,
+    startPoint: { biomeKey, point: 'opening' },
+  });
+  const modified = applyProjectCommand(practice, catalog, {
     kind: 'ReplaceRunModifiers',
-    route: createRouteAddress(project.route.routeKey),
-    value: { startPoint: { biomeKey, point: 'opening' } },
+    route,
+    value: { enemyGoldDropChance: 40 },
+  });
+  return applyProjectCommand(modified, catalog, {
+    kind: 'ReplaceDraftSpec',
+    route,
+    draft: { ...modified.route.draft, godKeys: ['Zeus'], seed: 7 },
   });
 }
 
@@ -87,13 +98,13 @@ describe('ReplaceRoute', () => {
     });
   });
 
-  it('carries the run modifiers and refuses another route', () => {
+  it('carries the run modifiers, Practice start and draft spec, and refuses another route', () => {
     const source = loadUnderworldFGHICheckpoint();
-    const practice = withStartPoint(source, 'G');
+    const practice = withPractice(source, 'G');
     const replaced = applyProjectCommand(practice, catalog, replaceWith(practice, source));
-    expect(replaced.route.loadout.runModifiers).toEqual({
-      startPoint: { biomeKey: 'G', point: 'opening' },
-    });
+    expect(replaced.route.loadout.runModifiers).toEqual({ enemyGoldDropChance: 40 });
+    expect(replaced.route.practiceStart).toEqual({ biomeKey: 'G', point: 'opening' });
+    expect(replaced.route.draft).toBe(practice.route.draft);
     const surface = loadSurfaceNOPQProject();
     expect(() => applyProjectCommand(source, catalog, replaceWith(surface, surface))).toThrow(
       ProjectCommandContractError,

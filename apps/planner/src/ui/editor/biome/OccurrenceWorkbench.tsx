@@ -39,15 +39,12 @@ interface OccurrenceWorkbenchProps {
   readonly navigationRevision?: number;
   readonly findingNavigationRevision?: number;
   readonly doors?: ReactNode;
-  /** Exact room-owned additions to ordinary lifecycle rows; the removal fills the delete slot. */
+  /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  readonly renderRoomActionRowRemoval?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
   readonly renderLifecycleBoundaryContent?: (
     boundary: WorkspaceRoomLifecycleBoundary,
   ) => TimelineBoundaryContent | undefined;
-  /** Exact room-owned optional interaction shown before its authored action exists. */
-  readonly renderOptionalRoomActionContent?: () => ReactNode;
 }
 
 /** A room-local editor that consumes the structured workspace only. */
@@ -64,9 +61,7 @@ export function OccurrenceWorkbench({
   initialSideRoomSlotKey,
   room,
   renderRoomActionRowContent,
-  renderRoomActionRowRemoval,
   renderLifecycleBoundaryContent,
-  renderOptionalRoomActionContent,
   runState,
 }: OccurrenceWorkbenchProps) {
   const findingAnchor = useFindingAnchor();
@@ -215,11 +210,7 @@ export function OccurrenceWorkbench({
       interactions={interactions}
       room={room}
       {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
-      {...(renderRoomActionRowRemoval === undefined ? {} : { renderRoomActionRowRemoval })}
       renderLifecycleBoundaryContent={renderBoundaryContent}
-      {...(renderOptionalRoomActionContent === undefined
-        ? {}
-        : { renderOptionalRoomActionContent })}
       view={view}
     />
   );

@@ -14,7 +14,6 @@ import {
   simulateProject,
   simulateProjectAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
-  type RunStateSnapshot,
 } from '@run-planner/engine/simulation';
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
@@ -31,11 +30,6 @@ const midshop = freshFileFMidshopId;
 const postboss = freshFileFPostbossId;
 const freshFProject = createFreshFileFProject;
 
-function snapshotsOf(project: ProjectDocument): readonly RunStateSnapshot[] {
-  const result = simulateProject(catalog, project).route.biomes[0]!;
-  return 'rewards' in result ? (result.rewards?.runStateSnapshots ?? []) : [];
-}
-
 describe('Fresh File retained content', () => {
   it('authors a complete valid Fresh File F with no Postboss Well, Pool or rack', () => {
     const project = freshFProject();
@@ -47,6 +41,7 @@ describe('Fresh File retained content', () => {
     expect(occurrence.gameName).toBe('F_PostBoss01');
     expect(occurrence).not.toHaveProperty('stygianWell');
     expect(occurrence).not.toHaveProperty('purgingPool');
+    expect(occurrence).not.toHaveProperty('keepsakeRack');
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplacePostbossKeepsake',
@@ -100,12 +95,10 @@ describe('Fresh File retained content', () => {
     ).toEqual([]);
   });
 
-  it('reports a retained Postboss Well, rack and Pool on Fresh File and lets each be removed', () => {
-    const keepsakeKey = catalog.keepsakes.values[0]!.key;
+  it('reports a retained Postboss Well and Pool on Fresh File and lets each be removed', () => {
     const retained = withRetainedFreshFilePostboss(freshFProject(), {
       well: true,
       poolSaleTraitKey: 'ApolloWeaponBoon',
-      rackKeepsakeKey: keepsakeKey,
     });
     const codesOf = (project: ProjectDocument) =>
       simulateProject(catalog, project).findings.map((finding) => [
@@ -130,15 +123,7 @@ describe('Fresh File retained content', () => {
       occurrence: owner,
       interacted: false,
     });
-    // The rack is reached once the earlier Postboss features are repaired.
-    expect(codesOf(poolClosed)).toEqual([['keepsakeUnavailable', 'rackUnavailableOnRoute']]);
-    for (const snapshot of snapshotsOf(poolClosed))
-      expect(snapshot.keepsakes.currentKey).not.toBe(keepsakeKey);
-    const repaired = applyProjectCommand(poolClosed, catalog, {
-      kind: 'RemovePostbossKeepsake',
-      selection: createPostbossKeepsakeSelectionAddress(owner),
-    });
-    expect(simulateProject(catalog, repaired).findings).toEqual([]);
+    expect(simulateProject(catalog, poolClosed).findings).toEqual([]);
   });
 
   it('reports an interacted Pool on Fresh File even without a sale', () => {

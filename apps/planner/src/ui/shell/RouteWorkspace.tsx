@@ -29,7 +29,6 @@ import type { DraftRunController } from '@planner/workspace/draftRun';
 import { RouteDraftPanel } from './RouteDraftPanel';
 import { RouteNpcIndex } from './RouteNpcIndex';
 import { RouteLoadoutPanel } from './RouteLoadoutPanel';
-import { RouteModifiersPanel } from './RouteModifiersPanel';
 import { RouteScopePanel } from './RouteScopePanel';
 import { RouteResourcesPanel } from './RouteResourcesPanel';
 import { RouteShrinesPanel } from './RouteShrinesPanel';
@@ -42,7 +41,6 @@ const fixedRoutePanels = Object.freeze([
   Object.freeze({ kind: 'route' as const, label: 'Route' }),
   Object.freeze({ kind: 'draft' as const, label: 'Draft' }),
   Object.freeze({ kind: 'loadout' as const, label: 'Loadout' }),
-  Object.freeze({ kind: 'modifiers' as const, label: 'Modifiers' }),
 ]);
 
 export function RouteWorkspace({
@@ -112,9 +110,6 @@ export function RouteWorkspace({
   );
   const hasShrines = shrineRows.length > 0;
   const hasWells = wellRows.length > 0;
-  const hasModifiers = workspaceRoute.runModifiers.declarations.some(
-    (declaration) => declaration.kind !== 'startPoint',
-  );
   const hasRouteIndexes = hasNpcIndex || hasTraits || hasResources || hasShrines || hasWells;
   const activePanelAvailable = (() => {
     switch (activePanel.kind) {
@@ -128,8 +123,6 @@ export function RouteWorkspace({
         return hasShrines;
       case 'wells':
         return hasWells;
-      case 'modifiers':
-        return hasModifiers;
       case 'draft':
         return hasDraft;
       case 'route':
@@ -196,8 +189,7 @@ export function RouteWorkspace({
           <fieldset className="panel-navigation-fieldset" disabled={drafting}>
             <p className="navigation-label">{navigation.label}</p>
             {fixedRoutePanels.map((panel) =>
-              (panel.kind === 'modifiers' && !hasModifiers) ||
-              (panel.kind === 'draft' && !hasDraft) ? null : (
+              panel.kind === 'draft' && !hasDraft ? null : (
                 <button
                   aria-current={displayedPanel.kind === panel.kind ? 'page' : undefined}
                   aria-label={panel.label}
@@ -402,8 +394,6 @@ export function RouteWorkspace({
               workspaceRoute={workspaceRoute}
               interactions={interactions}
             />
-          ) : displayedPanel.kind === 'modifiers' ? (
-            <RouteModifiersPanel key={replacementKey} workspaceRoute={workspaceRoute} />
           ) : displayedPanel.kind === 'npcIndex' ? (
             <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
           ) : displayedPanel.kind === 'traits' ? (

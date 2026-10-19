@@ -1,4 +1,4 @@
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import type { AuthoredDraftSpec, ProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
 import {
   assessDraftBasket,
@@ -11,8 +11,6 @@ import {
   type DraftTraitAssessment,
   type DraftWorldOptions,
 } from '@run-planner/engine/simulation';
-
-import type { DraftSessionState } from '@planner/state/draftSessionSlice';
 
 /** A Postboss rack slot; a slot without its own choice inherits the previous keepsake. */
 export interface DraftRackSlot {
@@ -34,24 +32,21 @@ export interface DraftSpecProjection {
 }
 
 /**
- * The spec a draft runs with: the project's own loadout plus the session's world,
+ * The spec a draft runs with: the project's own loadout plus the saved world,
  * basket and racks, kept to the choices the current itinerary still offers.
  */
-export function projectDraftSpec(
-  catalog: Catalog,
-  project: ProjectDocument,
-  session: DraftSessionState,
-): DraftSpecProjection {
+export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): DraftSpecProjection {
   const route = project.route;
+  const draft = route.draft;
   const worldOptions = draftWorldOptions(catalog, route);
   const keepsakeOptions = draftKeepsakeOptions(catalog, route);
   const storyNpcByBiome: Record<string, string> = {};
   const fieldNpcsByBiome: Record<string, readonly string[]> = {};
   for (const biome of worldOptions.biomes) {
-    const story = session.storyNpcByBiome[biome.biomeKey];
+    const story = draft.storyNpcByBiome[biome.biomeKey];
     if (story !== undefined && biome.storyNpc?.npcKey === story)
       storyNpcByBiome[biome.biomeKey] = story;
-    const fields = (session.fieldNpcsByBiome[biome.biomeKey] ?? []).filter((npcKey) =>
+    const fields = (draft.fieldNpcsByBiome[biome.biomeKey] ?? []).filter((npcKey) =>
       biome.fieldNpcs.some((npc) => npc.npcKey === npcKey),
     );
     if (fields.length > 0) fieldNpcsByBiome[biome.biomeKey] = fields;
@@ -59,7 +54,7 @@ export function projectDraftSpec(
   const { weaponKey, aspectKey, familiarKey, startingKeepsakeKey } = route.loadout;
   let held = startingKeepsakeKey;
   const rackSlots = keepsakeOptions.rackSlots.map((slot): DraftRackSlot => {
-    const chosen = session.rackKeepsakeByBiome[slot.afterBiomeKey];
+    const chosen = draft.rackKeepsakeByBiome[slot.afterBiomeKey];
     const keepsakeKey =
       chosen !== undefined && chosen !== held && slot.keepsakeKeys.includes(chosen) ? chosen : null;
     const inheritedKeepsakeKey = held;
@@ -94,14 +89,72 @@ export function projectDraftSpec(
           : { aspectHexTree: route.loadout.aspectHexTree }),
       },
       world: {
-        godKeys: session.godKeys.filter((key) => worldOptions.godKeys.includes(key)),
+        godKeys: draft.godKeys.filter((key) => worldOptions.godKeys.includes(key)),
         storyNpcByBiome,
         fieldNpcsByBiome,
       },
-      basketTraitKeys: session.basketTraitKeys,
+      basketTraitKeys: draft.basketTraitKeys,
       rackKeepsakeKeys: rackSlots.map((slot) => slot.keepsakeKey),
     }),
   });
+}
+
+function toggled(values: readonly string[], value: string): readonly string[] {
+  return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
+}
+
+export function withDraftGodToggled(draft: AuthoredDraftSpec, godKey: string): AuthoredDraftSpec {
+  return { ...draft, godKeys: toggled(draft.godKeys, godKey) };
+}
+
+export function withDraftBasketTraitToggled(
+  draft: AuthoredDraftSpec,
+  traitKey: string,
+): AuthoredDraftSpec {
+  return { ...draft, basketTraitKeys: toggled(draft.basketTraitKeys, traitKey) };
+}
+
+export function withDraftStoryNpcToggled(
+  draft: AuthoredDraftSpec,
+  biomeKey: string,
+  npcKey: string,
+): AuthoredDraftSpec {
+  const { [biomeKey]: current, ...rest } = draft.storyNpcByBiome;
+  return {
+    ...draft,
+    storyNpcByBiome: current === npcKey ? rest : { ...rest, [biomeKey]: npcKey },
+  };
+}
+
+/** A field NPC appears once per run, so choosing it in one biome moves it there. */
+export function withDraftFieldNpcToggled(
+  draft: AuthoredDraftSpec,
+  biomeKey: string,
+  npcKey: string,
+): AuthoredDraftSpec {
+  const fieldNpcsByBiome: Record<string, readonly string[]> = {};
+  for (const [otherKey, npcKeys] of Object.entries(draft.fieldNpcsByBiome))
+    fieldNpcsByBiome[otherKey] =
+      otherKey === biomeKey ? npcKeys : npcKeys.filter((key) => key !== npcKey);
+  fieldNpcsByBiome[biomeKey] = toggled(draft.fieldNpcsByBiome[biomeKey] ?? [], npcKey);
+  return {
+    ...draft,
+    fieldNpcsByBiome: Object.fromEntries(
+      Object.entries(fieldNpcsByBiome).filter(([, npcKeys]) => npcKeys.length > 0),
+    ),
+  };
+}
+
+/** Choosing the keepsake already held at a rack stores no change, so it keeps inheriting. */
+export function withDraftRackKeepsake(
+  draft: AuthoredDraftSpec,
+  slot: Pick<DraftRackSlot, 'afterBiomeKey' | 'inheritedKeepsakeKey'>,
+  keepsakeKey: string,
+): AuthoredDraftSpec {
+  const rackKeepsakeByBiome = { ...draft.rackKeepsakeByBiome };
+  if (keepsakeKey === slot.inheritedKeepsakeKey) delete rackKeepsakeByBiome[slot.afterBiomeKey];
+  else rackKeepsakeByBiome[slot.afterBiomeKey] = keepsakeKey;
+  return { ...draft, rackKeepsakeByBiome };
 }
 
 export interface DraftBasketRow {

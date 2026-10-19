@@ -28,7 +28,7 @@ const fBoss = createOccurrenceAddress(
 );
 
 describe('keepsake authored selections', () => {
-  it('creates mandatory starting and sparse Postboss defaults and round-trips replacements', () => {
+  it('creates mandatory starting and unchanged Postboss defaults and round-trips replacements', () => {
     let project = createCompleteFGProject();
     const route = project.route;
     expect(route?.loadout.startingKeepsakeKey).toBe('ManaOverTimeRefundKeepsake');
@@ -36,7 +36,7 @@ describe('keepsake authored selections', () => {
       route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
       )?.keepsakeRack,
-    ).toBeUndefined();
+    ).toEqual({ keepsakeKey: null });
 
     const selection: Extract<KeepsakeSelectionAddress, { readonly owner: object }> =
       createPostbossKeepsakeSelectionAddress(fPostboss);
@@ -70,7 +70,7 @@ describe('keepsake authored selections', () => {
     );
   });
 
-  it('rejects a persisted rack leaf on a room without the declaration-owned rack', () => {
+  it('rejects a rack on a room without one and requires it where the room has one', () => {
     const project = createCompleteFGProject();
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
       route: {
@@ -87,8 +87,31 @@ describe('keepsake authored selections', () => {
     if (occurrence === undefined) throw new Error('expected an Underworld F occurrence');
     occurrence.keepsakeRack = { keepsakeKey: 'ForceZeusBoonKeepsake' };
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
-      'room declaration has no keepsake rack',
+      'F_Combat02 has no keepsake rack on route Underworld',
     );
+    delete occurrence.keepsakeRack;
+    const postboss = encoded.route.biomes
+      .find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'F_PostBoss01');
+    if (postboss === undefined) throw new Error('expected the F Postboss');
+    const rack = postboss.keepsakeRack;
+    delete postboss.keepsakeRack;
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      'keepsakeRack: must be an object',
+    );
+    postboss.keepsakeRack = { keepsakeKey: null, equipResults: {} };
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      'an unchanged rack has no equip results',
+    );
+    postboss.keepsakeRack = rack;
+    const roomActions = postboss.roomActions as { order: { kind: string }[] };
+    const order = roomActions.order;
+    roomActions.order = order.filter((reference) => reference.kind !== 'interactKeepsakeRack');
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      'a keepsake rack owns exactly one interactKeepsakeRack action',
+    );
+    roomActions.order = order;
+    expect(decodeProjectDocument(encoded, catalog)).toEqual(project);
   });
 
   it('round-trips and clears exact Transcendent Embryo equip and transformation results', () => {
@@ -190,7 +213,7 @@ describe('keepsake authored selections', () => {
     }
   });
 
-  it('leaves Jeweled Pom unresolved and restores dormant authored results', () => {
+  it('leaves Jeweled Pom unresolved, restores a dormant route-start result and drops a swapped rack result', () => {
     let project = createCompleteFGProject();
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     const postboss = createPostbossKeepsakeSelectionAddress(fPostboss);
@@ -252,6 +275,7 @@ describe('keepsake authored selections', () => {
       result: createKeepsakeEquipResultAddress(postboss, 'jeweledPom'),
       value: { traitKey: 'HadesLifestealBoon' },
     });
+    // A rack key change drops the results another keepsake owned.
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: postboss,
@@ -265,8 +289,8 @@ describe('keepsake authored selections', () => {
     expect(
       project.route.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
-      )?.keepsakeRack?.equipResults?.jeweledPom,
-    ).toEqual({ traitKey: 'HadesLifestealBoon' });
+      )?.keepsakeRack,
+    ).toEqual({ keepsakeKey: 'HadesAndPersephoneKeepsake' });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );

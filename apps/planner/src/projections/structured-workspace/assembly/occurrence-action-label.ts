@@ -298,7 +298,7 @@ export function occurrenceActionLabel(
     case 'useFountain':
       return 'Use Fountain';
     case 'interactKeepsakeRack':
-      return 'Change Keepsake';
+      return 'Keepsake Rack';
     case 'interactEris':
       return 'Talk to Eris';
   }

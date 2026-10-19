@@ -148,9 +148,9 @@ export function withStartPoint(
   startPoint: RunStartPoint,
 ): ProjectDocument {
   return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceRunModifiers',
+    kind: 'ReplacePracticeStart',
     route: createRouteAddress(project.route.routeKey),
-    value: { ...project.route.loadout.runModifiers, startPoint },
+    startPoint,
   });
 }
 

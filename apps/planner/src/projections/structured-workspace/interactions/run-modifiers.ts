@@ -1,8 +1,10 @@
 import {
   RUN_MODIFIER_DECLARATIONS,
-  RUN_MODIFIER_GOLD,
+  PRACTICE_START_GOLD,
   RUN_MODIFIER_PERCENTAGE,
   createRouteAddress,
+  decodePracticeStart,
+  samePracticeStart,
   isRunModifierAuthored,
   isRunModifierValue,
   routeRunModifiers,
@@ -12,7 +14,7 @@ import {
   type RunModifierDeclaration,
   type RunModifiers,
   type RunModifierValue,
-  type StartPointRunModifierDeclaration,
+  type RunStartPoint,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -76,30 +78,15 @@ export function bindRunModifiers(
     RUN_MODIFIER_DECLARATIONS as readonly RunModifierDeclaration[],
     devBuild,
   );
-  const startPointDeclaration = declarations.find(
-    (declaration): declaration is StartPointRunModifierDeclaration =>
-      declaration.kind === 'startPoint',
-  );
   const startPointBlock =
-    startPointDeclaration === undefined || value.startPoint === undefined
+    route.practiceStart === undefined
       ? undefined
       : startPointPublicationBlock(catalog, project, evaluation);
-  const startPoint =
-    startPointDeclaration === undefined
-      ? undefined
-      : bindStartPoint(
-          catalog,
-          project,
-          evaluation,
-          startPointDeclaration,
-          value,
-          startPointBlock,
-          intentFor,
-        );
+  const startPoint = bindStartPoint(catalog, project, evaluation, startPointBlock);
   return Object.freeze({
     value,
     declarations,
-    ...(startPoint === undefined ? {} : { startPoint }),
+    startPoint,
     ...(startPointBlock === undefined ? {} : { startPointBlock }),
     setValue: (declaration: BooleanRunModifierDeclaration, next: boolean) => {
       assertDeclared(declaration);
@@ -129,15 +116,16 @@ function bindStartPoint(
   catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
-  declaration: StartPointRunModifierDeclaration,
-  value: RunModifiers,
   block: StartPointPublicationBlock | undefined,
-  intentFor: (
-    declaration: RunModifierDeclaration,
-    next: RunModifierValue | undefined,
-  ) => ReturnType<WorkspaceStartPointControl['selectIntent']>,
 ): WorkspaceStartPointControl {
-  const current = value.startPoint;
+  const current = project.route.practiceStart;
+  const intentFor = (next: RunStartPoint | undefined) => ({
+    command: {
+      kind: 'ReplacePracticeStart' as const,
+      route: createRouteAddress(project.route.routeKey),
+      startPoint: next ?? null,
+    },
+  });
   let domain: readonly WorkspaceStartPointRow[] | undefined;
   const loadDomain = () => {
     if (domain !== undefined) return domain;
@@ -170,14 +158,13 @@ function bindStartPoint(
     return domain;
   };
   const control: WorkspaceStartPointControl = {
-    declaration,
+    label: 'Practice mode',
     value: current,
     valueLabel: current === undefined ? '' : startPointLabel(catalog, current),
     ...(block?.code === 'startPointIneligible' ? { unavailable: true as const } : {}),
     loadDomain,
     selectIntent: (next) =>
       intentFor(
-        declaration,
         next === undefined
           ? undefined
           : {
@@ -192,15 +179,15 @@ function bindStartPoint(
       if (text === '')
         return {
           kind: 'valid',
-          intent: intentFor(declaration, { biomeKey: current.biomeKey, point: current.point }),
+          intent: intentFor({ biomeKey: current.biomeKey, point: current.point }),
         };
       const next = { biomeKey: current.biomeKey, point: current.point, gold: Number(text) };
-      if (!isRunModifierValue(declaration, next))
+      if (!samePracticeStart(decodePracticeStart(next), next))
         return {
           kind: 'invalid',
-          message: `Enter whole gold between ${RUN_MODIFIER_GOLD.min} and ${RUN_MODIFIER_GOLD.max}, or leave it empty to add none.`,
+          message: `Enter whole gold between ${PRACTICE_START_GOLD.min} and ${PRACTICE_START_GOLD.max}, or leave it empty to add none.`,
         };
-      return { kind: 'valid', intent: intentFor(declaration, next) };
+      return { kind: 'valid', intent: intentFor(next) };
     },
   };
   return Object.freeze(control);

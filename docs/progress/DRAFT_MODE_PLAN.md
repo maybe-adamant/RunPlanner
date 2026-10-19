@@ -33,8 +33,8 @@ then edits by hand.
 
 ## The draft spec
 
-An engine product held in application memory (not saved in v1). The draft
-step comes before the loadout and sets it.
+Saved in the project as `route.draft` (schema 97); each edit is an Undo step.
+The draft step comes before the loadout and sets it.
 
 - **Loadout:** weapon, aspect, familiar, Arcana, Fear and starting keepsake,
   edited with the existing loadout controls and checked by the engine's
@@ -177,7 +177,6 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
 
 ## Non-goals
 
-- Saving the spec in the project (with the next approved schema bump).
 - Full search beyond per-biome restarts.
 - Choosing rarities, levels, encounters or filler rewards beyond the soft
   targets.

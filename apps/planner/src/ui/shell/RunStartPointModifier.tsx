@@ -21,7 +21,7 @@ export function RunStartPointModifier({
   const [open, setOpen] = useState(false);
   const switchRef = useRef<HTMLLabelElement>(null);
   const checkboxRef = useRef<HTMLInputElement>(null);
-  const { declaration, value } = control;
+  const { label, value } = control;
   // Checked only while a start point is set, or while choosing the first one.
   const checked = value !== undefined || open;
   const authoredGold = value?.gold === undefined ? '' : String(value.gold);
@@ -72,7 +72,7 @@ export function RunStartPointModifier({
           checked={checked}
           onChange={(event) => toggle(event.target.checked)}
         />
-        <span>{declaration.label}</span>
+        <span>{label}</span>
       </label>
       <div className="route-run-modifier-practice-fields">
         <label id={`${id}-label`} className="route-run-modifier-field-label" htmlFor={id}>

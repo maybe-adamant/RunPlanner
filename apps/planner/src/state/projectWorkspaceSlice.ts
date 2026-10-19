@@ -48,6 +48,10 @@ export interface PreparedProjectWorkspace {
 export const authoredProjectCommandDispatched = createAction<ProjectCommand>(
   'projectWorkspace/commandDispatched',
 );
+/** Several commands applied in order and published as one history step. */
+export const authoredProjectCommandsDispatched = createAction<readonly ProjectCommand[]>(
+  'projectWorkspace/commandsDispatched',
+);
 export const authoredProjectUndoRequested = createAction('projectWorkspace/undoRequested');
 export const authoredProjectRedoRequested = createAction('projectWorkspace/redoRequested');
 /** A saved copy's new project identity; replaces every snapshot, adding no history step. */
@@ -116,25 +120,43 @@ export function createProjectWorkspaceReducer(
       ? Object.freeze({ kind: 'noProject' })
       : publishPreparedWorkspace(createProjectHistory(initialWorkspace.project), initialWorkspace);
 
-  return (state = initialState, action) => {
-    if (authoredProjectCommandDispatched.match(action)) {
-      if (state.kind === 'noProject') return state;
+  const publishCommands = (
+    state: OpenProjectWorkspaceState,
+    commands: readonly ProjectCommand[],
+  ): ProjectWorkspaceState => {
+    let assembly = state.assembly;
+    let fault: SettlementFault | undefined;
+    for (const command of commands) {
       if (
-        projectCommandAuthoringAddresses(action.payload, state.history.present).some(
-          (owner) => authoringReadinessAt(state.assembly, owner) === 'locked',
+        projectCommandAuthoringAddresses(command, assembly.project).some(
+          (owner) => authoringReadinessAt(assembly, owner) === 'locked',
         )
       ) {
         return state;
       }
-      const { assembly, fault } = settleProjectEdit({
+      const settled = settleProjectEdit({
         catalog,
-        before: state.assembly,
-        command: action.payload,
+        before: assembly,
+        command,
         evaluate: assembleProjectEvaluation,
       });
-      if (assembly.project === state.history.present) return state;
-      const history = publishProjectHistoryEdit(state.history, assembly.project);
-      return publishPreparedWorkspace(history, { project: assembly.project, assembly }, fault);
+      assembly = settled.assembly;
+      // The first unfinished repair is the one reported.
+      fault ??= settled.fault;
+    }
+    if (assembly.project === state.history.present) return state;
+    const history = publishProjectHistoryEdit(state.history, assembly.project);
+    return publishPreparedWorkspace(history, { project: assembly.project, assembly }, fault);
+  };
+
+  return (state = initialState, action) => {
+    if (authoredProjectCommandDispatched.match(action)) {
+      if (state.kind === 'noProject') return state;
+      return publishCommands(state, [action.payload]);
+    }
+    if (authoredProjectCommandsDispatched.match(action)) {
+      if (state.kind === 'noProject') return state;
+      return publishCommands(state, action.payload);
     }
     if (authoredProjectUndoRequested.match(action)) {
       if (state.kind === 'noProject') return state;

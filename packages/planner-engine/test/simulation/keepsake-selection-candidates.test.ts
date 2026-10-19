@@ -304,6 +304,15 @@ describe('keepsake selection candidates', () => {
         selection: fPostboss,
         keepsakeKey: 'ForceZeusBoonKeepsake',
       },
+      {
+        kind: 'MoveRoomAction',
+        action: createRoomActionAddress(
+          createBiomeAddress('Underworld', 'F'),
+          completion.occurrenceId,
+          roomActionKey({ kind: 'interactKeepsakeRack' }),
+        ),
+        toIndex: 2,
+      },
     ] as const)
       project = applyProjectCommand(project, catalog, command);
     expect(

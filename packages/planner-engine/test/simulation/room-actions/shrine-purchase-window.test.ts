@@ -188,14 +188,17 @@ describe('Shrine purchases after the doors open', () => {
       '[roomEntered]',
       'useFountain',
       '[cleanup]',
+      'interactKeepsakeRack',
       'purchaseHermesShrineOffer',
       'purchaseHermesShrineOffer',
       'interactAcquisitionEntry',
     ]);
+    // The first purchase, ranked after the unchanged rack, moves ahead of the fountain.
     const beforeFountain = reorder(project, 'N', nPostbossId, (order) => [
-      ...order.slice(1, 2),
+      order[2]!,
       order[0]!,
-      ...order.slice(2),
+      order[1]!,
+      ...order.slice(3),
     ]);
     expect(evaluatedRoom(beforeFountain, 'N', nPostbossId).roomActionRoster.issues).toContainEqual(
       expect.objectContaining({ kind: 'window', reference: { kind: 'useFountain' } }),

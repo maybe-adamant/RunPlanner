@@ -18,7 +18,7 @@ import { visibleRunModifierDeclarations } from '@planner/projections/structured-
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
-const keys = ['enemyGoldDropChance', 'encounterGoldRange', 'startPoint'];
+const keys = ['enemyGoldDropChance', 'encounterGoldRange'];
 
 it('projects engine defaults and complete intents bound to the current route and siblings', () => {
   const application = createOpenTestApplication('FreshFile');
@@ -95,11 +95,11 @@ it('authors only released declarations outside a development build', () => {
   }
 });
 
-/** The replacement value of a run-modifier intent. */
-function valueOf(intent: { readonly command: ProjectCommand }) {
-  if (intent.command.kind !== 'ReplaceRunModifiers')
-    throw new Error('expected a run-modifier edit');
-  return intent.command.value;
+/** The replacement start point of a Practice start intent. */
+function startOf(intent: { readonly command: ProjectCommand }) {
+  if (intent.command.kind !== 'ReplacePracticeStart')
+    throw new Error('expected a Practice start edit');
+  return intent.command.startPoint;
 }
 
 function openGolden(devBuild: boolean, document: ProjectDocument = createGoldenFGHIProject()) {
@@ -112,7 +112,7 @@ function openGolden(devBuild: boolean, document: ProjectDocument = createGoldenF
 
 it('binds Practice mode to the engine start-point domain with complete one-step intents', () => {
   const { application, control } = openGolden(true);
-  const startPoint = () => control().startPoint!;
+  const startPoint = () => control().startPoint;
   expect(control()).not.toHaveProperty('startPointBlock');
   expect(startPoint()).toMatchObject({ value: undefined, valueLabel: '' });
   expect(startPoint()).not.toHaveProperty('unavailable');
@@ -134,28 +134,31 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
   const route = createRouteAddress('Underworld');
   const choose = startPoint().selectIntent({ biomeKey: 'G', point: 'opening' }).command;
   expect(choose).toEqual({
-    kind: 'ReplaceRunModifiers',
+    kind: 'ReplacePracticeStart',
     route,
-    value: { startPoint: { biomeKey: 'G', point: 'opening' } },
+    startPoint: { biomeKey: 'G', point: 'opening' },
   });
   application.store.dispatch(authoredProjectCommandDispatched(choose));
   expect(startPoint().valueLabel).toBe('Oceanus · Opening');
   expect(startPoint().loadDomain()[1]!.options[0]!.selected).toBe(true);
   const gold = startPoint().goldDraftIntent(' 120 ');
   if (gold.kind !== 'valid') throw new Error('Valid gold rejected');
-  expect(valueOf(gold.intent)).toEqual({
-    startPoint: { biomeKey: 'G', point: 'opening', gold: 120 },
-  });
+  expect(startOf(gold.intent)).toEqual({ biomeKey: 'G', point: 'opening', gold: 120 });
   application.store.dispatch(authoredProjectCommandDispatched(gold.intent.command));
-  expect(valueOf(startPoint().selectIntent({ biomeKey: 'H', point: 'preboss' }))).toEqual({
-    startPoint: { biomeKey: 'H', point: 'preboss', gold: 120 },
+  expect(startOf(startPoint().selectIntent({ biomeKey: 'H', point: 'preboss' }))).toEqual({
+    biomeKey: 'H',
+    point: 'preboss',
+    gold: 120,
   });
-  expect(valueOf(startPoint().selectIntent({ biomeKey: 'H', point: 'boss' }))).toEqual({
-    startPoint: { biomeKey: 'H', point: 'boss', gold: 120 },
+  expect(startOf(startPoint().selectIntent({ biomeKey: 'H', point: 'boss' }))).toEqual({
+    biomeKey: 'H',
+    point: 'boss',
+    gold: 120,
   });
   const none = startPoint().goldDraftIntent('');
-  expect(none.kind === 'valid' && valueOf(none.intent)).toEqual({
-    startPoint: { biomeKey: 'G', point: 'opening' },
+  expect(none.kind === 'valid' && startOf(none.intent)).toEqual({
+    biomeKey: 'G',
+    point: 'opening',
   });
   for (const draft of ['-1', '2.5', 'x', '100000'])
     expect(startPoint().goldDraftIntent(draft)).toEqual({
@@ -167,15 +170,16 @@ it('binds Practice mode to the engine start-point domain with complete one-step 
   const sibling = control().draftIntent(chance, '40');
   if (sibling.kind !== 'valid') throw new Error('Valid draft rejected');
   application.store.dispatch(authoredProjectCommandDispatched(sibling.intent.command));
-  // Unchecking removes the start point and its gold in one edit, keeping siblings.
-  expect(valueOf(startPoint().selectIntent(undefined))).toEqual({ enemyGoldDropChance: 40 });
+  // Unchecking removes the start point and its gold in one edit; run modifiers stay.
+  expect(startOf(startPoint().selectIntent(undefined))).toBeNull();
+  expect(control().value).toEqual({ enemyGoldDropChance: 40 });
 });
 
 it('blocks publication by an ineligible start point in every build', () => {
   const golden = createGoldenFGHIProject();
   const withStart = (startPoint: RunStartPoint): ProjectDocument => ({
     ...golden,
-    route: { ...golden.route, loadout: { ...golden.route.loadout, runModifiers: { startPoint } } },
+    route: { ...golden.route, practiceStart: startPoint },
   });
   const dangling = withStart({ biomeKey: 'N', point: 'preboss' });
   const dev = openGolden(true, dangling).control();

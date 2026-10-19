@@ -15,13 +15,12 @@ import {
   authoredProjectRedoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
-import { OptionalPercentageRunModifier } from '@planner/ui/shell/RouteModifiersPanel';
+import { OptionalPercentageRunModifier } from '@planner/ui/shell/RouteRunModifiers';
 import {
   createOpenTestApplication,
   renderPlannerForInteraction,
 } from '@planner-test/fixtures/renderPlanner';
 import { hintOf } from '@planner-test/support/hints';
-import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import { createApplication } from '@planner/composition/createApplication';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
@@ -34,7 +33,6 @@ const range = () => slider('Encounter gold range');
 
 function open(routeKey = 'Underworld') {
   const application = createOpenTestApplication(routeKey);
-  application.store.dispatch(routePanelSelected({ routeKey, panel: { kind: 'modifiers' } }));
   const view = renderPlannerForInteraction({ application });
   const project = () => view.application.store.getState().projectWorkspace.history!.present;
   return { ...view, project, modifiers: () => routeRunModifiers(project().route.loadout) };
@@ -43,7 +41,7 @@ function open(routeKey = 'Underworld') {
 describe('Run modifier authoring', () => {
   it('renders each percentage as an unchecked checkbox and a disabled slider', () => {
     open();
-    expect(screen.getByRole('heading', { name: 'Modifiers' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Run modifiers' })).toBeTruthy();
     const percentages = RUN_MODIFIER_DECLARATIONS.filter((d) => d.kind === 'optionalPercentage');
     expect(screen.getAllByRole('slider')).toHaveLength(percentages.length);
     for (const declaration of percentages) {
@@ -90,13 +88,8 @@ describe('Run modifier authoring', () => {
     expect(chance().value).toBe('35');
     fireEvent.change(chance(), { target: { value: '20' } });
     const saved = view.project();
-    act(() => {
-      view.application.store.dispatch(authoredProjectReplaced(saved));
-      // Replacement returns the workspace to Route.
-      view.application.store.dispatch(
-        routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'modifiers' } }),
-      );
-    });
+    // Replacement returns the workspace to Route, which hosts the run modifiers.
+    act(() => view.application.store.dispatch(authoredProjectReplaced(saved)));
     expect(chance().value).toBe('35');
     fireEvent.change(chance(), { target: { value: '0' } });
     fireEvent.keyUp(chance(), { key: 'ArrowLeft' });
@@ -109,7 +102,7 @@ describe('Run modifier authoring', () => {
     const application = createOpenTestApplication();
     const declaration = runModifierDeclaration('encounterGoldRange');
     if (declaration.kind !== 'optionalPercentage') throw new Error('expected a percentage');
-    const control: WorkspaceRoute['runModifiers'] = {
+    const control = {
       value: { encounterGoldRange: 50 },
       declarations: [declaration],
       setValue: () => {
@@ -119,7 +112,7 @@ describe('Run modifier authoring', () => {
         throw new Error('not cleared here');
       },
       draftIntent: () => ({ kind: 'invalid', message: 'Enter a value from 0 to 100.' }),
-    };
+    } as Omit<WorkspaceRoute['runModifiers'], 'startPoint'> as WorkspaceRoute['runModifiers'];
     render(
       <Provider store={application.store}>
         <OptionalPercentageRunModifier control={control} declaration={declaration} id="stub" />
@@ -177,16 +170,13 @@ describe('Practice mode', () => {
           ? golden
           : {
               ...golden,
-              route: {
-                ...golden.route,
-                loadout: { ...golden.route.loadout, runModifiers: { startPoint } },
-              } as typeof golden.route,
+              route: { ...golden.route, practiceStart: startPoint } as typeof golden.route,
             },
       ),
     );
     const view = renderPlannerForInteraction({ application });
     const project = () => view.application.store.getState().projectWorkspace.history!.present;
-    return { ...view, project, modifiers: () => routeRunModifiers(project().route.loadout) };
+    return { ...view, project, start: () => project().route.practiceStart };
   }
   const practice = () => toggle('Practice mode');
   const startAt = () => screen.getByRole('button', { name: /^Start at/ }) as HTMLButtonElement;
@@ -207,22 +197,22 @@ describe('Practice mode', () => {
     expect(hintOf(practice().closest('.route-run-modifier-practice'))).toBeNull();
     expect(hintOf(startAt())).toBeNull();
     await view.user.click(unavailable);
-    expect(view.modifiers()).toEqual({});
+    expect(view.start()).toBeUndefined();
     // Closing without a choice leaves Practice mode off and returns focus to its checkbox.
     await view.user.keyboard('{Escape}');
     expect(practice().checked).toBe(false);
     expect(document.activeElement).toBe(practice());
-    expect(view.modifiers()).toEqual({});
+    expect(view.start()).toBeUndefined();
     // Clicking the checkbox while choosing cancels rather than reopening the picker.
     await view.user.click(practice());
     expect(await screen.findByRole('group', { name: 'Start points' })).toBeTruthy();
     await view.user.click(practice());
     expect(practice().checked).toBe(false);
     expect(screen.queryByRole('group', { name: 'Start points' })).toBeNull();
-    expect(view.modifiers()).toEqual({});
+    expect(view.start()).toBeUndefined();
     await view.user.click(practice());
     await view.user.click(await screen.findByRole('button', { name: 'Fields Preboss' }));
-    expect(view.modifiers()).toEqual({ startPoint: { biomeKey: 'H', point: 'preboss' } });
+    expect(view.start()).toEqual({ biomeKey: 'H', point: 'preboss' });
     expect(practice().checked).toBe(true);
     expect(startAt().textContent).toContain('Fields · Preboss');
     expect(gold().placeholder).toBe('0');
@@ -230,12 +220,10 @@ describe('Practice mode', () => {
     await view.user.type(gold(), 'abc{Enter}');
     expect(gold().value).toBe('abc');
     expect(gold().getAttribute('aria-invalid')).toBe('true');
-    expect(view.modifiers()).toEqual({ startPoint: { biomeKey: 'H', point: 'preboss' } });
+    expect(view.start()).toEqual({ biomeKey: 'H', point: 'preboss' });
     await view.user.clear(gold());
     await view.user.type(gold(), '250{Enter}');
-    expect(view.modifiers()).toEqual({
-      startPoint: { biomeKey: 'H', point: 'preboss', gold: 250 },
-    });
+    expect(view.start()).toEqual({ biomeKey: 'H', point: 'preboss', gold: 250 });
     // The Boss is the row's third column.
     await view.user.click(startAt());
     const fields = await screen.findByRole('group', { name: 'Fields' });
@@ -245,17 +233,13 @@ describe('Practice mode', () => {
         .map((button) => button.textContent),
     ).toEqual(['Opening', 'Preboss', 'Boss']);
     await view.user.click(within(fields).getByRole('button', { name: 'Fields Boss' }));
-    expect(view.modifiers()).toEqual({
-      startPoint: { biomeKey: 'H', point: 'boss', gold: 250 },
-    });
+    expect(view.start()).toEqual({ biomeKey: 'H', point: 'boss', gold: 250 });
     expect(startAt().textContent).toContain('Fields · Boss');
     await view.user.click(practice());
-    expect(view.project().route.loadout.runModifiers).toBeUndefined();
+    expect(view.start()).toBeUndefined();
     expect(gold().value).toBe('');
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(view.modifiers()).toEqual({
-      startPoint: { biomeKey: 'H', point: 'boss', gold: 250 },
-    });
+    expect(view.start()).toEqual({ biomeKey: 'H', point: 'boss', gold: 250 });
   });
 
   it('keeps an ineligible saved start point checked with a quiet unavailable label', () => {

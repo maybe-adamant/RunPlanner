@@ -8,6 +8,7 @@ import {
 } from './model';
 import { ProjectDocumentContractError } from './validation';
 import { createInitialRouteLoadout } from './loadout';
+import { EMPTY_DRAFT_SPEC } from './draft-spec';
 import { resolveRoutePosition } from './route-context';
 import { createDefaultStartTopology } from './topology/construction';
 
@@ -69,6 +70,7 @@ export function createProjectDocument(
       itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]),
       loadout,
       resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
+      draft: EMPTY_DRAFT_SPEC,
       biomes: itineraryBiomeKeys.slice(0, configuredCount).map((biomeKey) => {
         const layout = catalog.biomeLayouts.byKey[biomeKey];
         if (layout === undefined) {

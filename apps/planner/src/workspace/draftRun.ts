@@ -1,4 +1,10 @@
-import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  EMPTY_DRAFT_SPEC,
+  createRouteAddress,
+  encodeProjectDocument,
+  type ProjectCommand,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { draftRefusals, type DraftSpec } from '@run-planner/engine/simulation';
 
@@ -9,7 +15,10 @@ import {
   draftRunStarted,
   type DraftRunState,
 } from '@planner/state/draftSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectCommandsDispatched,
+} from '@planner/state/projectWorkspaceSlice';
 import type { PlannerStore } from '@planner/state/store';
 import {
   answerDraftWorkerRequest,
@@ -104,10 +113,18 @@ export function createWorkerDraftRunner(createWorker: () => Worker): DraftRunner
   };
 }
 
+/** The project's saved form without its draft settings. */
+function withoutDraft(project: ProjectDocument): string {
+  return encodeProjectDocument({
+    ...project,
+    route: { ...project.route, draft: EMPTY_DRAFT_SPEC },
+  });
+}
+
 export interface DraftRunController {
-  /** Drafts with the session seed. */
+  /** Drafts with the project's saved seed. */
   draft(): void;
-  /** Drafts with a new seed. */
+  /** Drafts with a new seed, saved with the drafted route as one Undo step. */
   reroll(): void;
   cancel(): void;
   dispose(): void;
@@ -115,7 +132,8 @@ export interface DraftRunController {
 
 /**
  * Runs drafts against the present project and applies a drafted route as one
- * ReplaceRoute. A replaced workspace cancels the run; a later edit clears the outcome.
+ * ReplaceRoute. A replaced workspace cancels the run; a later edit outside the draft
+ * settings clears the outcome.
  */
 export function createDraftRunController({
   catalog,
@@ -133,6 +151,7 @@ export function createDraftRunController({
   let current: { handle?: DraftRunHandle } | undefined;
   /** The project an outcome describes; editing past it clears the outcome. */
   let settledProject: ProjectDocument | undefined;
+  let settledKey: string | undefined;
   let revision = store.getState().editorSession.workspaceReplacementRevision;
   const presentProject = () => {
     const workspace = store.getState().projectWorkspace;
@@ -145,6 +164,7 @@ export function createDraftRunController({
   const settle = (outcome: Exclude<DraftRunState, { readonly kind: 'idle' | 'running' }>) => {
     current = undefined;
     settledProject = presentProject();
+    settledKey = undefined;
     store.dispatch(draftRunSettled(outcome));
   };
   const unsubscribe = store.subscribe(() => {
@@ -157,15 +177,34 @@ export function createDraftRunController({
     }
     const run = state.draftSession.run.kind;
     if (run === 'idle' || run === 'running' || settledProject === undefined) return;
-    if (presentProject() === settledProject) return;
+    const present = presentProject();
+    if (present === settledProject) return;
+    // Editing only the draft settings keeps the outcome.
+    if (
+      present !== undefined &&
+      withoutDraft(present) === (settledKey ??= withoutDraft(settledProject))
+    ) {
+      settledProject = present;
+      return;
+    }
     settledProject = undefined;
+    settledKey = undefined;
     store.dispatch(draftRunCleared());
   });
   const start = (seed: number): void => {
     if (current !== undefined) return;
     const project = presentProject();
     if (project === undefined) return;
-    const { spec } = projectDraftSpec(catalog, project, store.getState().draftSession);
+    const { spec } = projectDraftSpec(catalog, project);
+    // A reroll's seed is saved with its outcome, so a failed reroll still shows it.
+    const seedCommand: ProjectCommand | undefined =
+      seed === project.route.draft.seed
+        ? undefined
+        : {
+            kind: 'ReplaceDraftSpec',
+            route: createRouteAddress(project.route.routeKey),
+            draft: { ...project.route.draft, seed },
+          };
     if (spec === undefined || draftRefusals(catalog, project, spec).length > 0) return;
     settledProject = undefined;
     store.dispatch(draftRunStarted({ seed, startedAt: now() }));
@@ -185,7 +224,11 @@ export function createDraftRunController({
       switch (result.kind) {
         case 'drafted':
           try {
-            store.dispatch(authoredProjectCommandDispatched(result.command));
+            store.dispatch(
+              authoredProjectCommandsDispatched(
+                seedCommand === undefined ? [result.command] : [seedCommand, result.command],
+              ),
+            );
           } catch (error) {
             settle({
               kind: 'error',
@@ -201,13 +244,18 @@ export function createDraftRunController({
           return;
         case 'failed':
         case 'refused':
+          if (seedCommand !== undefined)
+            store.dispatch(authoredProjectCommandDispatched(seedCommand));
           settle(result);
           return;
       }
     });
   };
   return {
-    draft: () => start(store.getState().draftSession.seed),
+    draft: () => {
+      const project = presentProject();
+      if (project !== undefined) start(project.route.draft.seed);
+    },
     reroll: () => start(randomSeed()),
     cancel() {
       if (current === undefined) return;

@@ -51,6 +51,8 @@ function commandContractAddress(
     case 'ReplaceFamiliar':
     case 'ReplaceAspectHexTree':
     case 'ReplaceRunModifiers':
+    case 'ReplacePracticeStart':
+    case 'ReplaceDraftSpec':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
       return command.route;
@@ -71,7 +73,6 @@ function commandContractAddress(
     case 'ReplaceFountainRarityTarget':
       return command.outcome;
     case 'ReplacePostbossKeepsake':
-    case 'RemovePostbossKeepsake':
       return command.selection;
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':

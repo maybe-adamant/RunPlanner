@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 96,
-  "schemaRevision": 2,
+  "schemaVersion": 97,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -43,6 +42,14 @@
       },
       "startingKeepsakeKey": "ManaOverTimeRefundKeepsake",
       "familiarKey": "FrogFamiliar"
+    },
+    "draft": {
+      "godKeys": [],
+      "storyNpcByBiome": {},
+      "fieldNpcsByBiome": {},
+      "basketTraitKeys": [],
+      "rackKeepsakeByBiome": {},
+      "seed": 1
     },
     "biomes": [
       {

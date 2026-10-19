@@ -19,35 +19,8 @@ export interface OptionalPercentageRunModifierDeclaration extends RunModifierDec
   readonly kind: 'optionalPercentage';
 }
 
-/** Absent is a normal run; a present value starts the run at a biome's Opening, Preboss or Boss. */
-export interface StartPointRunModifierDeclaration extends RunModifierDeclarationShape {
-  readonly kind: 'startPoint';
-}
-
 export type RunModifierDeclaration =
-  | BooleanRunModifierDeclaration
-  | OptionalPercentageRunModifierDeclaration
-  | StartPointRunModifierDeclaration;
-
-/** Modifiers the execution plan's `runModifiers` record carries. */
-export type ExecutionRunModifierDeclaration = Exclude<
-  RunModifierDeclaration,
-  StartPointRunModifierDeclaration
->;
-
-/** The mid-run start points of a biome, in route order. */
-export const RUN_START_POINTS = Object.freeze(['opening', 'preboss', 'boss'] as const);
-
-/** A mid-run start; the biome may dangle from the route. */
-export interface RunStartPoint {
-  readonly biomeKey: string;
-  readonly point: (typeof RUN_START_POINTS)[number];
-  /** Base gold added to the game's own starting gold; absent adds none. */
-  readonly gold?: number;
-}
-
-/** Domain of a start point's gold. */
-export const RUN_MODIFIER_GOLD = Object.freeze({ min: 0, max: 99_999, step: 1 } as const);
+  BooleanRunModifierDeclaration | OptionalPercentageRunModifierDeclaration;
 
 /** Domain of every enabled optional-percentage modifier. */
 export const RUN_MODIFIER_PERCENTAGE = Object.freeze({
@@ -80,49 +53,25 @@ export const RUN_MODIFIER_DECLARATIONS = declareRunModifiers([
     description: "Each encounter's gold budget is fixed at this point of its native range.",
     stage: 'released',
   },
-  {
-    key: 'startPoint',
-    kind: 'startPoint',
-    label: 'Practice mode',
-    description: "Starts the run at a later biome's Opening or at a biome's Preboss.",
-    stage: 'released',
-  },
 ]);
 
 type DeclaredRunModifier = (typeof RUN_MODIFIER_DECLARATIONS)[number];
 type OptionalRunModifier = Extract<DeclaredRunModifier, { readonly kind: 'optionalPercentage' }>;
-type StartPointRunModifier = Extract<DeclaredRunModifier, { readonly kind: 'startPoint' }>;
-type RequiredRunModifier = Exclude<
-  DeclaredRunModifier,
-  OptionalRunModifier | StartPointRunModifier
->;
+type RequiredRunModifier = Exclude<DeclaredRunModifier, OptionalRunModifier>;
 export type RunModifierKey = DeclaredRunModifier['key'];
 
-/** The run modifiers the execution plan publishes; an optional modifier is present only while enabled. */
-export type ExecutionRunModifiers = {
+/** The complete settings, as published; an optional modifier is present only while enabled. */
+export type RunModifiers = {
   readonly [D in RequiredRunModifier as D['key']]: boolean;
 } & {
   readonly [D in OptionalRunModifier as D['key']]?: number;
 };
 
-/** The complete authored settings; an optional modifier is present only while set. */
-export type RunModifiers = ExecutionRunModifiers & {
-  readonly [D in StartPointRunModifier as D['key']]?: RunStartPoint;
-};
-
 /** Persisted settings: only values that differ from native. */
 export type RunModifiersRecord = Readonly<Partial<RunModifiers>>;
 
-export type RunModifierValue = boolean | number | RunStartPoint;
+export type RunModifierValue = boolean | number;
 type RunModifierValues = Readonly<Record<string, RunModifierValue | undefined>>;
-
-export const EXECUTION_RUN_MODIFIER_DECLARATIONS: readonly ExecutionRunModifierDeclaration[] =
-  Object.freeze(
-    (RUN_MODIFIER_DECLARATIONS as readonly RunModifierDeclaration[]).filter(
-      (declaration): declaration is ExecutionRunModifierDeclaration =>
-        declaration.kind !== 'startPoint',
-    ),
-  );
 
 export const NATIVE_RUN_MODIFIERS: RunModifiers = Object.freeze(
   Object.fromEntries(
@@ -149,10 +98,6 @@ export function runModifierDeclaration(key: RunModifierKey): RunModifierDeclarat
 /** A present value within its declared domain; an optional modifier's absence is checked by its owner. */
 export function isRunModifierValue(declaration: RunModifierDeclaration, value: unknown): boolean {
   if (declaration.kind === 'boolean') return typeof value === 'boolean';
-  if (declaration.kind === 'startPoint') {
-    const healed = healStartPoint(value);
-    return healed !== undefined && sameStartPoint(healed, value as RunStartPoint);
-  }
   return (
     typeof value === 'number' &&
     Number.isFinite(value) &&
@@ -169,55 +114,30 @@ export function routeRunModifiers(loadout: Pick<RouteLoadout, 'runModifiers'>): 
 }
 
 /** The execution-published modifiers, or undefined when every one is native. */
-export function executionRunModifiers(value: RunModifiers): ExecutionRunModifiers | undefined {
+export function executionRunModifiers(value: RunModifiers): RunModifiers | undefined {
   const values: RunModifierValues = value;
   if (
-    EXECUTION_RUN_MODIFIER_DECLARATIONS.every(
+    (RUN_MODIFIER_DECLARATIONS as readonly RunModifierDeclaration[]).every(
       (declaration) => values[declaration.key] === nativeRunModifierValue(declaration),
     )
   )
     return undefined;
   return Object.freeze(
     Object.fromEntries(
-      EXECUTION_RUN_MODIFIER_DECLARATIONS.flatMap((declaration) =>
+      (RUN_MODIFIER_DECLARATIONS as readonly RunModifierDeclaration[]).flatMap((declaration) =>
         values[declaration.key] === undefined ? [] : [[declaration.key, values[declaration.key]]],
       ),
     ),
-  ) as ExecutionRunModifiers;
+  ) as RunModifiers;
 }
 
 function nativeRunModifierValue(declaration: RunModifierDeclaration): boolean | undefined {
   return declaration.kind === 'boolean' ? declaration.default : undefined;
 }
 
-function sameStartPoint(left: RunStartPoint, right: RunStartPoint): boolean {
-  return left.biomeKey === right.biomeKey && left.point === right.point && left.gold === right.gold;
-}
-
-/** Value equality for one modifier; a start point compares by its fields. */
+/** Value equality for one modifier. */
 export function sameRunModifierValue(left: unknown, right: unknown): boolean {
-  if (left === right) return true;
-  if (typeof left !== 'object' || typeof right !== 'object' || left === null || right === null)
-    return false;
-  return sameStartPoint(left as RunStartPoint, right as RunStartPoint);
-}
-
-function isRunStartPointKind(value: unknown): value is RunStartPoint['point'] {
-  return RUN_START_POINTS.some((point) => point === value);
-}
-
-/** A malformed shape is absent; malformed gold is absent; finite gold clamps to an integer in its domain. */
-function healStartPoint(raw: unknown): RunStartPoint | undefined {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
-  const { biomeKey, point, gold } = raw as Record<string, unknown>;
-  if (typeof biomeKey !== 'string' || biomeKey.length === 0) return undefined;
-  if (!isRunStartPointKind(point)) return undefined;
-  if (typeof gold !== 'number' || !Number.isFinite(gold)) return Object.freeze({ biomeKey, point });
-  const healedGold = Math.min(
-    RUN_MODIFIER_GOLD.max,
-    Math.max(RUN_MODIFIER_GOLD.min, Math.round(gold)),
-  );
-  return Object.freeze({ biomeKey, point, gold: healedGold });
+  return left === right;
 }
 
 /** A finite number outside the declared domain clamps to its nearest bound. */
@@ -226,7 +146,6 @@ function healRunModifierValue(
   raw: unknown,
 ): RunModifierValue | undefined {
   if (declaration.kind === 'boolean') return typeof raw === 'boolean' ? raw : declaration.default;
-  if (declaration.kind === 'startPoint') return healStartPoint(raw);
   if (typeof raw !== 'number' || !Number.isFinite(raw)) return undefined;
   return Math.min(RUN_MODIFIER_PERCENTAGE.max, Math.max(RUN_MODIFIER_PERCENTAGE.min, raw));
 }

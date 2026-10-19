@@ -218,10 +218,10 @@ export interface CanonicalAuthoredRoom {
   readonly hasKeepsakeRack: boolean;
   /** Declaration-owned physical fountain presence, independent of Aromatic Phial. */
   readonly hasRequiredFountain: boolean;
-  /** Exact optional Postboss rack state remains owned by its fixed occurrence. */
-  readonly keepsakeRack?: NonNullable<
-    import('../../authored-project/model').RoomOccurrence['keepsakeRack']
-  >;
+  /** The rack's replacement keepsake; absent when the rack leaves the keepsake unchanged. */
+  readonly keepsakeRack?: import('../../authored-project/model').AuthoredKeepsakeRack & {
+    readonly keepsakeKey: string;
+  };
   readonly fountainRarityResult?: import('../../authored-project/model').AuthoredFountainRarityResult;
   /** The exact realized Pool list remains occurrence-owned through simulation. */
   readonly purgingPool?: NonNullable<

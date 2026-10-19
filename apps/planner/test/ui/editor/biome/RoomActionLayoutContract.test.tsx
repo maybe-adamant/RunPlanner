@@ -13,9 +13,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import {
   inspectorLifecycleBoundaryContent,
-  inspectorOptionalRoomActionContent,
   inspectorRoomActionContent,
-  inspectorRoomActionRemoval,
 } from '@planner/ui/editor/biome/BiomeInspectorControls';
 import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
 import { FindingTargetScope } from '@planner/ui/feedback/useFindingTarget';
@@ -100,11 +98,7 @@ function renderInspectorOccurrence(
           renderLifecycleBoundaryContent={(boundary) =>
             inspectorLifecycleBoundaryContent(room, interactions, boundary)
           }
-          renderOptionalRoomActionContent={() =>
-            inspectorOptionalRoomActionContent(room, interactions)
-          }
           renderRoomActionRowContent={(row) => inspectorRoomActionContent(room, interactions, row)}
-          renderRoomActionRowRemoval={(row) => inspectorRoomActionRemoval(room, interactions, row)}
         />
       </FindingTargetScope>
     </Provider>,

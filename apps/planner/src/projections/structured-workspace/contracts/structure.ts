@@ -564,7 +564,7 @@ export interface WorkspaceStartPointRow {
 }
 
 export interface WorkspaceStartPointControl {
-  readonly declaration: import('@run-planner/engine/authored-project').StartPointRunModifierDeclaration;
+  readonly label: string;
   readonly value: import('@run-planner/engine/authored-project').RunStartPoint | undefined;
   /** The authored start point; empty when none is set. */
   readonly valueLabel: string;
@@ -583,8 +583,8 @@ export interface WorkspaceStartPointControl {
 }
 
 export interface WorkspaceRunModifiersControl {
-  /** Present exactly when the start-point declaration is authored in this build. */
-  readonly startPoint?: WorkspaceStartPointControl;
+  /** The route's Practice mode start point. */
+  readonly startPoint: WorkspaceStartPointControl;
   /** Why the authored start point blocks publication; only where it is authored. */
   readonly startPointBlock?: import('@run-planner/engine/execution-plan').StartPointPublicationBlock;
   readonly value: import('@run-planner/engine/authored-project').RunModifiers;

@@ -232,7 +232,7 @@ export function applyRoomActionCommand(
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
       }
       if (order[existingIndex]?.kind === 'interactKeepsakeRack') {
-        failCommand(command, 'the keepsake rack uses RemovePostbossKeepsake');
+        failCommand(command, 'the keepsake rack is permanent; ReplacePostbossKeepsake clears it');
       }
       if (
         occurrenceIsActive &&

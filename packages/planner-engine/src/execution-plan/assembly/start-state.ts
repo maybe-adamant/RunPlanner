@@ -1,4 +1,4 @@
-import type { RunStartPoint } from '../../authored-project/run-modifiers';
+import type { RunStartPoint } from '../../authored-project/practice-start';
 import type { Catalog } from '../../catalog-schema';
 import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
 import type {

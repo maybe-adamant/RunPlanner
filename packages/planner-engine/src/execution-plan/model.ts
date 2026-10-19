@@ -1,6 +1,6 @@
 import type { ProjectEvaluationAssembly } from '../simulation/evaluation/evaluation-products';
 import type { Catalog } from '../catalog-schema';
-import type { ExecutionRunModifiers } from '../authored-project/run-modifiers';
+import type { RunModifiers } from '../authored-project/run-modifiers';
 import type { StartInstallationUnavailableReason } from '../simulation/start-installation/model';
 import type { ResourceExecutionPolicy, ResourcePointDisposition } from '../simulation/resources';
 import type { TraitElement, TraitRarity } from '../catalog-schema';
@@ -1367,7 +1367,7 @@ export interface ExecutionPlan {
   /** Presentation-only plan name (the saved file's name); outside the fingerprint. */
   readonly displayName?: string;
   readonly routeKey: ExecutionRouteKey;
-  readonly runModifiers?: ExecutionRunModifiers;
+  readonly runModifiers?: RunModifiers;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionConfiguredExtent;
@@ -1387,7 +1387,7 @@ export interface ExecutionSemanticProduct {
   readonly catalogVersion: string;
   readonly projectId: string;
   readonly routeKey: ExecutionRouteKey;
-  readonly runModifiers?: ExecutionRunModifiers;
+  readonly runModifiers?: RunModifiers;
   readonly startingLoadout: ExecutionStartingLoadout;
   readonly startingKeepsake: ExecutionStartingKeepsake;
   readonly extent: ExecutionPlan['extent'];

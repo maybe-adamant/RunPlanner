@@ -263,8 +263,8 @@ need not decode every plan to describe them:
       "startingFear": 8,
       "practiceStart": "Thessaly · Boss",
       "catalogVersion": "…",
-      "schemaVersion": 96,
-      "schemaRevision": 1,
+      "schemaVersion": 97,
+      "schemaRevision": 0,
       "fingerprint": "…"
     },
     "0": {
@@ -276,8 +276,8 @@ need not decode every plan to describe them:
         "endsAt": "2026-10-19T00:00:00Z"
       },
       "catalogVersion": "…",
-      "schemaVersion": 96,
-      "schemaRevision": 1,
+      "schemaVersion": 97,
+      "schemaRevision": 0,
       "fingerprint": "…"
     }
   }

@@ -7,10 +7,11 @@ import type {
   AuthoredTraitOffer,
 } from './traits/state';
 import type { RunModifiersRecord } from './run-modifiers';
+import type { RunStartPoint } from './practice-start';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 96 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 97 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 2;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -428,11 +429,8 @@ export interface RoomOccurrence {
   readonly roomActions: RoomActionState;
   /** Source-owned closed sibling continuations emitted by this occurrence. */
   readonly additionalExits: readonly AuthoredAdditionalExit[];
-  /** Present only where this exact room declaration exposes the keepsake rack. */
-  readonly keepsakeRack?: {
-    readonly keepsakeKey: string;
-    readonly equipResults?: AuthoredKeepsakeEquipResults;
-  };
+  /** Present exactly where the room offers its keepsake rack on this route. */
+  readonly keepsakeRack?: AuthoredKeepsakeRack;
   /** Present only at a route-declared Eris host, as an observation rather than a condition. */
   readonly eris?: AuthoredErisObservation;
   /** Present only when this exact occurrence owns a realized Phial target. */
@@ -442,6 +440,12 @@ export interface RoomOccurrence {
   /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */
   readonly hermesShrine?: HermesShrineState;
   readonly stygianWell?: StygianWellState;
+}
+
+/** A Postboss rack; a null key leaves the held keepsake unchanged. */
+export interface AuthoredKeepsakeRack {
+  readonly keepsakeKey: string | null;
+  readonly equipResults?: AuthoredKeepsakeEquipResults;
 }
 
 /** Eris stood in the room on entry; her spawn condition is observed, never simulated. */
@@ -599,7 +603,22 @@ export interface AuthoredRoutePlan {
   readonly itineraryBiomeKeys: readonly string[];
   readonly loadout: RouteLoadout;
   readonly resourcePlacements: ResourcePlacements;
+  /** A Practice mode start; absent is a full run. */
+  readonly practiceStart?: RunStartPoint;
+  readonly draft: AuthoredDraftSpec;
   readonly biomes: readonly AuthoredBiomePlan[];
+}
+
+/** The persisted Draft settings; the loadout and route are read from the project. */
+export interface AuthoredDraftSpec {
+  readonly godKeys: readonly string[];
+  /** Targeted story NPC by biome; a biome left out has no story target. */
+  readonly storyNpcByBiome: Readonly<Record<string, string>>;
+  readonly fieldNpcsByBiome: Readonly<Record<string, readonly string[]>>;
+  readonly basketTraitKeys: readonly string[];
+  /** Rack keepsake by the biome its rack follows; a missing entry keeps the held keepsake. */
+  readonly rackKeepsakeByBiome: Readonly<Record<string, string>>;
+  readonly seed: number;
 }
 
 export interface ProjectDocument {

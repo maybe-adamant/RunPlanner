@@ -238,9 +238,13 @@ export function materializeAuthoredRoom(
     roomActions: context.occurrence.roomActions,
     hasKeepsakeRack: routeHasKeepsakeRack(context.room, context.biome.routeKey),
     hasRequiredFountain: context.room.hasRequiredFountain,
-    ...(context.occurrence.keepsakeRack === undefined
+    ...(context.occurrence.keepsakeRack?.keepsakeKey == null
       ? {}
-      : { keepsakeRack: context.occurrence.keepsakeRack }),
+      : {
+          keepsakeRack: context.occurrence.keepsakeRack as NonNullable<
+            CanonicalAuthoredRoom['keepsakeRack']
+          >,
+        }),
     ...(context.occurrence.fountainRarityResult === undefined
       ? {}
       : { fountainRarityResult: context.occurrence.fountainRarityResult }),

@@ -14,11 +14,6 @@ import {
   NATIVE_RUN_MODIFIERS,
   RUN_MODIFIER_DECLARATIONS,
   RUN_MODIFIER_PERCENTAGE,
-  RUN_MODIFIER_GOLD,
-  EXECUTION_RUN_MODIFIER_DECLARATIONS,
-  executionRunModifiers,
-  runModifierDeclaration,
-  sameRunModifierValue,
   routeRunModifiers,
   projectCommandAddress,
   ProjectCommandContractError,
@@ -55,12 +50,8 @@ describe('run modifier declarations', () => {
   it('declare the gold percentages as released optional modifiers that are off natively', () => {
     const keys = RUN_MODIFIER_DECLARATIONS.map((declaration) => declaration.key);
     expect(new Set(keys).size).toBe(keys.length);
-    expect(keys).toEqual(['enemyGoldDropChance', 'encounterGoldRange', 'startPoint']);
-    expect(EXECUTION_RUN_MODIFIER_DECLARATIONS.map((declaration) => declaration.key)).toEqual([
-      'enemyGoldDropChance',
-      'encounterGoldRange',
-    ]);
-    for (const declaration of EXECUTION_RUN_MODIFIER_DECLARATIONS) {
+    expect(keys).toEqual(['enemyGoldDropChance', 'encounterGoldRange']);
+    for (const declaration of RUN_MODIFIER_DECLARATIONS) {
       expect(declaration.kind).toBe('optionalPercentage');
       expect(declaration.stage).toBe('released');
       expect(declaration.label).not.toBe('');
@@ -143,86 +134,6 @@ describe('run modifier stage', () => {
     }
     expect(isRunModifierAuthored(internal, false)).toBe(false);
     expect(isRunModifierAuthored(internal, true)).toBe(true);
-  });
-});
-
-describe('start point run modifier', () => {
-  const startPoint = { biomeKey: 'G', point: 'preboss', gold: 250 } as const;
-  const declaration = runModifierDeclaration('startPoint');
-
-  it('is a released optional declaration that is absent natively', () => {
-    expect(declaration).toMatchObject({ kind: 'startPoint', stage: 'released' });
-    expect(NATIVE_RUN_MODIFIERS).not.toHaveProperty('startPoint');
-    expect(RUN_MODIFIER_GOLD).toEqual({ min: 0, max: 99_999, step: 1 });
-    expect(isRunModifierValue(declaration, startPoint)).toBe(true);
-    expect(isRunModifierValue(declaration, { biomeKey: 'G', point: 'opening' })).toBe(true);
-    expect(isRunModifierValue(declaration, { biomeKey: 'G', point: 'boss' })).toBe(true);
-    for (const value of [
-      undefined,
-      { ...startPoint, gold: 2.5 },
-      { ...startPoint, gold: -1 },
-      { ...startPoint, gold: 100_000 },
-      { ...startPoint, point: 'hub' },
-      { ...startPoint, biomeKey: '' },
-    ])
-      expect(isRunModifierValue(declaration, value)).toBe(false);
-  });
-
-  it('heals malformed shapes and malformed gold to absent, and keeps a dangling biome', () => {
-    for (const value of [
-      null,
-      [],
-      'G',
-      { point: 'opening' },
-      { biomeKey: 3, point: 'opening' },
-      { biomeKey: '', point: 'opening' },
-      { biomeKey: 'G', point: 'hub' },
-    ])
-      expect(decodeRunModifiers({ startPoint: value }, 'runModifiers')).toEqual({});
-    for (const gold of ['5', null, NaN, Infinity])
-      expect(decodeRunModifiers({ startPoint: { ...startPoint, gold } }, 'runModifiers')).toEqual({
-        startPoint: { biomeKey: 'G', point: 'preboss' },
-      });
-    for (const [stored, healed] of [
-      [-5, 0],
-      [12.6, 13],
-      [250_000, 99_999],
-    ] as const)
-      expect(
-        decodeRunModifiers({ startPoint: { ...startPoint, gold: stored } }, 'runModifiers'),
-      ).toEqual({ startPoint: { ...startPoint, gold: healed } });
-    expect(
-      decodeRunModifiers({ startPoint: { biomeKey: 'G', point: 'boss' } }, 'runModifiers'),
-    ).toEqual({ startPoint: { biomeKey: 'G', point: 'boss' } });
-    const dangling = { biomeKey: 'NotABiome', point: 'opening', extra: true };
-    expect(decodeRunModifiers({ startPoint: dangling }, 'runModifiers')).toEqual({
-      startPoint: { biomeKey: 'NotABiome', point: 'opening' },
-    });
-    const saved = decodeProjectDocument(withLoadoutModifiers({ startPoint: dangling }), catalog);
-    expect(saved.route.loadout.runModifiers).toEqual({
-      startPoint: { biomeKey: 'NotABiome', point: 'opening' },
-    });
-  });
-
-  it('encodes only a set start point and is excluded from the execution modifiers', () => {
-    expect(encodeRunModifiers({ startPoint })).toEqual({ startPoint });
-    expect(encodeRunModifiers({})).toBeUndefined();
-    expect(executionRunModifiers({ startPoint })).toBeUndefined();
-    expect(executionRunModifiers({ ...settings, startPoint })).toEqual(settings);
-    const changed = replace({ startPoint });
-    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(changed)), catalog)).toEqual(
-      changed,
-    );
-  });
-
-  it('compares start points by value, so an equal replacement is a no-op', () => {
-    expect(sameRunModifierValue(startPoint, { ...startPoint })).toBe(true);
-    expect(sameRunModifierValue(startPoint, { ...startPoint, gold: 251 })).toBe(false);
-    expect(sameRunModifierValue(startPoint, undefined)).toBe(false);
-    const changed = replace({ startPoint });
-    expect(replace({ startPoint: { ...startPoint } }, changed)).toBe(changed);
-    const cleared = replace({}, changed);
-    expect(cleared.route.loadout).not.toHaveProperty('runModifiers');
   });
 });
 

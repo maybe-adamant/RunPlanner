@@ -8,25 +8,27 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { useAppDispatch } from '@planner/state/store';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
 import { hintProps } from '@planner/ui/controls/hint';
+import { RunStartPointModifier } from './RunStartPointModifier';
 
-/** The run modifiers other than Practice mode, which the Route panel hosts. */
-export function RouteModifiersPanel({
+/** The Route panel's run modifiers, with Practice mode's start point last. */
+export function RouteRunModifiers({
+  replacementKey,
   workspaceRoute,
 }: {
+  /** Accepted document replacement clears local drafts. */
+  readonly replacementKey: string;
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const control = workspaceRoute.runModifiers;
   const prefix = `${workspaceRoute.routeKey}-run-modifiers`;
   return (
-    <section className="route-overview route-run-modifiers" aria-labelledby={`${prefix}-heading`}>
-      <header className="panel-heading">
-        <h2 id={`${prefix}-heading`} className="eyebrow route-loadout-heading">
-          Modifiers
-        </h2>
-      </header>
-      <div className="route-run-modifier-controls">
+    <section className="route-run-modifiers" aria-labelledby={`${prefix}-heading`}>
+      <h3 id={`${prefix}-heading`} className="route-section-heading">
+        Run modifiers
+      </h3>
+      <div className="route-run-modifier-controls" key={replacementKey}>
         {control.declarations.map((declaration) =>
-          declaration.kind === 'startPoint' ? null : declaration.kind === 'boolean' ? (
+          declaration.kind === 'boolean' ? (
             <BooleanRunModifierToggle
               key={declaration.key}
               control={control}
@@ -41,6 +43,7 @@ export function RouteModifiersPanel({
             />
           ),
         )}
+        <RunStartPointModifier control={control.startPoint} id={`${prefix}-startPoint`} />
       </div>
     </section>
   );

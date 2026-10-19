@@ -116,7 +116,6 @@ export function bindResolutionInteractions(input: {
     {
       readonly address: KeepsakeSelectionAddress;
       readonly selectedKeepsakeKey?: string;
-      readonly unavailableReason?: 'rackUnavailableOnRoute';
     }
   >;
   readonly keepsakeEquipResultControls?: ReadonlyMap<
@@ -431,18 +430,13 @@ export function bindResolutionInteractions(input: {
           projectKeepsakeSelectionPicker(
             contextualPicker,
             catalog,
-            control.unavailableReason === undefined
-              ? candidates.keepsakeSelections(control.address)
-              : [],
+            candidates.keepsakeSelections(control.address),
             selectedKey,
           ),
-        ...(control.unavailableReason === undefined
-          ? {}
-          : { unavailableReason: control.unavailableReason }),
         owner: control.address,
         selectedLabel:
           catalog.keepsakes.byKey[selectedKey ?? '']?.label ??
-          (postboss ? 'Add keepsake change' : (selectedKey ?? 'Choose keepsake')),
+          (postboss ? 'Unchanged' : (selectedKey ?? 'Choose keepsake')),
         ...(selectedKey === undefined ? {} : { selectedKeepsakeKey: selectedKey }),
         replaceIntent: (keepsakeKey: string) =>
           Object.freeze({
@@ -468,16 +462,17 @@ export function bindResolutionInteractions(input: {
           }),
         ...(postboss && selectedKey !== undefined
           ? {
-              removeIntent: () =>
+              unchangedIntent: () =>
                 Object.freeze({
                   command: Object.freeze({
-                    kind: 'RemovePostbossKeepsake' as const,
+                    kind: 'ReplacePostbossKeepsake' as const,
                     selection: control.address as Extract<
                       KeepsakeSelectionAddress,
                       {
                         readonly owner: import('@run-planner/engine/authored-project').OccurrenceAddress;
                       }
                     >,
+                    keepsakeKey: null,
                   }),
                 }),
             }

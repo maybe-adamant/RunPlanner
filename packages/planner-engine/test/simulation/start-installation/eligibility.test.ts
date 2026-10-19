@@ -14,7 +14,7 @@ const golden = createGoldenFGHIProject();
 const evaluation = simulateProject(catalog, golden);
 const withStartPoint = (startPoint: RunStartPoint): ProjectDocument => ({
   ...golden,
-  route: { ...golden.route, loadout: { ...golden.route.loadout, runModifiers: { startPoint } } },
+  route: { ...golden.route, practiceStart: startPoint },
 });
 
 describe('start point eligibility', () => {

@@ -160,16 +160,14 @@ describe('draftProject', () => {
   it('drafts a route with a Practice start and keeps the start point', () => {
     const { base, spec } = cases[0]!;
     const practice = applyProjectCommand(base, catalog, {
-      kind: 'ReplaceRunModifiers',
+      kind: 'ReplacePracticeStart',
       route: createRouteAddress(base.route.routeKey),
-      value: { startPoint: { biomeKey: 'G', point: 'opening' } },
+      startPoint: { biomeKey: 'G', point: 'opening' },
     });
     const result = draftProject(catalog, practice, spec, 1);
     if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
     const drafted = applyProjectCommand(practice, catalog, result.command);
-    expect(drafted.route.loadout.runModifiers).toEqual({
-      startPoint: { biomeKey: 'G', point: 'opening' },
-    });
+    expect(drafted.route.practiceStart).toEqual({ biomeKey: 'G', point: 'opening' });
     const evaluation = simulateProjectAssembly(catalog, drafted).evaluation;
     expect(evaluation.status).toBe('valid');
     expect(evaluation.findings).toEqual([]);

@@ -728,11 +728,8 @@ export function executionTimelineTransactions(
       const reference = actionReference;
       if (reference.kind === 'interactKeepsakeRack') {
         const keepsakeKey = room.keepsakeRack?.keepsakeKey;
-        if (keepsakeKey === undefined)
-          throw new CompilerError(
-            'executionCoverageMissing',
-            `${room.gameName} lacks selected keepsake rack target`,
-          );
+        // An unchanged rack is never touched in game.
+        if (keepsakeKey === undefined) continue;
         const rackOwner = semanticAddressKey(timeline.action.owner);
         const equipResults = executionKeepsakeEquipResults(room.keepsakeRack?.equipResults);
         add({

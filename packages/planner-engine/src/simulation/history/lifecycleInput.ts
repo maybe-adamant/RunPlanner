@@ -113,6 +113,9 @@ export function createRoomLifecycleInput(
     ...(room.kind === 'authored' && room.hermesShrine !== undefined
       ? { hermesShrine: room.hermesShrine }
       : {}),
+    ...(room.kind === 'authored' && room.keepsakeRack !== undefined
+      ? { keepsakeRackReplaces: true }
+      : {}),
     ...(incomingReward === undefined
       ? {}
       : {

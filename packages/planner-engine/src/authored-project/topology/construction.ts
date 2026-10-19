@@ -3,6 +3,7 @@ import {
   resolveBiomeStart,
   routePurgingPool,
   routeRoomDeclaration,
+  routeHasKeepsakeRack,
   routeRoomShop,
 } from '../route-profile';
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
@@ -16,6 +17,8 @@ import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
+
+const RACK_ACTION = Object.freeze({ kind: 'interactKeepsakeRack' as const });
 
 export function defaultOccurrence(
   catalog: Catalog,
@@ -37,6 +40,8 @@ export function defaultOccurrence(
     loadout,
     ...(activeCageCount === undefined ? {} : { activeCageCount }),
   });
+  const hasRack = routeHasKeepsakeRack(room, routeKey);
+  const defaultActions = createDefaultRoomActionState(room);
   const encounters = createDefaultRoomEncounterState(
     catalog,
     room,
@@ -50,7 +55,10 @@ export function defaultOccurrence(
       ? { acquisitionSites: Object.freeze({ roomExit: Object.freeze({}) }) }
       : {}),
     encounters,
-    roomActions: createDefaultRoomActionState(room),
+    ...(hasRack ? { keepsakeRack: Object.freeze({ keepsakeKey: null }) } : {}),
+    roomActions: hasRack
+      ? Object.freeze({ order: Object.freeze([...defaultActions.order, RACK_ACTION]) })
+      : defaultActions,
     additionalExits: Object.freeze([]),
     ...(routePurgingPool(room, routeKey) === undefined
       ? {}

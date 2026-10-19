@@ -134,9 +134,7 @@ export function DirectRoomWorkbench({
   room,
   view,
   renderRoomActionRowContent,
-  renderRoomActionRowRemoval,
   renderLifecycleBoundaryContent,
-  renderOptionalRoomActionContent,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -146,11 +144,9 @@ export function DirectRoomWorkbench({
     | 'actions'
     | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation };
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  readonly renderRoomActionRowRemoval?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderLifecycleBoundaryContent?: (
     boundary: WorkspaceRoomLifecycleBoundary,
   ) => TimelineBoundaryContent | undefined;
-  readonly renderOptionalRoomActionContent?: () => ReactNode;
 }) {
   const workbench = room.workbench;
   const renderEncounterPhase = (phase: WorkspaceEncounterPhase): ReactNode => (
@@ -208,15 +204,11 @@ export function DirectRoomWorkbench({
           encounterPhases={workbench.encounterPhases}
           idPrefix={idPrefix}
           interactions={interactions}
-          optionalChildren={renderOptionalRoomActionContent?.()}
           renderEncounterPhase={renderEncounterPhase}
           renderRewardWheel={renderRewardWheel}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowRemoval === undefined
-            ? {}
-            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -241,9 +233,6 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowRemoval === undefined
-            ? {}
-            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -267,9 +256,6 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowRemoval === undefined
-            ? {}
-            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -303,9 +289,6 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
-          {...(renderRoomActionRowRemoval === undefined
-            ? {}
-            : { renderRowRemoval: renderRoomActionRowRemoval })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
