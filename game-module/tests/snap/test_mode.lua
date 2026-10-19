@@ -155,6 +155,53 @@ function TestSnapMode.testBuildsThePlannedRoomWhenTheDoorLeadsElsewhere()
     lu.assertEquals(door.Room, { Name = "F_B", __runPlannerExecutionRoomId = "b" })
 end
 
+-- A session in F_A, still synchronized, whose batch exit offers F_B (planned) and F_C.
+local function synchronizedAtBatchExit()
+    local state = session.create()
+    state.plan = plan()
+    assert(session.resumeAt(state, 1))
+    state.state, state.reason = "synchronized", "ready"
+    route.enter(state.route, "a", "F_A")
+    state.plan.occurrencesById.a.doors = { kind = "batch", targets = {
+        { room = { id = "b", gameName = "F_B" } }, { room = { id = "c", gameName = "F_C" } },
+    } }
+    return state
+end
+
+function TestSnapMode.testAStrayDoorFromASynchronizedRoomSnapsAtThatExit()
+    local state = synchronizedAtBatchExit()
+    local leave, _, log, restore = attached(state, true)
+    local door = { Room = { Name = "F_C", __runPlannerExecutionRoomId = "c" } }
+    leave("F_A", door)
+    restore()
+    lu.assertEquals(door.Room.__runPlannerExecutionRoomId, "b")
+    lu.assertEquals(#log.created, 1)
+    lu.assertEquals({ state.state, state.reason, state.route.index }, { "synchronized", "snap-pending", 2 })
+    lu.assertEquals(state.snapPending.mismatch.checkpoint, "exit-door")
+end
+
+function TestSnapMode.testAStrayDoorWithSnapOffDesynchronizesAtTheExit()
+    local state = synchronizedAtBatchExit()
+    local leave, _, log, restore = attached(state, false)
+    local door = { Room = { Name = "F_C", __runPlannerExecutionRoomId = "c" } }
+    leave("F_A", door)
+    restore()
+    lu.assertEquals(door.Room.__runPlannerExecutionRoomId, "c")
+    lu.assertEquals(log.created, {})
+    lu.assertEquals({ state.state, state.firstMismatch.checkpoint, state.firstMismatch.observed },
+        { "desynchronized", "exit-door", "c" })
+end
+
+function TestSnapMode.testThePlannedOrAnUnstampedDoorLeavesInSync()
+    for _, room in ipairs({ { Name = "F_B", __runPlannerExecutionRoomId = "b" }, { Name = "N_Hub" } }) do
+        local state = synchronizedAtBatchExit()
+        local leave, _, _, restore = attached(state, true)
+        leave("F_A", { Room = room })
+        restore()
+        lu.assertEquals({ state.state, state.reason, state.route.index }, { "synchronized", "ready", 2 })
+    end
+end
+
 function TestSnapMode.testDeclinesBiomeEdgesHubsMissingFramesAndUnsnappableSessions()
     local edge = desynchronized(3)
     lu.assertEquals({ mode.target(edge, "F_C") }, { nil, "declined" })

@@ -25,6 +25,9 @@ says otherwise.
 
 ## Declines and integrity
 
+- [ ] In an in-sync room with several doors, take a door the plan did not
+      choose: that door leads to the planned room and snaps, with no extra room.
+
 - [ ] A wrong turn into Ephyra's board, or across a biome edge, stays out of
       sync and does not snap.
 - [ ] After a victory with snaps, the summary shows "Snapped back N times".

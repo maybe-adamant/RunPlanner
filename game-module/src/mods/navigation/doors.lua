@@ -246,6 +246,18 @@ function doors.plannedRoom(plan, index, game)
     return nil
 end
 
+-- The other published target a door from `occurrence` leads to instead of
+-- `expectedId`; nil for the planned door, unstamped doors and non-target rooms.
+function doors.strayTarget(occurrence, door, expectedId, occurrencesById)
+    local destination = destinationId(door)
+    if destination == nil or destination == expectedId or occurrence == nil or occurrence.doors == nil
+        or occurrence.doors.kind == "terminal" then return nil end
+    for _, target in ipairs(publishedTargets(occurrence.doors, occurrencesById)) do
+        if target.room.id == destination then return destination end
+    end
+    return nil
+end
+
 -- Replace only the semantic rows.  Existing native-only door fields are
 -- retained by index, while route target/reward/provider facts are stamped.
 function doors.realize(occurrence, nativeDoors, game, occurrencesById)
