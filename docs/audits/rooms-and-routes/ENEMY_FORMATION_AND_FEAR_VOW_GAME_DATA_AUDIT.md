@@ -384,7 +384,9 @@ units.
 Menace runs inside `HandleNextSpawn`, after generation has selected the
 original enemy type and count but before `EnemyData` is copied into a live
 unit. Unless the encounter, call site, or original enemy blocks the Vow, each
-source spawn request independently rolls the effective chance. A request may
+source spawn request independently rolls the effective chance, 10% at rank 1
+and 25% at rank 2 (`MetaUpgradeData.lua:1842-1846`, `Ranks` `ChangeValue`). A
+request may
 expand into a unit group; it is not necessarily one final entity.
 
 On success:

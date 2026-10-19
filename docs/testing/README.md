@@ -20,6 +20,7 @@ commits, not these checklists.
 - [Armor](ARMOR_LIVE_ACCEPTANCE.md)
 - [Slot rebuild](SLOT_REBUILD_LIVE_ACCEPTANCE.md)
 - [Snap mode](SNAP_MODE_LIVE_ACCEPTANCE.md)
+- [Draft Mode](DRAFT_MODE_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete

@@ -284,7 +284,8 @@ that are off, only when some value is non-native, separately from starting
 equipment.
 
 `ReplaceRoute` replaces the loadout (keeping run modifiers) and every itinerary
-biome's plan; the Practice start and the draft spec stay.
+biome's plan and clears resource placements, which name hosts in the replaced
+biomes; the route, itinerary, Practice start and draft spec stay.
 
 The route also owns one always-present `draft` spec, the persisted Draft
 settings: `godKeys`, `storyNpcByBiome`, `fieldNpcsByBiome`, `basketTraitKeys`,
