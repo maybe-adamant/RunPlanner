@@ -1,9 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import {
-  applyProjectCommand,
   countedRewardBinding,
   createBiomeAddress,
-  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
@@ -19,27 +17,21 @@ import {
   semanticAddressKey,
   shopOfferOptionValues,
   takeoverPrebossGameNames,
-  type AuthoredTraitOffer,
   type BiomeAddress,
-  type AuthoredTraitOfferTraits,
-  type AuthoredTraitOption,
   type BatchRewardStoreAddress,
   type ExitDecisionAddress,
   type HubAction,
   type HubDecision,
   type HubDecisionAddress,
   type OccurrenceId,
-  ProjectCommandContractError,
   type ProjectCommand,
   type ProjectDocument,
   type RoomOccurrence,
   type SemanticAddress,
   type TargetAddress,
-  type TraitOfferAddress,
 } from '../../authored-project';
 import { hermesShrineInitialSlotKey } from '../../authored-project/model';
 import { exitDecisionForSource } from '../../authored-project/topology/query';
-import { createDefaultAuthoredHexTree } from '../../authored-project/traits/hex-tree';
 import { biomeStartRoomGameNames, resolveBiomeStart } from '../../authored-project/route-profile';
 import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../reward-kernel';
 import {
@@ -47,54 +39,29 @@ import {
   type ProjectCandidateSession,
 } from '../candidates/session';
 import type { StartRoomCandidateQuery } from '../candidates/start-room';
-import {
-  acquisitionConversionCandidateForProjectEvaluationAssembly,
-  countedRewardTypeDomain,
-  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
-  levelResolutionCandidateForProjectEvaluationAssembly,
-} from '../evaluation/project-evaluation-assembly';
+import { countedRewardTypeDomain } from '../evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
-import { latestRunState } from './report';
-import type { SemanticFinding } from '../model';
-import { draftDenialActive, type DraftSpec } from './spec';
-import {
-  draftProvider,
-  draftSupplyTraitKeys,
-  type DraftGodSchedule,
-  type DraftSupply,
-} from './schedule';
-import {
-  DRAFT_PROVIDER_CAPS,
-  draftCappedGiver,
-  draftIllegalTrait,
-  draftStartTraits,
-} from './basket';
-import { shuffleDraft, type DraftRng } from './rng';
-import { settleDraftCommand } from './settle';
-import { completeCarrierChildren, type DraftCarrierChildContext } from './carrier-children';
 import { assessmentRepairOwner } from '../finding-regions';
+import type { SemanticFinding } from '../model';
+import { draftStartTraits } from './basket';
+import { draftEncounterChoice, type DraftEncounterChoiceContext } from './encounters';
+import { createDraftPrerequisites } from './prerequisites';
+import { shuffleDraft, type DraftRng } from './rng';
 import {
-  createDraftPrerequisites,
-  type DraftHeldTraits,
-  type DraftPrerequisites,
-} from './prerequisites';
-import type { DraftNpcGiver, DraftWorldProduct } from './world';
-
-/** What the walk has acquired so far, read from the latest Run State snapshot. */
-export interface DraftProgress {
-  readonly equippedTraitKeys: readonly string[];
-  /** Hermes boons held, basket or not; each spends one of the run's Hermes rooms. */
-  readonly hermes: number;
-  readonly held: DraftHeldTraits;
-}
-
-const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
-/** Replacement traits tried for one unselected row that needs no change. */
-const FILLER_DRAWS = 4;
-/** Offer weight of a giver whose basket trait is still wanted. */
-const WANTED_GIVER_WEIGHT = 30;
-/** Offer weight of a giver whose basket trait is due now. */
-const DUE_GIVER_WEIGHT = 60;
+  sampleArcanaChoice,
+  sampleFountainRarity,
+  sampleHexActivation,
+  sampleKeepsakeEquipResult,
+  sampleLevelResolution,
+  sampleSteadyGrowth,
+  type DraftSampleContext,
+} from './samples';
+import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedule';
+import { settleDraftCommand } from './settle';
+import type { DraftSpec } from './spec';
+import { DraftSteering, type DraftProgress } from './steering';
+import { DraftTraitOffers } from './trait-offers';
+import type { DraftWorldProduct } from './world';
 
 /**
  * One finding-driven draft walk over a working project. Every value comes from
@@ -104,18 +71,11 @@ export class DraftWalk {
   assembly: ProjectEvaluationAssembly;
   private session: ProjectCandidateSession | undefined;
   private readonly hooked = new Set<string>();
-  private readonly worldGivers: ReadonlySet<string>;
-  private readonly prerequisites: DraftPrerequisites;
-  private readonly start: DraftHeldTraits;
-  private readonly hermesTraits: ReadonlySet<string>;
-  private readonly hammerTraits: ReadonlySet<string>;
-  private readonly denial: boolean;
-  private readonly npcGivers: readonly DraftNpcGiver[];
-  /** Basket NPC traits by the itinerary index of their NPC's biome. */
-  private readonly npcTraitBiomes: ReadonlyMap<string, number>;
+  private readonly steering: DraftSteering;
+  private readonly traitOffers: DraftTraitOffers;
+  private readonly samples: DraftSampleContext;
+  private readonly encounterChoices: DraftEncounterChoiceContext;
   private nextOccurrence = 0;
-  /** Trait offers this walk authored, by address, for re-picking a stale child. */
-  private readonly authoredOffers = new Map<string, AuthoredTraitOfferTraits>();
   private stepCount = 0;
   private failureReason: string | undefined;
   /** The biome being walked. */
@@ -128,18 +88,56 @@ export class DraftWalk {
     start: ProjectEvaluationAssembly,
     readonly spec: DraftSpec,
     readonly rng: DraftRng,
-    private readonly schedule: DraftGodSchedule,
+    schedule: DraftGodSchedule,
     world: DraftWorldProduct,
   ) {
     this.assembly = start;
-    this.worldGivers = new Set(world.giverKeys);
-    this.start = draftStartTraits(catalog, start.project.route, spec.loadout);
-    this.prerequisites = createDraftPrerequisites(catalog, spec.basketTraitKeys, this.start);
-    this.hermesTraits = draftSupplyTraitKeys(catalog, 'hermes');
-    this.hammerTraits = draftSupplyTraitKeys(catalog, 'hammer');
-    this.denial = draftDenialActive(catalog, spec.loadout);
-    this.npcGivers = world.npcGivers;
-    this.npcTraitBiomes = world.npcTraitBiomes;
+    const held = draftStartTraits(catalog, start.project.route, spec.loadout);
+    this.steering = new DraftSteering(
+      catalog,
+      spec,
+      schedule,
+      world,
+      createDraftPrerequisites(catalog, spec.basketTraitKeys, held),
+      held,
+      { assembly: () => this.assembly, biomeIndex: () => this.biomeIndex },
+    );
+    const shuffle = <T>(values: readonly T[]) => this.shuffle(values);
+    const apply = (command: ProjectCommand) => this.apply(command);
+    this.traitOffers = new DraftTraitOffers({
+      catalog,
+      spec,
+      steering: this.steering,
+      hooked: this.hooked,
+      project: () => this.project,
+      evaluate: this.evaluate,
+      startingOutcome: (trait, giverKey) =>
+        this.candidates().traitOfferStartingOutcome(trait, giverKey),
+      apply,
+      shuffle,
+      fail: (reason) => {
+        this.failureReason = reason;
+      },
+    });
+    this.samples = {
+      assembly: () => this.assembly,
+      evaluate: this.evaluate,
+      apply,
+      shuffle,
+      traitGuard: () => {
+        const progress = this.steering.progress();
+        return (traitKey) => this.traitOffers.traitAllowed(traitKey, progress);
+      },
+    };
+    this.encounterChoices = {
+      catalog,
+      spec,
+      steering: this.steering,
+      hooked: this.hooked,
+      assembly: () => this.assembly,
+      apply,
+      shuffle,
+    };
   }
 
   /** Decisions taken so far, across every biome this walk ran. */
@@ -187,7 +185,7 @@ export class DraftWalk {
       }
       const issue = this.assembly.evaluation.issue!;
       const reason = issue.reasons[0]!;
-      if (!this.optionalChoices(reason) && !this.repair(reason)) {
+      if (!draftEncounterChoice(this.encounterChoices, reason) && !this.repair(reason)) {
         this.failureReason ??= `${reason.code} at ${semanticAddressKey(reason.origin)}`;
         return false;
       }
@@ -246,164 +244,21 @@ export class DraftWalk {
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
   }
 
+  /** What the walk has acquired so far. */
   progress(): DraftProgress {
-    const snapshot = latestRunState(this.assembly);
-    const equippedTraitKeys = Object.keys(snapshot?.traits.equippedTraits ?? {});
-    return {
-      equippedTraitKeys,
-      hermes: equippedTraitKeys.filter((key) => this.hermesTraits.has(key)).length,
-      held:
-        snapshot === undefined
-          ? this.start
-          : { traitKeys: new Set(equippedTraitKeys), elementCounts: snapshot.traits.elementCounts },
-    };
+    return this.steering.progress();
   }
 
-  // --- Targets -----------------------------------------------------------
-
-  private wantedBasket(progress: DraftProgress): string[] {
-    return this.spec.basketTraitKeys.filter((key) => !progress.equippedTraitKeys.includes(key));
+  hermesReserved(): boolean {
+    return this.steering.hermesReserved();
   }
 
-  /** Wanted basket traits another wanted basket trait still waits on. */
-  private neededPrerequisites(progress: DraftProgress): ReadonlySet<string> {
-    return this.prerequisites.waitedOn(this.wantedBasket(progress), progress.held);
+  wastedHermes(): number {
+    return this.steering.wastedHermes();
   }
 
-  /** Wanted basket traits a wanted NPC trait waits on while its NPC's biome is not yet past. */
-  private npcPrerequisites(progress: DraftProgress): ReadonlySet<string> {
-    const wanted = this.wantedBasket(progress);
-    const waiting = wanted.filter((key) => (this.npcTraitBiomes.get(key) ?? -1) >= this.biomeIndex);
-    return this.prerequisites.waitedOn(wanted, progress.held, waiting);
-  }
-
-  private ready(traitKey: string, progress: DraftProgress): boolean {
-    return this.prerequisites.ready(traitKey, progress.held);
-  }
-
-  /** A wanted basket trait of this giver cannot be offered yet. */
-  private npcWaiting(giverKey: string | undefined, progress: DraftProgress): boolean {
-    const traitKeys = this.catalog.traitGivers.byKey[giverKey ?? '']?.traitKeys ?? [];
-    return this.wantedBasket(progress).some(
-      (key) => traitKeys.includes(key) && !this.ready(key, progress),
-    );
-  }
-
-  /**
-   * Whether the biome likely has another room before its last forced depth;
-   * a cheap stand-in for a later chance to meet an NPC.
-   */
-  private laterRoomLikely(biomeKey: string): boolean {
-    let lastForced = 0;
-    for (const room of this.catalog.rooms.values)
-      if (
-        room.roomSetKey === biomeKey &&
-        room.force?.kind === 'depthWindow' &&
-        room.force.axis === 'biomeDepthCache'
-      )
-        lastForced = Math.max(lastForced, room.force.deadline);
-    const biome = this.assembly.evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
-    const depth =
-      biome !== undefined && 'history' in biome
-        ? biome.history.ledgers.roomAppearances.filter((a) => a.origin.biomeKey === biomeKey).length
-        : 0;
-    return depth + 1 < lastForced;
-  }
-
-  /** Basket traits a Hermes, Hammer or Selene giver offers. */
-  private basketOf(providerKind: DraftSupply | 'spell'): string[] {
-    return this.spec.basketTraitKeys.filter((key) =>
-      this.catalog.traitGivers.values.some(
-        (giver) => giver.providerKind === providerKind && giver.traitKeys.includes(key),
-      ),
-    );
-  }
-
-  private wantedHermes(progress: DraftProgress): string[] {
-    return this.wantedBasket(progress).filter((key) => this.hermesTraits.has(key));
-  }
-
-  /**
-   * Every remaining Hermes room is owed to a wanted Hermes trait and none can
-   * be offered yet, so a Hermes reward now would spend a slot on another trait.
-   */
-  hermesReserved(progress: DraftProgress = this.progress()): boolean {
-    const wanted = this.wantedHermes(progress);
-    return (
-      wanted.length > 0 &&
-      wanted.length >= DRAFT_PROVIDER_CAPS.hermes - progress.hermes &&
-      !wanted.some((key) => this.ready(key, progress))
-    );
-  }
-
-  /** Basket traits the schedule makes due by this biome. */
-  private dueTraits(): readonly string[] {
-    return this.schedule.byBiome.slice(0, this.biomeIndex + 1).flatMap((biome) => biome.traitKeys);
-  }
-
-  private supplyOf(traitKey: string): DraftSupply | undefined {
-    return this.hermesTraits.has(traitKey)
-      ? 'hermes'
-      : this.hammerTraits.has(traitKey)
-        ? 'hammer'
-        : undefined;
-  }
-
-  /**
-   * How much a Hermes or Hammer reward helps the basket: 'now' for a ready
-   * wanted trait the schedule makes due, 'later' for one not yet due, none otherwise.
-   */
-  private supplyNeed(supply: DraftSupply, progress: DraftProgress): 'now' | 'later' | undefined {
-    if (supply === 'hermes' && progress.hermes >= DRAFT_PROVIDER_CAPS.hermes) return undefined;
-    const wanted = this.basketOf(supply).filter(
-      (key) => !progress.equippedTraitKeys.includes(key) && this.ready(key, progress),
-    );
-    if (wanted.length === 0) return undefined;
-    const due = this.dueTraits();
-    return wanted.some((key) => due.includes(key)) ? 'now' : 'later';
-  }
-
-  /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */
-  private offerWeight(offer: ResolvedRewardOffer): number {
-    // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.
-    if (offer.rewardType === 'ChaosWeaponUpgrade') return 0;
-    const progress = this.progress();
-    const wanted = this.wantedBasket(progress);
-    // A Devotion trial grants the chosen god's boon.
-    const source =
-      offer.payload?.kind === 'BoonSource'
-        ? offer.payload.source
-        : offer.payload?.kind === 'DevotionPair'
-          ? offer.payload.chosenSource
-          : undefined;
-    const giverKey =
-      source === undefined ? undefined : this.catalog.traitGiverByAcquisitionGameName[source];
-    const giver = giverKey === undefined ? undefined : this.catalog.traitGivers.byKey[giverKey];
-    if (giver?.providerKind === 'olympian') {
-      if (!this.worldGivers.has(giver.key)) return 0;
-      const needed = wanted.some((key) => giver.traitKeys.includes(key));
-      const weight = this.dueGods(progress).has(giver.key)
-        ? DUE_GIVER_WEIGHT
-        : needed
-          ? WANTED_GIVER_WEIGHT
-          : 4;
-      const prerequisites = this.neededPrerequisites(progress);
-      const unlocks = giver.traitKeys.some(
-        (key) => prerequisites.has(key) && wanted.includes(key) && this.ready(key, progress),
-      );
-      return unlocks ? weight * 1.5 : weight;
-    }
-    const provider = draftProvider(this.catalog, offer);
-    if (provider === 'spell') {
-      const spells = this.basketOf('spell').filter((key) => wanted.includes(key));
-      const npcPrerequisites = this.npcPrerequisites(progress);
-      if (spells.some((key) => npcPrerequisites.has(key))) return DUE_GIVER_WEIGHT;
-      return spells.length > 0 ? WANTED_GIVER_WEIGHT : 1;
-    }
-    if (provider === undefined) return 1;
-    if (provider === 'hermes' && this.hermesReserved(progress)) return 0.2;
-    const need = this.supplyNeed(provider, progress);
-    return need === 'now' ? 25 : need === 'later' ? 3 : 1;
+  scheduledTargets(): ReturnType<DraftSteering['scheduledTargets']> {
+    return this.steering.scheduledTargets();
   }
 
   /** Buys a Shop Hermes or Hammer a ready basket trait needs now; a refused purchase is undone. */
@@ -413,108 +268,22 @@ export class DraftWalk {
   ): void {
     const supply = draftProvider(this.catalog, value);
     if (supply === undefined || supply === 'spell') return;
-    if (this.supplyNeed(supply, this.progress()) !== 'now') return;
+    if (this.steering.supplyNeed(supply, this.steering.progress()) !== 'now') return;
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
     if (this.assembly.evaluation.issue?.kind === 'invalid')
       this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
   }
 
-  /** Hermes held outside the basket beyond the rooms the basket leaves free. */
-  wastedHermes(progress: DraftProgress = this.progress()): number {
-    const basket = this.basketOf('hermes');
-    const outside = progress.equippedTraitKeys.filter(
-      (key) => this.hermesTraits.has(key) && !basket.includes(key),
-    ).length;
-    return Math.max(0, outside - Math.max(0, DRAFT_PROVIDER_CAPS.hermes - basket.length));
-  }
-
   /** A basket Hermes or Hammer reward some decision could take; none while the basket reserves every Hermes room. */
   private noteSupply(offers: readonly ResolvedRewardOffer[]): void {
     for (const offer of offers) {
-      if (this.offerWeight(offer) <= 0) continue;
+      if (this.steering.offerWeight(offer) <= 0) continue;
       const supply = draftProvider(this.catalog, offer);
-      if (supply === undefined || supply === 'spell' || this.basketOf(supply).length === 0)
+      if (supply === undefined || supply === 'spell' || this.steering.basketOf(supply).length === 0)
         continue;
-      if (supply === 'hermes' && this.hermesReserved()) continue;
+      if (supply === 'hermes' && this.steering.hermesReserved()) continue;
       this.legalSupply.add(supply);
     }
-  }
-
-  /**
-   * Each basket trait due by this biome, held or not; a due trait whose
-   * prerequisites are not held is not judged, as steering skips it too.
-   */
-  scheduledTargets(): readonly {
-    readonly traitKey: string;
-    readonly supply?: DraftSupply;
-    readonly met: boolean;
-  }[] {
-    const progress = this.progress();
-    return this.dueTraits()
-      .filter((key) => progress.equippedTraitKeys.includes(key) || this.ready(key, progress))
-      .map((traitKey) => {
-        const supply = this.supplyOf(traitKey);
-        return {
-          traitKey,
-          ...(supply === undefined ? {} : { supply }),
-          met: progress.equippedTraitKeys.includes(traitKey),
-        };
-      });
-  }
-
-  /**
-   * Gods with an offerable basket trait not yet held that is due by this
-   * biome or that a wanted NPC trait waits on.
-   */
-  private dueGods(progress: DraftProgress): ReadonlySet<string> {
-    const due = new Set<string>();
-    const traitKeys = [...this.dueTraits(), ...this.npcPrerequisites(progress)];
-    for (const traitKey of traitKeys)
-      if (!progress.equippedTraitKeys.includes(traitKey) && this.ready(traitKey, progress))
-        for (const giver of this.catalog.traitGivers.values)
-          if (giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
-            due.add(giver.key);
-    return due;
-  }
-
-  /** A door placement waits on a story NPC whose wanted trait is not ready while a later room is likely. */
-  private roomWeight(gameName: string, biomeKey: string, placing = false): number {
-    const room = this.catalog.rooms.byKey[gameName];
-    if (room?.kind === 'Story') {
-      if (this.spec.world.storyNpcByBiome[biomeKey] === undefined) return 0.5;
-      const biomeIndex = this.project.route.itineraryBiomeKeys.indexOf(biomeKey);
-      const giver = this.npcGivers.find((g) => g.story && g.biomeIndex === biomeIndex);
-      const waits =
-        placing &&
-        giver !== undefined &&
-        this.npcWaiting(giver.giverKey, this.progress()) &&
-        this.laterRoomLikely(biomeKey);
-      return waits ? 0.1 : 200;
-    }
-    if (room?.kind === 'Shop') return 0.4;
-    return 1;
-  }
-
-  // --- Optional choices no finding asks for ------------------------------
-
-  /** Encounter choice for the finding's room, once its phases are reached. */
-  private optionalChoices(reason: SemanticFinding): boolean {
-    const origin = reason.origin;
-    if (!('biomeKey' in origin)) return false;
-    const occurrenceId =
-      'occurrenceId' in origin
-        ? origin.occurrenceId
-        : 'source' in origin && origin.source.kind === 'occurrence'
-          ? origin.source.occurrenceId
-          : 'owner' in origin && typeof origin.owner === 'object' && 'occurrenceId' in origin.owner
-            ? origin.owner.occurrenceId
-            : undefined;
-    if (typeof occurrenceId !== 'string') return false;
-    const key = `encounters:${origin.biomeKey}:${occurrenceId}`;
-    if (this.hooked.has(key)) return false;
-    const outcome = this.chooseEncounters(origin.biomeKey, occurrenceId as OccurrenceId);
-    if (outcome.reached) this.hooked.add(key);
-    return outcome.changed;
   }
 
   /** Equips the drafted keepsake at the rack after this biome's Postboss, once. */
@@ -536,69 +305,6 @@ export class DraftWalk {
     return this.apply({ kind: 'ReplacePostbossKeepsake', selection, keepsakeKey })
       ? 'equipped'
       : 'refused';
-  }
-
-  /** Selects wanted field NPC encounters, else a random combat encounter; never Nemesis events. */
-  private chooseEncounters(
-    biomeKey: string,
-    occurrenceId: OccurrenceId,
-  ): { readonly reached: boolean; readonly changed: boolean } {
-    const occurrence = this.occurrence(biomeKey, occurrenceId);
-    if (occurrence === undefined) return { reached: false, changed: false };
-    const wanted = this.spec.world.fieldNpcsByBiome[biomeKey] ?? [];
-    let changed = false;
-    let reached = false;
-    for (const phaseKey of Object.keys(occurrence.encounters.encounterKeyByPhase)) {
-      const phase = createEncounterPhaseAddress(
-        createBiomeAddress(this.project.route.routeKey, biomeKey),
-        { kind: 'occurrence', occurrenceId },
-        phaseKey,
-      );
-      const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
-        this.assembly,
-        phase,
-      );
-      if (support === undefined) continue;
-      reached = true;
-      if (!support.activationSatisfied) continue;
-      const candidates = support.candidateEncounterKeys.filter(
-        (key) => this.catalog.encounterDefinitions.byKey[key]?.kind !== 'nonCombat',
-      );
-      const npcFor = (key: string) =>
-        this.catalog.encounterDefinitions.byKey[key]?.npcPresentationKey;
-      // A field NPC whose wanted trait is not ready yet waits for a likely later room.
-      const waits = (key: string) =>
-        this.npcWaiting(
-          this.catalog.encounterDefinitions.byKey[key]?.traitOfferProducer?.giverKey,
-          this.progress(),
-        ) && this.laterRoomLikely(biomeKey);
-      const field = candidates.find((key) => {
-        const npc = npcFor(key);
-        return (
-          npc !== undefined &&
-          wanted.includes(npc) &&
-          !this.metFieldNpc(biomeKey, npc) &&
-          !waits(key)
-        );
-      });
-      const ordinary = candidates.filter((key) => npcFor(key) === undefined);
-      const choice = field ?? (ordinary.length > 0 ? this.shuffle(ordinary)[0] : undefined);
-      if (choice === undefined || choice === support.selectedEncounterKey) continue;
-      changed = this.apply({ kind: 'SelectEncounter', phase, encounterKey: choice }) || changed;
-    }
-    return { reached, changed };
-  }
-
-  private metFieldNpc(biomeKey: string, npc: string): boolean {
-    return (
-      this.project.route.biomes
-        .find((biome) => biome.biomeKey === biomeKey)
-        ?.topology?.occurrences.some((occurrence) =>
-          Object.values(occurrence.encounters.encounterKeyByPhase).some(
-            (key) => this.catalog.encounterDefinitions.byKey[key]?.npcPresentationKey === npc,
-          ),
-        ) === true
-    );
   }
 
   // --- Repairs -------------------------------------------------------------
@@ -625,7 +331,7 @@ export class DraftWalk {
         return origin.kind === 'roomFeature' && this.hermesShrineOffer(origin);
       case 'steadyGrowthOutcomeMissing':
       case 'steadyGrowthOutcomeUnavailable':
-        return origin.kind === 'steadyGrowthOutcome' && this.steadyGrowth(origin);
+        return origin.kind === 'steadyGrowthOutcome' && sampleSteadyGrowth(this.samples, origin);
       case 'biomeFieldMissing':
         return origin.kind === 'biomeField' && this.biomeField(origin);
       case 'biomeTopologyMissing':
@@ -644,7 +350,7 @@ export class DraftWalk {
       case 'rewardAcquisitionUnavailable':
         return this.authorReward(origin);
       case 'traitOfferMissing':
-        return origin.kind === 'traitOffer' && this.authorTraitOffer(origin);
+        return origin.kind === 'traitOffer' && this.traitOffers.author(origin);
       case 'roomActionPlacementRequired':
         return this.placeRequiredActions(origin);
       case 'fieldsSpatialPointMissing':
@@ -653,26 +359,31 @@ export class DraftWalk {
         return origin.kind === 'fieldsSpatial' && this.fieldsSpatialPoint(origin, reason);
       case 'fountainRarityResultMissing':
       case 'fountainRarityResultUnavailable':
-        return origin.kind === 'fountainRarityOutcome' && this.fountainRarity(origin, reason);
+        return (
+          origin.kind === 'fountainRarityOutcome' &&
+          sampleFountainRarity(this.samples, origin, reason)
+        );
       case 'keepsakeEquipResultMissing':
       case 'keepsakeEquipResultUnavailable':
-        return origin.kind === 'keepsakeEquipResult' && this.keepsakeEquipResult(origin);
+        return (
+          origin.kind === 'keepsakeEquipResult' && sampleKeepsakeEquipResult(this.samples, origin)
+        );
       case 'figurineOutcomeMissing':
       case 'figurineOutcomeWrongCardinality':
       case 'figurineOutcomeTargetUnavailable':
-        return origin.kind === 'figurineArcana' && this.arcanaChoice(origin);
+        return origin.kind === 'figurineArcana' && sampleArcanaChoice(this.samples, origin);
       case 'judgmentOutcomeMissing':
       case 'judgmentOutcomeWrongCardinality':
       case 'judgmentOutcomeTargetUnavailable':
-        return origin.kind === 'judgmentArcana' && this.arcanaChoice(origin);
+        return origin.kind === 'judgmentArcana' && sampleArcanaChoice(this.samples, origin);
       case 'hexActivationMissing':
       case 'hexActivationUnavailable':
-        return origin.kind === 'acquisitionRole' && this.hexActivation(origin);
+        return origin.kind === 'acquisitionRole' && sampleHexActivation(this.samples, origin);
       default: {
-        if (origin.kind === 'levelResolution') return this.levelResolution(origin);
+        if (origin.kind === 'levelResolution') return sampleLevelResolution(this.samples, origin);
         if (origin.kind === 'rewardWheel') return this.rewardWheelPicked(origin);
         const owner = assessmentRepairOwner(origin);
-        return owner.kind === 'traitOffer' && this.repickCarrierChild(owner, origin);
+        return owner.kind === 'traitOffer' && this.traitOffers.repickCarrierChild(owner, origin);
       }
     }
   }
@@ -793,7 +504,9 @@ export class DraftWalk {
       ...(takeover === undefined ? [] : [{ kind: 'takeover' as const }]),
     ];
     for (const choice of this.weighted(choices, (entry) =>
-      entry.kind === 'takeover' ? 0.5 : this.roomWeight(entry.gameName, target.biomeKey, true),
+      entry.kind === 'takeover'
+        ? 0.5
+        : this.steering.roomWeight(entry.gameName, target.biomeKey, true),
     )) {
       if (choice.kind === 'takeover') {
         if (applyTakeover()) return true;
@@ -841,7 +554,7 @@ export class DraftWalk {
     const layout = this.catalog.biomeLayouts.byKey[openSet.biomeKey];
     if (layout?.progression.kind !== 'hub') return false;
     const slots = this.weighted(layout.progression.slots, (slot) =>
-      this.roomWeight(slot.roomGameName, openSet.biomeKey),
+      this.steering.roomWeight(slot.roomGameName, openSet.biomeKey),
     );
     for (const slot of slots) {
       const address = createHubSlotAddress(
@@ -909,7 +622,9 @@ export class DraftWalk {
       const target = decision.openTargets.find((t) => t.hubSlotKey === action.hubSlotKey);
       const occurrence =
         target === undefined ? undefined : this.occurrence(visit.biomeKey, target.occurrenceId);
-      return occurrence === undefined ? 1 : this.roomWeight(occurrence.gameName, visit.biomeKey);
+      return occurrence === undefined
+        ? 1
+        : this.steering.roomWeight(occurrence.gameName, visit.biomeKey);
     };
     const orders: HubAction[][] =
       visit.kind === 'hubFountain'
@@ -1059,9 +774,9 @@ export class DraftWalk {
       const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
       const offerWeight =
         reward !== undefined && reward !== null
-          ? Math.max(this.offerWeight(reward.offer), 0.01)
+          ? Math.max(this.steering.offerWeight(reward.offer), 0.01)
           : 1;
-      return this.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight;
+      return this.steering.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight;
     });
     for (const target of ordered)
       if (
@@ -1104,7 +819,7 @@ export class DraftWalk {
         );
       });
       this.noteSupply(values.map((value) => value.offer));
-      for (const value of this.weighted(values, (v) => this.offerWeight(v.offer)))
+      for (const value of this.weighted(values, (v) => this.steering.offerWeight(v.offer)))
         if (this.apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
           this.buyWantedSupply(origin, value.offer);
           return true;
@@ -1161,7 +876,7 @@ export class DraftWalk {
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
-      .filter((offer) => this.offerWeight(offer) > 0)
+      .filter((offer) => this.steering.offerWeight(offer) > 0)
       .filter((offer) => {
         const evaluation = evaluate(offer);
         return (
@@ -1176,272 +891,9 @@ export class DraftWalk {
         );
       });
     this.noteSupply(legal);
-    for (const offer of this.weighted(legal, (o) => this.offerWeight(o)))
+    for (const offer of this.weighted(legal, (o) => this.steering.offerWeight(o)))
       if (this.apply(command(offer))) return true;
     return false;
-  }
-
-  // --- Trait offers --------------------------------------------------------
-
-  private offerSupported(trait: TraitOfferAddress, value: AuthoredTraitOffer): boolean {
-    const evaluation = this.evaluate({ kind: 'traitOffer', trait, value });
-    return (
-      evaluation.kind === 'traitOffer' &&
-      evaluation.result.supported &&
-      evaluation.result.findings.length === 0
-    );
-  }
-
-  /**
-   * A trait a source other than a trait offer may add: never draft-illegal, a
-   * slot the basket reserves or holds, or past its giver's cap with the basket's owed traits.
-   */
-  private traitAllowed(traitKey: string, progress: DraftProgress): boolean {
-    const declaration = this.catalog.traits.byKey[traitKey];
-    if (declaration === undefined || draftIllegalTrait(declaration)) return false;
-    if (!this.slotAllowed(traitKey)) return false;
-    const slot = declaration.equipmentSlot;
-    if (
-      slot !== undefined &&
-      slot !== 'Spell' &&
-      progress.equippedTraitKeys.some(
-        (key) => key !== traitKey && this.catalog.traits.byKey[key]?.equipmentSlot === slot,
-      )
-    )
-      return false;
-    const capped = draftCappedGiver(this.catalog, this.spec, traitKey);
-    const wanted = this.wantedBasket(progress);
-    if (capped === undefined || wanted.includes(traitKey)) return true;
-    const ofGiver = (key: string) =>
-      draftCappedGiver(this.catalog, this.spec, key)?.giverKey === capped.giverKey;
-    return (
-      progress.equippedTraitKeys.filter(ofGiver).length + wanted.filter(ofGiver).length < capped.cap
-    );
-  }
-
-  private childContext(trait: TraitOfferAddress): DraftCarrierChildContext {
-    const progress = this.progress();
-    return {
-      catalog: this.catalog,
-      evaluate: (query) => this.evaluate(query),
-      shuffle: (values) => this.shuffle(values),
-      allowsTrait: (traitKey) => this.traitAllowed(traitKey, progress),
-      prefersTrait: (traitKey) => this.wantedBasket(this.progress()).includes(traitKey),
-      supported: (value) => this.offerSupported(trait, value),
-    };
-  }
-
-  private completeChildren(
-    trait: TraitOfferAddress,
-    value: AuthoredTraitOfferTraits,
-  ): AuthoredTraitOfferTraits {
-    return completeCarrierChildren(this.childContext(trait), trait, value);
-  }
-
-  /** Picks the finding's child of an offer this walk authored again. */
-  private repickCarrierChild(trait: TraitOfferAddress, origin: SemanticAddress): boolean {
-    const value = this.authoredOffers.get(semanticAddressKey(trait));
-    if (value === undefined) return false;
-    const key = `repick:${semanticAddressKey(origin)}`;
-    if (this.hooked.has(key)) return false;
-    this.hooked.add(key);
-    const repicked = completeCarrierChildren(
-      this.childContext(trait),
-      trait,
-      value,
-      semanticAddressKey(origin),
-    );
-    return (
-      this.offerSupported(trait, repicked) &&
-      this.apply({ kind: 'ReplaceTraitOffer', trait, value: repicked })
-    );
-  }
-
-  /** Never an exchange row, a trait-removing Duo or a draft-illegal trait. */
-  private monotonicSelection(trait: TraitOfferAddress, value: AuthoredTraitOfferTraits): boolean {
-    const index = OPTION_KEYS.indexOf(value.selectedOptionKey);
-    const selected = value.options[index];
-    if (selected === undefined) return false;
-    const declaration = this.catalog.traits.byKey[selected.traitKey];
-    if (declaration === undefined || draftIllegalTrait(declaration)) return false;
-    const evaluation = this.evaluate({ kind: 'traitOffer', trait, value });
-    return (
-      evaluation.kind === 'traitOffer' &&
-      evaluation.result.assessments[index]?.replacementTransition === undefined
-    );
-  }
-
-  /** A core slot holding a basket trait takes no other trait. */
-  private slotAllowed(traitKey: string | undefined): boolean {
-    if (traitKey === undefined) return false;
-    const slot = this.catalog.traits.byKey[traitKey]?.equipmentSlot;
-    if (slot === undefined || slot === 'Spell') return true;
-    const reserved = this.spec.basketTraitKeys.filter(
-      (key) => this.catalog.traits.byKey[key]?.equipmentSlot === slot,
-    );
-    return reserved.length === 0 || reserved.includes(traitKey);
-  }
-
-  private accepts(command: ProjectCommand): boolean {
-    try {
-      applyProjectCommand(this.project, this.catalog, command);
-      return true;
-    } catch (error) {
-      if (error instanceof ProjectCommandContractError) return false;
-      throw error;
-    }
-  }
-
-  private authorTraitOffer(trait: TraitOfferAddress): boolean {
-    const command = (value: AuthoredTraitOffer): ProjectCommand => ({
-      kind: 'ReplaceTraitOffer',
-      trait,
-      value,
-    });
-    for (const giver of this.shuffle(this.catalog.traitGivers.values)) {
-      if (giver.providerKind === 'olympian' && !this.worldGivers.has(giver.key)) continue;
-      const draft = this.candidates().traitOfferStartingOutcome(trait, giver.key);
-      // The command binds one provider to this address; its starting outcome is accepted.
-      if (draft === undefined || !this.accepts(command(draft))) continue;
-      const values = draft.kind === 'traits' ? this.steerTraitOffer(trait, draft) : [draft];
-      if (values.length === 0) {
-        const banned =
-          draft.kind === 'traits' &&
-          draft.options.some((option) => !this.slotAllowed(option.traitKey));
-        this.failureReason = `${banned ? 'slotBan' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`;
-        return false;
-      }
-      for (const value of values) {
-        const filled = value.kind === 'traits' ? this.randomFiller(trait, value) : undefined;
-        if (filled !== undefined && this.apply(command(filled))) {
-          this.authoredOffers.set(semanticAddressKey(trait), filled);
-          return true;
-        }
-        if (this.apply(command(value))) {
-          if (value.kind === 'traits') this.authoredOffers.set(semanticAddressKey(trait), value);
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * The unselected rows redrawn at random among supported ones. Under Denial,
-   * which bans them, they keep clear of wanted basket traits unless nothing else fits.
-   */
-  private randomFiller(
-    trait: TraitOfferAddress,
-    value: AuthoredTraitOfferTraits,
-  ): AuthoredTraitOfferTraits {
-    const giver = this.catalog.traitGivers.byKey[value.giverKey];
-    if (giver === undefined) return value;
-    const avoided = new Set(
-      this.denial && giver.denialParticipates === true ? this.wantedBasket(this.progress()) : [],
-    );
-    const selected = OPTION_KEYS.indexOf(value.selectedOptionKey);
-    let current = value;
-    for (const index of this.shuffle([...value.options.keys()])) {
-      if (index === selected) continue;
-      const row = current.options[index]!;
-      const offered = new Set(current.options.map((option) => option.traitKey));
-      const pool = this.shuffle(giver.traitKeys).filter(
-        (key) => !offered.has(key) && !avoided.has(key),
-      );
-      // A row already clear of the reserve is redrawn only from a few draws.
-      for (const traitKey of pool.slice(
-        0,
-        avoided.has(row.traitKey) ? pool.length : FILLER_DRAWS,
-      )) {
-        const declaration = this.catalog.traits.byKey[traitKey];
-        const rarities =
-          declaration?.rarityDomain.kind === 'ranked'
-            ? [
-                ...(row.rarity === undefined ? [] : [row.rarity]),
-                ...this.shuffle(declaration.rarityDomain.freshOfferRarities).filter(
-                  (rarity) => rarity !== row.rarity,
-                ),
-              ]
-            : [undefined];
-        const candidate = rarities
-          .map((rarity) => {
-            const options = [...current.options];
-            options[index] = rarity === undefined ? { traitKey } : { traitKey, rarity };
-            return {
-              ...current,
-              options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-            } as AuthoredTraitOfferTraits;
-          })
-          .reduce<AuthoredTraitOfferTraits | undefined>((found, offer) => {
-            if (found !== undefined) return found;
-            const complete = this.completeChildren(trait, offer);
-            return this.offerSupported(trait, complete) ? complete : undefined;
-          }, undefined);
-        if (candidate !== undefined) {
-          current = candidate;
-          break;
-        }
-      }
-    }
-    return current;
-  }
-
-  /** Wanted basket placements first, prerequisites leading, then every other legal row in random order. */
-  private steerTraitOffer(
-    trait: TraitOfferAddress,
-    draft: AuthoredTraitOfferTraits,
-  ): AuthoredTraitOfferTraits[] {
-    const select = (options: readonly AuthoredTraitOption[], index: number) => {
-      const traitKey = options[index]!.traitKey;
-      const hexTree = this.catalog.hexes.byKey[traitKey]
-        ? createDefaultAuthoredHexTree(this.catalog, traitKey)
-        : undefined;
-      const { hexTree: _hexTree, ...rest } = draft;
-      void _hexTree;
-      return {
-        ...rest,
-        options: options as AuthoredTraitOfferTraits['options'],
-        selectedOptionKey: OPTION_KEYS[index]!,
-        ...(hexTree === undefined ? {} : { hexTree }),
-      } as AuthoredTraitOfferTraits;
-    };
-    const legal = (candidate: AuthoredTraitOfferTraits) =>
-      this.slotAllowed(
-        candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)]?.traitKey,
-      ) &&
-      this.offerSupported(trait, candidate) &&
-      this.monotonicSelection(trait, candidate);
-    const indexes = [...draft.options.keys()];
-    const giverTraits = this.catalog.traitGivers.byKey[draft.giverKey]?.traitKeys ?? [];
-    const progress = this.progress();
-    const prerequisites = this.neededPrerequisites(progress);
-    // Prerequisites of other wanted traits first, so waiting traits clear soonest; under
-    // Denial a wanted trait already offered comes first, since leaving it would ban it.
-    const offered = (key: string) =>
-      Number(this.denial && draft.options.some((option) => option.traitKey === key));
-    const wanted = this.shuffle(
-      this.wantedBasket(progress).filter((key) => giverTraits.includes(key)),
-    ).sort(
-      (a, b) =>
-        offered(b) - offered(a) || Number(prerequisites.has(b)) - Number(prerequisites.has(a)),
-    );
-    for (const traitKey of wanted) {
-      const declaration = this.catalog.traits.byKey[traitKey];
-      const rarities =
-        declaration?.rarityDomain.kind === 'ranked'
-          ? this.shuffle(declaration.rarityDomain.freshOfferRarities)
-          : [undefined];
-      for (const index of this.shuffle(indexes))
-        for (const rarity of rarities) {
-          const options = [...draft.options];
-          options[index] = rarity === undefined ? { traitKey } : { traitKey, rarity };
-          const candidate = this.completeChildren(trait, select(options, index));
-          if (legal(candidate)) return [candidate];
-        }
-    }
-    return this.shuffle(indexes)
-      .map((index) => this.completeChildren(trait, select(draft.options, index)))
-      .filter(legal);
   }
 
   // --- Other owners --------------------------------------------------------
@@ -1495,27 +947,6 @@ export class DraftWalk {
     return changed;
   }
 
-  private steadyGrowth(
-    outcome: Extract<SemanticAddress, { readonly kind: 'steadyGrowthOutcome' }>,
-  ): boolean {
-    const probe = this.evaluate({
-      kind: 'steadyGrowthOutcome',
-      outcome,
-      targetTraitKey: undefined,
-    });
-    if (probe.kind !== 'steadyGrowthOutcome') return false;
-    const targets: (string | null)[] = probe.result.emptyNoOp
-      ? [null]
-      : this.shuffle(probe.result.eligibleTargetKeys);
-    for (const targetTraitKey of targets) {
-      const evaluation = this.evaluate({ kind: 'steadyGrowthOutcome', outcome, targetTraitKey });
-      if (evaluation.kind === 'steadyGrowthOutcome' && !evaluation.result.selectedPossible)
-        continue;
-      if (this.apply({ kind: 'ReplaceSteadyGrowthTarget', outcome, targetTraitKey })) return true;
-    }
-    return false;
-  }
-
   private fieldsSpatialPoint(
     spatial: Extract<SemanticAddress, { readonly kind: 'fieldsSpatial' }>,
     reason: SemanticFinding,
@@ -1524,134 +955,6 @@ export class DraftWalk {
     if (!Array.isArray(ids)) return false;
     for (const pointId of this.shuffle(ids.filter((id): id is number => typeof id === 'number')))
       if (this.apply({ kind: 'ReplaceFieldsSpatialPoint', spatial, pointId })) return true;
-    return false;
-  }
-
-  private fountainRarity(
-    outcome: Extract<SemanticAddress, { readonly kind: 'fountainRarityOutcome' }>,
-    reason: SemanticFinding,
-  ): boolean {
-    const keys = reason.evidence['eligibleTargetKeys'];
-    if (!Array.isArray(keys)) return false;
-    for (const targetTraitKey of this.shuffle(
-      keys.filter((k): k is string => typeof k === 'string'),
-    )) {
-      const evaluation = this.evaluate({ kind: 'fountainRarityOutcome', outcome, targetTraitKey });
-      if (evaluation.kind === 'fountainRarityOutcome' && !evaluation.result.selectedPossible)
-        continue;
-      if (this.apply({ kind: 'ReplaceFountainRarityTarget', outcome, targetTraitKey })) return true;
-    }
-    return false;
-  }
-
-  private keepsakeEquipResult(
-    result: Extract<SemanticAddress, { readonly kind: 'keepsakeEquipResult' }>,
-  ): boolean {
-    const evaluation = this.evaluate({ kind: 'keepsakeEquipResult', result });
-    if (evaluation.kind !== 'keepsakeEquipResult') return false;
-    const progress = this.progress();
-    const allowed = evaluation.result.options.filter(
-      (option) =>
-        option.selectedPossible &&
-        (!('traitKey' in option.value) || this.traitAllowed(option.value.traitKey, progress)),
-    );
-    for (const option of this.shuffle(allowed)) {
-      const command = (
-        option.resultKind === 'jeweledPom'
-          ? { kind: 'ReplaceJeweledPomEquipResult', result, value: option.value }
-          : option.resultKind === 'experimentalHammer'
-            ? { kind: 'ReplaceExperimentalHammerEquipResult', result, value: option.value }
-            : { kind: 'ReplaceTranscendentEmbryoEquipResult', result, value: option.value }
-      ) as ProjectCommand;
-      if (this.apply(command)) return true;
-    }
-    return false;
-  }
-
-  /** Figurine and Judgment: a random set of the required count among inactive Arcana. */
-  private arcanaChoice(
-    origin: Extract<SemanticAddress, { readonly kind: 'figurineArcana' | 'judgmentArcana' }>,
-  ): boolean {
-    const assess = (arcanaKeys: readonly string[]) => {
-      const evaluation =
-        origin.kind === 'figurineArcana'
-          ? this.evaluate({ kind: 'figurineArcana', figurine: origin, arcanaKeys })
-          : this.evaluate({ kind: 'judgmentArcana', judgment: origin, arcanaKeys });
-      return evaluation.kind === 'figurineArcana' || evaluation.kind === 'judgmentArcana'
-        ? evaluation.result
-        : undefined;
-    };
-    const probe = assess([]);
-    if (probe === undefined) return false;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const arcanaKeys = this.shuffle(probe.inactiveArcanaKeys).slice(0, probe.requiredCount);
-      const result = assess(arcanaKeys);
-      if (result === undefined || !result.selectedPossible || result.findings.length > 0) continue;
-      if (
-        this.apply(
-          origin.kind === 'figurineArcana'
-            ? { kind: 'ReplaceFigurineArcana', figurine: origin, arcanaKeys }
-            : { kind: 'ReplaceJudgmentArcana', judgment: origin, arcanaKeys },
-        )
-      )
-        return true;
-    }
-    return false;
-  }
-
-  private hexActivation(
-    acquisition: Extract<SemanticAddress, { readonly kind: 'acquisitionRole' }>,
-  ): boolean {
-    const capability = acquisitionConversionCandidateForProjectEvaluationAssembly(
-      this.assembly,
-      acquisition,
-    )?.hexActivation;
-    if (capability === undefined) return false;
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const selectedNodeKeys: string[] = [];
-      while (selectedNodeKeys.length < capability.count) {
-        const available = capability.availableNodeKeys(selectedNodeKeys);
-        if (available.length === 0) break;
-        selectedNodeKeys.push(this.shuffle(available)[0]!);
-      }
-      if (capability.assess(selectedNodeKeys).length > 0) continue;
-      if (this.apply({ kind: 'ReplaceHexActivation', acquisition, value: { selectedNodeKeys } }))
-        return true;
-    }
-    return false;
-  }
-
-  private levelResolution(
-    levelResolution: Extract<SemanticAddress, { readonly kind: 'levelResolution' }>,
-  ): boolean {
-    const capability = levelResolutionCandidateForProjectEvaluationAssembly(
-      this.assembly,
-      levelResolution,
-    );
-    if (capability === undefined) return false;
-    for (const [branchIndex, branch] of capability.branches.entries()) {
-      const targets = this.shuffle(branch.eligibleTargetTraitKeys);
-      const offered = targets.slice(0, branch.requiredOfferCount);
-      for (const targetTraitKey of branch.effectKind === 'choice' ? offered : targets) {
-        const value =
-          branch.effectKind === 'random'
-            ? ({ kind: 'random', targetTraitKey } as const)
-            : ({
-                kind: 'choice',
-                offeredTraitKeys: offered,
-                selectedTraitKey: targetTraitKey,
-              } as const);
-        if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
-        if (
-          this.apply({
-            kind: 'ReplaceLevelResolution',
-            levelResolution,
-            value,
-          })
-        )
-          return true;
-      }
-    }
     return false;
   }
 }
