@@ -8,7 +8,12 @@ import { draftEncounters } from '../../../src/simulation/draft/encounters';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
-import { createDraftRng, DraftWalk } from '../../../src/simulation/draft/walk';
+import {
+  createDraftRng,
+  DraftWalk,
+  settleDraftCommand,
+  settleDraftCommandWithoutNewFinding,
+} from '../../../src/simulation/draft/walk';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import {
   generatedEncounterSupportForProjectEvaluationAssembly,
@@ -126,6 +131,23 @@ describe('draftEncounters', () => {
     );
     expect(values.length).toBeGreaterThan(0);
     for (const value of values) expect(value.kind === 'generated' && value.menace).toBeFalsy();
+  });
+
+  it('refuses an edit whose earlier block replaces the frontier finding', () => {
+    const phase = reachedEncounterPhasesForProjectEvaluationAssembly(start).find(
+      (entry) => generatedEncounterSupportForProjectEvaluationAssembly(start, entry) !== undefined,
+    )!;
+    const command = {
+      kind: 'ReplaceEncounterCustomization' as const,
+      phase,
+      decisionKey: generatedEncounterSupportForProjectEvaluationAssembly(start, phase)!.decisionKey,
+      // Five waves is representable but beyond every declared policy.
+      value: { kind: 'generated' as const, waveCount: 5 },
+    };
+    const settled = settleDraftCommand(catalog, start, command)!;
+    expect(settled.evaluation.findings).toHaveLength(start.evaluation.findings.length);
+    expect(settled.evaluation.findings).not.toEqual(start.evaluation.findings);
+    expect(settleDraftCommandWithoutNewFinding(catalog, start, command)).toBeUndefined();
   });
 
   it('drafts the same encounters for the same seed', () => {

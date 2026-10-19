@@ -119,6 +119,24 @@ export function settleDraftCommand(
   return settled.assembly.project === before.project ? undefined : settled.assembly;
 }
 
+/**
+ * Settles one command unless it is refused or adds a finding. A partly walked
+ * route keeps its later frontier finding; an earlier block would replace it.
+ */
+export function settleDraftCommandWithoutNewFinding(
+  catalog: Catalog,
+  before: ProjectEvaluationAssembly,
+  command: ProjectCommand,
+): ProjectEvaluationAssembly | undefined {
+  const settled = settleDraftCommand(catalog, before, command);
+  if (settled === undefined) return undefined;
+  const key = (finding: SemanticFinding) => `${finding.code} ${semanticAddressKey(finding.origin)}`;
+  const known = new Set(before.evaluation.findings.map(key));
+  return settled.evaluation.findings.every((finding) => known.has(key(finding)))
+    ? settled
+    : undefined;
+}
+
 /** What the walk has acquired so far, read from the latest Run State snapshot. */
 export interface DraftProgress {
   readonly equippedTraitKeys: readonly string[];
