@@ -218,6 +218,49 @@ input[type='checkbox']:checked:disabled {
   flex-direction: column;
 }
 
+/* The route's victory banner sits under a shade that keeps the header legible. */
+.app-header[data-route-banner] {
+  --route-banner-shade-start: 63%;
+  --route-banner-shade-end: 40%;
+  --route-banner-position: center bottom;
+  position: relative;
+  isolation: isolate;
+  padding: 12px 14px 14px;
+  border-bottom-color: transparent;
+}
+
+/* The Surface and Dream crops are brighter and busier. */
+.app-header[data-route-banner='Surface'],
+.app-header[data-route-banner='Dream'] {
+  --route-banner-shade-start: 84%;
+  --route-banner-shade-end: 68%;
+}
+
+.app-header[data-route-banner='Surface'] {
+  --route-banner-position: center 75%;
+}
+
+.app-header[data-route-banner='Dream'] {
+  --route-banner-position: center 60%;
+}
+
+.app-header[data-route-banner]::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: 12px 12px 0 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(17 18 22 / var(--route-banner-shade-start)),
+      rgb(17 18 22 / var(--route-banner-shade-end))
+    ),
+    var(--route-banner) var(--route-banner-position) / cover no-repeat;
+  content: '';
+  mask-image: linear-gradient(to bottom, #000 65%, transparent);
+  pointer-events: none;
+}
+
 .app-brand {
   display: flex;
   flex: 0 0 auto;
