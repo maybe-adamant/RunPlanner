@@ -129,6 +129,26 @@ An engine generator: `draftProject(catalog, project, spec, seed, budget)`.
 - The result always has zero findings. The report lists the basket traits,
   the selected NPCs and rack keepsakes, and any extras with reasons.
 
+## Encounter post pass
+
+After the search picks its final project, one engine pass makes every reached
+encounter deterministic, seeded from the final seed. Non-Fresh-File routes
+assume a mature profile, so profile-gated steering (Menace's next-biome check,
+enemy introductions) is out of scope.
+
+- Encounters are walked in route order; each one's legal options are
+  re-queried after the previous one is applied, so the Fields Sorrow-Spiller
+  blacklist and Aetos's once-per-Olympus placement carry forward.
+- Generated encounters: random wave count, base roll, highlight and enemies per
+  position from the engine's assessment; allocations sampled around the
+  engine's equal allocation; Fangs type then perks in order; Menace counts
+  rolled per spawn request with the rank's conversion chance, a catalog fact
+  (10% rank 1, 25% rank 2), capped at the engine's maximum.
+- Single, ordered-prefix, cocoon, Infinite roster and Aetos decisions: random
+  among the engine's legal values.
+- An encounter that cannot be completed keeps the engine's deterministic
+  initialisation. The project keeps zero findings.
+
 ## Application
 
 - A Draft step before the loadout screen edits the spec through the engine
