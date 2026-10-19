@@ -1,6 +1,14 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
-import { useCallback, useEffect, useRef, useState, type ReactElement, type Ref } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type Ref,
+} from 'react';
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { showTruncatedTitle } from './truncatedTitle';
@@ -40,6 +48,11 @@ interface ContextualPickerProps<T> {
   readonly triggerHint?: string;
   /** An image shown before the trigger's text. */
   readonly triggerIcon?: ArtworkSource | undefined;
+  /** A list value shown as each member's icon before its name, joined like the trigger label. */
+  readonly triggerParts?: readonly {
+    readonly label: string;
+    readonly icon: ArtworkSource | undefined;
+  }[];
   /** An image shown before an option's text. */
   readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   /** Marks a retained value the current context cannot produce. */
@@ -269,6 +282,7 @@ export function ContextualPicker<T>({
   triggerSizingLabels,
   triggerHint,
   triggerIcon,
+  triggerParts,
   itemIcon,
   invalid = false,
   hasIssues,
@@ -351,7 +365,22 @@ export function ContextualPicker<T>({
             }}
             type="button"
           >
-            {triggerIcon === undefined || disabled ? (
+            {triggerParts !== undefined && triggerParts.length > 0 && !disabled ? (
+              <span className="contextual-picker-trigger-parts" onMouseEnter={showTruncatedTitle}>
+                {triggerParts.map((part, index) => (
+                  <Fragment key={index}>
+                    {index === 0 ? null : (
+                      <span className="contextual-picker-trigger-separator"> · </span>
+                    )}
+                    <ArtworkIcon
+                      className="contextual-picker-trigger-part-image"
+                      source={part.icon}
+                    />
+                    <span>{part.label}</span>
+                  </Fragment>
+                ))}
+              </span>
+            ) : triggerIcon === undefined || disabled ? (
               triggerText
             ) : (
               <span className="contextual-picker-trigger-value">

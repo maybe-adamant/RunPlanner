@@ -285,6 +285,14 @@ function GeneratedFangsPicker({
               ? 'No perks'
               : value.fangs.perkKeys.map((key) => presentation.perks[key]?.label ?? key).join(' · ')
         }
+        {...(value.fangs === undefined
+          ? {}
+          : {
+              triggerParts: value.fangs.perkKeys.map((key) => ({
+                label: presentation.perks[key]?.label ?? key,
+                icon: fangsPerkIcon(key),
+              })),
+            })}
       />
     </div>
   );
@@ -379,6 +387,10 @@ function GeneratedEncounterWaveDraftPicker({
               ? actionLabel
               : selection.map((member) => member.label).join(' · ')
           }
+          triggerParts={selection.map((member) => ({
+            label: member.label,
+            icon: enemyIcon(member.key),
+          }))}
         />
       </div>
     </div>
@@ -424,11 +436,13 @@ function ReadOnlyWavePanel({
                 <th scope="col">{wave.source === 'fixed' ? 'Fixed' : 'Native'}</th>
                 {wave.spawns.map((spawn, index) => (
                   <th scope="col" key={`${index}-${spawn.enemyKey}`}>
-                    <ArtworkIcon
-                      className="encounter-enemy-icon"
-                      source={enemyIcon(spawn.enemyKey)}
-                    />
-                    {spawn.label}
+                    <span className="encounter-enemy-label">
+                      <ArtworkIcon
+                        className="artwork-label-icon"
+                        source={enemyIcon(spawn.enemyKey)}
+                      />
+                      {spawn.label}
+                    </span>
                   </th>
                 ))}
               </tr>
@@ -638,8 +652,10 @@ export function EncounterCompositionControl({
                           : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`,
                       )}
                     >
-                      <ArtworkIcon className="encounter-enemy-icon" source={enemyIcon(key)} />
-                      {label(key)}
+                      <span className="encounter-enemy-label">
+                        <ArtworkIcon className="artwork-label-icon" source={enemyIcon(key)} />
+                        {label(key)}
+                      </span>
                       {cost(key) === undefined ? null : (
                         <>
                           <br /> ({budgetNumber.format(cost(key)!)})

@@ -66,6 +66,11 @@ export function InfiniteRosterControl({
         open={draft !== undefined}
         placeholder="Default"
         triggerLabel={typeKeys === undefined ? 'Default' : typeKeys.map(labelFor).join(' · ')}
+        {...(typeKeys === undefined
+          ? {}
+          : {
+              triggerParts: typeKeys.map((key) => ({ label: labelFor(key), icon: enemyIcon(key) })),
+            })}
         {...(needsRepair ? { invalid: true } : {})}
       />
       <button

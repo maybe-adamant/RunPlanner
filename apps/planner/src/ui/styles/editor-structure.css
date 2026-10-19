@@ -1145,3 +1145,22 @@ select {
   height: 1.15rem;
   vertical-align: middle;
 }
+
+.contextual-picker-trigger-parts {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.contextual-picker-trigger-part-image {
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.contextual-picker-trigger-separator {
+  white-space: pre;
+}

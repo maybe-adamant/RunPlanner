@@ -55,6 +55,8 @@ import iconStalker from './assets/Stalker.webp';
 import iconStickler from './assets/Stickler.webp';
 import iconTempus from './assets/Tempus.webp';
 import iconThornWeeper from './assets/ThornWeeper.webp';
+import iconTombstone from './assets/Tombstone.webp';
+import iconTreant from './assets/Treant.webp';
 import iconWailer from './assets/Wailer.webp';
 import iconWastrel from './assets/Wastrel.webp';
 import iconWaveMaker from './assets/WaveMaker.webp';
@@ -157,7 +159,7 @@ export const enemyArtwork: Readonly<Record<string, string | null>> = {
   Scimiterror: iconSeesword,
   Scimiterror_Elite: iconSeesword,
   Screamer: iconWailer,
-  Screamer2: null,
+  Screamer2: iconWailer,
   Screamer_Elite: iconWailer,
   SentryBot: iconAutoSeeker,
   SentryBot_Elite: iconAutoSeeker,
@@ -180,7 +182,7 @@ export const enemyArtwork: Readonly<Record<string, string | null>> = {
   Swarmer_Elite: iconNumbskull,
   TimeElemental: iconTempus,
   TimeElemental_Elite: iconTempus,
-  Treant2: null,
+  Treant2: iconTreant,
   Turtle: iconShellback,
   Turtle_Elite: iconShellback,
   WaterElemental: iconDroplet,
@@ -196,7 +198,7 @@ export const enemyArtwork: Readonly<Record<string, string | null>> = {
   ZombieHeavyRanged_Elite: iconLubber,
   ZombieOlympus: iconSnowShambler,
   ZombieOlympus_Elite: iconSnowShambler,
-  ZombieSpawner: null,
-  ZombieSpawner_Elite: null,
+  ZombieSpawner: iconTombstone,
+  ZombieSpawner_Elite: iconTombstone,
   Zombie_Elite: iconShambler,
 };
