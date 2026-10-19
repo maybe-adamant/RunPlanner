@@ -1,3 +1,5 @@
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import {
   routeInitialProfile,
   type EncounterPhaseAddress,
@@ -261,7 +263,13 @@ export function RouteWorkspace({
                   }
                   type="button"
                 >
-                  <span>{biomeProjection.label}</span>
+                  <span className="panel-navigation-biome">
+                    <ArtworkIcon
+                      className="panel-navigation-icon"
+                      source={biomeIcon(biomeProjection.biomeKey)}
+                    />
+                    <span>{biomeProjection.label}</span>
+                  </span>
                   <span
                     aria-label={`${biomeFeedback.status.label}${biomeFeedback.findingCount === 0 ? '' : `, ${biomeFeedback.findingCount} findings`}`}
                     className="navigation-feedback"

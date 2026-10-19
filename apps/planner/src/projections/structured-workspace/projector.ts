@@ -735,8 +735,25 @@ export function createStructuredWorkspaceProjection(
                             ).label,
                     });
                   })();
+            const placementRoom =
+              placement === null
+                ? undefined
+                : routeSource.resourceAuthoring.entered.find(
+                    (candidate) =>
+                      candidate.biomeKey === placement.biomeKey &&
+                      candidate.origin.kind === 'occurrence' &&
+                      candidate.origin.occurrenceId === placement.occurrenceId,
+                  )?.gameName;
+            const element = (
+              placementRoom === undefined
+                ? catalog.rooms.values.find((room) =>
+                    room.resourcePointSupport?.families.includes(family),
+                  )
+                : requireWorkspaceRoom(catalog, placementRoom)
+            )?.resourcePointSupport?.rules[family]?.element;
             return Object.freeze({
               family,
+              ...(element === undefined ? {} : { element }),
               ...(presentedPlacement === undefined ? {} : { placement: presentedPlacement }),
             });
           }),

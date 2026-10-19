@@ -1,3 +1,5 @@
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
@@ -58,6 +60,7 @@ export function RouteScopePanel({
                     )
                   }
                 />
+                <ArtworkIcon className="artwork-label-icon" source={biomeIcon(biome.biomeKey)} />
                 {biome.label}
               </label>
             ))}

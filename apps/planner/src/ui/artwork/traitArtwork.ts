@@ -6,6 +6,7 @@ import { hammerArtwork } from './hammers/hammerArtwork';
 import { hermesBoonArtwork } from './hermes/hermesBoonArtwork';
 import { hexSpellArtwork } from './hex-spells/hexSpellArtwork';
 import { npcBoonArtwork } from './npc-boons/npcBoonArtwork';
+import { otherTraitArtwork } from './other-traits/otherTraitArtwork';
 import { rewardArtwork } from './rewards/rewardArtwork';
 
 const traitArtwork: Readonly<Record<string, string | null>> = {
@@ -16,6 +17,7 @@ const traitArtwork: Readonly<Record<string, string | null>> = {
   ...chaosArtwork,
   ...hexSpellArtwork,
   ...arcanaTraitArtwork,
+  ...otherTraitArtwork,
   // Champion of Elysium's trait shares its reward's key and art.
   InfernalContractBoon: rewardArtwork.InfernalContractBoon ?? null,
 };

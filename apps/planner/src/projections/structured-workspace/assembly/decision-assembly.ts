@@ -525,6 +525,7 @@ function projectAuthoredTargetWithOverlay(
         : { clockworkReward: evaluatedTarget.room.clockworkReward }),
       door,
       exitKey: target.exitKey,
+      ...(declaredExit === undefined ? {} : { exitTypeKey: declaredExit.type }),
       ...(exitTypeLabel === undefined ? {} : { exitTypeLabel }),
       index:
         evaluatedTarget?.exit.index ??

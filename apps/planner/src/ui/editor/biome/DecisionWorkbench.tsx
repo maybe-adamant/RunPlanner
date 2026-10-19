@@ -276,6 +276,9 @@ function TargetRow({
       {...(authorsRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`${door.room.label} room offer`}
       className="biome-target-row"
+      {...(target.exitTypeKey === undefined || doorArtwork[target.exitTypeKey] == null
+        ? {}
+        : { icon: doorArtwork[target.exitTypeKey]! })}
       kicker={doorKicker(target.index, target.exitTypeLabel)}
       map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
       {...(selectionChoice === undefined

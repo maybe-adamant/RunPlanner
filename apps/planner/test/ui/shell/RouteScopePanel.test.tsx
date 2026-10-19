@@ -99,7 +99,9 @@ describe('RouteScopePanel', () => {
 
     const markup = routeMarkup(application);
     expect(
-      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
+      [...markup.matchAll(/-configured-prefix"[^>]*>(.*?)<\/label>/g)].map((match) =>
+        match[1]!.replace(/<[^>]*>/g, ''),
+      ),
     ).toEqual(['Summit', 'Erebus', 'Ephyra', 'Fields']);
     expect(markup).toContain('Through Summit');
   });
@@ -107,7 +109,9 @@ describe('RouteScopePanel', () => {
   it('shows the ordinary route order in the same Route panel', () => {
     const markup = routeMarkup(createOpenTestApplication('Underworld'));
     expect(
-      [...markup.matchAll(/-configured-prefix"[^>]*>([^<]+)<\/label>/g)].map((match) => match[1]),
+      [...markup.matchAll(/-configured-prefix"[^>]*>(.*?)<\/label>/g)].map((match) =>
+        match[1]!.replace(/<[^>]*>/g, ''),
+      ),
     ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
   });
 

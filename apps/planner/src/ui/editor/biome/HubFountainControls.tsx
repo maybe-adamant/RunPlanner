@@ -3,6 +3,8 @@ import type {
   WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { hubFountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
 /** Read-only timing and the Hub-owned Phial target, hosted after the preceding room. */
@@ -21,7 +23,11 @@ export function HubFountainControls({
       {...(fountain.rarity === undefined ? findingAnchor(fountain.outcomeMarker.address) : {})}
       tabIndex={-1}
     >
-      <p>
+      <p className="hub-fountain-heading">
+        <ArtworkIcon
+          className="artwork-label-icon"
+          source={hubFountainIcon(fountain.address.biomeKey)}
+        />
         <strong>Fountain used in the Hub after this room.</strong>
       </p>
       {fountain.rarity === undefined ? null : (

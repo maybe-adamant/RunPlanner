@@ -29,7 +29,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
-import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
+import { encounterIcon, minibossIcon } from '@planner/ui/artwork/encounterArtwork';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -326,12 +326,14 @@ function EncounterCustomizationControl({
 const npcIcon = (npcKey: string | undefined): string | undefined =>
   npcKey === undefined ? undefined : (npcArtwork[npcKey] ?? undefined);
 
-/** The selected encounter's NPC, else its miniboss. */
+/** An encounter's own icon (such as a cocoon), else its NPC, else its miniboss. */
+const encounterChoiceIcon = (definitionKey: string, npcKey: string | undefined) =>
+  encounterIcon(definitionKey) ?? npcIcon(npcKey) ?? minibossIcon(definitionKey);
+
 const selectedEncounterIcon = (
   encounter: WorkspaceEncounterPhase['selectedEncounter'],
 ): string | undefined =>
-  npcIcon(encounter.npcKey) ??
-  minibossIcon(encounter.nativeEncounterDefinitionKey ?? encounter.key);
+  encounterChoiceIcon(encounter.nativeEncounterDefinitionKey ?? encounter.key, encounter.npcKey);
 
 export function CustomizableEncounterPhaseControl({
   interaction,
@@ -394,8 +396,10 @@ export function CustomizableEncounterPhaseControl({
         ? {}
         : {
             itemIcon: (item: { readonly value: string }) =>
-              npcIcon(interaction.npcKeyFor(item.value)) ??
-              minibossIcon(interaction.definitionKeyFor(item.value)),
+              encounterChoiceIcon(
+                interaction.definitionKeyFor(item.value),
+                interaction.npcKeyFor(item.value),
+              ),
           })}
       triggerIcon={selectedEncounterIcon(phase.selectedEncounter)}
       open={step !== undefined}

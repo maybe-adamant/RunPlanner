@@ -56,6 +56,7 @@ export type {
   WorkspacePhysicalTarget,
   WorkspaceRailEntry,
   WorkspaceRailReward,
+  WorkspaceRailRoomIcon,
   WorkspaceRailSelectedTarget,
   WorkspaceRoute,
   WorkspaceTakeoverBatchNode,

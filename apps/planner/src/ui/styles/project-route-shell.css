@@ -482,7 +482,7 @@
 
 .editor-workspace {
   display: grid;
-  grid-template-columns: 148px minmax(0, 1fr);
+  grid-template-columns: 172px minmax(0, 1fr);
   min-height: 0;
   flex: 1 1 auto;
   margin-top: 8px;
@@ -1291,6 +1291,9 @@
 }
 
 .route-start-point-biome {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.85rem;
 }
 
@@ -1626,4 +1629,23 @@
 .editor-dialog-body > .draft-basket {
   flex-grow: 1;
   align-content: start;
+}
+
+.panel-navigation-biome {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.panel-navigation-biome > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-navigation-icon {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
 }

@@ -73,6 +73,8 @@ export interface WorkspacePhysicalTarget {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly door: WorkspaceDoorContract;
   readonly exitKey: string;
+  /** The declared exit door type, when the exit is declared. */
+  readonly exitTypeKey?: string;
   readonly exitTypeLabel?: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
@@ -462,7 +464,18 @@ export interface WorkspaceRailReward {
  * useful independently of whether its reward surface can be represented as
  * one unambiguous compact reward.
  */
+/** What a rail room line's leading icon depicts, from the room's catalog declaration. */
+export type WorkspaceRailRoomIcon =
+  | {
+      readonly kind: 'combat' | 'empty' | 'fountain' | 'boss';
+      readonly biomeKey: string;
+    }
+  | { readonly kind: 'shop' | 'chaos' | 'contract' }
+  | { readonly kind: 'miniboss'; readonly encounterDefinitionKey?: string }
+  | { readonly kind: 'story'; readonly npcKey?: string };
+
 export interface WorkspaceRailSelectedTarget {
+  readonly roomIcon: WorkspaceRailRoomIcon;
   /** The additional exit taken, such as a Chaos gate; absent for a physical door. */
   readonly exitTypeKey?: string;
   /** Goals remaining shown on the selected Clockwork Goal door. */
@@ -634,6 +647,8 @@ export interface WorkspaceRoute {
   /** Assessed route-owned selected successful resource outcomes. */
   readonly resources: readonly {
     readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
+    /** The element a success grants, from the placement room's rule or any declaring room. */
+    readonly element?: 'Fire' | 'Air' | 'Earth' | 'Water';
     readonly placement?: {
       readonly biomeKey: string;
       readonly locationLabel: string;

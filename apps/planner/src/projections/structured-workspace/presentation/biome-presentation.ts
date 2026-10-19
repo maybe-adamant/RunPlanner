@@ -5,7 +5,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
-import { StructuredWorkspaceProjectionContractError } from '../contract';
+import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
+import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
@@ -24,6 +25,7 @@ import type {
   WorkspaceOrdinaryBatchNode,
   WorkspaceRailEntry,
   WorkspaceRailReward,
+  WorkspaceRailRoomIcon,
   WorkspaceRailSelectedTarget,
   WorkspaceSelectedContinuationNavigation,
   WorkspaceTakeoverBatchNode,
@@ -232,7 +234,51 @@ function withSelectedContinuationNavigation(node: WorkspaceNode): WorkspaceNode 
   });
 }
 
+/** Classifies a room by its declaration: enemies, no enemies, or its own object or NPC. */
+function railRoomIcon(catalog: Catalog, room: WorkspaceRoomSummary): WorkspaceRailRoomIcon {
+  const declaration = requireWorkspaceRoom(catalog, room.gameName);
+  const biomeKey = room.address.biomeKey;
+  const encounter = room.encounterPhases[0]?.selectedEncounter;
+  if (room.roomLocal.kind === 'shop') return Object.freeze({ kind: 'shop' as const });
+  if (declaration.mode.kind === 'authored') {
+    if (declaration.mode.templateKey === 'Chaos') return Object.freeze({ kind: 'chaos' as const });
+    if (declaration.mode.templateKey === 'ContractBoss')
+      return Object.freeze({ kind: 'contract' as const });
+  }
+  switch (declaration.kind) {
+    case 'Shop':
+      return Object.freeze({ kind: 'shop' as const });
+    case 'Reprieve':
+      return Object.freeze({ kind: 'fountain' as const, biomeKey });
+    case 'Boss':
+      return Object.freeze({ kind: 'boss' as const, biomeKey });
+    case 'Miniboss':
+      return Object.freeze({
+        kind: 'miniboss' as const,
+        ...(encounter === undefined
+          ? {}
+          : { encounterDefinitionKey: encounter.nativeEncounterDefinitionKey ?? encounter.key }),
+      });
+    case 'Story':
+      return Object.freeze({
+        kind: 'story' as const,
+        ...(encounter?.npcKey === undefined ? {} : { npcKey: encounter.npcKey }),
+      });
+    case 'Combat':
+    case 'Opening':
+    case 'Devotion':
+      return Object.freeze({ kind: 'combat' as const, biomeKey });
+    case 'Intro':
+    case 'PreHub':
+    case 'Hub':
+    case 'Preboss':
+    case 'PostBoss':
+      return Object.freeze({ kind: 'empty' as const, biomeKey });
+  }
+}
+
 function selectedTargetRailPresentation(
+  catalog: Catalog,
   node: BatchWithContinuations,
 ): WorkspaceRailSelectedTarget | undefined {
   const door = node.selectedContinuation?.door;
@@ -264,6 +310,7 @@ function selectedTargetRailPresentation(
         candidate.offer === null ? [] : [candidate.offer],
       ),
     ),
+    roomIcon: railRoomIcon(catalog, door.room),
     roomLabel: door.room.label,
     ...(door.room.roomLocal.kind === 'shop' ? { shop: true as const } : {}),
   });
@@ -469,7 +516,7 @@ export function presentWorkspaceBiome(
     if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') {
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
-      const selectedTarget = selectedTargetRailPresentation(node);
+      const selectedTarget = selectedTargetRailPresentation(catalog, node);
       const marker = decisionRailMarker(node);
       return Object.freeze({
         focusMarker: railFocusMarkerForNode(node, marker),
@@ -501,11 +548,12 @@ export function presentWorkspaceBiome(
             : undefined;
     const selectedTarget =
       node.kind === 'takeoverBatch'
-        ? selectedTargetRailPresentation(node)
+        ? selectedTargetRailPresentation(catalog, node)
         : node.kind === 'occurrenceWorkbench' &&
             mainReward === undefined &&
             node.room.roomLocal.kind === 'shop'
           ? Object.freeze({
+              roomIcon: railRoomIcon(catalog, node.room),
               roomLabel: node.room.label,
               roomRewards: Object.freeze([]),
               shop: true as const,

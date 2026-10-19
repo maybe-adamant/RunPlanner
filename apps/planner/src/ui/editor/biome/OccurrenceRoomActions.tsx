@@ -36,6 +36,8 @@ import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { HermesShrineRushControl, TravelDealLine } from './commerce/PurchaseRowControls';
 import { hintProps } from '@planner/ui/controls/hint';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
 /** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
 export interface TimelineBoundaryContent {
   readonly editors?: ReactNode;
@@ -571,6 +573,12 @@ export function RoomActionsWorkbench({
                   <span aria-hidden="true">·</span>
                 </>
               ) : null}
+              {roomActionIcon(row.reference, row.address.biomeKey) === undefined ? null : (
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={roomActionIcon(row.reference, row.address.biomeKey)}
+                />
+              )}
               {nemesisInteraction === undefined || nemesisInteraction.value === null ? (
                 <strong>{row.label}</strong>
               ) : (

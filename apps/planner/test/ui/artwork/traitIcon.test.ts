@@ -11,9 +11,9 @@ describe('traitIcon', () => {
     for (const card of cards) expect(traitIcon(card.traitKey)).toBe(arcanaArtwork[card.key]);
   });
 
-  it('shows Champion of Elysium with its reward art and leaves Blessing of Strife blank', () => {
+  it('shows Champion of Elysium with its reward art and Blessing of Strife with its own', () => {
     expect(traitIcon('InfernalContractBoon')).toBe(rewardIcon('InfernalContractBoon'));
     expect(traitIcon('InfernalContractBoon')).toBeDefined();
-    expect(traitIcon('ErisCurseTrait')).toBeUndefined();
+    expect(traitIcon('ErisCurseTrait')).toBeDefined();
   });
 });
