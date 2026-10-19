@@ -254,7 +254,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             local ok, routeError = route.exit(state.route)
             if not ok then reportOutcome(session, state, routeError) end
         end
-        -- A sibling door prepared for another published target leaves the route here.
+        -- A door prepared for another published target or additional exit leaves the route here.
         local expected = state.state == "synchronized" and route.expected(state.route) or nil
         local stray = expected and doors.strayTarget(state.route.lastExitedOccurrence, door,
             expected.id, state.route.plan.occurrencesById)

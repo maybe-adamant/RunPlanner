@@ -202,6 +202,37 @@ function TestSnapMode.testThePlannedOrAnUnstampedDoorLeavesInSync()
     end
 end
 
+-- The batch exit plus a planned Chaos gate to occurrence x; `chaosNext` selects x after F_A.
+local function synchronizedWithChaosGate(chaosNext)
+    local state = synchronizedAtBatchExit()
+    local chaos = occurrence("x", "Chaos_01", "F")
+    state.plan.occurrencesById.x = chaos
+    state.plan.occurrencesById.a.overview.additional = { { kind = "chaos", owner = "a-chaos", room = chaos } }
+    if chaosNext then table.insert(state.plan.selectedOccurrenceIds, 2, "x") end
+    return state
+end
+
+function TestSnapMode.testAnUnplannedChaosGateSnapsToThePlannedDoorRoom()
+    local state = synchronizedWithChaosGate(false)
+    local leave, _, log, restore = attached(state, true)
+    local door = { Room = { Name = "Chaos_01", __runPlannerExecutionRoomId = "x" } }
+    leave("F_A", door)
+    restore()
+    lu.assertEquals({ door.Room.Name, door.Room.__runPlannerExecutionRoomId, #log.created }, { "F_B", "b", 1 })
+    lu.assertEquals({ state.state, state.reason, state.snapPending.mismatch.checkpoint },
+        { "synchronized", "snap-pending", "exit-door" })
+end
+
+function TestSnapMode.testANormalDoorTakenInsteadOfThePlannedChaosGateSnapsToTheChaosRoom()
+    local state = synchronizedWithChaosGate(true)
+    local leave, _, log, restore = attached(state, true)
+    local door = { Room = { Name = "F_B", __runPlannerExecutionRoomId = "b" } }
+    leave("F_A", door)
+    restore()
+    lu.assertEquals({ door.Room.Name, door.Room.__runPlannerExecutionRoomId, #log.created }, { "Chaos_01", "x", 1 })
+    lu.assertEquals({ state.state, state.reason, state.snapPending.occurrenceId }, { "synchronized", "snap-pending", "x" })
+end
+
 function TestSnapMode.testDeclinesBiomeEdgesHubsMissingFramesAndUnsnappableSessions()
     local edge = desynchronized(3)
     lu.assertEquals({ mode.target(edge, "F_C") }, { nil, "declined" })
