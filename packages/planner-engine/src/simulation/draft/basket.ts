@@ -173,8 +173,14 @@ function assessTrait(
   const others = spec.basketTraitKeys.filter((key) => key !== traitKey);
   const refusals: DraftTraitRefusal[] = [];
   const deferred = new Set<string>();
-  if (!worldGivers.some((giver) => catalog.traitGivers.byKey[giver]!.traitKeys.includes(traitKey)))
-    refusals.push({ kind: 'giverNotInWorld' });
+  // A Duo is offered only once both of its gods are met, so every giver listing it must be in the world.
+  const inWorld =
+    draftTraitKind(trait) === 'duo'
+      ? catalog.traitGivers.values.every(
+          (giver) => !giver.traitKeys.includes(traitKey) || worldGivers.includes(giver.key),
+        )
+      : worldGivers.some((giver) => catalog.traitGivers.byKey[giver]!.traitKeys.includes(traitKey));
+  if (!inWorld) refusals.push({ kind: 'giverNotInWorld' });
   if (draftIllegalTrait(trait)) refusals.push({ kind: 'draftIllegal' });
   const slot = trait.equipmentSlot;
   const slotHolder =
