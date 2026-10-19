@@ -101,6 +101,7 @@ export function RoomActionRemovalControl({
     (removable?.structurallyAuthorable === true ||
       row.refillPurchaseRemoval !== undefined ||
       row.shopParticipation !== undefined);
+  // A mandatory row's disabled delete needs no hint.
   const explanation = removalEnabled
     ? removable?.kind === 'unplace'
       ? 'Remove this delivery and its reward details while keeping the source purchase.'
@@ -108,13 +109,13 @@ export function RoomActionRemovalControl({
     : row.rank === null
       ? 'This action is not currently in the timeline.'
       : row.reference.kind === 'interactKeepsakeRack'
-        ? 'The Keepsake Rack is always in the timeline.'
+        ? undefined
         : row.shopParticipation !== undefined
           ? 'Purchased membership is edited in Room Overview.'
           : !owned && row.participationOwnedByOverview
             ? 'This action is edited in Room Overview.'
             : row.participation === 'required'
-              ? 'Required actions cannot be removed.'
+              ? undefined
               : removable?.explanations.join(' ') || undefined;
   return (
     <TimelineActionDeleteButton
