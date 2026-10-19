@@ -73,8 +73,6 @@ export interface WorkspacePhysicalTarget {
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly door: WorkspaceDoorContract;
   readonly exitKey: string;
-  /** The declared exit door type, when the exit is declared. */
-  readonly exitTypeKey?: string;
   readonly exitTypeLabel?: string;
   readonly index: number;
   readonly marker: WorkspaceMarker;
