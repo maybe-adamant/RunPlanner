@@ -66,12 +66,11 @@
 
 .route-choice-card {
   display: flex;
-  min-height: 132px;
-  align-items: flex-start;
-  padding: 18px;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
   border: 1px solid #3b3943;
   border-radius: 12px;
-  flex-direction: column;
   color: #d9d4dc;
   background: rgb(255 255 255 / 3%);
   text-align: left;
@@ -82,28 +81,24 @@
     transform 120ms ease;
 }
 
-.route-choice-card:hover:not(:disabled) {
+.route-choice-card:hover:not(:disabled),
+.route-choice-card:focus-visible {
   border-color: #9d7e4c;
   background: rgb(184 139 77 / 9%);
   transform: translateY(-1px);
+}
+
+.route-choice-icon {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
 }
 
 .route-choice-name {
   color: #f0e9f3;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.35rem;
-}
-
-.route-choice-action {
-  margin-top: auto;
-  padding-top: 18px;
-  color: var(--selection-accent);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.route-choice-action::after {
-  content: '  →';
 }
 
 .project-entry-footer {

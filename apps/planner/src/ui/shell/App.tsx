@@ -169,7 +169,7 @@ export function App({
               </>
             )}
           </div>
-          <div className="app-header-actions" data-entry={showEntry || undefined}>
+          <div className="app-header-actions">
             <ProjectFileControls
               beforeFileMenu={
                 <output

@@ -211,11 +211,25 @@ input[type='checkbox']:checked:disabled {
   border-bottom: 1px solid #303139;
 }
 
+/* The entry panel spans below a top row of the brand and the Game and About controls. */
 .app-header[data-entry] {
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   padding-bottom: 0;
   border-bottom: 0;
-  flex-direction: column;
+}
+
+.app-header[data-entry] > .app-header-actions {
+  display: contents;
+}
+
+.app-header[data-entry] .header-about-controls {
+  grid-area: 1 / 2;
+}
+
+.app-header[data-entry] .project-entry-panel {
+  grid-column: 1 / -1;
 }
 
 /* The route's victory banner sits under a shade that keeps the header legible. */
@@ -288,12 +302,6 @@ input[type='checkbox']:checked:disabled {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.app-header-actions[data-entry] {
-  width: 100%;
-  flex-direction: column;
-  align-items: stretch;
 }
 
 .app-header h1,

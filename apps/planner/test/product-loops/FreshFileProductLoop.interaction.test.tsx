@@ -24,7 +24,7 @@ describe('Fresh File product loop', () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
     const project = () => application.store.getState().projectWorkspace.history!.present;
 
-    await user.click(screen.getByRole('button', { name: 'Fresh File' }));
+    await user.click(screen.getByRole('button', { name: 'Create Fresh File project' }));
     expect(project().route).toMatchObject({
       routeKey: 'FreshFile',
       loadout: { weaponKey: null, aspectKey: null, startingKeepsakeKey: null },
