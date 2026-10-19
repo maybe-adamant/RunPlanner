@@ -79,6 +79,10 @@ export default defineConfig({
   define: {
     __RUN_PLANNER_BUILD_IDENTITY__: JSON.stringify(buildIdentity),
   },
+  build: {
+    // Icons ship as files the browser fetches when shown, never as base64 inside the JS.
+    assetsInlineLimit: (file) => (file.endsWith('.webp') ? false : undefined),
+  },
   plugins: [react(), browserErrorRelay()],
   resolve: {
     alias: {

@@ -263,6 +263,27 @@ select {
   visibility: hidden;
 }
 
+/* An icon before the text; the text still cuts off with an ellipsis. */
+.contextual-picker-trigger-value {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.contextual-picker-trigger-value > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextual-picker-trigger-image {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
 .contextual-picker-trigger-icon {
   color: #8f8c96;
   font-size: 0.75rem;
@@ -395,6 +416,15 @@ select {
   border-radius: 7px;
   color: #ded9d1;
   cursor: pointer;
+}
+
+.contextual-picker-popover [cmdk-item][data-has-icon] {
+  grid-template-columns: 18px 1.6rem minmax(0, 1fr) auto;
+}
+
+.contextual-picker-item-icon {
+  width: 1.6rem;
+  height: 1.6rem;
 }
 
 .contextual-picker-popover [cmdk-item][data-selected='true'] {

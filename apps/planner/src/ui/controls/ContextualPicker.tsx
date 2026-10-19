@@ -37,6 +37,10 @@ interface ContextualPickerProps<T> {
   readonly triggerSizingLabels?: readonly string[];
   /** Hover explanation for the current value of an enabled trigger. */
   readonly triggerHint?: string;
+  /** An image shown before the trigger's text. */
+  readonly triggerIcon?: string | undefined;
+  /** An image shown before an option's text. */
+  readonly itemIcon?: (item: ContextualPickerItem<T>) => string | undefined;
   /** Marks a retained value the current context cannot produce. */
   readonly invalid?: boolean;
   /** Marks a local customization issue this picker repairs. */
@@ -49,20 +53,24 @@ function itemValue<T>(item: ContextualPickerItem<T>): string {
 
 function PickerSection<T>({
   groupRef,
+  itemIcon,
   onSelect,
   section,
 }: {
   readonly groupRef?: Ref<HTMLDivElement>;
+  readonly itemIcon?: ((item: ContextualPickerItem<T>) => string | undefined) | undefined;
   readonly onSelect: (item: ContextualPickerItem<T>) => void;
   readonly section: ContextualPickerSection<T>;
 }) {
   return (
     <Command.Group heading={section.label} value={section.key} ref={groupRef}>
       {section.items.map((item) => {
+        const icon = itemIcon?.(item);
         return (
           <Command.Item
             aria-label={item.ariaLabel}
             data-candidate-state={item.state}
+            data-has-icon={itemIcon === undefined ? undefined : true}
             data-selected-value={item.selected}
             disabled={item.disabled}
             key={item.key}
@@ -73,6 +81,11 @@ function PickerSection<T>({
             <span className="contextual-picker-item-indicator" aria-hidden="true">
               {item.selected ? '✓' : item.state === 'forced' ? '!' : ''}
             </span>
+            {itemIcon === undefined ? null : icon === undefined ? (
+              <span className="contextual-picker-item-icon" aria-hidden="true" />
+            ) : (
+              <img src={icon} alt="" className="contextual-picker-item-icon" />
+            )}
             <span className="contextual-picker-item-copy">
               <span className="contextual-picker-item-label">{item.label}</span>
               {item.explanation !== undefined && (
@@ -92,6 +105,7 @@ function PickerSection<T>({
 function PickerContent<T>({
   cancelLabel,
   choicesLabel,
+  itemIcon,
   loading,
   model,
   onActiveChange,
@@ -102,6 +116,7 @@ function PickerContent<T>({
 }: {
   readonly cancelLabel?: string;
   readonly choicesLabel: string;
+  readonly itemIcon?: ((item: ContextualPickerItem<T>) => string | undefined) | undefined;
   readonly loading: boolean;
   readonly model: ContextualPickerModel<T>;
   /** The item under the pointer or keyboard highlight. */
@@ -195,10 +210,20 @@ function PickerContent<T>({
               <Command.Empty>No matching choices.</Command.Empty>
             )}
             {ordinarySections.map((section) => (
-              <PickerSection key={section.key} onSelect={select} section={section} />
+              <PickerSection
+                itemIcon={itemIcon}
+                key={section.key}
+                onSelect={select}
+                section={section}
+              />
             ))}
             {collapsibleOpen && collapsible !== undefined && (
-              <PickerSection groupRef={collapsibleGroup} onSelect={select} section={collapsible} />
+              <PickerSection
+                groupRef={collapsibleGroup}
+                itemIcon={itemIcon}
+                onSelect={select}
+                section={collapsible}
+              />
             )}
           </Command.List>
           {collapsible !== undefined && (
@@ -244,6 +269,8 @@ export function ContextualPicker<T>({
   triggerLabel,
   triggerSizingLabels,
   triggerHint,
+  triggerIcon,
+  itemIcon,
   invalid = false,
   hasIssues,
   findingMark,
@@ -260,6 +287,20 @@ export function ContextualPicker<T>({
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
   const interactionDisabled = disabled || disabledHint !== undefined || authoringLocked;
   const shownLabel = disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder);
+
+  const triggerText =
+    triggerSizingLabels === undefined ? (
+      <span onMouseEnter={showTruncatedTitle}>{shownLabel}</span>
+    ) : (
+      <span className="contextual-picker-trigger-sized">
+        <span onMouseEnter={showTruncatedTitle}>{shownLabel}</span>
+        {triggerSizingLabels.map((sizingLabel) => (
+          <span aria-hidden="true" key={sizingLabel}>
+            {sizingLabel}
+          </span>
+        ))}
+      </span>
+    );
 
   function updateOpen(nextOpen: boolean): void {
     if (nextOpen && interactionDisabled) return;
@@ -311,16 +352,12 @@ export function ContextualPicker<T>({
             }}
             type="button"
           >
-            {triggerSizingLabels === undefined ? (
-              <span onMouseEnter={showTruncatedTitle}>{shownLabel}</span>
+            {triggerIcon === undefined || disabled ? (
+              triggerText
             ) : (
-              <span className="contextual-picker-trigger-sized">
-                <span onMouseEnter={showTruncatedTitle}>{shownLabel}</span>
-                {triggerSizingLabels.map((sizingLabel) => (
-                  <span aria-hidden="true" key={sizingLabel}>
-                    {sizingLabel}
-                  </span>
-                ))}
+              <span className="contextual-picker-trigger-value">
+                <img src={triggerIcon} alt="" className="contextual-picker-trigger-image" />
+                {triggerText}
               </span>
             )}
             <span className="contextual-picker-trigger-icon" aria-hidden="true">
@@ -340,6 +377,7 @@ export function ContextualPicker<T>({
             <PickerContent
               {...(cancelLabel === undefined ? {} : { cancelLabel })}
               choicesLabel={choicesLabel}
+              itemIcon={itemIcon}
               key={choiceLabel ?? 'default'}
               loading={loading}
               model={model}

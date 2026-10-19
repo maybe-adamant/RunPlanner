@@ -1,5 +1,6 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { familiarArtwork } from '@planner/ui/controls/familiars/familiarArtwork';
 
 /** The mature profile's starting familiar, with every stat upgrade owned. */
 export function RouteFamiliarPicker({
@@ -34,6 +35,8 @@ export function RouteFamiliarPicker({
       onSelect={onSelect}
       placeholder="Choose a familiar"
       triggerLabel={catalog.familiars.byKey[familiarKey]?.label ?? familiarKey}
+      triggerIcon={familiarArtwork[familiarKey]}
+      itemIcon={(item) => familiarArtwork[item.key]}
     />
   );
 }
