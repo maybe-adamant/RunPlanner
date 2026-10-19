@@ -198,8 +198,9 @@ input[type='checkbox']:checked:disabled {
   min-height: 0;
   flex-direction: column;
   margin: 0 auto;
-  padding: 12px 0;
-  overflow: hidden;
+  --app-shell-block-padding: 12px;
+  padding: var(--app-shell-block-padding) 0;
+  overflow: visible clip;
 }
 
 .app-header {
@@ -261,8 +262,7 @@ input[type='checkbox']:checked:disabled {
 .app-header[data-route-banner]::before {
   position: absolute;
   z-index: -1;
-  inset: 0;
-  border-radius: 12px 12px 0 0;
+  inset: calc(-1 * var(--app-shell-block-padding)) calc(50% - 50vw) 0;
   background:
     linear-gradient(
       90deg,

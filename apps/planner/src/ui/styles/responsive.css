@@ -53,7 +53,8 @@
     width: calc(100% - 24px);
     height: auto;
     min-height: calc(100 * var(--app-vh));
-    padding: 24px 0;
+    --app-shell-block-padding: 24px;
+    padding: var(--app-shell-block-padding) 0;
     overflow: visible;
   }
 
