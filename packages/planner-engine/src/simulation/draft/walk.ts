@@ -93,6 +93,32 @@ export function createDraftRng(seed: number): DraftRng {
   };
 }
 
+/** Settles one command; undefined when the command authority refuses it or it changes nothing. */
+export function settleDraftCommand(
+  catalog: Catalog,
+  before: ProjectEvaluationAssembly,
+  command: ProjectCommand,
+): ProjectEvaluationAssembly | undefined {
+  let settled: ReturnType<typeof settleProjectEdit>;
+  let evaluated = false;
+  try {
+    settled = settleProjectEdit({
+      catalog,
+      before,
+      command,
+      evaluate: (project) => {
+        evaluated = true;
+        return simulateProjectAssembly(catalog, project);
+      },
+    });
+  } catch (error) {
+    // A refusal before anything is evaluated is the command's own; later ones are engine defects.
+    if (error instanceof ProjectCommandContractError && !evaluated) return undefined;
+    throw error;
+  }
+  return settled.assembly.project === before.project ? undefined : settled.assembly;
+}
+
 /** What the walk has acquired so far, read from the latest Run State snapshot. */
 export interface DraftProgress {
   readonly equippedTraitKeys: readonly string[];
@@ -198,25 +224,9 @@ export class DraftWalk {
 
   /** Applies a command through edit settlement; false when the command authority refuses it. */
   apply(command: ProjectCommand): boolean {
-    let settled: ReturnType<typeof settleProjectEdit>;
-    let evaluated = false;
-    try {
-      settled = settleProjectEdit({
-        catalog: this.catalog,
-        before: this.assembly,
-        command,
-        evaluate: (project) => {
-          evaluated = true;
-          return simulateProjectAssembly(this.catalog, project);
-        },
-      });
-    } catch (error) {
-      // A refusal before anything is evaluated is the command's own; later ones are engine defects.
-      if (error instanceof ProjectCommandContractError && !evaluated) return false;
-      throw error;
-    }
-    if (settled.assembly.project === this.project) return false;
-    this.assembly = settled.assembly;
+    const settled = settleDraftCommand(this.catalog, this.assembly, command);
+    if (settled === undefined) return false;
+    this.assembly = settled;
     this.session = undefined;
     return true;
   }

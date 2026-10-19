@@ -284,10 +284,11 @@ export function normalizeFearVows(
     const isDenial = vow.key === 'BanUnpickedBoonsShrineUpgrade';
     const isForfeit = vow.key === 'BoonSkipShrineUpgrade';
     const isVoid = vow.key === 'LimitGraspShrineUpgrade';
+    const isMenace = vow.key === 'NextBiomeEnemyShrineUpgrade';
     if (isDenial && vow.effect === undefined)
       fail(`${path}.effect`, 'Vow of Denial must declare banUnselectedTraits');
-    if (!isDenial && !isForfeit && !isVoid && vow.effect !== undefined)
-      fail(`${path}.effect`, 'only Vow of Denial, Forfeit, or Void may declare an effect');
+    if (!isDenial && !isForfeit && !isVoid && !isMenace && vow.effect !== undefined)
+      fail(`${path}.effect`, 'only Vow of Denial, Forfeit, Void, or Menace may declare an effect');
     if (
       isDenial &&
       vow.effect !== undefined &&
@@ -314,6 +315,15 @@ export function normalizeFearVows(
         JSON.stringify(vow.effect.availablePercentByRank) !== JSON.stringify([60, 40, 20, 0]))
     )
       fail(`${path}.effect`, 'must limit starting Grasp from 30 by 60, 40, 20, and 0 percent');
+    if (
+      isMenace &&
+      (vow.effect?.kind !== 'substituteNextBiomeEnemy' ||
+        JSON.stringify(vow.effect.chanceByRank) !== JSON.stringify([0.1, 0.25]))
+    )
+      fail(
+        `${path}.effect`,
+        'Vow of Menace must substitute next-biome enemies at 10 and 25 percent',
+      );
     return Object.freeze({
       ...vow,
       incrementalFear: Object.freeze([...vow.incrementalFear]),
@@ -344,7 +354,14 @@ export function normalizeFearVows(
                   ],
                 }),
               }
-            : {}),
+            : isMenace
+              ? {
+                  effect: Object.freeze({
+                    kind: 'substituteNextBiomeEnemy' as const,
+                    chanceByRank: Object.freeze([0.1, 0.25]) as readonly [0.1, 0.25],
+                  }),
+                }
+              : {}),
     });
   });
   if (values.length !== 17) fail('fearVows', 'must declare all 17 Vows');

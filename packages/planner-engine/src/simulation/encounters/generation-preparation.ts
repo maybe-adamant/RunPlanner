@@ -17,6 +17,8 @@ import {
 export interface GeneratedEncounterCandidateCapability {
   readonly origin: EncounterPhaseAddress;
   readonly decisionKey: string;
+  /** The declared native wave-count bounds. */
+  readonly waveCount: { readonly min: number; readonly max: number };
   readonly assess: (value: AuthoredGeneratedEncounterCustomization) => GeneratedEncounterAssessment;
   /** One deterministic, complete starting value for the exact reached context. */
   readonly initialize: () => AuthoredGeneratedEncounterCustomization | undefined;
@@ -124,6 +126,7 @@ export function prepareGeneratedEncounter(
   const capability = Object.freeze({
     origin,
     decisionKey: decision.key,
+    waveCount: policy.waveCount,
     assess,
     initialize: () => initializeGeneratedEncounter(policy, context),
   });

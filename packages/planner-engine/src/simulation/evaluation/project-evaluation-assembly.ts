@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  createEncounterPhaseAddress,
   semanticAddressKey,
   type AcquisitionSiteAddress,
   type AcquisitionRoleAddress,
@@ -359,6 +360,43 @@ export function encounterPhaseSequenceStatusForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(phase.routeKey, phase.biomeKey))
     ?.encounters.statusAt(phase);
+}
+
+/**
+ * Every prepared active encounter phase in route order: entered occurrences by
+ * room history, then each room's phases in declaration order.
+ */
+export function reachedEncounterPhasesForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+): readonly EncounterPhaseAddress[] {
+  const phases: EncounterPhaseAddress[] = [];
+  for (const evaluation of assembly.evaluation.route.biomes) {
+    if (!('history' in evaluation)) continue;
+    const biome = createBiomeAddress(assembly.project.route.routeKey, evaluation.biomeKey);
+    const occurrences = assembly.project.route.biomes.find(
+      (entry) => entry.biomeKey === evaluation.biomeKey,
+    )?.topology?.occurrences;
+    const seen = new Set<string>();
+    for (const room of evaluation.history.rooms) {
+      const origin = room.origin;
+      if (origin.kind !== 'occurrence' || seen.has(origin.occurrenceId)) continue;
+      seen.add(origin.occurrenceId);
+      const occurrence = occurrences?.find((entry) => entry.occurrenceId === origin.occurrenceId);
+      for (const phaseKey of Object.keys(occurrence?.encounters.figLeafSkipByPhase ?? {})) {
+        const phase = createEncounterPhaseAddress(
+          biome,
+          { kind: 'occurrence', occurrenceId: origin.occurrenceId },
+          phaseKey,
+        );
+        if (
+          encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase)?.kind ===
+          'active'
+        )
+          phases.push(phase);
+      }
+    }
+  }
+  return Object.freeze(phases);
 }
 
 /** Narrow exact-assembly query for derived entries at one reached acquisition site. */
