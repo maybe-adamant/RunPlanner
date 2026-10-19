@@ -1027,3 +1027,29 @@ function TestPracticeStart.testInstallFaultMakesExecutionPassiveAndTheRunContinu
     lu.assertEquals(created.args.RoomName, "Q_Intro")
     lu.assertTrue(world.run.RunPlannerPracticeStart)
 end
+
+-- AddTraitToHero runs a curse's AcquireFunctionName only FromLoot; the Time curse's
+-- timer must still start, or the native biome timer tick fails on a nil CurrentTime.
+function TestPracticeStart.testAnInstalledTimeCurseStartsItsTimer()
+    local added = {}
+    local restore = nativeGame.install({
+        CurrentRun = { Hero = {} },
+        GetProcessedTraitData = function(args)
+            if args.TraitName == "ChaosTimeCurse" then
+                return { Name = args.TraitName, StartingTime = 120, AcquireFunctionName = "StartChaosTimer" }
+            end
+            return { Name = args.TraitName }
+        end,
+        AddTraitToHero = function(args)
+            added[args.TraitData.Name] = args.TraitData
+            return args.TraitData
+        end,
+    })
+    local ok, errorValue = pcall(install.chaos, { chaosBlessings = {}, chaosCurses = { {
+        name = "ChaosTimeCurse", remainingUses = 2, curseValues = {},
+        blessing = { name = "ChaosSpeedBlessing", rarity = "Rare", blessingValues = {} },
+    } } })
+    restore()
+    assert(ok, errorValue)
+    lu.assertEquals({ added.ChaosTimeCurse.CurrentTime, added.ChaosTimeCurse.RemainingUses }, { 120, 2 })
+end

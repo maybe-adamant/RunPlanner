@@ -202,6 +202,8 @@ local function installChaos(start)
             row.remainingUses, row.curseValues)
         curse.OnExpire = curse.OnExpire or {}
         curse.OnExpire.TraitData = blessing
+        -- PowersLogic.StartChaosTimer: the acquisition that starts the Time curse's timer.
+        if curse.AcquireFunctionName == "StartChaosTimer" then curse.CurrentTime = curse.StartingTime end
         add(curse)
     end
     for _, row in ipairs(start.chaosBlessings) do
