@@ -169,6 +169,41 @@ describe('draft basket legality', () => {
     ).toContainEqual(wrongLoadout);
   });
 
+  it('requires a Hammer the loadout can take before Latest Model', () => {
+    const icarus = { fieldNpcsByBiome: { O: ['Icarus'] } };
+    const latestModel = assessment(surface, spec([], icarus), 'UpgradeHammerBoon');
+    expect(latestModel.refusals).toContainEqual(
+      expect.objectContaining({ kind: 'requirement', code: 'missingPrerequisite' }),
+    );
+    const required = latestModel.refusals.flatMap((refusal) =>
+      refusal.kind === 'requirement' ? (refusal.requirementTraitKeys ?? []) : [],
+    );
+    expect(required).toContain('StaffDoubleAttackTrait');
+    expect(required).not.toContain('DaggerBlinkAoETrait');
+    expect(
+      assessment(surface, spec(['StaffDoubleAttackTrait'], icarus), 'UpgradeHammerBoon').selectable,
+    ).toBe(true);
+  });
+
+  it('classifies core, other, Legendary and Duo traits', () => {
+    const kinds = Object.fromEntries(
+      [
+        'ZeusWeaponBoon',
+        'ZeusCastBoon',
+        'SpawnKillBoon',
+        'ApolloSecondStageCastBoon',
+        'FocusLightningBoon',
+      ].map((key) => [key, assessment(underworld, spec([]), key).kind]),
+    );
+    expect(kinds).toEqual({
+      ZeusWeaponBoon: 'core',
+      ZeusCastBoon: 'core',
+      SpawnKillBoon: 'legendary',
+      ApolloSecondStageCastBoon: 'duo',
+      FocusLightningBoon: 'other',
+    });
+  });
+
   it('refuses the Hera and Zeus Ransoms as draft-illegal', () => {
     const draft = spec(['HeraWeaponBoon', 'ZeusCastBoon'], { godKeys: ['Hera', 'Zeus'] });
     for (const traitKey of ['SuperSacrificeBoonHera', 'SuperSacrificeBoonZeus'])

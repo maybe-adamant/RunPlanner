@@ -601,8 +601,6 @@ export {
 } from './edit-settlement';
 export {
   draftKeepsakeOptions,
-  draftLoadoutProject,
-  draftRouteLoadout,
   forcesGod,
   type DraftKeepsakeOptions,
   type DraftLoadout,
@@ -626,6 +624,7 @@ export {
   type DraftCapUsage,
   type DraftGiverCapUsage,
   type DraftTraitAssessment,
+  type DraftTraitKind,
   type DraftTraitRefusal,
 } from './draft/basket';
 export {

@@ -1,8 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../rewards';
-import type { ResolvedRewardOffer } from '../../reward-kernel';
-import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
 import type { DraftSpec } from './spec';
 
 export type DraftTargetKind = 'basketTrait' | 'storyNpc' | 'fieldNpc' | 'rackKeepsake';
@@ -26,37 +24,6 @@ export interface DraftReport {
   readonly met: number;
 }
 
-export type DraftSupply = 'hermes' | 'hammer';
-
-/** Every trait a Hermes giver offers. */
-export function draftHermesTraitKeys(catalog: Catalog): ReadonlySet<string> {
-  return new Set(
-    catalog.traitGivers.values
-      .filter((giver) => giver.providerKind === 'hermes')
-      .flatMap((giver) => giver.traitKeys),
-  );
-}
-
-/** Rewards whose acquisition role resolves to a Hermes, Daedalus Hammer or Selene giver. */
-export function draftProvider(
-  catalog: Catalog,
-  offer: ResolvedRewardOffer,
-): DraftSupply | 'spell' | undefined {
-  const roles = catalog.rewards.rewardTypes.byKey[offer.rewardType]?.acquisitionRoles.values ?? [];
-  for (const role of roles) {
-    const giverKey = traitGiverForAcquisitionRole(catalog, offer, role.key);
-    const kind =
-      giverKey === undefined ? undefined : catalog.traitGivers.byKey[giverKey]?.providerKind;
-    if (kind === 'hermes' || kind === 'hammer' || kind === 'spell') return kind;
-  }
-  return undefined;
-}
-
-/** Basket traits of a supply to hold by the end of a biome's half: half of them, rounded up, then all. */
-export function draftHalfTarget(biomeIndex: number, biomeCount: number, target: number): number {
-  return biomeIndex < Math.ceil(biomeCount / 2) ? Math.ceil(target / 2) : target;
-}
-
 /** The latest Run State snapshot the evaluation published. */
 export function latestRunState(assembly: ProjectEvaluationAssembly): RunStateSnapshot | undefined {
   let latest: RunStateSnapshot | undefined;
@@ -70,10 +37,7 @@ export function latestRunState(assembly: ProjectEvaluationAssembly): RunStateSna
 }
 
 /** Gods whose boon the run has picked up by this snapshot. */
-export function acquiredGods(
-  catalog: Catalog,
-  snapshot: RunStateSnapshot | undefined,
-): readonly string[] {
+function acquiredGods(catalog: Catalog, snapshot: RunStateSnapshot | undefined): readonly string[] {
   return (snapshot?.godPool.acquiredSourceKeys ?? []).flatMap((source) => {
     const giver = catalog.traitGiverByAcquisitionGameName[source];
     return giver === undefined ? [] : [giver];

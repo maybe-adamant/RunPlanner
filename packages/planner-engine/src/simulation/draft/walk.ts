@@ -47,7 +47,6 @@ import {
   type ProjectCandidateSession,
 } from '../candidates/session';
 import type { StartRoomCandidateQuery } from '../candidates/start-room';
-import { settleProjectEdit } from '../edit-settlement';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   countedRewardTypeDomain,
@@ -55,19 +54,23 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
-import { simulateProjectAssembly } from '../evaluation/project';
-import {
-  draftHalfTarget,
-  draftHermesTraitKeys,
-  draftProvider,
-  acquiredGods,
-  latestRunState,
-  type DraftSupply,
-} from './report';
+import { latestRunState } from './report';
 import type { SemanticFinding } from '../model';
 import { draftDenialActive, type DraftSpec } from './spec';
-import type { DraftGodSchedule } from './schedule';
-import { DRAFT_PROVIDER_CAPS, draftIllegalTrait, draftStartTraits } from './basket';
+import {
+  draftProvider,
+  draftSupplyTraitKeys,
+  type DraftGodSchedule,
+  type DraftSupply,
+} from './schedule';
+import {
+  DRAFT_PROVIDER_CAPS,
+  draftCappedGiver,
+  draftIllegalTrait,
+  draftStartTraits,
+} from './basket';
+import { shuffleDraft, type DraftRng } from './rng';
+import { settleDraftCommand } from './settle';
 import { completeCarrierChildren, type DraftCarrierChildContext } from './carrier-children';
 import { assessmentRepairOwner } from '../finding-regions';
 import {
@@ -75,75 +78,11 @@ import {
   type DraftHeldTraits,
   type DraftPrerequisites,
 } from './prerequisites';
-import {
-  draftNpcGivers,
-  draftNpcTraitBiomes,
-  draftWorldGiverKeys,
-  type DraftNpcGiver,
-} from './world';
-
-/** A seeded xorshift stream; every random draft choice reads it. */
-export type DraftRng = () => number;
-
-export function createDraftRng(seed: number): DraftRng {
-  let state = seed >>> 0 || 1;
-  return () => {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return (state >>> 0) / 4294967296;
-  };
-}
-
-/** Settles one command; undefined when the command authority refuses it or it changes nothing. */
-export function settleDraftCommand(
-  catalog: Catalog,
-  before: ProjectEvaluationAssembly,
-  command: ProjectCommand,
-): ProjectEvaluationAssembly | undefined {
-  let settled: ReturnType<typeof settleProjectEdit>;
-  let evaluated = false;
-  try {
-    settled = settleProjectEdit({
-      catalog,
-      before,
-      command,
-      evaluate: (project) => {
-        evaluated = true;
-        return simulateProjectAssembly(catalog, project);
-      },
-    });
-  } catch (error) {
-    // A refusal before anything is evaluated is the command's own; later ones are engine defects.
-    if (error instanceof ProjectCommandContractError && !evaluated) return undefined;
-    throw error;
-  }
-  return settled.assembly.project === before.project ? undefined : settled.assembly;
-}
-
-/**
- * Settles one command unless it is refused or adds a finding. A partly walked
- * route keeps its later frontier finding; an earlier block would replace it.
- */
-export function settleDraftCommandWithoutNewFinding(
-  catalog: Catalog,
-  before: ProjectEvaluationAssembly,
-  command: ProjectCommand,
-): ProjectEvaluationAssembly | undefined {
-  const settled = settleDraftCommand(catalog, before, command);
-  if (settled === undefined) return undefined;
-  const key = (finding: SemanticFinding) => `${finding.code} ${semanticAddressKey(finding.origin)}`;
-  const known = new Set(before.evaluation.findings.map(key));
-  return settled.evaluation.findings.every((finding) => known.has(key(finding)))
-    ? settled
-    : undefined;
-}
+import type { DraftNpcGiver, DraftWorldProduct } from './world';
 
 /** What the walk has acquired so far, read from the latest Run State snapshot. */
 export interface DraftProgress {
   readonly equippedTraitKeys: readonly string[];
-  /** Pool gods whose boon has been picked up. */
-  readonly godKeys: readonly string[];
   /** Hermes boons held, basket or not; each spends one of the run's Hermes rooms. */
   readonly hermes: number;
   readonly held: DraftHeldTraits;
@@ -169,6 +108,7 @@ export class DraftWalk {
   private readonly prerequisites: DraftPrerequisites;
   private readonly start: DraftHeldTraits;
   private readonly hermesTraits: ReadonlySet<string>;
+  private readonly hammerTraits: ReadonlySet<string>;
   private readonly denial: boolean;
   private readonly npcGivers: readonly DraftNpcGiver[];
   /** Basket NPC traits by the itinerary index of their NPC's biome. */
@@ -176,10 +116,10 @@ export class DraftWalk {
   private nextOccurrence = 0;
   /** Trait offers this walk authored, by address, for re-picking a stale child. */
   private readonly authoredOffers = new Map<string, AuthoredTraitOfferTraits>();
-  steps = 0;
-  failure: string | undefined;
+  private stepCount = 0;
+  private failureReason: string | undefined;
   /** The biome being walked. */
-  biomeIndex = 0;
+  private biomeIndex = 0;
   /** Hermes and Hammer rewards some decision in this walk could legally take. */
   readonly legalSupply = new Set<DraftSupply>();
 
@@ -189,15 +129,27 @@ export class DraftWalk {
     readonly spec: DraftSpec,
     readonly rng: DraftRng,
     private readonly schedule: DraftGodSchedule,
+    world: DraftWorldProduct,
   ) {
     this.assembly = start;
-    this.worldGivers = new Set(draftWorldGiverKeys(catalog, start.project.route, spec.world));
+    this.worldGivers = new Set(world.giverKeys);
     this.start = draftStartTraits(catalog, start.project.route, spec.loadout);
     this.prerequisites = createDraftPrerequisites(catalog, spec.basketTraitKeys, this.start);
-    this.hermesTraits = draftHermesTraitKeys(catalog);
+    this.hermesTraits = draftSupplyTraitKeys(catalog, 'hermes');
+    this.hammerTraits = draftSupplyTraitKeys(catalog, 'hammer');
     this.denial = draftDenialActive(catalog, spec.loadout);
-    this.npcGivers = draftNpcGivers(catalog, start.project.route, spec.world);
-    this.npcTraitBiomes = draftNpcTraitBiomes(catalog, this.npcGivers, spec.basketTraitKeys);
+    this.npcGivers = world.npcGivers;
+    this.npcTraitBiomes = world.npcTraitBiomes;
+  }
+
+  /** Decisions taken so far, across every biome this walk ran. */
+  get steps(): number {
+    return this.stepCount;
+  }
+
+  /** Why the last biome run stopped short. */
+  get failure(): string | undefined {
+    return this.failureReason;
   }
 
   get project(): ProjectDocument {
@@ -215,25 +167,33 @@ export class DraftWalk {
   }
 
   /**
-   * Authors one biome until the route's issue leaves it, then equips its rack.
-   * False at a dead end or the step limit; the route then stays incomplete.
+   * Authors one biome and equips its drafted rack keepsake until the route's
+   * issue leaves it. False at a dead end, a refused rack or the step limit.
    */
   runBiome(biomeIndex: number, maxSteps: number): boolean {
     this.biomeIndex = biomeIndex;
-    while (this.steps < maxSteps) {
+    while (this.stepCount < maxSteps) {
       if (this.issueBiomeIndex() > biomeIndex) {
-        if (biomeIndex < this.project.route.biomes.length - 1) this.equipRack(biomeIndex);
+        const rack = this.equipRack(biomeIndex);
+        if (rack === 'equipped') {
+          this.stepCount += 1;
+          continue;
+        }
+        if (rack === 'refused') {
+          this.failureReason ??= `rackKeepsakeRefused at ${this.project.route.itineraryBiomeKeys[biomeIndex]}`;
+          return false;
+        }
         return true;
       }
       const issue = this.assembly.evaluation.issue!;
       const reason = issue.reasons[0]!;
       if (!this.optionalChoices(reason) && !this.repair(reason)) {
-        this.failure ??= `${reason.code} at ${semanticAddressKey(reason.origin)}`;
+        this.failureReason ??= `${reason.code} at ${semanticAddressKey(reason.origin)}`;
         return false;
       }
-      this.steps += 1;
+      this.stepCount += 1;
     }
-    this.failure = 'step limit';
+    this.failureReason = 'step limit';
     return false;
   }
 
@@ -254,12 +214,7 @@ export class DraftWalk {
   }
 
   private shuffle<T>(values: readonly T[]): T[] {
-    const result = [...values];
-    for (let index = result.length - 1; index > 0; index -= 1) {
-      const swap = Math.floor(this.rng() * (index + 1));
-      [result[index], result[swap]] = [result[swap]!, result[index]!];
-    }
-    return result;
+    return shuffleDraft(this.rng, values);
   }
 
   /** A weighted random order; zero-weight values are dropped. */
@@ -296,7 +251,6 @@ export class DraftWalk {
     const equippedTraitKeys = Object.keys(snapshot?.traits.equippedTraits ?? {});
     return {
       equippedTraitKeys,
-      godKeys: acquiredGods(this.catalog, snapshot),
       hermes: equippedTraitKeys.filter((key) => this.hermesTraits.has(key)).length,
       held:
         snapshot === undefined
@@ -365,14 +319,6 @@ export class DraftWalk {
     );
   }
 
-  /** A wanted Hermes trait can be offered now and a Hermes room is left for it. */
-  private hermesReady(progress: DraftProgress): boolean {
-    return (
-      progress.hermes < DRAFT_PROVIDER_CAPS.hermes! &&
-      this.wantedHermes(progress).some((key) => this.ready(key, progress))
-    );
-  }
-
   private wantedHermes(progress: DraftProgress): string[] {
     return this.wantedBasket(progress).filter((key) => this.hermesTraits.has(key));
   }
@@ -385,38 +331,39 @@ export class DraftWalk {
     const wanted = this.wantedHermes(progress);
     return (
       wanted.length > 0 &&
-      wanted.length >= DRAFT_PROVIDER_CAPS.hermes! - progress.hermes &&
+      wanted.length >= DRAFT_PROVIDER_CAPS.hermes - progress.hermes &&
       !wanted.some((key) => this.ready(key, progress))
     );
   }
 
-  /** Basket traits of a supply held, against its half target. */
-  private supplyHalf(
-    supply: DraftSupply,
-    progress: DraftProgress,
-  ): { readonly held: number; readonly target: number } {
-    const basket = this.basketOf(supply);
-    return {
-      held: basket.filter((key) => progress.equippedTraitKeys.includes(key)).length,
-      target: draftHalfTarget(this.biomeIndex, this.project.route.biomes.length, basket.length),
-    };
+  /** Basket traits the schedule makes due by this biome. */
+  private dueTraits(): readonly string[] {
+    return this.schedule.byBiome.slice(0, this.biomeIndex + 1).flatMap((biome) => biome.traitKeys);
+  }
+
+  private supplyOf(traitKey: string): DraftSupply | undefined {
+    return this.hermesTraits.has(traitKey)
+      ? 'hermes'
+      : this.hammerTraits.has(traitKey)
+        ? 'hammer'
+        : undefined;
   }
 
   /**
-   * How much a Hermes or Hammer reward helps the basket: 'now' below the half
-   * target or for a ready Hermes trait, 'later' past it, none without a ready wanted trait.
+   * How much a Hermes or Hammer reward helps the basket: 'now' for a ready
+   * wanted trait the schedule makes due, 'later' for one not yet due, none otherwise.
    */
   private supplyNeed(supply: DraftSupply, progress: DraftProgress): 'now' | 'later' | undefined {
-    if (supply === 'hermes') return this.hermesReady(progress) ? 'now' : undefined;
+    if (supply === 'hermes' && progress.hermes >= DRAFT_PROVIDER_CAPS.hermes) return undefined;
     const wanted = this.basketOf(supply).filter(
       (key) => !progress.equippedTraitKeys.includes(key) && this.ready(key, progress),
     );
     if (wanted.length === 0) return undefined;
-    const half = this.supplyHalf(supply, progress);
-    return half.held < half.target ? 'now' : 'later';
+    const due = this.dueTraits();
+    return wanted.some((key) => due.includes(key)) ? 'now' : 'later';
   }
 
-  /** Olympian sources outside the world are never chosen; Anvil and Story rewards are filtered. */
+  /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */
   private offerWeight(offer: ResolvedRewardOffer): number {
     // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.
     if (offer.rewardType === 'ChaosWeaponUpgrade') return 0;
@@ -478,7 +425,7 @@ export class DraftWalk {
     const outside = progress.equippedTraitKeys.filter(
       (key) => this.hermesTraits.has(key) && !basket.includes(key),
     ).length;
-    return Math.max(0, outside - Math.max(0, DRAFT_PROVIDER_CAPS.hermes! - basket.length));
+    return Math.max(0, outside - Math.max(0, DRAFT_PROVIDER_CAPS.hermes - basket.length));
   }
 
   /** A basket Hermes or Hammer reward some decision could take; none while the basket reserves every Hermes room. */
@@ -494,33 +441,25 @@ export class DraftWalk {
   }
 
   /**
-   * Whether the basket's Hermes and Hammers meet this biome's half target;
-   * Hermes rooms the basket reserves for traits still waiting count as held.
-   */
-  halfSupply(): readonly { readonly supply: DraftSupply; readonly met: boolean }[] {
-    const progress = this.progress();
-    return (['hermes', 'hammer'] as const)
-      .filter((supply) => this.basketOf(supply).length > 0)
-      .map((supply) => {
-        const half = this.supplyHalf(supply, progress);
-        return {
-          supply,
-          met: half.held >= half.target || (supply === 'hermes' && this.hermesReserved(progress)),
-        };
-      });
-  }
-
-  /**
-   * Whether each basket trait due by this biome is held; a due trait whose
+   * Each basket trait due by this biome, held or not; a due trait whose
    * prerequisites are not held is not judged, as steering skips it too.
    */
-  scheduledTargets(): readonly boolean[] {
+  scheduledTargets(): readonly {
+    readonly traitKey: string;
+    readonly supply?: DraftSupply;
+    readonly met: boolean;
+  }[] {
     const progress = this.progress();
-    return this.schedule.byBiome
-      .slice(0, this.biomeIndex + 1)
-      .flatMap((biome) => biome.traitKeys)
+    return this.dueTraits()
       .filter((key) => progress.equippedTraitKeys.includes(key) || this.ready(key, progress))
-      .map((key) => progress.equippedTraitKeys.includes(key));
+      .map((traitKey) => {
+        const supply = this.supplyOf(traitKey);
+        return {
+          traitKey,
+          ...(supply === undefined ? {} : { supply }),
+          met: progress.equippedTraitKeys.includes(traitKey),
+        };
+      });
   }
 
   /**
@@ -529,10 +468,7 @@ export class DraftWalk {
    */
   private dueGods(progress: DraftProgress): ReadonlySet<string> {
     const due = new Set<string>();
-    const traitKeys = [
-      ...this.schedule.byBiome.slice(0, this.biomeIndex + 1).flatMap((biome) => biome.traitKeys),
-      ...this.npcPrerequisites(progress),
-    ];
+    const traitKeys = [...this.dueTraits(), ...this.npcPrerequisites(progress)];
     for (const traitKey of traitKeys)
       if (!progress.equippedTraitKeys.includes(traitKey) && this.ready(traitKey, progress))
         for (const giver of this.catalog.traitGivers.values)
@@ -581,20 +517,25 @@ export class DraftWalk {
     return outcome.changed;
   }
 
-  /** The drafted keepsake for the rack after this biome's Postboss. */
-  private equipRack(biomeIndex: number): boolean {
+  /** Equips the drafted keepsake at the rack after this biome's Postboss, once. */
+  private equipRack(biomeIndex: number): 'none' | 'equipped' | 'refused' {
     const keepsakeKey = this.spec.rackKeepsakeKeys[biomeIndex];
     const plan = this.project.route.biomes[biomeIndex];
-    if (keepsakeKey === undefined || keepsakeKey === null || plan === undefined) return false;
-    const biome = createBiomeAddress(this.project.route.routeKey, plan.biomeKey);
-    for (const occurrence of plan.topology?.occurrences ?? []) {
-      if (occurrence.keepsakeRack === undefined) continue;
-      const selection = createPostbossKeepsakeSelectionAddress(
-        createOccurrenceAddress(biome, occurrence.occurrenceId),
-      );
-      if (this.apply({ kind: 'ReplacePostbossKeepsake', selection, keepsakeKey })) return true;
-    }
-    return false;
+    if (keepsakeKey === undefined || keepsakeKey === null || plan === undefined) return 'none';
+    const rack = plan.topology?.occurrences.find(
+      (occurrence) => occurrence.keepsakeRack !== undefined,
+    );
+    if (rack === undefined) return 'refused';
+    if (rack.keepsakeRack?.keepsakeKey === keepsakeKey) return 'none';
+    const selection = createPostbossKeepsakeSelectionAddress(
+      createOccurrenceAddress(
+        createBiomeAddress(this.project.route.routeKey, plan.biomeKey),
+        rack.occurrenceId,
+      ),
+    );
+    return this.apply({ kind: 'ReplacePostbossKeepsake', selection, keepsakeKey })
+      ? 'equipped'
+      : 'refused';
   }
 
   /** Selects wanted field NPC encounters, else a random combat encounter; never Nemesis events. */
@@ -719,11 +660,11 @@ export class DraftWalk {
       case 'figurineOutcomeMissing':
       case 'figurineOutcomeWrongCardinality':
       case 'figurineOutcomeTargetUnavailable':
-        return origin.kind === 'figurineArcana' && this.figurine(origin);
+        return origin.kind === 'figurineArcana' && this.arcanaChoice(origin);
       case 'judgmentOutcomeMissing':
       case 'judgmentOutcomeWrongCardinality':
       case 'judgmentOutcomeTargetUnavailable':
-        return origin.kind === 'judgmentArcana' && this.judgment(origin);
+        return origin.kind === 'judgmentArcana' && this.arcanaChoice(origin);
       case 'hexActivationMissing':
       case 'hexActivationUnavailable':
         return origin.kind === 'acquisitionRole' && this.hexActivation(origin);
@@ -847,15 +788,18 @@ export class DraftWalk {
         (evaluation.kind === 'roomTarget' && evaluation.result.findings.length === 0)
       );
     });
-    const TAKEOVER = '\u0000takeover';
-    const choices = takeover === undefined ? legal : [...legal, TAKEOVER];
-    for (const gameName of this.weighted(choices, (name) =>
-      name === TAKEOVER ? 0.5 : this.roomWeight(name, target.biomeKey, true),
+    const choices: readonly ({ kind: 'room'; gameName: string } | { kind: 'takeover' })[] = [
+      ...legal.map((gameName) => ({ kind: 'room' as const, gameName })),
+      ...(takeover === undefined ? [] : [{ kind: 'takeover' as const }]),
+    ];
+    for (const choice of this.weighted(choices, (entry) =>
+      entry.kind === 'takeover' ? 0.5 : this.roomWeight(entry.gameName, target.biomeKey, true),
     )) {
-      if (gameName === TAKEOVER) {
+      if (choice.kind === 'takeover') {
         if (applyTakeover()) return true;
         continue;
       }
+      const gameName = choice.gameName;
       const occurrenceId = this.occurrenceId(target.biomeKey);
       if (
         this.apply({ kind: 'CreateTarget', target, occurrenceId, gameName }) ||
@@ -1248,25 +1192,40 @@ export class DraftWalk {
     );
   }
 
-  private childContext(trait: TraitOfferAddress): DraftCarrierChildContext {
-    const equippedSlots = new Set(
-      this.progress().equippedTraitKeys.map((key) => this.catalog.traits.byKey[key]?.equipmentSlot),
+  /**
+   * A trait a source other than a trait offer may add: never draft-illegal, a
+   * slot the basket reserves or holds, or past its giver's cap with the basket's owed traits.
+   */
+  private traitAllowed(traitKey: string, progress: DraftProgress): boolean {
+    const declaration = this.catalog.traits.byKey[traitKey];
+    if (declaration === undefined || draftIllegalTrait(declaration)) return false;
+    if (!this.slotAllowed(traitKey)) return false;
+    const slot = declaration.equipmentSlot;
+    if (
+      slot !== undefined &&
+      slot !== 'Spell' &&
+      progress.equippedTraitKeys.some(
+        (key) => key !== traitKey && this.catalog.traits.byKey[key]?.equipmentSlot === slot,
+      )
+    )
+      return false;
+    const capped = draftCappedGiver(this.catalog, this.spec, traitKey);
+    const wanted = this.wantedBasket(progress);
+    if (capped === undefined || wanted.includes(traitKey)) return true;
+    const ofGiver = (key: string) =>
+      draftCappedGiver(this.catalog, this.spec, key)?.giverKey === capped.giverKey;
+    return (
+      progress.equippedTraitKeys.filter(ofGiver).length + wanted.filter(ofGiver).length < capped.cap
     );
+  }
+
+  private childContext(trait: TraitOfferAddress): DraftCarrierChildContext {
+    const progress = this.progress();
     return {
       catalog: this.catalog,
       evaluate: (query) => this.evaluate(query),
       shuffle: (values) => this.shuffle(values),
-      // A replayed or residual trait never exchanges a held core slot.
-      allowsTrait: (traitKey) => {
-        const declaration = this.catalog.traits.byKey[traitKey];
-        const slot = declaration?.equipmentSlot;
-        return (
-          declaration !== undefined &&
-          !draftIllegalTrait(declaration) &&
-          this.slotAllowed(traitKey) &&
-          (slot === undefined || slot === 'Spell' || !equippedSlots.has(slot))
-        );
-      },
+      allowsTrait: (traitKey) => this.traitAllowed(traitKey, progress),
       prefersTrait: (traitKey) => this.wantedBasket(this.progress()).includes(traitKey),
       supported: (value) => this.offerSupported(trait, value),
     };
@@ -1327,8 +1286,9 @@ export class DraftWalk {
     try {
       applyProjectCommand(this.project, this.catalog, command);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (error instanceof ProjectCommandContractError) return false;
+      throw error;
     }
   }
 
@@ -1348,7 +1308,7 @@ export class DraftWalk {
         const banned =
           draft.kind === 'traits' &&
           draft.options.some((option) => !this.slotAllowed(option.traitKey));
-        this.failure = `${banned ? 'slotBan' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`;
+        this.failureReason = `${banned ? 'slotBan' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`;
         return false;
       }
       for (const value of values) {
@@ -1589,9 +1549,13 @@ export class DraftWalk {
   ): boolean {
     const evaluation = this.evaluate({ kind: 'keepsakeEquipResult', result });
     if (evaluation.kind !== 'keepsakeEquipResult') return false;
-    for (const option of this.shuffle(
-      evaluation.result.options.filter((o) => o.selectedPossible),
-    )) {
+    const progress = this.progress();
+    const allowed = evaluation.result.options.filter(
+      (option) =>
+        option.selectedPossible &&
+        (!('traitKey' in option.value) || this.traitAllowed(option.value.traitKey, progress)),
+    );
+    for (const option of this.shuffle(allowed)) {
       const command = (
         option.resultKind === 'jeweledPom'
           ? { kind: 'ReplaceJeweledPomEquipResult', result, value: option.value }
@@ -1604,38 +1568,33 @@ export class DraftWalk {
     return false;
   }
 
-  private figurine(
-    figurine: Extract<SemanticAddress, { readonly kind: 'figurineArcana' }>,
+  /** Figurine and Judgment: a random set of the required count among inactive Arcana. */
+  private arcanaChoice(
+    origin: Extract<SemanticAddress, { readonly kind: 'figurineArcana' | 'judgmentArcana' }>,
   ): boolean {
-    const probe = this.evaluate({ kind: 'figurineArcana', figurine, arcanaKeys: [] });
-    if (probe.kind !== 'figurineArcana') return false;
+    const assess = (arcanaKeys: readonly string[]) => {
+      const evaluation =
+        origin.kind === 'figurineArcana'
+          ? this.evaluate({ kind: 'figurineArcana', figurine: origin, arcanaKeys })
+          : this.evaluate({ kind: 'judgmentArcana', judgment: origin, arcanaKeys });
+      return evaluation.kind === 'figurineArcana' || evaluation.kind === 'judgmentArcana'
+        ? evaluation.result
+        : undefined;
+    };
+    const probe = assess([]);
+    if (probe === undefined) return false;
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      const arcanaKeys = this.shuffle(probe.result.inactiveArcanaKeys).slice(
-        0,
-        probe.result.requiredCount,
-      );
-      const evaluation = this.evaluate({ kind: 'figurineArcana', figurine, arcanaKeys });
-      if (evaluation.kind !== 'figurineArcana' || !evaluation.result.selectedPossible) continue;
-      if (evaluation.result.findings.length > 0) continue;
-      if (this.apply({ kind: 'ReplaceFigurineArcana', figurine, arcanaKeys })) return true;
-    }
-    return false;
-  }
-
-  private judgment(
-    judgment: Extract<SemanticAddress, { readonly kind: 'judgmentArcana' }>,
-  ): boolean {
-    const probe = this.evaluate({ kind: 'judgmentArcana', judgment, arcanaKeys: [] });
-    if (probe.kind !== 'judgmentArcana') return false;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const arcanaKeys = this.shuffle(probe.result.inactiveArcanaKeys).slice(
-        0,
-        probe.result.requiredCount,
-      );
-      const evaluation = this.evaluate({ kind: 'judgmentArcana', judgment, arcanaKeys });
-      if (evaluation.kind !== 'judgmentArcana' || !evaluation.result.selectedPossible) continue;
-      if (evaluation.result.findings.length > 0) continue;
-      if (this.apply({ kind: 'ReplaceJudgmentArcana', judgment, arcanaKeys })) return true;
+      const arcanaKeys = this.shuffle(probe.inactiveArcanaKeys).slice(0, probe.requiredCount);
+      const result = assess(arcanaKeys);
+      if (result === undefined || !result.selectedPossible || result.findings.length > 0) continue;
+      if (
+        this.apply(
+          origin.kind === 'figurineArcana'
+            ? { kind: 'ReplaceFigurineArcana', figurine: origin, arcanaKeys }
+            : { kind: 'ReplaceJudgmentArcana', judgment: origin, arcanaKeys },
+        )
+      )
+        return true;
     }
     return false;
   }

@@ -214,7 +214,7 @@ export interface FearVowDeclaration {
     | {
         /** Per-rank chance that each eligible source spawn request becomes a next-biome enemy. */
         readonly kind: 'substituteNextBiomeEnemy';
-        readonly chanceByRank: readonly [0.1, 0.25];
+        readonly chanceByRank: readonly number[];
       };
 }
 

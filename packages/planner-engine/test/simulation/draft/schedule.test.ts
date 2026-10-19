@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
-import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
-import { createDraftRng } from '../../../src/simulation/draft/walk';
+import { draftScheduleFor } from '../../support/draft-walk';
 import type { DraftSpec } from '../../../src/simulation';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
@@ -23,7 +22,7 @@ const spec: DraftSpec = {
 
 describe('draft god schedule', () => {
   it('spreads basket traits by capacity', () => {
-    const { byBiome } = draftGodSchedule(catalog, surface, spec, createDraftRng(1));
+    const { byBiome } = draftScheduleFor(surface, spec, 1);
     expect(byBiome.flatMap((biome) => biome.traitKeys).sort()).toEqual(
       [...spec.basketTraitKeys].sort(),
     );
@@ -35,13 +34,13 @@ describe('draft god schedule', () => {
       ...spec,
       loadout: { ...loadout, fearRanks: { ...loadout.fearRanks, BoonSkipShrineUpgrade: 1 } },
     };
-    const o = draftGodSchedule(catalog, surface, forfeit, createDraftRng(1)).byBiome[1]!;
+    const o = draftScheduleFor(surface, forfeit, 1).byBiome[1]!;
     expect(o).toMatchObject({ traitKeys: [] });
   });
 
   it('varies with the seed', () => {
     const orders = [1, 2, 3, 4, 5].map((seed) =>
-      JSON.stringify(draftGodSchedule(catalog, surface, spec, createDraftRng(seed))),
+      JSON.stringify(draftScheduleFor(surface, spec, seed)),
     );
     expect(new Set(orders).size).toBeGreaterThan(1);
   });
@@ -63,8 +62,8 @@ describe('draft god schedule', () => {
     };
     const dueBiomes = (seed: number) => {
       const due = new Map<string, number>();
-      draftGodSchedule(catalog, surface, chained, createDraftRng(seed)).byBiome.forEach(
-        (biome, index) => biome.traitKeys.forEach((key) => due.set(key, index)),
+      draftScheduleFor(surface, chained, seed).byBiome.forEach((biome, index) =>
+        biome.traitKeys.forEach((key) => due.set(key, index)),
       );
       return (key: string) => {
         const index = due.get(key);
@@ -119,7 +118,7 @@ describe('draft god schedule', () => {
         ],
       };
       for (const seed of [2, 3]) {
-        const { byBiome } = draftGodSchedule(catalog, surface, icarus, createDraftRng(seed));
+        const { byBiome } = draftScheduleFor(surface, icarus, seed);
         expect(byBiome.findIndex((biome) => biome.traitKeys.includes('AresWeaponBoon'))).toBe(1);
       }
     });
@@ -141,8 +140,8 @@ describe('draft god schedule', () => {
     });
     const dueOf = (route: typeof underworld, draftSpec: DraftSpec, seed: number) => {
       const due = new Map<string, number>();
-      draftGodSchedule(catalog, route, draftSpec, createDraftRng(seed)).byBiome.forEach(
-        (biome, index) => biome.traitKeys.forEach((key) => due.set(key, index)),
+      draftScheduleFor(route, draftSpec, seed).byBiome.forEach((biome, index) =>
+        biome.traitKeys.forEach((key) => due.set(key, index)),
       );
       return (key: string) => due.get(key);
     };
@@ -168,6 +167,18 @@ describe('draft god schedule', () => {
       for (const route of [underworld, shortDream]) {
         const due = dueOf(route, draft([...successRate, 'TimeStopLastStandBoon']), 1);
         expect(due('TimeStopLastStandBoon')).toBe(route.itineraryBiomeKeys.length - 1);
+      }
+    });
+
+    it('puts the first basket Hammer at the first-half end and the second at the last biome', () => {
+      for (const route of [underworld, shortDream]) {
+        const due = dueOf(route, draft(['StaffDoubleAttackTrait', 'StaffLongAttackTrait']), 1);
+        expect(
+          [due('StaffDoubleAttackTrait'), due('StaffLongAttackTrait')].sort((a, b) => a! - b!),
+        ).toEqual([
+          Math.ceil(route.itineraryBiomeKeys.length / 2) - 1,
+          route.itineraryBiomeKeys.length - 1,
+        ]);
       }
     });
 

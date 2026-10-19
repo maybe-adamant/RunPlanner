@@ -7,11 +7,10 @@ import {
   type AuthoredTraitOfferTraits,
   type TraitOfferAddress,
 } from '../../../src/authored-project';
-import { simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
+import type { DraftSpec } from '../../../src/simulation';
 import { latestRunState } from '../../../src/simulation/draft/report';
-import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
-import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
-import { createDraftRng, DraftWalk } from '../../../src/simulation/draft/walk';
+import type { DraftWalk } from '../../../src/simulation/draft/walk';
+import { startDraftWalk } from '../../support/draft-walk';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -58,19 +57,17 @@ function traitOffers(value: unknown): AuthoredTraitOfferTraits[] {
 
 /** Walks biome by biome until the trait is held; each walked biome is left with no issue. */
 function walkUntilHeld(base: typeof surface, draft: DraftSpec, traitKey: string, seed = 1) {
-  const start = simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, draft.loadout));
-  const schedule = draftGodSchedule(catalog, base.route, draft, createDraftRng(seed));
-  const walk = new DraftWalk(catalog, start, draft, createDraftRng(seed), schedule);
+  const walk = startDraftWalk(base, draft, seed);
   for (const index of base.route.itineraryBiomeKeys.keys()) {
     expect(walk.runBiome(index, walk.steps + 600), walk.failure).toBe(true);
     const held = Object.keys(latestRunState(walk.assembly)?.traits.equippedTraits ?? {});
-    if (held.includes(traitKey)) return walk;
+    if (held.includes(traitKey)) return { walk, biomeIndex: index };
   }
   throw new Error(`${traitKey} was never drafted`);
 }
 
 /** The selected offer of the trait, with every engine-discovered child authored. */
-function expectChildrenAuthored(walk: DraftWalk, traitKey: string) {
+function expectChildrenAuthored(walk: DraftWalk, biomeIndex: number, traitKey: string) {
   const offer = traitOffers(walk.project).find(
     (candidate) =>
       candidate.options[['option1', 'option2', 'option3'].indexOf(candidate.selectedOptionKey)]
@@ -90,7 +87,7 @@ function expectChildrenAuthored(walk: DraftWalk, traitKey: string) {
   );
   expect(children.length).toBeGreaterThan(0);
   expect(children.every((child) => child.authoredComplete)).toBe(true);
-  const walked = walk.project.route.itineraryBiomeKeys.slice(0, walk.biomeIndex + 1);
+  const walked = walk.project.route.itineraryBiomeKeys.slice(0, biomeIndex + 1);
   expect(
     walk.assembly.evaluation.findings.filter(
       (finding) => 'biomeKey' in finding.origin && walked.includes(finding.origin.biomeKey),
@@ -100,21 +97,21 @@ function expectChildrenAuthored(walk: DraftWalk, traitKey: string) {
 
 describe('draft selected-outcome children', () => {
   it('drafts Bridal Glow with its Heroic target', () => {
-    const walk = walkUntilHeld(
+    const { walk, biomeIndex } = walkUntilHeld(
       surface,
       spec(surfaceWorld(['Zeus', 'Hera', 'Demeter', 'Ares']), ['BoonDecayBoon']),
       'BoonDecayBoon',
     );
-    expectChildrenAuthored(walk, 'BoonDecayBoon');
+    expectChildrenAuthored(walk, biomeIndex, 'BoonDecayBoon');
   });
 
   it("drafts Red Citrine Divination with Circe's Arcana resolution", () => {
-    const walk = walkUntilHeld(
+    const { walk, biomeIndex } = walkUntilHeld(
       surface,
       spec(surfaceWorld(['Zeus', 'Hera', 'Demeter', 'Ares']), ['RandomArcanaTrait']),
       'RandomArcanaTrait',
     );
-    expectChildrenAuthored(walk, 'RandomArcanaTrait');
+    expectChildrenAuthored(walk, biomeIndex, 'RandomArcanaTrait');
   });
 
   it('drafts All Together with one result per set', () => {
@@ -124,52 +121,55 @@ describe('draft selected-outcome children', () => {
       'DamageSharePotencyBoon',
       'AllElementalBoon',
     ];
-    const walk = walkUntilHeld(
+    const { walk, biomeIndex } = walkUntilHeld(
       surface,
       spec(surfaceWorld(['Zeus', 'Hera', 'Demeter', 'Ares']), traits),
       'AllElementalBoon',
     );
-    expectChildrenAuthored(walk, 'AllElementalBoon');
+    expectChildrenAuthored(walk, biomeIndex, 'AllElementalBoon');
   });
 
   it('drafts Natural Selection with its complete increments', () => {
     const traits = ['PoseidonWeaponBoon', 'DemeterSpecialBoon', 'BoonGrowthBoon', 'GoodStuffBoon'];
-    const walk = walkUntilHeld(
+    const { walk, biomeIndex } = walkUntilHeld(
       surface,
       spec(surfaceWorld(['Zeus', 'Poseidon', 'Demeter', 'Ares']), traits),
       'GoodStuffBoon',
     );
-    expectChildrenAuthored(walk, 'GoodStuffBoon');
+    expectChildrenAuthored(walk, biomeIndex, 'GoodStuffBoon');
   });
 
   it('drafts Latest Model with its Hammer targets', () => {
     const traits = ['StaffDoubleAttackTrait', 'UpgradeHammerBoon'];
-    const walk = walkUntilHeld(
+    const { walk, biomeIndex } = walkUntilHeld(
       surface,
       spec(surfaceWorld(['Zeus', 'Hera', 'Demeter', 'Ares']), traits),
       'UpgradeHammerBoon',
     );
-    expectChildrenAuthored(walk, 'UpgradeHammerBoon');
+    expectChildrenAuthored(walk, biomeIndex, 'UpgradeHammerBoon');
   });
 
   it('drafts Pom Pom Pom and Boon Boon Boon with their Echo outcomes', () => {
     for (const traitKey of ['EchoDoubleLevelBoon', 'EchoLastRunBoon']) {
-      const walk = walkUntilHeld(underworld, spec(underworldWorld, [traitKey]), traitKey);
-      expectChildrenAuthored(walk, traitKey);
+      const { walk, biomeIndex } = walkUntilHeld(
+        underworld,
+        spec(underworldWorld, [traitKey]),
+        traitKey,
+      );
+      expectChildrenAuthored(walk, biomeIndex, traitKey);
     }
   });
 
   it('resolves a Heroic Concave Stone with a residual row', () => {
     const traits = ['DemeterWeaponBoon', 'HeraCastBoon', 'KeepsakeLevelBoon'];
-    const walk = walkUntilHeld(
+    const { walk, biomeIndex } = walkUntilHeld(
       surface,
       spec(surfaceWorld(['Zeus', 'Hera', 'Demeter', 'Ares']), traits, {
         startingKeepsakeKey: 'UnpickedBoonKeepsake',
       }),
       'KeepsakeLevelBoon',
     );
-    const index = walk.biomeIndex;
-    expect(walk.runBiome(index + 1, walk.steps + 600), walk.failure).toBe(true);
+    expect(walk.runBiome(biomeIndex + 1, walk.steps + 600), walk.failure).toBe(true);
     expect(
       traitOffers(walk.project).some((offer) => offer.concaveStoneResult?.kind === 'proc'),
     ).toBe(true);

@@ -3,10 +3,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
 import type { AuthoredTraitOfferTraits } from '../../../src/authored-project';
-import { simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
-import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
-import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
-import { createDraftRng, DraftWalk } from '../../../src/simulation/draft/walk';
+import type { DraftSpec } from '../../../src/simulation';
+import type { DraftWalk } from '../../../src/simulation/draft/walk';
+import { startDraftWalk } from '../../support/draft-walk';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -34,9 +33,7 @@ function authored(before: DraftWalk['project'], after: DraftWalk['project']) {
 
 /** Each seed's authoring of the route's first trait offer from a Zeus room, from the same frontier. */
 function firstZeusOffers(spec: DraftSpec, seeds: readonly number[]): AuthoredTraitOfferTraits[] {
-  const start = simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, spec.loadout));
-  const schedule = draftGodSchedule(catalog, base.route, spec, createDraftRng(1));
-  const walk = new DraftWalk(catalog, start, spec, createDraftRng(1), schedule);
+  const walk = startDraftWalk(base, spec, 1);
   const step = (from: DraftWalk) => {
     const steps = from.steps;
     from.runBiome(0, steps + 1);
@@ -45,7 +42,7 @@ function firstZeusOffers(spec: DraftSpec, seeds: readonly number[]): AuthoredTra
   for (;;) {
     if (walk.assembly.evaluation.issue?.reasons[0]?.code === 'traitOfferMissing') {
       const offers = seeds.map((seed) => {
-        const next = new DraftWalk(catalog, walk.assembly, spec, createDraftRng(seed), schedule);
+        const next = startDraftWalk(base, spec, seed, { from: walk.assembly, scheduleSeed: 1 });
         step(next);
         return authored(walk.project, next.project);
       });
@@ -93,5 +90,28 @@ describe('draft trait offer filler', () => {
       );
       expect(unselected(offer).filter((key) => zeusBasket.includes(key))).toEqual([]);
     }
+  });
+});
+
+describe('draft rack keepsakes', () => {
+  it('equips the rack keepsake with its equip result before the biome succeeds', () => {
+    const rack: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketTraitKeys: [],
+      rackKeepsakeKeys: ['TempHammerKeepsake', null, null],
+    };
+    const walk = startDraftWalk(base, rack, 1);
+    expect(walk.runBiome(0, 600), walk.failure).toBe(true);
+    const occurrence = walk.project.route.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.keepsakeRack !== undefined,
+    );
+    expect(occurrence?.keepsakeRack?.keepsakeKey).toBe('TempHammerKeepsake');
+    expect(occurrence?.keepsakeRack?.equipResults?.experimentalHammer).toBeDefined();
+    expect(
+      walk.assembly.evaluation.findings.filter(
+        (finding) => 'biomeKey' in finding.origin && finding.origin.biomeKey === 'F',
+      ),
+    ).toEqual([]);
   });
 });

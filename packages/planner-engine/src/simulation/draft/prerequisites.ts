@@ -50,6 +50,14 @@ function prerequisiteLeaves(catalog: Catalog, traitKey: string): readonly Prereq
       leaves.push(requirement);
   };
   [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements].forEach(visit);
+  // Latest Model upgrades a held Hammer, so it waits on one.
+  if (trait.targetedAcquisition?.kind === 'upgradeHammerToRank2')
+    leaves.push({
+      kind: 'anyEquippedTrait',
+      traitKeys: catalog.traits.values
+        .filter((candidate) => candidate.hammerCompatibility !== undefined)
+        .map((candidate) => candidate.key),
+    });
   return leaves;
 }
 

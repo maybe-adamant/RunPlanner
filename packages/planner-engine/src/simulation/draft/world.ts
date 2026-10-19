@@ -166,12 +166,8 @@ export interface DraftNpcGiver {
 }
 
 /** The selected trait-giving story and field NPCs, in itinerary order. */
-export function draftNpcGivers(
-  catalog: Catalog,
-  route: DraftRoute,
-  world: DraftWorld,
-): readonly DraftNpcGiver[] {
-  return draftWorldOptions(catalog, route).biomes.flatMap((biome, biomeIndex) => {
+function npcGivers(options: DraftWorldOptions, world: DraftWorld): readonly DraftNpcGiver[] {
+  return options.biomes.flatMap((biome, biomeIndex) => {
     const story = biome.storyNpc;
     const selected = world.fieldNpcsByBiome[biome.biomeKey] ?? [];
     return [
@@ -189,22 +185,22 @@ export function draftNpcGivers(
   });
 }
 
-/** Each basket trait a selected NPC gives, by the earliest biome index that NPC is met in. */
-export function draftNpcTraitBiomes(
-  catalog: Catalog,
-  givers: readonly DraftNpcGiver[],
-  traitKeys: readonly string[],
-): ReadonlyMap<string, number> {
-  const biomes = new Map<string, number>();
-  for (const giver of givers)
-    for (const traitKey of catalog.traitGivers.byKey[giver.giverKey]?.traitKeys ?? [])
-      if (traitKeys.includes(traitKey) && !biomes.has(traitKey))
-        biomes.set(traitKey, giver.biomeIndex);
-  return biomes;
-}
-
 /** Givers every world has: Hermes, Daedalus Hammers and Selene; Chaos is never drafted. */
 const ALWAYS_PRESENT_PROVIDER_KINDS: ReadonlySet<string> = new Set(['hermes', 'hammer', 'spell']);
+
+function worldGiverKeys(
+  options: DraftWorldOptions,
+  world: DraftWorld,
+  givers: readonly DraftNpcGiver[],
+): readonly string[] {
+  return Object.freeze([
+    ...new Set([
+      ...world.godKeys,
+      ...givers.map((giver) => giver.giverKey),
+      ...options.bonusGiverKeys,
+    ]),
+  ]);
+}
 
 /** Trait givers the world contributes: its gods, its trait-giving NPCs and the always-present givers. */
 export function draftWorldGiverKeys(
@@ -213,16 +209,33 @@ export function draftWorldGiverKeys(
   world: DraftWorld,
 ): readonly string[] {
   const options = draftWorldOptions(catalog, route);
-  const givers = new Set(world.godKeys);
-  for (const biome of options.biomes) {
-    const story = biome.storyNpc;
-    if (story?.giverKey !== undefined && world.storyNpcByBiome[biome.biomeKey] === story.npcKey)
-      givers.add(story.giverKey);
-    const selected = world.fieldNpcsByBiome[biome.biomeKey] ?? [];
-    for (const field of biome.fieldNpcs)
-      if (field.giverKey !== undefined && selected.includes(field.npcKey))
-        givers.add(field.giverKey);
-  }
-  for (const key of options.bonusGiverKeys) givers.add(key);
-  return Object.freeze([...givers]);
+  return worldGiverKeys(options, world, npcGivers(options, world));
+}
+
+/** What one draft reads from its world, derived once. */
+export interface DraftWorldProduct {
+  readonly giverKeys: readonly string[];
+  readonly npcGivers: readonly DraftNpcGiver[];
+  /** Each basket trait a selected NPC gives, by the earliest itinerary index that NPC is met in. */
+  readonly npcTraitBiomes: ReadonlyMap<string, number>;
+}
+
+export function draftWorld(
+  catalog: Catalog,
+  route: DraftRoute,
+  world: DraftWorld,
+  basketTraitKeys: readonly string[],
+): DraftWorldProduct {
+  const options = draftWorldOptions(catalog, route);
+  const givers = npcGivers(options, world);
+  const npcTraitBiomes = new Map<string, number>();
+  for (const giver of givers)
+    for (const traitKey of catalog.traitGivers.byKey[giver.giverKey]?.traitKeys ?? [])
+      if (basketTraitKeys.includes(traitKey) && !npcTraitBiomes.has(traitKey))
+        npcTraitBiomes.set(traitKey, giver.biomeIndex);
+  return Object.freeze({
+    giverKeys: worldGiverKeys(options, world, givers),
+    npcGivers: Object.freeze(givers),
+    npcTraitBiomes,
+  });
 }

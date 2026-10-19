@@ -55,8 +55,11 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
   let held = startingKeepsakeKey;
   const rackSlots = keepsakeOptions.rackSlots.map((slot): DraftRackSlot => {
     const chosen = draft.rackKeepsakeByBiome[slot.afterBiomeKey];
+    // A saved keepsake the rack does not offer stays, so the engine's refusal blocks the draft.
     const keepsakeKey =
-      chosen !== undefined && chosen !== held && slot.keepsakeKeys.includes(chosen) ? chosen : null;
+      chosen !== undefined && chosen !== held && catalog.keepsakes.byKey[chosen] !== undefined
+        ? chosen
+        : null;
     const inheritedKeepsakeKey = held;
     held = keepsakeKey ?? held;
     return Object.freeze({
@@ -237,14 +240,13 @@ const SLOT_ORDER: readonly TraitOrdinaryBoonSlot[] = [
   'Mana',
 ];
 
-function offeredOnlyAs(catalog: Catalog, traitKey: string, rarity: 'Duo' | 'Legendary'): boolean {
-  const domain = catalog.traits.byKey[traitKey]?.rarityDomain;
-  return domain?.kind === 'ranked' && domain.freshOfferRarities.includes(rarity);
-}
-
 /** Core slots first, then the other boons, then the Legendary. */
-function godOrder(catalog: Catalog, traitKey: string): number {
-  if (offeredOnlyAs(catalog, traitKey, 'Legendary')) return SLOT_ORDER.length + 1;
+function godOrder(
+  catalog: Catalog,
+  trait: DraftTraitAssessment | undefined,
+  traitKey: string,
+): number {
+  if (trait?.kind === 'legendary') return SLOT_ORDER.length + 1;
   const slot = catalog.traits.byKey[traitKey]?.equipmentSlot;
   const index = slot === undefined ? -1 : (SLOT_ORDER as readonly string[]).indexOf(slot);
   return index === -1 ? SLOT_ORDER.length : index;
@@ -312,8 +314,8 @@ export function projectDraftBasket(
   const godSections = spec.world.godKeys.map((godKey) => {
     const giver = catalog.traitGivers.byKey[godKey]!;
     const own = giver.traitKeys
-      .filter((key) => !offeredOnlyAs(catalog, key, 'Duo'))
-      .map((key, index) => ({ key, index, order: godOrder(catalog, key) }))
+      .filter((key) => byKey.get(key)?.kind !== 'duo')
+      .map((key, index) => ({ key, index, order: godOrder(catalog, byKey.get(key), key) }))
       .sort((a, b) => a.order - b.order || a.index - b.index)
       .map((entry) => entry.key);
     return section(godKey, giver.label, rowsOf(own), giverCap(caps.poolGods, godKey));
@@ -321,8 +323,8 @@ export function projectDraftBasket(
   const duoKeys = [
     ...new Set(
       spec.world.godKeys.flatMap((godKey) =>
-        catalog.traitGivers.byKey[godKey]!.traitKeys.filter((key) =>
-          offeredOnlyAs(catalog, key, 'Duo'),
+        catalog.traitGivers.byKey[godKey]!.traitKeys.filter(
+          (key) => byKey.get(key)?.kind === 'duo',
         ),
       ),
     ),
