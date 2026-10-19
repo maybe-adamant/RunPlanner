@@ -8,11 +8,14 @@ import iconDragon from './assets/Dragon.webp';
 import iconFogEmitter from './assets/FogEmitter.webp';
 import iconGoldElemental from './assets/GoldElemental.webp';
 import iconJellyfish from './assets/Jellyfish.webp';
+import iconLamia from './assets/Lamia.webp';
 import iconRatCatcher from './assets/RatCatcher.webp';
 import iconSatyrCrossbow from './assets/SatyrCrossbow.webp';
 import iconStalker from './assets/Stalker.webp';
 import iconTalos from './assets/Talos.webp';
 import iconTreant from './assets/Treant.webp';
+import iconTyphonEye from './assets/TyphonEye.webp';
+import iconTyphonTail from './assets/TyphonTail.webp';
 import iconVampire from './assets/Vampire.webp';
 import iconWaterUnit from './assets/WaterUnit.webp';
 
@@ -27,7 +30,7 @@ export const minibossArtwork: Readonly<Record<string, string | null>> = {
   MiniBossCrawler: iconCrawler,
   MiniBossJellyfish: iconJellyfish,
   MiniBossVampire: iconVampire,
-  MiniBossLamia: null,
+  MiniBossLamia: iconLamia,
   MiniBossRatCatcher: iconRatCatcher,
   MiniBossGoldElemental: iconGoldElemental,
   MiniBossSatyrCrossbow: iconSatyrCrossbow,
@@ -38,6 +41,6 @@ export const minibossArtwork: Readonly<Record<string, string | null>> = {
   MiniBossDragon: iconDragon,
   MiniBossBrute: iconBrute,
   MiniBossStalker: iconStalker,
-  BossTyphonTail01: null,
-  BossTyphonEye01: null,
+  BossTyphonTail01: iconTyphonTail,
+  BossTyphonEye01: iconTyphonEye,
 };
