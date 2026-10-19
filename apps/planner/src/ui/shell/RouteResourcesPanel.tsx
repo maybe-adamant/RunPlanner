@@ -2,6 +2,8 @@ import { createOccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
 import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
 
 function resourceFamilyLabel(family: WorkspaceRoute['resources'][number]['family']): string {
   switch (family) {
@@ -35,7 +37,19 @@ export function RouteResourcesPanel({ route }: { readonly route: WorkspaceRoute 
           return (
             <li className="route-trait-row" key={resource.family}>
               <div>
-                <strong>{resourceFamilyLabel(resource.family)}</strong>
+                <span className="route-resource-name">
+                  <ArtworkIcon
+                    className="artwork-label-icon"
+                    source={gatheringToolIcon(resource.family)}
+                  />
+                  <strong>{resourceFamilyLabel(resource.family)}</strong>
+                  {resource.element === undefined ? null : (
+                    <ArtworkIcon
+                      className="artwork-label-icon"
+                      source={elementIcon(resource.element)}
+                    />
+                  )}
+                </span>
                 <span className="route-trait-meta">
                   {placement === undefined
                     ? 'No selected success'

@@ -224,6 +224,7 @@ describe('structured workspace biome presentation', () => {
       (entry) => entry.kind === 'node' && entry.node.key === preboss?.key,
     );
     expect(prebossRail?.kind === 'node' && prebossRail.selectedTarget).toEqual({
+      roomIcon: { kind: 'shop' },
       roomLabel: 'Preboss',
       roomRewards: [],
       shop: true,
@@ -553,6 +554,7 @@ describe('structured workspace biome presentation', () => {
     );
     if (directRail === undefined) throw new Error('F direct decision rail entry is missing');
     expect(directRail.selectedTarget).toEqual({
+      roomIcon: { kind: 'combat', biomeKey: 'F' },
       roomLabel: directTarget.room.label,
       roomRewards: [directTarget.room.roomLocal.control.offer],
       reward: {
@@ -579,6 +581,7 @@ describe('structured workspace biome presentation', () => {
     if (fieldsRail === undefined) throw new Error('H Fields decision rail entry is missing');
     // The rail keeps every cage reward, in cage order.
     expect(fieldsRail.selectedTarget).toEqual({
+      roomIcon: { kind: 'combat', biomeKey: 'H' },
       roomLabel: fieldsTarget.room.label,
       roomRewards: fieldsTarget.door.offerRewardSurface.rewards.map((reward) => reward.offer),
     });
@@ -603,6 +606,7 @@ describe('structured workspace biome presentation', () => {
     );
     if (fixedRail === undefined) throw new Error('O fixed decision rail entry is missing');
     expect(fixedRail.selectedTarget).toEqual({
+      roomIcon: { kind: 'combat', biomeKey: 'O' },
       roomLabel: fixedTarget.room.label,
       roomRewards: [fixedTarget.room.roomLocal.offer],
       reward: {
@@ -648,6 +652,7 @@ describe('structured workspace biome presentation', () => {
     expect(goalDecision.missingTargets).toEqual([]);
     expect(rail.selectedTarget).toEqual({
       clockworkGoalsRemaining: 5,
+      roomIcon: { kind: 'combat', biomeKey: 'I' },
       roomLabel: goalTarget.room.label,
       roomRewards: [],
     });

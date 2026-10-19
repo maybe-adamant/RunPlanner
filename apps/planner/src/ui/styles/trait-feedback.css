@@ -756,3 +756,9 @@ button.hex-tree-node[data-has-findings='true'] {
   width: 2.2rem;
   height: 2.2rem;
 }
+
+.route-resource-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}

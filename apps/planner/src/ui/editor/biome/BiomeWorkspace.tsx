@@ -1,10 +1,16 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { type ReactNode } from 'react';
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
+import { biomeIcon, fountainIcon } from '@planner/ui/artwork/roomArtwork';
+import { combatRoomArtwork } from '@planner/ui/artwork/combat-rooms/combatRoomArtwork';
+import { emptyRoomArtwork } from '@planner/ui/artwork/empty-rooms/emptyRoomArtwork';
+import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
+import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
+import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { noRewardArtwork } from '@planner/ui/artwork/no-reward/noRewardArtwork';
 
 import {
@@ -158,49 +164,52 @@ function RailMainReward({ reward }: { readonly reward: WorkspaceRailReward }) {
   );
 }
 
-/**
- * An additional exit shows its door art, a shop the Shop door and a Clockwork Goal its countdown;
- * several rewards show one icon each, and a room without any reward shows its biome's no-reward
- * door.
- */
-function RailTargetIcons({
-  biomeKey,
-  target,
-}: {
-  readonly biomeKey: string;
-  readonly target: WorkspaceRailSelectedTarget;
-}) {
-  const exitIcon = target.exitTypeKey === undefined ? undefined : doorArtwork[target.exitTypeKey];
-  if (exitIcon != null) return <ArtworkIcon className="biome-rail-reward-icon" source={exitIcon} />;
-  if (target.shop === true)
-    return <ArtworkIcon className="biome-rail-reward-icon" source={rewardIcon('Shop')} />;
+/** Shop, Clockwork countdown, each offered reward, or the biome's no-reward arrow. */
+function railRewardIcons(
+  biomeKey: string,
+  target: WorkspaceRailSelectedTarget,
+): readonly (ArtworkSource | undefined)[] {
+  // A shop room already shows Shop as its room icon.
+  if (target.shop === true) return target.roomIcon.kind === 'shop' ? [] : [rewardIcon('Shop')];
   if (target.clockworkGoalsRemaining !== undefined)
-    return (
-      <ArtworkIcon
-        className="biome-rail-reward-icon"
-        source={clockworkCountdownArtwork[String(target.clockworkGoalsRemaining)] ?? undefined}
-      />
-    );
-  if (target.roomRewards.length <= 1)
-    return (
-      <ArtworkIcon
-        className="biome-rail-reward-icon"
-        source={
-          target.roomRewards[0] === undefined
-            ? (noRewardArtwork[biomeKey] ?? undefined)
-            : offerIcon(target.roomRewards[0])
-        }
-      />
-    );
-  return (
-    <span aria-hidden="true" className="biome-rail-reward-row">
-      {target.roomRewards.map((offer, index) => (
-        <ArtworkIcon className="biome-rail-reward-icon" key={index} source={offerIcon(offer)} />
-      ))}
-    </span>
-  );
+    return [clockworkCountdownArtwork[String(target.clockworkGoalsRemaining)] ?? undefined];
+  if (target.roomRewards.length === 0) {
+    const arrow = noRewardArtwork[biomeKey];
+    return arrow == null ? [] : [arrow];
+  }
+  return target.roomRewards.map(offerIcon);
 }
 
+/** The room's own icon: its enemies, empty scene, object, miniboss, NPC or contract door. */
+function railRoomIcon(target: WorkspaceRailSelectedTarget): string | undefined {
+  const room = target.roomIcon;
+  switch (room.kind) {
+    case 'combat':
+      return combatRoomArtwork[room.biomeKey] ?? undefined;
+    case 'empty':
+      return emptyRoomArtwork[room.biomeKey] ?? undefined;
+    case 'fountain':
+      return fountainIcon(room.biomeKey);
+    case 'boss':
+      return bossIcon(room.biomeKey);
+    case 'shop':
+      return rewardIcon('Shop');
+    case 'chaos':
+      return traitGiverArtwork.Chaos ?? undefined;
+    case 'contract':
+      return target.exitTypeKey === undefined
+        ? undefined
+        : (doorArtwork[target.exitTypeKey] ?? undefined);
+    case 'miniboss':
+      return room.encounterDefinitionKey === undefined
+        ? undefined
+        : minibossIcon(room.encounterDefinitionKey);
+    case 'story':
+      return room.npcKey === undefined ? undefined : (npcArtwork[room.npcKey] ?? undefined);
+  }
+}
+
+/** `[room] Room · [reward] Reward`: each icon sits before the thing it describes. */
 function RailSelectedTarget({
   biomeKey,
   selectedTarget,
@@ -208,13 +217,21 @@ function RailSelectedTarget({
   readonly biomeKey: string;
   readonly selectedTarget: WorkspaceRailSelectedTarget;
 }) {
+  const rewardIcons = railRewardIcons(biomeKey, selectedTarget).map((icon, index) => (
+    <ArtworkIcon className="biome-rail-reward-icon" key={index} source={icon} />
+  ));
   return (
     <span className="biome-rail-selection">
-      <RailTargetIcons biomeKey={biomeKey} target={selectedTarget} />
+      <ArtworkIcon className="biome-rail-reward-icon" source={railRoomIcon(selectedTarget)} />
       {selectedTarget.roomLabel}
-      {selectedTarget.reward === undefined ? null : (
+      {selectedTarget.reward === undefined ? (
+        rewardIcons.length === 0 ? null : (
+          <> {rewardIcons}</>
+        )
+      ) : (
         <>
           {' · '}
+          {rewardIcons}
           <span className="biome-rail-reward">{selectedTarget.reward.label}</span>
         </>
       )}
@@ -542,7 +559,7 @@ export function BiomeWorkspace({
         <header className="biome-structure-heading">
           <div className="biome-structure-title">
             <div className="biome-structure-title-row">
-              <ArtworkIcon className="biome-boss-icon" source={bossIcon(biome.biomeKey)} />
+              <ArtworkIcon className="biome-boss-icon" source={biomeIcon(biome.biomeKey)} />
               <h2>{biome.label}</h2>
               {clearTopology === undefined ? null : (
                 <TopologyRemovalAction

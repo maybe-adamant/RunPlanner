@@ -721,6 +721,7 @@ export function assembleWorkspaceOccurrence(
               return Object.freeze({
                 address: createRoomFeatureAddress(address, { kind: 'resource', family }),
                 family,
+                ...(rule?.element === undefined ? {} : { element: rule.element }),
                 label: resourceOutcomeLabel(family, rule?.element),
                 marker: input.markerDestinations.marker(
                   createRoomFeatureAddress(address, { kind: 'resource', family }),

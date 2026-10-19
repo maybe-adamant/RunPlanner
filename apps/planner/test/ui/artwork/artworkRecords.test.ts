@@ -1,11 +1,20 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
+import { biomeArtwork } from '@planner/ui/artwork/biomes/biomeArtwork';
+import { combatRoomArtwork } from '@planner/ui/artwork/combat-rooms/combatRoomArtwork';
+import { emptyRoomArtwork } from '@planner/ui/artwork/empty-rooms/emptyRoomArtwork';
 import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
 import { boonArtwork } from '@planner/ui/artwork/boons/boonArtwork';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
 import { chaosArtwork } from '@planner/ui/artwork/chaos/chaosArtwork';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { elementArtwork } from '@planner/ui/artwork/elements/elementArtwork';
+import { encounterArtwork } from '@planner/ui/artwork/encounters/encounterArtwork';
+import { fountainArtwork } from '@planner/ui/artwork/fountains/fountainArtwork';
+import { hubFountainArtwork } from '@planner/ui/artwork/hub-fountains/hubFountainArtwork';
+import { otherTraitArtwork } from '@planner/ui/artwork/other-traits/otherTraitArtwork';
+import { roomObjectArtwork } from '@planner/ui/artwork/room-objects/roomObjectArtwork';
+import { gatheringToolArtwork } from '@planner/ui/artwork/tools/gatheringToolArtwork';
 import { enemyArtwork } from '@planner/ui/artwork/enemies/enemyArtwork';
 import { fangsPerkArtwork } from '@planner/ui/artwork/fangs/fangsPerkArtwork';
 import { hammerArtwork } from '@planner/ui/artwork/hammers/hammerArtwork';
@@ -86,6 +95,14 @@ const fangsPerkKeys = selections.flatMap((selection) =>
     : [],
 );
 
+const coveredTraitKeys = new Set([
+  ...catalog.traitGivers.values.flatMap((g) => g.traitKeys),
+  ...[...catalog.chaos.blessings.values, ...catalog.chaos.curses.values].map((x) => x.key),
+  ...catalog.hexes.values.map((h) => h.spellTraitKey),
+  ...catalog.arcanaCards.values.map((a) => a.traitKey),
+  ...catalog.rewards.rewardTypes.values.map((r) => r.gameName),
+]);
+
 const roomShop = catalog.rewards.shops.values.find((s) => s.key === 'RoomShop');
 
 // Each record lists every catalog key in its category, with an icon or an explicit null.
@@ -118,6 +135,9 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
   ['npcs', npcArtwork, npcKeys],
   ['no-reward', noRewardArtwork, catalog.biomes.values.map((b) => b.key)],
   ['bosses', bossArtwork, catalog.biomes.values.map((b) => b.key)],
+  ['biomes', biomeArtwork, catalog.biomes.values.map((b) => b.key)],
+  ['combat-rooms', combatRoomArtwork, catalog.biomes.values.map((b) => b.key)],
+  ['empty-rooms', emptyRoomArtwork, catalog.biomes.values.map((b) => b.key)],
   ['doors', doorArtwork, catalog.exitTypes.values.map((e) => e.key)],
   ['enemies', enemyArtwork, enemyKeys],
   [
@@ -126,6 +146,34 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
     catalog.encounterDefinitions.values.filter((d) => d.kind === 'miniboss').map((d) => d.key),
   ],
   ['fangs', fangsPerkArtwork, fangsPerkKeys],
+  [
+    'room-objects',
+    roomObjectArtwork,
+    ['stygianWell', 'purgingPool', 'hermesShrine', 'keepsakeRack'],
+  ],
+  ['fountains', fountainArtwork, catalog.biomes.values.map((b) => b.key)],
+  [
+    'hub-fountains',
+    hubFountainArtwork,
+    catalog.rooms.values.filter((r) => r.kind === 'Hub').map((r) => r.roomSetKey),
+  ],
+  [
+    'tools',
+    gatheringToolArtwork,
+    catalog.rooms.values.flatMap((r) => r.resourcePointSupport?.families ?? []),
+  ],
+  [
+    'encounters',
+    encounterArtwork,
+    catalog.encounterDefinitions.values
+      .filter((d) => d.kind === 'combat' && d.npcPresentationKey === 'Arachne')
+      .map((d) => d.key),
+  ],
+  [
+    'other-traits',
+    otherTraitArtwork,
+    catalog.traits.values.filter((t) => !coveredTraitKeys.has(t.key)).map((t) => t.key),
+  ],
 ];
 
 describe('artwork records', () => {

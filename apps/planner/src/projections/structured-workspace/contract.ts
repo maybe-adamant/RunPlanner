@@ -599,6 +599,8 @@ export interface WorkspaceRoomSummary {
   readonly resources?: readonly {
     readonly address: RoomFeatureAddress;
     readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
+    /** The element a success grants here, from the room's declared rule. */
+    readonly element?: 'Fire' | 'Air' | 'Earth' | 'Water';
     readonly label: string;
     readonly marker: WorkspaceMarker;
     readonly action: 'add' | 'move' | 'remove';

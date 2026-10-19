@@ -4,6 +4,8 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceRoomFeature,
 } from '@planner/projections/structured-workspace';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import type { WorkspacePurgingPoolSlotInteraction } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
@@ -76,6 +78,10 @@ export function RoomInventoryPanel({
                   }
                   type="checkbox"
                 />
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={roomObjectIcon('stygianWell')}
+                />
                 <span>Stygian Well</span>
               </label>
               {feature.interactionKey === undefined
@@ -127,6 +133,10 @@ export function RoomInventoryPanel({
             <div className="room-feature-interaction-header">
               <label className="room-feature-presence-row">
                 <input aria-label="Pool of Purging" checked disabled type="checkbox" />
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={roomObjectIcon('purgingPool')}
+                />
                 <span>Pool of Purging</span>
               </label>
               <label className="room-feature-interact-toggle">
@@ -257,6 +267,7 @@ export function RoomInventoryPanel({
                 }
                 type="checkbox"
               />
+              <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('hermesShrine')} />
               <span>Hermes Shrine</span>
             </label>
             {feature.slots.map((slot) => {

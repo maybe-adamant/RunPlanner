@@ -2395,3 +2395,9 @@
   align-items: center;
   gap: 0.35rem;
 }
+
+.hub-fountain-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}

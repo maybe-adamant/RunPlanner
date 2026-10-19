@@ -7,6 +7,8 @@ import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { elementIcon, gatheringToolIcon } from '@planner/ui/artwork/roomArtwork';
 
 export function RoomResourceControls({
   interactions,
@@ -37,7 +39,14 @@ export function RoomResourceControls({
               }
               type="checkbox"
             />
+            <ArtworkIcon
+              className="artwork-label-icon"
+              source={gatheringToolIcon(resource.family)}
+            />
             <span>{resource.label}</span>
+            {resource.element === undefined ? null : (
+              <ArtworkIcon className="artwork-label-icon" source={elementIcon(resource.element)} />
+            )}
           </label>
           {resource.action === 'move' && resource.currentPlacement !== undefined ? (
             <span className="resource-placement-disclosure">

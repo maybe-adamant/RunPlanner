@@ -1,3 +1,5 @@
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import * as Popover from '@radix-ui/react-popover';
 import { useRef, useState } from 'react';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
@@ -128,6 +130,10 @@ export function RunStartPointModifier({
                     aria-labelledby={`${id}-${row.biomeKey}`}
                   >
                     <span id={`${id}-${row.biomeKey}`} className="route-start-point-biome">
+                      <ArtworkIcon
+                        className="artwork-label-icon"
+                        source={biomeIcon(row.biomeKey)}
+                      />
                       {row.label}
                     </span>
                     {row.options.map((option) => (

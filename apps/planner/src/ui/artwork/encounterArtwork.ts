@@ -1,4 +1,5 @@
 import { enemyArtwork } from './enemies/enemyArtwork';
+import { encounterArtwork } from './encounters/encounterArtwork';
 import { fangsPerkArtwork } from './fangs/fangsPerkArtwork';
 import { minibossArtwork } from './minibosses/minibossArtwork';
 
@@ -15,4 +16,9 @@ export function fangsPerkIcon(perkKey: string | undefined): string | undefined {
 /** A miniboss encounter's icon by its native encounter declaration key. */
 export function minibossIcon(definitionKey: string): string | undefined {
   return minibossArtwork[definitionKey] ?? undefined;
+}
+
+/** An encounter's own icon by native encounter declaration key, ahead of its NPC portrait. */
+export function encounterIcon(definitionKey: string): string | undefined {
+  return encounterArtwork[definitionKey] ?? undefined;
 }
