@@ -637,6 +637,8 @@ export interface WorkspaceRoomSummary {
       readonly marker: WorkspaceMarker;
     };
     readonly marker: WorkspaceMarker;
+    /** The keepsake held arriving at the rack, when the room's Run State is known. */
+    readonly heldKeepsake?: { readonly key: string; readonly label: string };
     readonly selectedKeepsakeKey?: string;
     /** A keepsake retained where the route has no rack; it can only be removed. */
     readonly unavailableReason?: 'rackUnavailableOnRoute';

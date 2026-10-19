@@ -57,52 +57,20 @@ function commitEquipResult(
   }
 }
 
-export function KeepsakeSelectionPicker({
-  disabledHint,
-  id,
-  interaction,
-  label,
-}: {
-  readonly disabledHint?: string;
-  readonly id: string;
-  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
-  readonly label: string;
-}) {
-  const findingTarget = useFindingTarget();
-  const executeIntent = useCommandIntent();
-  const projection = useWorkspaceInteraction(interaction);
-  return (
-    <ContextualPicker
-      {...(disabledHint === undefined ? {} : { disabledHint })}
-      findingTarget={findingTarget(interaction.owner, id)}
-      id={id}
-      label={label}
-      layout="inline"
-      loading={projection.pending}
-      model={projection.result ?? emptyModel}
-      onOpenChange={(open) => {
-        if (open) projection.activate();
-      }}
-      onSelect={(keepsakeKey) => {
-        executeIntent(interaction.replaceIntent(keepsakeKey));
-      }}
-      placeholder={interaction.selectedLabel}
-      {...(interaction.selectedLabel === undefined
-        ? {}
-        : { triggerLabel: interaction.selectedLabel })}
-    />
-  );
-}
-
 /** A rack launcher whose dialog also holds the held keepsake's equip-result controls. */
 export function KeepsakeSelectionLauncher({
+  disabledHint,
   equipResults,
+  held,
   id,
   interaction,
   label,
   unavailableHint,
 }: {
+  readonly disabledHint?: string;
   readonly equipResults: readonly WorkspaceKeepsakeEquipResultInteraction[];
+  /** The keepsake held arriving at a rack; choosing it again keeps it with no swap. */
+  readonly held?: { readonly key: string; readonly label: string };
   readonly id: string;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
   readonly label: string;
@@ -118,19 +86,36 @@ export function KeepsakeSelectionLauncher({
     // A selection replaces the interaction; reload the rack while the dialog stays open.
     if (open) activate();
   }, [activate, open]);
+  const shownKey = interaction.selectedKeepsakeKey ?? held?.key;
   const entries = new Map<string, KeepsakeRackEntry>();
   for (const section of projection.result?.sections ?? [])
     for (const item of section.items) {
       if (entries.has(item.value)) continue;
       const refused = unavailableHint?.(item.value);
+      // The held keepsake stays choosable: choosing it keeps it.
+      const keeps = item.value === held?.key;
       entries.set(item.value, {
         key: item.value,
         label: item.label,
-        selected: item.value === interaction.selectedKeepsakeKey,
-        disabled: item.disabled || refused !== undefined,
+        selected: item.value === shownKey,
+        disabled: !keeps && (item.disabled || refused !== undefined),
         hint: refused ?? item.explanation,
       });
     }
+  if (held !== undefined && projection.result !== undefined && !entries.has(held.key))
+    entries.set(held.key, { ...held, selected: held.key === shownKey, disabled: false });
+  const select = (keepsakeKey: string) => {
+    if (keepsakeKey !== held?.key) executeIntent(interaction.replaceIntent(keepsakeKey));
+    else if (
+      interaction.selectedKeepsakeKey !== undefined &&
+      interaction.removeIntent !== undefined
+    )
+      executeIntent(interaction.removeIntent());
+  };
+  const shownLabel =
+    interaction.selectedKeepsakeKey === undefined && held !== undefined
+      ? held.label
+      : interaction.selectedLabel;
   const target = equipResults.find((result) => result.value !== undefined)?.selectedLabel;
   return (
     <>
@@ -142,11 +127,12 @@ export function KeepsakeSelectionLauncher({
           undefined,
           equipResults.map((result) => result.owner),
         )}
+        {...(disabledHint === undefined ? {} : { disabledHint })}
         id={id}
-        keepsakeKey={interaction.selectedKeepsakeKey}
+        keepsakeKey={shownKey}
         label={label}
         onOpen={() => setOpen(true)}
-        text={`${interaction.selectedLabel}${target === undefined ? '' : ` → ${target}`}`}
+        text={`${shownLabel}${target === undefined ? '' : ` → ${target}`}`}
       />
       {open ? (
         <KeepsakeRackDialog
@@ -160,7 +146,7 @@ export function KeepsakeSelectionLauncher({
           entries={[...entries.values()]}
           loading={projection.pending}
           onClose={() => setOpen(false)}
-          onSelect={(keepsakeKey) => executeIntent(interaction.replaceIntent(keepsakeKey))}
+          onSelect={select}
           returnFocusId={id}
           title={label}
         />

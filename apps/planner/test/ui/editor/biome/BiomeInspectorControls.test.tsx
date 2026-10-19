@@ -690,36 +690,47 @@ describe('Biome inspector controls', () => {
     expect(authored()?.figurineArcanaKeysByPhase?.Encounter ?? []).toHaveLength(0);
   });
 
-  it('binds the reached Postboss keepsake selector through replacement and deletion', async () => {
+  it('binds the reached Postboss keepsake rack: the held keepsake is no swap, another is a swap', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const owner = createPostbossKeepsakeSelectionAddress(
       createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss')),
     );
-    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    const optional = within(timeline).getByRole('region', { name: 'Optional actions' });
-    const rack = within(optional).getByRole('listitem', { name: 'Keepsake Rack' });
-    const selector = within(rack).getByRole('button', { name: 'Choose Keepsake' });
-    fireEvent.click(selector);
-    const keepsakeList = screen.getByRole('listbox');
-    await waitFor(() =>
-      expect(
-        within(keepsakeList)
-          .getByText('Knuckle Bones')
-          .closest('[cmdk-item]')
-          ?.getAttribute('data-candidate-state'),
-      ).toBe('possible'),
-    );
-    fireEvent.click(within(keepsakeList).getByText('Knuckle Bones'));
-    expect(
+    const postboss = () =>
       view.application.store
         .getState()
         .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.topology?.occurrences.find(
           (occurrence) =>
             occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
-        )?.keepsakeRack,
-    ).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
+        );
+    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    const optional = within(timeline).getByRole('region', { name: 'Optional actions' });
+    const rack = within(optional).getByRole('listitem', { name: 'Keepsake Rack' });
+    const launcher = within(rack).getByRole('button', { name: 'Choose Keepsake' });
+    // The launcher always shows the keepsake held at the rack.
+    const held = launcher.textContent!;
+    expect(held).not.toBe('');
+    const openRack = async (button: HTMLElement) => {
+      fireEvent.click(button);
+      const dialog = screen.getByRole('dialog', { name: 'Choose Keepsake' });
+      return within(dialog).findByRole('group', { name: 'Keepsakes' });
+    };
+    let cards = await openRack(launcher);
+    expect(within(cards).getByRole('button', { name: held }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    fireEvent.click(within(cards).getByRole('button', { name: held }));
+    expect(postboss()?.keepsakeRack).toBeUndefined();
+    await waitFor(() =>
+      expect(
+        within(cards).getByRole('button', { name: 'Knuckle Bones' }).getAttribute('aria-disabled'),
+      ).toBeNull(),
+    );
+    fireEvent.click(within(cards).getByRole('button', { name: 'Knuckle Bones' }));
+    expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
+    // The swap moves the rack from the optional actions into the timeline.
+    expect(screen.queryByRole('dialog', { name: 'Choose Keepsake' })).toBeNull();
     await waitFor(() =>
       expect(within(timeline).getByRole('button', { name: 'Move Change Keepsake' })).toBeTruthy(),
     );
@@ -727,42 +738,39 @@ describe('Biome inspector controls', () => {
       within(timeline).getByText('Change Keepsake').closest('[data-in-order="true"]'),
     ).not.toBeNull();
     expect(within(timeline).queryByRole('listitem', { name: 'Keepsake Rack' })).toBeNull();
-    const orderBeforeChange = view.application.store
-      .getState()
-      .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
-      ?.topology?.occurrences.find(
-        (occurrence) =>
-          occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
-      )?.roomActions.order;
-    fireEvent.click(within(timeline).getByRole('button', { name: 'Choose Keepsake' }));
-    fireEvent.click(within(screen.getByRole('listbox')).getByText('Evil Eye'));
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.topology?.occurrences.find(
-          (occurrence) =>
-            occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
-        )?.roomActions.order,
-    ).toEqual(orderBeforeChange);
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.topology?.occurrences.find(
-          (occurrence) =>
-            occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
-        )?.keepsakeRack,
-    ).toEqual({ keepsakeKey: 'DeathVengeanceKeepsake' });
-    fireEvent.click(within(timeline).getByRole('button', { name: 'Choose Keepsake' }));
-    fireEvent.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
-    const keepsakeAction = within(timeline)
-      .getByText('Change Keepsake')
-      .closest<HTMLElement>('[data-in-order="true"]');
-    expect(keepsakeAction).not.toBeNull();
-    if (keepsakeAction === null) throw new Error('keepsake action row is absent');
-    expect(within(keepsakeAction).getByRole('button', { name: 'Choose Keepsake' })).toBeTruthy();
-    expect(within(keepsakeAction).getByRole('button', { name: 'Target' })).toBeTruthy();
+    const orderBeforeChange = postboss()?.roomActions.order;
+    const authoredLauncher = () =>
+      within(timeline).getByRole('button', { name: 'Choose Keepsake' });
+    expect(authoredLauncher().textContent).toBe('Knuckle Bones');
+    cards = await openRack(authoredLauncher());
+    fireEvent.click(within(cards).getByRole('button', { name: 'Evil Eye' }));
+    expect(postboss()?.roomActions.order).toEqual(orderBeforeChange);
+    expect(postboss()?.keepsakeRack).toEqual({ keepsakeKey: 'DeathVengeanceKeepsake' });
+    // Choosing the held keepsake again removes the authored swap.
+    fireEvent.click(within(cards).getByRole('button', { name: held }));
+    expect(postboss()?.keepsakeRack).toBeUndefined();
+
+    cards = await openRack(
+      within(within(timeline).getByRole('listitem', { name: 'Keepsake Rack' })).getByRole(
+        'button',
+        { name: 'Choose Keepsake' },
+      ),
+    );
+    fireEvent.click(within(cards).getByRole('button', { name: 'Jeweled Pom' }));
+    const keepsakeAction = await waitFor(() => {
+      const row = within(timeline)
+        .getByText('Change Keepsake')
+        .closest<HTMLElement>('[data-in-order="true"]');
+      if (row === null) throw new Error('keepsake action row is absent');
+      return row;
+    });
+    const pomLauncher = within(keepsakeAction).getByRole('button', { name: 'Choose Keepsake' });
+    expect(pomLauncher.textContent).toBe('Jeweled Pom');
+    // The Pom target sits in the dialog's strip.
+    await openRack(pomLauncher);
+    const dialog = screen.getByRole('dialog', { name: 'Choose Keepsake' });
+    expect(await within(dialog).findByRole('button', { name: 'Jeweled Pom result' })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
     const removeKeepsake = within(timeline).getByRole('button', {
       name: 'Remove Change Keepsake from timeline',
     });
@@ -804,16 +812,17 @@ describe('Biome inspector controls', () => {
       within(timeline).getByRole('region', { name: 'Optional actions' }),
     ).getByRole('listitem', { name: 'Keepsake Rack' });
     fireEvent.click(within(optionalRack).getByRole('button', { name: 'Choose Keepsake' }));
-    const keepsakes = screen.getByRole('listbox');
+    const keepsakes = await within(
+      screen.getByRole('dialog', { name: 'Choose Keepsake' }),
+    ).findByRole('group', { name: 'Keepsakes' });
     await waitFor(() =>
       expect(
         within(keepsakes)
-          .getByText('Aromatic Phial')
-          .closest('[cmdk-item]')
-          ?.getAttribute('data-candidate-state'),
-      ).toBe('possible'),
+          .getByRole('button', { name: 'Aromatic Phial' })
+          .getAttribute('aria-disabled'),
+      ).toBeNull(),
     );
-    fireEvent.click(within(keepsakes).getByText('Aromatic Phial'));
+    fireEvent.click(within(keepsakes).getByRole('button', { name: 'Aromatic Phial' }));
     fireEvent.click(await within(timeline).findByRole('button', { name: 'Move Change Keepsake' }));
     fireEvent.click(await screen.findByRole('option', { name: /Before Use Fountain/ }));
 

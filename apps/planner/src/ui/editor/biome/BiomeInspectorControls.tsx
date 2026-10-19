@@ -8,6 +8,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
+  type WorkspaceKeepsakeEquipResultInteraction,
   type WorkspaceKeepsakeSelectionInteraction,
   type WorkspaceNode,
   type WorkspaceRoomLifecycleBoundary,
@@ -31,25 +32,32 @@ import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { TimelineRow } from './TimelineRow';
 import type { TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { BiomeWorkspaceContractError } from './workspaceContract';
-import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
+import { KeepsakeEquipResultPicker, KeepsakeSelectionLauncher } from '../KeepsakePickers';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
 });
 
+/** A Postboss rack: it shows the keepsake held there, arriving or swapped in. */
 function PostbossKeepsakeControl({
   disabledHint,
+  equipResult,
   hideLabel = false,
   interaction,
+  selection,
 }: {
   readonly disabledHint?: string;
+  readonly equipResult?: WorkspaceKeepsakeEquipResultInteraction;
   readonly hideLabel?: boolean;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
+  readonly selection: NonNullable<WorkspaceRoomSummary['keepsakeSelection']>;
 }) {
   return (
     <div className="room-keepsake-control" data-label-hidden={hideLabel || undefined}>
-      <KeepsakeSelectionPicker
+      <KeepsakeSelectionLauncher
         {...(disabledHint === undefined ? {} : { disabledHint })}
+        equipResults={equipResult === undefined ? [] : [equipResult]}
+        {...(selection.heldKeepsake === undefined ? {} : { held: selection.heldKeepsake })}
         id={`postboss-keepsake-${interaction.key}`}
         interaction={interaction}
         label="Choose Keepsake"
@@ -81,16 +89,11 @@ function KeepsakeRackTimelineContent({
         {...(interaction.unavailableReason === undefined
           ? {}
           : { disabledHint: 'No Keepsake Rack on this route.' })}
+        {...(equipResult === undefined ? {} : { equipResult })}
         hideLabel
         interaction={interaction}
+        selection={selection}
       />
-      {equipResult === undefined ? null : (
-        <KeepsakeEquipResultPicker
-          id={`${equipResult.owner.resultKind}-${equipResult.key}`}
-          interaction={equipResult}
-          label="Target"
-        />
-      )}
     </div>
   );
 }
@@ -296,7 +299,7 @@ export function inspectorOptionalRoomActionContent(
   return (
     <TimelineRow
       aria-label="Keepsake Rack"
-      editors={<PostbossKeepsakeControl interaction={interaction} />}
+      editors={<PostbossKeepsakeControl interaction={interaction} selection={selection} />}
       kind="action"
       label={<strong>Keepsake Rack</strong>}
       ordinal="—"

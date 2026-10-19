@@ -20,7 +20,7 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import {
   KeepsakeEquipResultPicker,
-  KeepsakeSelectionPicker,
+  KeepsakeSelectionLauncher,
 } from '@planner/ui/editor/KeepsakePickers';
 
 afterEach(() => {
@@ -138,7 +138,7 @@ describe('KeepsakeEquipResultPicker', () => {
   });
 });
 
-describe('KeepsakeSelectionPicker', () => {
+describe('KeepsakeSelectionLauncher', () => {
   it('dispatches its selection through the bound intent, including its declared focus', async () => {
     const application = createApplication();
     const dispatch = vi
@@ -163,13 +163,18 @@ describe('KeepsakeSelectionPicker', () => {
     };
     render(
       <Provider store={application.store}>
-        <KeepsakeSelectionPicker id="keepsake" interaction={interaction} label="Keepsake" />
+        <KeepsakeSelectionLauncher
+          equipResults={[]}
+          id="keepsake"
+          interaction={interaction}
+          label="Keepsake"
+        />
       </Provider>,
     );
     const user = userEvent.setup();
     await user.click(document.getElementById('keepsake')!);
     dispatch.mockClear();
-    await user.click(await screen.findByRole('option', { name: /Silver Wheel/ }));
+    await user.click(await screen.findByRole('button', { name: 'Silver Wheel' }));
     expect(dispatch.mock.calls.map(([action]) => action)).toEqual([
       authoredProjectCommandDispatched(command as never),
       semanticOwnerFocused(owner),
