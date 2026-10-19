@@ -9,8 +9,16 @@ import type { Catalog, TraitGiverDeclaration } from '@run-planner/engine/catalog
 import type { WorkspaceLauncherPresentation } from '../contracts/traits';
 
 /** The detail appears only when a chosen value exists to restate in full. */
-function presentation(label: string, detail?: string): WorkspaceLauncherPresentation {
-  return Object.freeze(detail === undefined ? { label } : { label, detail });
+function presentation(
+  label: string,
+  detail?: string,
+  traitKey?: string,
+): WorkspaceLauncherPresentation {
+  return Object.freeze({
+    label,
+    ...(detail === undefined ? {} : { detail }),
+    ...(traitKey === undefined ? {} : { traitKey }),
+  });
 }
 
 function traitLabel(catalog: Catalog, traitKey: string): string {
@@ -34,6 +42,7 @@ export function traitOfferLauncherPresentation(
     return presentation(
       `Edit Chaos · ${curse} → ${blessing}`,
       `${curse} → ${blessing} · ${offer.rarity}`,
+      curseKey,
     );
   }
   const kind = giver.providerKind === 'spell' ? 'Hex' : 'Trait';
@@ -46,6 +55,7 @@ export function traitOfferLauncherPresentation(
   return presentation(
     `Edit ${kind} · ${label}`,
     `${giver.label}: ${label}${selected.rarity === undefined ? '' : ` · ${selected.rarity}`}`,
+    selected.traitKey,
   );
 }
 
@@ -66,6 +76,7 @@ export function levelResolutionLauncherPresentation(
     `${label}${
       levelCount === undefined ? '' : ` gains ${levelCount} level${levelCount === 1 ? '' : 's'}`
     }`,
+    target,
   );
 }
 

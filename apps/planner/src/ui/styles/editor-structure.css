@@ -1124,3 +1124,24 @@ select {
 .contextual-picker-popover [cmdk-root]:focus {
   outline: none;
 }
+
+/* An icon slot before a name in read-only rows and outcome views. */
+.artwork-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.artwork-label-icon {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.artwork-label-icon-small {
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  vertical-align: middle;
+}

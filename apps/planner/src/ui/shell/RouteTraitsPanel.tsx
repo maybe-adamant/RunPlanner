@@ -3,6 +3,9 @@ import { useAppDispatch } from '@planner/state/store';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import type { RouteTraitOfferProjection } from '@planner/projections/rewards/traitProjection';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 
 export function RouteTraitsPanel({
   interactions,
@@ -32,19 +35,30 @@ export function RouteTraitsPanel({
             }`;
             return (
               <li className="route-trait-row" key={row.interactionKey}>
-                <div>
-                  <strong>{row.selectedTraitLabel}</strong>
-                  <span className="route-trait-meta">
-                    {row.biomeKey} · {row.locationLabel} · {row.giverLabel}
-                    {row.rarity === undefined ? '' : ` · ${row.rarity}`}
-                  </span>
-                  {row.selectedReplacement === undefined ? null : (
-                    <span className="route-trait-replacement">
-                      Replaces {row.selectedReplacement.replacedTraitLabel} ·{' '}
-                      {row.selectedReplacement.oldRarity} to{' '}
-                      {row.selectedReplacement.requiredRarity}
+                <div className="route-trait-row-body">
+                  <ArtworkIcon
+                    className="route-trait-icon"
+                    source={traitIcon(row.selectedTraitKey)}
+                  />
+                  <div>
+                    <strong>{row.selectedTraitLabel}</strong>
+                    <span className="route-trait-meta">
+                      {row.biomeKey} · {row.locationLabel} ·{' '}
+                      <ArtworkIcon
+                        className="artwork-label-icon-small"
+                        source={traitGiverArtwork[row.giverKey] ?? undefined}
+                      />{' '}
+                      {row.giverLabel}
+                      {row.rarity === undefined ? '' : ` · ${row.rarity}`}
                     </span>
-                  )}
+                    {row.selectedReplacement === undefined ? null : (
+                      <span className="route-trait-replacement">
+                        Replaces {row.selectedReplacement.replacedTraitLabel} ·{' '}
+                        {row.selectedReplacement.oldRarity} to{' '}
+                        {row.selectedReplacement.requiredRarity}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button
                   aria-label={editLabel}

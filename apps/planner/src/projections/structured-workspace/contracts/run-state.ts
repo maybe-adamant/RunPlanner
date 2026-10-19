@@ -54,9 +54,23 @@ export interface WorkspaceRunStateSection {
 }
 
 /** `Name (bracket)` on the left, `right` in the fixed right column. */
+/** The catalog entity a row names, so the view can show its icon. */
+export type WorkspaceRunStateRowSubject =
+  | { readonly kind: 'trait'; readonly key: string }
+  | { readonly kind: 'chaosBlessing'; readonly key: string }
+  | { readonly kind: 'hexTalent'; readonly key: string }
+  | { readonly kind: 'keepsake'; readonly key: string }
+  | { readonly kind: 'aspect'; readonly key: string }
+  | { readonly kind: 'familiar'; readonly key: string }
+  | { readonly kind: 'rewardType'; readonly key: string }
+  | { readonly kind: 'wellItem'; readonly key: string }
+  | { readonly kind: 'arcanaCard'; readonly key: string }
+  | { readonly kind: 'fearVow'; readonly key: string };
+
 export interface WorkspaceRunStateRow {
   readonly key: string;
   readonly name: string;
+  readonly subject?: WorkspaceRunStateRowSubject;
   /** Already-formatted clock or current value, including its parentheses. */
   readonly bracket?: string;
   /** Rarity, level, rank or a plain value. */

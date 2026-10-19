@@ -51,3 +51,32 @@ export const arcanaArtwork: Readonly<Record<string, string>> = {
   EpicRarityBoost: card24,
   CardDraw: card25,
 };
+
+/** Arcana card icons by the catalog trait key each card grants. */
+export const arcanaTraitArtwork: Readonly<Record<string, string>> = {
+  ChannelSlowMetaUpgrade: card1,
+  DoorHealMetaUpgrade: card2,
+  LowManaDamageMetaupgrade: card3,
+  CastDamageMetaUpgrade: card4,
+  SorceryRegenMetaUpgrade: card5,
+  InsideCastBuffMetaUpgrade: card6,
+  HealthManaBonusMetaUpgrade: card7,
+  DodgeBonusMetaUpgrade: card8,
+  ManaOverTimeMetaUpgrade: card9,
+  MagicCritMetaUpgrade: card10,
+  SprintShieldMetaUpgrade: card11,
+  LastStandSlowTimeMetaUpgrade: card12,
+  ChamberHealthMetaUpgrade: card13,
+  EffectVulnerabilityMetaUpgrade: card14,
+  BossShieldMetaUpgrade: card15,
+  DoorRerollMetaUpgrade: card16,
+  StartingGoldMetaUpgrade: card17,
+  MetaToRunMetaUpgrade: card18,
+  RarityBoostMetaUpgrade: card19,
+  DuoRarityBoostMetaUpgrade: card20,
+  RerollTradeOffMetaUpgrade: card21,
+  PanelRerollMetaUpgrade: card22,
+  LowHealthBuffMetaUpgrade: card23,
+  EpicRarityBoostMetaUpgrade: card24,
+  BossProgressionMetaUpgrade: card25,
+};

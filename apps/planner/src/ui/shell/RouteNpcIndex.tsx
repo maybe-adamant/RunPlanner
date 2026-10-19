@@ -4,6 +4,8 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import type { RouteNpcIndex as RouteNpcIndexProjection } from '@planner/projections/routeNpcIndex';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 
 /** Read-only route history index; editing remains in the exact room workbench. */
 export function RouteNpcIndex({
@@ -31,7 +33,14 @@ export function RouteNpcIndex({
               className="route-npc-index-group"
               key={group.presentationKey}
             >
-              <h3 id={`route-npc-index-${encodeURIComponent(group.presentationKey)}`}>
+              <h3
+                className="artwork-label"
+                id={`route-npc-index-${encodeURIComponent(group.presentationKey)}`}
+              >
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={npcArtwork[group.presentationKey] ?? undefined}
+                />
                 {group.presentationKey}
               </h3>
               <ol>

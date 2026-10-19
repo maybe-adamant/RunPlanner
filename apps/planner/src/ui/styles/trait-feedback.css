@@ -743,3 +743,16 @@ button.hex-tree-node[data-has-findings='true'] {
   color: var(--muted);
   margin: 0;
 }
+
+.route-trait-row-body {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.route-trait-icon {
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+}

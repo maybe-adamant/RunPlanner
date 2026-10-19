@@ -19,6 +19,7 @@ import type {
   WorkspaceRunStateBagSection,
   WorkspaceRunStatePresentation,
   WorkspaceRunStateRow,
+  WorkspaceRunStateRowSubject,
   WorkspaceRunStateSection,
 } from '../contracts/run-state';
 
@@ -375,11 +376,16 @@ function percentBracket(fraction: number, signed: boolean): string {
 function row(
   key: string,
   name: string,
-  parts: { readonly bracket?: string; readonly right?: string } = {},
+  parts: {
+    readonly bracket?: string;
+    readonly right?: string;
+    readonly subject?: WorkspaceRunStateRowSubject;
+  } = {},
 ): WorkspaceRunStateRow {
   return Object.freeze({
     key,
     name,
+    ...(parts.subject === undefined ? {} : { subject: Object.freeze(parts.subject) }),
     ...(parts.bracket === undefined ? {} : { bracket: parts.bracket }),
     ...(parts.right === undefined || parts.right === '' ? {} : { right: parts.right }),
   });
@@ -445,7 +451,10 @@ function traitRow(catalog: Catalog, snapshot: RunStateSnapshot, traitKey: string
   const infusionState =
     catalog.traits.byKey[traitKey]?.unityTrait === true ? infusionRight(state) : undefined;
   if (infusionState !== undefined)
-    return row(`trait:${traitKey}`, traitLabel(catalog, traitKey), { right: infusionState });
+    return row(`trait:${traitKey}`, traitLabel(catalog, traitKey), {
+      right: infusionState,
+      subject: { kind: 'trait', key: traitKey },
+    });
   const decay = equipped.roomDecay;
   return row(`trait:${traitKey}`, traitLabel(catalog, traitKey), {
     ...(state !== undefined
@@ -454,6 +463,7 @@ function traitRow(catalog: Catalog, snapshot: RunStateSnapshot, traitKey: string
         ? { bracket: percentBracket(decay.fraction, false) }
         : {}),
     right: traitRight(equipped),
+    subject: { kind: 'trait', key: traitKey },
   });
 }
 
@@ -484,11 +494,16 @@ function loadoutRows(
       : [
           row('aspect', catalog.aspects.byKey[aspect.aspectKey]?.label ?? aspect.aspectKey, {
             right: aspectRanks[aspect.rank],
+            subject: { kind: 'aspect', key: aspect.aspectKey },
           }),
         ]),
     ...(familiarKey === undefined
       ? []
-      : [row('familiar', catalog.familiars.byKey[familiarKey]?.label ?? familiarKey)]),
+      : [
+          row('familiar', catalog.familiars.byKey[familiarKey]?.label ?? familiarKey, {
+            subject: { kind: 'familiar', key: familiarKey },
+          }),
+        ]),
   ]);
 }
 
@@ -512,6 +527,7 @@ function overviewSections(
         return [
           row(`consumed:${entry.acquisitionIdentity}`, traitLabel(catalog, entry.traitKey), {
             bracket: '(Consumed)',
+            subject: { kind: 'trait', key: entry.traitKey },
           }),
         ];
       case 'chaosBlessing':
@@ -519,7 +535,7 @@ function overviewSections(
           row(
             `blessing:${entry.acquisitionIdentity}`,
             catalog.chaos.blessings.byKey[entry.blessingKey]?.label ?? entry.blessingKey,
-            { right: entry.rarity },
+            { right: entry.rarity, subject: { kind: 'chaosBlessing', key: entry.blessingKey } },
           ),
         ];
     }
@@ -528,10 +544,15 @@ function overviewSections(
   const hexRows = [
     ...(spell === undefined
       ? []
-      : [row(`hex:${spell.traitKey}`, traitLabel(catalog, spell.traitKey))]),
+      : [
+          row(`hex:${spell.traitKey}`, traitLabel(catalog, spell.traitKey), {
+            subject: { kind: 'trait', key: spell.traitKey },
+          }),
+        ]),
     ...snapshot.effects.hexTalents.map((talent) =>
       row(`talent:${talent.talentKey}`, hexTalentLabel(catalog, snapshot, talent.talentKey), {
         right: `Lv. ${talent.level}`,
+        subject: { kind: 'hexTalent', key: talent.talentKey },
       }),
     ),
   ];
@@ -544,6 +565,7 @@ function overviewSections(
     row(`keepsake:${keepsake.keepsakeKey}`, keepsakeLabel(catalog, keepsake.keepsakeKey), {
       ...(keepsake.state === undefined ? {} : { bracket: effectBracket(keepsake.state) }),
       ...(keepsake.rank === undefined ? {} : { right: keepsakeStars[keepsake.rank] }),
+      subject: { kind: 'keepsake', key: keepsake.keepsakeKey },
     }),
   );
   return sections(
@@ -572,13 +594,17 @@ function effectSections(
   const wellRows = snapshot.effects.stygianWell.map((entry, index) =>
     row(`well:${index}:${entry.itemKey}`, wellItemLabel(catalog, entry.itemKey), {
       bracket: clockBracket(entry.clock),
+      subject: { kind: 'wellItem', key: entry.itemKey },
     }),
   );
   const shrineRows = snapshot.effects.hermesDeliveries.map((delivery) =>
     row(
       `shrine:${delivery.entryKey}`,
       catalog.rewards.rewardTypes.byKey[delivery.rewardType]?.label ?? delivery.rewardType,
-      { bracket: clockBracket(delivery.clock) },
+      {
+        bracket: clockBracket(delivery.clock),
+        subject: { kind: 'rewardType', key: delivery.rewardType },
+      },
     ),
   );
   const chaosRows = snapshot.effects.chaosCurses.map((curse, index) =>
@@ -587,7 +613,11 @@ function effectSections(
       `${catalog.chaos.curses.byKey[curse.curseKey]?.label ?? curse.curseKey} → ${
         catalog.chaos.blessings.byKey[curse.blessingKey]?.label ?? curse.blessingKey
       }`,
-      { bracket: clockBracket(curse.clock), right: curse.rarity },
+      {
+        bracket: clockBracket(curse.clock),
+        right: curse.rarity,
+        subject: { kind: 'chaosBlessing', key: curse.curseKey },
+      },
     ),
   );
   return sections(
@@ -614,6 +644,7 @@ function keepsakeHistorySections(
   const keptRows = (keepsakes.retained ?? []).map((entry) =>
     row(`kept:${entry.key}`, keepsakeLabel(catalog, entry.key), {
       right: keepsakeStars[entry.rank],
+      subject: { kind: 'keepsake', key: entry.key },
     }),
   );
   return sections(
@@ -640,6 +671,7 @@ function arcanaSections(
       return row(`arcana:${card.key}`, cardLabel(card.key), {
         ...(clock === undefined ? {} : { bracket: clockBracket(clock) }),
         right: arcanaRanks[card.rarity],
+        subject: { kind: 'arcanaCard', key: card.key },
       });
     });
   const temporary = active
@@ -649,6 +681,7 @@ function arcanaSections(
       return row(`temporary:${card.key}`, cardLabel(card.key), {
         ...(clock === undefined ? {} : { bracket: clockBracket(clock) }),
         right: arcanaRanks[card.rarity],
+        subject: { kind: 'arcanaCard', key: card.key },
       });
     });
   const barren =
@@ -669,7 +702,14 @@ function fearSections(
   const fear = snapshot.arcanaFear.fear;
   const vows = catalog.fearVows.values.flatMap((vow) => {
     const rank = fear.effectiveRanks[vow.key] ?? 0;
-    return rank > 0 ? [row(`vow:${vow.key}`, vow.label, { right: `Rank ${roman(rank)}` })] : [];
+    return rank > 0
+      ? [
+          row(`vow:${vow.key}`, vow.label, {
+            right: `Rank ${roman(rank)}`,
+            subject: { kind: 'fearVow', key: vow.key },
+          }),
+        ]
+      : [];
   });
   const forfeit =
     snapshot.forfeitStatus === 'inactive'
@@ -685,12 +725,13 @@ function fearSections(
       ? [
           row(`disabled:${key}`, catalog.fearVows.byKey[key]?.label ?? key, {
             right: `Rank ${roman(rank)}`,
+            subject: { kind: 'fearVow', key },
           }),
         ]
       : [];
   });
   const banned = snapshot.traits.bannedTraitKeys.map((key) =>
-    row(`banned:${key}`, traitLabel(catalog, key)),
+    row(`banned:${key}`, traitLabel(catalog, key), { subject: { kind: 'trait', key } }),
   );
   return sections(
     section('vows', undefined, vows),

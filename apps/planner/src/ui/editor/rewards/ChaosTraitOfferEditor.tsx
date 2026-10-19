@@ -190,6 +190,7 @@ export function ChaosTraitOfferEditor({
         })}
       </div>
       <SelectedOutcomeBlock
+        icon={traitIcon(selectedCurseKey(value))}
         name="Selected Chaos outcome"
         traitLabel={`${interaction.curseLabel(selectedCurseKey(value))} → ${interaction.blessingLabel(value.blessingKey)}`}
       >

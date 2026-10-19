@@ -1,4 +1,6 @@
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
@@ -31,6 +33,9 @@ export function LauncherButton({
       onClick={onClick}
       type="button"
     >
+      {launcher.traitKey === undefined ? null : (
+        <ArtworkIcon className="artwork-label-icon" source={traitIcon(launcher.traitKey)} />
+      )}
       <span>{launcher.label}</span>
     </button>
   );
