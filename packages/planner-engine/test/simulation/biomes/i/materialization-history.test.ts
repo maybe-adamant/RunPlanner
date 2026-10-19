@@ -17,6 +17,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  clockworkDoorGoalsRemaining,
   composeBiomeHistory,
   composeBiomeHistoryPrefix,
   evaluateBiomeCompleteness,
@@ -399,6 +400,42 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual(['I_Boss01']);
     expect(snapshot.biomeState).toEqual({ maxNonGoalRewards: 5 });
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
+  });
+
+  it('shows each Goal door the goals remaining when its batch is generated', () => {
+    const project = completeProject();
+    const snapshot = materializeBiome(
+      catalog,
+      biome,
+      ordinaryPositionFor(catalog, biome),
+      complete(project),
+      traitContext(project),
+    );
+    const doors = batches(snapshot).flatMap((batch) =>
+      batch.targets.map((target) => [
+        target.room.gameName,
+        clockworkDoorGoalsRemaining(batch, target),
+      ]),
+    );
+
+    // A picked NonGoal leaves the count; Preboss is a Goal door at zero.
+    expect(doors).toEqual([
+      ['I_Combat01', 5],
+      ['I_Combat03', 4],
+      ['I_Story01', undefined],
+      ['I_Combat04', 3],
+      ['I_Combat05', undefined],
+      ['I_Combat09', 3],
+      ['I_Combat10', 2],
+      ['I_Combat06', undefined],
+      ['I_Combat11', 2],
+      ['I_Combat12', 1],
+      ['I_Combat07', undefined],
+      ['I_Combat12', 1],
+      ['I_PreBoss02', 0],
+      ['I_Combat08', undefined],
+      ['I_PreBoss02', 0],
+    ]);
   });
 
   it('carries H route state and advances Clockwork counters only at picked producer points', () => {

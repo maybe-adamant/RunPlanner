@@ -635,15 +635,57 @@ describe('structured workspace biome presentation', () => {
     if (rail === undefined) throw new Error('I Clockwork Goal decision rail entry is missing');
 
     expect(goalTarget.room.roomLocal.control.offer).toBeNull();
-    // The door names the goal instead of an editable reward.
+    // The door names the goal and its countdown instead of an editable reward.
     expect(
-      goalTarget.door.offerRewardSurface.rewards.map(({ control, summary }) => ({
-        control,
-        summary,
-      })),
-    ).toEqual([{ control: undefined, summary: 'Clockwork Goal' }]);
+      goalTarget.door.offerRewardSurface.rewards.map(
+        ({ clockworkGoalsRemaining, control, summary }) => ({
+          clockworkGoalsRemaining,
+          control,
+          summary,
+        }),
+      ),
+    ).toEqual([{ clockworkGoalsRemaining: 5, control: undefined, summary: 'Clockwork Goal' }]);
     expect(goalDecision.missingTargets).toEqual([]);
-    expect(rail.selectedTarget).toEqual({ roomLabel: goalTarget.room.label, roomRewards: [] });
+    expect(rail.selectedTarget).toEqual({
+      clockworkGoalsRemaining: 5,
+      roomLabel: goalTarget.room.label,
+      roomRewards: [],
+    });
+    // Each Goal door on the rail carries the countdown its batch shows.
+    expect(
+      biome.rail.flatMap((entry) =>
+        entry.kind === 'node' && entry.selectedTarget !== undefined
+          ? [[entry.selectedTarget.roomLabel, entry.selectedTarget.clockworkGoalsRemaining]]
+          : [],
+      ),
+    ).toEqual([
+      ['Combat 01', 5],
+      ['Combat 03', 4],
+      ['Combat 05', 3],
+      ['Combat 06', 2],
+      ['Combat 09', 1],
+      ['Preboss', undefined],
+    ]);
+    // Every Goal door in the biome, selected or not, carries its batch's countdown.
+    expect(
+      biome.nodes.flatMap((node) =>
+        node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch'
+          ? node.targets.flatMap((target) =>
+              target.door.offerRewardSurface.rewards.flatMap((reward) =>
+                reward.clockworkGoalsRemaining === undefined
+                  ? []
+                  : [[target.room.label, reward.clockworkGoalsRemaining]],
+              ),
+            )
+          : [],
+      ),
+    ).toEqual([
+      ['Combat 01', 5],
+      ['Combat 03', 4],
+      ['Combat 05', 3],
+      ['Combat 06', 2],
+      ['Combat 09', 1],
+    ]);
   });
 
   it('presents every generated biome as entry, numbered decision stops, and bounded Preboss', () => {

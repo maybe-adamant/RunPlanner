@@ -404,6 +404,7 @@ export {
   authoredBatchEnteredRewardStores,
   BatchEnteredRewardStoreContractError,
   canonicalBatchEnteredRewardStores,
+  clockworkDoorGoalsRemaining,
   type BatchEnteredRewardStores,
   type BatchExitEnteredRewardStore,
   type BatchExitKey,

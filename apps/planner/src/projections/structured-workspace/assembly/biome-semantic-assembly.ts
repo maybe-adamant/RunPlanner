@@ -162,6 +162,7 @@ function requireCompatibleOccurrenceAssemblyRequest(
     cached.occurrence !== request.occurrence ||
     cached.evaluatedRoom !== request.evaluatedRoom ||
     cached.fieldsBatchFacts !== request.fieldsBatchFacts ||
+    cached.clockworkGoalsRemaining !== request.clockworkGoalsRemaining ||
     cached.isEntry !== request.isEntry ||
     cached.roomPicker !== request.roomPicker ||
     cached.anomalyReplacementRoomGameNames !== request.anomalyReplacementRoomGameNames
@@ -592,6 +593,9 @@ export function assembleWorkspaceBiomeSemantics(
       figLeafSupport: source.figLeafSupport,
       gorgonSupport: source.gorgonSupport,
       ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),
+      ...(request.clockworkGoalsRemaining === undefined
+        ? {}
+        : { clockworkGoalsRemaining: request.clockworkGoalsRemaining }),
       ...(request.fieldsBatchFacts === undefined
         ? {}
         : { fieldsBatchFacts: request.fieldsBatchFacts }),

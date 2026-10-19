@@ -49,6 +49,8 @@ export interface WorkspaceAnomalyControl {
 }
 
 export interface WorkspaceDoorReward {
+  /** Goals remaining shown on a Clockwork Goal door's countdown. */
+  readonly clockworkGoalsRemaining?: number;
   readonly control?: WorkspaceRewardControl;
   readonly key: string;
   readonly label: string;
@@ -463,6 +465,8 @@ export interface WorkspaceRailReward {
 export interface WorkspaceRailSelectedTarget {
   /** The additional exit taken, such as a Chaos gate; absent for a physical door. */
   readonly exitTypeKey?: string;
+  /** Goals remaining shown on the selected Clockwork Goal door. */
+  readonly clockworkGoalsRemaining?: number;
   readonly reward?: WorkspaceRailReward;
   /** Every resolved reward the selected room offers, in offer order, shown on its door or not. */
   readonly roomRewards: readonly ResolvedRewardOffer[];

@@ -5,6 +5,7 @@ export {
   selectedBatchContinuationRoom,
 } from './batch';
 export {
+  clockworkDoorGoalsRemaining,
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,
   targetContinuation,

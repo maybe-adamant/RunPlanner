@@ -145,6 +145,9 @@ function offerRewardRewards(
         }
         return Object.freeze([
           Object.freeze({
+            ...(input.clockworkGoalsRemaining === undefined
+              ? {}
+              : { clockworkGoalsRemaining: input.clockworkGoalsRemaining }),
             key: 'incoming',
             label: 'Door reward',
             marker: roomLocal.control.marker,
@@ -261,6 +264,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
     phase: EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  /** Goals remaining shown on this room's Clockwork Goal door, from its batch. */
+  readonly clockworkGoalsRemaining?: number;
   readonly preparedEncounterDefinitionKeysBySlot?: Readonly<Record<string, string>>;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -337,6 +342,8 @@ export interface WorkspaceOccurrenceAssembly {
 export interface WorkspaceOccurrenceAssemblyRequest {
   readonly anomalyReplacementRoomGameNames?: readonly string[];
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
+  /** Present only for a Clockwork Goal door target. */
+  readonly clockworkGoalsRemaining?: number;
   /** Present only when this occurrence belongs to a configured Fields batch. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
   readonly occurrence: RoomOccurrence;

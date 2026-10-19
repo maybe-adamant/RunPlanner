@@ -6,6 +6,8 @@ import {
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import { useAppSelector } from '@planner/state/store';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
@@ -78,7 +80,17 @@ export function RewardSurfaceEditor({
               tabIndex={firstEditableReward === undefined && index === 0 ? -1 : undefined}
             >
               <span>{showRewardLabels ? reward.label : 'Reward'}</span>
-              <span className="fixed-room-state">{reward.summary}</span>
+              <span className="fixed-room-state">
+                {reward.clockworkGoalsRemaining === undefined ? null : (
+                  <ArtworkIcon
+                    className="door-fixed-reward-icon"
+                    source={
+                      clockworkCountdownArtwork[String(reward.clockworkGoalsRemaining)] ?? undefined
+                    }
+                  />
+                )}
+                {reward.summary}
+              </span>
             </div>
           ) : (
             <RewardControlEditor
