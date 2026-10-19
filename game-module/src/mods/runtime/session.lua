@@ -231,9 +231,13 @@ end
 -- Snap mode resumes at the planned next occurrence after a mismatch: steering
 -- the transition into it needs a synchronized session before the hero is snapped.
 function runtime.beginSnap(state, index)
-    local mismatch = state.firstMismatch
+    -- A snap superseding a pending one keeps the first mismatch and counts once.
+    local mismatch = state.snapPending and state.snapPending.mismatch or state.firstMismatch
+    local lastExited = state.route and state.route.lastExitedOccurrence
     local resumed, routeError = runtime.resumeAt(state, index)
     if not resumed then return runtime.fault(state, routeError) end
+    -- The room just left still anchors native Hub and parent re-entries.
+    state.route.lastExitedOccurrence = lastExited
     state.firstMismatch, state.loggedMismatch = nil, nil
     state.snapPending = { occurrenceId = state.plan.selectedOccurrenceIds[index], index = index, mismatch = mismatch }
     state.state, state.reason = "synchronized", "snap-pending"

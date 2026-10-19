@@ -30,8 +30,25 @@ says otherwise.
 - [ ] With snap on, take a Chaos gate the plan did not choose: you arrive in
       the planned room.
 
-- [ ] A wrong turn into Ephyra's board, or across a biome edge, stays out of
-      sync and does not snap.
+- [ ] Ephyra Hub, in sync: take a main-room door the plan did not choose. You
+      enter the planned main room and the header shows Synchronized.
+- [ ] Ephyra main room, in sync: take the wrong side door. You enter the
+      planned side room. Back in the main room, you return through the planned
+      side door, and the taken side room can still be entered.
+- [ ] Ephyra main room, plan returns to the Hub: take a side door. You arrive
+      in the Hub at the return entrance, and the side door stays open.
+- [ ] Ephyra main room, plan goes to a side room: take the Hub return. You
+      enter the planned side room. Back in the main room, the Hub return is
+      still open and you start at the side-door entrance.
+- [ ] The Hub slide (the camera pans to the planned door and the hero walks
+      there) is acceptable.
+- [ ] After an Ephyra snap, the pylon count is right and the Hub exit opens
+      after the sixth pylon, not before.
+- [ ] Desync in the room before the Hub (e.g. a wrong boon), then enter the Hub.
+      The Hub shows the planned board, and you snap on entering the first
+      planned main room.
+- [ ] Desync just before a biome edge: the edge stays out of sync. The first
+      exit in the new biome snaps into the planned second room.
 - [ ] After a victory with snaps, the summary shows "Snapped back N times".
 
 ## Store markers

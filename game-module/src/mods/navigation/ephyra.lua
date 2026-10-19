@@ -237,6 +237,132 @@ function ephyra.proveHubEntry(occurrence, nativeDoors)
     return true
 end
 
+local function planHub(plan)
+    for _, occurrence in pairs(plan and plan.occurrencesById or {}) do
+        local hub = occurrence.overview and occurrence.overview.hub
+        if hub and hub.room then return hub end
+    end
+end
+
+local function hubTargets(hub, occurrence)
+    if hub.finalHandoff and hub.finalHandoff.id == occurrence.id then return true end
+    for _, slot in ipairs(hub.slots or {}) do
+        if slot.room and slot.room.id == occurrence.id then return true end
+    end
+    return false
+end
+
+-- Hub slots, side rooms and the final handoff are reached only through the board's own doors.
+function ephyra.onBoard(plan, occurrence)
+    local hub = planHub(plan)
+    if hub ~= nil and hubTargets(hub, occurrence) then return true end
+    return ephyra.parentForSide(plan, occurrence.id) ~= nil
+end
+
+-- The Hub room a return door re-enters, built as AttemptUseDoor builds it (RoomLogic.lua:843-857).
+local function returnRoom(currentRun, name, game)
+    local history = currentRun and currentRun.RoomHistory or {}
+    for index = #history, 1, -1 do
+        local previous = history[index]
+        if previous.Name == name then
+            local result = {}
+            for key, value in pairs(previous) do result[key] = value end
+            for key, value in pairs(game and game.RoomData and game.RoomData[name] or {}) do
+                if result[key] == nil then result[key] = value end
+            end
+            result.TimesVisited = (result.TimesVisited or 0) + 1
+            return result
+        end
+    end
+end
+
+local function stampedTarget(door)
+    local nativeRoom = door.Room or door.RoomData
+    return door.__runPlannerExecutionDoorTarget
+        or type(nativeRoom) == "table" and nativeRoom.__runPlannerExecutionRoomId or nil
+end
+
+-- The board's exit from the Hub or a main room towards `target`: nil off the board,
+-- else { door, enters, room } with the offered door (nil when none) and whether it enters `target`.
+-- stampedOnly accepts only a door steered for `target`, never an unsteered native one.
+function ephyra.exit(plan, nativeRoomName, target, offered, currentRun, game, stampedOnly)
+    local hub = planHub(plan)
+    if hub == nil or nativeRoomName == nil then return nil end
+    local main
+    if nativeRoomName ~= hub.room.gameName then
+        for _, slot in ipairs(hub.slots or {}) do
+            if slot.room and slot.room.gameName == nativeRoomName then
+                main = plan.occurrencesById[slot.room.id] or { overview = {} }
+            end
+        end
+        if main == nil then return nil end
+    end
+    local result = {}
+    if target == nil then return result end
+    offered = offered or {}
+    for _, door in pairs(offered) do
+        if stampedTarget(door) == target.id then
+            result.door, result.enters = door, true
+            return result
+        end
+    end
+    if stampedOnly then return result end
+    if main == nil then
+        for _, slot in ipairs(hub.slots or {}) do
+            if slot.room and slot.room.id == target.id then
+                result.door = offered[slot.physicalDoorId]
+                result.enters = result.door ~= nil
+                return result
+            end
+        end
+        if hub.finalHandoff and hub.finalHandoff.id == target.id then
+            for _, door in pairs(offered) do
+                if roomName(door.Room) == target.gameName then result.door, result.enters = door, true end
+            end
+        end
+        return result
+    end
+    for _, slot in ipairs(main.overview and main.overview.localSlots or {}) do
+        if slot.room and slot.room.id == target.id then
+            result.door = offered[slot.physicalDoorId]
+            result.enters = result.door ~= nil
+            return result
+        end
+    end
+    if hubTargets(hub, target) then
+        for _, door in pairs(offered) do
+            if door.ReturnToPreviousRoomName == hub.room.gameName then
+                result.room = returnRoom(currentRun, hub.room.gameName, game)
+                if result.room ~= nil then result.door = door end
+            end
+        end
+    end
+    return result
+end
+
+-- The door taken from the Hub or a main room instead of the offered planned door; nil otherwise.
+function ephyra.stray(plan, nativeRoomName, expected, door, offered, currentRun, game)
+    local exit = expected and ephyra.exit(plan, nativeRoomName, expected, offered, currentRun, game)
+    local planned = exit and exit.door
+    if planned == nil or type(door) ~= "table" or planned == door
+        or (door.ObjectId ~= nil and door.ObjectId == planned.ObjectId) then return nil end
+    return stampedTarget(door) or roomName(door.Room) or door.ObjectId
+end
+
+-- Leaves through the planned door instead of the taken one: undoes what AttemptUseDoor
+-- recorded for the taken door (RoomLogic.lua:862-869) and records the planned one.
+function ephyra.substitute(currentRun, taken, exit, game)
+    local planned, current = exit.door, currentRun.CurrentRoom
+    local declaration = game and game.RoomData and game.RoomData[current.Name] or current
+    local onUse = declaration.OnUseSetRunData or {}
+    for key in pairs(onUse[taken.Name] or {}) do current[key] = nil end
+    if taken.CloseOnReturnAnimation ~= nil then current.CloseDoorOnReturn = nil end
+    if planned.CloseOnReturnAnimation ~= nil then current.CloseDoorOnReturn = planned.ObjectId end
+    _G.OverwriteTableKeys(current, onUse[planned.Name])
+    if exit.room ~= nil then planned.Room = exit.room end
+    return planned
+end
+
 function ephyra.finalHandoff(state, routeSession, nativeRoomData)
     local currentRun = _G.CurrentRun
     local hub = ephyra.hub(state and state.plan, currentRun and currentRun.CurrentRoom)
