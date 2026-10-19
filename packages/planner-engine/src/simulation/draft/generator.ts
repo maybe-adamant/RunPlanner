@@ -6,6 +6,7 @@ import {
 } from '../../authored-project';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
+import { draftEncounters } from './encounters';
 import { draftGodSchedule } from './schedule';
 import { draftReport, type DraftReport } from './report';
 import { draftRefusals, type DraftRefusal } from './refusals';
@@ -129,7 +130,13 @@ export function draftProject(
       if (localMet && halves.every((half) => half.met || !walk.legalSupply.has(half.supply))) break;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
-    current = best.assembly;
+    // Only the chosen attempt's encounters are drafted, before the next biome builds on them.
+    current = draftEncounters(
+      catalog,
+      best.assembly,
+      biomeKey,
+      createDraftRng((seed * 2_246_822_519 + biomeIndex * 7_919 + 1) >>> 0),
+    );
   }
   const evaluation = current.evaluation;
   if (evaluation.status !== 'valid' || evaluation.findings.length > 0)

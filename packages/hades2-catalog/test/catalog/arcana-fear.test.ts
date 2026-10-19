@@ -148,6 +148,10 @@ describe('Arcana and Fear catalog', () => {
       baseCapacity: 30,
       availablePercentByRank: [60, 40, 20, 0],
     });
+    expect(catalog.fearVows.byKey.NextBiomeEnemyShrineUpgrade?.effect).toEqual({
+      kind: 'substituteNextBiomeEnemy',
+      chanceByRank: [0.1, 0.25],
+    });
     expect(
       catalog.traitGivers.values
         .filter((giver) => giver.denialParticipates)
@@ -263,6 +267,20 @@ describe('Arcana and Fear catalog', () => {
         ) as unknown as typeof declarations.fearVows,
       }),
     ).toThrow(/Denial must declare/);
+    for (const effect of [
+      undefined,
+      { kind: 'substituteNextBiomeEnemy', chanceByRank: [0.25, 0.1] },
+    ])
+      expect(() =>
+        createCatalog({
+          ...declarations,
+          fearVows: declarations.fearVows.map((vow) =>
+            vow.key === 'NextBiomeEnemyShrineUpgrade'
+              ? { ...vow, ...(effect === undefined ? { effect: undefined } : { effect }) }
+              : vow,
+          ) as unknown as typeof declarations.fearVows,
+        }),
+      ).toThrow(/Menace must substitute next-biome enemies at 10 and 25 percent/);
     expect(() =>
       createCatalog({
         ...declarations,
@@ -332,7 +350,7 @@ describe('Arcana and Fear catalog', () => {
             : vow,
         ),
       }),
-    ).toThrow(/only Vow of Denial, Forfeit, or Void may declare an effect/);
+    ).toThrow(/only Vow of Denial, Forfeit, Void, or Menace may declare an effect/);
     expect(() =>
       createCatalog({
         ...declarations,

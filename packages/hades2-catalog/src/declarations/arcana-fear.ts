@@ -215,7 +215,11 @@ export const fearVows = [
   vow('EnemyShieldShrineUpgrade', 'Vow of Wards', [1, 1]),
   vow('EnemyCountShrineUpgrade', 'Vow of Hordes', [1, 1, 1]),
   vow('EnemyRespawnShrineUpgrade', 'Vow of Return', [1, 1]),
-  vow('NextBiomeEnemyShrineUpgrade', 'Vow of Menace', [1, 2]),
+  // MetaUpgradeData.lua:1842-1846 NextBiomeEnemyShrineUpgrade Ranks ChangeValue 0.10, 0.25.
+  vow('NextBiomeEnemyShrineUpgrade', 'Vow of Menace', [1, 2], true, {
+    kind: 'substituteNextBiomeEnemy',
+    chanceByRank: [0.1, 0.25],
+  }),
   vow('BiomeSpeedShrineUpgrade', 'Vow of Time', [1, 2, 3]),
   vow('MinibossCountShrineUpgrade', 'Vow of Shadow', [2]),
   vow('BossDifficultyShrineUpgrade', 'Vow of Rivals', [2, 3, 3, 4], false),

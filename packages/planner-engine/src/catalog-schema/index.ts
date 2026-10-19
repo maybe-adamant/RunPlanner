@@ -210,6 +210,11 @@ export interface FearVowDeclaration {
         readonly kind: 'limitStartingGrasp';
         readonly baseCapacity: 30;
         readonly availablePercentByRank: readonly [60, 40, 20, 0];
+      }
+    | {
+        /** Per-rank chance that each eligible source spawn request becomes a next-biome enemy. */
+        readonly kind: 'substituteNextBiomeEnemy';
+        readonly chanceByRank: readonly [0.1, 0.25];
       };
 }
 

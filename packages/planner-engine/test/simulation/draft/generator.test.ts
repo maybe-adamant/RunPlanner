@@ -13,6 +13,10 @@ import { latestRunState } from '../../../src/simulation/draft/report';
 import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
 import { createDraftRng, DraftWalk } from '../../../src/simulation/draft/walk';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  reachedEncounterPhasesForProjectEvaluationAssembly,
+} from '../../../src/simulation/evaluation/project-evaluation-assembly';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -109,6 +113,31 @@ describe('draftProject', () => {
         )
           expect(target).toMatchObject({ met: true });
       expect(result.report.extras).toEqual([]);
+      // Every reached encounter decision is drafted; Aetos appears at most once in Olympus.
+      const assembly = simulateProjectAssembly(catalog, result.project);
+      const phases = reachedEncounterPhasesForProjectEvaluationAssembly(assembly);
+      expect(phases.length).toBeGreaterThan(0);
+      for (const phase of phases) {
+        const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase);
+        const definitionKey = status?.kind === 'active' ? status.encounterDefinitionKey : undefined;
+        const decided = result.project.route.biomes
+          .find((biome) => biome.biomeKey === phase.biomeKey)!
+          .topology!.occurrences.find(
+            (occurrence) => occurrence.occurrenceId === phase.owner.occurrenceId,
+          )!.encounters.customizationByPhase?.[phase.phaseKey];
+        for (const decision of catalog.encounterDefinitions.byKey[definitionKey ?? '']
+          ?.customization ?? [])
+          expect(
+            decided?.[decision.key],
+            `${phase.owner.occurrenceId}.${phase.phaseKey}`,
+          ).toBeDefined();
+      }
+      const olympus = result.project.route.biomes.find((biome) => biome.biomeKey === 'P');
+      expect(
+        (olympus?.topology?.occurrences ?? []).flatMap((occurrence) =>
+          Object.keys(occurrence.encounters.aetosWaveByPhase ?? {}),
+        ).length,
+      ).toBeLessThanOrEqual(1);
       expect(result.command.loadout).toMatchObject({
         weaponKey: spec.loadout.weaponKey,
         startingKeepsakeKey: spec.loadout.startingKeepsakeKey,
