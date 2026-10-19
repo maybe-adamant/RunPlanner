@@ -621,7 +621,7 @@ describe('encounter envelope catalog', () => {
       'GeneratedAnomalyB',
     ];
     const pPreCombat = Object.keys(definitions).filter(
-      (key) => key === 'GeneratedP_PreCombat' || key.startsWith('P_Combat'),
+      (key) => key.startsWith('GeneratedP_PreCombat') || key.startsWith('P_Combat'),
     );
     expect(
       Object.values(definitions)
@@ -666,9 +666,9 @@ describe('encounter envelope catalog', () => {
       });
     }
     const preCombat = Object.values(definitions).filter(
-      ({ key }) => key === 'GeneratedP_PreCombat' || key.startsWith('P_Combat'),
+      ({ key }) => key.startsWith('GeneratedP_PreCombat') || key.startsWith('P_Combat'),
     );
-    expect(preCombat).toHaveLength(53);
+    expect(preCombat).toHaveLength(54);
     for (const definition of preCombat) {
       expect(definition, definition.key).toMatchObject({
         kind: 'combat',

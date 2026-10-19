@@ -96,6 +96,7 @@ const budgetEvidence: readonly BudgetRow[] = [
   ['IcarusCombatO', 115, 55, 'biomeEncounterDepth', 0, 3, 45],
   // EncounterData_Generated.lua:1204-1206; GeneratedP hard :1150
   ['GeneratedP_PreCombat', { min: 340, max: 500 }, 0, 'biomeDepthCache', 0, 1, 50],
+  ['GeneratedP_PreCombatChronosForces', { min: 340, max: 500 }, 0, 'biomeDepthCache', 0, 1, 50],
   // EncounterData_Generated.lua:1023-1024
   ['GeneratedP', 430, 85, 'biomeDepthCache', 0, 1, 50],
   ['GeneratedP_Large', 430, 85, 'biomeDepthCache', 0, 1, 50],
@@ -246,7 +247,12 @@ describe('source-declared generated encounter policies', () => {
         .filter((definition) => selection(definition.key).blockMenace)
         .map((definition) => definition.key)
         .sort(),
-    ).toEqual(['GeneratedH_Passive', 'GeneratedH_PassiveSmall', 'GeneratedP_PreCombat']);
+    ).toEqual([
+      'GeneratedH_Passive',
+      'GeneratedH_PassiveSmall',
+      'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
+    ]);
   });
   it('keeps Arachne spacing only where native requirements inherit it', () => {
     const f = catalog.encounterDefinitions.byKey.ArachneCombatF!.requirements!;
@@ -416,8 +422,8 @@ describe('source-declared generated encounter policies', () => {
     }
   });
 
-  it('covers the audited 50 concrete identities without boss/prescribed vignettes', () => {
-    expect(definitions).toHaveLength(50);
+  it('covers the audited 51 concrete identities without boss/prescribed vignettes', () => {
+    expect(definitions).toHaveLength(51);
     expect(definitions.every((definition) => definition.kind === 'combat')).toBe(true);
     expect(
       definitions
@@ -500,6 +506,16 @@ describe('source-declared generated encounter policies', () => {
       Automatons: 1,
       ChronosForces: 1,
     });
+    expect(selection('GeneratedP_PreCombatChronosForces').maxTypesPerGroup).toEqual({});
+    expect(
+      selection('GeneratedP_PreCombatChronosForces')
+        .choices.map((enemy) => enemy.key)
+        .sort(),
+    ).toEqual(
+      ['Dragon', 'HarpyDropper', 'SatyrSapper', 'SatyrLancer2', 'SatyrCrossbow2', 'ZombieOlympus']
+        .flatMap((key) => [key, `${key}_Elite`])
+        .sort(),
+    );
   });
   it('normalizes the audited Fangs pools, blocks, room restrictions, and native presentation', () => {
     const fangs = selection('GeneratedF').fangs!;

@@ -190,6 +190,7 @@ describe('declaration-owned lifecycle clocks', () => {
       'PIntroCombat_CrossbowStatues',
       'PIntroCombat_SapperOverlook',
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'P_Combat01_PreCombat01',
       'P_Combat01_PreCombat02',
       'P_Combat01_PreCombat03',
