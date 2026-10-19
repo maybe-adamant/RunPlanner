@@ -144,7 +144,9 @@ describe('HubMapTimeline', () => {
     expect(healthRoom.getAttribute('aria-description')).toBe('Reward: Big Max Health');
     expect(hintOf(healthRoom)).toBe('Combat 01');
     const healthIcon = healthRoom.querySelector('img');
-    expect(decodeURIComponent(healthIcon?.getAttribute('src') ?? '')).toContain('Max Health.webp');
+    expect(decodeURIComponent(healthIcon?.getAttribute('src') ?? '')).toContain(
+      'MaxHealthDropBigPreview.webp',
+    );
     expect(healthIcon?.draggable).toBe(false);
 
     for (let visitCount = 2; visitCount < 6; visitCount += 1) {

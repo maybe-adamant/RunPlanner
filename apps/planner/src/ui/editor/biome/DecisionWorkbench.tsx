@@ -20,6 +20,7 @@ import {
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -99,6 +100,7 @@ function ExitCard({
   ariaLabel,
   children,
   className,
+  icon,
   kicker,
   map,
   selection,
@@ -110,6 +112,8 @@ function ExitCard({
   readonly children: ReactNode;
   /** Distinguishes physical door targets from additional exits. */
   readonly className?: string;
+  /** The exit's door art, for exits that have one. */
+  readonly icon?: string;
   readonly kicker: string;
   readonly map?: { readonly gameName: string; readonly hostId: string; readonly title: string };
   /** The selection radio; absent when the card is not individually selectable. */
@@ -136,6 +140,7 @@ function ExitCard({
       {selection ?? <div className="exit-marker" aria-hidden="true" />}
       <div className="exit-content">
         <div className="exit-heading">
+          {icon === undefined ? null : <img alt="" className="exit-door-icon" src={icon} />}
           <div>
             <p className="card-kicker">{kicker}</p>
             <h4>{title}</h4>
@@ -429,6 +434,9 @@ function AdditionalExitCard({
   return (
     <ExitCard
       ariaLabel={`${control.exitTypeLabel} exit`}
+      {...(doorArtwork[control.exitTypeKey] == null
+        ? {}
+        : { icon: doorArtwork[control.exitTypeKey]! })}
       kicker={control.exitTypeLabel}
       map={{ gameName: room.gameName, hostId: key, title: room.label }}
       selection={

@@ -461,8 +461,14 @@ export interface WorkspaceRailReward {
  * one unambiguous compact reward.
  */
 export interface WorkspaceRailSelectedTarget {
+  /** The additional exit taken, such as a Chaos gate; absent for a physical door. */
+  readonly exitTypeKey?: string;
   readonly reward?: WorkspaceRailReward;
+  /** Every resolved reward the selected room offers, in offer order, shown on its door or not. */
+  readonly roomRewards: readonly ResolvedRewardOffer[];
   readonly roomLabel: string;
+  /** The selected room is a shop, such as a Preboss shop entered instead of its reward door. */
+  readonly shop?: true;
 }
 
 export interface WorkspaceDecisionRailEntry {
@@ -492,8 +498,8 @@ export interface WorkspaceStageRailEntry {
   readonly mainReward?: WorkspaceRailReward;
   readonly marker: WorkspaceMarker;
   readonly node: Exclude<WorkspaceNode, WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode>;
-  /** Only numbered decision rail entries may expose selected-target context. */
-  readonly selectedTarget?: never;
+  /** A Preboss takeover exposes the door it continues through; a shop stage, its shop. */
+  readonly selectedTarget?: WorkspaceRailSelectedTarget;
 }
 
 export type WorkspaceRailEntry =

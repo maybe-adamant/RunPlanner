@@ -46,6 +46,8 @@ export function TraitOfferOption<TraitValue>({
   traitAriaLabel,
   traitFindingMark,
   persephoneAriaLabel,
+  traitIcon,
+  traitTriggerIcon,
   traitLabel,
   infusion = false,
   traitPicker,
@@ -81,6 +83,9 @@ export function TraitOfferOption<TraitValue>({
   readonly traitAriaLabel: string;
   readonly traitFindingMark?: FindingMarkProps;
   readonly persephoneAriaLabel?: string;
+  /** A trait's icon; when set, every row keeps an icon slot. */
+  readonly traitIcon?: (value: TraitValue) => string | undefined;
+  readonly traitTriggerIcon?: string | undefined;
   readonly traitLabel?: string;
   /** Native presents this trait's rarity as an Infusion. */
   readonly infusion?: boolean;
@@ -132,6 +137,10 @@ export function TraitOfferOption<TraitValue>({
         onSelect={onSelectTrait}
         placeholder="Choose a trait"
         {...(traitLabel === undefined ? {} : { triggerLabel: traitLabel })}
+        {...(traitIcon === undefined
+          ? {}
+          : { itemIcon: (item: ContextualPickerItem<TraitValue>) => traitIcon(item.value) })}
+        triggerIcon={traitTriggerIcon}
       />
       {fixedRarity === undefined && onSelectRarity !== undefined ? (
         <ContextualPicker

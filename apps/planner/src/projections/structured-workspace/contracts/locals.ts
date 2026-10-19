@@ -85,6 +85,8 @@ export interface WorkspaceEncounterInteraction {
    */
   readonly load: () => ContextualPickerModel<string>;
   readonly nemesisEvent?: WorkspaceNemesisEventSelection;
+  /** The story or field NPC an encounter choice presents, when it presents one. */
+  readonly npcKeyFor: (encounterKey: string) => string | undefined;
   readonly owner: EncounterPhaseAddress;
   readonly selected: string;
 }
@@ -496,6 +498,8 @@ export interface WorkspaceEncounterPhase {
     readonly label: string;
     /** Resolved declaration identity when this phase maps to a native encounter. */
     readonly nativeEncounterDefinitionKey?: string;
+    /** The story or field NPC the encounter presents. */
+    readonly npcKey?: string;
   };
   readonly nemesisEvent?: {
     readonly marker: WorkspaceMarker;

@@ -278,6 +278,16 @@ select {
   white-space: nowrap;
 }
 
+.encounter-npc-icon {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.encounter-npc-icon + * {
+  margin-right: auto;
+}
+
 .contextual-picker-trigger-image {
   flex: 0 0 auto;
   width: 1.4rem;
@@ -425,6 +435,28 @@ select {
 .contextual-picker-item-icon {
   width: 1.6rem;
   height: 1.6rem;
+}
+
+/* Two icons share one slot, offset diagonally like the game's stitched pickups. */
+.artwork-pair {
+  position: relative;
+  display: inline-block;
+}
+
+.artwork-pair-part {
+  position: absolute;
+  width: 72%;
+  height: 72%;
+}
+
+.artwork-pair-part:first-child {
+  top: 0;
+  left: 0;
+}
+
+.artwork-pair-part:last-child {
+  right: 0;
+  bottom: 0;
 }
 
 .contextual-picker-popover [cmdk-item][data-selected='true'] {
@@ -890,6 +922,16 @@ select {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.exit-door-icon {
+  flex: 0 0 auto;
+  width: 2.4rem;
+  height: 2.4rem;
+}
+
+.exit-door-icon + div {
+  margin-right: auto;
 }
 
 /* The map action keeps one line beside the title. */

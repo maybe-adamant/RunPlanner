@@ -9,6 +9,7 @@ import type { TraitOptionDomainProjection } from '@planner/projections/rewards/t
 import type { TraitOfferOptionFeedback } from '@planner/projections/rewards/traitProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { spellOfferSlotPresentation } from './spellOfferPresentation';
 import { TraitOfferOption } from './TraitOfferOption';
@@ -164,6 +165,8 @@ export function TraitOfferOrdinaryOption({
       selectedName={`${semanticAddressKey(interaction.owner)}-selected`}
       {...(spellSlot === undefined ? {} : { spellSlot })}
       traitAriaLabel={`${spellOffer ? optionKey.replace('option', 'Spell ') : optionKey} trait`}
+      traitIcon={traitIcon}
+      traitTriggerIcon={traitIcon(option.traitKey)}
       traitLabel={interaction.traitLabel(option.traitKey)}
       traitPicker={traitPicker}
       rarityAriaLabel={`${optionKey} rarity`}

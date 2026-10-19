@@ -89,6 +89,7 @@ function travelDealLineCells(
           <HermesShrineSlotEditor
             label="Travel Deal"
             marker={line.refill.marker}
+            rewardType={line.refill.rewardType}
             {...(line.refill.rewardLabel === undefined
               ? {}
               : { rewardLabel: line.refill.rewardLabel })}

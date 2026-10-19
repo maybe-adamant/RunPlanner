@@ -2,6 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { useCallback, useEffect, useRef, useState, type ReactElement, type Ref } from 'react';
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { showTruncatedTitle } from './truncatedTitle';
 import { hintProps } from './hint';
 
@@ -38,9 +39,9 @@ interface ContextualPickerProps<T> {
   /** Hover explanation for the current value of an enabled trigger. */
   readonly triggerHint?: string;
   /** An image shown before the trigger's text. */
-  readonly triggerIcon?: string | undefined;
+  readonly triggerIcon?: ArtworkSource | undefined;
   /** An image shown before an option's text. */
-  readonly itemIcon?: (item: ContextualPickerItem<T>) => string | undefined;
+  readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   /** Marks a retained value the current context cannot produce. */
   readonly invalid?: boolean;
   /** Marks a local customization issue this picker repairs. */
@@ -58,7 +59,7 @@ function PickerSection<T>({
   section,
 }: {
   readonly groupRef?: Ref<HTMLDivElement>;
-  readonly itemIcon?: ((item: ContextualPickerItem<T>) => string | undefined) | undefined;
+  readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly onSelect: (item: ContextualPickerItem<T>) => void;
   readonly section: ContextualPickerSection<T>;
 }) {
@@ -81,10 +82,8 @@ function PickerSection<T>({
             <span className="contextual-picker-item-indicator" aria-hidden="true">
               {item.selected ? '✓' : item.state === 'forced' ? '!' : ''}
             </span>
-            {itemIcon === undefined ? null : icon === undefined ? (
-              <span className="contextual-picker-item-icon" aria-hidden="true" />
-            ) : (
-              <img src={icon} alt="" className="contextual-picker-item-icon" />
+            {itemIcon === undefined ? null : (
+              <ArtworkIcon className="contextual-picker-item-icon" source={icon} />
             )}
             <span className="contextual-picker-item-copy">
               <span className="contextual-picker-item-label">{item.label}</span>
@@ -116,7 +115,7 @@ function PickerContent<T>({
 }: {
   readonly cancelLabel?: string;
   readonly choicesLabel: string;
-  readonly itemIcon?: ((item: ContextualPickerItem<T>) => string | undefined) | undefined;
+  readonly itemIcon?: ((item: ContextualPickerItem<T>) => ArtworkSource | undefined) | undefined;
   readonly loading: boolean;
   readonly model: ContextualPickerModel<T>;
   /** The item under the pointer or keyboard highlight. */
@@ -356,7 +355,7 @@ export function ContextualPicker<T>({
               triggerText
             ) : (
               <span className="contextual-picker-trigger-value">
-                <img src={triggerIcon} alt="" className="contextual-picker-trigger-image" />
+                <ArtworkIcon className="contextual-picker-trigger-image" source={triggerIcon} />
                 {triggerText}
               </span>
             )}
@@ -402,6 +401,7 @@ export function ContextualPickerPopover<T>({
   choiceLabel,
   collisionBoundary,
   heading,
+  itemIcon,
   model,
   onActiveChange,
   onOpenChange,
@@ -415,6 +415,7 @@ export function ContextualPickerPopover<T>({
   /** The element the popover stays within, such as its editor; the viewport when absent. */
   readonly collisionBoundary?: Element | null;
   readonly heading: string;
+  readonly itemIcon?: (item: ContextualPickerItem<T>) => ArtworkSource | undefined;
   readonly model: ContextualPickerModel<T>;
   readonly onActiveChange?: (item: ContextualPickerItem<T> | undefined) => void;
   readonly onOpenChange: (open: boolean) => void;
@@ -447,6 +448,7 @@ export function ContextualPickerPopover<T>({
           <p className="contextual-picker-step-label">{heading}</p>
           <PickerContent
             choicesLabel={choiceLabel}
+            itemIcon={itemIcon}
             loading={false}
             model={model}
             {...(onActiveChange === undefined ? {} : { onActiveChange })}

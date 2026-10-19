@@ -7,6 +7,7 @@ import {
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 
 import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
@@ -296,6 +297,8 @@ function EchoLastRunBoonChoiceEditor({
                   })}
               traitPicker={traitPicker}
               {...(row.identity === undefined ? {} : { traitLabel: domain.labelFor(row.identity) })}
+              traitIcon={(identity) => traitIcon(identity.traitKey)}
+              traitTriggerIcon={row.identity && traitIcon(row.identity.traitKey)}
               onSelectTrait={(identity) => {
                 const rarities = pickerItems(domain.rarityPickerFor(identity)).filter(
                   (item) => item.state !== 'impossible',

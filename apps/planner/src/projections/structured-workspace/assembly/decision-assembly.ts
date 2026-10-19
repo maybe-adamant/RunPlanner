@@ -19,7 +19,7 @@ import {
   type ExitDecision,
   type ExitDecisionAddress,
 } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { Catalog, RoomExit } from '@run-planner/engine/catalog-schema';
 import type {
   CanonicalAdditionalContinuation,
   CanonicalBatch,
@@ -75,11 +75,11 @@ export type WorkspaceAuthoredBatchDecision = ExitDecision & {
 type AuthoredBatchDecision = WorkspaceAuthoredBatchDecision;
 type AuthoredBatchTarget = WorkspaceAuthoredBatchDecision['normal']['targets'][number];
 
-function additionalRewardPreview(
+function additionalPhysicalExit(
   input: WorkspaceDecisionAssemblyInput,
   decision: AuthoredBatchDecision,
   kind: 'chaos' | 'zagreusContract',
-): 'hidden' | 'visible' {
+): Omit<RoomExit, 'index'> {
   if (decision.source.kind !== 'occurrence') {
     throw new StructuredWorkspaceProjectionContractError(
       `${semanticAddressKey(createExitDecisionAddress(input.source.biome, decision.source))} has ${kind} without an occurrence source`,
@@ -97,7 +97,7 @@ function additionalRewardPreview(
       `${decision.source.occurrenceId} has authored ${kind} without a declaration`,
     );
   }
-  return declaration.physicalExit.behavior.rewardPreview;
+  return declaration.physicalExit;
 }
 
 const additionalExitTypeLabels = Object.freeze({
@@ -955,7 +955,7 @@ function assembleBatchDecision(
                 : zagreusAdditional.occurrenceId,
               zagreusAdditional.key,
             ),
-            rewardPreview: additionalRewardPreview(input, decision, 'zagreusContract'),
+            physicalExit: additionalPhysicalExit(input, decision, 'zagreusContract'),
             selected:
               decision.selection.kind === 'additional' &&
               decision.selection.additionalExitKey === zagreusAdditional.key,
@@ -1010,7 +1010,7 @@ function assembleBatchDecision(
               }),
             ),
             owner: additionalOwner,
-            rewardPreview: additionalRewardPreview(input, decision, chaosAdditional.kind),
+            physicalExit: additionalPhysicalExit(input, decision, chaosAdditional.kind),
             selected:
               decision.selection.kind === 'additional' &&
               decision.selection.additionalExitKey === chaosAdditional.key,
@@ -1031,8 +1031,9 @@ function assembleBatchDecision(
           zagreusContract: Object.freeze({
             door: projectWorkspaceDoorContract(
               zagreusContract.contractRoom,
-              zagreusContract.rewardPreview,
+              zagreusContract.physicalExit.behavior.rewardPreview,
             ),
+            exitTypeKey: zagreusContract.physicalExit.type,
             exitTypeLabel: additionalExitTypeLabels.zagreusContract,
             fixedRewardLabel: additionalExitFixedRewardLabel(
               input.catalog,
@@ -1047,7 +1048,11 @@ function assembleBatchDecision(
       ? {}
       : {
           chaos: Object.freeze({
-            door: projectWorkspaceDoorContract(chaos.chaosRoom, chaos.rewardPreview),
+            door: projectWorkspaceDoorContract(
+              chaos.chaosRoom,
+              chaos.physicalExit.behavior.rewardPreview,
+            ),
+            exitTypeKey: chaos.physicalExit.type,
             exitTypeLabel: additionalExitTypeLabels[chaos.kind],
             fixedRewardLabel: additionalExitFixedRewardLabel(
               input.catalog,

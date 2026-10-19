@@ -6,6 +6,7 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceRewardControl,
 } from '@planner/projections/structured-workspace';
+import { shopItemIcon } from '@planner/ui/artwork/rewardIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -53,6 +54,14 @@ export function ShopOfferEditor({
       }}
       open={open}
       placeholder={interaction.summary}
+      itemIcon={(item) =>
+        item.value === null ? undefined : shopItemIcon(item.value.optionKey, item.value.offer)
+      }
+      triggerIcon={
+        interaction.selected === null
+          ? undefined
+          : shopItemIcon(interaction.selected.optionKey, interaction.selected.offer)
+      }
       triggerLabel={interaction.summary}
     />
   );

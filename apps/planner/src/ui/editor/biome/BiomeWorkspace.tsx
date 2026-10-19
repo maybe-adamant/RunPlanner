@@ -1,5 +1,10 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
 import { type ReactNode } from 'react';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
+import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
+import { noRewardArtwork } from '@planner/ui/artwork/no-reward/noRewardArtwork';
 
 import {
   requireWorkspaceInteraction,
@@ -140,32 +145,68 @@ function FocusButton({
   );
 }
 
-/** Keeps the current text fallback isolated from a future compact reward token. */
-function RailReward({ reward }: { readonly reward: WorkspaceRailReward }) {
-  return <span className="biome-rail-reward">{reward.label}</span>;
-}
+const bossIcon = (biomeKey: string): string | undefined => bossArtwork[biomeKey] ?? undefined;
 
 function RailMainReward({ reward }: { readonly reward: WorkspaceRailReward }) {
   return (
     <span className="biome-rail-selection">
       <span className="visually-hidden">Main reward: </span>
-      <RailReward reward={reward} />
+      <ArtworkIcon className="biome-rail-reward-icon" source={offerIcon(reward.offer)} />
+      <span className="biome-rail-reward">{reward.label}</span>
+    </span>
+  );
+}
+
+/**
+ * An additional exit shows its door art and a shop the Shop door; several rewards show one icon
+ * each, and a room without any reward shows its biome's no-reward door.
+ */
+function RailTargetIcons({
+  biomeKey,
+  target,
+}: {
+  readonly biomeKey: string;
+  readonly target: WorkspaceRailSelectedTarget;
+}) {
+  const exitIcon = target.exitTypeKey === undefined ? undefined : doorArtwork[target.exitTypeKey];
+  if (exitIcon != null) return <ArtworkIcon className="biome-rail-reward-icon" source={exitIcon} />;
+  if (target.shop === true)
+    return <ArtworkIcon className="biome-rail-reward-icon" source={rewardIcon('Shop')} />;
+  if (target.roomRewards.length <= 1)
+    return (
+      <ArtworkIcon
+        className="biome-rail-reward-icon"
+        source={
+          target.roomRewards[0] === undefined
+            ? (noRewardArtwork[biomeKey] ?? undefined)
+            : offerIcon(target.roomRewards[0])
+        }
+      />
+    );
+  return (
+    <span aria-hidden="true" className="biome-rail-reward-row">
+      {target.roomRewards.map((offer, index) => (
+        <ArtworkIcon className="biome-rail-reward-icon" key={index} source={offerIcon(offer)} />
+      ))}
     </span>
   );
 }
 
 function RailSelectedTarget({
+  biomeKey,
   selectedTarget,
 }: {
+  readonly biomeKey: string;
   readonly selectedTarget: WorkspaceRailSelectedTarget;
 }) {
   return (
     <span className="biome-rail-selection">
+      <RailTargetIcons biomeKey={biomeKey} target={selectedTarget} />
       {selectedTarget.roomLabel}
       {selectedTarget.reward === undefined ? null : (
         <>
           {' · '}
-          <RailReward reward={selectedTarget.reward} />
+          <span className="biome-rail-reward">{selectedTarget.reward.label}</span>
         </>
       )}
     </span>
@@ -173,9 +214,11 @@ function RailSelectedTarget({
 }
 
 function RailNode({
+  biomeKey,
   entry,
   selectedRailKey,
 }: {
+  readonly biomeKey: string;
   readonly entry: Extract<WorkspaceRailEntry, { readonly kind: 'node' }>;
   readonly selectedRailKey: string | undefined;
 }) {
@@ -192,7 +235,7 @@ function RailNode({
           </span>
         </span>
         {entry.selectedTarget === undefined ? null : (
-          <RailSelectedTarget selectedTarget={entry.selectedTarget} />
+          <RailSelectedTarget biomeKey={biomeKey} selectedTarget={entry.selectedTarget} />
         )}
         {entry.mainReward === undefined ? null : <RailMainReward reward={entry.mainReward} />}
       </FocusButton>
@@ -309,15 +352,17 @@ function HubRailGroup({
 }
 
 function RailEntry({
+  biomeKey,
   entry,
   selectedRailKey,
 }: {
+  readonly biomeKey: string;
   readonly entry: WorkspaceRailEntry;
   readonly selectedRailKey: string | undefined;
 }) {
   switch (entry.kind) {
     case 'node':
-      return <RailNode entry={entry} selectedRailKey={selectedRailKey} />;
+      return <RailNode biomeKey={biomeKey} entry={entry} selectedRailKey={selectedRailKey} />;
     case 'hubGroup':
       return <HubRailGroup entry={entry} selectedRailKey={selectedRailKey} />;
     case 'frontier':
@@ -326,9 +371,11 @@ function RailEntry({
 }
 
 function CompletionOutline({
+  biomeKey,
   completion,
   selectedNodeKey,
 }: {
+  readonly biomeKey: string;
   readonly completion: WorkspaceBiome['completionOutline'];
   readonly selectedNodeKey?: string;
 }) {
@@ -356,6 +403,10 @@ function CompletionOutline({
                 onClick={() => dispatch(semanticOwnerFocused(focusOwner))}
                 type="button"
               >
+                <ArtworkIcon
+                  className="biome-completion-icon"
+                  source={roleLabel === 'Boss' ? bossIcon(biomeKey) : undefined}
+                />
                 <span>{roleLabel}</span>
                 {node.room.label === roleLabel ? null : <strong>{node.room.label}</strong>}
               </button>
@@ -482,6 +533,7 @@ export function BiomeWorkspace({
         <header className="biome-structure-heading">
           <div className="biome-structure-title">
             <div className="biome-structure-title-row">
+              <ArtworkIcon className="biome-boss-icon" source={bossIcon(biome.biomeKey)} />
               <h2>{biome.label}</h2>
               {clearTopology === undefined ? null : (
                 <TopologyRemovalAction
@@ -497,10 +549,16 @@ export function BiomeWorkspace({
         <div className="biome-structure-scroll">
           <div className="biome-rail">
             {biome.rail.map((entry) => (
-              <RailEntry entry={entry} key={entry.key} selectedRailKey={selectedRailKey} />
+              <RailEntry
+                biomeKey={biome.biomeKey}
+                entry={entry}
+                key={entry.key}
+                selectedRailKey={selectedRailKey}
+              />
             ))}
           </div>
           <CompletionOutline
+            biomeKey={biome.biomeKey}
             completion={biome.completionOutline}
             {...(subject?.kind === 'node' && subject.node.kind === 'occurrenceWorkbench'
               ? { selectedNodeKey: subject.node.key }

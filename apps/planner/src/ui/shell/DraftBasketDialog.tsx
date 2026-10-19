@@ -6,6 +6,8 @@ import type {
   DraftBasketSection,
   DraftBasketTab,
 } from '@planner/projections/draftSpec';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { hintProps } from '@planner/ui/controls/hint';
 import { DraftCapCount } from './DraftCapCount';
@@ -27,6 +29,7 @@ function BasketRows({
             aria-disabled={unavailable || undefined}
             aria-pressed={row.inBasket}
             className="draft-toggle"
+            data-has-icon
             data-refused={(row.inBasket && !row.selectable) || undefined}
             key={row.traitKey}
             onClick={() => {
@@ -35,6 +38,7 @@ function BasketRows({
             type="button"
             {...hintProps(row.selectable ? undefined : row.hint)}
           >
+            <ArtworkIcon className="draft-toggle-icon" source={traitIcon(row.traitKey)} />
             {row.label}
           </button>
         );

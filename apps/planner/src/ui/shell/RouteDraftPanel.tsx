@@ -31,6 +31,9 @@ import type {
 import type { DraftRunState } from '@planner/state/draftSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
+import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { KeepsakeLauncher, KeepsakeRackDialog } from '@planner/ui/controls/keepsakes/KeepsakeRack';
 import { hintProps } from '@planner/ui/controls/hint';
 import type { DraftRunController } from '@planner/workspace/draftRun';
@@ -224,6 +227,8 @@ function DraftRackKeepsake({
   );
 }
 
+const npcIcon = (npcKey: string): string | undefined => npcArtwork[npcKey] ?? undefined;
+
 /** Describes a world and basket; drafting fills the route's biomes and sets the loadout. */
 export function RouteDraftPanel({
   catalog,
@@ -304,11 +309,16 @@ export function RouteDraftPanel({
                 <button
                   aria-pressed={selected}
                   className="draft-toggle"
+                  data-has-icon
                   disabled={full}
                   key={godKey}
                   onClick={() => replaceDraft(withDraftGodToggled(draft, godKey))}
                   type="button"
                 >
+                  <ArtworkIcon
+                    className="draft-toggle-icon"
+                    source={traitGiverArtwork[godKey] ?? undefined}
+                  />
                   {catalog.traitGivers.byKey[godKey]?.label ?? godKey}
                 </button>
               );
@@ -350,6 +360,7 @@ export function RouteDraftPanel({
                             spec?.world.storyNpcByBiome[biome.biomeKey] === storyNpc.npcKey
                           }
                           className="draft-toggle"
+                          data-has-icon
                           onClick={() =>
                             replaceDraft(
                               withDraftStoryNpcToggled(draft, biome.biomeKey, storyNpc.npcKey),
@@ -357,6 +368,10 @@ export function RouteDraftPanel({
                           }
                           type="button"
                         >
+                          <ArtworkIcon
+                            className="draft-toggle-icon"
+                            source={npcIcon(storyNpc.npcKey)}
+                          />
                           {npcLabel(catalog, storyNpc)}
                         </button>
                       )}
@@ -371,6 +386,7 @@ export function RouteDraftPanel({
                               true
                             }
                             className="draft-toggle"
+                            data-has-icon
                             key={npc.npcKey}
                             onClick={() =>
                               replaceDraft(
@@ -379,6 +395,10 @@ export function RouteDraftPanel({
                             }
                             type="button"
                           >
+                            <ArtworkIcon
+                              className="draft-toggle-icon"
+                              source={npcIcon(npc.npcKey)}
+                            />
                             {npcLabel(catalog, npc)}
                           </button>
                         ))}

@@ -69,6 +69,7 @@ import type {
   RewardCandidateOwner,
 } from '@planner/projections/candidates/candidateProjection';
 import { resolveWorkspaceFixedRewardOffer } from './catalog-room';
+import { encounterNpcKey } from '@planner/projections/encounterPickerProjection';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceEncounterCustomizationDecision,
@@ -1033,6 +1034,10 @@ export function activeEncounterPhasesForOwner(
     const selectedChoice = domain.choices.find(
       (choice) => choice.key === domain.selectedEncounterKey,
     )!;
+    const selectedNpcKey =
+      domain.selectedEncounterDefinitionKey === undefined
+        ? undefined
+        : encounterNpcKey(input.catalog, domain.selectedEncounterDefinitionKey);
     const nemesisEvent =
       selectedDefinition?.key === 'NemesisRandomEvent'
         ? Object.freeze({
@@ -1199,6 +1204,7 @@ export function activeEncounterPhasesForOwner(
           ...(domain.selectedEncounterDefinitionKey === undefined
             ? {}
             : { nativeEncounterDefinitionKey: domain.selectedEncounterDefinitionKey }),
+          ...(selectedNpcKey === undefined ? {} : { npcKey: selectedNpcKey }),
         }),
         ...(fieldsPassive &&
         domain.choices.some(
