@@ -1,5 +1,19 @@
 # Project schema boundary
 
+Schema 97 saves the Draft settings in `route.draft`, makes every Postboss
+keepsake rack a permanent timeline row, and moves the Practice start point
+from `loadout.runModifiers.startPoint` to `route.practiceStart`.
+
+```bash
+npm run schema:migrate-96-to-97 -- path/to/schema-96-project.runplanner.json
+```
+
+The migration adds an empty `route.draft`. On every Postboss occurrence whose
+route offers the rack, it adds an unchanged rack (`keepsakeKey: null`) right
+after Use Fountain; on routes that exclude the rack (Fresh File) it drops a
+retained rack. The Practice start keeps its value, and empty run modifiers are
+removed.
+
 Schema 96 makes every N Hub own its completed-Hub exit: the width-one
 `N_PreBoss01` batch sourced by the Hub decision, with its fixed Boss and
 route-position Postboss.
