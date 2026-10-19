@@ -1,22 +1,29 @@
 import type { Catalog, EncounterCustomizationDecision } from '../../catalog-schema';
-import type {
-  AuthoredEncounterCustomization,
-  AuthoredGeneratedEncounterCustomization,
-  EncounterPhaseAddress,
-  ProjectCommand,
+import {
+  createBiomeAddress,
+  createEncounterPhaseAddress,
+  type AuthoredEncounterCustomization,
+  type AuthoredGeneratedEncounterCustomization,
+  type EncounterPhaseAddress,
+  type OccurrenceId,
+  type ProjectCommand,
 } from '../../authored-project';
 import { customizationDecisionOnRoute } from '../../authored-project/room-state/encounter-customization';
 import type { GeneratedEncounterCandidateCapability } from '../encounters/generation-preparation';
 import type { InfiniteRosterCandidateCapability } from '../encounters/infinite-roster';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import {
+  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
   infiniteRosterSupportForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
+import type { SemanticFinding } from '../model';
 import type { DraftRng } from './rng';
 import { settleDraftCommandWithoutNewFinding } from './settle';
+import type { DraftSpec } from './spec';
+import type { DraftSteering } from './steering';
 
 /** Random generated values tried before the engine's deterministic initialisation. */
 const GENERATED_ATTEMPTS = 4;
@@ -268,4 +275,107 @@ export function draftEncounters(
     }
   }
   return assembly;
+}
+
+/** What encounter selection during the walk borrows from it. */
+export interface DraftEncounterChoiceContext {
+  readonly catalog: Catalog;
+  readonly spec: DraftSpec;
+  readonly steering: DraftSteering;
+  /** Keys of choices already made in this walk. */
+  readonly hooked: Set<string>;
+  readonly assembly: () => ProjectEvaluationAssembly;
+  readonly apply: (command: ProjectCommand) => boolean;
+  readonly shuffle: <T>(values: readonly T[]) => T[];
+}
+
+/** Encounter choice for the finding's room, once its phases are reached. */
+export function draftEncounterChoice(
+  context: DraftEncounterChoiceContext,
+  reason: SemanticFinding,
+): boolean {
+  const origin = reason.origin;
+  if (!('biomeKey' in origin)) return false;
+  const occurrenceId =
+    'occurrenceId' in origin
+      ? origin.occurrenceId
+      : 'source' in origin && origin.source.kind === 'occurrence'
+        ? origin.source.occurrenceId
+        : 'owner' in origin && typeof origin.owner === 'object' && 'occurrenceId' in origin.owner
+          ? origin.owner.occurrenceId
+          : undefined;
+  if (typeof occurrenceId !== 'string') return false;
+  const key = `encounters:${origin.biomeKey}:${occurrenceId}`;
+  if (context.hooked.has(key)) return false;
+  const outcome = chooseEncounters(context, origin.biomeKey, occurrenceId as OccurrenceId);
+  if (outcome.reached) context.hooked.add(key);
+  return outcome.changed;
+}
+
+/** Selects wanted field NPC encounters, else a random combat encounter; never Nemesis events. */
+function chooseEncounters(
+  context: DraftEncounterChoiceContext,
+  biomeKey: string,
+  occurrenceId: OccurrenceId,
+): { readonly reached: boolean; readonly changed: boolean } {
+  const { catalog, steering } = context;
+  const occurrence = context
+    .assembly()
+    .project.route.biomes.find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+  if (occurrence === undefined) return { reached: false, changed: false };
+  const wanted = context.spec.world.fieldNpcsByBiome[biomeKey] ?? [];
+  let changed = false;
+  let reached = false;
+  for (const phaseKey of Object.keys(occurrence.encounters.encounterKeyByPhase)) {
+    const phase = createEncounterPhaseAddress(
+      createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+      { kind: 'occurrence', occurrenceId },
+      phaseKey,
+    );
+    const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+      context.assembly(),
+      phase,
+    );
+    if (support === undefined) continue;
+    reached = true;
+    if (!support.activationSatisfied) continue;
+    const candidates = support.candidateEncounterKeys.filter(
+      (key) => catalog.encounterDefinitions.byKey[key]?.kind !== 'nonCombat',
+    );
+    const npcFor = (key: string) => catalog.encounterDefinitions.byKey[key]?.npcPresentationKey;
+    // A field NPC whose wanted trait is not ready yet waits for a likely later room.
+    const waits = (key: string) =>
+      steering.npcWaiting(
+        catalog.encounterDefinitions.byKey[key]?.traitOfferProducer?.giverKey,
+        steering.progress(),
+      ) && steering.laterRoomLikely(biomeKey);
+    const field = candidates.find((key) => {
+      const npc = npcFor(key);
+      return (
+        npc !== undefined &&
+        wanted.includes(npc) &&
+        !metFieldNpc(context, biomeKey, npc) &&
+        !waits(key)
+      );
+    });
+    const ordinary = candidates.filter((key) => npcFor(key) === undefined);
+    const choice = field ?? (ordinary.length > 0 ? context.shuffle(ordinary)[0] : undefined);
+    if (choice === undefined || choice === support.selectedEncounterKey) continue;
+    changed = context.apply({ kind: 'SelectEncounter', phase, encounterKey: choice }) || changed;
+  }
+  return { reached, changed };
+}
+
+function metFieldNpc(context: DraftEncounterChoiceContext, biomeKey: string, npc: string): boolean {
+  return (
+    context
+      .assembly()
+      .project.route.biomes.find((biome) => biome.biomeKey === biomeKey)
+      ?.topology?.occurrences.some((occurrence) =>
+        Object.values(occurrence.encounters.encounterKeyByPhase).some(
+          (key) => context.catalog.encounterDefinitions.byKey[key]?.npcPresentationKey === npc,
+        ),
+      ) === true
+  );
 }
