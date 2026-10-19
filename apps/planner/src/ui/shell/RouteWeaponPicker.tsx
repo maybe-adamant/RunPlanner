@@ -41,6 +41,9 @@ export function RouteWeaponPicker({
       layout="inline"
       placeholder="Choose weapon and aspect"
       triggerLabel={`${weapon.label} · ${aspect.label}`}
+      triggerSizingLabels={catalog.weapons.values.flatMap((option) =>
+        option.aspectKeys.map((key) => `${option.label} · ${catalog.aspects.byKey[key]!.label}`),
+      )}
       choiceLabel={pendingWeapon === undefined ? 'Weapon' : `${pendingWeapon.label} · Aspect`}
       open={open}
       closeOnSelect={false}

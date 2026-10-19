@@ -72,12 +72,17 @@ const draftSessionSlice = createSlice({
     draftBasketTraitToggled(state, action: PayloadAction<string>) {
       state.basketTraitKeys = toggled(state.basketTraitKeys, action.payload);
     },
+    /** Choosing the keepsake already held at that rack stores no change, so it keeps inheriting. */
     draftRackKeepsakeReplaced(
       state,
-      action: PayloadAction<{ afterBiomeKey: string; keepsakeKey: string | null }>,
+      action: PayloadAction<{
+        afterBiomeKey: string;
+        keepsakeKey: string;
+        inheritedKeepsakeKey: string | null;
+      }>,
     ) {
-      const { afterBiomeKey, keepsakeKey } = action.payload;
-      if (keepsakeKey === null) delete state.rackKeepsakeByBiome[afterBiomeKey];
+      const { afterBiomeKey, keepsakeKey, inheritedKeepsakeKey } = action.payload;
+      if (keepsakeKey === inheritedKeepsakeKey) delete state.rackKeepsakeByBiome[afterBiomeKey];
       else state.rackKeepsakeByBiome[afterBiomeKey] = keepsakeKey;
     },
     draftRunStarted(state, action: PayloadAction<{ seed: number; startedAt: number }>) {

@@ -3,14 +3,18 @@ import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   draftRefusals,
+  forcesGod,
   type DraftNpcOption,
   type DraftRefusal,
   type DraftTargetResult,
   type DraftWorldOptions,
 } from '@run-planner/engine/simulation';
 
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import { projectDraftBasket, projectDraftSpec } from '@planner/projections/draftSpec';
+import {
+  projectDraftBasket,
+  projectDraftSpec,
+  type DraftRackSlot,
+} from '@planner/projections/draftSpec';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
@@ -24,12 +28,13 @@ import {
   type DraftRunState,
 } from '@planner/state/draftSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { KeepsakeLauncher, KeepsakeRackDialog } from '@planner/ui/controls/keepsakes/KeepsakeRack';
 import { hintProps } from '@planner/ui/controls/hint';
 import type { DraftRunController } from '@planner/workspace/draftRun';
 import { DraftBasketDialog } from './DraftBasketDialog';
 import { DraftCapCount } from './DraftCapCount';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
+import { useCommonItemWidth } from './useCommonItemWidth';
 
 /** Why a draft cannot start, when nothing else on the panel already shows it. */
 function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): string | undefined {
@@ -155,6 +160,63 @@ function DraftOutcome({
   }
 }
 
+const godKeepsakeReason = "Drafting can't use god keepsakes.";
+
+/** One Postboss rack's keepsake; it shows the keepsake held there, inherited or chosen. */
+function DraftRackKeepsake({
+  catalog,
+  index,
+  label,
+  slot,
+}: {
+  readonly catalog: Catalog;
+  readonly index: number;
+  readonly label: string;
+  readonly slot: DraftRackSlot;
+}) {
+  const dispatch = useAppDispatch();
+  const [open, setOpen] = useState(false);
+  const id = `draft-rack-${index}`;
+  const held = slot.effectiveKeepsakeKey;
+  return (
+    <>
+      <KeepsakeLauncher
+        id={id}
+        keepsakeKey={held ?? undefined}
+        label={label}
+        onOpen={() => setOpen(true)}
+        text={held === null ? 'Choose keepsake' : (catalog.keepsakes.byKey[held]?.label ?? held)}
+      />
+      {open ? (
+        <KeepsakeRackDialog
+          entries={catalog.keepsakes.values.map((keepsake) => {
+            const allowed = slot.keepsakeKeys.includes(keepsake.key);
+            return {
+              key: keepsake.key,
+              label: keepsake.label,
+              selected: keepsake.key === held,
+              disabled: !allowed,
+              hint: allowed ? undefined : godKeepsakeReason,
+            };
+          })}
+          onClose={() => setOpen(false)}
+          onSelect={(keepsakeKey) =>
+            dispatch(
+              draftRackKeepsakeReplaced({
+                afterBiomeKey: slot.afterBiomeKey,
+                keepsakeKey,
+                inheritedKeepsakeKey: slot.inheritedKeepsakeKey,
+              }),
+            )
+          }
+          returnFocusId={id}
+          title={label}
+        />
+      ) : null}
+    </>
+  );
+}
+
 /** Describes a world and basket; drafting fills the route's biomes and sets the loadout. */
 export function RouteDraftPanel({
   catalog,
@@ -172,11 +234,13 @@ export function RouteDraftPanel({
   const dispatch = useAppDispatch();
   const session = useAppSelector((state) => state.draftSession);
   const [basketOpen, setBasketOpen] = useState(false);
+  // Racks line up under Arcana, Fear and Keepsake at one shared width.
+  const rows = useCommonItemWidth<HTMLFieldSetElement>();
   const projection = useMemo(
     () => projectDraftSpec(catalog, project, session),
     [catalog, project, session],
   );
-  const { spec, worldOptions, keepsakeOptions } = projection;
+  const { spec, worldOptions, rackSlots } = projection;
   const refusals = useMemo(
     () => (spec === undefined ? [] : draftRefusals(catalog, project, spec)),
     [catalog, project, spec],
@@ -195,19 +259,25 @@ export function RouteDraftPanel({
     spec === undefined ? 'The loadout is not complete.' : refusalHint(catalog, refusals[0]);
   const overwrites = project.route.biomes.some((biome) => biome.topology !== null);
   const biomeLabel = (biomeKey: string) => catalog.biomes.byKey[biomeKey]?.label ?? biomeKey;
+  const godKeepsakeHint = (keepsakeKey: string) =>
+    forcesGod(catalog, keepsakeKey) ? godKeepsakeReason : undefined;
   return (
     <section className="route-overview route-draft" aria-label="Draft">
       <header className="panel-heading">
         <h2 className="eyebrow route-loadout-heading">Draft</h2>
       </header>
-      <fieldset className="draft-fieldset" disabled={running}>
+      <fieldset className="draft-fieldset" disabled={running} ref={rows}>
         <RouteLoadoutControls
           authoredRoute={project.route}
           catalog={catalog}
           interactions={interactions}
+          keepsakeUnavailableHint={godKeepsakeHint}
           workspaceRoute={workspaceRoute}
         />
-        <section className="draft-section" aria-labelledby="draft-gods-heading">
+        <section
+          className="draft-section draft-section-inline"
+          aria-labelledby="draft-gods-heading"
+        >
           <h3 className="draft-section-heading" id="draft-gods-heading">
             Gods{' '}
             <span>
@@ -234,17 +304,21 @@ export function RouteDraftPanel({
           </div>
         </section>
         <section className="draft-section" aria-labelledby="draft-npcs-heading">
-          <h3 className="draft-section-heading" id="draft-npcs-heading">
-            NPCs
-          </h3>
+          {/* The title shares the header row with the Story and Field column labels. */}
           <table className="draft-npc-table" aria-labelledby="draft-npcs-heading">
             <thead>
               <tr>
                 <th scope="col">
-                  <span className="visually-hidden">Biome</span>
+                  <h3 className="draft-section-heading" id="draft-npcs-heading">
+                    NPCs
+                  </h3>
                 </th>
-                <th scope="col">Story</th>
-                <th scope="col">Field</th>
+                <th className="draft-section-heading" scope="col">
+                  Story
+                </th>
+                <th className="draft-section-heading draft-npc-field" scope="col">
+                  Field
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -278,7 +352,7 @@ export function RouteDraftPanel({
                         </button>
                       )}
                     </td>
-                    <td>
+                    <td className="draft-npc-field">
                       <span className="draft-toggle-row">
                         {biome.fieldNpcs.map((npc) => (
                           <button
@@ -310,48 +384,22 @@ export function RouteDraftPanel({
             </tbody>
           </table>
         </section>
-        {keepsakeOptions.rackSlots.length === 0 ? null : (
-          <section
-            className="draft-section route-loadout-controls"
-            aria-labelledby="draft-racks-heading"
-          >
+        {rackSlots.length === 0 ? null : (
+          <section className="draft-section" aria-labelledby="draft-racks-heading">
             <h3 className="draft-section-heading" id="draft-racks-heading">
               Rack keepsakes
             </h3>
-            {keepsakeOptions.rackSlots.map((slot, index) => {
-              const selected = spec?.rackKeepsakeKeys[index] ?? null;
-              return (
-                <ContextualPicker
-                  disabled={running}
-                  id={`draft-rack-${index}`}
+            <div className="route-loadout-row">
+              {rackSlots.map((slot, index) => (
+                <DraftRackKeepsake
+                  catalog={catalog}
+                  index={index}
                   key={`${slot.afterBiomeKey}-${index}`}
                   label={`After ${biomeLabel(slot.afterBiomeKey)}`}
-                  layout="inline"
-                  model={declaredChoicesPicker<string | null>(
-                    [
-                      { key: '__keep', value: null, label: 'Keep current' },
-                      ...slot.keepsakeKeys.map((key) => ({
-                        key,
-                        value: key,
-                        label: catalog.keepsakes.byKey[key]?.label ?? key,
-                      })),
-                    ],
-                    selected,
-                  )}
-                  onSelect={(keepsakeKey) =>
-                    dispatch(
-                      draftRackKeepsakeReplaced({ afterBiomeKey: slot.afterBiomeKey, keepsakeKey }),
-                    )
-                  }
-                  placeholder="Keep current"
-                  triggerLabel={
-                    selected === null
-                      ? 'Keep current'
-                      : (catalog.keepsakes.byKey[selected]?.label ?? selected)
-                  }
+                  slot={slot}
                 />
-              );
-            })}
+              ))}
+            </div>
           </section>
         )}
         <section className="draft-section" aria-labelledby="draft-basket-heading">

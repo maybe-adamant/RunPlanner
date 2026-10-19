@@ -7,6 +7,7 @@ import type {
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { useFindingAnchor } from '../feedback/useFindingTarget';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
+import { useCommonItemWidth } from './useCommonItemWidth';
 
 /** The starting choices; route-scoped findings anchor here. */
 export function RouteLoadoutPanel({
@@ -84,8 +85,9 @@ function MatureRouteLoadout({
   const startingReward = workspaceRoute.startingReward;
   if (startingReward === undefined)
     throw new Error(`Missing starting reward control for ${workspaceRoute.routeKey}`);
+  const rows = useCommonItemWidth<HTMLDivElement>();
   return (
-    <>
+    <div ref={rows}>
       <RouteLoadoutControls
         authoredRoute={authoredRoute}
         catalog={catalog}
@@ -100,6 +102,6 @@ function MatureRouteLoadout({
           label="Starting reward"
         />
       </div>
-    </>
+    </div>
   );
 }

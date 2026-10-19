@@ -114,12 +114,27 @@ describe('draft run controller', () => {
 
   it('keys rack keepsakes by biome and keeps only keepsakes the rack allows', () => {
     const { runner, runs } = createManualRunner();
-    const { application } = openUnderworld(runner);
+    const { application, history } = openUnderworld(runner);
     const { catalog, store } = application;
-    const allowed = catalog.keepsakes.values.find((k) => !forcesGod(catalog, k.key))!.key;
+    const starting = history().present.route.loadout.startingKeepsakeKey;
+    const allowed = catalog.keepsakes.values.find(
+      (k) => !forcesGod(catalog, k.key) && k.key !== starting,
+    )!.key;
     const godKeepsake = catalog.keepsakes.values.find((k) => forcesGod(catalog, k.key))!.key;
-    store.dispatch(draftRackKeepsakeReplaced({ afterBiomeKey: 'G', keepsakeKey: allowed }));
-    store.dispatch(draftRackKeepsakeReplaced({ afterBiomeKey: 'H', keepsakeKey: godKeepsake }));
+    store.dispatch(
+      draftRackKeepsakeReplaced({
+        afterBiomeKey: 'G',
+        keepsakeKey: allowed,
+        inheritedKeepsakeKey: starting,
+      }),
+    );
+    store.dispatch(
+      draftRackKeepsakeReplaced({
+        afterBiomeKey: 'H',
+        keepsakeKey: godKeepsake,
+        inheritedKeepsakeKey: allowed,
+      }),
+    );
     application.draftRun.draft();
     expect(runs[0]!.request.spec.rackKeepsakeKeys).toEqual([null, allowed, null]);
   });

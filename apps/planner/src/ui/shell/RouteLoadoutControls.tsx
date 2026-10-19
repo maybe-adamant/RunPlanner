@@ -14,10 +14,7 @@ import type {
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
 import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
-import {
-  KeepsakeEquipResultPicker,
-  KeepsakeSelectionPicker,
-} from '@planner/ui/editor/KeepsakePickers';
+import { KeepsakeSelectionLauncher } from '@planner/ui/editor/KeepsakePickers';
 import { AspectHexTreeDialog } from '@planner/ui/editor/rewards/AspectHexTreeDialog';
 import { useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
@@ -26,6 +23,7 @@ import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
 
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
+import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -52,11 +50,14 @@ export function RouteLoadoutControls({
   authoredRoute,
   catalog,
   interactions,
+  keepsakeUnavailableHint,
   workspaceRoute,
 }: {
   readonly authoredRoute: ProjectDocument['route'];
   readonly catalog: Catalog;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** Dims starting keepsakes this panel can't use, with the reason. */
+  readonly keepsakeUnavailableHint?: (keepsakeKey: string) => string | undefined;
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
@@ -88,142 +89,115 @@ export function RouteLoadoutControls({
   const keepsake = interactions.keepsakeSelections.get(workspaceInteractionKey(startingKeepsake));
   if (keepsake === undefined)
     throw new Error(`Missing starting keepsake interaction for ${workspaceRoute.routeKey}`);
-  const pomAddress = createKeepsakeEquipResultAddress(startingKeepsake, 'jeweledPom');
-  const pom = interactions.keepsakeEquipResults.get(workspaceInteractionKey(pomAddress)) as
-    | Extract<
-        import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
-        { readonly owner: { readonly resultKind: 'jeweledPom' } }
-      >
-    | undefined;
-  const experimentalHammerAddress = createKeepsakeEquipResultAddress(
-    startingKeepsake,
-    'experimentalHammer',
-  );
-  const experimentalHammer = interactions.keepsakeEquipResults.get(
-    workspaceInteractionKey(experimentalHammerAddress),
-  ) as
-    | Extract<
-        import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
-        { readonly owner: { readonly resultKind: 'experimentalHammer' } }
-      >
-    | undefined;
-  const transcendentEmbryoAddress = createKeepsakeEquipResultAddress(
-    startingKeepsake,
-    'transcendentEmbryo',
-  );
-  const transcendentEmbryo = interactions.keepsakeEquipResults.get(
-    workspaceInteractionKey(transcendentEmbryoAddress),
-  ) as
-    | Extract<
-        import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
-        { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
-      >
-    | undefined;
+  const equipResults = (
+    ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo'] as const
+  ).flatMap((resultKind) => {
+    const result = interactions.keepsakeEquipResults.get(
+      workspaceInteractionKey(createKeepsakeEquipResultAddress(startingKeepsake, resultKind)),
+    );
+    return result === undefined ? [] : [result];
+  });
   const [dialog, setDialog] = useState<'Arcana' | 'Fear' | 'Hex'>();
   return (
     <div className="route-loadout-panel">
       <div className="route-loadout-controls">
-        <RouteWeaponPicker
-          catalog={catalog}
-          id={`${workspaceRoute.routeKey}-weapon-aspect`}
-          weaponKey={weapon.key}
-          aspectKey={aspectKey}
-          onSelect={(weaponKey, aspectKey) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceRouteLoadout',
-                route: createRouteAddress(workspaceRoute.routeKey),
-                weaponKey,
-                aspectKey,
-              }),
-            )
-          }
-        />
-        <div className="field-control field-control-inline loadout-dialog-launcher">
-          <label htmlFor={`${workspaceRoute.routeKey}-arcana`}>Starting Arcana</label>
-          <button
-            id={`${workspaceRoute.routeKey}-arcana`}
-            className="contextual-picker-trigger"
-            type="button"
-            aria-label="Edit Arcana"
-            aria-haspopup="dialog"
-            onClick={() => setDialog('Arcana')}
-          >
-            Arcana · {derivedLoadout.activeArcanaKeys.length} active ·{' '}
-            {derivedLoadout.startingArcanaGrasp.cost}/{derivedLoadout.startingArcanaGrasp.capacity}{' '}
-            Grasp
-          </button>
+        {/* The Hex belongs to the aspect, so it shares the weapon's cell. */}
+        <div className="route-loadout-weapon-cell">
+          <RouteWeaponPicker
+            catalog={catalog}
+            id={`${workspaceRoute.routeKey}-weapon-aspect`}
+            weaponKey={weapon.key}
+            aspectKey={aspectKey}
+            onSelect={(weaponKey, aspectKey) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceRouteLoadout',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  weaponKey,
+                  aspectKey,
+                }),
+              )
+            }
+          />
+          {workspaceRoute.aspectHexTree === undefined ? null : (
+            <div className="field-control field-control-inline loadout-dialog-launcher">
+              <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
+              <button
+                {...findingTarget(
+                  workspaceRoute.aspectHexTree.address,
+                  `${workspaceRoute.routeKey}-aspect-hex`,
+                )}
+                className="contextual-picker-trigger"
+                type="button"
+                aria-label="Edit Sky Fall Hex tree"
+                aria-haspopup="dialog"
+                onClick={() => setDialog('Hex')}
+              >
+                <span onMouseEnter={showTruncatedTitle}>
+                  {workspaceRoute.aspectHexTree.layoutLabel} tree
+                </span>
+              </button>
+            </div>
+          )}
         </div>
-        <div className="field-control field-control-inline loadout-dialog-launcher">
-          <label htmlFor={`${workspaceRoute.routeKey}-fear`}>Starting Fear</label>
-          <button
-            id={`${workspaceRoute.routeKey}-fear`}
-            className="contextual-picker-trigger"
-            type="button"
-            aria-label="Edit Fear"
-            aria-haspopup="dialog"
-            onClick={() => setDialog('Fear')}
-          >
-            Fear · {activeFearCount} active · {derivedLoadout.fearTotal}/{maximumFear} Fear
-          </button>
-        </div>
-        <div className="route-keepsake-controls">
-          <KeepsakeSelectionPicker
+        {/* Arcana, Fear, Keepsake and Familiar share one width with the Draft racks. */}
+        <div className="route-loadout-row">
+          <div className="field-control field-control-inline loadout-dialog-launcher">
+            <label htmlFor={`${workspaceRoute.routeKey}-arcana`}>Starting Arcana</label>
+            <button
+              id={`${workspaceRoute.routeKey}-arcana`}
+              className="contextual-picker-trigger"
+              type="button"
+              aria-label="Edit Arcana"
+              aria-haspopup="dialog"
+              onClick={() => setDialog('Arcana')}
+            >
+              <span onMouseEnter={showTruncatedTitle}>
+                Arcana · {derivedLoadout.activeArcanaKeys.length} active ·{' '}
+                {derivedLoadout.startingArcanaGrasp.cost}/
+                {derivedLoadout.startingArcanaGrasp.capacity} Grasp
+              </span>
+            </button>
+          </div>
+          <div className="field-control field-control-inline loadout-dialog-launcher">
+            <label htmlFor={`${workspaceRoute.routeKey}-fear`}>Starting Fear</label>
+            <button
+              id={`${workspaceRoute.routeKey}-fear`}
+              className="contextual-picker-trigger"
+              type="button"
+              aria-label="Edit Fear"
+              aria-haspopup="dialog"
+              onClick={() => setDialog('Fear')}
+            >
+              <span onMouseEnter={showTruncatedTitle}>
+                Fear · {activeFearCount} active · {derivedLoadout.fearTotal}/{maximumFear} Fear
+              </span>
+            </button>
+          </div>
+          <KeepsakeSelectionLauncher
+            equipResults={equipResults}
             id={`${workspaceRoute.routeKey}-starting-keepsake`}
             interaction={keepsake}
             label="Starting keepsake"
+            {...(keepsakeUnavailableHint === undefined
+              ? {}
+              : { unavailableHint: keepsakeUnavailableHint })}
           />
-          {pom === undefined ? null : (
-            <KeepsakeEquipResultPicker
-              id={`${workspaceRoute.routeKey}-jeweled-pom`}
-              interaction={pom}
-            />
-          )}
-          {experimentalHammer === undefined ? null : (
-            <KeepsakeEquipResultPicker
-              id={`${workspaceRoute.routeKey}-experimental-hammer`}
-              interaction={experimentalHammer}
-            />
-          )}
-          {transcendentEmbryo === undefined ? null : (
-            <KeepsakeEquipResultPicker
-              id={`${workspaceRoute.routeKey}-transcendent-embryo`}
-              interaction={transcendentEmbryo}
-            />
-          )}
+          <RouteFamiliarPicker
+            catalog={catalog}
+            familiarKey={familiarKey}
+            id={`${workspaceRoute.routeKey}-familiar`}
+            onSelect={(nextFamiliarKey) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceFamiliar',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  familiarKey: nextFamiliarKey,
+                }),
+              )
+            }
+          />
         </div>
-        {workspaceRoute.aspectHexTree === undefined ? null : (
-          <div className="field-control field-control-inline loadout-dialog-launcher">
-            <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
-            <button
-              {...findingTarget(
-                workspaceRoute.aspectHexTree.address,
-                `${workspaceRoute.routeKey}-aspect-hex`,
-              )}
-              className="contextual-picker-trigger"
-              type="button"
-              aria-label="Edit Sky Fall Hex tree"
-              aria-haspopup="dialog"
-              onClick={() => setDialog('Hex')}
-            >
-              {workspaceRoute.aspectHexTree.layoutLabel} tree
-            </button>
-          </div>
-        )}
-        <RouteFamiliarPicker
-          catalog={catalog}
-          familiarKey={familiarKey}
-          id={`${workspaceRoute.routeKey}-familiar`}
-          onSelect={(nextFamiliarKey) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceFamiliar',
-                route: createRouteAddress(workspaceRoute.routeKey),
-                familiarKey: nextFamiliarKey,
-              }),
-            )
-          }
-        />
       </div>
       {dialog === 'Hex' && workspaceRoute.aspectHexTree !== undefined ? (
         <AspectHexTreeDialog

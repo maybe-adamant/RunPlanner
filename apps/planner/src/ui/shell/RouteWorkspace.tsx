@@ -22,11 +22,7 @@ import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
-import {
-  FindingCount,
-  NavigationStatusMarker,
-  ProjectFindings,
-} from '../feedback/EvaluationFeedback';
+import { NavigationStatusMarker, ProjectFindings } from '../feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '../feedback/semanticOwner';
 import { BiomeWorkspace } from '../editor/biome/BiomeWorkspace';
 import type { DraftRunController } from '@planner/workspace/draftRun';
@@ -231,10 +227,6 @@ export function RouteWorkspace({
                       id={`${workspaceRoute.routeKey}-loadout-navigation-feedback`}
                     >
                       <NavigationStatusMarker status={feedback.loadout.status} />
-                      <FindingCount
-                        count={feedback.loadout.findingCount}
-                        label="Loadout findings"
-                      />
                     </span>
                   ) : null}
                 </button>
@@ -284,10 +276,6 @@ export function RouteWorkspace({
                     id={feedbackId}
                   >
                     <NavigationStatusMarker status={biomeFeedback.status} />
-                    <FindingCount
-                      count={biomeFeedback.findingCount}
-                      label={`${biomeProjection.label} findings`}
-                    />
                   </span>
                 </button>
               );

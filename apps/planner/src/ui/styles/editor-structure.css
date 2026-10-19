@@ -245,6 +245,24 @@ select {
   color: #c4becb;
 }
 
+/* Every label the trigger can show shares one cell; only the current one is visible. */
+.contextual-picker-trigger-sized {
+  display: grid;
+  min-width: 0;
+}
+
+.contextual-picker-trigger-sized > span {
+  grid-area: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextual-picker-trigger-sized > span[aria-hidden] {
+  visibility: hidden;
+}
+
 .contextual-picker-trigger-icon {
   color: #8f8c96;
   font-size: 0.75rem;

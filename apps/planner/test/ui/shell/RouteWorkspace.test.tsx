@@ -129,7 +129,7 @@ describe('RouteWorkspace', () => {
   it('marks the Loadout panel with its own findings like a biome panel', () => {
     const application = createOpenTestApplication('Underworld');
     expect(navigationOf(routeWorkspaceMarkup(application, 'Underworld'))).toMatch(
-      /aria-label="Loadout"[^>]*>.*?aria-label="Valid"/,
+      /aria-label="Loadout"[^>]*>.*?aria-label="Valid"[^>]*><span[^>]*data-tone="valid"[^>]*>✓</,
     );
     // Planning Erebus leaves the route-start reward missing, a Loadout finding.
     application.store.dispatch(
@@ -140,9 +140,11 @@ describe('RouteWorkspace', () => {
       }),
     );
     const navigation = navigationOf(routeWorkspaceMarkup(application, 'Underworld'));
+    // One fixed marker per panel; the count lives only in the description.
     expect(navigation).toMatch(
-      /aria-label="Loadout"[^>]*>.*?aria-label="Incomplete, 1 findings"[^>]*>.*?1 Loadout findings/,
+      /aria-label="Loadout"[^>]*>.*?aria-label="Incomplete, 1 findings"[^>]*><span[^>]*data-tone="incomplete"[^>]*>!<\/span><\/span>/,
     );
+    expect(navigation).not.toContain('findings-count');
     for (const label of ['Route', 'Modifiers'])
       expect(navigation).not.toMatch(
         new RegExp(`aria-label="${label}"[^>]*><span>${label}</span><span[^>]*navigation-feedback`),

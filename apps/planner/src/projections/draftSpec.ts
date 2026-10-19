@@ -14,9 +14,21 @@ import {
 
 import type { DraftSessionState } from '@planner/state/draftSessionSlice';
 
+/** A Postboss rack slot; a slot without its own choice inherits the previous keepsake. */
+export interface DraftRackSlot {
+  readonly afterBiomeKey: string;
+  readonly keepsakeKeys: readonly string[];
+  /** The keepsake held arriving at this rack; choosing it again stores no change. */
+  readonly inheritedKeepsakeKey: string | null;
+  readonly effectiveKeepsakeKey: string | null;
+  /** The slot's own choice, or null to keep the held keepsake. */
+  readonly keepsakeKey: string | null;
+}
+
 export interface DraftSpecProjection {
   readonly worldOptions: DraftWorldOptions;
   readonly keepsakeOptions: DraftKeepsakeOptions;
+  readonly rackSlots: readonly DraftRackSlot[];
   /** Absent while the project's loadout has no weapon, aspect, familiar or keepsake. */
   readonly spec?: DraftSpec;
 }
@@ -45,7 +57,21 @@ export function projectDraftSpec(
     if (fields.length > 0) fieldNpcsByBiome[biome.biomeKey] = fields;
   }
   const { weaponKey, aspectKey, familiarKey, startingKeepsakeKey } = route.loadout;
-  const projection = { worldOptions, keepsakeOptions };
+  let held = startingKeepsakeKey;
+  const rackSlots = keepsakeOptions.rackSlots.map((slot): DraftRackSlot => {
+    const chosen = session.rackKeepsakeByBiome[slot.afterBiomeKey];
+    const keepsakeKey =
+      chosen !== undefined && chosen !== held && slot.keepsakeKeys.includes(chosen) ? chosen : null;
+    const inheritedKeepsakeKey = held;
+    held = keepsakeKey ?? held;
+    return Object.freeze({
+      ...slot,
+      inheritedKeepsakeKey,
+      effectiveKeepsakeKey: held,
+      keepsakeKey,
+    });
+  });
+  const projection = { worldOptions, keepsakeOptions, rackSlots };
   if (
     weaponKey === null ||
     aspectKey === null ||
@@ -73,12 +99,7 @@ export function projectDraftSpec(
         fieldNpcsByBiome,
       },
       basketTraitKeys: session.basketTraitKeys,
-      rackKeepsakeKeys: keepsakeOptions.rackSlots.map((slot) => {
-        const keepsakeKey = session.rackKeepsakeByBiome[slot.afterBiomeKey];
-        return keepsakeKey !== undefined && slot.keepsakeKeys.includes(keepsakeKey)
-          ? keepsakeKey
-          : null;
-      }),
+      rackKeepsakeKeys: rackSlots.map((slot) => slot.keepsakeKey),
     }),
   });
 }

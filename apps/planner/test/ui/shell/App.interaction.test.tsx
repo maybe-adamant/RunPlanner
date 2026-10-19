@@ -91,7 +91,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceSeleneHexPathCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { getByHint, hintOf } from '@planner-test/support/hints';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -1151,7 +1151,12 @@ describe('planner history interaction', () => {
     );
     const loadout = screen.getByRole('button', { name: 'Loadout' });
     expect(loadout.getAttribute('aria-current')).toBeNull();
-    expect(within(loadout).getByLabelText('1 Loadout findings')).toBeTruthy();
+    expect(
+      document
+        .getElementById(loadout.getAttribute('aria-describedby') ?? '')
+        ?.getAttribute('aria-label'),
+    ).toBe('Incomplete, 1 findings');
+    expect(loadout.querySelector('.navigation-status-marker')?.textContent).toBe('!');
     await user.click(screen.getByRole('button', { name: /Choose a reward/ }));
     expect(loadout.getAttribute('aria-current')).toBe('page');
     expect(screen.getByRole('button', { name: 'Starting reward' })).toBeTruthy();
@@ -2499,7 +2504,8 @@ describe('planner history interaction', () => {
       }),
     );
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
-    expect(getByHint(oceanus, 'Blocked')).toBeTruthy();
+    // A blocked biome shows no marker; its status stays in the description.
+    expect(oceanus.querySelector('.navigation-status-marker')).toBeNull();
     expect(
       document
         .getElementById(oceanus.getAttribute('aria-describedby') ?? '')
@@ -2553,9 +2559,15 @@ describe('route loadout interaction', () => {
       weaponKey: suit.key,
       aspectKey: selene.key,
     });
-    expect(screen.getByRole('button', { name: 'Starting weapon' }).textContent).toContain(
-      selene.label,
-    );
+    // The trigger keeps hidden copies of every option for its width; one is shown.
+    const weaponTrigger = screen.getByRole('button', { name: 'Starting weapon' });
+    expect(
+      weaponTrigger.querySelector('.contextual-picker-trigger-sized > span:not([aria-hidden])')
+        ?.textContent,
+    ).toBe(`${suit.label} · ${selene.label}`);
+    expect(
+      weaponTrigger.querySelectorAll('.contextual-picker-trigger-sized > [aria-hidden="true"]'),
+    ).toHaveLength(catalog.weapons.values.flatMap((option) => option.aspectKeys).length);
     expect(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }).textContent).toBe(
       'Lung tree',
     );
@@ -2591,8 +2603,8 @@ describe('route loadout interaction', () => {
     await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     const weapon = screen.getByRole('button', { name: 'Starting weapon' });
-    expect(startingKeepsake.closest('.route-keepsake-controls')).toBeTruthy();
-    expect(weapon.closest('.route-keepsake-controls')).toBeNull();
+    expect(startingKeepsake.closest('.route-loadout-row')).toBeTruthy();
+    expect(weapon.closest('.route-loadout-row')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
     const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
     const artwork = Array.from(arcana.querySelectorAll('img'));
@@ -2651,25 +2663,35 @@ describe('route loadout interaction', () => {
     expect(screen.getByRole('button', { name: 'Vow of Void, rank 0 of 4' })).toBeTruthy();
   });
 
-  it('authors one of the complete starting-keepsake inventory through route settings', async () => {
+  it('authors one of the complete starting-keepsake inventory through the keepsake rack', async () => {
     const { application, user } = renderPlannerForInteraction();
     await openLoadout(user);
-    const selector = screen.getByRole('button', { name: 'Starting keepsake' });
+    const launcher = screen.getByRole('button', { name: 'Starting keepsake' });
 
-    await user.click(selector);
-    const keepsakeList = screen.getByRole('listbox');
-    expect(within(keepsakeList).getByText('Time Piece')).toBeTruthy();
+    await user.click(launcher);
+    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    const rack = await within(dialog).findByRole('group', { name: 'Keepsakes' });
+    // The rack lists every keepsake in its in-game grid order, with its icon.
+    expect(within(rack).getAllByRole('button')).toHaveLength(catalog.keepsakes.values.length);
+    expect(within(rack).getAllByRole('button')[0]!.textContent).toBe('Silver Wheel');
+    expect(
+      within(rack).getByRole('button', { name: 'Silver Wheel' }).getAttribute('aria-pressed'),
+    ).toBe('true');
 
-    await user.click(within(keepsakeList).getByText('Time Piece'));
+    await user.click(within(rack).getByRole('button', { name: 'Time Piece' }));
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
         .startingKeepsakeKey,
     ).toBe('GoldifyKeepsake');
-    expect(selector.textContent).toContain('Time Piece');
+    expect(
+      within(rack).getByRole('button', { name: 'Time Piece' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(launcher.textContent).toContain('Time Piece');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(selector.textContent).not.toContain('Time Piece');
+    expect(launcher.textContent).not.toContain('Time Piece');
   });
 
   it('replaces the required starting familiar from the catalog list and undoes it', async () => {
@@ -2707,7 +2729,8 @@ describe('route loadout interaction', () => {
     await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     await user.click(startingKeepsake);
-    await user.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
+    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Jeweled Pom' }));
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
@@ -2720,7 +2743,9 @@ describe('route loadout interaction', () => {
       summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
     });
 
-    await screen.findByRole('button', { name: 'Jeweled Pom result' });
+    // The target control sits in the dialog's detail strip.
+    await within(dialog).findByRole('button', { name: 'Jeweled Pom result' });
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
     const missingFinding = application.store
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(
@@ -2741,7 +2766,15 @@ describe('route loadout interaction', () => {
       key: issue.regionKey,
       origin: issue.owner,
     });
-    await user.click(screen.getByRole('button', { name: 'Jeweled Pom result' }));
+    // The launcher carries its target's finding while the dialog is closed.
+    expect(startingKeepsake.getAttribute('data-has-findings')).toBe('true');
+    await user.click(startingKeepsake);
+    const target = within(screen.getByRole('dialog', { name: 'Starting keepsake' })).getByRole(
+      'button',
+      { name: 'Jeweled Pom result' },
+    );
+    expect(target.getAttribute('data-has-findings')).toBe('true');
+    await user.click(target);
     const resultList = screen.getByRole('listbox');
     await waitFor(() => expect(within(resultList).getByText('Last Gasp')).toBeTruthy());
     await user.click(within(resultList).getByText('Last Gasp'));
@@ -2755,6 +2788,8 @@ describe('route loadout interaction', () => {
     expect(
       application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
     ).toHaveLength(0);
+    expect(startingKeepsake.textContent).toBe('Jeweled Pom → Last Gasp');
+    expect(startingKeepsake.getAttribute('data-has-findings')).toBe('false');
 
     expect(screen.queryByRole('checkbox', { name: 'Death Defiance condition met' })).toBeNull();
   });
@@ -2769,7 +2804,8 @@ describe('route loadout interaction', () => {
     await openLoadout(user);
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     await user.click(startingKeepsake);
-    await user.click(within(screen.getByRole('listbox')).getByText('Experimental Hammer'));
+    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Experimental Hammer' }));
 
     expect(
       application.store.getState().projectWorkspace.history!.present.route?.loadout
@@ -2782,7 +2818,9 @@ describe('route loadout interaction', () => {
       summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
     });
 
-    const result = await screen.findByRole('button', { name: 'Experimental Hammer result' });
+    const result = await within(dialog).findByRole('button', {
+      name: 'Experimental Hammer result',
+    });
     const finding = application.store
       .getState()
       .projectWorkspace.assembly!.evaluation.findings.find(
@@ -2809,10 +2847,16 @@ describe('route loadout interaction', () => {
       application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,
     ).toHaveLength(0);
     expect(result.textContent).toContain('Wicked Thrasher');
+    await user.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(startingKeepsake.textContent).toBe('Experimental Hammer → Wicked Thrasher');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(startingKeepsake.textContent).toBe('Experimental Hammer');
+    await user.click(startingKeepsake);
     expect(
-      screen.getByRole('button', { name: 'Experimental Hammer result' }).textContent,
+      within(screen.getByRole('dialog', { name: 'Starting keepsake' })).getByRole('button', {
+        name: 'Experimental Hammer result',
+      }).textContent,
     ).toContain('Choose compatible Hammer');
     expect(
       application.store.getState().projectWorkspace.assembly!.evaluation.route?.biomes,

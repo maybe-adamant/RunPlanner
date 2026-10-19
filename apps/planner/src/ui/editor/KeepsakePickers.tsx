@@ -10,9 +10,14 @@ import {
   useWorkspaceInteractionController,
 } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TranscendentEmbryoOutcomeFields } from './rewards/TranscendentEmbryoOutcomeFields';
+import {
+  KeepsakeLauncher,
+  KeepsakeRackDialog,
+  type KeepsakeRackEntry,
+} from '@planner/ui/controls/keepsakes/KeepsakeRack';
 
 type JeweledPomInteraction = Extract<
   WorkspaceKeepsakeEquipResultInteraction,
@@ -86,6 +91,81 @@ export function KeepsakeSelectionPicker({
         ? {}
         : { triggerLabel: interaction.selectedLabel })}
     />
+  );
+}
+
+/** A rack launcher whose dialog also holds the held keepsake's equip-result controls. */
+export function KeepsakeSelectionLauncher({
+  equipResults,
+  id,
+  interaction,
+  label,
+  unavailableHint,
+}: {
+  readonly equipResults: readonly WorkspaceKeepsakeEquipResultInteraction[];
+  readonly id: string;
+  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
+  readonly label: string;
+  /** Dims keepsakes this slot can't take, with the reason. */
+  readonly unavailableHint?: (keepsakeKey: string) => string | undefined;
+}) {
+  const findingTarget = useFindingTarget();
+  const executeIntent = useCommandIntent();
+  const projection = useWorkspaceInteraction(interaction);
+  const [open, setOpen] = useState(false);
+  const { activate } = projection;
+  useEffect(() => {
+    // A selection replaces the interaction; reload the rack while the dialog stays open.
+    if (open) activate();
+  }, [activate, open]);
+  const entries = new Map<string, KeepsakeRackEntry>();
+  for (const section of projection.result?.sections ?? [])
+    for (const item of section.items) {
+      if (entries.has(item.value)) continue;
+      const refused = unavailableHint?.(item.value);
+      entries.set(item.value, {
+        key: item.value,
+        label: item.label,
+        selected: item.value === interaction.selectedKeepsakeKey,
+        disabled: item.disabled || refused !== undefined,
+        hint: refused ?? item.explanation,
+      });
+    }
+  const target = equipResults.find((result) => result.value !== undefined)?.selectedLabel;
+  return (
+    <>
+      <KeepsakeLauncher
+        findingTarget={findingTarget(
+          interaction.owner,
+          id,
+          interaction.owner,
+          undefined,
+          equipResults.map((result) => result.owner),
+        )}
+        id={id}
+        keepsakeKey={interaction.selectedKeepsakeKey}
+        label={label}
+        onOpen={() => setOpen(true)}
+        text={`${interaction.selectedLabel}${target === undefined ? '' : ` → ${target}`}`}
+      />
+      {open ? (
+        <KeepsakeRackDialog
+          detail={equipResults.map((result) => (
+            <KeepsakeEquipResultPicker
+              id={`${id}-${result.owner.resultKind}`}
+              interaction={result}
+              key={result.owner.resultKind}
+            />
+          ))}
+          entries={[...entries.values()]}
+          loading={projection.pending}
+          onClose={() => setOpen(false)}
+          onSelect={(keepsakeKey) => executeIntent(interaction.replaceIntent(keepsakeKey))}
+          returnFocusId={id}
+          title={label}
+        />
+      ) : null}
+    </>
   );
 }
 

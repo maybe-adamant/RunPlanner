@@ -164,7 +164,9 @@ export function useFindingTarget() {
     id = semanticOwnerControlElementId(address),
     readinessOwner: SemanticAddress = address,
     filter?: FindingTargetFilter,
-  ): FindingTargetProps => bind(address, id, readinessOwner, filter);
+    /** Owners edited behind this launcher; their findings mark it too. */
+    nestedOwners: readonly SemanticAddress[] = [],
+  ): FindingTargetProps => bind(address, id, readinessOwner, filter, undefined, nestedOwners);
 }
 
 function useTargetBinder() {
@@ -183,14 +185,17 @@ function useTargetBinder() {
     readinessOwner: SemanticAddress,
     filter: FindingTargetFilter | undefined,
     focusTarget?: FocusTarget,
+    nestedOwners: readonly SemanticAddress[] = [],
   ): FindingTargetProps => {
     const key = semanticAddressKey(address);
     const locked = authoringReadiness?.(readinessOwner) === 'locked';
-    const allFindings = findingsByTarget.get(key) ?? [];
+    const keys = [key, ...nestedOwners.map(semanticAddressKey)];
+    const allFindings = keys.flatMap((markKey) => findingsByTarget.get(markKey) ?? []);
     const findings = filter === undefined ? allFindings : allFindings.filter(filter);
     const selectedAtTarget =
       selectedKey !== undefined &&
-      focusKey === key &&
+      focusKey !== undefined &&
+      keys.includes(focusKey) &&
       (filter === undefined ||
         findings.some((finding) => semanticFindingKey(finding) === selectedKey));
     const request = `${revision}:${selectedKey ?? ''}:${key}`;
