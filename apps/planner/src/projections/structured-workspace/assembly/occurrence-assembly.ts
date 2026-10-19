@@ -19,6 +19,7 @@ import {
   semanticAddressKey,
   roomActionKey,
   createPostbossKeepsakeSelectionAddress,
+  createRoomRunStateCheckpointAddress,
   type BiomeAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
@@ -504,9 +505,15 @@ export function assembleWorkspaceOccurrence(
     !input.facts.detailsActive || (!rackOnRoute && !rackRetainedOffRoute)
       ? undefined
       : (() => {
-          const address = createPostbossKeepsakeSelectionAddress(
-            createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+          const occurrenceAddress = createOccurrenceAddress(input.biome, occurrence.occurrenceId);
+          const address = createPostbossKeepsakeSelectionAddress(occurrenceAddress);
+          // The keepsake held on entering the rack room, before any swap there.
+          const entered = input.runState(
+            createRoomRunStateCheckpointAddress(occurrenceAddress, { kind: 'roomEntered' }),
           );
+          const heldKey =
+            entered?.availability === 'available' ? entered.snapshot.keepsakes.currentKey : null;
+          const held = heldKey === null ? undefined : input.catalog.keepsakes.byKey[heldKey];
           const effect =
             occurrence.keepsakeRack === undefined
               ? undefined
@@ -529,6 +536,9 @@ export function assembleWorkspaceOccurrence(
                   }),
                 }),
             marker: input.markerDestinations.marker(address),
+            ...(held === undefined
+              ? {}
+              : { heldKeepsake: Object.freeze({ key: held.key, label: held.label }) }),
             ...(occurrence.keepsakeRack === undefined
               ? {}
               : { selectedKeepsakeKey: occurrence.keepsakeRack.keepsakeKey }),

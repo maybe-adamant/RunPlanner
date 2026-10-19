@@ -18,6 +18,7 @@ const rackOrder = new Map(Object.keys(keepsakeArtwork).map((key, index) => [key,
 
 /** A keepsake launcher: the held keepsake's icon and name, plus its target when it has one. */
 export function KeepsakeLauncher({
+  disabledHint,
   findingTarget,
   id,
   keepsakeKey,
@@ -25,6 +26,8 @@ export function KeepsakeLauncher({
   onOpen,
   text,
 }: {
+  /** Shown on hover while the launcher can't open. */
+  readonly disabledHint?: string;
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
   readonly keepsakeKey: string | undefined;
@@ -42,7 +45,9 @@ export function KeepsakeLauncher({
         className="contextual-picker-trigger keepsake-launcher"
         type="button"
         aria-haspopup="dialog"
+        disabled={disabledHint !== undefined}
         onClick={onOpen}
+        {...hintProps(disabledHint, findingTarget?.['aria-description'])}
       >
         {artwork === undefined ? null : (
           <img src={artwork} alt="" className="keepsake-launcher-icon" width={150} height={150} />

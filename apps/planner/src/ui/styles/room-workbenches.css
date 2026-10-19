@@ -2361,7 +2361,7 @@
 }
 
 .visually-hidden,
-.room-keepsake-control[data-label-hidden='true'] > .contextual-picker > label,
+.room-keepsake-control[data-label-hidden='true'] > .field-control > label,
 .nemesis-interaction-controls > .contextual-picker > label,
 .room-action-inline-reward .contextual-picker > label {
   position: absolute;
