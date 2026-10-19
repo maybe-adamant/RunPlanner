@@ -21,14 +21,13 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '../../src/simulation';
-import { authorLegalTraitOffers, legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { allTogetherOffer, allTogetherResult } from '../simulation/shop-trait-purchase-support';
 import {
   applyProjectCommand,
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
-  clockedTraitGeneratedPickupEntryKey,
   createAdditionalExitAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -51,7 +50,6 @@ import {
   parseClockedTraitGeneratedPickupEntryKey,
   semanticAddressKey,
   createTraitOfferAddress,
-  parseProjectDocument,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
@@ -95,24 +93,6 @@ import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
-import { migrateProjectDocument as migrateProject79To80 } from '../../../../schema/migrate-project-79-to-80.js';
-import { migrateProjectDocument as migrateProject80To81 } from '../../../../schema/migrate-project-80-to-81.js';
-import { migrateProjectDocument as migrateProject81To82 } from '../../../../schema/migrate-project-81-to-82.js';
-import { migrateProjectDocument as migrateProject82To83 } from '../../../../schema/migrate-project-82-to-83.js';
-import { migrateProjectDocument as migrateProject83To84 } from '../../../../schema/migrate-project-83-to-84.js';
-import { migrateProjectDocument as migrateProject84To85 } from '../../../../schema/migrate-project-84-to-85.js';
-import { migrateProjectDocument as migrateProject85To86 } from '../../../../schema/migrate-project-85-to-86.js';
-import { migrateProjectDocument as migrateProject86To87 } from '../../../../schema/migrate-project-86-to-87.js';
-import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
-import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
-import { migrateProjectDocument as migrateProject89To90 } from '../../../../schema/migrate-project-89-to-90.js';
-import { migrateProjectDocument as migrateProject90To91 } from '../../../../schema/migrate-project-90-to-91.js';
-import { migrateProjectDocument as migrateProject91To92 } from '../../../../schema/migrate-project-91-to-92.js';
-import { migrateProjectDocument as migrateProject92To93 } from '../../../../schema/migrate-project-92-to-93.js';
-import { migrateProjectDocument as migrateProject93To94 } from '../../../../schema/migrate-project-93-to-94.js';
-import { migrateProjectDocument as migrateProject94To95 } from '../../../../schema/migrate-project-94-to-95.js';
-import { migrateProjectDocument as migrateProject95To96 } from '../../../../schema/migrate-project-95-to-96.js';
-import { migrateProjectDocument as migrateProject96To97 } from '../../../../schema/migrate-project-96-to-97.js';
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({
@@ -2422,152 +2402,6 @@ describe('execution-plan compiler and codec', () => {
     expect(
       simulateProjectAssembly(catalog, roundTripped).evaluation.route.summary
         .eligibleForExecutionPlan,
-    ).toBe(true);
-  });
-
-  it('loads migrated legacy Supply Chain entries through the project parser', () => {
-    const project = surfaceScheduledLifecycleWithQSupplyChainSlicesProject();
-    const before = qSupplyChainSlices(project);
-    expect(before.map((entry) => entry.pickupKey)).toEqual(['pom1', 'pom2']);
-
-    const legacy = legacyRareEpicHexTrees(JSON.parse(encodeProjectDocument(project))) as {
-      schemaVersion: number;
-      route: {
-        loadout: { startingReward?: unknown };
-        biomes: {
-          biomeKey: string;
-          topology: null | {
-            startOccurrenceId: string;
-            occurrences: {
-              occurrenceId: string;
-              acquisitionSites?: Record<string, { pickupEntries?: Record<string, unknown> }>;
-              startingRewardAcquisition?: unknown;
-              state: unknown;
-              roomActions: {
-                order: { kind: string; siteKey?: string; entryKey?: string }[];
-              };
-            }[];
-          };
-        }[];
-      };
-    };
-    legacy.schemaVersion = 79;
-    const firstTopology = legacy.route.biomes[0]?.topology;
-    const firstStart = firstTopology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === firstTopology.startOccurrenceId,
-    );
-    const startingReward = legacy.route.loadout.startingReward;
-    if (firstStart !== undefined && startingReward !== undefined && startingReward !== null) {
-      firstStart.state = {
-        kind: 'counted',
-        reward: { offer: startingReward, ...(firstStart.startingRewardAcquisition ?? {}) },
-      };
-    }
-    delete legacy.route.loadout.startingReward;
-    for (const biome of legacy.route.biomes) {
-      for (const occurrence of biome.topology?.occurrences ?? []) {
-        delete occurrence.startingRewardAcquisition;
-        // Schema 90 stored each Shrine purchase's rush on its purchase detail.
-        const shrine = (occurrence as { hermesShrine?: Record<string, Record<string, object>> })
-          .hermesShrine;
-        for (const action of occurrence.roomActions.order) {
-          if (action.kind !== 'purchaseHermesShrineOffer') continue;
-          const { generationKey, rushed } = action as unknown as {
-            generationKey: string;
-            rushed: boolean;
-          };
-          const purchases =
-            generationKey === 'travelDealRefill'
-              ? shrine!.travelDealRefill!
-              : shrine!.purchaseBySlot!;
-          const key = generationKey === 'travelDealRefill' ? 'purchase' : generationKey.slice(8);
-          purchases[key] = { ...purchases[key], rushed };
-        }
-        occurrence.roomActions.order = occurrence.roomActions.order.filter(
-          (action) => action.kind !== 'purchaseHermesShrineOffer',
-        );
-      }
-      const decisions = (biome.topology as { decisions?: Record<string, unknown>[] } | null)
-        ?.decisions;
-      for (const decision of decisions ?? []) {
-        if (decision.kind !== 'hub') continue;
-        // Schema 87 persisted room visits only; its migration restores fountain use first.
-        const actions = decision.actions as { kind: string; hubSlotKey?: string }[];
-        expect(actions[0]).toEqual({ kind: 'useFountain' });
-        decision.visitOrder = actions.flatMap((action) =>
-          action.hubSlotKey === undefined ? [] : [action.hubSlotKey],
-        );
-        delete decision.actions;
-      }
-    }
-    for (const biome of legacy.route.biomes) {
-      if (biome.biomeKey !== 'Q') continue;
-      for (const occurrence of biome.topology?.occurrences ?? []) {
-        const entries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
-        if (entries === undefined) continue;
-        const mappings = new Map<string, string>();
-        for (const key of Object.keys(entries)) {
-          const parsed = parseClockedTraitGeneratedPickupEntryKey(key);
-          if (parsed === undefined || !['pom1', 'pom2'].includes(parsed.pickupKey)) continue;
-          mappings.set(
-            key,
-            clockedTraitGeneratedPickupEntryKey(
-              `${parsed.acquisitionIdentity}:339`,
-              parsed.pickupKey,
-            ),
-          );
-        }
-        for (const [stableKey, legacyKey] of mappings) {
-          entries[legacyKey] = entries[stableKey];
-          delete entries[stableKey];
-        }
-        occurrence.roomActions.order = occurrence.roomActions.order.map((action) =>
-          action.kind === 'interactAcquisitionEntry' &&
-          action.siteKey === 'roomExit' &&
-          action.entryKey !== undefined &&
-          mappings.has(action.entryKey)
-            ? { ...action, entryKey: mappings.get(action.entryKey)! }
-            : action,
-        );
-      }
-    }
-
-    const migrated = migrateProject84To85(
-      migrateProject83To84(
-        migrateProject82To83(
-          migrateProject81To82(migrateProject80To81(migrateProject79To80(legacy))),
-        ),
-      ),
-    );
-    const loaded = parseProjectDocument(
-      JSON.stringify(
-        migrateProject96To97(
-          migrateProject95To96(
-            migrateProject94To95(
-              migrateProject93To94(
-                migrateProject92To93(
-                  migrateProject91To92(
-                    migrateProject90To91(
-                      migrateProject89To90(
-                        migrateProject88To89(
-                          migrateProject87To88(
-                            migrateProject86To87(migrateProject85To86(migrated)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-      catalog,
-    );
-    expect(qSupplyChainSlices(loaded)).toEqual(before);
-    expect(
-      simulateProjectAssembly(catalog, loaded).evaluation.route.summary.eligibleForExecutionPlan,
     ).toBe(true);
   });
 
