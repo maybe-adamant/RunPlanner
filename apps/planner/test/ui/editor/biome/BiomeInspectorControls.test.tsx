@@ -721,12 +721,13 @@ describe('Biome inspector controls', () => {
     expect(unchanged).toMatch(/ \(Unchanged\)$/);
     const held = unchanged.replace(/ \(Unchanged\)$/, '');
     expect(within(rackRow()).getByRole('button', { name: 'Move Keepsake Rack' })).toBeTruthy();
-    // Like other mandatory rows, its delete slot holds a disabled removal.
+    // Like other mandatory rows, its delete slot holds a disabled removal without a hint.
     const removal = within(rackRow()).getByRole<HTMLButtonElement>('button', {
       name: 'Remove Keepsake Rack from timeline',
     });
     expect(removal.disabled).toBe(true);
     expect(removal.parentElement?.dataset.timelineActionSlot).toBe('delete');
+    expect(removal.hasAttribute('data-hint')).toBe(false);
 
     fireEvent.click(launcher());
     const dialog = () => screen.getByRole('dialog', { name: 'Choose Keepsake' });
