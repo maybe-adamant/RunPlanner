@@ -105,7 +105,7 @@ describe('Draft panel', () => {
 
   it('orders a god by core slot, then other boons, then its Legendary, with Duos last', () => {
     const { catalog } = open();
-    chooseGods(['Zeus', 'Hera']);
+    chooseGods(['Zeus', 'Apollo']);
     const dialog = openBasket();
     expect(
       within(dialog)
@@ -119,7 +119,7 @@ describe('Draft panel', () => {
     const sections = within(dialog)
       .getAllByRole('region')
       .map((s) => s.getAttribute('aria-label'));
-    expect(sections).toEqual(['Zeus', 'Hera', 'Duos']);
+    expect(sections).toEqual(['Zeus', 'Apollo', 'Duos']);
 
     const zeus = within(within(dialog).getByRole('region', { name: 'Zeus' }))
       .getAllByRole('button')
@@ -144,6 +144,30 @@ describe('Draft panel', () => {
     );
     expect(ransoms.length).toBeGreaterThan(0);
     for (const ransom of ransoms) expect(shown).not.toContain(ransom.label);
+  });
+
+  it('lists only Duos shared by pool gods, and none for a single god', () => {
+    const { catalog } = open();
+    chooseGods(['Zeus', 'Hera', 'Apollo']);
+    let dialog = openBasket();
+    const duos = within(within(dialog).getByRole('region', { name: 'Duos' }))
+      .getAllByRole('button')
+      .map((button) => button.textContent);
+    const givers = (label: string | null) =>
+      catalog.traitGivers.values
+        .filter((giver) =>
+          giver.traitKeys.some((key) => catalog.traits.byKey[key]?.label === label),
+        )
+        .map((giver) => giver.key);
+    expect(duos.length).toBeGreaterThan(0);
+    for (const duo of duos)
+      expect(['Zeus', 'Hera', 'Apollo']).toEqual(expect.arrayContaining(givers(duo)));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+
+    // Deselecting Hera and Apollo leaves Zeus alone.
+    chooseGods(['Hera', 'Apollo']);
+    dialog = openBasket();
+    expect(within(dialog).queryByRole('region', { name: 'Duos' })).toBeNull();
   });
 
   it('adds basket traits, refuses a second trait for a held slot, and lists the selected NPCs', () => {

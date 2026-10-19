@@ -327,6 +327,30 @@ describe('draft basket legality', () => {
     ]);
   });
 
+  it('refuses a Duo unless both of its gods are in the world', () => {
+    const notInWorld = { kind: 'giverNotInWorld' };
+    expect(
+      assessment(underworld, spec([], { godKeys: ['Zeus', 'Hestia'] }), 'ApolloSecondStageCastBoon')
+        .refusals,
+    ).toContainEqual(notInWorld);
+    expect(
+      assessment(underworld, spec([]), 'ApolloSecondStageCastBoon').refusals,
+    ).not.toContainEqual(notInWorld);
+  });
+
+  it('refuses a basket Duo whose other god is outside the pool', () => {
+    expect(
+      refusals(underworld, {
+        world: { ...emptyWorld, godKeys: ['Zeus', 'Hestia', 'Hera'] },
+        basketTraitKeys: ['ApolloSecondStageCastBoon'],
+      }),
+    ).toContainEqual({
+      kind: 'basketTrait',
+      traitKey: 'ApolloSecondStageCastBoon',
+      refusals: expect.arrayContaining([{ kind: 'giverNotInWorld' }]),
+    });
+  });
+
   it('caps each selected trait-giving NPC at one trait', () => {
     const world = { storyNpcByBiome: { F: 'Arachne' }, fieldNpcsByBiome: { G: ['Artemis'] } };
     const [first, second] = catalog.traitGivers.byKey.Arachne!.traitKeys;

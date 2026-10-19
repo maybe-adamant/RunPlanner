@@ -255,7 +255,8 @@ function godOrder(
 /**
  * The basket picker: pool gods with one shared Duo section, the always-present
  * Hermes, Hammer and Selene givers, then the selected NPCs. Rows a draft never
- * takes and Hammers for another weapon or aspect are left out.
+ * takes, Duos with a god outside the pool and Hammers for another weapon or
+ * aspect are left out unless already in the basket.
  */
 export function projectDraftBasket(
   catalog: Catalog,
@@ -279,7 +280,8 @@ export function projectDraftBasket(
     trait.refusals.some(
       (refusal) =>
         refusal.kind === 'draftIllegal' ||
-        (refusal.kind === 'wrongHammerLoadout' && !trait.inBasket),
+        (refusal.kind === 'wrongHammerLoadout' && !trait.inBasket) ||
+        (refusal.kind === 'giverNotInWorld' && trait.kind === 'duo' && !trait.inBasket),
     );
   const rowsOf = (traitKeys: readonly string[]): DraftBasketRow[] =>
     traitKeys.flatMap((key) => {
