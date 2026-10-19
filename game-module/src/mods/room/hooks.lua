@@ -2,6 +2,8 @@
 local snapMode = type(import) == "function" and import("mods/snap/mode.lua") or require("mods.snap.mode")
 local doors = type(import) == "function" and import("mods/navigation/doors.lua")
     or require("mods.navigation.doors")
+local ephyra = type(import) == "function" and import("mods/navigation/ephyra.lua")
+    or require("mods.navigation.ephyra")
 
 local hooks = {}
 
@@ -25,18 +27,27 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         and type(loadoutScope.installedRun) == "function",
         "starting-room loadout scope is required")
     -- Snap mode steers a desynchronized run's next room to the planned next
-    -- occurrence: the door's own room when it was prepared for that occurrence,
-    -- else the room the planned door would have offered, built and created as
-    -- ChooseStartingRoom does. The session resynchronizes first so the new
-    -- room's encounter and reward are steered inside LeaveRoom.
-    local function steerSnap(runtime, state, currentRun, door)
-        if snapScope == nil or not snapScope.enabled(runtime) then return end
-        local target, index = snapMode.target(state, roomName(currentRun and currentRun.CurrentRoom))
-        if target == nil then return end
-        if not session.beginSnap(state, index) then report(runtime); return end
-        room.prepare(state, target)
-        if state.state == "synchronized" and not navigation.doorTargets(door, target.id) then
-            local gameValue = _G.game or game
+    -- occurrence: through the planned board door in Ephyra, else the door's own
+    -- room when it was prepared for that occurrence, else the room the planned
+    -- door would have offered, built and created as ChooseStartingRoom does. The
+    -- session resynchronizes first so the new room's encounter and reward are
+    -- steered inside LeaveRoom. Returns the door LeaveRoom leaves through.
+    local function steerSnap(runtime, state, currentRun, door, inSync)
+        if snapScope == nil or not snapScope.enabled(runtime) then return door end
+        local gameValue = _G.game or game
+        local target, index, way = snapMode.target(state, roomName(currentRun and currentRun.CurrentRoom), {
+            door = door, offered = _G.MapState and _G.MapState.OfferedExitDoors, currentRun = currentRun,
+            game = gameValue, inSync = inSync,
+        })
+        if target == nil then return door end
+        if not session.beginSnap(state, index) then report(runtime); return door end
+        if way.door ~= nil then
+            door = ephyra.substitute(currentRun, door, way, gameValue)
+            -- A return through the Hub leaves an in-sync run on plan; the target comes later.
+            if way.kind == "board" and not way.enters then session.completeSnap(state); report(runtime); return door end
+        end
+        if way.kind ~= "throughHub" then room.prepare(state, target) end
+        if way.kind == "room" and state.state == "synchronized" and not navigation.doorTargets(door, target.id) then
             local data = navigation.plannedRoom(state.plan, index, gameValue) or room.realize(state, target, gameValue)
             if data ~= nil then data = navigation.realizeIncomingReward(target, data) end
             local createRoom = gameValue and gameValue.CreateRoom or _G.CreateRoom
@@ -46,6 +57,13 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         end
         if state.state ~= "synchronized" then session.stopSnapping(state) end
         report(runtime)
+        return door
+    end
+
+    local function boardStray(state, nativeRoomName, door, currentRun)
+        local expected = route.expected(state.route)
+        return ephyra.stray(state.plan, nativeRoomName, expected, door,
+            _G.MapState and _G.MapState.OfferedExitDoors, currentRun, _G.game or game), expected
     end
 
     -- At the snapped room's StartRoom, before native setup binds the hero.
@@ -177,7 +195,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         if nativeRoom == nil and type(liveRun) == "table" then nativeRoom = liveRun.CurrentRoom end
         -- A run loaded into a fresh process continues unsteered.
         if loadoutScope.installedRun(liveRun) then session.resumeUnsteered(state) end
-        local snapped = state.snapPending ~= nil
+        -- A snap through the Hub settles at the planned room after the Hub's first entry.
+        local snapped = state.snapPending ~= nil and not route.transparent(state.route, roomName(nativeRoom))
         if snapped then settleSnap(runtime, state, nativeRoom) end
         if state.state ~= "synchronized" then report(runtime); return base(currentRun, nativeRoom) end
         local expected = route.expected(state.route)
@@ -236,14 +255,25 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     module.hooks.wrap("LeaveRoom", "run-planner-room-exit", function(_, runtime, base, currentRun, door)
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then
-            if state ~= nil then steerSnap(runtime, state, currentRun, door) end
+            if state ~= nil then door = steerSnap(runtime, state, currentRun, door) end
             return base(currentRun, door)
         end
         local nativeRoomName = roomName(currentRun and currentRun.CurrentRoom)
         if route.leaveTransparent and route.leaveTransparent(state.route, nativeRoomName) then
-            if navigation.proveHubDeparture then
+            -- A snap pending through the Hub corrects the hero at the planned room instead.
+            if navigation.proveHubDeparture and state.snapPending == nil then
                 local departed, departureError = navigation.proveHubDeparture(state, currentRun)
                 if not departed then reportOutcome(session, state, departureError); report(runtime) end
+            end
+            -- The Hub and a restored main room leave through the board door to the planned next room.
+            local stray, expected
+            if state.state == "synchronized" then stray, expected = boardStray(state, nativeRoomName, door, currentRun) end
+            if stray ~= nil then
+                session.mismatch(state, { checkpoint = "exit-door", expected = expected.id, observed = stray })
+            end
+            if state.state == "desynchronized" then
+                door = steerSnap(runtime, state, currentRun, door, stray ~= nil)
+                report(runtime)
             end
             return base(currentRun, door)
         end
@@ -254,17 +284,18 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             local ok, routeError = route.exit(state.route)
             if not ok then reportOutcome(session, state, routeError) end
         end
-        -- A door prepared for another published target or additional exit leaves the route here.
+        -- A door prepared for another published target or additional exit, or
+        -- any board door but the planned one, leaves the route here.
         local expected = state.state == "synchronized" and route.expected(state.route) or nil
-        local stray = expected and doors.strayTarget(state.route.lastExitedOccurrence, door,
-            expected.id, state.route.plan.occurrencesById)
+        local stray = expected and (doors.strayTarget(state.route.lastExitedOccurrence, door,
+            expected.id, state.route.plan.occurrencesById) or boardStray(state, nativeRoomName, door, currentRun))
         if stray ~= nil then
             session.mismatch(state, { checkpoint = "exit-door", expected = expected.id, observed = stray })
         end
         if state.state == "synchronized" and expected == nil then
             state.reason = "configured-prefix-complete"
         end
-        if state.state == "desynchronized" then steerSnap(runtime, state, currentRun, door) end
+        if state.state == "desynchronized" then door = steerSnap(runtime, state, currentRun, door, stray ~= nil) end
         local result = base(currentRun, door)
         report(runtime)
         return result
