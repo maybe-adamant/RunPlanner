@@ -6,15 +6,14 @@ Answering it bounds the remaining data-mining for the icon set under
 
 Status: open. Each row closes when its art is added to the owner's icon source
 folder and wired, or is judged unnecessary. Enemies, minibosses, bosses, Fangs
-perks, biomes, room objects, fountains, gathering tools, Eris, cocoons and most
-exit doors are covered.
+perks, biomes, room objects, fountains, gathering tools, Eris and cocoons are
+covered.
 
 ## Still missing
 
-| Entity                  | Count | Detail                                                                                                                              | Where the planner shows it |
-| ----------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Exit doors              | 5     | N_OpeningDoor, EphyraExitDoorReturn, EphyraExitBossDoor, AnomalyAutoExitDoor, ChaosReturnExitDoor; the game shows glow effects only | decision exit cards        |
-| Trial (Devotion) reward | 1     | no game icon; the planner shows the chosen god pair instead                                                                         | reward pickers and rail    |
+| Entity                  | Count | Detail                                                      | Where the planner shows it |
+| ----------------------- | ----- | ----------------------------------------------------------- | -------------------------- |
+| Trial (Devotion) reward | 1     | no game icon; the planner shows the chosen god pair instead | reward pickers and rail    |
 
 ## Candidates held for later
 
@@ -25,6 +24,8 @@ exit doors are covered.
 
 ## Not needing art
 
+- Physical exit doors: only the Chaos and Zagreus exits carry icons; the in-world
+  door sprites vary too much in style to read as icons.
 - Weapons: their codex cards are alternative Melinoë art; aspect icons cover
   the picker.
 - Rooms: the rail uses room-type icons, not per-room art.
