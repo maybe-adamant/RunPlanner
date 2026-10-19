@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { type CSSProperties, useRef, useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 import {
@@ -50,6 +50,7 @@ import { GameHeaderControls } from './GameHeaderControls';
 import { GamePanel } from './GamePanel';
 import { BugReportDialog } from './BugReportDialog';
 import { hintProps } from '@planner/ui/controls/hint';
+import { routeBannerArtwork } from '@planner/ui/artwork/route-banners/routeBannerArtwork';
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
@@ -121,6 +122,10 @@ export function App({
   const activeRouteFeedback = feedback?.route;
   const activeWorkspaceRoute = workspace?.route;
   const showEntry = project === undefined || entryOpen;
+  const routeBanner =
+    activeRouteNavigation === undefined || showEntry
+      ? null
+      : (routeBannerArtwork[activeRouteNavigation.routeKey] ?? null);
   const repairIssue = evaluation?.route.issue;
   // A running draft holds the workspace on the Draft panel.
   const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
@@ -143,7 +148,16 @@ export function App({
       findings={workspace?.findingsByRepairTarget}
     >
       <main className="app-shell">
-        <header className="app-header" data-entry={showEntry || undefined}>
+        <header
+          className="app-header"
+          data-entry={showEntry || undefined}
+          {...(routeBanner === null || activeRouteNavigation === undefined
+            ? {}
+            : {
+                'data-route-banner': activeRouteNavigation.routeKey,
+                style: { '--route-banner': `url("${routeBanner}")` } as CSSProperties,
+              })}
+        >
           <div className="app-brand">
             <h1>Run Planner</h1>
             {activeRouteNavigation === undefined || showEntry ? null : (

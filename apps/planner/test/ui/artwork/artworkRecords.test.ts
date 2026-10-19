@@ -27,6 +27,7 @@ import { npcBoonArtwork } from '@planner/ui/artwork/npc-boons/npcBoonArtwork';
 import { noRewardArtwork } from '@planner/ui/artwork/no-reward/noRewardArtwork';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 import { rewardArtwork } from '@planner/ui/artwork/rewards/rewardArtwork';
+import { routeBannerArtwork } from '@planner/ui/artwork/route-banners/routeBannerArtwork';
 import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 
@@ -146,6 +147,7 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
     catalog.encounterDefinitions.values.filter((d) => d.kind === 'miniboss').map((d) => d.key),
   ],
   ['fangs', fangsPerkArtwork, fangsPerkKeys],
+  ['route-banners', routeBannerArtwork, catalog.routes.values.map((r) => r.key)],
   [
     'room-objects',
     roomObjectArtwork,
