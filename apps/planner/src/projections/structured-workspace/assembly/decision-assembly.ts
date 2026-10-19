@@ -29,6 +29,7 @@ import type {
 import {
   authoredBatchEnteredRewardStores,
   canonicalBatchEnteredRewardStores,
+  clockworkDoorGoalsRemaining,
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,
   targetContinuation,
@@ -429,6 +430,7 @@ function projectAuthoredTargetWithOverlay(
   physical: readonly DeclaredPhysicalExit[],
   completedHubExitStage: boolean,
   evaluatedTarget: CanonicalTarget | undefined,
+  clockworkGoalsRemaining: number | undefined,
   batchKind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
 ): {
   readonly node: WorkspaceOccurrenceWorkbenchNode;
@@ -495,6 +497,7 @@ function projectAuthoredTargetWithOverlay(
   const occurrenceAssembly = input.assembleOccurrence(
     Object.freeze({
       ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
+      ...(clockworkGoalsRemaining === undefined ? {} : { clockworkGoalsRemaining }),
       ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
       occurrence,
       ...(roomPicker === undefined ? {} : { roomPicker }),
@@ -857,6 +860,9 @@ function assembleBatchDecision(
         physical,
         completedHubExitStage,
         overlay,
+        overlay === undefined || evaluated === undefined
+          ? undefined
+          : clockworkDoorGoalsRemaining(evaluated.batch, overlay),
         kind,
       );
     });

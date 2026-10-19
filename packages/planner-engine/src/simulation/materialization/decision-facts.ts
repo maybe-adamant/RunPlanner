@@ -2,7 +2,7 @@ import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema
 import type { ExitDecision, OccurrenceId, RoomOccurrence } from '../../authored-project/model';
 import { deriveFieldsActiveCageCount } from '../../authored-project/fields';
 
-import type { CanonicalTargetContinuation } from './model';
+import type { CanonicalBatch, CanonicalTarget, CanonicalTargetContinuation } from './model';
 
 type OccurrenceLookup = (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
 
@@ -127,4 +127,18 @@ export function fieldsBatchFacts(
 export function targetContinuation(picked: boolean): CanonicalTargetContinuation {
   if (!picked) return 'deadLeaf';
   return 'continuesSpine';
+}
+
+/**
+ * Goals remaining shown on a Clockwork Goal door: the count when its batch is
+ * generated, after the source room's own Goal (`SetupClockworkGoalReward`).
+ */
+export function clockworkDoorGoalsRemaining(
+  batch: CanonicalBatch,
+  target: CanonicalTarget,
+): number | undefined {
+  if (batch.batchState.kind !== 'clockwork' || target.room.clockworkReward !== 'goal') {
+    return undefined;
+  }
+  return batch.batchState.goalsRemaining;
 }

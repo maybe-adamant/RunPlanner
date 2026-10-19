@@ -698,6 +698,17 @@ select {
   padding: 6px 10px;
 }
 
+/* A Clockwork Goal door leads its label with the countdown the game shows. */
+.door-fixed-reward > .fixed-room-state {
+  gap: 8px;
+}
+
+.door-fixed-reward-icon {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
 .start-room-fixed > .fixed-room-state {
   margin: 0;
   padding: 0;

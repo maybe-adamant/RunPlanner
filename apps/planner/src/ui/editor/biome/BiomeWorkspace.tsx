@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
+import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
 import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { noRewardArtwork } from '@planner/ui/artwork/no-reward/noRewardArtwork';
 
@@ -158,8 +159,9 @@ function RailMainReward({ reward }: { readonly reward: WorkspaceRailReward }) {
 }
 
 /**
- * An additional exit shows its door art and a shop the Shop door; several rewards show one icon
- * each, and a room without any reward shows its biome's no-reward door.
+ * An additional exit shows its door art, a shop the Shop door and a Clockwork Goal its countdown;
+ * several rewards show one icon each, and a room without any reward shows its biome's no-reward
+ * door.
  */
 function RailTargetIcons({
   biomeKey,
@@ -172,6 +174,13 @@ function RailTargetIcons({
   if (exitIcon != null) return <ArtworkIcon className="biome-rail-reward-icon" source={exitIcon} />;
   if (target.shop === true)
     return <ArtworkIcon className="biome-rail-reward-icon" source={rewardIcon('Shop')} />;
+  if (target.clockworkGoalsRemaining !== undefined)
+    return (
+      <ArtworkIcon
+        className="biome-rail-reward-icon"
+        source={clockworkCountdownArtwork[String(target.clockworkGoalsRemaining)] ?? undefined}
+      />
+    );
   if (target.roomRewards.length <= 1)
     return (
       <ArtworkIcon

@@ -252,8 +252,12 @@ function selectedTargetRailPresentation(
       : node.zagreusContract?.door === door
         ? node.zagreusContract.exitTypeKey
         : undefined;
+  const clockworkGoalsRemaining = door.offerRewardSurface.rewards.find(
+    (candidate) => candidate.clockworkGoalsRemaining !== undefined,
+  )?.clockworkGoalsRemaining;
   return Object.freeze({
     ...(exitTypeKey === undefined ? {} : { exitTypeKey }),
+    ...(clockworkGoalsRemaining === undefined ? {} : { clockworkGoalsRemaining }),
     ...(reward === undefined ? {} : { reward }),
     roomRewards: Object.freeze(
       door.offerRewardSurface.rewards.flatMap((candidate) =>

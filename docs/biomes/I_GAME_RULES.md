@@ -80,6 +80,12 @@ non-goal cap, remaining combat rewards resolve to Goal. Two-door room
 declarations also reserve capacity for a later two-door decision, preventing
 an authored branch from evading the countdown indefinitely.
 
+A Goal door previews `ClockworkCountdown<n>`, where `n` is the goals remaining
+when its batch is set up (`RewardLogic.lua:SetupClockworkGoalReward`). The
+source room's own Goal is already counted, because its decrement
+(`SpawnClockworkGoalReward`) precedes exit unlock; every Goal door in one batch
+shows the same count, and a Preboss door previews zero.
+
 Goal and NonGoal are derived realizations of one occurrence-owned room state,
 not alternate persisted topology. A dormant non-goal leaf survives while the
 same room currently resolves to Goal, so a compatible upstream edit can change

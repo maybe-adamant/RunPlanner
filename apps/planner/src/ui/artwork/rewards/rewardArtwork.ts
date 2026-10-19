@@ -11,7 +11,6 @@ import iconBones from './assets/Bones.webp';
 import iconBoon2 from './assets/Boon2.webp';
 import iconChampionOfElysium from './assets/ChampionOfElysium.webp';
 import iconChaos from './assets/Chaos.webp';
-import iconClockworkCountdown5 from './assets/ClockworkCountdown5.webp';
 import iconDemeter from './assets/Demeter.webp';
 import iconEarth from './assets/Earth.webp';
 import iconEmptyMaxHealth from './assets/EmptyMaxHealth.webp';
@@ -118,5 +117,5 @@ export const rewardArtwork: Readonly<Record<string, string | null>> = {
   ShopHermesUpgrade: iconHermes,
   Story: iconStory,
   Shop: iconShop,
-  ClockworkGoal: iconClockworkCountdown5,
+  ClockworkGoal: null,
 };
