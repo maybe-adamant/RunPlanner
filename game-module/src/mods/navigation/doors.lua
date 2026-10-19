@@ -246,12 +246,15 @@ function doors.plannedRoom(plan, index, game)
     return nil
 end
 
--- The other published target a door from `occurrence` leads to instead of
--- `expectedId`; nil for the planned door, unstamped doors and non-target rooms.
+-- The other published target or planned additional exit a door from `occurrence`
+-- leads to instead of `expectedId`; nil for the planned door, unstamped doors and other rooms.
 function doors.strayTarget(occurrence, door, expectedId, occurrencesById)
     local destination = destinationId(door)
-    if destination == nil or destination == expectedId or occurrence == nil or occurrence.doors == nil
-        or occurrence.doors.kind == "terminal" then return nil end
+    if destination == nil or destination == expectedId or occurrence == nil then return nil end
+    for _, additional in ipairs(occurrence.overview and occurrence.overview.additional or {}) do
+        if additional.room.id == destination then return destination end
+    end
+    if occurrence.doors == nil or occurrence.doors.kind == "terminal" then return nil end
     for _, target in ipairs(publishedTargets(occurrence.doors, occurrencesById)) do
         if target.room.id == destination then return destination end
     end

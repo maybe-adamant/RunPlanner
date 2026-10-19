@@ -1748,9 +1748,10 @@ owns the exact contacts and scope lifetimes.
 ## Deferred scope
 
 Wrong continuation is detected by the next room-entry identity check. The one
-exception is a door prepared for another published target of the room being
-left: `LeaveRoom` reports it as an `exit-door` mismatch after the cursor
-exits, so snap mode can redirect that same door.
+exception is a door prepared for another published target or planned
+additional exit of the room being left: `LeaveRoom` reports it as an
+`exit-door` mismatch after the cursor exits, so snap mode can redirect that same
+door. Only its destination changes; the door's cost and presentation stay native.
 
 Automatic diagnostic import remains deferred. Automated protocol and hook
 coverage does not substitute for live-game verification of a complete Dream run.
