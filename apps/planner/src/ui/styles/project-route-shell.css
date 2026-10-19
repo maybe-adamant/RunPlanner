@@ -1412,6 +1412,19 @@
   cursor: pointer;
 }
 
+.draft-toggle[data-has-icon] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-left: 0.3rem;
+}
+
+.draft-toggle-icon {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
 .draft-toggle:hover:not(:disabled, [aria-disabled='true']) {
   border-color: var(--selection-accent);
 }

@@ -12,6 +12,8 @@ import {
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
+import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -45,6 +47,26 @@ interface RewardInteraction {
 const emptyModel: ContextualPickerModel<ResolvedRewardOffer> = Object.freeze({
   sections: Object.freeze([]),
 });
+
+/** A picker row shows its reward type, or the Boon or Trial god the row picks. */
+function pickerRowIcon(
+  offer: ResolvedRewardOffer,
+  step: RewardPickerStep | undefined,
+): string | undefined {
+  const payload = offer.payload;
+  if (payload === undefined || step === 'type') return rewardIcon(offer.rewardType);
+  if (payload.kind === 'BoonSource') return rewardIcon(payload.source);
+  return rewardIcon(step === 'spurned' ? payload.spurnedSource : payload.chosenSource);
+}
+
+/** While picking a Trial, the trigger fills its gods in as each is picked. */
+function triggerIcon(
+  offer: ResolvedRewardOffer,
+  step: RewardPickerStep | undefined,
+): ArtworkSource | undefined {
+  if (step === undefined || offer.payload?.kind !== 'DevotionPair') return offerIcon(offer);
+  return [step === 'spurned' ? rewardIcon(offer.payload.chosenSource) : undefined, undefined];
+}
 
 function offerKey(offer: ResolvedRewardOffer): string {
   return JSON.stringify(offer);
@@ -168,6 +190,8 @@ export function RewardValueEditor({
         open={active !== undefined}
         placeholder={summary}
         triggerLabel={triggerLabel}
+        triggerIcon={activeOffer === undefined ? undefined : triggerIcon(activeOffer, active?.step)}
+        itemIcon={(item) => pickerRowIcon(item.value, active?.step)}
         {...(realizedLabel === undefined
           ? {}
           : { triggerHint: 'Converted by the Vow of Forfeit.' })}

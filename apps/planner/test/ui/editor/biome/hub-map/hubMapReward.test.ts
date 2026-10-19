@@ -63,21 +63,21 @@ describe('Hub map reward presentation', () => {
 
   it.each([
     ['HermesUpgrade', 'Hermes'],
-    ['MaxHealthDropBig', 'Max Health'],
-    ['MaxManaDropBig', 'Max Magick'],
+    ['MaxHealthDropBig', 'MaxHealthDropBigPreview'],
+    ['MaxManaDropBig', 'MaxManaDropBigPreview'],
     ['WeaponUpgrade', 'Hammer'],
-    ['SpellDrop', "Selene's Gift"],
+    ['SpellDrop', 'SelenesGift'],
   ])('maps the %s Hub reward to its packaged icon', (rewardType, filename) => {
     const reward = hubMapReward(withReward({ rewardType }));
     expect(decodeURIComponent(reward.icon!).endsWith(`/${filename}.webp`)).toBe(true);
   });
 
-  it('retains full projected names and does not invent icons for unresolved or closed rewards', () => {
+  it('retains full projected names and shows no god before one is chosen', () => {
     expect(hubMapReward(slot).summary).toBe('Big Max Health');
     expect(hubMapReward(withReward(null, 'Choose reward'))).toEqual({ summary: 'Choose reward' });
-    expect(hubMapReward(withReward({ rewardType: 'Boon' }, 'Choose god'))).toEqual({
-      summary: 'Choose god',
-    });
+    const unchosen = hubMapReward(withReward({ rewardType: 'Boon' }, 'Choose god'));
+    expect(unchosen.summary).toBe('Choose god');
+    expect(decodeURIComponent(unchosen.icon!).endsWith('/Boon2.webp')).toBe(true);
     expect(hubMapReward({ ...slot, open: false })).toEqual({ summary: 'Reward unavailable.' });
   });
 });

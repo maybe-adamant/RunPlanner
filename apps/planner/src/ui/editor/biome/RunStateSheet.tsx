@@ -1,3 +1,5 @@
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { elementArtwork } from '@planner/ui/artwork/elements/elementArtwork';
 import {
   useCallback,
   useEffect,
@@ -73,6 +75,31 @@ function BagSection({
   );
 }
 
+function ElementCounts({
+  counts,
+  name,
+}: {
+  readonly counts: NonNullable<WorkspaceRunStateRow['elementCounts']>;
+  readonly name: string;
+}) {
+  return (
+    <>
+      <span className="visually-hidden">{name}</span>
+      <span aria-hidden="true" className="run-state-elements">
+        {counts.map(({ element, count }) => (
+          <span className="run-state-element" key={element}>
+            <ArtworkIcon
+              className="run-state-element-icon"
+              source={elementArtwork[element] ?? undefined}
+            />
+            {count}
+          </span>
+        ))}
+      </span>
+    </>
+  );
+}
+
 function RunStateRows({
   label,
   rows,
@@ -85,7 +112,11 @@ function RunStateRows({
       {rows.map((row) => (
         <li className="run-state-row" key={row.key}>
           <span className="run-state-row-name">
-            {row.name}
+            {row.elementCounts === undefined ? (
+              row.name
+            ) : (
+              <ElementCounts counts={row.elementCounts} name={row.name} />
+            )}
             {row.bracket === undefined ? null : (
               <>
                 {' '}

@@ -219,6 +219,15 @@ describe('structured workspace biome presentation', () => {
         node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceId('preboss'),
     );
     expect(preboss?.kind === 'occurrenceWorkbench' && preboss.runState?.title).toBe('Preboss');
+    // The visible Preboss shop stage carries the shop fact for its rail icon.
+    const prebossRail = biome.rail.find(
+      (entry) => entry.kind === 'node' && entry.node.key === preboss?.key,
+    );
+    expect(prebossRail?.kind === 'node' && prebossRail.selectedTarget).toEqual({
+      roomLabel: 'Preboss',
+      roomRewards: [],
+      shop: true,
+    });
     const hub = biome.nodes.find((node) => node.kind === 'hubDecision');
     expect(hub?.kind === 'hubDecision' && hub.visits.some((visit) => 'runState' in visit)).toBe(
       false,
@@ -545,6 +554,7 @@ describe('structured workspace biome presentation', () => {
     if (directRail === undefined) throw new Error('F direct decision rail entry is missing');
     expect(directRail.selectedTarget).toEqual({
       roomLabel: directTarget.room.label,
+      roomRewards: [directTarget.room.roomLocal.control.offer],
       reward: {
         label: summarizeRewardOffer(catalog, directTarget.room.roomLocal.control.offer),
         offer: directTarget.room.roomLocal.control.offer,
@@ -567,7 +577,12 @@ describe('structured workspace biome presentation', () => {
         entry.kind === 'node' && entry.node.key === fieldsDecision.key,
     );
     if (fieldsRail === undefined) throw new Error('H Fields decision rail entry is missing');
-    expect(fieldsRail.selectedTarget).toEqual({ roomLabel: fieldsTarget.room.label });
+    // The rail keeps every cage reward, in cage order.
+    expect(fieldsRail.selectedTarget).toEqual({
+      roomLabel: fieldsTarget.room.label,
+      roomRewards: fieldsTarget.door.offerRewardSurface.rewards.map((reward) => reward.offer),
+    });
+    expect(fieldsRail.selectedTarget?.roomRewards.length).toBeGreaterThan(1);
 
     const fixed = fixedRewardBiome;
     const fixedDecision = fixed.nodes.find(
@@ -589,6 +604,7 @@ describe('structured workspace biome presentation', () => {
     if (fixedRail === undefined) throw new Error('O fixed decision rail entry is missing');
     expect(fixedRail.selectedTarget).toEqual({
       roomLabel: fixedTarget.room.label,
+      roomRewards: [fixedTarget.room.roomLocal.offer],
       reward: {
         label: fixedTarget.room.roomLocal.summary,
         offer: fixedTarget.room.roomLocal.offer,
@@ -627,7 +643,7 @@ describe('structured workspace biome presentation', () => {
       })),
     ).toEqual([{ control: undefined, summary: 'Clockwork Goal' }]);
     expect(goalDecision.missingTargets).toEqual([]);
-    expect(rail.selectedTarget).toEqual({ roomLabel: goalTarget.room.label });
+    expect(rail.selectedTarget).toEqual({ roomLabel: goalTarget.room.label, roomRewards: [] });
   });
 
   it('presents every generated biome as entry, numbered decision stops, and bounded Preboss', () => {

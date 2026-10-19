@@ -162,6 +162,7 @@ export type WorkspaceStygianWellTravelDealRefill = NonNullable<
 
 export interface WorkspaceZagreusContractControl {
   readonly door: WorkspaceDoorContract;
+  readonly exitTypeKey: string;
   readonly exitTypeLabel: string;
   /** The destination room's declared fixed reward. */
   readonly fixedRewardLabel: string;
@@ -179,6 +180,7 @@ export interface WorkspaceZagreusSpawnControl {
 
 export interface WorkspaceChaosExitControl {
   readonly door: WorkspaceDoorContract;
+  readonly exitTypeKey: string;
   readonly exitTypeLabel: string;
   /** The destination room's declared fixed reward. */
   readonly fixedRewardLabel: string;

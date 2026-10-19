@@ -535,11 +535,11 @@ function overviewSections(
       }),
     ),
   ];
-  const elements = Object.entries(snapshot.traits.elementCounts)
+  const elementCounts = Object.entries(snapshot.traits.elementCounts)
     .filter(([, value]) => value > 0)
     .sort(([, left], [, right]) => right - left)
-    .map(([key, value]) => `${key} ${value}`)
-    .join(' · ');
+    .map(([element, count]) => Object.freeze({ element, count }));
+  const elements = elementCounts.map(({ element, count }) => `${element} ${count}`).join(' · ');
   const keepsakeRows = snapshot.effects.keepsakes.map((keepsake) =>
     row(`keepsake:${keepsake.keepsakeKey}`, keepsakeLabel(catalog, keepsake.keepsakeKey), {
       ...(keepsake.state === undefined ? {} : { bracket: effectBracket(keepsake.state) }),
@@ -548,7 +548,18 @@ function overviewSections(
   );
   return sections(
     section('keepsake', 'Keepsake', keepsakeRows),
-    section('elements', 'Elements', elements === '' ? [] : [row('elements', elements)]),
+    section(
+      'elements',
+      'Elements',
+      elements === ''
+        ? []
+        : [
+            Object.freeze({
+              ...row('elements', elements),
+              elementCounts: Object.freeze(elementCounts),
+            }),
+          ],
+    ),
     section('traits', 'Traits', [...slotRows, ...otherRows]),
     section('hex', 'Hex', hexRows),
   );

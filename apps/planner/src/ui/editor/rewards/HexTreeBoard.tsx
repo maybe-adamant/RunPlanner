@@ -8,6 +8,9 @@ import type {
   WorkspaceHexTreeDomain,
   WorkspaceHexTreeNode,
 } from '@planner/projections/structured-workspace';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { hexLayoutArtwork } from '@planner/ui/artwork/hex-layouts/hexLayoutArtwork';
+import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { ContextualPicker, ContextualPickerPopover } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
@@ -16,6 +19,9 @@ import { HexBoard } from './HexBoard';
 
 /** Pickers with more options than this offer a search box. */
 const SEARCH_THRESHOLD = 8;
+
+const hexNodeIcon = (talentKey: string | undefined): string | undefined =>
+  talentKey === undefined ? undefined : (hexNodeArtwork[talentKey] ?? undefined);
 
 /** The open node picker and the trigger it was opened from: the board node or a table talent. */
 interface OpenPicker {
@@ -53,6 +59,7 @@ export function HexTreeBoard({
       <ContextualPickerPopover
         choiceLabel="talent"
         heading={editor.heading}
+        itemIcon={(item) => hexNodeIcon(editor.talentKeys[item.key])}
         key={`${node.nodeKey}-${anchor}`}
         model={editor.model}
         onActiveChange={(item) => setActiveItemKey(item?.key)}
@@ -72,6 +79,10 @@ export function HexTreeBoard({
   return (
     <div className="hex-tree-editor" ref={setRoot}>
       <div className="hex-tree-toolbar">
+        <ArtworkIcon
+          className="hex-tree-layout-image"
+          source={hexLayoutArtwork[domain.value.layoutKey] ?? undefined}
+        />
         <ContextualPicker
           ariaLabel="Hex talent layout"
           id={`${idBase}-layout`}
@@ -115,6 +126,7 @@ export function HexTreeBoard({
                 {...marks}
                 {...hintProps(`${node.talentLabel} appears once God Sent is eligible.`)}
               >
+                <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
                 {node.talentLabel}
               </span>
             );
@@ -132,6 +144,7 @@ export function HexTreeBoard({
               type="button"
               {...marks}
             >
+              <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
               {node.talentLabel}
             </button>,
           );

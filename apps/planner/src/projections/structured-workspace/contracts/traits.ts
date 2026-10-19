@@ -159,6 +159,8 @@ export interface WorkspaceHexNodeEditor {
   readonly heading: string;
   /** The nodes each picker item involves, by item key. */
   readonly relatedNodeKeys: Readonly<Record<string, readonly string[]>>;
+  /** The talent each picker item places, by item key. */
+  readonly talentKeys: Readonly<Record<string, string>>;
 }
 
 /** One Hex board node placed on the native talent grid. */
@@ -170,6 +172,7 @@ export interface WorkspaceHexBoardNode {
   readonly y: number;
   /** Nodes at the next depth this node links to. */
   readonly linkTo: readonly string[];
+  readonly talentKey: string;
   readonly talentLabel: string;
   /** Unique accessible name: kind, talent and depth, such as "Common Omen, depth 3". */
   readonly name: string;

@@ -233,7 +233,7 @@ function withSelectedContinuationNavigation(node: WorkspaceNode): WorkspaceNode 
 }
 
 function selectedTargetRailPresentation(
-  node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode,
+  node: BatchWithContinuations,
 ): WorkspaceRailSelectedTarget | undefined {
   const door = node.selectedContinuation?.door;
   if (door === undefined) return undefined;
@@ -246,9 +246,22 @@ function selectedTargetRailPresentation(
     onlyReward?.offer === null || onlyReward?.offer === undefined
       ? undefined
       : Object.freeze({ label: onlyReward.summary, offer: onlyReward.offer });
+  const exitTypeKey =
+    node.chaos?.door === door
+      ? node.chaos.exitTypeKey
+      : node.zagreusContract?.door === door
+        ? node.zagreusContract.exitTypeKey
+        : undefined;
   return Object.freeze({
+    ...(exitTypeKey === undefined ? {} : { exitTypeKey }),
     ...(reward === undefined ? {} : { reward }),
+    roomRewards: Object.freeze(
+      door.offerRewardSurface.rewards.flatMap((candidate) =>
+        candidate.offer === null ? [] : [candidate.offer],
+      ),
+    ),
     roomLabel: door.room.label,
+    ...(door.room.roomLocal.kind === 'shop' ? { shop: true as const } : {}),
   });
 }
 
@@ -482,6 +495,18 @@ export function presentWorkspaceBiome(
           : semantic.progressionKind === 'hub'
             ? mainRailRewardForDoor(node.incomingDoor)
             : undefined;
+    const selectedTarget =
+      node.kind === 'takeoverBatch'
+        ? selectedTargetRailPresentation(node)
+        : node.kind === 'occurrenceWorkbench' &&
+            mainReward === undefined &&
+            node.room.roomLocal.kind === 'shop'
+          ? Object.freeze({
+              roomLabel: node.room.label,
+              roomRewards: Object.freeze([]),
+              shop: true as const,
+            })
+          : undefined;
     return Object.freeze({
       kind: 'node' as const,
       focusMarker: railFocusMarkerForNode(node, marker),
@@ -490,6 +515,7 @@ export function presentWorkspaceBiome(
       ...(mainReward === undefined ? {} : { mainReward }),
       marker,
       node,
+      ...(selectedTarget === undefined ? {} : { selectedTarget }),
     });
   };
   const unboundRail = Object.freeze([
@@ -640,6 +666,7 @@ export function presentWorkspaceBiome(
             marker: entry.marker,
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.mainReward === undefined ? {} : { mainReward: entry.mainReward }),
+            ...(entry.selectedTarget === undefined ? {} : { selectedTarget: entry.selectedTarget }),
           });
         case 'occurrenceWorkbench':
         case 'hubDecision':

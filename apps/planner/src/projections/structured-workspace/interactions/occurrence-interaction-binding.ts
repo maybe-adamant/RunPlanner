@@ -25,6 +25,7 @@ import type { CandidateProjectionSession } from '@planner/projections/candidates
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   encounterCandidateExplanation,
+  encounterNpcKey,
   projectEncounterPicker,
 } from '@planner/projections/encounterPickerProjection';
 import {
@@ -502,6 +503,12 @@ export function bindOccurrenceLocalInteractions(
                     phase.selectedEncounterKey,
                     candidates.encounterPhases(phase.owner, encounterKeys),
                   )),
+                npcKeyFor: (encounterKey: string) =>
+                  encounterNpcKey(
+                    catalog,
+                    phase.candidateChoices.find((choice) => choice.value === encounterKey)
+                      ?.nativeEncounterDefinitionKey ?? encounterKey,
+                  ),
                 owner: phase.owner,
                 ...(nemesisSelection === undefined ? {} : { nemesisEvent: nemesisSelection }),
                 selected: phase.selectedEncounterKey,

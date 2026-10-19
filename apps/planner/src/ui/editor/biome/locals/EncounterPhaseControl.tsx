@@ -27,6 +27,8 @@ import { InfiniteRosterControl } from './InfiniteRosterControl';
 import { isCompositionFinding, isIdentityFinding } from './encounterPhaseFindings';
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -320,6 +322,9 @@ function EncounterCustomizationControl({
   );
 }
 
+const npcIcon = (npcKey: string | undefined): string | undefined =>
+  npcKey === undefined ? undefined : (npcArtwork[npcKey] ?? undefined);
+
 export function CustomizableEncounterPhaseControl({
   interaction,
   phase,
@@ -377,6 +382,13 @@ export function CustomizableEncounterPhaseControl({
         }
         setSelection(undefined);
       }}
+      {...(step === 'event'
+        ? {}
+        : {
+            itemIcon: (item: { readonly value: string }) =>
+              npcIcon(interaction.npcKeyFor(item.value)),
+          })}
+      triggerIcon={npcIcon(phase.selectedEncounter.npcKey)}
       open={step !== undefined}
       placeholder="Choose an encounter"
       triggerLabel={
@@ -432,7 +444,15 @@ export function EncounterPhaseControl({
         ) : (
           <div className="field-control field-control-inline">
             <span>{phase.identityLabel}</span>
-            <div className="encounter-fixed-value">{phase.selectedEncounter.label}</div>
+            <div className="encounter-fixed-value">
+              {phase.selectedEncounter.npcKey === undefined ? null : (
+                <ArtworkIcon
+                  className="encounter-npc-icon"
+                  source={npcIcon(phase.selectedEncounter.npcKey)}
+                />
+              )}
+              <span>{phase.selectedEncounter.label}</span>
+            </div>
           </div>
         )}
         {nemesisInteraction === undefined ? null : (

@@ -6,6 +6,9 @@ import {
 } from '@planner/projections/structured-workspace';
 import type { WorkspacePurgingPoolSlotInteraction } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -15,6 +18,9 @@ import {
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
 import { hintProps } from '@planner/ui/controls/hint';
+
+const wellIcon = (itemKey: string | null): string | undefined =>
+  itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -148,6 +154,7 @@ export function RoomInventoryPanel({
                         address={slot.address}
                         interaction={interaction}
                         label={slot.label}
+                        traitKey={slot.traitKey}
                         {...(slot.traitLabel === undefined
                           ? {}
                           : { selectedLabel: slot.traitLabel })}
@@ -266,6 +273,7 @@ export function RoomInventoryPanel({
                   key={slot.key}
                   marker={slot.marker}
                   label={slot.label}
+                  rewardType={slot.rewardType}
                   {...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel })}
                   offer={offer}
                   purchase={purchase}
@@ -284,10 +292,12 @@ function PurgingPoolTraitPicker({
   label,
   onSelect,
   selectedLabel,
+  traitKey,
 }: {
   readonly address: import('@run-planner/engine/authored-project').SemanticAddress;
   readonly interaction: WorkspacePurgingPoolSlotInteraction;
   readonly label: string;
+  readonly traitKey: string | null;
   readonly onSelect: (traitKey: string | null) => void;
   readonly selectedLabel?: string;
 }) {
@@ -307,6 +317,8 @@ function PurgingPoolTraitPicker({
       }}
       onSelect={onSelect}
       placeholder="Unresolved"
+      itemIcon={(item) => (item.value === null ? undefined : traitIcon(item.value))}
+      triggerIcon={traitKey === null ? undefined : traitIcon(traitKey)}
       {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
     />
   );
@@ -345,6 +357,8 @@ export function StygianWellSlotEditor({
         }}
         onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
         placeholder="Unresolved"
+        itemIcon={(item) => wellIcon(item.value)}
+        triggerIcon={wellIcon(slot.itemKey)}
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
       {withPurchased ? (
@@ -392,6 +406,7 @@ export function HermesShrineSlotEditor({
   label,
   marker,
   rewardLabel,
+  rewardType,
   offer,
   purchase,
   withPurchased = true,
@@ -401,6 +416,7 @@ export function HermesShrineSlotEditor({
   readonly label: string;
   readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
   readonly rewardLabel?: string;
+  readonly rewardType: string | null;
   readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
   readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
 }) {
@@ -421,8 +437,10 @@ export function HermesShrineSlotEditor({
         onOpenChange={(open) => {
           if (open) offerPicker.activate();
         }}
-        onSelect={(rewardType) => executeIntent(offer.intentFor(rewardType))}
+        onSelect={(selected) => executeIntent(offer.intentFor(selected))}
         placeholder="Unresolved"
+        itemIcon={(item) => rewardIcon(item.value)}
+        triggerIcon={rewardType === null ? undefined : rewardIcon(rewardType)}
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
       <div className="hermes-shrine-purchase-details">

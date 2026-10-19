@@ -420,6 +420,26 @@
   white-space: nowrap;
 }
 
+.biome-rail-reward-row {
+  display: inline-flex;
+  gap: 0.1rem;
+  margin-right: 0.2rem;
+  vertical-align: -0.2rem;
+}
+
+.biome-rail-reward-row .biome-rail-reward-icon {
+  margin-right: 0;
+  vertical-align: baseline;
+}
+
+.biome-rail-reward-icon {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.2rem;
+  vertical-align: -0.2rem;
+}
+
 .biome-rail-status {
   display: flex;
   flex: 0 0 auto;
@@ -456,7 +476,7 @@
 .biome-completion-node {
   display: flex;
   width: 100%;
-  align-items: baseline;
+  align-items: center;
   gap: 7px;
   padding: 6px 8px;
   border: 1px solid #393a44;
@@ -652,4 +672,37 @@
 .transcendent-embryo-outcome-row > .field-control:not(.contextual-picker) > .value-slider {
   flex: 1 1 10rem;
   min-width: 0;
+}
+
+.biome-structure-title-row h2 {
+  margin-right: auto;
+}
+
+.biome-boss-icon {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+}
+
+.biome-completion-icon {
+  flex: 0 0 auto;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.run-state-elements {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.run-state-element {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.run-state-element-icon {
+  width: 1.2rem;
+  height: 1.2rem;
 }

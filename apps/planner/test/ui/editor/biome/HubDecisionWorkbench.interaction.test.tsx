@@ -142,7 +142,7 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(healthMarker.getAttribute('aria-description')).toBe('Reward: Big Max Health');
     expect(
       decodeURIComponent(healthMarker.querySelector('img')?.getAttribute('src') ?? ''),
-    ).toContain('Max Health.webp');
+    ).toContain('MaxHealthDropBigPreview.webp');
     const closedMarker = screen.getByRole('button', { name: 'Combat 04: Closed. Open room.' });
     expect(within(closedMarker).getByText('Closed')).toBeTruthy();
     expect(closedMarker.querySelector('img')).toBeNull();

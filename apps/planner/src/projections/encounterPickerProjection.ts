@@ -15,6 +15,15 @@ export interface EncounterPickerChoice {
   readonly value: string;
 }
 
+/** The story or field NPC a native encounter presents, when it presents one. */
+export function encounterNpcKey(catalog: Catalog, definitionKey: string): string | undefined {
+  const definition = catalog.encounterDefinitions.byKey[definitionKey];
+  return (
+    definition?.npcPresentationKey ??
+    (definition?.kind === 'story' ? definition.traitOfferProducer?.giverKey : undefined)
+  );
+}
+
 function rangeLabel(range: NumericRange): string {
   if (range.min === undefined && range.max === undefined) return 'any value';
   if (range.min === range.max) return `exactly ${range.min}`;

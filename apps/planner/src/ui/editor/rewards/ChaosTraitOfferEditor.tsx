@@ -1,5 +1,6 @@
 import type { AuthoredChaosTraitOffer, TraitOptionKey } from '@run-planner/engine/authored-project';
 import type { ChaosNumericOperand, TraitRarity } from '@run-planner/engine/catalog-schema';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import type { WorkspaceChaosOfferInteraction } from '@planner/projections/structured-workspace';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
@@ -158,6 +159,8 @@ export function ChaosTraitOfferEditor({
                   model={optionDomain.cursePicker}
                   onSelect={(curseKey) => updateCurse(index, curseKey)}
                   placeholder="Choose a curse"
+                  itemIcon={(item) => traitIcon(item.value)}
+                  triggerIcon={traitIcon(option.curseKey)}
                   triggerLabel={interaction.curseLabel(option.curseKey)}
                 />
                 <label className="field-control">
@@ -198,6 +201,8 @@ export function ChaosTraitOfferEditor({
           model={domain.blessingPicker}
           onSelect={changeBlessing}
           placeholder="Choose a blessing"
+          itemIcon={(item) => traitIcon(item.value)}
+          triggerIcon={traitIcon(value.blessingKey)}
           triggerLabel={interaction.blessingLabel(value.blessingKey)}
         />
         <ContextualPicker

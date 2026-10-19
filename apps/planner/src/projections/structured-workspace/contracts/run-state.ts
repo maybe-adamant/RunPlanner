@@ -61,6 +61,8 @@ export interface WorkspaceRunStateRow {
   readonly bracket?: string;
   /** Rarity, level, rank or a plain value. */
   readonly right?: string;
+  /** Element counts, highest first; the name states the same counts as text. */
+  readonly elementCounts?: readonly { readonly element: string; readonly count: number }[];
 }
 
 export interface WorkspaceRunStateBagPresentation {

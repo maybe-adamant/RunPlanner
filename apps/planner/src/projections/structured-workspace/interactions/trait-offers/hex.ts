@@ -135,6 +135,7 @@ function nodeEditor(
 ): WorkspaceHexNodeEditor {
   const kind = kindLabels[node.kind];
   const relatedNodeKeys: Record<string, readonly string[]> = {};
+  const talentKeys: Record<string, string> = {};
   const sections = groups.map((group) =>
     Object.freeze({
       key: group.kind,
@@ -145,6 +146,7 @@ function nodeEditor(
         group.options.map((option) => {
           const key = `${group.kind}:${option.talentKey}`;
           relatedNodeKeys[key] = option.relatedNodeKeys;
+          talentKeys[key] = option.talentKey;
           const explanation = optionExplanation(kind, group.kind, option);
           const name = talentLabel(hex, option.talentKey);
           return Object.freeze({
@@ -168,6 +170,7 @@ function nodeEditor(
     }),
     heading: `${kind} · ${talent}`,
     relatedNodeKeys: Object.freeze(relatedNodeKeys),
+    talentKeys: Object.freeze(talentKeys),
   });
 }
 
@@ -231,15 +234,13 @@ export function projectHexBoardNodes(
   tree: AuthoredHexTreeConfiguration,
   present: (node: HexLayoutNodeDeclaration) => boolean = () => true,
 ): readonly WorkspaceHexBoardNode[] {
-  const talentOf = (node: HexLayoutNodeDeclaration) =>
-    talentLabel(
-      hex,
-      node.kind === 'olympianSpell'
-        ? hex.godSent.olympianTalentKey
-        : node.kind === 'olympianCount'
-          ? hex.godSent.lineageTalentKey
-          : tree.nodes[node.key]!,
-    );
+  const talentKeyOf = (node: HexLayoutNodeDeclaration) =>
+    node.kind === 'olympianSpell'
+      ? hex.godSent.olympianTalentKey
+      : node.kind === 'olympianCount'
+        ? hex.godSent.lineageTalentKey
+        : tree.nodes[node.key]!;
+  const talentOf = (node: HexLayoutNodeDeclaration) => talentLabel(hex, talentKeyOf(node));
   const names = nodeNames(layout, talentOf);
   return layout.nodes.values.filter(present).map((node) =>
     Object.freeze({
@@ -249,6 +250,7 @@ export function projectHexBoardNodes(
       x: node.depth + node.gridOffsetX,
       y: node.slot + node.gridOffsetY,
       linkTo: Object.freeze(node.linkTo.map((slot) => `${node.depth + 1}:${slot}`)),
+      talentKey: talentKeyOf(node),
       talentLabel: talentOf(node),
     }),
   );
