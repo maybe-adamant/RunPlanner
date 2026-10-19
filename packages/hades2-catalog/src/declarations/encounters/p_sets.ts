@@ -25,13 +25,18 @@ export const pEncounterSets = [
   },
   {
     key: 'PEncountersIntros',
-    encounterDefinitionKeys: ['GeneratedP_PreCombat', 'HeraclesCombatP'],
+    encounterDefinitionKeys: [
+      'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
+      'HeraclesCombatP',
+    ],
     defaultAuthoringProfileKey: 'GeneratedP_PreCombat',
   },
   {
     key: 'PCombat01IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat01_PreCombat01',
       'P_Combat01_PreCombat02',
@@ -44,6 +49,7 @@ export const pEncounterSets = [
     key: 'PCombat02IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat02_PreCombat01',
       'P_Combat02_PreCombat02',
@@ -55,6 +61,7 @@ export const pEncounterSets = [
     key: 'PCombat03IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat03_PreCombat01',
       'P_Combat03_PreCombat02',
@@ -66,6 +73,7 @@ export const pEncounterSets = [
     key: 'PCombat04IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat04_PreCombat01',
       'P_Combat04_PreCombat02',
@@ -77,6 +85,7 @@ export const pEncounterSets = [
     key: 'PCombat05IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat05_PreCombat01',
       'P_Combat05_PreCombat02',
@@ -88,6 +97,7 @@ export const pEncounterSets = [
     key: 'PCombat06IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat06_PreCombat01',
       'P_Combat06_PreCombat02',
@@ -100,6 +110,7 @@ export const pEncounterSets = [
     key: 'PCombat07IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat07_PreCombat01',
       'P_Combat07_PreCombat02',
@@ -111,6 +122,7 @@ export const pEncounterSets = [
     key: 'PCombat08IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat08_PreCombat01',
       'P_Combat08_PreCombat02',
@@ -122,6 +134,7 @@ export const pEncounterSets = [
     key: 'PCombat09IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat09_PreCombat01',
       'P_Combat09_PreCombat02',
@@ -133,6 +146,7 @@ export const pEncounterSets = [
     key: 'PCombat10IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat10_PreCombat01',
       'P_Combat10_PreCombat02',
@@ -144,6 +158,7 @@ export const pEncounterSets = [
     key: 'PCombat11IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat11_PreCombat01',
       'P_Combat11_PreCombat02',
@@ -156,6 +171,7 @@ export const pEncounterSets = [
     key: 'PCombat12IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat12_PreCombat01',
       'P_Combat12_PreCombat02',
@@ -167,6 +183,7 @@ export const pEncounterSets = [
     key: 'PCombat13IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat13_PreCombat01',
       'P_Combat13_PreCombat02',
@@ -178,6 +195,7 @@ export const pEncounterSets = [
     key: 'PCombat14IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat14_PreCombat01',
       'P_Combat14_PreCombat02',
@@ -189,6 +207,7 @@ export const pEncounterSets = [
     key: 'PCombat15IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat15_PreCombat01',
       'P_Combat15_PreCombat02',
@@ -201,6 +220,7 @@ export const pEncounterSets = [
     key: 'PCombat16IntroEncounters',
     encounterDefinitionKeys: [
       'GeneratedP_PreCombat',
+      'GeneratedP_PreCombatChronosForces',
       'HeraclesCombatP',
       'P_Combat16_PreCombat01',
       'P_Combat16_PreCombat02',

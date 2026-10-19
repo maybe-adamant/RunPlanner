@@ -86,7 +86,7 @@ describe('native generated composition possibility', () => {
             : [],
         ),
     );
-    expect(profiles).toHaveLength(50);
+    expect(profiles).toHaveLength(51);
     for (const { definitionKey, policy: profile } of profiles) {
       const context = {
         biomeDepthCache: 8,

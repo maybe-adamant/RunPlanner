@@ -319,6 +319,13 @@ const budgetByEncounter: Readonly<
     multiplier: 1,
     hardDepthRamp: 50,
   },
+  GeneratedP_PreCombatChronosForces: {
+    base: { min: 340, max: 500 },
+    depthRamp: 0,
+    depthAxis: 'biomeDepthCache',
+    multiplier: 1,
+    hardDepthRamp: 50,
+  },
   GeneratedP: {
     base: 430,
     depthRamp: 85,
@@ -878,6 +885,19 @@ const unbudgetedGeneratedEncounterChoices = {
     hardCap: 3,
     blockMenace: true,
     groups: { Automatons: 1, ChronosForces: 1 },
+  }),
+  // Inherits GeneratedP_PreCombat with MaxTypesPerGroup cleared
+  // (EncounterData_Generated.lua:1257).
+  GeneratedP_PreCombatChronosForces: generation({
+    pool: pools.chronosForces,
+    waves: [1, 1],
+    minTypes: 2,
+    maxTypes: 2,
+    ramp: 0.33,
+    cap: 2,
+    eliteTypes: 3,
+    hardCap: 3,
+    blockMenace: true,
   }),
   GeneratedP: generation({
     pool: pools.p,

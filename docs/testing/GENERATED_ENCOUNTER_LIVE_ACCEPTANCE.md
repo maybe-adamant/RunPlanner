@@ -11,3 +11,7 @@ verification; the owner confirms or waives each check.
 - [ ] Mature profile, H route whose later cage has an authored composition with
       `FogEmitter2` and earlier uncustomized cages. No earlier cage spawns
       `FogEmitter2`, and the later cage admits its composition and spawns it.
+- [ ] Mature profile, P route with a P Intro room planned as
+      `GeneratedP_PreCombatChronosForces` with an authored composition. The
+      room starts that encounter, its Olympus corpse obstacles spawn, and the
+      authored roster still admits and spawns in full.

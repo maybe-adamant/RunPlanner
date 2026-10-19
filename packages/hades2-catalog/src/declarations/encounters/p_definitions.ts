@@ -193,6 +193,16 @@ export const pEncounterDefinitions = [
     skipEndEncounterEffects: true,
     blocksGorgon: true,
   },
+  {
+    key: 'GeneratedP_PreCombatChronosForces',
+    customization: [generatedEncounterChoices.GeneratedP_PreCombatChronosForces],
+    label: 'Chronos forces pre-combat',
+    kind: 'combat',
+    countsEncounterDepth: false,
+    canEncounterSkip: true,
+    skipEndEncounterEffects: true,
+    blocksGorgon: true,
+  },
   // Each vignette inherits GeneratedP_PreCombat (P_BaseVignette,
   // EncounterData_Opening.lua:1517); its one fixed wave fills MinWaves = MaxWaves = 1
   // (EncounterData_Generated.lua:1199-1200).

@@ -558,6 +558,12 @@ export const generatedEnemyPools = {
     (entry) => !['SwarmerClockwork', 'SwarmerClockwork_Elite'].includes(entry.key),
   ),
   pIntro: p.filter((entry) => !['ZombieOlympus', 'ZombieOlympus_Elite'].includes(entry.key)),
+  // EnemySets.lua:523 ChronosForces lists these pairs, all members of BiomeP.
+  chronosForces: p.filter((entry) =>
+    ['Dragon', 'HarpyDropper', 'SatyrSapper', 'SatyrLancer2', 'SatyrCrossbow2', 'ZombieOlympus']
+      .flatMap((key) => [key, `${key}_Elite`])
+      .includes(entry.key),
+  ),
   qIslands: q.filter((entry) =>
     [
       'SimpleSquad',

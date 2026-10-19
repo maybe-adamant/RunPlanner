@@ -7,15 +7,15 @@ only the default Combat choice, plus `O_Devotion01`. Field-NPC combats are
 first-class entries. The unit is the resolved encounter identity at its phase:
 H passive/cage phases, O Intro/Combat1/Combat2, and P Intro/Combat remain separate.
 
-The Combat-room inventory exposes 155 scoped rooms and 102 distinct resolved encounter
-identities: 43 generator-family identities (including 13 field-NPC combats, four
+The Combat-room inventory exposes 155 scoped rooms and 103 distinct resolved encounter
+identities: 44 generator-family identities (including 13 field-NPC combats, four
 Devotion identities and four mixed Fresh File introductions), 52 prescribed P
 precombat vignettes, four all-fixed Fresh File H introductions, two Arachne
-cocoon encounters, and one shared Nemesis random event. These are not 102 picker
+cocoon encounters, and one shared Nemesis random event. These are not 103 picker
 choices: ordinary Combat profiles also resolve reward-dependent Trial/Goal
 identities.
 
-The Combat-room customization candidates are the **43 generator-family identities**,
+The Combat-room customization candidates are the **44 generator-family identities**,
 including H's two mixed fixed/generated templates and the four mixed
 introductions. The other 59 identities remain in this inventory to explain
 their exclusion from wave/type customization: P's prescribed rosters and the H
@@ -158,15 +158,15 @@ every choice is simultaneously eligible.
 | O Combat01–15, Intro                    | `GeneratedO_Intro01`, `HeraclesCombatO`                                                                                                                     |
 | O Combat01–15, Combat1 / active Combat2 | `GeneratedO`, `IcarusCombatO`                                                                                                                               |
 | O_Devotion01                            | `DevotionTestO`                                                                                                                                             |
-| P Combat01–19, Intro                    | `GeneratedP_PreCombat`, `HeraclesCombatP`, plus the room-local vignette identities below for rooms 01–16                                                    |
+| P Combat01–19, Intro                    | `GeneratedP_PreCombat`, `GeneratedP_PreCombatChronosForces`, `HeraclesCombatP`, plus the room-local vignette identities below for rooms 01–16               |
 | P Combat01–19, Combat                   | `GeneratedP`, `GeneratedP_Large`, `AthenaCombatP`, `IcarusCombatP`                                                                                          |
 | Q Combat01,02,04,06–09,12–16            | `GeneratedQ`                                                                                                                                                |
 | Q Combat03,05                           | `GeneratedQ_Islands`                                                                                                                                        |
 | Q Combat10,11                           | `GeneratedQ_Large`                                                                                                                                          |
 
-The biome-local identity counts are F 8, G 8, H 11, I 6, N 5, O 5, P 58 and
-Q 3. Their sum is 104; `NemesisRandomEvent` shared across F/G/H reduces the
-distinct union to 102. The room counts are 22/20/15/24/23/16/19/16 respectively.
+The biome-local identity counts are F 8, G 8, H 11, I 6, N 5, O 5, P 59 and
+Q 3. Their sum is 105; `NemesisRandomEvent` shared across F/G/H reduces the
+distinct union to 103. The room counts are 22/20/15/24/23/16/19/16 respectively.
 
 Catalog contacts: `packages/hades2-catalog/src/declarations/encounters/`
 `f.ts`, `g.ts`, `h.ts`, `i.ts`, `n.ts`, `o.ts`, `p_definitions.ts`, `p_sets.ts`,
@@ -201,34 +201,35 @@ hard-encounter override; the override table below is part of this evidence.
 
 ## Generated biome and Devotion encounters
 
-| Identity                      | Waves | Highlight   | Type mode; min / max     | Type cap | Elite cap | Enemy pool                                          |
-| ----------------------------- | ----- | ----------- | ------------------------ | -------- | --------- | --------------------------------------------------- |
-| `GeneratedF`                  | 1–3   | Conditional | R; 2 / 2 + .20D          | 3        | 1         | `BiomeF`                                            |
-| `GeneratedG`                  | 1–3   | Conditional | R; 1 / 2 + .10D          | 3        | 2         | `BiomeG`                                            |
-| `GeneratedH_Passive`          | 1     | No          | R; 2 / 2 + .50D          | 4        | 3         | `BiomeHPassive`                                     |
-| `GeneratedH_PassiveSmall`     | 1     | No          | R; 2 / 2 + .50D          | 4        | 1         | `BiomeHPassive`                                     |
-| `GeneratedH`                  | 1     | No          | E; 2 / 2 + .20D          | 3        | 3         | `BiomeH`                                            |
-| `GeneratedH_Treant2`          | 1     | No          | E; 2 / 2, mixed template | 3        | 1         | Fixed `Treant2` plus one generated `BiomeH` entry   |
-| `GeneratedH_Screamer2`        | 1     | No          | E; 2 / 2, mixed template | 3        | 1         | Fixed `Screamer2` plus one generated `BiomeH` entry |
-| `GeneratedI`                  | 1–3   | Conditional | R; 2 / 2 + .25D          | 3        | 3         | `BiomeI`                                            |
-| `GeneratedI_GoalReward`       | 1–3   | Conditional | R; 2 / 2 + .25D          | 3        | 3         | `BiomeI`                                            |
-| `GeneratedI_Small`            | 2–3   | Yes         | R; 2 / 2 + .25D          | 2        | 3         | `BiomeIOptional`                                    |
-| `GeneratedI_Small_GoalReward` | 2–3   | Yes         | R; 2 / 2 + .25D          | 2        | 3         | `BiomeI`                                            |
-| `GeneratedN`                  | 1–2   | Conditional | E; 2 / 2 + .20E          | 3        | 1         | `BiomeN`                                            |
-| `GeneratedN_Smaller`          | 1–2   | Conditional | E; 2 / 2 + .20E          | 2        | 1         | `BiomeN`                                            |
-| `GeneratedN_Bigger`           | 2–3   | Yes         | E; 2 / 2 + .20E          | 3        | 1         | `BiomeN`                                            |
-| `GeneratedO_Intro01`          | 1     | No          | E; 1 / 2 + .35D          | 2        | 2         | `BiomeOIntro`                                       |
-| `GeneratedO`                  | 1–2   | Conditional | E; 1 / 2 + .35D          | 2        | 2         | `BiomeO`                                            |
-| `GeneratedP_PreCombat`        | 1     | No          | R; 2 / 2 + .33D          | 2        | 3         | `BiomePIntro`                                       |
-| `GeneratedP`                  | 1–2   | Conditional | R; 1 / 2 + .33D          | 3        | 3         | `BiomeP`                                            |
-| `GeneratedP_Large`            | 3     | Yes         | R; 1 / 2 + .33D          | 3        | 3         | `BiomeP`                                            |
-| `GeneratedQ`                  | 1     | No          | E; 1 / 2 + .143E         | 2        | 2         | `BiomeQ`                                            |
-| `GeneratedQ_Large`            | 1     | No          | E; 1 / 2 + .143E         | 2        | 2         | `BiomeQ`                                            |
-| `GeneratedQ_Islands`          | 1     | No          | E; 1 / 2 + .143E         | 2        | 2         | `BiomeQIslands`                                     |
-| `DevotionTestF`               | 2–3   | Yes         | R; 3 / 3                 | 3        | 1         | `BiomeF`                                            |
-| `DevotionTestG`               | 2–3   | Yes         | R; 2 / 4                 | 3        | 3         | `BiomeG`                                            |
-| `DevotionTestI`               | 2–3   | Yes         | R; 2 / 3                 | 3        | 4         | `BiomeIOptional`                                    |
-| `DevotionTestO`               | 3     | Yes         | E; 3 / 4                 | 3        | 3         | `BiomeO`                                            |
+| Identity                            | Waves | Highlight   | Type mode; min / max     | Type cap | Elite cap | Enemy pool                                          |
+| ----------------------------------- | ----- | ----------- | ------------------------ | -------- | --------- | --------------------------------------------------- |
+| `GeneratedF`                        | 1–3   | Conditional | R; 2 / 2 + .20D          | 3        | 1         | `BiomeF`                                            |
+| `GeneratedG`                        | 1–3   | Conditional | R; 1 / 2 + .10D          | 3        | 2         | `BiomeG`                                            |
+| `GeneratedH_Passive`                | 1     | No          | R; 2 / 2 + .50D          | 4        | 3         | `BiomeHPassive`                                     |
+| `GeneratedH_PassiveSmall`           | 1     | No          | R; 2 / 2 + .50D          | 4        | 1         | `BiomeHPassive`                                     |
+| `GeneratedH`                        | 1     | No          | E; 2 / 2 + .20D          | 3        | 3         | `BiomeH`                                            |
+| `GeneratedH_Treant2`                | 1     | No          | E; 2 / 2, mixed template | 3        | 1         | Fixed `Treant2` plus one generated `BiomeH` entry   |
+| `GeneratedH_Screamer2`              | 1     | No          | E; 2 / 2, mixed template | 3        | 1         | Fixed `Screamer2` plus one generated `BiomeH` entry |
+| `GeneratedI`                        | 1–3   | Conditional | R; 2 / 2 + .25D          | 3        | 3         | `BiomeI`                                            |
+| `GeneratedI_GoalReward`             | 1–3   | Conditional | R; 2 / 2 + .25D          | 3        | 3         | `BiomeI`                                            |
+| `GeneratedI_Small`                  | 2–3   | Yes         | R; 2 / 2 + .25D          | 2        | 3         | `BiomeIOptional`                                    |
+| `GeneratedI_Small_GoalReward`       | 2–3   | Yes         | R; 2 / 2 + .25D          | 2        | 3         | `BiomeI`                                            |
+| `GeneratedN`                        | 1–2   | Conditional | E; 2 / 2 + .20E          | 3        | 1         | `BiomeN`                                            |
+| `GeneratedN_Smaller`                | 1–2   | Conditional | E; 2 / 2 + .20E          | 2        | 1         | `BiomeN`                                            |
+| `GeneratedN_Bigger`                 | 2–3   | Yes         | E; 2 / 2 + .20E          | 3        | 1         | `BiomeN`                                            |
+| `GeneratedO_Intro01`                | 1     | No          | E; 1 / 2 + .35D          | 2        | 2         | `BiomeOIntro`                                       |
+| `GeneratedO`                        | 1–2   | Conditional | E; 1 / 2 + .35D          | 2        | 2         | `BiomeO`                                            |
+| `GeneratedP_PreCombat`              | 1     | No          | R; 2 / 2 + .33D          | 2        | 3         | `BiomePIntro`                                       |
+| `GeneratedP_PreCombatChronosForces` | 1     | No          | R; 2 / 2 + .33D          | 2        | 3         | `ChronosForces`                                     |
+| `GeneratedP`                        | 1–2   | Conditional | R; 1 / 2 + .33D          | 3        | 3         | `BiomeP`                                            |
+| `GeneratedP_Large`                  | 3     | Yes         | R; 1 / 2 + .33D          | 3        | 3         | `BiomeP`                                            |
+| `GeneratedQ`                        | 1     | No          | E; 1 / 2 + .143E         | 2        | 2         | `BiomeQ`                                            |
+| `GeneratedQ_Large`                  | 1     | No          | E; 1 / 2 + .143E         | 2        | 2         | `BiomeQ`                                            |
+| `GeneratedQ_Islands`                | 1     | No          | E; 1 / 2 + .143E         | 2        | 2         | `BiomeQIslands`                                     |
+| `DevotionTestF`                     | 2–3   | Yes         | R; 3 / 3                 | 3        | 1         | `BiomeF`                                            |
+| `DevotionTestG`                     | 2–3   | Yes         | R; 2 / 4                 | 3        | 3         | `BiomeG`                                            |
+| `DevotionTestI`                     | 2–3   | Yes         | R; 2 / 3                 | 3        | 4         | `BiomeIOptional`                                    |
+| `DevotionTestO`                     | 3     | Yes         | E; 3 / 4                 | 3        | 3         | `BiomeO`                                            |
 
 Primary declaration contacts: `EncounterData.lua:Generated/GeneratedF`
 (82/182); `EncounterData_Generated.lua` G 8, H passive 137/209, H cage 222/327/373,
@@ -245,6 +246,11 @@ Material distinctions:
 - P generated precombat has `MaxTypesPerGroup = { Automatons = 1,
 ChronosForces = 1 }`; main P has `{ Automatons = 1, ChronosForces = 2 }`.
   These are ordered fill gates, not unconditional final-set maxima after seeds.
+- `GeneratedP_PreCombatChronosForces` (`EncounterData_Generated.lua:1257`)
+  inherits `GeneratedP_PreCombat`, swaps in the `ChronosForces` pool and clears
+  its type-group caps and ambient battle damage, and adds decorative
+  `SpawnOlympusCorpses` obstacles. The planner models neither enemy pre-damage
+  nor the corpses.
 - `GeneratedO_Intro01` and `GeneratedP_PreCombat` require completed enemy intros.
   Base Devotion also requires completed intros and skips post-generation intro
   encounter replacement. Other ordinary rows can inherit room/depth intro gates.
@@ -392,55 +398,56 @@ type count 1 (`RunLogic.lua:1323`) and requirements 0, so Surface
 first parent; `RunData.lua:1363-1416`). **Hard** is the `HardEncounterOverrideValues`
 `DepthDifficultyRamp`; hard and Dream overrides carry no other budget key.
 
-| Identity                      | Base    | Depth ramp | Axis      | Modifier | Multiplier | Hard | Source                                                  |
-| ----------------------------- | ------- | ---------: | --------- | -------: | ---------: | ---: | ------------------------------------------------------- |
-| `OpeningGeneratedF`           | 55      |         15 | Cache     |      -20 |          1 |   30 | `GeneratedF`; `EncounterData.lua:489` (modifier)        |
-| `GeneratedF`                  | 55      |         15 | Cache     |        0 |          1 |   30 | `EncounterData.lua:199-200`, hard 248                   |
-| `DevotionTestF`               | 150     |          0 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:6-7` (Base), 157            |
-| `ArtemisCombatF`              | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Artemis.lua:55` (Base)     |
-| `NemesisCombatF`              | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Nemesis.lua:57` (Base)     |
-| `GeneratedG`                  | 140     |         40 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:23-24`, hard 110           |
-| `DevotionTestG`               | 270     |          5 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:167-168,175`                |
-| `ArtemisCombatG`              | 140     |         40 | Cache     |      145 |          1 |   30 | `GeneratedG`; `EncounterData_Artemis.lua:160`           |
-| `NemesisCombatG`              | 140     |         40 | Cache     |       60 |          1 |   30 | `GeneratedG`; `EncounterData_Nemesis.lua:57` (Base)     |
-| `GeneratedH_Passive`          | 180     |         60 | Cache     |        0 |          1 |    — | `EncounterData_Generated.lua:162-163`                   |
-| `GeneratedH_PassiveSmall`     | 60      |         15 | Cache     |        0 |          1 |    — | `EncounterData_Generated.lua:217-218`                   |
-| `GeneratedH`                  | 290     |         82 | Encounter |        0 |          1 |   30 | `EncounterData_Generated.lua:243-245`, hard 309         |
-| `GeneratedH_Treant2`          | 290     |         82 | Encounter |        0 |          1 |   30 | Inherits `GeneratedH`                                   |
-| `GeneratedH_Screamer2`        | 290     |         82 | Encounter |        0 |          1 |   30 | Inherits `GeneratedH`                                   |
-| `NemesisCombatH`              | 290     |         82 | Encounter |       60 |          1 |   30 | `GeneratedH`; `EncounterData_Nemesis.lua:57` (Base)     |
-| `GeneratedI`                  | 325     |        105 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:440-441`, hard 485         |
-| `GeneratedI_GoalReward`       | 250     |        105 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:568-569`                   |
-| `GeneratedI_Small`            | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:585`         |
-| `GeneratedI_Small_GoalReward` | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:604`         |
-| `DevotionTestI`               | 400     |        110 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:198-199`                    |
-| `NemesisCombatI`              | 325     |        105 | Cache     |       60 |          1 |   30 | `GeneratedI`; `EncounterData_Nemesis.lua:57` (Base)     |
-| `OpeningGeneratedN`           | 60      |         25 | Encounter |        0 |          1 |    — | `GeneratedN`; `EncounterData_Opening.lua:16` (Base)     |
-| `PreHubGeneratedN`            | 100     |          0 | Encounter |        0 |          1 |    — | `EncounterData_Opening.lua:62-63`                       |
-| `GeneratedNSubRoom`           | 20      |          5 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:775-776`                   |
-| `GeneratedNSubRoom_Bigger`    | 40      |          5 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:806-807`                   |
-| `GeneratedN`                  | 110     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:695-697`                   |
-| `GeneratedN_Smaller`          | 85      |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:749-750`                   |
-| `GeneratedN_Bigger`           | 135     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:756,759`                   |
-| `ArtemisCombatN`              | 200     |         20 | Encounter |       60 |          1 |    — | `EncounterData_Artemis.lua:191-192`, modifier 55 (Base) |
-| `HeraclesCombatN`             | 110     |         25 | Encounter |      150 |          1 |    — | `GeneratedN`; `EncounterData_Heracles.lua:64`           |
-| `GeneratedO_Intro01`          | 50      |         45 | Encounter |        0 |          1 |   45 | `EncounterData_Generated.lua:940-941`; axis 850         |
-| `GeneratedO`                  | 115     |         55 | Encounter |        0 |          1 |   45 | `EncounterData_Generated.lua:848-850`, hard 895         |
-| `DevotionTestO`               | 425     |         15 | Encounter |        0 |          1 |   45 | `EncounterData_Devotion.lua:227-228`                    |
-| `HeraclesCombatO`             | 115     |         55 | Encounter |      155 |          1 |   45 | `GeneratedO`; `EncounterData_Heracles.lua:130`          |
-| `IcarusCombatO`               | 115     |         55 | Encounter |        0 |          3 |   45 | `GeneratedO`; `EncounterData_Icarus.lua:46` (Base)      |
-| `GeneratedP_PreCombat`        | 340–500 |          0 | Cache     |        0 |          1 |   50 | `EncounterData_Generated.lua:1204-1206`; hard 1150      |
-| `GeneratedP`                  | 430     |         85 | Cache     |        0 |          1 |   50 | `EncounterData_Generated.lua:1023-1024`, hard 1150      |
-| `GeneratedP_Large`            | 430     |         85 | Cache     |        0 |          1 |   50 | Inherits `GeneratedP`                                   |
-| `HeraclesCombatP`             | 600     |         50 | Cache     |        0 |          1 |   50 | `EncounterData_Heracles.lua:185-186`                    |
-| `IcarusCombatP`               | 430     |         85 | Cache     |        0 |          3 |   50 | `GeneratedP`; `EncounterData_Icarus.lua:46` (Base)      |
-| `AthenaCombatP`               | 680     |        180 | Cache     |        0 |          1 |   50 | `EncounterData_Athena.lua:48-49` (Base)                 |
-| `GeneratedQ`                  | 150     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:1312-1314`                 |
-| `GeneratedQ_Large`            | 525     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:1416-1417`                 |
-| `GeneratedQ_Islands`          | 150     |         25 | Encounter |        0 |          1 |    — | Inherits `GeneratedQ`                                   |
+| Identity                            | Base    | Depth ramp | Axis      | Modifier | Multiplier | Hard | Source                                                  |
+| ----------------------------------- | ------- | ---------: | --------- | -------: | ---------: | ---: | ------------------------------------------------------- |
+| `OpeningGeneratedF`                 | 55      |         15 | Cache     |      -20 |          1 |   30 | `GeneratedF`; `EncounterData.lua:489` (modifier)        |
+| `GeneratedF`                        | 55      |         15 | Cache     |        0 |          1 |   30 | `EncounterData.lua:199-200`, hard 248                   |
+| `DevotionTestF`                     | 150     |          0 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:6-7` (Base), 157            |
+| `ArtemisCombatF`                    | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Artemis.lua:55` (Base)     |
+| `NemesisCombatF`                    | 55      |         15 | Cache     |       60 |          1 |   30 | `GeneratedF`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedG`                        | 140     |         40 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:23-24`, hard 110           |
+| `DevotionTestG`                     | 270     |          5 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:167-168,175`                |
+| `ArtemisCombatG`                    | 140     |         40 | Cache     |      145 |          1 |   30 | `GeneratedG`; `EncounterData_Artemis.lua:160`           |
+| `NemesisCombatG`                    | 140     |         40 | Cache     |       60 |          1 |   30 | `GeneratedG`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedH_Passive`                | 180     |         60 | Cache     |        0 |          1 |    — | `EncounterData_Generated.lua:162-163`                   |
+| `GeneratedH_PassiveSmall`           | 60      |         15 | Cache     |        0 |          1 |    — | `EncounterData_Generated.lua:217-218`                   |
+| `GeneratedH`                        | 290     |         82 | Encounter |        0 |          1 |   30 | `EncounterData_Generated.lua:243-245`, hard 309         |
+| `GeneratedH_Treant2`                | 290     |         82 | Encounter |        0 |          1 |   30 | Inherits `GeneratedH`                                   |
+| `GeneratedH_Screamer2`              | 290     |         82 | Encounter |        0 |          1 |   30 | Inherits `GeneratedH`                                   |
+| `NemesisCombatH`                    | 290     |         82 | Encounter |       60 |          1 |   30 | `GeneratedH`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `GeneratedI`                        | 325     |        105 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:440-441`, hard 485         |
+| `GeneratedI_GoalReward`             | 250     |        105 | Cache     |        0 |          1 |   30 | `EncounterData_Generated.lua:568-569`                   |
+| `GeneratedI_Small`                  | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:585`         |
+| `GeneratedI_Small_GoalReward`       | 325     |        105 | Cache     |        0 |       0.85 |   30 | `GeneratedI`; `EncounterData_Generated.lua:604`         |
+| `DevotionTestI`                     | 400     |        110 | Cache     |        0 |          1 |   30 | `EncounterData_Devotion.lua:198-199`                    |
+| `NemesisCombatI`                    | 325     |        105 | Cache     |       60 |          1 |   30 | `GeneratedI`; `EncounterData_Nemesis.lua:57` (Base)     |
+| `OpeningGeneratedN`                 | 60      |         25 | Encounter |        0 |          1 |    — | `GeneratedN`; `EncounterData_Opening.lua:16` (Base)     |
+| `PreHubGeneratedN`                  | 100     |          0 | Encounter |        0 |          1 |    — | `EncounterData_Opening.lua:62-63`                       |
+| `GeneratedNSubRoom`                 | 20      |          5 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:775-776`                   |
+| `GeneratedNSubRoom_Bigger`          | 40      |          5 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:806-807`                   |
+| `GeneratedN`                        | 110     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:695-697`                   |
+| `GeneratedN_Smaller`                | 85      |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:749-750`                   |
+| `GeneratedN_Bigger`                 | 135     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:756,759`                   |
+| `ArtemisCombatN`                    | 200     |         20 | Encounter |       60 |          1 |    — | `EncounterData_Artemis.lua:191-192`, modifier 55 (Base) |
+| `HeraclesCombatN`                   | 110     |         25 | Encounter |      150 |          1 |    — | `GeneratedN`; `EncounterData_Heracles.lua:64`           |
+| `GeneratedO_Intro01`                | 50      |         45 | Encounter |        0 |          1 |   45 | `EncounterData_Generated.lua:940-941`; axis 850         |
+| `GeneratedO`                        | 115     |         55 | Encounter |        0 |          1 |   45 | `EncounterData_Generated.lua:848-850`, hard 895         |
+| `DevotionTestO`                     | 425     |         15 | Encounter |        0 |          1 |   45 | `EncounterData_Devotion.lua:227-228`                    |
+| `HeraclesCombatO`                   | 115     |         55 | Encounter |      155 |          1 |   45 | `GeneratedO`; `EncounterData_Heracles.lua:130`          |
+| `IcarusCombatO`                     | 115     |         55 | Encounter |        0 |          3 |   45 | `GeneratedO`; `EncounterData_Icarus.lua:46` (Base)      |
+| `GeneratedP_PreCombat`              | 340–500 |          0 | Cache     |        0 |          1 |   50 | `EncounterData_Generated.lua:1204-1206`; hard 1150      |
+| `GeneratedP_PreCombatChronosForces` | 340–500 |          0 | Cache     |        0 |          1 |   50 | Inherits `GeneratedP_PreCombat`                         |
+| `GeneratedP`                        | 430     |         85 | Cache     |        0 |          1 |   50 | `EncounterData_Generated.lua:1023-1024`, hard 1150      |
+| `GeneratedP_Large`                  | 430     |         85 | Cache     |        0 |          1 |   50 | Inherits `GeneratedP`                                   |
+| `HeraclesCombatP`                   | 600     |         50 | Cache     |        0 |          1 |   50 | `EncounterData_Heracles.lua:185-186`                    |
+| `IcarusCombatP`                     | 430     |         85 | Cache     |        0 |          3 |   50 | `GeneratedP`; `EncounterData_Icarus.lua:46` (Base)      |
+| `AthenaCombatP`                     | 680     |        180 | Cache     |        0 |          1 |   50 | `EncounterData_Athena.lua:48-49` (Base)                 |
+| `GeneratedQ`                        | 150     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:1312-1314`                 |
+| `GeneratedQ_Large`                  | 525     |         25 | Encounter |        0 |          1 |    — | `EncounterData_Generated.lua:1416-1417`                 |
+| `GeneratedQ_Islands`                | 150     |         25 | Encounter |        0 |          1 |    — | Inherits `GeneratedQ`                                   |
 
 Cache is `BiomeDepthCache`; Encounter is `BiomeEncounterDepth`; — means no hard
-override. `GeneratedP_PreCombat` is the only supported variable base; it is not
+override. `GeneratedP_PreCombat` and its ChronosForces inheritor are the only supported variable bases; it is not
 also depth-scaled unless its hard override applies. Other modifier declarations
 in the same files (for example intro encounters at `EncounterData.lua:314,358,393`)
 belong to encounters outside this scope.
@@ -477,7 +484,8 @@ pool is declaration support, not a guarantee that every member is eligible.
 | `BiomeQIslands`  | pair(`SimpleSquad`); pair(`Mati`); pair(`DragonBurrower`)                                                                                                                                                                         | 571         |
 
 `Automatons` and `ChronosForces` also identify P's allegiance groups; the
-standalone sets matter to the native-only specialized precombat below. Raw
+standalone `ChronosForces` set is `GeneratedP_PreCombatChronosForces`'s pool, and
+`Automatons` is the pool only of the inactive `GeneratedP_PreCombatAutomatons`. Raw
 normal/elite pairs remain separate even where a future presentation might group
 them. Do not invent additional enemies from a family-name prefix.
 
@@ -755,7 +763,6 @@ unless the planner deliberately adds their encounter identities later.
 | Scripted first-time encounters  | `FIntroFight`, `FishmanIntro`, `ClockworkIntro`, `DeadSeaIntro`, `GeneratedO_Intro01_First`, `OlympusIntro`, `TyphonIntro` | Native progression encounters, not planner choices; Fresh File resolves the first three as fixed waves.                            |
 | NPC introductions               | `ArtemisCombatIntro`, `NemesisCombatIntro`, `HeraclesCombatIntro`, `IcarusCombatIntro`, `AthenaCombatIntro`                | Progression variants that can alter NPC behavior; existing primary NPC identities remain the customization targets.                |
 | Tartarus progression variants   | `GeneratedIChronosIntro`, `GeneratedI_SmallChronosIntro`                                                                   | Not modeled; use the existing ordinary I profiles.                                                                                 |
-| Specialized P precombat         | `GeneratedP_PreCombatChronosForces`                                                                                        | Not modeled; composition customization does not introduce another encounter choice.                                                |
 | Inactive set/reward contacts    | `HeraclesCombatP2`, `IcarusCombatP2`, `GeneratedP_PreCombatAutomatons`, `DevotionTestH/N/P`                                | Not active in the relevant ordinary encounter sets or reward contacts. Q has no `DevotionTestQ` declaration.                       |
 
 Source contacts: `EncounterSets.lua`, `EncounterData.lua`,

@@ -271,10 +271,10 @@ the Dream-run context. The combat entries inherit the non-counting
 Non-counting here refers only to `CountsForRoomEncounterDepth`. The two P
 encounter families have distinct native flags:
 
-| Family                                                            | Counts encounter depth | Skips end effects | Allows Fig Leaf skip | Explicitly blocks Athena |
-| ----------------------------------------------------------------- | ---------------------- | ----------------- | -------------------- | ------------------------ |
-| All 15 supported `PIntroCombat*` entrance variants                | No                     | No                | No                   | No                       |
-| `GeneratedP_PreCombat` and all 52 `P_Combat*_PreCombat*` variants | No                     | Yes               | Yes                  | Yes                      |
+| Family                                                                                         | Counts encounter depth | Skips end effects | Allows Fig Leaf skip | Explicitly blocks Athena |
+| ---------------------------------------------------------------------------------------------- | ---------------------- | ----------------- | -------------------- | ------------------------ |
+| All 15 supported `PIntroCombat*` entrance variants                                             | No                     | No                | No                   | No                       |
+| `GeneratedP_PreCombat`, its ChronosForces inheritor and all 52 `P_Combat*_PreCombat*` variants | No                     | Yes               | Yes                  | Yes                      |
 
 `EncounterData_Opening.lua:BasePIntroEncounters` sets only the depth flag;
 none of its supported children overrides these flags. The room-specific

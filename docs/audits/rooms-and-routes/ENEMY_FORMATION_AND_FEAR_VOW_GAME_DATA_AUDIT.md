@@ -21,7 +21,7 @@ shared generation algorithm and Vow interactions.
 
 Budget/count inheritance, the 114 supported source identities, and Fangs
 pool/filter declarations were rechecked on 2026-09-23. The supported-domain
-censuses below include all 39 policies in the companion matrix, including NPC,
+censuses below include all 40 policies in the companion matrix, including NPC,
 passive and fixed-template contacts. Native-source probes establish bounded
 contact behavior with controlled scaffolding, not live combat or save restoration.
 
@@ -205,8 +205,9 @@ pre-clamp domain, not percentages; they need not sum to the wave budget.
 Zero allocation does not remove a selected type. Enemy-set entry multiplicity
 weights type selection, not this later allocation.
 
-The inherited 39-policy census (including hard/Dream overrides) has one variable
-base: `GeneratedP_PreCombat`, integer 340–500. The other 38 have fixed bases,
+The inherited 40-policy census (including hard/Dream overrides) has one variable
+base, integer 340–500, shared by `GeneratedP_PreCombat` and its inheritor
+`GeneratedP_PreCombatChronosForces`. The other 38 have fixed bases,
 though final budgets still depend on exact depth, modifiers and Hordes. The H
 Treant/Screamer templates charge their fixed count-one seed at index 1; their
 generated companion at index 2 samples rather than receiving the remainder,
@@ -421,7 +422,7 @@ Menace, but a particular selected enemy still can.
 
 ### Supported Menace inventory
 
-Inventory of the 114 enemy identities in the 39 supported composition policies,
+Inventory of the 114 enemy identities in the 40 supported composition policies,
 including fixed seeds. Compared normalized policy pools with inheritance-resolved
 EnemyData, native MetaUpgradeData.NextBiomeEnemyShrineUpgrade.SwapMap and
 BiomeEnemySets. Native source: MetaUpgradeData.lua:1829–1950,
@@ -479,7 +480,8 @@ changing the name; lack of a destination is not the same as an explicit block.
 
 Counts partition the 114 identities: 68 mapped, 9 random, 15 enemy-blocked,
 22 without a destination. Encounter blocks additionally suppress all replacement
-in GeneratedH_Passive, GeneratedH_PassiveSmall and GeneratedP_PreCombat.
+in GeneratedH_Passive, GeneratedH_PassiveSmall, GeneratedP_PreCombat and
+GeneratedP_PreCombatChronosForces.
 These are biome-owned pools even in Dream routes, not itinerary-next-biome pools.
 
 ## Vow of Fangs
