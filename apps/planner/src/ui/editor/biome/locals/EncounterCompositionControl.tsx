@@ -16,6 +16,8 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { NavigationStatusMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { hintProps } from '@planner/ui/controls/hint';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { enemyIcon, fangsPerkIcon } from '@planner/ui/artwork/encounterArtwork';
 
 type GeneratedEdits = NonNullable<WorkspaceEncounterCustomizationInteraction['generatedEdits']>;
 
@@ -237,6 +239,7 @@ function GeneratedFangsPicker({
         choiceLabel={targetProduct?.stepLabel ?? 'Fangs target'}
         disabled={interaction.generatedFangsDraftFor === undefined}
         id={`generated-fangs-target-${interaction.key}`}
+        itemIcon={(item) => (item.value.kind === 'type' ? enemyIcon(item.value.key) : undefined)}
         label="Fangs target"
         layout="inline"
         model={targetProduct?.picker ?? emptyFangsPicker}
@@ -244,6 +247,7 @@ function GeneratedFangsPicker({
           if (choice.kind === 'type') edit((edits) => edits.setFangsTarget(choice.key));
         }}
         placeholder="Select target"
+        triggerIcon={enemyIcon(value.fangs?.typeKey)}
         triggerLabel={display}
       />
       <ContextualPicker<WorkspaceGeneratedFangsDraftChoice>
@@ -253,6 +257,13 @@ function GeneratedFangsPicker({
         closeOnSelect={false}
         disabled={value.fangs === undefined || interaction.generatedFangsDraftFor === undefined}
         id={`generated-fangs-perks-${interaction.key}`}
+        itemIcon={(item) =>
+          item.value.kind === 'perk'
+            ? fangsPerkIcon(item.value.key)
+            : item.value.kind === 'perkPrefix'
+              ? fangsPerkIcon(perkDraft?.[item.value.perkKeys.length])
+              : undefined
+        }
         label="Perks"
         layout="inline"
         model={perkProduct?.picker ?? emptyFangsPicker}
@@ -319,6 +330,9 @@ function GeneratedEncounterWaveDraftPicker({
           closeOnSelect={false}
           disabled={interaction.generatedWaveDraftFor === undefined}
           id={`generated-wave-${interaction.key}-${wave.waveIndex}`}
+          itemIcon={(item) =>
+            item.value.kind === 'finish' ? undefined : enemyIcon(item.value.key)
+          }
           label={`Wave ${wave.waveIndex}`}
           layout="inline"
           model={product?.picker ?? emptyDraftPicker}
@@ -410,6 +424,10 @@ function ReadOnlyWavePanel({
                 <th scope="col">{wave.source === 'fixed' ? 'Fixed' : 'Native'}</th>
                 {wave.spawns.map((spawn, index) => (
                   <th scope="col" key={`${index}-${spawn.enemyKey}`}>
+                    <ArtworkIcon
+                      className="encounter-enemy-icon"
+                      source={enemyIcon(spawn.enemyKey)}
+                    />
                     {spawn.label}
                   </th>
                 ))}
@@ -620,6 +638,7 @@ export function EncounterCompositionControl({
                           : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`,
                       )}
                     >
+                      <ArtworkIcon className="encounter-enemy-icon" source={enemyIcon(key)} />
                       {label(key)}
                       {cost(key) === undefined ? null : (
                         <>
@@ -678,12 +697,19 @@ export function EncounterCompositionControl({
                               {...hintProps(cell.replacementLabel)}
                             >
                               {cell.picker === undefined ? (
-                                <span>{cell.replacementLabel}</span>
+                                <span className="encounter-enemy-label">
+                                  <ArtworkIcon
+                                    className="artwork-label-icon"
+                                    source={enemyIcon(cell.replacementKey)}
+                                  />
+                                  {cell.replacementLabel}
+                                </span>
                               ) : (
                                 <ContextualPicker
                                   ariaLabel={`Wave ${wave.waveIndex} ${label(key)} replacement`}
                                   choiceLabel="Menace replacement"
                                   id={`generated-menace-${idKey}-${wave.waveIndex}-${key}`}
+                                  itemIcon={(item) => enemyIcon(item.value)}
                                   label="Replacement"
                                   layout="inline"
                                   model={cell.picker}
@@ -693,6 +719,7 @@ export function EncounterCompositionControl({
                                     )
                                   }
                                   placeholder="Select replacement"
+                                  triggerIcon={enemyIcon(cell.replacementKey)}
                                   triggerLabel={cell.replacementLabel}
                                 />
                               )}
@@ -739,8 +766,10 @@ export function EncounterCompositionControl({
               const position = wave.additionalTypeCount.max + index;
               return (
                 <div key={`${position}-${key}`}>
-                  <span>
-                    Enemy {wave.seeds.length + position + 1}: {label(key)}
+                  <span className="encounter-enemy-label">
+                    Enemy {wave.seeds.length + position + 1}:
+                    <ArtworkIcon className="artwork-label-icon" source={enemyIcon(key)} />
+                    {label(key)}
                   </span>
                   {position === selected.length - 1 ? (
                     <button
@@ -949,11 +978,13 @@ export function EncounterCompositionControl({
               choiceLabel="Shared Enemy"
               disabled={interaction?.generatedHighlightPicker === undefined}
               id={`generated-highlight-${idKey}`}
+              itemIcon={(item) => enemyIcon(item.value)}
               label="Shared Enemy"
               layout="inline"
               model={interaction?.generatedHighlightPicker ?? emptyHighlightPicker}
               onSelect={(highlightKey) => edit((edits) => edits.setSharedEnemy(highlightKey))}
               placeholder="Select shared enemy"
+              triggerIcon={enemyIcon(interaction?.generatedHighlightPicker?.selected?.value)}
             />
           </div>
         ) : null}

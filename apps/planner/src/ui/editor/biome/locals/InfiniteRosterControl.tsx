@@ -7,6 +7,7 @@ import type {
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import { enemyIcon } from '@planner/ui/artwork/encounterArtwork';
 
 type Decision = Extract<
   NonNullable<WorkspaceEncounterPhase['customization']>[number],
@@ -48,6 +49,7 @@ export function InfiniteRosterControl({
         closeOnSelect={false}
         disabled={interaction.infiniteRosterDraftFor === undefined}
         id={id}
+        itemIcon={(item) => (item.value.kind === 'enemy' ? enemyIcon(item.value.key) : undefined)}
         label={decision.label}
         layout="inline"
         model={product?.picker ?? emptyPicker}

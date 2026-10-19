@@ -2389,3 +2389,16 @@
 .shop-family-item-status {
   min-height: 36px;
 }
+
+.encounter-enemy-icon {
+  display: block;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin: 0 auto 4px;
+}
+
+.encounter-enemy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}

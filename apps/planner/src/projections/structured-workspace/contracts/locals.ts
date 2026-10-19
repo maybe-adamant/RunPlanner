@@ -87,6 +87,8 @@ export interface WorkspaceEncounterInteraction {
   readonly nemesisEvent?: WorkspaceNemesisEventSelection;
   /** The story or field NPC an encounter choice presents, when it presents one. */
   readonly npcKeyFor: (encounterKey: string) => string | undefined;
+  /** The native encounter declaration an encounter choice resolves to. */
+  readonly definitionKeyFor: (encounterKey: string) => string;
   readonly owner: EncounterPhaseAddress;
   readonly selected: string;
 }
@@ -221,6 +223,8 @@ export interface WorkspaceGeneratedEncounterAssessment {
         string,
         {
           readonly replacementLabel: string;
+          /** The replacement enemy's key once one is fixed or selected. */
+          readonly replacementKey?: string;
           readonly picker?: ContextualPickerModel<string>;
         }
       >
