@@ -40,6 +40,7 @@ Use semantic neighborhoods rather than the first caller that needs a result:
 - `simulation/evaluation/` composes project/biome results and exact artifacts;
 - `simulation/progressive/` locates blocking regions and authoring readiness;
 - `simulation/candidates/` consumes exact captured capabilities.
+- `simulation/draft/` owns Draft generation over those products.
 
 A folder is not another processing stage. Shared normalized contracts sit
 below their consumers; assembly does not become policy merely because it
@@ -663,6 +664,29 @@ owns the room-exit fact kinds over those snapshots, with its matrix in
 `test/simulation/run-state.test.ts`. `execution-plan/modeled-traits.ts`
 owns the traits snap restores; its drift test generates the module's
 `modeled_traits.lua`.
+
+## Draft Generation
+
+Draft Mode fills a route with a random plan inside a user-described world. The
+engine owns all of it: the spec's world options (`draftWorldOptions`), static
+basket legality with its caps and refusals (`assessDraftBasket`,
+`draftRefusals`), the search (`draftProject` and its biome walk), the encounter
+post pass and the report. The application only runs it in a worker and applies
+the result as one `ReplaceRoute`.
+
+The walk is driven by the route's next blocking finding and authors each
+decision from an engine domain or candidate query through edit settlement,
+including every selected-trait child; it never computes game legality. Its own
+rules are draft policy, not legality: monotonic acquisition, the god pool,
+draft-illegal traits (the Ransoms and the replaying Echo choices), the per-slot
+basket claim and the planner caps.
+
+The contract is best effort with no compromise on validity: a drafted project
+always has zero findings, and the report lists each basket trait, story and
+field NPC and rack keepsake as met or unmet. A biome that dead-ends retries
+only itself; attempt counts alone bound the search, so a seed drafts the same
+project on every machine. The encounter post pass then makes every reached
+encounter deterministic from the same seed.
 
 ## Extension and Verification
 

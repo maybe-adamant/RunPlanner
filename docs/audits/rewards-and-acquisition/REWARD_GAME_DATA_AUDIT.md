@@ -840,7 +840,11 @@ initialization replaces `CurrentRun`. Closed doors contribute no offered type.
 
 The late Hammer path still requires a third-or-later entered biome and exactly
 one acquired Hammer. Reaching biome three alone does not restore Hammer
-eligibility. The lookup's native `WeaponUpgrade` identity differs from the
+eligibility. These entry requirements bind only room and Shop generation:
+Reward Reward Reward (`EchoLastReward`, `EventLogic.lua:1537–1560`) recreates
+an earlier Hammer pickup and Gold Gold Gold (`EchoDoubleShop`) duplicates a
+purchased Shop Hammer without consulting them, so either can grant a third
+Hammer. The lookup's native `WeaponUpgrade` identity differs from the
 shop wrapper `WeaponUpgradeDrop`. Generic Spell/Hammer reward requirements do
 not impose these source-specific exclusions on other reward producers.
 
