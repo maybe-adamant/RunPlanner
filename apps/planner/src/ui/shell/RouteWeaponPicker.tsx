@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { aspectArtwork } from '@planner/ui/controls/aspects/aspectArtwork';
 
 export function RouteWeaponPicker({
   catalog,
@@ -41,6 +42,13 @@ export function RouteWeaponPicker({
       layout="inline"
       placeholder="Choose weapon and aspect"
       triggerLabel={`${weapon.label} · ${aspect.label}`}
+      triggerIcon={aspectArtwork[aspectKey]}
+      // A weapon shows its default aspect's icon.
+      itemIcon={(item) =>
+        aspectArtwork[
+          pendingWeapon === undefined ? catalog.weapons.byKey[item.key]!.defaultAspectKey : item.key
+        ]
+      }
       triggerSizingLabels={catalog.weapons.values.flatMap((option) =>
         option.aspectKeys.map((key) => `${option.label} · ${catalog.aspects.byKey[key]!.label}`),
       )}
