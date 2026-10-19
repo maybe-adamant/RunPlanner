@@ -68,6 +68,8 @@ import type { SemanticFinding } from '../model';
 import { draftDenialActive, type DraftSpec } from './spec';
 import type { DraftGodSchedule } from './schedule';
 import { DRAFT_PROVIDER_CAPS, draftIllegalTrait, draftStartTraits } from './basket';
+import { completeCarrierChildren, type DraftCarrierChildContext } from './carrier-children';
+import { assessmentRepairOwner } from '../finding-regions';
 import {
   createDraftPrerequisites,
   type DraftHeldTraits,
@@ -172,6 +174,8 @@ export class DraftWalk {
   /** Basket NPC traits by the itinerary index of their NPC's biome. */
   private readonly npcTraitBiomes: ReadonlyMap<string, number>;
   private nextOccurrence = 0;
+  /** Trait offers this walk authored, by address, for re-picking a stale child. */
+  private readonly authoredOffers = new Map<string, AuthoredTraitOfferTraits>();
   steps = 0;
   failure: string | undefined;
   /** The biome being walked. */
@@ -723,10 +727,12 @@ export class DraftWalk {
       case 'hexActivationMissing':
       case 'hexActivationUnavailable':
         return origin.kind === 'acquisitionRole' && this.hexActivation(origin);
-      default:
+      default: {
         if (origin.kind === 'levelResolution') return this.levelResolution(origin);
         if (origin.kind === 'rewardWheel') return this.rewardWheelPicked(origin);
-        return false;
+        const owner = assessmentRepairOwner(origin);
+        return owner.kind === 'traitOffer' && this.repickCarrierChild(owner, origin);
+      }
     }
   }
 
@@ -1242,6 +1248,56 @@ export class DraftWalk {
     );
   }
 
+  private childContext(trait: TraitOfferAddress): DraftCarrierChildContext {
+    const equippedSlots = new Set(
+      this.progress().equippedTraitKeys.map((key) => this.catalog.traits.byKey[key]?.equipmentSlot),
+    );
+    return {
+      catalog: this.catalog,
+      evaluate: (query) => this.evaluate(query),
+      shuffle: (values) => this.shuffle(values),
+      // A replayed or residual trait never exchanges a held core slot.
+      allowsTrait: (traitKey) => {
+        const declaration = this.catalog.traits.byKey[traitKey];
+        const slot = declaration?.equipmentSlot;
+        return (
+          declaration !== undefined &&
+          !draftIllegalTrait(declaration) &&
+          this.slotAllowed(traitKey) &&
+          (slot === undefined || slot === 'Spell' || !equippedSlots.has(slot))
+        );
+      },
+      prefersTrait: (traitKey) => this.wantedBasket(this.progress()).includes(traitKey),
+      supported: (value) => this.offerSupported(trait, value),
+    };
+  }
+
+  private completeChildren(
+    trait: TraitOfferAddress,
+    value: AuthoredTraitOfferTraits,
+  ): AuthoredTraitOfferTraits {
+    return completeCarrierChildren(this.childContext(trait), trait, value);
+  }
+
+  /** Picks the finding's child of an offer this walk authored again. */
+  private repickCarrierChild(trait: TraitOfferAddress, origin: SemanticAddress): boolean {
+    const value = this.authoredOffers.get(semanticAddressKey(trait));
+    if (value === undefined) return false;
+    const key = `repick:${semanticAddressKey(origin)}`;
+    if (this.hooked.has(key)) return false;
+    this.hooked.add(key);
+    const repicked = completeCarrierChildren(
+      this.childContext(trait),
+      trait,
+      value,
+      semanticAddressKey(origin),
+    );
+    return (
+      this.offerSupported(trait, repicked) &&
+      this.apply({ kind: 'ReplaceTraitOffer', trait, value: repicked })
+    );
+  }
+
   /** Never an exchange row, a trait-removing Duo or a draft-illegal trait. */
   private monotonicSelection(trait: TraitOfferAddress, value: AuthoredTraitOfferTraits): boolean {
     const index = OPTION_KEYS.indexOf(value.selectedOptionKey);
@@ -1295,12 +1351,17 @@ export class DraftWalk {
         this.failure = `${banned ? 'slotBan' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`;
         return false;
       }
-      for (const value of values)
-        if (
-          (value.kind === 'traits' && this.apply(command(this.randomFiller(trait, value)))) ||
-          this.apply(command(value))
-        )
+      for (const value of values) {
+        const filled = value.kind === 'traits' ? this.randomFiller(trait, value) : undefined;
+        if (filled !== undefined && this.apply(command(filled))) {
+          this.authoredOffers.set(semanticAddressKey(trait), filled);
           return true;
+        }
+        if (this.apply(command(value))) {
+          if (value.kind === 'traits') this.authoredOffers.set(semanticAddressKey(trait), value);
+          return true;
+        }
+      }
     }
     return false;
   }
@@ -1351,7 +1412,11 @@ export class DraftWalk {
               options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
             } as AuthoredTraitOfferTraits;
           })
-          .find((offer) => this.offerSupported(trait, offer));
+          .reduce<AuthoredTraitOfferTraits | undefined>((found, offer) => {
+            if (found !== undefined) return found;
+            const complete = this.completeChildren(trait, offer);
+            return this.offerSupported(trait, complete) ? complete : undefined;
+          }, undefined);
         if (candidate !== undefined) {
           current = candidate;
           break;
@@ -1410,12 +1475,12 @@ export class DraftWalk {
         for (const rarity of rarities) {
           const options = [...draft.options];
           options[index] = rarity === undefined ? { traitKey } : { traitKey, rarity };
-          const candidate = select(options, index);
+          const candidate = this.completeChildren(trait, select(options, index));
           if (legal(candidate)) return [candidate];
         }
     }
     return this.shuffle(indexes)
-      .map((index) => select(draft.options, index))
+      .map((index) => this.completeChildren(trait, select(draft.options, index)))
       .filter(legal);
   }
 
