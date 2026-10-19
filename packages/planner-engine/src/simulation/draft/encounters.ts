@@ -15,7 +15,7 @@ import {
   infiniteRosterSupportForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
-import { settleDraftCommand, type DraftRng } from './walk';
+import { settleDraftCommandWithoutNewFinding, type DraftRng } from './walk';
 
 /** Random generated values tried before the engine's deterministic initialisation. */
 const GENERATED_ATTEMPTS = 4;
@@ -197,15 +197,9 @@ export function draftEncounters(
 ): ProjectEvaluationAssembly {
   let assembly = start;
   const settle = (command: ProjectCommand): boolean => {
-    const settled = settleDraftCommand(catalog, assembly, command);
-    // A drafted route has none; a partly walked one keeps its later frontier finding.
-    if (
-      settled === undefined ||
-      settled.evaluation.findings.length > assembly.evaluation.findings.length
-    )
-      return false;
-    assembly = settled;
-    return true;
+    const settled = settleDraftCommandWithoutNewFinding(catalog, assembly, command);
+    if (settled !== undefined) assembly = settled;
+    return settled !== undefined;
   };
   const customize = (
     phase: EncounterPhaseAddress,
