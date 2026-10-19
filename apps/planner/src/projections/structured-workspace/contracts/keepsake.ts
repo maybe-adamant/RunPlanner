@@ -24,11 +24,10 @@ export interface WorkspaceKeepsakeSelectionInteraction {
       { readonly kind: 'ReplaceStartingKeepsake' | 'ReplacePostbossKeepsake' }
     >
   >;
-  readonly removeIntent?: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemovePostbossKeepsake' }>
+  /** Returns a swapped Postboss rack to leaving the held keepsake unchanged. */
+  readonly unchangedIntent?: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplacePostbossKeepsake' }>
   >;
-  /** The route has no rack: nothing can be chosen and only removal is bound. */
-  readonly unavailableReason?: 'rackUnavailableOnRoute';
 }
 
 /** Closed immediate acquisitions beneath their exact rack selection. */

@@ -392,6 +392,8 @@ export {
   type AcquisitionDisposition,
   type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,
+  type AuthoredDraftSpec,
+  type AuthoredKeepsakeRack,
   type ResourceFamily,
   type ResourcePlacement,
   type ResourcePlacements,
@@ -463,8 +465,6 @@ export { chaosGateSpawnPointIndices } from './chaos-gate-position';
 export {
   RUN_MODIFIER_DECLARATIONS,
   RUN_MODIFIER_PERCENTAGE,
-  RUN_MODIFIER_GOLD,
-  EXECUTION_RUN_MODIFIER_DECLARATIONS,
   NATIVE_RUN_MODIFIERS,
   runModifierDeclaration,
   isRunModifierAuthored,
@@ -477,14 +477,18 @@ export {
   type RunModifierDeclaration,
   type BooleanRunModifierDeclaration,
   type OptionalPercentageRunModifierDeclaration,
-  type StartPointRunModifierDeclaration,
-  type ExecutionRunModifierDeclaration,
-  type ExecutionRunModifiers,
-  type RunStartPoint,
   type RunModifierValue,
   type RunModifierKey,
   type RunModifiers,
   type RunModifiersRecord,
 } from './run-modifiers';
+export {
+  RUN_START_POINTS,
+  PRACTICE_START_GOLD,
+  decodePracticeStart,
+  samePracticeStart,
+  type RunStartPoint,
+} from './practice-start';
+export { EMPTY_DRAFT_SPEC, MAX_DRAFT_SEED, decodeDraftSpec, sameDraftSpec } from './draft-spec';
 
 export { structurallyInvalidGeneratedPickupPlacements } from './generated-pickup-placement';

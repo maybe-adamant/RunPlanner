@@ -151,7 +151,6 @@ export function equivalenceCorpus(): readonly EquivalenceEntry[] {
       withRetainedFreshFilePostboss(createFreshFileFProject(), {
         well: true,
         poolSaleTraitKey: 'ApolloWeaponBoon',
-        rackKeepsakeKey: catalog.keepsakes.values[0]!.key,
       }),
     ),
     entry('fresh-file/withRetainedFreshFilePostboss(emptyPool)', () =>

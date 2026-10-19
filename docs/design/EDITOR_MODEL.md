@@ -172,10 +172,10 @@ domain. Picker activation invokes a prepared, address-bound capability.
 Application projections translate its evidence into grouped/searchable options;
 React neither constructs engine queries nor recomputes legality.
 
-The Modifiers panel renders the released run-modifier declarations by declared
-kind, including in Fresh File: a toggle or a checkbox with a 0–100% slider.
-The Practice mode start point renders on the Route panel; its picker domain is
-evaluated when it opens. An
+The Route panel's Run modifiers section renders the released run-modifier
+declarations by declared kind, including in Fresh File: a toggle or a checkbox
+with a 0–100% slider. The Practice mode start point follows them in the same
+section; its picker domain is evaluated when it opens. An
 unchecked percentage modifier is native; its slider is disabled and shows no
 value. Development builds, and release builds made with
 `VITE_INTERNAL_FEATURES=1`, also render `internal` declarations. Application binding reads
@@ -455,8 +455,8 @@ Explicit discard removes only recovery, never the user's source profile.
 
 ## Presentation and Accessibility
 
-The shell presents route identity, file/history operations, the Route,
-Loadout and Modifiers panels, ordered biome navigation and nonempty route-local
+The shell presents route identity, file/history operations, the Route and
+Loadout panels, ordered biome navigation and nonempty route-local
 indexes. Index visibility
 comes from the same rows as its panel, not a separate availability query.
 If an active index becomes empty after an edit, return to Route.

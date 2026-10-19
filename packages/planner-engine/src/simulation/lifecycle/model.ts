@@ -184,6 +184,8 @@ export interface RoomLifecycleExecutionInput {
   readonly roomActionRoster?: RoomActionRoster;
   /** Feature-local Shrine purchases, consumed only by the Shrine scheduling checkpoint. */
   readonly hermesShrine?: import('../../authored-project/model').HermesShrineState;
+  /** The rack swaps the keepsake; an unchanged rack's action is a no-op. */
+  readonly keepsakeRackReplaces?: true;
 }
 
 export interface RoomHistoryFragment {

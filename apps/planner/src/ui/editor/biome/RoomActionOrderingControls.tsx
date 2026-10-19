@@ -107,13 +107,15 @@ export function RoomActionRemovalControl({
       : `Remove ${row.label} from the timeline.`
     : row.rank === null
       ? 'This action is not currently in the timeline.'
-      : row.shopParticipation !== undefined
-        ? 'Purchased membership is edited in Room Overview.'
-        : !owned && row.participationOwnedByOverview
-          ? 'This action is edited in Room Overview.'
-          : row.participation === 'required'
-            ? 'Required actions cannot be removed.'
-            : removable?.explanations.join(' ') || undefined;
+      : row.reference.kind === 'interactKeepsakeRack'
+        ? 'The Keepsake Rack is always in the timeline.'
+        : row.shopParticipation !== undefined
+          ? 'Purchased membership is edited in Room Overview.'
+          : !owned && row.participationOwnedByOverview
+            ? 'This action is edited in Room Overview.'
+            : row.participation === 'required'
+              ? 'Required actions cannot be removed.'
+              : removable?.explanations.join(' ') || undefined;
   return (
     <TimelineActionDeleteButton
       {...(findingMark === undefined ? {} : { findingMark })}

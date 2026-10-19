@@ -1,9 +1,5 @@
 import type { ProjectDocument } from '../../authored-project/model';
-import {
-  RUN_START_POINTS,
-  routeRunModifiers,
-  type RunStartPoint,
-} from '../../authored-project/run-modifiers';
+import { RUN_START_POINTS, type RunStartPoint } from '../../authored-project/practice-start';
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import type { StartInstallation, StartInstallationUnavailableReason } from './model';
@@ -75,7 +71,7 @@ export function authoredStartPointEligibility(
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
 ): AuthoredStartPointEligibility {
-  const startPoint = routeRunModifiers(project.route.loadout).startPoint;
+  const startPoint = project.route.practiceStart;
   if (startPoint === undefined) return Object.freeze({ kind: 'unset' });
   const result = installationFor(
     catalog,

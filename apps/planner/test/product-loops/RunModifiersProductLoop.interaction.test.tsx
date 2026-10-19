@@ -21,7 +21,8 @@ it('restores authored modifiers through history, saved reload and published exec
   const application = createApplication({ profileFile: files.adapter, gameModuleHost: game.host });
   await files.openSaved(application, loadSurfaceNProject(), 'modifiers.runplanner.json');
   const { user } = renderPlannerForInteraction({ application });
-  const modifiers = () => user.click(screen.getByRole('button', { name: 'Modifiers' }));
+  // The Route panel hosts the run modifiers.
+  const modifiers = () => user.click(screen.getByRole('button', { name: 'Route' }));
   await modifiers();
   const gold = () =>
     screen.getByRole('slider', { name: 'Encounter gold range' }) as HTMLInputElement;

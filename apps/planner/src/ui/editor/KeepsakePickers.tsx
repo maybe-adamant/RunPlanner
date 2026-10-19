@@ -32,6 +32,9 @@ type TranscendentEmbryoInteraction = Extract<
   { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
 >;
 
+/** The rack card that leaves the held keepsake in place. */
+const UNCHANGED = '__unchanged';
+
 const emptyModel: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
@@ -69,7 +72,7 @@ export function KeepsakeSelectionLauncher({
 }: {
   readonly disabledHint?: string;
   readonly equipResults: readonly WorkspaceKeepsakeEquipResultInteraction[];
-  /** The keepsake held arriving at a rack; choosing it again keeps it with no swap. */
+  /** The keepsake held arriving at a rack; choosing it leaves the rack unchanged. */
   readonly held?: { readonly key: string; readonly label: string };
   readonly id: string;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
@@ -104,17 +107,27 @@ export function KeepsakeSelectionLauncher({
     }
   if (held !== undefined && projection.result !== undefined && !entries.has(held.key))
     entries.set(held.key, { ...held, selected: held.key === shownKey, disabled: false });
+  // Without a known held keepsake, a Postboss rack offers Unchanged as its own card.
+  if (
+    held === undefined &&
+    interaction.owner.owner !== 'routeStart' &&
+    projection.result !== undefined
+  )
+    entries.set(UNCHANGED, {
+      key: UNCHANGED,
+      label: 'Unchanged',
+      selected: interaction.selectedKeepsakeKey === undefined,
+      disabled: false,
+    });
   const select = (keepsakeKey: string) => {
-    if (keepsakeKey !== held?.key) executeIntent(interaction.replaceIntent(keepsakeKey));
-    else if (
-      interaction.selectedKeepsakeKey !== undefined &&
-      interaction.removeIntent !== undefined
-    )
-      executeIntent(interaction.removeIntent());
+    if (keepsakeKey !== held?.key && keepsakeKey !== UNCHANGED)
+      executeIntent(interaction.replaceIntent(keepsakeKey));
+    else if (interaction.unchangedIntent !== undefined)
+      executeIntent(interaction.unchangedIntent());
   };
   const shownLabel =
     interaction.selectedKeepsakeKey === undefined && held !== undefined
-      ? held.label
+      ? `${held.label} (Unchanged)`
       : interaction.selectedLabel;
   const target = equipResults.find((result) => result.value !== undefined)?.selectedLabel;
   return (

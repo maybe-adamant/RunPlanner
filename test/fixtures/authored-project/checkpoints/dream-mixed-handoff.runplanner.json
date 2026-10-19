@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 96,
-  "schemaRevision": 2,
+  "schemaVersion": 97,
   "projectId": "execution-dream-q-f-n-h",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -49,6 +48,14 @@
       },
       "startingKeepsakeKey": "ManaOverTimeRefundKeepsake",
       "familiarKey": "FrogFamiliar"
+    },
+    "draft": {
+      "godKeys": [],
+      "storyNpcByBiome": {},
+      "fieldNpcsByBiome": {},
+      "basketTraitKeys": [],
+      "rackKeepsakeByBiome": {},
+      "seed": 1
     },
     "biomes": [
       {
@@ -602,6 +609,9 @@
                 "order": [
                   {
                     "kind": "useFountain"
+                  },
+                  {
+                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -612,6 +622,9 @@
                   "secondLeft": null,
                   "secondRight": null
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "additionalExits": []
             }
@@ -1679,6 +1692,9 @@
                 "order": [
                   {
                     "kind": "useFountain"
+                  },
+                  {
+                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -1689,6 +1705,9 @@
                   "secondLeft": null,
                   "secondRight": null
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "additionalExits": []
             }
@@ -2214,6 +2233,9 @@
                 "order": [
                   {
                     "kind": "useFountain"
+                  },
+                  {
+                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -2224,6 +2246,9 @@
                   "secondLeft": null,
                   "secondRight": null
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "additionalExits": []
             },

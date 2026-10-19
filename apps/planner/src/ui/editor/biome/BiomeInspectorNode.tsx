@@ -20,8 +20,6 @@ import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
-  inspectorRoomActionRemoval,
-  inspectorOptionalRoomActionContent,
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -186,14 +184,8 @@ function OccurrenceInspector({
         renderRoomActionRowContent={(row) =>
           inspectorRoomActionContent(node.room, interactions, row)
         }
-        renderRoomActionRowRemoval={(row) =>
-          inspectorRoomActionRemoval(node.room, interactions, row)
-        }
         renderLifecycleBoundaryContent={(boundary) =>
           inspectorLifecycleBoundaryContent(node.room, interactions, boundary)
-        }
-        renderOptionalRoomActionContent={() =>
-          inspectorOptionalRoomActionContent(node.room, interactions)
         }
         {...(node.runState === undefined ? {} : { runState: node.runState })}
         {...(navigationRevision === undefined ? {} : { navigationRevision })}

@@ -82,7 +82,7 @@ export function draftRouteLoadout(loadout: DraftLoadout): RouteLoadout {
 
 /**
  * The base project's route with the draft loadout, every itinerary biome
- * configured and no topology, strictly decoded. Run modifiers carry over.
+ * configured and no topology, strictly decoded. Run modifiers and the Practice start carry over.
  */
 export function draftLoadoutProject(
   catalog: Catalog,
@@ -96,11 +96,13 @@ export function draftLoadoutProject(
     configuredBiomeCount: base.route.itineraryBiomeKeys.length,
   });
   const runModifiers = base.route.loadout.runModifiers;
+  const practiceStart = base.route.practiceStart;
   return decodeProjectDocument(
     {
       ...project,
       route: {
         ...project.route,
+        ...(practiceStart === undefined ? {} : { practiceStart }),
         loadout: {
           ...draftRouteLoadout(loadout),
           ...(runModifiers === undefined ? {} : { runModifiers }),

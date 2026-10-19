@@ -1558,6 +1558,8 @@ describe('Hermes Shrine purchase actions', () => {
     generationKey,
     rushed,
   });
+  // The Postboss rack is permanent; it stays ranked right after the fountain.
+  const rack = { kind: 'interactKeepsakeRack' as const };
   const pickup = (generationKey: HermesShrineGenerationKey) => ({
     kind: 'interactAcquisitionEntry' as const,
     siteKey: 'hermesShrineDelivery',
@@ -1582,6 +1584,7 @@ describe('Hermes Shrine purchase actions', () => {
     const project = surfaceShrineTravelDealProject();
     expect(shrineRoom(project).roomActions.order).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:first', true),
       purchase('travelDealRefill', false),
       pickup('initial:first'),
@@ -1594,6 +1597,7 @@ describe('Hermes Shrine purchase actions', () => {
     });
     expect(shrineRoom(purchased).roomActions.order).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:first', true),
       purchase('initial:secondLeft', false),
       purchase('travelDealRefill', false),
@@ -1618,6 +1622,7 @@ describe('Hermes Shrine purchase actions', () => {
     expect(shrineRoom(cleared).hermesShrine?.purchaseBySlot).toEqual({ secondLeft: { delay: 3 } });
     expect(shrineRoom(cleared).roomActions.order).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:secondLeft', false),
       purchase('travelDealRefill', false),
     ]);
@@ -1642,6 +1647,7 @@ describe('Hermes Shrine purchase actions', () => {
     expect(shrineRoom(rushed).hermesShrine?.purchaseBySlot?.secondLeft).toEqual({ delay: 3 });
     expect(shrineRoom(rushed).roomActions.order).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:first', true),
       purchase('initial:secondLeft', true),
       purchase('travelDealRefill', false),
@@ -1678,6 +1684,7 @@ describe('Hermes Shrine purchase actions', () => {
     const sourceUnrushed = rush(refillRushed, 'initial:first', false);
     expect(shrineRoom(sourceUnrushed).roomActions.order).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:first', false),
       purchase('initial:secondLeft', false),
       purchase('travelDealRefill', true),
@@ -1712,10 +1719,11 @@ describe('Hermes Shrine purchase actions', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
-      toIndex: 3,
+      toIndex: 4,
     });
-    expect(shrineRoom(project).roomActions.order.slice(0, 4)).toEqual([
+    expect(shrineRoom(project).roomActions.order.slice(0, 5)).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:first', true),
       purchase('travelDealRefill', true),
       purchase('initial:secondLeft', true),
@@ -1770,10 +1778,11 @@ describe('Hermes Shrine purchase actions', () => {
     const moved = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
       action: testHermesShrinePurchaseAction(shrine, 'initial:secondLeft'),
-      toIndex: 1,
+      toIndex: 2,
     });
-    expect(shrineRoom(moved).roomActions.order.slice(0, 4)).toEqual([
+    expect(shrineRoom(moved).roomActions.order.slice(0, 5)).toEqual([
       { kind: 'useFountain' },
+      rack,
       purchase('initial:secondLeft', true),
       purchase('initial:first', true),
       purchase('travelDealRefill', false),

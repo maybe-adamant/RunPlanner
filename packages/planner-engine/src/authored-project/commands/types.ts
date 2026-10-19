@@ -58,6 +58,17 @@ export type ProjectStateCommand =
       readonly value: import('../run-modifiers').RunModifiers;
     }
   | {
+      readonly kind: 'ReplacePracticeStart';
+      readonly route: RouteAddress;
+      /** Null restores a full run. */
+      readonly startPoint: import('../practice-start').RunStartPoint | null;
+    }
+  | {
+      readonly kind: 'ReplaceDraftSpec';
+      readonly route: RouteAddress;
+      readonly draft: import('../model').AuthoredDraftSpec;
+    }
+  | {
       readonly kind: 'ReplaceStartingReward';
       readonly reward: StartingRewardAddress;
       readonly value: ResolvedRewardOffer | null;
@@ -105,7 +116,7 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     }
   | {
-      /** Replaces the loadout and every itinerary biome's plan; route, itinerary and run modifiers stay. */
+      /** Replaces the loadout (but not its run modifiers) and the biome plans; the rest of the route stays. */
       readonly kind: 'ReplaceRoute';
       readonly route: RouteAddress;
       readonly loadout: Omit<import('../model').RouteLoadout, 'runModifiers'>;
@@ -142,11 +153,8 @@ export type FountainRarityCommand = {
 export type KeepsakeCommand = {
   readonly kind: 'ReplacePostbossKeepsake';
   readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: OccurrenceAddress }>;
-  readonly keepsakeKey: string;
-};
-export type RemoveKeepsakeCommand = {
-  readonly kind: 'RemovePostbossKeepsake';
-  readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: OccurrenceAddress }>;
+  /** Null leaves the held keepsake unchanged. */
+  readonly keepsakeKey: string | null;
 };
 export type KeepsakeEquipResultCommand = {
   readonly kind: 'ReplaceJeweledPomEquipResult';
@@ -701,7 +709,6 @@ export type ProjectCommand =
   | SteadyGrowthCommand
   | FountainRarityCommand
   | KeepsakeCommand
-  | RemoveKeepsakeCommand
   | KeepsakeEquipResultCommand
   | ExperimentalHammerEquipResultCommand
   | TranscendentEmbryoEquipResultCommand

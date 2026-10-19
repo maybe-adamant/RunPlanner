@@ -89,7 +89,7 @@ the authoring surface to a narrow content column. A short structure rail does
 not advertise overflow merely because its connector decoration extends beyond
 a terminal stop.
 
-The Route, Loadout and Modifiers panels remain ordinary editor-panel content and may use that
+The Route and Loadout panels remain ordinary editor-panel content and may use that
 panel's scroll container. At narrow widths the layout intentionally returns to
 one document-flow column rather than retaining nested scrollports. These are
 CSS presentation boundaries only: scroll position remains transient and no
@@ -97,7 +97,7 @@ layout state enters the authored project or semantic commands.
 
 Before a project is open, the application presents a catalog-driven route
 chooser. Once a route is selected, the header displays its identity and the
-route-local navigation provides Route, Loadout and Modifiers, then configured
+route-local navigation provides Route and Loadout, then configured
 biomes and nonempty indexes;
 it does not switch between sibling authored runs. The route rail is the
 selected route's local overview and biome navigation, not a competing second
@@ -106,15 +106,13 @@ route selector.
 ### Route Rail
 
 The route rail projects the selected route's normalized biome order and current
-project evaluation. It shows the Route, Loadout and Modifiers panels, each
+project evaluation. It shows the Route and Loadout panels, each
 configured biome, its status, and whether contextual evaluation is active,
 complete, or blocked by an earlier biome. The workspace opens on Route, which
-holds Plan up to, Practice mode and the whole-plan status. Loadout holds the
+holds Plan up to, the run modifiers with Practice mode, and the whole-plan status. Loadout holds the
 starting choices (on Fresh File, only its fixed weapon) and carries the same
 status marker and finding count as a biome for route-start owners; every
-route-scoped or route-start finding opens it. Modifiers holds the run
-modifiers other than Practice mode and appears only while one is declared;
-Route and Modifiers carry no marker. The catalog route collection is used only to populate the
+route-scoped or route-start finding opens it. Route carries no marker. The catalog route collection is used only to populate the
 chooser; it is not rendered as sibling project workspaces.
 
 Selecting a biome changes UI-session navigation only. A downstream biome remains
@@ -176,12 +174,12 @@ those facts into finished rows, including max stats, the Reward Store Ratio,
 counters and bag totals, so React only renders them; it does not count
 lifecycle events, evaluate thresholds, or predict a future automatic target.
 
-The Modifiers panel renders from the engine's run modifier declarations: a toggle for a boolean kind, and for an optional percentage a
+The Route panel's run modifiers render from the engine's run modifier declarations: a toggle for a boolean kind, and for an optional percentage a
 checkbox plus a 0–100% slider that is disabled while unchecked, with the label
 and description taken from the declaration. The slider keeps its last value in
 UI state only, so re-enabling restores it until the panel is left; with none,
 enabling starts at 100%.
-Practice mode is one Route-panel row beside Plan up to, on every route
+Practice mode is the last row of the Route panel's run modifiers, on every route
 including Fresh File (where a practice run skips earlier first-time story, see
 [Practice mode start](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)): a checkbox, a Start at picker and a Gold field, the
 latter two disabled while unchecked. Checking opens the picker over the
@@ -565,7 +563,7 @@ edit makes the substitution no longer apply.
 ### Keepsake Products
 
 The Loadout panel projects the mandatory starting selection. Each fixed Postboss
-occurrence with a declared rack projects an optional `Choose keepsake` action
+occurrence with a declared rack projects a permanent `Keepsake Rack` action
 at every supported nonterminal route position; when active, that action owns
 the replacement selection. Immediate Jeweled Pom and Experimental Hammer
 results appear beneath that exact selection.

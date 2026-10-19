@@ -35,7 +35,7 @@ function open(routeKey = 'Underworld') {
       };
     },
   };
-  const application = createApplication({ draftRunner: runner, draftSeed: () => 42 });
+  const application = createApplication({ draftRunner: runner, rerollSeed: () => 42 });
   application.store.dispatch(
     newProjectCreated(
       createProjectDocument(application.catalog, {
@@ -245,11 +245,18 @@ describe('Draft panel', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
     };
     const shown = () => ['F', 'G', 'H'].map((biomeKey) => launcher(biomeKey).textContent);
-    const stored = () => application.store.getState().draftSession.rackKeepsakeByBiome;
-    expect(shown()).toEqual(['Silver Wheel', 'Silver Wheel', 'Silver Wheel']);
+    const stored = () =>
+      application.store.getState().projectWorkspace.history!.present.route.draft
+        .rackKeepsakeByBiome;
+    // A rack that keeps the held keepsake reads as unchanged.
+    expect(shown()).toEqual([
+      'Silver Wheel (Unchanged)',
+      'Silver Wheel (Unchanged)',
+      'Silver Wheel (Unchanged)',
+    ]);
 
     choose('G', 'Lion Fang');
-    expect(shown()).toEqual(['Silver Wheel', 'Lion Fang', 'Lion Fang']);
+    expect(shown()).toEqual(['Silver Wheel (Unchanged)', 'Lion Fang', 'Lion Fang (Unchanged)']);
     choose('H', 'Gold Purse');
     expect(stored()).toEqual({ G: 'DecayingBoostKeepsake', H: 'BonusMoneyKeepsake' });
     // Choosing the keepsake already held there stores no change.
@@ -266,7 +273,7 @@ describe('Draft panel', () => {
         }),
       );
     });
-    expect(shown()).toEqual(['Gold Purse', 'Lion Fang', 'Lion Fang']);
+    expect(shown()).toEqual(['Gold Purse (Unchanged)', 'Lion Fang', 'Lion Fang (Unchanged)']);
     chooseGods(['Zeus', 'Hera', 'Apollo']);
     fireEvent.click(draftButton());
     expect(runs[0]!.request.spec.rackKeepsakeKeys).toEqual([null, 'DecayingBoostKeepsake', null]);
@@ -280,7 +287,8 @@ describe('Draft panel', () => {
     chooseGods(['Hera']);
     fireEvent.click(draftButton());
     expect(runs).toHaveLength(1);
-    expect(runs[0]!.request.seed).toBe(42);
+    // Draft uses the project's saved seed; only Reroll draws a new one.
+    expect(runs[0]!.request.seed).toBe(1);
     expect(screen.getByText(/^Drafting…/)).toBeTruthy();
     expect(
       (screen.getByRole('button', { name: 'Zeus' }) as HTMLButtonElement).matches(':disabled'),

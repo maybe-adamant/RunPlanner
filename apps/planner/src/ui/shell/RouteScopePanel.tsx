@@ -5,9 +5,9 @@ import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
-import { RunStartPointModifier } from './RunStartPointModifier';
+import { RouteRunModifiers } from './RouteRunModifiers';
 
-/** The plan's extent and where the run starts, with the whole-plan status. */
+/** The plan's extent and its run modifiers, with the whole-plan status. */
 export function RouteScopePanel({
   label,
   navigation,
@@ -27,7 +27,6 @@ export function RouteScopePanel({
   const lastConfiguredBiome = navigation.biomePanels[configuredBiomeCount - 1]?.label;
   const routeExtent =
     lastConfiguredBiome === undefined ? 'No biomes' : `Through ${lastConfiguredBiome}`;
-  const startPoint = workspaceRoute.runModifiers.startPoint;
   return (
     <section className="route-overview route-scope-panel" aria-label="Route">
       <header className="panel-heading">
@@ -64,14 +63,8 @@ export function RouteScopePanel({
             ))}
           </div>
         </div>
-        {startPoint === undefined ? null : (
-          <RunStartPointModifier
-            key={replacementKey}
-            control={startPoint}
-            id={`${workspaceRoute.routeKey}-run-modifiers-${startPoint.declaration.key}`}
-          />
-        )}
       </div>
+      <RouteRunModifiers replacementKey={replacementKey} workspaceRoute={workspaceRoute} />
     </section>
   );
 }

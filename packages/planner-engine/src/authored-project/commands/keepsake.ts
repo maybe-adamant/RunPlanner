@@ -15,7 +15,6 @@ import type {
   TranscendentEmbryoEquipResultCommand,
   TranscendentEmbryoTransformationCommand,
   KeepsakeCommand,
-  RemoveKeepsakeCommand,
   KeepsakeEquipResultCommand,
   FountainRarityCommand,
 } from './types';
@@ -29,8 +28,7 @@ export function applyKeepsakeCommand(
     | ExperimentalHammerEquipResultCommand
     | FountainRarityCommand
     | TranscendentEmbryoEquipResultCommand
-    | TranscendentEmbryoTransformationCommand
-    | RemoveKeepsakeCommand,
+    | TranscendentEmbryoTransformationCommand,
 ): ProjectDocument {
   if (command.kind === 'ReplaceFountainRarityTarget') {
     if (
@@ -265,7 +263,7 @@ export function applyKeepsakeCommand(
     const located = locateBiome(document, catalog, command);
     const occurrence = requireOccurrence(located.plan, selection.owner.occurrenceId, command);
     if (
-      occurrence.keepsakeRack === undefined ||
+      occurrence.keepsakeRack?.keepsakeKey == null ||
       catalog.keepsakes.byKey[occurrence.keepsakeRack.keepsakeKey]?.effect?.kind !==
         'experimentalHammer'
     )
@@ -357,35 +355,16 @@ export function applyKeepsakeCommand(
   ) {
     failCommand(command, `${occurrence.gameName} is not this biome's Postboss room`);
   }
-  if (!room.hasKeepsakeRack) failCommand(command, 'biome has no ordinary Postboss rack');
-  if (command.kind === 'RemovePostbossKeepsake') {
-    if (occurrence.keepsakeRack === undefined) return document;
-    const nextOrder = occurrence.roomActions.order.filter(
-      (reference) => reference.kind !== 'interactKeepsakeRack',
-    );
-    const { keepsakeRack: _removed, ...withoutRack } = occurrence;
-    void _removed;
-    return updateOccurrence(document, located, {
-      ...withoutRack,
-      roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-    });
-  }
-  if (!routeHasKeepsakeRack(room, located.routeKey))
+  if (!routeHasKeepsakeRack(room, located.routeKey) || occurrence.keepsakeRack === undefined)
     failCommand(command, 'this route has no Postboss rack');
-  if (catalog.keepsakes.byKey[command.keepsakeKey] === undefined)
-    failCommand(command, `unknown keepsake ${command.keepsakeKey}`);
-  const rack = Object.freeze({ kind: 'interactKeepsakeRack' as const });
-  const existingOrder = occurrence.roomActions.order;
-  const nextOrder = existingOrder.some((reference) => reference.kind === 'interactKeepsakeRack')
-    ? existingOrder
-    : Object.freeze([...existingOrder, rack]);
+  const keepsakeKey = command.keepsakeKey;
+  if (keepsakeKey !== null && catalog.keepsakes.byKey[keepsakeKey] === undefined)
+    failCommand(command, `unknown keepsake ${keepsakeKey}`);
+  if (occurrence.keepsakeRack.keepsakeKey === keepsakeKey) return document;
+  // Each equip result belongs to one keepsake, so a change drops them all; the rank stays.
   return updateOccurrence(document, located, {
     ...occurrence,
-    keepsakeRack: Object.freeze({
-      ...occurrence.keepsakeRack,
-      keepsakeKey: command.keepsakeKey,
-    }),
-    roomActions: Object.freeze({ order: nextOrder }),
+    keepsakeRack: Object.freeze({ keepsakeKey }),
   });
 }
 

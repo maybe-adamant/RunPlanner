@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 96,
-  "schemaRevision": 2,
+  "schemaVersion": 97,
   "projectId": "surface-4",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -57,6 +56,14 @@
           }
         }
       }
+    },
+    "draft": {
+      "godKeys": [],
+      "storyNpcByBiome": {},
+      "fieldNpcsByBiome": {},
+      "basketTraitKeys": [],
+      "rackKeepsakeByBiome": {},
+      "seed": 1
     },
     "biomes": [
       {
@@ -1300,6 +1307,9 @@
                     "kind": "useFountain"
                   },
                   {
+                    "kind": "interactKeepsakeRack"
+                  },
+                  {
                     "kind": "purchaseHermesShrineOffer",
                     "generationKey": "initial:first",
                     "rushed": true
@@ -1336,6 +1346,9 @@
                     "delay": 2
                   }
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "acquisitionSites": {
                 "hermesShrineDelivery": {
@@ -2256,6 +2269,9 @@
                     "kind": "useFountain"
                   },
                   {
+                    "kind": "interactKeepsakeRack"
+                  },
+                  {
                     "kind": "purchaseHermesShrineOffer",
                     "generationKey": "initial:first",
                     "rushed": true
@@ -2292,6 +2308,9 @@
                     "delay": 2
                   }
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "acquisitionSites": {
                 "hermesShrineDelivery": {
@@ -3498,6 +3517,9 @@
                 "order": [
                   {
                     "kind": "useFountain"
+                  },
+                  {
+                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -3513,6 +3535,9 @@
                     "rewardType": "MaxManaDrop"
                   }
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "additionalExits": []
             }

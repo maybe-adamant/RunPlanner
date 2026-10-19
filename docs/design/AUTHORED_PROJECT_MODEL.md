@@ -242,12 +242,17 @@ record means every modifier is native. A declaration's stage is `released`
 or `internal`; an internal one is authored and published only when the
 composition enables internal modifiers (development builds), and none is
 currently declared. The released modifiers are the optional
-percentages `enemyGoldDropChance` and `encounterGoldRange` and the
-`startPoint` modifier (Practice mode) is absent for a normal run and present as
-`{ biomeKey, point: 'opening' | 'preboss' | 'boss', gold? }`; a malformed shape decodes
-as absent, malformed gold as absent, and finite gold rounds and clamps to
+percentages `enemyGoldDropChance` and `encounterGoldRange`.
+
+The route optionally owns `practiceStart` (Practice mode), absent for a normal
+run and present as `{ biomeKey, point: 'opening' | 'preboss' | 'boss', gold? }`.
+It decodes as tolerantly as a run modifier: a malformed shape decodes as
+absent, malformed gold as absent, and finite gold rounds and clamps to
 0–99 999. Gold is a base amount added to the game's own starting gold. A
-well-formed start point whose biome is off the itinerary is kept. Its
+well-formed start point whose biome is off the itinerary is kept.
+`ReplacePracticeStart` sets or clears it (null) as one route-owned history edit,
+preserves identity for an equal value, and rejects a malformed value rather than
+healing it. Its
 eligibility is the engine's start-installation availability
 (`authoredStartPointEligibility`): the biome is on the itinerary
 (`notOnItinerary`), the point is not the route-start biome's Opening, which is
@@ -258,9 +263,10 @@ with that availability; it does not consult project validity. A start point
 publishes only from a valid project, through the ordinary publication gate.
 An ineligible start point blocks publication with its reason and an eligible
 one publishes the execution plan's
-[`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start). These
-options are editable in Fresh File without making its fixed equipment
-editable. They do not change simulation, candidates, or encounter eligibility.
+[`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start). The start
+point and the run modifiers are editable in Fresh File without making its fixed
+equipment editable. Neither changes simulation, candidates, or encounter
+eligibility.
 
 A mature route's loadout requires one catalog `familiarKey`; new routes start
 with the catalog's default familiar, Frinos. A Fresh File route stores `null`,
@@ -273,9 +279,23 @@ fails on Fresh File.
 `ReplaceRunModifiers` replaces the complete settings as one route-owned history
 edit, normalizes its value through the same tolerant decode, preserves identity
 for no-ops, and removes the record when every value is native. Execution
-assembly publishes the complete declared record except the start point,
-omitting optional modifiers that are off, only when some value is non-native,
-separately from starting equipment.
+assembly publishes the complete authored record, omitting optional modifiers
+that are off, only when some value is non-native, separately from starting
+equipment.
+
+`ReplaceRoute` replaces the loadout (keeping run modifiers) and every itinerary
+biome's plan; the Practice start and the draft spec stay.
+
+The route also owns one always-present `draft` spec, the persisted Draft
+settings: `godKeys`, `storyNpcByBiome`, `fieldNpcsByBiome`, `basketTraitKeys`,
+`rackKeepsakeByBiome` (a missing biome keeps the held keepsake) and `seed`. A new
+route starts empty with seed 1. The codec is exact: gods are Olympian givers,
+story and field NPCs are the catalog's story givers and field-NPC encounter
+presentations, traits and keepsakes are catalog keys, and records save in
+catalog biome order; entries for biomes off the itinerary are kept. The loadout
+and itinerary are read from the project, not duplicated. `ReplaceDraftSpec`
+replaces the spec as one ordinary history edit and preserves identity for a
+structurally equal spec. Draft run state and results are not persisted.
 
 Loadout also owns the nullable starting reward offer. A mature route reports a
 missing offer once any biome is configured; a Fresh File entry binds no
@@ -312,21 +332,25 @@ not a synthetic reward or topology edge.
 ### Keepsake Authorship
 
 The route loadout owns one exact starting keepsake, or none on a Fresh File
-route. Resolved Postboss room declarations expose physical racks; an occurrence
-owns a sparse `keepsakeRack` leaf with one catalog keepsake key only when the
-player authors a replacement. Absence means no interaction and carries the
-current keepsake. The occurrence and its local controls are active for every
+route. Every occurrence of a room whose rack the route offers
+(`routeHasKeepsakeRack`; Fresh File has none) owns a `keepsakeRack` leaf, and
+no other occurrence may. `keepsakeKey: null` means unchanged: the rack is a
+no-op that carries the current keepsake, with no effect, lifecycle event, order
+dependency or execution transaction. A key authors a replacement. The
+occurrence and its local controls are active for every
 supported nonterminal route position. The ordinary terminal I and Q positions
 have no Postboss occurrence; physical biome identity alone does not determine
 finality.
 
-Every structural Postboss state defaults to a `useFountain` action. Adding a
-replacement atomically appends the `interactKeepsakeRack` action, whose membership
-only the keepsake selection commands change. Changing
-its key preserves the ranked action and dormant keepsake-specific equip detail;
-deleting it removes the leaf, action, and all leaf-owned detail. The action
-order is the sole chronology owner, and the Postboss occurrence owns its
-findings and history.
+Every structural Postboss state defaults to a `useFountain` action followed,
+where the route offers the rack, by the unchanged rack's `interactKeepsakeRack`
+action. The rack is a permanent
+timeline row: the codec requires exactly one rack action wherever the leaf
+exists, generic insertion and removal refuse it, and `MoveRoomAction` reorders
+it. `ReplacePostbossKeepsake { keepsakeKey: string | null }` sets or clears the
+key without moving the row. Each equip result belongs to one keepsake, so any
+key change, including null, drops the equip results. The action order is the sole
+chronology owner, and the Postboss occurrence owns its findings and history.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
 malformed, while a structurally valid replacement that has already been
@@ -338,8 +362,9 @@ Only immediate equip outcomes are persisted beneath a selection. Jeweled Pom
 and Experimental Hammer use one closed `KeepsakeEquipResultAddress` family with
 effect-specific complete children; Transcendent Embryo stores its selected
 blessing and complete operand map at the reached automatic outcome. The result
-is reached on start or replacement and is dormant while another identity is
-selected.
+is reached on start or replacement. A route-start result is dormant while
+another starting keepsake is selected; a rack result does not survive a change
+of the rack's keepsake.
 Calling Card row actions stay on their exact trait offers, Time Piece conversion
 choices stay on exact acquisition roles, and Fig Leaf/Gorgon results stay on
 exact encounter phases. This preserves one semantic owner for every authored
@@ -1340,6 +1365,11 @@ every screen is unresolved and each reached one asks for its nodes.
 Schema 96 requires every Hub's completed-Hub exit; the 95 → 96 migration gives
 each Hub without one its Preboss, Boss and Postboss with declaration-owned
 defaults and new biome-scoped identities, leaving existing identities intact.
+Schema 97 adds the route's draft spec and Practice start and makes every rack
+present; the 96 → 97 migration adds the empty draft, gives each rack-bearing
+occurrence without a rack an unchanged one ranked right after its fountain,
+drops a rack retained where the route has none, and moves the run modifiers'
+`startPoint` to `practiceStart`.
 
 ## Undo and Redo
 

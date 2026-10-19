@@ -398,7 +398,8 @@ describe('completion Boss variants', () => {
       throw new Error('selected Dream I Preboss must own Dream Postboss 01');
     expect(postboss).toMatchObject({
       state: { kind: 'none' },
-      roomActions: { order: [{ kind: 'useFountain' }] },
+      roomActions: { order: [{ kind: 'useFountain' }, { kind: 'interactKeepsakeRack' }] },
+      keepsakeRack: { keepsakeKey: null },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',

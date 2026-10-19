@@ -111,13 +111,19 @@ describe('RouteScopePanel', () => {
     ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
   });
 
-  it('hosts Practice mode beside the route extent, including in Fresh File', () => {
+  it('hosts the run modifiers after the route extent, Practice mode last, including in Fresh File', () => {
     for (const routeKey of ['Underworld', 'FreshFile']) {
       const markup = routeMarkup(createOpenTestApplication(routeKey));
-      expect(markup).toContain('Practice mode');
-      expect(markup.indexOf('Biomes to configure')).toBeLessThan(markup.indexOf('Practice mode'));
+      const order = [
+        'Biomes to configure',
+        'Run modifiers',
+        'Enemy gold drop chance',
+        'Practice mode',
+      ];
+      const positions = order.map((text) => markup.indexOf(text));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect([...positions].sort((x, y) => x - y)).toEqual(positions);
       expect(markup).not.toContain('Starting weapon');
-      expect(markup).not.toContain('Enemy gold drop chance');
     }
   });
 });

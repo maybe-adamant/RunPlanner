@@ -153,8 +153,8 @@ after Encounter ended and before Cleanup.
 
 The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions
--> Doors open`: `Use fountain` is required and a selected replacement adds the
-`Choose keepsake` rack action. The rack is not a required room object: it may be
+-> Doors open`: `Use fountain` is required and every rack-bearing Postboss has
+the permanent `Keepsake Rack` action. The rack is not a required room object: it may be
 ordered anywhere, before or after the fountain and the Well or Shrine purchases,
 and its window follows that position. Cleanup follows the fountain, and the
 purchases follow Cleanup. The occurrence
@@ -170,7 +170,7 @@ The Hub fountain use is the one exception outside a room timeline: its
 `fountainUsed` event is owned by the `HubFountainAddress` and emitted from the
 Hub room, as described under Ephyra restoration.
 `keepsakeRackUsed` carries the same `RoomActionSemanticAddress` and is emitted only
-by the active Postboss rack action. The event owners are the same semantic
+by a Postboss rack action that swaps the keepsake; an unchanged rack emits nothing. The event owners are the same semantic
 owners consumed by the Room Action roster and history fold; neither event is
 reconstructed from a rendered row or a generic room checkpoint.
 
@@ -546,8 +546,8 @@ is threaded into the already-generated picked target's preparation.
 
 `Postboss action`
 : A ranked action owned by a fixed Postboss occurrence. `Use fountain` is
-required; `Choose keepsake` is the optional, never door-locking rack interaction
-created by a replacement. Its position determines which equipped keepsake and fountain
+required; `Keepsake Rack` is the permanent, never door-locking rack interaction,
+a no-op while the keepsake is unchanged. Its position determines which equipped keepsake and fountain
 effects later actions observe.
 
 ## Ownership
@@ -573,18 +573,17 @@ The editor must not persist lifecycle operations or history snapshots.
 
 The route enters each fixed Postboss occurrence with the keepsake used for the Boss.
 Boss Judgment therefore observes the old keepsake. The occurrence roster contains required
-`Use fountain`; a replacement also contributes optional `Choose keepsake`.
+`Use fountain` and the permanent `Keepsake Rack` row.
 The authored order may place the rack before or after the fountain. Immediate
 equip results occur when the rack action executes, so the fountain observes the
 old or new keepsake according to that order and later acquisitions observe the
 resulting state.
 
 The rack is a shared Room Action owned by the exact Postboss occurrence, not a
-fixed lifecycle seam. A declaration-owned physical rack publishes authoring
-capability even when no action exists. Only a selected replacement creates the
-occurrence-owned ranked action and `keepsakeRackUsed` event. Changing the
-selection preserves its ranked position and dormant equip detail; deleting it
-removes the action and complete leaf-owned subtree. Postboss features exist
+fixed lifecycle seam. Its ranked row always exists where the route offers the
+rack; only a selected replacement emits the `keepsakeRackUsed` event, and an
+unchanged rack produces no window, order dependency or execution transaction.
+Changing or clearing the selection keeps the row's ranked position. Postboss features exist
 only when the route-position table supplies a Postboss occurrence; terminal I/Q
 endings do not expose this Postboss interaction set in the supported topology.
 
@@ -1131,11 +1130,11 @@ generation.
 
 A Well host, Purging Pool or keepsake rack declared with `excludedRouteKeys`
 (the rack's `keepsakeRackExcludedRouteKeys`) is absent on those routes: defaults
-create no forced Well or Pool state, commands refuse to add a Well or equip at
-the rack, and the forced Postboss Well is not required. State retained from
-before such an exclusion still decodes but is context-invalid: a Well reports
-`stygianWellPlacementUnavailable`, a rack equip reports `keepsakeUnavailable`
-without equipping, and an interacted Pool reports `purgingPoolUnavailable` and is
+create no forced Well, Pool or rack state, commands refuse to add a Well or equip at
+the rack, and the forced Postboss Well is not required. A rack is rejected by the
+codec there; a saved one was dropped by the 96 → 97 migration. Well and Pool state
+retained from before such an exclusion still decodes but is context-invalid: a Well reports
+`stygianWellPlacementUnavailable`, and an interacted Pool reports `purgingPoolUnavailable` and is
 never assessed, so its sales have no effect. A Fresh File attempt has none of these
 features; the H Postboss Pool object it shows natively is locked and is not an
 authorable inventory. Likewise, a customization the route-free binding owned on

@@ -104,11 +104,9 @@ export function RoomActionsWorkbench({
   encounterPhases,
   idPrefix,
   interactions,
-  optionalChildren,
   renderEncounterPhase,
   renderRewardWheel,
   renderRowContent,
-  renderRowRemoval,
   renderBoundaryContent,
   mode,
 }: {
@@ -117,15 +115,11 @@ export function RoomActionsWorkbench({
   readonly encounterPhases?: readonly WorkspaceEncounterPhase[];
   readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  /** Room-owned optional interactions that do not exist as authored actions yet. */
-  readonly optionalChildren?: ReactNode;
   /** Encounter/reward owner supplies these leaves without a reverse import. */
   readonly renderEncounterPhase?: (phase: WorkspaceEncounterPhase) => ReactNode;
   readonly renderRewardWheel?: (wheel: WorkspaceRewardWheelDescriptor) => ReactNode;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
-  /** Consumer-owned removal that fills the row's delete slot. */
-  readonly renderRowRemoval?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderBoundaryContent?: (
     boundary: WorkspaceRoomLifecycleBoundary,
   ) => TimelineBoundaryContent | undefined;
@@ -199,7 +193,6 @@ export function RoomActionsWorkbench({
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [placingRow]);
-  const hasOptionalChildren = optionalChildren !== undefined && optionalChildren !== null;
   if (actions === undefined && mode.kind === 'roomTimeline') {
     if (encounterPhases === undefined || idPrefix === undefined) return null;
     return (
@@ -621,22 +614,20 @@ export function RoomActionsWorkbench({
           }
           placement={placementControl}
           removal={
-            renderRowRemoval?.(row) ?? (
-              <RoomActionRemovalControl
-                findingMark={findingMark(row.address, 'delete')}
-                onRemove={removeRow}
-                proposals={placement === undefined ? proposals : []}
-                row={row}
-                showRemoval={
-                  placement === undefined &&
-                  row.reference.kind !== 'interactKeepsakeRack' &&
-                  row.reference.kind !== 'interactEris' &&
-                  (!row.participationOwnedByOverview ||
-                    row.stale ||
-                    row.refillPurchaseRemoval !== undefined)
-                }
-              />
-            )
+            <RoomActionRemovalControl
+              findingMark={findingMark(row.address, 'delete')}
+              onRemove={removeRow}
+              proposals={placement === undefined ? proposals : []}
+              row={row}
+              showRemoval={
+                placement === undefined &&
+                row.reference.kind !== 'interactKeepsakeRack' &&
+                row.reference.kind !== 'interactEris' &&
+                (!row.participationOwnedByOverview ||
+                  row.stale ||
+                  row.refillPurchaseRemoval !== undefined)
+              }
+            />
           }
         />
         {row.travelDealLine === undefined ? null : (
@@ -911,14 +902,13 @@ export function RoomActionsWorkbench({
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
       {children}
-      {actions.optionalRows.length === 0 && !hasOptionalChildren ? null : (
+      {actions.optionalRows.length === 0 ? null : (
         <section aria-label="Optional actions" className="room-action-optional-pool">
           <div className="local-reward-heading">
             <h5>Optional actions</h5>
           </div>
           <ol aria-label="Optional actions" className="room-action-list">
             {actions.optionalRows.map((row) => renderRow(row))}
-            {optionalChildren}
           </ol>
         </section>
       )}

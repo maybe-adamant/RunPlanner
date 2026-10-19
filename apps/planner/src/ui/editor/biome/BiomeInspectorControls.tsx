@@ -8,8 +8,6 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-  type WorkspaceKeepsakeEquipResultInteraction,
-  type WorkspaceKeepsakeSelectionInteraction,
   type WorkspaceNode,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomSummary,
@@ -28,7 +26,6 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import { RoomSelector } from './RoomSelector';
-import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { TimelineRow } from './TimelineRow';
 import type { TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -38,34 +35,7 @@ const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze(
   sections: Object.freeze([]),
 });
 
-/** A Postboss rack: it shows the keepsake held there, arriving or swapped in. */
-function PostbossKeepsakeControl({
-  disabledHint,
-  equipResult,
-  hideLabel = false,
-  interaction,
-  selection,
-}: {
-  readonly disabledHint?: string;
-  readonly equipResult?: WorkspaceKeepsakeEquipResultInteraction;
-  readonly hideLabel?: boolean;
-  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
-  readonly selection: NonNullable<WorkspaceRoomSummary['keepsakeSelection']>;
-}) {
-  return (
-    <div className="room-keepsake-control" data-label-hidden={hideLabel || undefined}>
-      <KeepsakeSelectionLauncher
-        {...(disabledHint === undefined ? {} : { disabledHint })}
-        equipResults={equipResult === undefined ? [] : [equipResult]}
-        {...(selection.heldKeepsake === undefined ? {} : { held: selection.heldKeepsake })}
-        id={`postboss-keepsake-${interaction.key}`}
-        interaction={interaction}
-        label="Choose Keepsake"
-      />
-    </div>
-  );
-}
-
+/** A Postboss rack row: the keepsake held there, unchanged or swapped in. */
 function KeepsakeRackTimelineContent({
   interactions,
   selection,
@@ -85,40 +55,16 @@ function KeepsakeRackTimelineContent({
   if (interaction === undefined) return null;
   return (
     <div className="room-keepsake-action">
-      <PostbossKeepsakeControl
-        {...(interaction.unavailableReason === undefined
-          ? {}
-          : { disabledHint: 'No Keepsake Rack on this route.' })}
-        {...(equipResult === undefined ? {} : { equipResult })}
-        hideLabel
-        interaction={interaction}
-        selection={selection}
-      />
+      <div className="room-keepsake-control" data-label-hidden>
+        <KeepsakeSelectionLauncher
+          equipResults={equipResult === undefined ? [] : [equipResult]}
+          {...(selection.heldKeepsake === undefined ? {} : { held: selection.heldKeepsake })}
+          id={`postboss-keepsake-${interaction.key}`}
+          interaction={interaction}
+          label="Choose Keepsake"
+        />
+      </div>
     </div>
-  );
-}
-
-function KeepsakeRackTimelineDeleteButton({
-  interaction,
-  label,
-}: {
-  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
-  readonly label: string;
-}) {
-  const dispatch = useAppDispatch();
-  if (interaction.removeIntent === undefined) return null;
-  return (
-    <TimelineActionDeleteButton
-      enabled
-      explanation={`Remove ${label} from the timeline.`}
-      label={label}
-      onRemove={() => {
-        const intent = interaction.removeIntent?.();
-        if (intent !== undefined) {
-          dispatch(authoredProjectCommandDispatched(intent.command));
-        }
-      }}
-    />
   );
 }
 
@@ -269,40 +215,6 @@ function StygianWellTwistTimelineContent({
       onSelect={(itemKey) => executeIntent(interaction.intentFor(itemKey))}
       placeholder="Unresolved"
       {...(twist.itemLabel === undefined ? {} : { triggerLabel: twist.itemLabel })}
-    />
-  );
-}
-export function inspectorRoomActionRemoval(
-  room: WorkspaceRoomSummary,
-  interactions: WorkspaceInteractionCatalog,
-  row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
-): ReactNode {
-  if (row.reference.kind !== 'interactKeepsakeRack' || room.keepsakeSelection === undefined) {
-    return null;
-  }
-  const interaction = interactions.keepsakeSelections.get(
-    workspaceInteractionKey(room.keepsakeSelection.address),
-  );
-  if (interaction?.removeIntent === undefined) return null;
-  return <KeepsakeRackTimelineDeleteButton interaction={interaction} label={row.label} />;
-}
-export function inspectorOptionalRoomActionContent(
-  room: WorkspaceRoomSummary,
-  interactions: WorkspaceInteractionCatalog,
-): ReactNode {
-  const selection = room.keepsakeSelection;
-  if (selection === undefined || selection.selectedKeepsakeKey !== undefined) return null;
-  const interaction = interactions.keepsakeSelections.get(
-    workspaceInteractionKey(selection.address),
-  );
-  if (interaction === undefined) return null;
-  return (
-    <TimelineRow
-      aria-label="Keepsake Rack"
-      editors={<PostbossKeepsakeControl interaction={interaction} selection={selection} />}
-      kind="action"
-      label={<strong>Keepsake Rack</strong>}
-      ordinal="—"
     />
   );
 }

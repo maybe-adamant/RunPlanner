@@ -21,6 +21,8 @@ import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliat
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
 import type { ProjectDocument } from '../model';
+import { decodePracticeStart, samePracticeStart } from '../practice-start';
+import { decodeDraftSpec, sameDraftSpec } from '../draft-spec';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../defaults';
 
 import { failCommand, locateBiome, withBiome } from './contract';
@@ -404,6 +406,37 @@ export function applyProjectStateCommand(
           loadout: { ...loadout, ...(encoded === undefined ? {} : { runModifiers: encoded }) },
         },
       };
+    }
+    case 'ReplacePracticeStart': {
+      if (document.route.routeKey !== command.route.routeKey)
+        failCommand(command, `project is missing route ${command.route.routeKey}`);
+      const route = document.route;
+      const startPoint =
+        command.startPoint === null ? undefined : decodePracticeStart(command.startPoint);
+      if (command.startPoint !== null && !samePracticeStart(command.startPoint, startPoint))
+        failCommand(command, 'start point is malformed');
+      if (samePracticeStart(route.practiceStart, startPoint)) return document;
+      const { practiceStart: _previous, ...rest } = route;
+      void _previous;
+      return {
+        ...document,
+        route: Object.freeze({
+          ...rest,
+          ...(startPoint === undefined ? {} : { practiceStart: startPoint }),
+        }) as typeof route,
+      };
+    }
+    case 'ReplaceDraftSpec': {
+      if (document.route.routeKey !== command.route.routeKey)
+        failCommand(command, `project is missing route ${command.route.routeKey}`);
+      let draft;
+      try {
+        draft = decodeDraftSpec(command.draft, 'draft', catalog);
+      } catch (error) {
+        failCommand(command, error instanceof Error ? error.message : 'invalid draft spec');
+      }
+      if (sameDraftSpec(document.route.draft, draft)) return document;
+      return { ...document, route: { ...document.route, draft } };
     }
     case 'ReplaceManualArcanaSelection': {
       const { route } = routeForCommand(document, catalog, command);

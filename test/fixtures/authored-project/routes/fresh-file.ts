@@ -280,14 +280,13 @@ function freshFileFTopology(): ProjectDocument {
 
 /**
  * The same F with Postboss state a save made before Fresh File excluded the
- * rack, Pool and Wells could still hold.
+ * Pool and Wells could still hold.
  */
 export function withRetainedFreshFilePostboss(
   project: ProjectDocument,
   retained: {
     readonly well?: boolean;
     readonly poolSaleTraitKey?: string | null;
-    readonly rackKeepsakeKey?: string;
   },
 ): ProjectDocument {
   const encoded = JSON.parse(encodeProjectDocument(project));
@@ -307,10 +306,6 @@ export function withRetainedFreshFilePostboss(
     };
     if (retained.poolSaleTraitKey !== null)
       order.push({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
-  }
-  if (retained.rackKeepsakeKey !== undefined) {
-    raw.keepsakeRack = { keepsakeKey: retained.rackKeepsakeKey };
-    order.push({ kind: 'interactKeepsakeRack' });
   }
   raw.roomActions = { order };
   return decodeProjectDocument(encoded, catalog);
@@ -406,6 +401,14 @@ function withoutNectarLevels(value: unknown): void {
   Object.values(record).forEach(withoutNectarLevels);
 }
 
+/** Fresh File has no F, G or H Postboss rack, so a carried mature room drops it. */
+function withoutKeepsakeRack(occurrence: RawJson): void {
+  delete occurrence.keepsakeRack;
+  occurrence.roomActions.order = occurrence.roomActions.order.filter(
+    (reference: RawJson) => reference.kind !== 'interactKeepsakeRack',
+  );
+}
+
 /**
  * The mature generated-composition F prefix, made fresh-legal and continued
  * from the Fresh first sequence; it keeps its retained customization.
@@ -426,7 +429,10 @@ export function createFreshFileGeneratedComposition(): ProjectDocument {
   const occurrences = matureF.topology.occurrences.filter(
     (occurrence: { occurrenceId: string }) => occurrence.occurrenceId !== matureStart,
   );
-  for (const occurrence of occurrences) delete occurrence.startingRewardAcquisition;
+  for (const occurrence of occurrences) {
+    delete occurrence.startingRewardAcquisition;
+    withoutKeepsakeRack(occurrence);
+  }
   const decisions = matureF.topology.decisions.map(
     (decision: { source: { kind: string; occurrenceId?: string } }) =>
       decision.source.occurrenceId === matureStart
@@ -562,6 +568,7 @@ function freshFileRouteFrontierStart(): ProjectDocument {
   for (const id of ['golden-g-preboss-shop:postboss', 'golden-h-preboss-shop:postboss']) {
     delete occurrence(id).stygianWell;
     delete occurrence(id).purgingPool;
+    withoutKeepsakeRack(occurrence(id));
   }
   const incoming: Readonly<Record<string, RawJson>> = {
     'golden-g-b1-e1': { rewardType: 'MetaCardPointsCommonDrop' },

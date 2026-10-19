@@ -1066,6 +1066,8 @@ describe('OccurrenceRoomActions', () => {
         { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+        // The Postboss rack keeps its place after the sales.
+        { kind: 'interactKeepsakeRack' },
       ]),
     );
 
@@ -1088,6 +1090,7 @@ describe('OccurrenceRoomActions', () => {
         { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+        { kind: 'interactKeepsakeRack' },
       ]),
     );
 
@@ -1097,6 +1100,7 @@ describe('OccurrenceRoomActions', () => {
         { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+        { kind: 'interactKeepsakeRack' },
       ]),
     );
     view.application.store.dispatch(authoredProjectRedoRequested());
@@ -1105,6 +1109,7 @@ describe('OccurrenceRoomActions', () => {
         { kind: 'useFountain' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+        { kind: 'interactKeepsakeRack' },
       ]),
     );
 

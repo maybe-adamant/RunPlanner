@@ -2,6 +2,8 @@ import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
 import { decodeRunModifiers, encodeRunModifiers } from './run-modifiers';
+import { decodePracticeStart, samePracticeStart, type RunStartPoint } from './practice-start';
+import { decodeDraftSpec } from './draft-spec';
 import { decodeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
@@ -116,7 +118,15 @@ function decodeRoutePlan(
   const plan = expectRecord(value, path);
   expectExactKeys(
     plan,
-    ['routeKey', 'itineraryBiomeKeys', 'loadout', 'resourcePlacements', 'biomes'],
+    [
+      'routeKey',
+      'itineraryBiomeKeys',
+      'loadout',
+      'resourcePlacements',
+      ...('practiceStart' in plan ? ['practiceStart'] : []),
+      'draft',
+      'biomes',
+    ],
     path,
   );
 
@@ -380,6 +390,16 @@ function decodeRoutePlan(
   const itinerary = reuseDecoded(plan.itineraryBiomeKeys, [catalog, route], () =>
     Object.freeze(itineraryBiomeKeys),
   );
+  // A malformed start point heals to absent, like a malformed run modifier.
+  const healedStart = decodePracticeStart(plan.practiceStart);
+  const practiceStart =
+    Object.isFrozen(plan.practiceStart) &&
+    samePracticeStart(plan.practiceStart as RunStartPoint, healedStart)
+      ? (plan.practiceStart as RunStartPoint | undefined)
+      : healedStart;
+  const draft = reuseDecoded(plan.draft, [catalog], () =>
+    decodeDraftSpec(plan.draft, `${path}.draft`, catalog),
+  );
   const previous = attested(plan, [catalog, route])
     ? (plan as unknown as AuthoredRoutePlan)
     : undefined;
@@ -388,6 +408,8 @@ function decodeRoutePlan(
     previous.itineraryBiomeKeys === itinerary &&
     previous.resourcePlacements === resourcePlacements &&
     previous.loadout === decodedLoadout &&
+    previous.practiceStart === practiceStart &&
+    previous.draft === draft &&
     previous.biomes.length === biomes.length &&
     previous.biomes.every((biome, index) => biome === biomes[index])
   )
@@ -397,6 +419,8 @@ function decodeRoutePlan(
     itineraryBiomeKeys: itinerary,
     resourcePlacements,
     loadout: decodedLoadout,
+    ...(practiceStart === undefined ? {} : { practiceStart }),
+    draft,
     biomes: Object.freeze(biomes),
   });
   decodedProducts.set(decoded, [catalog, route]);

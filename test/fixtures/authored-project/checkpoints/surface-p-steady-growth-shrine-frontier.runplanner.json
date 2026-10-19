@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 96,
-  "schemaRevision": 2,
+  "schemaVersion": 97,
   "projectId": "run-plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -78,6 +77,14 @@
           "traitKey": "HadesDashSweepBoon"
         }
       }
+    },
+    "draft": {
+      "godKeys": [],
+      "storyNpcByBiome": {},
+      "fieldNpcsByBiome": {},
+      "basketTraitKeys": [],
+      "rackKeepsakeByBiome": {},
+      "seed": 1
     },
     "biomes": [
       {
@@ -2188,6 +2195,9 @@
                     "kind": "useFountain"
                   },
                   {
+                    "kind": "interactKeepsakeRack"
+                  },
+                  {
                     "kind": "purchaseHermesShrineOffer",
                     "generationKey": "initial:secondLeft",
                     "rushed": false
@@ -2211,6 +2221,9 @@
                     "delay": 2
                   }
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "additionalExits": []
             }

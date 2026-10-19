@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  createRouteAddress,
+  type AuthoredDraftSpec,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   draftRefusals,
@@ -13,20 +17,19 @@ import {
 import {
   projectDraftBasket,
   projectDraftSpec,
+  withDraftBasketTraitToggled,
+  withDraftFieldNpcToggled,
+  withDraftGodToggled,
+  withDraftRackKeepsake,
+  withDraftStoryNpcToggled,
   type DraftRackSlot,
 } from '@planner/projections/draftSpec';
 import type {
   WorkspaceInteractionCatalog,
   WorkspaceRoute,
 } from '@planner/projections/structured-workspace';
-import {
-  draftBasketTraitToggled,
-  draftFieldNpcToggled,
-  draftGodToggled,
-  draftRackKeepsakeReplaced,
-  draftStoryNpcToggled,
-  type DraftRunState,
-} from '@planner/state/draftSessionSlice';
+import type { DraftRunState } from '@planner/state/draftSessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { KeepsakeLauncher, KeepsakeRackDialog } from '@planner/ui/controls/keepsakes/KeepsakeRack';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -167,17 +170,19 @@ function DraftRackKeepsake({
   catalog,
   index,
   label,
+  onSelect,
   slot,
 }: {
   readonly catalog: Catalog;
   readonly index: number;
   readonly label: string;
+  readonly onSelect: (keepsakeKey: string) => void;
   readonly slot: DraftRackSlot;
 }) {
-  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const id = `draft-rack-${index}`;
   const held = slot.effectiveKeepsakeKey;
+  const heldLabel = held === null ? undefined : (catalog.keepsakes.byKey[held]?.label ?? held);
   return (
     <>
       <KeepsakeLauncher
@@ -185,7 +190,13 @@ function DraftRackKeepsake({
         keepsakeKey={held ?? undefined}
         label={label}
         onOpen={() => setOpen(true)}
-        text={held === null ? 'Choose keepsake' : (catalog.keepsakes.byKey[held]?.label ?? held)}
+        text={
+          heldLabel === undefined
+            ? 'Choose keepsake'
+            : slot.keepsakeKey === null
+              ? `${heldLabel} (Unchanged)`
+              : heldLabel
+        }
       />
       {open ? (
         <KeepsakeRackDialog
@@ -200,15 +211,7 @@ function DraftRackKeepsake({
             };
           })}
           onClose={() => setOpen(false)}
-          onSelect={(keepsakeKey) =>
-            dispatch(
-              draftRackKeepsakeReplaced({
-                afterBiomeKey: slot.afterBiomeKey,
-                keepsakeKey,
-                inheritedKeepsakeKey: slot.inheritedKeepsakeKey,
-              }),
-            )
-          }
+          onSelect={onSelect}
           returnFocusId={id}
           title={label}
         />
@@ -232,14 +235,20 @@ export function RouteDraftPanel({
   readonly workspaceRoute: WorkspaceRoute;
 }) {
   const dispatch = useAppDispatch();
-  const session = useAppSelector((state) => state.draftSession);
+  const run = useAppSelector((state) => state.draftSession.run);
   const [basketOpen, setBasketOpen] = useState(false);
   // Racks line up under Arcana, Fear and Keepsake at one shared width.
   const rows = useCommonItemWidth<HTMLFieldSetElement>();
-  const projection = useMemo(
-    () => projectDraftSpec(catalog, project, session),
-    [catalog, project, session],
-  );
+  const projection = useMemo(() => projectDraftSpec(catalog, project), [catalog, project]);
+  const draft = project.route.draft;
+  const replaceDraft = (next: AuthoredDraftSpec) =>
+    dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceDraftSpec',
+        route: createRouteAddress(project.route.routeKey),
+        draft: next,
+      }),
+    );
   const { spec, worldOptions, rackSlots } = projection;
   const refusals = useMemo(
     () => (spec === undefined ? [] : draftRefusals(catalog, project, spec)),
@@ -250,7 +259,6 @@ export function RouteDraftPanel({
       spec === undefined ? undefined : projectDraftBasket(catalog, project, spec, worldOptions),
     [catalog, project, spec, worldOptions],
   );
-  const run = session.run;
   const running = run.kind === 'running';
   const elapsed = useElapsedSeconds(run);
   const godKeys = spec?.world.godKeys ?? [];
@@ -294,7 +302,7 @@ export function RouteDraftPanel({
                   className="draft-toggle"
                   disabled={full}
                   key={godKey}
-                  onClick={() => dispatch(draftGodToggled(godKey))}
+                  onClick={() => replaceDraft(withDraftGodToggled(draft, godKey))}
                   type="button"
                 >
                   {catalog.traitGivers.byKey[godKey]?.label ?? godKey}
@@ -339,11 +347,8 @@ export function RouteDraftPanel({
                           }
                           className="draft-toggle"
                           onClick={() =>
-                            dispatch(
-                              draftStoryNpcToggled({
-                                biomeKey: biome.biomeKey,
-                                npcKey: storyNpc.npcKey,
-                              }),
+                            replaceDraft(
+                              withDraftStoryNpcToggled(draft, biome.biomeKey, storyNpc.npcKey),
                             )
                           }
                           type="button"
@@ -364,11 +369,8 @@ export function RouteDraftPanel({
                             className="draft-toggle"
                             key={npc.npcKey}
                             onClick={() =>
-                              dispatch(
-                                draftFieldNpcToggled({
-                                  biomeKey: biome.biomeKey,
-                                  npcKey: npc.npcKey,
-                                }),
+                              replaceDraft(
+                                withDraftFieldNpcToggled(draft, biome.biomeKey, npc.npcKey),
                               )
                             }
                             type="button"
@@ -396,6 +398,9 @@ export function RouteDraftPanel({
                   index={index}
                   key={`${slot.afterBiomeKey}-${index}`}
                   label={`After ${biomeLabel(slot.afterBiomeKey)}`}
+                  onSelect={(keepsakeKey) =>
+                    replaceDraft(withDraftRackKeepsake(draft, slot, keepsakeKey))
+                  }
                   slot={slot}
                 />
               ))}
@@ -441,7 +446,7 @@ export function RouteDraftPanel({
                   <button
                     aria-label={`Remove ${chip.label}`}
                     className="draft-chip-remove"
-                    onClick={() => dispatch(draftBasketTraitToggled(chip.traitKey))}
+                    onClick={() => replaceDraft(withDraftBasketTraitToggled(draft, chip.traitKey))}
                     type="button"
                   >
                     ×
@@ -459,7 +464,7 @@ export function RouteDraftPanel({
           </p>
         ) : null}
         <div className="draft-action-row">
-          <span className="draft-seed">Seed {running ? run.seed : session.seed}</span>
+          <span className="draft-seed">Seed {running ? run.seed : draft.seed}</span>
           {running ? (
             <>
               <span className="draft-progress">Drafting… {elapsed} s</span>
@@ -499,7 +504,7 @@ export function RouteDraftPanel({
       {basketOpen && basket !== undefined ? (
         <DraftBasketDialog
           onClose={() => setBasketOpen(false)}
-          onToggle={(traitKey) => dispatch(draftBasketTraitToggled(traitKey))}
+          onToggle={(traitKey) => replaceDraft(withDraftBasketTraitToggled(draft, traitKey))}
           projection={basket}
           returnFocusId="draft-basket-edit"
         />

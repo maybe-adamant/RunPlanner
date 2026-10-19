@@ -1,10 +1,10 @@
-import { createRouteAddress } from '@run-planner/engine/authored-project';
+import { createRouteAddress, type AuthoredDraftSpec } from '@run-planner/engine/authored-project';
 import { draftReport, forcesGod } from '@run-planner/engine/simulation';
 import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { draftGodToggled, draftRackKeepsakeReplaced } from '@planner/state/draftSessionSlice';
+import { withDraftGodToggled, withDraftRackKeepsake } from '@planner/projections/draftSpec';
 import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import {
   authoredProjectCommandDispatched,
@@ -35,17 +35,36 @@ function createManualRunner() {
   return { runner, runs };
 }
 
-function chooseGods(application: ReturnType<typeof createApplication>) {
-  for (const godKey of ['Apollo', 'Hera', 'Hestia'])
-    application.store.dispatch(draftGodToggled(godKey));
+type Application = ReturnType<typeof createApplication>;
+
+function editDraft(
+  application: Application,
+  edit: (draft: AuthoredDraftSpec) => AuthoredDraftSpec,
+) {
+  const workspace = application.store.getState().projectWorkspace;
+  if (workspace.kind !== 'openProject') throw new Error('no open project');
+  const route = workspace.history.present.route;
+  application.store.dispatch(
+    authoredProjectCommandDispatched({
+      kind: 'ReplaceDraftSpec',
+      route: createRouteAddress(route.routeKey),
+      draft: edit(route.draft),
+    }),
+  );
 }
 
-function openUnderworld(runner: DraftRunner, seeds: readonly number[] = [7]) {
+function chooseGods(application: Application) {
+  for (const godKey of ['Apollo', 'Hera', 'Hestia'])
+    editDraft(application, (draft) => withDraftGodToggled(draft, godKey));
+  editDraft(application, (draft) => ({ ...draft, seed: 7 }));
+}
+
+function openUnderworld(runner: DraftRunner, seeds: readonly number[] = [11]) {
   const generated = loadUnderworldFGHICheckpoint();
   let seedIndex = 0;
   const application = createApplication({
     draftRunner: runner,
-    draftSeed: () => seeds[Math.min(seedIndex++, seeds.length - 1)]!,
+    rerollSeed: () => seeds[Math.min(seedIndex++, seeds.length - 1)]!,
   });
   const { catalog } = application;
   application.store.dispatch(
@@ -83,8 +102,8 @@ describe('draft run controller', () => {
   it('applies a drafted result as one undoable ReplaceRoute', () => {
     const { runner, runs } = createManualRunner();
     const { application, draftedResult, generated, history, run } = openUnderworld(runner);
+    editDraft(application, (draft) => withDraftGodToggled(draft, 'Zeus'));
     const before = history().present;
-    application.store.dispatch(draftGodToggled('Zeus'));
 
     application.draftRun.draft();
     expect(run()).toMatchObject({ kind: 'running', seed: 7 });
@@ -93,8 +112,10 @@ describe('draft run controller', () => {
     expect(runs[0]!.request.project).toBe(before);
 
     runs[0]!.emit({ kind: 'settled', result: draftedResult(runs[0]!.request) });
-    expect(history().past).toEqual([before]);
+    expect(history().past.at(-1)).toBe(before);
     expect(history().present.route.biomes).toEqual(generated.route.biomes);
+    // Drafting replaces the route and loadout but keeps the saved draft settings.
+    expect(history().present.route.draft).toBe(before.route.draft);
     expect(run()).toMatchObject({ kind: 'drafted', seed: 7 });
 
     application.store.dispatch(authoredProjectUndoRequested());
@@ -103,40 +124,82 @@ describe('draft run controller', () => {
     expect(run()).toEqual({ kind: 'idle' });
   });
 
-  it('rerolls with a new seed', () => {
+  it('saves a reroll seed with its drafted route as one Undo step', () => {
     const { runner, runs } = createManualRunner();
-    const { application } = openUnderworld(runner, [7, 11]);
-    expect(application.store.getState().draftSession.seed).toBe(7);
+    const { application, draftedResult, generated, history, run } = openUnderworld(runner, [11]);
+    const before = history().present;
     application.draftRun.reroll();
     expect(runs[0]!.request.seed).toBe(11);
-    expect(application.store.getState().draftSession.seed).toBe(11);
+    expect(run()).toMatchObject({ kind: 'running', seed: 11 });
+    // The seed is saved only with the outcome.
+    expect(history().present).toBe(before);
+
+    runs[0]!.emit({ kind: 'settled', result: draftedResult(runs[0]!.request) });
+    expect(history().past.at(-1)).toBe(before);
+    expect(history().present.route.draft.seed).toBe(11);
+    expect(history().present.route.biomes).toEqual(generated.route.biomes);
+
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(history().present).toBe(before);
+    expect(history().present.route.draft.seed).toBe(7);
+  });
+
+  it('saves a failed reroll seed so the panel shows the seed it tried', () => {
+    const { runner, runs } = createManualRunner();
+    const { application, history, run } = openUnderworld(runner, [11]);
+    const before = history().present;
+    application.draftRun.reroll();
+    runs[0]!.emit({
+      kind: 'settled',
+      result: { kind: 'failed', biomeKey: 'F', reasons: [] },
+    });
+    expect(run()).toMatchObject({ kind: 'failed' });
+    expect(history().past.at(-1)).toBe(before);
+    expect(history().present.route.draft.seed).toBe(11);
+    expect(history().present.route.biomes).toEqual(before.route.biomes);
   });
 
   it('keys rack keepsakes by biome and keeps only keepsakes the rack allows', () => {
     const { runner, runs } = createManualRunner();
     const { application, history } = openUnderworld(runner);
-    const { catalog, store } = application;
+    const { catalog } = application;
     const starting = history().present.route.loadout.startingKeepsakeKey;
     const allowed = catalog.keepsakes.values.find(
       (k) => !forcesGod(catalog, k.key) && k.key !== starting,
     )!.key;
     const godKeepsake = catalog.keepsakes.values.find((k) => forcesGod(catalog, k.key))!.key;
-    store.dispatch(
-      draftRackKeepsakeReplaced({
-        afterBiomeKey: 'G',
-        keepsakeKey: allowed,
-        inheritedKeepsakeKey: starting,
-      }),
+    editDraft(application, (draft) =>
+      withDraftRackKeepsake(draft, { afterBiomeKey: 'G', inheritedKeepsakeKey: starting }, allowed),
     );
-    store.dispatch(
-      draftRackKeepsakeReplaced({
-        afterBiomeKey: 'H',
-        keepsakeKey: godKeepsake,
-        inheritedKeepsakeKey: allowed,
-      }),
+    editDraft(application, (draft) =>
+      withDraftRackKeepsake(
+        draft,
+        { afterBiomeKey: 'H', inheritedKeepsakeKey: allowed },
+        godKeepsake,
+      ),
     );
     application.draftRun.draft();
     expect(runs[0]!.request.spec.rackKeepsakeKeys).toEqual([null, allowed, null]);
+  });
+
+  it('keeps the outcome across draft-settings edits and clears it on any other edit', () => {
+    const { runner, runs } = createManualRunner();
+    const { application, draftedResult, run } = openUnderworld(runner);
+    application.draftRun.draft();
+    runs[0]!.emit({ kind: 'settled', result: draftedResult(runs[0]!.request) });
+    expect(run().kind).toBe('drafted');
+    editDraft(application, (draft) => withDraftGodToggled(draft, 'Zeus'));
+    expect(run().kind).toBe('drafted');
+    application.store.dispatch(authoredProjectUndoRequested());
+    expect(run().kind).toBe('drafted');
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceFamiliar',
+        route: createRouteAddress('Underworld'),
+        familiarKey: 'CatFamiliar',
+      }),
+    );
+    expect(run()).toEqual({ kind: 'idle' });
   });
 
   it('drops a result whose base project changed while drafting', () => {

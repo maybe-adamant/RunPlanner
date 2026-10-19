@@ -84,46 +84,27 @@ describe('RouteWorkspace', () => {
     expect(markup).toContain('Plan up to');
   });
 
-  it('opens on Route and orders Route, Loadout and Modifiers above the biomes', () => {
+  it('opens on Route and orders Route, Draft and Loadout above the biomes', () => {
     const application = createOpenTestApplication('Underworld');
     const markup = routeWorkspaceMarkup(application, 'Underworld');
     const navigation = navigationOf(markup);
-    const positions = ['Route', 'Loadout', 'Modifiers'].map((label) =>
+    const positions = ['Route', 'Draft', 'Loadout'].map((label) =>
       navigation.indexOf(`aria-label="${label}"`),
     );
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
     expect(navigation.indexOf('class="panel-navigation-separator"')).toBeGreaterThan(positions[2]!);
     expect(navigation).toMatch(/aria-current="page"[^>]*aria-label="Route"/);
-    for (const [kind, text, absent] of [
-      ['loadout', 'Starting weapon', 'Plan up to'],
-      ['modifiers', 'Enemy gold drop chance', 'Starting weapon'],
-    ] as const) {
-      application.store.dispatch(routePanelSelected({ routeKey: 'Underworld', panel: { kind } }));
-      const panel = routeWorkspaceMarkup(application, 'Underworld');
-      expect(panel).toContain(text);
-      expect(panel).not.toContain(absent);
-      expect(panel).not.toContain('Practice mode');
-    }
-  });
-
-  it('offers Modifiers only while a modifier other than Practice mode is declared', () => {
-    const application = createOpenTestApplication('Underworld');
+    // The run modifiers live in the Route panel, not a panel of their own.
+    expect(navigation).not.toContain('aria-label="Modifiers"');
+    for (const text of ['Plan up to', 'Run modifiers', 'Enemy gold drop chance', 'Practice mode'])
+      expect(markup).toContain(text);
     application.store.dispatch(
-      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'modifiers' } }),
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'loadout' } }),
     );
-    const markup = routeWorkspaceMarkup(application, 'Underworld', (route) => ({
-      ...route,
-      runModifiers: {
-        ...route.runModifiers,
-        declarations: route.runModifiers.declarations.filter(
-          (declaration) => declaration.kind === 'startPoint',
-        ),
-      },
-    }));
-    expect(navigationOf(markup)).not.toContain('aria-label="Modifiers"');
-    // A stale Modifiers selection presents Route.
-    expect(markup).toContain('data-editor-layout="route"');
+    const loadout = routeWorkspaceMarkup(application, 'Underworld');
+    expect(loadout).toContain('Starting weapon');
+    expect(loadout).not.toContain('Run modifiers');
   });
 
   it('marks the Loadout panel with its own findings like a biome panel', () => {
@@ -145,7 +126,7 @@ describe('RouteWorkspace', () => {
       /aria-label="Loadout"[^>]*>.*?aria-label="Incomplete, 1 findings"[^>]*><span[^>]*data-tone="incomplete"[^>]*>!<\/span><\/span>/,
     );
     expect(navigation).not.toContain('findings-count');
-    for (const label of ['Route', 'Modifiers'])
+    for (const label of ['Route', 'Draft'])
       expect(navigation).not.toMatch(
         new RegExp(`aria-label="${label}"[^>]*><span>${label}</span><span[^>]*navigation-feedback`),
       );
@@ -157,7 +138,7 @@ describe('RouteWorkspace', () => {
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
     const navigationMarkup = navigationOf(markup);
-    const routePosition = navigationMarkup.indexOf('aria-label="Modifiers"');
+    const routePosition = navigationMarkup.indexOf('aria-label="Loadout"');
     const biomePositions = ['Ephyra', 'Thessaly', 'Olympus', 'Summit'].map((label) =>
       navigationMarkup.indexOf(`>${label}</span>`),
     );

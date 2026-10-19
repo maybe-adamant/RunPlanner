@@ -16,6 +16,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  EMPTY_DRAFT_SPEC,
   createRouteAddress,
   createStartingRewardAddress,
   createShopOfferAddress,
@@ -32,6 +33,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   authoredProjectCommandDispatched,
+  authoredProjectCommandsDispatched,
   authoredProjectRedoRequested,
   authoredProjectReplaced,
   authoredProjectUndoRequested,
@@ -186,6 +188,7 @@ describe('project workspace application state', () => {
         Pickaxe: null,
         Shovel: null,
       },
+      draft: EMPTY_DRAFT_SPEC,
       biomes: [],
     });
     expect(selectProjectEvaluation(state)).toBe(
@@ -919,5 +922,101 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectUndoRequested());
     expect(store.getState().projectWorkspace.settlementFault).toBeUndefined();
+  });
+});
+
+describe('several commands as one history step', () => {
+  const route = createRouteAddress('Underworld');
+  const seeded = (seed: number) =>
+    ({
+      kind: 'ReplaceDraftSpec',
+      route,
+      draft: { ...EMPTY_DRAFT_SPEC, seed },
+    }) as const satisfies ProjectCommand;
+  const prefix = (configuredBiomeCount: number) =>
+    ({
+      kind: 'ConfigureRoutePrefix',
+      route,
+      configuredBiomeCount,
+    }) as const satisfies ProjectCommand;
+
+  it('publishes a two-command batch as exactly one Undo step', () => {
+    const { store } = createStore();
+    const before = presentProject(store);
+    store.dispatch(authoredProjectCommandsDispatched([seeded(5), prefix(1)]));
+    expect(projectHistory(store).past).toEqual([before]);
+    expect(presentProject(store).route.draft.seed).toBe(5);
+    expect(presentProject(store).route.biomes).toHaveLength(1);
+    store.dispatch(authoredProjectUndoRequested());
+    expect(presentProject(store)).toBe(before);
+  });
+
+  it('records nothing for an all-no-op batch', () => {
+    const { assembleProjectEvaluation, store } = createStore();
+    const original = store.getState().projectWorkspace;
+    store.dispatch(authoredProjectCommandsDispatched([prefix(0), seeded(EMPTY_DRAFT_SPEC.seed)]));
+    expect(store.getState().projectWorkspace).toBe(original);
+    expect(assembleProjectEvaluation).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies nothing when a later command reaches a locked owner', () => {
+    const { store } = createStore();
+    const original = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingReward',
+      reward: createStartingRewardAddress('Underworld'),
+      value: null,
+    });
+    store.dispatch(authoredProjectReplaced(original));
+    const before = store.getState().projectWorkspace;
+    store.dispatch(
+      authoredProjectCommandsDispatched([
+        seeded(5),
+        {
+          kind: 'ReplaceResourcePlacement',
+          route,
+          family: 'Pickaxe',
+          value: { biomeKey: 'F', occurrenceId: goldenFOccurrenceId(1, 1) },
+        },
+      ]),
+    );
+    expect(store.getState().projectWorkspace).toBe(before);
+  });
+
+  it('applies nothing when a later command is rejected', () => {
+    const { store } = createStore();
+    const original = store.getState().projectWorkspace;
+    expect(() =>
+      store.dispatch(
+        authoredProjectCommandsDispatched([
+          seeded(5),
+          { ...seeded(6), route: createRouteAddress('Surface') },
+        ]),
+      ),
+    ).toThrow();
+    expect(store.getState().projectWorkspace).toBe(original);
+  });
+
+  it('reports the first unfinished repair of a batch', () => {
+    const { store } = createStore();
+    const owner = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+    const first = { key: `first:${semanticAddressKey(owner)}`, owner };
+    const second = { key: `second:${semanticAddressKey(owner)}`, owner };
+    const settle = vi.spyOn(simulation, 'settleProjectEdit');
+    for (const fault of [first, second])
+      settle.mockImplementationOnce((options) => ({
+        assembly: options.evaluate(
+          applyProjectCommand(options.before.project, catalog, options.command),
+        ),
+        fault,
+      }));
+    const warn = vi.spyOn(globalThis.console, 'warn').mockImplementation(() => undefined);
+    try {
+      store.dispatch(authoredProjectCommandsDispatched([seeded(5), prefix(1)]));
+    } finally {
+      settle.mockRestore();
+      warn.mockRestore();
+    }
+    expect(store.getState().projectWorkspace.settlementFault).toEqual(first);
+    expect(projectHistory(store).past).toHaveLength(1);
   });
 });

@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 96,
-  "schemaRevision": 2,
+  "schemaVersion": 97,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
@@ -58,6 +57,14 @@
       },
       "startingKeepsakeKey": "ManaOverTimeRefundKeepsake",
       "familiarKey": "FrogFamiliar"
+    },
+    "draft": {
+      "godKeys": [],
+      "storyNpcByBiome": {},
+      "fieldNpcsByBiome": {},
+      "basketTraitKeys": [],
+      "rackKeepsakeByBiome": {},
+      "seed": 1
     },
     "biomes": [
       {
@@ -1277,6 +1284,9 @@
                 "order": [
                   {
                     "kind": "useFountain"
+                  },
+                  {
+                    "kind": "interactKeepsakeRack"
                   }
                 ]
               },
@@ -1292,6 +1302,9 @@
                     "rewardType": "MaxManaDrop"
                   }
                 }
+              },
+              "keepsakeRack": {
+                "keepsakeKey": null
               },
               "additionalExits": []
             }

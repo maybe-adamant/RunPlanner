@@ -1,5 +1,5 @@
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
-import { routeErisHost, routeRoomShop } from '../route-profile';
+import { routeErisHost, routeHasKeepsakeRack, routeRoomShop } from '../route-profile';
 import type {
   HermesShrineState,
   PurgingPoolState,
@@ -74,16 +74,17 @@ function decodeErisObservation(
 function decodeKeepsakeRackState(
   value: unknown,
   catalog: Catalog,
-  room: NonNullable<Catalog['rooms']['byKey'][string]>,
   path: string,
 ): NonNullable<RoomOccurrence['keepsakeRack']> {
-  if (!room.hasKeepsakeRack) failProjectDocument(path, 'room declaration has no keepsake rack');
   const raw = expectRecord(value, path);
   const hasEquipResults = Object.hasOwn(raw, 'equipResults');
   expectExactKeys(raw, ['keepsakeKey', ...(hasEquipResults ? ['equipResults'] : [])], path);
-  const keepsakeKey = expectString(raw.keepsakeKey, `${path}.keepsakeKey`);
-  if (catalog.keepsakes.byKey[keepsakeKey] === undefined)
+  const keepsakeKey =
+    raw.keepsakeKey === null ? null : expectString(raw.keepsakeKey, `${path}.keepsakeKey`);
+  if (keepsakeKey !== null && catalog.keepsakes.byKey[keepsakeKey] === undefined)
     failProjectDocument(`${path}.keepsakeKey`, 'unknown keepsake');
+  if (keepsakeKey === null && hasEquipResults)
+    failProjectDocument(`${path}.equipResults`, 'an unchanged rack has no equip results');
   return Object.freeze({
     keepsakeKey,
     ...(hasEquipResults
@@ -432,11 +433,18 @@ export function decodeRoomOccurrence(input: {
     stygianWell === undefined
   )
     failProjectDocument(`${rawOccurrence.path}.stygianWell`, 'must be an object');
-  const keepsakeRack = rawOccurrence.hasKeepsakeRack
+  const routeRack = routeHasKeepsakeRack(room, routeKey);
+  if (routeRack !== rawOccurrence.hasKeepsakeRack)
+    failProjectDocument(
+      `${rawOccurrence.path}.keepsakeRack`,
+      routeRack
+        ? 'must be an object'
+        : `${room.gameName} has no keepsake rack on route ${routeKey}`,
+    );
+  const keepsakeRack = routeRack
     ? decodeKeepsakeRackState(
         rawOccurrence.keepsakeRack,
         catalog,
-        room,
         `${rawOccurrence.path}.keepsakeRack`,
       )
     : undefined;
@@ -459,6 +467,14 @@ export function decodeRoomOccurrence(input: {
     failProjectDocument(
       `${rawOccurrence.path}.roomActions.order`,
       'an Eris interaction requires the spawned Eris observation',
+    );
+  if (
+    roomActions.order.filter((reference) => reference.kind === 'interactKeepsakeRack').length !==
+    (keepsakeRack === undefined ? 0 : 1)
+  )
+    failProjectDocument(
+      `${rawOccurrence.path}.roomActions.order`,
+      'a keepsake rack owns exactly one interactKeepsakeRack action',
     );
   assertStygianWellPurchaseActionClosure(
     stygianWell,

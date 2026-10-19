@@ -9,8 +9,8 @@ import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanne
 
 afterEach(cleanup);
 
-it('drafts a zero-finding route as one undoable edit', async () => {
-  const application = createApplication({ draftSeed: () => 3 });
+it('drafts a zero-finding route as one undoable edit, and rerolls as one more', async () => {
+  const application = createApplication({ rerollSeed: () => 3 });
   const { catalog, store } = application;
   store.dispatch(
     newProjectCreated(
@@ -21,7 +21,6 @@ it('drafts a zero-finding route as one undoable edit', async () => {
       }),
     ),
   );
-  const before = store.getState().projectWorkspace.history!.present;
   const { user } = renderPlannerForInteraction({ application });
   await user.click(screen.getByRole('button', { name: 'Draft' }));
   const gods = screen.getByRole('group', { name: 'Gods' });
@@ -35,26 +34,44 @@ it('drafts a zero-finding route as one undoable edit', async () => {
   );
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
 
-  const settled = new Promise<void>((resolve) => {
-    const unsubscribe = store.subscribe(() => {
-      if (store.getState().draftSession.run.kind === 'running') return;
-      unsubscribe();
-      resolve();
+  const run = async (name: 'Draft' | 'Reroll') => {
+    const settled = new Promise<void>((resolve) => {
+      const unsubscribe = store.subscribe(() => {
+        if (store.getState().draftSession.run.kind === 'running') return;
+        unsubscribe();
+        resolve();
+      });
     });
-  });
-  const actions = document.querySelector('.draft-action-row') as HTMLElement;
-  await user.click(within(actions).getByRole('button', { name: 'Draft' }));
-  await act(() => settled);
+    const actions = document.querySelector('.draft-action-row') as HTMLElement;
+    await user.click(within(actions).getByRole('button', { name }));
+    await act(() => settled);
+  };
+  const present = () => store.getState().projectWorkspace.history!.present;
+  // The draft settings are ordinary edits; drafting is one more.
+  const before = present();
+  await run('Draft');
 
   const workspace = store.getState().projectWorkspace;
   expect(store.getState().draftSession.run.kind).toBe('drafted');
-  expect(workspace.history!.past).toEqual([before]);
+  expect(workspace.history!.past.at(-1)).toBe(before);
   expect(workspace.assembly!.evaluation.status).toBe('valid');
   expect(workspace.assembly!.evaluation.findings).toEqual([]);
   expect(workspace.history!.present.route.biomes).toHaveLength(4);
   expect(screen.getByRole('region', { name: 'Draft report' })).toBeTruthy();
   expect(screen.getByRole('note').textContent).toBe('Drafting replaces the current route plan.');
 
+  expect(present().route.draft).toBe(before.route.draft);
+
+  // Reroll saves its new seed with the drafted route: one Undo reverts both.
+  const drafted = present();
+  await run('Reroll');
+  expect(store.getState().draftSession.run.kind).toBe('drafted');
+  expect(present().route.draft.seed).toBe(3);
+  expect(present().route.draft.seed).not.toBe(drafted.route.draft.seed);
+  expect(present().route.biomes).not.toBe(drafted.route.biomes);
   await user.click(screen.getByRole('button', { name: 'Undo' }));
-  expect(store.getState().projectWorkspace.history!.present).toBe(before);
+  expect(present()).toBe(drafted);
+
+  await user.click(screen.getByRole('button', { name: 'Undo' }));
+  expect(present()).toBe(before);
 });

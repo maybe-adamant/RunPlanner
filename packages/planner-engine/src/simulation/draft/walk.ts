@@ -556,7 +556,7 @@ export class DraftWalk {
     if (keepsakeKey === undefined || keepsakeKey === null || plan === undefined) return false;
     const biome = createBiomeAddress(this.project.route.routeKey, plan.biomeKey);
     for (const occurrence of plan.topology?.occurrences ?? []) {
-      if (!this.catalog.rooms.byKey[occurrence.gameName]?.hasKeepsakeRack) continue;
+      if (occurrence.keepsakeRack === undefined) continue;
       const selection = createPostbossKeepsakeSelectionAddress(
         createOccurrenceAddress(biome, occurrence.occurrenceId),
       );
