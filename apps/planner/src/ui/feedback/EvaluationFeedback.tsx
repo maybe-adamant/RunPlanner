@@ -25,30 +25,30 @@ export function StatusBadge({ status }: { readonly status: StatusPresentation })
   );
 }
 
-function navigationStatusSymbol(tone: StatusPresentation['tone']): string {
+// Clean shows ✓; a finding or anything pending shows !; other states show nothing.
+function navigationStatusSymbol(tone: StatusPresentation['tone']): string | undefined {
   switch (tone) {
     case 'valid':
       return '✓';
     case 'incomplete':
-      return '…';
     case 'invalid':
       return '!';
     case 'blocked':
-      return '–';
     case 'empty':
-      return '○';
+      return undefined;
   }
 }
 
 export function NavigationStatusMarker({ status }: { readonly status: StatusPresentation }) {
-  return (
+  const symbol = navigationStatusSymbol(status.tone);
+  return symbol === undefined ? null : (
     <span
       aria-hidden="true"
       className="navigation-status-marker"
       data-tone={status.tone}
       {...hintProps(status.label)}
     >
-      {navigationStatusSymbol(status.tone)}
+      {symbol}
     </span>
   );
 }

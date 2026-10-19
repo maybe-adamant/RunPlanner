@@ -2,6 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Command } from 'cmdk';
 import { useCallback, useEffect, useRef, useState, type ReactElement, type Ref } from 'react';
 import type { FindingMarkProps, FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { showTruncatedTitle } from './truncatedTitle';
 import { hintProps } from './hint';
 
 import type {
@@ -32,6 +33,8 @@ interface ContextualPickerProps<T> {
   readonly placeholder: string;
   readonly side?: 'top' | 'bottom';
   readonly triggerLabel?: string;
+  /** Every label the trigger can show; it keeps the widest one's width so it never shifts. */
+  readonly triggerSizingLabels?: readonly string[];
   /** Hover explanation for the current value of an enabled trigger. */
   readonly triggerHint?: string;
   /** Marks a retained value the current context cannot produce. */
@@ -239,6 +242,7 @@ export function ContextualPicker<T>({
   placeholder,
   side = 'bottom',
   triggerLabel,
+  triggerSizingLabels,
   triggerHint,
   invalid = false,
   hasIssues,
@@ -255,6 +259,7 @@ export function ContextualPicker<T>({
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
   const interactionDisabled = disabled || disabledHint !== undefined || authoringLocked;
+  const shownLabel = disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder);
 
   function updateOpen(nextOpen: boolean): void {
     if (nextOpen && interactionDisabled) return;
@@ -306,7 +311,18 @@ export function ContextualPicker<T>({
             }}
             type="button"
           >
-            <span>{disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder)}</span>
+            {triggerSizingLabels === undefined ? (
+              <span onMouseEnter={showTruncatedTitle}>{shownLabel}</span>
+            ) : (
+              <span className="contextual-picker-trigger-sized">
+                <span onMouseEnter={showTruncatedTitle}>{shownLabel}</span>
+                {triggerSizingLabels.map((sizingLabel) => (
+                  <span aria-hidden="true" key={sizingLabel}>
+                    {sizingLabel}
+                  </span>
+                ))}
+              </span>
+            )}
             <span className="contextual-picker-trigger-icon" aria-hidden="true">
               ▾
             </span>

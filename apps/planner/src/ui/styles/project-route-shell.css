@@ -538,9 +538,6 @@
 
 .panel-navigation-item > span:first-child {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .panel-navigation-item:hover {
@@ -569,6 +566,7 @@
 .route-loadout-controls,
 .route-configuration {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
@@ -580,17 +578,78 @@
   letter-spacing: 0.16em;
 }
 
-.route-loadout-controls > .contextual-picker,
-.route-loadout-controls > .loadout-dialog-launcher,
-.route-keepsake-controls > .contextual-picker,
 .route-configuration > .reward-value-editor {
-  width: 100%;
-  max-width: 32rem;
+  width: var(--route-loadout-item-width, 100%);
+  max-width: 100%;
   min-width: 0;
+}
+
+/* These panels put every label above its control. */
+.route-configuration .field-control-inline {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .route-loadout-panel {
   padding-block: 1rem 0.75rem;
+}
+
+/* Packed left at one shared width; a row wraps when it can't fit. */
+.route-loadout-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.route-loadout-row > :not(dialog) {
+  flex: 0 0 auto;
+  width: var(--route-loadout-item-width, auto);
+  max-width: 100%;
+}
+
+/* Trigger text stays on one line; the full text shows on hover when cut off. */
+:is(.route-loadout-controls, .route-loadout-row, .route-configuration)
+  .contextual-picker-trigger
+  > span:not([aria-hidden]) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The weapon keeps its widest-option width; a Hex launcher trails it, wrapping rather than squeezing it. */
+.route-loadout-weapon-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.route-loadout-weapon-cell > .field-control:first-child {
+  flex: 0 1 auto;
+}
+
+.route-loadout-weapon-cell > .field-control + .field-control {
+  flex: 0 0 auto;
+}
+
+/* Labels sit above their controls. */
+:is(.route-loadout-row, .route-loadout-weapon-cell) > .field-control {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+:is(.route-loadout-row, .route-loadout-weapon-cell) > .field-control > label {
+  white-space: nowrap;
+}
+
+@container app-viewport (max-width: 700px) {
+  .route-loadout-row > :not(dialog),
+  .route-configuration > .reward-value-editor {
+    width: 100%;
+  }
 }
 
 .route-scope-rows {
@@ -621,20 +680,13 @@
   color: #d9d4dc;
 }
 
-.route-loadout-controls > .contextual-picker > label,
-.route-loadout-controls > .loadout-dialog-launcher > label,
-.route-keepsake-controls > .contextual-picker > label,
 .route-configuration > .reward-value-editor > .contextual-picker > label {
   white-space: nowrap;
 }
 
 @container app-viewport (min-width: 701px) {
   .route-scope-rows > .route-run-modifier-practice,
-  .route-scope.field-control-inline,
-  .route-loadout-controls > .contextual-picker,
-  .route-loadout-controls > .loadout-dialog-launcher,
-  .route-keepsake-controls > .contextual-picker,
-  .route-configuration > .reward-value-editor > .contextual-picker {
+  .route-scope.field-control-inline {
     grid-template-columns: 10rem minmax(0, 1fr);
   }
 }
@@ -668,43 +720,6 @@
   height: 16px;
   margin: 0;
   accent-color: var(--selection-accent);
-}
-
-.route-keepsake-controls {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.route-keepsake-controls > .contextual-picker {
-  flex: 0 1 32rem;
-}
-
-.route-keepsake-controls > .keepsake-equip-result-control {
-  flex: 0 1 28rem;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.route-keepsake-controls > .keepsake-equip-result-control > .contextual-picker {
-  flex: 1 1 auto;
-}
-
-.route-keepsake-controls > .transcendent-embryo-outcome-row {
-  flex: 1 1 48rem;
-}
-
-.route-keepsake-controls > .transcendent-embryo-outcome-row > .contextual-picker {
-  flex: 0 1 16rem;
-}
-
-.route-keepsake-controls
-  > .transcendent-embryo-outcome-row
-  > .field-control:not(.contextual-picker) {
-  flex: 1 1 14rem;
-  min-width: min(100%, 14rem);
 }
 
 .route-loadout-section {
@@ -1317,6 +1332,7 @@
 
 .draft-fieldset {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   min-width: 0;
   margin: 0;
@@ -1333,6 +1349,18 @@
   gap: 0.5rem;
   padding-top: 0.75rem;
   border-top: 1px solid #30313a;
+}
+
+.draft-section-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.draft-section-inline > .draft-toggle-row {
+  flex: 1 1 20rem;
+  min-width: 0;
 }
 
 .draft-section-header {
@@ -1408,9 +1436,12 @@
 }
 
 .draft-npc-table thead th {
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding-bottom: 0.4rem;
+}
+
+.draft-npc-table .draft-npc-field {
+  padding-left: 1.25rem;
+  border-left: 1px solid #3a3b45;
 }
 
 .draft-npc-biome {

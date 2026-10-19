@@ -599,8 +599,8 @@ button.hex-tree-node[data-has-findings='true'] {
 
 .navigation-feedback {
   display: flex;
-  align-items: center;
-  gap: 5px;
+  width: 19px;
+  height: 19px;
 }
 
 .navigation-status-marker {
@@ -641,12 +641,6 @@ button.hex-tree-node[data-has-findings='true'] {
   border-color: rgb(132 130 143 / 45%);
   color: #aaa7b3;
   background: rgb(100 98 112 / 12%);
-}
-
-.navigation-feedback .findings-count {
-  min-width: 19px;
-  height: 19px;
-  font-size: 0.68rem;
 }
 
 .hex-tree-help {

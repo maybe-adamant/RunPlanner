@@ -211,6 +211,67 @@ describe('Draft panel', () => {
     expect(runs).toHaveLength(0);
   });
 
+  it('dims god keepsakes in the starting keepsake rack', async () => {
+    const { application, catalog } = open();
+    fireEvent.click(screen.getByRole('button', { name: 'Starting keepsake' }));
+    const dialog = screen.getByRole('dialog', { name: 'Starting keepsake' });
+    const rack = await within(dialog).findByRole('group', { name: 'Keepsakes' });
+    const god = catalog.keepsakes.values.find((keepsake) => forcesGod(catalog, keepsake.key))!;
+    const bangle = within(rack).getByRole('button', { name: god.label });
+    expect(bangle.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(bangle)).toBe("Drafting can't use god keepsakes.");
+    fireEvent.click(bangle);
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.loadout
+        .startingKeepsakeKey,
+    ).not.toBe(god.key);
+    fireEvent.click(within(rack).getByRole('button', { name: 'Gold Purse' }));
+    expect(within(dialog).getByText('Gold Purse', { selector: 'p' })).toBeTruthy();
+    expect(
+      application.store.getState().projectWorkspace.history!.present.route.loadout
+        .startingKeepsakeKey,
+    ).toBe('BonusMoneyKeepsake');
+  });
+
+  it('shows each rack inheriting the keepsake held before it, storing only real changes', () => {
+    const { application, catalog, runs } = open();
+    const rackLabel = (biomeKey: string) => `After ${catalog.biomes.byKey[biomeKey]!.label}`;
+    const launcher = (biomeKey: string) =>
+      screen.getByRole('button', { name: rackLabel(biomeKey) });
+    const choose = (biomeKey: string, keepsake: string) => {
+      fireEvent.click(launcher(biomeKey));
+      const dialog = screen.getByRole('dialog', { name: rackLabel(biomeKey) });
+      fireEvent.click(within(dialog).getByRole('button', { name: keepsake }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    };
+    const shown = () => ['F', 'G', 'H'].map((biomeKey) => launcher(biomeKey).textContent);
+    const stored = () => application.store.getState().draftSession.rackKeepsakeByBiome;
+    expect(shown()).toEqual(['Silver Wheel', 'Silver Wheel', 'Silver Wheel']);
+
+    choose('G', 'Lion Fang');
+    expect(shown()).toEqual(['Silver Wheel', 'Lion Fang', 'Lion Fang']);
+    choose('H', 'Gold Purse');
+    expect(stored()).toEqual({ G: 'DecayingBoostKeepsake', H: 'BonusMoneyKeepsake' });
+    // Choosing the keepsake already held there stores no change.
+    choose('H', 'Lion Fang');
+    expect(stored()).toEqual({ G: 'DecayingBoostKeepsake' });
+
+    // A new starting keepsake flows through every rack that keeps inheriting.
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceStartingKeepsake',
+          selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+          keepsakeKey: 'BonusMoneyKeepsake',
+        }),
+      );
+    });
+    expect(shown()).toEqual(['Gold Purse', 'Lion Fang', 'Lion Fang']);
+    chooseGods(['Zeus', 'Hera', 'Apollo']);
+    fireEvent.click(draftButton());
+    expect(runs[0]!.request.spec.rackKeepsakeKeys).toEqual([null, 'DecayingBoostKeepsake', null]);
+  });
+
   it('locks the panel and its navigation while drafting, then reports the targets', () => {
     const { application, runs } = open();
     chooseGods(['Zeus', 'Apollo']);

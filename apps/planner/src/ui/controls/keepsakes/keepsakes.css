@@ -1,0 +1,113 @@
+.contextual-picker-trigger.keepsake-launcher {
+  justify-content: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.keepsake-launcher > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keepsake-launcher-icon {
+  flex: 0 0 auto;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-block: -0.2rem;
+}
+
+/* Eleven per row, as on the in-game rack. */
+.keepsake-rack {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: 0.3rem;
+  width: 100%;
+}
+
+@container app-viewport (max-width: 900px) {
+  .keepsake-rack {
+    grid-template-columns: repeat(auto-fill, minmax(4.75rem, 1fr));
+  }
+}
+
+.keepsake-card {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.35rem 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  background: rgb(255 255 255 / 3%);
+  color: #e3dde8;
+  font: inherit;
+  font-size: 0.7rem;
+  line-height: 1.15;
+  text-align: center;
+  cursor: pointer;
+}
+
+.keepsake-card:hover:not([aria-disabled='true']) {
+  border-color: #65636f;
+}
+
+.keepsake-card[aria-pressed='true'] {
+  border-color: var(--selection-accent);
+  background: color-mix(in srgb, var(--selection-accent) 18%, transparent);
+}
+
+.keepsake-card[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.keepsake-card[aria-disabled='true'] > .keepsake-card-icon {
+  filter: grayscale(1);
+}
+
+.keepsake-card-icon {
+  display: block;
+  width: 100%;
+  max-width: 3.5rem;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.keepsake-rack-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem 1rem;
+  min-height: 3.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #30313a;
+}
+
+.keepsake-rack-detail-name {
+  flex: 0 0 100%;
+  margin: 0;
+  font-weight: 700;
+}
+
+.keepsake-rack-detail > .keepsake-equip-result-control {
+  flex: 0 1 22rem;
+  align-items: end;
+  max-width: 100%;
+}
+
+.keepsake-rack-detail > .transcendent-embryo-outcome-row {
+  flex-basis: 100%;
+}
+
+.keepsake-rack-detail .keepsake-equip-result-control > .field-control-inline,
+.keepsake-rack-detail .transcendent-embryo-outcome-row > .field-control-inline {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.keepsake-rack-detail > .keepsake-equip-result-control > .contextual-picker {
+  flex: 1 1 auto;
+}
