@@ -11,11 +11,10 @@ exit doors are covered.
 
 ## Still missing
 
-| Entity                  | Count | Detail                                                                                                                              | Where the planner shows it               |
-| ----------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Exit doors              | 5     | N_OpeningDoor, EphyraExitDoorReturn, EphyraExitBossDoor, AnomalyAutoExitDoor, ChaosReturnExitDoor; the game shows glow effects only | decision exit cards                      |
-| Fields fountain         | 1     | referenced (`Fields_HealthFountain_01`) but in no package                                                                           | none today (Fields has no fountain room) |
-| Trial (Devotion) reward | 1     | no game icon; the planner shows the chosen god pair instead                                                                         | reward pickers and rail                  |
+| Entity                  | Count | Detail                                                                                                                              | Where the planner shows it |
+| ----------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Exit doors              | 5     | N_OpeningDoor, EphyraExitDoorReturn, EphyraExitBossDoor, AnomalyAutoExitDoor, ChaosReturnExitDoor; the game shows glow effects only | decision exit cards        |
+| Trial (Devotion) reward | 1     | no game icon; the planner shows the chosen god pair instead                                                                         | reward pickers and rail    |
 
 ## Candidates held for later
 
