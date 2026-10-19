@@ -75,7 +75,7 @@ it('expires confirmations, renews repeated operations, and never times out failu
   );
   const create = async () => {
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Underworld' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Create Underworld project' }));
     });
   };
   await create();

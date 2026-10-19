@@ -1256,7 +1256,7 @@ describe('planner history interaction', () => {
   it('keeps navigation outside authored history', async () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
 
-    await user.click(screen.getByRole('button', { name: 'Surface' }));
+    await user.click(screen.getByRole('button', { name: 'Create Surface project' }));
 
     expect(application.store.getState().editorSession.activeSection).toBe('route');
     expect(application.store.getState().projectWorkspace.kind).toBe('openProject');
@@ -1269,7 +1269,7 @@ describe('planner history interaction', () => {
   it('activates the selected route and configured-biome navigation from the keyboard', async () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
 
-    const underworld = screen.getByRole('button', { name: 'Underworld' });
+    const underworld = screen.getByRole('button', { name: 'Create Underworld project' });
     underworld.focus();
     await user.keyboard('{Enter}');
     expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
@@ -3126,7 +3126,7 @@ describe('project profile interaction', () => {
     expect(screen.queryByText('Not saved')).toBeNull();
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
-        name: 'Underworld',
+        name: 'Create Underworld project',
       }),
     );
     await user.click(screen.getByRole('button', { name: 'File' }));
@@ -3189,7 +3189,7 @@ describe('project profile interaction', () => {
     await user.click(screen.getByRole('menuitem', { name: 'New' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
-        name: 'Underworld',
+        name: 'Create Underworld project',
       }),
     );
     expect(configuredBiomeCount(application)).toBe(1);

@@ -240,7 +240,7 @@ describe('surface product loop', () => {
     expect(currentEvaluation(application).status).toBe('valid');
     await view.user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
-        name: 'Surface',
+        name: 'Create Surface project',
       }),
     );
     expect(currentEvaluation(application).status).toBe('incomplete');

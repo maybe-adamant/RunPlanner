@@ -11,6 +11,8 @@ import type {
 } from '@planner/workspace/projectOperations';
 import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { routeArtwork } from '@planner/ui/artwork/route-icons/routeArtwork';
 import { DreamItineraryDialog } from './DreamItineraryDialog';
 import { ProjectFileFeedback } from './ProjectFileFeedback';
 
@@ -95,7 +97,7 @@ export function ProjectFileControls({
           <div className="route-choice-grid">
             {routes.map((route) => (
               <button
-                aria-label={route.label}
+                aria-label={`Create ${route.label} project`}
                 className="route-choice-card"
                 disabled={pendingOperation !== null}
                 key={route.routeKey}
@@ -108,8 +110,11 @@ export function ProjectFileControls({
                 }}
                 type="button"
               >
+                <ArtworkIcon
+                  className="route-choice-icon"
+                  source={routeArtwork[route.routeKey] ?? undefined}
+                />
                 <span className="route-choice-name">{route.label}</span>
-                <span className="route-choice-action">Create project</span>
               </button>
             ))}
           </div>
