@@ -1030,7 +1030,7 @@ persisted and hashed like the other gameplay options) returns a run to its plan
 after a mismatch. Off, a desynchronized run is unchanged.
 
 - **Steering.** At the next `LeaveRoom` of a desynchronized run, after every
-  ordinary check, the route cursor exits and its next occurrence becomes the
+  ordinary check including the `exit-door` check of a synchronized exit, the route cursor exits and its next occurrence becomes the
   target. The session resumes there (a fresh cursor and room coordinator, as a
   Practice start resumes) before native `LeaveRoom` runs, so the next room's
   encounter and reward are steered. The chosen door's room is kept only when it
@@ -1747,9 +1747,10 @@ owns the exact contacts and scope lifetimes.
 
 ## Deferred scope
 
-Wrong continuation is detected by the next room-entry identity check; the
-executor deliberately has no separate selected-transition conformance
-checkpoint.
+Wrong continuation is detected by the next room-entry identity check. The one
+exception is a door prepared for another published target of the room being
+left: `LeaveRoom` reports it as an `exit-door` mismatch after the cursor
+exits, so snap mode can redirect that same door.
 
 Automatic diagnostic import remains deferred. Automated protocol and hook
 coverage does not substitute for live-game verification of a complete Dream run.

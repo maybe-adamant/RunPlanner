@@ -1,5 +1,7 @@
 -- Route/room handshake and current-room lifecycle contacts.
 local snapMode = type(import) == "function" and import("mods/snap/mode.lua") or require("mods.snap.mode")
+local doors = type(import) == "function" and import("mods/navigation/doors.lua")
+    or require("mods.navigation.doors")
 
 local hooks = {}
 
@@ -252,7 +254,14 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             local ok, routeError = route.exit(state.route)
             if not ok then reportOutcome(session, state, routeError) end
         end
-        if state.state == "synchronized" and route.expected(state.route) == nil then
+        -- A sibling door prepared for another published target leaves the route here.
+        local expected = state.state == "synchronized" and route.expected(state.route) or nil
+        local stray = expected and doors.strayTarget(state.route.lastExitedOccurrence, door,
+            expected.id, state.route.plan.occurrencesById)
+        if stray ~= nil then
+            session.mismatch(state, { checkpoint = "exit-door", expected = expected.id, observed = stray })
+        end
+        if state.state == "synchronized" and expected == nil then
             state.reason = "configured-prefix-complete"
         end
         if state.state == "desynchronized" then steerSnap(runtime, state, currentRun, door) end
