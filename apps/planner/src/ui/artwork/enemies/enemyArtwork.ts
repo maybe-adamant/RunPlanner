@@ -12,6 +12,7 @@ import iconBoneRaker from './assets/BoneRaker.webp';
 import iconBoozer from './assets/Boozer.webp';
 import iconBronzebeak from './assets/Bronzebeak.webp';
 import iconBurnFlinger from './assets/BurnFlinger.webp';
+import iconCanine from './assets/Canine.webp';
 import iconCasket from './assets/Casket.webp';
 import iconCutthroat from './assets/Cutthroat.webp';
 import iconDroplet from './assets/Droplet.webp';
@@ -128,8 +129,8 @@ export const enemyArtwork: Readonly<Record<string, string | null>> = {
   Lamia_Elite: iconLamia,
   Lovesick: iconHoleheart,
   Lovesick_Elite: iconHoleheart,
-  LycanSwarmer: null,
-  LycanSwarmer_Elite: null,
+  LycanSwarmer: iconCanine,
+  LycanSwarmer_Elite: iconCanine,
   Lycanthrope: iconLycaon,
   Lycanthrope_Elite: iconLycaon,
   Mage: iconCasket,
