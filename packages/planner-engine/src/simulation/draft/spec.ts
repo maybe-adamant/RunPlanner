@@ -67,7 +67,7 @@ export function forcesGod(catalog: Catalog, keepsakeKey: string): boolean {
 }
 
 /** The route loadout a draft sets, before any generated choice. */
-export function draftRouteLoadout(loadout: DraftLoadout): RouteLoadout {
+function draftRouteLoadout(loadout: DraftLoadout): RouteLoadout {
   return Object.freeze({
     weaponKey: loadout.weaponKey,
     aspectKey: loadout.aspectKey,

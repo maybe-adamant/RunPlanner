@@ -6,14 +6,12 @@ import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
 import { draftEncounters } from '../../../src/simulation/draft/encounters';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
-import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
-import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
+import { createDraftRng } from '../../../src/simulation/draft/rng';
 import {
-  createDraftRng,
-  DraftWalk,
   settleDraftCommand,
   settleDraftCommandWithoutNewFinding,
-} from '../../../src/simulation/draft/walk';
+} from '../../../src/simulation/draft/settle';
+import { startDraftWalk } from '../../support/draft-walk';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import {
   generatedEncounterSupportForProjectEvaluationAssembly,
@@ -47,13 +45,7 @@ const spec: DraftSpec = {
 
 /** A walked first biome under Menace 2 and Fangs 2, before its encounters are drafted. */
 function walkedFirstBiome(): ProjectEvaluationAssembly {
-  const walk = new DraftWalk(
-    catalog,
-    simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, spec.loadout)),
-    spec,
-    createDraftRng(3),
-    draftGodSchedule(catalog, base.route, spec, createDraftRng(3)),
-  );
+  const walk = startDraftWalk(base, spec, 3);
   if (!walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome)) throw new Error(walk.failure);
   return walk.assembly;
 }

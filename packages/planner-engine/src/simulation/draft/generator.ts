@@ -11,12 +11,13 @@ import { draftGodSchedule } from './schedule';
 import { draftReport, type DraftReport } from './report';
 import { draftRefusals, type DraftRefusal } from './refusals';
 import { draftLoadoutProject, type DraftSpec } from './spec';
-import { createDraftRng, DraftWalk } from './walk';
-import { draftNpcGivers, draftNpcTraitBiomes } from './world';
+import { createDraftRng } from './rng';
+import { DraftWalk } from './walk';
+import { draftWorld } from './world';
 
 /** Attempt counts alone bound the search, so a seed drafts the same route on any machine. */
 export interface DraftBudget {
-  /** Attempts per biome once one has succeeded, keeping the best by target coverage. */
+  /** Further attempts per biome after its first success, keeping the best by target coverage. */
   readonly attemptsPerBiome: number;
   /** Dead-end attempts a biome may take before any succeeds; then the draft fails. */
   readonly maxFailedAttemptsPerBiome: number;
@@ -25,7 +26,7 @@ export interface DraftBudget {
 }
 
 export const DEFAULT_DRAFT_BUDGET: DraftBudget = Object.freeze({
-  attemptsPerBiome: 4,
+  attemptsPerBiome: 3,
   maxFailedAttemptsPerBiome: 16,
   maxStepsPerBiome: 600,
 });
@@ -69,54 +70,50 @@ export function draftProject(
     draftLoadoutProject(catalog, base, spec.loadout),
   );
   const biomeKeys = current.project.route.biomes.map((biome) => biome.biomeKey);
+  const world = draftWorld(catalog, current.project.route, spec.world, spec.basketTraitKeys);
   const schedule = draftGodSchedule(
     catalog,
     current.project.route,
     spec,
+    world,
     createDraftRng((seed * 2_654_435_761) >>> 0),
-  );
-  const npcTraitBiomes = draftNpcTraitBiomes(
-    catalog,
-    draftNpcGivers(catalog, current.project.route, spec.world),
-    spec.basketTraitKeys,
   );
   let attempts = 0;
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best: { assembly: ProjectEvaluationAssembly; score: number; localMet: boolean } | undefined;
     const reasons: string[] = [];
+    let afterSuccess = 0;
     for (
       let attempt = 0;
       best === undefined
         ? reasons.length < budget.maxFailedAttemptsPerBiome
-        : attempt < budget.attemptsPerBiome;
+        : afterSuccess < budget.attemptsPerBiome;
       attempt += 1
     ) {
       attempts += 1;
+      if (best !== undefined) afterSuccess += 1;
       const walk = new DraftWalk(
         catalog,
         current,
         spec,
         createDraftRng(attemptSeed(seed, biomeIndex, attempt)),
         schedule,
+        world,
       );
       if (!walk.runBiome(biomeIndex, budget.maxStepsPerBiome)) {
         reasons.push(walk.failure ?? 'unknown');
         continue;
       }
       const report = draftReport(catalog, spec, walk.assembly);
-      const halves = walk.halfSupply();
       const scheduled = walk.scheduledTargets();
       const score =
-        report.met +
-        halves.filter((half) => half.met).length +
-        scheduled.filter(Boolean).length -
-        walk.wastedHermes();
+        report.met + scheduled.filter((target) => target.met).length - walk.wastedHermes();
       // An NPC basket trait is this biome's own target, like its NPC.
       const localMet = report.targets.every(
         (target) =>
           target.met ||
           (target.kind === 'basketTrait'
-            ? npcTraitBiomes.get(target.key) !== biomeIndex
+            ? world.npcTraitBiomes.get(target.key) !== biomeIndex
             : target.biomeKey !== biomeKey),
       );
       // On a tie, an attempt that meets this biome's own targets wins.
@@ -126,8 +123,15 @@ export function draftProject(
         (score === best.score && localMet && !best.localMet)
       )
         best = { assembly: walk.assembly, score, localMet };
-      // An unmet half target ends the biome only when no decision could take it here.
-      if (localMet && halves.every((half) => half.met || !walk.legalSupply.has(half.supply))) break;
+      // An unmet scheduled Hermes or Hammer ends the biome only when no decision could take it here.
+      if (
+        localMet &&
+        scheduled.every(
+          (target) =>
+            target.met || target.supply === undefined || !walk.legalSupply.has(target.supply),
+        )
+      )
+        break;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
     // Only the chosen attempt's encounters are drafted, before the next biome builds on them.

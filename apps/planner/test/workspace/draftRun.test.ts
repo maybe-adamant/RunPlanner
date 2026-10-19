@@ -159,7 +159,7 @@ describe('draft run controller', () => {
     expect(history().present.route.biomes).toEqual(before.route.biomes);
   });
 
-  it('keys rack keepsakes by biome and keeps only keepsakes the rack allows', () => {
+  it('keys rack keepsakes by biome and refuses a saved god keepsake', () => {
     const { runner, runs } = createManualRunner();
     const { application, history } = openUnderworld(runner);
     const { catalog } = application;
@@ -177,6 +177,11 @@ describe('draft run controller', () => {
         { afterBiomeKey: 'H', inheritedKeepsakeKey: allowed },
         godKeepsake,
       ),
+    );
+    application.draftRun.draft();
+    expect(runs).toHaveLength(0);
+    editDraft(application, (draft) =>
+      withDraftRackKeepsake(draft, { afterBiomeKey: 'H', inheritedKeepsakeKey: allowed }, allowed),
     );
     application.draftRun.draft();
     expect(runs[0]!.request.spec.rackKeepsakeKeys).toEqual([null, allowed, null]);

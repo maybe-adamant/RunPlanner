@@ -358,7 +358,7 @@ export function normalizeFearVows(
               ? {
                   effect: Object.freeze({
                     kind: 'substituteNextBiomeEnemy' as const,
-                    chanceByRank: Object.freeze([0.1, 0.25]) as readonly [0.1, 0.25],
+                    chanceByRank: Object.freeze([0.1, 0.25]),
                   }),
                 }
               : {}),

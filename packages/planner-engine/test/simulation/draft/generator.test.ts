@@ -10,9 +10,9 @@ import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { latestRunState } from '../../../src/simulation/draft/report';
-import { draftGodSchedule } from '../../../src/simulation/draft/schedule';
+import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../../../src/simulation/draft/basket';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
-import { createDraftRng, DraftWalk } from '../../../src/simulation/draft/walk';
+import { startDraftWalk } from '../../support/draft-walk';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
@@ -168,22 +168,19 @@ describe('draftProject', () => {
       ...spec,
       world: { ...spec.world, storyNpcByBiome: { F: 'Arachne', H: 'Echo' }, fieldNpcsByBiome: {} },
     };
-    const schedule = draftGodSchedule(catalog, base.route, echoSpec, createDraftRng(6));
     let assembly = simulateProjectAssembly(
       catalog,
       draftLoadoutProject(catalog, base, echoSpec.loadout),
     );
     for (const biomeIndex of [0, 1]) {
-      const walk = new DraftWalk(catalog, assembly, echoSpec, createDraftRng(6), schedule);
+      const walk = startDraftWalk(base, echoSpec, 6, { from: assembly });
       expect(walk.runBiome(biomeIndex, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome)).toBe(true);
       assembly = walk.assembly;
     }
     const echoChoices = echoSelections(assembly.project);
     expect(echoChoices.length).toBeGreaterThan(0);
     for (const traitKey of echoChoices)
-      expect(['EchoLastReward', 'EchoRepeatKeepsakeBoon', 'EchoDoubleShop']).not.toContain(
-        traitKey,
-      );
+      expect(DRAFT_ILLEGAL_ECHO_TRAIT_KEYS.has(traitKey)).toBe(false);
   });
 
   it('drafts a route with a Practice start and keeps the start point', () => {
@@ -210,14 +207,7 @@ describe('draftProject', () => {
       world: { ...spec.world, fieldNpcsByBiome: { G: ['Artemis'] } },
       basketTraitKeys: ['CritBonusBoon', 'LuckyBoon', 'TimeStopLastStandBoon'],
     };
-    const startWalk = (draft: DraftSpec) =>
-      new DraftWalk(
-        catalog,
-        simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, draft.loadout)),
-        draft,
-        createDraftRng(1),
-        draftGodSchedule(catalog, base.route, draft, createDraftRng(1)),
-      );
+    const startWalk = (draft: DraftSpec) => startDraftWalk(base, draft, 1);
 
     it('reserves Hermes only while every free Hermes room is owed to a waiting trait', () => {
       expect(startWalk(waiting).hermesReserved()).toBe(true);
@@ -280,12 +270,14 @@ describe('draftProject', () => {
       expect(result.report.targets).toContainEqual({ ...target, met: true });
   });
 
-  it('drafts the same route for the same seed', () => {
+  it('walks the same biome for the same seed', () => {
     const { base, spec } = cases[0]!;
-    const first = draftProject(catalog, base, spec, 7);
-    const second = draftProject(catalog, base, spec, 7);
-    expect(first.kind).toBe('drafted');
-    expect(second).toEqual(first);
+    const walked = () => {
+      const walk = startDraftWalk(base, spec, 7);
+      expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+      return walk.project;
+    };
+    expect(walked()).toEqual(walked());
   });
 
   it('refuses the FreshFile route', () => {

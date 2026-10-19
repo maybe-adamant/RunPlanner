@@ -45,6 +45,10 @@ function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): strin
   switch (refusal.kind) {
     case 'godStartingKeepsake':
       return `${catalog.keepsakes.byKey[refusal.keepsakeKey]?.label ?? refusal.keepsakeKey} brings in a god, so it can't start a draft.`;
+    case 'rackKeepsake':
+      return refusal.reason === 'forcesGod'
+        ? `${catalog.keepsakes.byKey[refusal.keepsakeKey]?.label ?? refusal.keepsakeKey} brings in a god, so a rack can't take it.`
+        : undefined;
     case 'invalidLoadout':
       return 'The loadout is not complete.';
     case 'tooFewGods':

@@ -1,22 +1,24 @@
 import type { Catalog } from '../../catalog-schema';
-import { draftStartTraits } from './basket';
+import type { ResolvedRewardOffer } from '../../reward-kernel';
+import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
+import { draftStartTraits, draftTraitKind } from './basket';
 import {
   createDraftPrerequisites,
   prerequisiteDue,
   prerequisiteOrder,
   type DraftPrerequisiteNeed,
 } from './prerequisites';
-import { draftHermesTraitKeys } from './report';
+import { shuffleDraft, type DraftRng } from './rng';
 import { draftForfeitActive, type DraftRoute, type DraftSpec } from './spec';
-import type { DraftRng } from './walk';
-import { draftNpcGivers, draftNpcTraitBiomes } from './world';
+import type { DraftWorldProduct } from './world';
 
 /**
  * Median world-god boon rooms one biome yields: ten seeds each of full
- * Underworld FGHI and Surface NOPQ drafted with god boons weighted 25 times,
- * story targets on, counting door rewards, Fields cages and Ship wheel picks.
+ * Underworld FGHI and Surface NOPQ drafts, counting door rewards, Fields cages
+ * and Ship wheel picks. Measured when wanted god boons weighed 25 against 1;
+ * steering now weighs them 30 or 60 against 4.
  */
-export const DRAFT_GOD_ROOM_CAPACITY: Readonly<Record<string, number>> = Object.freeze({
+const DRAFT_GOD_ROOM_CAPACITY: Readonly<Record<string, number>> = Object.freeze({
   F: 5,
   G: 2,
   H: 1,
@@ -27,7 +29,34 @@ export const DRAFT_GOD_ROOM_CAPACITY: Readonly<Record<string, number>> = Object.
   Q: 2,
 });
 
-/** The basket god and Hermes traits to hold by the end of each biome. */
+/** The Hermes and Daedalus Hammer rewards whose basket traits are scheduled by route half. */
+export type DraftSupply = 'hermes' | 'hammer';
+
+/** Every trait a Hermes or Hammer giver offers. */
+export function draftSupplyTraitKeys(catalog: Catalog, supply: DraftSupply): ReadonlySet<string> {
+  return new Set(
+    catalog.traitGivers.values
+      .filter((giver) => giver.providerKind === supply)
+      .flatMap((giver) => giver.traitKeys),
+  );
+}
+
+/** Rewards whose acquisition role resolves to a Hermes, Daedalus Hammer or Selene giver. */
+export function draftProvider(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+): DraftSupply | 'spell' | undefined {
+  const roles = catalog.rewards.rewardTypes.byKey[offer.rewardType]?.acquisitionRoles.values ?? [];
+  for (const role of roles) {
+    const giverKey = traitGiverForAcquisitionRole(catalog, offer, role.key);
+    const kind =
+      giverKey === undefined ? undefined : catalog.traitGivers.byKey[giverKey]?.providerKind;
+    if (kind === 'hermes' || kind === 'hammer' || kind === 'spell') return kind;
+  }
+  return undefined;
+}
+
+/** The basket god, Hermes and Hammer traits to hold by the end of each biome. */
 export interface DraftGodSchedule {
   readonly byBiome: readonly {
     readonly biomeKey: string;
@@ -59,9 +88,8 @@ function spread(
  * biome, into the latest such biome with spare capacity; each still waits on its own needs.
  */
 function pullNpcPrerequisites(
-  catalog: Catalog,
   route: DraftRoute,
-  spec: DraftSpec,
+  npcBiomes: ReadonlyMap<string, number>,
   needs: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>,
   due: Map<string, number>,
   godTraits: readonly string[],
@@ -69,11 +97,6 @@ function pullNpcPrerequisites(
 ): void {
   const last = route.itineraryBiomeKeys.length - 1;
   const dueOf = (key: string) => due.get(key);
-  const npcBiomes = draftNpcTraitBiomes(
-    catalog,
-    draftNpcGivers(catalog, route, spec.world),
-    spec.basketTraitKeys,
-  );
   const spareBiome = (latest: number) => {
     for (let index = latest; index >= 0; index -= 1)
       if (
@@ -112,24 +135,18 @@ function pullNpcPrerequisites(
 }
 
 /**
- * Basket god traits spread by capacity, Hermes traits one per half; no trait
- * falls due before its prerequisites, and an NPC basket trait's prerequisites
- * fall due by its NPC's biome.
+ * Basket god traits spread by capacity, Hermes and Hammer traits one per half;
+ * no trait falls due before its prerequisites, and an NPC basket trait's
+ * prerequisites fall due by its NPC's biome.
  */
 export function draftGodSchedule(
   catalog: Catalog,
   route: DraftRoute,
   spec: DraftSpec,
+  world: DraftWorldProduct,
   rng: DraftRng,
 ): DraftGodSchedule {
-  const shuffle = <T>(values: readonly T[]): T[] => {
-    const result = [...values];
-    for (let index = result.length - 1; index > 0; index -= 1) {
-      const swap = Math.floor(rng() * (index + 1));
-      [result[index], result[swap]] = [result[swap]!, result[index]!];
-    }
-    return result;
-  };
+  const shuffle = <T>(values: readonly T[]) => shuffleDraft(rng, values);
   const godKeys = shuffle(spec.world.godKeys);
   const biomeKeys = route.itineraryBiomeKeys;
   const forfeit = draftForfeitActive(catalog, spec.loadout) ? 1 : 0;
@@ -140,9 +157,13 @@ export function draftGodSchedule(
     catalog.traitGivers.values
       .filter((giver) => giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
       .map((giver) => giver.key);
+  const duo = (traitKey: string) => {
+    const trait = catalog.traits.byKey[traitKey];
+    return trait !== undefined && draftTraitKind(trait) === 'duo';
+  };
   const godTraits = spec.basketTraitKeys.filter((key) => godsOf(key).length > 0);
   const byGod = godKeys.map((god) =>
-    shuffle(godTraits.filter((key) => godsOf(key).length === 1 && godsOf(key)[0] === god)),
+    shuffle(godTraits.filter((key) => !duo(key) && godsOf(key).includes(god))),
   );
   const interleaved: string[] = [];
   for (let round = 0; byGod.some((traits) => traits.length > round); round += 1)
@@ -152,28 +173,28 @@ export function draftGodSchedule(
     spec.basketTraitKeys,
     draftStartTraits(catalog, route, spec.loadout),
   );
-  const traitOrder = prerequisiteOrder(
-    [...interleaved, ...shuffle(godTraits.filter((key) => godsOf(key).length > 1))],
-    needs,
-  );
+  const traitOrder = prerequisiteOrder([...interleaved, ...shuffle(godTraits.filter(duo))], needs);
   const traitPlaces = spread(traitOrder.length, biomeKeys, capacity);
   const last = biomeKeys.length - 1;
   const due = new Map<string, number>();
   const dueAfterNeeds = (key: string) =>
     prerequisiteDue(needs.get(key) ?? [], (member) => due.get(member), last);
   traitOrder.forEach((key, i) => due.set(key, Math.max(traitPlaces[i]!, dueAfterNeeds(key))));
-  const hermes = draftHermesTraitKeys(catalog);
-  const hermesTraits = prerequisiteOrder(
-    spec.basketTraitKeys.filter((key) => hermes.has(key)),
-    needs,
-  );
-  hermesTraits.forEach((key, i) => {
-    const half = i === 0 ? firstHalf.length - 1 : last;
-    const previous = i === 0 ? 0 : due.get(hermesTraits[i - 1]!)!;
-    due.set(key, Math.max(half, previous, dueAfterNeeds(key)));
+  const supplied = (['hermes', 'hammer'] as const).flatMap((supply) => {
+    const traitKeys = draftSupplyTraitKeys(catalog, supply);
+    const ordered = prerequisiteOrder(
+      spec.basketTraitKeys.filter((key) => traitKeys.has(key)),
+      needs,
+    );
+    ordered.forEach((key, i) => {
+      const half = i === 0 ? firstHalf.length - 1 : last;
+      const previous = i === 0 ? 0 : due.get(ordered[i - 1]!)!;
+      due.set(key, Math.max(half, previous, dueAfterNeeds(key)));
+    });
+    return ordered;
   });
-  pullNpcPrerequisites(catalog, route, spec, needs, due, traitOrder, capacity);
-  const scheduled = [...traitOrder, ...hermesTraits];
+  pullNpcPrerequisites(route, world.npcTraitBiomes, needs, due, traitOrder, capacity);
+  const scheduled = [...traitOrder, ...supplied];
   return Object.freeze({
     byBiome: Object.freeze(
       biomeKeys.map((biomeKey, index) =>

@@ -15,7 +15,8 @@ import {
   infiniteRosterSupportForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
-import { settleDraftCommandWithoutNewFinding, type DraftRng } from './walk';
+import type { DraftRng } from './rng';
+import { settleDraftCommandWithoutNewFinding } from './settle';
 
 /** Random generated values tried before the engine's deterministic initialisation. */
 const GENERATED_ATTEMPTS = 4;
@@ -41,8 +42,10 @@ function binomial(rng: DraftRng, trials: number, chance: number): number {
 
 /** Each eligible Menace source request converts independently at the rank's chance. */
 function menaceChance(catalog: Catalog, rank: number): number {
-  const effect = catalog.fearVows.byKey.NextBiomeEnemyShrineUpgrade?.effect;
-  return effect?.kind === 'substituteNextBiomeEnemy' ? (effect.chanceByRank[rank - 1] ?? 0) : 0;
+  for (const vow of catalog.fearVows.values)
+    if (vow.effect?.kind === 'substituteNextBiomeEnemy')
+      return vow.effect.chanceByRank[rank - 1] ?? 0;
+  return 0;
 }
 
 function sampleGenerated(

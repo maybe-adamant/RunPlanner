@@ -37,8 +37,21 @@ export type DraftTraitRefusal =
       readonly requirementTraitKeys?: readonly string[];
     };
 
+/** How the basket picker and the schedule group a trait. */
+export type DraftTraitKind = 'core' | 'other' | 'legendary' | 'duo';
+
+/** Duos and Legendaries by their offered rarity; core traits by their boon slot. */
+export function draftTraitKind(trait: TraitDeclaration): DraftTraitKind {
+  const rarities =
+    trait.rarityDomain.kind === 'ranked' ? trait.rarityDomain.freshOfferRarities : [];
+  if (rarities.includes('Duo')) return 'duo';
+  if (rarities.includes('Legendary')) return 'legendary';
+  return trait.equipmentSlot !== undefined && trait.equipmentSlot !== 'Spell' ? 'core' : 'other';
+}
+
 export interface DraftTraitAssessment {
   readonly traitKey: string;
+  readonly kind: DraftTraitKind;
   readonly inBasket: boolean;
   /** Judged against the rest of the basket and the loadout. */
   readonly selectable: boolean;
@@ -109,7 +122,7 @@ function basketCaps(
     Object.freeze({
       giverKey,
       count: spec.basketTraitKeys.filter(
-        (key) => cappedGiver(catalog, spec, key)?.giverKey === giverKey,
+        (key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey,
       ).length,
       cap,
     });
@@ -128,9 +141,9 @@ function basketCaps(
     providers: Object.freeze(
       catalog.traitGivers.values.flatMap((giver) => {
         const kind = giver.providerKind;
-        if (kind !== 'hammer' && kind !== 'hermes' && kind !== 'spell') return [];
+        if (!isProviderKind(kind)) return [];
         return [
-          Object.freeze({ ...usage(giver.key, DRAFT_PROVIDER_CAPS[kind]!), providerKind: kind }),
+          Object.freeze({ ...usage(giver.key, DRAFT_PROVIDER_CAPS[kind]), providerKind: kind }),
         ];
       }),
     ),
@@ -170,10 +183,10 @@ function assessTrait(
       : others.find((key) => catalog.traits.byKey[key]?.equipmentSlot === slot);
   if (slot !== undefined && slotHolder !== undefined)
     refusals.push({ kind: 'slotTaken', slot, traitKey: slotHolder });
-  const capped = cappedGiver(catalog, spec, traitKey);
+  const capped = draftCappedGiver(catalog, spec, traitKey);
   if (capped !== undefined) {
     const held = others.filter(
-      (key) => cappedGiver(catalog, spec, key)?.giverKey === capped.giverKey,
+      (key) => draftCappedGiver(catalog, spec, key)?.giverKey === capped.giverKey,
     );
     if (held.length >= capped.cap) refusals.push({ kind: 'cap', ...capped });
   }
@@ -190,6 +203,16 @@ function assessTrait(
       !hammer.aspectKeys.includes(spec.loadout.aspectKey))
   )
     refusals.push({ kind: 'wrongHammerLoadout' });
+  // Latest Model upgrades a held Hammer, so the basket must bring one.
+  if (trait.targetedAcquisition?.kind === 'upgradeHammerToRank2') {
+    const hammers = compatibleHammerKeys(catalog, spec.loadout);
+    if (!others.some((key) => hammers.includes(key)))
+      refusals.push({
+        kind: 'requirement',
+        code: 'missingPrerequisite',
+        requirementTraitKeys: hammers,
+      });
+  }
   const requirements = [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements];
   if (requirements.length > 0) {
     const state = withBasket(catalog, routeStart, others);
@@ -200,6 +223,7 @@ function assessTrait(
   if (trait.offerDependsOnDeathDefiance === true) deferred.add('deathDefiance');
   return Object.freeze({
     traitKey,
+    kind: draftTraitKind(trait),
     inBasket: spec.basketTraitKeys.includes(traitKey),
     selectable: refusals.length === 0,
     refusals: Object.freeze(refusals),
@@ -207,8 +231,19 @@ function assessTrait(
   });
 }
 
+/** Hammers the loadout's weapon and Aspect can take. */
+function compatibleHammerKeys(catalog: Catalog, loadout: DraftLoadout): readonly string[] {
+  return catalog.traits.values
+    .filter(
+      (trait) =>
+        trait.hammerCompatibility?.weaponKey === loadout.weaponKey &&
+        trait.hammerCompatibility.aspectKeys.includes(loadout.aspectKey),
+    )
+    .map((trait) => trait.key);
+}
+
 /** Echo choices that replay or duplicate acquisitions, so they can break the draft's caps. */
-const DRAFT_ILLEGAL_ECHO_TRAIT_KEYS: ReadonlySet<string> = new Set([
+export const DRAFT_ILLEGAL_ECHO_TRAIT_KEYS: ReadonlySet<string> = new Set([
   'EchoLastReward',
   'EchoRepeatKeepsakeBoon',
   'EchoDoubleShop',
@@ -221,11 +256,17 @@ export function draftIllegalTrait(trait: TraitDeclaration): boolean {
   );
 }
 
+export type DraftProviderKind = 'hammer' | 'hermes' | 'spell';
+
+function isProviderKind(kind: string): kind is DraftProviderKind {
+  return kind === 'hammer' || kind === 'hermes' || kind === 'spell';
+}
+
 /**
  * Native run caps: two Hammers (HammerLootRequirements' early and late gates), two
  * Hermes boons from rooms and one Hex; the catalog encodes them only as offer requirements.
  */
-export const DRAFT_PROVIDER_CAPS: Readonly<Record<string, number>> = {
+export const DRAFT_PROVIDER_CAPS: Readonly<Record<DraftProviderKind, number>> = {
   hammer: 2,
   hermes: 2,
   spell: 1,
@@ -256,11 +297,14 @@ function isGodTrait(catalog: Catalog, traitKey: string): boolean {
   );
 }
 
-function cappedGiver(
+/** The one giver whose cap a trait counts against; a Duo counts for neither god. */
+export function draftCappedGiver(
   catalog: Catalog,
   spec: DraftSpec,
   traitKey: string,
 ): { readonly giverKey: string; readonly cap: number } | undefined {
+  const trait = catalog.traits.byKey[traitKey];
+  if (trait === undefined || draftTraitKind(trait) === 'duo') return undefined;
   const givers = catalog.traitGivers.values.filter((g) => g.traitKeys.includes(traitKey));
   if (givers.length !== 1) return undefined;
   const giver = givers[0]!;
@@ -269,7 +313,9 @@ function cappedGiver(
       ? olympianCap(catalog, spec)
       : isNpcGiver(giver)
         ? NPC_CAP
-        : DRAFT_PROVIDER_CAPS[giver.providerKind];
+        : isProviderKind(giver.providerKind)
+          ? DRAFT_PROVIDER_CAPS[giver.providerKind]
+          : undefined;
   return cap === undefined ? undefined : { giverKey: giver.key, cap };
 }
 

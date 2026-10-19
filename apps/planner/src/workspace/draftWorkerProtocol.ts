@@ -12,7 +12,7 @@ export type DraftRunOutcome =
   | Exclude<DraftResult, { readonly kind: 'drafted' }>
   | Omit<Extract<DraftResult, { readonly kind: 'drafted' }>, 'project'>;
 
-/** What a run reports; a run may report more than once before it settles. */
+/** What a run reports once it settles. */
 export type DraftRunEvent =
   | { readonly kind: 'settled'; readonly result: DraftRunOutcome }
   | { readonly kind: 'error'; readonly message: string };
