@@ -203,19 +203,29 @@ describe('repository test execution policy', () => {
       'utf8',
     );
     const equivalenceFile = "'packages/planner-engine/test/equivalence/equivalence.test.ts'";
+    const draftCorpusFiles = "'packages/planner-engine/test/draft-corpus/**/*.test.ts'";
+    const draftCorpusConfig = readFileSync(
+      `${repositoryRoot}/vitest.draft-corpus.config.ts`,
+      'utf8',
+    );
 
     expect(correctnessConfig).toContain("'packages/*/test/**/*.test.ts'");
     expect(correctnessConfig).toContain("'apps/*/test/**/*.test.{ts,tsx}'");
     expect(correctnessConfig).toContain(`equivalenceTestFile = ${equivalenceFile}`);
+    expect(correctnessConfig).toContain(`draftCorpusTestFiles = ${draftCorpusFiles}`);
     expect(correctnessConfig.match(/exclude: \[[^\]]*\]/g)).toEqual([
-      'exclude: [performanceTestFile, equivalenceTestFile]',
+      'exclude: [performanceTestFile, equivalenceTestFile, draftCorpusTestFiles]',
     ]);
     expect(performanceConfig).toContain('include: [performanceTestFile]');
     expect(equivalenceConfig).toContain(`equivalenceTestFile = ${equivalenceFile}`);
     expect(equivalenceConfig.match(/include: \[[^\]]*\]/g)).toEqual([
       'include: [equivalenceTestFile]',
     ]);
-    // The equivalence lane is opt-in: no script reachable from `check` runs it.
+    expect(draftCorpusConfig).toContain(`draftCorpusTestFiles = ${draftCorpusFiles}`);
+    expect(draftCorpusConfig.match(/include: \[[^\]]*\]/g)).toEqual([
+      'include: [draftCorpusTestFiles]',
+    ]);
+    // The equivalence and draft corpus lanes are opt-in: no script reachable from `check` runs them.
     const scripts = (
       JSON.parse(readFileSync(`${repositoryRoot}/package.json`, 'utf8')) as {
         readonly scripts: Readonly<Record<string, string>>;
@@ -229,8 +239,12 @@ describe('repository test execution policy', () => {
     };
     visit('check');
     expect(reachable).not.toContain('test:equivalence');
+    expect(reachable).not.toContain('test:draft-corpus');
     expect([...reachable].map((name) => scripts[name])).not.toContainEqual(
       expect.stringContaining('vitest.equivalence.config'),
+    );
+    expect([...reachable].map((name) => scripts[name])).not.toContainEqual(
+      expect.stringContaining('vitest.draft-corpus.config'),
     );
     expect(performanceConfig).toContain('maxWorkers: 1');
     expect(fixtureConfig).toContain('maxWorkers: 1');

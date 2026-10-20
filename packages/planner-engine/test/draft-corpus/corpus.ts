@@ -1,0 +1,305 @@
+import { catalog } from '@run-planner/hades2-catalog';
+import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { createProjectDocument } from '../../src/authored-project/defaults';
+import type { ProjectDocument } from '../../src/authored-project';
+import {
+  assessDraftBasket,
+  draftKeepsakeOptions,
+  draftRefusals,
+  draftWorldOptions,
+  type DraftLoadout,
+  type DraftSpec,
+  type DraftWorld,
+} from '../../src/simulation';
+import { createDraftRng, shuffleDraft } from '../../src/simulation/draft/rng';
+
+export interface DraftCorpusEntry {
+  readonly name: string;
+  readonly base: ProjectDocument;
+  readonly spec: DraftSpec;
+  /** Planned biomes ("Plan up to"); the base project's configured prefix. */
+  readonly prefix: number;
+  readonly seeds: readonly number[];
+}
+
+/** Basket composition, filled in a seeded order with only traits the basket admits at that point. */
+interface BasketRecipe {
+  readonly godTraits: number;
+  readonly hermes?: number;
+  readonly hammer?: number;
+  readonly selene?: number;
+  /** A trait of this selected NPC giver, added last. */
+  readonly npcGiverKey?: string;
+}
+
+interface EntryRecipe {
+  readonly name: string;
+  readonly routeKey: string;
+  readonly itineraryBiomeKeys?: readonly string[];
+  readonly prefix: number;
+  readonly godKeys: readonly string[];
+  readonly fieldNpcsByBiome?: Readonly<Record<string, readonly string[]>>;
+  readonly basket: BasketRecipe;
+  readonly forfeit?: boolean;
+  /** Keepsake taken at the first rack. */
+  readonly rackKeepsakeKey?: string;
+}
+
+const SEEDS = [1, 2, 3, 4] as const;
+const LIGHT = 3;
+const MEDIUM = 8;
+/** The planner's whole-pool god trait cap; 8 under Forfeit. */
+const HEAVY = 12;
+
+const UNDERWORLD_GODS = ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'];
+const UNDERWORLD_ALT_GODS = ['Poseidon', 'Demeter', 'Hera', 'Ares'];
+const SURFACE_GODS = ['Zeus', 'Hera', 'Demeter', 'Ares'];
+const DREAM_GODS = ['Zeus', 'Apollo', 'Poseidon', 'Hestia'];
+const DREAM_ITINERARY = ['H', 'F', 'N', 'I'];
+
+const recipes: readonly EntryRecipe[] = [
+  {
+    name: 'U1 light Artemis',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_GODS,
+    fieldNpcsByBiome: { F: ['Artemis'] },
+    basket: { godTraits: LIGHT },
+    rackKeepsakeKey: 'DoorHealReserveKeepsake',
+  },
+  {
+    name: 'U2 medium Hermes Hammer Selene',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_ALT_GODS,
+    basket: { godTraits: MEDIUM, hermes: 1, hammer: 1, selene: 1 },
+  },
+  {
+    name: 'U3 heavy Hermes Artemis trait',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_GODS,
+    fieldNpcsByBiome: { F: ['Artemis'] },
+    basket: { godTraits: HEAVY, hermes: 1, npcGiverKey: 'Artemis' },
+  },
+  {
+    name: 'U4 medium Forfeit',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_ALT_GODS,
+    basket: { godTraits: MEDIUM },
+    forfeit: true,
+  },
+  {
+    name: 'U5 medium prefix 1',
+    routeKey: 'Underworld',
+    prefix: 1,
+    godKeys: UNDERWORLD_GODS,
+    basket: { godTraits: MEDIUM },
+  },
+  {
+    name: 'U6 medium Hammer prefix 2',
+    routeKey: 'Underworld',
+    prefix: 2,
+    godKeys: UNDERWORLD_ALT_GODS,
+    fieldNpcsByBiome: { G: ['Artemis'] },
+    basket: { godTraits: MEDIUM, hammer: 1 },
+  },
+  {
+    name: 'S1 light Icarus',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { O: ['Icarus'] },
+    basket: { godTraits: LIGHT },
+    rackKeepsakeKey: 'DoorHealReserveKeepsake',
+  },
+  {
+    name: 'S2 medium Hermes Hammer Selene Heracles',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { N: ['Heracles'] },
+    basket: { godTraits: MEDIUM, hermes: 1, hammer: 1, selene: 1 },
+  },
+  {
+    name: 'S3 heavy Hermes Icarus trait',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { O: ['Icarus'] },
+    basket: { godTraits: HEAVY, hermes: 1, npcGiverKey: 'Icarus' },
+  },
+  {
+    name: 'S4 medium Forfeit prefix 2',
+    routeKey: 'Surface',
+    prefix: 2,
+    godKeys: SURFACE_GODS,
+    basket: { godTraits: MEDIUM },
+    forfeit: true,
+  },
+  {
+    name: 'S5 light prefix 1',
+    routeKey: 'Surface',
+    prefix: 1,
+    godKeys: SURFACE_GODS,
+    basket: { godTraits: LIGHT },
+  },
+  {
+    name: 'S6 medium Artemis N',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { N: ['Artemis'] },
+    basket: { godTraits: MEDIUM },
+  },
+  {
+    name: 'S7 heavy Hermes Artemis trait N',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    fieldNpcsByBiome: { N: ['Artemis'] },
+    basket: { godTraits: HEAVY, hermes: 1, npcGiverKey: 'Artemis' },
+  },
+  {
+    name: 'D1 light',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 4,
+    godKeys: DREAM_GODS,
+    basket: { godTraits: LIGHT },
+    rackKeepsakeKey: 'DoorHealReserveKeepsake',
+  },
+  {
+    name: 'D2 medium Hammer Artemis prefix 2',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 2,
+    godKeys: DREAM_GODS,
+    fieldNpcsByBiome: { F: ['Artemis'] },
+    basket: { godTraits: MEDIUM, hammer: 1 },
+  },
+  {
+    name: 'D3 heavy Hermes Artemis trait',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 4,
+    godKeys: DREAM_GODS,
+    fieldNpcsByBiome: { F: ['Artemis'] },
+    basket: { godTraits: HEAVY, hermes: 1, npcGiverKey: 'Artemis' },
+  },
+  {
+    name: 'D4 medium Forfeit',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 4,
+    godKeys: DREAM_GODS,
+    basket: { godTraits: MEDIUM },
+    forfeit: true,
+  },
+];
+
+function nameSeed(name: string): number {
+  let hash = 2_166_136_261;
+  for (const char of name) hash = Math.imul(hash ^ char.charCodeAt(0), 16_777_619) >>> 0;
+  return hash;
+}
+
+function providerKindsOf(traitKey: string): readonly string[] {
+  return catalog.traitGivers.values
+    .filter((giver) => giver.traitKeys.includes(traitKey))
+    .map((giver) => giver.providerKind);
+}
+
+/** Grows the basket one admitted trait at a time, so each prerequisite precedes its dependants. */
+function buildBasket(
+  recipe: EntryRecipe,
+  base: ProjectDocument,
+  loadout: DraftLoadout,
+  world: DraftWorld,
+): string[] {
+  const rng = createDraftRng(nameSeed(recipe.name));
+  const basket: string[] = [];
+  const spec = (): DraftSpec => ({
+    loadout,
+    world,
+    basketTraitKeys: basket,
+    rackKeepsakeKeys: [],
+  });
+  const add = (count: number, wanted: (traitKey: string) => boolean, label: string) => {
+    for (let added = 0; added < count; added += 1) {
+      const selectable = assessDraftBasket(catalog, base.route, spec()).traits.filter(
+        (trait) => !trait.inBasket && trait.selectable && wanted(trait.traitKey),
+      );
+      const next = shuffleDraft(
+        rng,
+        selectable.map((trait) => trait.traitKey),
+      )[0];
+      if (next === undefined) throw new Error(`${recipe.name}: no admissible ${label} trait`);
+      basket.push(next);
+    }
+  };
+  const godKinds = (key: string) => {
+    const kinds = providerKindsOf(key);
+    return kinds.length > 0 && kinds.every((kind) => kind === 'olympian');
+  };
+  add(recipe.basket.godTraits, godKinds, 'god');
+  add(recipe.basket.hermes ?? 0, (key) => providerKindsOf(key).includes('hermes'), 'Hermes');
+  add(recipe.basket.hammer ?? 0, (key) => providerKindsOf(key).includes('hammer'), 'Hammer');
+  add(recipe.basket.selene ?? 0, (key) => providerKindsOf(key).includes('spell'), 'Selene');
+  const npc = recipe.basket.npcGiverKey;
+  if (npc !== undefined)
+    add(1, (key) => catalog.traitGivers.byKey[npc]?.traitKeys.includes(key) === true, npc);
+  return basket;
+}
+
+function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
+  const base = createProjectDocument(catalog, {
+    projectId: `corpus-${nameSeed(recipe.name)}`,
+    routeKey: recipe.routeKey,
+    ...(recipe.itineraryBiomeKeys === undefined
+      ? {}
+      : { itineraryBiomeKeys: recipe.itineraryBiomeKeys }),
+    configuredBiomeCount: recipe.prefix,
+  });
+  const { startingReward: _startingReward, ...defaults } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const loadout: DraftLoadout = recipe.forfeit
+    ? { ...defaults, fearRanks: { ...defaults.fearRanks, BoonSkipShrineUpgrade: 1 } }
+    : defaults;
+  const options = draftWorldOptions(catalog, base.route);
+  const world: DraftWorld = {
+    godKeys: recipe.godKeys,
+    storyNpcByBiome: Object.fromEntries(
+      options.biomes.flatMap((biome) =>
+        biome.storyNpc === undefined ? [] : [[biome.biomeKey, biome.storyNpc.npcKey]],
+      ),
+    ),
+    fieldNpcsByBiome: recipe.fieldNpcsByBiome ?? {},
+  };
+  const rackSlots = draftKeepsakeOptions(catalog, base.route).rackSlots;
+  const rackKeepsakeKeys = rackSlots.map((slot, index) => {
+    const key = index === 0 ? recipe.rackKeepsakeKey : undefined;
+    if (key !== undefined && !slot.keepsakeKeys.includes(key))
+      throw new Error(`${recipe.name}: ${key} is not a rack option`);
+    return key ?? null;
+  });
+  const spec: DraftSpec = {
+    loadout,
+    world,
+    basketTraitKeys: buildBasket(recipe, base, loadout, world),
+    rackKeepsakeKeys,
+  };
+  const refusals = draftRefusals(catalog, base, spec);
+  if (refusals.length > 0)
+    throw new Error(`${recipe.name} is refused: ${JSON.stringify(refusals)}`);
+  return Object.freeze({ name: recipe.name, base, spec, prefix: recipe.prefix, seeds: SEEDS });
+}
+
+/** One spec of the opt-in draft corpus, which spans all three routes with deterministic seeds. */
+export function draftCorpusEntry(index: number): DraftCorpusEntry {
+  return buildEntry(recipes[index]!);
+}
+
+export const DRAFT_CORPUS_SPEC_COUNT = recipes.length;
+export const DRAFT_CORPUS_RUN_COUNT = recipes.length * SEEDS.length;

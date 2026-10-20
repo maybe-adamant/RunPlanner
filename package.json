@@ -43,6 +43,7 @@
     "test:changed": "vitest run --changed --passWithNoTests && npm run test:performance:changed",
     "test:fixtures:check": "vitest run --config vitest.fixtures.config.ts",
     "test:equivalence": "vitest run --config vitest.equivalence.config.ts",
+    "test:draft-corpus": "vitest run --config vitest.draft-corpus.config.ts",
     "fixtures:execution": "node scripts/regenerate-execution-fixtures.mjs",
     "fixtures:modeled-traits": "node scripts/regenerate-modeled-traits.mjs",
     "fixtures:checkpoints:regenerate": "node scripts/regenerate-authored-checkpoints.mjs",

@@ -301,6 +301,12 @@ broad phase-closure verification:
   with the committed
   `packages/planner-engine/test/equivalence/baseline.json`; `EQUIVALENCE_WRITE=1`
   rewrites the baseline, only for an intended product change.
+- `npm run test:draft-corpus` before and after a Draft change. It drafts a
+  fixed corpus of specs and seeds, prints target, order, purchase, attempt and
+  time aggregates with deltas against the committed
+  `packages/planner-engine/test/draft-corpus/baseline.json`, and fails only on
+  a refusal, a throw or a redrafted seed's changed plan; `DRAFT_CORPUS_WRITE=1`
+  rewrites the baseline.
 
 `npm run test` and `npm run check` remain the complete phase, push, and release
 gates. Run the complete gate for test/configuration changes, shared package
@@ -310,7 +316,7 @@ changes with broad downstream impact, and before declaring a phase closed.
 
 All package and application Vitest files run through the single
 `npm run test:correctness` lane; the performance witness and the opt-in
-equivalence lane are its only excluded files. The repository uses the
+equivalence and draft corpus lanes are its only excluded files. The repository uses the
 calibrated eight-worker setting, 120-second test and hook watchdogs, a
 30-second teardown watchdog, and zero retries. These values detect probable
 hangs; they are not correctness performance budgets. Fixture integrity

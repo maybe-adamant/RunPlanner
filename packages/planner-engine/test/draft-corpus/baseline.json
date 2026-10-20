@@ -1,0 +1,189 @@
+{
+  "U1 light Artemis": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1, "field": 1, "rack": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7741,
+    "msMax": 9682
+  },
+  "U2 medium Hermes Hammer Selene": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "hermes": 1, "hammer": 1, "selene": 1, "story": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 2.5,
+    "purchasesPerRun": {},
+    "attemptsMedian": 5,
+    "msMedian": 9033,
+    "msMax": 10274
+  },
+  "U3 heavy Hermes Artemis trait": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.875, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 3,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 8055,
+    "msMax": 9457
+  },
+  "U4 medium Forfeit": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.813, "story": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 1.5,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7517,
+    "msMax": 9546
+  },
+  "U5 medium prefix 1": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 3,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7298,
+    "msMax": 9585
+  },
+  "U6 medium Hammer prefix 2": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.969, "hammer": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 2.5,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7563,
+    "msMax": 8783
+  },
+  "S1 light Icarus": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1, "field": 1, "rack": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7972,
+    "msMax": 9647
+  },
+  "S2 medium Hermes Hammer Selene Heracles": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "hermes": 1, "hammer": 1, "selene": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 4,
+    "purchasesPerRun": { "hammer": 0.25, "hermes": 0.25 },
+    "attemptsMedian": 4,
+    "msMedian": 7530,
+    "msMax": 11597
+  },
+  "S3 heavy Hermes Icarus trait": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.771, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 3.5,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7594,
+    "msMax": 8678
+  },
+  "S4 medium Forfeit prefix 2": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.813, "story": 1 },
+    "orderInversionRuns": 0.25,
+    "orderInversionsMedian": 0,
+    "purchasesPerRun": {},
+    "attemptsMedian": 5.5,
+    "msMedian": 7124,
+    "msMax": 7917
+  },
+  "S5 light prefix 1": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7260,
+    "msMax": 7704
+  },
+  "S6 medium Artemis N": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.969, "story": 1, "field": 0 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 3.5,
+    "purchasesPerRun": {},
+    "attemptsMedian": 9,
+    "msMedian": 9217,
+    "msMax": 12335
+  },
+  "S7 heavy Hermes Artemis trait N": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.917, "hermes": 1, "npcTrait": 0, "story": 1, "field": 0 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 6,
+    "purchasesPerRun": {},
+    "attemptsMedian": 7,
+    "msMedian": 8501,
+    "msMax": 10605
+  },
+  "D1 light": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1, "rack": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 8073,
+    "msMax": 8667
+  },
+  "D2 medium Hammer Artemis prefix 2": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 1, "hammer": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 2.5,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 7759,
+    "msMax": 8170
+  },
+  "D3 heavy Hermes Artemis trait": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.979, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 6,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 8051,
+    "msMax": 10786
+  },
+  "D4 medium Forfeit": {
+    "runs": 4,
+    "drafted": 1,
+    "targets": { "god": 0.969, "story": 1 },
+    "orderInversionRuns": 1,
+    "orderInversionsMedian": 2,
+    "purchasesPerRun": {},
+    "attemptsMedian": 4,
+    "msMedian": 5343,
+    "msMax": 6449
+  }
+}
