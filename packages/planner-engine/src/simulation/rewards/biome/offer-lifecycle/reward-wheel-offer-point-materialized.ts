@@ -12,8 +12,7 @@ import type {
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
-import { processOfferGenerationCohort, staticCountedOfferExclusion } from '../../offer-generation';
-import { staticRewardOfferExclusion } from '../../offer-exclusions';
+import { explainCohortOfferExclusions, processOfferGenerationCohort } from '../../offer-generation';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import type { FixedAcquisitionRealization } from '../../acquisition/contracts';
@@ -246,6 +245,15 @@ export function applyRewardWheelOfferPointMaterialization(
           .sort((left, right) => left.offerKey.localeCompare(right.offerKey))
           .map((candidate) => candidate.offerKey),
       );
+      const focusedCandidate = () => {
+        const concrete = concreteByKey.get(focused.offerKey);
+        const unresolved = unresolvedByKey.get(focused.offerKey);
+        return concrete !== undefined && offer === concrete.offer
+          ? concrete
+          : unresolved === undefined
+            ? Object.freeze({ ...concrete!, offer })
+            : wheelStateFor(unresolved, offer);
+      };
       const store = catalog.rewards.stores.byKey[wheel.storeKey];
       if (store === undefined)
         throw new BiomeRewardSimulationContractError(`unknown wheel store ${wheel.storeKey}`);
@@ -332,11 +340,17 @@ export function applyRewardWheelOfferPointMaterialization(
         );
         mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
       }
-      const routeKey = frontierBranches[0]?.state.reached.routePosition.routeKey;
-      const fixed =
-        proposals.length > 0 || routeKey === undefined
+      const exclusions =
+        proposals.length > 0
           ? undefined
-          : staticCountedOfferExclusion(catalog, binding, wheel.storeKey, offer, routeKey);
+          : explainCohortOfferExclusions(
+              frontierBranches,
+              contextForWheel(focusedCandidate()),
+              wheel.offers
+                .filter((candidate) => candidate.offerKey !== focused.offerKey)
+                .map(contextForWheel),
+              'unordered',
+            );
       return Object.freeze({
         findings: Object.freeze(
           [...candidateFindings.values()]
@@ -344,7 +358,7 @@ export function applyRewardWheelOfferPointMaterialization(
             .filter((finding) => finding.code !== 'traitOfferMissing'),
         ),
         supported: proposals.length > 0,
-        ...(fixed === undefined ? {} : { exclusions: staticRewardOfferExclusion(fixed) }),
+        ...(exclusions === undefined ? {} : { exclusions }),
       });
     },
   });

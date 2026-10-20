@@ -5,13 +5,10 @@ import { semanticAddressKey, type SemanticAddress } from '../../authored-project
 import {
   applyOfferProjection,
   consumeCountedOffer,
-  countedOfferExclusion,
   countedStoreExhausted,
   oldestSupportedRewardPriority,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
-  ORDINARY_SOURCE_CAP,
-  ordinarySourceGameNames,
   sourceSupportExclusion,
   storeEntryOnRoute,
   type CountedOfferTransitionOptions,
@@ -22,7 +19,6 @@ import {
 } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import { evaluateRequirement } from '../../requirements/evaluator';
-import { requirementEvidence } from '../../requirements/evidence';
 
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import type { FindingEvidence, RewardGenerationFindingCode } from '../model';
@@ -45,6 +41,8 @@ import { withBag } from './branch-primitives';
 import { addRewardFinding, rewardFinding } from './findings';
 import {
   aggregateRewardOfferExclusions,
+  countedBagReason,
+  sourceSupportReason,
   staticRewardOfferExclusion,
   type RewardOfferExclusionEvidence,
   type RewardOfferExclusionReason,
@@ -473,6 +471,39 @@ export function explainRewardOfferExclusions(
 }
 
 /**
+ * Explains a cohort member the existential search rejected: its own cause
+ * alone, or the authored peers it cannot be generated beside.
+ */
+export function explainCohortOfferExclusions(
+  branches: readonly RewardBranchState[],
+  focused: OfferProcessingContext,
+  peers: readonly OfferProcessingContext[],
+  ordering: 'unordered' | 'peersFirst',
+): readonly RewardOfferExclusionEvidence[] | undefined {
+  if (processRewardOffer(branches, focused, new Map()).length === 0)
+    return explainRewardOfferExclusions(branches, focused);
+  const conflicting = peers.filter((peer) => {
+    const afterPeer = processRewardOffer(branches, peer, new Map());
+    // An independently invalid peer is its own repair, not this offer's conflict.
+    if (afterPeer.length === 0) return false;
+    return ordering === 'peersFirst'
+      ? processRewardOffer(afterPeer, focused, new Map()).length === 0
+      : processOfferGenerationCohort(branches, [peer, focused], new Map(), {
+          ordering: 'allOffers',
+        }).length === 0;
+  });
+  const cited = conflicting.length > 0 ? conflicting : peers;
+  return cited.length === 0
+    ? undefined
+    : aggregateRewardOfferExclusions([
+        {
+          kind: 'peerConflict',
+          peers: cited.map((peer) => ({ origin: peer.reward.origin, offer: peer.reward.offer })),
+        },
+      ]);
+}
+
+/**
  * Store membership, route scope and binding filters of a counted offer; they
  * hold for every branch.
  */
@@ -586,11 +617,8 @@ function sourceExclusion(
   context: OfferProcessingContext,
   facts: ReturnType<OfferProcessingContext['facts']>,
 ): RewardOfferExclusionReason | undefined {
-  const { catalog } = context;
   const offer = context.reward.offer;
-  const code = sourceSupportExclusion(catalog.rewards, offer, facts, 'offer');
-  const payload = offer.payload;
-  if (code === undefined)
+  if (sourceSupportExclusion(context.catalog.rewards, offer, facts, 'offer') === undefined)
     return context.peers.length === 0
       ? undefined
       : {
@@ -600,38 +628,7 @@ function sourceExclusion(
             offer: peer,
           })),
         };
-  if (payload === undefined) return undefined;
-  const acquired = facts.requirements.records.lootTypeHistory;
-  if (code === 'devotionSourceNotAcquired')
-    return payload.kind === 'DevotionPair'
-      ? {
-          kind: code,
-          sources: [payload.chosenSource, payload.spurnedSource].filter(
-            (source) => (acquired[source] ?? 0) === 0,
-          ),
-        }
-      : undefined;
-  if (payload.kind !== 'BoonSource') return undefined;
-  const source = payload.source;
-  switch (code) {
-    case 'godCap':
-      return {
-        kind: code,
-        source,
-        acquiredSources: ordinarySourceGameNames(catalog.rewards).filter(
-          (name) => (acquired[name] ?? 0) > 0,
-        ),
-        cap: ORDINARY_SOURCE_CAP,
-      };
-    case 'godRequirement': {
-      const requirement = catalog.rewards.acquisitions.byKey[source]?.lootRequirement;
-      return requirement === undefined
-        ? undefined
-        : { kind: code, source, evaluation: requirementEvidence(requirement, facts.requirements) };
-    }
-    case 'godNotInteracted':
-      return { kind: code, source };
-  }
+  return sourceSupportReason(context.catalog.rewards, offer, facts, 'offer');
 }
 
 function bagExclusion(
@@ -641,39 +638,15 @@ function bagExclusion(
   facts: ReturnType<OfferProcessingContext['facts']>,
   options: CountedOfferTransitionOptions,
 ): RewardOfferExclusionReason | undefined {
-  const offer = context.reward.offer;
-  const storeKey = store.key;
-  const exclusion = countedOfferExclusion(store, bag, offer, facts, options);
-  switch (exclusion?.kind) {
-    case undefined:
-      return undefined;
-    case 'storeExhausted':
-      return {
-        kind: 'storeExhausted',
-        storeKey,
-        fallbackRewardType: context.catalog.rewards.countedStoreFallbackRewardType,
-      };
-    case 'entriesSpent':
-      return { kind: 'entriesSpent', rewardType: offer.rewardType, storeKey };
-    case 'excludedByProducer':
-      return { kind: 'excludedByProducer', rewardType: offer.rewardType };
-    case 'peerConflict':
-      return {
-        kind: 'peerConflict',
-        peers: context.peers
-          .filter((peer) => peer.offer.rewardType === offer.rewardType)
-          .map(({ origin, offer: peer }) => ({ origin, offer: peer })),
-      };
-    case 'entryRequirement':
-      return exclusion.entry.requirement === undefined
-        ? undefined
-        : {
-            kind: 'entryRequirement',
-            rewardType: offer.rewardType,
-            storeKey,
-            evaluation: requirementEvidence(exclusion.entry.requirement, facts.requirements),
-          };
-  }
+  return countedBagReason(
+    context.catalog.rewards,
+    store,
+    bag,
+    context.reward.offer,
+    facts,
+    options,
+    context.peers,
+  );
 }
 
 function forcedRewardFor(

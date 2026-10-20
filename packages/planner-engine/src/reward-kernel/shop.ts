@@ -22,6 +22,67 @@ import type {
 } from './model';
 import { isOfferSupportedAtResolutionPoint, locallyValidRewardOffers } from './support';
 
+/** The first option-level gate that keeps a Shop option from carrying an offer. */
+export type ShopOptionExclusion =
+  'optionMismatch' | 'shopExcluded' | 'shopOptionRequirement' | 'source';
+
+function shopOptionExclusion(
+  catalog: RewardKernelCatalog,
+  option: ShopOptionEntry,
+  authored: AuthoredShopOffer,
+  facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
+  constraints: ShopGenerationConstraints,
+  priorOffers: readonly import('./model').ResolvedRewardOffer[] = [],
+): ShopOptionExclusion | undefined {
+  if (
+    (authored.optionKey !== undefined &&
+      authored.optionKey !== null &&
+      authored.optionKey !== option.key) ||
+    option.rewardType !== authored.offer.rewardType
+  )
+    return 'optionMismatch';
+  if (excludedPurchaseName(option, authored, constraints) !== undefined) return 'shopExcluded';
+  if (unmetShopOptionRequirement(option, facts, additionalOptionRequirements) !== undefined)
+    return 'shopOptionRequirement';
+  return isOfferSupportedAtResolutionPoint(catalog, authored.offer, facts, 'offer', { priorOffers })
+    ? undefined
+    : 'source';
+}
+
+/** The Travel Deal or Echo exclusion that removes this option's purchase. */
+function excludedPurchaseName(
+  option: ShopOptionEntry,
+  authored: AuthoredShopOffer,
+  constraints: ShopGenerationConstraints,
+): string | undefined {
+  const excluded = constraints.excludedPurchaseInteractionNames;
+  if (excluded === undefined) return undefined;
+  if (excluded.has(option.rewardType)) return option.rewardType;
+  const resolvedSource =
+    option.purchaseInteraction.kind === 'resolvedOfferSource' &&
+    authored.offer.payload?.kind === 'BoonSource'
+      ? authored.offer.payload.source
+      : undefined;
+  return resolvedSource !== undefined && excluded.has(resolvedSource) ? resolvedSource : undefined;
+}
+
+function unmetShopOptionRequirement(
+  option: ShopOptionEntry,
+  facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
+): RequirementExpression | undefined {
+  if (
+    option.requirement !== undefined &&
+    !evaluateRequirement(option.requirement, facts.requirements)
+  )
+    return option.requirement;
+  const additional = additionalOptionRequirements[option.key];
+  return additional !== undefined && !evaluateRequirement(additional, facts.requirements)
+    ? additional
+    : undefined;
+}
+
 function optionSupportsOffer(
   catalog: RewardKernelCatalog,
   option: ShopOptionEntry,
@@ -30,25 +91,15 @@ function optionSupportsOffer(
   additionalOptionRequirements: Readonly<Record<string, RequirementExpression>>,
   constraints: ShopGenerationConstraints,
 ): boolean {
-  const additionalRequirement = additionalOptionRequirements[option.key];
-  const excluded = constraints.excludedPurchaseInteractionNames;
-  const resolvedSource =
-    option.purchaseInteraction.kind === 'resolvedOfferSource' &&
-    authored.offer.payload?.kind === 'BoonSource'
-      ? authored.offer.payload.source
-      : undefined;
   return (
-    (authored.optionKey === undefined ||
-      authored.optionKey === null ||
-      authored.optionKey === option.key) &&
-    !excluded?.has(option.rewardType) &&
-    (resolvedSource === undefined || !excluded?.has(resolvedSource)) &&
-    option.rewardType === authored.offer.rewardType &&
-    (option.requirement === undefined ||
-      evaluateRequirement(option.requirement, facts.requirements)) &&
-    (additionalRequirement === undefined ||
-      evaluateRequirement(additionalRequirement, facts.requirements)) &&
-    isOfferSupportedAtResolutionPoint(catalog, authored.offer, facts, 'offer')
+    shopOptionExclusion(
+      catalog,
+      option,
+      authored,
+      facts,
+      additionalOptionRequirements,
+      constraints,
+    ) === undefined
   );
 }
 
@@ -61,25 +112,16 @@ function optionSupportsOfferWithPeers(
   constraints: ShopGenerationConstraints,
   priorOffers: readonly import('./model').ResolvedRewardOffer[],
 ): boolean {
-  const additionalRequirement = additionalOptionRequirements[option.key];
-  const excluded = constraints.excludedPurchaseInteractionNames;
-  const resolvedSource =
-    option.purchaseInteraction.kind === 'resolvedOfferSource' &&
-    authored.offer.payload?.kind === 'BoonSource'
-      ? authored.offer.payload.source
-      : undefined;
   return (
-    (authored.optionKey === undefined ||
-      authored.optionKey === null ||
-      authored.optionKey === option.key) &&
-    !excluded?.has(option.rewardType) &&
-    (resolvedSource === undefined || !excluded?.has(resolvedSource)) &&
-    option.rewardType === authored.offer.rewardType &&
-    (option.requirement === undefined ||
-      evaluateRequirement(option.requirement, facts.requirements)) &&
-    (additionalRequirement === undefined ||
-      evaluateRequirement(additionalRequirement, facts.requirements)) &&
-    isOfferSupportedAtResolutionPoint(catalog, authored.offer, facts, 'offer', { priorOffers })
+    shopOptionExclusion(
+      catalog,
+      option,
+      authored,
+      facts,
+      additionalOptionRequirements,
+      constraints,
+      priorOffers,
+    ) === undefined
   );
 }
 
@@ -626,4 +668,128 @@ export function simulateShopPurchases(
     baseFacts,
     additionalOptionRequirements,
   ).results;
+}
+
+/** Why one indexed Shop slot cannot carry its authored offer. */
+export type ShopSlotExclusion =
+  | { readonly kind: 'notInShop' }
+  /** Another fixed slot of the same group cannot be drawn beside it. */
+  | { readonly kind: 'peerConflict'; readonly slotIndices: readonly number[] }
+  | { readonly kind: 'shopExcluded'; readonly name: string }
+  | {
+      readonly kind: 'shopOptionRequirement';
+      readonly option: ShopOptionEntry;
+      readonly requirement: RequirementExpression;
+    }
+  /** The offer's own source support; the caller explains it. */
+  | { readonly kind: 'source' };
+
+const SHOP_GATE_PROGRESS: readonly ShopOptionExclusion[] = [
+  'optionMismatch',
+  'shopExcluded',
+  'shopOptionRequirement',
+  'source',
+];
+
+/** Static: no option of the slot's group can carry the offer. */
+export function shopSlotStocksOffer(
+  profile: ShopProfileDeclaration,
+  slotIndex: number,
+  authored: AuthoredShopOffer,
+): boolean {
+  const options = shopSlotGroup(profile, slotIndex)?.options.values ?? [];
+  return options.some(
+    (option) =>
+      option.rewardType === authored.offer.rewardType &&
+      (authored.optionKey === undefined ||
+        authored.optionKey === null ||
+        authored.optionKey === option.key),
+  );
+}
+
+function shopSlotGroup(
+  profile: ShopProfileDeclaration,
+  slotIndex: number,
+): ShopGroupDeclaration | undefined {
+  const slot = profile.slots.values[slotIndex];
+  return slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
+}
+
+/**
+ * Explains a slot without generation witnesses: alone it repeats the option
+ * gates; supported alone, the fixed peers it cannot be drawn beside conflict.
+ */
+export function shopSlotExclusion(
+  catalog: RewardKernelCatalog,
+  profile: ShopProfileDeclaration,
+  fixedOffers: readonly (AuthoredShopOffer | null)[],
+  slotIndex: number,
+  facts: RewardKernelFacts,
+  additionalOptionRequirements: Readonly<Record<string, RequirementExpression>> = {},
+  constraints: ShopGenerationConstraints = {},
+): ShopSlotExclusion | undefined {
+  const authored = fixedOffers[slotIndex];
+  const group = shopSlotGroup(profile, slotIndex);
+  if (authored === undefined || authored === null || group === undefined) return undefined;
+  if (!shopSlotStocksOffer(profile, slotIndex, authored)) return { kind: 'notInShop' };
+  const only = (indices: readonly number[]) =>
+    fixedOffers.map((offer, index) => (indices.includes(index) ? offer : null));
+  const witnessed = (indices: readonly number[]) =>
+    findShopPartialAuthoredGenerationWitnesses(
+      catalog,
+      profile,
+      only(indices),
+      facts,
+      additionalOptionRequirements,
+      constraints,
+    ).length > 0;
+  if (witnessed([slotIndex])) {
+    const peers = fixedOffers.flatMap((offer, index) =>
+      offer === null || index === slotIndex ? [] : [index],
+    );
+    const conflicting = peers.filter((index) => !witnessed([index, slotIndex]));
+    return peers.length === 0
+      ? undefined
+      : { kind: 'peerConflict', slotIndices: conflicting.length > 0 ? conflicting : peers };
+  }
+  let furthest:
+    { readonly gate: ShopOptionExclusion; readonly option: ShopOptionEntry } | undefined;
+  for (const option of group.options.values) {
+    const gate = shopOptionExclusion(
+      catalog,
+      option,
+      authored,
+      facts,
+      additionalOptionRequirements,
+      constraints,
+    );
+    // An option that passes alone leaves the failure to group filling.
+    if (gate === undefined) return undefined;
+    if (
+      furthest === undefined ||
+      SHOP_GATE_PROGRESS.indexOf(gate) > SHOP_GATE_PROGRESS.indexOf(furthest.gate)
+    )
+      furthest = { gate, option };
+  }
+  switch (furthest?.gate) {
+    case undefined:
+    case 'optionMismatch':
+      return undefined;
+    case 'shopExcluded': {
+      const name = excludedPurchaseName(furthest.option, authored, constraints);
+      return name === undefined ? undefined : { kind: 'shopExcluded', name };
+    }
+    case 'shopOptionRequirement': {
+      const requirement = unmetShopOptionRequirement(
+        furthest.option,
+        facts,
+        additionalOptionRequirements,
+      );
+      return requirement === undefined
+        ? undefined
+        : { kind: 'shopOptionRequirement', option: furthest.option, requirement };
+    }
+    case 'source':
+      return { kind: 'source' };
+  }
 }

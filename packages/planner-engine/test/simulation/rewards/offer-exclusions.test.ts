@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { createTestArcanaFearState } from '../../support/arcana-fear';
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../../support/arcana-fear';
 import {
+  explainCohortOfferExclusions,
   explainRewardOfferExclusions,
   processRewardOffer,
   staticCountedOfferExclusion,
@@ -25,8 +26,14 @@ import {
 import {
   aggregateRewardOfferExclusions,
   mergeRewardOfferExclusions,
+  sourceSupportReason,
   type RewardOfferExclusionReason,
 } from '../../../src/simulation/rewards/offer-exclusions';
+import {
+  notInShopReason,
+  shopSlotReason,
+  type ShopSlotExclusionInput,
+} from '../../../src/simulation/rewards/shop/slot-exclusions';
 import { createRewardProducerCandidateResult } from '../../../src/simulation/rewards/producer-frontiers';
 import type { RewardBranchState } from '../../../src/simulation/rewards/branch-primitives';
 
@@ -55,7 +62,7 @@ function factsFor(history: RewardHistoryState): RewardKernelFacts {
       currentRoomShopOptionNames: new Set(),
       currentRoomRewardType: undefined,
       currentRoomStructuralTags: [],
-      rewardLookups: {},
+      rewardLookups: { hubRewardLookup: new Set() },
       offeredRewardTypes: new Set<string>(),
       runDepthCache: 8,
       lastEventRunDepthCaches: {},
@@ -64,6 +71,7 @@ function factsFor(history: RewardHistoryState): RewardKernelFacts {
       currentBatchRoomGameNames: [],
       clockwork: undefined,
       flags: { allSpellInvested: false, pendingSpellDrop: false },
+      equippedAspectKey: null,
     },
   };
 }
@@ -85,13 +93,14 @@ function context(
     readonly binding?: CountedRewardBinding | null;
     readonly storeKey?: string;
     readonly peers?: readonly OfferProcessingPeer[];
+    readonly origin?: OfferProcessingContext['reward']['origin'];
   } = {},
 ): OfferProcessingContext {
   const counted = options.binding === null ? undefined : (options.binding ?? binding());
   return {
     catalog,
     reward: {
-      origin,
+      origin: options.origin ?? origin,
       offer,
       producerLifecycleKey: 'RoomReward',
       resolvedStoreKey: options.storeKey ?? 'RunProgress',
@@ -448,6 +457,151 @@ describe('door and local reward offer exclusions', () => {
         storeKey: 'RunProgress',
         allBranches: false,
       },
+    ]);
+  });
+});
+
+describe('cohort reward offer exclusions', () => {
+  const peer = (offer: ResolvedRewardOffer) => context(offer, { origin: peerOrigin });
+
+  it('names the unordered peer an offer supported alone cannot share the cohort with', () => {
+    const duplicate = peer({ rewardType: 'MaxHealthDrop' });
+    expect(
+      explainCohortOfferExclusions(
+        [branch()],
+        context({ rewardType: 'MaxHealthDrop' }),
+        [duplicate, peer({ rewardType: 'StackUpgrade' })],
+        'unordered',
+      ),
+    ).toEqual([
+      {
+        kind: 'peerConflict',
+        peers: [{ origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } }],
+        allBranches: true,
+      },
+    ]);
+  });
+
+  it('names an earlier peer that spent the only eligible entry', () => {
+    expect(
+      explainCohortOfferExclusions(
+        [branch()],
+        context({ rewardType: 'MaxHealthDrop' }),
+        [peer({ rewardType: 'MaxHealthDrop' })],
+        'peersFirst',
+      ),
+    ).toEqual([
+      {
+        kind: 'peerConflict',
+        peers: [{ origin: peerOrigin, offer: { rewardType: 'MaxHealthDrop' } }],
+        allBranches: true,
+      },
+    ]);
+  });
+
+  it("reports the offer's own cause when it fails alone", () => {
+    expect(
+      explainCohortOfferExclusions(
+        [branch()],
+        context({ rewardType: 'MetaCurrencyDrop' }),
+        [peer({ rewardType: 'MaxHealthDrop' })],
+        'unordered',
+      ),
+    ).toEqual([
+      {
+        kind: 'notInStore',
+        rewardType: 'MetaCurrencyDrop',
+        storeKey: 'RunProgress',
+        allBranches: true,
+      },
+    ]);
+  });
+});
+
+describe('acquisition-resolved source exclusions', () => {
+  it('explains a source resolved at its acquisition role', () => {
+    const facts = factsFor({ ...branch().state.rewardHistory, lifetimeGodUseRecord: {} });
+    expect(
+      sourceSupportReason(
+        catalog.rewards,
+        { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
+        facts,
+        { acquisitionRole: 'hiddenSource' },
+      ),
+    ).toMatchObject({ kind: 'godRequirement', source: 'AphroditeUpgrade' });
+  });
+});
+
+describe('Shop slot exclusions', () => {
+  const profile = catalog.rewards.shops.byKey.SurfaceShop!;
+  const facts = factsFor(branch().state.rewardHistory);
+  const input = (
+    offers: readonly (ResolvedRewardOffer | null)[],
+    slotIndex: number,
+    excluded?: ReadonlySet<string>,
+  ): ShopSlotExclusionInput => ({
+    catalog: catalog.rewards,
+    profile,
+    fixedOffers: offers.map((offer) => (offer === null ? null : { optionKey: null, offer })),
+    slotIndex,
+    ...(excluded === undefined
+      ? {}
+      : { constraints: { excludedPurchaseInteractionNames: excluded } }),
+    peerAt: (index) =>
+      offers[index] === null || offers[index] === undefined
+        ? undefined
+        : { origin: peerOrigin, offer: offers[index] },
+  });
+
+  it('names a slot whose group does not stock the offer', () => {
+    expect(notInShopReason(input([null, null, { rewardType: 'Boon' }], 2))).toEqual({
+      kind: 'notInShop',
+      profileKey: 'SurfaceShop',
+      slotIndex: 2,
+    });
+  });
+
+  it('names the same-group slot a without-replacement draw repeats', () => {
+    const health = { rewardType: 'MaxHealthDrop' };
+    expect(shopSlotReason(input([null, health, health], 2), facts)).toEqual({
+      kind: 'peerConflict',
+      peers: [{ origin: peerOrigin, offer: health }],
+    });
+  });
+
+  it('names the purchase Travel Deal excludes from the restock', () => {
+    expect(
+      shopSlotReason(
+        input([null, { rewardType: 'MaxHealthDrop' }, null], 1, new Set(['MaxHealthDrop'])),
+        facts,
+      ),
+    ).toEqual({ kind: 'shopExcluded', name: 'MaxHealthDrop' });
+  });
+
+  it("names a stocked option's unmet requirement", () => {
+    expect(
+      shopSlotReason(input([null, { rewardType: 'TalentDrop' }, null], 1), {
+        requirements: { ...facts.requirements, routeKey: 'FreshFile' },
+      }),
+    ).toMatchObject({
+      kind: 'shopOptionRequirement',
+      optionKey: 'TalentDrop',
+      rewardType: 'TalentDrop',
+      evaluation: { satisfied: false },
+    });
+  });
+});
+
+describe('Shop-only aggregation kinds', () => {
+  it('ranks Contract and Shop exclusions by the fixed gate order', () => {
+    expect(
+      aggregateRewardOfferExclusions([
+        { kind: 'shopExcluded', name: 'MaxHealthDrop' },
+        { kind: 'contractNotEquipped' },
+      ]),
+    ).toEqual([
+      { kind: 'contractNotEquipped', allBranches: false },
+      { kind: 'shopExcluded', name: 'MaxHealthDrop', allBranches: false },
     ]);
   });
 });

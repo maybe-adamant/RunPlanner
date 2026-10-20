@@ -1,6 +1,20 @@
 import type { SemanticAddress } from '../../authored-project/addresses';
-import type { RequirementEvaluationEvidence } from '../../requirements/evidence';
-import type { ResolvedRewardOffer } from '../../reward-kernel';
+import {
+  requirementEvidence,
+  type RequirementEvaluationEvidence,
+} from '../../requirements/evidence';
+import {
+  countedOfferExclusion,
+  ORDINARY_SOURCE_CAP,
+  ordinarySourceGameNames,
+  sourceSupportExclusion,
+  type CountedOfferTransitionOptions,
+  type ResolvedRewardOffer,
+  type RewardBagState,
+  type RewardKernelCatalog,
+  type RewardKernelFacts,
+  type RewardStoreDeclaration,
+} from '../../reward-kernel';
 
 /** Why a producer cannot offer a reward; params only, copy is the application's. */
 export type RewardOfferExclusionReason =
@@ -45,6 +59,18 @@ export type RewardOfferExclusionReason =
       readonly evaluation: RequirementEvaluationEvidence;
     }
   | { readonly kind: 'entriesSpent'; readonly rewardType: string; readonly storeKey: string }
+  /** No option of the Shop slot's group stocks the offer. */
+  | { readonly kind: 'notInShop'; readonly profileKey: string; readonly slotIndex: number }
+  | {
+      readonly kind: 'shopOptionRequirement';
+      readonly optionKey: string;
+      readonly rewardType: string;
+      readonly evaluation: RequirementEvaluationEvidence;
+    }
+  /** Travel Deal or Echo removes this purchase from the restock. */
+  | { readonly kind: 'shopExcluded'; readonly name: string }
+  /** The Infernal Contract item needs its boon equipped. */
+  | { readonly kind: 'contractNotEquipped' }
   /** Both refills found nothing eligible, so only the fallback reward is offered. */
   | {
       readonly kind: 'storeExhausted';
@@ -62,9 +88,12 @@ export type RewardOfferExclusionKind = RewardOfferExclusionReason['kind'];
 /** Tie-break order among equally cited reasons, following the offer gates. */
 const KIND_PRECEDENCE: readonly RewardOfferExclusionKind[] = [
   'notInStore',
+  'notInShop',
   'offRoute',
   'rewardTypeFixed',
   'excludedByProducer',
+  'contractNotEquipped',
+  'shopExcluded',
   'forcedReward',
   'olympianProviderForced',
   'peerConflict',
@@ -73,6 +102,7 @@ const KIND_PRECEDENCE: readonly RewardOfferExclusionKind[] = [
   'godNotInteracted',
   'devotionSourceNotAcquired',
   'priorityRequired',
+  'shopOptionRequirement',
   'entryRequirement',
   'entriesSpent',
   'storeExhausted',
@@ -80,6 +110,7 @@ const KIND_PRECEDENCE: readonly RewardOfferExclusionKind[] = [
 
 const STATIC_KINDS: ReadonlySet<RewardOfferExclusionKind> = new Set([
   'notInStore',
+  'notInShop',
   'offRoute',
   'rewardTypeFixed',
   'excludedByProducer',
@@ -156,4 +187,91 @@ export function mergeRewardOfferExclusions(
     for (const { allBranches, ...reason } of result.exclusions ?? [])
       tally(tallies, reason as RewardOfferExclusionReason, allBranches);
   return ranked(tallies, results.length);
+}
+
+/** God-source reasons for a locally valid offer unsupported without peers. */
+export function sourceSupportReason(
+  catalog: RewardKernelCatalog,
+  offer: ResolvedRewardOffer,
+  facts: RewardKernelFacts,
+  resolution: 'offer' | { readonly acquisitionRole: string },
+): RewardOfferExclusionReason | undefined {
+  const code = sourceSupportExclusion(catalog, offer, facts, resolution);
+  const payload = offer.payload;
+  if (code === undefined || payload === undefined) return undefined;
+  const acquired = facts.requirements.records.lootTypeHistory;
+  if (code === 'devotionSourceNotAcquired')
+    return payload.kind === 'DevotionPair'
+      ? {
+          kind: code,
+          sources: [payload.chosenSource, payload.spurnedSource].filter(
+            (source) => (acquired[source] ?? 0) === 0,
+          ),
+        }
+      : undefined;
+  if (payload.kind !== 'BoonSource') return undefined;
+  const source = payload.source;
+  switch (code) {
+    case 'godCap':
+      return {
+        kind: code,
+        source,
+        acquiredSources: ordinarySourceGameNames(catalog).filter(
+          (name) => (acquired[name] ?? 0) > 0,
+        ),
+        cap: ORDINARY_SOURCE_CAP,
+      };
+    case 'godRequirement': {
+      const requirement = catalog.acquisitions.byKey[source]?.lootRequirement;
+      return requirement === undefined
+        ? undefined
+        : { kind: code, source, evaluation: requirementEvidence(requirement, facts.requirements) };
+    }
+    case 'godNotInteracted':
+      return { kind: code, source };
+  }
+}
+
+/** Counted-bag reasons for an offer with no draw from its store. */
+export function countedBagReason(
+  catalog: RewardKernelCatalog,
+  store: RewardStoreDeclaration,
+  bag: RewardBagState,
+  offer: ResolvedRewardOffer,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions,
+  peers: readonly { readonly origin: SemanticAddress; readonly offer: ResolvedRewardOffer }[],
+): RewardOfferExclusionReason | undefined {
+  const storeKey = store.key;
+  const exclusion = countedOfferExclusion(store, bag, offer, facts, options);
+  switch (exclusion?.kind) {
+    case undefined:
+      return undefined;
+    case 'storeExhausted':
+      return {
+        kind: 'storeExhausted',
+        storeKey,
+        fallbackRewardType: catalog.countedStoreFallbackRewardType,
+      };
+    case 'entriesSpent':
+      return { kind: 'entriesSpent', rewardType: offer.rewardType, storeKey };
+    case 'excludedByProducer':
+      return { kind: 'excludedByProducer', rewardType: offer.rewardType };
+    case 'peerConflict':
+      return {
+        kind: 'peerConflict',
+        peers: peers
+          .filter((peer) => peer.offer.rewardType === offer.rewardType)
+          .map(({ origin, offer: peer }) => ({ origin, offer: peer })),
+      };
+    case 'entryRequirement':
+      return exclusion.entry.requirement === undefined
+        ? undefined
+        : {
+            kind: 'entryRequirement',
+            rewardType: offer.rewardType,
+            storeKey,
+            evaluation: requirementEvidence(exclusion.entry.requirement, facts.requirements),
+          };
+  }
 }

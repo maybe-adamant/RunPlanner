@@ -780,6 +780,24 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     ).toBe('paid');
   });
 
+  it('explains a refill offer Travel Deal excludes or its slot does not stock', () => {
+    const derived = settle({ order: ['MajorNonBoon'], travel: true });
+    const refill = derived.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'travelDealRefill',
+    );
+    if (refill?.evaluateOffer === undefined) throw new Error('missing derived refill frontier');
+    expect(refill.evaluateOffer({ rewardType: 'MaxHealthDrop' })).toEqual({
+      findings: [],
+      supported: false,
+      exclusions: [{ kind: 'shopExcluded', name: 'MaxHealthDrop', allBranches: true }],
+    });
+    expect(refill.evaluateOffer({ rewardType: 'MaxManaDrop' })).toEqual({
+      findings: [],
+      supported: false,
+      exclusions: [{ kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 1, allBranches: true }],
+    });
+  });
+
   it('retains the exact refill frontier when the selected child is stale', () => {
     const staleChild = createUnresolvedAcquisitionRewardState(
       catalog,
