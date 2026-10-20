@@ -151,6 +151,9 @@ function spawnSeaStarDuplicate(
   return state === branch.state ? branch : Object.freeze({ ...branch, state });
 }
 import type { RewardEvent } from '../model';
+import { staticallyExcludedCandidateResult } from '../producer-frontiers';
+
+const ARTIFICER_INELIGIBLE_REWARD_TYPES: ReadonlySet<string> = new Set(['Devotion', 'SpellDrop']);
 
 export function applyProducerRoleHistory(
   catalog: Catalog,
@@ -775,6 +778,22 @@ export function applyProducerRoleHistory(
             artificerReplacementCandidate: Object.freeze({
               rewardTypes: artificerReplacementRewardTypes,
               evaluateOffer: (offer: ResolvedRewardOffer) => {
+                // Artificer redraws from RunProgress without Devotion or Selene.
+                if (ARTIFICER_INELIGIBLE_REWARD_TYPES.has(offer.rewardType))
+                  return staticallyExcludedCandidateResult({
+                    kind: 'excludedByProducer',
+                    rewardType: offer.rewardType,
+                  });
+                if (
+                  catalog.rewards.stores.byKey.RunProgress?.entries.some(
+                    (entry) => entry.rewardType === offer.rewardType,
+                  ) !== true
+                )
+                  return staticallyExcludedCandidateResult({
+                    kind: 'notInStore',
+                    rewardType: offer.rewardType,
+                    storeKey: 'RunProgress',
+                  });
                 const supported = branches.every((branch) => {
                   const artificer = assessArtificerConversion(
                     catalog,
@@ -793,7 +812,7 @@ export function applyProducerRoleHistory(
                         prepared.bag,
                         offer,
                         facts(prepared.branch.state),
-                        { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
+                        { ineligibleRewardTypes: ARTIFICER_INELIGIBLE_REWARD_TYPES },
                       ).length > 0
                     );
                   } catch {

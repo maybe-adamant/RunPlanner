@@ -23,7 +23,11 @@ import {
 import { initializeRewardBranches } from '../rewards/branch-lifecycle';
 import { createArcanaFearState } from '../arcana-fear';
 import { createRouteStartRewardFacts } from '../rewards/facts';
-import { processRewardOffer } from '../rewards/offer-generation';
+import {
+  explainRewardOfferExclusions,
+  processRewardOffer,
+  type OfferProcessingContext,
+} from '../rewards/offer-generation';
 import {
   coverageUnavailable,
   producerUnavailable,
@@ -121,26 +125,25 @@ export function createStartingRewardCandidateCapability(
   return Object.freeze({
     evaluateOffer: (offer: ResolvedRewardOffer) => {
       const findings = new Map();
-      const evaluated = processRewardOffer(
-        branches,
-        {
-          catalog,
-          reward: Object.freeze({
-            origin: reward,
-            offer,
-            producerLifecycleKey: binding.producerLifecycleKey,
-            ...(binding.storeKeys[0] === undefined
-              ? {}
-              : { resolvedStoreKey: binding.storeKeys[0] }),
-          }),
-          binding,
-          historySequence: 0,
-          peers: Object.freeze([]),
-          facts: (state) => createRouteStartRewardFacts(catalog, reward, state),
-        },
+      const context: OfferProcessingContext = {
+        catalog,
+        reward: Object.freeze({
+          origin: reward,
+          offer,
+          producerLifecycleKey: binding.producerLifecycleKey,
+          ...(binding.storeKeys[0] === undefined ? {} : { resolvedStoreKey: binding.storeKeys[0] }),
+        }),
+        binding,
+        historySequence: 0,
+        peers: Object.freeze([]),
+        facts: (state) => createRouteStartRewardFacts(catalog, reward, state),
+      };
+      const evaluated = processRewardOffer(branches, context, findings);
+      return createRewardProducerCandidateResult(
         findings,
+        evaluated,
+        evaluated.length === 0 ? explainRewardOfferExclusions(branches, context) : undefined,
       );
-      return createRewardProducerCandidateResult(findings, evaluated);
     },
   });
 }

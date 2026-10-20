@@ -9,7 +9,12 @@ import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
-import { processRewardOffer, type OfferProcessingPeer } from '../../offer-generation';
+import {
+  explainRewardOfferExclusions,
+  processRewardOffer,
+  type OfferProcessingContext,
+  type OfferProcessingPeer,
+} from '../../offer-generation';
 import { localRewardBinding } from '../room-reward-bindings';
 import {
   createRewardProducerCandidateResult,
@@ -200,7 +205,13 @@ export function generateLocalRewards(
             );
             mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
           }
-          return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+          return createRewardProducerCandidateResult(
+            candidateFindings,
+            candidateBranches,
+            candidateBranches.length === 0
+              ? explainRewardOfferExclusions(frontierBranches, candidateContext)
+              : undefined,
+          );
         },
       }),
     );
@@ -267,26 +278,27 @@ export function generateLocalRewards(
             }),
           });
           const candidateFindings = new Map<string, FindingRegionEntry>();
+          const candidateContext: OfferProcessingContext = Object.freeze({
+            catalog,
+            reward: candidate,
+            binding: localRewardBinding(context.declaration, candidate),
+            historySequence: event.sequence,
+            peers,
+            facts: (state: SimulationState) =>
+              createBiomeRewardFacts({
+                catalog,
+                state,
+                source: context.source,
+                currentRoom: context.currentRoom,
+                sourceDeclaration: context.sourceDeclaration,
+                view: context.generationView!,
+                currentRoomShopOptionNames: context.currentShopNames,
+                hubBoardLookups: 'notConsulted',
+              }),
+          });
           const candidateBranches = processRewardOffer(
             frontierBranches,
-            Object.freeze({
-              catalog,
-              reward: candidate,
-              binding: localRewardBinding(context.declaration, candidate),
-              historySequence: event.sequence,
-              peers,
-              facts: (state: SimulationState) =>
-                createBiomeRewardFacts({
-                  catalog,
-                  state,
-                  source: context.source,
-                  currentRoom: context.currentRoom,
-                  sourceDeclaration: context.sourceDeclaration,
-                  view: context.generationView!,
-                  currentRoomShopOptionNames: context.currentShopNames,
-                  hubBoardLookups: 'notConsulted',
-                }),
-            }),
+            candidateContext,
             candidateFindings,
           );
           if (
@@ -327,6 +339,10 @@ export function generateLocalRewards(
             );
             mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
           }
+          const exclusions =
+            candidateBranches.length === 0
+              ? explainRewardOfferExclusions(frontierBranches, candidateContext)
+              : undefined;
           return Object.freeze({
             findings: Object.freeze(
               [...candidateFindings.values()]
@@ -334,6 +350,7 @@ export function generateLocalRewards(
                 .filter((finding) => finding.code !== 'traitOfferMissing'),
             ),
             supported: candidateBranches.length > 0,
+            ...(exclusions === undefined ? {} : { exclusions }),
           });
         },
       }),

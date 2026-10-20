@@ -123,18 +123,41 @@ export function eligibleOrdinarySourceGameNames(
   );
 }
 
+/** The first source-support gate that rejects a locally valid god offer. */
+export type SourceSupportExclusion =
+  'godCap' | 'godRequirement' | 'godNotInteracted' | 'devotionSourceNotAcquired';
+
+function acquiredOrdinarySources(
+  ordinarySources: readonly string[],
+  facts: RewardKernelFacts,
+): ReadonlySet<string> {
+  const acquired = facts.requirements.records.lootTypeHistory;
+  return new Set(ordinarySources.filter((source) => (acquired[source] ?? 0) > 0));
+}
+
+/** `GetEligibleLootNames` caps the pool first, then applies each god's loot requirement. */
+function ordinaryBaseExclusion(
+  catalog: RewardKernelCatalog,
+  source: string,
+  acquiredSources: ReadonlySet<string>,
+  facts: RewardKernelFacts,
+): 'godCap' | 'godRequirement' | undefined {
+  if (acquiredSources.size >= ORDINARY_SOURCE_CAP && !acquiredSources.has(source)) return 'godCap';
+  return sourceRequirementMet(catalog, source, facts) ? undefined : 'godRequirement';
+}
+
 function ordinaryBaseSupport(
   catalog: RewardKernelCatalog,
   rewardType: RewardTypeDeclaration,
   facts: RewardKernelFacts,
 ): ReadonlySet<string> {
   const ordinarySources = sourceDomainValues(catalog, rewardType);
-  const acquired = facts.requirements.records.lootTypeHistory;
-  const acquiredSources = new Set(ordinarySources.filter((source) => (acquired[source] ?? 0) > 0));
-  const capped =
-    acquiredSources.size >= ORDINARY_SOURCE_CAP ? acquiredSources : new Set(ordinarySources);
-  // `GetEligibleLootNames` applies each god's loot requirement after the cap.
-  return new Set([...capped].filter((source) => sourceRequirementMet(catalog, source, facts)));
+  const acquiredSources = acquiredOrdinarySources(ordinarySources, facts);
+  return new Set(
+    ordinarySources.filter(
+      (source) => ordinaryBaseExclusion(catalog, source, acquiredSources, facts) === undefined,
+    ),
+  );
 }
 
 function ordinaryPeerSupport(
@@ -144,8 +167,7 @@ function ordinaryPeerSupport(
   peers: RewardPeerContext,
 ): ReadonlySet<string> {
   const ordinarySources = sourceDomainValues(catalog, rewardType);
-  const acquired = facts.requirements.records.lootTypeHistory;
-  const acquiredSources = new Set(ordinarySources.filter((source) => (acquired[source] ?? 0) > 0));
+  const acquiredSources = acquiredOrdinarySources(ordinarySources, facts);
   const priorSources = new Set<string>();
   for (const offer of peers.priorOffers) {
     if (
@@ -199,6 +221,32 @@ function devotionSupport(
         spurnedSource,
       })),
   );
+}
+
+/**
+ * Why a locally valid offer's source is unsupported without peers, or
+ * undefined when it is supported; peer exclusions are the caller's contrast.
+ */
+export function sourceSupportExclusion(
+  catalog: RewardKernelCatalog,
+  offer: ResolvedRewardOffer,
+  facts: RewardKernelFacts,
+  resolution: 'offer' | { readonly acquisitionRole: string },
+): SourceSupportExclusion | undefined {
+  if (isOfferSupportedAtResolutionPoint(catalog, offer, facts, resolution)) return undefined;
+  const rewardType = catalog.rewardTypes.byKey[offer.rewardType];
+  const payload = offer.payload;
+  if (rewardType === undefined || payload === undefined) return undefined;
+  if (payload.kind === 'DevotionPair') return 'devotionSourceNotAcquired';
+  const ordinarySources = sourceDomainValues(catalog, rewardType);
+  const base = ordinaryBaseExclusion(
+    catalog,
+    payload.source,
+    acquiredOrdinarySources(ordinarySources, facts),
+    facts,
+  );
+  if (base !== undefined) return base;
+  return rewardType.sourceSupport === 'ordinaryInteracted' ? 'godNotInteracted' : undefined;
 }
 
 export function supportedPayloads(

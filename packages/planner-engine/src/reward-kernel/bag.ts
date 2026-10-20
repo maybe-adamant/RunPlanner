@@ -46,6 +46,33 @@ export function insertExactPriorityIntoBag(
   return refill(store, state, routeKey);
 }
 
+/** The first entry-level gate that keeps a counted store entry from being drawn. */
+export type CountedEntryExclusion = 'excludedByProducer' | 'peerConflict' | 'entryRequirement';
+
+function countedEntryExclusion(
+  entry: RewardStoreEntry,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions,
+): CountedEntryExclusion | undefined {
+  if (
+    (options.eligibleRewardTypes !== undefined &&
+      !options.eligibleRewardTypes.has(entry.rewardType)) ||
+    options.ineligibleRewardTypes?.has(entry.rewardType) === true
+  ) {
+    return 'excludedByProducer';
+  }
+  if (
+    !entry.allowDuplicates &&
+    options.peers?.priorOffers.some((peer) => peer.rewardType === entry.rewardType) === true
+  ) {
+    return 'peerConflict';
+  }
+  return entry.requirement === undefined ||
+    evaluateRequirement(entry.requirement, facts.requirements)
+    ? undefined
+    : 'entryRequirement';
+}
+
 function entryIsEligible(
   store: RewardStoreDeclaration,
   entryIndex: number,
@@ -53,27 +80,7 @@ function entryIsEligible(
   options: CountedOfferTransitionOptions,
 ): boolean {
   const entry = store.entries[entryIndex];
-  if (entry === undefined) {
-    return false;
-  }
-  if (
-    options.eligibleRewardTypes !== undefined &&
-    !options.eligibleRewardTypes.has(entry.rewardType)
-  ) {
-    return false;
-  }
-  if (options.ineligibleRewardTypes?.has(entry.rewardType) === true) {
-    return false;
-  }
-  if (
-    !entry.allowDuplicates &&
-    options.peers?.priorOffers.some((peer) => peer.rewardType === entry.rewardType) === true
-  ) {
-    return false;
-  }
-  return (
-    entry.requirement === undefined || evaluateRequirement(entry.requirement, facts.requirements)
-  );
+  return entry !== undefined && countedEntryExclusion(entry, facts, options) === undefined;
 }
 
 function eligibleIndexes(
@@ -211,4 +218,38 @@ export function consumeCountedOffer(
     unique.set(bagSemanticKey(store, next), next);
   }
   return [...unique.values()];
+}
+
+/** Why a counted offer has no draw while its store still has eligible entries. */
+export type CountedOfferExclusion =
+  | { readonly kind: 'entriesSpent' }
+  | { readonly kind: 'storeExhausted' }
+  | { readonly kind: CountedEntryExclusion; readonly entry: RewardStoreEntry };
+
+/**
+ * Explains an empty `consumeCountedOffer` by the first gate of the offer's own
+ * entries; an unspent entry's gate outranks a spent one.
+ */
+export function countedOfferExclusion(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  offer: ResolvedRewardOffer,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions = {},
+): CountedOfferExclusion | undefined {
+  const { bag, eligible } = refilledFrontier(store, state, facts, options);
+  if (eligible.length === 0) return Object.freeze({ kind: 'storeExhausted' });
+  let first: CountedOfferExclusion | undefined;
+  for (const [index, entry] of store.entries.entries()) {
+    if (entry.rewardType !== offer.rewardType) continue;
+    if ((bag.remainingEntryCounts[index] ?? 0) <= 0) {
+      first ??= Object.freeze({ kind: 'entriesSpent' });
+      continue;
+    }
+    const kind = countedEntryExclusion(entry, facts, options);
+    if (kind === undefined) return undefined;
+    if (first === undefined || first.kind === 'entriesSpent')
+      first = Object.freeze({ kind, entry });
+  }
+  return first;
 }

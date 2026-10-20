@@ -1,6 +1,7 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import { directEncounterDefinitionKeyForSlot } from '../../authored-project/room-state/encounter-envelope';
 import type { RequirementEvaluationContext } from '../../requirements/evaluator';
+import { requirementEvidence } from '../../requirements/evidence';
 import {
   createBiomeAddress,
   createTargetAddress,
@@ -44,7 +45,6 @@ import {
   generationDecisions,
   generationRooms,
   projectRoomGenerationRequirementContext,
-  requirementEvidence,
   roomGenerationCounts,
   sourceGenerationSupport,
   stagedCandidatePool,

@@ -220,6 +220,18 @@ function requirementMessages(
       return [
         `The Clockwork non-goal capacity is exhausted (${evidence.acquired}/${evidence.maximum}).`,
       ];
+    case 'encounterKeyCount':
+    case 'encounterCompletionCount':
+    case 'previousRoomEncounterKeyCount':
+    case 'notInCurrentRoomShopOptions':
+    case 'offeredRewardExcludes':
+    case 'rewardLookupExcludes':
+    case 'minRoomsSinceEvent':
+    case 'currentRoomRewardExcludes':
+    case 'currentRoomStructuralTagsInclude':
+    case 'flagEquals':
+    case 'equippedAspectEquals':
+      return [];
   }
 }
 

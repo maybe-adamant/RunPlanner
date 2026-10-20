@@ -28,7 +28,6 @@ export type {
   RoomTargetCandidateContext,
   RoomTargetCandidateValidation,
   TakeoverPrebossBatchCandidateSupport,
-  RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
   RoomGenerationExclusionReason,
   SideRoomGenerationOutcome,
