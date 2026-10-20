@@ -19,7 +19,10 @@ import {
   encodeExecutionPlan,
   ExecutionPlanCodecError,
   type ExecutionPlan,
+  type ExecutionHubDepartureConformance,
+  type ExecutionRunStateDiagnostic,
 } from '@run-planner/engine/execution-plan';
+import { fingerprint } from '../../src/execution-plan/fingerprint';
 import { hubVisitActions, legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
@@ -30,6 +33,8 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNPhialIntermediateFountainCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import phialFountainFixture from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
+import surfaceNFixture from './fixtures/surface-n.execution.json';
+import underworldFghFixture from './fixtures/underworld-fgh.execution.json';
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
 import { migrateProjectDocument as migrateProject89To90 } from '../../../../schema/migrate-project-89-to-90.js';
@@ -378,5 +383,119 @@ describe('Hub departure conformance', () => {
       departureConformance: (published.departures as unknown[])[0],
     };
     expect(() => decodeExecutionPlan(wire)).toThrow(ExecutionPlanCodecError);
+  });
+});
+
+/** A frame's state families, without its owner and checkpoint labels. */
+function families(frame: ExecutionRunStateDiagnostic | undefined) {
+  if (frame === undefined) throw new Error('frame required');
+  const { owner, checkpoint, ...rest } = frame;
+  void owner;
+  void checkpoint;
+  return rest;
+}
+
+function occurrence(value: ExecutionPlan, id: string) {
+  const index = value.occurrences.findIndex((entry) => entry.id === id);
+  if (index < 0) throw new Error(`${id} is not published`);
+  return { entry: value.occurrences[index]!, previous: value.occurrences[index - 1]! };
+}
+
+/** The plan with each Hub departure rewritten and its fingerprint refreshed. */
+function withDepartures(
+  value: ExecutionPlan,
+  rewrite: (departure: ExecutionHubDepartureConformance) => ExecutionHubDepartureConformance,
+) {
+  const { planFingerprint, ...body } = value;
+  void planFingerprint;
+  const modified = {
+    ...body,
+    occurrences: body.occurrences.map((entry) =>
+      entry.overview.hub === undefined
+        ? entry
+        : {
+            ...entry,
+            overview: {
+              ...entry.overview,
+              hub: {
+                ...entry.overview.hub,
+                departures: entry.overview.hub.departures.map(rewrite),
+              },
+            },
+          },
+    ),
+  };
+  return { ...modified, planFingerprint: fingerprint(modified) };
+}
+
+describe('Hub departure frame', () => {
+  it('publishes one exit frame per departure, equal to the next room entry without its own effects', () => {
+    // These routes have no departure or entry effects at the rooms the Hub leads into.
+    for (const fixture of [surfaceNFixture, phialFountainFixture]) {
+      const decoded = decodeExecutionPlan(fixture);
+      publishedHub(decoded).departures.forEach((departure, index) => {
+        expect(departure.beforeRoomExit?.owner).toBe(semanticAddressKey(hub));
+        expect(departure.beforeRoomExit?.checkpoint).toBe('beforeRoomExit');
+        expect(families(departure.beforeRoomExit)).toEqual(
+          families(occurrence(decoded, nextRooms[index]!).entry.diagnostics?.roomEntered),
+        );
+      });
+    }
+  });
+
+  it("carries the board's reward draws on the first departure", () => {
+    const decoded = decodeExecutionPlan(surfaceNFixture);
+    const first = publishedHub(decoded).departures[0]!.beforeRoomExit!;
+    const carrierExit = occurrence(decoded, nextRooms[0]!).previous.diagnostics?.beforeRoomExit;
+    expect(first.rewardStores).not.toEqual(carrierExit?.rewardStores);
+  });
+
+  it('carries the consumed Aromatic Phial from the fountain departure onward', () => {
+    const decoded = decodeExecutionPlan(phialFountainFixture);
+    const departures = publishedHub(decoded).departures;
+    const atFountain = departures[phialFountainPrecedingVisits]!.beforeRoomExit!;
+    const beforeFountain = departures[phialFountainPrecedingVisits - 1]!.beforeRoomExit!;
+    const roomExit = occurrence(decoded, nextRooms[phialFountainPrecedingVisits]!).previous
+      .diagnostics?.beforeRoomExit;
+    expect(beforeFountain.retainedEffects.keepsakes.phial).toEqual(
+      roomExit?.retainedEffects.keepsakes.phial,
+    );
+    expect(atFountain.retainedEffects.keepsakes.phial).not.toEqual(
+      roomExit?.retainedEffects.keepsakes.phial,
+    );
+    expect(
+      atFountain.traits.equipped.find((trait) => trait.traitKey === phialFountainTargetTraitKey)
+        ?.rarity,
+    ).toBe('Heroic');
+    expect(
+      roomExit?.traits.equipped.find((trait) => trait.traitKey === phialFountainTargetTraitKey)
+        ?.rarity,
+    ).toBe('Common');
+  });
+
+  it('publishes no Hub frame without Ephyra', () => {
+    const decoded = decodeExecutionPlan(underworldFghFixture);
+    expect(decoded.occurrences.some((entry) => entry.overview.hub !== undefined)).toBe(false);
+  });
+
+  it('decodes a plan whose departures lack the frame', () => {
+    const decoded = decodeExecutionPlan(
+      withDepartures(decodeExecutionPlan(surfaceNFixture), (departure) => {
+        const { beforeRoomExit, ...rest } = departure;
+        void beforeRoomExit;
+        return rest;
+      }),
+    );
+    const departures = publishedHub(decoded).departures;
+    expect(departures).toHaveLength(7);
+    expect(departures.every((departure) => departure.beforeRoomExit === undefined)).toBe(true);
+  });
+
+  it('rejects a malformed departure frame', () => {
+    const malformed = withDepartures(decodeExecutionPlan(surfaceNFixture), (departure) => ({
+      ...departure,
+      beforeRoomExit: { ...departure.beforeRoomExit!, checkpoint: 'hub' as 'beforeRoomExit' },
+    }));
+    expect(() => decodeExecutionPlan(malformed)).toThrow(/beforeRoomExit\.checkpoint/);
   });
 });

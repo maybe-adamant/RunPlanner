@@ -604,6 +604,8 @@ export interface ExecutionHubDepartureConformance {
   readonly precedingVisitCount: number;
   readonly facts: readonly { readonly kind: 'traitInventory' }[];
   readonly traits: { readonly equipped: ExecutionRunStateDiagnostic['traits']['equipped'] };
+  /** The full Run State on leaving the Hub, after its board draws and fountain use. */
+  readonly beforeRoomExit?: ExecutionRunStateDiagnostic;
 }
 
 export interface ExecutionOverview {

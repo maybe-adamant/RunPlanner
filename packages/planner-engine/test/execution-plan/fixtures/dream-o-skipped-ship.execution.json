@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 97,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "dream-o-skipped-ship",
   "routeKey": "Dream",
   "startingLoadout": {
@@ -1491,5 +1491,5 @@
       }
     }
   ],
-  "planFingerprint": "d44372df"
+  "planFingerprint": "4032d288"
 }

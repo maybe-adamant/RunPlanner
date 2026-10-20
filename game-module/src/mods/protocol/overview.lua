@@ -442,7 +442,7 @@ end
 
 -- Expected modeled trait inventory at one ordered Hub departure.
 local function hubDepartureConformance(value, label)
-    local record, errorMessage = p.exact(value, { "precedingVisitCount", "facts", "traits" }, {}, label)
+    local record, errorMessage = p.exact(value, { "precedingVisitCount", "facts", "traits" }, { "beforeRoomExit" }, label)
     if not record then return nil, errorMessage end
     local _, countError = p.int(record.precedingVisitCount, label .. ".precedingVisitCount", 0)
     if countError then return nil, countError end

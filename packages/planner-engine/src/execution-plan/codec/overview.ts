@@ -16,7 +16,7 @@ import type {
   ExecutionHubDepartureConformance,
   ExecutionHubFountainUse,
 } from '../model';
-import { equippedTraits } from './diagnostics';
+import { equippedTraits, runState } from './diagnostics';
 import { generatedEncounter } from './generated-encounter';
 
 /** A present native-roll exclusion list is non-empty and distinct. */
@@ -234,7 +234,7 @@ function hubDepartures(
 
 function hubDepartureConformance(value: unknown, label: string): ExecutionHubDepartureConformance {
   const record = object(value, label);
-  exact(record, ['precedingVisitCount', 'facts', 'traits'], [], label);
+  exact(record, ['precedingVisitCount', 'facts', 'traits'], ['beforeRoomExit'], label);
   const precedingVisitCount = integer(record.precedingVisitCount, `${label}.precedingVisitCount`);
   const facts = array(record.facts, `${label}.facts`).map((entry, index) => {
     const fact = object(entry, `${label}.facts[${index}]`);
@@ -252,6 +252,9 @@ function hubDepartureConformance(value: unknown, label: string): ExecutionHubDep
     precedingVisitCount,
     facts: Object.freeze(facts),
     traits: Object.freeze({ equipped: Object.freeze(equipped) }),
+    ...(record.beforeRoomExit === undefined
+      ? {}
+      : { beforeRoomExit: runState(record.beforeRoomExit, `${label}.beforeRoomExit`) }),
   });
 }
 
