@@ -467,6 +467,43 @@ Hub visit candidates.
 The application may aggregate complete offer results into reward-type,
 Boon-source, and Devotion-source steps. It does not implement reward support.
 
+### Offer exclusions
+
+An unsupported reward-offer result carries `exclusions`, the engine's typed
+answer to why the offer is impossible; a supported result never has them. Each
+reason is a closed kind with typed params (store, reward type, god, Shop slot or
+option, peer origins, requirement evidence) and no copy; the application words
+it. Every reward-offer capability (door, local, wheel, Shop, Fields cohort,
+acquisition entry, Artificer, Echo and Travel Deal derivations, starting reward)
+publishes the same product:
+
+- **First failing gate per branch.** Each reached branch contributes only the
+  first gate that rejects the offer, in the boolean path's own gate order.
+  Later gates are not evaluated, and an unexplained branch still counts as
+  reached.
+- **Static causes.** A cause that cannot depend on rolls (not in the store or
+  Shop slot, a reward type the producer fixes or filters out, off the route, an
+  Echo replay's fixed offer) is the whole answer only when every branch cites
+  it. A static kind cited by only some branches is dropped rather than worded
+  as roll-dependent.
+- **Aggregation.** Reasons are de-duplicated by their identifying params; the
+  first citation's branch-local params (counts, acquired sources, requirement
+  evidence) stand for the group. They are ranked by how many branches cite them,
+  ties broken by a fixed kind precedence following the gate order, and capped
+  at two. `allBranches` marks a reason held in every reached branch.
+- **Peers.** Wheel and Shop offers are first assessed alone against the
+  frontier: a cause alone is reported as such, and only an offer supported
+  alone reports the authored peers it cannot be generated beside, so the
+  existential search is unchanged.
+- **Cohorts.** A capability that requires every cohort merges their reasons;
+  a supported cohort cites nothing, so no merged reason holds in all branches.
+- **Cost.** The explanation runs only on the failure path, after the unchanged
+  boolean decision; supported offers pay nothing.
+
+Selected-plan findings do not carry these exclusions. Attaching them to the
+reward-offer findings' evidence moves the `simulateProject` digest, so that
+refinement is deferred.
+
 ## Replay Horizons
 
 Each candidate family has an explicit semantic horizon:

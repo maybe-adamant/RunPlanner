@@ -628,7 +628,14 @@ implementation, expresses the distinction.
 A Devotion offer selects two distinct sources from ordinary god loot already
 present in `CurrentRun.LootTypeHistory`. Supported Devotion producers require at
 least two acquired ordinary sources, so the raw fallback to a new eligible god
-is unreachable under the selected baseline. The selection does not apply
+is unreachable under the selected baseline. The `RunProgress` Devotion entry
+counts them with `CountOf` over `LootTypeHistory` (`LootData.lua` Devotion
+entry; `RequirementsLogic.lua`), which counts distinct present keys, not
+pickups: the entry needs boons from two distinct Olympians other than Ares. The
+planner declares it as `distinctRecordKeyCount`. The game's `SumOf` is a total
+instead; `H_Bridge01` and `H_PreBoss01` use it and keep `recordCount`, and the
+remaining 29 `recordCount` declarations were verified against their game
+counters. The selection does not apply
 ordinary same-batch peer exclusion or re-run the four-source cap over that
 already-acquired set. The normalized policy is `devotionAcquiredPair`, resolved
 at offer generation.

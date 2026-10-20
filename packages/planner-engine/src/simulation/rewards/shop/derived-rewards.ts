@@ -305,7 +305,7 @@ export function materializeShopGold(input: {
                   ? Object.freeze({ findings: Object.freeze([]), supported: true })
                   : staticallyExcludedCandidateResult(
                       candidateOffer.rewardType === sourceOffer.offer.rewardType
-                        ? { kind: 'excludedByProducer', rewardType: candidateOffer.rewardType }
+                        ? { kind: 'replayFixed', offer: sourceOffer.offer }
                         : { kind: 'rewardTypeFixed', rewardType: sourceOffer.offer.rewardType },
                     ),
             }

@@ -502,7 +502,9 @@ Aggregated diagnostic ranges are not authorization to merge semantic states.
 ## Findings and Repair
 
 Every finding is a simulation blocker; there is no severity. A finding
-carries a stable semantic origin, code and typed evidence.
+carries a stable semantic origin, code and typed evidence. Why a reward-offer
+candidate is impossible is a candidate product, not a finding: see
+[Offer exclusions](CANDIDATE_EVALUATION_MODEL.md#offer-exclusions).
 Instance identity belongs in the address, not the code. Messages and display
 labels are application products. An actual lifecycle action block retains each
 matching dependency or window violation as invalid ordering; a missing required

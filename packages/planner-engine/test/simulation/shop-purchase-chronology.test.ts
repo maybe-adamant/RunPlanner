@@ -587,6 +587,25 @@ describe('Gold Gold Gold Shop pickups', () => {
     expect(withheld.entriesAt(address.site)).toEqual([]);
   });
 
+  it('explains a duplicate offer that differs from the Echo Gold source', () => {
+    const reward = shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon');
+    const frontier = echoGoldShop(['Boon'], {
+      includeDuplicate: true,
+      rewardOverrides: { Boon: reward },
+    }).settlement.derivedEntryFrontiers?.find((entry) => entry.kind === 'echoDoubleShopReward');
+    if (frontier?.evaluateOffer === undefined) throw new Error('missing Echo Gold capability');
+    expect(
+      frontier.evaluateOffer({
+        rewardType: reward.offer.rewardType,
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      }),
+    ).toEqual({
+      findings: [],
+      supported: false,
+      exclusions: [{ kind: 'replayFixed', offer: reward.offer, allBranches: true }],
+    });
+  });
+
   it('copies ordinary Gold source identity while leaving fresh children unresolved', () => {
     const boon = echoGoldShop(['Boon'], {
       rewardOverrides: { Boon: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon') },

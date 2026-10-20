@@ -788,6 +788,8 @@ describe('contextual option projection', () => {
           everywhere({
             kind: 'devotionSourceNotAcquired',
             sources: ['ZeusUpgrade', 'HeraUpgrade'],
+            acquiredSources: [],
+            required: 2,
           }),
           everywhere({
             kind: 'entriesSpent',
@@ -821,13 +823,50 @@ describe('contextual option projection', () => {
         'This reward conflicts with the offer on Shop slot 2.',
         'This run already has 2 gods: Apollo and Hera.',
         'The Shop offers only gods already picked up on this save file.',
-        'Requires a boon from Zeus and Hera earlier this run.',
+        'Requires boons from Zeus and Hera earlier this run.',
         'The Major Reward pool has no Max Health left.',
         'This reward pool has no Max Health left.',
         'The restock leaves out Max Health.',
         'Requires Champion of Elysium equipped.',
         'The Major Reward pool is exhausted, so only Max Health is offered.',
         'Appears from the second biome on.',
+      ]);
+    });
+
+    it('names Echo replays, forced Olympian providers, god requirements and one missing god', () => {
+      const domain = catalog.rewards.payloadDomains.byKey.BoonSource;
+      if (domain?.kind !== 'oneOf') throw new Error('god domain fixture');
+      expect(
+        [
+          everywhere({
+            kind: 'replayFixed',
+            offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+          }),
+          everywhere({ kind: 'olympianProviderForced', providerKey: 'ZeusUpgrade' }),
+          everywhere({
+            kind: 'godRequirement',
+            source: 'HeraUpgrade',
+            evaluation: {
+              kind: 'recordCount',
+              satisfied: false,
+              record: 'lootTypeHistory',
+              keys: domain.values,
+              actual: 0,
+              expected: { min: 1 },
+            },
+          }),
+          everywhere({
+            kind: 'devotionSourceNotAcquired',
+            sources: ['HeraUpgrade'],
+            acquiredSources: ['ZeusUpgrade'],
+            required: 2,
+          }),
+        ].map((exclusion) => reasons(excluded(exclusion))),
+      ).toEqual([
+        'Echo repeats Boon · Zeus exactly.',
+        'Zeus must be the god here.',
+        'Requires a boon this run.',
+        'Requires a boon from Hera earlier this run.',
       ]);
     });
 

@@ -190,23 +190,29 @@ export function applyShopOfferPointMaterialization(
       );
       return { context, isContract, fixedOffers, shopNames };
     };
+    const hasWitnesses = (
+      branch: (typeof frontierBranches)[number],
+      { context, fixedOffers, shopNames }: ReturnType<typeof selectionInputs>,
+    ) =>
+      findShopPartialAuthoredGenerationWitnesses(
+        catalog.rewards,
+        context.profile,
+        fixedOffers,
+        facts(branch.state, shopNames),
+        context.requirements,
+      ).length > 0;
+    const contractEquipped = (branch: (typeof frontierBranches)[number]) =>
+      branch.state.traitHistory.equippedTraits.InfernalContractBoon !== undefined;
     const supportsSelection = (owner: SemanticAddress, selection: AuthoredShopOffer): boolean => {
-      const { context, isContract, fixedOffers, shopNames } = selectionInputs(owner, selection);
+      const inputs = selectionInputs(owner, selection);
       return frontierBranches.some(
         (branch) =>
-          findShopPartialAuthoredGenerationWitnesses(
-            catalog.rewards,
-            context.profile,
-            fixedOffers,
-            facts(branch.state, shopNames),
-            context.requirements,
-          ).length > 0 &&
-          (!isContract ||
-            branch.state.traitHistory.equippedTraits.InfernalContractBoon !== undefined),
+          hasWitnesses(branch, inputs) && (!inputs.isContract || contractEquipped(branch)),
       );
     };
     const explainSelection = (owner: SemanticAddress, selection: AuthoredShopOffer) => {
-      const { context, isContract, fixedOffers, shopNames } = selectionInputs(owner, selection);
+      const inputs = selectionInputs(owner, selection);
+      const { context, isContract, fixedOffers, shopNames } = inputs;
       const input: ShopSlotExclusionInput = {
         catalog: catalog.rewards,
         profile: context.profile,
@@ -224,10 +230,13 @@ export function applyShopOfferPointMaterialization(
       const fixed = notInShopReason(input);
       if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
       return aggregateRewardOfferExclusions(
+        // Inventory witnesses are checked before the Contract boon.
         frontierBranches.map((branch) =>
-          isContract && branch.state.traitHistory.equippedTraits.InfernalContractBoon === undefined
-            ? { kind: 'contractNotEquipped' as const }
-            : shopSlotReason(input, facts(branch.state, shopNames)),
+          !hasWitnesses(branch, inputs)
+            ? shopSlotReason(input, facts(branch.state, shopNames))
+            : isContract && !contractEquipped(branch)
+              ? { kind: 'contractNotEquipped' as const }
+              : undefined,
         ),
       );
     };

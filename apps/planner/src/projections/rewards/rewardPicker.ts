@@ -10,8 +10,8 @@ import type {
   ContextualPickerProjectionService,
 } from '../contextual/contextualPicker';
 import {
-  alternativePrefix,
   explainCandidateEvaluation,
+  rewardExclusionExplanation,
   type CandidateExplanation,
 } from '../contextual/contextualOptions';
 import type { ProjectedRewardDomain, ProjectedRewardDomainOption } from './rewardDomainProjection';
@@ -227,8 +227,8 @@ function projectedOffer(
 }
 
 /**
- * A Trial row or a chosen-god row stands for many god pairs, so a missing god
- * of the one representative pair is not the reason; state the pair rule.
+ * A Trial row or a chosen-god row stands for many god pairs, so the missing gods
+ * of its one representative pair are not the reason; word the pair rule instead.
  */
 function aggregateDevotionReasons(
   catalog: Catalog,
@@ -238,31 +238,19 @@ function aggregateDevotionReasons(
 ): readonly CandidateExplanation[] | undefined {
   if (mode !== 'aggregate' || (step !== 'type' && step !== 'chosen')) return undefined;
   const reasons = explainCandidateEvaluation(catalog, source.evaluation);
-  if (!reasons.some((reason) => reason.kind === 'devotionSourceNotAcquired')) return undefined;
-  const chosenMissing =
-    step === 'chosen' &&
-    'result' in source.evaluation &&
-    'exclusions' in source.evaluation.result &&
-    (source.evaluation.result.exclusions ?? []).some(
-      (exclusion) =>
-        exclusion.kind === 'devotionSourceNotAcquired' && exclusion.sources.includes(source.key),
-    );
-  const rule =
-    step === 'type'
-      ? 'Requires boons from 2 different gods this run.'
-      : chosenMissing
-        ? `Requires a boon from ${optionLabel(catalog, step, source.key)} earlier this run.`
-        : 'Requires a boon from a second god this run.';
-  return reasons.map((reason) =>
-    reason.kind !== 'devotionSourceNotAcquired'
-      ? reason
-      : {
-          kind: reason.kind,
-          message: reason.message.startsWith(alternativePrefix)
-            ? `${alternativePrefix}${rule}`
-            : rule,
-        },
-  );
+  if (!reasons.some((reason) => reason.exclusion?.kind === 'devotionSourceNotAcquired'))
+    return undefined;
+  return reasons.map((reason) => {
+    const exclusion = reason.exclusion;
+    if (exclusion?.kind !== 'devotionSourceNotAcquired') return reason;
+    const rule =
+      step === 'type'
+        ? `Requires boons from ${exclusion.required} different gods this run, not counting Ares.`
+        : exclusion.acquiredSources.includes(source.key)
+          ? 'Requires a boon from a second god this run.'
+          : `Requires a boon from ${optionLabel(catalog, step, source.key)} earlier this run.`;
+    return rewardExclusionExplanation(exclusion, rule);
+  });
 }
 
 export function createRewardPickerProjection(

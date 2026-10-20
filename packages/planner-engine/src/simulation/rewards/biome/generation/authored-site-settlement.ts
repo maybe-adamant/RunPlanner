@@ -493,10 +493,14 @@ export function settleAuthoredAcquisitionSite(
                 });
               }
               // Echo replays its agreed offer exactly.
-              if (echoReplay && JSON.stringify(offer) !== JSON.stringify(agreedReplay?.offer)) {
+              if (
+                echoReplay &&
+                agreedReplay !== undefined &&
+                JSON.stringify(offer) !== JSON.stringify(agreedReplay.offer)
+              ) {
                 return staticallyExcludedCandidateResult({
-                  kind: 'excludedByProducer',
-                  rewardType: offer.rewardType,
+                  kind: 'replayFixed',
+                  offer: agreedReplay.offer,
                 });
               }
               const candidateSettlement = settlePickupAcquisitionSite(
