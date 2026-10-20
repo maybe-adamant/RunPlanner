@@ -2,7 +2,9 @@ import type { AuthoredDraftSpec, ProjectDocument } from '@run-planner/engine/aut
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
 import {
   assessDraftBasket,
+  draftGodQueues,
   draftKeepsakeOptions,
+  draftOrderRefusals,
   draftWorldOptions,
   type DraftCapUsage,
   type DraftGiverCapUsage,
@@ -190,6 +192,23 @@ export interface DraftBasketChip {
   /** The engine refuses this basket trait, so the draft cannot start. */
   readonly refused: boolean;
   readonly hint?: string;
+  /**
+   * A god's queued trait: the basket with it swapped one place earlier or later,
+   * absent at an end or where the swap would queue a trait above its prerequisite.
+   */
+  readonly order?: {
+    readonly earlierBasket?: readonly string[];
+    readonly laterBasket?: readonly string[];
+  };
+}
+
+/** Basket chips by god in acquisition order, then every other basket trait. */
+export interface DraftBasketChipGroup {
+  readonly key: string;
+  readonly label: string;
+  readonly chips: readonly DraftBasketChip[];
+  /** Each of this god's traits queued above its prerequisite, as a visible line. */
+  readonly orderNotes: readonly string[];
 }
 
 /** One cap on the panel's basket summary. */
@@ -203,7 +222,7 @@ export interface DraftBasketProjection {
   readonly tabs: readonly DraftBasketTab[];
   /** God boons, each bonus giver, then NPC traits. */
   readonly summary: readonly DraftBasketSummaryCap[];
-  readonly chips: readonly DraftBasketChip[];
+  readonly chipGroups: readonly DraftBasketChipGroup[];
 }
 
 function refusalHint(
@@ -222,6 +241,8 @@ function refusalHint(
           : `Needs ${refusal.requirementTraitKeys.map(label).join(' or ')}.`;
       case 'giverNotInWorld':
         return 'Its giver is not in the world.';
+      case 'prerequisiteAfter':
+        return `Needs ${refusal.traitKeys.map(label).join(' or ')} earlier.`;
       case 'draftIllegal':
       case 'wrongHammerLoadout':
       case 'cap':
@@ -389,16 +410,77 @@ export function projectDraftBasket(
     { key: 'npcs', label: 'NPCs', cap: caps.npcTotal, sections: npcSections },
   ];
 
-  const chips = spec.basketTraitKeys.map((traitKey) => {
+  const chip = (traitKey: string, order?: DraftBasketChip['order']): DraftBasketChip => {
     const trait = byKey.get(traitKey);
-    const hint = trait === undefined ? undefined : refusalHint(catalog, trait.refusals);
+    // An order refusal is a visible note under its god's row, not a hint.
+    const hint =
+      trait === undefined
+        ? undefined
+        : refusalHint(
+            catalog,
+            trait.refusals.filter((refusal) => refusal.kind !== 'prerequisiteAfter'),
+          );
     return Object.freeze({
       traitKey,
       label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
       refused: trait === undefined || !trait.selectable,
       ...(hint === undefined ? {} : { hint }),
+      ...(order === undefined ? {} : { order: Object.freeze(order) }),
     });
-  });
+  };
+  const swapped = (a: string, b: string) =>
+    Object.freeze(spec.basketTraitKeys.map((key) => (key === a ? b : key === b ? a : key)));
+  const orderRefusals = draftOrderRefusals(catalog, project.route, spec);
+  const current = orderRefusals(spec.basketTraitKeys).size;
+  // A move may not add an order refusal; while one stands, any move that adds none is open.
+  const legalMove = (basketTraitKeys: readonly string[]) => {
+    const after = orderRefusals(basketTraitKeys).size;
+    return after === 0 || (current > 0 && after <= current);
+  };
+  const label = (key: string) => catalog.traits.byKey[key]?.label ?? key;
+  const queues = draftGodQueues(catalog, spec).filter((queue) => queue.traitKeys.length > 0);
+  const queued = new Set(queues.flatMap((queue) => queue.traitKeys));
+  const others = spec.basketTraitKeys.filter((key) => !queued.has(key));
+  const chipGroups: DraftBasketChipGroup[] = [
+    ...queues.map((queue) =>
+      Object.freeze({
+        key: queue.godKey,
+        label: catalog.traitGivers.byKey[queue.godKey]?.label ?? queue.godKey,
+        chips: Object.freeze(
+          queue.traitKeys.map((traitKey, index, keys) => {
+            const earlier =
+              keys[index - 1] === undefined ? undefined : swapped(traitKey, keys[index - 1]!);
+            const later =
+              keys[index + 1] === undefined ? undefined : swapped(traitKey, keys[index + 1]!);
+            return chip(traitKey, {
+              ...(earlier === undefined || !legalMove(earlier) ? {} : { earlierBasket: earlier }),
+              ...(later === undefined || !legalMove(later) ? {} : { laterBasket: later }),
+            });
+          }),
+        ),
+        orderNotes: Object.freeze(
+          queue.traitKeys.flatMap((traitKey) => {
+            const refusal = byKey
+              .get(traitKey)
+              ?.refusals.find((candidate) => candidate.kind === 'prerequisiteAfter');
+            return refusal?.kind === 'prerequisiteAfter'
+              ? [`${label(traitKey)} needs ${refusal.traitKeys.map(label).join(' or ')} first.`]
+              : [];
+          }),
+        ),
+      }),
+    ),
+    ...(others.length === 0
+      ? []
+      : [
+          Object.freeze({
+            key: 'other',
+            label: 'Other',
+            chips: Object.freeze(others.map((key) => chip(key))),
+            orderNotes: Object.freeze([]),
+          }),
+        ]),
+  ];
   const summary: DraftBasketSummaryCap[] = [
     { key: 'gods', label: 'God boons', cap: caps.poolGodTotal },
     ...caps.providers.map((usage) => ({
@@ -411,6 +493,6 @@ export function projectDraftBasket(
   return Object.freeze({
     tabs: Object.freeze(tabs.map((tab) => Object.freeze(tab))),
     summary: Object.freeze(summary),
-    chips,
+    chipGroups: Object.freeze(chipGroups),
   });
 }

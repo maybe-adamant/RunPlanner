@@ -5,6 +5,9 @@ import { createProjectDocument } from '../../../src/authored-project/defaults';
 import type { AuthoredTraitOfferTraits } from '../../../src/authored-project';
 import type { DraftSpec } from '../../../src/simulation';
 import type { DraftWalk } from '../../../src/simulation/draft/walk';
+import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
+import { latestRunState } from '../../../src/simulation/draft/report';
+import { draftDuoFires } from '../../../src/simulation/draft/trait-offers';
 import { startDraftWalk } from '../../support/draft-walk';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
@@ -113,5 +116,68 @@ describe('draft rack keepsakes', () => {
         (finding) => 'biomeKey' in finding.origin && finding.origin.biomeKey === 'F',
       ),
     ).toEqual([]);
+  });
+});
+
+/** Basket traits the walk holds, in the order they were first equipped. */
+function acquired(walk: DraftWalk, basket: readonly string[]): string[] {
+  const order: string[] = [];
+  const snapshots = walk.assembly.evaluation.route.biomes
+    .flatMap((biome) => ('rewards' in biome ? biome.rewards.runStateSnapshots : []))
+    .sort((a, b) => a.historySequence - b.historySequence);
+  for (const snapshot of snapshots)
+    for (const key of Object.keys(snapshot.traits.equippedTraits))
+      if (basket.includes(key) && !order.includes(key)) order.push(key);
+  return order;
+}
+
+describe('draft walk order', () => {
+  const world = {
+    godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+    storyNpcByBiome: {},
+    fieldNpcsByBiome: {},
+  };
+
+  it("takes each god's basket traits only in basket order", () => {
+    const zeus = ['ZeusManaBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon', 'ZeusCastBoon'];
+    const spec: DraftSpec = {
+      loadout,
+      world,
+      basketTraitKeys: [...zeus, 'ApolloSpecialBoon'],
+      rackKeepsakeKeys: [null, null, null],
+    };
+    for (const seed of [1, 2, 3]) {
+      const walk = startDraftWalk(base, spec, seed);
+      expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+      const held = acquired(walk, zeus);
+      expect(held.length).toBeGreaterThan(0);
+      expect(held).toEqual(zeus.slice(0, held.length));
+    }
+  });
+
+  it('takes a ready Duo with chance 1/3, then 2/3, then always', () => {
+    expect([0, 1, 2].map((declined) => draftDuoFires(declined, 0.3))).toEqual([true, true, true]);
+    expect([0, 1, 2].map((declined) => draftDuoFires(declined, 0.5))).toEqual([false, true, true]);
+    expect([0, 1, 2].map((declined) => draftDuoFires(declined, 0.9))).toEqual([false, false, true]);
+  });
+
+  it("counts each declined god room of a ready Duo and continues the previous biome's count", () => {
+    const duo = 'ApolloSecondStageCastBoon';
+    const spec: DraftSpec = {
+      loadout,
+      world,
+      basketTraitKeys: ['ApolloExCastBoon', 'ZeusWeaponBoon', duo],
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const run = (seed: number, duoDeclines: ReadonlyMap<string, number>) => {
+      const walk = startDraftWalk(base, spec, seed, { duoDeclines });
+      expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+      const held = Object.keys(latestRunState(walk.assembly)?.traits.equippedTraits ?? {});
+      return { taken: held.includes(duo), declines: walk.duoDeclines().get(duo) ?? 0 };
+    };
+    // Declined in two god rooms, the third takes it.
+    expect(run(1, new Map())).toEqual({ taken: true, declines: 2 });
+    // A count carried in from an earlier biome continues: twice declined, every later room fires it.
+    for (const seed of [1, 2, 3, 4]) expect(run(seed, new Map([[duo, 2]])).declines).toBe(2);
   });
 });

@@ -110,6 +110,7 @@ describe('draft selected-outcome children', () => {
       surface,
       spec(surfaceWorld(['Zeus', 'Hera', 'Demeter', 'Ares']), ['RandomArcanaTrait']),
       'RandomArcanaTrait',
+      2,
     );
     expectChildrenAuthored(walk, biomeIndex, 'RandomArcanaTrait');
   });

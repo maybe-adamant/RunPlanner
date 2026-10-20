@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
-import { draftGodQueues, draftQueueOrder, draftStartTraits, draftTraitKind } from './basket';
+import { draftGodQueues, draftStartTraits, draftTraitKind } from './basket';
 import {
   createDraftPrerequisites,
   prerequisiteDue,
@@ -163,7 +163,7 @@ export function draftGodSchedule(
   };
   const godTraits = spec.basketTraitKeys.filter((key) => godsOf(key).length > 0);
   const queues = new Map(
-    draftGodQueues(catalog, spec).map((queue) => [queue.godKey, draftQueueOrder(queue)]),
+    draftGodQueues(catalog, spec).map((queue) => [queue.godKey, queue.traitKeys]),
   );
   const byGod = godKeys.map((god) => queues.get(god) ?? []);
   const interleaved: string[] = [];
