@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
-import { draftStartTraits, draftTraitKind } from './basket';
+import { draftGodQueues, draftQueueOrder, draftStartTraits, draftTraitKind } from './basket';
 import {
   createDraftPrerequisites,
   prerequisiteDue,
@@ -162,9 +162,10 @@ export function draftGodSchedule(
     return trait !== undefined && draftTraitKind(trait) === 'duo';
   };
   const godTraits = spec.basketTraitKeys.filter((key) => godsOf(key).length > 0);
-  const byGod = godKeys.map((god) =>
-    shuffle(godTraits.filter((key) => !duo(key) && godsOf(key).includes(god))),
+  const queues = new Map(
+    draftGodQueues(catalog, spec).map((queue) => [queue.godKey, draftQueueOrder(queue)]),
   );
+  const byGod = godKeys.map((god) => queues.get(god) ?? []);
   const interleaved: string[] = [];
   for (let round = 0; byGod.some((traits) => traits.length > round); round += 1)
     for (const traits of byGod) if (traits[round] !== undefined) interleaved.push(traits[round]!);
@@ -180,6 +181,15 @@ export function draftGodSchedule(
   const dueAfterNeeds = (key: string) =>
     prerequisiteDue(needs.get(key) ?? [], (member) => due.get(member), last);
   traitOrder.forEach((key, i) => due.set(key, Math.max(traitPlaces[i]!, dueAfterNeeds(key))));
+  // Each god's slots go to its traits in queue order, never falling due before an earlier one.
+  for (const queue of queues.values()) {
+    const slots = queue.map((key) => due.get(key)!).sort((a, b) => a - b);
+    let previous = 0;
+    queue.forEach((key, i) => {
+      previous = Math.max(slots[i]!, dueAfterNeeds(key), previous);
+      due.set(key, previous);
+    });
+  }
   const supplied = (['hermes', 'hammer'] as const).flatMap((supply) => {
     const traitKeys = draftSupplyTraitKeys(catalog, supply);
     const ordered = prerequisiteOrder(
@@ -194,6 +204,10 @@ export function draftGodSchedule(
     return ordered;
   });
   pullNpcPrerequisites(route, world.npcTraitBiomes, needs, due, traitOrder, capacity);
+  // A pulled trait brings its god's earlier traits with it.
+  for (const queue of queues.values())
+    for (let i = queue.length - 2; i >= 0; i -= 1)
+      due.set(queue[i]!, Math.min(due.get(queue[i]!)!, due.get(queue[i + 1]!)!));
   const scheduled = [...traitOrder, ...supplied];
   return Object.freeze({
     byBiome: Object.freeze(

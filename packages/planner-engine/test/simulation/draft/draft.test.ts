@@ -5,6 +5,7 @@ import { createProjectDocument } from '../../../src/authored-project/defaults';
 import {
   assessDraftBasket,
   draftKeepsakeOptions,
+  draftGodQueues,
   draftRefusals,
   draftWorldGiverKeys,
   draftWorldOptions,
@@ -361,6 +362,58 @@ describe('draft basket legality', () => {
     expect(assessment(underworld, spec([first!], world), second!).refusals).toContainEqual(capped);
     expect(assessment(underworld, spec([], world), second!).refusals).toEqual([]);
     expect(assessment(underworld, spec([first!], world), artemis).selectable).toBe(true);
+  });
+});
+
+describe('draft basket order', () => {
+  it("queues each god's traits in basket order, Duos outside and Legendaries closing", () => {
+    const draft = spec([
+      'ZeusCastBoon',
+      'SpawnKillBoon',
+      'ApolloWeaponBoon',
+      'ZeusSprintBoon',
+      'ApolloExCastBoon',
+      'ZeusWeaponBoon',
+      'ApolloSecondStageCastBoon',
+    ]);
+    expect(draftGodQueues(catalog, draft)).toEqual([
+      {
+        godKey: 'Zeus',
+        orderedTraitKeys: ['ZeusCastBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon'],
+        closingTraitKeys: ['SpawnKillBoon'],
+      },
+      {
+        godKey: 'Apollo',
+        orderedTraitKeys: ['ApolloWeaponBoon', 'ApolloExCastBoon'],
+        closingTraitKeys: [],
+      },
+    ]);
+  });
+
+  it('refuses a trait queued before the only god traits that meet its need', () => {
+    const refusal = { kind: 'prerequisiteAfter', traitKeys: ['ZeusCastBoon'] };
+    expect(
+      assessment(underworld, spec(['DoubleBoltBoon', 'ZeusCastBoon']), 'DoubleBoltBoon').refusals,
+    ).toEqual([refusal]);
+    expect(
+      assessment(underworld, spec(['ZeusCastBoon', 'DoubleBoltBoon']), 'DoubleBoltBoon').selectable,
+    ).toBe(true);
+    // An earlier member of the same need is enough.
+    expect(
+      assessment(
+        underworld,
+        spec(['ZeusSprintBoon', 'DoubleBoltBoon', 'ZeusCastBoon']),
+        'DoubleBoltBoon',
+      ).selectable,
+    ).toBe(true);
+    expect(
+      refusals(underworld, { basketTraitKeys: ['DoubleBoltBoon', 'ZeusCastBoon'] }),
+    ).toContainEqual({ kind: 'basketTrait', traitKey: 'DoubleBoltBoon', refusals: [refusal] });
+  });
+
+  it('lets a Legendary sit anywhere in the basket, since it closes its list', () => {
+    const draft = spec(['SpawnKillBoon', 'ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon']);
+    expect(assessment(underworld, draft, 'SpawnKillBoon').selectable).toBe(true);
   });
 });
 

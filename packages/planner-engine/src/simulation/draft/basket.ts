@@ -17,7 +17,11 @@ import {
   type DraftRoute,
   type DraftSpec,
 } from './spec';
-import type { DraftHeldTraits } from './prerequisites';
+import {
+  createDraftPrerequisites,
+  type DraftHeldTraits,
+  type DraftPrerequisites,
+} from './prerequisites';
 import { draftWorldGiverKeys } from './world';
 
 export type DraftTraitRefusal =
@@ -30,6 +34,8 @@ export type DraftTraitRefusal =
   | { readonly kind: 'cap'; readonly giverKey: string; readonly cap: number }
   /** The basket already holds the planner limit of god traits, Duos included. */
   | { readonly kind: 'totalCap'; readonly cap: number }
+  /** Its need can only be met by its god's traits queued after it. */
+  | { readonly kind: 'prerequisiteAfter'; readonly traitKeys: readonly string[] }
   | {
       readonly kind: 'requirement';
       readonly code: TraitFindingCode;
@@ -103,10 +109,14 @@ export function assessDraftBasket(
   );
   for (const key of spec.basketTraitKeys) traitKeys.add(key);
   const routeStart = routeStartState(catalog, route, spec.loadout);
+  const order: DraftOrderContext = {
+    queues: draftGodQueues(catalog, spec),
+    prerequisites: createDraftPrerequisites(catalog, spec.basketTraitKeys, heldTraits(routeStart)),
+  };
   return Object.freeze({
     traits: Object.freeze(
       [...traitKeys].map((traitKey) =>
-        assessTrait(catalog, spec, worldGivers, routeStart, traitKey),
+        assessTrait(catalog, spec, worldGivers, routeStart, order, traitKey),
       ),
     ),
     caps: basketCaps(catalog, spec, worldGivers),
@@ -166,6 +176,7 @@ function assessTrait(
   spec: DraftSpec,
   worldGivers: readonly string[],
   routeStart: SimulationState,
+  order: DraftOrderContext,
   traitKey: string,
 ): DraftTraitAssessment {
   const trait = catalog.traits.byKey[traitKey];
@@ -225,6 +236,10 @@ function assessTrait(
     for (const requirement of requirements)
       for (const failure of checkStatic(catalog, requirement, trait, state, deferred))
         refusals.push({ kind: 'requirement', ...failure });
+  }
+  if (spec.basketTraitKeys.includes(traitKey)) {
+    const later = prerequisitesQueuedAfter(order, traitKey);
+    if (later.length > 0) refusals.push({ kind: 'prerequisiteAfter', traitKeys: later });
   }
   if (trait.offerDependsOnDeathDefiance === true) deferred.add('deathDefiance');
   return Object.freeze({
@@ -370,7 +385,11 @@ export function draftStartTraits(
   route: DraftRoute,
   loadout: DraftLoadout,
 ): DraftHeldTraits {
-  const history = routeStartState(catalog, route, loadout).traitHistory;
+  return heldTraits(routeStartState(catalog, route, loadout));
+}
+
+function heldTraits(state: SimulationState): DraftHeldTraits {
+  const history = state.traitHistory;
   return Object.freeze({
     traitKeys: new Set(Object.keys(history.equippedTraits)),
     elementCounts: history.elementCounts,
@@ -416,4 +435,68 @@ function withBasket(
     state,
     Object.freeze({ ...createTraitHistoryState(), equippedTraits: Object.freeze(equippedTraits) }),
   );
+}
+
+/** One world god's basket traits in acquisition order. */
+export interface DraftGodQueue {
+  readonly godKey: string;
+  /** The god's own traits in basket order, which the player may reorder. */
+  readonly orderedTraitKeys: readonly string[];
+  /** Legendaries, which close the god's list. */
+  readonly closingTraitKeys: readonly string[];
+}
+
+/** Each world god's own basket traits, Duos excluded: basket order, then its Legendaries. */
+export function draftGodQueues(catalog: Catalog, spec: DraftSpec): readonly DraftGodQueue[] {
+  return Object.freeze(
+    spec.world.godKeys.map((godKey) => {
+      const own = spec.basketTraitKeys.filter(
+        (key) =>
+          catalog.traitGivers.byKey[godKey]?.providerKind === 'olympian' &&
+          draftCappedGiver(catalog, spec, key)?.giverKey === godKey,
+      );
+      const closing = (key: string) => {
+        const trait = catalog.traits.byKey[key];
+        return trait !== undefined && draftTraitKind(trait) === 'legendary';
+      };
+      return Object.freeze({
+        godKey,
+        orderedTraitKeys: Object.freeze(own.filter((key) => !closing(key))),
+        closingTraitKeys: Object.freeze(own.filter(closing)),
+      });
+    }),
+  );
+}
+
+/** The acquisition order of one god queue. */
+export function draftQueueOrder(queue: DraftGodQueue): readonly string[] {
+  return [...queue.orderedTraitKeys, ...queue.closingTraitKeys];
+}
+
+interface DraftOrderContext {
+  readonly queues: readonly DraftGodQueue[];
+  readonly prerequisites: DraftPrerequisites;
+}
+
+/**
+ * Same-god traits queued after this one that some need must use: each need is
+ * judged with those traits left out, and every other basket trait counted.
+ */
+function prerequisitesQueuedAfter(order: DraftOrderContext, traitKey: string): readonly string[] {
+  const queue = order.queues.map(draftQueueOrder).find((traitKeys) => traitKeys.includes(traitKey));
+  if (queue === undefined) return [];
+  const after = new Set(queue.slice(queue.indexOf(traitKey) + 1));
+  const later = new Set<string>();
+  for (const need of order.prerequisites.needs.get(traitKey) ?? []) {
+    if (need.length === 0) continue;
+    const met = need.some((option) => {
+      let sum = 0;
+      for (const [key, weight] of option.weights) if (!after.has(key)) sum += weight;
+      return sum >= option.needed;
+    });
+    if (met) continue;
+    for (const option of need)
+      for (const key of option.weights.keys()) if (after.has(key)) later.add(key);
+  }
+  return Object.freeze([...later]);
 }

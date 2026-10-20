@@ -82,6 +82,7 @@ export class DraftWalk {
   private biomeIndex = 0;
   /** Hermes and Hammer rewards some decision in this walk could legally take. */
   readonly legalSupply = new Set<DraftSupply>();
+  private readonly duoDeclineCounts: Map<string, number>;
 
   constructor(
     readonly catalog: Catalog,
@@ -90,8 +91,10 @@ export class DraftWalk {
     readonly rng: DraftRng,
     schedule: DraftGodSchedule,
     world: DraftWorldProduct,
+    duoDeclines: ReadonlyMap<string, number> = new Map(),
   ) {
     this.assembly = start;
+    this.duoDeclineCounts = new Map(duoDeclines);
     const held = draftStartTraits(catalog, start.project.route, spec.loadout);
     this.steering = new DraftSteering(
       catalog,
@@ -115,6 +118,8 @@ export class DraftWalk {
         this.candidates().traitOfferStartingOutcome(trait, giverKey),
       apply,
       shuffle,
+      random: () => this.rng(),
+      duoDeclines: this.duoDeclineCounts,
       fail: (reason) => {
         this.failureReason = reason;
       },
@@ -138,6 +143,11 @@ export class DraftWalk {
       apply,
       shuffle,
     };
+  }
+
+  /** Rooms each ready basket Duo was declined in so far; the next biome's walk continues them. */
+  duoDeclines(): ReadonlyMap<string, number> {
+    return new Map(this.duoDeclineCounts);
   }
 
   /** Decisions taken so far, across every biome this walk ran. */
