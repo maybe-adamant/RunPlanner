@@ -85,7 +85,7 @@ const model: ContextualPickerModel<string> = {
           selected: false,
           disabled: true,
           explanations: [
-            'Biome depth is 1; this room requires at least 3.',
+            'Biome depth is 1; requires at least 3.',
             'This room can appear at most once in this biome.',
           ],
         },
@@ -224,7 +224,7 @@ describe('ContextualPicker', () => {
         (line) => line.textContent,
       ),
     ).toEqual([
-      'Biome depth is 1; this room requires at least 3.',
+      'Biome depth is 1; requires at least 3.',
       'This room can appear at most once in this biome.',
     ]);
 

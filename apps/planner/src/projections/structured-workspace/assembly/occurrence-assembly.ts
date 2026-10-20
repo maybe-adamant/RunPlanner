@@ -48,7 +48,7 @@ import type {
   RunStateSnapshot,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
-import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,

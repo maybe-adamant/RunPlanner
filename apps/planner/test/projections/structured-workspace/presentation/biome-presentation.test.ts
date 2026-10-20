@@ -40,7 +40,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import type { WorkspaceBiome } from '@planner/projections/structured-workspace/contracts/structure';
 import { workspaceDecisionOwnedMarkers } from '@planner/projections/structured-workspace/navigation/marker-ownership';
-import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { presentWorkspaceBiome } from '@planner/projections/structured-workspace/presentation/biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '@planner/projections/structured-workspace/assembly/biome-semantic-assembly';
 import {

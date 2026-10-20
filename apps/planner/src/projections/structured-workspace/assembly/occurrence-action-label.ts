@@ -12,7 +12,7 @@ import {
 } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalAuthoredRoom } from '@run-planner/engine/simulation';
-import { summarizeRewardOffer } from '@planner/projections/rewards/rewardPicker';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';

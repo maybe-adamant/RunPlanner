@@ -1,6 +1,7 @@
 import type {
   FindingEvidenceValue,
   ForcePressureLedgerEntry,
+  RewardOfferExclusionEvidence,
   ProjectCandidateEvaluation,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
@@ -8,7 +9,7 @@ import type {
 } from '@run-planner/engine/simulation';
 import { routeRoomDeclaration } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { CounterAxis } from '@run-planner/engine/requirements';
+import type { CounterAxis, NumericRange } from '@run-planner/engine/requirements';
 
 import {
   candidateSupport,
@@ -18,7 +19,9 @@ import {
 import { formatFindingSentence, presentFinding } from '../evaluationProjection';
 import { inactiveEncounterPhaseMessage, rangeLabel } from '../encounterPickerProjection';
 import { roomPickerCandidateCategory } from '../roomSelectorProjection';
-import { biomeFieldLabel } from '../structured-workspace/assembly/biome-semantic-assembly';
+import { summarizeRewardOffer } from '../rewards/rewardOfferSummary';
+import { biomeFieldLabel } from '../structured-workspace/assembly/biome-field-labels';
+import { workspaceRewardStoreLabel } from '../structured-workspace/assembly/reward-labels';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -98,14 +101,65 @@ function routeLabel(catalog: Catalog, routeKey: string): string {
   return catalog.routes.byKey[routeKey]?.label ?? routeKey;
 }
 
-function roomLabels(catalog: Catalog, gameNames: readonly string[], routeKey: string): string {
+/** Room labels, realized on the route when the route is known. */
+function roomLabels(
+  catalog: Catalog,
+  gameNames: readonly string[],
+  routeKey: string | undefined,
+): string {
   return [
     ...new Set(
       gameNames.map((name) =>
-        catalog.rooms.byKey[name] === undefined ? name : roomName(catalog, name, routeKey),
+        catalog.rooms.byKey[name] === undefined
+          ? name
+          : routeKey === undefined
+            ? catalog.rooms.byKey[name]!.label
+            : roomName(catalog, name, routeKey),
       ),
     ),
   ].join(' / ');
+}
+
+function rewardTypeLabel(catalog: Catalog, key: string): string {
+  return catalog.rewards.rewardTypes.byKey[key]?.label ?? key;
+}
+
+function encounterNames(catalog: Catalog, keys: readonly string[]): string {
+  return [
+    ...new Set(keys.map((key) => catalog.encounterDefinitions.byKey[key]?.label ?? key)),
+  ].join(' / ');
+}
+
+/**
+ * A requirement over most ordinary gods reads as a rule, not a list: "" for all of
+ * them, ", not counting Ares" when it leaves a few out, undefined when it is a short list.
+ */
+function godSetPhrase(catalog: Catalog, keys: readonly string[]): string | undefined {
+  const domain = catalog.rewards.payloadDomains.byKey.BoonSource;
+  if (domain?.kind !== 'oneOf' || keys.length < 3) return undefined;
+  if (!keys.every((key) => domain.values.includes(key))) return undefined;
+  const left = domain.values.filter((key) => !keys.includes(key));
+  if (left.length > 2) return undefined;
+  return left.length === 0
+    ? ''
+    : `, not counting ${left.map((key) => rewardTypeLabel(catalog, key)).join(' or ')}`;
+}
+
+const ordinals = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
+
+/** The entered-biome counter read as a route position: "from the second biome on". */
+function enteredBiomeMessage(range: NumericRange, expected: boolean): string | undefined {
+  if (!expected) return undefined;
+  const { min, max } = range;
+  if (min !== undefined && max === undefined && ordinals[min - 1] !== undefined)
+    return `Appears from the ${ordinals[min - 1]} biome on.`;
+  if (max !== undefined && (min === undefined || min <= 1))
+    return max === 1 ? 'Only in the first biome.' : `Only in the first ${max} biomes.`;
+  if (min !== undefined && max !== undefined && ordinals[min - 1] && ordinals[max - 1])
+    return min === max
+      ? `Only in the ${ordinals[min - 1]} biome.`
+      : `Only from the ${ordinals[min - 1]} to the ${ordinals[max - 1]} biome.`;
+  return undefined;
 }
 
 /** A god's loot key (`ApolloUpgrade`) by its giver's name. */
@@ -116,7 +170,7 @@ function lootLabel(catalog: Catalog, key: string): string {
 
 function recordMessage(
   catalog: Catalog,
-  routeKey: string,
+  routeKey: string | undefined,
   evidence: Extract<
     RequirementEvaluationEvidence,
     { readonly kind: 'recordCount' | 'distinctRecordKeyCount' }
@@ -131,7 +185,7 @@ function recordMessage(
       const rooms = roomLabels(catalog, evidence.keys, routeKey);
       return expected && evidence.expected.max === 0
         ? `${rooms} was already entered this run.`
-        : `Requires ${range} entries into ${rooms}; currently ${evidence.actual}.`;
+        : `${rooms} entered ${times(evidence.actual)} this run; requires ${range}.`;
     }
     case 'lootTypeHistory':
     case 'useRecord':
@@ -140,29 +194,39 @@ function recordMessage(
     case 'lifetimeGodPickupRecord': {
       const scope =
         evidence.record === 'biomeUseRecord'
-          ? 'this biome'
+          ? 'in this biome'
           : evidence.record === 'lifetimeGodUseRecord' ||
               evidence.record === 'lifetimeGodPickupRecord'
-            ? 'this save file'
+            ? 'on this save file'
             : 'this run';
       const names = evidence.keys.map(
         (key) => catalog.rewards.rewardTypes.byKey[key]?.label ?? lootLabel(catalog, key),
       );
+      const gods = godSetPhrase(catalog, evidence.keys);
+      if (gods !== undefined && evidence.record === 'lootTypeHistory' && expected)
+        return evidence.kind === 'distinctRecordKeyCount'
+          ? `Requires boons from ${rangeLabel(evidence.expected)} different gods this run${gods}; currently ${evidence.actual}.`
+          : `Requires ${rangeLabel(evidence.expected)} boons this run${gods}; currently ${evidence.actual}.`;
       if (evidence.kind === 'distinctRecordKeyCount')
         return `Requires rewards from ${range} different gods this run; currently ${evidence.actual}.`;
-      return expected && evidence.expected.max === 0
-        ? `${names.join(' / ')} already used on ${scope}.`
-        : `Requires ${range} uses of ${names.join(' / ')} on ${scope}; currently ${evidence.actual}.`;
+      // A use limit gates the reward itself, so naming its keys would repeat the choice.
+      if (expected && evidence.expected.max === 0)
+        return evidence.record === 'biomeUseRecord'
+          ? 'Already used in this biome.'
+          : `${names.join(' / ')} already used ${scope}.`;
+      if (expected && evidence.expected.min === 1 && evidence.expected.max === undefined)
+        return `Requires ${names.join(' or ')} used earlier ${scope}.`;
+      return `${names.join(' / ')} used ${times(evidence.actual)} ${scope}; requires ${range}.`;
     }
     case 'resourceGains':
-      return `Requires ${range} ${evidence.keys.join(' / ')} gained this run; currently ${evidence.actual}.`;
+      return `${evidence.keys.join(' / ')} gained this run: ${evidence.actual}; requires ${range}.`;
   }
 }
 
 /** The failed room conditions, read with the polarity a `not` imposes. */
 function requirementMessages(
   catalog: Catalog,
-  routeKey: string,
+  routeKey: string | undefined,
   evidence: RequirementEvaluationEvidence,
   expected = true,
 ): readonly string[] {
@@ -191,7 +255,10 @@ function requirementMessages(
       return requirementMessages(catalog, routeKey, evidence.child, !expected);
     case 'counterRange':
       return [
-        `${counterLabel(evidence.axis)} is ${evidence.actual}; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+        (evidence.axis === 'enteredBiomes'
+          ? enteredBiomeMessage(evidence.expected, expected)
+          : undefined) ??
+          `${counterLabel(evidence.axis)} is ${evidence.actual}; requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
       ];
     case 'recordCount':
     case 'distinctRecordKeyCount':
@@ -201,37 +268,105 @@ function requirementMessages(
         `Requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)} matching encounters in the previous ${evidence.roomWindow} rooms; currently ${evidence.actual}.`,
       ];
     case 'minExits':
-      return [
-        `This room has ${evidence.actual} doors; this room requires at least ${evidence.minimum}.`,
-      ];
+      return [`This room has ${evidence.actual} doors; requires at least ${evidence.minimum}.`];
     case 'currentBatchTargetCount':
       return [
-        `These doors lead to ${evidence.actual} rooms; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+        `These doors lead to ${evidence.actual} rooms; requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
       ];
     case 'currentBatchRoomCount':
       return [
-        `${evidence.actual} of these doors lead to ${roomLabels(catalog, evidence.roomGameNames, routeKey)}; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+        `${evidence.actual} of these doors lead to ${roomLabels(catalog, evidence.roomGameNames, routeKey)}; requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
       ];
     case 'clockworkGoalsRemaining':
       return [
-        `${evidence.actual} Clockwork goals remain; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+        `${evidence.actual} Clockwork goals remain; requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
       ];
     case 'clockworkNonGoalCapacity':
       return [
         `The Clockwork non-goal capacity is exhausted (${evidence.acquired}/${evidence.maximum}).`,
       ];
-    case 'encounterKeyCount':
-    case 'encounterCompletionCount':
-    case 'previousRoomEncounterKeyCount':
+    case 'encounterKeyCount': {
+      const scope = evidence.scope === 'route' ? 'run' : 'biome';
+      const names = encounterNames(catalog, evidence.encounterKeys);
+      return [
+        expected && evidence.expected.max === 0
+          ? `${names} already occurred this ${scope}.`
+          : `Requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)} occurrences of ${names} this ${scope}; currently ${evidence.actual}.`,
+      ];
+    }
+    case 'encounterCompletionCount': {
+      const names = encounterNames(catalog, evidence.encounterKeys);
+      return [
+        expected && evidence.expected.max === 0
+          ? `${names} was already completed this run.`
+          : expected && evidence.expected.min === 1 && evidence.expected.max === undefined
+            ? `Requires ${names} to be completed earlier this run.`
+            : `Requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)} completions of ${names} this run; currently ${evidence.actual}.`,
+      ];
+    }
+    case 'previousRoomEncounterKeyCount': {
+      const names = encounterNames(catalog, evidence.encounterKeys);
+      return [
+        expected && evidence.expected.max === 0
+          ? `${names} occurred within the previous ${evidence.roomWindow} rooms.`
+          : `Requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)} of ${names} in the previous ${evidence.roomWindow} rooms; currently ${evidence.actual}.`,
+      ];
+    }
     case 'notInCurrentRoomShopOptions':
+      return [
+        expected
+          ? `This room's Shop already offers ${rewardTypeLabel(catalog, evidence.rewardType)}.`
+          : `Requires ${rewardTypeLabel(catalog, evidence.rewardType)} in this room's Shop.`,
+      ];
     case 'offeredRewardExcludes':
-    case 'rewardLookupExcludes':
-    case 'minRoomsSinceEvent':
+      return [
+        expected
+          ? `${rewardTypeLabel(catalog, evidence.rewardType)} was already offered on the doors leading here.`
+          : `Requires ${rewardTypeLabel(catalog, evidence.rewardType)} offered on the doors leading here.`,
+      ];
+    case 'rewardLookupExcludes': {
+      const where = evidence.lookupKey === 'hubRewardLookup' ? 'in this Hub' : 'here';
+      return [
+        expected
+          ? `${rewardTypeLabel(catalog, evidence.rewardType)} is already offered ${where}.`
+          : `Requires ${rewardTypeLabel(catalog, evidence.rewardType)} offered ${where}.`,
+      ];
+    }
+    case 'minRoomsSinceEvent': {
+      const event = evidence.event === 'Devotion' ? 'A Trial' : evidence.event;
+      return [
+        evidence.actual === null
+          ? `Requires ${event.replace(/^A /, 'a ')} earlier this run.`
+          : `${event} was ${evidence.actual} rooms ago; requires at least ${evidence.minimum}.`,
+      ];
+    }
     case 'currentRoomRewardExcludes':
+      return [
+        expected
+          ? `Unavailable with this room's reward: ${evidence.actual === null ? 'none' : rewardTypeLabel(catalog, evidence.actual)}.`
+          : `Requires a room reward of ${evidence.rewardTypes.map((key) => rewardTypeLabel(catalog, key)).join(' / ')}.`,
+      ];
     case 'currentRoomStructuralTagsInclude':
-    case 'flagEquals':
-    case 'equippedAspectEquals':
-      return [];
+      return [
+        `${expected ? 'Requires' : 'Unavailable in'} ${evidence.expected.join(' / ').toLowerCase()} rooms.`,
+      ];
+    case 'flagEquals': {
+      // The flag's actual value is the opposite of what the condition needs.
+      const actual = expected ? !evidence.expected : evidence.expected;
+      return [
+        evidence.flag === 'pendingSpellDrop'
+          ? actual
+            ? 'A Spell Drop is already pending.'
+            : 'Requires a pending Spell Drop.'
+          : actual
+            ? 'Every Spell talent is already invested.'
+            : 'Requires every Spell talent invested.',
+      ];
+    }
+    case 'equippedAspectEquals': {
+      const aspect = catalog.aspects.byKey[evidence.expected]?.label ?? evidence.expected;
+      return [expected ? `Requires ${aspect}.` : `Unavailable with ${aspect}.`];
+    }
   }
 }
 
@@ -285,7 +420,7 @@ function roomExclusionExplanations(
         {
           kind: 'counter',
           // Worded like the matching eligibility range so the two de-duplicate.
-          message: `${counterLabel(exclusion.axis)} is ${exclusion.actual}; this room requires at least ${exclusion.minimum}.`,
+          message: `${counterLabel(exclusion.axis)} is ${exclusion.actual}; requires at least ${exclusion.minimum}.`,
         },
       ];
     case 'eligibilityRequirement':
@@ -346,7 +481,11 @@ function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefin
         : 'another offer';
     case 'rewardWheelOffer':
       return typeof origin.offerKey === 'string'
-        ? numberedLabel(origin.offerKey, 'Offer')
+        ? numberedLabel(origin.offerKey, 'Wheel slot')
+        : 'another offer';
+    case 'shopOffer':
+      return typeof origin.offerKey === 'string'
+        ? numberedLabel(origin.offerKey, 'Shop slot')
         : 'another offer';
     case 'localReward':
       return typeof origin.slotKey === 'string'
@@ -372,6 +511,112 @@ function rewardPeerLabel(catalog: Catalog, value: FindingEvidenceValue | undefin
     default:
       return 'another offer';
   }
+}
+
+/** "the Major Reward pool", or "this reward pool" when the pool has no player name. */
+function storeLabel(storeKey: string): string {
+  const label = workspaceRewardStoreLabel(storeKey);
+  return label === storeKey ? 'this reward pool' : `the ${label} pool`;
+}
+
+function capitalized(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function namesList(names: readonly string[]): string {
+  return names.length <= 1
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
+/** One engine reason a reward offer is impossible, in game words. */
+function rewardExclusionMessages(
+  catalog: Catalog,
+  exclusion: RewardOfferExclusionEvidence,
+): readonly string[] {
+  switch (exclusion.kind) {
+    case 'notInStore':
+      return [
+        exclusion.storeKey === null
+          ? 'Not in this reward pool.'
+          : `Not in ${storeLabel(exclusion.storeKey)}.`,
+      ];
+    case 'notInShop':
+      return ['This Shop slot never stocks this item.'];
+    case 'offRoute':
+      return [`Not offered on the ${routeLabel(catalog, exclusion.routeKey)} route.`];
+    case 'rewardTypeFixed':
+      return [`This source always gives ${rewardTypeLabel(catalog, exclusion.rewardType)}.`];
+    case 'excludedByProducer':
+      return ['This source never gives this reward.'];
+    case 'forcedReward':
+      return [`${summarizeRewardOffer(catalog, exclusion.offer)} must be offered here.`];
+    case 'olympianProviderForced':
+      return [
+        `${catalog.traitGivers.byKey[exclusion.providerKey]?.label ?? rewardTypeLabel(catalog, exclusion.providerKey)} must be the god here.`,
+      ];
+    case 'priorityRequired':
+      return [`${rewardTypeLabel(catalog, exclusion.rewardType)} must be offered first.`];
+    case 'peerConflict': {
+      const places = [
+        ...new Set(
+          exclusion.peers.map((peer) =>
+            rewardPeerLabel(catalog, peer.origin as unknown as FindingEvidenceValue),
+          ),
+        ),
+      ];
+      return [
+        places.every((place) => place === 'another offer')
+          ? 'This reward conflicts with another offer.'
+          : `This reward conflicts with the offer on ${namesList(places.slice(0, 2))}.`,
+      ];
+    }
+    case 'godCap':
+      return [
+        `This run already has ${exclusion.cap} gods: ${namesList(exclusion.acquiredSources.map((source) => rewardTypeLabel(catalog, source)))}.`,
+      ];
+    case 'godRequirement':
+    case 'entryRequirement':
+    case 'shopOptionRequirement':
+      return requirementMessages(catalog, undefined, exclusion.evaluation);
+    case 'godNotInteracted':
+      // World Shop boons come only from gods already picked up on this save file.
+      return ['The Shop offers only gods already picked up on this save file.'];
+    case 'devotionSourceNotAcquired':
+      return [
+        `Requires a boon from ${namesList(exclusion.sources.map((source) => rewardTypeLabel(catalog, source)))} earlier this run.`,
+      ];
+    case 'entriesSpent':
+      return [
+        `${capitalized(storeLabel(exclusion.storeKey))} has no ${rewardTypeLabel(catalog, exclusion.rewardType)} left.`,
+      ];
+    case 'shopExcluded':
+      return [`The restock leaves out ${rewardTypeLabel(catalog, exclusion.name)}.`];
+    case 'contractNotEquipped':
+      return [
+        `Requires ${catalog.traits.byKey.InfernalContractBoon?.label ?? 'its boon'} equipped.`,
+      ];
+    case 'storeExhausted':
+      return [
+        `${capitalized(storeLabel(exclusion.storeKey))} is exhausted, so only ${rewardTypeLabel(catalog, exclusion.fallbackRewardType)} is offered.`,
+      ];
+  }
+}
+
+/** Leads a reason that holds only in some reached branches. */
+export const alternativePrefix = 'Depending on earlier rolls: ';
+
+/** Engine reward exclusions; one that holds only in some branches reads as an alternative. */
+function rewardExclusionExplanations(
+  catalog: Catalog,
+  exclusions: readonly RewardOfferExclusionEvidence[],
+): readonly CandidateExplanation[] {
+  return exclusions.flatMap((exclusion) =>
+    rewardExclusionMessages(catalog, exclusion).map((message) => ({
+      kind: exclusion.kind,
+      message: exclusion.allBranches ? message : `${alternativePrefix}${message}`,
+    })),
+  );
 }
 
 function siblingExplanation(
@@ -955,6 +1200,30 @@ function withoutSubsumedMinimums(
   );
 }
 
+/** Findings that only summarize a cause the typed exclusions name exactly. */
+const summaryFindingCodes: ReadonlySet<string> = new Set([
+  'targetRoomUnavailable',
+  'rewardBagEntryUnavailable',
+  'rewardBagSupportEmpty',
+  'rewardSourceUnavailable',
+]);
+
+function rewardOfferExclusions(
+  evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
+): readonly RewardOfferExclusionEvidence[] {
+  switch (evaluation.kind) {
+    case 'incomingReward':
+    case 'startingReward':
+    case 'localReward':
+    case 'rewardWheelOffer':
+    case 'shopOffer':
+    case 'acquisitionEntryOffer':
+      return evaluation.result.exclusions ?? [];
+    default:
+      return [];
+  }
+}
+
 /** The reasons for a forced, impossible, or unassessed candidate, most direct first. */
 export function explainCandidateEvaluation(
   catalog: Catalog,
@@ -973,12 +1242,12 @@ export function explainCandidateEvaluation(
       ? withoutSubsumedMinimums(evaluation.result.pressure.selectedExclusions).flatMap(
           (exclusion) => roomExclusionExplanations(catalog, exclusion, evaluation.result.pressure),
         )
-      : [];
-  // The door's own exclusions already say why; its summary finding would only repeat that.
+      : rewardExclusionExplanations(catalog, rewardOfferExclusions(evaluation));
+  // Typed exclusions already say why; the coarse summary findings would only repeat them.
   const findings = activeFindings(evaluation).filter(
     (finding) =>
       exclusions.length === 0 ||
-      finding.code !== 'targetRoomUnavailable' ||
+      !summaryFindingCodes.has(finding.code) ||
       'anomalyReplacement' in finding.evidence,
   );
   const [special, ordinary] = [

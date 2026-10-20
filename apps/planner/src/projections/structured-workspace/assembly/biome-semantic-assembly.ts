@@ -54,6 +54,7 @@ import {
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
 import { workspaceRewardStoreLabel } from './reward-labels';
+import { biomeFieldLabel } from './biome-field-labels';
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueHubInteractionRequirements,
@@ -198,15 +199,6 @@ function assessmentForSource(
   return source.isAssessed(address) || source.findingsFor(address).length > 0
     ? 'assessed'
     : 'unassessed';
-}
-
-export function biomeFieldLabel(fieldKey: string): string {
-  switch (fieldKey) {
-    case 'maxNonGoalRewards':
-      return 'Rolled non-goal limit';
-    default:
-      return fieldKey;
-  }
 }
 
 function projectBiomeFields(
