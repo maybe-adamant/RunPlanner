@@ -65,8 +65,15 @@ next room unless it says otherwise.
       upgraded trait's rarity are back to the plan.
 - [ ] Out of sync in the Hub, take a main-room door the plan did not choose:
       you enter the planned main room.
-- [ ] The Hub slide (the camera pans to the planned door and the hero walks
-      there) is acceptable.
+- [ ] Hub wrong door: the walk-in plays on the taken door, the planned room
+      loads, and there is no slide to the planned door.
+- [ ] Main room wrong side door or Hub return: the hero walks out through the
+      taken door without turning toward the planned one, and the planned room
+      loads.
+- [ ] After a snapped side room, you reappear in the main room at the planned
+      side door.
+- [ ] After a Hub wrong door, on revisiting the Hub the taken door is still
+      open and the planned one closed.
 - [ ] After an Ephyra correction, the pylon count is right and the Hub exit
       opens after the sixth pylon, not before.
 - [ ] Desync in the room before the Hub (e.g. a wrong boon), then enter the

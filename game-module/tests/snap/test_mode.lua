@@ -119,6 +119,9 @@ local function attached(state, snapOn, correct, rewardProof, options)
         OverwriteTableKeys = function(target, values)
             for key, value in pairs(values or {}) do target[key] = value end
         end,
+        -- The nearest native point of a kind is named by its source and kind.
+        GetIdsByType = function(args) return { args.Name } end,
+        GetClosest = function(args) return tostring(args.Id) .. ":" .. tostring(args.DestinationIds[1]) end,
         CollapseTableOrdered = function(value)
             local rows = {}
             for _, door in pairs(value or {}) do rows[#rows + 1] = door end
@@ -595,6 +598,32 @@ function TestSnapMode.testAWrongHubDoorIsForcedAndTheHubExitUsesItsDepartureFram
     lu.assertEquals({ state.route.currentOccurrence.id, #log.order }, { "m2", 2 })
 end
 
+-- Native LeaveRoom closes and records the door it is given, then presents the exit through it.
+function TestSnapMode.testAWrongHubDoorWalksInOnTheTakenDoorAndKeepsThePlannedDoorsBookkeeping()
+    local state = ephyraAt(5, nil, "s2")
+    local planned = { ObjectId = 102, Room = { Name = "N_Combat02", __runPlannerExecutionRoomId = "m2" } }
+    local taken = { ObjectId = 103, Room = { Name = "N_Combat03", __runPlannerExecutionRoomId = "m3" } }
+    local _, _, _, restore, callbacks, runtime = attached(state, true, nil, nil,
+        { offered = { [102] = planned, [103] = taken }, roomData = ephyraRoomData })
+    local hubRoom = { Name = "N_Hub" }
+    local currentRun = { CurrentRoom = hubRoom, ClosedDoors = { N_Hub = {} }, RoomHistory = { {}, {} } }
+    local entered, presented
+    callbacks.LeaveRoom(nil, runtime, function(run, door)
+        entered = door
+        hubRoom.DoorRoomHistory = { [door.ObjectId] = #run.RoomHistory + 2 }
+        run.ClosedDoors.N_Hub[door.ObjectId] = true
+        callbacks.HubCombatRoomEntrance(nil, runtime, function(_, exitDoor) presented = exitDoor end, run, door)
+    end, currentRun, taken)
+    local afterwards
+    callbacks.HubCombatRoomEntrance(nil, runtime, function(_, exitDoor) afterwards = exitDoor end, currentRun, planned)
+    restore()
+    lu.assertIs(entered, planned)
+    lu.assertIs(presented, taken)
+    lu.assertIs(afterwards, planned)
+    lu.assertEquals({ currentRun.ClosedDoors.N_Hub, hubRoom.DoorRoomHistory }, { { [102] = true }, { [102] = 4 } })
+    lu.assertEquals({ state.state, state.snaps[1].occurrenceId }, { "synchronized", "m2" })
+end
+
 function TestSnapMode.testAPlanWithoutTheHubFrameCorrectsAtTheNextRoomsExit()
     local state = ephyraAt(5, nil, "s2", ephyraPlan(nil, false))
     local planned = { ObjectId = 102, Room = { Name = "N_Combat02", __runPlannerExecutionRoomId = "m2" } }
@@ -622,6 +651,8 @@ function TestSnapMode.testAWrongSideDoorLeavesThroughThePlannedSideDoor()
     restore()
     lu.assertIs(passed, planned)
     lu.assertEquals(currentRun.CurrentRoom.CloseDoorOnReturn, 201)
+    lu.assertEquals({ currentRun.CurrentRoom.HeroStartPoint, currentRun.CurrentRoom.HeroEndPoint },
+        { "201:HeroStart", "201:HeroEnd" })
     lu.assertEquals({ state.state, state.route.index, state.snaps[1].occurrenceId }, { "synchronized", 3, "s1" })
 end
 
@@ -671,6 +702,7 @@ function TestSnapMode.testASideDoorTakenWhenThePlanReturnsToTheHubLeavesThroughT
     }
     local passed = leave(currentRun, taken)
     lu.assertIs(passed, planned)
+    lu.assertNil(currentRun.CurrentRoom.HeroStartPoint)
     lu.assertEquals({ planned.Room.Kept, planned.Room.Declared, planned.Room.TimesVisited }, { true, true, 2 })
     lu.assertNotIs(planned.Room, hubVisit)
     lu.assertEquals(hubVisit.TimesVisited, 1)
@@ -695,9 +727,72 @@ function TestSnapMode.testTheHubReturnTakenWhenThePlanSaysSideRoomLeavesThroughT
     lu.assertIs(passed, planned)
     lu.assertNil(currentRun.CurrentRoom.NextHeroStartPoint)
     lu.assertNil(currentRun.CurrentRoom.NextHeroEndPoint)
+    lu.assertEquals(currentRun.CurrentRoom.HeroStartPoint, "201:HeroStart")
     lu.assertEquals(currentRun.CurrentRoom.CloseDoorOnReturn, 201)
     lu.assertEquals({ state.route.index, state.snaps[1].occurrenceId, state.snaps[1].mismatch.observed },
         { 3, "s1", "N_Hub" })
+end
+
+-- Native LeaveRoom given `door`: presents the exit through `presentation`; returns the door
+-- LeaveRoom received and the door presented.
+local function leaveAndPresent(callbacks, runtime, currentRun, taken, presentation)
+    local entered, presented
+    callbacks.LeaveRoom(nil, runtime, function(run, door)
+        entered = door
+        callbacks[presentation](nil, runtime, function(_, exitDoor) presented = exitDoor end, run, door)
+    end, currentRun, taken)
+    return entered, presented
+end
+
+function TestSnapMode.testEveryEphyraDoorSubstitutionPresentsOnTheTakenDoor()
+    -- A wrong side door: the side room is the planned one, the walk-out is the taken door's.
+    local state = ephyraAt(2, "N_Combat01")
+    local planned, taken = sideDoor(201, "s1"), sideDoor(202, "s2")
+    local _, _, _, restore, callbacks, runtime = attached(state, true, nil, nil, {
+        offered = { [201] = planned, [202] = taken, [300] = hubReturn() }, roomData = ephyraRoomData,
+    })
+    local currentRun = { CurrentRoom = { Name = "N_Combat01" } }
+    local entered, presented = leaveAndPresent(callbacks, runtime, currentRun, taken, "FastExitPresentation")
+    restore()
+    lu.assertEquals({ entered.ObjectId, presented.ObjectId, currentRun.CurrentRoom.HeroStartPoint },
+        { 201, 202, "201:HeroStart" })
+
+    -- A side door taken when the plan returns to the Hub.
+    state = ephyraAt(5, nil, "s2")
+    planned, taken = hubReturn(), sideDoor(201, "s1")
+    _, _, _, restore, callbacks, runtime = attached(state, true, nil, nil, {
+        offered = { [201] = taken, [300] = planned }, roomData = ephyraRoomData,
+    })
+    currentRun = { CurrentRoom = { Name = "N_Combat01" }, RoomHistory = { { Name = "N_Hub", TimesVisited = 1 } } }
+    entered, presented = leaveAndPresent(callbacks, runtime, currentRun, taken, "FastExitPresentation")
+    restore()
+    lu.assertEquals({ entered.ObjectId, presented.ObjectId, currentRun.CurrentRoom.NextHeroStartPoint },
+        { 300, 201, 11 })
+
+    -- The Hub return taken when the plan goes to a side room.
+    state = ephyraAt(2, "N_Combat01")
+    planned, taken = sideDoor(201, "s1"), hubReturn()
+    _, _, _, restore, callbacks, runtime = attached(state, true, nil, nil, {
+        offered = { [201] = planned, [300] = taken }, roomData = ephyraRoomData,
+    })
+    currentRun = { CurrentRoom = { Name = "N_Combat01" } }
+    entered, presented = leaveAndPresent(callbacks, runtime, currentRun, taken, "FastExitPresentation")
+    restore()
+    lu.assertEquals({ entered.ObjectId, presented.ObjectId }, { 201, 300 })
+
+    -- An unsteered Hub slot door skipped for the final handoff.
+    state = ephyraAt(5, nil, "s2")
+    session.mismatch(state, { checkpoint = "room-exit-conformance:traitInventory" })
+    local native = { ObjectId = 102, Room = { Name = "N_Combat02" } }
+    local handoff = { ObjectId = 400, Room = { Name = "N_PreBoss01", __runPlannerExecutionRoomId = "boss" } }
+    _, _, _, restore, callbacks, runtime = attached(state, true, nil, nil, { offered = { [102] = native, [400] = handoff } })
+    entered, presented = leaveAndPresent(callbacks, runtime, { CurrentRoom = { Name = "N_Hub" } }, native,
+        "LeaveRoomPresentation")
+    -- Outside a substituted exit the presentation keeps its own door.
+    local afterwards
+    callbacks.FastExitPresentation(nil, runtime, function(_, exitDoor) afterwards = exitDoor end, {}, handoff)
+    restore()
+    lu.assertEquals({ entered.ObjectId, presented.ObjectId, afterwards.ObjectId }, { 400, 102, 400 })
 end
 
 function TestSnapMode.testAPlannedBoardDoorThatIsNotOfferedDeclines()

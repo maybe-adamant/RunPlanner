@@ -315,7 +315,7 @@ function ephyra.exit(plan, nativeRoomName, target, offered, currentRun, game, st
     offered = offered or {}
     for _, door in pairs(offered) do
         if stampedTarget(door) == target.id then
-            result.door, result.enters = door, true
+            result.door, result.enters, result.localSlot = door, true, main ~= nil or nil
             return result
         end
     end
@@ -375,6 +375,13 @@ function ephyra.substitute(currentRun, taken, exit, game)
     if planned.CloseOnReturnAnimation ~= nil then current.CloseDoorOnReturn = planned.ObjectId end
     _G.OverwriteTableKeys(current, onUse[planned.Name])
     if exit.room ~= nil then planned.Room = exit.room end
+    -- HandleSubRoomData stored the return entrance nearest the taken door; the return re-enters at the planned one.
+    if exit.localSlot and planned ~= taken then
+        local function nearest(kind)
+            return _G.GetClosest({ Id = planned.ObjectId, DestinationIds = _G.GetIdsByType({ Name = kind }) })
+        end
+        current.HeroStartPoint, current.HeroEndPoint = nearest("HeroStart"), nearest("HeroEnd")
+    end
     return planned
 end
 
