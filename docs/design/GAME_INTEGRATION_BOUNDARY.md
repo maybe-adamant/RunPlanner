@@ -1071,11 +1071,18 @@ at each room exit. Off, a desynchronized run is unchanged.
   slot door, the main room's side door, or its `EphyraExitDoorReturn` back to
   the Hub. Native bookkeeping then records that door (the Hub also closes it
   for the run; main rooms record `DoorRoomHistory` but keep their doors open)
-  and presents the exit from it. The module undoes what `AttemptUseDoor`
-  recorded for the taken door (`OnUseSetRunData` keys and `CloseDoorOnReturn`)
-  and records the planned door. For the Hub return, it builds the room from
-  `RoomHistory` as `AttemptUseDoor` does. A synchronized board exit through any
-  other door is an `exit-door` mismatch, so a wrong turn is forced in one step.
+  and sets the next room's `Flipped` and entrance from it. The module undoes
+  what `AttemptUseDoor` recorded for the taken door (`OnUseSetRunData` keys and
+  `CloseDoorOnReturn`) and records the planned door. For the Hub return, it
+  builds the room from `RoomHistory` as `AttemptUseDoor` does. Presentation
+  follows the taken door: the exit presentation `LeaveRoom` dispatches for the
+  planned door (`HubCombatRoomEntrance`, `FastExitPresentation` or
+  `LeaveRoomPresentation`) receives the taken door, so the walk-out plays there
+  while `ExitDirection`, `Flipped`, the next entrance and the closed and recorded
+  door all stay the planned door's. For a planned side door, the parent's return
+  entrance that `HandleSubRoomData` stored at the taken door
+  (`HeroStartPoint`/`HeroEndPoint`) is moved to the points nearest the planned
+  door. A synchronized board exit through any other door is an `exit-door` mismatch, so a wrong turn is forced in one step.
   An exit from the Hub carrier enters the Hub and resumes at the first Hub
   visit; any other exit from the carrier, such as a Chaos gate, leaves through
   the offered Hub door instead. Every board visit, in or out of sync, stamps

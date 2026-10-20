@@ -29,6 +29,8 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
 
     -- The planned Dream opening CreateRoom realizes for an out-of-sync snap.
     local plannedCreation
+    -- A substituted Ephyra door { planned, taken } while native LeaveRoom runs.
+    local exitWalk
 
     -- Writes the plan's hero state for the room being left before native LeaveRoom;
     -- nil when the correction failed and snapping stopped.
@@ -71,6 +73,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     -- door would have offered, built and created as ChooseStartingRoom does.
     -- Returns the door LeaveRoom leaves through.
     local function snapExit(runtime, state, currentRun, door, inSync)
+        exitWalk = nil
         if snapScope == nil or not snapScope.enabled(runtime) or not snapMode.armed(state) then return door end
         local gameValue = _G.game or game
         local nativeRoom = currentRun and currentRun.CurrentRoom
@@ -94,7 +97,11 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         local target, way = decision.target, decision.way
         if target == nil then report(runtime); return door end
         local mismatch = state.firstMismatch
-        if way.door ~= nil then door = ephyra.substitute(currentRun, door, way, gameValue) end
+        if way.door ~= nil then
+            local taken = door
+            door = ephyra.substitute(currentRun, door, way, gameValue)
+            if taken ~= door then exitWalk = { planned = door, taken = taken } end
+        end
         if not session.resync(state, decision.index, leaving) then report(runtime); return door end
         if way.kind == "room" or (way.kind == "board" and way.enters) then room.prepare(state, target) end
         local rebuild = way.rebuild
@@ -298,11 +305,23 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         return base(currentRun, nativeRoom)
     end)
 
+    -- Native LeaveRoom keeps the planned Ephyra door's bookkeeping; its exit presentation plays on the
+    -- door taken. Ephyra's slot, side, return and boss doors resolve to these exit functions.
+    for _, name in ipairs({ "HubCombatRoomEntrance", "FastExitPresentation", "LeaveRoomPresentation" }) do
+        module.hooks.wrap(name, "run-planner-snap-exit-walk", function(_, _, base, currentRun, exitDoor, ...)
+            local walk = exitWalk
+            if walk ~= nil and exitDoor == walk.planned then exitDoor = walk.taken end
+            return base(currentRun, exitDoor, ...)
+        end)
+    end
+
     module.hooks.wrap("LeaveRoom", "run-planner-room-exit", function(_, runtime, base, currentRun, door)
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then
             if state ~= nil then door = snapExit(runtime, state, currentRun, door) end
-            return base(currentRun, door)
+            local result = base(currentRun, door)
+            exitWalk = nil
+            return result
         end
         local nativeRoomName = roomName(currentRun and currentRun.CurrentRoom)
         if route.leaveTransparent and route.leaveTransparent(state.route, nativeRoomName) then
@@ -317,7 +336,9 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
                 session.mismatch(state, { checkpoint = "exit-door", expected = expected.id, observed = stray })
             end
             door = snapExit(runtime, state, currentRun, door, stray ~= nil)
-            return base(currentRun, door)
+            local result = base(currentRun, door)
+            exitWalk = nil
+            return result
         end
         local proved, errorValue = navigation.proveOutgoingDoors(state, currentRun)
         if not proved then reportOutcome(session, state, errorValue) end
@@ -339,6 +360,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         end
         door = snapExit(runtime, state, currentRun, door, stray ~= nil)
         local result = base(currentRun, door)
+        exitWalk = nil
         report(runtime)
         return result
     end)
