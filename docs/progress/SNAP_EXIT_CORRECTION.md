@@ -37,9 +37,10 @@ no longer need special cases. Today:
    not only while synchronized.
 5. **Room starts only check.** The `roomEntered` proofs report. Nothing is
    applied at `StartRoom`.
-6. **Steering continues while a correction is due.** A mismatch inside a room
-   doesn't stop steering that room's offers and encounters. The exit corrects
-   the hero.
+6. **A mismatch desynchronizes as today.** The rest of that room plays
+   unsteered; most hero mismatches surface at the room's close anyway. The
+   next exit corrects the hero, forces the door and repositions the route, so
+   the next room is entered synchronized and steered.
 
 Snapping stops only when an exit correction fails in its own room. The
 existing loop rule stays: the snap fails by itself, never by comparing
@@ -69,7 +70,7 @@ mismatch kinds.
     in the commit.
 - **Game module:**
   - exit correction, forced door in and out of sync, Hub stamps on revisits,
-    entry checks only, steering while a correction is due;
+    entry checks only;
   - delete the StartRoom apply, the pending snap through the Hub, the
     Hub-departure proof skip, the in-sync-only stray, Hub-return and declines,
     and `snap/exit_spike.lua`.
@@ -88,7 +89,9 @@ mismatch kinds.
    - the Hub exit using its frame, including a Phial used at the wrong time;
    - a wrong door out of sync;
    - Hub revisit stamps;
-   - a plan without the Hub frame.
+   - a plan without the Hub frame;
+   - a mid-room mismatch, then the exit correction, then the next room
+     entered synchronized.
 
    Acceptance: `npm run test:game-module`. Documentation: the Snap mode section
    in `docs/design/GAME_INTEGRATION_BOUNDARY.md`, and
