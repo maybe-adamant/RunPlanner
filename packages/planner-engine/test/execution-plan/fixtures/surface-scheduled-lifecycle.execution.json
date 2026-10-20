@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 97,
-  "schemaRevision": 0,
+  "schemaRevision": 1,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -1098,6 +1098,215 @@
                   { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
                   { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 3,
+                  "biomeEncounterDepth": 2,
+                  "routeEncounterDepth": 2,
+                  "roomHistoryOrdinal": 3
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 23 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade"],
+                  "effectiveSourceKeys": [
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HeraUpgrade",
+                    "HestiaUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade"
+                  ],
+                  "capNarrowed": false
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged" },
+                    { "slot": "Rush" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 1, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 2 },
+                  "upgradableCount": 2,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosWeaponBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": { "damageBonus": 0.7 }
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 2
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 2,
+                      "markedBlessingKey": "ChaosWeaponBlessing",
+                      "markedBlessingValues": { "damageBonus": 0.7 },
+                      "markedBlessingAcquisitionIdentity": "[\"keepsakeEquipResult\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",\"transcendentEmbryo\"]:0"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             },
             {
@@ -1109,6 +1318,216 @@
                   { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 9,
+                  "biomeEncounterDepth": 3,
+                  "routeEncounterDepth": 3,
+                  "roomHistoryOrdinal": 9
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade"],
+                  "effectiveSourceKeys": [
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HeraUpgrade",
+                    "HestiaUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade"
+                  ],
+                  "capNarrowed": false
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged" },
+                    { "slot": "Rush" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 2, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 3 },
+                  "upgradableCount": 2,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosWeaponBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": { "damageBonus": 0.7 }
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 3
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 3,
+                      "markedBlessingKey": "ChaosWeaponBlessing",
+                      "markedBlessingValues": { "damageBonus": 0.7 },
+                      "markedBlessingAcquisitionIdentity": "[\"keepsakeEquipResult\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",\"transcendentEmbryo\"]:0"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             },
             {
@@ -1121,6 +1540,217 @@
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
                   { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 11,
+                  "biomeEncounterDepth": 4,
+                  "routeEncounterDepth": 4,
+                  "roomHistoryOrdinal": 11
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HephaestusUpgrade"],
+                  "effectiveSourceKeys": [
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HeraUpgrade",
+                    "HestiaUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade"
+                  ],
+                  "capNarrowed": false
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
+                    { "slot": "Rush" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 4 },
+                  "upgradableCount": 3,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosWeaponBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": { "damageBonus": 0.7 }
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 4
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 4,
+                      "markedBlessingKey": "ChaosWeaponBlessing",
+                      "markedBlessingValues": { "damageBonus": 0.7 },
+                      "markedBlessingAcquisitionIdentity": "[\"keepsakeEquipResult\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",\"transcendentEmbryo\"]:0"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             },
             {
@@ -1133,6 +1763,217 @@
                   { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
                   { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 15,
+                  "biomeEncounterDepth": 5,
+                  "routeEncounterDepth": 5,
+                  "roomHistoryOrdinal": 15
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HephaestusUpgrade"],
+                  "effectiveSourceKeys": [
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HeraUpgrade",
+                    "HestiaUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade"
+                  ],
+                  "capNarrowed": false
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
+                    { "slot": "Rush" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 4 },
+                  "upgradableCount": 3,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosWeaponBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": { "damageBonus": 0.7 }
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 5
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 5,
+                      "markedBlessingKey": "ChaosWeaponBlessing",
+                      "markedBlessingValues": { "damageBonus": 0.7 },
+                      "markedBlessingAcquisitionIdentity": "[\"keepsakeEquipResult\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",\"transcendentEmbryo\"]:0"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             },
             {
@@ -1146,6 +1987,218 @@
                   { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 },
                   { "traitKey": "AresSprintBoon", "rarity": "Common", "level": 1 }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 19,
+                  "biomeEncounterDepth": 6,
+                  "routeEncounterDepth": 6,
+                  "roomHistoryOrdinal": 19
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HephaestusUpgrade"],
+                  "effectiveSourceKeys": [
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HeraUpgrade",
+                    "HestiaUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade"
+                  ],
+                  "capNarrowed": false
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSprintBoon", "rarity": "Common", "level": 1 }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
+                    { "slot": "Rush", "traitKey": "AresSprintBoon" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 5, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 5 },
+                  "upgradableCount": 4,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosWeaponBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": { "damageBonus": 0.7 }
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 6
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 6,
+                      "markedBlessingKey": "ChaosWeaponBlessing",
+                      "markedBlessingValues": { "damageBonus": 0.7 },
+                      "markedBlessingAcquisitionIdentity": "[\"keepsakeEquipResult\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",\"transcendentEmbryo\"]:0"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             },
             {
@@ -1160,6 +2213,219 @@
                   { "traitKey": "AresSprintBoon", "rarity": "Common", "level": 1 },
                   { "traitKey": "BoonGrowthBoon", "rarity": "Epic" }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 21,
+                  "biomeEncounterDepth": 7,
+                  "routeEncounterDepth": 7,
+                  "roomHistoryOrdinal": 21
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": [
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade"
+                  ],
+                  "effectiveSourceKeys": [
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade"
+                  ],
+                  "capNarrowed": true
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSprintBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "BoonGrowthBoon", "rarity": "Epic" }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
+                    { "slot": "Rush", "traitKey": "AresSprintBoon" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 6, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 5, "Epic": 1 },
+                  "upgradableCount": 4,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosWeaponBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": { "damageBonus": 0.7 }
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 7
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 7,
+                      "markedBlessingKey": "ChaosWeaponBlessing",
+                      "markedBlessingValues": { "damageBonus": 0.7 },
+                      "markedBlessingAcquisitionIdentity": "[\"keepsakeEquipResult\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",\"transcendentEmbryo\"]:0"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [{ "traitKey": "BoonGrowthBoon", "interval": 4, "progress": 0 }],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             },
             {
@@ -1175,6 +2441,220 @@
                   { "traitKey": "BoonGrowthBoon", "rarity": "Epic" },
                   { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" }
                 ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 23,
+                  "biomeEncounterDepth": 8,
+                  "routeEncounterDepth": 8,
+                  "roomHistoryOrdinal": 23
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": [
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade"
+                  ],
+                  "effectiveSourceKeys": [
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade"
+                  ],
+                  "capNarrowed": true
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSprintBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "BoonGrowthBoon", "rarity": "Epic" },
+                    { "traitKey": "StaffDoubleAttackTrait", "hammerRank": "RankI" }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
+                    { "slot": "Rush", "traitKey": "AresSprintBoon" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 3, "Earth": 9, "Air": 4, "Fire": 3, "Water": 3 },
+                  "godRarityCounts": { "Common": 5, "Epic": 1 },
+                  "upgradableCount": 4,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": {
+                  "active": [],
+                  "matured": [
+                    {
+                      "blessingKey": "ChaosElementalBlessing",
+                      "rarity": "Epic",
+                      "blessingValues": {}
+                    }
+                  ]
+                },
+                "keepsakes": {
+                  "currentKey": "RandomBlessingKeepsake",
+                  "usedKeys": ["RandomBlessingKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    {
+                      "name": "RandomBlessingKeepsake",
+                      "rarity": "Epic",
+                      "slotted": true,
+                      "currentRoom": 0
+                    }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": {
+                      "origin": "ordinary",
+                      "rarity": "Epic",
+                      "progress": 0,
+                      "markedBlessingKey": "ChaosElementalBlessing",
+                      "markedBlessingValues": {},
+                      "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                    },
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [{ "traitKey": "BoonGrowthBoon", "interval": 4, "progress": 1 }],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
               }
             }
           ]
@@ -9535,5 +11015,5 @@
       }
     }
   ],
-  "planFingerprint": "0018f3d6"
+  "planFingerprint": "0bedf5d8"
 }

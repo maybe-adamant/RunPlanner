@@ -1,5 +1,6 @@
 {
   "schemaVersion": 97,
+  "schemaRevision": 1,
   "projectId": "surface-1",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {

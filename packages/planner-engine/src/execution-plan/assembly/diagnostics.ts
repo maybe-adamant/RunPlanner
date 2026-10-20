@@ -63,7 +63,15 @@ function heldKeepsake(
   return Object.freeze(held);
 }
 
-function assembleRunStateDiagnostic(
+export function assembleRunStateDiagnostic(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot,
+): ExecutionRunStateDiagnostic;
+export function assembleRunStateDiagnostic(
+  catalog: Catalog,
+  snapshot: RunStateSnapshot | undefined,
+): ExecutionRunStateDiagnostic | undefined;
+export function assembleRunStateDiagnostic(
   catalog: Catalog,
   snapshot: RunStateSnapshot | undefined,
 ): ExecutionRunStateDiagnostic | undefined {

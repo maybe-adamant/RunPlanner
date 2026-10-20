@@ -13,6 +13,8 @@ import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionReward } from './overview';
 import type { HubDepartureRunState } from '../../simulation/rewards/model';
 import { hubDepartureTraitInventory } from '../../simulation/rewards/run-state-conformance';
+import type { Catalog } from '../../catalog-schema';
+import { assembleRunStateDiagnostic } from './diagnostics';
 
 function reference(room: {
   readonly occurrenceId: string;
@@ -27,6 +29,7 @@ function reference(room: {
 }
 
 export function hubOverview(
+  catalog: Catalog,
   hub: CanonicalHubDecision | undefined,
   hubExit: CanonicalBatch | undefined,
   departures: readonly HubDepartureRunState[],
@@ -60,11 +63,12 @@ export function hubOverview(
     // A complete canonical Hub holds exactly its declaration's required visits.
     requiredVisitCount: hub.visits.length,
     fountain: hubFountainUse(hub),
-    departures: hubDepartures(hub, departures),
+    departures: hubDepartures(catalog, hub, departures),
   });
 }
 
 function hubDepartures(
+  catalog: Catalog,
   hub: CanonicalHubDecision,
   departures: readonly HubDepartureRunState[],
 ): readonly ExecutionHubDepartureConformance[] {
@@ -91,6 +95,7 @@ function hubDepartures(
             ),
           ),
         }),
+        beforeRoomExit: assembleRunStateDiagnostic(catalog, departure.departure),
       }),
     ),
   );

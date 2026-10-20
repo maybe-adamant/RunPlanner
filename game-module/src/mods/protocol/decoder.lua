@@ -20,7 +20,7 @@ local protocol = {
     CATALOG_VERSION = "0.55.0-anvil-of-fates",
     -- The planner's authored schema pair; a plan made under another pair is outdated.
     SCHEMA_VERSION = 97,
-    SCHEMA_REVISION = 0,
+    SCHEMA_REVISION = 1,
     MAX_ITEMS = p.MAX_ITEMS,
     MAX_STRING = p.MAX_STRING,
     fingerprint = p.fingerprint,
