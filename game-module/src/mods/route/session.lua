@@ -81,9 +81,11 @@ end
 
 -- The cursor waits in the Hub for its next visit or final handoff, identified
 -- by the number of completed main-room visits (not side-room excursions).
-local function hubDeparturePosition(route)
+local function hubDeparturePosition(route, index)
     if route == nil or route.currentOccurrence ~= nil then return nil end
-    local expected = routeSession.expected(route)
+    index = index or route.index
+    local expectedId = route.plan.selectedOccurrenceIds[index]
+    local expected = expectedId and route.plan.occurrencesById[expectedId]
     if expected == nil then return nil end
     for _, carrier in pairs(route.plan.occurrencesById or {}) do
         local hub = carrier.overview and carrier.overview.hub
@@ -92,8 +94,8 @@ local function hubDeparturePosition(route)
             for _, slot in ipairs(hub.slots or {}) do slotIds[slot.room.id] = true end
             if not slotIds[expected.id] and expected.id ~= hub.finalHandoff.id then return nil end
             local visits = 0
-            for index = 1, route.index - 1 do
-                if slotIds[route.plan.selectedOccurrenceIds[index]] then visits = visits + 1 end
+            for position = 1, index - 1 do
+                if slotIds[route.plan.selectedOccurrenceIds[position]] then visits = visits + 1 end
             end
             return hub, carrier, visits
         end
@@ -101,8 +103,9 @@ local function hubDeparturePosition(route)
     return nil
 end
 
-function routeSession.hubDeparture(route)
-    local hub, carrier, visits = hubDeparturePosition(route)
+-- The departure toward the occurrence at `index`, the cursor's when nil.
+function routeSession.hubDeparture(route, index)
+    local hub, carrier, visits = hubDeparturePosition(route, index)
     if hub == nil then return nil end
     return hub.departures[visits + 1], carrier
 end

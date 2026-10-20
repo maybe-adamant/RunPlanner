@@ -273,15 +273,20 @@ function composition.bind(root, moduleVersion)
             shipCombat.takeRewardProducer, highlights)
         local transformationScope = transformationHooks.attach(module, session, getState, report, room)
         local featureScope = roomFeatureHooks.attach(module, session, getState, report, room)
+        local function snapEnabled(runtime)
+            return runtime ~= nil and runtime.data ~= nil and runtime.data.read("SnapMode") == true
+        end
         local navigation = navigationHooks.attach(module, session, getState, report, route, room,
-            transformationScope, shipCombat.rewardContext, generatedEncounter, highlights)
+            transformationScope, shipCombat.rewardContext, generatedEncounter, highlights, snapEnabled)
         if highlights then highlights.attach(module, getState) end
         roomHooks.attach(module, session, getState, report, route, room, featureScope, navigation,
             loadoutScope, practiceScope, {
-                enabled = function(runtime)
-                    return runtime ~= nil and runtime.data ~= nil and runtime.data.read("SnapMode") == true
+                enabled = snapEnabled,
+                correct = import("mods/snap/apply.lua").correct,
+                differences = import("mods/snap/apply.lua").differences,
+                log = function(text)
+                    if rom and rom.log and rom.log.info then rom.log.info(text) end
                 end,
-                apply = import("mods/snap/apply.lua").apply,
                 hexTree = hexTree,
             })
         encounterHooks.attach(module, session, getState, report, room, shipCombat, generatedEncounter, highlights)

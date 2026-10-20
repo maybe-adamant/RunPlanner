@@ -2216,6 +2216,10 @@ function TestProtocol.testHubFountainUseDecodesStrictlyWithinItsRequiredVisits()
         { function(hub) hub.fountain.kind = "useFountain" end, "invalid fountain use" },
         { function(hub) hub.fountain.interactionKey = "well" end, "invalid fountain use" },
         { function(hub) hub.fountain.aromaticPhialTarget = "" end, "Aromatic Phial target" },
+        { function(hub) hub.departures[1].beforeRoomExit.checkpoint = "roomEntered" end,
+            "invalid checkpoint or owner" },
+        { function(hub) hub.departures[1].beforeRoomExit.chaos = nil end, "missing chaos" },
+        { function(hub) hub.departures[1].beforeRoomExit.forfeit = "spent" end, "forfeit" },
     }) do
         local decoded, errorMessage = hubPlan(case[1])
         lu.assertNil(decoded)

@@ -143,6 +143,17 @@ function ephyra.bindNativeDoors(scope, nativeDoors)
     end
 end
 
+-- Stamps each offered board door whose native room is its slot's planned room.
+function ephyra.stampSlotDoors(scope, nativeDoors)
+    for _, door in ipairs(nativeDoors or {}) do
+        local slot = scope.byDoor[door.ObjectId]
+        local nativeRoom = door.Room or door.RoomData
+        if slot ~= nil and type(nativeRoom) == "table" and roomName(nativeRoom) == slot.room.gameName then
+            nativeRoom.__runPlannerExecutionRoomId = slot.room.id
+        end
+    end
+end
+
 function ephyra.chooseSideRoom(scope, args, game)
     local doorId = type(args) == "table" and args.RunPlannerEphyraDoorId or nil
     local slot = doorId and scope and scope.byDoor[doorId] or nil
@@ -284,7 +295,9 @@ end
 
 -- The board's exit from the Hub or a main room towards `target`: nil off the board,
 -- else { door, enters, room } with the offered door (nil when none) and whether it enters `target`.
--- stampedOnly accepts only a door steered for `target`, never an unsteered native one.
+-- stampedOnly enters a Hub slot only through a door steered for it, never an
+-- unsteered native one; a main room's side door is rebuilt instead (rebuild), and
+-- its return to the Hub needs no steering. localSlot marks a planned side room.
 function ephyra.exit(plan, nativeRoomName, target, offered, currentRun, game, stampedOnly)
     local hub = planHub(plan)
     if hub == nil or nativeRoomName == nil then return nil end
@@ -306,7 +319,7 @@ function ephyra.exit(plan, nativeRoomName, target, offered, currentRun, game, st
             return result
         end
     end
-    if stampedOnly then return result end
+    if stampedOnly and main == nil then return result end
     if main == nil then
         for _, slot in ipairs(hub.slots or {}) do
             if slot.room and slot.room.id == target.id then
@@ -324,8 +337,10 @@ function ephyra.exit(plan, nativeRoomName, target, offered, currentRun, game, st
     end
     for _, slot in ipairs(main.overview and main.overview.localSlots or {}) do
         if slot.room and slot.room.id == target.id then
-            result.door = offered[slot.physicalDoorId]
+            result.door, result.localSlot = offered[slot.physicalDoorId], true
             result.enters = result.door ~= nil
+            -- A side room is a fresh room: an unsteered side door is rebuilt for its target.
+            result.rebuild = stampedOnly and result.enters or nil
             return result
         end
     end

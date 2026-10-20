@@ -92,8 +92,10 @@ digits so distinct double-precision values remain distinguishable.
 
 A Practice mode start's self-check runs at the start room's
 `StartRoomPresentation`. The start occurrence's expanded `roomEntered`
-diagnostics supply expected values to these same conformance families, and a
-snapped room checks them after the snap. Other diagnostic sections remain
+diagnostics supply expected values to these same conformance families, and
+after a mismatch snap mode checks them against the room being left's
+`beforeRoomExit` frame, or in Ephyra's Hub the visit's Hub departure frame,
+before native `LeaveRoom`. Other diagnostic sections remain
 nonblocking; the self-check does not add readers or compare the entire
 diagnostic frame.
 

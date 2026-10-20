@@ -18,7 +18,7 @@ local function reportOutcome(session, state, errorValue)
     return session.mismatch(state, errorValue)
 end
 
--- snapScope: { enabled(runtime), apply, hexTree } for snap mode; nil leaves it off.
+-- snapScope: { enabled(runtime), correct, differences, log, hexTree } for snap mode; nil leaves it off.
 function hooks.attach(module, session, getState, report, route, room, featureScope, navigation, loadoutScope,
     practiceScope, snapScope)
     assert(type(loadoutScope) == "table"
@@ -26,36 +26,89 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         and type(loadoutScope.startingRun) == "function"
         and type(loadoutScope.installedRun) == "function",
         "starting-room loadout scope is required")
-    -- Snap mode steers a desynchronized run's next room to the planned next
-    -- occurrence: through the planned board door in Ephyra, else the door's own
-    -- room when it was prepared for that occurrence, else the room the planned
-    -- door would have offered, built and created as ChooseStartingRoom does. The
-    -- session resynchronizes first so the new room's encounter and reward are
-    -- steered inside LeaveRoom. Returns the door LeaveRoom leaves through.
-    local function steerSnap(runtime, state, currentRun, door, inSync)
-        if snapScope == nil or not snapScope.enabled(runtime) then return door end
-        local gameValue = _G.game or game
-        local target, index, way = snapMode.target(state, roomName(currentRun and currentRun.CurrentRoom), {
-            door = door, offered = _G.MapState and _G.MapState.OfferedExitDoors, currentRun = currentRun,
-            game = gameValue, inSync = inSync,
+
+    -- The planned Dream opening CreateRoom realizes for an out-of-sync snap.
+    local plannedCreation
+
+    -- Writes the plan's hero state for the room being left before native LeaveRoom;
+    -- nil when the correction failed and snapping stopped.
+    local function correctHero(state, frame, owner)
+        local ok, outcome, detail = pcall(snapScope.correct, frame, {
+            hexTree = snapScope.hexTree,
+            diagnostic = function(checkpoint, expected, observed)
+                session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
+            end,
         })
-        if target == nil then return door end
-        if not session.beginSnap(state, index) then report(runtime); return door end
-        if way.door ~= nil then
-            door = ephyra.substitute(currentRun, door, way, gameValue)
-            -- A return through the Hub leaves an in-sync run on plan; the target comes later.
-            if way.kind == "board" and not way.enters then session.completeSnap(state); report(runtime); return door end
+        if not ok then
+            session.stopSnapping(state, { outcome = "fault", checkpoint = "snap-apply", expected = owner,
+                observed = tostring(outcome) })
+            return nil
         end
-        if way.kind ~= "throughHub" then room.prepare(state, target) end
-        if way.kind == "room" and state.state == "synchronized" and not navigation.doorTargets(door, target.id) then
-            local data = navigation.plannedRoom(state.plan, index, gameValue) or room.realize(state, target, gameValue)
+        if outcome == nil then session.stopSnapping(state, detail); return nil end
+        return outcome, detail
+    end
+
+    -- An exit that passed its conformance still agrees with the full exit frame;
+    -- any difference is a design issue, logged and never written.
+    local function reportDisagreement(state, nativeRoom, frame)
+        local found = snapScope.differences(frame)
+        if #found == 0 or snapScope.log == nil then return end
+        local families, paths = {}, {}
+        for _, difference in ipairs(found) do
+            families[#families + 1] = difference.family
+            for _, path in ipairs(difference.paths) do paths[#paths + 1] = path end
+        end
+        snapScope.log("[RunPlanner] conformance/snap disagreement room=" .. tostring(roomName(nativeRoom))
+            .. " slot=" .. tostring(state.planSlot) .. " families=" .. table.concat(families, ",")
+            .. " paths=" .. table.concat(paths, "; "))
+    end
+
+    -- Snap mode at an exit after the room's own checks: a synchronized exit writes
+    -- nothing. A desynchronized one corrects the hero to the room's exit frame and
+    -- resumes at the planned next occurrence through the planned door: the offered
+    -- board door in Ephyra, the native return from a side room, else the door's
+    -- own room when it was prepared for that occurrence, else the room the planned
+    -- door would have offered, built and created as ChooseStartingRoom does.
+    -- Returns the door LeaveRoom leaves through.
+    local function snapExit(runtime, state, currentRun, door, inSync)
+        if snapScope == nil or not snapScope.enabled(runtime) or not snapMode.armed(state) then return door end
+        local gameValue = _G.game or game
+        local nativeRoom = currentRun and currentRun.CurrentRoom
+        local decision = { leaving = state.route.lastExitedOccurrence }
+        if state.state == "desynchronized" then
+            decision = snapMode.target(state, roomName(nativeRoom), {
+                door = door, offered = _G.MapState and _G.MapState.OfferedExitDoors, currentRun = currentRun,
+                game = gameValue, inSync = inSync,
+            })
+        end
+        local leaving = decision.leaving
+        local frame = snapMode.frame(state, nativeRoom, leaving, decision.index)
+        if state.state == "synchronized" then
+            if frame ~= nil then reportDisagreement(state, nativeRoom, frame) end
+            return door
+        end
+        if frame ~= nil and correctHero(state, frame, leaving and leaving.id or roomName(nativeRoom)) == nil then
+            report(runtime)
+            return door
+        end
+        local target, way = decision.target, decision.way
+        if target == nil then report(runtime); return door end
+        local mismatch = state.firstMismatch
+        if way.door ~= nil then door = ephyra.substitute(currentRun, door, way, gameValue) end
+        if not session.resync(state, decision.index, leaving) then report(runtime); return door end
+        if way.kind == "room" or (way.kind == "board" and way.enters) then room.prepare(state, target) end
+        local rebuild = way.rebuild
+            or way.kind == "room" and type(door) == "table" and not navigation.doorTargets(door, target.id)
+        if rebuild then
+            local data = navigation.plannedRoom(state.plan, decision.index, gameValue)
+                or room.realize(state, target, gameValue)
             if data ~= nil then data = navigation.realizeIncomingReward(target, data) end
             local createRoom = gameValue and gameValue.CreateRoom or _G.CreateRoom
             if type(data) == "table" and type(createRoom) == "function" and type(door) == "table" then
                 door.Room = createRoom(data)
             end
         end
-        if state.state ~= "synchronized" then session.stopSnapping(state) end
+        session.recordSnap(state, { occurrenceId = target.id, mismatch = mismatch })
         report(runtime)
         return door
     end
@@ -66,38 +119,35 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             _G.MapState and _G.MapState.OfferedExitDoors, currentRun, _G.game or game), expected
     end
 
-    -- At the snapped room's StartRoom, before native setup binds the hero.
-    local function settleSnap(runtime, state, nativeRoom)
-        local pending = state.snapPending
-        local occurrence = state.plan.occurrencesById[pending.occurrenceId]
-        local ok, verified, failure = true, false, nil
-        if state.state == "synchronized" and roomName(nativeRoom) ~= occurrence.gameName then
-            failure = { checkpoint = "snap-room", expected = occurrence.gameName, observed = roomName(nativeRoom) }
-        elseif state.state == "synchronized" then
-            ok, verified, failure = pcall(snapScope.apply, occurrence, occurrence.diagnostics.roomEntered,
-                state.plan, {
-                    hexTree = snapScope.hexTree,
-                    diagnostic = function(checkpoint, expected, observed)
-                        session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
-                    end,
-                })
-            if not ok then
-                failure = { outcome = "fault", checkpoint = "snap-apply", expected = occurrence.id,
-                    observed = tostring(verified) }
-            end
-        end
-        if ok and verified then session.completeSnap(state) else session.stopSnapping(state, failure) end
-        report(runtime)
-    end
-
     module.hooks.wrap("ChooseStartingRoom", "run-planner-starting-room", function(_, runtime, base, currentRun,
         args)
         local state = getState(runtime)
         if state == nil then return base(currentRun, args) end
-        local enteringDreamBiome = state.state == "synchronized"
-            and state.plan.routeKey == "Dream"
+        local dreamEntry = (state.state == "synchronized" or state.state == "desynchronized")
+            and state.plan ~= nil and state.plan.routeKey == "Dream"
             and type(args) == "table" and args.StartingBiome ~= nil
             and currentRun and currentRun.IsDreamRun == true
+        local enteringDreamBiome = dreamEntry and state.state == "synchronized"
+        -- Snap mode steers an out-of-sync Dream exit to the planned opening; its LeaveRoom resynchronizes.
+        local snapOpening = dreamEntry and state.state == "desynchronized" and snapScope ~= nil
+            and snapScope.enabled(runtime) and snapMode.armed(state)
+            and snapMode.plannedNext(state, roomName(currentRun.CurrentRoom)) or nil
+        if snapOpening ~= nil then
+            local gameValue = _G.game or game
+            local data = room.realize(state, snapOpening, gameValue)
+            if data ~= nil then data = navigation.realizeIncomingReward(snapOpening, data) end
+            local createRoom = gameValue and gameValue.CreateRoom or _G.CreateRoom
+            if type(data) ~= "table" or type(createRoom) ~= "function" then
+                report(runtime)
+                return base(currentRun, args)
+            end
+            plannedCreation = snapOpening
+            local ok, value = pcall(createRoom, data, args)
+            plannedCreation = nil
+            if not ok then error(value, 0) end
+            report(runtime)
+            return value
+        end
         if state.state ~= "starting" and not enteringDreamBiome then
             report(runtime)
             return base(currentRun, args)
@@ -152,10 +202,11 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
                 opening = expected
             end
         end
-        if state == nil or state.state ~= "synchronized" then return base(roomData, args) end
-        local additional = featureScope and featureScope.currentAdditional()
+        local planned = plannedCreation
+        if state == nil or (state.state ~= "synchronized" and planned == nil) then return base(roomData, args) end
+        local additional = planned == nil and featureScope and featureScope.currentAdditional() or nil
         local id = type(roomData) == "table" and roomData.__runPlannerExecutionRoomId or nil
-        local occurrence = opening
+        local occurrence = opening or planned
             or id and state.plan.occurrencesById[id]
             or additional and additional.occurrence
             or navigation.resolveNativeRoom and navigation.resolveNativeRoom(state, roomData)
@@ -195,9 +246,6 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         if nativeRoom == nil and type(liveRun) == "table" then nativeRoom = liveRun.CurrentRoom end
         -- A run loaded into a fresh process continues unsteered.
         if loadoutScope.installedRun(liveRun) then session.resumeUnsteered(state) end
-        -- A snap through the Hub settles at the planned room after the Hub's first entry.
-        local snapped = state.snapPending ~= nil and not route.transparent(state.route, roomName(nativeRoom))
-        if snapped then settleSnap(runtime, state, nativeRoom) end
         if state.state ~= "synchronized" then report(runtime); return base(currentRun, nativeRoom) end
         local expected = route.expected(state.route)
         local id = type(nativeRoom) == "table" and nativeRoom.__runPlannerExecutionRoomId or nil
@@ -232,8 +280,6 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
                 offeredExitDoors = _G.MapState and _G.MapState.OfferedExitDoors,
             })
         end
-        -- A snapped room that fails its own entry proofs means the snap did not hold.
-        if snapped and state.state == "desynchronized" then session.stopSnapping(state) end
         report(runtime)
         return result
     end)
@@ -255,13 +301,12 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
     module.hooks.wrap("LeaveRoom", "run-planner-room-exit", function(_, runtime, base, currentRun, door)
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then
-            if state ~= nil then door = steerSnap(runtime, state, currentRun, door) end
+            if state ~= nil then door = snapExit(runtime, state, currentRun, door) end
             return base(currentRun, door)
         end
         local nativeRoomName = roomName(currentRun and currentRun.CurrentRoom)
         if route.leaveTransparent and route.leaveTransparent(state.route, nativeRoomName) then
-            -- A snap pending through the Hub corrects the hero at the planned room instead.
-            if navigation.proveHubDeparture and state.snapPending == nil then
+            if navigation.proveHubDeparture then
                 local departed, departureError = navigation.proveHubDeparture(state, currentRun)
                 if not departed then reportOutcome(session, state, departureError); report(runtime) end
             end
@@ -271,10 +316,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             if stray ~= nil then
                 session.mismatch(state, { checkpoint = "exit-door", expected = expected.id, observed = stray })
             end
-            if state.state == "desynchronized" then
-                door = steerSnap(runtime, state, currentRun, door, stray ~= nil)
-                report(runtime)
-            end
+            door = snapExit(runtime, state, currentRun, door, stray ~= nil)
             return base(currentRun, door)
         end
         local proved, errorValue = navigation.proveOutgoingDoors(state, currentRun)
@@ -295,7 +337,7 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         if state.state == "synchronized" and expected == nil then
             state.reason = "configured-prefix-complete"
         end
-        if state.state == "desynchronized" then door = steerSnap(runtime, state, currentRun, door, stray ~= nil) end
+        door = snapExit(runtime, state, currentRun, door, stray ~= nil)
         local result = base(currentRun, door)
         report(runtime)
         return result

@@ -1,6 +1,6 @@
--- Snap: return the live hero to one room's roomEntered frame by writing only
--- the differences, before native StartRoom binds the hero. Every write reuses
--- the Practice writers; state no check reads stays live.
+-- Snap: return the live hero to a room's beforeRoomExit frame by writing only
+-- the differences, before native LeaveRoom runs. Every write reuses the
+-- Practice writers; state no check reads stays live.
 local practice = type(import) == "function" and import("mods/practice/install.lua")
     or require("mods.practice.install")
 local readers = type(import) == "function" and import("mods/room/conformance/readers.lua")
@@ -515,12 +515,12 @@ local function validate(frame, context)
     return true
 end
 
--- Snaps the hero to the occurrence's roomEntered frame and proves it with the
--- Practice start check, returning that result; an invalid frame touches nothing.
-function snap.apply(occurrence, frame, _, context)
+-- Writes the frame's differences and proves them against the same frame,
+-- returning that result; an invalid frame touches nothing.
+function snap.apply(frame, context)
     local valid, failure = validate(frame, context)
     if not valid then return nil, failure end
-    local expected = assert(conformance.admissionExpected(occurrence.diagnostics))
+    local expected = assert(conformance.admissionExpected(frame))
     local unit = hero()
     local captured = { health = unit.Health, lastStands = copy(unit.LastStands), maxLastStands = unit.MaxLastStands }
     practice.quietly(function()
@@ -541,7 +541,43 @@ function snap.apply(occurrence, frame, _, context)
         unit.LastStands, unit.MaxLastStands = captured.lastStands, captured.maxLastStands
     end)
     unit.Health = math.min(captured.health, unit.MaxHealth)
-    return admission.verify(occurrence)
+    return admission.verifyFrame(frame, "snap-exit")
+end
+
+local function leaves(expected, observed, path, out)
+    if type(expected) == "table" and type(observed) == "table" then
+        local keys = {}
+        for key in pairs(expected) do keys[key] = true end
+        for key in pairs(observed) do keys[key] = true end
+        for key in pairs(keys) do leaves(expected[key], observed[key], path .. "." .. tostring(key), out) end
+    elseif expected ~= observed then
+        out[#out + 1] = path .. "=" .. tostring(expected) .. "->" .. tostring(observed)
+    end
+    return out
+end
+
+-- The families and leaf paths where the live hero differs from the frame, read
+-- only; empty when they agree.
+function snap.differences(frame)
+    local found, problem = admission.differences(frame, "snap-exit")
+    if not found then return { { family = "frame", paths = { tostring(problem) } } } end
+    local result = {}
+    for _, mismatch in ipairs(found) do
+        local paths = leaves(mismatch.expected, mismatch.observed, mismatch.family, {})
+        table.sort(paths)
+        result[#result + 1] = { family = mismatch.family, paths = paths }
+    end
+    return result
+end
+
+-- "in-sync" when the hero already matches the frame, else "corrected" and the
+-- first difference once apply verifies; nil and the failure otherwise.
+function snap.correct(frame, context)
+    local same, difference = admission.verifyFrame(frame, "snap-exit")
+    if same then return "in-sync" end
+    local applied, failure = snap.apply(frame, context)
+    if not applied then return nil, failure end
+    return "corrected", difference
 end
 
 return snap

@@ -463,6 +463,11 @@ local function hubDepartureConformance(value, label)
         if seen[row.traitKey] then return p.fail(label .. ".traits.equipped has duplicate traits") end
         seen[row.traitKey] = true
     end
+    if record.beforeRoomExit ~= nil then
+        local _, frameError = diagnostics.completeFrame(record.beforeRoomExit, "beforeRoomExit",
+            label .. ".beforeRoomExit")
+        if frameError then return nil, frameError end
+    end
     return record
 end
 

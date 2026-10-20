@@ -708,6 +708,22 @@ function diagnostics.expand(value, label, framing)
     return result
 end
 
+-- One complete run-state frame published whole, such as a Hub departure's.
+function diagnostics.completeFrame(value, checkpoint, label)
+    local required = { "owner", "checkpoint" }
+    for _, section in ipairs(sections) do required[#required + 1] = section end
+    local record, errorMessage = p.exact(value, required, {}, label)
+    if not record then return nil, errorMessage end
+    if record.checkpoint ~= checkpoint or not p.str(record.owner, label .. ".owner", p.MAX_OWNER_STRING) then
+        return p.fail(label .. " has an invalid checkpoint or owner")
+    end
+    for _, section in ipairs(sections) do
+        local _, sectionError = validateSection(section, record[section], label .. "." .. section)
+        if sectionError then return nil, sectionError end
+    end
+    return record
+end
+
 diagnostics.equippedTraits = equippedTraits
 
 return diagnostics
