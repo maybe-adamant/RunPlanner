@@ -7,8 +7,20 @@ import type {
 import { createProjectDocument } from '../../authored-project/defaults';
 import { decodeProjectDocument } from '../../authored-project/codec';
 
-/** The project's route and itinerary, which a draft never changes. */
-export type DraftRoute = Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'>;
+/** The project's route and itinerary, which a draft never changes, and its configured prefix. */
+export type DraftRoute = Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'> &
+  Partial<Pick<AuthoredRoutePlan, 'biomes'>>;
+
+/** The biomes a draft plans: the configured prefix ("Plan up to"), or the whole itinerary when none is. */
+export function draftPlannedBiomeKeys(route: DraftRoute): readonly string[] {
+  const count = route.biomes?.length ?? 0;
+  return count === 0 ? route.itineraryBiomeKeys : route.itineraryBiomeKeys.slice(0, count);
+}
+
+/** The planned share of the route, which scales the planner's boon and Hermes-plus-Hammer caps. */
+export function draftPlannedShare(route: DraftRoute): number {
+  return draftPlannedBiomeKeys(route).length / route.itineraryBiomeKeys.length;
+}
 
 /** The loadout a draft sets; the starting reward and keepsake equip results are generated. */
 export interface DraftLoadout {
@@ -81,7 +93,7 @@ function draftRouteLoadout(loadout: DraftLoadout): RouteLoadout {
 }
 
 /**
- * The base project's route with the draft loadout, every itinerary biome
+ * The base project's route with the draft loadout, its planned biomes
  * configured and no topology, strictly decoded. Run modifiers and the Practice start carry over.
  */
 export function draftLoadoutProject(
@@ -93,7 +105,7 @@ export function draftLoadoutProject(
     projectId: base.projectId,
     routeKey: base.route.routeKey,
     itineraryBiomeKeys: base.route.itineraryBiomeKeys,
-    configuredBiomeCount: base.route.itineraryBiomeKeys.length,
+    configuredBiomeCount: draftPlannedBiomeKeys(base.route).length,
   });
   const runModifiers = base.route.loadout.runModifiers;
   const practiceStart = base.route.practiceStart;

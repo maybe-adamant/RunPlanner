@@ -72,8 +72,8 @@ function replaceRoute(
   const route = document.route;
   if (route.routeKey !== command.route.routeKey)
     failCommand(command, `project is missing route ${command.route.routeKey}`);
-  if (command.biomes.length !== route.itineraryBiomeKeys.length)
-    failCommand(command, `must plan all ${route.itineraryBiomeKeys.length} itinerary biomes`);
+  if (command.biomes.length === 0 || command.biomes.length > route.itineraryBiomeKeys.length)
+    failCommand(command, `must plan 1 to ${route.itineraryBiomeKeys.length} itinerary biomes`);
   command.biomes.forEach((biome, index) => {
     if (biome.biomeKey !== route.itineraryBiomeKeys[index])
       failCommand(command, `biome ${index} must be ${route.itineraryBiomeKeys[index]}`);

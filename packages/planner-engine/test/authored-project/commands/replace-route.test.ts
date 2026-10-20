@@ -111,13 +111,18 @@ describe('ReplaceRoute', () => {
     );
   });
 
-  it('refuses a partial or reordered itinerary and a disallowed starting reward', () => {
+  it('installs a planned prefix of the itinerary', () => {
+    const source = loadUnderworldFGHICheckpoint();
+    const [f, g] = source.route.biomes;
+    const replaced = applyProjectCommand(source, catalog, replaceWith(source, source, [f!, g!]));
+    expect(replaced.route.biomes).toEqual([f, g]);
+    expect(replaced.route.itineraryBiomeKeys).toEqual(source.route.itineraryBiomeKeys);
+  });
+
+  it('refuses an empty, overlong or reordered plan and a disallowed starting reward', () => {
     const source = loadUnderworldFGHICheckpoint();
     const [f, g, h, i] = source.route.biomes;
-    for (const biomes of [
-      [g!, f!, h!, i!],
-      [f!, g!, h!],
-    ])
+    for (const biomes of [[], [g!, f!, h!, i!], [g!], [f!, g!, h!, i!, i!]])
       expect(() =>
         applyProjectCommand(source, catalog, replaceWith(source, source, biomes)),
       ).toThrow(ProjectCommandContractError);

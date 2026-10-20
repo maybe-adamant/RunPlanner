@@ -47,6 +47,16 @@ export type DraftResult =
       readonly attempts: number;
     };
 
+/**
+ * A met story or field NPC outweighs a basket trait, which also scores as a met scheduled target,
+ * so an attempt that visits its NPCs beats one with one more due trait.
+ */
+const NPC_TARGET_WEIGHT = 3;
+
+function targetWeight(target: DraftReport['targets'][number]): number {
+  return target.kind === 'storyNpc' || target.kind === 'fieldNpc' ? NPC_TARGET_WEIGHT : 1;
+}
+
 function attemptSeed(seed: number, biomeIndex: number, attempt: number): number {
   return (seed * 1_000_003 + biomeIndex * 7_919 + attempt * 104_729) >>> 0;
 }
@@ -117,7 +127,9 @@ export function draftProject(
       const report = draftReport(catalog, spec, walk.assembly);
       const scheduled = walk.scheduledTargets();
       const score =
-        report.met + scheduled.filter((target) => target.met).length - walk.wastedHermes();
+        report.targets.reduce((sum, target) => sum + (target.met ? targetWeight(target) : 0), 0) +
+        scheduled.filter((target) => target.met).length -
+        walk.wastedHermes();
       // An NPC basket trait is this biome's own target, like its NPC.
       const localMet = report.targets.every(
         (target) =>

@@ -18,7 +18,7 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
     createProjectDocument(catalog, {
       projectId: 'run-plan',
       routeKey: 'Underworld',
-      configuredBiomeCount: 1,
+      configuredBiomeCount: 2,
     }),
     'draft.runplanner.json',
   );

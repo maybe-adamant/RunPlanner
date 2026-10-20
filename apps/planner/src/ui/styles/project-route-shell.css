@@ -588,6 +588,12 @@
   padding-block: 1rem 0.75rem;
 }
 
+/* In the Draft panel the loadout follows "Plan up to" directly, as one block of route settings. */
+.draft-fieldset > .route-scope + .route-loadout-panel {
+  margin-top: -0.25rem;
+  padding-top: 0;
+}
+
 /* Packed left at one shared width; a row wraps when it can't fit. */
 .route-loadout-row {
   display: flex;

@@ -5,6 +5,7 @@ import {
   draftSourceQueues,
   draftKeepsakeOptions,
   draftOrderRefusals,
+  draftPlannedBiomeKeys,
   draftWorldOptions,
   type DraftCapUsage,
   type DraftGiverCapUsage,
@@ -27,6 +28,8 @@ export interface DraftRackSlot {
 
 export interface DraftSpecProjection {
   readonly worldOptions: DraftWorldOptions;
+  /** The configured prefix a draft plans; NPC choices past it are inert. */
+  readonly plannedBiomeKeys: readonly string[];
   readonly keepsakeOptions: DraftKeepsakeOptions;
   readonly rackSlots: readonly DraftRackSlot[];
   /** Absent while the project's loadout has no weapon, aspect, familiar or keepsake. */
@@ -71,7 +74,12 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
       keepsakeKey,
     });
   });
-  const projection = { worldOptions, keepsakeOptions, rackSlots };
+  const projection = {
+    worldOptions,
+    plannedBiomeKeys: draftPlannedBiomeKeys(route),
+    keepsakeOptions,
+    rackSlots,
+  };
   if (
     weaponKey === null ||
     aspectKey === null ||
@@ -251,6 +259,7 @@ function refusalHint(
       case 'wrongHammerLoadout':
       case 'cap':
       case 'totalCap':
+      case 'supplyCap':
         break;
     }
   return undefined;
@@ -344,7 +353,9 @@ export function projectDraftBasket(
     usages: readonly DraftGiverCapUsage[],
   ): DraftBasketSection => {
     const giver = catalog.traitGivers.byKey[giverKey]!;
-    return section(giverKey, giver.label, rowsOf(giver.traitKeys), giverCap(usages, giverKey));
+    // The Hammer giver reads "Hammer", as in its basket row and count.
+    const label = giver.providerKind === 'hammer' ? 'Hammer' : giver.label;
+    return section(giverKey, label, rowsOf(giver.traitKeys), giverCap(usages, giverKey));
   };
 
   const godSections = spec.world.godKeys.map((godKey) => {
@@ -419,7 +430,8 @@ export function projectDraftBasket(
       cap: caps.poolGodTotal,
       sections: [...godSections, ...(duos.length === 0 ? [] : [section('duos', 'Duos', duos)])],
     },
-    { key: 'bonus', label: 'Bonus', sections: bonus },
+    // Hermes and Hammers share one count, one per planned biome; Selene keeps its own.
+    { key: 'bonus', label: 'Bonus', cap: caps.supplyTotal, sections: bonus },
     { key: 'npcs', label: 'NPCs', cap: caps.npcTotal, sections: npcSections },
   ];
 
@@ -501,14 +513,14 @@ export function projectDraftBasket(
   ];
   const summary: DraftBasketSummaryCap[] = [
     { key: 'gods', label: 'God boons', cap: caps.poolGodTotal },
-    ...caps.providers.map((usage) => ({
-      key: usage.giverKey,
-      label:
-        usage.providerKind === 'hammer'
-          ? 'Hammer'
-          : (catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey),
-      cap: usage,
-    })),
+    { key: 'supply', label: 'Hermes + Hammer', cap: caps.supplyTotal },
+    ...caps.providers
+      .filter((usage) => usage.providerKind === 'spell')
+      .map((usage) => ({
+        key: usage.giverKey,
+        label: catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey,
+        cap: usage,
+      })),
     { key: 'npcs', label: 'NPCs', cap: caps.npcTotal },
   ];
   return Object.freeze({
