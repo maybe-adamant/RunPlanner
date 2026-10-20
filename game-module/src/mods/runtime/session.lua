@@ -17,6 +17,7 @@ function runtime.create()
         state = "inactive",
         reason = "not-started",
         diagnostics = {},
+        snaps = {},
     }
 end
 
@@ -104,7 +105,6 @@ local function reset(state)
     state.practiceStart = nil
     state.abandoned = nil
     state.snaps = {}
-    state.snapPending = nil
     state.snapDisabled = nil
     state.diagnostics = {}
     state.reason = "not-started"
@@ -228,33 +228,28 @@ function runtime.resumeAt(state, index)
     return true
 end
 
--- Snap mode resumes at the planned next occurrence after a mismatch: steering
--- the transition into it needs a synchronized session before the hero is snapped.
-function runtime.beginSnap(state, index)
-    -- A snap superseding a pending one keeps the first mismatch and counts once.
-    local mismatch = state.snapPending and state.snapPending.mismatch or state.firstMismatch
-    local lastExited = state.route and state.route.lastExitedOccurrence
+-- Snap mode returns a desynchronized run to the plan at occurrence `index`; the
+-- room just left still anchors native Hub and parent re-entries.
+function runtime.resync(state, index, lastExited)
     local resumed, routeError = runtime.resumeAt(state, index)
     if not resumed then return runtime.fault(state, routeError) end
-    -- The room just left still anchors native Hub and parent re-entries.
     state.route.lastExitedOccurrence = lastExited
     state.firstMismatch, state.loggedMismatch = nil, nil
-    state.snapPending = { occurrenceId = state.plan.selectedOccurrenceIds[index], index = index, mismatch = mismatch }
-    state.state, state.reason = "synchronized", "snap-pending"
+    state.state, state.reason = "synchronized", "ready"
     return true
 end
 
--- The hero now matches the occurrence's frame; the snap joins the run's record.
-function runtime.completeSnap(state)
-    local pending, snaps = state.snapPending, {}
-    for position, snap in ipairs(state.snaps or {}) do snaps[position] = snap end
-    snaps[#snaps + 1] = pending
-    state.snaps, state.snapPending, state.reason = snaps, nil, "ready"
+-- One exit that returned the run to the plan joins the run's record.
+function runtime.recordSnap(state, snap)
+    local snaps = {}
+    for position, recorded in ipairs(state.snaps or {}) do snaps[position] = recorded end
+    snaps[#snaps + 1] = snap
+    state.snaps = snaps
 end
 
 -- A snap that cannot hold ends snap mode for the run; the session stays passive.
 function runtime.stopSnapping(state, failure)
-    state.snapPending, state.snapDisabled = nil, true
+    state.snapDisabled = true
     if failure ~= nil and failure.outcome == "fault" then
         state.firstMismatch = nil
         runtime.fault(state, failure)

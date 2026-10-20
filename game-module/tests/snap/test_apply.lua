@@ -69,6 +69,7 @@ local function world(traits)
         TraitData = setmetatable({
             ReincarnationKeepsake = { Slot = "Keepsake" }, ArmorGainKeepsake = { Slot = "Keepsake" },
             RarifyKeepsake = { Slot = "Keepsake" }, ManaOverTimeRefundKeepsake = { Slot = "Keepsake" },
+            FountainRarityKeepsake = { Slot = "Keepsake" },
             StorePendingDeliveryItem = { Name = "StorePendingDeliveryItem" },
         },
             { __index = function() return {} end }),
@@ -127,17 +128,16 @@ local function world(traits)
         RemoveIncomingDamageModifier = function() end, AddIncomingDamageModifier = function() end,
         GetSurfaceShopText = function(item) return item.Name end,
     })
-    local verify = admission.verify
-    admission.verify = function() return true end
+    local verify = admission.verifyFrame
+    admission.verifyFrame = function() return true end
     return hero, log, function()
-        admission.verify = verify
+        admission.verifyFrame = verify
         restore()
     end
 end
 
 local function apply(value)
-    local occurrence = { diagnostics = { roomEntered = value } }
-    return snap.apply(occurrence, value, {}, {})
+    return snap.apply(value, {})
 end
 
 local function names(hero)
@@ -234,7 +234,7 @@ end
 function TestSnapApply.testReturnsTheStartCheckFailure()
     local _, _, restore = world({})
     local mismatch = { checkpoint = "practice-start:traitInventory" }
-    admission.verify = function() return nil, mismatch end
+    admission.verifyFrame = function() return nil, mismatch end
     local ok, failure = apply(frame())
     restore()
     lu.assertNil(ok)
@@ -374,6 +374,18 @@ function TestSnapApply.testReequipsARerankedKeepsakeKeepingItsArmorAndHoldsAPerm
     lu.assertEquals(gameState.LastAwardTrait, "ArmorGainKeepsake")
 end
 
+function TestSnapApply.testAPhialFountainUsedAtTheWrongTimeIsUndone()
+    local phial = { Name = "FountainRarityKeepsake", Rarity = "Common", Slot = "Keepsake", Uses = 0 }
+    local hero, _, restore = world({ phial, { Name = "ZeusWeaponBoon", Rarity = "Rare", StackNum = 1 } })
+    local value = frame()
+    value.keepsakes.held = { { name = "FountainRarityKeepsake", rarity = "Common", slotted = true, uses = 1 } }
+    value.traits.equipped = { { traitKey = "ZeusWeaponBoon", rarity = "Common", level = 1 } }
+    lu.assertTrue(apply(value))
+    restore()
+    lu.assertIs(named(hero, "FountainRarityKeepsake"), phial)
+    lu.assertEquals({ phial.Uses, named(hero, "ZeusWeaponBoon").Rarity }, { 1, "Common" })
+end
+
 function TestSnapApply.testWritesThePublishedRewardStores()
     local _, _, restore = world({})
     local run = _G.CurrentRun
@@ -399,11 +411,43 @@ function TestSnapApply.testReslotsASpellWhoseRealisedTreeDiffers()
     local value = frame()
     value.hexProgress.spellTraitKey, value.hexProgress.layoutKey = "SpellPotionTrait", "Lung"
     value.hexNodes = { nodes = { ["1:1"] = "TalentZ" }, investedNodes = { "1:1" } }
-    lu.assertTrue(snap.apply({ diagnostics = { roomEntered = value } }, value, {}, { hexTree = hexTree }))
+    lu.assertTrue(snap.apply(value, { hexTree = hexTree }))
     restore()
     lu.assertEquals(realized.nodes, { ["1:1"] = "TalentZ" })
     lu.assertEquals(names(hero), { "SpellPotionTrait", "TalentZ" })
     lu.assertTrue(hero.SlottedSpell.Talents[1][1].Invested)
+end
+
+function TestSnapApply.testACorrectionWritesNothingWhenTheHeroAlreadyMatches()
+    local hero, log, restore = world({ { Name = "ZeusWeaponBoon", Rarity = "Common", StackNum = 1 } })
+    lu.assertEquals(snap.correct(frame(), {}), "in-sync")
+    lu.assertEquals({ names(hero), log.removed, log.added }, { { "ZeusWeaponBoon" }, {}, {} })
+    local mismatch = { checkpoint = "snap-exit:traitInventory" }
+    local calls = 0
+    admission.verifyFrame = function()
+        calls = calls + 1
+        if calls == 1 then return nil, mismatch end
+        return true
+    end
+    local outcome, difference = snap.correct(frame(), {})
+    restore()
+    lu.assertEquals({ outcome, difference }, { "corrected", mismatch })
+    lu.assertEquals(log.removed[1].name, "ZeusWeaponBoon")
+    lu.assertEquals(names(hero), {})
+end
+
+function TestSnapApply.testDifferencesNameEachFamilyAndLeafWithoutWriting()
+    local hero, log, restore = world({ { Name = "ZeusWeaponBoon", Rarity = "Common", StackNum = 1 } })
+    local differences = admission.differences
+    admission.differences = function()
+        return { { family = "keepsakes", expected = { held = { { uses = 1, name = "Phial" } } },
+            observed = { held = { { uses = 0, name = "Phial" } } } } }
+    end
+    local found = snap.differences(frame())
+    admission.differences = differences
+    restore()
+    lu.assertEquals(found, { { family = "keepsakes", paths = { "keepsakes.held.1.uses=1->0" } } })
+    lu.assertEquals({ names(hero), log.removed, log.added }, { { "ZeusWeaponBoon" }, {}, {} })
 end
 
 function TestSnapApply.testRejectsAnUndeclaredStoreOrMissingTreeBeforeAnyWrite()

@@ -1027,57 +1027,78 @@ reload would; clear-time and depth records still write.
 
 The ModpackLib option **Snap back to the plan** (`SnapMode`, off by default,
 persisted and hashed like the other gameplay options) returns a run to its plan
-after a mismatch. Off, a desynchronized run is unchanged.
+at each room exit. Off, a desynchronized run is unchanged.
 
-- **Steering.** At the next `LeaveRoom` of a desynchronized run, after every
-  ordinary check including the `exit-door` check of a synchronized exit, the
-  route cursor exits and its next occurrence becomes the target. The session
-  resumes there (a fresh cursor and room coordinator, as a Practice start
-  resumes, keeping the room last left so native Hub and parent re-entries stay
-  transparent) before native `LeaveRoom` runs, so the next room's encounter and
-  reward are steered. Outside Ephyra's board, the chosen door's room is kept
-  only when it was prepared for that occurrence; otherwise `doors.plannedRoom`
-  builds the room the planned door would have offered, with its reward, cages
-  and Zagreus Contract presence, and `CreateRoom` replaces `door.Room`.
+- **Correct at the exit.** Every `LeaveRoom` first runs the room's ordinary
+  checks: its exit conformance, the Hub departure conformance in the Hub, and
+  the `exit-door` check of a synchronized exit. An exit that passes them writes
+  nothing. After a mismatch, `snap/apply.lua` compares the live hero with the
+  plan's hero state for the room being left over every admission family. That
+  state is the occurrence's `beforeRoomExit` frame, or in Ephyra's Hub the
+  visit's `departures[i].beforeRoomExit`, found by its completed main-room
+  visits. Differences are written through the Practice writers before native
+  `LeaveRoom` runs, and the hero is verified against the same frame. Native
+  `LeaveRoom` and `StartRoom` then replay what follows the frame: room-counted
+  traits, Echo, Silken Sash, shop completions, the Well spark and the Hub board
+  draws. Health is clamped, Death Defiance and armor stay live, and only the
+  traits in the generated `modeled_traits.lua` are restored. A room that is not
+  the occurrence being left, a restored main room, and a Hub without a
+  departure frame are not corrected; the next room's exit corrects the hero.
+- **Disagreement.** A synchronized exit that passes its checks still reads the
+  frame's differences without writing them. Any difference means conformance
+  and the frame disagree, a design issue: the module logs a
+  `[RunPlanner] conformance/snap disagreement` line naming the room, families
+  and differing paths, and counts nothing.
+- **Force the planned door.** After a mismatch, the same exit leaves the route
+  cursor and resumes at the planned next occurrence (a fresh cursor and room
+  coordinator, as a Practice start resumes, keeping the room just left so
+  native Hub and parent re-entries stay transparent) before native `LeaveRoom`
+  runs, so the next room's encounter and reward are steered. Outside Ephyra's
+  board, including a biome edge, the chosen door's room is kept only when it
+  was prepared for that occurrence; otherwise `doors.plannedRoom` builds the
+  room the planned door would have offered, with its reward, cages and Zagreus
+  Contract presence, and `CreateRoom` replaces `door.Room`. A side room's
+  native return already re-enters its parent, so only the hero is corrected.
+  A biome edge, including Dream's, is steered only from a Postboss the route
+  entered in sync while the plan continues past it. Dream picks the next biome
+  (`SelectNextDreamBiome`) and its opening (`ChooseStartingRoom`) before
+  `LeaveRoom`; neither reads the hero, so with snap on both are steered to the
+  planned occurrence even out of sync, and the exit then corrects and resumes as
+  for any room.
 - **Ephyra's board.** The Hub and its main rooms are never rebuilt, because
   `CreateRoom` + `StartRoom` would respawn their Soul Pylons, which gate the Hub
   exit. Native `LeaveRoom` is instead given the offered planned door: the Hub
   slot door, the main room's side door, or its `EphyraExitDoorReturn` back to
   the Hub. Native bookkeeping then records that door (the Hub also closes it
   for the run; main rooms record `DoorRoomHistory` but keep their doors open)
-  and presents the exit from it. The module undoes what `AttemptUseDoor` recorded for the taken door
-  (`OnUseSetRunData` keys and `CloseDoorOnReturn`) and records the planned door.
-  For the Hub return, it builds the room from `RoomHistory` as `AttemptUseDoor`
-  does. A synchronized board exit through any other door is an `exit-door`
-  mismatch, so a wrong turn snaps in one step. A return to the Hub completes
-  the snap at once, because the run was in sync. An exit from the Hub carrier
-  that enters the Hub snaps to the first Hub visit; any other exit from the
-  carrier, such as a Chaos gate, leaves through the offered Hub door instead.
-  That snap settles at the visit's `StartRoom` after the Hub's first entry, so
-  the entry's board is steered in sync. The Hub departure proof waits for that
-  frame. Out of sync, only a board door stamped for the target is used, never
-  an unsteered native one.
-- **Snap.** At that room's `StartRoom`, before native setup binds a fresh hero
-  unit, `snap/apply.lua` writes only the differences from the room's
-  `roomEntered` frame through the Practice writers, then runs the Practice start
-  check. Health is clamped, Death Defiance and armor stay live, and only the
-  traits in the generated `modeled_traits.lua` are restored.
-- **Stop.** Snapping stops for the run only when a snap fails in its own room:
-  `apply` faults (the session faults), verify fails, or that room's entry proofs
-  mismatch inside the same `StartRoom` (`snap-loop`). Any later mismatch snaps
-  again at the next transition.
-- **Declined.** A transition the plan cannot reach in one step is declined.
-  These are biome edges including Dream transitions, a target without a
-  `roomEntered` frame, a side room's return, a board target from outside the
-  board, a planned board door that is not offered, and a reloaded run. A
-  declined run does not wait on the same target. From a board room, the next
-  planned occurrence with an offered entering door is the target. Elsewhere,
-  the cursor's occurrence is tried first. If it cannot be reached, the room
-  being left is found at or after the cursor by name, and the next occurrence
-  is the target when it is in the same biome.
-- **Superseded.** A snap that replaces one still pending keeps the first
-  mismatch and counts once.
-- **Integrity.** The status window and the victory summary count the snaps, on
+  and presents the exit from it. The module undoes what `AttemptUseDoor`
+  recorded for the taken door (`OnUseSetRunData` keys and `CloseDoorOnReturn`)
+  and records the planned door. For the Hub return, it builds the room from
+  `RoomHistory` as `AttemptUseDoor` does. A synchronized board exit through any
+  other door is an `exit-door` mismatch, so a wrong turn is forced in one step.
+  An exit from the Hub carrier enters the Hub and resumes at the first Hub
+  visit; any other exit from the carrier, such as a Chaos gate, leaves through
+  the offered Hub door instead. Every board visit, in or out of sync, stamps
+  the offered doors whose native room is their slot's planned room. Out of
+  sync, a Hub slot is entered only through a door stamped for it, never an
+  unsteered native one. A planned side room is never skipped: its offered side
+  door is used, and rebuilt with the planned room when unstamped, because side
+  rooms are fresh rooms without pylons. The Hub return needs no stamp, and a
+  Hub skip-ahead corrects to the departure frame of the visit it reaches.
+- **Room starts only check.** Nothing is written at `StartRoom`; the entry
+  proofs report as in any synchronized room.
+- **Stop.** Snapping stops for the run only when an exit correction fails in
+  its own room: the writers fault (the session faults) or the verify fails
+  (`snap-loop`). Any later mismatch is corrected at the next exit.
+- **Declined.** A reloaded run, a planned door that is not offered, and a
+  biome edge from a room entered out of sync or where the plan ends are
+  declined, and native chooses. A declined run does not wait on the same
+  target. From a board room, the next planned occurrence with an offered door
+  is the target. Elsewhere, the cursor's occurrence is tried first unless it is
+  the room being left. Otherwise the room being left is found at or after the
+  cursor by name, and its next occurrence is the target.
+- **Integrity.** Each exit that returns a desynchronized run to the plan
+  counts one snap. The status window and the victory summary show the count on
   every slot.
 
 ### Content fingerprint
@@ -1569,7 +1590,9 @@ cannot observe it because they compare one occurrence's own entry and exit.
 `hub.departures` publishes one frame for each completed-visit count, from zero
 through the required visit count, including the final handoff. Each frame has
 `facts: [{ kind: 'traitInventory' }]` and the expected `traits.equipped` rows,
-in the Run State frame's shape. The executor compares the full modeled inventory
+in the Run State frame's shape, and may carry the complete `beforeRoomExit` Run
+State frame of that departure, which [snap mode](#snap-mode) corrects against.
+The executor compares the full modeled inventory
 on every Hub departure, independently of whether a fountain use or trait change
 was planned in that interval. An early Phial upgrade therefore fails at the
 immediate departure even if it matches the upgrade planned for later. Fountain

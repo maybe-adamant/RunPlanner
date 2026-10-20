@@ -11,6 +11,7 @@ local conformance = type(import) == "function" and import("mods/protocol/conform
     or require("mods.protocol.conformance")
 local proof = type(import) == "function" and import("mods/room/conformance/proof.lua")
     or require("mods.room.conformance.proof")
+local snapMode = type(import) == "function" and import("mods/snap/mode.lua") or require("mods.snap.mode")
 local hooks = {}
 
 local function orderedDoors(value)
@@ -38,8 +39,9 @@ local function withForcedAnomaly(base, currentRun, args, otherDoors, anomaly)
     return result, true
 end
 
+-- snapEnabled(runtime) reads the snap mode option; nil leaves snap mode off.
 function hooks.attach(module, session, getState, report, routeSession, room, transformationScope,
-    nestedRewardContext, generatedEncounter, highlights)
+    nestedRewardContext, generatedEncounter, highlights, snapEnabled)
     exitProtection.attach(module, getState, routeSession)
     local doorScope
     local rewardChoiceScope
@@ -52,11 +54,18 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         return base(door, args)
     end)
 
-    local function dreamNextBiome(state)
-        if state == nil or (state.state ~= "starting" and state.state ~= "synchronized")
-            or state.plan.routeKey ~= "Dream" or not (_G.CurrentRun and _G.CurrentRun.IsDreamRun == true)
-            then return nil end
-        local occurrence = routeSession.next(state.route)
+    -- Snap mode steers the Dream biome choice out of sync too, as it forces a planned door.
+    local function dreamNextBiome(runtime, state)
+        if state == nil or state.plan == nil or state.plan.routeKey ~= "Dream"
+            or not (_G.CurrentRun and _G.CurrentRun.IsDreamRun == true) then return nil end
+        local occurrence
+        if state.state == "starting" or state.state == "synchronized" then
+            occurrence = routeSession.next(state.route)
+        elseif state.state == "desynchronized" and snapEnabled ~= nil and snapEnabled(runtime)
+            and snapMode.armed(state) then
+            local currentRoom = _G.CurrentRun.CurrentRoom
+            occurrence = snapMode.plannedNext(state, type(currentRoom) == "table" and currentRoom.Name or nil)
+        end
         return occurrence and occurrence.biomeKey or nil
     end
 
@@ -65,7 +74,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
     -- biome record, and NextRoomSet as one native decision.
     module.hooks.wrap("SelectNextDreamBiome", "run-planner-dream-biome-choice", function(_, runtime, base, source, args)
         local state = getState(runtime)
-        local biomeKey = dreamNextBiome(state)
+        local biomeKey = dreamNextBiome(runtime, state)
         if biomeKey == nil then return base(source, args) end
         local priorLast = _G.GameState and _G.GameState.LastDreamStartingBiome or nil
         local initialPool = _G.CurrentRun and next(_G.CurrentRun.DreamBiomePool or {}) == nil
@@ -264,7 +273,20 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
 
     module.hooks.wrap("DoUnlockRoomExits", "run-planner-doors", function(_, runtime, base, currentRun, nativeRoom)
         local state = getState(runtime)
-        if state == nil or state.state ~= "synchronized" then return base(currentRun, nativeRoom) end
+        if state == nil or (state.state ~= "synchronized" and state.state ~= "desynchronized") then
+            return base(currentRun, nativeRoom)
+        end
+        if state.state == "desynchronized" then
+            -- Every board visit stamps its doors that lead to their planned rooms, so an
+            -- exit can still take the planned one.
+            local boardScope = ephyra.scope(state.plan, ephyra.occurrenceForNative(state, routeSession, nativeRoom),
+                nativeRoom, _G.game or game, state.route)
+            local result = base(currentRun, nativeRoom)
+            if boardScope then
+                ephyra.stampSlotDoors(boardScope, orderedDoors(_G.MapState and _G.MapState.OfferedExitDoors))
+            end
+            return result
+        end
         local occurrence = routeSession.current(state.route)
         local expected = occurrence and occurrence.doors
         local ephyraScope = ephyra.scope(
