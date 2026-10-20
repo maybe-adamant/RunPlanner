@@ -1,5 +1,17 @@
 export type ActionIconName =
-  'discard' | 'info' | 'load' | 'new' | 'publish' | 'redo' | 'save' | 'saveAs' | 'undo' | 'zoom';
+  | 'chevronLeft'
+  | 'chevronRight'
+  | 'close'
+  | 'discard'
+  | 'info'
+  | 'load'
+  | 'new'
+  | 'publish'
+  | 'redo'
+  | 'save'
+  | 'saveAs'
+  | 'undo'
+  | 'zoom';
 
 export function ActionIcon({ name }: { readonly name: ActionIconName }) {
   const content = (() => {
@@ -66,6 +78,12 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
             <path d="M13 7H7a4 4 0 0 0-4 4" />
           </>
         );
+      case 'chevronLeft':
+        return <path d="m10 3.5-4.5 4.5 4.5 4.5" />;
+      case 'chevronRight':
+        return <path d="m6 3.5 4.5 4.5-4.5 4.5" />;
+      case 'close':
+        return <path d="m4.5 4.5 7 7m0-7-7 7" />;
       case 'info':
         return (
           <>

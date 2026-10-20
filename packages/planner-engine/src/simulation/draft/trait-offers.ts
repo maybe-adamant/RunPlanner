@@ -36,6 +36,8 @@ export interface DraftTraitOfferContext {
   readonly random: () => number;
   /** Rooms of either god each ready basket Duo has been declined in, carried across biomes. */
   readonly duoDeclines: Map<string, number>;
+  /** Whether the walked biome is the last one drafted, where a ready Duo is never declined. */
+  readonly finalBiome: () => boolean;
   /** Records why the biome cannot continue. */
   readonly fail: (reason: string) => void;
 }
@@ -282,16 +284,17 @@ export class DraftTraitOffers {
     return current;
   }
 
-  /** Rolls each ready basket Duo of the giver once per god room. */
+  /** Rolls each ready basket Duo of the giver once per god room; the last drafted biome takes every one. */
   private firedDuos(trait: TraitOfferAddress, giverKey: string): readonly string[] {
     const key = `${semanticAddressKey(trait)}|${giverKey}`;
     const known = this.duoRolls.get(key);
     if (known !== undefined) return known;
     const declines = this.context.duoDeclines;
     const fired: string[] = [];
+    const final = this.context.finalBiome();
     for (const duo of this.context.steering.readyDuos(giverKey, this.context.steering.progress())) {
       const declined = declines.get(duo) ?? 0;
-      if (draftDuoFires(declined, this.context.random())) fired.push(duo);
+      if (final || draftDuoFires(declined, this.context.random())) fired.push(duo);
       else declines.set(duo, declined + 1);
     }
     this.duoRolls.set(key, fired);
@@ -335,10 +338,13 @@ export class DraftTraitOffers {
     // Denial a wanted trait already offered comes first, since leaving it would ban it.
     const offered = (key: string) =>
       Number(this.denial && draft.options.some((option) => option.traitKey === key));
-    const olympian = this.catalog.traitGivers.byKey[draft.giverKey]?.providerKind === 'olympian';
+    const providerKind = this.catalog.traitGivers.byKey[draft.giverKey]?.providerKind;
+    const olympian = providerKind === 'olympian';
+    // Gods, Hermes and Hammers offer their next queued basket trait only.
+    const queued = olympian || providerKind === 'hermes' || providerKind === 'hammer';
     const fired = olympian ? this.firedDuos(trait, draft.giverKey) : [];
-    const next = olympian ? steering.nextQueued(draft.giverKey, progress) : undefined;
-    const wanted = olympian
+    const next = queued ? steering.nextQueued(draft.giverKey, progress) : undefined;
+    const wanted = queued
       ? [...this.context.shuffle(fired), ...(next === undefined ? [] : [next])]
       : this.context
           .shuffle(steering.wantedBasket(progress).filter((key) => giverTraits.includes(key)))

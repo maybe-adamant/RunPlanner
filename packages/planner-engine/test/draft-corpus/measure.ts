@@ -7,7 +7,7 @@ import type { ProjectDocument } from '../../src/authored-project';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../src/simulation';
 import type { DraftReport } from '../../src/simulation/draft/report';
 import { draftProvider } from '../../src/simulation/draft/schedule';
-import { draftCappedGiver } from '../../src/simulation/draft/basket';
+import { draftSourceQueues, draftTraitKind } from '../../src/simulation/draft/basket';
 import type { ResolvedRewardOffer } from '../../src/reward-kernel';
 import type { TraitRequirementExpression } from '../../src/catalog-schema';
 import type { DraftCorpusEntry } from './corpus';
@@ -22,7 +22,7 @@ export interface DraftCorpusRun {
   readonly digest: string;
   /** Met and total by target kind; drafted runs only. */
   readonly targets: Readonly<Record<string, { readonly met: number; readonly total: number }>>;
-  /** Pairs of one god's met basket traits acquired against basket order. */
+  /** Pairs of one source's met basket traits acquired against basket order. */
   readonly orderInversions: number;
   /** Inverted pairs whose earlier trait waits on an element threshold, which the draft may pass over. */
   readonly elementDeferred: number;
@@ -43,6 +43,7 @@ export interface DraftCorpusRun {
 
 export const TARGET_KINDS = [
   'god',
+  'duo',
   'hermes',
   'hammer',
   'selene',
@@ -62,7 +63,8 @@ function basketTargetKind(traitKey: string): (typeof TARGET_KINDS)[number] {
   if (kinds.has('hammer')) return 'hammer';
   if (kinds.has('spell')) return 'selene';
   if (kinds.has('npc')) return 'npcTrait';
-  return 'god';
+  const trait = catalog.traits.byKey[traitKey];
+  return trait !== undefined && draftTraitKind(trait) === 'duo' ? 'duo' : 'god';
 }
 
 function targetCounts(report: DraftReport): DraftCorpusRun['targets'] {
@@ -114,10 +116,9 @@ function orderInversions(
 ): { readonly inversions: number; readonly elementDeferred: number } {
   let inversions = 0;
   let elementDeferred = 0;
-  for (const godKey of spec.world.godKeys) {
-    const own = spec.basketTraitKeys.filter(
-      (key) => draftCappedGiver(catalog, spec, key)?.giverKey === godKey && first.has(key),
-    );
+  // One god's, Hermes' or a Hammer giver's traits, against basket order.
+  for (const { traitKeys } of draftSourceQueues(catalog, spec)) {
+    const own = traitKeys.filter((key) => first.has(key));
     for (const [index, earlier] of own.entries())
       for (const later of own.slice(index + 1))
         if (first.get(later)! < first.get(earlier)!)

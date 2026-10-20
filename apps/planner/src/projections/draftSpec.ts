@@ -2,7 +2,7 @@ import type { AuthoredDraftSpec, ProjectDocument } from '@run-planner/engine/aut
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
 import {
   assessDraftBasket,
-  draftGodQueues,
+  draftSourceQueues,
   draftKeepsakeOptions,
   draftOrderRefusals,
   draftWorldOptions,
@@ -169,6 +169,8 @@ export interface DraftBasketRow {
   readonly selectable: boolean;
   /** Present only when the refusal is not visible from the counts. */
   readonly hint?: string;
+  /** A selected queued trait's place in its source's acquisition order, from 1. */
+  readonly orderNumber?: number;
 }
 
 export interface DraftBasketSection {
@@ -193,7 +195,7 @@ export interface DraftBasketChip {
   readonly refused: boolean;
   readonly hint?: string;
   /**
-   * A god's queued trait: the basket with it swapped one place earlier or later,
+   * A source's queued trait: the basket with it swapped one place earlier or later,
    * absent at an end or where the swap would queue a trait above its prerequisite.
    */
   readonly order?: {
@@ -202,12 +204,14 @@ export interface DraftBasketChip {
   };
 }
 
-/** Basket chips by god in acquisition order, then every other basket trait. */
+/** Basket chips by god, Hermes and Hammer in acquisition order, then every other basket trait. */
 export interface DraftBasketChipGroup {
   readonly key: string;
   readonly label: string;
+  /** A god, Hermes or Hammer row, whose chips are in acquisition order. */
+  readonly queued: boolean;
   readonly chips: readonly DraftBasketChip[];
-  /** Each of this god's traits queued above its prerequisite, as a visible line. */
+  /** Each of this source's traits queued above its prerequisite, as a visible line. */
   readonly orderNotes: readonly string[];
 }
 
@@ -287,6 +291,14 @@ export function projectDraftBasket(
 ): DraftBasketProjection {
   const assessment = assessDraftBasket(catalog, project.route, spec);
   const byKey = new Map(assessment.traits.map((trait) => [trait.traitKey, trait]));
+  const queues = draftSourceQueues(catalog, spec).filter((queue) => queue.traitKeys.length > 0);
+  const orderNumbers = new Map(
+    queues.flatMap((queue) => queue.traitKeys.map((key, index) => [key, index + 1] as const)),
+  );
+  const orderNumber = (traitKey: string) => {
+    const number = orderNumbers.get(traitKey);
+    return number === undefined ? {} : { orderNumber: number };
+  };
   const row = (trait: DraftTraitAssessment): DraftBasketRow => {
     const hint = refusalHint(catalog, trait.refusals);
     return Object.freeze({
@@ -295,6 +307,7 @@ export function projectDraftBasket(
       inBasket: trait.inBasket,
       selectable: trait.selectable,
       ...(hint === undefined ? {} : { hint }),
+      ...orderNumber(trait.traitKey),
     });
   };
   const hidden = (trait: DraftTraitAssessment) =>
@@ -438,14 +451,18 @@ export function projectDraftBasket(
     return after === 0 || (current > 0 && after <= current);
   };
   const label = (key: string) => catalog.traits.byKey[key]?.label ?? key;
-  const queues = draftGodQueues(catalog, spec).filter((queue) => queue.traitKeys.length > 0);
   const queued = new Set(queues.flatMap((queue) => queue.traitKeys));
   const others = spec.basketTraitKeys.filter((key) => !queued.has(key));
   const chipGroups: DraftBasketChipGroup[] = [
     ...queues.map((queue) =>
       Object.freeze({
-        key: queue.godKey,
-        label: catalog.traitGivers.byKey[queue.godKey]?.label ?? queue.godKey,
+        key: queue.giverKey,
+        // The Hammer row drops "Daedalus" to fit the table's label column.
+        label:
+          catalog.traitGivers.byKey[queue.giverKey]?.providerKind === 'hammer'
+            ? 'Hammer'
+            : (catalog.traitGivers.byKey[queue.giverKey]?.label ?? queue.giverKey),
+        queued: true,
         chips: Object.freeze(
           queue.traitKeys.map((traitKey, index, keys) => {
             const earlier =
@@ -476,6 +493,7 @@ export function projectDraftBasket(
           Object.freeze({
             key: 'other',
             label: 'Other',
+            queued: false,
             chips: Object.freeze(others.map((key) => chip(key))),
             orderNotes: Object.freeze([]),
           }),
@@ -485,7 +503,10 @@ export function projectDraftBasket(
     { key: 'gods', label: 'God boons', cap: caps.poolGodTotal },
     ...caps.providers.map((usage) => ({
       key: usage.giverKey,
-      label: catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey,
+      label:
+        usage.providerKind === 'hammer'
+          ? 'Hammer'
+          : (catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey),
       cap: usage,
     })),
     { key: 'npcs', label: 'NPCs', cap: caps.npcTotal },

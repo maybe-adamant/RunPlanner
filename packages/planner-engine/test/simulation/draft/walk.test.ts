@@ -9,6 +9,10 @@ import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { latestRunState } from '../../../src/simulation/draft/report';
 import { draftDuoFires } from '../../../src/simulation/draft/trait-offers';
 import { startDraftWalk } from '../../support/draft-walk';
+import { decodeProjectDocument } from '../../../src/authored-project/codec';
+import { simulateProjectAssembly } from '../../../src/simulation';
+import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
+import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -169,8 +173,15 @@ describe('draft walk order', () => {
       basketTraitKeys: ['ApolloExCastBoon', 'ZeusWeaponBoon', duo],
       rackKeepsakeKeys: [null, null, null],
     };
-    const run = (seed: number, duoDeclines: ReadonlyMap<string, number>) => {
-      const walk = startDraftWalk(base, spec, seed, { duoDeclines });
+    const run = (
+      seed: number,
+      duoDeclines: ReadonlyMap<string, number>,
+      from?: ProjectEvaluationAssembly,
+    ) => {
+      const walk = startDraftWalk(base, spec, seed, {
+        duoDeclines,
+        ...(from === undefined ? {} : { from }),
+      });
       expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
       const held = Object.keys(latestRunState(walk.assembly)?.traits.equippedTraits ?? {});
       return { taken: held.includes(duo), declines: walk.duoDeclines().get(duo) ?? 0 };
@@ -179,5 +190,18 @@ describe('draft walk order', () => {
     expect(run(1, new Map())).toEqual({ taken: true, declines: 2 });
     // A count carried in from an earlier biome continues: twice declined, every later room fires it.
     for (const seed of [1, 2, 3, 4]) expect(run(seed, new Map([[duo, 2]])).declines).toBe(2);
+    // Planned only to F, the walk is in its last biome: the first god room takes the Duo.
+    const loadoutProject = draftLoadoutProject(catalog, base, spec.loadout);
+    const onlyF = simulateProjectAssembly(
+      catalog,
+      decodeProjectDocument(
+        {
+          ...loadoutProject,
+          route: { ...loadoutProject.route, biomes: loadoutProject.route.biomes.slice(0, 1) },
+        },
+        catalog,
+      ),
+    );
+    expect(run(1, new Map(), onlyF)).toEqual({ taken: true, declines: 0 });
   });
 });

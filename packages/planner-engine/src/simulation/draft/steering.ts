@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { TraitElement } from '../../catalog-schema/traits';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
-import { DRAFT_PROVIDER_CAPS, draftGodQueues, draftTraitKind } from './basket';
+import { DRAFT_PROVIDER_CAPS, draftSourceQueues, draftTraitKind } from './basket';
 import type { DraftHeldTraits, DraftPrerequisites } from './prerequisites';
 import { latestRunState } from './report';
 import {
@@ -59,7 +59,7 @@ export class DraftSteering {
     this.npcGivers = world.npcGivers;
     this.npcTraitBiomes = world.npcTraitBiomes;
     this.queues = new Map(
-      draftGodQueues(catalog, spec).map((queue) => [queue.godKey, queue.traitKeys]),
+      draftSourceQueues(catalog, spec).map((queue) => [queue.giverKey, queue.traitKeys]),
     );
   }
 
@@ -221,8 +221,15 @@ export class DraftSteering {
     return (
       wanted.length > 0 &&
       wanted.length >= DRAFT_PROVIDER_CAPS.hermes - progress.hermes &&
-      !wanted.some((key) => this.ready(key, progress))
+      !this.nextSupply('hermes', progress).some((key) => this.ready(key, progress))
     );
+  }
+
+  /** The next queued basket trait of each Hermes or Hammer giver. */
+  private nextSupply(supply: DraftSupply, progress: DraftProgress): string[] {
+    return this.catalog.traitGivers.values
+      .filter((giver) => giver.providerKind === supply)
+      .flatMap((giver) => this.nextQueued(giver.key, progress) ?? []);
   }
 
   /** Basket traits the schedule makes due by this biome. */
@@ -246,9 +253,7 @@ export class DraftSteering {
    */
   supplyNeed(supply: DraftSupply, progress: DraftProgress): 'now' | 'later' | undefined {
     if (supply === 'hermes' && progress.hermes >= DRAFT_PROVIDER_CAPS.hermes) return undefined;
-    const wanted = this.basketOf(supply).filter(
-      (key) => !progress.equippedTraitKeys.includes(key) && this.ready(key, progress),
-    );
+    const wanted = this.nextSupply(supply, progress).filter((key) => this.ready(key, progress));
     if (wanted.length === 0) return undefined;
     const due = this.dueTraits();
     return wanted.some((key) => due.includes(key)) ? 'now' : 'later';

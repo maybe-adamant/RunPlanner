@@ -619,9 +619,9 @@ export {
 } from './draft/world';
 export {
   assessDraftBasket,
-  draftGodQueues,
+  draftSourceQueues,
   draftOrderRefusals,
-  type DraftGodQueue,
+  type DraftSourceQueue,
   type DraftBasketAssessment,
   type DraftBasketCaps,
   type DraftCapUsage,

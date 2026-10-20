@@ -5,7 +5,7 @@ import { createProjectDocument } from '../../../src/authored-project/defaults';
 import {
   assessDraftBasket,
   draftKeepsakeOptions,
-  draftGodQueues,
+  draftSourceQueues,
   draftRefusals,
   draftWorldGiverKeys,
   draftWorldOptions,
@@ -366,23 +366,46 @@ describe('draft basket legality', () => {
 });
 
 describe('draft basket order', () => {
-  it("queues each god's traits in basket order, Legendaries included and Duos outside", () => {
+  it("queues each god's, Hermes' and each Hammer's traits in basket order, Duos outside", () => {
     const draft = spec([
       'ZeusCastBoon',
       'SpawnKillBoon',
+      'HermesWeaponBoon',
       'ApolloWeaponBoon',
       'ZeusSprintBoon',
+      'StaffLongAttackTrait',
       'ApolloExCastBoon',
+      'HermesSpecialBoon',
       'ZeusWeaponBoon',
       'ApolloSecondStageCastBoon',
+      'StaffDoubleAttackTrait',
     ]);
-    expect(draftGodQueues(catalog, draft)).toEqual([
+    expect(draftSourceQueues(catalog, draft)).toEqual([
       {
-        godKey: 'Zeus',
+        giverKey: 'Zeus',
         traitKeys: ['ZeusCastBoon', 'SpawnKillBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon'],
       },
-      { godKey: 'Apollo', traitKeys: ['ApolloWeaponBoon', 'ApolloExCastBoon'] },
+      { giverKey: 'Apollo', traitKeys: ['ApolloWeaponBoon', 'ApolloExCastBoon'] },
+      { giverKey: 'Hermes', traitKeys: ['HermesWeaponBoon', 'HermesSpecialBoon'] },
+      {
+        giverKey: 'WeaponUpgrade',
+        traitKeys: ['StaffLongAttackTrait', 'StaffDoubleAttackTrait'],
+      },
     ]);
+  });
+
+  it('refuses a Hermes trait queued before the Hermes trait it needs', () => {
+    const order = (basket: readonly string[]) =>
+      assessment(
+        underworld,
+        spec([...basket], { godKeys: ['Zeus', 'Apollo'] }),
+        'TimeStopLastStandBoon',
+      ).refusals;
+    const prerequisites = ['ZeusWeaponBoon', 'DoubleStrikeChanceBoon'];
+    expect(order([...prerequisites, 'TimeStopLastStandBoon', 'LuckyBoon'])).toEqual([
+      { kind: 'prerequisiteAfter', traitKeys: ['LuckyBoon'] },
+    ]);
+    expect(order([...prerequisites, 'LuckyBoon', 'TimeStopLastStandBoon'])).toEqual([]);
   });
 
   it('refuses a trait queued before the only god traits that meet its need', () => {

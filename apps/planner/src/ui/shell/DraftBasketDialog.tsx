@@ -40,6 +40,11 @@ function BasketRows({
           >
             <ArtworkIcon className="draft-toggle-icon" source={traitIcon(row.traitKey)} />
             {row.label}
+            {row.orderNumber === undefined ? null : (
+              <span className="draft-order-number" aria-hidden="true">
+                {row.orderNumber}
+              </span>
+            )}
           </button>
         );
       })}
@@ -99,9 +104,8 @@ export function DraftBasketDialog({
   };
   return (
     <EditorDialog
-      eyebrow="Draft"
-      headerAction={
-        <div aria-label="Basket givers" className="run-state-tabs draft-basket-tabs" role="tablist">
+      headerBelow={
+        <div aria-label="Basket givers" className="draft-basket-segments" role="tablist">
           {tabs.map((tab, index) => (
             <button
               aria-controls="draft-basket-panel"

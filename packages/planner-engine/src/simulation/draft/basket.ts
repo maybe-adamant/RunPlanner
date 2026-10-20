@@ -110,7 +110,7 @@ export function assessDraftBasket(
   for (const key of spec.basketTraitKeys) traitKeys.add(key);
   const routeStart = routeStartState(catalog, route, spec.loadout);
   const order: DraftOrderContext = {
-    queues: draftGodQueues(catalog, spec),
+    queues: draftSourceQueues(catalog, spec),
     prerequisites: createDraftPrerequisites(catalog, spec.basketTraitKeys, heldTraits(routeStart)),
   };
   return Object.freeze({
@@ -437,22 +437,32 @@ function withBasket(
   );
 }
 
-/** One world god's own basket traits, Duos excluded, in basket order: the order the draft takes them. */
-export interface DraftGodQueue {
-  readonly godKey: string;
+/**
+ * One acquisition source's basket traits in basket order, the order the draft
+ * takes them: a world god's own traits (Duos excluded), Hermes or a Hammer giver.
+ */
+export interface DraftSourceQueue {
+  readonly giverKey: string;
   readonly traitKeys: readonly string[];
 }
 
-export function draftGodQueues(catalog: Catalog, spec: DraftSpec): readonly DraftGodQueue[] {
+/** World gods first, then the Hermes and Hammer givers, in catalog order. */
+export function draftSourceQueues(catalog: Catalog, spec: DraftSpec): readonly DraftSourceQueue[] {
+  const givers = [
+    ...spec.world.godKeys.filter(
+      (godKey) => catalog.traitGivers.byKey[godKey]?.providerKind === 'olympian',
+    ),
+    ...catalog.traitGivers.values
+      .filter((giver) => giver.providerKind === 'hermes' || giver.providerKind === 'hammer')
+      .map((giver) => giver.key),
+  ];
   return Object.freeze(
-    spec.world.godKeys.map((godKey) =>
+    givers.map((giverKey) =>
       Object.freeze({
-        godKey,
+        giverKey,
         traitKeys: Object.freeze(
           spec.basketTraitKeys.filter(
-            (key) =>
-              catalog.traitGivers.byKey[godKey]?.providerKind === 'olympian' &&
-              draftCappedGiver(catalog, spec, key)?.giverKey === godKey,
+            (key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey,
           ),
         ),
       }),
@@ -462,7 +472,7 @@ export function draftGodQueues(catalog: Catalog, spec: DraftSpec): readonly Draf
 
 /**
  * Order legality for reorderings of the spec's basket: each basket trait queued
- * above a same-god trait its held-trait need must use, with those later traits.
+ * above a same-source trait its held-trait need must use, with those later traits.
  */
 export function draftOrderRefusals(
   catalog: Catalog,
@@ -475,7 +485,10 @@ export function draftOrderRefusals(
     draftStartTraits(catalog, route, spec.loadout),
   );
   return (basketTraitKeys) => {
-    const order = { queues: draftGodQueues(catalog, { ...spec, basketTraitKeys }), prerequisites };
+    const order = {
+      queues: draftSourceQueues(catalog, { ...spec, basketTraitKeys }),
+      prerequisites,
+    };
     const refusals = new Map<string, readonly string[]>();
     for (const queue of order.queues)
       for (const traitKey of queue.traitKeys) {
@@ -487,12 +500,12 @@ export function draftOrderRefusals(
 }
 
 interface DraftOrderContext {
-  readonly queues: readonly DraftGodQueue[];
+  readonly queues: readonly DraftSourceQueue[];
   readonly prerequisites: DraftPrerequisites;
 }
 
 /**
- * Same-god traits queued after this one that some held-trait need must use: each need is
+ * Same-source traits queued after this one that some held-trait need must use: each need is
  * judged with those traits left out, and every other basket trait counted.
  */
 function prerequisitesQueuedAfter(order: DraftOrderContext, traitKey: string): readonly string[] {
