@@ -43,6 +43,7 @@ import type { DraftRunController } from '@planner/workspace/draftRun';
 import { DraftBasketDialog } from './DraftBasketDialog';
 import { DraftCapCount } from './DraftCapCount';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
+import { RoutePrefixControl } from './RoutePrefixControl';
 import { useCommonItemWidth } from './useCommonItemWidth';
 
 /** Why a draft cannot start, when nothing else on the panel already shows it. */
@@ -281,6 +282,8 @@ export function RouteDraftPanel({
   const biomeLabel = (biomeKey: string) => catalog.biomes.byKey[biomeKey]?.label ?? biomeKey;
   const godKeepsakeHint = (keepsakeKey: string) =>
     forcesGod(catalog, keepsakeKey) ? godKeepsakeReason : undefined;
+  // Each planned biome's Postboss holds its rack; racks of later biomes are left out.
+  const plannedRacks = rackSlots.slice(0, projection.plannedBiomeKeys.length);
   const chipGroup = (group: DraftBasketChipGroup) => (
     <div className="draft-chip-group" data-queued={group.queued || undefined} key={group.key}>
       <span className="draft-chip-group-label">
@@ -370,6 +373,14 @@ export function RouteDraftPanel({
         <h2 className="eyebrow route-loadout-heading">Draft</h2>
       </header>
       <fieldset className="draft-fieldset" disabled={running} ref={rows}>
+        <RoutePrefixControl
+          biomes={project.route.itineraryBiomeKeys.map((biomeKey) => ({
+            biomeKey,
+            label: biomeLabel(biomeKey),
+          }))}
+          configuredBiomeCount={project.route.biomes.length}
+          routeKey={project.route.routeKey}
+        />
         <RouteLoadoutControls
           authoredRoute={project.route}
           catalog={catalog}
@@ -430,79 +441,83 @@ export function RouteDraftPanel({
               </tr>
             </thead>
             <tbody>
-              {worldOptions.biomes.map((biome) => {
-                const storyNpc = biome.storyNpc;
-                const label = biomeLabel(biome.biomeKey);
-                return (
-                  <tr key={biome.biomeKey}>
-                    <th className="draft-npc-biome" scope="row">
-                      {label}
-                    </th>
-                    <td>
-                      {storyNpc === undefined ? null : (
-                        <button
-                          aria-label={`${npcLabel(catalog, storyNpc)}, story room in ${label}`}
-                          aria-pressed={
-                            spec?.world.storyNpcByBiome[biome.biomeKey] === storyNpc.npcKey
-                          }
-                          className="draft-toggle"
-                          data-has-icon
-                          onClick={() =>
-                            replaceDraft(
-                              withDraftStoryNpcToggled(draft, biome.biomeKey, storyNpc.npcKey),
-                            )
-                          }
-                          type="button"
-                        >
-                          <ArtworkIcon
-                            className="draft-toggle-icon"
-                            source={npcIcon(storyNpc.npcKey)}
-                          />
-                          {npcLabel(catalog, storyNpc)}
-                        </button>
-                      )}
-                    </td>
-                    <td className="draft-npc-field">
-                      <span className="draft-toggle-row">
-                        {biome.fieldNpcs.map((npc) => (
+              {/* A biome past the planned prefix is not drafted, so its NPC row is left out. */}
+              {worldOptions.biomes
+                .filter((biome) => projection.plannedBiomeKeys.includes(biome.biomeKey))
+                .map((biome) => {
+                  const storyNpc = biome.storyNpc;
+                  const label = biomeLabel(biome.biomeKey);
+                  return (
+                    <tr key={biome.biomeKey}>
+                      <th className="draft-npc-biome" scope="row">
+                        {label}
+                      </th>
+                      <td>
+                        {storyNpc === undefined ? null : (
                           <button
-                            aria-label={`${npcLabel(catalog, npc)} in ${label}`}
+                            aria-label={`${npcLabel(catalog, storyNpc)}, story room in ${label}`}
                             aria-pressed={
-                              spec?.world.fieldNpcsByBiome[biome.biomeKey]?.includes(npc.npcKey) ===
-                              true
+                              spec?.world.storyNpcByBiome[biome.biomeKey] === storyNpc.npcKey
                             }
                             className="draft-toggle"
                             data-has-icon
-                            key={npc.npcKey}
                             onClick={() =>
                               replaceDraft(
-                                withDraftFieldNpcToggled(draft, biome.biomeKey, npc.npcKey),
+                                withDraftStoryNpcToggled(draft, biome.biomeKey, storyNpc.npcKey),
                               )
                             }
                             type="button"
                           >
                             <ArtworkIcon
                               className="draft-toggle-icon"
-                              source={npcIcon(npc.npcKey)}
+                              source={npcIcon(storyNpc.npcKey)}
                             />
-                            {npcLabel(catalog, npc)}
+                            {npcLabel(catalog, storyNpc)}
                           </button>
-                        ))}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+                        )}
+                      </td>
+                      <td className="draft-npc-field">
+                        <span className="draft-toggle-row">
+                          {biome.fieldNpcs.map((npc) => (
+                            <button
+                              aria-label={`${npcLabel(catalog, npc)} in ${label}`}
+                              aria-pressed={
+                                spec?.world.fieldNpcsByBiome[biome.biomeKey]?.includes(
+                                  npc.npcKey,
+                                ) === true
+                              }
+                              className="draft-toggle"
+                              data-has-icon
+                              key={npc.npcKey}
+                              onClick={() =>
+                                replaceDraft(
+                                  withDraftFieldNpcToggled(draft, biome.biomeKey, npc.npcKey),
+                                )
+                              }
+                              type="button"
+                            >
+                              <ArtworkIcon
+                                className="draft-toggle-icon"
+                                source={npcIcon(npc.npcKey)}
+                              />
+                              {npcLabel(catalog, npc)}
+                            </button>
+                          ))}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table>
         </section>
-        {rackSlots.length === 0 ? null : (
+        {plannedRacks.length === 0 ? null : (
           <section className="draft-section" aria-labelledby="draft-racks-heading">
             <h3 className="draft-section-heading" id="draft-racks-heading">
               Rack keepsakes
             </h3>
             <div className="route-loadout-row">
-              {rackSlots.map((slot, index) => (
+              {plannedRacks.map((slot, index) => (
                 <DraftRackKeepsake
                   catalog={catalog}
                   index={index}

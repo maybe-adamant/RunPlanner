@@ -1,7 +1,7 @@
 import type { Catalog, EncounterDefinition } from '../../catalog-schema';
 import type { RequirementExpression } from '../../requirements/model';
 import { ORDINARY_SOURCE_CAP } from '../../reward-kernel';
-import type { DraftRoute, DraftWorld } from './spec';
+import { draftPlannedBiomeKeys, type DraftRoute, type DraftWorld } from './spec';
 
 export interface DraftNpcOption {
   readonly npcKey: string;
@@ -165,9 +165,14 @@ export interface DraftNpcGiver {
   readonly story: boolean;
 }
 
-/** The selected trait-giving story and field NPCs, in itinerary order. */
-function npcGivers(options: DraftWorldOptions, world: DraftWorld): readonly DraftNpcGiver[] {
-  return options.biomes.flatMap((biome, biomeIndex) => {
+/** The selected trait-giving story and field NPCs of the planned biomes, in itinerary order. */
+function npcGivers(
+  options: DraftWorldOptions,
+  world: DraftWorld,
+  route: DraftRoute,
+): readonly DraftNpcGiver[] {
+  const planned = draftPlannedBiomeKeys(route).length;
+  return options.biomes.slice(0, planned).flatMap((biome, biomeIndex) => {
     const story = biome.storyNpc;
     const selected = world.fieldNpcsByBiome[biome.biomeKey] ?? [];
     return [
@@ -209,7 +214,7 @@ export function draftWorldGiverKeys(
   world: DraftWorld,
 ): readonly string[] {
   const options = draftWorldOptions(catalog, route);
-  return worldGiverKeys(options, world, npcGivers(options, world));
+  return worldGiverKeys(options, world, npcGivers(options, world, route));
 }
 
 /** What one draft reads from its world, derived once. */
@@ -227,7 +232,7 @@ export function draftWorld(
   basketTraitKeys: readonly string[],
 ): DraftWorldProduct {
   const options = draftWorldOptions(catalog, route);
-  const givers = npcGivers(options, world);
+  const givers = npcGivers(options, world, route);
   const npcTraitBiomes = new Map<string, number>();
   for (const giver of givers)
     for (const traitKey of catalog.traitGivers.byKey[giver.giverKey]?.traitKeys ?? [])

@@ -96,7 +96,8 @@ export function draftReport(
         });
   spec.rackKeepsakeKeys.forEach((keepsakeKey, index) => {
     const plan = assembly.project.route.biomes[index];
-    if (keepsakeKey === null || plan === undefined || index >= configured.length - 1) return;
+    // The rack sits in its own biome's Postboss, so every planned biome's rack is a target.
+    if (keepsakeKey === null || plan === undefined || index >= configured.length) return;
     targets.push({
       kind: 'rackKeepsake',
       key: keepsakeKey,

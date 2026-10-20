@@ -41,7 +41,7 @@ function open(routeKey = 'Underworld') {
       createProjectDocument(application.catalog, {
         projectId: 'run-plan',
         routeKey,
-        configuredBiomeCount: 1,
+        configuredBiomeCount: 4,
       }),
     ),
   );

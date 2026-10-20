@@ -1,12 +1,8 @@
-import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
-import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch } from '@planner/state/store';
 import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
+import { RoutePrefixControl } from './RoutePrefixControl';
 import { RouteRunModifiers } from './RouteRunModifiers';
 
 /** The plan's extent and its run modifiers, with the whole-plan status. */
@@ -24,7 +20,6 @@ export function RouteScopePanel({
   readonly replacementKey: string;
   readonly workspaceRoute: WorkspaceRoute;
 }) {
-  const dispatch = useAppDispatch();
   const configuredBiomeCount = workspaceRoute.biomes.length;
   const lastConfiguredBiome = navigation.biomePanels[configuredBiomeCount - 1]?.label;
   const routeExtent =
@@ -40,32 +35,11 @@ export function RouteScopePanel({
         </div>
       </header>
       <div className="route-scope-rows">
-        <div className="route-scope field-control field-control-inline">
-          <span>Plan up to</span>
-          <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
-            {navigation.biomePanels.map((biome, index) => (
-              <label key={biome.biomeKey}>
-                <input
-                  type="radio"
-                  name={`${workspaceRoute.routeKey}-configured-prefix`}
-                  value={index + 1}
-                  checked={configuredBiomeCount === index + 1}
-                  onChange={() =>
-                    dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'ConfigureRoutePrefix',
-                        route: createRouteAddress(workspaceRoute.routeKey),
-                        configuredBiomeCount: index + 1,
-                      }),
-                    )
-                  }
-                />
-                <ArtworkIcon className="artwork-label-icon" source={biomeIcon(biome.biomeKey)} />
-                {biome.label}
-              </label>
-            ))}
-          </div>
-        </div>
+        <RoutePrefixControl
+          biomes={navigation.biomePanels}
+          configuredBiomeCount={configuredBiomeCount}
+          routeKey={workspaceRoute.routeKey}
+        />
       </div>
       <RouteRunModifiers replacementKey={replacementKey} workspaceRoute={workspaceRoute} />
     </section>

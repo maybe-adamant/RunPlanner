@@ -50,8 +50,8 @@ interface EntryRecipe {
 const SEEDS = [1, 2, 3, 4] as const;
 const LIGHT = 3;
 const MEDIUM = 8;
-/** The planner's whole-pool god trait cap; 8 under Forfeit. */
-const HEAVY = 12;
+/** More than any god cap, so a heavy basket fills to the planned cap. */
+const HEAVY = 16;
 
 const UNDERWORLD_GODS = ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'];
 const UNDERWORLD_ALT_GODS = ['Poseidon', 'Demeter', 'Hera', 'Ares'];
@@ -270,6 +270,28 @@ const recipes: readonly EntryRecipe[] = [
       ],
     },
   },
+  {
+    name: 'U9 heavy prefix 3',
+    routeKey: 'Underworld',
+    prefix: 3,
+    godKeys: UNDERWORLD_GODS,
+    basket: { godTraits: HEAVY, hermes: 1 },
+  },
+  {
+    name: 'S10 heavy prefix 2',
+    routeKey: 'Surface',
+    prefix: 2,
+    godKeys: SURFACE_GODS,
+    basket: { godTraits: HEAVY },
+  },
+  {
+    name: 'D7 heavy prefix 3',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 3,
+    godKeys: DREAM_GODS,
+    basket: { godTraits: HEAVY, hammer: 1 },
+  },
 ];
 
 function nameSeed(name: string): number {
@@ -299,7 +321,13 @@ function buildBasket(
     basketTraitKeys: basket,
     rackKeepsakeKeys: [],
   });
-  const add = (count: number, wanted: (traitKey: string) => boolean, label: string) => {
+  // A capped kind stops at the planned share's cap; a named trait must be admitted.
+  const add = (
+    count: number,
+    wanted: (traitKey: string) => boolean,
+    label: string,
+    capped = false,
+  ) => {
     for (let added = 0; added < count; added += 1) {
       const selectable = assessDraftBasket(catalog, base.route, spec()).traits.filter(
         (trait) => !trait.inBasket && trait.selectable && wanted(trait.traitKey),
@@ -314,6 +342,7 @@ function buildBasket(
             (refusal) => refusal.kind === 'basketTrait',
           ),
       );
+      if (next === undefined && capped) return;
       if (next === undefined) throw new Error(`${recipe.name}: no admissible ${label} trait`);
       basket.push(next);
     }
@@ -323,9 +352,9 @@ function buildBasket(
     return kinds.length > 0 && kinds.every((kind) => kind === 'olympian');
   };
   for (const key of recipe.basket.leadTraits ?? []) add(1, (candidate) => candidate === key, key);
-  add(recipe.basket.godTraits - (recipe.basket.leadTraits?.length ?? 0), godKinds, 'god');
-  add(recipe.basket.hermes ?? 0, (key) => providerKindsOf(key).includes('hermes'), 'Hermes');
-  add(recipe.basket.hammer ?? 0, (key) => providerKindsOf(key).includes('hammer'), 'Hammer');
+  add(recipe.basket.godTraits - (recipe.basket.leadTraits?.length ?? 0), godKinds, 'god', true);
+  add(recipe.basket.hermes ?? 0, (key) => providerKindsOf(key).includes('hermes'), 'Hermes', true);
+  add(recipe.basket.hammer ?? 0, (key) => providerKindsOf(key).includes('hammer'), 'Hammer', true);
   add(recipe.basket.selene ?? 0, (key) => providerKindsOf(key).includes('spell'), 'Selene');
   const npc = recipe.basket.npcGiverKey;
   if (npc !== undefined)

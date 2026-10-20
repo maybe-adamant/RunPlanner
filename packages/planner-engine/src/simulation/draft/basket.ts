@@ -13,6 +13,8 @@ import type { TraitFindingCode } from '../model';
 import {
   draftDenialActive,
   draftForfeitActive,
+  draftPlannedBiomeKeys,
+  draftPlannedShare,
   type DraftLoadout,
   type DraftRoute,
   type DraftSpec,
@@ -34,6 +36,8 @@ export type DraftTraitRefusal =
   | { readonly kind: 'cap'; readonly giverKey: string; readonly cap: number }
   /** The basket already holds the planner limit of god traits, Duos included. */
   | { readonly kind: 'totalCap'; readonly cap: number }
+  /** The basket already holds the planner limit of Hermes and Hammer traits together. */
+  | { readonly kind: 'supplyCap'; readonly cap: number }
   /** Its need can only be met by its god's traits queued after it. */
   | { readonly kind: 'prerequisiteAfter'; readonly traitKeys: readonly string[] }
   | {
@@ -78,8 +82,10 @@ export interface DraftGiverCapUsage extends DraftCapUsage {
 
 /** The basket's use of each planner and native cap, for the world it targets. */
 export interface DraftBasketCaps {
-  /** Every god trait, Duos included; lower under Forfeit. */
+  /** Every god trait, Duos included; lower under Forfeit; scaled by the planned share. */
   readonly poolGodTotal: DraftCapUsage;
+  /** Hermes and Hammer traits together: one per planned biome. */
+  readonly supplyTotal: DraftCapUsage;
   /** Each pool god's own traits, Legendaries included and Duos not; 4 under Denial. */
   readonly poolGods: readonly DraftGiverCapUsage[];
   /** Hammers, Hermes and Selene, in catalog order. */
@@ -109,6 +115,11 @@ export function assessDraftBasket(
   );
   for (const key of spec.basketTraitKeys) traitKeys.add(key);
   const routeStart = routeStartState(catalog, route, spec.loadout);
+  const plan: DraftPlanScale = {
+    share: draftPlannedShare(route),
+    planned: draftPlannedBiomeKeys(route).length,
+    supplyCap: supplyCap(route),
+  };
   const order: DraftOrderContext = {
     queues: draftSourceQueues(catalog, spec),
     prerequisites: createDraftPrerequisites(catalog, spec.basketTraitKeys, heldTraits(routeStart)),
@@ -116,10 +127,10 @@ export function assessDraftBasket(
   return Object.freeze({
     traits: Object.freeze(
       [...traitKeys].map((traitKey) =>
-        assessTrait(catalog, spec, worldGivers, routeStart, order, traitKey),
+        assessTrait(catalog, spec, worldGivers, routeStart, order, plan, traitKey),
       ),
     ),
-    caps: basketCaps(catalog, spec, worldGivers),
+    caps: basketCaps(catalog, spec, worldGivers, plan),
   });
 }
 
@@ -127,6 +138,7 @@ function basketCaps(
   catalog: Catalog,
   spec: DraftSpec,
   worldGivers: readonly string[],
+  plan: DraftPlanScale,
 ): DraftBasketCaps {
   const usage = (giverKey: string, cap: number): DraftGiverCapUsage =>
     Object.freeze({
@@ -143,7 +155,11 @@ function basketCaps(
   return Object.freeze({
     poolGodTotal: Object.freeze({
       count: spec.basketTraitKeys.filter((key) => isGodTrait(catalog, key)).length,
-      cap: totalCap(catalog, spec),
+      cap: totalCap(catalog, spec, plan),
+    }),
+    supplyTotal: Object.freeze({
+      count: spec.basketTraitKeys.filter((key) => isSupplyTrait(catalog, key)).length,
+      cap: plan.supplyCap,
     }),
     poolGods: Object.freeze(
       spec.world.godKeys.map((godKey) => usage(godKey, olympianCap(catalog, spec))),
@@ -165,10 +181,47 @@ function basketCaps(
   });
 }
 
-function totalCap(catalog: Catalog, spec: DraftSpec): number {
-  return draftForfeitActive(catalog, spec.loadout)
-    ? FORFEIT_OLYMPIAN_TOTAL_CAP
-    : OLYMPIAN_TOTAL_CAP;
+/** How the planned prefix sizes the route-wide caps. */
+interface DraftPlanScale {
+  /** Planned biomes over itinerary biomes. */
+  readonly share: number;
+  readonly planned: number;
+  readonly supplyCap: number;
+}
+
+/** A planner cap over the whole route, scaled by the planned share and rounded up. */
+function scaled(cap: number, share: number): number {
+  return Math.ceil(cap * share);
+}
+
+// EXPERIMENT: cumulative god caps by planned biome count.
+const CAP_VARIANT: 'current' | 'A' | 'B' = 'current';
+const CAP_TABLES = {
+  A: { normal: [4, 7, 11, 14], forfeit: [3, 5, 8, 10] },
+  B: { normal: [5, 8, 11, 12], forfeit: [4, 6, 8, 8] },
+} as const;
+
+function totalCap(catalog: Catalog, spec: DraftSpec, plan: DraftPlanScale): number {
+  const forfeit = draftForfeitActive(catalog, spec.loadout);
+  if (CAP_VARIANT !== 'current') {
+    const table = CAP_TABLES[CAP_VARIANT][forfeit ? 'forfeit' : 'normal'];
+    return table[plan.planned - 1] ?? table[table.length - 1]!;
+  }
+  return scaled(forfeit ? FORFEIT_OLYMPIAN_TOTAL_CAP : OLYMPIAN_TOTAL_CAP, plan.share);
+}
+
+/** One Hermes or Hammer trait per planned biome; each giver keeps its own cap of two. */
+function supplyCap(route: DraftRoute): number {
+  return draftPlannedBiomeKeys(route).length;
+}
+
+/** A Hermes or Daedalus Hammer trait. */
+function isSupplyTrait(catalog: Catalog, traitKey: string): boolean {
+  return catalog.traitGivers.values.some(
+    (giver) =>
+      (giver.providerKind === 'hermes' || giver.providerKind === 'hammer') &&
+      giver.traitKeys.includes(traitKey),
+  );
 }
 
 function assessTrait(
@@ -177,6 +230,7 @@ function assessTrait(
   worldGivers: readonly string[],
   routeStart: SimulationState,
   order: DraftOrderContext,
+  plan: DraftPlanScale,
   traitKey: string,
 ): DraftTraitAssessment {
   const trait = catalog.traits.byKey[traitKey];
@@ -207,12 +261,18 @@ function assessTrait(
     );
     if (held.length >= capped.cap) refusals.push({ kind: 'cap', ...capped });
   }
-  const godTotalCap = totalCap(catalog, spec);
+  const godTotalCap = totalCap(catalog, spec, plan);
   if (
     isGodTrait(catalog, traitKey) &&
     others.filter((key) => isGodTrait(catalog, key)).length >= godTotalCap
   )
     refusals.push({ kind: 'totalCap', cap: godTotalCap });
+  const supplyTotalCap = plan.supplyCap;
+  if (
+    isSupplyTrait(catalog, traitKey) &&
+    others.filter((key) => isSupplyTrait(catalog, key)).length >= supplyTotalCap
+  )
+    refusals.push({ kind: 'supplyCap', cap: supplyTotalCap });
   const hammer = trait.hammerCompatibility;
   if (
     hammer !== undefined &&

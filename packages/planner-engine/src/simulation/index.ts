@@ -601,6 +601,7 @@ export {
 } from './edit-settlement';
 export {
   draftKeepsakeOptions,
+  draftPlannedBiomeKeys,
   forcesGod,
   type DraftKeepsakeOptions,
   type DraftLoadout,

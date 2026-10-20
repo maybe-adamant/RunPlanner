@@ -322,6 +322,51 @@ describe('draft basket legality', () => {
     ).not.toContainEqual(capped(8));
   });
 
+  it('scales the god cap by the planned share and allows one Hermes or Hammer per planned biome', () => {
+    const planned = (count: number, frame = underworld) => ({
+      ...frame,
+      biomes: createProjectDocument(catalog, {
+        projectId: 'p',
+        routeKey: 'Underworld',
+        configuredBiomeCount: count,
+      }).route.biomes,
+    });
+    const forfeit = {
+      ...underworld,
+      fearRanks: { ...underworld.fearRanks, BoonSkipShrineUpgrade: 1 },
+    };
+    const capsOf = (frame: DraftRoute & DraftLoadout) =>
+      assessDraftBasket(catalog, frame, { ...spec([]), loadout: frame }).caps;
+    const caps = (count: number) => {
+      const { poolGodTotal, supplyTotal, providers, poolGods } = capsOf(planned(count));
+      return {
+        gods: poolGodTotal.cap,
+        forfeitGods: capsOf(planned(count, forfeit)).poolGodTotal.cap,
+        supply: supplyTotal.cap,
+        selene: providers.find((p) => p.providerKind === 'spell')!.cap,
+        perGod: poolGods[0]!.cap,
+      };
+    };
+    expect([1, 2, 3, 4].map(caps)).toEqual([
+      { gods: 3, forfeitGods: 2, supply: 1, selene: 1, perGod: 5 },
+      { gods: 6, forfeitGods: 4, supply: 2, selene: 1, perGod: 5 },
+      { gods: 9, forfeitGods: 6, supply: 3, selene: 1, perGod: 5 },
+      { gods: 12, forfeitGods: 8, supply: 4, selene: 1, perGod: 5 },
+    ]);
+    // An unconfigured route plans the whole itinerary.
+    expect(capsOf(underworld)).toMatchObject({
+      poolGodTotal: { cap: 12 },
+      supplyTotal: { cap: 4 },
+    });
+    // One planned biome takes one Hermes or Hammer trait in all.
+    const one = planned(1);
+    expect(
+      assessDraftBasket(catalog, one, { ...spec(['HermesWeaponBoon']), loadout: one }).traits.find(
+        (trait) => trait.traitKey === 'StaffDoubleAttackTrait',
+      )?.refusals,
+    ).toContainEqual({ kind: 'supplyCap', cap: 1 });
+  });
+
   it('refuses a trait whose giver is outside the world', () => {
     expect(assessment(underworld, spec(['HeraWeaponBoon']), 'HeraWeaponBoon').refusals).toEqual([
       { kind: 'giverNotInWorld' },

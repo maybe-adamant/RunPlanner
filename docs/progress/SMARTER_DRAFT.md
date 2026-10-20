@@ -142,12 +142,15 @@ deterministic corpus. A heavy basket must stay within about 15 s.
 2. **Scaling.**
    - The prefix-aware generator, `ReplaceRoute` prefix and report.
    - Scaled caps (engine-owned) and the app's cap display.
+   - Purchase steering with the pace, moved here so the cap is chosen with
+     purchases in place.
+   - A corpus A/B of the god cap partition by planned biome count, decided by
+     the owner.
    - Tests: `test:engine`, `test:planner`, `test:product`; the corpus delta.
 3. **NPC windows.**
    - The generic requirement reader, the steering and the miss report.
    - Tests: `test:engine`; the corpus delta.
-4. **Purchases and exclusions.**
-   - Purchase steering with the pace.
+4. **Exclusions.**
    - Exclusion-driven repairs.
    - Tests: `test:engine`; the corpus delta.
 5. **Closure.**

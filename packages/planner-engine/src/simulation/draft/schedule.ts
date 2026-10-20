@@ -9,7 +9,7 @@ import {
   type DraftPrerequisiteNeed,
 } from './prerequisites';
 import { shuffleDraft, type DraftRng } from './rng';
-import { draftForfeitActive, type DraftRoute, type DraftSpec } from './spec';
+import { draftForfeitActive, draftPlannedBiomeKeys, type DraftRoute, type DraftSpec } from './spec';
 import type { DraftWorldProduct } from './world';
 
 /**
@@ -88,21 +88,18 @@ function spread(
  * biome, into the latest such biome with spare capacity; each still waits on its own needs.
  */
 function pullNpcPrerequisites(
-  route: DraftRoute,
+  biomeKeys: readonly string[],
   npcBiomes: ReadonlyMap<string, number>,
   needs: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>,
   due: Map<string, number>,
   godTraits: readonly string[],
   capacity: (biomeKey: string) => number,
 ): void {
-  const last = route.itineraryBiomeKeys.length - 1;
+  const last = biomeKeys.length - 1;
   const dueOf = (key: string) => due.get(key);
   const spareBiome = (latest: number) => {
     for (let index = latest; index >= 0; index -= 1)
-      if (
-        godTraits.filter((key) => due.get(key) === index).length <
-        capacity(route.itineraryBiomeKeys[index]!)
-      )
+      if (godTraits.filter((key) => due.get(key) === index).length < capacity(biomeKeys[index]!))
         return index;
     return latest;
   };
@@ -135,7 +132,7 @@ function pullNpcPrerequisites(
 }
 
 /**
- * Basket god traits spread by capacity, Hermes and Hammer traits one per half;
+ * Over the planned biomes: basket god traits spread by capacity, Hermes and Hammer traits one per half;
  * no trait falls due before its prerequisites, and an NPC basket trait's
  * prerequisites fall due by its NPC's biome.
  */
@@ -148,7 +145,7 @@ export function draftGodSchedule(
 ): DraftGodSchedule {
   const shuffle = <T>(values: readonly T[]) => shuffleDraft(rng, values);
   const godKeys = shuffle(spec.world.godKeys);
-  const biomeKeys = route.itineraryBiomeKeys;
+  const biomeKeys = draftPlannedBiomeKeys(route);
   const forfeit = draftForfeitActive(catalog, spec.loadout) ? 1 : 0;
   const capacity = (biomeKey: string) =>
     Math.max((DRAFT_GOD_ROOM_CAPACITY[biomeKey] ?? 1) - forfeit, 0);
@@ -202,7 +199,7 @@ export function draftGodSchedule(
     });
     return ordered;
   });
-  pullNpcPrerequisites(route, world.npcTraitBiomes, needs, due, traitOrder, capacity);
+  pullNpcPrerequisites(biomeKeys, world.npcTraitBiomes, needs, due, traitOrder, capacity);
   // A pulled trait brings its god's earlier traits with it.
   for (const queue of godQueues)
     for (let i = queue.length - 2; i >= 0; i -= 1)

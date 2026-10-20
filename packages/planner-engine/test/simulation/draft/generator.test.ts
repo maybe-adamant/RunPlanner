@@ -280,6 +280,68 @@ describe('draftProject', () => {
     expect(walked()).toEqual(walked());
   });
 
+  describe('a planned prefix', () => {
+    const duo = 'ApolloSecondStageCastBoon';
+    const prefixSpec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: { F: 'Arachne', G: 'Narcissus', H: 'Echo' },
+        fieldNpcsByBiome: {},
+      },
+      basketTraitKeys: ['ApolloCastBoon', 'ApolloExCastBoon', 'ZeusWeaponBoon', duo],
+      rackKeepsakeKeys: ['DoorHealReserveKeepsake', 'BossPreDamageKeepsake', null],
+    };
+    const fg = createProjectDocument(catalog, {
+      projectId: 'p',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 2,
+    });
+
+    it('drafts and reports only the planned biomes, with the rack in each one', () => {
+      const result = draftProject(catalog, fg, prefixSpec, 1);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      expect(result.command.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
+      const drafted = applyProjectCommand(fg, catalog, result.command);
+      expect(drafted.route.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
+      expect(simulateProjectAssembly(catalog, drafted).evaluation.findings).toEqual([]);
+      // Echo in H lies past the plan; the rack after G is in G's Postboss.
+      expect(result.report.targets.filter((target) => target.kind !== 'basketTrait')).toEqual([
+        { kind: 'storyNpc', key: 'Arachne', biomeKey: 'F', met: true },
+        { kind: 'storyNpc', key: 'Narcissus', biomeKey: 'G', met: true },
+        { kind: 'rackKeepsake', key: 'DoorHealReserveKeepsake', biomeKey: 'F', met: true },
+        { kind: 'rackKeepsake', key: 'BossPreDamageKeepsake', biomeKey: 'G', met: true },
+      ]);
+    });
+
+    it('never declines a ready Duo in G, the last planned biome', () => {
+      // Zeus's third queued trait readies the Duo, so on these seeds it falls due in G.
+      const late: DraftSpec = {
+        ...prefixSpec,
+        world: { ...prefixSpec.world, storyNpcByBiome: {} },
+        basketTraitKeys: [
+          'ApolloCastBoon',
+          'ApolloExCastBoon',
+          'ZeusSprintBoon',
+          'ZeusManaBoon',
+          'ZeusSpecialBoon',
+          duo,
+        ],
+        rackKeepsakeKeys: [null, null, null],
+      };
+      for (const seed of [3, 5, 7]) {
+        const walk = startDraftWalk(fg, late, seed);
+        expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+        const declinedInF = walk.duoDeclines().get(duo) ?? 0;
+        expect(walk.runBiome(1, walk.steps + DEFAULT_DRAFT_BUDGET.maxStepsPerBiome)).toBe(true);
+        expect(walk.duoDeclines().get(duo) ?? 0).toBe(declinedInF);
+        expect(Object.keys(latestRunState(walk.assembly)?.traits.equippedTraits ?? {})).toContain(
+          duo,
+        );
+      }
+    });
+  });
+
   it('refuses the FreshFile route', () => {
     const base = createProjectDocument(catalog, { projectId: 'f', routeKey: 'FreshFile' });
     expect(draftProject(catalog, base, cases[0]!.spec, 1)).toEqual({
