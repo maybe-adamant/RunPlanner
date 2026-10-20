@@ -38,6 +38,26 @@ describe('draft god schedule', () => {
     expect(o).toMatchObject({ traitKeys: [] });
   });
 
+  it("keeps each god's traits due in basket order", () => {
+    const ordered: DraftSpec = {
+      ...spec,
+      basketTraitKeys: [
+        'ZeusManaBoon',
+        'HeraCastBoon',
+        'ZeusSprintBoon',
+        'ZeusWeaponBoon',
+        'AresSpecialBoon',
+        'ZeusSpecialBoon',
+      ],
+    };
+    const zeus = ['ZeusManaBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon', 'ZeusSpecialBoon'];
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
+      const { byBiome } = draftScheduleFor(surface, ordered, seed);
+      const due = zeus.map((key) => byBiome.findIndex((biome) => biome.traitKeys.includes(key)));
+      expect(due).toEqual([...due].sort((a, b) => a - b));
+    }
+  });
+
   it('varies with the seed', () => {
     const orders = [1, 2, 3, 4, 5].map((seed) =>
       JSON.stringify(draftScheduleFor(surface, spec, seed)),
@@ -95,8 +115,9 @@ describe('draft god schedule', () => {
       for (const seed of seeds) expect(dueBiomes(seed)('ZeusWeaponBoon')).toBe(0);
     });
 
-    it("makes an NPC trait's prerequisite due by the NPC's biome", () => {
-      // Ingenious Strike needs a god Attack; on these seeds the Duos' prerequisites would push it to P.
+    it("makes an NPC trait's prerequisite due by the NPC's biome, with its god's earlier traits", () => {
+      // Ingenious Strike needs a god Attack; queued fifth for Ares, the Attack would fall due after O.
+      const ares = ['AresManaBoon', 'AresSprintBoon', 'AresSpecialBoon', 'AresCastBoon'];
       const icarus: DraftSpec = {
         ...spec,
         world: {
@@ -105,21 +126,17 @@ describe('draft god schedule', () => {
           fieldNpcsByBiome: { O: ['Icarus'] },
         },
         basketTraitKeys: [
-          'HeraCastBoon',
-          'DemeterSpecialBoon',
-          'ZeusSprintBoon',
-          'AresManaBoon',
+          'FocusLightningBoon',
+          ...ares,
           'AresWeaponBoon',
-          'BloodDropRevengeBoon',
-          'KeepsakeLevelBoon',
-          'RootStrikeBoon',
-          'BloodRetentionBoon',
           'FocusAttackDamageTrait',
         ],
       };
-      for (const seed of [2, 3]) {
+      for (const seed of [1, 2, 3]) {
         const { byBiome } = draftScheduleFor(surface, icarus, seed);
-        expect(byBiome.findIndex((biome) => biome.traitKeys.includes('AresWeaponBoon'))).toBe(1);
+        const due = (key: string) => byBiome.findIndex((biome) => biome.traitKeys.includes(key));
+        expect(due('AresWeaponBoon')).toBeLessThanOrEqual(1);
+        for (const key of ares) expect(due(key)).toBeLessThanOrEqual(due('AresWeaponBoon'));
       }
     });
   });
@@ -191,12 +208,12 @@ describe('draft god schedule', () => {
     it('puts an Infusion after enough contributors, or last when the basket falls short', () => {
       const airs = ['ZeusSpecialBoon', 'ZeusCastBoon', 'ZeusSprintBoon'];
       for (const seed of seeds) {
-        const due = dueOf(underworld, draft(['ElementalDamageFloorBoon', ...airs]), seed);
+        const due = dueOf(underworld, draft([...airs, 'ElementalDamageFloorBoon']), seed);
         expect(due('ElementalDamageFloorBoon')).toBeGreaterThanOrEqual(
           Math.max(...airs.map((key) => due(key)!)),
         );
       }
-      const short = dueOf(underworld, draft(['ElementalDamageFloorBoon', 'ZeusCastBoon']), 1);
+      const short = dueOf(underworld, draft(['ZeusCastBoon', 'ElementalDamageFloorBoon']), 1);
       expect(short('ElementalDamageFloorBoon')).toBe(3);
     });
   });

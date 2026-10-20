@@ -33,6 +33,9 @@ export interface DraftTraitOfferContext {
   ) => AuthoredTraitOffer | undefined;
   readonly apply: (command: ProjectCommand) => boolean;
   readonly shuffle: <T>(values: readonly T[]) => T[];
+  readonly random: () => number;
+  /** Rooms of either god each ready basket Duo has been declined in, carried across biomes. */
+  readonly duoDeclines: Map<string, number>;
   /** Records why the biome cannot continue. */
   readonly fail: (reason: string) => void;
 }
@@ -40,12 +43,18 @@ export interface DraftTraitOfferContext {
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 /** Replacement traits tried for one unselected row that needs no change. */
 const FILLER_DRAWS = 4;
+/** A ready Duo is taken in its first god room with chance 1/3, then 2/3, then always. */
+const DUO_ROOMS = 3;
+/** Outside traits tried in a row when no offered row may be taken. */
+const SUBSTITUTE_DRAWS = 6;
 
 /** Authors trait offers toward the basket, with every selected-outcome child complete. */
 export class DraftTraitOffers {
   private readonly denial: boolean;
   /** Trait offers this walk authored, by address, for re-picking a stale child. */
   private readonly authoredOffers = new Map<string, AuthoredTraitOfferTraits>();
+  /** The Duos each god room's roll took, by offer and giver, so re-authoring keeps the roll. */
+  private readonly duoRolls = new Map<string, readonly string[]>();
 
   constructor(private readonly context: DraftTraitOfferContext) {
     this.denial = draftDenialActive(context.catalog, context.spec.loadout);
@@ -72,6 +81,7 @@ export class DraftTraitOffers {
     const declaration = this.catalog.traits.byKey[traitKey];
     if (declaration === undefined || draftIllegalTrait(declaration)) return false;
     if (!this.slotAllowed(traitKey)) return false;
+    if (!this.context.steering.orderAllows(traitKey, progress)) return false;
     const slot = declaration.equipmentSlot;
     if (
       slot !== undefined &&
@@ -99,7 +109,10 @@ export class DraftTraitOffers {
       evaluate: (query) => this.context.evaluate(query),
       shuffle: (values) => this.context.shuffle(values),
       allowsTrait: (traitKey) => this.traitAllowed(traitKey, progress),
-      prefersTrait: (traitKey) => steering.wantedBasket(steering.progress()).includes(traitKey),
+      prefersTrait: (traitKey) => {
+        const now = steering.progress();
+        return steering.wantedBasket(now).includes(traitKey) && steering.orderAllows(traitKey, now);
+      },
       supported: (value) => this.offerSupported(trait, value),
     };
   }
@@ -264,7 +277,26 @@ export class DraftTraitOffers {
     return current;
   }
 
-  /** Wanted basket placements first, prerequisites leading, then every other legal row in random order. */
+  /** Rolls each ready basket Duo of the giver once per god room. */
+  private firedDuos(trait: TraitOfferAddress, giverKey: string): readonly string[] {
+    const key = `${semanticAddressKey(trait)}|${giverKey}`;
+    const known = this.duoRolls.get(key);
+    if (known !== undefined) return known;
+    const declines = this.context.duoDeclines;
+    const fired: string[] = [];
+    for (const duo of this.context.steering.readyDuos(giverKey, this.context.steering.progress())) {
+      const declined = declines.get(duo) ?? 0;
+      if (this.context.random() < (declined + 1) / DUO_ROOMS) fired.push(duo);
+      else declines.set(duo, declined + 1);
+    }
+    this.duoRolls.set(key, fired);
+    return fired;
+  }
+
+  /**
+   * Wanted basket placements first, then every other legal row in random order.
+   * A god offers a fired Duo or its next queued trait; its later traits wait.
+   */
   private steerTraitOffer(
     trait: TraitOfferAddress,
     draft: AuthoredTraitOfferTraits,
@@ -298,12 +330,28 @@ export class DraftTraitOffers {
     // Denial a wanted trait already offered comes first, since leaving it would ban it.
     const offered = (key: string) =>
       Number(this.denial && draft.options.some((option) => option.traitKey === key));
-    const wanted = this.context
-      .shuffle(steering.wantedBasket(progress).filter((key) => giverTraits.includes(key)))
-      .sort(
-        (a, b) =>
-          offered(b) - offered(a) || Number(prerequisites.has(b)) - Number(prerequisites.has(a)),
+    const olympian = this.catalog.traitGivers.byKey[draft.giverKey]?.providerKind === 'olympian';
+    const fired = olympian ? this.firedDuos(trait, draft.giverKey) : [];
+    const next = olympian ? steering.nextQueued(draft.giverKey, progress) : undefined;
+    const wanted = olympian
+      ? [...this.context.shuffle(fired), ...(next === undefined ? [] : [next])]
+      : this.context
+          .shuffle(steering.wantedBasket(progress).filter((key) => giverTraits.includes(key)))
+          .sort(
+            (a, b) =>
+              offered(b) - offered(a) ||
+              Number(prerequisites.has(b)) - Number(prerequisites.has(a)),
+          );
+    const wantedNow = steering.wantedBasket(progress);
+    // A fallback row never jumps a god's queue or takes a Duo its roll declined.
+    const fallbackAllowed = (candidate: AuthoredTraitOfferTraits) => {
+      const key = candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)]?.traitKey;
+      return (
+        key !== undefined &&
+        steering.orderAllows(key, progress) &&
+        !(steering.isBasketDuo(key) && wantedNow.includes(key) && !fired.includes(key))
       );
+    };
     for (const traitKey of wanted) {
       const declaration = this.catalog.traits.byKey[traitKey];
       const rarities =
@@ -318,9 +366,30 @@ export class DraftTraitOffers {
           if (legal(candidate)) return [candidate];
         }
     }
-    return this.context
+    const rows = this.context
       .shuffle(indexes)
       .map((index) => this.completeChildren(trait, select(draft.options, index)))
-      .filter(legal);
+      .filter((candidate) => fallbackAllowed(candidate) && legal(candidate));
+    if (rows.length > 0) return rows;
+    // Every offered row waits in a queue or is banned, so another of the giver's traits takes a row.
+    const substitutes = this.context
+      .shuffle(giverTraits)
+      .filter((key) => !wantedNow.includes(key) && this.slotAllowed(key))
+      .slice(0, SUBSTITUTE_DRAWS);
+    for (const traitKey of substitutes) {
+      const declaration = this.catalog.traits.byKey[traitKey];
+      const rarities =
+        declaration?.rarityDomain.kind === 'ranked'
+          ? this.context.shuffle(declaration.rarityDomain.freshOfferRarities)
+          : [undefined];
+      for (const index of this.context.shuffle(indexes))
+        for (const rarity of rarities) {
+          const options = [...draft.options];
+          options[index] = rarity === undefined ? { traitKey } : { traitKey, rarity };
+          const candidate = this.completeChildren(trait, select(options, index));
+          if (legal(candidate)) return [candidate];
+        }
+    }
+    return [];
   }
 }

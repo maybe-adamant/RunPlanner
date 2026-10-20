@@ -26,7 +26,8 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - Once a Duo's prerequisites are met, the first room of either god accepts
      it with 33% probability, the next with 66%, and the third with 100%.
    - In a short biome it carries over to the next one.
-   - Legendaries gate on their prerequisites and close their god's list.
+   - Legendaries are ordinary members of their god's order, gated on their
+     prerequisites like any other trait.
 3. **Scaling by planned biomes.**
    - The draft follows the route's configured prefix ("Plan up to"). This
      reverses the full-route-only draft of `1ebe3ab11`.

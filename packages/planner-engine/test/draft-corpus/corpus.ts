@@ -231,10 +231,16 @@ function buildBasket(
       const selectable = assessDraftBasket(catalog, base.route, spec()).traits.filter(
         (trait) => !trait.inBasket && trait.selectable && wanted(trait.traitKey),
       );
+      // A trait admitted now can still leave an earlier one waiting on it, so the basket must stay unrefused.
       const next = shuffleDraft(
         rng,
         selectable.map((trait) => trait.traitKey),
-      )[0];
+      ).find(
+        (key) =>
+          !draftRefusals(catalog, base, { ...spec(), basketTraitKeys: [...basket, key] }).some(
+            (refusal) => refusal.kind === 'basketTrait',
+          ),
+      );
       if (next === undefined) throw new Error(`${recipe.name}: no admissible ${label} trait`);
       basket.push(next);
     }
