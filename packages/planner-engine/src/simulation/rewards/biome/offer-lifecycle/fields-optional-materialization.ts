@@ -17,8 +17,7 @@ import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
-import { processRewardOffer, staticCountedOfferExclusion } from '../../offer-generation';
-import { staticRewardOfferExclusion } from '../../offer-exclusions';
+import { explainCohortOfferExclusions, processRewardOffer } from '../../offer-generation';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
 import { spawnPickups } from '../../../state/pending-resource-pickups';
@@ -144,6 +143,15 @@ export function materializeFieldsOptionalOfferPoint(
     const domain = Object.freeze(
       store.entries.flatMap((entry) => locallyValidRewardOffers(catalog.rewards, entry.rewardType)),
     );
+    const focusedReward = (slotKey: string) => {
+      const concrete = concreteBySlot.get(slotKey);
+      const unresolved = unresolvedBySlot.get(slotKey);
+      return concrete !== undefined && offer === concrete.offer
+        ? concrete
+        : unresolved === undefined
+          ? Object.freeze({ ...concrete!, offer })
+          : candidateState(unresolved, offer);
+    };
     let representativeFailedFindings: Map<string, FindingRegionEntry> | undefined;
     const visit = (
       index: number,
@@ -237,16 +245,19 @@ export function materializeFieldsOptionalOfferPoint(
       );
       mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
     }
-    const routeKey = frontierBranches[0]?.state.reached.routePosition.routeKey;
-    const fixed =
-      candidateBranches.length > 0 || routeKey === undefined
+    const exclusions =
+      candidateBranches.length > 0
         ? undefined
-        : staticCountedOfferExclusion(
-            catalog,
-            localRewardBinding(declaration, { ...selectedReward, offer }),
-            selectedReward.resolvedStoreKey,
-            offer,
-            routeKey,
+        : explainCohortOfferExclusions(
+            frontierBranches,
+            contextFor(focusedReward(selectedReward.slotKey)),
+            orderedSlots
+              .slice(0, orderedSlots.indexOf(selectedReward.slotKey))
+              .flatMap((slotKey) => {
+                const concrete = concreteBySlot.get(slotKey);
+                return concrete === undefined ? [] : [contextFor(concrete)];
+              }),
+            'peersFirst',
           );
     return Object.freeze({
       findings: Object.freeze(
@@ -255,7 +266,7 @@ export function materializeFieldsOptionalOfferPoint(
           .filter((finding) => finding.code !== 'traitOfferMissing'),
       ),
       supported: candidateBranches.length > 0,
-      ...(fixed === undefined ? {} : { exclusions: staticRewardOfferExclusion(fixed) }),
+      ...(exclusions === undefined ? {} : { exclusions }),
     });
   };
 

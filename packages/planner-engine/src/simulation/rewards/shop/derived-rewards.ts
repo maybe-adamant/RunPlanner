@@ -15,9 +15,12 @@ import {
 import {
   findShopIndexedGenerationWitnesses,
   locallyValidRewardOffers,
+  type AuthoredShopOffer,
   type ResolvedRewardOffer,
   type ShopProfileDeclaration,
 } from '../../../reward-kernel';
+import { aggregateRewardOfferExclusions, staticRewardOfferExclusion } from '../offer-exclusions';
+import { notInShopReason, shopSlotReason, type ShopSlotExclusionInput } from './slot-exclusions';
 import { foldTraitHistoryEvents } from '../../traits';
 import { spawnPickups } from '../../state/pending-resource-pickups';
 import type {
@@ -88,6 +91,30 @@ export function deriveTravelRefill(input: {
         ? {}
         : { excludedPurchaseInteractionNames: effectiveExcludedNames },
     );
+  // The refill regenerates only its own slot, so it has no authored peers.
+  const refillExclusionResult = (selection: AuthoredShopOffer) => {
+    const input: ShopSlotExclusionInput = {
+      catalog: catalog.rewards,
+      profile,
+      fixedOffers: profile.slots.values.map((_, index) => (index === slotIndex ? selection : null)),
+      slotIndex,
+      requirements,
+      ...(effectiveExcludedNames.size === 0
+        ? {}
+        : { constraints: { excludedPurchaseInteractionNames: effectiveExcludedNames } }),
+      peerAt: () => undefined,
+    };
+    const fixed = notInShopReason(input);
+    const exclusions =
+      fixed === undefined
+        ? aggregateRewardOfferExclusions([shopSlotReason(input, generationFacts)])
+        : staticRewardOfferExclusion(fixed);
+    return Object.freeze({
+      findings: Object.freeze([]),
+      supported: false,
+      ...(exclusions === undefined ? {} : { exclusions }),
+    });
+  };
   return Object.freeze({
     data: Object.freeze({
       sourceOfferKey: sourceOffer.offerKey,
@@ -98,17 +125,15 @@ export function deriveTravelRefill(input: {
     }),
     capability: Object.freeze({
       evaluateOffer: (offer: ResolvedRewardOffer) =>
-        Object.freeze({
-          findings: Object.freeze([]),
-          supported: witnessesFor(offer).length > 0,
-        }),
+        witnessesFor(offer).length > 0
+          ? Object.freeze({ findings: Object.freeze([]), supported: true })
+          : refillExclusionResult({ optionKey: null, offer }),
       evaluateShopOption: (selection: import('../../../reward-kernel').ShopOptionSelection) =>
-        Object.freeze({
-          findings: Object.freeze([]),
-          supported: witnessesFor(selection.offer).some(
-            (witness) => witness.optionKeys[slotIndex] === selection.optionKey,
-          ),
-        }),
+        witnessesFor(selection.offer).some(
+          (witness) => witness.optionKeys[slotIndex] === selection.optionKey,
+        )
+          ? Object.freeze({ findings: Object.freeze([]), supported: true })
+          : refillExclusionResult(selection),
     }),
   });
 }

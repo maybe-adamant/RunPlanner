@@ -641,9 +641,12 @@ export function createChronologyAccumulator(
                   const results = combined.map((candidate) =>
                     candidate.evaluateShopOption!(selection),
                   );
+                  const supported = results.every((result) => result.supported);
+                  const exclusions = supported ? undefined : mergeRewardOfferExclusions(results);
                   return Object.freeze({
                     findings: Object.freeze(results.flatMap((result) => result.findings)),
-                    supported: results.every((result) => result.supported),
+                    supported,
+                    ...(exclusions === undefined ? {} : { exclusions }),
                   });
                 },
               }),

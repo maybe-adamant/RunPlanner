@@ -152,6 +152,11 @@ function spawnSeaStarDuplicate(
 }
 import type { RewardEvent } from '../model';
 import { staticallyExcludedCandidateResult } from '../producer-frontiers';
+import {
+  aggregateRewardOfferExclusions,
+  countedBagReason,
+  sourceSupportReason,
+} from '../offer-exclusions';
 
 const ARTIFICER_INELIGIBLE_REWARD_TYPES: ReadonlySet<string> = new Set(['Devotion', 'SpellDrop']);
 
@@ -819,7 +824,33 @@ export function applyProducerRoleHistory(
                     return false;
                   }
                 });
-                return Object.freeze({ findings: Object.freeze([]), supported });
+                if (supported) return Object.freeze({ findings: Object.freeze([]), supported });
+                // Every branch must redraw it; a supported branch cites nothing.
+                const exclusions = aggregateRewardOfferExclusions(
+                  branches.map((branch) => {
+                    if (!assessArtificerConversion(catalog, branch, incoming, resolution).supported)
+                      return undefined;
+                    const prepared = withBag(catalog, branch, 'RunProgress');
+                    if (prepared === undefined) return undefined;
+                    const branchFacts = facts(prepared.branch.state);
+                    return (
+                      countedBagReason(
+                        catalog.rewards,
+                        catalog.rewards.stores.byKey.RunProgress!,
+                        prepared.bag,
+                        offer,
+                        branchFacts,
+                        { ineligibleRewardTypes: ARTIFICER_INELIGIBLE_REWARD_TYPES },
+                        [],
+                      ) ?? sourceSupportReason(catalog.rewards, offer, branchFacts, 'offer')
+                    );
+                  }),
+                );
+                return Object.freeze({
+                  findings: Object.freeze([]),
+                  supported,
+                  ...(exclusions === undefined ? {} : { exclusions }),
+                });
               },
             }),
           }),

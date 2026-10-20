@@ -760,7 +760,18 @@ describe('The Artificer', () => {
       throw new Error('Artificer sibling candidate is missing');
     expect(
       frontier.artificerReplacementCandidate.evaluateOffer({ rewardType: 'MaxHealthDrop' }),
-    ).toEqual({ findings: [], supported: false });
+    ).toEqual({
+      findings: [],
+      supported: false,
+      exclusions: [
+        {
+          kind: 'entriesSpent',
+          rewardType: 'MaxHealthDrop',
+          storeKey: 'RunProgress',
+          allBranches: true,
+        },
+      ],
+    });
   });
 
   it('spends each legitimate RunProgress copy for deferred sibling conversions', () => {

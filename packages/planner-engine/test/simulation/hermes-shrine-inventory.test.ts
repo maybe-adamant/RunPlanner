@@ -1889,6 +1889,20 @@ describe('Hermes Shrine pickup settlement', () => {
         },
       }),
     ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: true } });
+    expect(
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+        kind: 'acquisitionEntryOffer',
+        entry,
+        value: { rewardType: 'TalentDrop' },
+      }),
+    ).toEqual({
+      kind: 'acquisitionEntryOffer',
+      result: {
+        findings: [],
+        supported: false,
+        exclusions: [{ kind: 'rewardTypeFixed', rewardType: 'BlindBoxLoot', allBranches: true }],
+      },
+    });
   });
 
   it('settles a rushed Shrine item through the ordinary free pickup lifecycle', () => {

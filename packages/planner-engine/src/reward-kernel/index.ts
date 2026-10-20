@@ -43,7 +43,11 @@ export {
   findShopPartialGenerationWitnesses,
   findShopPartialAuthoredGenerationWitnesses,
   purchaseInteractionName,
+  shopSlotExclusion,
+  shopSlotStocksOffer,
   simulateShopPurchases,
+  type ShopOptionExclusion,
+  type ShopSlotExclusion,
 } from './shop';
 export {
   isOfferSupportedAtResolutionPoint,

@@ -24,6 +24,12 @@ import { spawnPickups } from '../../../state/pending-resource-pickups';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
+import { aggregateRewardOfferExclusions, staticRewardOfferExclusion } from '../../offer-exclusions';
+import {
+  notInShopReason,
+  shopSlotReason,
+  type ShopSlotExclusionInput,
+} from '../../shop/slot-exclusions';
 import { processShopInventory } from '../../shop/inventory';
 import type { SimulationState } from '../../../state/model';
 import { attestSharedRewardLookups } from '../../../state/reward-lookups';
@@ -171,7 +177,7 @@ export function applyShopOfferPointMaterialization(
             : undefined,
       });
     };
-    const supportsSelection = (owner: SemanticAddress, selection: AuthoredShopOffer): boolean => {
+    const selectionInputs = (owner: SemanticAddress, selection: AuthoredShopOffer) => {
       const context = candidateContext(owner);
       const isContract = context.focused.offerKey === 'infernalContractReward';
       const fixedOffers = context.profile.slots.values.map((slot) =>
@@ -179,21 +185,61 @@ export function applyShopOfferPointMaterialization(
           ? selection
           : (context.concreteByKey.get(slot.key) ?? null),
       );
+      const shopNames = new Set(
+        isContract ? shopEntry!.offers.map((offer) => offer.offer.rewardType) : [],
+      );
+      return { context, isContract, fixedOffers, shopNames };
+    };
+    const supportsSelection = (owner: SemanticAddress, selection: AuthoredShopOffer): boolean => {
+      const { context, isContract, fixedOffers, shopNames } = selectionInputs(owner, selection);
       return frontierBranches.some(
         (branch) =>
           findShopPartialAuthoredGenerationWitnesses(
             catalog.rewards,
             context.profile,
             fixedOffers,
-            facts(
-              branch.state,
-              new Set(isContract ? shopEntry!.offers.map((offer) => offer.offer.rewardType) : []),
-            ),
+            facts(branch.state, shopNames),
             context.requirements,
           ).length > 0 &&
           (!isContract ||
             branch.state.traitHistory.equippedTraits.InfernalContractBoon !== undefined),
       );
+    };
+    const explainSelection = (owner: SemanticAddress, selection: AuthoredShopOffer) => {
+      const { context, isContract, fixedOffers, shopNames } = selectionInputs(owner, selection);
+      const input: ShopSlotExclusionInput = {
+        catalog: catalog.rewards,
+        profile: context.profile,
+        fixedOffers,
+        slotIndex: context.profile.slots.values.findIndex(
+          (slot) => slot.key === context.focused.offerKey,
+        ),
+        ...(context.requirements === undefined ? {} : { requirements: context.requirements }),
+        peerAt: (index) => {
+          const key = context.profile.slots.values[index]?.key;
+          const peer = shopEntry?.offers.find((offer) => offer.offerKey === key);
+          return peer === undefined ? undefined : { origin: peer.offerOrigin, offer: peer.offer };
+        },
+      };
+      const fixed = notInShopReason(input);
+      if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
+      return aggregateRewardOfferExclusions(
+        frontierBranches.map((branch) =>
+          isContract && branch.state.traitHistory.equippedTraits.InfernalContractBoon === undefined
+            ? { kind: 'contractNotEquipped' as const }
+            : shopSlotReason(input, facts(branch.state, shopNames)),
+        ),
+      );
+    };
+    const selectionResult = (owner: SemanticAddress, selection: AuthoredShopOffer) => {
+      if (supportsSelection(owner, selection))
+        return Object.freeze({ findings: Object.freeze([]), supported: true });
+      const exclusions = explainSelection(owner, selection);
+      return Object.freeze({
+        findings: Object.freeze([]),
+        supported: false,
+        ...(exclusions === undefined ? {} : { exclusions }),
+      });
     };
     producerFrontiers.push(
       Object.freeze({
@@ -208,21 +254,14 @@ export function applyShopOfferPointMaterialization(
         ) => {
           const context = candidateContext(owner);
           const current = context.concreteByKey.get(context.focused.offerKey);
-          return Object.freeze({
-            findings: Object.freeze([]),
-            supported: supportsSelection(owner, {
-              optionKey:
-                current?.offer.rewardType === offer.rewardType ? (current.optionKey ?? null) : null,
-              offer,
-            }),
+          return selectionResult(owner, {
+            optionKey:
+              current?.offer.rewardType === offer.rewardType ? (current.optionKey ?? null) : null,
+            offer,
           });
         },
-        evaluateShopOption: (owner: SemanticAddress, selection: ShopOptionSelection) => {
-          return Object.freeze({
-            findings: Object.freeze([]),
-            supported: supportsSelection(owner, selection),
-          });
-        },
+        evaluateShopOption: (owner: SemanticAddress, selection: ShopOptionSelection) =>
+          selectionResult(owner, selection),
         shopSlotAssessment: (owner: ShopOfferAddress) =>
           ownerKeys.has(semanticAddressKey(owner))
             ? inventory?.slotAssessments.get(owner.offerKey)

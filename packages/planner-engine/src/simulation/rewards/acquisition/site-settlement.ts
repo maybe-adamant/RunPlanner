@@ -1,4 +1,5 @@
 import { staticallyExcludedCandidateResult } from '../producer-frontiers';
+import { aggregateRewardOfferExclusions, sourceSupportReason } from '../offer-exclusions';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -351,14 +352,13 @@ export function settleAcquisitionResolvedReward(
             kind: 'rewardTypeFixed',
             rewardType: request.visibleOffer.rewardType,
           })
-        : Object.freeze({
-            findings: Object.freeze([]),
-            supported: branches.every((branch) =>
+        : branches.every((branch) =>
               isOfferSupportedAtResolutionPoint(catalog.rewards, offer, facts(branch.state), {
                 acquisitionRole: resolution.role,
               }),
-            ),
-          }),
+            )
+          ? Object.freeze({ findings: Object.freeze([]), supported: true })
+          : acquisitionSourceExclusionResult(catalog, branches, offer, facts, resolution.role),
   });
   if (request.reward === undefined || request.reward === null) {
     addRewardFinding(
@@ -940,5 +940,25 @@ export function settlePickupAcquisitionSite(
     pickupEntryFrontiers: Object.freeze(pickupEntryFrontiers),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
+  });
+}
+
+/** Every branch must resolve the source; supported branches cite nothing. */
+function acquisitionSourceExclusionResult(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  offer: ResolvedRewardOffer,
+  facts: RewardFactsFactory,
+  acquisitionRole: string,
+) {
+  const exclusions = aggregateRewardOfferExclusions(
+    branches.map((branch) =>
+      sourceSupportReason(catalog.rewards, offer, facts(branch.state), { acquisitionRole }),
+    ),
+  );
+  return Object.freeze({
+    findings: Object.freeze([]),
+    supported: false,
+    ...(exclusions === undefined ? {} : { exclusions }),
   });
 }
