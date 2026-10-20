@@ -377,6 +377,23 @@ describe('reward eligibility requirements', () => {
       ),
     ).toBe(true);
   });
+
+  it('counts distinct Olympians, not pickups, toward Devotion eligibility', () => {
+    const devotion = rewardKernelCatalog.stores.byKey.RunProgress?.entries.find(
+      (entry) => entry.rewardType === 'Devotion',
+    );
+    if (devotion?.requirement === undefined) {
+      throw new Error('RunProgress Devotion requirement is missing');
+    }
+    const withHistory = (lootTypeHistory: Readonly<Record<string, number>>) => {
+      const base = facts().requirements;
+      return facts([], { records: { ...base.records, lootTypeHistory } }).requirements;
+    };
+    expect(evaluateRequirement(devotion.requirement, withHistory({ ZeusUpgrade: 2 }))).toBe(false);
+    expect(
+      evaluateRequirement(devotion.requirement, withHistory({ ZeusUpgrade: 2, ApolloUpgrade: 1 })),
+    ).toBe(true);
+  });
 });
 
 describe('counted reward bags', () => {

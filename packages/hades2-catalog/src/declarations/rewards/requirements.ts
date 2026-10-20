@@ -91,13 +91,16 @@ export const hermesLootLegal: RequirementExpression = {
   ],
 };
 
-/** Devotion needs the lifetime PoseidonDevotionIntro01 line. */
+/**
+ * Devotion needs boons from two distinct Olympians other than Ares (game CountOf)
+ * and the lifetime PoseidonDevotionIntro01 line.
+ */
 export const devotionLegal: RequirementExpression = {
   kind: 'all',
   requirements: [
     notFreshFileRoute,
     {
-      kind: 'recordCount',
+      kind: 'distinctRecordKeyCount',
       record: 'lootTypeHistory',
       keys: devotionEligibilitySources,
       range: { min: 2 },

@@ -452,6 +452,36 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
     }
   });
 
+  it('counts distinct non-Ares Olympians, not pickups, for Devotion store eligibility', () => {
+    const lootHistoryLeaves = (requirement: unknown): unknown[] => {
+      const node = requirement as { kind?: string; record?: string; requirements?: unknown[] };
+      if (node.requirements !== undefined) return node.requirements.flatMap(lootHistoryLeaves);
+      return node.record === 'lootTypeHistory' ? [node] : [];
+    };
+    for (const storeKey of ['RunProgress', 'TartarusRewards']) {
+      const devotion = rewardKernelCatalog.stores.byKey[storeKey]?.entries.find(
+        (entry) => entry.rewardType === 'Devotion',
+      );
+      expect(lootHistoryLeaves(devotion?.requirement)).toEqual([
+        {
+          kind: 'distinctRecordKeyCount',
+          record: 'lootTypeHistory',
+          keys: [
+            'AphroditeUpgrade',
+            'ApolloUpgrade',
+            'DemeterUpgrade',
+            'HephaestusUpgrade',
+            'HeraUpgrade',
+            'HestiaUpgrade',
+            'PoseidonUpgrade',
+            'ZeusUpgrade',
+          ],
+          range: { min: 2 },
+        },
+      ]);
+    }
+  });
+
   it('rejects an interchangeable reward type without repeated entries in its store', () => {
     expect(() =>
       createRewardKernelCatalog(
