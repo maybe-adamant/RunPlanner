@@ -17,8 +17,6 @@ covered.
 
 ## Candidates held for later
 
-- Route banners: `Routes/Underworld.png`, `Surface.png`, route emblems and the
-  Dream Dive poppy, for a project-type banner.
 - God keepsake portraits and fuller Max Magick, Bones and Ashes art in
   `Items/Candidates/`, as possible replacements for the current icons.
 

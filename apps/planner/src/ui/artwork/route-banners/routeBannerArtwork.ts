@@ -1,11 +1,11 @@
-import iconDreamDiveAlt2 from './assets/DreamDiveAlt2.webp';
-import iconSurfaceAlt2 from './assets/SurfaceAlt2.webp';
-import iconUnderworldAlt1 from './assets/UnderworldAlt1.webp';
+import iconDreamDiveScene from './assets/DreamDiveScene.webp';
+import iconSurfaceScene from './assets/SurfaceScene.webp';
+import iconUnderworldScene from './assets/UnderworldScene.webp';
 
-/** Header banners by catalog route key; `null` marks a key with no icon yet. */
+/** Route backdrops by catalog route key; `null` marks a key with no art yet. */
 export const routeBannerArtwork: Readonly<Record<string, string | null>> = {
-  Underworld: iconUnderworldAlt1,
-  Surface: iconSurfaceAlt2,
-  Dream: iconDreamDiveAlt2,
-  FreshFile: iconUnderworldAlt1,
+  Underworld: iconUnderworldScene,
+  Surface: iconSurfaceScene,
+  Dream: iconDreamDiveScene,
+  FreshFile: iconUnderworldScene,
 };
