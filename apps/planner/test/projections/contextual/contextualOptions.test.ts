@@ -634,7 +634,7 @@ describe('contextual option projection', () => {
     ]);
     expect(
       requirement({
-        kind: 'recordCount',
+        kind: 'distinctRecordKeyCount',
         satisfied: false,
         record: 'lootTypeHistory',
         keys: [
@@ -650,7 +650,7 @@ describe('contextual option projection', () => {
         actual: 1,
         expected: { min: 2 },
       }),
-    ).toBe('Requires at least 2 boons this run, not counting Ares; currently 1.');
+    ).toBe('Requires boons from 2 different gods this run, not counting Ares.');
     expect(
       requirement({
         kind: 'recordCount',

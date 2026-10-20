@@ -203,10 +203,14 @@ function recordMessage(
         (key) => catalog.rewards.rewardTypes.byKey[key]?.label ?? lootLabel(catalog, key),
       );
       const gods = godSetPhrase(catalog, evidence.keys);
-      if (gods !== undefined && evidence.record === 'lootTypeHistory' && expected)
-        return evidence.kind === 'distinctRecordKeyCount'
-          ? `Requires boons from ${rangeLabel(evidence.expected)} different gods this run${gods}; currently ${evidence.actual}.`
-          : `Requires ${rangeLabel(evidence.expected)} boons this run${gods}; currently ${evidence.actual}.`;
+      if (gods !== undefined && evidence.record === 'lootTypeHistory' && expected) {
+        if (evidence.kind === 'recordCount')
+          return `Requires ${rangeLabel(evidence.expected)} boons this run${gods}; currently ${evidence.actual}.`;
+        const { min, max } = evidence.expected;
+        return min !== undefined && max === undefined
+          ? `Requires boons from ${min} different gods this run${gods}.`
+          : `Requires boons from ${rangeLabel(evidence.expected)} different gods this run${gods}; currently ${evidence.actual}.`;
+      }
       if (evidence.kind === 'distinctRecordKeyCount')
         return `Requires rewards from ${range} different gods this run; currently ${evidence.actual}.`;
       // A use limit gates the reward itself, so naming its keys would repeat the choice.
