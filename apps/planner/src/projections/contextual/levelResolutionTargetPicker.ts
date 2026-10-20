@@ -29,7 +29,6 @@ export function projectLevelResolutionTargetPicker(input: {
       label: input.traitLabel(target),
       selected,
       state: supported ? ('possible' as const) : ('impossible' as const),
-      ...(unavailableCurrent ? { status: 'Current · unavailable' } : {}),
       ...(unavailableCurrent
         ? {
             explanation: formatFindingExplanation(

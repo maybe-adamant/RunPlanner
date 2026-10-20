@@ -202,7 +202,11 @@ export function projectEncounterPicker(
           `Encounter picker received a non-encounter candidate for ${candidate.value}`,
         );
       }
-      const explanation = encounterCandidateExplanation(catalog, candidate.evaluation);
+      // The unassessed section heading already says the phase is not evaluated.
+      const explanation =
+        candidate.evaluation.result.evidence.kind === 'coverageUnavailable'
+          ? undefined
+          : encounterCandidateExplanation(catalog, candidate.evaluation);
       return Object.freeze({
         label,
         selected: candidate.value === selectedEncounterKey,

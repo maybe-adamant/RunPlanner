@@ -578,7 +578,7 @@ function activeFinding(
 function unavailableExplanation(
   catalog: Catalog,
   evaluation: Extract<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
-): CandidateExplanation {
+): CandidateExplanation | undefined {
   switch (evaluation.evidence.kind) {
     case 'authoredPrerequisiteMissing': {
       const label =
@@ -593,10 +593,8 @@ function unavailableExplanation(
       };
     }
     case 'coverageNotReached':
-      return {
-        kind: evaluation.evidence.kind,
-        message: 'This part of the route has not been evaluated yet.',
-      };
+      // The "Needs earlier steps" section heading already says this.
+      return undefined;
     case 'producerFrontierUnavailable':
       return {
         kind: evaluation.evidence.kind,

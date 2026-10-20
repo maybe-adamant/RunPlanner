@@ -235,7 +235,7 @@ describe('contextual option projection', () => {
     expect(resolved.map((option) => option.explanation?.kind)).toEqual([
       'authoredPrerequisiteMissing',
       'authoredPrerequisiteMissing',
-      'coverageNotReached',
+      undefined,
       'producerFrontierUnavailable',
       'targetNotReachable',
       'upstreamIncomplete',
@@ -244,7 +244,7 @@ describe('contextual option projection', () => {
     expect(resolved.map((option) => option.explanation?.message)).toEqual([
       'Choose the required reward pool before evaluating this option.',
       'Choose the required biome setting before evaluating this option.',
-      'This part of the route has not been evaluated yet.',
+      undefined,
       'The current route does not reach this reward yet.',
       'This door is not reachable in the current route.',
       'Finish Erebus before choices here can be evaluated.',

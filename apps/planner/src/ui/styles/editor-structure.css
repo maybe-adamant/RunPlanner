@@ -465,8 +465,14 @@ select {
 }
 
 .contextual-picker-popover [cmdk-item][aria-disabled='true'] {
-  color: #a68282;
+  color: var(--muted);
   cursor: not-allowed;
+  opacity: 0.78;
+}
+
+/* Choices that wait on earlier steps stay selectable but read as muted. */
+.contextual-picker-popover [cmdk-item][data-candidate-state='unassessed'] {
+  color: var(--muted);
   opacity: 0.78;
 }
 

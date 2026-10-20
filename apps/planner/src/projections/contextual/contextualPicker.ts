@@ -106,16 +106,7 @@ interface MutableSection<T> {
 }
 
 function pickerItem<T>(option: ContextualOption<T>, keyFor: (value: T) => string) {
-  const status =
-    option.state === 'forced'
-      ? 'Required'
-      : option.state === 'unassessed'
-        ? 'Not evaluated'
-        : option.state === 'impossible'
-          ? option.selected
-            ? 'Current · unavailable'
-            : 'Unavailable'
-          : undefined;
+  const status = option.state === 'forced' ? 'Required' : undefined;
   return Object.freeze({
     key: keyFor(option.value),
     value: option.value,
@@ -143,8 +134,8 @@ function pushGrouped<T>(
     kind === 'category'
       ? categoryLabel(category)
       : category === undefined
-        ? 'Not evaluated'
-        : `${category} · Not evaluated`;
+        ? 'Needs earlier steps'
+        : `${category} · Needs earlier steps`;
   const key = `${kind}:${category ?? 'available'}`;
   let section = byKey.get(key);
   if (section === undefined) {

@@ -58,7 +58,7 @@ const model: ContextualPickerModel<string> = {
     {
       key: 'unassessed:story',
       kind: 'unassessed',
-      label: 'Story · Not evaluated',
+      label: 'Story · Needs earlier steps',
       collapsible: false,
       items: [
         {
@@ -68,7 +68,6 @@ const model: ContextualPickerModel<string> = {
           state: 'unassessed',
           selected: false,
           disabled: false,
-          explanation: 'This part of the route has not been evaluated yet.',
         },
       ],
     },
@@ -210,7 +209,7 @@ describe('ContextualPicker', () => {
 
     expect(screen.getByText('Required now')).toBeTruthy();
     expect(screen.getByText('Combat')).toBeTruthy();
-    expect(screen.getByText('Story · Not evaluated')).toBeTruthy();
+    expect(screen.getByText('Story · Needs earlier steps')).toBeTruthy();
     expect(screen.queryByText('Combat 20')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Unavailable (1)' }));
