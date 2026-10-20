@@ -6,11 +6,13 @@ import {
   createKeepsakeEquipResultAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createShopOfferAddress,
   createTargetAddress,
 } from '@run-planner/engine/authored-project';
 import type {
   ProjectCandidateEvaluation,
   RequirementEvaluationEvidence,
+  RewardOfferExclusionEvidence,
   RoomGenerationExclusionEvidence,
   SemanticFinding,
 } from '@run-planner/engine/simulation';
@@ -160,9 +162,9 @@ describe('contextual option projection', () => {
       'This room can appear at most 2 times among these doors.',
       'This room can appear at most 4 times in this biome.',
       'This room must be included here: Opening 01.',
-      'This room has 2 doors; this room requires at least 3.',
-      'These doors lead to 2 rooms; this room requires at least 3.',
-      '2 of these doors lead to Combat 01; this room requires at most 1.',
+      'This room has 2 doors; requires at least 3.',
+      'These doors lead to 2 rooms; requires at least 3.',
+      '2 of these doors lead to Combat 01; requires at most 1.',
     ]);
   });
 
@@ -605,7 +607,60 @@ describe('contextual option projection', () => {
           },
         ]),
       ),
-    ).toBe('Biome depth is 1; this room requires 4–6.');
+    ).toBe('Biome depth is 1; requires 4–6.');
+  });
+
+  it('reads biome counts as route positions and god sets as rules', () => {
+    const requirement = (evaluation: RequirementEvaluationEvidence) =>
+      reasons(roomTarget([{ kind: 'eligibilityRequirement', evaluation }]));
+    const biomes = (expected: { readonly min?: number; readonly max?: number }) =>
+      requirement({
+        kind: 'counterRange',
+        satisfied: false,
+        axis: 'enteredBiomes',
+        actual: 3,
+        expected,
+      });
+    expect([
+      biomes({ min: 2 }),
+      biomes({ max: 2 }),
+      biomes({ max: 1 }),
+      biomes({ min: 2, max: 3 }),
+    ]).toEqual([
+      'Appears from the second biome on.',
+      'Only in the first 2 biomes.',
+      'Only in the first biome.',
+      'Only from the second to the third biome.',
+    ]);
+    expect(
+      requirement({
+        kind: 'recordCount',
+        satisfied: false,
+        record: 'lootTypeHistory',
+        keys: [
+          'AphroditeUpgrade',
+          'ApolloUpgrade',
+          'DemeterUpgrade',
+          'HephaestusUpgrade',
+          'HeraUpgrade',
+          'HestiaUpgrade',
+          'PoseidonUpgrade',
+          'ZeusUpgrade',
+        ],
+        actual: 1,
+        expected: { min: 2 },
+      }),
+    ).toBe('Requires at least 2 boons this run, not counting Ares; currently 1.');
+    expect(
+      requirement({
+        kind: 'recordCount',
+        satisfied: false,
+        record: 'biomeUseRecord',
+        keys: ['HermesUpgrade', 'ShopHermesUpgrade'],
+        actual: 1,
+        expected: { max: 0 },
+      }),
+    ).toBe('Already used in this biome.');
   });
 
   it('names the failed room condition instead of a generic history sentence', () => {
@@ -654,7 +709,7 @@ describe('contextual option projection', () => {
         ],
       }),
     ).toBe(
-      'Requires one of: Biome depth is 1; this room requires at least 3; or Combat 01 was already entered this run.',
+      'Requires one of: Biome depth is 1; requires at least 3; or Combat 01 was already entered this run.',
     );
   });
 
@@ -673,5 +728,230 @@ describe('contextual option projection', () => {
       },
     };
     expect(reasons(offered)).toBe('This door does not lead to Miniboss rooms.');
+  });
+
+  describe('reward offer exclusions', () => {
+    const excluded = (
+      ...exclusions: readonly RewardOfferExclusionEvidence[]
+    ): ProjectCandidateEvaluation => ({
+      kind: 'incomingReward',
+      result: { supported: false, findings: [], exclusions },
+    });
+    // Every fixture reason holds in all branches unless a test says otherwise.
+    type Reason = RewardOfferExclusionEvidence extends infer Each
+      ? Each extends unknown
+        ? Omit<Each, 'allBranches'>
+        : never
+      : never;
+    const everywhere = (reason: Reason) =>
+      ({ ...reason, allBranches: true }) as RewardOfferExclusionEvidence;
+    const unmet: RequirementEvaluationEvidence = {
+      kind: 'counterRange',
+      satisfied: false,
+      axis: 'enteredBiomes',
+      actual: 1,
+      expected: { min: 2 },
+    };
+
+    it('names each static, store, god, Shop and peer cause', () => {
+      const shopSlot = createShopOfferAddress(biome, createOccurrenceId('shop'), 'offer2');
+      expect(
+        [
+          everywhere({ kind: 'notInStore', rewardType: 'MaxHealthDrop', storeKey: 'MetaProgress' }),
+          everywhere({ kind: 'notInStore', rewardType: 'MaxHealthDrop', storeKey: null }),
+          everywhere({ kind: 'notInShop', profileKey: 'WorldShop', slotIndex: 0 }),
+          everywhere({
+            kind: 'offRoute',
+            rewardType: 'MaxHealthDrop',
+            storeKey: 'RunProgress',
+            routeKey: 'Underworld',
+          }),
+          everywhere({ kind: 'rewardTypeFixed', rewardType: 'MaxHealthDrop' }),
+          everywhere({ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' }),
+          everywhere({ kind: 'forcedReward', offer: { rewardType: 'MaxHealthDrop' } }),
+          everywhere({
+            kind: 'priorityRequired',
+            rewardType: 'MaxHealthDrop',
+            storeKey: 'RunProgress',
+          }),
+          everywhere({
+            kind: 'peerConflict',
+            peers: [{ origin: shopSlot, offer: { rewardType: 'MaxHealthDrop' } }],
+          }),
+          everywhere({
+            kind: 'godCap',
+            source: 'ZeusUpgrade',
+            acquiredSources: ['ApolloUpgrade', 'HeraUpgrade'],
+            cap: 2,
+          }),
+          everywhere({ kind: 'godNotInteracted', source: 'ZeusUpgrade' }),
+          everywhere({
+            kind: 'devotionSourceNotAcquired',
+            sources: ['ZeusUpgrade', 'HeraUpgrade'],
+          }),
+          everywhere({
+            kind: 'entriesSpent',
+            rewardType: 'MaxHealthDrop',
+            storeKey: 'RunProgress',
+          }),
+          everywhere({ kind: 'entriesSpent', rewardType: 'MaxHealthDrop', storeKey: 'HubRewards' }),
+          everywhere({ kind: 'shopExcluded', name: 'MaxHealthDrop' }),
+          everywhere({ kind: 'contractNotEquipped' }),
+          everywhere({
+            kind: 'storeExhausted',
+            storeKey: 'RunProgress',
+            fallbackRewardType: 'MaxHealthDrop',
+          }),
+          everywhere({
+            kind: 'entryRequirement',
+            rewardType: 'MaxHealthDrop',
+            storeKey: 'RunProgress',
+            evaluation: unmet,
+          }),
+        ].map((exclusion) => reasons(excluded(exclusion))),
+      ).toEqual([
+        'Not in the Minor Reward pool.',
+        'Not in this reward pool.',
+        'This Shop slot never stocks this item.',
+        'Not offered on the Underworld route.',
+        'This source always gives Max Health.',
+        'This source never gives this reward.',
+        'Max Health must be offered here.',
+        'Max Health must be offered first.',
+        'This reward conflicts with the offer on Shop slot 2.',
+        'This run already has 2 gods: Apollo and Hera.',
+        'The Shop offers only gods already picked up on this save file.',
+        'Requires a boon from Zeus and Hera earlier this run.',
+        'The Major Reward pool has no Max Health left.',
+        'This reward pool has no Max Health left.',
+        'The restock leaves out Max Health.',
+        'Requires Champion of Elysium equipped.',
+        'The Major Reward pool is exhausted, so only Max Health is offered.',
+        'Appears from the second biome on.',
+      ]);
+    });
+
+    it('reads a reason that holds only in some branches as an alternative, capped at two', () => {
+      expect(
+        reasons(
+          excluded(
+            { kind: 'godNotInteracted', source: 'ZeusUpgrade', allBranches: false },
+            everywhere({ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' }),
+            everywhere({ kind: 'contractNotEquipped' }),
+          ),
+        ),
+      ).toBe(
+        'Depending on earlier rolls: The Shop offers only gods already picked up on this save file. | This source never gives this reward.',
+      );
+    });
+
+    it('drops the coarse reward finding the exclusions already explain', () => {
+      expect(
+        reasons({
+          kind: 'shopOffer',
+          result: {
+            supported: false,
+            findings: [
+              {
+                code: 'rewardBagEntryUnavailable',
+                phase: 'rewardGeneration',
+                origin: target,
+                evidence: {},
+              },
+            ],
+            exclusions: [everywhere({ kind: 'excludedByProducer', rewardType: 'MaxHealthDrop' })],
+          },
+        }),
+      ).toBe('This source never gives this reward.');
+    });
+
+    it('names each reward requirement condition', () => {
+      const requirement = (evaluation: RequirementEvaluationEvidence) =>
+        reasons(
+          excluded(
+            everywhere({
+              kind: 'shopOptionRequirement',
+              optionKey: 'MaxHealthDrop',
+              rewardType: 'MaxHealthDrop',
+              evaluation,
+            }),
+          ),
+        );
+      expect(
+        [
+          {
+            kind: 'encounterKeyCount',
+            satisfied: false,
+            scope: 'route',
+            encounterKeys: ['ArtemisCombatF'],
+            actual: 1,
+            expected: { max: 0 },
+          },
+          {
+            kind: 'encounterCompletionCount',
+            satisfied: false,
+            encounterKeys: ['ArtemisCombatF'],
+            actual: 0,
+            expected: { min: 1 },
+          },
+          {
+            kind: 'previousRoomEncounterKeyCount',
+            satisfied: false,
+            encounterKeys: ['ArtemisCombatF'],
+            roomWindow: 3,
+            actual: 1,
+            expected: { max: 0 },
+          },
+          { kind: 'notInCurrentRoomShopOptions', satisfied: false, rewardType: 'SpellDrop' },
+          { kind: 'offeredRewardExcludes', satisfied: false, rewardType: 'SpellDrop' },
+          {
+            kind: 'rewardLookupExcludes',
+            satisfied: false,
+            lookupKey: 'hubRewardLookup',
+            rewardType: 'SpellDrop',
+          },
+          {
+            kind: 'minRoomsSinceEvent',
+            satisfied: false,
+            event: 'Devotion',
+            minimum: 15,
+            actual: 4,
+          },
+          {
+            kind: 'currentRoomRewardExcludes',
+            satisfied: false,
+            rewardTypes: ['SpellDrop'],
+            actual: 'SpellDrop',
+          },
+          {
+            kind: 'currentRoomStructuralTagsInclude',
+            satisfied: false,
+            expected: ['Outdoor'],
+            actual: ['Indoor'],
+          },
+          { kind: 'flagEquals', satisfied: false, flag: 'pendingSpellDrop', expected: false },
+          { kind: 'flagEquals', satisfied: false, flag: 'allSpellInvested', expected: false },
+          {
+            kind: 'equippedAspectEquals',
+            satisfied: false,
+            expected: 'SuitHexAspect',
+            actual: null,
+          },
+        ].map((evaluation) => requirement(evaluation as RequirementEvaluationEvidence)),
+      ).toEqual([
+        'Artemis combat already occurred this run.',
+        'Requires Artemis combat to be completed earlier this run.',
+        'Artemis combat occurred within the previous 3 rooms.',
+        "This room's Shop already offers Selene's Gift.",
+        "Selene's Gift was already offered on the doors leading here.",
+        "Selene's Gift is already offered in this Hub.",
+        'A Trial was 4 rooms ago; requires at least 15.',
+        "Unavailable with this room's reward: Selene's Gift.",
+        'Requires outdoor rooms.',
+        'A Spell Drop is already pending.',
+        'Every Spell talent is already invested.',
+        'Requires Aspect of Selene.',
+      ]);
+    });
   });
 });

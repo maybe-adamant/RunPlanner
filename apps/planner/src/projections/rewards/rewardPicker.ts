@@ -9,7 +9,13 @@ import type {
   ContextualPickerModel,
   ContextualPickerProjectionService,
 } from '../contextual/contextualPicker';
+import {
+  alternativePrefix,
+  explainCandidateEvaluation,
+  type CandidateExplanation,
+} from '../contextual/contextualOptions';
 import type { ProjectedRewardDomain, ProjectedRewardDomainOption } from './rewardDomainProjection';
+import { rewardDeclaration, summarizeRewardOffer } from './rewardOfferSummary';
 
 export type RewardPickerStep = 'type' | 'source' | 'chosen' | 'spurned';
 
@@ -35,36 +41,8 @@ function offerKey(offer: ResolvedRewardOffer): string {
   return JSON.stringify(offer);
 }
 
-function sourceLabel(catalog: Catalog, source: string): string {
-  const declaration = catalog.rewards.rewardTypes.byKey[source];
-  if (declaration === undefined) {
-    throw new Error(`Reward source ${source} is missing`);
-  }
-  return declaration.label;
-}
-
-function rewardDeclaration(catalog: Catalog, rewardType: string) {
-  const declaration = catalog.rewards.rewardTypes.byKey[rewardType];
-  if (declaration === undefined) {
-    throw new Error(`Reward type ${rewardType} is missing`);
-  }
-  return declaration;
-}
-
 function hasEventualSource(catalog: Catalog, offer: ResolvedRewardOffer): boolean {
   return rewardDeclaration(catalog, offer.rewardType).sourceResolution?.kind === 'acquisitionRole';
-}
-
-export function summarizeRewardOffer(catalog: Catalog, offer: ResolvedRewardOffer): string {
-  const declaration = rewardDeclaration(catalog, offer.rewardType);
-  if (offer.payload === undefined) {
-    return declaration.label;
-  }
-  if (offer.payload.kind === 'BoonSource') {
-    const source = sourceLabel(catalog, offer.payload.source);
-    return `${declaration.label} · ${source}`;
-  }
-  return `${declaration.label} · ${sourceLabel(catalog, offer.payload.chosenSource)} / ${sourceLabel(catalog, offer.payload.spurnedSource)}`;
 }
 
 function optionLabel(catalog: Catalog, step: RewardPickerStep, key: string): string {
@@ -248,6 +226,45 @@ function projectedOffer(
   return option.supportingOffer;
 }
 
+/**
+ * A Trial row or a chosen-god row stands for many god pairs, so a missing god
+ * of the one representative pair is not the reason; state the pair rule.
+ */
+function aggregateDevotionReasons(
+  catalog: Catalog,
+  step: RewardPickerStep,
+  mode: AssessmentMode,
+  source: ProjectedRewardDomainOption,
+): readonly CandidateExplanation[] | undefined {
+  if (mode !== 'aggregate' || (step !== 'type' && step !== 'chosen')) return undefined;
+  const reasons = explainCandidateEvaluation(catalog, source.evaluation);
+  if (!reasons.some((reason) => reason.kind === 'devotionSourceNotAcquired')) return undefined;
+  const chosenMissing =
+    step === 'chosen' &&
+    'result' in source.evaluation &&
+    'exclusions' in source.evaluation.result &&
+    (source.evaluation.result.exclusions ?? []).some(
+      (exclusion) =>
+        exclusion.kind === 'devotionSourceNotAcquired' && exclusion.sources.includes(source.key),
+    );
+  const rule =
+    step === 'type'
+      ? 'Requires boons from 2 different gods this run.'
+      : chosenMissing
+        ? `Requires a boon from ${optionLabel(catalog, step, source.key)} earlier this run.`
+        : 'Requires a boon from a second god this run.';
+  return reasons.map((reason) =>
+    reason.kind !== 'devotionSourceNotAcquired'
+      ? reason
+      : {
+          kind: reason.kind,
+          message: reason.message.startsWith(alternativePrefix)
+            ? `${alternativePrefix}${rule}`
+            : rule,
+        },
+  );
+}
+
 export function createRewardPickerProjection(
   catalog: Catalog,
   contextualPicker: ContextualPickerProjectionService,
@@ -317,9 +334,11 @@ export function createRewardPickerProjection(
           if (source === undefined) {
             throw new Error(`Reward ${step} projection lost its domain option`);
           }
+          const explanations = aggregateDevotionReasons(catalog, step, resolved.mode, source);
           return {
             label: optionLabel(catalog, step, source.key),
             selected: source.key === selectedValue,
+            ...(explanations === undefined ? {} : { explanations }),
           };
         },
         offerKey,
