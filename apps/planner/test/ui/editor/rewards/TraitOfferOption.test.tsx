@@ -62,7 +62,7 @@ describe('trait rarity presentation', () => {
       state: value === 'Common' ? ('impossible' as const) : ('possible' as const),
       selected: value === 'Common',
       disabled: value === 'Common',
-      ...(value === 'Common' ? { explanation: 'Below the current rarity floor.' } : {}),
+      ...(value === 'Common' ? { explanations: ['Below the current rarity floor.'] } : {}),
     }));
     render(
       <TraitOfferOption

@@ -60,7 +60,7 @@ describe('Pom target picker projection', () => {
         {
           value: 'Stale',
           disabled: false,
-          explanation: 'Pom target unavailable',
+          explanations: ['Pom target unavailable'],
         },
       ],
     });

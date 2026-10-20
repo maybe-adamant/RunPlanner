@@ -34,7 +34,7 @@ describe('contextual picker projection', () => {
         value: 'other',
         label: 'Other',
         disabled: true,
-        explanation: 'Already chosen',
+        explanations: ['Already chosen'],
       },
     ];
     const model = declaredChoicesPicker(choices, 'retained');
@@ -50,7 +50,7 @@ describe('contextual picker projection', () => {
       ['category', false, ['']],
       ['unavailable', true, ['other']],
     ]);
-    expect(model.sections[2]!.items[0]!.explanation).toBe('Already chosen');
+    expect(model.sections[2]!.items[0]!.explanations).toEqual(['Already chosen']);
     expect(declaredChoicesPicker(choices.slice(0, 1), '').sections).toHaveLength(1);
   });
   it('orders required, selected-invalid, possible, unassessed, and unavailable sections from engine evidence', () => {

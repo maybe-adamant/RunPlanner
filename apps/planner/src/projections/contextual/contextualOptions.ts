@@ -1,5 +1,6 @@
 import type {
   FindingEvidenceValue,
+  ForcePressureLedgerEntry,
   ProjectCandidateEvaluation,
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
@@ -15,6 +16,9 @@ import {
   type CandidateProjectionEvaluation,
 } from '../candidates/candidateProjection';
 import { formatFindingSentence, presentFinding } from '../evaluationProjection';
+import { inactiveEncounterPhaseMessage, rangeLabel } from '../encounterPickerProjection';
+import { roomPickerCandidateCategory } from '../roomSelectorProjection';
+import { biomeFieldLabel } from '../structured-workspace/assembly/biome-semantic-assembly';
 
 export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unassessed';
 
@@ -29,15 +33,34 @@ export interface ContextualOption<T> {
   readonly category?: string;
   readonly state: ContextualOptionState;
   readonly selected: boolean;
-  readonly explanation?: CandidateExplanation;
+  /** At most two distinct reasons, most direct first. */
+  readonly explanations?: readonly CandidateExplanation[];
 }
 
 export interface ContextualOptionPresentation {
   readonly label: string;
   readonly category?: string;
-  /** A domain-specific, typed explanation supplied by its application projector. */
-  readonly explanation?: CandidateExplanation;
+  /** Domain-specific, typed reasons supplied by its application projector. */
+  readonly explanations?: readonly CandidateExplanation[];
   readonly selected: boolean;
+}
+
+/** A blocked choice shows at most this many reason lines. */
+const maxReasons = 2;
+
+/** Distinct reasons in their given order, capped for one picker row. */
+export function distinctReasons(
+  reasons: readonly CandidateExplanation[],
+): readonly CandidateExplanation[] {
+  const seen = new Set<string>();
+  const kept: CandidateExplanation[] = [];
+  for (const reason of reasons) {
+    if (seen.has(reason.message)) continue;
+    seen.add(reason.message);
+    kept.push(reason);
+    if (kept.length === maxReasons) break;
+  }
+  return Object.freeze(kept);
 }
 
 export interface ContextualOptionResolver {
@@ -71,36 +94,132 @@ function counterLabel(axis: CounterAxis): string {
   }
 }
 
-function requirementMessage(evidence: RequirementEvaluationEvidence): string {
+function routeLabel(catalog: Catalog, routeKey: string): string {
+  return catalog.routes.byKey[routeKey]?.label ?? routeKey;
+}
+
+function roomLabels(catalog: Catalog, gameNames: readonly string[], routeKey: string): string {
+  return [
+    ...new Set(
+      gameNames.map((name) =>
+        catalog.rooms.byKey[name] === undefined ? name : roomName(catalog, name, routeKey),
+      ),
+    ),
+  ].join(' / ');
+}
+
+/** A god's loot key (`ApolloUpgrade`) by its giver's name. */
+function lootLabel(catalog: Catalog, key: string): string {
+  const giverKey = key.replace(/Upgrade$/, '');
+  return catalog.traitGivers.byKey[giverKey]?.label ?? giverKey;
+}
+
+function recordMessage(
+  catalog: Catalog,
+  routeKey: string,
+  evidence: Extract<
+    RequirementEvaluationEvidence,
+    { readonly kind: 'recordCount' | 'distinctRecordKeyCount' }
+  >,
+  expected: boolean,
+): string {
+  const range = expected
+    ? rangeLabel(evidence.expected)
+    : `outside ${rangeLabel(evidence.expected)}`;
+  switch (evidence.record) {
+    case 'roomsEntered': {
+      const rooms = roomLabels(catalog, evidence.keys, routeKey);
+      return expected && evidence.expected.max === 0
+        ? `${rooms} was already entered this run.`
+        : `Requires ${range} entries into ${rooms}; currently ${evidence.actual}.`;
+    }
+    case 'lootTypeHistory':
+    case 'useRecord':
+    case 'biomeUseRecord':
+    case 'lifetimeGodUseRecord':
+    case 'lifetimeGodPickupRecord': {
+      const scope =
+        evidence.record === 'biomeUseRecord'
+          ? 'this biome'
+          : evidence.record === 'lifetimeGodUseRecord' ||
+              evidence.record === 'lifetimeGodPickupRecord'
+            ? 'this save file'
+            : 'this run';
+      const names = evidence.keys.map(
+        (key) => catalog.rewards.rewardTypes.byKey[key]?.label ?? lootLabel(catalog, key),
+      );
+      if (evidence.kind === 'distinctRecordKeyCount')
+        return `Requires rewards from ${range} different gods this run; currently ${evidence.actual}.`;
+      return expected && evidence.expected.max === 0
+        ? `${names.join(' / ')} already used on ${scope}.`
+        : `Requires ${range} uses of ${names.join(' / ')} on ${scope}; currently ${evidence.actual}.`;
+    }
+    case 'resourceGains':
+      return `Requires ${range} ${evidence.keys.join(' / ')} gained this run; currently ${evidence.actual}.`;
+  }
+}
+
+/** The failed room conditions, read with the polarity a `not` imposes. */
+function requirementMessages(
+  catalog: Catalog,
+  routeKey: string,
+  evidence: RequirementEvaluationEvidence,
+  expected = true,
+): readonly string[] {
+  if (evidence.satisfied === expected) return [];
   switch (evidence.kind) {
     case 'routeKeyEquals':
-      return `This room condition requires the ${evidence.expected} route.`;
+      return [
+        expected
+          ? `Requires the ${routeLabel(catalog, evidence.expected)} route.`
+          : `Unavailable on the ${routeLabel(catalog, evidence.expected)} route.`,
+      ];
     case 'all':
     case 'any': {
-      const failed = evidence.children.find((child) => !child.satisfied);
-      return failed === undefined
-        ? 'The current history does not satisfy this room requirement.'
-        : requirementMessage(failed);
+      const children = evidence.children
+        .map((child) => requirementMessages(catalog, routeKey, child, expected))
+        .filter((messages) => messages.length > 0);
+      if ((evidence.kind === 'all') === expected) return [...new Set(children.flat())];
+      const alternatives = [
+        ...new Set(children.map((messages) => messages.join(' ').replace(/\.$/, ''))),
+      ];
+      return alternatives.length <= 1
+        ? alternatives.map((message) => `${message}.`)
+        : [`Requires one of: ${alternatives.join('; or ')}.`];
     }
     case 'not':
-      return 'A disallowed history condition is currently present.';
+      return requirementMessages(catalog, routeKey, evidence.child, !expected);
     case 'counterRange':
-      return `${counterLabel(evidence.axis)} is ${evidence.actual}; this room requires ${evidence.expected.min ?? 'any'} to ${evidence.expected.max ?? 'any'}.`;
+      return [
+        `${counterLabel(evidence.axis)} is ${evidence.actual}; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+      ];
     case 'recordCount':
     case 'distinctRecordKeyCount':
-      return `The current matching history count is ${evidence.actual}; this room requires a different count.`;
+      return [recordMessage(catalog, routeKey, evidence, expected)];
     case 'recentEnvelopeSlotCount':
-      return 'Recent encounter history does not satisfy this room.';
+      return [
+        `Requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)} matching encounters in the previous ${evidence.roomWindow} rooms; currently ${evidence.actual}.`,
+      ];
     case 'minExits':
-      return `This room has ${evidence.actual} doors; this room requires at least ${evidence.minimum}.`;
+      return [
+        `This room has ${evidence.actual} doors; this room requires at least ${evidence.minimum}.`,
+      ];
     case 'currentBatchTargetCount':
-      return `These doors contain ${evidence.actual} rooms, outside the room's supported range.`;
+      return [
+        `These doors lead to ${evidence.actual} rooms; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+      ];
     case 'currentBatchRoomCount':
-      return `These doors contain ${evidence.actual} matching rooms, outside the room's supported range.`;
+      return [
+        `${evidence.actual} of these doors lead to ${roomLabels(catalog, evidence.roomGameNames, routeKey)}; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+      ];
     case 'clockworkGoalsRemaining':
-      return `${evidence.actual} Clockwork goals remain; this room is not valid at that point.`;
+      return [
+        `${evidence.actual} Clockwork goals remain; this room requires ${expected ? '' : 'outside '}${rangeLabel(evidence.expected)}.`,
+      ];
     case 'clockworkNonGoalCapacity':
-      return `The Clockwork non-goal capacity is exhausted (${evidence.acquired}/${evidence.maximum}).`;
+      return [
+        `The Clockwork non-goal capacity is exhausted (${evidence.acquired}/${evidence.maximum}).`,
+      ];
   }
 }
 
@@ -111,54 +230,84 @@ function roomName(catalog: Catalog, gameName: string, routeKey: string): string 
   return room.label;
 }
 
-function roomExclusionExplanation(
+function times(count: number): string {
+  return count === 1 ? 'once' : `${count} times`;
+}
+
+/** Which room category a door offers, when the selected room lies outside them. */
+function notCandidateMessage(catalog: Catalog, pressure: ForcePressureLedgerEntry): string {
+  const { biomeKey } = pressure.targetOrigin;
+  const category = (gameName: string) => {
+    const room = catalog.rooms.byKey[gameName];
+    return room === undefined ? undefined : roomPickerCandidateCategory(biomeKey, room);
+  };
+  const offered = new Set(pressure.eligibleRoomGameNames.flatMap((name) => category(name) ?? []));
+  const selected = category(pressure.selectedGameName);
+  return selected !== undefined && offered.size > 0 && !offered.has(selected)
+    ? `This door does not lead to ${selected} rooms.`
+    : 'Not one of the rooms this door can offer.';
+}
+
+function roomExclusionExplanations(
   catalog: Catalog,
   exclusion: RoomGenerationExclusionEvidence,
-  routeKey: string,
-): CandidateExplanation {
+  pressure: ForcePressureLedgerEntry,
+): readonly CandidateExplanation[] {
+  const routeKey = pressure.targetOrigin.routeKey;
   switch (exclusion.kind) {
     case 'notCandidate':
-      return { kind: 'declaration', message: 'This room is not available for this door.' };
+      return [{ kind: 'declaration', message: notCandidateMessage(catalog, pressure) }];
     case 'physicalExitUnavailable':
-      return { kind: 'exit', message: `Door ${exclusion.exitIndex} is unavailable here.` };
+      return [{ kind: 'exit', message: `Door ${exclusion.exitIndex} is unavailable here.` }];
     case 'exitIncompatible':
-      return {
-        kind: 'compatibility',
-        message: `${roomName(catalog, exclusion.candidateGameName, routeKey)} is incompatible with this door.`,
-      };
+      return [
+        {
+          kind: 'compatibility',
+          message: `${roomName(catalog, exclusion.candidateGameName, routeKey)} is incompatible with this door.`,
+        },
+      ];
     case 'currentRoomRepeat':
-      return { kind: 'repeat', message: 'The current room cannot immediately repeat.' };
+      return [{ kind: 'repeat', message: 'The current room cannot immediately repeat.' }];
     case 'forceMinimum':
-      return {
-        kind: 'counter',
-        message: `${counterLabel(exclusion.axis)} is ${exclusion.actual}; this room starts at ${exclusion.minimum}.`,
-      };
+      return [
+        {
+          kind: 'counter',
+          // Worded like the matching eligibility range so the two de-duplicate.
+          message: `${counterLabel(exclusion.axis)} is ${exclusion.actual}; this room requires at least ${exclusion.minimum}.`,
+        },
+      ];
     case 'eligibilityRequirement':
-      return { kind: 'requirement', message: requirementMessage(exclusion.evaluation) };
+      return requirementMessages(catalog, routeKey, exclusion.evaluation).map((message) => ({
+        kind: 'requirement',
+        message,
+      }));
     case 'maxCreationsThisRun':
-      return {
-        kind: 'cap',
-        message: `This room can appear at most ${exclusion.maximum} times on this route.`,
-      };
+      return [
+        {
+          kind: 'cap',
+          message: `This room can appear at most ${times(exclusion.maximum)} on this route.`,
+        },
+      ];
     case 'maxCreationsPerRoom':
-      return {
-        kind: 'cap',
-        message: `This room can appear at most ${exclusion.maximum} times among these doors.`,
-      };
+      return [
+        {
+          kind: 'cap',
+          message: `This room can appear at most ${times(exclusion.maximum)} among these doors.`,
+        },
+      ];
     case 'maxAppearancesThisBiome':
-      return {
-        kind: 'cap',
-        message: `This room can appear at most ${exclusion.maximum} times in this biome.`,
-      };
+      return [
+        {
+          kind: 'cap',
+          message: `This room can appear at most ${times(exclusion.maximum)} in this biome.`,
+        },
+      ];
     case 'forcedPool': {
       const rooms = exclusion.requiredRoomGameNames.map((name) =>
         roomName(catalog, name, routeKey),
       );
       const subject = rooms.length === 1 ? 'This room must' : 'These rooms must';
-      return {
-        kind: 'force',
-        message: `${subject} be included here: ${rooms.join(', ')}.`,
-      };
+      return [{ kind: 'force', message: `${subject} be included here: ${rooms.join(', ')}.` }];
     }
   }
 }
@@ -219,12 +368,15 @@ function siblingExplanation(
 ): CandidateExplanation | undefined {
   const peers = Array.isArray(finding.evidence.priorOffers) ? finding.evidence.priorOffers : [];
   const firstPeer = evidenceRecord(peers[0]);
-  return firstPeer === undefined
-    ? undefined
-    : {
-        kind: 'sibling',
-        message: `This reward conflicts with the offer on ${rewardPeerLabel(catalog, firstPeer.origin)}.`,
-      };
+  if (firstPeer === undefined) return undefined;
+  const peer = rewardPeerLabel(catalog, firstPeer.origin);
+  return {
+    kind: 'sibling',
+    message:
+      peer === 'another offer'
+        ? 'This reward conflicts with another offer.'
+        : `This reward conflicts with the offer on ${peer}.`,
+  };
 }
 
 /** The finding's own presented copy, when the candidate context adds nothing to it. */
@@ -305,8 +457,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'stygianWellTwistInvalid':
       return presented('store', finding);
     case 'ixionChaosMissing':
+      return {
+        kind: 'generic',
+        message: "Ixion's Chaos gate belongs on the first room that can offer a Chaos exit.",
+      };
     case 'ixionChaosUnavailable':
-      return { kind: 'generic', message: 'Repair this Ixion-generated Chaos exit.' };
+      return { kind: 'generic', message: 'No pending Ixion effect creates this Chaos gate.' };
     case 'chaosRejectedBlockMissing':
       return { kind: 'trait', message: 'Rejected requires one visible option to be blocked.' };
     case 'chaosRejectedBlockUnavailable':
@@ -337,8 +493,9 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         message: 'Choose a greatest-level trait, or record that no eligible target exists.',
       };
     case 'echoPomNoTargetUnavailable':
+      return { kind: 'trait', message: 'A Pom-eligible trait exists, so Echo Pom needs a target.' };
     case 'echoPomTargetUnavailable':
-      return { kind: 'trait', message: 'Choose a greatest-level Pom-eligible trait.' };
+      return { kind: 'trait', message: 'Not a highest-level Pom-eligible trait.' };
     case 'naturalSelectionResultMissing':
       return { kind: 'trait', message: 'Choose the successful Natural Selection level targets.' };
     case 'naturalSelectionResultUnavailable':
@@ -383,10 +540,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'persephoneLevelBonusUnavailable':
       return { kind: 'trait', message: 'Choose an available Persephone roll.' };
     case 'targetRoomUnavailable':
-      return {
-        kind: 'room',
-        message: 'This room is not among the rooms that can be offered for this door.',
-      };
+      return 'anomalyReplacement' in finding.evidence
+        ? { kind: 'room', message: 'An Anomaly cannot occur here.' }
+        : {
+            kind: 'room',
+            message: 'This room is not among the rooms that can be offered for this door.',
+          };
     case 'judgmentOutcomeMissing':
     case 'judgmentOutcomeWrongCardinality':
     case 'judgmentOutcomeTargetUnavailable':
@@ -444,10 +603,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         message: 'This encounter cannot occur when this room begins.',
       };
     case 'encounterSlotActivationUnavailable':
-      return {
-        kind: 'encounter',
-        message: 'This encounter phase is not active for the selected room setup.',
-      };
+      return { kind: 'encounter', message: inactiveEncounterPhaseMessage };
     case 'figLeafSkipUnavailable':
       return {
         kind: 'encounter',
@@ -561,18 +717,159 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'hubVisitOrderIncomplete':
     case 'pickedTargetMissing':
     case 'targetMissing':
-      return {
-        kind: 'structure',
-        message: 'Finish the required earlier route steps before this option can be evaluated.',
-      };
+      return { kind: 'structure', message: missingStepMessage(catalog, finding) };
   }
 }
 
-function activeFinding(
+/** The earlier authored step a structural finding names, in the biome it belongs to. */
+function missingStepMessage(catalog: Catalog, finding: SemanticFinding): string {
+  const origin = finding.origin as { readonly routeKey?: string; readonly biomeKey?: string };
+  const biome =
+    origin.biomeKey !== undefined && catalog.biomes.byKey[origin.biomeKey] !== undefined
+      ? biomeName(catalog, origin.biomeKey)
+      : undefined;
+  const inBiome = biome === undefined ? '' : ` in ${biome}`;
+  const parent =
+    typeof finding.evidence.parentGameName === 'string' &&
+    origin.routeKey !== undefined &&
+    catalog.rooms.byKey[finding.evidence.parentGameName] !== undefined
+      ? roomName(catalog, finding.evidence.parentGameName, origin.routeKey)
+      : undefined;
+  const fromParent = parent === undefined ? inBiome : ` from ${parent}`;
+  const number = (key: string) =>
+    typeof finding.evidence[key] === 'number' ? (finding.evidence[key] as number) : undefined;
+  switch (finding.code) {
+    case 'batchRewardStoreMissing':
+      return `Choose the reward pool for the doors${fromParent} first.`;
+    case 'batchStateMissing':
+      return `Choose the Fields door roll${fromParent} first.`;
+    case 'biomeFieldMissing':
+      return typeof finding.evidence.fieldKey === 'string'
+        ? `Choose the ${biomeFieldLabel(finding.evidence.fieldKey).toLowerCase()}${inBiome} first.`
+        : `Choose the biome setting${inBiome} first.`;
+    case 'biomeTopologyMissing':
+      return `Create the opening room${inBiome} first.`;
+    case 'hubOpenSetIncomplete': {
+      const min = number('minimumCount') ?? number('minimumOpenCount');
+      const max = number('maximumCount') ?? number('maximumOpenCount');
+      const actual = number('actualCount') ?? number('actualOpenCount');
+      const range =
+        min === undefined || max === undefined ? '' : `${min === max ? min : `${min}–${max}`} `;
+      return `Open ${range}Hub rooms${inBiome} first${actual === undefined ? '' : `; ${actual} open`}.`;
+    }
+    case 'hubVisitOrderIncomplete': {
+      const required = number('requiredCount');
+      const actual = number('actualCount');
+      if (required !== undefined && actual !== undefined && actual >= required)
+        return `Use the Hub fountain${inBiome} first.`;
+      return required === undefined || actual === undefined
+        ? `Plan the Hub visits${inBiome} first.`
+        : `Plan ${required} Hub visits${inBiome} first; ${actual} planned.`;
+    }
+    case 'pickedTargetMissing':
+      return finding.evidence.decisionKind === 'hubHandoff'
+        ? `Choose the door taken from the Hub${inBiome} first.`
+        : `Choose the door taken${inBiome} first.`;
+    case 'targetMissing':
+      return typeof finding.evidence.exitKey === 'string'
+        ? `Choose the room behind ${numberedLabel(finding.evidence.exitKey, 'Door')}${fromParent} first.`
+        : `Choose the next room${fromParent} first.`;
+    default:
+      return formatFindingSentence(presentFinding(finding));
+  }
+}
+
+function activeFindings(
   evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
-): SemanticFinding | undefined {
-  if (evaluation.kind === 'traitOffer') return undefined;
-  return 'findings' in evaluation.result ? evaluation.result.findings[0] : undefined;
+): readonly SemanticFinding[] {
+  if (evaluation.kind === 'traitOffer') return [];
+  return 'findings' in evaluation.result && typeof evaluation.result.findings[0] === 'object'
+    ? (evaluation.result.findings as readonly SemanticFinding[])
+    : [];
+}
+
+/** What an impossible candidate kind means when the engine attaches no finding to it. */
+function unexplainedImpossibility(
+  catalog: Catalog,
+  evaluation: Exclude<ProjectCandidateEvaluation, { readonly kind: 'unavailable' }>,
+): CandidateExplanation {
+  switch (evaluation.kind) {
+    case 'startRoom': {
+      const rooms = evaluation.result.supportedGameNames.flatMap(
+        (name) => catalog.rooms.byKey[name]?.label ?? [],
+      );
+      return {
+        kind: 'startRoom',
+        message:
+          rooms.length > 0 && rooms.length <= 3
+            ? `This biome starts in ${rooms.join(' or ')}.`
+            : 'Not a start room for this biome.',
+      };
+    }
+    case 'roomTarget':
+      return { kind: 'room', message: 'Not one of the rooms this door can offer.' };
+    case 'batchRewardStore':
+      return { kind: 'store', message: 'These doors cannot roll this reward pool.' };
+    case 'fieldsCageOutcome':
+      return { kind: 'fields', message: 'This Fields door roll cannot occur at this door.' };
+    case 'hubSlot':
+      return { kind: 'hub', message: 'This Hub room cannot open with the current open set.' };
+    case 'hubActionOrder':
+      return { kind: 'hub', message: 'This Hub visit cannot come next.' };
+    case 'sideRoomGeneration':
+      return { kind: 'sideRoom', message: 'This side-room outcome cannot occur here.' };
+    case 'sideRoomEntryOrder':
+      return { kind: 'sideRoom', message: 'This side room cannot be entered next.' };
+    case 'shipEncounterCount':
+      return { kind: 'encounter', message: 'This encounter count cannot occur on this ship.' };
+    case 'rewardWheelOfferCount':
+      return { kind: 'wheel', message: 'This wheel cannot show this many offers.' };
+    case 'rewardWheelPicked':
+      return { kind: 'wheel', message: 'This wheel offer cannot be picked.' };
+    case 'rewardWheelStore':
+      return { kind: 'wheel', message: 'This wheel cannot roll this reward pool.' };
+    case 'takeoverPrebossBatch':
+      return { kind: 'room', message: 'These doors cannot lead to this Preboss room.' };
+    case 'hubTerminalTakeover':
+      return {
+        kind: 'requirement',
+        message:
+          requirementMessages(
+            catalog,
+            evaluation.result.source.routeKey,
+            evaluation.result.eligibility,
+          )[0] ?? 'This Hub cannot take over this door.',
+      };
+    case 'incomingReward':
+    case 'startingReward':
+    case 'localReward':
+      return { kind: 'reward', message: 'No reward roll here produces this reward.' };
+    case 'rewardWheelOffer':
+      return { kind: 'reward', message: 'No wheel roll here produces this reward.' };
+    case 'shopOffer':
+      return { kind: 'shop', message: 'No Shop roll here stocks this item.' };
+    case 'acquisitionEntryOffer':
+      return { kind: 'reward', message: 'This source cannot produce this reward here.' };
+    case 'traitOffer':
+      return { kind: 'trait', message: 'No trait offer here can show these choices.' };
+    case 'judgmentArcana':
+    case 'figurineArcana':
+      return { kind: 'arcana', message: 'These cards cannot be drawn here.' };
+    case 'keepsakeSelection':
+      return { kind: 'keepsake', message: 'This keepsake cannot be equipped here.' };
+    case 'keepsakeEquipResult':
+      return { kind: 'keepsake', message: 'This keepsake cannot grant this result here.' };
+    case 'acquisitionConversion':
+      return { kind: 'reward', message: 'No conversion applies to this acquisition.' };
+    case 'steadyGrowthOutcome':
+      return { kind: 'trait', message: 'This trait cannot gain rarity here.' };
+    case 'fountainRarityOutcome':
+      return { kind: 'trait', message: 'This boon cannot be promoted here.' };
+    case 'transcendentEmbryoOutcome':
+      return { kind: 'trait', message: 'This Chaos blessing is not eligible here.' };
+    case 'fieldsSpatialPoint':
+      return { kind: 'fields', message: 'This point is not available to this Fields item.' };
+  }
 }
 
 function unavailableExplanation(
@@ -618,31 +915,72 @@ function unavailableExplanation(
   }
 }
 
+/** Failed counter axes a room's eligibility already names. */
+function failedCounterAxes(evidence: RequirementEvaluationEvidence): readonly CounterAxis[] {
+  if (evidence.satisfied) return [];
+  switch (evidence.kind) {
+    case 'counterRange':
+      return [evidence.axis];
+    case 'all':
+    case 'any':
+      return evidence.children.flatMap(failedCounterAxes);
+    default:
+      return [];
+  }
+}
+
+/** A force minimum repeats an eligibility range on the same counter; keep only the range. */
+function withoutSubsumedMinimums(
+  exclusions: readonly RoomGenerationExclusionEvidence[],
+): readonly RoomGenerationExclusionEvidence[] {
+  const named = new Set(
+    exclusions.flatMap((exclusion) =>
+      exclusion.kind === 'eligibilityRequirement' ? failedCounterAxes(exclusion.evaluation) : [],
+    ),
+  );
+  return exclusions.filter(
+    (exclusion) => exclusion.kind !== 'forceMinimum' || !named.has(exclusion.axis),
+  );
+}
+
+/** The reasons for a forced, impossible, or unassessed candidate, most direct first. */
 export function explainCandidateEvaluation(
   catalog: Catalog,
   evaluation: ProjectCandidateEvaluation,
-): CandidateExplanation | undefined {
-  if (evaluation.kind === 'unavailable') return unavailableExplanation(catalog, evaluation);
+): readonly CandidateExplanation[] {
+  if (evaluation.kind === 'unavailable') {
+    const explanation = unavailableExplanation(catalog, evaluation);
+    return explanation === undefined ? [] : [explanation];
+  }
   const support = candidateSupport({ value: null, evaluation });
-  if (support === 'forced') {
-    return {
-      kind: 'forced',
-      message: 'This option must be included here.',
-    };
-  }
-  if (support !== 'impossible') return undefined;
-  if (evaluation.kind === 'roomTarget') {
-    const { pressure } = evaluation.result;
-    const exclusion = pressure.selectedExclusions[0];
-    if (exclusion !== undefined)
-      return roomExclusionExplanation(catalog, exclusion, pressure.targetOrigin.routeKey);
-  }
-  const finding = activeFinding(evaluation);
-  if (finding !== undefined) return findingExplanation(catalog, finding);
-  return {
-    kind: 'unsupported',
-    message: 'This option is not available with the current route.',
-  };
+  if (support === 'forced')
+    return [{ kind: 'forced', message: 'This option must be included here.' }];
+  if (support !== 'impossible') return [];
+  const exclusions =
+    evaluation.kind === 'roomTarget'
+      ? withoutSubsumedMinimums(evaluation.result.pressure.selectedExclusions).flatMap(
+          (exclusion) => roomExclusionExplanations(catalog, exclusion, evaluation.result.pressure),
+        )
+      : [];
+  // The door's own exclusions already say why; its summary finding would only repeat that.
+  const findings = activeFindings(evaluation).filter(
+    (finding) =>
+      exclusions.length === 0 ||
+      finding.code !== 'targetRoomUnavailable' ||
+      'anomalyReplacement' in finding.evidence,
+  );
+  const [special, ordinary] = [
+    findings.filter((finding) => 'anomalyReplacement' in finding.evidence),
+    findings.filter((finding) => !('anomalyReplacement' in finding.evidence)),
+  ];
+  const reasons = [
+    ...special.map((finding) => findingExplanation(catalog, finding)),
+    ...exclusions,
+    ...ordinary.map((finding) => findingExplanation(catalog, finding)),
+  ];
+  return distinctReasons(
+    reasons.length > 0 ? reasons : [unexplainedImpossibility(catalog, evaluation)],
+  );
 }
 
 function state(evaluation: CandidateProjectionEvaluation): ContextualOptionState {
@@ -678,20 +1016,21 @@ export function createContextualOptionResolver(catalog: Catalog): ContextualOpti
       const projected = Object.freeze(
         options.map((option, index) => {
           const display = presentation[index]!;
-          const explanation =
-            display.explanation ??
-            (option.evaluation.kind === 'encounter' ||
-            option.evaluation.kind === 'traitOfferFocusedOption' ||
-            option.evaluation.kind === 'traitAcquisitionTarget'
-              ? undefined
-              : explainCandidateEvaluation(catalog, option.evaluation));
+          const explanations = distinctReasons(
+            display.explanations ??
+              (option.evaluation.kind === 'encounter' ||
+              option.evaluation.kind === 'traitOfferFocusedOption' ||
+              option.evaluation.kind === 'traitAcquisitionTarget'
+                ? []
+                : explainCandidateEvaluation(catalog, option.evaluation)),
+          );
           return Object.freeze({
             value: option.value,
             label: display.label,
             ...(display.category === undefined ? {} : { category: display.category }),
             state: state(option.evaluation),
             selected: display.selected,
-            ...(explanation === undefined ? {} : { explanation: Object.freeze(explanation) }),
+            ...(explanations.length === 0 ? {} : { explanations }),
           });
         }),
       );

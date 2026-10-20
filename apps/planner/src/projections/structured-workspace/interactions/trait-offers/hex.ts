@@ -156,7 +156,7 @@ function nodeEditor(
             state: 'possible' as const,
             selected: option.selected,
             disabled: false,
-            ...(explanation === undefined ? {} : { explanation }),
+            ...(explanation === undefined ? {} : { explanations: Object.freeze([explanation]) }),
           });
         }),
       ),

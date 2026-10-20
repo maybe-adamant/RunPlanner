@@ -277,11 +277,18 @@ function roomActionsForOccurrence(
         ? roomActionKey(blocker.precedingAction) === proposedKey
         : blocker.dependency.kind === 'afterAction' &&
           roomActionKey(blocker.dependency.action) === proposedKey);
-    const blocker =
-      candidates.find((entry) => entry.kind === 'dependency' && concernsProposal(entry)) ??
-      candidates.find(concernsProposal) ??
-      candidates.find((entry) => entry.kind === 'dependency') ??
-      candidates[0]!;
+    // The most direct blockers first: a dependency of the moved action, then its window.
+    const rank = (entry: Blocker) =>
+      (concernsProposal(entry) ? 0 : 2) + (entry.kind === 'dependency' ? 0 : 1);
+    const ranked = [...candidates].sort((left, right) => rank(left) - rank(right));
+    const prefix = introduced.length === 0 ? 'Existing timeline issue: ' : '';
+    return Object.freeze(
+      [
+        ...new Set(ranked.map((blocker) => `${prefix}${blockerSentence(blocker, proposedKey)}`)),
+      ].slice(0, 2),
+    );
+  };
+  const blockerSentence = (blocker: Blocker, proposedKey: string): string => {
     const label = actionLabel(blocker.reference);
     let explanation: string;
     if (blocker.kind === 'window') {
@@ -336,9 +343,7 @@ function roomActionsForOccurrence(
     } else {
       explanation = `${label} must come ${blocker.dependency.kind === 'afterCheckpoint' ? 'after' : 'before'} ${checkpointLabel(blocker.dependency.checkpointKey)}.`;
     }
-    return Object.freeze([
-      `${introduced.length === 0 ? 'Existing timeline issue: ' : ''}${explanation}`,
-    ]);
+    return explanation;
   };
   const projectProposals = () =>
     proposalEntries.map(({ proposal, key }) =>

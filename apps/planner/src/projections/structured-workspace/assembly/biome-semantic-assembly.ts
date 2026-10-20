@@ -30,11 +30,7 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOccurrenceStageOutgoing,
 } from '../contracts/structure';
-import type {
-  AuthoredFieldDescriptor,
-  BiomeLayout,
-  Catalog,
-} from '@run-planner/engine/catalog-schema';
+import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
 
 import {
@@ -204,12 +200,12 @@ function assessmentForSource(
     : 'unassessed';
 }
 
-function biomeFieldLabel(field: AuthoredFieldDescriptor): string {
-  switch (field.key) {
+export function biomeFieldLabel(fieldKey: string): string {
+  switch (fieldKey) {
     case 'maxNonGoalRewards':
       return 'Rolled non-goal limit';
     default:
-      return field.key;
+      return fieldKey;
   }
 }
 
@@ -226,7 +222,7 @@ function projectBiomeFields(
       const base = {
         address,
         key: field.key,
-        label: biomeFieldLabel(field),
+        label: biomeFieldLabel(field.key),
         marker: marker.marker(address),
       };
       switch (field.kind) {

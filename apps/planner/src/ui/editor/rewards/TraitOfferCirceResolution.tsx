@@ -192,7 +192,7 @@ export function TraitOfferCirceResolution({
                       disabled:
                         disabled ||
                         (!selected && (complete || candidate === undefined || candidate.disabled)),
-                      hint: candidate?.explanation,
+                      hint: candidate?.explanations?.join(' '),
                       onClick: () =>
                         setDraft({
                           ...draft,

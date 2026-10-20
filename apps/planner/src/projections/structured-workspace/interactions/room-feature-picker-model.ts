@@ -36,7 +36,7 @@ export function projectStableIdentityPicker<T>({
   const selectedItem = selectedIsStale
     ? Object.freeze({
         disabled: true,
-        explanation: 'This current choice is no longer available here.',
+        explanations: Object.freeze(['This current choice is no longer available here.']),
         key: String(selected),
         label: selectedLabel ?? String(selected),
         selected: true,

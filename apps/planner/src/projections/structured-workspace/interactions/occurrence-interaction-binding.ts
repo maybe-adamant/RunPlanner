@@ -24,7 +24,7 @@ import {
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
-  encounterCandidateExplanation,
+  encounterCandidateExplanations,
   encounterNpcKey,
   projectEncounterPicker,
 } from '@planner/projections/encounterPickerProjection';
@@ -876,7 +876,9 @@ export function bindOccurrenceLocalInteractions(
             ])[0]!;
             const disabledReason = phase.nemesisFeature.selected
               ? undefined
-              : encounterCandidateExplanation(catalog, candidate.evaluation)?.message;
+              : encounterCandidateExplanations(catalog, candidate.evaluation)
+                  .map((reason) => reason.message)
+                  .join(' ') || undefined;
             nemesisFeatures.set(
               key,
               Object.freeze({

@@ -48,7 +48,7 @@ function projectChoicePicker<T extends ChoiceKey>(
       return Object.freeze({
         label,
         selected: candidate.value === selected,
-        ...(explanation === undefined ? {} : { explanation }),
+        ...(explanation === undefined ? {} : { explanations: Object.freeze([explanation]) }),
       });
     },
     (value) => String(value),

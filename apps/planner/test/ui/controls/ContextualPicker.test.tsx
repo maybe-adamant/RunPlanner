@@ -35,7 +35,7 @@ const model: ContextualPickerModel<string> = {
           state: 'forced',
           selected: false,
           disabled: false,
-          explanation: 'This option must be included here.',
+          explanations: ['This option must be included here.'],
         },
       ],
     },
@@ -84,7 +84,10 @@ const model: ContextualPickerModel<string> = {
           state: 'impossible',
           selected: false,
           disabled: true,
-          explanation: 'Biome depth is 1; this room requires 3 to any.',
+          explanations: [
+            'Biome depth is 1; this room requires at least 3.',
+            'This room can appear at most once in this biome.',
+          ],
         },
       ],
     },
@@ -97,7 +100,7 @@ describe('ContextualPicker', () => {
     async (state) => {
       const user = userEvent.setup();
       const explanation = 'This selection depends on an earlier route choice.';
-      const selected = { ...model.selected!, state, explanation };
+      const selected = { ...model.selected!, state, explanations: [explanation] };
       const assessed: ContextualPickerModel<string> = {
         selected,
         sections: [
@@ -213,9 +216,17 @@ describe('ContextualPicker', () => {
     expect(screen.queryByText('Combat 20')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Unavailable (1)' }));
+    const blocked = screen.getByText('Combat 20').closest('[cmdk-item]')!;
+    expect(blocked.getAttribute('aria-disabled')).toBe('true');
+    // Each reason is its own line, not one run-on sentence.
     expect(
-      screen.getByText('Combat 20').closest('[cmdk-item]')?.getAttribute('aria-disabled'),
-    ).toBe('true');
+      [...blocked.querySelectorAll('.contextual-picker-item-explanation')].map(
+        (line) => line.textContent,
+      ),
+    ).toEqual([
+      'Biome depth is 1; this room requires at least 3.',
+      'This room can appear at most once in this biome.',
+    ]);
 
     const search = screen.getByRole('combobox', { name: 'Room choices' });
     await user.type(search, 'Story 01');

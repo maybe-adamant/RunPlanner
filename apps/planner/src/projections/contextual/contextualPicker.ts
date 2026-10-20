@@ -21,7 +21,8 @@ export interface ContextualPickerItem<T> {
   readonly selected: boolean;
   readonly disabled: boolean;
   readonly status?: string;
-  readonly explanation?: string;
+  /** Up to two reason lines, most direct first. */
+  readonly explanations?: readonly string[];
 }
 
 export interface ContextualPickerSection<T> {
@@ -115,7 +116,9 @@ function pickerItem<T>(option: ContextualOption<T>, keyFor: (value: T) => string
     selected: option.selected,
     disabled: option.state === 'impossible',
     ...(status === undefined ? {} : { status }),
-    ...(option.explanation === undefined ? {} : { explanation: option.explanation.message }),
+    ...(option.explanations === undefined
+      ? {}
+      : { explanations: Object.freeze(option.explanations.map((reason) => reason.message)) }),
   });
 }
 

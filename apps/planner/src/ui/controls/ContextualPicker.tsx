@@ -88,7 +88,7 @@ function PickerSection<T>({
             data-selected-value={item.selected}
             disabled={item.disabled}
             key={item.key}
-            keywords={[section.label, item.explanation ?? '']}
+            keywords={[section.label, ...(item.explanations ?? [])]}
             onSelect={() => onSelect(item)}
             value={itemValue(item)}
           >
@@ -100,9 +100,11 @@ function PickerSection<T>({
             )}
             <span className="contextual-picker-item-copy">
               <span className="contextual-picker-item-label">{item.label}</span>
-              {item.explanation !== undefined && (
-                <span className="contextual-picker-item-explanation">{item.explanation}</span>
-              )}
+              {item.explanations?.map((reason) => (
+                <span className="contextual-picker-item-explanation" key={reason}>
+                  {reason}
+                </span>
+              ))}
             </span>
             {item.status !== undefined && (
               <span className="contextual-picker-item-state">{item.status}</span>
@@ -356,7 +358,7 @@ export function ContextualPicker<T>({
               disabledHint ?? triggerHint,
               findingMark?.['aria-description'] ??
                 findingTarget?.['aria-description'] ??
-                selected?.explanation,
+                selected?.explanations?.join(' '),
             )}
             id={id}
             ref={(node) => {

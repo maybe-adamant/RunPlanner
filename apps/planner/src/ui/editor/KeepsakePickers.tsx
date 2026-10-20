@@ -102,7 +102,7 @@ export function KeepsakeSelectionLauncher({
         label: item.label,
         selected: item.value === shownKey,
         disabled: !keeps && (item.disabled || refused !== undefined),
-        hint: refused ?? item.explanation,
+        hint: refused ?? item.explanations?.join(' '),
       });
     }
   if (held !== undefined && projection.result !== undefined && !entries.has(held.key))

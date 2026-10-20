@@ -56,7 +56,7 @@ export function RoomActionPlacementPicker({
                       selected: false,
                       disabled: !available,
                       state: available ? ('possible' as const) : ('impossible' as const),
-                      ...(!available ? { explanation: choice.explanations.join(' ') } : {}),
+                      ...(!available ? { explanations: choice.explanations } : {}),
                     })),
                   },
                 ];

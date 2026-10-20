@@ -9,6 +9,7 @@ import type {
   TraitGiverDeclaration,
   TraitRarity,
 } from '@run-planner/engine/catalog-schema';
+import type { EvaluatedTraitOfferFocusedOptionCandidate } from '@run-planner/engine/simulation';
 
 import {
   candidateSupport,
@@ -20,6 +21,7 @@ import type {
   ContextualPickerProjectionService,
 } from '../contextual/contextualPicker';
 import {
+  distinctReasons,
   explainCandidateEvaluation,
   type CandidateExplanation,
 } from '../contextual/contextualOptions';
@@ -124,28 +126,10 @@ function visibleCandidate(candidate: TraitCandidate, selected: AuthoredTraitOpti
   );
 }
 
-function candidateExplanation(
-  catalog: Catalog,
-  evaluation: CandidateProjectionEvaluation,
+function focusedFindingExplanation(
+  finding: EvaluatedTraitOfferFocusedOptionCandidate['result']['evidence'][number]['finding'],
   traitLabel: (traitKey: string) => string,
-): CandidateExplanation | undefined {
-  if (evaluation.kind === 'encounter') return undefined;
-  if (evaluation.kind === 'traitAcquisitionTarget') {
-    if (evaluation.result.supported) return undefined;
-    const finding = evaluation.result.findings[0];
-    if (finding === undefined) return undefined;
-    const copy = presentTraitCandidateFinding(finding.code);
-    return Object.freeze({ kind: 'trait', message: formatFindingExplanation(copy) });
-  }
-  if (evaluation.kind !== 'traitOfferFocusedOption') {
-    return explainCandidateEvaluation(catalog, evaluation);
-  }
-  // Focused support is an aggregate across retained branches. Blocking
-  // evidence from a losing branch must not decorate an available choice.
-  if (evaluation.result.supported) return undefined;
-  const blocking = evaluation.result.evidence.find((entry) => entry.blocksFocusedOption);
-  if (blocking === undefined) return undefined;
-  const finding = blocking.finding;
+): CandidateExplanation {
   const copy = presentTraitCandidateFinding(finding.code);
   const requirements = finding.requirementTraitKeys?.map(traitLabel) ?? [];
   if (requirements.length > 0) {
@@ -175,6 +159,36 @@ function candidateExplanation(
     });
   }
   return Object.freeze({ kind: 'trait', message: formatFindingExplanation(copy) });
+}
+
+function candidateExplanations(
+  catalog: Catalog,
+  evaluation: CandidateProjectionEvaluation,
+  traitLabel: (traitKey: string) => string,
+): readonly CandidateExplanation[] {
+  if (evaluation.kind === 'encounter') return [];
+  if (evaluation.kind === 'traitAcquisitionTarget') {
+    if (evaluation.result.supported) return [];
+    return distinctReasons(
+      evaluation.result.findings.map((finding) =>
+        Object.freeze({
+          kind: 'trait',
+          message: formatFindingExplanation(presentTraitCandidateFinding(finding.code)),
+        }),
+      ),
+    );
+  }
+  if (evaluation.kind !== 'traitOfferFocusedOption') {
+    return explainCandidateEvaluation(catalog, evaluation);
+  }
+  // Focused support is an aggregate across retained branches. Blocking
+  // evidence from a losing branch must not decorate an available choice.
+  if (evaluation.result.supported) return [];
+  return distinctReasons(
+    evaluation.result.evidence
+      .filter((entry) => entry.blocksFocusedOption)
+      .map((entry) => focusedFindingExplanation(entry.finding, traitLabel)),
+  );
 }
 
 function representativeCandidate(
@@ -258,11 +272,11 @@ export function createTraitDomainProjection(
       const traitPicker = contextualPicker.project(
         traits,
         (candidate) => {
-          const explanation = candidateExplanation(catalog, candidate.evaluation, traitLabel);
+          const explanations = candidateExplanations(catalog, candidate.evaluation, traitLabel);
           return Object.freeze({
             label: traitLabel(candidate.value),
             selected: candidate.value === selected.traitKey,
-            ...(explanation === undefined ? {} : { explanation }),
+            ...(explanations.length === 0 ? {} : { explanations }),
           });
         },
         (traitKey) => traitKey,
@@ -297,11 +311,11 @@ export function createTraitDomainProjection(
         const model = contextualPicker.project<TraitRarity>(
           rarityCandidates,
           (candidate) => {
-            const explanation = candidateExplanation(catalog, candidate.evaluation, traitLabel);
+            const explanations = candidateExplanations(catalog, candidate.evaluation, traitLabel);
             return Object.freeze({
               label: candidate.value,
               selected: selected.traitKey === traitKey && selected.rarity === candidate.value,
-              ...(explanation === undefined ? {} : { explanation }),
+              ...(explanations.length === 0 ? {} : { explanations }),
             });
           },
           (rarity) => rarity,
@@ -327,7 +341,7 @@ export function createTraitDomainProjection(
               targetPicker: contextualPicker.project(
                 targetCandidates,
                 (candidate) => {
-                  const explanation = candidateExplanation(
+                  const explanations = candidateExplanations(
                     catalog,
                     candidate.evaluation,
                     traitLabel,
@@ -335,7 +349,7 @@ export function createTraitDomainProjection(
                   return Object.freeze({
                     label: traitLabel(candidate.value),
                     selected: candidate.value === selected.targetTraitKey,
-                    ...(explanation === undefined ? {} : { explanation }),
+                    ...(explanations.length === 0 ? {} : { explanations }),
                   });
                 },
                 (traitKey) => traitKey,

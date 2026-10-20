@@ -139,6 +139,8 @@ export interface CandidateOptionProjection<
 /** Engine-derived immediate Embryo grant facts, retained beside its candidate option. */
 export interface KeepsakeEquipResultOptionProjection extends CandidateOptionProjection<string> {
   readonly resultValue: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults];
+  /** The engine's finding codes for this one result value. */
+  readonly findings: readonly string[];
   readonly transcendentEmbryoSummary?: {
     readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
     readonly operands: readonly import('@run-planner/engine/catalog-schema').ChaosNumericOperand[];

@@ -91,11 +91,13 @@ function introductionExclusionItems<T>(
       selected: false,
       state: 'impossible' as const,
       value: valueFor(key),
-      explanation: introductionExclusionMessage(
-        labelFor(key),
-        introductionLabel(introductions.encounterKeyByEnemyKey[key]!),
-        true,
-      ),
+      explanations: Object.freeze([
+        introductionExclusionMessage(
+          labelFor(key),
+          introductionLabel(introductions.encounterKeyByEnemyKey[key]!),
+          true,
+        ),
+      ]),
     }),
   );
 }

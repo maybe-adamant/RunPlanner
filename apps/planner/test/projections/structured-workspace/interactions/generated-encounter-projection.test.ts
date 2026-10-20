@@ -223,7 +223,7 @@ describe('generated enemy presentation', () => {
     expect(
       projectGeneratedEncounterAssessment(assessment, introductionLabels, introductionLabel).issues,
     ).toEqual([{ message: repair, waveIndex: 1, field: 'enemies' }]);
-    const excluded = { label: 'Spindle', disabled: true, explanation: repair };
+    const excluded = { label: 'Spindle', disabled: true, explanations: [repair] };
     expect(
       projectGeneratedEncounterHighlightPicker(
         assessment,
