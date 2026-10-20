@@ -36,7 +36,7 @@ export function unavailablePickerModel<T>(
       state: 'impossible' as const,
       selected: true,
       disabled: true,
-      explanation: 'This outcome is not available at the current route frontier.',
+      explanations: ['This outcome is not available at the current route frontier.'],
     }),
   );
   const selected = items[0]!;

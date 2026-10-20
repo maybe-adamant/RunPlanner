@@ -157,7 +157,7 @@ describe('trait option domain projection', () => {
 
     expect(itemValues(rarity)).toContain('Common');
     expect(rarity.selected?.state).toBe('impossible');
-    expect(rarity.selected?.explanation).toBe('Rarity unavailable in this offer');
+    expect(rarity.selected?.explanations).toEqual(['Rarity unavailable in this offer']);
     expect(projection.preferredOptionFor(first)?.rarity).toBe('Rare');
   });
 
@@ -274,7 +274,7 @@ describe('trait option domain projection', () => {
     );
     const availableRarity = availableDespiteLosingBranchEvidence.rarityPickerFor(first);
     if (availableRarity === undefined) throw new Error('Apollo rarity picker is missing');
-    expect(availableRarity.selected?.explanation).toBeUndefined();
+    expect(availableRarity.selected?.explanations).toBeUndefined();
 
     const hammer = giver('WeaponUpgrade');
     const hammerOptions = hammer.traitKeys.slice(0, 3);
@@ -348,7 +348,7 @@ describe('trait option domain projection', () => {
       label: catalog.traits.byKey.ZeusWeaponBoon?.label,
       state: 'impossible',
     });
-    expect(targetPicker.selected?.explanation).not.toContain('ZeusWeaponBoon');
+    expect(targetPicker.selected?.explanations?.join(' ')).not.toContain('ZeusWeaponBoon');
     expect(projection.preferredOptionFor('HeraWeaponBoon')).not.toHaveProperty('targetTraitKey');
   });
 });

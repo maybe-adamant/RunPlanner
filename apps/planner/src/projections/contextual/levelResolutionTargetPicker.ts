@@ -31,10 +31,17 @@ export function projectLevelResolutionTargetPicker(input: {
       state: supported ? ('possible' as const) : ('impossible' as const),
       ...(unavailableCurrent
         ? {
-            explanation: formatFindingExplanation(
-              presentLevelResolutionCandidateFinding(
-                group?.evaluations[0]?.findings[0] ?? 'targetUnavailable',
-              ),
+            explanations: Object.freeze(
+              [
+                ...new Set(
+                  (group?.evaluations[0]?.findings.length
+                    ? group.evaluations[0].findings
+                    : ['targetUnavailable']
+                  ).map((code) =>
+                    formatFindingExplanation(presentLevelResolutionCandidateFinding(code)),
+                  ),
+                ),
+              ].slice(0, 2),
             ),
           }
         : {}),

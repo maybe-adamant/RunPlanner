@@ -53,7 +53,7 @@ export function projectDreamItineraryDraft(
     );
     return detail === undefined
       ? Object.freeze(item)
-      : Object.freeze({ ...item, explanation: detail });
+      : Object.freeze({ ...item, explanations: Object.freeze([detail]) });
   });
   const selected = items.find((item) => item.selected);
   return Object.freeze({

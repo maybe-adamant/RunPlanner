@@ -83,7 +83,7 @@ describe('encounter picker projection', () => {
     );
     expect(model.sections[0]?.items[0]).toMatchObject({
       disabled: true,
-      explanation: `Unavailable in ${catalog.routes.byKey.Dream!.label}.`,
+      explanations: [`Unavailable in ${catalog.routes.byKey.Dream!.label}.`],
     });
   });
 
@@ -156,7 +156,7 @@ describe('encounter picker projection', () => {
     ]);
     expect(model.selected).toMatchObject({
       disabled: true,
-      explanation: 'Requires biome depth at least 4; currently 2.',
+      explanations: ['Requires biome depth at least 4; currently 2.'],
       label: 'Default combat',
       state: 'impossible',
       value: 'default',
@@ -168,13 +168,13 @@ describe('encounter picker projection', () => {
         state: 'unassessed',
       }),
     ]);
-    expect(model.sections[2]?.items[0]?.explanation).toBeUndefined();
+    expect(model.sections[2]?.items[0]?.explanations).toBeUndefined();
     expect(model.sections[3]).toMatchObject({
       collapsible: true,
       items: [
         expect.objectContaining({
           disabled: true,
-          explanation: 'This encounter phase is not active for the selected room setup.',
+          explanations: ['This encounter phase is not active for the selected room setup.'],
           label: 'Inactive combat',
         }),
       ],
@@ -214,7 +214,7 @@ describe('encounter picker projection', () => {
     ]);
     for (const item of model.sections[0]!.items) {
       expect(item).not.toHaveProperty('status');
-      expect(item).not.toHaveProperty('explanation');
+      expect(item).not.toHaveProperty('explanations');
     }
   });
 
@@ -241,7 +241,7 @@ describe('encounter picker projection', () => {
       .find((item) => item.value === 'ArtemisCombatF');
     expect(artemis).toMatchObject({
       disabled: true,
-      explanation: expect.stringContaining('Requires biome depth at least 4; currently 1.'),
+      explanations: expect.arrayContaining(['Requires biome depth at least 4; currently 1.']),
     });
   });
 
@@ -273,15 +273,16 @@ describe('encounter picker projection', () => {
       expect.objectContaining({
         value: 'RadiatorIntro',
         disabled: true,
-        explanation:
+        explanations: [
           'No encounter here can include Spindle / Spindle (Elite), so this introduction cannot occur.',
+        ],
       }),
     );
     expect(items(fresh, freshFileFBiome, 'fresh-3-0')).toContainEqual(
       expect.objectContaining({
         value: 'RadiatorIntro',
         disabled: true,
-        explanation: 'Spindle introduction was already completed this run.',
+        explanations: ['Spindle introduction was already completed this run.'],
       }),
     );
     // The mature domain omits every introduction, so its rows are unchanged.
@@ -343,13 +344,13 @@ describe('encounter picker projection', () => {
     expect(model.selected).toMatchObject({
       value: 'RadiatorIntro',
       state: 'impossible',
-      explanation: expect.stringContaining(
+      explanations: expect.arrayContaining([
         `Requires the ${catalog.routes.byKey.FreshFile!.label} route.`,
-      ),
+      ]),
     });
   });
 
-  it('explains all failed conditions without listing successful ones', () => {
+  it('explains the first two failed conditions without listing successful ones', () => {
     const requirements: EncounterRequirementEvidence[] = [
       {
         kind: 'counterRange',
@@ -418,9 +419,11 @@ describe('encounter picker projection', () => {
         }),
       ],
     );
-    expect(model.selected?.explanation).toBe(
-      'Requires biome depth at least 4; currently 3. Unavailable with the current room reward: Boon. Artemis combat already occurred this run. Nemesis combat occurred within the previous 6 rooms. Requires outdoor rooms.',
-    );
+    // The first two distinct failed conditions show; the rest stay out of the row.
+    expect(model.selected?.explanations).toEqual([
+      'Requires biome depth at least 4; currently 3.',
+      'Unavailable with the current room reward: Boon.',
+    ]);
   });
 
   it('explains keepsake exclusions and inactive depth windows separately', () => {
@@ -467,13 +470,14 @@ describe('encounter picker projection', () => {
         }),
       ],
     );
-    expect(model.selected?.explanation).toBe(
-      'Athena has already appeared through Gorgon Amulet. Requires biome depth at least 4; currently 3.',
-    );
+    expect(model.selected?.explanations).toEqual([
+      'Athena has already appeared through Gorgon Amulet.',
+      'Requires biome depth at least 4; currently 3.',
+    ]);
     expect(
       model.sections.flatMap((section) => section.items).find((item) => item.value === 'GeneratedO')
-        ?.explanation,
-    ).toBe('Requires biome encounter depth 2–5; currently 6.');
+        ?.explanations,
+    ).toEqual(['Requires biome encounter depth 2–5; currently 6.']);
   });
 
   it('preserves alternative groups and negated requirements in explanations', () => {
@@ -530,7 +534,7 @@ describe('encounter picker projection', () => {
         }),
       ],
     );
-    expect(model.selected?.explanation).toBe(
+    expect(model.selected?.explanations?.join(' ')).toBe(
       'Requires one alternative: (Requires biome depth at least 4; currently 3. Requires outdoor rooms.) OR (Requires a room reward of Clockwork goal.)',
     );
   });

@@ -30,7 +30,7 @@ function item<T>(
     selected: candidate.selected,
     disabled: state === 'impossible',
     ...(status === undefined ? {} : { status }),
-    ...(explanation === undefined ? {} : { explanation }),
+    ...(explanation === undefined ? {} : { explanations: Object.freeze([explanation]) }),
   });
 }
 

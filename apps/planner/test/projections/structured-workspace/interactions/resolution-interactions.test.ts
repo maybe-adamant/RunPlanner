@@ -276,7 +276,7 @@ describe('resolution-interactions', () => {
     expect(unionOnly).toMatchObject({
       state: 'impossible',
       disabled: true,
-      explanation: 'This outcome is not supported by every current route branch.',
+      explanations: ['This outcome is not supported by every current route branch.'],
     });
   });
 });

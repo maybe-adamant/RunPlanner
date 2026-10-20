@@ -261,6 +261,7 @@ export function createTraitCandidateAdapters(
                 ? option.value.blessingKey
                 : option.value.traitKey,
           resultValue: option.value,
+          findings: option.findings,
           evaluation: Object.freeze({
             ...evaluation,
             result: Object.freeze({
@@ -281,6 +282,7 @@ export function createTraitCandidateAdapters(
         Object.freeze({
           value: selectedKey,
           resultValue: value,
+          findings: Object.freeze([]),
           evaluation: Object.freeze({
             ...evaluation,
             result: Object.freeze({ ...evaluation.result, selectedPossible: false }),

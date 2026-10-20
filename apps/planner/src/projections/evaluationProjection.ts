@@ -833,10 +833,10 @@ export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): F
 const levelResolutionCandidateCopy = {
   missingTarget: findingCopy.missingPomTarget,
   wrongOfferCount: findingCopy.pomWrongOfferCount,
-  duplicateTargets: findingCopy.pomWrongOfferCount,
+  duplicateTargets: { title: 'Pom targets repeat' },
   selectedTargetNotOffered: findingCopy.pomSelectedTargetNotOffered,
   targetUnavailable: findingCopy.pomTargetUnavailable,
-  kindMismatch: findingCopy.pomTargetUnavailable,
+  kindMismatch: { title: 'Pom choice does not match this Pom' },
 } as const satisfies Readonly<Record<LevelResolutionFindingCode, FindingPresentation>>;
 
 /** Present a Pom draft's candidate finding with the shared Pom finding copy. */

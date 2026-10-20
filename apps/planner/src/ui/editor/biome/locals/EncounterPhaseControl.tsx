@@ -299,7 +299,7 @@ function EncounterCustomizationControl({
                               ...choice,
                               value: choice.key,
                               disabled: held,
-                              ...(held ? { explanation: 'Already chosen for another use' } : {}),
+                              ...(held ? { explanations: ['Already chosen for another use'] } : {}),
                             };
                           }),
                         ],

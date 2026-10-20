@@ -223,8 +223,9 @@ describe('boss-door reward store workspace binding', () => {
     expect(byLabel.get('Major Reward')).toMatchObject({
       state: 'impossible',
       disabled: true,
-      explanation:
+      explanations: [
         '2 of 17 entered rooms counted Minor Reward; the controller forces Minor Reward here.',
+      ],
     });
     expect(byLabel.get('Minor Reward')).toMatchObject({ state: 'forced', selected: true });
   });

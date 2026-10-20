@@ -239,7 +239,7 @@ describe('trait-offers/bind', () => {
       (item) => item.label === keystone.talentLabel,
     );
     expect(held).toMatchObject({
-      explanation: 'On another Rare node',
+      explanations: ['On another Rare node'],
       value: {
         kind: 'setNode',
         nodeKey: otherKeystone.nodeKey,

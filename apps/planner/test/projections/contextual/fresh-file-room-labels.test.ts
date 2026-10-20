@@ -28,7 +28,7 @@ it('names the forced Fresh bridge by its realized Shop label in a door explanati
     target,
     gameName: 'H_Combat01',
   }) as ProjectCandidateEvaluation;
-  const message = explainCandidateEvaluation(catalog, evaluation)?.message;
+  const message = explainCandidateEvaluation(catalog, evaluation)[0]?.message;
   expect(message).toBe('These rooms must be included here: Queen Lamia, Shop.');
   expect(message).not.toContain('Echo');
 });

@@ -10,7 +10,15 @@ import type {
   KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { transcendentEmbryoBlessingValues } from '@run-planner/engine/simulation';
+import {
+  transcendentEmbryoBlessingValues,
+  type KeepsakeSelectionUnavailableReason,
+} from '@run-planner/engine/simulation';
+import {
+  formatFindingSentence,
+  presentTraitCandidateFinding,
+  type TraitCandidateFindingCode,
+} from '@planner/projections/evaluationProjection';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import { projectDirectTraitOutcomePicker } from '@planner/projections/contextual/directTraitOutcomeProjection';
 import { levelResolutionLauncherPresentation } from './launcher-presentation';
@@ -48,14 +56,61 @@ function projectKeepsakeSelectionPicker(
 ): ContextualPickerModel<string> {
   const projected = contextualPicker.project(
     options,
-    (option) =>
-      Object.freeze({
+    (option) => {
+      const reason =
+        option.evaluation.kind === 'keepsakeSelection'
+          ? option.evaluation.result.options.find((entry) => entry.key === option.value)
+              ?.unavailableReason
+          : undefined;
+      return Object.freeze({
         label: catalog.keepsakes.byKey[option.value]?.label ?? option.value,
         selected: option.value === selectedKey,
-      }),
+        ...(reason === undefined
+          ? {}
+          : {
+              explanations: Object.freeze([
+                { kind: 'keepsake', message: keepsakeUnavailableMessage[reason] },
+              ]),
+            }),
+      });
+    },
     (value) => value,
   );
   return projected;
+}
+
+const keepsakeUnavailableMessage = {
+  alreadyEquipped: 'Already equipped.',
+  removed: 'Already given up earlier this run.',
+  unfatedEnabling: 'Unavailable while the run is Unfated.',
+  encounterHistory: 'An earlier encounter this run rules it out.',
+} as const satisfies Readonly<Record<KeepsakeSelectionUnavailableReason, string>>;
+
+/** One equip result's own finding codes, in the keepsake's words. */
+function equipResultReasons(
+  resultKind: 'jeweledPom' | 'experimentalHammer' | 'transcendentEmbryo',
+  option: KeepsakeEquipResultOptionProjection,
+): readonly { readonly kind: string; readonly message: string }[] {
+  return option.findings.map((code) => {
+    if (code !== 'keepsakeEquipResultUnavailable') {
+      const copy = presentTraitCandidateFinding(code as TraitCandidateFindingCode);
+      return { kind: 'trait', message: formatFindingSentence(copy ?? { title: code }) };
+    }
+    switch (resultKind) {
+      case 'experimentalHammer':
+        return {
+          kind: 'keepsake',
+          message:
+            option.value === '__exhausted'
+              ? 'A compatible Hammer is still available.'
+              : 'Not a Hammer for the active weapon.',
+        };
+      case 'jeweledPom':
+        return { kind: 'keepsake', message: 'Jeweled Pom grants a trait only while Fated.' };
+      case 'transcendentEmbryo':
+        return { kind: 'keepsake', message: 'Not an eligible Chaos blessing here.' };
+    }
+  });
 }
 
 function equipResultLabel(
@@ -76,12 +131,20 @@ function projectKeepsakeEquipResultDomain(
   options: readonly KeepsakeEquipResultOptionProjection[],
   selectedValue: string | undefined,
 ): WorkspaceKeepsakeEquipResultDomain {
+  const findingsByValue = new Map(options.map((option) => [option.value, option]));
   const picker = contextualPicker.project(
     options,
     (option) =>
       Object.freeze({
         label: equipResultLabel(catalog, resultKind, option.value),
         selected: option.value === selectedValue,
+        ...(findingsByValue.get(option.value)?.findings.length
+          ? {
+              explanations: Object.freeze(
+                equipResultReasons(resultKind, findingsByValue.get(option.value)!),
+              ),
+            }
+          : {}),
       }),
     (value) => value,
   );

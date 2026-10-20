@@ -1495,7 +1495,8 @@ describe('OccurrenceRoomActions', () => {
       const row = projected.room.roomActions!.rows.find(
         (candidate) => roomActionKey(candidate.reference) === roomActionKey(proposal.reference),
       )!;
-      expect(proposal.explanations).toHaveLength(1);
+      expect(proposal.explanations.length).toBeLessThanOrEqual(2);
+      expect(new Set(proposal.explanations).size).toBe(proposal.explanations.length);
       expect(proposal.explanations[0]).toMatch(
         new RegExp(`^${row.label} belongs (before|after) Combat [123]\\.$`),
       );

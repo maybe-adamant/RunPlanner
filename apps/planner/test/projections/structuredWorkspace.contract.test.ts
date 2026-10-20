@@ -644,7 +644,7 @@ describe('structured workspace overlay contract', () => {
       value: 'ApolloWeaponBoon',
       state: 'impossible',
       selected: true,
-      explanation: 'This option is not available with the current route.',
+      explanations: ['This keepsake cannot grant this result here.'],
     });
     expect(invalidModel.picker.sections).toContainEqual(
       expect.objectContaining({

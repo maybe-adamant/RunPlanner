@@ -24,7 +24,7 @@ export function encounterNpcKey(catalog: Catalog, definitionKey: string): string
   );
 }
 
-function rangeLabel(range: NumericRange): string {
+export function rangeLabel(range: NumericRange): string {
   if (range.min === undefined && range.max === undefined) return 'any value';
   if (range.min === range.max) return `exactly ${range.min}`;
   if (range.min === undefined) return `at most ${range.max}`;
@@ -127,50 +127,50 @@ function requirementMessages(
   }
 }
 
-export function encounterCandidateExplanation(
+export const inactiveEncounterPhaseMessage =
+  'This encounter phase is not active for the selected room setup.';
+
+/** The reasons an encounter cannot occur in its phase, most direct first. */
+export function encounterCandidateExplanations(
   catalog: Catalog,
   evaluation: EncounterCandidateProjectionEvaluation,
-): { readonly kind: 'encounter'; readonly message: string } | undefined {
+): readonly { readonly kind: 'encounter'; readonly message: string }[] {
+  const reasons = (messages: readonly string[]) =>
+    Object.freeze(
+      [...new Set(messages)].map((message) => ({ kind: 'encounter' as const, message })),
+    );
   switch (evaluation.result.evidence.kind) {
     case 'coverageUnavailable':
-      return {
-        kind: 'encounter',
-        message: 'This encounter phase has not been evaluated yet.',
-      };
+      return reasons(['This encounter phase has not been evaluated yet.']);
     case 'inactiveSlot':
-      return {
-        kind: 'encounter',
-        message:
-          evaluation.result.evidence.requirement === undefined
-            ? 'This encounter phase is not active for the selected room setup.'
-            : requirementMessages(catalog, evaluation.result.evidence.requirement).join(' '),
-      };
+      return reasons(
+        evaluation.result.evidence.requirement === undefined
+          ? [inactiveEncounterPhaseMessage]
+          : requirementMessages(catalog, evaluation.result.evidence.requirement),
+      );
     case 'requirementsExcluded': {
-      const messages = evaluation.result.evidence.exclusions.map((exclusion) => {
+      const messages = evaluation.result.evidence.exclusions.flatMap((exclusion) => {
         if (exclusion.kind === 'gorgonConsumed')
-          return 'Athena has already appeared through Gorgon Amulet.';
+          return ['Athena has already appeared through Gorgon Amulet.'];
         if (exclusion.kind === 'resolutionUnavailable')
-          return 'The room reward must be authored before this encounter can resolve.';
+          return ['The room reward must be authored before this encounter can resolve.'];
         if (exclusion.kind === 'introductionUnreachable')
-          return `No encounter here can include ${generatedEnemyNames(catalog, exclusion.triggerEnemyKeys)}, so this introduction cannot occur.`;
-        const alternatives = [
-          ...new Set(
-            exclusion.definitions.map((definition) =>
-              requirementMessages(catalog, definition.evaluation).join(' '),
-            ),
-          ),
-        ];
+          return [
+            `No encounter here can include ${generatedEnemyNames(catalog, exclusion.triggerEnemyKeys)}, so this introduction cannot occur.`,
+          ];
+        const variants = exclusion.definitions.map((definition) =>
+          requirementMessages(catalog, definition.evaluation),
+        );
+        const alternatives = [...new Set(variants.map((lines) => lines.join(' ')))];
+        // One variant's failed conditions are separate reasons; several variants are one choice.
         return alternatives.length === 1
-          ? alternatives[0]!
-          : `Requires one encounter variant: ${alternatives.join(' OR ')}`;
+          ? variants[0]!
+          : [`Requires one encounter variant: ${alternatives.join(' OR ')}`];
       });
-      return {
-        kind: 'encounter',
-        message: [...new Set(messages)].join(' '),
-      };
+      return reasons(messages);
     }
     case 'supported':
-      return undefined;
+      return [];
   }
 }
 
@@ -203,14 +203,14 @@ export function projectEncounterPicker(
         );
       }
       // The unassessed section heading already says the phase is not evaluated.
-      const explanation =
+      const explanations =
         candidate.evaluation.result.evidence.kind === 'coverageUnavailable'
-          ? undefined
-          : encounterCandidateExplanation(catalog, candidate.evaluation);
+          ? []
+          : encounterCandidateExplanations(catalog, candidate.evaluation);
       return Object.freeze({
         label,
         selected: candidate.value === selectedEncounterKey,
-        ...(explanation === undefined ? {} : { explanation }),
+        ...(explanations.length === 0 ? {} : { explanations }),
       });
     },
     (encounterKey) => encounterKey,
