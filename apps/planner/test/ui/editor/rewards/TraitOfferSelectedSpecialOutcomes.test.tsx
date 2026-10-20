@@ -1280,7 +1280,6 @@ describe('selected outcomes', () => {
         state: 'impossible' as const,
         selected: true,
         disabled: true,
-        status: 'Current · unavailable',
       }),
       sections: Object.freeze([
         Object.freeze({

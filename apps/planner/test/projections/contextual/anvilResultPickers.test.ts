@@ -43,8 +43,9 @@ describe('Anvil result pickers', () => {
     );
     expect(pickers.removed.sections[0]).toMatchObject({
       kind: 'selectedInvalid',
-      items: [{ value: 'Old', disabled: true, status: 'Current · unavailable' }],
+      items: [{ value: 'Old', disabled: true }],
     });
+    expect(pickers.removed.sections[0]?.items[0]?.status).toBeUndefined();
     expect(pickers.removed.sections[1]?.items).toMatchObject([
       { value: null, label: 'No removable Hammer' },
     ]);

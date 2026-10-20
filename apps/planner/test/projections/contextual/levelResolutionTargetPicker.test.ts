@@ -60,11 +60,11 @@ describe('Pom target picker projection', () => {
         {
           value: 'Stale',
           disabled: false,
-          status: 'Current · unavailable',
           explanation: 'Pom target unavailable',
         },
       ],
     });
+    expect(model.sections[0]?.items[0]?.status).toBeUndefined();
     expect(model.selected?.value).toBe('Stale');
   });
 

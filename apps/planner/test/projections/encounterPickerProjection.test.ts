@@ -164,11 +164,11 @@ describe('encounter picker projection', () => {
     expect(model.sections[2]?.items).toEqual([
       expect.objectContaining({
         disabled: false,
-        explanation: 'This encounter phase has not been evaluated yet.',
         label: 'Later combat',
         state: 'unassessed',
       }),
     ]);
+    expect(model.sections[2]?.items[0]?.explanation).toBeUndefined();
     expect(model.sections[3]).toMatchObject({
       collapsible: true,
       items: [

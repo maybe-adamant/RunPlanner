@@ -87,6 +87,18 @@ describe('contextual picker projection', () => {
       'unavailable',
     ]);
     expect(model.selected?.value).toBe(selected);
+    expect(
+      model.sections.map((section) => [
+        section.label,
+        section.items.map((item) => item.status ?? null),
+      ]),
+    ).toEqual([
+      ['Required now', ['Required']],
+      ['Current selection', [null]],
+      ['Combat', [null]],
+      ['Story · Needs earlier steps', [null]],
+      ['Unavailable', [null]],
+    ]);
     expect(model.sections.find((section) => section.kind === 'unavailable')?.collapsible).toBe(
       true,
     );

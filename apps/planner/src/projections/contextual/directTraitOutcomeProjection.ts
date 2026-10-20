@@ -13,14 +13,7 @@ function item<T>(
   key: (value: T) => string,
 ): ContextualPickerItem<T> {
   const state = candidate.support;
-  const status =
-    state === 'forced'
-      ? 'Required'
-      : state === 'impossible'
-        ? candidate.selected
-          ? 'Current · unavailable'
-          : 'Unavailable'
-        : undefined;
+  const status = state === 'forced' ? 'Required' : undefined;
   const explanation =
     candidate.reason === 'branchDivergence'
       ? 'This outcome is not supported by every current route branch.'

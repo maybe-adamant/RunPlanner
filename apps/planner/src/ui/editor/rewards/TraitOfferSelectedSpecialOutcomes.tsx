@@ -74,7 +74,6 @@ export function ConcaveStoneOutcomeEditor({
           state: 'impossible' as const,
           selected: true,
           disabled: true,
-          status: 'Current · unavailable',
         })
       : undefined;
   const picker: ContextualPickerModel<TraitOptionKey> = Object.freeze({

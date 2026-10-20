@@ -45,7 +45,6 @@ function pickerModel<T extends string | null>(
             label: labelFor(selected),
             selected: true,
             state: 'impossible' as const,
-            status: 'Current · unavailable',
             value: selected,
           }),
         ];

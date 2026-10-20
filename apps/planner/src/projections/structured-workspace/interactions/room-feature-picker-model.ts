@@ -41,7 +41,6 @@ export function projectStableIdentityPicker<T>({
         label: selectedLabel ?? String(selected),
         selected: true,
         state: 'impossible' as const,
-        status: 'Current · unavailable',
         value: selected,
       })
     : selectedChoice === undefined
@@ -72,7 +71,6 @@ export function projectStableIdentityPicker<T>({
           label: selectedLabel ?? String(selected),
           selected: true,
           state: 'unassessed' as const,
-          status: 'Not evaluated',
           value: selected,
         })
       : undefined;
@@ -92,7 +90,7 @@ export function projectStableIdentityPicker<T>({
           items: unassessedItems,
           key: 'unassessed:available',
           kind: 'unassessed' as const,
-          label: 'Not evaluated',
+          label: 'Needs earlier steps',
         });
   return Object.freeze({
     ...(selectedItem === undefined
