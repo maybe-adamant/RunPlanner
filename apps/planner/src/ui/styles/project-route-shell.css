@@ -1536,6 +1536,58 @@
   color: var(--muted);
 }
 
+.draft-chip-groups {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.draft-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+}
+
+.draft-chip-group-note {
+  flex-basis: 100%;
+  margin: 0 0 0 7.6rem;
+  color: var(--finding);
+  font-size: 0.85rem;
+}
+
+.draft-chip-group-label {
+  display: inline-flex;
+  flex: 0 0 7rem;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.draft-chip[data-ordered] {
+  padding-left: 0.3rem;
+}
+
+.draft-chip-move {
+  width: 1.2rem;
+  height: 1.4rem;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.draft-chip-move:hover:not(:disabled) {
+  color: var(--text);
+  background: #2b2c35;
+}
+
+.draft-chip-move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 .draft-chip-remove {
   width: 1.4rem;
   height: 1.4rem;

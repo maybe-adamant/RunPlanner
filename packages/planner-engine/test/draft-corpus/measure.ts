@@ -9,6 +9,7 @@ import type { DraftReport } from '../../src/simulation/draft/report';
 import { draftProvider } from '../../src/simulation/draft/schedule';
 import { draftCappedGiver } from '../../src/simulation/draft/basket';
 import type { ResolvedRewardOffer } from '../../src/reward-kernel';
+import type { TraitRequirementExpression } from '../../src/catalog-schema';
 import type { DraftCorpusEntry } from './corpus';
 
 /** One draft's measured outcome; written per run and aggregated by the lane's teardown. */
@@ -23,6 +24,18 @@ export interface DraftCorpusRun {
   readonly targets: Readonly<Record<string, { readonly met: number; readonly total: number }>>;
   /** Pairs of one god's met basket traits acquired against basket order. */
   readonly orderInversions: number;
+  /** Inverted pairs whose earlier trait waits on an element threshold, which the draft may pass over. */
+  readonly elementDeferred: number;
+  /** Resource points placed, each granting one element. */
+  readonly essences: number;
+  /** Placed points whose element a waiting element-gated basket trait needed then. */
+  readonly essencesIntended: number;
+  /** Element-gated basket traits: all, met, and met after a point of a needed element. */
+  readonly elementGated: {
+    readonly total: number;
+    readonly met: number;
+    readonly withEssence: number;
+  };
   readonly purchases: Readonly<Record<string, number>>;
   readonly attempts: number;
   readonly ms: number;
@@ -83,17 +96,35 @@ function firstEquipped(project: ProjectDocument): ReadonlyMap<string, number> {
   return first;
 }
 
-function orderInversions(spec: DraftSpec, first: ReadonlyMap<string, number>): number {
+function elementGated(traitKey: string): boolean {
+  const trait = catalog.traits.byKey[traitKey];
+  const visit = (requirement: TraitRequirementExpression): boolean =>
+    requirement.kind === 'all'
+      ? requirement.requirements.some(visit)
+      : requirement.kind === 'elementCount' || requirement.kind === 'highestBaseElementCount';
+  return (
+    trait !== undefined &&
+    [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements].some(visit)
+  );
+}
+
+function orderInversions(
+  spec: DraftSpec,
+  first: ReadonlyMap<string, number>,
+): { readonly inversions: number; readonly elementDeferred: number } {
   let inversions = 0;
+  let elementDeferred = 0;
   for (const godKey of spec.world.godKeys) {
     const own = spec.basketTraitKeys.filter(
       (key) => draftCappedGiver(catalog, spec, key)?.giverKey === godKey && first.has(key),
     );
     for (const [index, earlier] of own.entries())
       for (const later of own.slice(index + 1))
-        if (first.get(later)! < first.get(earlier)!) inversions += 1;
+        if (first.get(later)! < first.get(earlier)!)
+          if (elementGated(earlier)) elementDeferred += 1;
+          else inversions += 1;
   }
-  return inversions;
+  return { inversions, elementDeferred };
 }
 
 function purchaseKind(offer: ResolvedRewardOffer): string {
@@ -121,6 +152,73 @@ function purchases(project: ProjectDocument): Record<string, number> {
   return counts;
 }
 
+/** Elements a trait's element thresholds read; a highest-count threshold reads any. */
+function gatedElements(traitKey: string): readonly string[] {
+  const trait = catalog.traits.byKey[traitKey];
+  const elements: string[] = [];
+  const visit = (requirement: TraitRequirementExpression): void => {
+    if (requirement.kind === 'all') requirement.requirements.forEach(visit);
+    else if (requirement.kind === 'elementCount') elements.push(requirement.element);
+    else if (requirement.kind === 'highestBaseElementCount')
+      elements.push('Fire', 'Air', 'Earth', 'Water');
+  };
+  [...(trait?.eligibilityRequirements ?? []), ...(trait?.linkedBoonRequirements ?? [])].forEach(
+    visit,
+  );
+  return elements;
+}
+
+function essenceUse(
+  spec: DraftSpec,
+  project: ProjectDocument,
+): Pick<DraftCorpusRun, 'essences' | 'essencesIntended' | 'elementGated'> {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const snapshots = assembly.evaluation.route.biomes
+    .flatMap((biome) => ('rewards' in biome ? biome.rewards.runStateSnapshots : []))
+    .sort((a, b) => a.historySequence - b.historySequence);
+  const gated = spec.basketTraitKeys.filter((key) => gatedElements(key).length > 0);
+  const placements = Object.entries(project.route.resourcePlacements).flatMap(
+    ([family, placement]) => {
+      if (placement === null) return [];
+      const occurrence = project.route.biomes
+        .find((biome) => biome.biomeKey === placement.biomeKey)
+        ?.topology?.occurrences.find((o) => o.occurrenceId === placement.occurrenceId);
+      const element =
+        catalog.rooms.byKey[occurrence?.gameName ?? '']?.resourcePointSupport.rules[
+          family as 'Pickaxe'
+        ].element;
+      const snapshot = snapshots.find(
+        (candidate) =>
+          candidate.biomeKey === placement.biomeKey &&
+          JSON.stringify(candidate.owner).includes(`"${placement.occurrenceId}"`),
+      );
+      return element === undefined || snapshot === undefined ? [] : [{ element, snapshot }];
+    },
+  );
+  const firstHeld = (traitKey: string) =>
+    snapshots.find((snapshot) => traitKey in snapshot.traits.equippedTraits)?.historySequence;
+  const intended = placements.filter(({ element, snapshot }) =>
+    gated.some(
+      (key) => !(key in snapshot.traits.equippedTraits) && gatedElements(key).includes(element),
+    ),
+  ).length;
+  const met = gated.filter((key) => firstHeld(key) !== undefined);
+  return {
+    essences: placements.length,
+    essencesIntended: intended,
+    elementGated: {
+      total: gated.length,
+      met: met.length,
+      withEssence: met.filter((key) =>
+        placements.some(
+          ({ element, snapshot }) =>
+            gatedElements(key).includes(element) && snapshot.historySequence <= firstHeld(key)!,
+        ),
+      ).length,
+    },
+  };
+}
+
 function digestOf(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
 }
@@ -145,6 +243,10 @@ export function measureDraft(
       digest: digestOf(result),
       targets: {},
       orderInversions: 0,
+      elementDeferred: 0,
+      essences: 0,
+      essencesIntended: 0,
+      elementGated: { total: 0, met: 0, withEssence: 0 },
       purchases: {},
       attempts: 0,
     };
@@ -153,7 +255,10 @@ export function measureDraft(
     outcome: 'drafted',
     digest: digestOf(result.project),
     targets: targetCounts(result.report),
-    orderInversions: orderInversions(entry.spec, firstEquipped(result.project)),
+    ...(({ inversions, elementDeferred }) => ({ orderInversions: inversions, elementDeferred }))(
+      orderInversions(entry.spec, firstEquipped(result.project)),
+    ),
+    ...essenceUse(entry.spec, result.project),
     purchases: purchases(result.project),
     attempts: result.attempts,
   };

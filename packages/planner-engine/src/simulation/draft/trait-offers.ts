@@ -45,6 +45,11 @@ const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 const FILLER_DRAWS = 4;
 /** A ready Duo is taken in its first god room with chance 1/3, then 2/3, then always. */
 const DUO_ROOMS = 3;
+/** Whether a ready Duo declined in `declined` earlier god rooms is taken on this roll. */
+export function draftDuoFires(declined: number, roll: number): boolean {
+  return roll < (declined + 1) / DUO_ROOMS;
+}
+
 /** Outside traits tried in a row when no offered row may be taken. */
 const SUBSTITUTE_DRAWS = 6;
 
@@ -286,7 +291,7 @@ export class DraftTraitOffers {
     const fired: string[] = [];
     for (const duo of this.context.steering.readyDuos(giverKey, this.context.steering.progress())) {
       const declined = declines.get(duo) ?? 0;
-      if (this.context.random() < (declined + 1) / DUO_ROOMS) fired.push(duo);
+      if (draftDuoFires(declined, this.context.random())) fired.push(duo);
       else declines.set(duo, declined + 1);
     }
     this.duoRolls.set(key, fired);

@@ -1,7 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
+import type { TraitElement } from '../../catalog-schema/traits';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
-import { DRAFT_PROVIDER_CAPS, draftGodQueues, draftQueueOrder, draftTraitKind } from './basket';
+import { DRAFT_PROVIDER_CAPS, draftGodQueues, draftTraitKind } from './basket';
 import type { DraftHeldTraits, DraftPrerequisites } from './prerequisites';
 import { latestRunState } from './report';
 import {
@@ -58,13 +59,29 @@ export class DraftSteering {
     this.npcGivers = world.npcGivers;
     this.npcTraitBiomes = world.npcTraitBiomes;
     this.queues = new Map(
-      draftGodQueues(catalog, spec).map((queue) => [queue.godKey, draftQueueOrder(queue)]),
+      draftGodQueues(catalog, spec).map((queue) => [queue.godKey, queue.traitKeys]),
     );
   }
 
-  /** The god's next basket trait not yet held; only it may be taken from the god. */
+  /**
+   * The god's next basket trait not yet held; only it may be taken from the god.
+   * A trait waiting only on an element threshold is passed over until the threshold is met.
+   */
   nextQueued(godKey: string, progress: DraftProgress): string | undefined {
-    return this.queues.get(godKey)?.find((key) => !progress.equippedTraitKeys.includes(key));
+    const unmet = (this.queues.get(godKey) ?? []).filter(
+      (key) => !progress.equippedTraitKeys.includes(key),
+    );
+    return unmet.find((key) => !this.prerequisites.elementWaiting(key, progress.held)) ?? unmet[0];
+  }
+
+  /** Element thresholds a waiting basket trait still needs, first waiting trait first. */
+  wantedElements(progress: DraftProgress): readonly TraitElement[] {
+    const elements: TraitElement[] = [];
+    for (const key of this.wantedBasket(progress))
+      if (this.prerequisites.elementWaiting(key, progress.held))
+        for (const element of this.prerequisites.missingElements(key, progress.held))
+          if (!elements.includes(element)) elements.push(element);
+    return elements;
   }
 
   /** False for a god's queued basket trait while an earlier one is still unmet. */

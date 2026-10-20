@@ -20,13 +20,17 @@ export function draftScheduleFor(
 
 /**
  * A walk over the base project's drafted loadout, or from `from`; the schedule
- * uses `scheduleSeed`, by default the walk's own seed.
+ * uses `scheduleSeed`, by default the walk's own seed; `duoDeclines` carries Duo rolls in.
  */
 export function startDraftWalk(
   base: ProjectDocument,
   spec: DraftSpec,
   seed: number,
-  options: { readonly from?: ProjectEvaluationAssembly; readonly scheduleSeed?: number } = {},
+  options: {
+    readonly from?: ProjectEvaluationAssembly;
+    readonly scheduleSeed?: number;
+    readonly duoDeclines?: ReadonlyMap<string, number>;
+  } = {},
 ): DraftWalk {
   const route = base.route;
   const world = draftWorld(catalog, route, spec.world, spec.basketTraitKeys);
@@ -40,5 +44,13 @@ export function startDraftWalk(
   const start =
     options.from ??
     simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, spec.loadout));
-  return new DraftWalk(catalog, start, spec, createDraftRng(seed), schedule, world);
+  return new DraftWalk(
+    catalog,
+    start,
+    spec,
+    createDraftRng(seed),
+    schedule,
+    world,
+    options.duoDeclines,
+  );
 }

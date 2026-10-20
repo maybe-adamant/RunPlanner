@@ -25,8 +25,14 @@ export type DraftPrerequisiteNeed = readonly DraftPrerequisiteOption[];
 export interface DraftPrerequisites {
   /** Each basket trait's needs the route start leaves unmet. */
   readonly needs: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>;
+  /** The subset of `needs` for held traits, without element thresholds. */
+  readonly heldTraitNeeds: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>;
   /** Whether the trait's held-trait and element requirements all hold. */
   ready(traitKey: string, held: DraftHeldTraits): boolean;
+  /** Whether the trait waits only on element thresholds. */
+  elementWaiting(traitKey: string, held: DraftHeldTraits): boolean;
+  /** Elements whose unmet threshold the trait waits on; any base element for a highest-count need. */
+  missingElements(traitKey: string, held: DraftHeldTraits): readonly TraitElement[];
   /** Wanted basket traits that some unmet need of a waiting trait, by default any wanted one, could use. */
   waitedOn(
     wanted: readonly string[],
@@ -135,8 +141,28 @@ export function createDraftPrerequisites(
   );
   return Object.freeze({
     needs: new Map([...unmet].map(([key, needs]) => [key, needs.map((need) => need.options)])),
+    heldTraitNeeds: new Map(
+      [...unmet].map(([key, needs]) => [
+        key,
+        needs.filter((need) => need.leaf.kind === 'anyEquippedTrait').map((need) => need.options),
+      ]),
+    ),
     ready: (traitKey: string, held: DraftHeldTraits) =>
       leavesOf(traitKey).every((leaf) => leafHeld(leaf, held)),
+    missingElements: (traitKey: string, held: DraftHeldTraits) =>
+      leavesOf(traitKey)
+        .filter((leaf) => !leafHeld(leaf, held))
+        .flatMap((leaf): readonly TraitElement[] =>
+          leaf.kind === 'elementCount'
+            ? [leaf.element]
+            : leaf.kind === 'highestBaseElementCount'
+              ? BASE_TRAIT_ELEMENTS
+              : [],
+        ),
+    elementWaiting: (traitKey: string, held: DraftHeldTraits) => {
+      const waiting = leavesOf(traitKey).filter((leaf) => !leafHeld(leaf, held));
+      return waiting.length > 0 && waiting.every((leaf) => leaf.kind !== 'anyEquippedTrait');
+    },
     waitedOn: (wanted: readonly string[], held: DraftHeldTraits, waiting = wanted) => {
       const waited = new Set<string>();
       for (const traitKey of waiting)

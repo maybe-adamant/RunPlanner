@@ -457,27 +457,78 @@ export function RouteDraftPanel({
               ))}
             </ul>
           )}
-          {basket === undefined || basket.chips.length === 0 ? null : (
-            <ul aria-label="Basket traits" className="draft-chip-list">
-              {basket.chips.map((chip) => (
-                <li
-                  className="draft-chip"
-                  data-refused={chip.refused || undefined}
-                  key={chip.traitKey}
-                  {...hintProps(chip.refused ? chip.hint : undefined)}
-                >
-                  <span>{chip.label}</span>
-                  <button
-                    aria-label={`Remove ${chip.label}`}
-                    className="draft-chip-remove"
-                    onClick={() => replaceDraft(withDraftBasketTraitToggled(draft, chip.traitKey))}
-                    type="button"
-                  >
-                    ×
-                  </button>
-                </li>
+          {basket === undefined || basket.chipGroups.length === 0 ? null : (
+            <div className="draft-chip-groups">
+              {basket.chipGroups.map((group) => (
+                <div className="draft-chip-group" key={group.key}>
+                  <span className="draft-chip-group-label">
+                    <ArtworkIcon
+                      className="draft-toggle-icon"
+                      source={traitGiverArtwork[group.key] ?? undefined}
+                    />
+                    {group.label}
+                  </span>
+                  <ol aria-label={`${group.label} basket traits`} className="draft-chip-list">
+                    {group.chips.map((chip) => (
+                      <li
+                        className="draft-chip"
+                        data-refused={chip.refused || undefined}
+                        data-ordered={chip.order === undefined ? undefined : true}
+                        key={chip.traitKey}
+                        {...hintProps(chip.refused ? chip.hint : undefined)}
+                      >
+                        {chip.order === undefined ? null : (
+                          <button
+                            aria-label={`Move ${chip.label} earlier`}
+                            className="draft-chip-move"
+                            disabled={chip.order.earlierBasket === undefined}
+                            onClick={() => {
+                              const basketTraitKeys = chip.order?.earlierBasket;
+                              if (basketTraitKeys !== undefined)
+                                replaceDraft({ ...draft, basketTraitKeys });
+                            }}
+                            type="button"
+                          >
+                            ‹
+                          </button>
+                        )}
+                        <span>{chip.label}</span>
+                        {chip.order === undefined ? null : (
+                          <button
+                            aria-label={`Move ${chip.label} later`}
+                            className="draft-chip-move"
+                            disabled={chip.order.laterBasket === undefined}
+                            onClick={() => {
+                              const basketTraitKeys = chip.order?.laterBasket;
+                              if (basketTraitKeys !== undefined)
+                                replaceDraft({ ...draft, basketTraitKeys });
+                            }}
+                            type="button"
+                          >
+                            ›
+                          </button>
+                        )}
+                        <button
+                          aria-label={`Remove ${chip.label}`}
+                          className="draft-chip-remove"
+                          onClick={() =>
+                            replaceDraft(withDraftBasketTraitToggled(draft, chip.traitKey))
+                          }
+                          type="button"
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                  {group.orderNotes.map((note) => (
+                    <p className="draft-chip-group-note" key={note}>
+                      {note}
+                    </p>
+                  ))}
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </fieldset>

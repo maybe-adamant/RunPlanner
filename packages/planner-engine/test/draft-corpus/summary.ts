@@ -11,6 +11,8 @@ interface SpecSummary {
   readonly targets: Readonly<Record<string, number>>;
   readonly orderInversionRuns: number;
   readonly orderInversionsMedian: number;
+  readonly elementDeferredRuns: number;
+  readonly essencesPerRun: number;
   readonly purchasesPerRun: Readonly<Record<string, number>>;
   readonly attemptsMedian: number;
   readonly msMedian: number;
@@ -50,6 +52,12 @@ function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
       drafted.filter((run) => run.orderInversions > 0).length / Math.max(drafted.length, 1),
     ),
     orderInversionsMedian: median(drafted.map((run) => run.orderInversions)),
+    elementDeferredRuns: round(
+      drafted.filter((run) => run.elementDeferred > 0).length / Math.max(drafted.length, 1),
+    ),
+    essencesPerRun: round(
+      drafted.reduce((sum, run) => sum + run.essences, 0) / Math.max(drafted.length, 1),
+    ),
     purchasesPerRun,
     attemptsMedian: median(drafted.map((run) => run.attempts)),
     msMedian: Math.round(median(runs.map((run) => run.ms))),
@@ -74,6 +82,8 @@ function table(
     ...TARGET_KINDS,
     'invRuns',
     'invMed',
+    'elemDef',
+    'ess/run',
     'buys/run',
     'attMed',
     'msMed',
@@ -90,12 +100,60 @@ function table(
       ...TARGET_KINDS.map((kind) => cell(now.targets[kind], was?.targets[kind])),
       cell(now.orderInversionRuns, was?.orderInversionRuns),
       cell(now.orderInversionsMedian, was?.orderInversionsMedian),
+      cell(now.elementDeferredRuns, was?.elementDeferredRuns),
+      cell(now.essencesPerRun, was?.essencesPerRun),
       buys || '-',
       cell(now.attemptsMedian, was?.attemptsMedian),
       cell(now.msMedian, was?.msMedian),
       cell(now.msMax, was?.msMax),
     ];
   });
+  const widths = header.map((title, column) =>
+    Math.max(title.length, ...rows.map((row) => row[column]!.length)),
+  );
+  return [header, ...rows]
+    .map((row) => row.map((value, column) => value.padEnd(widths[column]!)).join(' | '))
+    .join('\n');
+}
+
+/** Essence placement by route, for judging the per-room essence chance. */
+function essenceTable(runs: readonly DraftCorpusRun[]): string {
+  const rows = ['U', 'S', 'D'].map((prefix) => {
+    const drafted = runs.filter((run) => run.outcome === 'drafted' && run.spec.startsWith(prefix));
+    const counts = [0, 1, 2, 3, 4].map(
+      (count) => drafted.filter((run) => run.essences === count).length,
+    );
+    const placed = drafted.reduce((sum, run) => sum + run.essences, 0);
+    const intended = drafted.reduce((sum, run) => sum + run.essencesIntended, 0);
+    const gated = drafted.reduce(
+      (sum, run) => ({
+        total: sum.total + run.elementGated.total,
+        met: sum.met + run.elementGated.met,
+        withEssence: sum.withEssence + run.elementGated.withEssence,
+      }),
+      { total: 0, met: 0, withEssence: 0 },
+    );
+    return [
+      prefix,
+      String(drafted.length),
+      String(median(drafted.map((run) => run.essences))),
+      counts.join('/'),
+      `${intended}/${placed}`,
+      String(counts[4]),
+      `${gated.met}/${gated.total}`,
+      String(gated.withEssence),
+    ];
+  });
+  const header = [
+    'route',
+    'runs',
+    'essMed',
+    'ess 0/1/2/3/4',
+    'intended',
+    'all4',
+    'gatedMet',
+    'withEss',
+  ];
   const widths = header.map((title, column) =>
     Math.max(title.length, ...rows.map((row) => row[column]!.length)),
   );
@@ -127,6 +185,7 @@ export default function setup(): () => Promise<void> {
       .map((run) => `  ${run.spec} seed ${run.seed}: ${run.failure}`);
     console.log(
       `\nDraft corpus (${runs.length} runs; deltas against baseline)\n${table(summaries, baseline)}` +
+        `\n\nEssences by route\n${essenceTable(runs)}` +
         (failures.length > 0 ? `\nFailed drafts:\n${failures.join('\n')}` : ''),
     );
     if (process.env.DRAFT_CORPUS_WRITE !== '1') return;

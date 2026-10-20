@@ -58,6 +58,11 @@ deterministic corpus. A heavy basket must stay within about 15 s.
      Purchases become less likely ahead of that pace and more likely behind
      it. The pace never blocks a purchase and never forces one.
    - Gold is not modelled; this is draft policy.
+   - Elemental essences: resource points roll about 10% per room that can host
+     an unplaced family, preferring an element a waiting element-gated trait
+     needs. Dream has no native resource points, so the walk buys elemental
+     boosts from Dream Shops instead. Those buys follow the same element
+     preference and don't count against the purchase pace.
 6. **Offer exclusions in the walk.** The walk acts on
    `RewardProducerCandidateResult.exclusions`:
    - `peerConflict` re-authors the peer;

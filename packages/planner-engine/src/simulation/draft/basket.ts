@@ -437,40 +437,53 @@ function withBasket(
   );
 }
 
-/** One world god's basket traits in acquisition order. */
+/** One world god's own basket traits, Duos excluded, in basket order: the order the draft takes them. */
 export interface DraftGodQueue {
   readonly godKey: string;
-  /** The god's own traits in basket order, which the player may reorder. */
-  readonly orderedTraitKeys: readonly string[];
-  /** Legendaries, which close the god's list. */
-  readonly closingTraitKeys: readonly string[];
+  readonly traitKeys: readonly string[];
 }
 
-/** Each world god's own basket traits, Duos excluded: basket order, then its Legendaries. */
 export function draftGodQueues(catalog: Catalog, spec: DraftSpec): readonly DraftGodQueue[] {
   return Object.freeze(
-    spec.world.godKeys.map((godKey) => {
-      const own = spec.basketTraitKeys.filter(
-        (key) =>
-          catalog.traitGivers.byKey[godKey]?.providerKind === 'olympian' &&
-          draftCappedGiver(catalog, spec, key)?.giverKey === godKey,
-      );
-      const closing = (key: string) => {
-        const trait = catalog.traits.byKey[key];
-        return trait !== undefined && draftTraitKind(trait) === 'legendary';
-      };
-      return Object.freeze({
+    spec.world.godKeys.map((godKey) =>
+      Object.freeze({
         godKey,
-        orderedTraitKeys: Object.freeze(own.filter((key) => !closing(key))),
-        closingTraitKeys: Object.freeze(own.filter(closing)),
-      });
-    }),
+        traitKeys: Object.freeze(
+          spec.basketTraitKeys.filter(
+            (key) =>
+              catalog.traitGivers.byKey[godKey]?.providerKind === 'olympian' &&
+              draftCappedGiver(catalog, spec, key)?.giverKey === godKey,
+          ),
+        ),
+      }),
+    ),
   );
 }
 
-/** The acquisition order of one god queue. */
-export function draftQueueOrder(queue: DraftGodQueue): readonly string[] {
-  return [...queue.orderedTraitKeys, ...queue.closingTraitKeys];
+/**
+ * Order legality for reorderings of the spec's basket: each basket trait queued
+ * above a same-god trait its held-trait need must use, with those later traits.
+ */
+export function draftOrderRefusals(
+  catalog: Catalog,
+  route: DraftRoute,
+  spec: DraftSpec,
+): (basketTraitKeys: readonly string[]) => ReadonlyMap<string, readonly string[]> {
+  const prerequisites = createDraftPrerequisites(
+    catalog,
+    spec.basketTraitKeys,
+    draftStartTraits(catalog, route, spec.loadout),
+  );
+  return (basketTraitKeys) => {
+    const order = { queues: draftGodQueues(catalog, { ...spec, basketTraitKeys }), prerequisites };
+    const refusals = new Map<string, readonly string[]>();
+    for (const queue of order.queues)
+      for (const traitKey of queue.traitKeys) {
+        const later = prerequisitesQueuedAfter(order, traitKey);
+        if (later.length > 0) refusals.set(traitKey, later);
+      }
+    return refusals;
+  };
 }
 
 interface DraftOrderContext {
@@ -479,15 +492,18 @@ interface DraftOrderContext {
 }
 
 /**
- * Same-god traits queued after this one that some need must use: each need is
+ * Same-god traits queued after this one that some held-trait need must use: each need is
  * judged with those traits left out, and every other basket trait counted.
  */
 function prerequisitesQueuedAfter(order: DraftOrderContext, traitKey: string): readonly string[] {
-  const queue = order.queues.map(draftQueueOrder).find((traitKeys) => traitKeys.includes(traitKey));
+  const queue = order.queues
+    .map((godQueue) => godQueue.traitKeys)
+    .find((traitKeys) => traitKeys.includes(traitKey));
   if (queue === undefined) return [];
   const after = new Set(queue.slice(queue.indexOf(traitKey) + 1));
   const later = new Set<string>();
-  for (const need of order.prerequisites.needs.get(traitKey) ?? []) {
+  // A trait waiting only on an element threshold is passed over, so only held-trait needs order it.
+  for (const need of order.prerequisites.heldTraitNeeds.get(traitKey) ?? []) {
     if (need.length === 0) continue;
     const met = need.some((option) => {
       let sum = 0;

@@ -366,7 +366,7 @@ describe('draft basket legality', () => {
 });
 
 describe('draft basket order', () => {
-  it("queues each god's traits in basket order, Duos outside and Legendaries closing", () => {
+  it("queues each god's traits in basket order, Legendaries included and Duos outside", () => {
     const draft = spec([
       'ZeusCastBoon',
       'SpawnKillBoon',
@@ -379,14 +379,9 @@ describe('draft basket order', () => {
     expect(draftGodQueues(catalog, draft)).toEqual([
       {
         godKey: 'Zeus',
-        orderedTraitKeys: ['ZeusCastBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon'],
-        closingTraitKeys: ['SpawnKillBoon'],
+        traitKeys: ['ZeusCastBoon', 'SpawnKillBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon'],
       },
-      {
-        godKey: 'Apollo',
-        orderedTraitKeys: ['ApolloWeaponBoon', 'ApolloExCastBoon'],
-        closingTraitKeys: [],
-      },
+      { godKey: 'Apollo', traitKeys: ['ApolloWeaponBoon', 'ApolloExCastBoon'] },
     ]);
   });
 
@@ -411,9 +406,16 @@ describe('draft basket order', () => {
     ).toContainEqual({ kind: 'basketTrait', traitKey: 'DoubleBoltBoon', refusals: [refusal] });
   });
 
-  it('lets a Legendary sit anywhere in the basket, since it closes its list', () => {
-    const draft = spec(['SpawnKillBoon', 'ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon']);
-    expect(assessment(underworld, draft, 'SpawnKillBoon').selectable).toBe(true);
+  it('refuses a Legendary queued above its own god prerequisites, and admits it after them', () => {
+    const before = spec(['SpawnKillBoon', 'ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon']);
+    expect(assessment(underworld, before, 'SpawnKillBoon').refusals).toEqual([
+      {
+        kind: 'prerequisiteAfter',
+        traitKeys: ['ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon'],
+      },
+    ]);
+    const after = spec(['ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon', 'SpawnKillBoon']);
+    expect(assessment(underworld, after, 'SpawnKillBoon').selectable).toBe(true);
   });
 });
 

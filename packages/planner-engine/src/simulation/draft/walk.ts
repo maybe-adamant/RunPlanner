@@ -7,6 +7,7 @@ import {
   createHubSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRouteAddress,
   createPostbossKeepsakeSelectionAddress,
   createRoomActionAddress,
   hubTerminalTakeoverForSource,
@@ -57,11 +58,16 @@ import {
   type DraftSampleContext,
 } from './samples';
 import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedule';
-import { settleDraftCommand } from './settle';
+import { settleDraftCommand, settleDraftCommandWithoutNewFinding } from './settle';
+import { routeResourceAuthoring } from '../resources';
 import type { DraftSpec } from './spec';
 import { DraftSteering, type DraftProgress } from './steering';
 import { DraftTraitOffers } from './trait-offers';
 import type { DraftWorldProduct } from './world';
+
+/** Chance that a newly entered room places a resource point, as the game spawns them naturally. */
+const ESSENCE_CHANCE = 0.1;
+const RESOURCE_FAMILIES = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 
 /**
  * One finding-driven draft walk over a working project. Every value comes from
@@ -76,6 +82,10 @@ export class DraftWalk {
   private readonly samples: DraftSampleContext;
   private readonly encounterChoices: DraftEncounterChoiceContext;
   private nextOccurrence = 0;
+  /** Rooms entered per biome that have had their essence roll. */
+  private readonly essenceRooms = new Map<number, number>();
+  /** Reward commands this walk applied. */
+  private readonly authoredRewards = new Set<string>();
   private stepCount = 0;
   private failureReason: string | undefined;
   /** The biome being walked. */
@@ -193,6 +203,7 @@ export class DraftWalk {
         }
         return true;
       }
+      this.maybePlaceEssence(biomeIndex);
       const issue = this.assembly.evaluation.issue!;
       const reason = issue.reasons[0]!;
       if (!draftEncounterChoice(this.encounterChoices, reason) && !this.repair(reason)) {
@@ -203,6 +214,62 @@ export class DraftWalk {
     }
     this.failureReason = 'step limit';
     return false;
+  }
+
+  /**
+   * Each newly entered room places an unplaced resource point with chance
+   * ESSENCE_CHANCE, preferring an element a waiting basket trait needs.
+   */
+  private maybePlaceEssence(biomeIndex: number): void {
+    const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
+    const biome = this.assembly.evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
+    if (biome === undefined || !('history' in biome)) return;
+    const entered = biome.history.ledgers.roomAppearances.filter(
+      (appearance) =>
+        appearance.origin.kind === 'occurrence' && appearance.origin.biomeKey === biomeKey,
+    );
+    if (entered.length <= (this.essenceRooms.get(biomeIndex) ?? 0)) return;
+    this.essenceRooms.set(biomeIndex, entered.length);
+    const latest = entered.at(-1)!;
+    if (latest.origin.kind !== 'occurrence') return;
+    const occurrenceId = latest.origin.occurrenceId;
+    const route = this.project.route;
+    // Only a room that can host an unplaced point rolls.
+    const support = this.catalog.rooms.byKey[latest.gameName]?.resourcePointSupport;
+    if (
+      support === undefined ||
+      support.excludedRouteKeys?.includes(route.routeKey) === true ||
+      !support.families.some((family) => route.resourcePlacements[family] === null)
+    )
+      return;
+    if (this.rng() >= ESSENCE_CHANCE) return;
+    const legal = routeResourceAuthoring(this.catalog, route).legalTargetsByFamily;
+    const rules = support.rules;
+    const families = RESOURCE_FAMILIES.filter(
+      (family) =>
+        route.resourcePlacements[family] === null &&
+        legal[family].some(
+          (target) => target.biomeKey === biomeKey && target.occurrenceId === occurrenceId,
+        ),
+    );
+    const wanted = this.steering.wantedElements(this.steering.progress());
+    const preferred = (family: (typeof RESOURCE_FAMILIES)[number]) => {
+      const element = rules[family].element;
+      return Number(element !== undefined && wanted.includes(element));
+    };
+    const ordered = this.shuffle(families).sort((a, b) => preferred(b) - preferred(a));
+    for (const family of ordered) {
+      const settled = settleDraftCommandWithoutNewFinding(this.catalog, this.assembly, {
+        kind: 'ReplaceResourcePlacement',
+        route: createRouteAddress(route.routeKey),
+        family,
+        value: { biomeKey: biomeKey!, occurrenceId },
+      });
+      if (settled === undefined) continue;
+      this.assembly = settled;
+      this.session = undefined;
+      return;
+    }
   }
 
   private candidates(): ProjectCandidateSession {
@@ -355,10 +422,11 @@ export class DraftWalk {
       case 'pickedTargetMissing':
         return origin.kind === 'exitSelection' && this.selectExit(origin);
       case 'rewardMissing':
+        return this.authorReward(origin, false);
       case 'rewardBagEntryUnavailable':
       case 'rewardSourceUnavailable':
       case 'rewardAcquisitionUnavailable':
-        return this.authorReward(origin);
+        return this.authorReward(origin, true);
       case 'traitOfferMissing':
         return origin.kind === 'traitOffer' && this.traitOffers.author(origin);
       case 'roomActionPlacementRequired':
@@ -800,7 +868,15 @@ export class DraftWalk {
     return false;
   }
 
-  private authorReward(origin: SemanticAddress): boolean {
+  /** A reward already authored here that became unavailable is not tried again, so repairs cannot cycle. */
+  private authorReward(origin: SemanticAddress, retry: boolean): boolean {
+    const apply = (command: ProjectCommand) => {
+      const key = JSON.stringify(command);
+      if (retry && this.authoredRewards.has(key)) return false;
+      if (!this.apply(command)) return false;
+      this.authoredRewards.add(key);
+      return true;
+    };
     if (origin.kind === 'startingReward') {
       const binding = this.catalog.runStartReward.incomingReward;
       if (binding.kind !== 'countedChoice') return false;
@@ -808,6 +884,7 @@ export class DraftWalk {
         binding.allowedRewardTypes,
         (value) => this.evaluate({ kind: 'startingReward', reward: origin, value }),
         (value) => ({ kind: 'ReplaceStartingReward', reward: origin, value }),
+        apply,
       );
     }
     if (origin.kind === 'shopOffer') {
@@ -830,7 +907,7 @@ export class DraftWalk {
       });
       this.noteSupply(values.map((value) => value.offer));
       for (const value of this.weighted(values, (v) => this.steering.offerWeight(v.offer)))
-        if (this.apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
+        if (apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
           this.buyWantedSupply(origin, value.offer);
           return true;
         }
@@ -852,6 +929,7 @@ export class DraftWalk {
         countedRewardTypeDomain(this.catalog, this.assembly, origin, attachment.reward),
         (value) => this.evaluate({ kind: 'rewardWheelOffer', offer: origin, value }),
         (value) => ({ kind: 'ReplaceRewardWheelOffer', offer: origin, value }),
+        apply,
       );
     }
     if (origin.kind !== 'incomingReward' && origin.kind !== 'localReward') return false;
@@ -871,11 +949,13 @@ export class DraftWalk {
           types,
           (value) => this.evaluate({ kind: 'incomingReward', reward: origin, value }),
           (value) => ({ kind: 'ReplaceIncomingReward', reward: origin, value }),
+          apply,
         )
       : this.tryOffers(
           types,
           (value) => this.evaluate({ kind: 'localReward', reward: origin, value }),
           (value) => ({ kind: 'ReplaceLocalReward', reward: origin, value }),
+          apply,
         );
   }
 
@@ -883,6 +963,7 @@ export class DraftWalk {
     rewardTypes: readonly string[],
     evaluate: (value: ResolvedRewardOffer) => { readonly kind: string },
     command: (value: ResolvedRewardOffer) => ProjectCommand,
+    apply: (command: ProjectCommand) => boolean,
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
@@ -902,7 +983,7 @@ export class DraftWalk {
       });
     this.noteSupply(legal);
     for (const offer of this.weighted(legal, (o) => this.steering.offerWeight(o)))
-      if (this.apply(command(offer))) return true;
+      if (apply(command(offer))) return true;
     return false;
   }
 
@@ -914,7 +995,7 @@ export class DraftWalk {
       const state = this.occurrence(origin.biomeKey, origin.occurrenceId)?.state;
       // An unauthored reward owns no actions yet; authoring it schedules them.
       if (state !== undefined && 'reward' in state && state.reward === null)
-        return this.authorReward(origin);
+        return this.authorReward(origin, false);
     }
     const occurrenceId = origin.occurrenceId as OccurrenceId;
     const biome = createBiomeAddress(origin.routeKey, origin.biomeKey);
