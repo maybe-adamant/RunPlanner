@@ -108,6 +108,28 @@ reward-offer findings (`rewardBagEntryUnavailable`, `rewardBagSupportEmpty`,
 Candidate-probe digest moves for invalid probes are the intended product
 change.
 
+## Record-count audit
+
+The game counts Devotion eligibility with `CountOf` over `LootTypeHistory`
+(`LootData.lua` Devotion entry; `RequirementsLogic.lua` `CountOf` counts
+distinct present keys), but `devotionLegal` declares `recordCount`, which sums
+pickups. All 31 catalog `recordCount` declarations are audited against the
+game's `CountOf` (distinct keys) or `SumOf` (total) before one catalog fix,
+with a `schemaRevision` bump.
+
+Copy that reads record-count evidence, to recheck after the fix:
+
+- `apps/planner/src/projections/contextual/contextualOptions.ts`:
+  `requirementMessages` record-count cases (`recordCount` /
+  `distinctRecordKeyCount`) and the god-set "not counting Ares" rule.
+- `apps/planner/src/projections/rewards/rewardPicker.ts`: the Trial type,
+  chosen-god and specific-pair rows.
+- `apps/planner/src/projections/structured-workspace/presentation/run-state.ts`:
+  record-count requirement presentation.
+- Tests: `apps/planner/test/projections/contextual/contextualOptions.test.ts`,
+  `apps/planner/test/projections/rewards/rewardPicker.test.ts`.
+- Owner copy table rows #35, #36, #37, #46, #47, #48 and #56.
+
 ## Gates
 
 1. **Engine, static and door/local.**
