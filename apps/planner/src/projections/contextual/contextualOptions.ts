@@ -28,6 +28,8 @@ export type ContextualOptionState = 'forced' | 'possible' | 'impossible' | 'unas
 export interface CandidateExplanation {
   readonly kind: string;
   readonly message: string;
+  /** The engine reward exclusion this reason words, with its `allBranches` scope. */
+  readonly exclusion?: RewardOfferExclusionEvidence;
 }
 
 export interface ContextualOption<T> {
@@ -205,7 +207,9 @@ function recordMessage(
       const gods = godSetPhrase(catalog, evidence.keys);
       if (gods !== undefined && evidence.record === 'lootTypeHistory' && expected) {
         if (evidence.kind === 'recordCount')
-          return `Requires ${rangeLabel(evidence.expected)} boons this run${gods}; currently ${evidence.actual}.`;
+          return evidence.expected.min === 1 && evidence.expected.max === undefined
+            ? `Requires a boon this run${gods}.`
+            : `Requires ${rangeLabel(evidence.expected)} boons this run${gods}; currently ${evidence.actual}.`;
         const { min, max } = evidence.expected;
         return min !== undefined && max === undefined
           ? `Requires boons from ${min} different gods this run${gods}.`
@@ -553,6 +557,8 @@ function rewardExclusionMessages(
       return [`This source always gives ${rewardTypeLabel(catalog, exclusion.rewardType)}.`];
     case 'excludedByProducer':
       return ['This source never gives this reward.'];
+    case 'replayFixed':
+      return [`Echo repeats ${summarizeRewardOffer(catalog, exclusion.offer)} exactly.`];
     case 'forcedReward':
       return [`${summarizeRewardOffer(catalog, exclusion.offer)} must be offered here.`];
     case 'olympianProviderForced':
@@ -588,7 +594,7 @@ function rewardExclusionMessages(
       return ['The Shop offers only gods already picked up on this save file.'];
     case 'devotionSourceNotAcquired':
       return [
-        `Requires a boon from ${namesList(exclusion.sources.map((source) => rewardTypeLabel(catalog, source)))} earlier this run.`,
+        `Requires ${exclusion.sources.length > 1 ? 'boons' : 'a boon'} from ${namesList(exclusion.sources.map((source) => rewardTypeLabel(catalog, source)))} earlier this run.`,
       ];
     case 'entriesSpent':
       return [
@@ -608,18 +614,28 @@ function rewardExclusionMessages(
 }
 
 /** Leads a reason that holds only in some reached branches. */
-export const alternativePrefix = 'Depending on earlier rolls: ';
+const alternativePrefix = 'Depending on earlier rolls: ';
 
-/** Engine reward exclusions; one that holds only in some branches reads as an alternative. */
+/** Words one engine reward exclusion; one held only in some branches reads as an alternative. */
+export function rewardExclusionExplanation(
+  exclusion: RewardOfferExclusionEvidence,
+  message: string,
+): CandidateExplanation {
+  return {
+    kind: exclusion.kind,
+    message: exclusion.allBranches ? message : `${alternativePrefix}${message}`,
+    exclusion,
+  };
+}
+
 function rewardExclusionExplanations(
   catalog: Catalog,
   exclusions: readonly RewardOfferExclusionEvidence[],
 ): readonly CandidateExplanation[] {
   return exclusions.flatMap((exclusion) =>
-    rewardExclusionMessages(catalog, exclusion).map((message) => ({
-      kind: exclusion.kind,
-      message: exclusion.allBranches ? message : `${alternativePrefix}${message}`,
-    })),
+    rewardExclusionMessages(catalog, exclusion).map((message) =>
+      rewardExclusionExplanation(exclusion, message),
+    ),
   );
 }
 

@@ -55,6 +55,8 @@ export {
   eligibleOrdinarySourceGameNames,
   isOrdinarySourcePolicy,
   locallyValidRewardOffers,
+  DEVOTION_REQUIRED_SOURCES,
+  devotionPairShortfall,
   ORDINARY_SOURCE_CAP,
   ordinarySourceGameNames,
   sourceSupportExclusion,

@@ -1,13 +1,18 @@
 import type { SemanticAddress } from '../../authored-project/addresses';
+import type { Catalog } from '../../catalog-schema';
+import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import {
   requirementEvidence,
   type RequirementEvaluationEvidence,
 } from '../../requirements/evidence';
 import {
   countedOfferExclusion,
+  DEVOTION_REQUIRED_SOURCES,
+  devotionPairShortfall,
   ORDINARY_SOURCE_CAP,
   ordinarySourceGameNames,
   sourceSupportExclusion,
+  storeEntryOnRoute,
   type CountedOfferTransitionOptions,
   type ResolvedRewardOffer,
   type RewardBagState,
@@ -28,6 +33,8 @@ export type RewardOfferExclusionReason =
   /** The producer always offers `rewardType`. */
   | { readonly kind: 'rewardTypeFixed'; readonly rewardType: string }
   | { readonly kind: 'excludedByProducer'; readonly rewardType: string }
+  /** Echo repeats its agreed offer exactly. */
+  | { readonly kind: 'replayFixed'; readonly offer: ResolvedRewardOffer }
   | { readonly kind: 'forcedReward'; readonly offer: ResolvedRewardOffer }
   | { readonly kind: 'olympianProviderForced'; readonly providerKey: string }
   /** A queued reward priority must be offered first. */
@@ -51,7 +58,13 @@ export type RewardOfferExclusionReason =
       readonly evaluation: RequirementEvaluationEvidence;
     }
   | { readonly kind: 'godNotInteracted'; readonly source: string }
-  | { readonly kind: 'devotionSourceNotAcquired'; readonly sources: readonly string[] }
+  /** `sources`: the pair's unacquired gods; `acquiredSources`: the pair domain's acquired gods. */
+  | {
+      readonly kind: 'devotionSourceNotAcquired';
+      readonly sources: readonly string[];
+      readonly acquiredSources: readonly string[];
+      readonly required: number;
+    }
   | {
       readonly kind: 'entryRequirement';
       readonly rewardType: string;
@@ -92,6 +105,7 @@ const KIND_PRECEDENCE: readonly RewardOfferExclusionKind[] = [
   'offRoute',
   'rewardTypeFixed',
   'excludedByProducer',
+  'replayFixed',
   'contractNotEquipped',
   'shopExcluded',
   'forcedReward',
@@ -114,6 +128,7 @@ const STATIC_KINDS: ReadonlySet<RewardOfferExclusionKind> = new Set([
   'offRoute',
   'rewardTypeFixed',
   'excludedByProducer',
+  'replayFixed',
 ]);
 
 const MAXIMUM_EXCLUSIONS = 2;
@@ -135,10 +150,17 @@ function ranked(
   tallies: ReadonlyMap<string, Tally>,
   groups: number,
 ): readonly RewardOfferExclusionEvidence[] | undefined {
-  let entries = [...tallies.values()];
+  // A static fact is the whole answer only when every branch cites it; a branch
+  // citing it beside others only reached its gate, so it is never roll-dependent copy.
+  const all = [...tallies.values()];
+  const everywhere = all.filter(
+    (entry) => STATIC_KINDS.has(entry.reason.kind) && entry.everywhere === groups,
+  );
+  const entries =
+    everywhere.length > 0
+      ? everywhere
+      : all.filter((entry) => !STATIC_KINDS.has(entry.reason.kind));
   if (entries.length === 0) return undefined;
-  if (entries.some((entry) => STATIC_KINDS.has(entry.reason.kind)))
-    entries = entries.filter((entry) => STATIC_KINDS.has(entry.reason.kind));
   entries.sort(
     (left, right) =>
       right.cited - left.cited ||
@@ -151,12 +173,51 @@ function ranked(
   );
 }
 
+/** Identifying params only; branch-local counts and evaluations keep the first citation. */
+function exclusionKey(reason: RewardOfferExclusionReason): string {
+  switch (reason.kind) {
+    case 'notInStore':
+    case 'entriesSpent':
+    case 'priorityRequired':
+    case 'entryRequirement':
+      return JSON.stringify([reason.kind, reason.rewardType, reason.storeKey]);
+    case 'offRoute':
+      return JSON.stringify([reason.kind, reason.rewardType, reason.storeKey, reason.routeKey]);
+    case 'rewardTypeFixed':
+    case 'excludedByProducer':
+      return JSON.stringify([reason.kind, reason.rewardType]);
+    case 'replayFixed':
+    case 'forcedReward':
+      return JSON.stringify([reason.kind, reason.offer]);
+    case 'olympianProviderForced':
+      return JSON.stringify([reason.kind, reason.providerKey]);
+    case 'peerConflict':
+      return JSON.stringify([reason.kind, reason.peers.map((peer) => peer.origin)]);
+    case 'godCap':
+    case 'godRequirement':
+    case 'godNotInteracted':
+      return JSON.stringify([reason.kind, reason.source]);
+    case 'devotionSourceNotAcquired':
+      return JSON.stringify([reason.kind, reason.sources]);
+    case 'notInShop':
+      return JSON.stringify([reason.kind, reason.profileKey, reason.slotIndex]);
+    case 'shopOptionRequirement':
+      return JSON.stringify([reason.kind, reason.optionKey, reason.rewardType]);
+    case 'shopExcluded':
+      return JSON.stringify([reason.kind, reason.name]);
+    case 'contractNotEquipped':
+      return JSON.stringify([reason.kind]);
+    case 'storeExhausted':
+      return JSON.stringify([reason.kind, reason.storeKey]);
+  }
+}
+
 function tally(
   tallies: Map<string, Tally>,
   reason: RewardOfferExclusionReason,
   everywhere: boolean,
 ): void {
-  const key = JSON.stringify(reason);
+  const key = exclusionKey(reason);
   const entry = tallies.get(key) ?? { reason, cited: 0, everywhere: 0 };
   entry.cited += 1;
   if (everywhere) entry.everywhere += 1;
@@ -200,15 +261,12 @@ export function sourceSupportReason(
   const payload = offer.payload;
   if (code === undefined || payload === undefined) return undefined;
   const acquired = facts.requirements.records.lootTypeHistory;
-  if (code === 'devotionSourceNotAcquired')
-    return payload.kind === 'DevotionPair'
-      ? {
-          kind: code,
-          sources: [payload.chosenSource, payload.spurnedSource].filter(
-            (source) => (acquired[source] ?? 0) === 0,
-          ),
-        }
-      : undefined;
+  if (code === 'devotionSourceNotAcquired') {
+    const shortfall = devotionPairShortfall(catalog, offer, facts);
+    return shortfall === undefined
+      ? undefined
+      : { kind: code, ...shortfall, required: DEVOTION_REQUIRED_SOURCES };
+  }
   if (payload.kind !== 'BoonSource') return undefined;
   const source = payload.source;
   switch (code) {
@@ -274,4 +332,65 @@ export function countedBagReason(
             evaluation: requirementEvidence(exclusion.entry.requirement, facts.requirements),
           };
   }
+}
+
+/**
+ * Store membership, route scope and binding filters of a counted offer; they
+ * hold for every branch.
+ */
+export function staticCountedOfferExclusion(
+  catalog: Catalog,
+  binding: CountedRewardBinding | undefined,
+  storeKey: string | undefined,
+  offer: ResolvedRewardOffer,
+  routeKey: string,
+): RewardOfferExclusionReason | undefined {
+  const { rewardType } = offer;
+  if (
+    binding === undefined ||
+    rewardType === catalog.rewards.countedStoreFallbackRewardType ||
+    binding.forcedRewards?.some((forced) => forced.offer.rewardType === rewardType) === true
+  )
+    return undefined;
+  if (
+    (binding.eligibleRewardTypes.length > 0 && !binding.eligibleRewardTypes.includes(rewardType)) ||
+    binding.ineligibleRewardTypes.includes(rewardType)
+  )
+    return { kind: 'excludedByProducer', rewardType };
+  const store =
+    storeKey === undefined || !binding.storeKeys.includes(storeKey)
+      ? undefined
+      : catalog.rewards.stores.byKey[storeKey];
+  const entries = store?.entries.filter((entry) => entry.rewardType === rewardType) ?? [];
+  if (store === undefined || entries.length === 0)
+    return { kind: 'notInStore', rewardType, storeKey: storeKey ?? null };
+  return entries.some((entry) => storeEntryOnRoute(entry, routeKey))
+    ? undefined
+    : { kind: 'offRoute', rewardType, storeKey: store.key, routeKey };
+}
+
+/**
+ * One branch's first failing `consumeCountedOffer` gate for a producer without
+ * peers: store exhaustion, then source support, then the offer's entries.
+ */
+export function peerlessCountedOfferReason(
+  catalog: RewardKernelCatalog,
+  store: RewardStoreDeclaration,
+  bag: RewardBagState,
+  offer: ResolvedRewardOffer,
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions,
+): RewardOfferExclusionReason | undefined {
+  const bagReason = countedBagReason(catalog, store, bag, offer, facts, options, []);
+  if (bagReason?.kind === 'storeExhausted')
+    return offer.rewardType === catalog.countedStoreFallbackRewardType
+      ? sourceSupportReason(catalog, offer, facts, 'offer')
+      : bagReason;
+  const source = sourceSupportReason(catalog, offer, facts, 'offer');
+  if (source !== undefined) return source;
+  if (bagReason !== undefined) return bagReason;
+  // Only the final fallback offers a reward the store does not stock.
+  return store.entries.some((entry) => entry.rewardType === offer.rewardType)
+    ? undefined
+    : { kind: 'notInStore', rewardType: offer.rewardType, storeKey: store.key };
 }

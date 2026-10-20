@@ -19,7 +19,6 @@ import {
   explainCohortOfferExclusions,
   explainRewardOfferExclusions,
   processRewardOffer,
-  staticCountedOfferExclusion,
   type OfferProcessingContext,
   type OfferProcessingPeer,
 } from '../../../src/simulation/rewards/offer-generation';
@@ -27,6 +26,7 @@ import {
   aggregateRewardOfferExclusions,
   mergeRewardOfferExclusions,
   sourceSupportReason,
+  staticCountedOfferExclusion,
   type RewardOfferExclusionReason,
 } from '../../../src/simulation/rewards/offer-exclusions';
 import {
@@ -173,9 +173,12 @@ describe('reward offer exclusion aggregation', () => {
   };
   const fixed: RewardOfferExclusionReason = { kind: 'rewardTypeFixed', rewardType: 'Boon' };
 
-  it('reports a static cause alone', () => {
+  it('reports a static cause alone only when every branch cites it', () => {
+    expect(aggregateRewardOfferExclusions([fixed, fixed])).toEqual([
+      { ...fixed, allBranches: true },
+    ]);
     expect(aggregateRewardOfferExclusions([spent, fixed, spent])).toEqual([
-      { ...fixed, allBranches: false },
+      { ...spent, allBranches: false },
     ]);
   });
 
@@ -184,6 +187,19 @@ describe('reward offer exclusion aggregation', () => {
       { ...spent, allBranches: false },
       { ...cap, allBranches: false },
     ]);
+  });
+
+  it('de-duplicates by identifying params, keeping the first citation', () => {
+    const capOf = (acquiredSources: readonly string[]): RewardOfferExclusionReason => ({
+      ...cap,
+      acquiredSources,
+    });
+    expect(
+      aggregateRewardOfferExclusions([
+        capOf(['HeraUpgrade']),
+        capOf(['HeraUpgrade', 'AresUpgrade']),
+      ]),
+    ).toEqual([{ ...capOf(['HeraUpgrade']), allBranches: true }]);
   });
 
   it('de-duplicates by canonical key and marks reasons held in every branch', () => {
@@ -367,6 +383,23 @@ describe('door and local reward offer exclusions', () => {
     ).toEqual([{ kind: 'godNotInteracted', source: 'HeraUpgrade', allBranches: true }]);
   });
 
+  it('checks Trial gods before the store entry rule', () => {
+    const one = withHistory(branch(), { lootTypeHistory: { ZeusUpgrade: 1 } });
+    expect(
+      explain(
+        [one],
+        context({
+          rewardType: 'Devotion',
+          payload: {
+            kind: 'DevotionPair',
+            chosenSource: 'ZeusUpgrade',
+            spurnedSource: 'HeraUpgrade',
+          },
+        }),
+      )?.map((reason) => reason.kind),
+    ).toEqual(['devotionSourceNotAcquired']);
+  });
+
   it('names Trial gods not yet acquired', () => {
     const one = withHistory(branch(), { lootTypeHistory: { ZeusUpgrade: 1 } });
     expect(
@@ -384,7 +417,15 @@ describe('door and local reward offer exclusions', () => {
           { binding: null },
         ),
       ),
-    ).toEqual([{ kind: 'devotionSourceNotAcquired', sources: ['HeraUpgrade'], allBranches: true }]);
+    ).toEqual([
+      {
+        kind: 'devotionSourceNotAcquired',
+        sources: ['HeraUpgrade'],
+        acquiredSources: ['ZeusUpgrade'],
+        required: 2,
+        allBranches: true,
+      },
+    ]);
   });
 
   it('names an unmet store-entry requirement with its evidence', () => {

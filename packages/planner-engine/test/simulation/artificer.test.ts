@@ -16,6 +16,7 @@ import {
 import {
   applyConcreteAcquisition,
   factsWithHistory,
+  type ResolvedRewardOffer,
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
@@ -702,11 +703,14 @@ describe('The Artificer', () => {
     const remainingEntryCounts = store.entries.map((_, index) =>
       index === maxHealthIndex || index === maxManaIndex ? 1 : 0,
     );
+    // Four gods already fill the run, so a fifth god's Boon fails at its source.
+    const lootTypeHistory = { ZeusUpgrade: 1, HeraUpgrade: 1, ApolloUpgrade: 1, HestiaUpgrade: 1 };
     const seeded = initialBranches().map((branch) =>
       Object.freeze({
         ...branch,
         state: Object.freeze({
           ...branch.state,
+          rewardHistory: Object.freeze({ ...branch.state.rewardHistory, lootTypeHistory }),
           bags: Object.freeze({
             ...branch.state.bags,
             RunProgress: Object.freeze({
@@ -772,6 +776,23 @@ describe('The Artificer', () => {
         },
       ],
     });
+    const reasons = (offer: ResolvedRewardOffer) =>
+      frontier.artificerReplacementCandidate!.evaluateOffer(offer).exclusions;
+    expect(reasons({ rewardType: 'Devotion' })).toEqual([
+      { kind: 'excludedByProducer', rewardType: 'Devotion', allBranches: true },
+    ]);
+    expect(reasons({ rewardType: 'MetaCurrencyDrop' })).toEqual([
+      {
+        kind: 'notInStore',
+        rewardType: 'MetaCurrencyDrop',
+        storeKey: 'RunProgress',
+        allBranches: true,
+      },
+    ]);
+    // Source support is checked before the Boon entries, which are also spent.
+    expect(
+      reasons({ rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } }),
+    ).toMatchObject([{ kind: 'godCap', source: 'AphroditeUpgrade', allBranches: true }]);
   });
 
   it('spends each legitimate RunProgress copy for deferred sibling conversions', () => {
@@ -784,11 +805,14 @@ describe('The Artificer', () => {
     const remainingEntryCounts = store.entries.map((_, index) =>
       index === maxHealthIndex ? 2 : 0,
     );
+    // Four gods already fill the run, so a fifth god's Boon fails at its source.
+    const lootTypeHistory = { ZeusUpgrade: 1, HeraUpgrade: 1, ApolloUpgrade: 1, HestiaUpgrade: 1 };
     const seeded = initialBranches().map((branch) =>
       Object.freeze({
         ...branch,
         state: Object.freeze({
           ...branch.state,
+          rewardHistory: Object.freeze({ ...branch.state.rewardHistory, lootTypeHistory }),
           bags: Object.freeze({
             ...branch.state.bags,
             RunProgress: Object.freeze({

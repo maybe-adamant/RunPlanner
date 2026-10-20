@@ -151,14 +151,27 @@ function spawnSeaStarDuplicate(
   return state === branch.state ? branch : Object.freeze({ ...branch, state });
 }
 import type { RewardEvent } from '../model';
+import type { CountedRewardBinding } from '../../../reward-kernel/bindings';
 import { staticallyExcludedCandidateResult } from '../producer-frontiers';
 import {
   aggregateRewardOfferExclusions,
-  countedBagReason,
-  sourceSupportReason,
+  peerlessCountedOfferReason,
+  staticCountedOfferExclusion,
 } from '../offer-exclusions';
 
-const ARTIFICER_INELIGIBLE_REWARD_TYPES: ReadonlySet<string> = new Set(['Devotion', 'SpellDrop']);
+// Artificer redraws from RunProgress without Devotion or Selene.
+const ARTIFICER_INELIGIBLE_REWARD_TYPES: readonly string[] = ['Devotion', 'SpellDrop'];
+const ARTIFICER_REDRAW_OPTIONS = Object.freeze({
+  ineligibleRewardTypes: new Set(ARTIFICER_INELIGIBLE_REWARD_TYPES),
+});
+const ARTIFICER_REDRAW_BINDING: CountedRewardBinding = Object.freeze({
+  kind: 'countedChoice',
+  storeKeys: Object.freeze(['RunProgress']),
+  eligibleRewardTypes: Object.freeze([]),
+  ineligibleRewardTypes: ARTIFICER_INELIGIBLE_REWARD_TYPES,
+  allowedRewardTypes: Object.freeze([]),
+  producerLifecycleKey: 'Artificer',
+});
 
 export function applyProducerRoleHistory(
   catalog: Catalog,
@@ -783,22 +796,7 @@ export function applyProducerRoleHistory(
             artificerReplacementCandidate: Object.freeze({
               rewardTypes: artificerReplacementRewardTypes,
               evaluateOffer: (offer: ResolvedRewardOffer) => {
-                // Artificer redraws from RunProgress without Devotion or Selene.
-                if (ARTIFICER_INELIGIBLE_REWARD_TYPES.has(offer.rewardType))
-                  return staticallyExcludedCandidateResult({
-                    kind: 'excludedByProducer',
-                    rewardType: offer.rewardType,
-                  });
-                if (
-                  catalog.rewards.stores.byKey.RunProgress?.entries.some(
-                    (entry) => entry.rewardType === offer.rewardType,
-                  ) !== true
-                )
-                  return staticallyExcludedCandidateResult({
-                    kind: 'notInStore',
-                    rewardType: offer.rewardType,
-                    storeKey: 'RunProgress',
-                  });
+                const store = catalog.rewards.stores.byKey.RunProgress!;
                 const supported = branches.every((branch) => {
                   const artificer = assessArtificerConversion(
                     catalog,
@@ -813,11 +811,11 @@ export function applyProducerRoleHistory(
                     return (
                       consumeCountedOffer(
                         catalog.rewards,
-                        catalog.rewards.stores.byKey.RunProgress!,
+                        store,
                         prepared.bag,
                         offer,
                         facts(prepared.branch.state),
-                        { ineligibleRewardTypes: ARTIFICER_INELIGIBLE_REWARD_TYPES },
+                        ARTIFICER_REDRAW_OPTIONS,
                       ).length > 0
                     );
                   } catch {
@@ -825,6 +823,18 @@ export function applyProducerRoleHistory(
                   }
                 });
                 if (supported) return Object.freeze({ findings: Object.freeze([]), supported });
+                const routeKey = branches[0]?.state.reached.routePosition.routeKey;
+                const fixed =
+                  routeKey === undefined
+                    ? undefined
+                    : staticCountedOfferExclusion(
+                        catalog,
+                        ARTIFICER_REDRAW_BINDING,
+                        'RunProgress',
+                        offer,
+                        routeKey,
+                      );
+                if (fixed !== undefined) return staticallyExcludedCandidateResult(fixed);
                 // Every branch must redraw it; a supported branch cites nothing.
                 const exclusions = aggregateRewardOfferExclusions(
                   branches.map((branch) => {
@@ -832,18 +842,18 @@ export function applyProducerRoleHistory(
                       return undefined;
                     const prepared = withBag(catalog, branch, 'RunProgress');
                     if (prepared === undefined) return undefined;
-                    const branchFacts = facts(prepared.branch.state);
-                    return (
-                      countedBagReason(
+                    try {
+                      return peerlessCountedOfferReason(
                         catalog.rewards,
-                        catalog.rewards.stores.byKey.RunProgress!,
+                        store,
                         prepared.bag,
                         offer,
-                        branchFacts,
-                        { ineligibleRewardTypes: ARTIFICER_INELIGIBLE_REWARD_TYPES },
-                        [],
-                      ) ?? sourceSupportReason(catalog.rewards, offer, branchFacts, 'offer')
-                    );
+                        facts(prepared.branch.state),
+                        ARTIFICER_REDRAW_OPTIONS,
+                      );
+                    } catch {
+                      return undefined;
+                    }
                   }),
                 );
                 return Object.freeze({

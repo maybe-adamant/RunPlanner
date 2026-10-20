@@ -204,14 +204,46 @@ function interactedOrdinarySupport(
   return interacted.size > 0 ? interacted : eligible;
 }
 
+/** The Devotion pair domain's gods with a boon acquired this run. */
+function devotionAcquiredSources(
+  catalog: RewardKernelCatalog,
+  rewardType: RewardTypeDeclaration,
+  facts: RewardKernelFacts,
+): readonly string[] {
+  return sourceDomainValues(catalog, rewardType).filter(
+    (source) => (facts.requirements.records.lootTypeHistory[source] ?? 0) > 0,
+  );
+}
+
+/** Devotion offers a pair of two distinct acquired gods. */
+export const DEVOTION_REQUIRED_SOURCES = 2;
+
+/** Why a locally valid Devotion pair is unsupported: its unacquired gods. */
+export function devotionPairShortfall(
+  catalog: RewardKernelCatalog,
+  offer: ResolvedRewardOffer,
+  facts: RewardKernelFacts,
+):
+  { readonly sources: readonly string[]; readonly acquiredSources: readonly string[] } | undefined {
+  const rewardType = catalog.rewardTypes.byKey[offer.rewardType];
+  const payload = offer.payload;
+  if (
+    rewardType?.sourceSupport !== 'devotionAcquiredPair' ||
+    payload?.kind !== 'DevotionPair' ||
+    !isPayloadLocallyValid(catalog, rewardType, payload)
+  )
+    return undefined;
+  const acquiredSources = devotionAcquiredSources(catalog, rewardType, facts);
+  const sources = payloadSources(payload).filter((source) => !acquiredSources.includes(source));
+  return sources.length === 0 ? undefined : { sources, acquiredSources };
+}
+
 function devotionSupport(
   catalog: RewardKernelCatalog,
   rewardType: RewardTypeDeclaration,
   facts: RewardKernelFacts,
 ): readonly DevotionPairPayload[] {
-  const acquired = sourceDomainValues(catalog, rewardType).filter(
-    (source) => (facts.requirements.records.lootTypeHistory[source] ?? 0) > 0,
-  );
+  const acquired = devotionAcquiredSources(catalog, rewardType, facts);
   return acquired.flatMap((chosenSource) =>
     acquired
       .filter((spurnedSource) => spurnedSource !== chosenSource)
@@ -236,8 +268,16 @@ export function sourceSupportExclusion(
   if (isOfferSupportedAtResolutionPoint(catalog, offer, facts, resolution)) return undefined;
   const rewardType = catalog.rewardTypes.byKey[offer.rewardType];
   const payload = offer.payload;
-  if (rewardType === undefined || payload === undefined) return undefined;
-  if (payload.kind === 'DevotionPair') return 'devotionSourceNotAcquired';
+  if (
+    rewardType === undefined ||
+    payload === undefined ||
+    !isPayloadLocallyValid(catalog, rewardType, payload)
+  )
+    return undefined;
+  if (payload.kind === 'DevotionPair')
+    return devotionPairShortfall(catalog, offer, facts) === undefined
+      ? undefined
+      : 'devotionSourceNotAcquired';
   const ordinarySources = sourceDomainValues(catalog, rewardType);
   const base = ordinaryBaseExclusion(
     catalog,

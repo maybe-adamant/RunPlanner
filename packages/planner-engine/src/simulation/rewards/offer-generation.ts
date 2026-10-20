@@ -10,7 +10,6 @@ import {
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
   sourceSupportExclusion,
-  storeEntryOnRoute,
   type CountedOfferTransitionOptions,
   type RewardBagState,
   type RewardPeerContext,
@@ -43,6 +42,7 @@ import {
   aggregateRewardOfferExclusions,
   countedBagReason,
   sourceSupportReason,
+  staticCountedOfferExclusion,
   staticRewardOfferExclusion,
   type RewardOfferExclusionEvidence,
   type RewardOfferExclusionReason,
@@ -501,41 +501,6 @@ export function explainCohortOfferExclusions(
           peers: cited.map((peer) => ({ origin: peer.reward.origin, offer: peer.reward.offer })),
         },
       ]);
-}
-
-/**
- * Store membership, route scope and binding filters of a counted offer; they
- * hold for every branch.
- */
-export function staticCountedOfferExclusion(
-  catalog: Catalog,
-  binding: CountedRewardBinding | undefined,
-  storeKey: string | undefined,
-  offer: ResolvedRewardOffer,
-  routeKey: string,
-): RewardOfferExclusionReason | undefined {
-  const { rewardType } = offer;
-  if (
-    binding === undefined ||
-    rewardType === catalog.rewards.countedStoreFallbackRewardType ||
-    binding.forcedRewards?.some((forced) => forced.offer.rewardType === rewardType) === true
-  )
-    return undefined;
-  if (
-    (binding.eligibleRewardTypes.length > 0 && !binding.eligibleRewardTypes.includes(rewardType)) ||
-    binding.ineligibleRewardTypes.includes(rewardType)
-  )
-    return { kind: 'excludedByProducer', rewardType };
-  const store =
-    storeKey === undefined || !binding.storeKeys.includes(storeKey)
-      ? undefined
-      : catalog.rewards.stores.byKey[storeKey];
-  const entries = store?.entries.filter((entry) => entry.rewardType === rewardType) ?? [];
-  if (store === undefined || entries.length === 0)
-    return { kind: 'notInStore', rewardType, storeKey: storeKey ?? null };
-  return entries.some((entry) => storeEntryOnRoute(entry, routeKey))
-    ? undefined
-    : { kind: 'offRoute', rewardType, storeKey: store.key, routeKey };
 }
 
 function staticOfferExclusion(
