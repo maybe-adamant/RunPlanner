@@ -23,6 +23,7 @@ export function EditorDialog({
   feedback,
   footer,
   headerAction,
+  headerBelow,
   initialFocusId,
   model,
   returnFocusId,
@@ -32,13 +33,16 @@ export function EditorDialog({
   /** Finding anchor attributes for the dialog surface. */
   readonly anchorProps?: ModalSurfaceProps;
   readonly children: ReactNode;
-  readonly eyebrow: string;
+  /** The line above the title; a dialog with its own controls under the title omits it. */
+  readonly eyebrow?: string;
   /** The findings region when the dialog, not its content, owns it. */
   readonly feedback?: ReactNode;
   /** A draft footer when the dialog, not its content, owns the draft. */
   readonly footer?: ReactNode;
   /** A control beside the title, such as a help reference. */
   readonly headerAction?: ReactNode;
+  /** Controls pinned under the title, such as tabs. */
+  readonly headerBelow?: ReactNode;
   /** The exact repair control a navigation targets. */
   readonly initialFocusId?: string;
   readonly model: EditorDialogModel;
@@ -83,8 +87,9 @@ export function EditorDialog({
     >
       <header className="editor-dialog-header">
         <div>
-          <p className="eyebrow">{eyebrow}</p>
+          {eyebrow === undefined ? null : <p className="eyebrow">{eyebrow}</p>}
           <h2 id={titleId}>{title}</h2>
+          {headerBelow}
         </div>
         {headerAction}
       </header>

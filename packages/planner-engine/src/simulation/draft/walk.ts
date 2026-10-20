@@ -130,6 +130,7 @@ export class DraftWalk {
       shuffle,
       random: () => this.rng(),
       duoDeclines: this.duoDeclineCounts,
+      finalBiome: () => this.biomeIndex === this.project.route.biomes.length - 1,
       fail: (reason) => {
         this.failureReason = reason;
       },

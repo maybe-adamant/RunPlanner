@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
-import { draftGodQueues, draftStartTraits, draftTraitKind } from './basket';
+import { draftSourceQueues, draftStartTraits, draftTraitKind } from './basket';
 import {
   createDraftPrerequisites,
   prerequisiteDue,
@@ -163,9 +163,10 @@ export function draftGodSchedule(
   };
   const godTraits = spec.basketTraitKeys.filter((key) => godsOf(key).length > 0);
   const queues = new Map(
-    draftGodQueues(catalog, spec).map((queue) => [queue.godKey, queue.traitKeys]),
+    draftSourceQueues(catalog, spec).map((queue) => [queue.giverKey, queue.traitKeys]),
   );
   const byGod = godKeys.map((god) => queues.get(god) ?? []);
+  const godQueues = spec.world.godKeys.map((god) => queues.get(god) ?? []);
   const interleaved: string[] = [];
   for (let round = 0; byGod.some((traits) => traits.length > round); round += 1)
     for (const traits of byGod) if (traits[round] !== undefined) interleaved.push(traits[round]!);
@@ -182,7 +183,7 @@ export function draftGodSchedule(
     prerequisiteDue(needs.get(key) ?? [], (member) => due.get(member), last);
   traitOrder.forEach((key, i) => due.set(key, Math.max(traitPlaces[i]!, dueAfterNeeds(key))));
   // Each god's slots go to its traits in queue order, never falling due before an earlier one.
-  for (const queue of queues.values()) {
+  for (const queue of godQueues) {
     const slots = queue.map((key) => due.get(key)!).sort((a, b) => a - b);
     let previous = 0;
     queue.forEach((key, i) => {
@@ -192,10 +193,8 @@ export function draftGodSchedule(
   }
   const supplied = (['hermes', 'hammer'] as const).flatMap((supply) => {
     const traitKeys = draftSupplyTraitKeys(catalog, supply);
-    const ordered = prerequisiteOrder(
-      spec.basketTraitKeys.filter((key) => traitKeys.has(key)),
-      needs,
-    );
+    // Hermes and Hammer traits are taken in basket order, as their queues hold them.
+    const ordered = [...queues.values()].flat().filter((key) => traitKeys.has(key));
     ordered.forEach((key, i) => {
       const half = i === 0 ? firstHalf.length - 1 : last;
       const previous = i === 0 ? 0 : due.get(ordered[i - 1]!)!;
@@ -205,7 +204,7 @@ export function draftGodSchedule(
   });
   pullNpcPrerequisites(route, world.npcTraitBiomes, needs, due, traitOrder, capacity);
   // A pulled trait brings its god's earlier traits with it.
-  for (const queue of queues.values())
+  for (const queue of godQueues)
     for (let i = queue.length - 2; i >= 0; i -= 1)
       due.set(queue[i]!, Math.min(due.get(queue[i]!)!, due.get(queue[i + 1]!)!));
   const scheduled = [...traitOrder, ...supplied];

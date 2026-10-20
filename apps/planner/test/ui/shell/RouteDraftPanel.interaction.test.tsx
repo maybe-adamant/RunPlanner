@@ -207,10 +207,70 @@ describe('Draft panel', () => {
     ).toEqual(['Field', catalog.traitGivers.byKey.Artemis!.label]);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
 
-    const chips = screen.getByRole('list', { name: 'Basket traits' });
-    expect(within(chips).getByText(zeusAttack)).toBeTruthy();
+    const chips = screen.getByRole('list', { name: 'Zeus basket traits' });
+    // An ordered cell shows the trait's icon, named and hinted by the trait.
+    expect(hintOf(within(chips).getByRole('listitem', { name: zeusAttack }))).toBe(zeusAttack);
     fireEvent.click(within(chips).getByRole('button', { name: `Remove ${zeusAttack}` }));
-    expect(screen.queryByRole('list', { name: 'Basket traits' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Zeus basket traits' })).toBeNull();
+  });
+
+  it("numbers and reorders each god's traits, never into an order the engine refuses", () => {
+    const { catalog } = open();
+    chooseGods(['Zeus', 'Apollo']);
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    const [cast, strike, rush] = ['ZeusCastBoon', 'DoubleBoltBoon', 'ZeusSprintBoon'].map(label);
+    const dialog = openBasket();
+    for (const name of [cast!, strike!, rush!])
+      fireEvent.click(within(dialog).getByRole('button', { name }));
+    const badge = (name: string) =>
+      within(dialog).getByRole('button', { name }).querySelector('.draft-order-number')
+        ?.textContent;
+    expect([cast!, strike!, rush!].map(badge)).toEqual(['1', '2', '3']);
+    // Hermes takes its traits in basket order too; Selene's single trait has no number.
+    fireEvent.click(within(dialog).getByRole('tab', { name: /^Bonus/ }));
+    const [first, second] = ['HermesWeaponBoon', 'HermesSpecialBoon'].map(label);
+    const selene = label(catalog.traitGivers.byKey.SpellDrop!.traitKeys[0]!);
+    for (const name of [second!, first!, selene])
+      fireEvent.click(within(dialog).getByRole('button', { name }));
+    expect([second!, first!, selene].map(badge)).toEqual(['1', '2', undefined]);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    const hermes = screen.getByRole('list', { name: 'Hermes basket traits' });
+    fireEvent.click(within(hermes).getByRole('button', { name: `Move ${first} earlier` }));
+    expect(
+      within(screen.getByRole('list', { name: 'Hermes basket traits' }))
+        .getAllByRole('listitem')
+        .map((chip) => chip.getAttribute('aria-label')),
+    ).toEqual([first, second]);
+    expect(
+      within(screen.getByRole('list', { name: 'Other basket traits' })).getByRole('listitem', {
+        name: selene,
+      }),
+    ).toBeTruthy();
+
+    const zeus = () => screen.getByRole('list', { name: 'Zeus basket traits' });
+    const order = () =>
+      within(zeus())
+        .getAllByRole('listitem')
+        .map((chip) => chip.getAttribute('aria-label'));
+    const move = (name: string, direction: 'earlier' | 'later') =>
+      within(zeus()).getByRole('button', { name: `Move ${name} ${direction}` });
+    expect(order()).toEqual([cast, strike, rush]);
+    // Double Strike needs a Zeus core boon before it, and Storm Ring is its only earlier one.
+    expect((move(strike!, 'earlier') as HTMLButtonElement).disabled).toBe(true);
+    expect((move(cast!, 'earlier') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(move(rush!, 'earlier'));
+    expect(order()).toEqual([cast, rush, strike]);
+    expect((move(strike!, 'later') as HTMLButtonElement).disabled).toBe(true);
+
+    // Removing Storm Ring leaves Double Strike first: refused, with a visible note, and repairable.
+    fireEvent.click(move(strike!, 'earlier'));
+    fireEvent.click(within(zeus()).getByRole('button', { name: `Remove ${cast}` }));
+    expect(order()).toEqual([strike, rush]);
+    expect(screen.getByText(`${strike} needs ${rush} first.`)).toBeTruthy();
+    expect((move(strike!, 'later') as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(move(strike!, 'later'));
+    expect(order()).toEqual([rush, strike]);
+    expect(screen.queryByText(`${strike} needs ${rush} first.`)).toBeNull();
   });
 
   it('blocks drafting from a keepsake that brings in a god', () => {

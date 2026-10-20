@@ -28,6 +28,8 @@ interface BasketRecipe {
   readonly hermes?: number;
   readonly hammer?: number;
   readonly selene?: number;
+  /** Exact leading traits, each admitted in turn: Duos with their prerequisites before them. */
+  readonly leadTraits?: readonly string[];
   /** A trait of this selected NPC giver, added last. */
   readonly npcGiverKey?: string;
 }
@@ -197,6 +199,77 @@ const recipes: readonly EntryRecipe[] = [
     basket: { godTraits: MEDIUM },
     forfeit: true,
   },
+  {
+    name: 'U7 medium 2 Hermes 2 Hammer',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_GODS,
+    basket: { godTraits: MEDIUM, hermes: 2, hammer: 2 },
+  },
+  {
+    name: 'S8 medium 2 Hermes 2 Hammer',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    basket: { godTraits: MEDIUM, hermes: 2, hammer: 2 },
+  },
+  {
+    name: 'D5 medium 2 Hermes 2 Hammer',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 4,
+    godKeys: DREAM_GODS,
+    basket: { godTraits: MEDIUM, hermes: 2, hammer: 2 },
+  },
+  {
+    name: 'U8 heavy 2 Duos',
+    routeKey: 'Underworld',
+    prefix: 4,
+    godKeys: UNDERWORLD_GODS,
+    basket: {
+      godTraits: HEAVY,
+      leadTraits: [
+        'ZeusWeaponBoon',
+        'HestiaSpecialBoon',
+        'EchoBurnBoon',
+        'ApolloCastBoon',
+        'CoverRegenerationBoon',
+      ],
+    },
+  },
+  {
+    name: 'S9 heavy 2 Duos',
+    routeKey: 'Surface',
+    prefix: 4,
+    godKeys: SURFACE_GODS,
+    basket: {
+      godTraits: HEAVY,
+      leadTraits: [
+        'DemeterCastBoon',
+        'HeraWeaponBoon',
+        'KeepsakeLevelBoon',
+        'ZeusSpecialBoon',
+        'RootStrikeBoon',
+      ],
+    },
+  },
+  {
+    name: 'D6 heavy 2 Duos',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 4,
+    godKeys: DREAM_GODS,
+    basket: {
+      godTraits: HEAVY,
+      leadTraits: [
+        'PoseidonCastBoon',
+        'ZeusWeaponBoon',
+        'LightningVulnerabilityBoon',
+        'HestiaSpecialBoon',
+        'SteamBoon',
+      ],
+    },
+  },
 ];
 
 function nameSeed(name: string): number {
@@ -249,7 +322,8 @@ function buildBasket(
     const kinds = providerKindsOf(key);
     return kinds.length > 0 && kinds.every((kind) => kind === 'olympian');
   };
-  add(recipe.basket.godTraits, godKinds, 'god');
+  for (const key of recipe.basket.leadTraits ?? []) add(1, (candidate) => candidate === key, key);
+  add(recipe.basket.godTraits - (recipe.basket.leadTraits?.length ?? 0), godKinds, 'god');
   add(recipe.basket.hermes ?? 0, (key) => providerKindsOf(key).includes('hermes'), 'Hermes');
   add(recipe.basket.hammer ?? 0, (key) => providerKindsOf(key).includes('hammer'), 'Hammer');
   add(recipe.basket.selene ?? 0, (key) => providerKindsOf(key).includes('spell'), 'Selene');

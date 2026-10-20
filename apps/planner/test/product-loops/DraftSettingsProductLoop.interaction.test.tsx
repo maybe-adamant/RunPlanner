@@ -76,7 +76,9 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
     'true',
   );
   expect(
-    within(screen.getByRole('list', { name: 'Basket traits' })).getByText(zeusBoon),
+    within(screen.getByRole('list', { name: 'Zeus basket traits' })).getByRole('listitem', {
+      name: zeusBoon,
+    }),
   ).toBeTruthy();
   expect(rack().textContent).toBe('Lion Fang');
   expect(present().route.draft).toEqual(authored);
