@@ -12,7 +12,8 @@ import type {
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { RewardBranchState } from '../../branch-primitives';
-import { processOfferGenerationCohort } from '../../offer-generation';
+import { processOfferGenerationCohort, staticCountedOfferExclusion } from '../../offer-generation';
+import { staticRewardOfferExclusion } from '../../offer-exclusions';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import { forfeitFixedAcquisitionRealizations } from '../../acquisition/role-settlement';
 import type { FixedAcquisitionRealization } from '../../acquisition/contracts';
@@ -331,6 +332,11 @@ export function applyRewardWheelOfferPointMaterialization(
         );
         mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
       }
+      const routeKey = frontierBranches[0]?.state.reached.routePosition.routeKey;
+      const fixed =
+        proposals.length > 0 || routeKey === undefined
+          ? undefined
+          : staticCountedOfferExclusion(catalog, binding, wheel.storeKey, offer, routeKey);
       return Object.freeze({
         findings: Object.freeze(
           [...candidateFindings.values()]
@@ -338,6 +344,7 @@ export function applyRewardWheelOfferPointMaterialization(
             .filter((finding) => finding.code !== 'traitOfferMissing'),
         ),
         supported: proposals.length > 0,
+        ...(fixed === undefined ? {} : { exclusions: staticRewardOfferExclusion(fixed) }),
       });
     },
   });

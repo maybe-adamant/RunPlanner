@@ -99,7 +99,7 @@ export function flushHubBoard(
     if (focused === undefined)
       throw new BiomeRewardSimulationContractError('Hub-board frontier lost its focused context');
     const candidateFindings = new Map<string, FindingRegionEntry>();
-    const candidateBranches = processFocusedOfferAfterAuthoredPeers(
+    const focusedResult = processFocusedOfferAfterAuthoredPeers(
       pending.frontierBranches,
       Object.freeze(
         contexts.filter((context) => semanticAddressKey(context.reward.origin) !== ownerKey),
@@ -113,7 +113,8 @@ export function flushHubBoard(
           .map((entry) => entry.finding)
           .filter((finding) => finding.code !== 'traitOfferMissing'),
       ),
-      supported: candidateBranches.length > 0,
+      supported: focusedResult.branches.length > 0,
+      ...(focusedResult.exclusions === undefined ? {} : { exclusions: focusedResult.exclusions }),
     });
   };
   const frontiers: RewardProducerFrontier[] = pending.participants.map((entry) =>

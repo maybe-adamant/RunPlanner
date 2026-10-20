@@ -1,6 +1,9 @@
 export {
   consumeCountedOffer,
+  countedOfferExclusion,
   countedStoreExhausted,
+  type CountedEntryExclusion,
+  type CountedOfferExclusion,
   createRewardBagState,
   storeEntryOnRoute,
   insertExactPriorityIntoBag,
@@ -50,7 +53,9 @@ export {
   locallyValidRewardOffers,
   ORDINARY_SOURCE_CAP,
   ordinarySourceGameNames,
+  sourceSupportExclusion,
   supportedPayloads,
+  type SourceSupportExclusion,
 } from './support';
 export type {
   AcquisitionKind,

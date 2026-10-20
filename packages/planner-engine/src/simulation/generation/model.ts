@@ -4,7 +4,7 @@ import type {
   LocalVisitSlotAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
-import type { CounterAxis, HistoryRecord, NumericRange } from '../../requirements/model';
+import type { RequirementEvaluationEvidence } from '../../requirements/evidence';
 import type { SemanticFinding } from '../model';
 
 export type RoomGenerationExclusionReason =
@@ -18,79 +18,6 @@ export type RoomGenerationExclusionReason =
   | 'maxCreationsThisRun'
   | 'notCandidate'
   | 'physicalExitUnavailable';
-
-export type RequirementEvaluationEvidence =
-  | {
-      readonly kind: 'routeKeyEquals';
-      readonly satisfied: boolean;
-      readonly expected: string;
-    }
-  | {
-      readonly kind: 'all' | 'any';
-      readonly satisfied: boolean;
-      readonly children: readonly RequirementEvaluationEvidence[];
-    }
-  | {
-      readonly kind: 'not';
-      readonly satisfied: boolean;
-      readonly child: RequirementEvaluationEvidence;
-    }
-  | {
-      readonly kind: 'counterRange';
-      readonly satisfied: boolean;
-      readonly axis: CounterAxis;
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'recordCount' | 'distinctRecordKeyCount';
-      readonly satisfied: boolean;
-      readonly record: HistoryRecord;
-      readonly keys: readonly string[];
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'recentEnvelopeSlotCount';
-      readonly satisfied: boolean;
-      readonly envelopeKey: string;
-      readonly slotKey: string;
-      readonly roomWindow: number;
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'minExits';
-      readonly satisfied: boolean;
-      readonly actual: number;
-      readonly minimum: number;
-    }
-  | {
-      readonly kind: 'currentBatchTargetCount';
-      readonly satisfied: boolean;
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'currentBatchRoomCount';
-      readonly satisfied: boolean;
-      readonly roomGameNames: readonly string[];
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'clockworkGoalsRemaining';
-      readonly satisfied: boolean;
-      readonly actual: number;
-      readonly expected: NumericRange;
-    }
-  | {
-      readonly kind: 'clockworkNonGoalCapacity';
-      readonly satisfied: boolean;
-      readonly acquired: number;
-      readonly maximum: number;
-      readonly reserve: number;
-    };
 
 export type RoomGenerationExclusionEvidence =
   | { readonly kind: 'notCandidate' }

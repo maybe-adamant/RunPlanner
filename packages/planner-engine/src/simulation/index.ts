@@ -323,7 +323,6 @@ export {
   type HubTerminalTakeoverCandidateSupport,
   type HubRoomGenerationValidation,
   type HubSideRoomGenerationSupportEntry,
-  type RequirementEvaluationEvidence,
   type RoomGenerationExclusionEvidence,
   type RoomGenerationExclusionReason,
   type RoomTargetCandidateContext,
@@ -641,3 +640,9 @@ export {
   type DraftTargetKind,
   type DraftTargetResult,
 } from './draft/report';
+export type { RequirementEvaluationEvidence } from '../requirements/evidence';
+export type {
+  RewardOfferExclusionEvidence,
+  RewardOfferExclusionKind,
+  RewardOfferExclusionReason,
+} from './rewards/offer-exclusions';

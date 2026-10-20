@@ -17,7 +17,8 @@ import { createBiomeRewardFacts } from '../../facts';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
-import { processRewardOffer } from '../../offer-generation';
+import { processRewardOffer, staticCountedOfferExclusion } from '../../offer-generation';
+import { staticRewardOfferExclusion } from '../../offer-exclusions';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import { localRewardBinding } from '../room-reward-bindings';
 import { spawnPickups } from '../../../state/pending-resource-pickups';
@@ -236,6 +237,17 @@ export function materializeFieldsOptionalOfferPoint(
       );
       mergeRewardFindingEmissions(candidateFindings, settlement.findingEmissions);
     }
+    const routeKey = frontierBranches[0]?.state.reached.routePosition.routeKey;
+    const fixed =
+      candidateBranches.length > 0 || routeKey === undefined
+        ? undefined
+        : staticCountedOfferExclusion(
+            catalog,
+            localRewardBinding(declaration, { ...selectedReward, offer }),
+            selectedReward.resolvedStoreKey,
+            offer,
+            routeKey,
+          );
     return Object.freeze({
       findings: Object.freeze(
         [...candidateFindings.values()]
@@ -243,6 +255,7 @@ export function materializeFieldsOptionalOfferPoint(
           .filter((finding) => finding.code !== 'traitOfferMissing'),
       ),
       supported: candidateBranches.length > 0,
+      ...(fixed === undefined ? {} : { exclusions: staticRewardOfferExclusion(fixed) }),
     });
   };
 

@@ -1,3 +1,4 @@
+import { staticallyExcludedCandidateResult } from '../producer-frontiers';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -345,16 +346,19 @@ export function settleAcquisitionResolvedReward(
     rewardTypes: Object.freeze([request.visibleOffer.rewardType]),
     branchesBeforeEntry: branches,
     evaluateOffer: (offer: ResolvedRewardOffer) =>
-      Object.freeze({
-        findings: Object.freeze([]),
-        supported:
-          offer.rewardType === request.visibleOffer.rewardType &&
-          branches.every((branch) =>
-            isOfferSupportedAtResolutionPoint(catalog.rewards, offer, facts(branch.state), {
-              acquisitionRole: resolution.role,
-            }),
-          ),
-      }),
+      offer.rewardType !== request.visibleOffer.rewardType
+        ? staticallyExcludedCandidateResult({
+            kind: 'rewardTypeFixed',
+            rewardType: request.visibleOffer.rewardType,
+          })
+        : Object.freeze({
+            findings: Object.freeze([]),
+            supported: branches.every((branch) =>
+              isOfferSupportedAtResolutionPoint(catalog.rewards, offer, facts(branch.state), {
+                acquisitionRole: resolution.role,
+              }),
+            ),
+          }),
   });
   if (request.reward === undefined || request.reward === null) {
     addRewardFinding(

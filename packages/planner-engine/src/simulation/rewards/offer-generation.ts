@@ -5,15 +5,24 @@ import { semanticAddressKey, type SemanticAddress } from '../../authored-project
 import {
   applyOfferProjection,
   consumeCountedOffer,
+  countedOfferExclusion,
   countedStoreExhausted,
   oldestSupportedRewardPriority,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
+  ORDINARY_SOURCE_CAP,
+  ordinarySourceGameNames,
+  sourceSupportExclusion,
+  storeEntryOnRoute,
+  type CountedOfferTransitionOptions,
   type RewardBagState,
+  type RewardPeerContext,
+  type RewardStoreDeclaration,
   type ResolvedRewardOffer,
 } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import { evaluateRequirement } from '../../requirements/evaluator';
+import { requirementEvidence } from '../../requirements/evidence';
 
 import type { CanonicalResolvedIncomingReward } from '../materialization';
 import type { FindingEvidence, RewardGenerationFindingCode } from '../model';
@@ -34,6 +43,12 @@ import type { RewardFactsFactory } from './acquisition/contracts';
 import { withBag } from './branch-primitives';
 
 import { addRewardFinding, rewardFinding } from './findings';
+import {
+  aggregateRewardOfferExclusions,
+  staticRewardOfferExclusion,
+  type RewardOfferExclusionEvidence,
+  type RewardOfferExclusionReason,
+} from './offer-exclusions';
 
 function semanticAddressEvidence(origin: SemanticAddress): FindingEvidence {
   return Object.freeze({ ...origin }) as FindingEvidence;
@@ -174,6 +189,64 @@ export function processRewardOffer(
   context: OfferProcessingContext,
   findings: Map<string, FindingRegionEntry>,
 ): readonly RewardBranchState[] {
+  return processRewardOfferBranches(branches, context, findings, undefined);
+}
+
+/** The offer gate that rejected one reached branch, in gate order. */
+type OfferBranchGate =
+  | 'forcedReward'
+  | 'olympianProvider'
+  | 'source'
+  | 'storeBinding'
+  | 'priority'
+  | 'bag'
+  | 'storeExhausted';
+
+interface RejectedOfferBranch {
+  readonly branch: RewardBranchState;
+  readonly gate: OfferBranchGate;
+}
+
+interface CountedOfferInputs {
+  readonly storeKey: string;
+  readonly store: RewardStoreDeclaration;
+  readonly prepared: { readonly branch: RewardBranchState; readonly bag: RewardBagState };
+  readonly options: CountedOfferTransitionOptions;
+}
+
+function countedOfferInputs(
+  context: OfferProcessingContext,
+  binding: CountedRewardBinding,
+  branch: RewardBranchState,
+  peers: RewardPeerContext,
+): CountedOfferInputs | undefined {
+  const storeKey = context.reward.resolvedStoreKey;
+  if (storeKey === undefined || !binding.storeKeys.includes(storeKey)) return undefined;
+  const prepared = withBag(context.catalog, branch, storeKey);
+  const store = context.catalog.rewards.stores.byKey[storeKey];
+  if (prepared === undefined || store === undefined) return undefined;
+  return {
+    storeKey,
+    store,
+    prepared,
+    options: {
+      ...(binding.eligibleRewardTypes.length === 0
+        ? {}
+        : { eligibleRewardTypes: new Set(binding.eligibleRewardTypes) }),
+      ...(binding.ineligibleRewardTypes.length === 0
+        ? {}
+        : { ineligibleRewardTypes: new Set(binding.ineligibleRewardTypes) }),
+      peers,
+    },
+  };
+}
+
+function processRewardOfferBranches(
+  branches: readonly RewardBranchState[],
+  context: OfferProcessingContext,
+  findings: Map<string, FindingRegionEntry>,
+  rejected: RejectedOfferBranch[] | undefined,
+): readonly RewardBranchState[] {
   const { catalog, reward, historySequence, findingChronology } = context;
   const rewardType = catalog.rewards.rewardTypes.byKey[reward.offer.rewardType];
   if (
@@ -204,6 +277,7 @@ export function processRewardOffer(
     if (forced !== undefined) {
       if (!sameOffer(forced.offer, reward.offer)) {
         if (forced.offer.rewardType === reward.offer.rewardType) sawSourceFailure = true;
+        rejected?.push({ branch: originalBranch, gate: 'forcedReward' });
         continue;
       }
       next.push(recordCanonicalOffer(originalBranch, context));
@@ -224,6 +298,7 @@ export function processRewardOffer(
       !offerContainsProvider(catalog, reward.offer, requiredProvider)
     ) {
       sawSourceFailure = true;
+      rejected?.push({ branch: originalBranch, gate: 'olympianProvider' });
       continue;
     }
     const effectiveOffer = reward.offer;
@@ -242,6 +317,7 @@ export function processRewardOffer(
         sawSiblingFailure = true;
         sourceConflictingPeers(effectiveOffer, context.peers).forEach(recordSiblingConflict);
       }
+      rejected?.push({ branch: originalBranch, gate: 'source' });
       continue;
     }
 
@@ -270,26 +346,13 @@ export function processRewardOffer(
       continue;
     }
 
-    const storeKey = reward.resolvedStoreKey;
-    if (storeKey === undefined || !context.binding.storeKeys.includes(storeKey)) {
+    const counted = countedOfferInputs(context, context.binding, originalBranch, peers);
+    if (counted === undefined) {
       sawBagSupportEmpty = true;
+      rejected?.push({ branch: originalBranch, gate: 'storeBinding' });
       continue;
     }
-    const prepared = withBag(catalog, originalBranch, storeKey);
-    const store = catalog.rewards.stores.byKey[storeKey];
-    if (prepared === undefined || store === undefined) {
-      sawBagSupportEmpty = true;
-      continue;
-    }
-    const bagOptions = {
-      ...(context.binding.eligibleRewardTypes.length === 0
-        ? {}
-        : { eligibleRewardTypes: new Set(context.binding.eligibleRewardTypes) }),
-      ...(context.binding.ineligibleRewardTypes.length === 0
-        ? {}
-        : { ineligibleRewardTypes: new Set(context.binding.ineligibleRewardTypes) }),
-      peers,
-    };
+    const { storeKey, store, prepared, options: bagOptions } = counted;
     const requiredPriority = oldestSupportedRewardPriority(
       store,
       prepared.bag,
@@ -299,6 +362,7 @@ export function processRewardOffer(
     );
     if (requiredPriority !== undefined && effectiveOffer.rewardType !== requiredPriority) {
       sawBagSupportEmpty = true;
+      rejected?.push({ branch: originalBranch, gate: 'priority' });
       continue;
     }
     if (
@@ -320,9 +384,13 @@ export function processRewardOffer(
       facts,
       bagOptions,
     );
-    if (transitions.length === 0 && countedStoreExhausted(store, prepared.bag, facts, bagOptions)) {
-      sawBagSupportEmpty = true;
-      continue;
+    if (transitions.length === 0) {
+      if (countedStoreExhausted(store, prepared.bag, facts, bagOptions)) {
+        sawBagSupportEmpty = true;
+        rejected?.push({ branch: originalBranch, gate: 'storeExhausted' });
+        continue;
+      }
+      rejected?.push({ branch: originalBranch, gate: 'bag' });
     }
     for (const bag of transitions) {
       const history = applyOfferProjection(
@@ -384,6 +452,228 @@ export function processRewardOffer(
     );
   }
   return Object.freeze(next);
+}
+
+/**
+ * Explains an offer that `processRewardOffer` rejected in every branch by
+ * replaying its gates; callers run it only on that failure path.
+ */
+export function explainRewardOfferExclusions(
+  branches: readonly RewardBranchState[],
+  context: OfferProcessingContext,
+): readonly RewardOfferExclusionEvidence[] | undefined {
+  const fixed = staticOfferExclusion(branches, context);
+  if (fixed !== undefined) return staticRewardOfferExclusion(fixed);
+  const rejected: RejectedOfferBranch[] = [];
+  processRewardOfferBranches(branches, context, new Map(), rejected);
+  if (rejected.length === 0) return undefined;
+  return aggregateRewardOfferExclusions(
+    rejected.map((entry) => rejectedBranchExclusion(context, entry)),
+  );
+}
+
+/**
+ * Store membership, route scope and binding filters of a counted offer; they
+ * hold for every branch.
+ */
+export function staticCountedOfferExclusion(
+  catalog: Catalog,
+  binding: CountedRewardBinding | undefined,
+  storeKey: string | undefined,
+  offer: ResolvedRewardOffer,
+  routeKey: string,
+): RewardOfferExclusionReason | undefined {
+  const { rewardType } = offer;
+  if (
+    binding === undefined ||
+    rewardType === catalog.rewards.countedStoreFallbackRewardType ||
+    binding.forcedRewards?.some((forced) => forced.offer.rewardType === rewardType) === true
+  )
+    return undefined;
+  if (
+    (binding.eligibleRewardTypes.length > 0 && !binding.eligibleRewardTypes.includes(rewardType)) ||
+    binding.ineligibleRewardTypes.includes(rewardType)
+  )
+    return { kind: 'excludedByProducer', rewardType };
+  const store =
+    storeKey === undefined || !binding.storeKeys.includes(storeKey)
+      ? undefined
+      : catalog.rewards.stores.byKey[storeKey];
+  const entries = store?.entries.filter((entry) => entry.rewardType === rewardType) ?? [];
+  if (store === undefined || entries.length === 0)
+    return { kind: 'notInStore', rewardType, storeKey: storeKey ?? null };
+  return entries.some((entry) => storeEntryOnRoute(entry, routeKey))
+    ? undefined
+    : { kind: 'offRoute', rewardType, storeKey: store.key, routeKey };
+}
+
+function staticOfferExclusion(
+  branches: readonly RewardBranchState[],
+  context: OfferProcessingContext,
+): RewardOfferExclusionReason | undefined {
+  const first = branches[0];
+  return first === undefined
+    ? undefined
+    : staticCountedOfferExclusion(
+        context.catalog,
+        context.binding,
+        context.reward.resolvedStoreKey,
+        context.reward.offer,
+        first.state.reached.routePosition.routeKey,
+      );
+}
+
+function rejectedBranchExclusion(
+  context: OfferProcessingContext,
+  { branch, gate }: RejectedOfferBranch,
+): RewardOfferExclusionReason | undefined {
+  const { catalog, reward } = context;
+  const offer = reward.offer;
+  const facts = context.facts(branch.state);
+  const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
+  switch (gate) {
+    case 'forcedReward': {
+      const forced = forcedRewardFor(context, branch);
+      return forced === undefined ? undefined : { kind: 'forcedReward', offer: forced.offer };
+    }
+    case 'olympianProvider': {
+      const providerKey = requiredOlympianProviderForOffer(catalog, branch, offer, context.peers);
+      return providerKey === undefined
+        ? undefined
+        : { kind: 'olympianProviderForced', providerKey };
+    }
+    case 'source':
+      return sourceExclusion(context, facts);
+    case 'storeBinding':
+      return {
+        kind: 'notInStore',
+        rewardType: offer.rewardType,
+        storeKey: reward.resolvedStoreKey ?? null,
+      };
+    case 'storeExhausted':
+    case 'priority':
+    case 'bag': {
+      const counted =
+        context.binding === undefined
+          ? undefined
+          : countedOfferInputs(context, context.binding, branch, peers);
+      if (counted === undefined) return undefined;
+      const { storeKey, store, prepared, options } = counted;
+      if (gate === 'storeExhausted')
+        return {
+          kind: 'storeExhausted',
+          storeKey,
+          fallbackRewardType: catalog.rewards.countedStoreFallbackRewardType,
+        };
+      if (gate === 'priority') {
+        const rewardType = oldestSupportedRewardPriority(
+          store,
+          prepared.bag,
+          branch.state.rewardPriorities,
+          facts,
+          options,
+        );
+        return rewardType === undefined
+          ? undefined
+          : { kind: 'priorityRequired', rewardType, storeKey };
+      }
+      return bagExclusion(context, store, prepared.bag, facts, options);
+    }
+  }
+}
+
+function sourceExclusion(
+  context: OfferProcessingContext,
+  facts: ReturnType<OfferProcessingContext['facts']>,
+): RewardOfferExclusionReason | undefined {
+  const { catalog } = context;
+  const offer = context.reward.offer;
+  const code = sourceSupportExclusion(catalog.rewards, offer, facts, 'offer');
+  const payload = offer.payload;
+  if (code === undefined)
+    return context.peers.length === 0
+      ? undefined
+      : {
+          kind: 'peerConflict',
+          peers: sourceConflictingPeers(offer, context.peers).map(({ origin, offer: peer }) => ({
+            origin,
+            offer: peer,
+          })),
+        };
+  if (payload === undefined) return undefined;
+  const acquired = facts.requirements.records.lootTypeHistory;
+  if (code === 'devotionSourceNotAcquired')
+    return payload.kind === 'DevotionPair'
+      ? {
+          kind: code,
+          sources: [payload.chosenSource, payload.spurnedSource].filter(
+            (source) => (acquired[source] ?? 0) === 0,
+          ),
+        }
+      : undefined;
+  if (payload.kind !== 'BoonSource') return undefined;
+  const source = payload.source;
+  switch (code) {
+    case 'godCap':
+      return {
+        kind: code,
+        source,
+        acquiredSources: ordinarySourceGameNames(catalog.rewards).filter(
+          (name) => (acquired[name] ?? 0) > 0,
+        ),
+        cap: ORDINARY_SOURCE_CAP,
+      };
+    case 'godRequirement': {
+      const requirement = catalog.rewards.acquisitions.byKey[source]?.lootRequirement;
+      return requirement === undefined
+        ? undefined
+        : { kind: code, source, evaluation: requirementEvidence(requirement, facts.requirements) };
+    }
+    case 'godNotInteracted':
+      return { kind: code, source };
+  }
+}
+
+function bagExclusion(
+  context: OfferProcessingContext,
+  store: RewardStoreDeclaration,
+  bag: RewardBagState,
+  facts: ReturnType<OfferProcessingContext['facts']>,
+  options: CountedOfferTransitionOptions,
+): RewardOfferExclusionReason | undefined {
+  const offer = context.reward.offer;
+  const storeKey = store.key;
+  const exclusion = countedOfferExclusion(store, bag, offer, facts, options);
+  switch (exclusion?.kind) {
+    case undefined:
+      return undefined;
+    case 'storeExhausted':
+      return {
+        kind: 'storeExhausted',
+        storeKey,
+        fallbackRewardType: context.catalog.rewards.countedStoreFallbackRewardType,
+      };
+    case 'entriesSpent':
+      return { kind: 'entriesSpent', rewardType: offer.rewardType, storeKey };
+    case 'excludedByProducer':
+      return { kind: 'excludedByProducer', rewardType: offer.rewardType };
+    case 'peerConflict':
+      return {
+        kind: 'peerConflict',
+        peers: context.peers
+          .filter((peer) => peer.offer.rewardType === offer.rewardType)
+          .map(({ origin, offer: peer }) => ({ origin, offer: peer })),
+      };
+    case 'entryRequirement':
+      return exclusion.entry.requirement === undefined
+        ? undefined
+        : {
+            kind: 'entryRequirement',
+            rewardType: offer.rewardType,
+            storeKey,
+            evaluation: requirementEvidence(exclusion.entry.requirement, facts.requirements),
+          };
+  }
 }
 
 function forcedRewardFor(
@@ -593,7 +883,10 @@ export function processFocusedOfferAfterAuthoredPeers(
   peerContexts: readonly OfferProcessingContext[],
   focusedContext: OfferProcessingContext,
   findings: Map<string, FindingRegionEntry>,
-): readonly RewardBranchState[] {
+): {
+  readonly branches: readonly RewardBranchState[];
+  readonly exclusions?: readonly RewardOfferExclusionEvidence[];
+} {
   let reached = branches;
   const acceptedPeers: OfferProcessingPeer[] = [];
   for (const context of peerContexts) {
@@ -611,16 +904,14 @@ export function processFocusedOfferAfterAuthoredPeers(
   }
 
   const focusedFindings = new Map<string, FindingRegionEntry>();
-  const supported = processRewardOffer(
-    reached,
-    { ...focusedContext, peers: Object.freeze(acceptedPeers) },
-    focusedFindings,
-  );
-  if (supported.length > 0) return supported;
+  const focused = { ...focusedContext, peers: Object.freeze(acceptedPeers) };
+  const supported = processRewardOffer(reached, focused, focusedFindings);
+  if (supported.length > 0) return { branches: supported };
   for (const value of focusedFindings.values()) {
     addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
   }
-  return Object.freeze([]);
+  const exclusions = explainRewardOfferExclusions(reached, focused);
+  return { branches: Object.freeze([]), ...(exclusions === undefined ? {} : { exclusions }) };
 }
 
 /**

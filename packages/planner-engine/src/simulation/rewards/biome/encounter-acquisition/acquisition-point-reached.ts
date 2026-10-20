@@ -63,7 +63,11 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
-import type { RewardProducerOwnerAddress, RewardProducerFrontier } from '../../producer-frontiers';
+import {
+  staticallyExcludedCandidateResult,
+  type RewardProducerOwnerAddress,
+  type RewardProducerFrontier,
+} from '../../producer-frontiers';
 import type { SimulationState } from '../../../state/model';
 import { attestSharedRewardLookups } from '../../../state/reward-lookups';
 
@@ -354,7 +358,10 @@ export function applyAcquisitionPointReachedTransition(
             'Hermes delivery frontier received a foreign owner',
           );
         if (offer.rewardType !== input.rewardType)
-          return Object.freeze({ findings: Object.freeze([]), supported: false });
+          return staticallyExcludedCandidateResult({
+            kind: 'rewardTypeFixed',
+            rewardType: input.rewardType,
+          });
         const candidateSettlement = settlePickupAcquisitionSite(
           catalog,
           input.branchesBeforeEntry,

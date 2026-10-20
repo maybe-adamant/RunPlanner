@@ -29,7 +29,10 @@ import { settlePickupAcquisitionSite } from '../../acquisition/site-settlement';
 import { settleShopAcquisitionSite } from '../../shop/settlement';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { RewardBranchState } from '../../branch-primitives';
-import type { RewardProducerFrontier } from '../../producer-frontiers';
+import {
+  staticallyExcludedCandidateResult,
+  type RewardProducerFrontier,
+} from '../../producer-frontiers';
 import { createBiomeRewardFacts } from '../../facts';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import { canonicalArtificerSource } from '../reward-sources';
@@ -480,12 +483,21 @@ export function settleAuthoredAcquisitionSite(
                 : (frontier.reward?.offer.rewardType ??
                   producer.pickups.find((pickup) => pickup.key === frontier.address.entryKey)
                     ?.rewardType);
-              if (
-                fixedRewardType === undefined ||
-                offer.rewardType !== fixedRewardType ||
-                (echoReplay && JSON.stringify(offer) !== JSON.stringify(agreedReplay?.offer))
-              ) {
+              if (fixedRewardType === undefined) {
                 return Object.freeze({ findings: Object.freeze([]), supported: false });
+              }
+              if (offer.rewardType !== fixedRewardType) {
+                return staticallyExcludedCandidateResult({
+                  kind: 'rewardTypeFixed',
+                  rewardType: fixedRewardType,
+                });
+              }
+              // Echo replays its agreed offer exactly.
+              if (echoReplay && JSON.stringify(offer) !== JSON.stringify(agreedReplay?.offer)) {
+                return staticallyExcludedCandidateResult({
+                  kind: 'excludedByProducer',
+                  rewardType: offer.rewardType,
+                });
               }
               const candidateSettlement = settlePickupAcquisitionSite(
                 catalog,

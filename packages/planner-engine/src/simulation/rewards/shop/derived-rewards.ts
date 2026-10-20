@@ -1,4 +1,5 @@
 import { replaceSimulationTraitHistory } from '../../state/transitions';
+import { staticallyExcludedCandidateResult } from '../producer-frontiers';
 import type { Catalog } from '../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
@@ -275,14 +276,13 @@ export function materializeShopGold(input: {
         ...(input.pickupPlaced && fixedReward !== undefined
           ? {
               evaluateOffer: (candidateOffer: ResolvedRewardOffer) =>
-                Object.freeze({
-                  findings: Object.freeze([]),
-                  supported: echoShopDuplicateOfferMatches(
-                    catalog,
-                    sourceOffer.offer,
-                    candidateOffer,
-                  ),
-                }),
+                echoShopDuplicateOfferMatches(catalog, sourceOffer.offer, candidateOffer)
+                  ? Object.freeze({ findings: Object.freeze([]), supported: true })
+                  : staticallyExcludedCandidateResult(
+                      candidateOffer.rewardType === sourceOffer.offer.rewardType
+                        ? { kind: 'excludedByProducer', rewardType: candidateOffer.rewardType }
+                        : { kind: 'rewardTypeFixed', rewardType: sourceOffer.offer.rewardType },
+                    ),
             }
           : {}),
       }),

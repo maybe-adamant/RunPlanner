@@ -10,6 +10,7 @@ import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '..
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import {
   countedBinding,
+  explainRewardOfferExclusions,
   processRewardOffer,
   type OfferProcessingContext,
   type OfferProcessingPeer,
@@ -58,6 +59,8 @@ function incomingCandidateForOffer(
 
 interface IncomingOfferCandidateContext {
   readonly context: OfferProcessingContext;
+  /** Branches reaching generation, before the offer was processed. */
+  readonly frontierBranches: readonly RewardBranchState[];
   readonly declaration: RoomCreatedRewardContext['declaration'];
   readonly room: RoomCreatedRewardContext['room'];
   readonly incoming: CanonicalResolvedIncomingReward;
@@ -80,10 +83,14 @@ function completeIncomingOfferCandidate(
   candidateBranches: readonly RewardBranchState[],
   candidateFindings: Map<string, FindingRegionEntry>,
 ) {
+  const exclusions =
+    candidateBranches.length === 0
+      ? explainRewardOfferExclusions(entry.frontierBranches, entry.context)
+      : undefined;
   // Only the unchanged envelope retains authored acquisition children. A new
   // reward's children are authored after selection, not prerequisites for it.
   if (entry.incoming !== entry.room.incomingReward) {
-    return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+    return createRewardProducerCandidateResult(candidateFindings, candidateBranches, exclusions);
   }
   let branches = candidateBranches;
   if (
@@ -155,7 +162,7 @@ function completeIncomingOfferCandidate(
       branches = settlement.branches;
     }
   }
-  return createRewardProducerCandidateResult(candidateFindings, branches);
+  return createRewardProducerCandidateResult(candidateFindings, branches, exclusions);
 }
 
 /** Generates exactly one resolved or unresolved incoming reward envelope. */
@@ -313,6 +320,7 @@ export function generateIncomingReward(
             inputs.authoredSeaStarDuplicateSiteKeys,
             Object.freeze({
               context: candidateContext,
+              frontierBranches: inputs.branches,
               declaration: context.declaration,
               room: context.room,
               incoming: candidate,
@@ -412,6 +420,7 @@ export function generateIncomingReward(
           inputs.authoredSeaStarDuplicateSiteKeys,
           Object.freeze({
             context: candidateContext,
+            frontierBranches: inputs.branches,
             declaration: context.declaration,
             room: context.room,
             incoming: candidate,

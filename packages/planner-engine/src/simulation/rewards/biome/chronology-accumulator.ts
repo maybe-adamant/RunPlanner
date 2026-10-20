@@ -56,6 +56,7 @@ import type {
   TargetRewardHistoryCheckpoint,
 } from '../model';
 import { indexRewardProducerFrontier, type RewardProducerFrontier } from '../producer-frontiers';
+import { mergeRewardOfferExclusions } from '../offer-exclusions';
 import type { RunStateSnapshot } from '../run-state';
 import type {
   ReachedTraitChildCheckpoint,
@@ -625,9 +626,12 @@ export function createChronologyAccumulator(
             if (semanticAddressKey(owner) !== key)
               return fail('derived acquisition frontier received a foreign owner');
             const results = combined.map((candidate) => candidate.evaluateOffer!(offer));
+            const supported = results.every((result) => result.supported);
+            const exclusions = supported ? undefined : mergeRewardOfferExclusions(results);
             return Object.freeze({
               findings: Object.freeze(results.flatMap((result) => result.findings)),
-              supported: results.every((result) => result.supported),
+              supported,
+              ...(exclusions === undefined ? {} : { exclusions }),
             });
           },
           ...(first.evaluateShopOption === undefined

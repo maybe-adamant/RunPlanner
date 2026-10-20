@@ -21,3 +21,4 @@ export type {
   RunHistoryRecord,
   SaveFileHistoryRecord,
 } from './model';
+export { requirementEvidence, type RequirementEvaluationEvidence } from './evidence';

@@ -32,11 +32,8 @@ import type {
 } from '../materialization';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import { rewardLookupSets, sharedRewardLookups } from '../state/reward-lookups';
-import type {
-  RequirementEvaluationEvidence,
-  RoomGenerationExclusionEvidence,
-  RoomGenerationExclusionReason,
-} from './model';
+import { requirementEvidence } from '../../requirements/evidence';
+import type { RoomGenerationExclusionEvidence, RoomGenerationExclusionReason } from './model';
 import type { FindingEvidence, SemanticFinding } from '../model';
 import {
   findingRegion,
@@ -343,137 +340,6 @@ function forceSupport(
       const forceChance = 1 / Math.max(1, force.deadline - currentDepth);
       return forceChance >= 1 ? 'required' : 'optional';
     }
-  }
-}
-
-function requirementEvidence(
-  requirement: RequirementExpression,
-  context: RequirementEvaluationContext,
-): RequirementEvaluationEvidence {
-  const satisfied = evaluateRequirement(requirement, context);
-  switch (requirement.kind) {
-    case 'routeKeyEquals':
-      return Object.freeze({ kind: requirement.kind, satisfied, expected: requirement.routeKey });
-    case 'all':
-    case 'any':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        children: Object.freeze(
-          requirement.requirements.map((child) => requirementEvidence(child, context)),
-        ),
-      });
-    case 'not':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        child: requirementEvidence(requirement.requirement, context),
-      });
-    case 'counterRange':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        axis: requirement.axis,
-        actual: context.counters[requirement.axis],
-        expected: requirement.range,
-      });
-    case 'recordCount': {
-      const record = context.records[requirement.record];
-      if (record === undefined) throw new Error(`generation context lacks ${requirement.record}`);
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        record: requirement.record,
-        keys: requirement.keys,
-        actual: requirement.keys.reduce((total, key) => total + (record[key] ?? 0), 0),
-        expected: requirement.range,
-      });
-    }
-    case 'distinctRecordKeyCount': {
-      const record = context.records[requirement.record];
-      if (record === undefined) throw new Error(`generation context lacks ${requirement.record}`);
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        record: requirement.record,
-        keys: requirement.keys,
-        actual: requirement.keys.filter((key) => (record[key] ?? 0) > 0).length,
-        expected: requirement.range,
-      });
-    }
-    case 'recentEnvelopeSlotCount': {
-      const recentRooms = context.recentEncounterEnvelopeSlots.slice(-requirement.roomWindow);
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        envelopeKey: requirement.envelopeKey,
-        slotKey: requirement.slotKey,
-        roomWindow: requirement.roomWindow,
-        actual: recentRooms.reduce(
-          (total, room) =>
-            total +
-            (room.envelopeKey === requirement.envelopeKey &&
-            room.slotKeys.includes(requirement.slotKey)
-              ? 1
-              : 0),
-          0,
-        ),
-        expected: requirement.range,
-      });
-    }
-    case 'minExits':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        actual: context.offeredExitCount,
-        minimum: requirement.count,
-      });
-    case 'currentBatchTargetCount':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        actual: context.currentBatchRoomGameNames.length,
-        expected: requirement.range,
-      });
-    case 'currentBatchRoomCount':
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        roomGameNames: requirement.roomGameNames,
-        actual: context.currentBatchRoomGameNames.filter((gameName) =>
-          requirement.roomGameNames.includes(gameName),
-        ).length,
-        expected: requirement.range,
-      });
-    case 'clockworkGoalsRemaining':
-      if (context.clockwork === undefined) {
-        throw new BiomeRoomGenerationContractError(
-          'Clockwork requirement evidence has no Clockwork facts',
-        );
-      }
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        actual: context.clockwork.remainingGoals,
-        expected: requirement.range,
-      });
-    case 'clockworkNonGoalCapacity':
-      if (context.clockwork === undefined) {
-        throw new BiomeRoomGenerationContractError(
-          'Clockwork requirement evidence has no Clockwork facts',
-        );
-      }
-      return Object.freeze({
-        kind: requirement.kind,
-        satisfied,
-        acquired: context.clockwork.nonGoalRewardsAcquired,
-        maximum: context.clockwork.maxNonGoalRewards,
-        reserve: requirement.reserve,
-      });
-    default:
-      throw new BiomeRoomGenerationContractError(
-        `room generation cannot explain ${requirement.kind}`,
-      );
   }
 }
 
@@ -860,7 +726,6 @@ export {
   generationRooms,
   normalCandidatePool,
   projectRoomGenerationRequirementContext,
-  requirementEvidence,
   roomGenerationCounts,
   sourceGenerationSupport,
   stagedCandidatePool,
